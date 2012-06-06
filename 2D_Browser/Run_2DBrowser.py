@@ -35,9 +35,23 @@ class Browser(object):
 
 	def load_data(self):
 		os.chdir(self.data_path)
-		self.video_path = os.path.join(self.data_path, "world.avi")
-		self.audio_path = os.path.join(self.data_path, "world.wav")
-		self.pts_path = os.path.join(self.data_path, "pupil_positions.npy")
+		try: 
+			self.video_path = os.path.join(self.data_path, "world.avi")
+		except:
+			print "Could not load video 'world.avi' please check the file name and data directory given."
+			self.video_path = None
+
+		try:
+			self.audio_path = os.path.join(self.data_path, "world.wav")
+		except: 
+			print "Could not load audio 'world.wav' please check the file name and data directory given."
+			self.audio_path = None
+
+		try:
+			self.pts_path = os.path.join(self.data_path, "pupil_positions.npy")
+		except: 
+			print "Could not load pupil positions 'pupil_positions.npy' please check the file name and data directory given."
+			self.pts_path = None
 
 
 def grab(pipe, frame_num, src):
