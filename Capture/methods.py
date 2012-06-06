@@ -109,14 +109,14 @@ def erase_specular_new(image,lower_threshold=0.0, upper_threshold=150.0):
 	return specular
 
 
-def add_horizontal_gradient(image,left=0,right=15):
+def add_horizontal_gradient(image,left=0,right=00):
 	offset = np.linspace(left,right,image.shape[1]).astype(image.dtype)
 	offset = np.repeat(offset[np.newaxis,:],image.shape[0],0)
 	image += offset
 	return image
 
 
-def add_vertical_gradient(image,top=0,bottom=10):
+def add_vertical_gradient(image,top=10,bottom=0):
 	offset = np.linspace(top,bottom,image.shape[0]).astype(image.dtype)
 	offset = np.repeat(offset[:,np.newaxis,],image.shape[1],1)
 	image += offset

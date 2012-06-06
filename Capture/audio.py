@@ -120,12 +120,3 @@ def record_audio(pipe, verbose=False):
 			# clear global array when done recording
 			g_LRtn = array('h')
 
-
-
-
-
-
-
-
-
-
