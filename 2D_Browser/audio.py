@@ -68,7 +68,7 @@ def play_audio(pipe, src, chunk=1024, verbose=False):
 	# get audio framerate
 	# read in all data to a variable
 	data = wf.readframes(chunk)
-	print "chunk size:", chunk
+	# print "chunk size:", chunk
 	while data != '':
 		sync = pipe.recv()
 		stream.write(data)
