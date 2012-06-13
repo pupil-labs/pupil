@@ -1,16 +1,9 @@
 import numpy as np
 import cv2
 import cv2.cv as cv
-from common import anorm
 from functools import partial
-import sfm, homography
 from scipy import linalg
 
-from pylab import *
-from mpl_toolkits.mplot3d import axes3d	
-
-
-#import cProfile
 
 """
 Matching algorithms for two objects
@@ -22,6 +15,11 @@ FLANN_INDEX_KDTREE = 1	# bug: flann enums are missing
 flann_params = dict(algorithm = FLANN_INDEX_KDTREE,
 					trees = 4)
 					
+
+def anorm2(a):
+    return (a*a).sum(-1)
+def anorm(a):
+    return np.sqrt( anorm2(a) )
 
 def match_bruteforce(desc1, desc2, r_threshold = 0.75):
 	res = []
