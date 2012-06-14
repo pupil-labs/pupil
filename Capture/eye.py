@@ -6,6 +6,7 @@ from ctypes import *
 import numpy as np
 
 from methods import *
+from calibrate import *
 from gl_shapes import Point, Ellipse
 
 from multiprocessing import Queue, Value
@@ -74,7 +75,10 @@ class Temp(object):
 		pass
 
 
-def eye(q, pupil_x, pupil_y):
+def eye(q, pupil_x, pupil_y, 
+		pattern_x, pattern_y, 
+		calibrate, pos_record, 
+		eye_pipe):
 	"""eye
 		- Initialize glumpy figure, image, atb controls
 		- Execute the glumpy main glut loop
@@ -96,6 +100,10 @@ def eye(q, pupil_x, pupil_y):
 	g_pool = Temp()
 	g_pool.pupil_x = pupil_x
 	g_pool.pupil_y = pupil_y
+	g_pool.pattern_x = pattern_x
+	g_pool.pattern_y = pattern_y
+	g_pool.calibrate = calibrate
+	g_pool.pos_record = pos_record
 
 	# pupil object
 	pupil = Temp()
@@ -103,6 +111,16 @@ def eye(q, pupil_x, pupil_y):
 	pupil.image_coords = (0,0)
 	pupil.screen_coords = (0,0)
 	pupil.ellipse = None
+	pupil.map_coords = (0,0)
+	pupil.coefs = None
+	pupil.pt_cloud = None
+
+	# local object
+	l_pool = Temp()
+	l_pool.calib_running = False
+	l_pool.record_running = False
+	l_pool.record_positions = []
+	l_pool.record_path = None
 
 	# initialize gl shape primitives
 	pupil_point = Point()
@@ -183,6 +201,43 @@ def eye(q, pupil_x, pupil_y):
 			pupil_point.update(pupil.screen_coords)
 			pupil_ellipse.update(pupil.screen_coords, pupil.ellipse)
 
+			pupil.map_coords = map_vector(pupil.norm_coords, pupil.coefs)
+			g_pool.pupil_x.value, g_pool.pupil_y.value = pupil.map_coords
+
+		# Initialize Calibration (setup variables and lists)
+		if g_pool.calibrate.value and not l_pool.calib_running:
+			l_pool.calib_running = True
+			pupil.pt_cloud = [] 
+			pupil.coefs = None
+
+		# While Calibrating... 
+		if l_pool.calib_running and (g_pool.pattern_x.value or g_pool.pattern_y.value) and pupil.ellipse:
+			pupil.pt_cloud.append([pupil.norm_coords[0],pupil.norm_coords[1],
+								g_pool.pattern_x.value, g_pool.pattern_y.value])
+
+		# Calculate coefs
+		if not g_pool.calibrate.value and l_pool.calib_running:			
+			l_pool.calib_running = 0
+			if pupil.pt_cloud:
+				pupil.coefs = calibrate_poly(pupil.pt_cloud)
+
+		# Setup variables and lists for recording
+		if g_pool.pos_record.value and not l_pool.record_running:
+			l_pool.record_path = eye_pipe.recv()
+			print "l_pool.record_path: ", l_pool.record_path
+			l_pool.record_positions = []
+			l_pool.record_running = True
+
+		# While recording... 
+		if l_pool.record_running:
+			l_pool.record_positions.append([pupil.map_coords[0], pupil.map_coords[1], dt])
+
+		# Save values and flip switch to off for recording
+		if not g_pool.pos_record.value and l_pool.record_running:
+			np.save(l_pool.record_path, np.asarray(l_pool.record_positions))
+			l_pool.record_running = False
+
+
 		image.update()
 		fig.redraw()
 		if bar.exit:
@@ -195,3 +250,7 @@ def eye(q, pupil_x, pupil_y):
 	fig.window.set_title("Eye")
 	fig.window.set_position(1280,0)	
 	glumpy.show() 	
+
+
+
+

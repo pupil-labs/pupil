@@ -52,12 +52,16 @@ class Bar(atb.Bar):
 		# just flip the switch
 		self.screen_shot = not self.screen_shot
 
+
 class Temp(object):
 	"""Temp class to make objects"""
 	def __init__(self):
 		pass
 
-def world(q, pupil_x, pupil_y, pipe,audio_record):
+def world(q, pupil_x, pupil_y, 
+			pattern_x, pattern_y, 
+			calibrate, pos_record, 
+			audio_pipe, eye_pipe, audio_record):
 	"""world
 		- Initialize glumpy figure, image, atb controls
 		- Execute glumpy main loop
@@ -74,7 +78,11 @@ def world(q, pupil_x, pupil_y, pipe,audio_record):
 	g_pool = Temp()
 	g_pool.pupil_x = pupil_x
 	g_pool.pupil_y = pupil_y
+	g_pool.pattern_x = pattern_x
+	g_pool.pattern_y = pattern_y
 	g_pool.audio_record = audio_record
+	g_pool.calibrate = calibrate
+	g_pool.pos_record = pos_record
 
 	# pattern object
 	pattern = Temp()
@@ -88,18 +96,14 @@ def world(q, pupil_x, pupil_y, pipe,audio_record):
 
 	# gaze object
 	gaze = Temp()
-	gaze.norm_coords = (0,0)
 	gaze.map_coords = (0,0)
 	gaze.screen_coords = (0,0)
-	gaze.coefs = None
-	gaze.pt_cloud = None
 
 	# record object
 	record = Temp()
 	record.writer = None
 	record.path_parent = os.path.dirname( os.path.abspath(sys.argv[0]))
 	record.path = None
-	record.position_list = None
 	record.counter = 0
 
 	# initialize gl shape primitives
@@ -128,12 +132,17 @@ def world(q, pupil_x, pupil_y, pipe,audio_record):
 
 	def on_idle(dt):
 		bar.update_fps(dt)
+		# update calibration state from shared variable pool
+		g_pool.calibrate.value = bar.calibrate.value
+
+		# get an image from the grabber
 		img = q.get()
 
+		# update the image to display and convert color space
 		img_arr[...] = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
 
-		gaze.norm_coords = g_pool.pupil_x.value, g_pool.pupil_y.value 
-		gaze.map_coords = map_vector(gaze.norm_coords, gaze.coefs)
+		# update gaze points from shared variable pool
+		gaze.map_coords = g_pool.pupil_x.value, g_pool.pupil_y.value
 		gaze.screen_coords = denormalize(gaze.map_coords, fig.width, fig.height)
 		gaze_point.update(gaze.screen_coords)
 
@@ -149,6 +158,12 @@ def world(q, pupil_x, pupil_y, pipe,audio_record):
 			pattern.screen_coords = denormalize(pattern.norm_coords, fig.width, fig.height)
 			pattern.map_coords = pattern.screen_coords
 			pattern_point.update(pattern.screen_coords)
+
+			# broadcast pattern.norm_coords for calibration in eye process
+			g_pool.pattern_x.value, g_pool.pattern_y.value = pattern.norm_coords
+		else:
+			# If no pattern detected send 0,0 -- check this condition in eye process
+			g_pool.pattern_x.value, g_pool.pattern_y.value = 0, 0
 
 		if bar.screen_shot and bar.pattern and pattern.board:
 			# calibrate the camera intrinsics if the board is found
@@ -171,22 +186,9 @@ def world(q, pupil_x, pupil_y, pipe,audio_record):
 
 			bar.calibration_images = False
 
-		if bar.calibrate and not bar.calib_running:
-			bar.calib_running = 1
-			gaze.pt_cloud = [] 
-			gaze.coefs = None
 
-		if bar.calibrate and bar.calib_running and pattern.board:
-			gaze.pt_cloud.append([gaze.norm_coords[0],gaze.norm_coords[1],
-								pattern.norm_coords[0], pattern.norm_coords[1] ])
-
-		if not bar.calibrate and bar.calib_running:
-			bar.calib_running = 0
-			if gaze.pt_cloud:
-				gaze.coefs = calibrate_poly(gaze.pt_cloud)
-
-
-
+		
+		# Setup recording process
 		if bar.record_video and not bar.record_running:
 			record.path = os.path.join(record.path_parent, "data%03d/" %record.counter)
 			while True: 
@@ -194,7 +196,7 @@ def world(q, pupil_x, pupil_y, pipe,audio_record):
 					os.mkdir(record.path)
 					break
 				except:
-					print "dont want to overwrite data, incrementing counter & trying to make new data folder"
+					print "We dont want to overwrite data, incrementing counter & trying to make new data folder"
 					record.counter +=1
 					record.path = os.path.join(record.path_parent, "data%03d/" %record.counter)
 
@@ -204,24 +206,27 @@ def world(q, pupil_x, pupil_y, pipe,audio_record):
 			#DIVX -- good speed good compression medium file
 			record.writer = cv2.VideoWriter(video_path,cv.CV_FOURCC(*'DIVX'),bar.fps, (img.shape[1],img.shape[0]) )
 			
-			#audio
+			# audio data to audio process
 			audio_path = os.path.join(record.path, "world.wav")
 			g_pool.audio_record.value = 1
-			pipe.send(audio_path)
+			audio_pipe.send(audio_path)
 
-			#positions
-			record.position_list = []
+			# positions data to eye process
+			positions_path = os.path.join(record.path,"pupil_positions.npy")
+			g_pool.pos_record.value = 1
+			eye_pipe.send(positions_path)
+
 			bar.record_running = 1
 
-
+		# While Recording...
 		if bar.record_video and bar.record_running:
+			# Save image frames to video writer
 			record.writer.write(img)
-			record.position_list.append([gaze.map_coords[0], gaze.map_coords[1], dt])
 
+		# Finish all recordings, clean up. 
 		if not bar.record_video and bar.record_running:
 			g_pool.audio_record.value = 0
-			positions_path = os.path.join(record.path,"pupil_positions.npy")
-			np.save(positions_path, np.asarray(record.position_list))
+			g_pool.pos_record.value = 0
 			record.writer = None
 			bar.record_running = 0
 

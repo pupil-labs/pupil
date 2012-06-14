@@ -134,11 +134,11 @@ class cam_interface(object):
 		self.aptina_reset(id) 
 
 		self.write16(id,181,1) #start lvds sync pattern
-		self.write16(id,0x05,61) # Hblank 5E is minimum 61-1023 94 is default
+		self.write16(id,0x05,300) # Hblank 5E is minimum 61-1023 94 is default
 		self.write16(id,0x06,100) # Vblank 2-3228845 45 is default
 		self.write16(id,0x70,1) # activate row-wise black level calibration
 		self.write16(id,181,0) # stop lvds sync pattern
-		# self.write16(id,13,0x310) # bit 4 = row flip 
+		self.write16(id,13,0x310) # bit 4 = row flip 
 		self.write16(id,194,192) #192 anti eclipse  enable  # 64 disable : this is for looking into the sun
 		self.aptina_reset(id)
 

@@ -70,7 +70,7 @@ def grab(q,src_id, size=(640,480)):
 			q.put(img, False)
 			drop = 50 
 		except:
-			print "Camera Dropped Frame"
+			# print "Camera Dropped Frame"
 			drop -= 1
 			if not drop:
 				cap.release()
@@ -102,7 +102,7 @@ def record_audio(pipe,record, src_id=0, rate=44100, chunk_size=1536,
 			try:
 				data = stream.read(chunk_size)
 				L = unpack('<' + ('h'*(len(data)/2)), data) # little endian, signed short
-				print max(L)
+				# print max(L)
 				L = array('h', L)
 				g_LRtn.extend(L)
 				if verbose: 
@@ -150,15 +150,31 @@ def main():
 
 	audio_rx, audio_tx = Pipe(False)
 	audio_record = Value('i',0)
+
+	eye_rx, eye_tx = Pipe(False)
+
 	# create shared globals for pupil coords
+	# and pattern coordinates from the world process
+	# and global for record and calibrate buttons
 	pupil_x = Value('d', 0.0)
 	pupil_y = Value('d', 0.0)
+	pattern_x = Value('d', 0.0) 
+	pattern_y = Value('d', 0.0) 
+	calibrate = Value('i', 0)
+	pos_record = Value('i', 0)
+
 
 	p_grab_eye = Process(target=xmos_grab, args=(eye_q,eye_id,(450,300)))
 	# p_grab_world = Process(target=grab, args=(world_q,world_id))
 
-	p_show_eye = Process(target=eye, args=(eye_q, pupil_x, pupil_y))
-	p_show_world = Process(target=world, args=(world_q, pupil_x, pupil_y, audio_tx,audio_record))
+	p_show_eye = Process(target=eye, args=(eye_q, pupil_x, pupil_y, 
+											pattern_x, pattern_y, 
+											calibrate, pos_record,
+											eye_rx))
+	p_show_world = Process(target=world, args=(world_q, pupil_x, pupil_y, 
+												pattern_x, pattern_y,
+												calibrate, pos_record,
+												audio_tx, eye_tx, audio_record))
 	
 	# Audio:
 	# src=3 for logitech, rate=16000 for logitech 
