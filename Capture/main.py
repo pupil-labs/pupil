@@ -7,6 +7,7 @@ from time import sleep
 from multiprocessing import Process, Queue, Pipe, Value
 from eye import eye
 from world import world
+from player import player
 
 from array import array
 from struct import unpack, pack
@@ -153,6 +154,8 @@ def main():
 
 	eye_rx, eye_tx = Pipe(False)
 
+	player_rx, player_tx = Pipe(True)
+
 	# create shared globals for pupil coords
 	# and pattern coordinates from the world process
 	# and global for record and calibrate buttons
@@ -174,8 +177,10 @@ def main():
 	p_show_world = Process(target=world, args=(world_q, pupil_x, pupil_y, 
 												pattern_x, pattern_y,
 												calibrate, pos_record,
-												audio_tx, eye_tx, audio_record))
-	
+												audio_tx, eye_tx, audio_record,
+												player_tx))
+	p_player = Process(target=player, args=(player_rx,))
+
 	# Audio:
 	# src=3 for logitech, rate=16000 for logitech 
 	# defaults for built in MacBook microphone
@@ -184,6 +189,7 @@ def main():
 	p_show_world.start()
 	p_grab_eye.start()
 	p_audio.start()
+	p_player.start()
 
 	p_show_eye.start()
 	# when using the logitech h264 compression camera

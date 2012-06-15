@@ -30,6 +30,9 @@ class Bar(atb.Bar):
 		self.calibration_images = False
 
 		self.calibrate = c_bool(0)
+		self.calibrate_nine = c_bool(0)
+		self.calibrate_nine_step = c_int(0)
+		self.calibrate_nine_stage = c_int(0)
 		self.calib_running = c_bool(0)
 		self.record_video = c_bool(0)
 		self.record_running = c_bool(0)
@@ -38,6 +41,9 @@ class Bar(atb.Bar):
 		self.add_var("Find Calibration Pattern", self.pattern, key="P", help="Find Calibration Pattern")
 		self.add_button("Screen Shot", self.screen_cap, key="SPACE", help="Capture A Frame")
 		self.add_var("Calibrate", self.calibrate, key="C", help="Start/Stop Calibration Process")
+		self.add_var("Nine_Pt", self.calibrate_nine, key="9", help="Start/Stop 9 Point Calibration Process")
+		self.add_var("Nine_Pt_Stage", self.calibrate_nine_stage)
+		self.add_var("Nine_Pt_Step", self.calibrate_nine_step)
 		self.add_var("Record Video", self.record_video, key="R", help="Start/Stop Recording")
 		self.add_var("Exit", self.exit)
 
@@ -61,7 +67,8 @@ class Temp(object):
 def world(q, pupil_x, pupil_y, 
 			pattern_x, pattern_y, 
 			calibrate, pos_record, 
-			audio_pipe, eye_pipe, audio_record):
+			audio_pipe, eye_pipe, audio_record,
+			player_pipe):
 	"""world
 		- Initialize glumpy figure, image, atb controls
 		- Execute glumpy main loop
@@ -93,6 +100,8 @@ def world(q, pupil_x, pupil_y,
 	pattern.obj_grid = gen_pattern_grid((4,11)) # calib grid
 	pattern.obj_points = []
 	pattern.img_points = []
+	pattern.map = (0,2,7,16,21,23,39,40,42)
+
 
 	# gaze object
 	gaze = Temp()
@@ -119,7 +128,7 @@ def world(q, pupil_x, pupil_y,
 
 
 	def draw():
-		if pattern.board:
+		if pattern.board is not None:
 			pattern_point.draw()
 		gaze_point.draw()
 
@@ -132,7 +141,31 @@ def world(q, pupil_x, pupil_y,
 
 	def on_idle(dt):
 		bar.update_fps(dt)
-		# update calibration state from shared variable pool
+
+		# Nine Point calibration state machine timing
+		if bar.calibrate_nine.value:
+			if bar.calibrate_nine_step.value >= 40:
+				bar.calibrate_nine_step.value = 0
+				bar.calibrate_nine_stage.value += 1
+
+			if bar.calibrate_nine_stage.value > 8:
+				bar.calibrate_nine_stage.value = 0 
+				bar.calibrate_nine.value = 0
+
+			if bar.calibrate_nine_step.value in range(5,40):
+				bar.calibrate.value = True
+
+			else:
+				bar.calibrate.value = False
+
+			player_pipe.send("calibrate")
+			circle_id = pattern.map[bar.calibrate_nine_stage.value]
+
+			player_pipe.send((circle_id, bar.calibrate_nine_step.value))
+			
+			bar.calibrate_nine_step.value += 1
+
+		# Broadcast local calibration state to global pool of variables
 		g_pool.calibrate.value = bar.calibrate.value
 
 		# get an image from the grabber
@@ -150,10 +183,13 @@ def world(q, pupil_x, pupil_y,
 			#pattern.board = chessboard(img)
 			pattern.board = circle_grid(img)
 
-		if pattern.board:
+		if bar.pattern and bar.calibrate_nine.value:
+			pattern.board = circle_grid(img, pattern.map[bar.calibrate_nine_stage.value])
+
+		if pattern.board is not None:
 			# numpy array wants (row,col) for an image this = (height,width)
 			# therefore: img.shape[1] = xval, img.shape[0] = yval
-			pattern.image_coords = pattern.board[0] # this is the mean of the pattern found
+			pattern.image_coords = pattern.board # this is the mean of the pattern found
 			pattern.norm_coords = normalize(pattern.image_coords, img.shape[1], img.shape[0])
 			pattern.screen_coords = denormalize(pattern.norm_coords, fig.width, fig.height)
 			pattern.map_coords = pattern.screen_coords
