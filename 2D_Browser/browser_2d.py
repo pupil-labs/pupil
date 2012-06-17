@@ -109,10 +109,13 @@ def browser(data_path, pipe_video, frame_num, pts_path, pipe):
 	# gaze object
 	gaze = Temp()
 	gaze.list = np.load(pts_path)
-	gaze.x_pos = gaze.list[:,0]
-	gaze.y_pos = gaze.list[:,1]
-	gaze.dt = gaze.list[:,2]
+	# gaze.x_pos = gaze.list[:,0]
+	# gaze.y_pos = gaze.list[:,1]
+	# gaze.dt = gaze.list[:,2]
 	gaze_point = Point(color=(255,0,0,0.3), scale=60.0)
+
+	gaze_list = list(gaze.list)
+	gaze.map = [[{'eye_x': s[0], 'eye_y': s[1], 'dt': s[2]} for s in gaze_list if s[3] == frame] for frame in range(int(gaze_list[-1][-1])+1)]
 
 	# keyframe list object
 	framelist = Temp()
@@ -143,12 +146,10 @@ def browser(data_path, pipe_video, frame_num, pts_path, pipe):
 			img = pipe_video.recv()
 			
 			bar.frame_num.value = frame_num.value
-			gaze.x_screen, gaze.y_screen = denormalize((gaze.x_pos[bar.frame_num.value], 
-														gaze.y_pos[bar.frame_num.value]), 
+			# Here we are taking only the first values of the frame for positions hence 0 index
+			gaze.x_screen, gaze.y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
+														gaze.map[bar.frame_num.value][0]['eye_y']), 
 														fig.width, fig.height)
-			x_screen_cv, y_screen_cv = denormalize((gaze.x_pos[bar.frame_num.value], 
-														gaze.y_pos[bar.frame_num.value]), 
-														fig.width, fig.height, flip_y=False)
 
 			if bar.display == 0:
 				img_arr[...] = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)	
@@ -156,19 +157,7 @@ def browser(data_path, pipe_video, frame_num, pts_path, pipe):
 			if bar.display == 1:
 				img_arr[...] = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)	
 				gaze_point.update((	gaze.x_screen, gaze.y_screen))
-			if bar.display == 2:
-				# draw foveal point
-				img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-				# img_blur = cv2.GaussianBlur(cv2.cvtColor(img, cv2.COLOR_RGB2GRAY), (0,0), 10)#np.zeros(img.shape, dtype='uint8')
-				# img_blur = np.dstack((img_blur, img_blur, img_blur))
 
-				mask_black_dot = 255*np.ones((img.shape[0], img.shape[1]), dtype='uint8') #(img_arr.shape[0], img_arr.shape[1])
-				cv2.circle(mask_black_dot, (int(x_screen_cv), int(y_screen_cv)), 30, (0,0,0), -1)
-
-				cv2.bitwise_xor(img, img, img, mask_black_dot)
-
- 				img_arr[...] = img #np.dstack((img,img,img))
-				gaze_point.update((0.0, 0.0))	
 			bar.get_single = 0
 	
 		# else:

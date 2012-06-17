@@ -165,6 +165,7 @@ def main():
 	pattern_y = Value('d', 0.0) 
 	calibrate = Value('i', 0)
 	pos_record = Value('i', 0)
+	frame_count_record = Value('i', 0)
 
 
 	p_grab_eye = Process(target=xmos_grab, args=(eye_q,eye_id,(450,300)))
@@ -172,11 +173,11 @@ def main():
 
 	p_show_eye = Process(target=eye, args=(eye_q, pupil_x, pupil_y, 
 											pattern_x, pattern_y, 
-											calibrate, pos_record,
+											calibrate, pos_record, frame_count_record,
 											eye_rx))
 	p_show_world = Process(target=world, args=(world_q, pupil_x, pupil_y, 
 												pattern_x, pattern_y,
-												calibrate, pos_record,
+												calibrate, pos_record, frame_count_record,
 												audio_tx, eye_tx, audio_record,
 												player_tx))
 	p_player = Process(target=player, args=(player_rx,))

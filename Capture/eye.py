@@ -77,7 +77,7 @@ class Temp(object):
 
 def eye(q, pupil_x, pupil_y, 
 		pattern_x, pattern_y, 
-		calibrate, pos_record, 
+		calibrate, pos_record, frame_count_record, 
 		eye_pipe):
 	"""eye
 		- Initialize glumpy figure, image, atb controls
@@ -104,6 +104,7 @@ def eye(q, pupil_x, pupil_y,
 	g_pool.pattern_y = pattern_y
 	g_pool.calibrate = calibrate
 	g_pool.pos_record = pos_record
+	g_pool.frame_count_record = frame_count_record
 
 	# pupil object
 	pupil = Temp()
@@ -170,16 +171,18 @@ def eye(q, pupil_x, pupil_y,
 		
 
 
-
 		if pupil.ellipse:
 			pupil.image_coords = pupil.ellipse['center']
 			# numpy array wants (row,col) for an image this = (height,width)
 			# therefore: img.shape[1] = xval, img.shape[0] = yval
 			pupil.norm_coords = normalize(pupil.image_coords, img.shape[1], img.shape[0])
 			pupil.screen_coords = denormalize(pupil.norm_coords, fig.width, fig.height)
+			pupil_point.update(pupil.screen_coords)
+			pupil_ellipse.update(pupil.screen_coords, pupil.ellipse)
 
-			# write to global pool
-			g_pool.pupil_x.value, g_pool.pupil_y.value = pupil.norm_coords
+			# for the world screen
+			pupil.map_coords = map_vector(pupil.norm_coords, pupil.coefs)
+			g_pool.pupil_x.value, g_pool.pupil_y.value = pupil.map_coords
 
 
 		if bar.display == 0:
@@ -194,16 +197,7 @@ def eye(q, pupil_x, pupil_y,
 			gray_img = cv2.Scharr(gray_img, -1, 1, 1)
 			img_arr[...] = np.dstack((gray_img,gray_img,gray_img))
 
-
-
-
-		if pupil.ellipse:
-			pupil_point.update(pupil.screen_coords)
-			pupil_ellipse.update(pupil.screen_coords, pupil.ellipse)
-
-			pupil.map_coords = map_vector(pupil.norm_coords, pupil.coefs)
-			g_pool.pupil_x.value, g_pool.pupil_y.value = pupil.map_coords
-
+	
 		# Initialize Calibration (setup variables and lists)
 		if g_pool.calibrate.value and not l_pool.calib_running:
 			l_pool.calib_running = True
@@ -230,7 +224,7 @@ def eye(q, pupil_x, pupil_y,
 
 		# While recording... 
 		if l_pool.record_running:
-			l_pool.record_positions.append([pupil.map_coords[0], pupil.map_coords[1], dt])
+			l_pool.record_positions.append([pupil.map_coords[0], pupil.map_coords[1], dt, g_pool.frame_count_record.value])
 
 		# Save values and flip switch to off for recording
 		if not g_pool.pos_record.value and l_pool.record_running:

@@ -84,7 +84,6 @@ def player(pipe):
 
 		elif command == 'load_video':
 			src_id = pipe.recv() # path to video
-			src_id
 			capture.cap = cv2.VideoCapture(src_id)
 			# subtract last 10 frames so player process does not get errors for none type in cv2 grab
 			capture.remaining_frames = capture.cap.get(7)-10 

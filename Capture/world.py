@@ -72,7 +72,7 @@ class Temp(object):
 
 def world(q, pupil_x, pupil_y, 
 			pattern_x, pattern_y, 
-			calibrate, pos_record, 
+			calibrate, pos_record, frame_count_record, 
 			audio_pipe, eye_pipe, audio_record,
 			player_pipe):
 	"""world
@@ -96,6 +96,7 @@ def world(q, pupil_x, pupil_y,
 	g_pool.audio_record = audio_record
 	g_pool.calibrate = calibrate
 	g_pool.pos_record = pos_record
+	g_pool.frame_count_record = frame_count_record
 
 	# pattern object
 	pattern = Temp()
@@ -268,10 +269,14 @@ def world(q, pupil_x, pupil_y,
 			eye_pipe.send(positions_path)
 
 			bar.record_running = 1
+			g_pool.frame_count_record.value = 0
 
 		# While Recording...
 		if bar.record_video and bar.record_running:
 			# Save image frames to video writer
+			# increment the frame_count_record value 
+			# Eye positions can be associated with frames of recording even if different framerates 
+			g_pool.frame_count_record.value += 1
 			record.writer.write(img)
 
 		# Finish all recordings, clean up. 
@@ -282,7 +287,7 @@ def world(q, pupil_x, pupil_y,
 			bar.record_running = 0
 
 
-		if bar.play.value and not player.playing:
+		if bar.play.value and not player.playing and player.play_list_len:
 			player_pipe.send('load_video')
 			player_pipe.send(player.play_list[player.current_video])
 			player.playing = True
