@@ -4,6 +4,7 @@ from ctypes import *
 
 import cv2
 import numpy as np
+from glob import glob
 
 from multiprocessing import Process, Pipe, Value
 from browser_2d import browser
@@ -36,10 +37,19 @@ class Browser(object):
 	def load_data(self):
 		os.chdir(self.data_path)
 		try: 
-			self.video_path = os.path.join(self.data_path, "world.avi")
+			self.video_path = [os.path.join(self.data_path, "world.avi")]
 		except:
 			print "Could not load video 'world.avi' please check the file name and data directory given."
 			self.video_path = None
+
+		try:
+			all_videos = glob(self.data_path+'/*.mov')+glob(self.data_path+'/*.avi')
+			src_video_name = [video for video in all_videos if 'world.avi' not in video]
+			self.video_path = [self.video_path[0], src_video_name[0]]
+			print "Found %s.  Using homography mapping to find correspondence between source and %s" %(self.video_path[0], self.video_path[1])
+		except:
+			self.source_video_path = None
+			print "Could not find source video.  Proceed with single video."
 
 		try:
 			self.audio_path = os.path.join(self.data_path, "world.wav")
@@ -59,20 +69,26 @@ def grab(pipe, frame_num, src):
 		- Initialize a camera feed (from file)
 		- Return Images on demand
 	"""
-	#src = os.path.join(path, src)
-	cap = cv2.VideoCapture(src)
-	# cap.set(3, size[0])
-	# cap.set(4, size[1])
-	fps = cap.get(5)
-	total_frames = cap.get(7)
+	video_index = 0
+	for video in src:
+		print video
+		src[video_index] = cv2.VideoCapture(video)
+
+		fps = src[video_index].get(5)
+		total_frames = src[video_index].get(7)
+
+		video_index += 1
+
 	pipe.send(total_frames)
 	while True:
 		start_time = time.time()
 		# cap.set(1, frame_num.value)
+		for video in src:
+			status, img = video.read()
+			if status:
+				pipe.send(img)
+				print "Frame sent through the pipe"
 
-		status, img = cap.read()
-		if status:
-			pipe.send(img)
 		time_passed = time.time()-start_time
 		time.sleep(max(0,1/fps-time_passed))
 		
@@ -86,6 +102,7 @@ def grab(pipe, frame_num, src):
 def main(data_path, video_path, audio_path, pts_path):	
 	rx_video, tx_video = Pipe(False)
 	rx_audio, tx_audio = Pipe(False)
+
 
 	frame_num = Value('i', 0)
 

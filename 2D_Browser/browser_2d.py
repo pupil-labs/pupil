@@ -15,6 +15,7 @@ from methods import denormalize
 from gl_shapes import Point
 
 from time import sleep
+from video_homography import homography_map
 
 
 class Bar(atb.Bar):
@@ -96,12 +97,15 @@ class Temp(object):
 	def __init__(self):
 		pass
 
-def browser(data_path, pipe_video, frame_num, pts_path, pipe):
+def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe):
 
 	# Get image array from queue, initialize glumpy, map img_arr to opengl texture 
 	total_frames = pipe_video.recv()
 
 	img_arr = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
+	img_arr2 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
+	# img_arr, H = homography_map(img_arr, img_arr2)
+
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 	image = glumpy.Image(img_arr)
 	image.x, image.y = 0,0
@@ -142,9 +146,13 @@ def browser(data_path, pipe_video, frame_num, pts_path, pipe):
 		bar.update_fps(dt)
 
 		if bar.play or bar.get_single:
-			pipe.send(bar.play)
-			img = pipe_video.recv()
-			
+
+			audio_pipe.send(bar.play)
+			img1 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
+			img2 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
+
+			overlay_img, H = homography_map(img1, img2)	
+
 			bar.frame_num.value = frame_num.value
 			# Here we are taking only the first values of the frame for positions hence 0 index
 			gaze.x_screen, gaze.y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
@@ -152,10 +160,10 @@ def browser(data_path, pipe_video, frame_num, pts_path, pipe):
 														fig.width, fig.height)
 
 			if bar.display == 0:
-				img_arr[...] = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)	
+				img_arr[...] = img1
 				gaze_point.update((0.0, 0.0))
 			if bar.display == 1:
-				img_arr[...] = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)	
+				img_arr[...] = overlay_img
 				gaze_point.update((	gaze.x_screen, gaze.y_screen))
 
 			bar.get_single = 0

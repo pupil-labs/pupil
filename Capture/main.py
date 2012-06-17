@@ -196,7 +196,7 @@ def main():
 	# when using the logitech h264 compression camera
 	# you can't run world camera in its own process
 	# it must reside in the main loop
-	grab(world_q, world_id, (640,480))
+	grab(world_q, world_id, (1280,720))
 
 	p_grab_eye.join()
 	# p_grab_world.join()

@@ -44,12 +44,10 @@ def draw_match_overlay(img1, img2, H):
 	h1, w1 = img1.shape[:2]
 	h2, w2 = img2.shape[:2]
 	
-	res = np.zeros((max(h1, h2), max(w1,w2)), np.uint8)
 	overlay = cv2.warpPerspective(img2, H, (w1,h1))
 
 	# populate the vis array with pixel values from both images
-	res[:h1, :w1] = img1 # rows, columns of img1 (starting from the left)
-	res = cv2.addWeighted(res[:h1, :w1], 0.5, overlay, 0.5, 0.0)
+	res = cv2.addWeighted(img1, 0.5, overlay, 0.5, 0.0)
 	#vis = cv2.cvtColor(vis, cv2.COLOR_GRAY2BGR) # convert to color image
 	return res
 
@@ -115,8 +113,8 @@ def draw_match(img1, img2, p1, p2, status = None, H = None):
 
 def main():	
 
-	fn1 = '/Volumes/HD_Two/Users/Will/Desktop/img_01.png'
-	fn2 = '/Volumes/HD_Two/Users/Will/Desktop/img_02.jpg'
+	fn1 = '/Volumes/HD_Two/Users/Will/Desktop/02.png' # world video
+	fn2 = '/Volumes/HD_Two/Users/Will/Desktop/01.png' # src video 
 
 
 	img1 = cv2.imread(fn1, 0)
@@ -125,10 +123,10 @@ def main():
 	img1c = cv2.imread(fn1, 1)
 	img2c = cv2.imread(fn2, 1)
 	
-	img1 = cv2.resize(img1,(0,0),fx=0.25,fy=0.25,interpolation=3)  
-	img2 = cv2.resize(img2,(0,0),fx=0.25,fy=0.25,interpolation=3)  
-	img1c = cv2.resize(img1c,(0,0),fx=0.25,fy=0.25,interpolation=3)  
-	img2c = cv2.resize(img2c,(0,0),fx=0.25,fy=0.25,interpolation=3)  
+	# img1 = cv2.resize(img1,(0,0),fx=0.25,fy=0.25,interpolation=3)  
+	# img2 = cv2.resize(img2,(0,0),fx=0.25,fy=0.25,interpolation=3)  
+	# img1c = cv2.resize(img1c,(0,0),fx=0.25,fy=0.25,interpolation=3)  
+	# img2c = cv2.resize(img2c,(0,0),fx=0.25,fy=0.25,interpolation=3)  
 
 
 	surf = cv2.SURF(500)
@@ -138,7 +136,7 @@ def main():
 	desc2.shape = (-1, surf.descriptorSize())
 	print 'img1 - %d features, img2 - %d features' % (len(kp1), len(kp2))
 
-	def match_and_draw(match, r_threshold):
+	def match_and_draw(match_fn, r_threshold):
 		"""
 			Match a set of descriptors using a supplied matching method:
 			Parameters:
@@ -147,7 +145,7 @@ def main():
 		"""
 		# call the matching function passing descriptor vectors
 		# m is a list of index values for matched keypoints
-		m = match(desc1, desc2, r_threshold) 
+		m = match_fn(desc1, desc2, r_threshold) 
 		matched_p1 = np.array([kp1[i].pt for i, j in m], np.float32) # get img1 keypoints from match index
 		matched_p2 = np.array([kp2[j].pt for i, j in m], np.float32) # get img2 keypoints from match index
 
@@ -164,7 +162,7 @@ def main():
 	print 'bruteforce match:\n',
 	vis_brute, r1 = match_and_draw( match_bruteforce, 1.0 ) #.75
 	print 'flann match:\n',
-	vis_flann, r2 = match_and_draw( match_flann, 1.0 ) # .6 flann tends to find more distant second
+	vis_flann, r2 = match_and_draw( match_flann, .6 ) # .6 flann tends to find more distant second
 												   # neighbours, so r_threshold is decreased
 
 	cv2.imshow('find_obj SURF', vis_brute)
