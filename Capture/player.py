@@ -4,6 +4,7 @@ import OpenGL.GLUT as glut
 import glumpy.atb as atb
 from ctypes import *
 import numpy as np
+import cv2
 
 def make_grid(dim=(11,4)):
 	x = range(dim[0])
@@ -30,25 +31,6 @@ def make_grid(dim=(11,4)):
 	grid = glumpy.graphics.VertexBuffer(vertices)
 	return grid
 
-def display_circle_grid(circle_id, step):
-	gl.glEnable(gl.GL_POINT_SMOOTH)
-	gl.glPushMatrix()
-	gl.glTranslatef(0.0,fig.height/2,0.)
-	gl.glScalef(fig.height,fig.height,0.0)
-	gl.glTranslatef((float(fig.width)/float(fig.height))/2.0-10.0/16.0, 
-					-.45,
-					0.)
-
-	gl.glPointSize((float(fig.height)/10.0)/(step+1))
-	gl.glColor4f(1.0,0.0,0.0,1.0)
-	gl.glBegin(gl.GL_POINTS)
-	gl.glVertex3f(grid.vertices['position'][circle_id][0],grid.vertices['position'][circle_id][1],0.5)
-	gl.glEnd()
-
-	gl.glPointSize(float(fig.height)/10.0)
-	grid.draw(gl.GL_POINTS, 'pnc')
-
-	gl.glPopMatrix()
 
 class Temp(object):
 	"""Temp class to make objects"""
@@ -64,6 +46,7 @@ def player(pipe):
 	"""
 	capture = Temp()
 	capture.remaining_frames = 0
+	capture.cap = None
 
 	# Get image array from queue, initialize glumpy, map img_arr to opengl texture 
 	img_arr = np.zeros((720,1280,3), dtype=np.uint8)
@@ -73,7 +56,6 @@ def player(pipe):
 	image.x, image.y = 0,0
 
 	grid = make_grid()
-
 
 	def on_draw():
 		fig.clear(1.0, 1.0, 1.0, 1.0)
@@ -102,13 +84,15 @@ def player(pipe):
 
 		elif command == 'load_video':
 			src_id = pipe.recv() # path to video
-			cap = cv2.VideoCapture(src_id)
-			capture.remaining_frames = cap.get(7)
+			src_id
+			capture.cap = cv2.VideoCapture(src_id)
+			# subtract last 10 frames so player process does not get errors for none type in cv2 grab
+			capture.remaining_frames = capture.cap.get(7)-10 
 
 		elif command == 'next_frame':
 			capture.remaining_frames -= 1	
 			if capture.remaining_frames:
-				status, img = cap.read()
+				status, img = capture.cap.read()
 				pipe.send(True)
 				img_arr[...] = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
 

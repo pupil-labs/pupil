@@ -7,6 +7,8 @@ import glumpy.atb as atb
 from ctypes import *
 import numpy as np
 
+from glob import glob
+
 import cv2
 import cv2.cv as cv
 #from cv2 import VideoWriter
@@ -36,6 +38,9 @@ class Bar(atb.Bar):
 		self.calib_running = c_bool(0)
 		self.record_video = c_bool(0)
 		self.record_running = c_bool(0)
+		self.play = c_bool(0)
+		# play and record are tied together via pointers to the objects
+		self.play = self.record_video
 
 		self.add_var("FPS", step=0.01, getter=self.get_fps)
 		self.add_var("Find Calibration Pattern", self.pattern, key="P", help="Find Calibration Pattern")
@@ -45,6 +50,7 @@ class Bar(atb.Bar):
 		self.add_var("Nine_Pt_Stage", self.calibrate_nine_stage)
 		self.add_var("Nine_Pt_Step", self.calibrate_nine_step)
 		self.add_var("Record Video", self.record_video, key="R", help="Start/Stop Recording")
+		self.add_var("Play Source Video", self.play)
 		self.add_var("Exit", self.exit)
 
 	def update_fps(self, dt):
@@ -115,6 +121,14 @@ def world(q, pupil_x, pupil_y,
 	record.path = None
 	record.counter = 0
 
+	# player object
+	player = Temp()
+	player.play_list = glob('src_video/*')
+	player.playlist = [os.path.join(record.path_parent, path) for path in player.play_list]
+	player.current_video = 0
+	player.play_list_len = len(player.play_list)
+	player.playing = False
+
 	# initialize gl shape primitives
 	pattern_point = Point(color=(0,255,0,0.5)) 
 	gaze_point = Point(color=(255,0,0,0.5))
@@ -141,6 +155,7 @@ def world(q, pupil_x, pupil_y,
 
 	def on_idle(dt):
 		bar.update_fps(dt)
+
 
 		# Nine Point calibration state machine timing
 		if bar.calibrate_nine.value:
@@ -266,6 +281,26 @@ def world(q, pupil_x, pupil_y,
 			record.writer = None
 			bar.record_running = 0
 
+
+		if bar.play.value and not player.playing:
+			player_pipe.send('load_video')
+			player_pipe.send(player.play_list[player.current_video])
+			player.playing = True
+
+		if player.playing: 
+			player_pipe.send('next_frame')
+			status = player_pipe.recv()
+
+			if status:
+				pass
+			else:
+				bar.play.value = 0
+
+		if player.playing and not bar.play.value:
+			player.playing = False
+			player.current_video += 1
+			if player.current_video >= player.play_list_len:
+				player.current_video = 0
 
 
 		image.update()
