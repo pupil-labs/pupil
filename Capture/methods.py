@@ -180,11 +180,11 @@ def circle_grid(image, circle_id=None, pattern_size=(4,11)):
 		if circle_id is None:
 			result = centers.sum(0)/centers.shape[0]
 			# mean is [[x,y]]
-			return result[0]
+			return result[0], centers
 		else:
-			return centers[circle_id][0]
+			return centers[circle_id][0], centers
 	else:
-		return None
+		return None, None
 
 
 
@@ -194,7 +194,7 @@ def calibrate_camera(img_pts, obj_pts, img_size):
 	dist_coef = np.zeros(4)
 	rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_pts, img_pts, 
 													img_size, camera_matrix, dist_coef)
-	return camera_matrix
+	return camera_matrix, dist_coefs
 
 def gen_pattern_grid(size=(4,11)):
 	pattern_grid = []
@@ -220,9 +220,12 @@ def denormalize(pos, width, height, flip_y=True):
 		y = (y*height/2)+(height/2)
 	return x,y
 
-tst = []
-for i in range(10):
-	tst.append(gen_pattern_grid())
+if __name__ == '__main__':
+	tst = []	
+	for x in range(10):
+		tst.append(gen_pattern_grid())
+	tst = np.asarray(tst)
+	print tst.shape
 
 
 

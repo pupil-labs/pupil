@@ -108,6 +108,7 @@ def world(q, pupil_x, pupil_y,
 	pattern.obj_points = []
 	pattern.img_points = []
 	pattern.map = (0,2,7,16,21,23,39,40,42)
+	pattern.board_centers = None
 
 
 	# gaze object
@@ -197,10 +198,10 @@ def world(q, pupil_x, pupil_y,
 
 		if bar.pattern:
 			#pattern.board = chessboard(img)
-			pattern.board = circle_grid(img)
+			pattern.board, pattern.board_centers = circle_grid(img)
 
 		if bar.pattern and bar.calibrate_nine.value:
-			pattern.board = circle_grid(img, pattern.map[bar.calibrate_nine_stage.value])
+			pattern.board, pattern.board_centers = circle_grid(img, pattern.map[bar.calibrate_nine_stage.value])
 
 		if pattern.board is not None:
 			# numpy array wants (row,col) for an image this = (height,width)
@@ -217,11 +218,11 @@ def world(q, pupil_x, pupil_y,
 			# If no pattern detected send 0,0 -- check this condition in eye process
 			g_pool.pattern_x.value, g_pool.pattern_y.value = 0, 0
 
-		if bar.screen_shot and bar.pattern and pattern.board:
+		if bar.screen_shot and bar.pattern and (pattern.board is not None):
 			# calibrate the camera intrinsics if the board is found
 			# append list of circle grid center points to pattern.img_points
 			# append generic list of circle grid pattern type to  pattern.obj_points
-			pattern.img_points.append(pattern.board[1])
+			pattern.img_points.append(pattern.board_centers)
 			pattern.obj_points.append(pattern.obj_grid)
 			print "Number of Images Captured:", len(pattern.img_points)
 			#if pattern.img_points.shape[0] > 10:
@@ -231,10 +232,11 @@ def world(q, pupil_x, pupil_y,
 			bar.screen_shot = False
 
 		if (not bar.pattern) and bar.calibration_images:
-			camera_matrix = calibrate_camera(	np.asarray(pattern.img_points), 
+			camera_matrix, dist_coefs = calibrate_camera(np.asarray(pattern.img_points), 
 												np.asarray(pattern.obj_points), 
-												(img.shape[1], img.shape[0])	)
+												(img.shape[1], img.shape[0]))
 			np.save("data/camera_matrix.npy", camera_matrix)
+			np.save("data/dist_coefs.npy", dist_coefs)
 
 			bar.calibration_images = False
 

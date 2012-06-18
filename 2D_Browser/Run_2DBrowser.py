@@ -63,6 +63,12 @@ class Browser(object):
 			print "Could not load pupil positions 'pupil_positions.npy' please check the file name and data directory given."
 			self.pts_path = None
 
+		try:
+			self.cam_intrinsics_path = [os.path.join(self.data_path, 'camera_matrix.npy')]
+			self.cam_intrinsics_path.append(os.path.join(self.data_path, 'dist_coefs.npy'))
+		except:
+			print "Could not find camera intrinsics .npy files."
+			self.cam_intrinsics_path = None
 
 def grab(pipe, frame_num, src):
 	"""grab:
@@ -87,7 +93,6 @@ def grab(pipe, frame_num, src):
 			status, img = video.read()
 			if status:
 				pipe.send(img)
-				print "Frame sent through the pipe"
 
 		time_passed = time.time()-start_time
 		time.sleep(max(0,1/fps-time_passed))
@@ -99,14 +104,14 @@ def grab(pipe, frame_num, src):
 			frame_num.value = 0
 
 
-def main(data_path, video_path, audio_path, pts_path):	
+def main(data_path, video_path, audio_path, pts_path, cam_intrinsics_path):	
 	rx_video, tx_video = Pipe(False)
 	rx_audio, tx_audio = Pipe(False)
 
 
 	frame_num = Value('i', 0)
 
-	p_browser = Process(target=browser, args=(data_path, rx_video,frame_num, pts_path, tx_audio))
+	p_browser = Process(target=browser, args=(data_path, rx_video,frame_num, pts_path, tx_audio, cam_intrinsics_path))
 	p_audio = Process(target=play_audio, args=(rx_audio,audio_path))
 
 	p_browser.start()
@@ -119,6 +124,6 @@ def main(data_path, video_path, audio_path, pts_path):
 if __name__ == '__main__':
 	#	data_path = "/Volumes/HD_Two/Users/Will/Documents/2012/MIT/Thesis/Thesis_Data/Capture/05052012/mpk_stata_05052012/003"
 	b = Browser()
-	main(b.data_path, b.video_path, b.audio_path, b.pts_path)
+	main(b.data_path, b.video_path, b.audio_path, b.pts_path, b.cam_intrinsics_path)
 
 

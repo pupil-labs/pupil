@@ -74,10 +74,11 @@ def homography_map(img1, img2):
 	desc2.shape = (-1, surf.descriptorSize())
 	print 'img1 - %d features, img2 - %d features' % (len(kp1), len(kp2))
 
-	H, status, p1, p2 = match(match_flann, desc1, desc2, kp1, kp2, r_threshold=1.0)
+	H, status, p1, p2 = match(match_flann, desc1, desc2, kp1, kp2, r_threshold=0.60)
 
 	img_overlay = draw_match_overlay(img1, img2, H)
 	return np.dstack((img_overlay, img_overlay, img_overlay)), H
+
 
 
 

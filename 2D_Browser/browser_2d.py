@@ -97,7 +97,7 @@ class Temp(object):
 	def __init__(self):
 		pass
 
-def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe):
+def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsics_path):
 
 	# Get image array from queue, initialize glumpy, map img_arr to opengl texture 
 	total_frames = pipe_video.recv()
@@ -126,6 +126,10 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe):
 	framelist.keyframes = []
 	framelist.otherframes = []
 
+	if cam_intrinsics_path is not None:
+		cam_intrinsics = Temp()
+		cam_intrinsics.K = np.load(cam_intrinsics_path[0])
+		cam_intrinsics.dist_coefs = np.load(cam_intrinsics_path[1])
 
 	atb.init()
 	bar = Bar("Browser", data_path, total_frames, framelist, dict(label="Controls",
@@ -150,6 +154,9 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe):
 			audio_pipe.send(bar.play)
 			img1 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
 			img2 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
+
+			if cam_intrinsics_path is not None:
+				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
 
 			overlay_img, H = homography_map(img1, img2)	
 
