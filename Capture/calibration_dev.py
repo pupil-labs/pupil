@@ -74,7 +74,7 @@ fig = plt.figure()
 ax = fig.gca(projection='3d')
 
 
-cal_pt_cloud = np.load('/Volumes/BIN/Moritz/MIT/thesis/Software/Sandbox/cal_pt_cloud.npy')
+cal_pt_cloud = np.load('data/cal_pt_cloud.npy')
 
 Z = cal_pt_cloud 
 #plot input data

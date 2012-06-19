@@ -161,6 +161,8 @@ def world(q, pupil_x, pupil_y,
 
 		# Nine Point calibration state machine timing
 		if bar.calibrate_nine.value:
+			bar.calibrate.value = True
+
 			if bar.calibrate_nine_step.value >= 40:
 				bar.calibrate_nine_step.value = 0
 				bar.calibrate_nine_stage.value += 1
@@ -170,17 +172,13 @@ def world(q, pupil_x, pupil_y,
 				bar.calibrate_nine.value = 0
 
 			if bar.calibrate_nine_step.value in range(5,40):
-				bar.calibrate.value = True
+				player_pipe.send("calibrate")
+				circle_id = pattern.map[bar.calibrate_nine_stage.value]
+				player_pipe.send((circle_id, bar.calibrate_nine_step.value))
 
-			else:
-				bar.calibrate.value = False
-
-			player_pipe.send("calibrate")
-			circle_id = pattern.map[bar.calibrate_nine_stage.value]
-
-			player_pipe.send((circle_id, bar.calibrate_nine_step.value))
-			
 			bar.calibrate_nine_step.value += 1
+		else:
+			bar.calibrate.value = False
 
 		# Broadcast local calibration state to global pool of variables
 		g_pool.calibrate.value = bar.calibrate.value
@@ -194,6 +192,7 @@ def world(q, pupil_x, pupil_y,
 		# update gaze points from shared variable pool
 		gaze.map_coords = g_pool.pupil_x.value, g_pool.pupil_y.value
 		gaze.screen_coords = denormalize(gaze.map_coords, fig.width, fig.height)
+		# print "gaze.screen_coords: ", gaze.screen_coords
 		gaze_point.update(gaze.screen_coords)
 
 		if bar.pattern:
@@ -209,7 +208,6 @@ def world(q, pupil_x, pupil_y,
 			pattern.image_coords = pattern.board # this is the mean of the pattern found
 			pattern.norm_coords = normalize(pattern.image_coords, img.shape[1], img.shape[0])
 			pattern.screen_coords = denormalize(pattern.norm_coords, fig.width, fig.height)
-			pattern.map_coords = pattern.screen_coords
 			pattern_point.update(pattern.screen_coords)
 
 			# broadcast pattern.norm_coords for calibration in eye process

@@ -126,8 +126,10 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 	framelist.keyframes = []
 	framelist.otherframes = []
 
+	cam_intrinsics = Temp()
+	cam_intrinsics.H_map = []
+
 	if cam_intrinsics_path is not None:
-		cam_intrinsics = Temp()
 		cam_intrinsics.K = np.load(cam_intrinsics_path[0])
 		cam_intrinsics.dist_coefs = np.load(cam_intrinsics_path[1])
 
@@ -155,16 +157,23 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 			img1 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
 			img2 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
 
-			if cam_intrinsics_path is not None:
-				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
-
-			overlay_img, H = homography_map(img1, img2)	
+			overlay_img = img1
 
 			bar.frame_num.value = frame_num.value
 			# Here we are taking only the first values of the frame for positions hence 0 index
 			gaze.x_screen, gaze.y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
 														gaze.map[bar.frame_num.value][0]['eye_y']), 
 														fig.width, fig.height)
+
+			if cam_intrinsics_path is not None:
+				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
+
+				overlay_img, H = homography_map(img1, img2)	
+				cam_intrinsics.H_map.append([bar.frame_num.value, H])
+
+				m1,m2 = cv2.initUndistortRectifyMap(cam_intrinsics.K, cam_intrinsics.dist_coefs, None, cam_intrinsics.K, (720,1280), 0) #(1280,720)
+
+				gaze.x_screen, gaze.y_screen = m1[gaze.x_screen, gaze.y_screen]
 
 			if bar.display == 0:
 				img_arr[...] = img1
@@ -177,7 +186,7 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 	
 		# else:
 		# 	sleep(0.5)
-
+		# np.save("data/homography_map.npy", cam_intrinsics.H_map)
 		
 
 		image.update()
