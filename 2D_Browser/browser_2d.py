@@ -26,7 +26,7 @@ class Bar(atb.Bar):
 		self.play = c_bool(0)
 		self.get_single = c_bool(0)
 		self.frame_num = c_int(0)
-		self.display = 1
+		self.display = 0
 		self.exit = c_bool(0)
 		self.framelist = framelist
 		self.data_path = data_path
@@ -116,7 +116,7 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 	# gaze.x_pos = gaze.list[:,0]
 	# gaze.y_pos = gaze.list[:,1]
 	# gaze.dt = gaze.list[:,2]
-	gaze_point = Point(color=(255,0,0,0.3), scale=60.0)
+	gaze_point = Point(color=(255,0,0,0.3), scale=40.0)
 
 	gaze_list = list(gaze.list)
 	gaze.map = [[{'eye_x': s[0], 'eye_y': s[1], 'dt': s[2]} for s in gaze_list if s[3] == frame] for frame in range(int(gaze_list[-1][-1])+1)]
@@ -165,7 +165,7 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 														gaze.map[bar.frame_num.value][0]['eye_y']), 
 														fig.width, fig.height)
 
-			if cam_intrinsics_path is not None:
+			if cam_intrinsics_path is not None and bar.display == 1:
 				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
 
 				overlay_img, H = homography_map(img1, img2)	
@@ -173,14 +173,18 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 
 				m1,m2 = cv2.initUndistortRectifyMap(cam_intrinsics.K, cam_intrinsics.dist_coefs, None, cam_intrinsics.K, (720,1280), 0) #(1280,720)
 
-				gaze.x_screen, gaze.y_screen = m1[gaze.x_screen, gaze.y_screen]
+				gaze.x_screen, gaze.y_screen = m1[gaze.y_screen, gaze.x_screen]
 
 			if bar.display == 0:
 				img_arr[...] = img1
-				gaze_point.update((0.0, 0.0))
+				gaze_point.update((	gaze.x_screen, gaze.y_screen))
 			if bar.display == 1:
 				img_arr[...] = overlay_img
-				gaze_point.update((	gaze.x_screen, gaze.y_screen))
+				# gaze_point.update((	gaze.x_screen, gaze.y_screen))
+			if bar.display == 2:
+				img_arr[...] = img1
+				gaze_point.update((	0.0, 0.0))
+
 
 			bar.get_single = 0
 	

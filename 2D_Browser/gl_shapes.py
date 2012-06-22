@@ -5,7 +5,7 @@ import numpy as np
 
 class Point():
 	"""simple opengl point class"""
-	def __init__(self, center=(0.0,0.0), color=(255,0,0,0.5), scale=10.0):
+	def __init__(self, center=(0.0,0.0), color=(255,0,0,0.5), scale=5.0):
 		p = (center[0], center[1], 1.0)
 		n = (0,1,0)
 		c = color
