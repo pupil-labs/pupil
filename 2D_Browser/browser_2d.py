@@ -11,7 +11,7 @@ import cv2
 
 # from gl_shapes import Point
 from multiprocessing import Pipe, Value
-from methods import denormalize
+from methods import denormalize, denormalize_array
 from gl_shapes import Point
 
 from time import sleep
@@ -120,6 +120,9 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 
 	gaze_list = list(gaze.list)
 	gaze.map = [[{'eye_x': s[0], 'eye_y': s[1], 'dt': s[2]} for s in gaze_list if s[3] == frame] for frame in range(int(gaze_list[-1][-1])+1)]
+	gaze.pts = np.array([[i[0]['eye_x'], i[0]['eye_y']] for i in gaze.map if len(i) > 0], dtype=np.float32)
+	gaze.pts_screen = denormalize_array(gaze.pts, img_arr.shape[1], img_arr.shape[0])
+
 
 	# keyframe list object
 	framelist = Temp()
@@ -165,22 +168,34 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 														gaze.map[bar.frame_num.value][0]['eye_y']), 
 														fig.width, fig.height)
 
+
 			if cam_intrinsics_path is not None and bar.display == 1:
 				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
 
-				overlay_img, H = homography_map(img1, img2)	
+				overlay_img, H = homography_map(img2, img1) # flipped img1 & img2 -- now have correct homography for the points
 				cam_intrinsics.H_map.append([bar.frame_num.value, H])
 
-				m1,m2 = cv2.initUndistortRectifyMap(cam_intrinsics.K, cam_intrinsics.dist_coefs, None, cam_intrinsics.K, (720,1280), 0) #(1280,720)
+				# m1,m2 = cv2.initUndistortRectifyMap(cam_intrinsics.K, cam_intrinsics.dist_coefs, None, cam_intrinsics.K, (720,1280), 0) #(1280,720)
 
-				gaze.x_screen, gaze.y_screen = m1[gaze.y_screen, gaze.x_screen]
+				# gaze.y_screen, gaze.x_screen = m1[int(gaze.y_screen), int(gaze.x_screen)]
+
+				# convert screen coordinate points into homographic coordinates
+				print "H: ", H
+				gaze.pt_homog = np.array([gaze.x_screen, gaze.y_screen, 1])
+				# gaze.pts_homog = np.hstack((gaze.pts_screen,np.ones((gaze.pts_screen.shape[0],1))))
+				gaze.pt_homog = np.dot(H,gaze.pt_homog.T)
+				gaze.pt_homog /= gaze.pt_homog[-1]
+				print gaze.pt_homog
+				gaze.x_screen = gaze.pt_homog[0]
+				gaze.y_screen = fig.height-gaze.pt_homog[1]
+				print gaze.y_screen
 
 			if bar.display == 0:
 				img_arr[...] = img1
 				gaze_point.update((	gaze.x_screen, gaze.y_screen))
 			if bar.display == 1:
 				img_arr[...] = overlay_img
-				# gaze_point.update((	gaze.x_screen, gaze.y_screen))
+				gaze_point.update((	gaze.x_screen, gaze.y_screen))
 			if bar.display == 2:
 				img_arr[...] = img1
 				gaze_point.update((	0.0, 0.0))

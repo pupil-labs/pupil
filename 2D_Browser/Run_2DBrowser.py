@@ -115,7 +115,7 @@ def main(data_path, video_path, audio_path, pts_path, cam_intrinsics_path):
 	p_audio = Process(target=play_audio, args=(rx_audio,audio_path))
 
 	p_browser.start()
-	p_audio.start()
+	# p_audio.start()
 	
 	grab(tx_video, frame_num, video_path)
 

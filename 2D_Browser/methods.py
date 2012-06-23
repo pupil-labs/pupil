@@ -46,6 +46,14 @@ def denormalize(pos, width, height, flip_y=True):
 	return x,y
 
 
+def denormalize_array(arr_pts, width, height, flip_y=True):
+	arr_pts[:,0] = (arr_pts[:,0]*width/2)+(width/2)
+	if flip_y:
+		arr_pts[:,1] = (-arr_pts[:,1]*height/2)+(height/2)
+	else:
+		arr_pts[:,1] = (arr_pts[:,1]*height/2)+(height/2)
+	return arr_pts
+
 
 
 
