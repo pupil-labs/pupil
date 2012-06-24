@@ -167,40 +167,60 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 														gaze.map[bar.frame_num.value][0]['eye_y']), 
 														fig.width, fig.height)
 
-
+			# show rectified image without homography mapping for debugging
 			if cam_intrinsics_path is not None and bar.display == 1:
 				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
 
-				overlay_img, H = homography_map(img2, img1) # flipped img1 & img2 -- now have correct homography for the points
-				cam_intrinsics.H_map.append([bar.frame_num.value, H])
-
 				# Undistort the gaze point based on the distortion coefs (Is K necessary?) 
-				x_tmp, y_tmp = undistort_point(normalize((gaze.x_screen, gaze.y_screen), fig.width, fig.height), 
-											cam_intrinsics.K, cam_intrinsics.dist_coefs)
-
-				print "x_tmp, y_tmp denorm: %s,%s" %(denormalize((x_tmp, y_tmp), fig.width, fig.height))
+				x, y = undistort_point((gaze.map[bar.frame_num.value][0]['eye_x'], 
+												gaze.map[bar.frame_num.value][0]['eye_y']), 
+												cam_intrinsics.K, cam_intrinsics.dist_coefs)
 				
-				x_tmp, y_tmp = denormalize((x_tmp, y_tmp), fig.width, fig.height)
-				# convert screen coordinate points into homographic coordinates
-				# gaze.pt_homog = np.array([gaze.x_screen, gaze.y_screen, 1])
-				gaze.pt_homog = np.array([gaze.x_screen, gaze.y_screen, 1])
+				# turn normalized x,y back into screen coordinates
+				x_screen, y_screen = denormalize((x, y), fig.width, fig.height)
 
-				gaze.pt_homog = np.dot(H,gaze.pt_homog.T)
+				# update gaze.x_screen, gaze.y_screen
+				gaze.x_screen = x_screen
+				gaze.y_screen = y_screen
+
+
+			# show homography and rectified image with overlay
+			if cam_intrinsics_path is not None and bar.display == 2:
+				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
+
+				overlay_img, H = homography_map(img2, img1) # flipped img1 & img2 -- now have correct homography for the points
+				# cam_intrinsics.H_map.append([bar.frame_num.value, H])
+
+				# convert screen coordinate points into homographic coordinates
+				x, y = undistort_point((gaze.map[bar.frame_num.value][0]['eye_x'], 
+												gaze.map[bar.frame_num.value][0]['eye_y']), 
+												cam_intrinsics.K, cam_intrinsics.dist_coefs)
+				
+				# turn normalized x,y back into screen coordinates
+				x_screen, y_screen = denormalize((x, y), fig.width, fig.height)
+
+
+				gaze.pt_homog = np.array([	x_screen, 
+											y_screen, 
+											1])
+
+				gaze.pt_homog = np.dot(H, gaze.pt_homog)
 				gaze.pt_homog /= gaze.pt_homog[-1] # normalize the gaze.pts
+
+				print "homog pts: %s,%s" %(gaze.pt_homog[0], gaze.pt_homog[1])
 				
 				gaze.x_screen = gaze.pt_homog[0]
-				gaze.y_screen = fig.height-gaze.pt_homog[1]
-
+				gaze.y_screen = gaze.pt_homog[1]
 				
 			if bar.display == 0:
 				img_arr[...] = img1
 				gaze_point.update((	gaze.x_screen, gaze.y_screen))
 			if bar.display == 1:
-				img_arr[...] = overlay_img
+				img_arr[...] = img1
 				gaze_point.update((	gaze.x_screen, gaze.y_screen))
 			if bar.display == 2:
-				img_arr[...] = img1
-				gaze_point.update((	0.0, 0.0))
+				img_arr[...] = overlay_img
+				gaze_point.update((	gaze.x_screen, gaze.y_screen))
 
 
 			bar.get_single = 0

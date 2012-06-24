@@ -85,9 +85,9 @@ def undistort_point(pt, K, dist_coeffs):
 	x, y = pt
 	k1,k2,k3 = dist_coeffs[0],dist_coeffs[1],dist_coeffs[-1]
 	p1, p2 = dist_coeffs[2], dist_coeffs[3]
-	r = np.sqrt(x**2+y**2)
-	x_undistort = x*(1+k1*r**2 + k2*r**4+ k3*r**6) + 2*p1*x*y + p2*(r**2+ 2*x**2)
-	y_undistort = x*(1+k1*r**2 + k2*r**4+ k3*r**6) + 2*p2*y*x + p1*(r**2+ 2*y**2)
+	r = np.sqrt(x**2 + y**2)
+	x_undistort = (x * (1+ (k1*r**2) + (k2*r**4) + (k3*r**6))) + 2*p1*x*y + p2*(r**2 + 2*x**2)
+	y_undistort = (y * (1+ (k1*r**2) + (k2*r**4) + (k3*r**6))) + 2*p2*y*x + p1*(r**2 + 2*y**2)
 
 	return x_undistort[0], y_undistort[0]
 
