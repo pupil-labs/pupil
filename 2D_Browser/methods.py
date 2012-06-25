@@ -36,8 +36,7 @@ def normalize(pos, width, height):
 	return x,y
 
 def denormalize(pos, width, height, flip_y=True):
-	x = pos[0]
-	y = pos[1]
+	x, y = pos
 	x = (x*width/2)+(width/2)
 	if flip_y:
 		y = (-y*height/2)+(height/2)
@@ -45,16 +44,12 @@ def denormalize(pos, width, height, flip_y=True):
 		y = (y*height/2)+(height/2)
 	return x,y
 
-
-def denormalize_array(arr_pts, width, height, flip_y=True):
-	arr_pts[:,0] = (arr_pts[:,0]*width/2)+(width/2)
-	if flip_y:
-		arr_pts[:,1] = (-arr_pts[:,1]*height/2)+(height/2)
-	else:
-		arr_pts[:,1] = (arr_pts[:,1]*height/2)+(height/2)
-	return arr_pts
-
-
+def flip_horizontal(pos, height):
+	x, y = pos
+	y -= height/2
+	y *= -1
+	y += height/2
+	return x,y
 
 
 

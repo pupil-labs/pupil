@@ -11,7 +11,7 @@ import cv2
 
 # from gl_shapes import Point
 from multiprocessing import Pipe, Value
-from methods import denormalize, normalize
+from methods import denormalize, normalize, flip_horizontal
 from gl_shapes import Point
 
 from time import sleep
@@ -167,19 +167,34 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 														gaze.map[bar.frame_num.value][0]['eye_y']), 
 														fig.width, fig.height)
 
+			l_x_screen, l_y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
+														gaze.map[bar.frame_num.value][0]['eye_y']), 
+														fig.width, fig.height, flip_y=False)
+
+			overlay_img[int(l_y_screen), int(l_x_screen)] = [255,255,255]
+			overlay_img[int(l_y_screen)+1, int(l_x_screen)+1] = [255,255,255]
+			overlay_img[int(l_y_screen), int(l_x_screen)+1] = [255,255,255]
+			overlay_img[int(l_y_screen)+1, int(l_x_screen)] = [255,255,255]
+
+
 			# show rectified image without homography mapping for debugging
 			if cam_intrinsics_path is not None and bar.display == 1:
 				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
 
+				l_x_screen, l_y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
+														gaze.map[bar.frame_num.value][0]['eye_y']), 
+														fig.width, fig.height, flip_y=False)
+
 				# Undistort the gaze point based on the distortion coefs (Is K necessary?) 
-				x, y = undistort_point((gaze.map[bar.frame_num.value][0]['eye_x'], 
-												gaze.map[bar.frame_num.value][0]['eye_y']), 
-												cam_intrinsics.K, cam_intrinsics.dist_coefs)
+				x_screen, y_screen = undistort_point((l_x_screen, l_y_screen), 
+									cam_intrinsics.K, cam_intrinsics.dist_coefs)
 				
 				# turn normalized x,y back into screen coordinates
-				x_screen, y_screen = denormalize((x, y), fig.width, fig.height)
+				# x_screen, y_screen = denormalize((x, y), fig.width, fig.height)
+
 
 				# update gaze.x_screen, gaze.y_screen
+				x_screen,y_screen = flip_horizontal((x_screen,y_screen), fig.height)
 				gaze.x_screen = x_screen
 				gaze.y_screen = y_screen
 
@@ -191,13 +206,13 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 				overlay_img, H = homography_map(img2, img1) # flipped img1 & img2 -- now have correct homography for the points
 				# cam_intrinsics.H_map.append([bar.frame_num.value, H])
 
-				# convert screen coordinate points into homographic coordinates
-				x, y = undistort_point((gaze.map[bar.frame_num.value][0]['eye_x'], 
-												gaze.map[bar.frame_num.value][0]['eye_y']), 
-												cam_intrinsics.K, cam_intrinsics.dist_coefs)
-				
-				# turn normalized x,y back into screen coordinates
-				x_screen, y_screen = denormalize((x, y), fig.width, fig.height)
+				l_x_screen, l_y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
+														gaze.map[bar.frame_num.value][0]['eye_y']), 
+														fig.width, fig.height, flip_y=False)
+
+				# Undistort the gaze point based on the distortion coefs (Is K necessary?) 
+				x_screen, y_screen = undistort_point((l_x_screen, l_y_screen), 
+									cam_intrinsics.K, cam_intrinsics.dist_coefs)
 
 
 				gaze.pt_homog = np.array([	x_screen, 
@@ -209,8 +224,10 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 
 				print "homog pts: %s,%s" %(gaze.pt_homog[0], gaze.pt_homog[1])
 				
-				gaze.x_screen = gaze.pt_homog[0]
-				gaze.y_screen = gaze.pt_homog[1]
+				# x coordinate is correct it seems
+				# the y coordinate seems to be correct, but flipped
+				gaze.x_screen, gaze.y_screen = flip_horizontal((gaze.pt_homog[0], gaze.pt_homog[1]), fig.height)
+
 				
 			if bar.display == 0:
 				img_arr[...] = img1
