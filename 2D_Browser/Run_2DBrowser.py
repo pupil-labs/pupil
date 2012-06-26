@@ -70,59 +70,48 @@ class Browser(object):
 			print "Could not find camera intrinsics .npy files."
 			self.cam_intrinsics_path = None
 
-def grab(pipe, frame_num, src):
+
+
+def grab(pipe, src):
 	"""grab:
 		- Initialize a camera feed (from file)
 		- Return Images on demand
 	"""
-	video_index = 0
-	for video in src:
-		print video
-		src[video_index] = cv2.VideoCapture(video)
 
-		fps = src[video_index].get(5)
-		total_frames = src[video_index].get(7)
-
-		video_index += 1
-		print "total_frames:: ", total_frames
-
-	pipe.send(total_frames)
+	captures = [cv2.VideoCapture(path) for path in src]
+	total_frames = min([c.get(7) for c in captures])
+	fps = min([c.get(5) for c in captures])
+	current_frame= 0
 	while True:
-		start_time = time.time()
-		# cap.set(1, frame_num.value)
-		for video in src:
-			status, img = video.read()
-			# print "frame number: ", video.get(1)
-			if status:
-				pipe.send(img)
+			start_time = time.time()
+			pipe.send(current_frame)
+			
+			for c in captures:
+				status, img = c.read()
+				if status:
+					pipe.send(img)
+				else:
+					print "video done"
+								
+			current_frame+=1
+			
+			time_passed = time.time()-start_time
+			time.sleep(max(0,1/fps-time_passed))
+			
+	"do exit stuff here"
 
-		time_passed = time.time()-start_time
-		time.sleep(max(0,1/fps-time_passed))
-		
-		if frame_num.value < total_frames-10:
-			frame_num.value += 1
-			# print "next frame: ", frame_num.value
-			# print "total_frames: ", total_frames
-		else:
-			# loop back to the beginning 
-			print "I reached the end of the video"
-			# frame_num.value = 0
-			return
 
 def main(data_path, video_path, audio_path, pts_path, cam_intrinsics_path):	
 	rx_video, tx_video = Pipe(False)
 	rx_audio, tx_audio = Pipe(False)
 
-
-	frame_num = Value('i', 0)
-
-	p_browser = Process(target=browser, args=(data_path, rx_video,frame_num, pts_path, tx_audio, cam_intrinsics_path))
+	p_browser = Process(target=browser, args=(data_path, rx_video, pts_path, tx_audio, cam_intrinsics_path))
 	p_audio = Process(target=play_audio, args=(rx_audio,audio_path))
 
 	p_browser.start()
 	# p_audio.start()
 	
-	grab(tx_video, frame_num, video_path)
+	grab(tx_video, video_path)
 
 	p_browser.join()
 

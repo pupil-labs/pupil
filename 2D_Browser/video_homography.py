@@ -79,21 +79,36 @@ def homography_map(img1, img2):
 	img_overlay = draw_match_overlay(img1, img2, H)
 	return np.dstack((img_overlay, img_overlay, img_overlay)), H
 
-def undistort_point_dev(pt, K, dist_coeffs):
+def undistort_point(pt, K, dist_coeffs):
 	# see link for reference on the equation
 	# http://opencv.willowgarage.com/documentation/camera_calibration_and_3d_reconstruction.html
-	x, y = pt
-	k1,k2,k3 = dist_coeffs[0],dist_coeffs[1],dist_coeffs[-1]
-	p1, p2 = dist_coeffs[2], dist_coeffs[3]
+	u, v = pt
+	k1,k2,p1,p2, k3 = dist_coeffs
+
+
+	u0 = K[0,2] # cx
+	v0 = K[1,2] # cy
+	fx = K[0,0]
+	fy = K[1,1]
+
+	_fx = 1.0/fx
+	_fy = 1.0/fy
+	y = (v - v0)*_fy
+	x = (u - u0)*_fx
+
+
 	r = np.sqrt(x**2 + y**2)
-	x_undistort = (x * (1+ (k1*r**2) + (k2*r**4) + (k3*r**6))) + 2*p1*x*y + p2*(r**2 + 2*x**2)
-	y_undistort = (y * (1+ (k1*r**2) + (k2*r**4) + (k3*r**6))) + 2*p2*y*x + p1*(r**2 + 2*y**2)
+	u_undistort = (x * (1+ (k1*r**2) + (k2*r**4) + (k3*r**6))) + 2*p1*x*y + p2*(r**2 + 2*x**2)
+	v_undistort = (y * (1+ (k1*r**2) + (k2*r**4) + (k3*r**6))) + 2*p2*y*x + p1*(r**2 + 2*y**2)
+
+	x_undistort = fx*u_undistort+ u0
+	y_undistort = fy*v_undistort+ v0
 
 	return x_undistort[0], y_undistort[0]
 
 
 
-def undistort_point(pt, K, dist_coeffs):
+def undistort_point_dev(pt, K, dist_coeffs):
 	# pt is in pixels
 	# returns undistorted point in pixel coordinates
 
@@ -116,6 +131,8 @@ def undistort_point(pt, K, dist_coeffs):
 
 	y = (v - v0)*_fy
 	y2 = y*y
+	
+
 	ky = 1 + (k1 + k2*y2)*y2
 	k2y = 2*k2*y2
 	_2p1y = 2*p1*y

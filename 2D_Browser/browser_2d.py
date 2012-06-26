@@ -97,7 +97,7 @@ class Temp(object):
 	def __init__(self):
 		pass
 
-def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsics_path):
+def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path):
 
 	# Get image array from queue, initialize glumpy, map img_arr to opengl texture 
 	total_frames = pipe_video.recv()
@@ -156,12 +156,12 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 		if bar.play or bar.get_single:
 
 			# audio_pipe.send(bar.play)
+			bar.frame_num.value = pipe_video.recv()
 			img1 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
 			img2 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
 
 			overlay_img = img1
 
-			bar.frame_num.value = frame_num.value
 			# Here we are taking only the first values of the frame for positions hence 0 index
 			gaze.x_screen, gaze.y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
 														gaze.map[bar.frame_num.value][0]['eye_y']), 
@@ -172,9 +172,9 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 														fig.width, fig.height, flip_y=False)
 
 			overlay_img[int(l_y_screen), int(l_x_screen)] = [255,255,255]
-			overlay_img[int(l_y_screen)+1, int(l_x_screen)+1] = [255,255,255]
-			overlay_img[int(l_y_screen), int(l_x_screen)+1] = [255,255,255]
-			overlay_img[int(l_y_screen)+1, int(l_x_screen)] = [255,255,255]
+			# overlay_img[int(l_y_screen)+1, int(l_x_screen)+1] = [255,255,255]
+			# overlay_img[int(l_y_screen), int(l_x_screen)+1] = [255,255,255]
+			# overlay_img[int(l_y_screen)+1, int(l_x_screen)] = [255,255,255]
 
 
 			# show rectified image without homography mapping for debugging
