@@ -165,8 +165,8 @@ def eye(q, pupil_x, pupil_y,
 		spec_img = erase_specular(gray_img, bar.spec_lower, bar.spec_upper)
 		# spec_img = equalize(spec_img)		
 
-		# binary_img = adaptive_threshold(spec_img, bar.bin_lower, bar.bin_upper)
-		binary_img = extract_darkspot(spec_img, bar.bin_lower, bar.bin_upper)
+		binary_img = adaptive_threshold(spec_img, bar.bin_lower, bar.bin_upper)
+		# binary_img = extract_darkspot(spec_img, bar.bin_lower, bar.bin_upper)
 		pupil.ellipse = fit_ellipse(binary_img)
 		
 
