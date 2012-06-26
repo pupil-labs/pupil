@@ -307,13 +307,13 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, ru
 
 
 			if bar.record_video and not bar.record_running:
-				print bar.data_path
 				record.path = os.path.join(bar.data_path, "out.avi")
 				record.writer = cv2.VideoWriter(record.path,cv2.cv.CV_FOURCC(*'DIVX'),record.fps, (img2.shape[1],img2.shape[0]) )
-			
+				bar.record_running.value = 1
+
 			if bar.record_video and bar.record_running:
 				# Save image frames to video writer
-				record.writer.write(img2)
+				record.writer.write(cv2.cvtColor(img2, cv2.COLOR_BGR2RGB))
 
 			# Finish all recordings, clean up. 
 			if not bar.record_video and bar.record_running:
