@@ -155,7 +155,7 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 
 		if bar.play or bar.get_single:
 
-			audio_pipe.send(bar.play)
+			# audio_pipe.send(bar.play)
 			img1 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
 			img2 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
 
@@ -228,6 +228,7 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 				# the y coordinate seems to be correct, but flipped
 				gaze.x_screen, gaze.y_screen = flip_horizontal((gaze.pt_homog[0], gaze.pt_homog[1]), fig.height)
 
+
 			if cam_intrinsics_path is not None and bar.display == 3:
 				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
 
@@ -257,7 +258,6 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 				# the y coordinate seems to be correct, but flipped
 				gaze.x_screen, gaze.y_screen = flip_horizontal((gaze.pt_homog[0], gaze.pt_homog[1]), fig.height)
 
-				
 			if bar.display == 0:
 				img_arr[...] = img1
 				gaze_point.update((	gaze.x_screen, gaze.y_screen))
