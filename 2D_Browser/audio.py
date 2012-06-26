@@ -50,7 +50,7 @@ def add_silence(L, seconds):
 	LRtn.extend([0 for i in xrange(int(seconds*rate))])
 	return LRtn
 
-def play_audio(pipe, src, chunk=1024, verbose=False):
+def play_audio(pipe, src, running, chunk=1024, verbose=False):
 	"""play_audio:
 		- Open up a .wav file from given src. 
 		- Initialize stream
@@ -69,7 +69,7 @@ def play_audio(pipe, src, chunk=1024, verbose=False):
 	# read in all data to a variable
 	data = wf.readframes(chunk)
 	# print "chunk size:", chunk
-	while data != '':
+	while data != '' and running.value:
 		sync = pipe.recv()
 		stream.write(data)
 		data = wf.readframes(chunk)

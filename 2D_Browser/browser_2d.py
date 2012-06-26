@@ -31,6 +31,8 @@ class Bar(atb.Bar):
 		self.framelist = framelist
 		self.data_path = data_path
 
+		self.record_video = c_bool(0)
+		self.record_running = c_bool(0)
 
 		self.add_var("Play", self.play, key="SPACE", help="Play/Pause") #key="SPACE",
 		self.add_var("FPS", step=0.01, getter=self.get_fps)
@@ -42,12 +44,14 @@ class Bar(atb.Bar):
 					max=3, min=0)
 		self.add_button("Step", self.step_forward, key="s", help="Step forward one frame")
 		self.add_button("Save Keyframe", self.add_keyframe, key="RETURN", help="Save keyframe to list")
+		self.add_var("Record Video", self.record_video, key="R", help="Start/Stop Recording")
 
 		self.add_var("Exit", self.exit)
 
 	def update_fps(self, dt):
-		temp_fps = 1/dt
-		self.fps += 0.1*(temp_fps-self.fps)
+		if dt > 0:
+			temp_fps = 1/dt
+			self.fps += 0.1*(temp_fps-self.fps)
 
 	def get_fps(self):
 		return self.fps
@@ -97,7 +101,14 @@ class Temp(object):
 	def __init__(self):
 		pass
 
-def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path):
+def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, running):
+
+	record = Temp()
+	record.path = None
+	record.writer = None
+
+	# source video fps
+	record.fps = pipe_video.recv()
 
 	# Get image array from queue, initialize glumpy, map img_arr to opengl texture 
 	total_frames = pipe_video.recv()
@@ -131,6 +142,10 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path):
 	cam_intrinsics = Temp()
 	cam_intrinsics.H_map = []
 
+	g_pool = Temp()
+	g_pool.running = running
+
+
 	if cam_intrinsics_path is not None:
 		cam_intrinsics.K = np.load(cam_intrinsics_path[0])
 		cam_intrinsics.dist_coefs = np.load(cam_intrinsics_path[1])
@@ -150,13 +165,30 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path):
 					width=fig.width, height=fig.height)
 		draw()
 
+	def on_close():
+		g_pool.running.value = 0
+		# while pipe_video.poll(0.3):
+		while True:
+			try:
+				pipe_video.recv()
+			except:
+				print "exception, nothing to recv."
+				break
+			# dump = pipe_video.recv()
+		print "Close event !"
+
 	def on_idle(dt):
 		bar.update_fps(dt)
 
 		if bar.play or bar.get_single:
 
-			# audio_pipe.send(bar.play)
+			audio_pipe.send(bar.play)
+
 			bar.frame_num.value = pipe_video.recv()
+
+			if bar.frame_num.value == 0:
+				bar.play.value = 0
+
 			img1 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
 			img2 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
 
@@ -222,7 +254,7 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path):
 				gaze.pt_homog = np.dot(H, gaze.pt_homog)
 				gaze.pt_homog /= gaze.pt_homog[-1] # normalize the gaze.pts
 
-				print "homog pts: %s,%s" %(gaze.pt_homog[0], gaze.pt_homog[1])
+				# print "homog pts: %s,%s" %(gaze.pt_homog[0], gaze.pt_homog[1])
 				
 				# x coordinate is correct it seems
 				# the y coordinate seems to be correct, but flipped
@@ -251,12 +283,13 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path):
 				gaze.pt_homog = np.dot(H, gaze.pt_homog)
 				gaze.pt_homog /= gaze.pt_homog[-1] # normalize the gaze.pts
 
-				print "homog pts: %s,%s" %(gaze.pt_homog[0], gaze.pt_homog[1])
-				cv2.circle(img2, (int(gaze.pt_homog[0]), int(gaze.pt_homog[1])), 10, (0,255,0,100), 3) 
+				# print "homog pts: %s,%s" %(gaze.pt_homog[0], gaze.pt_homog[1])
+				cv2.circle(img2, (int(gaze.pt_homog[0]), int(gaze.pt_homog[1])), 10, (0,255,0,100), 1) 
 
 				# x coordinate is correct it seems
 				# the y coordinate seems to be correct, but flipped
 				gaze.x_screen, gaze.y_screen = flip_horizontal((gaze.pt_homog[0], gaze.pt_homog[1]), fig.height)
+
 
 			if bar.display == 0:
 				img_arr[...] = img1
@@ -271,6 +304,21 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path):
 				img_arr[...] = img2
 				gaze_point.update((	gaze.x_screen, gaze.y_screen))
 
+
+
+			if bar.record_video and not bar.record_running:
+				print bar.data_path
+				record.path = os.path.join(bar.data_path, "out.avi")
+				record.writer = cv2.VideoWriter(record.path,cv2.cv.CV_FOURCC(*'DIVX'),record.fps, (img2.shape[1],img2.shape[0]) )
+			
+			if bar.record_video and bar.record_running:
+				# Save image frames to video writer
+				record.writer.write(img2)
+
+			# Finish all recordings, clean up. 
+			if not bar.record_video and bar.record_running:
+				record.writer = None
+				bar.record_running = 0
 
 			bar.get_single = 0
 	
@@ -289,6 +337,7 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path):
 	fig.window.push_handlers(on_idle)
 	fig.window.push_handlers(atb.glumpy.Handlers(fig.window))
 	fig.window.push_handlers(on_draw)	
+	fig.window.push_handlers(on_close)	
 	fig.window.set_title("Browser")
 	fig.window.set_position(0,0)	
 	glumpy.show() 	
