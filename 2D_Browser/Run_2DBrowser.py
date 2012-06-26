@@ -84,6 +84,7 @@ def grab(pipe, frame_num, src):
 		total_frames = src[video_index].get(7)
 
 		video_index += 1
+		print "total_frames:: ", total_frames
 
 	pipe.send(total_frames)
 	while True:
@@ -91,17 +92,22 @@ def grab(pipe, frame_num, src):
 		# cap.set(1, frame_num.value)
 		for video in src:
 			status, img = video.read()
+			print "frame number: ", video.get(1)
 			if status:
 				pipe.send(img)
 
 		time_passed = time.time()-start_time
 		time.sleep(max(0,1/fps-time_passed))
 		
-		if frame_num.value < total_frames:
+		if frame_num.value < total_frames-10:
 			frame_num.value += 1
+			print "next frame: ", frame_num.value
+			print "total_frames: ", total_frames
 		else:
 			# loop back to the beginning 
+			print "I reached the end of the video"
 			frame_num.value = 0
+			video.set(1, 0)
 
 
 def main(data_path, video_path, audio_path, pts_path, cam_intrinsics_path):	

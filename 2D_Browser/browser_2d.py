@@ -39,7 +39,7 @@ class Bar(atb.Bar):
 		# 			min=0, max=10)
 		self.add_var("Frame Number", self.frame_num, min=0, max=total_frames-1)
 		self.add_var("Display", step=1, getter=self.get_display, setter=self.set_display,
-					max=2, min=0)
+					max=3, min=0)
 		self.add_button("Step", self.step_forward, key="s", help="Step forward one frame")
 		self.add_button("Save Keyframe", self.add_keyframe, key="RETURN", help="Save keyframe to list")
 
@@ -228,6 +228,35 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 				# the y coordinate seems to be correct, but flipped
 				gaze.x_screen, gaze.y_screen = flip_horizontal((gaze.pt_homog[0], gaze.pt_homog[1]), fig.height)
 
+			if cam_intrinsics_path is not None and bar.display == 3:
+				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
+
+				overlay_img, H = homography_map(img2, img1) # flipped img1 & img2 -- now have correct homography for the points
+				# cam_intrinsics.H_map.append([bar.frame_num.value, H])
+				
+				l_x_screen, l_y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
+														gaze.map[bar.frame_num.value][0]['eye_y']), 
+														fig.width, fig.height, flip_y=False)
+
+				# Undistort the gaze point based on the distortion coefs (Is K necessary?) 
+				x_screen, y_screen = undistort_point((l_x_screen, l_y_screen), 
+									cam_intrinsics.K, cam_intrinsics.dist_coefs)
+
+
+				gaze.pt_homog = np.array([	x_screen, 
+											y_screen, 
+											1])
+
+				gaze.pt_homog = np.dot(H, gaze.pt_homog)
+				gaze.pt_homog /= gaze.pt_homog[-1] # normalize the gaze.pts
+
+				print "homog pts: %s,%s" %(gaze.pt_homog[0], gaze.pt_homog[1])
+				cv2.circle(img2, (int(gaze.pt_homog[0]), int(gaze.pt_homog[1])), 10, (0,255,0,100), 3) 
+
+				# x coordinate is correct it seems
+				# the y coordinate seems to be correct, but flipped
+				gaze.x_screen, gaze.y_screen = flip_horizontal((gaze.pt_homog[0], gaze.pt_homog[1]), fig.height)
+
 				
 			if bar.display == 0:
 				img_arr[...] = img1
@@ -237,6 +266,9 @@ def browser(data_path, pipe_video, frame_num, pts_path, audio_pipe, cam_intrinsi
 				gaze_point.update((	gaze.x_screen, gaze.y_screen))
 			if bar.display == 2:
 				img_arr[...] = overlay_img
+				gaze_point.update((	gaze.x_screen, gaze.y_screen))
+			if bar.display == 3:
+				img_arr[...] = img2
 				gaze_point.update((	gaze.x_screen, gaze.y_screen))
 
 
