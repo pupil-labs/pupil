@@ -82,7 +82,7 @@ def grab(pipe, src, running):
 	total_frames = min([c.get(7) for c in captures])
 	fps = min([c.get(5) for c in captures])
 	pipe.send(fps)
-	current_frame= 0
+	current_frame= 5
 	while running.value:
 		start_time = time.time()
 

@@ -77,7 +77,7 @@ def homography_map(img1, img2):
 	H, status, p1, p2 = match(match_flann, desc1, desc2, kp1, kp2, r_threshold=0.60)
 
 	img_overlay = draw_match_overlay(img1, img2, H)
-	return np.dstack((img_overlay, img_overlay, img_overlay)), H
+	return cv2.cvtColor(img_overlay,cv2.COLOR_GRAY2RGB), H
 
 def undistort_point(pt, K, dist_coeffs):
 	# see link for reference on the equation
@@ -105,51 +105,6 @@ def undistort_point(pt, K, dist_coeffs):
 	y_undistort = fy*v_undistort+ v0
 
 	return x_undistort[0], y_undistort[0]
-
-
-
-def undistort_point_dev(pt, K, dist_coeffs):
-	# pt is in pixels
-	# returns undistorted point in pixel coordinates
-
-
-	u = pt[0]
-	v = pt[1]
-
-	u0 = K[0,2] # cx
-	v0 = K[1,2] # cy
-	fx = K[0,0]
-	fy = K[1,1]
-
-	_fx = 1.0/fx
-	_fy = 1.0/fy
-	
-	k1=dist_coeffs[0]
-	k2=dist_coeffs[1]
-	p1=dist_coeffs[2]
-	p2=dist_coeffs[3]
-
-	y = (v - v0)*_fy
-	y2 = y*y
-	
-
-	ky = 1 + (k1 + k2*y2)*y2
-	k2y = 2*k2*y2
-	_2p1y = 2*p1*y
-	_3p1y2 = 3*p1*y2
-	p2y2 = p2*y2
-
-	x = (u - u0)*_fx
-	x2 = x*x
-	kx = (k1 + k2*x2)*x2
-	d = kx + ky + k2y*x2
-	
-
-	_u = fx*(x*(d + _2p1y) + p2y2 + (3*p2)*x2) + u0
-	_v = fy*(y*(d + (2*p2)*x) + _3p1y2 + p1*x2) + v0
-	
-
-	return _u[0],_v[0]
 
 
 

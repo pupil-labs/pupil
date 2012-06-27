@@ -128,7 +128,6 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, ru
 	# gaze.y_pos = gaze.list[:,1]
 	# gaze.dt = gaze.list[:,2]
 	gaze_point = Point(color=(255,0,0,0.3), scale=40.0)
-
 	gaze_list = list(gaze.list)
 	gaze.map = [[{'eye_x': s[0], 'eye_y': s[1], 'dt': s[2]} for s in gaze_list if s[3] == frame] for frame in range(int(gaze_list[-1][-1])+1)]
 	gaze.pts = np.array([[i[0]['eye_x'], i[0]['eye_y']] for i in gaze.map if len(i) > 0], dtype=np.float32)
@@ -168,144 +167,73 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, ru
 	def on_close():
 		g_pool.running.value = 0
 		# while pipe_video.poll(0.3):
-		while True:
+		while 0:
 			try:
 				pipe_video.recv()
 			except:
 				print "exception, nothing to recv."
 				break
-			# dump = pipe_video.recv()
 		print "Close event !"
 
 	def on_idle(dt):
 		bar.update_fps(dt)
 
 		if bar.play or bar.get_single:
+			#this kills video playback at approx 280 frames when the audio process is not active
+			# audio_pipe.send(bar.play) 
 
-			audio_pipe.send(bar.play)
-
+			# load new images
 			bar.frame_num.value = pipe_video.recv()
+			img1 = pipe_video.recv()
+			img2 = pipe_video.recv()
+			
 
-			if bar.frame_num.value == 0:
-				bar.play.value = 0
-
-			img1 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
-			img2 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
-
-			overlay_img = img1
-
+			# Extract corresponing Pupil posistions.
 			# Here we are taking only the first values of the frame for positions hence 0 index
-			gaze.x_screen, gaze.y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
-														gaze.map[bar.frame_num.value][0]['eye_y']), 
-														fig.width, fig.height)
-
-			l_x_screen, l_y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
+			x_screen, y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
 														gaze.map[bar.frame_num.value][0]['eye_y']), 
 														fig.width, fig.height, flip_y=False)
 
-			overlay_img[int(l_y_screen), int(l_x_screen)] = [255,255,255]
+			# make the pupil pos center pixel in world video white
+			img1[int(y_screen), int(x_screen)] = [255,255,255]
 			# overlay_img[int(l_y_screen)+1, int(l_x_screen)+1] = [255,255,255]
 			# overlay_img[int(l_y_screen), int(l_x_screen)+1] = [255,255,255]
 			# overlay_img[int(l_y_screen)+1, int(l_x_screen)] = [255,255,255]
 
 
-			# show rectified image without homography mapping for debugging
-			if cam_intrinsics_path is not None and bar.display == 1:
+			
+			if cam_intrinsics_path is not None and bar.display is not 0:
+				# undistor world image
 				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
-
-				l_x_screen, l_y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
-														gaze.map[bar.frame_num.value][0]['eye_y']), 
-														fig.width, fig.height, flip_y=False)
-
-				# Undistort the gaze point based on the distortion coefs (Is K necessary?) 
-				x_screen, y_screen = undistort_point((l_x_screen, l_y_screen), 
-									cam_intrinsics.K, cam_intrinsics.dist_coefs)
-				
-				# turn normalized x,y back into screen coordinates
-				# x_screen, y_screen = denormalize((x, y), fig.width, fig.height)
-
-
-				# update gaze.x_screen, gaze.y_screen
-				x_screen,y_screen = flip_horizontal((x_screen,y_screen), fig.height)
-				gaze.x_screen = x_screen
-				gaze.y_screen = y_screen
-
-
-			# show homography and rectified image with overlay
-			if cam_intrinsics_path is not None and bar.display == 2:
-				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
-
-				overlay_img, H = homography_map(img2, img1) # flipped img1 & img2 -- now have correct homography for the points
-				# cam_intrinsics.H_map.append([bar.frame_num.value, H])
-
-				l_x_screen, l_y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
-														gaze.map[bar.frame_num.value][0]['eye_y']), 
-														fig.width, fig.height, flip_y=False)
-
-				# Undistort the gaze point based on the distortion coefs (Is K necessary?) 
-				x_screen, y_screen = undistort_point((l_x_screen, l_y_screen), 
+				# Undistort the gaze point based on the distortion coefs 
+				x_screen, y_screen = undistort_point((x_screen, y_screen), 
 									cam_intrinsics.K, cam_intrinsics.dist_coefs)
 
+				if bar.display in (2,3):
+					# homography mapping
+					overlay, H = homography_map(img2, img1) # map img1 onto img2 (the world onto the source video)
+					# cam_intrinsics.H_map.append([bar.frame_num.value, H])
 
-				gaze.pt_homog = np.array([	x_screen, 
-											y_screen, 
-											1])
+					pt_homog = np.array([x_screen, y_screen, 1])
+					pt_homog = np.dot(H, pt_homog)
+					pt_homog /= pt_homog[-1] # normalize the gaze.pts
+					x_screen, y_screen, z = pt_homog
 
-				gaze.pt_homog = np.dot(H, gaze.pt_homog)
-				gaze.pt_homog /= gaze.pt_homog[-1] # normalize the gaze.pts
+					img1=overlay #overwrite img with the overlay
 
-				# print "homog pts: %s,%s" %(gaze.pt_homog[0], gaze.pt_homog[1])
+				if bar.display == 3:
+					cv2.circle(img2, (int(x_screen), int(y_screen)), 10, (0,255,0,100), 1) 
+					img1=img2 #overwrite img1 with the source video
 				
-				# x coordinate is correct it seems
-				# the y coordinate seems to be correct, but flipped
-				gaze.x_screen, gaze.y_screen = flip_horizontal((gaze.pt_homog[0], gaze.pt_homog[1]), fig.height)
+			
+			# update gaze.x_screen, gaze.y_screen /OPENGL COORIDANTE SYSTEM 
+			gaze.x_screen,gaze.y_screen = flip_horizontal((x_screen,y_screen), fig.height)
+			gaze_point.update((	gaze.x_screen, gaze.y_screen))
+
+			img_arr[...] = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
 
 
-			if cam_intrinsics_path is not None and bar.display == 3:
-				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
-
-				overlay_img, H = homography_map(img2, img1) # flipped img1 & img2 -- now have correct homography for the points
-				# cam_intrinsics.H_map.append([bar.frame_num.value, H])
-				
-				l_x_screen, l_y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
-														gaze.map[bar.frame_num.value][0]['eye_y']), 
-														fig.width, fig.height, flip_y=False)
-
-				# Undistort the gaze point based on the distortion coefs (Is K necessary?) 
-				x_screen, y_screen = undistort_point((l_x_screen, l_y_screen), 
-									cam_intrinsics.K, cam_intrinsics.dist_coefs)
-
-
-				gaze.pt_homog = np.array([	x_screen, 
-											y_screen, 
-											1])
-
-				gaze.pt_homog = np.dot(H, gaze.pt_homog)
-				gaze.pt_homog /= gaze.pt_homog[-1] # normalize the gaze.pts
-
-				# print "homog pts: %s,%s" %(gaze.pt_homog[0], gaze.pt_homog[1])
-				cv2.circle(img2, (int(gaze.pt_homog[0]), int(gaze.pt_homog[1])), 10, (0,255,0,100), 1) 
-
-				# x coordinate is correct it seems
-				# the y coordinate seems to be correct, but flipped
-				gaze.x_screen, gaze.y_screen = flip_horizontal((gaze.pt_homog[0], gaze.pt_homog[1]), fig.height)
-
-
-			if bar.display == 0:
-				img_arr[...] = img1
-				gaze_point.update((	gaze.x_screen, gaze.y_screen))
-			if bar.display == 1:
-				img_arr[...] = img1
-				gaze_point.update((	gaze.x_screen, gaze.y_screen))
-			if bar.display == 2:
-				img_arr[...] = overlay_img
-				gaze_point.update((	gaze.x_screen, gaze.y_screen))
-			if bar.display == 3:
-				img_arr[...] = img2
-				gaze_point.update((	gaze.x_screen, gaze.y_screen))
-
-
-
+			#recorder logic
 			if bar.record_video and not bar.record_running:
 				record.path = os.path.join(bar.data_path, "out.avi")
 				record.writer = cv2.VideoWriter(record.path,cv2.cv.CV_FOURCC(*'DIVX'),record.fps, (img2.shape[1],img2.shape[0]) )
@@ -320,6 +248,11 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, ru
 				record.writer = None
 				bar.record_running = 0
 
+
+			#stop playback when at the end of file.
+			if bar.frame_num.value == 0:
+				bar.play.value = 0
+			#just grab one image.
 			bar.get_single = 0
 	
 		# else:
@@ -330,8 +263,8 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, ru
 		image.update()
 		fig.redraw()
 		if bar.exit:
-			pass
-			#fig.window.stop()
+			on_close()
+			fig.window.stop()
 	
 
 	fig.window.push_handlers(on_idle)
