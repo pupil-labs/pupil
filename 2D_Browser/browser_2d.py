@@ -182,7 +182,7 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, ru
 
 		if bar.play or bar.get_single:
 
-			audio_pipe.send(bar.play)
+			# audio_pipe.send(bar.play)
 
 			bar.frame_num.value = pipe_video.recv()
 
@@ -284,7 +284,7 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, ru
 				gaze.pt_homog /= gaze.pt_homog[-1] # normalize the gaze.pts
 
 				# print "homog pts: %s,%s" %(gaze.pt_homog[0], gaze.pt_homog[1])
-				cv2.circle(img2, (int(gaze.pt_homog[0]), int(gaze.pt_homog[1])), 10, (0,255,0,100), 1) 
+				cv2.circle(img2, (int(gaze.pt_homog[0]), int(gaze.pt_homog[1])), 50, (255,0,0,100), 2, cv2.CV_AA) 
 
 				# x coordinate is correct it seems
 				# the y coordinate seems to be correct, but flipped
