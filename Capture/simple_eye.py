@@ -83,6 +83,8 @@ def eye(q):
 		bar.update_fps(dt)
 		img = q.get()
 		img.shape = img_params.shape
+		img_cv = img
+
 			
 		if len(img.shape) <3:
 			img = np.dstack((img,img,img))
@@ -105,19 +107,18 @@ def eye(q):
 			video_path = os.path.join(record.path,"eye.avi")
 			#FFV1 -- good speed lossless big file
 			#DIVX -- good speed good compression medium file
-			record.writer = cv2.VideoWriter(video_path,cv.CV_FOURCC(*'DIVX'),bar.fps, (img.shape[1],img.shape[0]) )
+			record.writer = cv2.VideoWriter(video_path,cv.CV_FOURCC(*'DIVX'),bar.fps, (img.shape[1],img.shape[0]),0)
 					
 			bar.record_running = 1
 
 		if bar.record_video and bar.record_running:
-			# Save image frames to video writer
-			# Eye positions can be associated with frames of recording even if different framerates
-			record.writer.write(img)
+			record.writer.write(img_cv)
 
 		# Finish all recordings, clean up. 
 		if not bar.record_video and bar.record_running:
 			record.writer = None
 			bar.record_running = 0
+			print "Wrote video to: ", record.path
 
 		image.update()
 		fig.redraw()
