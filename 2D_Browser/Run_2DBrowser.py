@@ -114,13 +114,13 @@ def main(data_path, video_path, audio_path, pts_path, cam_intrinsics_path):
 
 	running = Value('i', 1)
 
-	p_browser = Process(target=browser, args=(data_path, rx_video, pts_path, tx_audio, cam_intrinsics_path, running))
+	p_browser = Process(target=browser, args=(data_path, video_path, pts_path, tx_audio, cam_intrinsics_path, running))
 	p_audio = Process(target=play_audio, args=(rx_audio,audio_path, running))
 
 	p_browser.start()
 	# p_audio.start()
 	
-	grab(tx_video, video_path, running)
+	# grab(tx_video, video_path, running)
 
 	p_browser.join()
 

@@ -18,19 +18,19 @@ class Bar(atb.Bar):
 		self.fps = 0.0 
 		self.display = 1
 		self.exit = c_bool(0)
-		self.spec_lower = 125.0
-		self.spec_upper = 255.0
-		self.bin_lower = 90.0
+		self.spec_lower = 250.0
+		self.spec_upper = 3.0
+		self.bin_lower = 0.0
 		self.bin_upper = 64.0
 		self.pupil_point = c_bool(1)
 
 		self.add_var("FPS", step=0.01, getter=self.get_fps)
 		self.add_var("Display", step=1, getter=self.get_display, setter=self.set_display,
 					max=4, min=0)
-		self.add_var("Specular/S_Lower", step=1.0, getter=self.get_spec_lower, setter=self.set_spec_lower,
-					max=256, min=0)
-		self.add_var("Specular/S_Upper", step=1.0, getter=self.get_spec_upper, setter=self.set_spec_upper,
-					max=256, min=0)
+		# self.add_var("Specular/S_Lower", step=1.0, getter=self.get_spec_lower, setter=self.set_spec_lower,
+		# 			max=256, min=0)
+		# self.add_var("Specular/S_Upper", step=1.0, getter=self.get_spec_upper, setter=self.set_spec_upper,
+		# 			max=256, min=0)
 		self.add_var("Binary/B_Lower", step=1.0, getter=self.get_bin_lower, setter=self.set_bin_lower,
 					max=256, min=0)
 		self.add_var("Binary/B_Upper", step=1.0, getter=self.get_bin_upper, setter=self.set_bin_upper,
@@ -159,14 +159,14 @@ def eye(q, pupil_x, pupil_y,
 		else:
 			gray_img = grayscale(img)
 
-		gray_img = add_horizontal_gradient(gray_img)
-		gray_img = 	add_vertical_gradient(gray_img)
+		# gray_img = add_horizontal_gradient(gray_img)
+		# gray_img = 	add_vertical_gradient(gray_img)
 
-		spec_img = erase_specular(gray_img, bar.spec_lower, bar.spec_upper)
+		spec_img = erase_specular_new(gray_img, bar.spec_lower, bar.spec_upper)
 		# spec_img = equalize(spec_img)		
-
-		binary_img = adaptive_threshold(spec_img, bar.bin_lower, bar.bin_upper)
-		# binary_img = extract_darkspot(spec_img, bar.bin_lower, bar.bin_upper)
+		# spec_img = dif_gaus(spec_img, bar.bin_lower, bar.bin_upper)
+		# binary_img = adaptive_threshold(spec_img, bar.bin_lower, bar.bin_upper)
+		binary_img = extract_darkspot(spec_img, bar.bin_lower, bar.bin_upper)
 		pupil.ellipse = fit_ellipse(binary_img)
 		
 
@@ -242,7 +242,7 @@ def eye(q, pupil_x, pupil_y,
 	fig.window.push_handlers(atb.glumpy.Handlers(fig.window))
 	fig.window.push_handlers(on_draw)
 	fig.window.set_title("Eye")
-	fig.window.set_position(1280,0)	
+	fig.window.set_position(0,0)	
 	glumpy.show() 	
 
 

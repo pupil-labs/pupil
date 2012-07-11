@@ -18,11 +18,11 @@ def extract_darkspot(image, image_lower=0.0, image_upper=255.0):
 	binary_img = cv2.inRange(image, np.asarray(image_lower), 
 				np.asarray(image_upper))
 
-	kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5,5))
-	cv2.dilate(binary_img, kernel, binary_img, iterations=1)
-	kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
+	# kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5,5))
+	# cv2.dilate(binary_img, kernel, binary_img, iterations=1)
+	# kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
 
-	cv2.erode(binary_img, kernel, binary_img, iterations=1)
+	# cv2.erode(binary_img, kernel, binary_img, iterations=1)
 	#binary_img = 255-binary_img
 	return binary_img
 
@@ -57,12 +57,6 @@ def adaptive_threshold(image, image_lower=0.0, image_upper=255.0):
 
 
 def equalize(image, image_lower=0.0, image_upper=255.0):
-	"""extract_darkspot:
-			head manager function to filter eye image by
-			- erasing specular reflections
-			- fitting ellipse to filtered image 
-		Out: filtered image and center of ellipse
-	"""
 	image_lower = int(image_lower*2)/2
 	image_lower +=1
 	image_lower = max(3,image_lower)
@@ -97,23 +91,41 @@ def erase_specular_new(image,lower_threshold=0.0, upper_threshold=150.0):
 	"""
 	thresh = cv2.inRange(image, 
 				np.asarray(lower_threshold), 
-				np.asarray(upper_threshold))
-	kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13,13))
-	hilight = np.zeros(thresh.shape).astype(np.uint8)
-	hi_mask = cv2.dilate(thresh, kernel, iterations=1)
-	# turn the hi_mask into boolean mask
-	# currently it has values of 0 or 255 so 255=True
-	hi_mask = (hi_mask==255)
-	specular = image.copy()
-	specular[hi_mask] = hilight[hi_mask]
+				np.asarray(256.0))
+
+	kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
+	hi_mask = cv2.dilate(thresh, kernel, iterations=2)
+	
+	specular = cv2.inpaint(image, hi_mask, 2, flags=cv2.INPAINT_TELEA) 
+	# return cv2.max(hi_mask,image)
 	return specular
 
-
-def add_horizontal_gradient(image,left=0,right=00):
+def add_horizontal_gradient(image,left=0,right=10):
 	offset = np.linspace(left,right,image.shape[1]).astype(image.dtype)
 	offset = np.repeat(offset[np.newaxis,:],image.shape[0],0)
 	image += offset
 	return image
+
+def dif_gaus(image, lower, upper):
+	lower, upper = int(lower-1), int(upper-1)
+	lower = cv2.GaussianBlur(image,ksize=(lower,lower),sigmaX=0)
+	upper = cv2.GaussianBlur(image,ksize=(upper,upper),sigmaX=0)
+	# upper +=50
+	# lower +=50
+
+	dif = lower-upper
+	# dif *= .1
+	# dif = cv2.medianBlur(dif,3)
+	# dif = 255-dif
+
+	kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (7,7))
+	dif = cv2.erode(dif, kernel, iterations=1)
+	# dif = cv2.max(image,dif)
+
+	# dif = cv2.dilate(dif, kernel, iterations=1)
+
+
+	return dif 
 
 
 def add_vertical_gradient(image,top=10,bottom=0):

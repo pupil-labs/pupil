@@ -54,6 +54,7 @@ def grab(q,src_id, size=(640,480)):
 	cap = cv2.VideoCapture(src_id)
 	cap.set(3, size[0])
 	cap.set(4, size[1])
+	# cap.set(5, 30)
 	drop = 50
 	while 1:
 		status, img = cap.read()
@@ -67,15 +68,20 @@ def grab(q,src_id, size=(640,480)):
 		#img_RGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 		# Hack tell the process to sleep
 		sleep(0.01)
-		try:
-			q.put(img, False)
-			drop = 50 
-		except:
-			# print "Camera Dropped Frame"
-			drop -= 1
-			if not drop:
-				cap.release()
-				return
+
+		if status:
+			try:
+				q.put(img, True)
+				drop = 50 
+			except:
+				print "Camera Dropped Frame"
+				drop -= 1
+				if not drop:
+					cap.release()
+					return
+
+		else:
+			cap.set(1,0) #loops video
 
 def record_audio(pipe,record, src_id=0, rate=44100, chunk_size=1536, 
 				format=pyaudio.paInt32, verbose=False):
@@ -143,8 +149,14 @@ def record_audio(pipe,record, src_id=0, rate=44100, chunk_size=1536,
 
 
 def main():
-	eye_id = 0
+	
+ 	# assing the right id to the cameras
+	eye_id = 1
 	world_id = 0
+
+	# eye_id = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
+
+
 
 	eye_q = Queue(3)
 	world_q = Queue(3)
@@ -168,7 +180,7 @@ def main():
 	frame_count_record = Value('i', 0)
 
 
-	p_grab_eye = Process(target=xmos_grab, args=(eye_q,eye_id,(400,250)))
+	p_grab_eye = Process(target=grab, args=(eye_q,eye_id,(640,320)))
 	# p_grab_world = Process(target=grab, args=(world_q,world_id))
 
 	p_show_eye = Process(target=eye, args=(eye_q, pupil_x, pupil_y, 
@@ -189,18 +201,18 @@ def main():
 
 	p_show_world.start()
 	p_grab_eye.start()
-	p_audio.start()
+	# p_audio.start()
 	p_player.start()
 
 	p_show_eye.start()
 	# when using the logitech h264 compression camera
 	# you can't run world camera in its own process
 	# it must reside in the main loop
-	grab(world_q, world_id, (1280,720))
+	grab(world_q, world_id, (640,480))
 
-	p_grab_eye.join()
+	# p_grab_eye.join()
 	# p_grab_world.join()
-	p_audio.join()
+	# p_audio.join()
 
 if __name__ == '__main__':
 	main()

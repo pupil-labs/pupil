@@ -101,21 +101,22 @@ class Temp(object):
 	def __init__(self):
 		pass
 
-def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, running):
+def browser(data_path, video_path, pts_path, audio_pipe, cam_intrinsics_path, running):
 
 	record = Temp()
 	record.path = None
 	record.writer = None
 
-	# source video fps
-	record.fps = pipe_video.recv()
+	c = Temp()
 
-	# Get image array from queue, initialize glumpy, map img_arr to opengl texture 
-	total_frames = pipe_video.recv()
+	c.captures = [cv2.VideoCapture(path) for path in video_path]
+	# c.total_frames = min([c.get(7) for c in c.captures])
+	# record.fps = min([c.get(5) for c in captures])
+	total_frames = 999
 
-	img_arr = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
-	img_arr2 = cv2.cvtColor(pipe_video.recv(), cv2.COLOR_BGR2RGB)
-	# img_arr, H = homography_map(img_arr, img_arr2)
+	r, img_arr = c.captures[0].read()
+	r, img_arr2 =c.captures[1].read()
+
 
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 	image = glumpy.Image(img_arr)
@@ -173,6 +174,8 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, ru
 			except:
 				print "exception, nothing to recv."
 				break
+
+
 		print "Close event !"
 
 	def on_idle(dt):
@@ -183,10 +186,16 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, ru
 			# audio_pipe.send(bar.play) 
 
 			# load new images
-			bar.frame_num.value = pipe_video.recv()
-			img1 = pipe_video.recv()
-			img2 = pipe_video.recv()
-			
+			bar.frame_num.value =10
+		
+
+			r, img1 = c.captures[0].read()
+			r, img2 =c.captures[1].read()
+
+			#stop playback when at the end of file.
+
+			if bar.frame_num.value == 0:
+				bar.play.value = 0
 
 			# Extract corresponing Pupil posistions.
 			# Here we are taking only the first values of the frame for positions hence 0 index
@@ -230,6 +239,7 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, ru
 			gaze.x_screen,gaze.y_screen = flip_horizontal((x_screen,y_screen), fig.height)
 			gaze_point.update((	gaze.x_screen, gaze.y_screen))
 
+			# update the img array
 			img_arr[...] = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
 
 
@@ -249,9 +259,7 @@ def browser(data_path, pipe_video, pts_path, audio_pipe, cam_intrinsics_path, ru
 				bar.record_running = 0
 
 
-			#stop playback when at the end of file.
-			if bar.frame_num.value == 0:
-				bar.play.value = 0
+
 			#just grab one image.
 			bar.get_single = 0
 	
