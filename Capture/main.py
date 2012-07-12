@@ -4,18 +4,18 @@ import numpy as np
 import cv2
 
 from time import sleep
-from multiprocessing import Process, Queue, Pipe, Value
+from multiprocessing import Process, Queue, Pipe
+from multiprocessing.sharedctypes import RawValue, Value # Raw is share memory but no lock, handle with care, this is usefull for ATB it needs cTypes
 from eye import eye
 from world import world
 from player import player
-
+from methods import Temp
 from array import array
 from struct import unpack, pack
 import pyaudio
 import wave
 
 from audio import normalize, trim, add_silence
-
 
 from utilities.usb_camera_interface import cam_interface
 from ctypes import *
@@ -147,19 +147,14 @@ def record_audio(pipe,record, src_id=0, rate=44100, chunk_size=1536,
 
 		#repeat and wait at pipe receive
 
-
 def main():
 	
  	# assing the right id to the cameras
-	eye_id = 1
+	eye_id = 0
 	world_id = 0
 
-	# eye_id = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
+	eye_id = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
 
-
-
-	eye_q = Queue(3)
-	world_q = Queue(3)
 
 	audio_rx, audio_tx = Pipe(False)
 	audio_record = Value('i',0)
@@ -171,44 +166,33 @@ def main():
 	# create shared globals for pupil coords
 	# and pattern coordinates from the world process
 	# and global for record and calibrate buttons
-	pupil_x = Value('d', 0.0)
-	pupil_y = Value('d', 0.0)
-	pattern_x = Value('d', 0.0) 
-	pattern_y = Value('d', 0.0) 
-	calibrate = Value('i', 0)
-	pos_record = Value('i', 0)
-	frame_count_record = Value('i', 0)
+	g_pool = Temp()
+	g_pool.pupil_x = Value('d', 0.0)
+	g_pool.pupil_y = Value('d', 0.0)
+	g_pool.pattern_x = Value('d', 0.0) 
+	g_pool.pattern_y = Value('d', 0.0) 
+	g_pool.frame_count_record = Value('i', 0)
+	g_pool.calibrate = RawValue(c_bool, 0)
+	g_pool.quit = RawValue(c_bool,0)
+	g_pool.pos_record = RawValue(c_bool, 0)
 
 
-	p_grab_eye = Process(target=grab, args=(eye_q,eye_id,(640,320)))
-	# p_grab_world = Process(target=grab, args=(world_q,world_id))
-
-	p_show_eye = Process(target=eye, args=(eye_q, pupil_x, pupil_y, 
-											pattern_x, pattern_y, 
-											calibrate, pos_record, frame_count_record,
-											eye_rx))
-	p_show_world = Process(target=world, args=(world_q, pupil_x, pupil_y, 
-												pattern_x, pattern_y,
-												calibrate, pos_record, frame_count_record,
-												audio_tx, eye_tx, audio_record,
-												player_tx))
+	p_show_eye = Process(target=eye, args=(eye_id, g_pool, eye_rx))
+	p_show_world = Process(target=world, args=(world_id,g_pool, audio_tx, eye_tx, audio_record,player_tx))
 	p_player = Process(target=player, args=(player_rx,))
 
 	# Audio:
 	# src=3 for logitech, rate=16000 for logitech 
 	# defaults for built in MacBook microphone
-	p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3)) 
-
-	p_show_world.start()
-	p_grab_eye.start()
-	# p_audio.start()
-	p_player.start()
+	# p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3)) 
 
 	p_show_eye.start()
+	p_show_world.start()
+	# p_player.start()
 	# when using the logitech h264 compression camera
 	# you can't run world camera in its own process
 	# it must reside in the main loop
-	grab(world_q, world_id, (640,480))
+	# grab(world_q, world_id, (640,480))
 
 	# p_grab_eye.join()
 	# p_grab_world.join()

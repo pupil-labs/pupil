@@ -4,6 +4,55 @@ import numpy as np
 import cv2
 from ctypes import *
 
+
+
+class Temp(object):
+	"""Temp class to make objects"""
+	def __init__(self):
+		pass
+
+class capture():
+	"""docstring for capture"""
+	def __init__(self, src,size):
+		self.src = src
+		self.VideoCapture = cv2.VideoCapture(src)
+		self.set_size(size)
+	
+	def set_size(self,(width,height)):
+		if isinstance(self.src, int):
+			self.size = (width,height)
+			self.VideoCapture.set(3, width)
+			self.VideoCapture.set(4, height)
+
+	def new_src(self,src):
+		self.VideoCapture = cv2.VideoCapture(src)
+
+	def read(self):
+		s, img =self.VideoCapture.read()
+		if not s:
+			self.rewind()
+			s, img = self.VideoCapture.read()
+		return s,img
+
+	def read_RGB(self):
+		s,img = self.read()
+		if s:
+			cv2.cvtColor(img, cv2.COLOR_RGB2BGR,img)
+		return s,img
+
+	def read_HSV(self):
+		s,img = self.read()
+		if s:
+			cv2.cvtColor(img, cv2.COLOR_RGB2HSV,img)
+		return s,img
+
+	def rewind(self):
+		self.VideoCapture.set(1,0) #seeek to 0
+
+
+
+
+
 def grayscale(image):
 	return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
@@ -90,7 +139,7 @@ def erase_specular_new(image,lower_threshold=0.0, upper_threshold=150.0):
 			within given threshold using a binary mask (hi_mask)
 	"""
 	thresh = cv2.inRange(image, 
-				np.asarray(lower_threshold), 
+				np.asarray(float(lower_threshold)), 
 				np.asarray(256.0))
 
 	kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))

@@ -8,34 +8,30 @@ import numpy as np
 from methods import *
 from calibrate import *
 from gl_shapes import Point, Ellipse
-
+from methods import Temp,capture
 from multiprocessing import Queue, Value
 
 class Bar(atb.Bar):
 	"""docstring for Bar"""
-	def __init__(self, name, defs):
+	def __init__(self, name,g_pool, defs):
 		super(Bar, self).__init__(name,**defs) 
 		self.fps = 0.0 
-		self.display = 1
+		self.display = c_int(1)
 		self.exit = c_bool(0)
-		self.spec_lower = 250.0
-		self.spec_upper = 3.0
-		self.bin_lower = 0.0
-		self.bin_upper = 64.0
+		self.spec_lower = c_int(250)
+		self.spec_upper = c_int(3)
+		self.bin_lower = c_int(0)
+		self.bin_upper = c_int(0)
 		self.pupil_point = c_bool(1)
 
 		self.add_var("FPS", step=0.01, getter=self.get_fps)
-		self.add_var("Display", step=1, getter=self.get_display, setter=self.set_display,
-					max=4, min=0)
-		# self.add_var("Specular/S_Lower", step=1.0, getter=self.get_spec_lower, setter=self.set_spec_lower,
-		# 			max=256, min=0)
-		# self.add_var("Specular/S_Upper", step=1.0, getter=self.get_spec_upper, setter=self.set_spec_upper,
-		# 			max=256, min=0)
-		self.add_var("Binary/B_Lower", step=1.0, getter=self.get_bin_lower, setter=self.set_bin_lower,
-					max=256, min=0)
-		self.add_var("Binary/B_Upper", step=1.0, getter=self.get_bin_upper, setter=self.set_bin_upper,
-					max=256, min=0)
-		self.add_var("Exit", self.exit)
+		self.add_var("Display", self.display, step=1,max=4, min=0)
+		self.add_var("Show Pupil Point", self.pupil_point)		
+		self.add_var("Specular/S_Lower", self.spec_lower, step=1, max=256, min=0)
+		self.add_var("Specular/S_Upper",self.spec_upper, step=1, max=256, min=0)
+		self.add_var("Binary/B_Lower", self.bin_lower, step=1,max=256, min=0)
+		self.add_var("Binary/B_Upper", self.bin_upper, step=1,max=256, min=0)
+		self.add_var("Exit", g_pool.quit)
 
 	def update_fps(self, dt):
 		temp_fps = 1/dt
@@ -44,67 +40,22 @@ class Bar(atb.Bar):
 	def get_fps(self):
 		return self.fps
 
-	def get_display(self):
-		return self.display
-	def set_display(self, val):
-		self.display = val
-
-	def get_spec_lower(self):
-		return self.spec_lower
-	def set_spec_lower(self, val):
-		self.spec_lower = val
-
-	def get_spec_upper(self):
-		return self.spec_upper
-	def set_spec_upper(self, val):
-		self.spec_upper = val
-
-	def get_bin_lower(self):
-		return self.bin_lower
-	def set_bin_lower(self, val):
-		self.bin_lower = val
-
-	def get_bin_upper(self):
-		return self.bin_upper
-	def set_bin_upper(self, val):
-		self.bin_upper = val
-
-class Temp(object):
-	"""Temp class to make objects"""
-	def __init__(self):
-		pass
 
 
-def eye(q, pupil_x, pupil_y, 
-		pattern_x, pattern_y, 
-		calibrate, pos_record, frame_count_record, 
-		eye_pipe):
+def eye(src, g_pool, eye_pipe):
 	"""eye
 		- Initialize glumpy figure, image, atb controls
 		- Execute the glumpy main glut loop
 	"""
 	# Get image array from queue, initialize glumpy, map img_arr to opengl texture 
-	img_params = Temp()
-	img_params.shape = q.get()
-	img_arr = q.get()
-	img_arr.shape = img_params.shape
+	
+	cap = capture(src,(640,480))
+	s, img_arr = cap.read_RGB()
 
-	if len(img_arr.shape) <3:
-		img_arr = np.dstack((img_arr,img_arr,img_arr))
-
-	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]) )
+	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 	image = glumpy.Image(img_arr)
 	image.x, image.y = 0,0
 
-	# global pool
-	g_pool = Temp()
-	g_pool.pupil_x = pupil_x
-	g_pool.pupil_y = pupil_y
-	g_pool.pattern_x = pattern_x
-	g_pool.pattern_y = pattern_y
-	g_pool.calibrate = calibrate
-	g_pool.pos_record = pos_record
-	g_pool.frame_count_record = frame_count_record
 
 	# pupil object
 	pupil = Temp()
@@ -126,50 +77,28 @@ def eye(q, pupil_x, pupil_y,
 	# initialize gl shape primitives
 	pupil_point = Point()
 	pupil_ellipse = Ellipse()
-
 	# Initialize ant tweak bar inherits from atb.Bar (see Bar class)
 	atb.init()
-	bar = Bar("Eye", dict(label="Controls",
+	bar = Bar("Eye",g_pool, dict(label="Controls",
 			help="Scene controls", color=(50,50,50), alpha=50,
 			text='light', position=(10, 10), size=(200, 200)) )
 
-	def draw():
-		"""draw
-			- place to draw objects to the glumpy window
-		"""
-		if bar.pupil_point and pupil.ellipse:
-			pupil_point.draw()
-			pupil_ellipse.draw()
-
-	def on_draw():
-		fig.clear(0.0, 0.0, 0.0, 1.0)
-		image.draw(x=image.x, y=image.y, z=0.0, 
-					width=fig.width, height=fig.height)
-		draw()
 
 
 	def on_idle(dt):
 		bar.update_fps(dt)
-		img = q.get()
-		img.shape = img_params.shape
-			
-		if len(img.shape) <3:
-			gray_img = img
-			img = np.dstack((img,img,img))
-		else:
-			gray_img = grayscale(img)
-
-		# gray_img = add_horizontal_gradient(gray_img)
-		# gray_img = 	add_vertical_gradient(gray_img)
-
-		spec_img = erase_specular_new(gray_img, bar.spec_lower, bar.spec_upper)
-		# spec_img = equalize(spec_img)		
-		# spec_img = dif_gaus(spec_img, bar.bin_lower, bar.bin_upper)
-		# binary_img = adaptive_threshold(spec_img, bar.bin_lower, bar.bin_upper)
-		binary_img = extract_darkspot(spec_img, bar.bin_lower, bar.bin_upper)
-		pupil.ellipse = fit_ellipse(binary_img)
+		s,img = cap.read_RGB()
 		
 
+		###IMAGE PROCESSING 
+		gray_img = grayscale(img)
+		spec_img = erase_specular_new(gray_img, bar.spec_lower.value, bar.spec_upper.value)
+		# spec_img = equalize(spec_img)     
+		# spec_img = dif_gaus(spec_img, bar.bin_lower, bar.bin_upper)
+		# binary_img = adaptive_threshold(spec_img, bar.bin_lower, bar.bin_upper)
+		binary_img = extract_darkspot(spec_img, bar.bin_lower.value, bar.bin_upper.value)
+		pupil.ellipse = fit_ellipse(binary_img)
+		
 
 		if pupil.ellipse:
 			pupil.image_coords = pupil.ellipse['center']
@@ -185,19 +114,19 @@ def eye(q, pupil_x, pupil_y,
 			g_pool.pupil_x.value, g_pool.pupil_y.value = pupil.map_coords
 
 
-		if bar.display == 0:
+		if bar.display.value == 0:
 			img_arr[...] = img
-		elif bar.display == 1:
+		elif bar.display.value == 1:
 			img_arr[...] =  np.dstack((gray_img,gray_img,gray_img))
-		elif bar.display == 2:
+		elif bar.display.value == 2:
 			img_arr[...] = np.dstack((spec_img, spec_img, spec_img))
-		elif bar.display == 3:
+		elif bar.display.value == 3:
 			img_arr[...] = np.dstack((binary_img, binary_img, binary_img))
 		else:
 			gray_img = cv2.Scharr(gray_img, -1, 1, 1)
 			img_arr[...] = np.dstack((gray_img,gray_img,gray_img))
 
-	
+		###CALIBRATION and MAPPING###
 		# Initialize Calibration (setup variables and lists)
 		if g_pool.calibrate.value and not l_pool.calib_running:
 			l_pool.calib_running = True
@@ -210,11 +139,13 @@ def eye(q, pupil_x, pupil_y,
 								g_pool.pattern_x.value, g_pool.pattern_y.value])
 
 		# Calculate coefs
-		if not g_pool.calibrate.value and l_pool.calib_running:			
+		if not g_pool.calibrate.value and l_pool.calib_running:         
 			l_pool.calib_running = 0
 			if pupil.pt_cloud:
 				pupil.coefs = calibrate_poly(pupil.pt_cloud)
 
+		
+		###RECORDING###
 		# Setup variables and lists for recording
 		if g_pool.pos_record.value and not l_pool.record_running:
 			l_pool.record_path = eye_pipe.recv()
@@ -234,16 +165,33 @@ def eye(q, pupil_x, pupil_y,
 
 		image.update()
 		fig.redraw()
-		if bar.exit:
-			pass
-			#fig.window.stop()
+		
+		if g_pool.quit.value:
+			print "EYE Process closing from global or atb"
+			fig.window.stop()
+
+	
+	def on_draw():
+		fig.clear(0.0, 0.0, 0.0, 1.0)
+		image.draw(x=image.x, y=image.y, z=0.0, 
+					width=fig.width, height=fig.height)
+		
+		if bar.pupil_point and pupil.ellipse:
+			pupil_point.draw()
+			pupil_ellipse.draw()
+
+
+	def on_close():
+		g_pool.quit.value = True
+		print "EYE Process closed from window"
 
 	fig.window.push_handlers(on_idle)
 	fig.window.push_handlers(atb.glumpy.Handlers(fig.window))
 	fig.window.push_handlers(on_draw)
+	fig.window.push_handlers(on_close)	
 	fig.window.set_title("Eye")
-	fig.window.set_position(0,0)	
-	glumpy.show() 	
+	fig.window.set_position(0,0)    
+	glumpy.show()   
 
 
 

@@ -15,6 +15,8 @@ import cv2.cv as cv
 #from cv2.cv import CV_FOURCC as codec
 
 from methods import normalize, denormalize, chessboard, circle_grid, gen_pattern_grid, calibrate_camera
+from methods import Temp,capture
+
 from calibrate import *
 from gl_shapes import Point
 
@@ -23,14 +25,12 @@ from multiprocessing import Queue, Value
 
 class Bar(atb.Bar):
 	"""docstring for Bar"""
-	def __init__(self, name, defs):
+	def __init__(self, name,g_pool, defs):
 		super(Bar, self).__init__(name,**defs) 
 		self.fps = 0.0 
-		self.exit = c_bool(0)
 		self.pattern = c_bool(0)
 		self.screen_shot = False
 		self.calibration_images = False
-
 		self.calibrate = c_bool(0)
 		self.calibrate_nine = c_bool(0)
 		self.calibrate_nine_step = c_int(0)
@@ -51,7 +51,7 @@ class Bar(atb.Bar):
 		self.add_var("Nine_Pt_Step", self.calibrate_nine_step)
 		self.add_var("Record Video", self.record_video, key="R", help="Start/Stop Recording")
 		self.add_var("Play Source Video", self.play)
-		self.add_var("Exit", self.exit)
+		self.add_var("Exit", g_pool.quit)
 
 	def update_fps(self, dt):
 		temp_fps = 1/dt
@@ -70,33 +70,18 @@ class Temp(object):
 	def __init__(self):
 		pass
 
-def world(q, pupil_x, pupil_y, 
-			pattern_x, pattern_y, 
-			calibrate, pos_record, frame_count_record, 
-			audio_pipe, eye_pipe, audio_record,
-			player_pipe):
+def world(src, g_pool, audio_pipe, eye_pipe, audio_record,player_pipe):
 	"""world
 		- Initialize glumpy figure, image, atb controls
 		- Execute glumpy main loop
 	"""
-	# Get image array from queue, initialize glumpy, map img_arr to opengl texture 
-	img_shape = q.get() # first item of que is img shape not needed in the world routine as the image is always three channels
-	img_arr = q.get()
+	cap = capture(src,(640,480))
+	s, img_arr = cap.read_RGB()
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 
 	image = glumpy.Image(img_arr)
 	image.x, image.y = 0,0
 
-	# global pool
-	g_pool = Temp()
-	g_pool.pupil_x = pupil_x
-	g_pool.pupil_y = pupil_y
-	g_pool.pattern_x = pattern_x
-	g_pool.pattern_y = pattern_y
-	g_pool.audio_record = audio_record
-	g_pool.calibrate = calibrate
-	g_pool.pos_record = pos_record
-	g_pool.frame_count_record = frame_count_record
 
 	# pattern object
 	pattern = Temp()
@@ -137,7 +122,7 @@ def world(q, pupil_x, pupil_y,
 
 	# Initialize ant tweak bar inherits from atb.Bar (see Bar class)
 	atb.init()
-	bar = Bar("World", dict(label="Controls",
+	bar = Bar("World",g_pool, dict(label="Controls",
 			help="Scene controls", color=(50,50,50), alpha=50,
 			text='light', position=(10, 10), size=(200, 250)) )
 
@@ -184,10 +169,10 @@ def world(q, pupil_x, pupil_y,
 		g_pool.calibrate.value = bar.calibrate.value
 
 		# get an image from the grabber
-		img = q.get()
+		s,img = cap.read_RGB()
 
 		# update the image to display and convert color space
-		img_arr[...] = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+		img_arr[...] = img
 
 		# update gaze points from shared variable pool
 		gaze.map_coords = g_pool.pupil_x.value, g_pool.pupil_y.value
@@ -310,14 +295,18 @@ def world(q, pupil_x, pupil_y,
 
 		image.update()
 		fig.redraw()
-		if bar.exit:
-			pass
-			#fig.window.stop()
+		if g_pool.quit.value:
+			print "WORLD Process closing from global or atb"
+			fig.window.stop()
 
+	def on_close():
+		g_pool.quit.value = True
+		print "WORLD Process closed from window"			
 
 	fig.window.push_handlers(on_idle)
 	fig.window.push_handlers(atb.glumpy.Handlers(fig.window))
 	fig.window.push_handlers(on_draw)	
+	fig.window.push_handlers(on_close)	
 	fig.window.set_title("World")
 	fig.window.set_position(0,0)	
 	glumpy.show() 	
