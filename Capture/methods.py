@@ -299,6 +299,68 @@ if __name__ == '__main__':
 
 
 
+def xmos_grab(q,id,size):
+	size= size[::-1] # swap sizes as numpy is row first
+	drop = 50
+	cam = cam_interface()
+	buffer = np.zeros(size, dtype=np.uint8) #this should always be a multiple of 4
+	cam.aptina_setWindowSize(cam.id0,(size[1],size[0])) #swap sizes back 
+	cam.aptina_setWindowPosition(cam.id0,(240,100))
+	cam.aptina_LED_control(cam.id0,Disable = 0,Invert =0)
+	cam.aptina_AEC_AGC(cam.id0,1,1) # Auto Exposure Control + Auto Gain Control
+	cam.aptina_HDR(cam.id0,1)
+	q.put(buffer.shape)
+	while 1:
+		if cam.get_frame(id,buffer): #returns True on sucess
+			try:
+				q.put(buffer,False)
+				drop = 50 
+			except:
+				drop -= 1
+				if not drop:
+					cam.release()
+					return
+
+
+def grab(q,src_id, size=(640,480)):
+	"""grab:
+		- Initialize a camera feed
+		- Stream images to queue 
+		- Non-blocking
+		- release cam if dropped frames>50
+	"""
+	cap = cv2.VideoCapture(src_id)
+	cap.set(3, size[0])
+	cap.set(4, size[1])
+	# cap.set(5, 30)
+	drop = 50
+	while 1:
+		status, img = cap.read()
+		if status:
+			q.put(img.shape)
+			break
+
+			
+	while True:
+		status, img = cap.read()
+		#img_RGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+		# Hack tell the process to sleep
+		sleep(0.01)
+
+		if status:
+			try:
+				q.put(img, True)
+				drop = 50 
+			except:
+				print "Camera Dropped Frame"
+				drop -= 1
+				if not drop:
+					cap.release()
+					return
+
+		else:
+			cap.set(1,0) #loops video
+
 
 
 

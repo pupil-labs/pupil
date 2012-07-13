@@ -119,4 +119,67 @@ def record_audio(pipe, verbose=False):
 			if verbose: print "Saved audio to: %s" %audio_out
 			# clear global array when done recording
 			g_LRtn = array('h')
+def record_audio(pipe,record, src_id=0, rate=44100, chunk_size=1536, 
+				format=pyaudio.paInt32, verbose=False):
+	"""record_audio:
+		- Initialize a global array to hold audio 
+		- if record and not running initiaize PyAudio Stream 
+		- if recording and running, add to data list
+		- if not recording and not running, clean up data and save to wav
+	"""
+	g_LRtn = array('h')
+	while True:
+		#init new recording
+		audio_out = pipe.recv() 
+		p = pyaudio.PyAudio()
+		if verbose: 
+			print "Initialized PyAudio stream for recording"
+		stream = p.open(input_device_index=src_id, format=format, 
+					channels=1, rate=rate, 
+					input=True, output=True,
+					frames_per_buffer=chunk_size, 
+					start = True)
+		# stream.start_stream()
+		#record loop
+		while record.value:
+			try:
+				data = stream.read(chunk_size)
+				L = unpack('<' + ('h'*(len(data)/2)), data) # little endian, signed short
+				# print max(L)
+				L = array('h', L)
+				g_LRtn.extend(L)
+				if verbose: 
+					print "len(g_LRtn): %s" %(len(g_LRtn))
+			except IOError,e:
+				if e[1] == pyaudio.paInputOverflowed: 
+					print e
+					print "Audio Buffer Overflow."
+					data = '\x00'*pyaudio.paInt32*chunk_size*1
+		#clean up and save file
+		if verbose: 
+			print "Stopped recording...Saving File"
+		sample_width = p.get_sample_size(pyaudio.paInt32)
+		stream.stop_stream()
+		stream.close()
+		p.terminate()
+
+		if verbose: 
+			print "len(g_LRtn): ", len(g_LRtn)
+		# g_LRtn = normalize(g_LRtn)
+		# g_LRtn = trim(g_LRtn)
+		# g_LRtn = add_silence(g_LRtn, 0.5)
+
+		data = pack('<' + ('h'*len(g_LRtn)), *g_LRtn)
+
+		wf = wave.open(audio_out, 'wb')
+		wf.setnchannels(1)
+		wf.setsampwidth(sample_width)
+		wf.setframerate(rate)
+		wf.writeframes(data)
+		wf.close()
+		print "Saved audio to: %s" %audio_out
+		# clear global array when done recording
+		g_LRtn = array('h')
+
+		#repeat and wait at pipe receive
 
