@@ -171,7 +171,7 @@ def world(src, g_pool, audio_pipe, eye_pipe, audio_record,player_pipe):
 		# get an image from the grabber
 		s,img = cap.read_RGB()
 
-		# update the image to display and convert color space
+		# update the image to display
 		img_arr[...] = img
 
 		# update gaze points from shared variable pool

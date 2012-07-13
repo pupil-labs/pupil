@@ -5,7 +5,7 @@ import cv2
 
 from time import sleep
 from multiprocessing import Process, Queue, Pipe
-from multiprocessing.sharedctypes import RawValue, Value # Raw is share memory but no lock, handle with care, this is usefull for ATB it needs cTypes
+from multiprocessing.sharedctypes import RawValue, Value # RawValue is shared memory without lock, handle with care, this is usefull for ATB it needs cTypes
 from eye import eye
 from world import world
 from player import player
@@ -186,8 +186,9 @@ def main():
 	# defaults for built in MacBook microphone
 	# p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3)) 
 
-	p_show_eye.start()
 	p_show_world.start()
+	p_show_eye.start()
+
 	# p_player.start()
 	# when using the logitech h264 compression camera
 	# you can't run world camera in its own process

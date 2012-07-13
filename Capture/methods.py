@@ -19,8 +19,9 @@ class capture():
 		self.set_size(size)
 	
 	def set_size(self,(width,height)):
+		self.size = (width,height)
+		self.np_size = (height,width)
 		if isinstance(self.src, int):
-			self.size = (width,height)
 			self.VideoCapture.set(3, width)
 			self.VideoCapture.set(4, height)
 
@@ -265,21 +266,27 @@ def gen_pattern_grid(size=(4,11)):
 	return np.asarray(pattern_grid, dtype='f4')
 
 def normalize(pos, width, height):
+	"""
+	normalize return as float
+	"""
 	x = pos[0]
 	y = pos[1]
-	x = (x-width/2)/(width/2)
-	y = (y-height/2)/(height/2)
+	x = (x-width/2.)/(width/2.)
+	y = (y-height/2.)/(height/2.)
 	return x,y
 
 def denormalize(pos, width, height, flip_y=True):
+	"""
+	denormalize and return as int
+	"""
 	x = pos[0]
 	y = pos[1]
-	x = (x*width/2)+(width/2)
+	x = (x*width/2.)+(width/2.)
 	if flip_y:
-		y = (-y*height/2)+(height/2)
+		y = (-y*height/2.)+(height/2.)
 	else:
-		y = (y*height/2)+(height/2)
-	return x,y
+		y = (y*height/2.)+(height/2.)
+	return int(x),int(y)
 
 if __name__ == '__main__':
 	tst = []	
