@@ -217,22 +217,11 @@ def eye(src, g_pool, eye_pipe):
 		r.setStart((x,y))
 		pass
 
-	def on_mouse_release(x, y, button):
-		print 'A mouse button was released.'
-		pass
-
-	def on_mouse_motion(x, y, dx, dy): 
-		print 'The mouse was moved with no buttons held down.'
-		pass
-
 	def on_mouse_drag(x, y, dx, dy, buttons):
 		x,y = denormalize(normalize((x,y),fig.width,fig.height),img_arr.shape[1],img_arr.shape[0],flip_y=True) 
 		r.setEnd((x,y))
 		pass
 
-	def on_mouse_scroll(self, dx, dy):
-		'The mouse wheel was scrolled by (dx,dy).'
-		pass
 	fig.window.push_handlers(on_idle)
 	fig.window.push_handlers(atb.glumpy.Handlers(fig.window))
 	fig.window.push_handlers(on_draw)
