@@ -5,6 +5,7 @@ import glumpy.atb as atb
 from ctypes import *
 import numpy as np
 import cv2
+from time import sleep
 
 def make_grid(dim=(11,4)):
 	x = range(dim[0])
@@ -37,7 +38,7 @@ class Temp(object):
 	def __init__(self):
 		pass
 
-def player(pipe):
+def player(g_pool):
 	"""player
 		- Shows 9 point calibration pattern
 		- Plays a source video synchronized with world process
@@ -59,55 +60,69 @@ def player(pipe):
 
 	def on_draw():
 		fig.clear(1.0, 1.0, 1.0, 1.0)
-		command = pipe.recv()
+		
+		if g_pool.player_pipe_new.wait(0.1):
+			command = g_pool.player_rx.recv()
+			g_pool.player_pipe_new.clear()
 
-		if command == 'calibrate':
-			circle_id,step = pipe.recv()
-			gl.glEnable(gl.GL_POINT_SMOOTH)
-			gl.glPushMatrix()
-			gl.glTranslatef(0.0,fig.height/2,0.)
-			gl.glScalef(fig.height,fig.height,0.0)
-			gl.glTranslatef((float(fig.width)/float(fig.height))/2.0-10.0/16.0, 
-							-.45,
-							0.)
+			if command == 'calibrate':
+				circle_id,step = g_pool.player_rx.recv()
+				gl.glEnable(gl.GL_POINT_SMOOTH)
+				gl.glPushMatrix()
+				gl.glTranslatef(0.0,fig.height/2,0.)
+				gl.glScalef(fig.height,fig.height,0.0)
+				gl.glTranslatef((float(fig.width)/float(fig.height))/2.0-10.0/16.0, 
+								-.45,
+								0.)
 
-			gl.glPointSize((float(fig.height)/10.0)*(1-step/40.0))
-			gl.glColor4f(1.0,0.0,0.0,1.0)
-			gl.glBegin(gl.GL_POINTS)
-			gl.glVertex3f(grid.vertices['position'][circle_id][0],grid.vertices['position'][circle_id][1],0.5)
-			gl.glEnd()
+				gl.glPointSize((float(fig.height)/10.0)*(1-step/40.0))
+				gl.glColor4f(1.0,0.0,0.0,1.0)
+				gl.glBegin(gl.GL_POINTS)
+				gl.glVertex3f(grid.vertices['position'][circle_id][0],grid.vertices['position'][circle_id][1],0.5)
+				gl.glEnd()
 
-			gl.glPointSize(float(fig.height)/10.0)
-			grid.draw(gl.GL_POINTS, 'pnc')
+				gl.glPointSize(float(fig.height)/10.0)
+				grid.draw(gl.GL_POINTS, 'pnc')
 
-			gl.glPopMatrix()
+				gl.glPopMatrix()
 
-		elif command == 'load_video':
-			src_id = pipe.recv() # path to video
-			capture.cap = cv2.VideoCapture(src_id)
-			# subtract last 10 frames so player process does not get errors for none type in cv2 grab
-			capture.remaining_frames = capture.cap.get(7)-10 
+			elif command == 'load_video':
+				src_id = g_pool.player_rx.recv() # path to video
+				capture.cap = cv2.VideoCapture(src_id)
+				# subtract last 10 frames so player process does not get errors for none type in cv2 grab
+				# capture.remaining_frames = capture.cap.get(7)-10 
 
-		elif command == 'next_frame':
-			capture.remaining_frames -= 1	
-			if capture.remaining_frames:
-				status, img = capture.cap.read()
-				pipe.send(True)
-				img_arr[...] = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+			elif command == 'next_frame':
+				capture.remaining_frames -= 1	
+				if capture.remaining_frames:
+					status, img = capture.cap.read()
+					g_pool.player_rx.send(True)
+					img_arr[...] = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
 
-				image.draw(x=image.x, y=image.y, z=0.0, 
-							width=fig.width, height=fig.height)
-				
-				image.update()	
+					image.draw(x=image.x, y=image.y, z=0.0, 
+								width=fig.width, height=fig.height)
+					
+					image.update()	
+				else:
+					g_pool.player_rx.send(False)	
 			else:
-				pipe.send(False)	
+				#do nothing 
+				pass
+		
+		if g_pool.quit.value:
+			print "Player Process closing from global or atb"
+			fig.window.stop()
 
+	def on_close():
+		g_pool.quit.value = True
+		print "Player Process closed from window"			
 
 	def on_idle(dt):
 		fig.redraw()
 
 	fig.window.push_handlers(on_idle)
 	fig.window.push_handlers(on_draw)	
+	fig.window.push_handlers(on_close)	
 	fig.window.set_title("Player")
 	fig.window.set_position(0,0)	
 	glumpy.show() 	

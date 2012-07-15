@@ -54,7 +54,7 @@ def calibrate_poly(points):
     """
     points = np.array(points)
     #save points to file
-    np.save('data/cal_pt_cloud.npy', points)
+    np.save('cal_pt_cloud.npy', points)
     
     x_cofs =fit_polynomial_surf(points[:,0],points[:,1],points[:,2])
     y_cofs =fit_polynomial_surf(points[:,0],points[:,1],points[:,3])

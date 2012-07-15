@@ -21,7 +21,7 @@ class capture():
 	def set_size(self,(width,height)):
 		self.size = (width,height)
 		self.np_size = (height,width)
-		if isinstance(self.src, int):
+		if isinstance(self.src, int) and width is not None:
 			self.VideoCapture.set(3, width)
 			self.VideoCapture.set(4, height)
 
@@ -157,20 +157,15 @@ def add_horizontal_gradient(image,left=0,right=10):
 	return image
 
 def dif_gaus(image, lower, upper):
-	lower, upper = int(lower-1), int(upper-1)
+	lower, upper = int(lower*2-1), int(upper*2-1)
 	lower = cv2.GaussianBlur(image,ksize=(lower,lower),sigmaX=0)
 	upper = cv2.GaussianBlur(image,ksize=(upper,upper),sigmaX=0)
-	# upper +=50
-	# lower +=50
 
 	dif = lower-upper
-	# dif *= .1
-	# dif = cv2.medianBlur(dif,3)
-	# dif = 255-dif
 
 	kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (7,7))
 	dif = cv2.erode(dif, kernel, iterations=1)
-	# dif = cv2.max(image,dif)
+	dif = cv2.max(image,dif)
 
 	# dif = cv2.dilate(dif, kernel, iterations=1)
 

@@ -5,6 +5,9 @@ import glumpy.atb as atb
 from ctypes import *
 import numpy as np
 
+from time import sleep
+
+
 from methods import *
 from calibrate import *
 from gl_shapes import Point, Ellipse
@@ -20,8 +23,8 @@ class Bar(atb.Bar):
 		self.exit = c_bool(0)
 		self.spec_lower = c_int(250)
 		self.spec_upper = c_int(3)
-		self.bin_lower = c_int(0)
-		self.bin_upper = c_int(0)
+		self.bin_lower = c_int(18)
+		self.bin_upper = c_int(22)
 		self.pupil_point = c_bool(1)
 
 		self.add_var("FPS", step=0.01, getter=self.get_fps)
@@ -46,10 +49,10 @@ class Roi(object):
 	it is applied on nump arrays for convinient slicing"""
 	def __init__(self, array_shape):
 		self.array_shape = array_shape
-		self.lX = 10
-		self.lY = 10
-		self.uX = array_shape[1]-10
-		self.uY = array_shape[0]-10
+		self.lX = 0
+		self.lY = 0
+		self.uX = array_shape[1]-0
+		self.uY = array_shape[0]-0
 		self.nX = 0
 		self.nY = 0
 
@@ -68,14 +71,14 @@ class Roi(object):
 	def add_vector(self,(x,y)):
 		return (self.lX+x,self.lY+y)
 
-			
-def eye(src, g_pool, eye_pipe):
+
+def eye(src, g_pool):
 	"""eye
 		- Initialize glumpy figure, image, atb controls
 		- Execute the glumpy main glut loop
 	"""
 	# Get image array from queue, initialize glumpy, map img_arr to opengl texture 
-	cap = capture(src,(640,480))
+	cap = capture(src,(640,320))
 	s, img_arr = cap.read_RGB()
 
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
@@ -117,17 +120,19 @@ def eye(src, g_pool, eye_pipe):
 		bar.update_fps(dt)
 		
 		s,img = cap.read_RGB()
-		
+ 
 		###IMAGE PROCESSING 
 		gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
 		spec_img = erase_specular_new(gray_img, bar.spec_lower.value, bar.spec_upper.value)
 		# spec_img = equalize(spec_img)     
-		# spec_img = dif_gaus(spec_img, bar.bin_lower, bar.bin_upper)
+		spec_img = dif_gaus(spec_img, bar.bin_lower.value, bar.bin_upper.value)
+		ys,xs = np.where(spec_img>200)
+
+
 		# binary_img = adaptive_threshold(spec_img, bar.bin_lower, bar.bin_upper)
 		binary_img = extract_darkspot(spec_img, bar.bin_lower.value, bar.bin_upper.value)
 		pupil.ellipse = fit_ellipse(binary_img)
 		
-
 		if pupil.ellipse:
 			pupil.image_coords = r.add_vector(pupil.ellipse['center'])
 			# numpy array wants (row,col) for an image this = (height,width)
@@ -175,7 +180,7 @@ def eye(src, g_pool, eye_pipe):
 		###RECORDING###
 		# Setup variables and lists for recording
 		if g_pool.pos_record.value and not l_pool.record_running:
-			l_pool.record_path = eye_pipe.recv()
+			l_pool.record_path = g_pool.eye_rx.recv()
 			print "l_pool.record_path: ", l_pool.record_path
 			l_pool.record_positions = []
 			l_pool.record_running = True

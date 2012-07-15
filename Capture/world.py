@@ -28,10 +28,11 @@ class Bar(atb.Bar):
 	def __init__(self, name,g_pool, defs):
 		super(Bar, self).__init__(name,**defs) 
 		self.fps = 0.0 
+		
+		self.calibrate = g_pool.calibrate
 		self.pattern = c_bool(0)
 		self.screen_shot = False
 		self.calibration_images = False
-		self.calibrate = c_bool(0)
 		self.calibrate_nine = c_bool(0)
 		self.calibrate_nine_step = c_int(0)
 		self.calibrate_nine_stage = c_int(0)
@@ -55,7 +56,7 @@ class Bar(atb.Bar):
 
 	def update_fps(self, dt):
 		temp_fps = 1/dt
-		self.fps += 0.1*(temp_fps-self.fps)
+		self.fps += 0.3*(temp_fps-self.fps)
 
 	def get_fps(self):
 		return self.fps
@@ -70,7 +71,7 @@ class Temp(object):
 	def __init__(self):
 		pass
 
-def world(src, g_pool, audio_pipe, eye_pipe, audio_record,player_pipe):
+def world(src, g_pool):
 	"""world
 		- Initialize glumpy figure, image, atb controls
 		- Execute glumpy main loop
@@ -128,17 +129,16 @@ def world(src, g_pool, audio_pipe, eye_pipe, audio_record,player_pipe):
 
 
 
-	def draw():
-		if pattern.board is not None:
-			pattern_point.draw()
-		gaze_point.draw()
-
 
 	def on_draw():
 		fig.clear(0.0, 0.0, 0.0, 1.0)
 		image.draw(x=image.x, y=image.y, z=0.0, 
 					width=fig.width, height=fig.height)
-		draw()
+		if pattern.board is not None:
+			pattern_point.draw()
+		gaze_point.draw()
+
+
 
 	def on_idle(dt):
 		bar.update_fps(dt)
@@ -148,7 +148,7 @@ def world(src, g_pool, audio_pipe, eye_pipe, audio_record,player_pipe):
 		if bar.calibrate_nine.value:
 			bar.calibrate.value = True
 
-			if bar.calibrate_nine_step.value >= 40:
+			if bar.calibrate_nine_step.value > 40:
 				bar.calibrate_nine_step.value = 0
 				bar.calibrate_nine_stage.value += 1
 
@@ -157,16 +157,15 @@ def world(src, g_pool, audio_pipe, eye_pipe, audio_record,player_pipe):
 				bar.calibrate_nine.value = 0
 
 			if bar.calibrate_nine_step.value in range(5,40):
-				player_pipe.send("calibrate")
+				g_pool.player_pipe_new.set()
+				g_pool.player_tx.send("calibrate")
 				circle_id = pattern.map[bar.calibrate_nine_stage.value]
-				player_pipe.send((circle_id, bar.calibrate_nine_step.value))
+				g_pool.player_tx.send((circle_id, bar.calibrate_nine_step.value))
 
 			bar.calibrate_nine_step.value += 1
 		else:
 			bar.calibrate.value = False
 
-		# Broadcast local calibration state to global pool of variables
-		g_pool.calibrate.value = bar.calibrate.value
 
 		# get an image from the grabber
 		s,img = cap.read_RGB()
@@ -218,8 +217,8 @@ def world(src, g_pool, audio_pipe, eye_pipe, audio_record,player_pipe):
 			camera_matrix, dist_coefs = calibrate_camera(np.asarray(pattern.img_points), 
 												np.asarray(pattern.obj_points), 
 												(img.shape[1], img.shape[0]))
-			np.save("data/camera_matrix.npy", camera_matrix)
-			np.save("data/dist_coefs.npy", dist_coefs)
+			np.save("camera_matrix.npy", camera_matrix)
+			np.save("dist_coefs.npy", dist_coefs)
 
 			bar.calibration_images = False
 
@@ -245,13 +244,16 @@ def world(src, g_pool, audio_pipe, eye_pipe, audio_record,player_pipe):
 			
 			# audio data to audio process
 			audio_path = os.path.join(record.path, "world.wav")
-			g_pool.audio_record.value = 1
-			audio_pipe.send(audio_path)
+			try:
+				g_pool.audio_record.value = 1
+				g_pool.audio_tx.send(audio_path)
+			except:
+				print "no audio initialized"
 
 			# positions data to eye process
 			positions_path = os.path.join(record.path,"pupil_positions.npy")
-			g_pool.pos_record.value = 1
-			eye_pipe.send(positions_path)
+			g_pool.pos_record.value = True
+			g_pool.eye_tx.send(positions_path)
 
 			bar.record_running = 1
 			g_pool.frame_count_record.value = 0
@@ -262,24 +264,30 @@ def world(src, g_pool, audio_pipe, eye_pipe, audio_record,player_pipe):
 			# increment the frame_count_record value 
 			# Eye positions can be associated with frames of recording even if different framerates 
 			g_pool.frame_count_record.value += 1
-			record.writer.write(img)
+			record.writer.write(cv2.cvtColor(img, cv2.COLOR_BGR2RBG))
 
 		# Finish all recordings, clean up. 
 		if not bar.record_video and bar.record_running:
-			g_pool.audio_record.value = 0
+			try:
+				g_pool.audio_record.value = 0
+			except:
+				print "no audio recorded"
+			
 			g_pool.pos_record.value = 0
 			record.writer = None
 			bar.record_running = 0
 
 
 		if bar.play.value and not player.playing and player.play_list_len:
-			player_pipe.send('load_video')
-			player_pipe.send(player.play_list[player.current_video])
+			g_pool.player_pipe_new.set()
+			g_pool.player_tx.send('load_video')
+			g_pool.player_tx.send(player.play_list[player.current_video])
 			player.playing = True
 
 		if player.playing: 
-			player_pipe.send('next_frame')
-			status = player_pipe.recv()
+			g_pool.player_pipe_new.set()
+			g_pool.player_tx.send('next_frame')
+			status = g_pool.player_tx.recv()
 
 			if status:
 				pass
