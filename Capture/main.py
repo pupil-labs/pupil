@@ -21,23 +21,52 @@ from utilities.usb_camera_interface import cam_interface
 from ctypes import *
 
 
+def grab(pipe,src_id,g_pool, size=(640,480)):
+	"""grab:
+		- Initialize a camera feed
+		-this is needed for certain cameras that have to run in the main loop.
+		- it pushed image frames to the capture class 
+			that it initialize with one pipeend as the source
+	"""
+
+	quit = g_pool.quit
+	cap = cv2.VideoCapture(src_id)
+	cap.set(3, size[0])
+	cap.set(4, size[1])
+	# cap.set(5, 30)
+			
+	while not quit.value:
+		try:
+			pipe.send(cap.read())
+		except:
+			pass
+	print "Local Grab exit"
+
+
+
 
 def main():
 	
-	audio = False
  	# assing the right id to the cameras
-	eye_id = 0
-	world_id = 1
-	if(0):
-		eye_id = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
+	eye_src = 1
+	world_src = 0
+
+
+
+	audio = False
+	muliprocess_cam = True
+	use_video = False
+ 	
+
+	if(use_video):
+		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
+		world_src = -1
+
+	if(muliprocess_cam):
+		world_src, world_feed = Pipe()
 		world_id = 0
 
-
-
-
-	# create shared globals for pupil coords
-	# and pattern coordinates from the world process
-	# and global for record and calibrate buttons
+	# create shared globals 
 	g_pool = Temp()
 	g_pool.pupil_x = Value('d', 0.0)
 	g_pool.pupil_y = Value('d', 0.0)
@@ -54,8 +83,8 @@ def main():
 	g_pool.audio_rx, g_pool.audio_tx = Pipe(False)
 
 
-	p_show_eye = Process(target=eye, args=(eye_id, g_pool))
-	p_show_world = Process(target=world, args=(world_id,g_pool))
+	p_show_eye = Process(target=eye, args=(eye_src, g_pool))
+	p_show_world = Process(target=world, args=(world_src,g_pool))
 	p_player = Process(target=player, args=(g_pool,))
 
 	# Audio:
@@ -70,6 +99,9 @@ def main():
 
 	if audio: p_audio.start()
 	
+	if(muliprocess_cam):
+		grab(world_feed,world_id,g_pool)
+
 	# when using the logitech h264 compression camera
 	# you can't run world camera in its own process
 	# it must reside in the main loop
@@ -83,52 +115,6 @@ def main():
 
 if __name__ == '__main__':
 	main()
-
-
-
-########### old Grab Routines ###########
-
-def grab(q,src_id, size=(640,480)):
-	"""grab:
-		- Initialize a camera feed
-		- Stream images to queue 
-		- Non-blocking
-		- release cam if dropped frames>50
-	"""
-	cap = cv2.VideoCapture(src_id)
-	cap.set(3, size[0])
-	cap.set(4, size[1])
-	# cap.set(5, 30)
-	drop = 50
-	while 1:
-		status, img = cap.read()
-		if status:
-			q.put(img.shape)
-			break
-
-			
-	while True:
-		# Hack tell the process to sleep
-		sleep(0.01)
-		status, img = cap.read()
-		#img_RGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-		if status:
-			try:
-				q.put(img, True)
-				drop = 50 
-			except:
-				print "Camera Dropped Frame"
-				drop -= 1
-				if not drop:
-					cap.release()
-					return
-
-		else:
-			cap.set(1,0) #loops video
-
-
-
 
 
 

@@ -15,8 +15,17 @@ class capture():
 	"""docstring for capture"""
 	def __init__(self, src,size):
 		self.src = src
-		self.VideoCapture = cv2.VideoCapture(src)
-		self.set_size(size)
+		if isinstance(self.src, int) or isinstance(self.src, str):
+			#set up as cv2 capture
+			self.VideoCapture = cv2.VideoCapture(src)
+			self.set_size(size)
+			self.get_frame = self.VideoCapture.read
+		else:
+			#set up as pipe
+			self.VideoCapture = src
+			self.get_frame = self.VideoCapture.recv
+
+
 	
 	def set_size(self,(width,height)):
 		self.size = (width,height)
@@ -25,14 +34,13 @@ class capture():
 			self.VideoCapture.set(3, width)
 			self.VideoCapture.set(4, height)
 
-	def new_src(self,src):
-		self.VideoCapture = cv2.VideoCapture(src)
 
 	def read(self):
-		s, img =self.VideoCapture.read()
+		s, img =self.get_frame()
 		if not s:
+			#this is only for looping videos
 			self.rewind()
-			s, img = self.VideoCapture.read()
+			s, img = self.get_frame()
 		return s,img
 
 	def read_RGB(self):
