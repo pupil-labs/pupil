@@ -55,7 +55,7 @@ def main():
 
 	audio = False
 	muliprocess_cam = False
-	use_video = False
+	use_video = 0
  	
 
 	if(use_video):

@@ -23,12 +23,12 @@ class Bar(atb.Bar):
 		self.exit = c_bool(0)
 		self.draw_roi = c_bool(0)
 		self.spec_lower = c_int(250)
-		self.spec_upper = c_int(3)
+		self.spec_upper = c_int(5)
 		self.bin_lower = c_int(0)
-		self.bin_upper = c_int(60)
+		self.bin_upper = c_int(50)
 		# self.bin_lower = c_int(18)
 		# self.bin_upper = c_int(22)
-		self.erode =  c_int(1)
+		self.erode =  c_int(3)
 		self.pupil_point = c_bool(1)
 
 		self.add_var("FPS", step=0.01, getter=self.get_fps)
@@ -38,8 +38,8 @@ class Bar(atb.Bar):
 		self.add_var("Specular/S_Lower", self.spec_lower, step=1, max=256, min=0)
 		self.add_var("Specular/S_Upper",self.spec_upper, step=1, max=256, min=0)
 		self.add_var("Binary/Erode",self.erode, step=1, max=20, min=1)
-		self.add_var("Binary/B_Lower", self.bin_lower, step=1,max=256, min=0)
-		self.add_var("Binary/B_Upper", self.bin_upper, step=1,max=256, min=0)
+		self.add_var("Binary/B_Lower", self.bin_lower, step=1,min=0)
+		self.add_var("Binary/B_Upper", self.bin_upper, step=1,min=0)
 
 		self.add_var("Exit", g_pool.quit)
 
@@ -121,7 +121,7 @@ def eye(src, g_pool):
 	atb.init()
 	bar = Bar("Eye",g_pool, dict(label="Controls",
 			help="Scene controls", color=(50,50,50), alpha=50,
-			text='light', position=(10, 10), size=(200, 200)) )
+			text='light', position=(10, 10), size=(200, 250)) )
 
 
 
@@ -141,9 +141,9 @@ def eye(src, g_pool):
 		# binary_img = adaptive_threshold(spec_img, bar.bin_lower.value, bar.bin_upper.value)
 		binary_img = extract_darkspot(spec_img, bar.bin_lower.value, bar.bin_upper.value)
 		# binary_img =  cv2.Canny(spec_img,bar.bin_upper.value, bar.bin_upper.value,apertureSize= bar.erode.value) 
-
+		# binary_img = cv2.max(binary_img,spec_img)
 		pupil.ellipse = fit_ellipse(binary_img)
-		
+		# pupil.ellipse=False
 		if pupil.ellipse:
 			pupil.image_coords = r.add_vector(pupil.ellipse['center'])
 			# numpy array wants (row,col) for an image this = (height,width)

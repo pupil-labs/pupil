@@ -188,6 +188,14 @@ def add_vertical_gradient(image,top=10,bottom=0):
 	return image
 
 
+def is_round(ellipse):
+	center, (axis1,axis2), angle = ellipse
+	if abs(1-axis2/axis1) < .25:
+		return True
+	else:
+		return False
+
+
 def fit_ellipse(image, contour_size=80):
 	""" fit_ellipse:
 			fit an ellipse around the pupil 
@@ -201,26 +209,19 @@ def fit_ellipse(image, contour_size=80):
 						'axes': (None, None), 'angle': None, 
 						'area': 0.0, 'ratio': None, 
 						'major': None, 'minor': None}
-
-	for c in contours:
-		if len(c) >= contour_size:
-			center, axes, angle = cv2.fitEllipse(c)
-			area = axes[0]*axes[1]
-
-			if area > largest_ellipse['area']:
-				largest_ellipse['center'] = center
-				largest_ellipse['axes'] = axes
-				largest_ellipse['angle'] = angle
-				largest_ellipse['area'] = area
-
-	if largest_ellipse['angle']:
-		largest_ellipse['major'] = max(largest_ellipse['axes'])
-		largest_ellipse['minor'] = min(largest_ellipse['axes'])
-		largest_ellipse['ratio'] = largest_ellipse['major']/largest_ellipse['minor']  
-		if largest_ellipse['ratio'] > 3: # improve me
-			print "blink"
-			return None
 	
+	ellipses = [cv2.fitEllipse(c) for c in contours if len(c) >= contour_size]
+	ellipses = filter(is_round,ellipses)
+	sorted(ellipses, key=lambda ellipses: ellipses[1][0]) #sort by axis size
+	
+	if ellipses:
+		largest = ellipses[-1]
+		largest_ellipse['center'] = largest[0]
+		largest_ellipse['angle'] = largest[-1]
+		largest_ellipse['axes'] = largest[1]
+		largest_ellipse['major'] = max(largest[1])
+		largest_ellipse['minor'] = min(largest[1])
+		largest_ellipse['ratio'] = largest_ellipse['major']/largest_ellipse['minor']  
 		return largest_ellipse
 	return None
 
