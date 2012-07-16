@@ -21,6 +21,7 @@ class Bar(atb.Bar):
 		self.fps = 0.0 
 		self.display = c_int(1)
 		self.exit = c_bool(0)
+		self.draw_roi = c_bool(0)
 		self.spec_lower = c_int(250)
 		self.spec_upper = c_int(3)
 		self.bin_lower = c_int(0)
@@ -33,6 +34,7 @@ class Bar(atb.Bar):
 		self.add_var("FPS", step=0.01, getter=self.get_fps)
 		self.add_var("Display", self.display, step=1,max=4, min=0)
 		self.add_var("Show Pupil Point", self.pupil_point)		
+		self.add_var("Draw ROI", self.draw_roi)		
 		self.add_var("Specular/S_Lower", self.spec_lower, step=1, max=256, min=0)
 		self.add_var("Specular/S_Upper",self.spec_upper, step=1, max=256, min=0)
 		self.add_var("Binary/Erode",self.erode, step=1, max=20, min=1)
@@ -65,12 +67,12 @@ class Roi(object):
 		self.nX,self.nY = x,y
 
 	def setEnd(self,(x,y)):
-		x,y = max(0,x),max(0,y)
-		if x != self.nX and y != self.nY:
-			self.lX = min(x,self.nX)
-			self.lY = min(y,self.nY)
-			self.uX = max(x,self.nX)
-			self.uY = max(y,self.nY)		
+			x,y = max(0,x),max(0,y)
+			if x != self.nX and y != self.nY:
+				self.lX = min(x,self.nX)
+				self.lY = min(y,self.nY)
+				self.uX = max(x,self.nX)
+				self.uY = max(y,self.nY)		
 
 	def add_vector(self,(x,y)):
 		"""
@@ -231,13 +233,13 @@ def eye(src, g_pool):
 
 	def on_mouse_press(x, y, button):
 		x,y = denormalize(normalize((x,y),fig.width,fig.height),img_arr.shape[1],img_arr.shape[0],flip_y=True) 
-		r.setStart((x,y))
-		pass
-
+		if bar.draw_roi.value:
+			r.setStart((x,y))
+			
 	def on_mouse_drag(x, y, dx, dy, buttons):
 		x,y = denormalize(normalize((x,y),fig.width,fig.height),img_arr.shape[1],img_arr.shape[0],flip_y=True) 
-		r.setEnd((x,y))
-		pass
+		if bar.draw_roi.value:
+			r.setEnd((x,y))
 
 	fig.window.push_handlers(on_idle)
 	fig.window.push_handlers(atb.glumpy.Handlers(fig.window))
