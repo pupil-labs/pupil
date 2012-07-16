@@ -156,14 +156,14 @@ def add_horizontal_gradient(image,left=0,right=10):
 	image += offset
 	return image
 
-def dif_gaus(image, lower, upper):
-	lower, upper = int(lower*2-1), int(upper*2-1)
+def dif_gaus(image, lower, upper,erode):
+	lower, upper,erode = int(lower*2-1),int(upper*2-1),int(erode*2-1)
 	lower = cv2.GaussianBlur(image,ksize=(lower,lower),sigmaX=0)
 	upper = cv2.GaussianBlur(image,ksize=(upper,upper),sigmaX=0)
 
 	dif = lower-upper
 
-	kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (7,7))
+	kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (erode,erode))
 	dif = cv2.erode(dif, kernel, iterations=1)
 	dif = cv2.max(image,dif)
 

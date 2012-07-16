@@ -23,8 +23,11 @@ class Bar(atb.Bar):
 		self.exit = c_bool(0)
 		self.spec_lower = c_int(250)
 		self.spec_upper = c_int(3)
-		self.bin_lower = c_int(18)
-		self.bin_upper = c_int(22)
+		self.bin_lower = c_int(0)
+		self.bin_upper = c_int(60)
+		# self.bin_lower = c_int(18)
+		# self.bin_upper = c_int(22)
+		self.erode =  c_int(1)
 		self.pupil_point = c_bool(1)
 
 		self.add_var("FPS", step=0.01, getter=self.get_fps)
@@ -32,6 +35,7 @@ class Bar(atb.Bar):
 		self.add_var("Show Pupil Point", self.pupil_point)		
 		self.add_var("Specular/S_Lower", self.spec_lower, step=1, max=256, min=0)
 		self.add_var("Specular/S_Upper",self.spec_upper, step=1, max=256, min=0)
+		self.add_var("Binary/Erode",self.erode, step=1, max=20, min=1)
 		self.add_var("Binary/B_Lower", self.bin_lower, step=1,max=256, min=0)
 		self.add_var("Binary/B_Upper", self.bin_upper, step=1,max=256, min=0)
 
@@ -46,7 +50,7 @@ class Bar(atb.Bar):
 
 class Roi(object):
 	"""this is a simple Region of Interest class
-	it is applied on nump arrays for convinient slicing"""
+	it is applied on numpy arrays for convinient slicing"""
 	def __init__(self, array_shape):
 		self.array_shape = array_shape
 		self.lX = 0
@@ -69,6 +73,9 @@ class Roi(object):
 			self.uY = max(y,self.nY)		
 
 	def add_vector(self,(x,y)):
+		"""
+		adds the roi offset to a len2 vector
+		"""
 		return (self.lX+x,self.lY+y)
 
 
@@ -125,12 +132,14 @@ def eye(src, g_pool):
 		gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
 		spec_img = erase_specular_new(gray_img, bar.spec_lower.value, bar.spec_upper.value)
 		# spec_img = equalize(spec_img)     
-		spec_img = dif_gaus(spec_img, bar.bin_lower.value, bar.bin_upper.value)
-		ys,xs = np.where(spec_img>200)
+		# spec_img = dif_gaus(spec_img, bar.bin_lower.value, bar.bin_upper.value,bar.erode.value)
+		# ys,xs = np.where(spec_img>200)
 
 
-		# binary_img = adaptive_threshold(spec_img, bar.bin_lower, bar.bin_upper)
+		# binary_img = adaptive_threshold(spec_img, bar.bin_lower.value, bar.bin_upper.value)
 		binary_img = extract_darkspot(spec_img, bar.bin_lower.value, bar.bin_upper.value)
+		# binary_img =  cv2.Canny(spec_img,bar.bin_upper.value, bar.bin_upper.value,apertureSize= bar.erode.value) 
+
 		pupil.ellipse = fit_ellipse(binary_img)
 		
 		if pupil.ellipse:
@@ -156,6 +165,9 @@ def eye(src, g_pool):
 		elif bar.display.value == 3:
 			img_arr[r.lY:r.uY,r.lX:r.uX] = np.dstack((binary_img, binary_img, binary_img))
 		else:
+			# gray_img = cv2.Blur(gray_img,ksize=( bar.bin_upper.value, bar.bin_upper.value),sigmaX=0)
+			binary_img =  cv2.Canny(spec_img,bar.bin_upper.value, bar.bin_upper.value,apertureSize= bar.erode.value) 
+			img_arr[r.lY:r.uY,r.lX:r.uX] = np.dstack((binary_img, binary_img, binary_img))
 			pass
 
 		###CALIBRATION and MAPPING###
