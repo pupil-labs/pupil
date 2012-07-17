@@ -13,7 +13,7 @@ class Temp(object):
 
 class capture():
 	"""docstring for capture"""
-	def __init__(self, src,size):
+	def __init__(self, src, size):
 		self.src = src
 		if isinstance(self.src, int) or isinstance(self.src, str):
 			#set up as cv2 capture
@@ -23,6 +23,9 @@ class capture():
 		else:
 			#set up as pipe
 			self.VideoCapture = src
+			self.size = size
+			self.np_size = size[::-1]
+			self.VideoCapture.send(self.size)
 			self.get_frame = self.VideoCapture.recv
 
 

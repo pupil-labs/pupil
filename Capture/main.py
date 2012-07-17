@@ -17,11 +17,10 @@ import wave
 
 from audio import normalize, trim, add_silence
 
-from utilities.usb_camera_interface import cam_interface
 from ctypes import *
 
 
-def grab(pipe,src_id,g_pool, size=(640,480)):
+def grab(pipe,src_id,g_pool):
 	"""grab:
 		- Initialize a camera feed
 		-this is needed for certain cameras that have to run in the main loop.
@@ -31,9 +30,9 @@ def grab(pipe,src_id,g_pool, size=(640,480)):
 
 	quit = g_pool.quit
 	cap = cv2.VideoCapture(src_id)
+	size = pipe.recv()
 	cap.set(3, size[0])
 	cap.set(4, size[1])
-	# cap.set(5, 30)
 			
 	while not quit.value:
 		try:
@@ -52,9 +51,15 @@ def main():
 	world_src = 0
 
 
-
 	audio = False
-	muliprocess_cam = False
+
+	# when using the logitech h264 compression camera
+	# you can't run world camera in its own process
+	# it must reside in the main loop
+	# this is all taken care of by setting this to true
+	muliprocess_cam = 0
+	
+	#use video for debugging
 	use_video = 0
  	
 
@@ -102,10 +107,6 @@ def main():
 	if(muliprocess_cam):
 		grab(world_feed,world_id,g_pool)
 
-	# when using the logitech h264 compression camera
-	# you can't run world camera in its own process
-	# it must reside in the main loop
-	# grab(world_q, world_id, (640,480))
 
 
 	p_show_eye.join()
