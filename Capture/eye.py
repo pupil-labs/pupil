@@ -2,7 +2,7 @@ import glumpy
 import OpenGL.GL as gl
 import OpenGL.GLUT as glut
 import glumpy.atb as atb
-from ctypes import *
+from ctypes import c_int,c_bool,c_float
 import numpy as np
 
 from time import sleep
@@ -19,27 +19,25 @@ class Bar(atb.Bar):
 	def __init__(self, name,g_pool, defs):
 		super(Bar, self).__init__(name,**defs) 
 		self.fps = 0.0 
+		self.sleep = c_float(0.0)
 		self.display = c_int(1)
+		self.pupil_point = c_bool(1)
 		self.exit = c_bool(0)
 		self.draw_roi = c_bool(0)
-		self.spec_lower = c_int(250)
-		self.spec_upper = c_int(5)
-		self.bin_lower = c_int(0)
-		self.bin_upper = c_int(50)
-		# self.bin_lower = c_int(18)
-		# self.bin_upper = c_int(22)
-		self.erode =  c_int(3)
-		self.pupil_point = c_bool(1)
+		self.bin_thresh = c_int(60)
+		self.canny_apture = c_int(5)
+		self.canny_lower = c_int(2)
+		self.canny_upper = c_int(800)
 
-		self.add_var("FPS", step=0.01, getter=self.get_fps)
-		self.add_var("Display", self.display, step=1,max=4, min=0)
+		self.add_var("FPS", step=0.1, getter=self.get_fps)
+		self.add_var("SlowDown",self.sleep, step=0.01,min=0.0)
+		self.add_var("Display", self.display, step=1,max=4, min=0, help="select the view-mode")
 		self.add_var("Show Pupil Point", self.pupil_point)		
-		self.add_var("Draw ROI", self.draw_roi)		
-		self.add_var("Specular/S_Lower", self.spec_lower, step=1, max=256, min=0)
-		self.add_var("Specular/S_Upper",self.spec_upper, step=1, max=256, min=0)
-		self.add_var("Binary/Erode",self.erode, step=1, max=20, min=1)
-		self.add_var("Binary/B_Lower", self.bin_lower, step=1,min=0)
-		self.add_var("Binary/B_Upper", self.bin_upper, step=1,min=0)
+		self.add_var("Draw ROI", self.draw_roi, help="drag on screen to select a region of interest")		
+		self.add_var("Bin/Thresh", self.bin_thresh, step=1, max=256, min=0)
+		self.add_var("Canny/Apture",self.canny_apture, step=2, max=7, min=1)
+		self.add_var("Canny/B_Lower", self.canny_lower, step=1,min=1)
+		self.add_var("Canny/B_Upper", self.canny_upper, step=1,min=1)
 
 		self.add_var("Exit", g_pool.quit)
 
@@ -52,7 +50,10 @@ class Bar(atb.Bar):
 
 class Roi(object):
 	"""this is a simple Region of Interest class
-	it is applied on numpy arrays for convinient slicing"""
+	it is applied on numpy arrays for convinient slicing
+	like this:
+	roi_array_slice = full_array[r.lY:r.uY,r.lX:r.uX]
+	"""
 	def __init__(self, array_shape):
 		self.array_shape = array_shape
 		self.lX = 0
@@ -86,7 +87,7 @@ def eye(src, g_pool):
 		- Initialize glumpy figure, image, atb controls
 		- Execute the glumpy main glut loop
 	"""
-	# Get image array from queue, initialize glumpy, map img_arr to opengl texture 
+	#init capture, initialize glumpy, map img_arr to opengl texture 
 	cap = capture(src,(640,320))
 	s, img_arr = cap.read_RGB()
 
@@ -117,7 +118,7 @@ def eye(src, g_pool):
 	# initialize gl shape primitives
 	pupil_point = Point()
 	pupil_ellipse = Ellipse()
-	# Initialize ant tweak bar inherits from atb.Bar (see Bar class)
+
 	atb.init()
 	bar = Bar("Eye",g_pool, dict(label="Controls",
 			help="Scene controls", color=(50,50,50), alpha=50,
@@ -129,17 +130,16 @@ def eye(src, g_pool):
 		bar.update_fps(dt)
 		
 		s,img = cap.read_RGB()
- 
+ 		sleep(bar.sleep.value)
 		###IMAGE PROCESSING 
 		gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
-		spec_img = erase_specular_new(gray_img, bar.spec_lower.value, bar.spec_upper.value)
+		spec_img = erase_specular_new(gray_img, 250,256)
 		# spec_img = equalize(spec_img)     
 		# spec_img = dif_gaus(spec_img, bar.bin_lower.value, bar.bin_upper.value,bar.erode.value)
 		# ys,xs = np.where(spec_img>200)
 
-
 		# binary_img = adaptive_threshold(spec_img, bar.bin_lower.value, bar.bin_upper.value)
-		binary_img = extract_darkspot(spec_img, bar.bin_lower.value, bar.bin_upper.value)
+		binary_img = extract_darkspot(spec_img, 0, bar.bin_thresh.value)
 		# binary_img =  cv2.Canny(spec_img,bar.bin_upper.value, bar.bin_upper.value,apertureSize= bar.erode.value) 
 		# binary_img = cv2.max(binary_img,spec_img)
 		pupil.ellipse = fit_ellipse(binary_img)
@@ -168,8 +168,17 @@ def eye(src, g_pool):
 			img_arr[r.lY:r.uY,r.lX:r.uX] = np.dstack((binary_img, binary_img, binary_img))
 		else:
 			# gray_img = cv2.Blur(gray_img,ksize=( bar.bin_upper.value, bar.bin_upper.value),sigmaX=0)
-			binary_img =  cv2.Canny(spec_img,bar.bin_upper.value, bar.bin_upper.value,apertureSize= bar.erode.value) 
-			img_arr[r.lY:r.uY,r.lX:r.uX] = np.dstack((binary_img, binary_img, binary_img))
+			binary_img =  cv2.Canny(spec_img,bar.canny_upper.value, bar.canny_lower.value,apertureSize= bar.canny_apture.value) 
+			binary_img = cv2.max(binary_img,spec_img)
+			img = np.dstack((binary_img, binary_img, binary_img))
+			#TEST Hough transform Circles - slow and not very good.
+			# circles = cv2.HoughCircles(binary_img, cv2.cv.CV_HOUGH_GRADIENT, 2, 2)
+			# if circles is not None:
+			# 	for x,y,rad in circles[0]:
+			# 		img[y,x,0] = 0
+			# 		img[y,x,1] = 255
+			# 		img[y,x,2] = 0
+			img_arr[r.lY:r.uY,r.lX:r.uX] = img
 			pass
 
 		###CALIBRATION and MAPPING###

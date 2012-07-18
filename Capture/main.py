@@ -47,8 +47,8 @@ def grab(pipe,src_id,g_pool):
 def main():
 	
  	# assing the right id to the cameras
-	eye_src = 1
-	world_src = 0
+	eye_src = 0
+	world_src = -1
 
 
 	audio = False
@@ -99,14 +99,15 @@ def main():
 	if audio: p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3)) 
 
 	p_show_eye.start()
+	sleep(.1)
 	p_show_world.start()
+	sleep(.1)
 	p_player.start()
-
+	sleep(.1)
 	if audio: p_audio.start()
 	
 	if(muliprocess_cam):
 		grab(world_feed,world_id,g_pool)
-
 
 
 	p_show_eye.join()
