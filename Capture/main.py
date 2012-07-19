@@ -48,7 +48,7 @@ def main():
 	
  	# assing the right id to the cameras
 	eye_src = 0
-	world_src = -1
+	world_src = 1
 
 
 	audio = False
@@ -58,13 +58,13 @@ def main():
 	# it must reside in the main loop
 	# this is all taken care of by setting this to true
 	muliprocess_cam = 0
-	
+	# 
 	#use video for debugging
 	use_video = 0
  	
 
 	if(use_video):
-		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
+		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/blue_eye_02.avi" # unsing a path to a videofiles allows for developement without a headset.
 		world_src = -1
 
 	if(muliprocess_cam):
@@ -99,11 +99,11 @@ def main():
 	if audio: p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3)) 
 
 	p_show_eye.start()
-	sleep(.1)
+	sleep(.3)
 	p_show_world.start()
-	sleep(.1)
+	sleep(.3)
 	p_player.start()
-	sleep(.1)
+	sleep(.3)
 	if audio: p_audio.start()
 	
 	if(muliprocess_cam):

@@ -191,15 +191,18 @@ def add_vertical_gradient(image,top=10,bottom=0):
 	return image
 
 
-def is_round(ellipse):
+def is_round(ellipse,ratio):
 	center, (axis1,axis2), angle = ellipse
-	if abs(1-axis2/axis1) < .25:
+
+	if axis1 and axis2 and min(axis2,axis1)/max(axis2,axis1) > ratio:
 		return True
 	else:
 		return False
+def size_deviation(ellipse,target_size):
+	center, axis, angle = ellipse
+	return abs(target_size-max(axis))
 
-
-def fit_ellipse(image, contour_size=80):
+def fit_ellipse(image, contour_size=80,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 			fit an ellipse around the pupil 
 			the largest white spot within a binary image
@@ -213,12 +216,17 @@ def fit_ellipse(image, contour_size=80):
 						'area': 0.0, 'ratio': None, 
 						'major': None, 'minor': None}
 	
-	ellipses = [cv2.fitEllipse(c) for c in contours if len(c) >= contour_size]
-	ellipses = filter(is_round,ellipses)
-	sorted(ellipses, key=lambda ellipses: ellipses[1][0]) #sort by axis size
+	# def ellipse_fittness((center, (axis1,axis2), angle)):
+	# 	roundness = abs(1-axis2/axis1) #1 is round less is worse
+	# 	size_deviation =abs(1-max(axis1,axis2)/perfect_size) #1 is close less is worse
+	# 	position_deviation = 
+	# 	return fitness 
+	ellipses = (cv2.fitEllipse(c) for c in contours if len(c) >= contour_size)
+	ellipses = [(size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio)]
+	sorted(ellipses,key=lambda e: e[0]) #sort by axis size
 	
 	if ellipses:
-		largest = ellipses[-1]
+		largest = ellipses[0][1]
 		largest_ellipse['center'] = largest[0]
 		largest_ellipse['angle'] = largest[-1]
 		largest_ellipse['axes'] = largest[1]
