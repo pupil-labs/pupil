@@ -148,8 +148,10 @@ def eye(src, g_pool):
 		binary_img = extract_darkspot(spec_img, 0, bar.bin_thresh.value)
 		# binary_img =  cv2.Canny(spec_img,bar.bin_upper.value, bar.bin_upper.value,apertureSize= bar.erode.value) 
 		# binary_img = cv2.max(binary_img,spec_img)
-		# pupil.ellipse,others = fit_ellipse(binary_img,ratio=bar.pupil_ratio.value,target_size=bar.pupil_target_size.value)
-		# pupil.ellipse=False
+		result = fit_ellipse(binary_img,spec_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_target_size.value)
+		
+		if result is not None:
+			pupil.ellipse, others= result
 
 
 		if bar.display.value == 0:
@@ -164,28 +166,24 @@ def eye(src, g_pool):
 			# gray_img = cv2.Blur(gray_img,ksize=( bar.bin_upper.value, bar.bin_upper.value),sigmaX=0)
 			binary_img =  cv2.Canny(spec_img,bar.canny_upper.value*100, bar.canny_lower.value*100,apertureSize= bar.canny_apture.value) 
 
-			pupil.ellipse,others = fit_ellipse(binary_img,spec_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_target_size.value)
+			result = fit_ellipse(binary_img,spec_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_target_size.value)
 			binary_img = cv2.max(binary_img,spec_img)
-			#TEST Hough transform Circles - slow and not very good.
-			# circles = cv2.HoughCircles(binary_img, cv2.cv.CV_HOUGH_GRADIENT, 2, 2)
-			# if circles is not None:
-			# 	for x,y,rad in circles[0]:
-			# 		img[y,x,0] = 0
-			# 		img[y,x,1] = 255
-			# 		img[y,x,2] = 0
 			t_img =cv2.cvtColor(binary_img, cv2.COLOR_GRAY2RGB)
-			for pre,((x,y),axs,ang) in others:
-				x,y = int(x),int(y)
-				t_img[y,x,:] =  [0,255,0]
-				t_img[y,x+1,:] =  [0,255,0]
-				t_img[y+1,x,:] =  [0,255,0]
-				t_img[y+1,x+1,:] =  [0,255,0]
+
+			if result is not None:
+				pupil.ellipse, others= result
+				for pre,((x,y),axs,ang) in others:
+					x,y = int(x),int(y)
+					t_img[y,x,:] =  [0,255,0]
+					t_img[y,x+1,:] =  [0,255,0]
+					t_img[y+1,x,:] =  [0,255,0]
+					t_img[y+1,x+1,:] =  [0,255,0]
 
 
 			img_arr[r.lY:r.uY,r.lX:r.uX] = t_img
-			pass
+	
 
-		if pupil.ellipse:
+		if result is not None:
 			pupil.image_coords = r.add_vector(pupil.ellipse['center'])
 
 			# pupil.image_coords = pupil.ellipse['center']

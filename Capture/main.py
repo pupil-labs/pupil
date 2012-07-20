@@ -60,7 +60,7 @@ def main():
 	muliprocess_cam = 0
 	
 	#use video for debugging
-	use_video = 0
+	use_video = 1
  	
 
 	if(use_video):

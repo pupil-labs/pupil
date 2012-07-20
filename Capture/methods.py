@@ -202,7 +202,7 @@ def size_deviation(ellipse,target_size):
 	center, axis, angle = ellipse
 	return abs(target_size-max(axis))
 
-def fit_ellipse(image,real_img,thresh, contour_size=10,ratio=.6,target_size=20.,size_tolerance=20.):
+def fit_ellipse(image,real_img,thresh, contour_size=20,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 			fit an ellipse around the pupil 
 			the largest white spot within a binary image
@@ -217,16 +217,14 @@ def fit_ellipse(image,real_img,thresh, contour_size=10,ratio=.6,target_size=20.,
 						'area': 0.0, 'ratio': None, 
 						'major': None, 'minor': None}
 	
-	# def ellipse_fittness((center, (axis1,axis2), angle)):
-	# 	roundness = abs(1-axis2/axis1) #1 is round less is worse
-	# 	size_deviation =abs(1-max(axis1,axis2)/perfect_size) #1 is close less is worse
-	# 	position_deviation = 
-	# 	return fitness 
+
+	shape = image.shape
 	ellipses = (cv2.fitEllipse(c) for c in contours if len(c) >= contour_size)
+	ellipses = (e for e in ellipses if 0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1])
 	ellipses = (e for e in ellipses if real_img[e[0][1],e[0][0]] < thresh)
 	ellipses = [(size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio)]
-	sorted(ellipses,key=lambda e: e[0]) #sort by axis size
-	
+	ellipses.sort(key=lambda e: e[0]) #sort size_deviation
+	print ellipses
 	if ellipses:
 		largest = ellipses[0][1]
 		largest_ellipse['center'] = largest[0]
