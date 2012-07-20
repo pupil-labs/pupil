@@ -58,13 +58,13 @@ def main():
 	# it must reside in the main loop
 	# this is all taken care of by setting this to true
 	muliprocess_cam = 0
-	# 
+	
 	#use video for debugging
 	use_video = 0
  	
 
 	if(use_video):
-		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/blue_eye_02.avi" # unsing a path to a videofiles allows for developement without a headset.
+		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
 		world_src = -1
 
 	if(muliprocess_cam):

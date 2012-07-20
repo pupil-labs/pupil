@@ -202,7 +202,7 @@ def size_deviation(ellipse,target_size):
 	center, axis, angle = ellipse
 	return abs(target_size-max(axis))
 
-def fit_ellipse(image, contour_size=80,ratio=.6,target_size=20.,size_tolerance=20.):
+def fit_ellipse(image,real_img,thresh, contour_size=10,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 			fit an ellipse around the pupil 
 			the largest white spot within a binary image
@@ -210,7 +210,8 @@ def fit_ellipse(image, contour_size=80,ratio=.6,target_size=20.,size_tolerance=2
 	c_img = image.copy()
 	contours, hierarchy = cv2.findContours(c_img, 
 											mode=cv2.RETR_LIST, 
-											method=cv2.CHAIN_APPROX_NONE)
+											method=cv2.CHAIN_APPROX_NONE,offset=(0,0))
+	
 	largest_ellipse = {'center': (None,None), 
 						'axes': (None, None), 'angle': None, 
 						'area': 0.0, 'ratio': None, 
@@ -222,6 +223,7 @@ def fit_ellipse(image, contour_size=80,ratio=.6,target_size=20.,size_tolerance=2
 	# 	position_deviation = 
 	# 	return fitness 
 	ellipses = (cv2.fitEllipse(c) for c in contours if len(c) >= contour_size)
+	ellipses = (e for e in ellipses if real_img[e[0][1],e[0][0]] < thresh)
 	ellipses = [(size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio)]
 	sorted(ellipses,key=lambda e: e[0]) #sort by axis size
 	
@@ -233,7 +235,7 @@ def fit_ellipse(image, contour_size=80,ratio=.6,target_size=20.,size_tolerance=2
 		largest_ellipse['major'] = max(largest[1])
 		largest_ellipse['minor'] = min(largest[1])
 		largest_ellipse['ratio'] = largest_ellipse['major']/largest_ellipse['minor']  
-		return largest_ellipse
+		return largest_ellipse,ellipses
 	return None
 
 def chessboard(image, pattern_size=(9,5)):

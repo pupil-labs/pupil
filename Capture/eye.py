@@ -28,9 +28,9 @@ class Bar(atb.Bar):
 		self.pupil_ratio = c_float(.6)
 		self.pupil_target_size = c_float(80.)
 		self.pupil_size_tolerance = c_float(40.)
-		self.canny_apture = c_int(5)
-		self.canny_lower = c_int(2)
-		self.canny_upper = c_int(800)
+		self.canny_apture = c_int(7)
+		self.canny_lower = c_int(200)
+		self.canny_upper = c_int(300)
 
 		self.add_var("Display/FPS", step=0.1, getter=self.get_fps)
 		self.add_var("Display/SlowDown",self.sleep, step=0.01,min=0.0)
@@ -148,20 +148,8 @@ def eye(src, g_pool):
 		binary_img = extract_darkspot(spec_img, 0, bar.bin_thresh.value)
 		# binary_img =  cv2.Canny(spec_img,bar.bin_upper.value, bar.bin_upper.value,apertureSize= bar.erode.value) 
 		# binary_img = cv2.max(binary_img,spec_img)
-		pupil.ellipse = fit_ellipse(binary_img,ratio=bar.pupil_ratio.value,target_size=bar.pupil_target_size.value)
+		# pupil.ellipse,others = fit_ellipse(binary_img,ratio=bar.pupil_ratio.value,target_size=bar.pupil_target_size.value)
 		# pupil.ellipse=False
-		if pupil.ellipse:
-			pupil.image_coords = r.add_vector(pupil.ellipse['center'])
-			# numpy array wants (row,col) for an image this = (height,width)
-			# therefore: img.shape[1] = xval, img.shape[0] = yval
-			pupil.norm_coords = normalize(pupil.image_coords, img.shape[1], img.shape[0])
-			pupil.screen_coords = denormalize(pupil.norm_coords, fig.width, fig.height)
-			pupil_point.update(pupil.screen_coords)
-			pupil_ellipse.update(pupil.screen_coords, pupil.ellipse)
-
-			# for the world screen
-			pupil.map_coords = map_vector(pupil.norm_coords, pupil.coefs)
-			g_pool.pupil_x.value, g_pool.pupil_y.value = pupil.map_coords
 
 
 		if bar.display.value == 0:
@@ -174,9 +162,10 @@ def eye(src, g_pool):
 			img_arr[r.lY:r.uY,r.lX:r.uX] = np.dstack((binary_img, binary_img, binary_img))
 		else:
 			# gray_img = cv2.Blur(gray_img,ksize=( bar.bin_upper.value, bar.bin_upper.value),sigmaX=0)
-			binary_img =  cv2.Canny(spec_img,bar.canny_upper.value, bar.canny_lower.value,apertureSize= bar.canny_apture.value) 
+			binary_img =  cv2.Canny(spec_img,bar.canny_upper.value*100, bar.canny_lower.value*100,apertureSize= bar.canny_apture.value) 
+
+			pupil.ellipse,others = fit_ellipse(binary_img,spec_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_target_size.value)
 			binary_img = cv2.max(binary_img,spec_img)
-			img = np.dstack((binary_img, binary_img, binary_img))
 			#TEST Hough transform Circles - slow and not very good.
 			# circles = cv2.HoughCircles(binary_img, cv2.cv.CV_HOUGH_GRADIENT, 2, 2)
 			# if circles is not None:
@@ -184,8 +173,34 @@ def eye(src, g_pool):
 			# 		img[y,x,0] = 0
 			# 		img[y,x,1] = 255
 			# 		img[y,x,2] = 0
-			img_arr[r.lY:r.uY,r.lX:r.uX] = img
+			t_img =cv2.cvtColor(binary_img, cv2.COLOR_GRAY2RGB)
+			for pre,((x,y),axs,ang) in others:
+				x,y = int(x),int(y)
+				t_img[y,x,:] =  [0,255,0]
+				t_img[y,x+1,:] =  [0,255,0]
+				t_img[y+1,x,:] =  [0,255,0]
+				t_img[y+1,x+1,:] =  [0,255,0]
+
+
+			img_arr[r.lY:r.uY,r.lX:r.uX] = t_img
 			pass
+
+		if pupil.ellipse:
+			pupil.image_coords = r.add_vector(pupil.ellipse['center'])
+
+			# pupil.image_coords = pupil.ellipse['center']
+
+			# numpy array wants (row,col) for an image this = (height,width)
+			# therefore: img.shape[1] = xval, img.shape[0] = yval
+			pupil.norm_coords = normalize(pupil.image_coords, img.shape[1], img.shape[0])
+			pupil.screen_coords = denormalize(pupil.norm_coords, fig.width, fig.height)
+			pupil_point.update(pupil.screen_coords)
+			pupil_ellipse.update(pupil.screen_coords, pupil.ellipse)
+
+			# for the world screen
+			pupil.map_coords = map_vector(pupil.norm_coords, pupil.coefs)
+			g_pool.pupil_x.value, g_pool.pupil_y.value = pupil.map_coords
+
 
 		###CALIBRATION and MAPPING###
 		# Initialize Calibration (setup variables and lists)
