@@ -164,7 +164,7 @@ def eye(src, g_pool):
 			img_arr[r.lY:r.uY,r.lX:r.uX] = np.dstack((binary_img, binary_img, binary_img))
 		else:
 			# gray_img = cv2.Blur(gray_img,ksize=( bar.bin_upper.value, bar.bin_upper.value),sigmaX=0)
-			binary_img =  cv2.Canny(spec_img,bar.canny_upper.value*100, bar.canny_lower.value*100,apertureSize= bar.canny_apture.value) 
+			binary_img =  cv2.Canny(spec_img,bar.canny_upper.value*10, bar.canny_lower.value*10,apertureSize= bar.canny_apture.value) 
 
 			result = fit_ellipse(binary_img,spec_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_target_size.value)
 			binary_img = cv2.max(binary_img,spec_img)
@@ -174,10 +174,10 @@ def eye(src, g_pool):
 				pupil.ellipse, others= result
 				for pre,((x,y),axs,ang) in others:
 					x,y = int(x),int(y)
-					t_img[y,x,:] =  [0,255,0]
-					t_img[y,x+1,:] =  [0,255,0]
-					t_img[y+1,x,:] =  [0,255,0]
-					t_img[y+1,x+1,:] =  [0,255,0]
+					t_img[y,x,:]   = [0,255,0]
+					t_img[y,x+1,:] = [0,255,0]
+					t_img[y+1,x,:] = [0,255,0]
+					t_img[y+1,x+1,:]=[0,255,0]
 
 
 			img_arr[r.lY:r.uY,r.lX:r.uX] = t_img

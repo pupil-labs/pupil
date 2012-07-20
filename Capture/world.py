@@ -155,6 +155,9 @@ def world(src, g_pool):
 			if bar.calibrate_nine_stage.value > 8:
 				bar.calibrate_nine_stage.value = 0 
 				bar.calibrate_nine.value = 0
+				bar.calibrate.value = False
+				bar.calibrate_nine.value = False
+
 
 			if bar.calibrate_nine_step.value in range(5,40):
 				g_pool.player_pipe_new.set()
@@ -163,8 +166,7 @@ def world(src, g_pool):
 				g_pool.player_tx.send((circle_id, bar.calibrate_nine_step.value))
 
 			bar.calibrate_nine_step.value += 1
-		else:
-			bar.calibrate.value = False
+
 
 
 		# get an image from the grabber

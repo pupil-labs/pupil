@@ -61,7 +61,7 @@ def player(g_pool):
 	def on_draw():
 		fig.clear(1.0, 1.0, 1.0, 1.0)
 		
-		if g_pool.player_pipe_new.wait(0.1):
+		if g_pool.player_pipe_new.wait(0.3):
 			command = g_pool.player_rx.recv()
 			g_pool.player_pipe_new.clear()
 
@@ -70,7 +70,7 @@ def player(g_pool):
 				gl.glEnable(gl.GL_POINT_SMOOTH)
 				gl.glPushMatrix()
 				gl.glTranslatef(0.0,fig.height/2,0.)
-				gl.glScalef(fig.height,fig.height,0.0)
+				gl.glScalef(fig.height-30,fig.height-30,0.0)
 				gl.glTranslatef((float(fig.width)/float(fig.height))/2.0-10.0/16.0, 
 								-.45,
 								0.)

@@ -224,7 +224,7 @@ def fit_ellipse(image,real_img,thresh, contour_size=20,ratio=.6,target_size=20.,
 	ellipses = (e for e in ellipses if real_img[e[0][1],e[0][0]] < thresh)
 	ellipses = [(size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio)]
 	ellipses.sort(key=lambda e: e[0]) #sort size_deviation
-	print ellipses
+	
 	if ellipses:
 		largest = ellipses[0][1]
 		largest_ellipse['center'] = largest[0]
