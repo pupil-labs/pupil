@@ -8,6 +8,11 @@ import cv2
 from time import sleep
 
 def make_grid(dim=(11,4)):
+	"""
+	this function generates the struckture for an asymetrical circle grid
+	It returns a Vertext Buffer Object that is used by glumpy to draw it in
+	the opengl Window.
+	"""
 	x = range(dim[0])
 	y = range(dim[1])
 
@@ -75,13 +80,13 @@ def player(g_pool):
 								-.45,
 								0.)
 
-				gl.glPointSize((float(fig.height)/10.0)*(1-step/40.0))
+				gl.glPointSize((float(fig.height)/20.0)*(1-step/40.0))
 				gl.glColor4f(1.0,0.0,0.0,1.0)
 				gl.glBegin(gl.GL_POINTS)
 				gl.glVertex3f(grid.vertices['position'][circle_id][0],grid.vertices['position'][circle_id][1],0.5)
 				gl.glEnd()
 
-				gl.glPointSize(float(fig.height)/10.0)
+				gl.glPointSize(float(fig.height)/20.0)
 				grid.draw(gl.GL_POINTS, 'pnc')
 
 				gl.glPopMatrix()

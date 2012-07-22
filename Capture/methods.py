@@ -21,7 +21,7 @@ class capture():
 			self.set_size(size)
 			self.get_frame = self.VideoCapture.read
 		else:
-			#set up as pipe
+			#set up as pipe end
 			self.VideoCapture = src
 			self.size = size
 			self.np_size = size[::-1]
@@ -190,19 +190,17 @@ def add_vertical_gradient(image,top=10,bottom=0):
 	image += offset
 	return image
 
-
-def is_round(ellipse,ratio):
-	center, (axis1,axis2), angle = ellipse
-
-	if axis1 and axis2 and min(axis2,axis1)/max(axis2,axis1) > ratio:
-		return True
+def chessboard(image, pattern_size=(9,5)):
+	status, corners = cv2.findChessboardCorners(image, pattern_size, flags=4)
+	if status:
+		mean = corners.sum(0)/corners.shape[0]
+		# mean is [[x,y]]
+		return mean[0], corners
 	else:
-		return False
-def size_deviation(ellipse,target_size):
-	center, axis, angle = ellipse
-	return abs(target_size-max(axis))
+		return None
 
-def fit_ellipse(image,real_img,thresh, contour_size=20,ratio=.6,target_size=20.,size_tolerance=20.):
+
+def fit_ellipse(image,real_img,thresh, contour_size=10,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 			fit an ellipse around the pupil 
 			the largest white spot within a binary image
@@ -222,9 +220,9 @@ def fit_ellipse(image,real_img,thresh, contour_size=20,ratio=.6,target_size=20.,
 	ellipses = (cv2.fitEllipse(c) for c in contours if len(c) >= contour_size)
 	ellipses = (e for e in ellipses if 0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1])
 	ellipses = (e for e in ellipses if real_img[e[0][1],e[0][0]] < thresh)
-	ellipses = [(size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio)]
+	ellipses = ((size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio))
+	ellipses = [(size_dif,e) for size_dif,e in ellipses if size_dif<size_tolerance]
 	ellipses.sort(key=lambda e: e[0]) #sort size_deviation
-	
 	if ellipses:
 		largest = ellipses[0][1]
 		largest_ellipse['center'] = largest[0]
@@ -236,14 +234,16 @@ def fit_ellipse(image,real_img,thresh, contour_size=20,ratio=.6,target_size=20.,
 		return largest_ellipse,ellipses
 	return None
 
-def chessboard(image, pattern_size=(9,5)):
-	status, corners = cv2.findChessboardCorners(image, pattern_size, flags=4)
-	if status:
-		mean = corners.sum(0)/corners.shape[0]
-		# mean is [[x,y]]
-		return mean[0], corners
+def is_round(ellipse,ratio):
+	center, (axis1,axis2), angle = ellipse
+
+	if axis1 and axis2 and min(axis2,axis1)/max(axis2,axis1) > ratio:
+		return True
 	else:
-		return None
+		return False
+def size_deviation(ellipse,target_size):
+	center, axis, angle = ellipse
+	return abs(target_size-max(axis))
 
 
 def circle_grid(image, circle_id=None, pattern_size=(4,11)):

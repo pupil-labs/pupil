@@ -3,6 +3,7 @@ import OpenGL.GL as gl
 import OpenGL.GLUT as glut
 import glumpy.atb as atb
 from ctypes import c_int,c_bool,c_float
+import cPickle as pickle
 import numpy as np
 
 from time import sleep
@@ -26,12 +27,27 @@ class Bar(atb.Bar):
 		self.draw_roi = c_bool(0)
 		self.bin_thresh = c_int(60)
 		self.pupil_ratio = c_float(.6)
-		self.pupil_target_size = c_float(80.)
+		self.pupil_size = c_float(80.)
 		self.pupil_size_tolerance = c_float(40.)
 		self.canny_apture = c_int(7)
-		self.canny_lower = c_int(200)
-		self.canny_upper = c_int(300)
+		self.canny_thresh = c_int(200)
+		self.canny_tolerance = c_int(10)
 
+
+		#add class field here and it will become session persistant
+		self.session_save = {'sleep':self.sleep,
+							'display':self.display,
+							'pupil_point':self.pupil_point,
+							'bin_thresh':self.bin_thresh,
+							'pupil_ratio':self.pupil_ratio,
+							'pupil_size':self.pupil_size,
+							'pupil_size_tolerance':self.pupil_size_tolerance,
+							'canny_apture':self.canny_apture,
+							'canny_thresh':self.canny_thresh,
+							'canny_tolerance':self.canny_tolerance}
+
+		self.load()
+		
 		self.add_var("Display/FPS", step=0.1, getter=self.get_fps)
 		self.add_var("Display/SlowDown",self.sleep, step=0.01,min=0.0)
 		self.add_var("Display/Mode", self.display, step=1,max=4, min=0, help="select the view-mode")
@@ -39,13 +55,14 @@ class Bar(atb.Bar):
 		self.add_var("Display/Draw_ROI", self.draw_roi, help="drag on screen to select a region of interest")		
 		self.add_var("Bin/Threshold", self.bin_thresh, step=1, max=256, min=0)
 		self.add_var("Pupil/Ratio", self.pupil_ratio, step=.05, max=1., min=0.)
-		self.add_var("Pupil/Target_Size", self.pupil_target_size, step=1, min=0)
-		# self.add_var("Pupil/Size_Tolerance", self.pupil_size_tolerance, step=1, min=0)
+		self.add_var("Pupil/Size", self.pupil_size, step=1, min=0)
+		self.add_var("Pupil/Size_Tolerance", self.pupil_size_tolerance, step=1, min=0)
 		self.add_var("Canny/Apture",self.canny_apture, step=2, max=7, min=1)
-		self.add_var("Canny/B_Lower", self.canny_lower, step=1,min=1)
-		self.add_var("Canny/B_Upper", self.canny_upper, step=1,min=1)
+		self.add_var("Canny/Edge_Threshold", self.canny_thresh, step=1,min=1)
+		self.add_var("Canny/Tolerance", self.canny_tolerance, step=1,min=1)
+		self.add_var("SaveSettings&Exit", g_pool.quit)
 
-		self.add_var("Exit", g_pool.quit)
+
 
 	def update_fps(self, dt):
 		temp_fps = 1/dt
@@ -53,6 +70,28 @@ class Bar(atb.Bar):
 
 	def get_fps(self):
 		return self.fps
+
+	def save(self):
+		new_settings = dict([(key,field.value) for key, field in self.session_save.items()])
+		settings_file = open('session_settings','wb')
+		pickle.dump(new_settings,settings_file)
+		settings_file.close
+
+
+	def load(self):
+		try:
+			settings_file = open('session_settings','rb')
+			new_settings = pickle.load(settings_file)
+			settings_file.close
+		except IOError:
+			print "No session_settings file found. Using defaults"
+			return
+
+		for key,val in new_settings.items():
+			try:
+				self.session_save[key].value = val
+			except KeyError:
+				print "Warning the Sessions file is from a different version, not all fields may be updated"
 
 class Roi(object):
 	"""this is a simple Region of Interest class
@@ -148,11 +187,15 @@ def eye(src, g_pool):
 		binary_img = extract_darkspot(spec_img, 0, bar.bin_thresh.value)
 		# binary_img =  cv2.Canny(spec_img,bar.bin_upper.value, bar.bin_upper.value,apertureSize= bar.erode.value) 
 		# binary_img = cv2.max(binary_img,spec_img)
-		result = fit_ellipse(binary_img,spec_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_target_size.value)
+		result = fit_ellipse(binary_img,spec_img,bar.bin_thresh.value, 
+							ratio=bar.pupil_ratio.value,
+							target_size=bar.pupil_size.value,
+							size_tolerance=bar.pupil_size_tolerance.value)
 		
 		if result is not None:
 			pupil.ellipse, others= result
-
+		else:
+			pupil.ellipse = None
 
 		if bar.display.value == 0:
 			img_arr[...] = img
@@ -164,9 +207,8 @@ def eye(src, g_pool):
 			img_arr[r.lY:r.uY,r.lX:r.uX] = np.dstack((binary_img, binary_img, binary_img))
 		else:
 			# gray_img = cv2.Blur(gray_img,ksize=( bar.bin_upper.value, bar.bin_upper.value),sigmaX=0)
-			binary_img =  cv2.Canny(spec_img,bar.canny_upper.value*10, bar.canny_lower.value*10,apertureSize= bar.canny_apture.value) 
-
-			result = fit_ellipse(binary_img,spec_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_target_size.value)
+			binary_img =  cv2.Canny(spec_img,bar.canny_thresh.value*10, bar.canny_thresh.value*10-bar.canny_tolerance.value*10,apertureSize= bar.canny_apture.value) 
+			result = fit_ellipse(binary_img,spec_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_size.value,size_tolerance=bar.pupil_size_tolerance.value)
 			binary_img = cv2.max(binary_img,spec_img)
 			t_img =cv2.cvtColor(binary_img, cv2.COLOR_GRAY2RGB)
 
@@ -179,15 +221,16 @@ def eye(src, g_pool):
 					t_img[y+1,x,:] = [0,255,0]
 					t_img[y+1,x+1,:]=[0,255,0]
 
-
 			img_arr[r.lY:r.uY,r.lX:r.uX] = t_img
 	
 
 		if result is not None:
 			pupil.image_coords = r.add_vector(pupil.ellipse['center'])
 
-			# pupil.image_coords = pupil.ellipse['center']
+			#update pupil size for the ellipse fiter algorithm
+			bar.pupil_size.value = bar.pupil_size.value + .3*(pupil.ellipse['major']-bar.pupil_size.value)
 
+			
 			# numpy array wants (row,col) for an image this = (height,width)
 			# therefore: img.shape[1] = xval, img.shape[0] = yval
 			pupil.norm_coords = normalize(pupil.image_coords, img.shape[1], img.shape[0])
@@ -198,7 +241,8 @@ def eye(src, g_pool):
 			# for the world screen
 			pupil.map_coords = map_vector(pupil.norm_coords, pupil.coefs)
 			g_pool.pupil_x.value, g_pool.pupil_y.value = pupil.map_coords
-
+		else:
+			pupil.ellipse = None
 
 		###CALIBRATION and MAPPING###
 		# Initialize Calibration (setup variables and lists)
@@ -242,6 +286,7 @@ def eye(src, g_pool):
 		
 		if g_pool.quit.value:
 			print "EYE Process closing from global or atb"
+			bar.save()
 			fig.window.stop()
 
 	
@@ -256,6 +301,7 @@ def eye(src, g_pool):
 
 
 	def on_close():
+		bar.save()
 		g_pool.quit.value = True
 		print "EYE Process closed from window"
 

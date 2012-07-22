@@ -11,8 +11,6 @@ from glob import glob
 
 import cv2
 import cv2.cv as cv
-#from cv2 import VideoWriter
-#from cv2.cv import CV_FOURCC as codec
 
 from methods import normalize, denormalize, chessboard, circle_grid, gen_pattern_grid, calibrate_camera
 from methods import Temp,capture
@@ -266,7 +264,7 @@ def world(src, g_pool):
 			# increment the frame_count_record value 
 			# Eye positions can be associated with frames of recording even if different framerates 
 			g_pool.frame_count_record.value += 1
-			record.writer.write(cv2.cvtColor(img, cv2.COLOR_BGR2RBG))
+			record.writer.write(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
 		# Finish all recordings, clean up. 
 		if not bar.record_video and bar.record_running:

@@ -19,31 +19,6 @@ from audio import normalize, trim, add_silence
 
 from ctypes import *
 
-
-def grab(pipe,src_id,g_pool):
-	"""grab:
-		- Initialize a camera feed
-		-this is needed for certain cameras that have to run in the main loop.
-		- it pushed image frames to the capture class 
-			that it initialize with one pipeend as the source
-	"""
-
-	quit = g_pool.quit
-	cap = cv2.VideoCapture(src_id)
-	size = pipe.recv()
-	cap.set(3, size[0])
-	cap.set(4, size[1])
-			
-	while not quit.value:
-		try:
-			pipe.send(cap.read())
-		except:
-			pass
-	print "Local Grab exit"
-
-
-
-
 def main():
 	
  	# assing the right id to the cameras
@@ -57,7 +32,7 @@ def main():
 	# you can't run world camera in its own process
 	# it must reside in the main loop
 	# this is all taken care of by setting this to true
-	muliprocess_cam = 1
+	muliprocess_cam = 0
 	
 	#use video for debugging
 	use_video = 1
@@ -114,6 +89,28 @@ def main():
 	p_show_world.join()
 	if audio: p_audio.join()
 	print "main exit"
+
+def grab(pipe,src_id,g_pool):
+	"""grab:
+		- Initialize a camera feed
+		-this is needed for certain cameras that have to run in the main loop.
+		- it pushed image frames to the capture class 
+			that it initialize with one pipeend as the source
+	"""
+
+	quit = g_pool.quit
+	cap = cv2.VideoCapture(src_id)
+	size = pipe.recv()
+	cap.set(3, size[0])
+	cap.set(4, size[1])
+			
+	while not quit.value:
+		try:
+			pipe.send(cap.read())
+		except:
+			pass
+	print "Local Grab exit"
+
 
 if __name__ == '__main__':
 	main()
