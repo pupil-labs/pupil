@@ -35,10 +35,10 @@ def main():
 	muliprocess_cam = 0
 	
 	#use video for debugging
-	use_video = 0
+	use_video = 1
  	
 	if(use_video):
-		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_ir_03.mov" # unsing a path to a videofiles allows for developement without a headset.
+		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
 		world_src = -1
 
 	if(muliprocess_cam):

@@ -178,14 +178,14 @@ def fit_ellipse(image,bin_dark_img, contour_size=10,ratio=.6,target_size=20.,siz
 		largest_ellipse['axes'] = largest[1]
 		largest_ellipse['major'] = max(largest[1])
 		largest_ellipse['minor'] = min(largest[1])
-		largest_ellipse['ratio'] = largest_ellipse['major']/largest_ellipse['minor']  
+		largest_ellipse['ratio'] = largest_ellipse['minor']/largest_ellipse['major']  
 		return largest_ellipse,ellipses
 	return None
 
-def is_round(ellipse,ratio):
+def is_round(ellipse,ratio,tolerance=.2):
 	center, (axis1,axis2), angle = ellipse
 
-	if axis1 and axis2 and min(axis2,axis1)/max(axis2,axis1) > ratio:
+	if axis1 and axis2 and min(axis2,axis1)/max(axis2,axis1) > ratio - tolerance:
 		return True
 	else:
 		return False

@@ -27,6 +27,8 @@ class Bar(atb.Bar):
 		self.draw_roi = c_bool(0)
 		self.bin_thresh = c_int(60)
 		self.pupil_ratio = c_float(.6)
+		self.pupil_angle = c_float(0.0)
+
 		self.pupil_size = c_float(80.)
 		self.pupil_size_tolerance = c_float(40.)
 		self.canny_apture = c_int(7)
@@ -55,6 +57,7 @@ class Bar(atb.Bar):
 		self.add_var("Display/Draw_ROI", self.draw_roi, help="drag on screen to select a region of interest")		
 		self.add_var("Bin/Threshold", self.bin_thresh, step=1, max=256, min=0)
 		self.add_var("Pupil/Ratio", self.pupil_ratio, step=.05, max=1., min=0.)
+		self.add_var("Pupil/Angle", self.pupil_angle, step=.05, max=1., min=0.)
 		self.add_var("Pupil/Size", self.pupil_size, step=1, min=0)
 		self.add_var("Pupil/Size_Tolerance", self.pupil_size_tolerance, step=1, min=0)
 		self.add_var("Canny/Apture",self.canny_apture, step=2, max=7, min=1)
@@ -178,18 +181,19 @@ def eye(src, g_pool):
  		sleep(bar.sleep.value)
 		###IMAGE PROCESSING 
 		gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
-		# spec_img = erase_specular(gray_img, 250,256)
+
+
 		binary_img = bin_thresholding(gray_img,image_upper=bar.bin_thresh.value)
 		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
 		binary_img = cv2.dilate(binary_img, kernel, iterations=3)
 	
-
 		spec_mask = cv2.inRange(gray_img, np.asarray(0.),np.asarray(250.0))
 		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
 		spec_mask = cv2.erode(spec_mask, kernel, iterations=1)
 
 		edges =  cv2.Canny(gray_img,bar.canny_thresh.value*10, bar.canny_thresh.value*10-bar.canny_tolerance.value*10,apertureSize= bar.canny_apture.value) 
 		edges = cv2.min(edges, spec_mask) 
+		edges = cv2.min(edges,binary_img)
 		result = fit_ellipse(edges,binary_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_size.value,size_tolerance=bar.pupil_size_tolerance.value)
 		
 		overlay_b = cv2.max(edges,gray_img)
@@ -207,19 +211,21 @@ def eye(src, g_pool):
 		if bar.display.value == 0:
 			img_arr[...] = img
 		elif bar.display.value == 1:
-			img_arr[r.lY:r.uY,r.lX:r.uX]=  np.dstack((gray_img,gray_img,gray_img))
+			img_arr[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
 		elif bar.display.value == 2:
-			img_arr[r.lY:r.uY,r.lX:r.uX] = np.dstack((spec_mask, spec_mask, spec_mask))
+			img_arr[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(spec_mask, cv2.COLOR_GRAY2RGB)
 		elif bar.display.value == 3:
-			img_arr[r.lY:r.uY,r.lX:r.uX] = np.dstack((binary_img, binary_img, binary_img))
+			img_arr[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(binary_img, cv2.COLOR_GRAY2RGB)
 		else:
 			img_arr[r.lY:r.uY,r.lX:r.uX] = overlay
 	
 		if result is not None:
 			pupil.image_coords = r.add_vector(pupil.ellipse['center'])
 
-			#update pupil size for the ellipse fiter algorithm
-			bar.pupil_size.value = bar.pupil_size.value + .3*(pupil.ellipse['major']-bar.pupil_size.value)
+			#update pupil size and ratio for the ellipse fiter algorithm
+			bar.pupil_size.value  =  bar.pupil_size.value + .3*(pupil.ellipse['major']-bar.pupil_size.value)
+			bar.pupil_ratio.value = bar.pupil_ratio.value + 1.*(pupil.ellipse['ratio']-bar.pupil_ratio.value)
+			bar.pupil_angle.value = bar.pupil_angle.value + 1.*(pupil.ellipse['angle']-bar.pupil_angle.value)
 
 			
 			# numpy array wants (row,col) for an image this = (height,width)
