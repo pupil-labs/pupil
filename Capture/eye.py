@@ -178,52 +178,43 @@ def eye(src, g_pool):
  		sleep(bar.sleep.value)
 		###IMAGE PROCESSING 
 		gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
-		spec_img = erase_specular_new(gray_img, 250,256)
-		# spec_img = equalize(spec_img)     
-		# spec_img = dif_gaus(spec_img, bar.bin_lower.value, bar.bin_upper.value,bar.erode.value)
-		# ys,xs = np.where(spec_img>200)
+		# spec_img = erase_specular(gray_img, 250,256)
+		binary_img = bin_thresholding(gray_img,image_upper=bar.bin_thresh.value)
+		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
+		binary_img = cv2.dilate(binary_img, kernel, iterations=3)
+	
 
-		# binary_img = adaptive_threshold(spec_img, bar.bin_lower.value, bar.bin_upper.value)
-		binary_img = extract_darkspot(spec_img, 0, bar.bin_thresh.value)
-		# binary_img =  cv2.Canny(spec_img,bar.bin_upper.value, bar.bin_upper.value,apertureSize= bar.erode.value) 
-		# binary_img = cv2.max(binary_img,spec_img)
-		result = fit_ellipse(binary_img,spec_img,bar.bin_thresh.value, 
-							ratio=bar.pupil_ratio.value,
-							target_size=bar.pupil_size.value,
-							size_tolerance=bar.pupil_size_tolerance.value)
+		spec_mask = cv2.inRange(gray_img, np.asarray(0.),np.asarray(250.0))
+		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
+		spec_mask = cv2.erode(spec_mask, kernel, iterations=1)
+
+		edges =  cv2.Canny(gray_img,bar.canny_thresh.value*10, bar.canny_thresh.value*10-bar.canny_tolerance.value*10,apertureSize= bar.canny_apture.value) 
+		edges = cv2.min(edges, spec_mask) 
+		result = fit_ellipse(edges,binary_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_size.value,size_tolerance=bar.pupil_size_tolerance.value)
 		
+		overlay_b = cv2.max(edges,gray_img)
+		overlay =cv2.cvtColor(overlay_b, cv2.COLOR_GRAY2RGB)
+		overlay[:,:,2] = cv2.max(overlay_b,binary_img)
 		if result is not None:
 			pupil.ellipse, others= result
-		else:
-			pupil.ellipse = None
+			for pre,((x,y),axs,ang) in others:
+				x,y = int(x),int(y)
+				overlay[y,x,:]   = [0,255,0]
+				# overlay[y,x+1,:] = [0,255,0]
+				# overlay[y+1,x,:] = [0,255,0]
+				# overlay[y+1,x+1,:]=[0,255,0]
 
 		if bar.display.value == 0:
 			img_arr[...] = img
 		elif bar.display.value == 1:
 			img_arr[r.lY:r.uY,r.lX:r.uX]=  np.dstack((gray_img,gray_img,gray_img))
 		elif bar.display.value == 2:
-			img_arr[r.lY:r.uY,r.lX:r.uX] = np.dstack((spec_img, spec_img, spec_img))
+			img_arr[r.lY:r.uY,r.lX:r.uX] = np.dstack((spec_mask, spec_mask, spec_mask))
 		elif bar.display.value == 3:
 			img_arr[r.lY:r.uY,r.lX:r.uX] = np.dstack((binary_img, binary_img, binary_img))
 		else:
-			# gray_img = cv2.Blur(gray_img,ksize=( bar.bin_upper.value, bar.bin_upper.value),sigmaX=0)
-			binary_img =  cv2.Canny(spec_img,bar.canny_thresh.value*10, bar.canny_thresh.value*10-bar.canny_tolerance.value*10,apertureSize= bar.canny_apture.value) 
-			result = fit_ellipse(binary_img,spec_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_size.value,size_tolerance=bar.pupil_size_tolerance.value)
-			binary_img = cv2.max(binary_img,spec_img)
-			t_img =cv2.cvtColor(binary_img, cv2.COLOR_GRAY2RGB)
-
-			if result is not None:
-				pupil.ellipse, others= result
-				for pre,((x,y),axs,ang) in others:
-					x,y = int(x),int(y)
-					t_img[y,x,:]   = [0,255,0]
-					t_img[y,x+1,:] = [0,255,0]
-					t_img[y+1,x,:] = [0,255,0]
-					t_img[y+1,x+1,:]=[0,255,0]
-
-			img_arr[r.lY:r.uY,r.lX:r.uX] = t_img
+			img_arr[r.lY:r.uY,r.lX:r.uX] = overlay
 	
-
 		if result is not None:
 			pupil.image_coords = r.add_vector(pupil.ellipse['center'])
 

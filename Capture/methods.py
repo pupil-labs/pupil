@@ -69,22 +69,15 @@ def grayscale(image):
 	return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
 
-def extract_darkspot(image, image_lower=0.0, image_upper=255.0):
-	"""extract_darkspot:
-			head manager function to filter eye image by
-			- erasing specular reflections
-			- fitting ellipse to filtered image 
-		Out: filtered image and center of ellipse
+def bin_thresholding(image, image_lower=0, image_upper=255):
+	"""
+	needs docstring	
 	"""
 	binary_img = cv2.inRange(image, np.asarray(image_lower), 
 				np.asarray(image_upper))
 
 	# kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5,5))
 	# cv2.dilate(binary_img, kernel, binary_img, iterations=1)
-	# kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
-
-	# cv2.erode(binary_img, kernel, binary_img, iterations=1)
-	#binary_img = 255-binary_img
 	return binary_img
 
 def adaptive_threshold(image, image_lower=0.0, image_upper=255.0):
@@ -127,26 +120,8 @@ def equalize(image, image_lower=0.0, image_upper=255.0):
 	# cv2.dilate(image, kernel, image, iterations=1)
 	return image
 
+
 def erase_specular(image,lower_threshold=0.0, upper_threshold=150.0):
-	"""erase_specular: removes specular reflections
-			within given threshold using a binary mask (hi_mask)
-	"""
-	thresh = cv2.inRange(image, 
-				np.asarray(lower_threshold), 
-				np.asarray(upper_threshold))
-	kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (6,6))
-	hilight = cv2.erode(image, kernel, iterations=2)
-	hi_mask = cv2.dilate(thresh, kernel, iterations=2)
-	# turn the hi_mask into boolean mask
-	# currently it has values of 0 or 255 so 255=True
-	hi_mask = (hi_mask==255)
-	specular = image.copy()
-	specular[hi_mask] = hilight[hi_mask]
-	return specular
-
-
-
-def erase_specular_new(image,lower_threshold=0.0, upper_threshold=150.0):
 	"""erase_specular: removes specular reflections
 			within given threshold using a binary mask (hi_mask)
 	"""
@@ -161,34 +136,7 @@ def erase_specular_new(image,lower_threshold=0.0, upper_threshold=150.0):
 	# return cv2.max(hi_mask,image)
 	return specular
 
-def add_horizontal_gradient(image,left=0,right=10):
-	offset = np.linspace(left,right,image.shape[1]).astype(image.dtype)
-	offset = np.repeat(offset[np.newaxis,:],image.shape[0],0)
-	image += offset
-	return image
 
-def dif_gaus(image, lower, upper,erode):
-	lower, upper,erode = int(lower*2-1),int(upper*2-1),int(erode*2-1)
-	lower = cv2.GaussianBlur(image,ksize=(lower,lower),sigmaX=0)
-	upper = cv2.GaussianBlur(image,ksize=(upper,upper),sigmaX=0)
-
-	dif = lower-upper
-
-	kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (erode,erode))
-	dif = cv2.erode(dif, kernel, iterations=1)
-	dif = cv2.max(image,dif)
-
-	# dif = cv2.dilate(dif, kernel, iterations=1)
-
-
-	return dif 
-
-
-def add_vertical_gradient(image,top=10,bottom=0):
-	offset = np.linspace(top,bottom,image.shape[0]).astype(image.dtype)
-	offset = np.repeat(offset[:,np.newaxis,],image.shape[1],1)
-	image += offset
-	return image
 
 def chessboard(image, pattern_size=(9,5)):
 	status, corners = cv2.findChessboardCorners(image, pattern_size, flags=4)
@@ -200,7 +148,7 @@ def chessboard(image, pattern_size=(9,5)):
 		return None
 
 
-def fit_ellipse(image,real_img,thresh, contour_size=10,ratio=.6,target_size=20.,size_tolerance=20.):
+def fit_ellipse(image,bin_dark_img, contour_size=10,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 			fit an ellipse around the pupil 
 			the largest white spot within a binary image
@@ -219,7 +167,7 @@ def fit_ellipse(image,real_img,thresh, contour_size=10,ratio=.6,target_size=20.,
 	shape = image.shape
 	ellipses = (cv2.fitEllipse(c) for c in contours if len(c) >= contour_size)
 	ellipses = (e for e in ellipses if 0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1])
-	ellipses = (e for e in ellipses if real_img[e[0][1],e[0][0]] < thresh)
+	ellipses = (e for e in ellipses if bin_dark_img[e[0][1],e[0][0]])
 	ellipses = ((size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio))
 	ellipses = [(size_dif,e) for size_dif,e in ellipses if size_dif<size_tolerance]
 	ellipses.sort(key=lambda e: e[0]) #sort size_deviation
