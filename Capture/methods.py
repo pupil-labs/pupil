@@ -148,7 +148,7 @@ def chessboard(image, pattern_size=(9,5)):
 		return None
 
 
-def fit_ellipse(image,bin_dark_img, contour_size=10,ratio=.6,target_size=20.,size_tolerance=20.):
+def fit_ellipse(image,bin_dark_img, contour_size=5,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 			fit an ellipse around the pupil 
 			the largest white spot within a binary image
@@ -182,7 +182,7 @@ def fit_ellipse(image,bin_dark_img, contour_size=10,ratio=.6,target_size=20.,siz
 		return largest_ellipse,ellipses
 	return None
 
-def is_round(ellipse,ratio,tolerance=.2):
+def is_round(ellipse,ratio,tolerance=.1):
 	center, (axis1,axis2), angle = ellipse
 
 	if axis1 and axis2 and min(axis2,axis1)/max(axis2,axis1) > ratio - tolerance:

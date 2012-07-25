@@ -151,9 +151,15 @@ def eye(src, g_pool):
 	pupil.screen_coords = (0,0)
 	pupil.ellipse = None
 	pupil.map_coords = (0,0)
-	pupil.coefs = None
-	pupil.pt_cloud = None
-
+	try:
+		pupil.pt_cloud = np.load('cal_pt_cloud.npy')
+	except:
+		pupil.pt_cloud = None
+	print pupil.pt_cloud
+	if pupil.pt_cloud is not None:
+		pupil.coefs = calibrate_poly(pupil.pt_cloud)
+	else:
+		pupil.coefs = None
 	r = Roi(img_arr.shape)
 	
 	# local object
@@ -222,9 +228,9 @@ def eye(src, g_pool):
 		if result is not None:
 			pupil.image_coords = r.add_vector(pupil.ellipse['center'])
 
-			#update pupil size and ratio for the ellipse fiter algorithm
+			#update pupil size,angle and ratio for the ellipse fiter algorithm
 			bar.pupil_size.value  =  bar.pupil_size.value + .3*(pupil.ellipse['major']-bar.pupil_size.value)
-			bar.pupil_ratio.value = bar.pupil_ratio.value + 1.*(pupil.ellipse['ratio']-bar.pupil_ratio.value)
+			bar.pupil_ratio.value = bar.pupil_ratio.value + .7*(pupil.ellipse['ratio']-bar.pupil_ratio.value)
 			bar.pupil_angle.value = bar.pupil_angle.value + 1.*(pupil.ellipse['angle']-bar.pupil_angle.value)
 
 			

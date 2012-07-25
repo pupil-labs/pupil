@@ -80,7 +80,7 @@ def player(g_pool):
 								-.45,
 								0.)
 
-				gl.glPointSize((float(fig.height)/20.0)*(1-step/40.0))
+				gl.glPointSize((float(fig.height)/20.0)*(1.1-(step+1)/80.0))
 				gl.glColor4f(1.0,0.0,0.0,1.0)
 				gl.glBegin(gl.GL_POINTS)
 				gl.glVertex3f(grid.vertices['position'][circle_id][0],grid.vertices['position'][circle_id][1],0.5)

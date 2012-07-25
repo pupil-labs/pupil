@@ -81,56 +81,106 @@ Z = cal_pt_cloud
 #ax.scatter(Z[:,0],Z[:,1],Z[:,2], c= "r")
 #ax.scatter(Z[:,0],Z[:,1],[z+0 for z in Z[:,3]], c= "b")
 
-s =4
+s =3
 
 if s == 1:
     #create fn plane from coeffients
     Z = cal_pt_cloud 
     x,y,c = fitPlane(Z[:,0],Z[:,1],Z[:,2],)
-    X = np.array([i/15.0 for i in range(-4,8)])
-    Y = np.array([i/15.0 for i in range(-10,0)])
+    X = np.linspace(min(Z[:,0]),max(Z[:,0]),num=30,endpoint=True)
+    Y = np.linspace(min(Z[:,1]),max(Z[:,1]),num=30,endpoint=True)
     X, Y = np.meshgrid(X,Y)
     Z =x*X + y*Y +c
     ax.plot_surface(X, Y, Z, rstride=1, cstride=1, linewidth=0.1, antialiased=True,alpha=0.4,color='r')
+    
+    #calculate residuals
+    Z = cal_pt_cloud 
+    X = Z[:,0]
+    Y = Z[:,1]
+    Zobserved = Z[:,2]
+    Zmodel = x*X + y*Y +c
+    Distance = Zobserved-Zmodel
+    Distance *=Distance
+    Error = np.sum(Distance)
+    print Error
+
     Z = cal_pt_cloud 
     ax.scatter(Z[:,0],Z[:,1],Z[:,2], c= "r")
 
-if s == 2:
+if s == 1:
     #create fn plane from coeffients
     Z = cal_pt_cloud 
     x,y,c = fitPlane(Z[:,0],Z[:,1],Z[:,3],)
-    X = np.array([i/15.0 for i in range(-4,8)])
-    Y = np.array([i/15.0 for i in range(-10,0)])
+    X = np.linspace(min(Z[:,0]),max(Z[:,0]),num=30,endpoint=True)
+    Y = np.linspace(min(Z[:,1]),max(Z[:,1]),num=30,endpoint=True)
     X, Y = np.meshgrid(X,Y)
     Z =x*X + y*Y +c
     ax.plot_surface(X, Y, Z, rstride=1, cstride=1, linewidth=.1, antialiased=True,alpha=0.4,color='b')
+    
+    #calculate residuals
+    Z = cal_pt_cloud 
+    X = Z[:,0]
+    Y = Z[:,1]
+    Zobserved = Z[:,3]
+    Zmodel = x*X + y*Y +c
+    Distance = Zobserved-Zmodel
+    Distance *=Distance
+    Error = np.sum(Distance)
+    print Error
+
+
     Z = cal_pt_cloud 
     ax.scatter(Z[:,0],Z[:,1],Z[:,3], c= "b")
 
-if s==4:
+if s==3:
     #create fn plane from coeffients
     Z = cal_pt_cloud 
-    x,y,xx,yy,xy,xxyy,c = Fit_Polynomial_Surf(Z[:,0],Z[:,1],Z[:,2],)
-    X = np.array([i/15.0 for i in range(-10,10)])
-    Y = np.array([i/15.0 for i in range(-10,5)])
+    x,y,xx,yy,xy,xxyy,c = Fit_Polynomial_Surf(Z[:,0],Z[:,1],Z[:,2])
+    X = np.linspace(min(Z[:,0]),max(Z[:,0]),num=30,endpoint=True)
+    Y = np.linspace(min(Z[:,1]),max(Z[:,1]),num=30,endpoint=True)
     X, Y = np.meshgrid(X,Y)
     Z =x*X + y*Y + xx*X*X + yy*Y*Y + xy*X*Y + xxyy*Y*Y*X*X +c
     ax.plot_surface(X, Y, Z, rstride=1, cstride=1, linewidth=.1, antialiased=True,alpha=0.4,color='r')
+    
+    #calculate residuals
+    Z = cal_pt_cloud 
+    X = Z[:,0]
+    Y = Z[:,1]
+    Zobserved = Z[:,2]
+    Zmodel = x*X + y*Y + xx*X*X + yy*Y*Y + xy*X*Y + xxyy*Y*Y*X*X +c
+    Distance = Zobserved-Zmodel
+    Distance *=Distance
+    Error = np.sum(Distance)
+    print Error
     Z = cal_pt_cloud 
     ax.scatter(Z[:,0],Z[:,1],Z[:,2], c= "r")
 
-if s ==4:
+if s ==3:
     #create fn plane from coeffients
     Z = cal_pt_cloud 
-    x,y,xx,yy,xy,xxyy,c = Fit_Polynomial_Surf(Z[:,0],Z[:,1],Z[:,3],)
-    X = np.array([i/15.0 for i in range(-10,10)])
-    Y = np.array([i/15.0 for i in range(-10,5)])
+    x,y,xx,yy,xy,xxyy,c = Fit_Polynomial_Surf(Z[:,0],Z[:,1],Z[:,3])
+    X = np.linspace(min(Z[:,0]),max(Z[:,0]),num=30,endpoint=True)
+    Y = np.linspace(min(Z[:,1]),max(Z[:,1]),num=30,endpoint=True)
     X, Y = np.meshgrid(X,Y)
     Z =x*X + y*Y + xx*X*X + yy*Y*Y + xy*X*Y + xxyy*Y*Y*X*X +c
     ax.plot_surface(X, Y, Z, rstride=1, cstride=1, linewidth=.1, antialiased=True,alpha=0.4,color='b')
+    
+    #calculate residuals
+    Z = cal_pt_cloud 
+    X = Z[:,0]
+    Y = Z[:,1]
+    Zobserved = Z[:,3]
+    Zmodel = x*X + y*Y + xx*X*X + yy*Y*Y + xy*X*Y + xxyy*Y*Y*X*X +c
+    Distance = Zobserved-Zmodel
+    Distance *=Distance
+    Error = np.sum(Distance)
+    print Error
     Z = cal_pt_cloud 
     ax.scatter(Z[:,0],Z[:,1],Z[:,3], c= "b")
 
-ax.set_zlim3d(-1.5, 1.5)
+# ax.set_zlim3d(-1.5, 1.5)
 #plt.axis([-1,.5, -1,.5,])
+plt.xlabel("Pupil X")
+plt.ylabel("Pupil Y")
+plt.title("Z is Pattern in X(red) / Y(blue), no of sambles: %i" %Z.shape[0])
 plt.show()

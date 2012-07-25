@@ -141,7 +141,7 @@ def world(src, g_pool):
 	def on_idle(dt):
 		bar.update_fps(dt)
 
-
+		collect_data =False
 		# Nine Point calibration state machine timing
 		if bar.calibrate_nine.value:
 			bar.calibrate.value = True
@@ -157,11 +157,14 @@ def world(src, g_pool):
 				bar.calibrate_nine.value = False
 
 
-			if bar.calibrate_nine_step.value in range(5,40):
-				g_pool.player_pipe_new.set()
-				g_pool.player_tx.send("calibrate")
-				circle_id = pattern.map[bar.calibrate_nine_stage.value]
-				g_pool.player_tx.send((circle_id, bar.calibrate_nine_step.value))
+			if bar.calibrate_nine_step.value in range(10,30):
+				collect_data = True
+
+			circle_id = pattern.map[bar.calibrate_nine_stage.value]
+			g_pool.player_pipe_new.set()
+			g_pool.player_tx.send("calibrate")
+			g_pool.player_tx.send((circle_id, bar.calibrate_nine_step.value))
+
 
 			bar.calibrate_nine_step.value += 1
 
@@ -186,7 +189,7 @@ def world(src, g_pool):
 		if bar.pattern and bar.calibrate_nine.value:
 			pattern.board, pattern.board_centers = circle_grid(img, pattern.map[bar.calibrate_nine_stage.value])
 
-		if pattern.board is not None:
+		if pattern.board is not None and collect_data:
 			# numpy array wants (row,col) for an image this = (height,width)
 			# therefore: img.shape[1] = xval, img.shape[0] = yval
 			pattern.image_coords = pattern.board # this is the mean of the pattern found

@@ -22,8 +22,8 @@ from ctypes import *
 def main():
 	
  	# assing the right id to the cameras
-	eye_src = 0
-	world_src = 1
+	eye_src = 1
+	world_src = 0
 
 
 	audio = False
@@ -32,10 +32,10 @@ def main():
 	# you can't run world camera in its own process
 	# it must reside in the main loop
 	# this is all taken care of by setting this to true
-	muliprocess_cam = 0
+	muliprocess_cam = 1
 	
 	#use video for debugging
-	use_video = 1
+	use_video = 0
  	
 	if(use_video):
 		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
