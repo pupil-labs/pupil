@@ -19,7 +19,7 @@ class Bar(atb.Bar):
 	"""docstring for Bar"""
 	def __init__(self, name,g_pool, defs):
 		super(Bar, self).__init__(name,**defs) 
-		self.fps = 0.0 
+		self.fps = c_float(0.0) 
 		self.sleep = c_float(0.0)
 		self.display = c_int(1)
 		self.pupil_point = c_bool(1)
@@ -50,14 +50,14 @@ class Bar(atb.Bar):
 
 		self.load()
 		
-		self.add_var("Display/FPS", step=0.1, getter=self.get_fps)
+		self.add_var("Display/FPS",self.fps, step=0.1)
 		self.add_var("Display/SlowDown",self.sleep, step=0.01,min=0.0)
 		self.add_var("Display/Mode", self.display, step=1,max=4, min=0, help="select the view-mode")
 		self.add_var("Display/Show_Pupil_Point", self.pupil_point)		
 		self.add_var("Display/Draw_ROI", self.draw_roi, help="drag on screen to select a region of interest")		
 		self.add_var("Bin/Threshold", self.bin_thresh, step=1, max=256, min=0)
 		self.add_var("Pupil/Ratio", self.pupil_ratio, step=.05, max=1., min=0.)
-		self.add_var("Pupil/Angle", self.pupil_angle, step=.05, max=1., min=0.)
+		self.add_var("Pupil/Angle", self.pupil_angle)
 		self.add_var("Pupil/Size", self.pupil_size, step=1, min=0)
 		self.add_var("Pupil/Size_Tolerance", self.pupil_size_tolerance, step=1, min=0)
 		self.add_var("Canny/Apture",self.canny_apture, step=2, max=7, min=1)
@@ -69,10 +69,8 @@ class Bar(atb.Bar):
 
 	def update_fps(self, dt):
 		temp_fps = 1/dt
-		self.fps += 0.1*(temp_fps-self.fps)
+		self.fps.value += 0.1*(temp_fps-self.fps.value)
 
-	def get_fps(self):
-		return self.fps
 
 	def save(self):
 		new_settings = dict([(key,field.value) for key, field in self.session_save.items()])
@@ -155,7 +153,6 @@ def eye(src, g_pool):
 		pupil.pt_cloud = np.load('cal_pt_cloud.npy')
 	except:
 		pupil.pt_cloud = None
-	print pupil.pt_cloud
 	if pupil.pt_cloud is not None:
 		pupil.coefs = calibrate_poly(pupil.pt_cloud)
 	else:

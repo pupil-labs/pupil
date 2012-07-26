@@ -32,7 +32,7 @@ def main():
 	# you can't run world camera in its own process
 	# it must reside in the main loop
 	# this is all taken care of by setting this to true
-	muliprocess_cam = 1
+	muliprocess_cam = 0
 	
 	#use video for debugging
 	use_video = 0

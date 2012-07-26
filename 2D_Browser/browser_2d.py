@@ -6,7 +6,7 @@ import OpenGL.GLUT as glut
 import glumpy.atb as atb
 from ctypes import *
 import numpy as np
-
+from time import sleep
 import cv2
 
 # from gl_shapes import Point
@@ -22,11 +22,11 @@ class Bar(atb.Bar):
 	"""docstring for Bar"""
 	def __init__(self, name, data_path, total_frames, framelist, defs):
 		super(Bar, self).__init__(name,**defs) 
-		self.fps = 0.0 
+		self.fps = c_float(0.0) 
 		self.play = c_bool(0)
 		self.get_single = c_bool(0)
 		self.frame_num = c_int(0)
-		self.display = 0
+		self.display = c_int(0)
 		self.exit = c_bool(0)
 		self.framelist = framelist
 		self.data_path = data_path
@@ -35,13 +35,12 @@ class Bar(atb.Bar):
 		self.record_running = c_bool(0)
 
 		self.add_var("Play", self.play, key="SPACE", help="Play/Pause") #key="SPACE",
-		self.add_var("FPS", step=0.01, getter=self.get_fps)
+		self.add_var("FPS",self.fps, step=0.01)
 		# self.add_var("Frame Number", step=1, getter=self.get_frame_num, setter=self.set_frame_num,
 		# 			help="Scrub through video frames.",
 		# 			min=0, max=10)
 		self.add_var("Frame Number", self.frame_num, min=0, max=total_frames-1)
-		self.add_var("Display", step=1, getter=self.get_display, setter=self.set_display,
-					max=3, min=0)
+		self.add_var("Display",self.display, step=1,max=3, min=0)
 		self.add_button("Step", self.step_forward, key="s", help="Step forward one frame")
 		self.add_button("Save Keyframe", self.add_keyframe, key="RETURN", help="Save keyframe to list")
 		self.add_var("Record Video", self.record_video, key="R", help="Start/Stop Recording")
@@ -51,7 +50,7 @@ class Bar(atb.Bar):
 	def update_fps(self, dt):
 		if dt > 0:
 			temp_fps = 1/dt
-			self.fps += 0.1*(temp_fps-self.fps)
+			self.fps.value += 0.1*(temp_fps-self.fps.value)
 
 	def get_fps(self):
 		return self.fps
@@ -59,16 +58,6 @@ class Bar(atb.Bar):
 	def screen_cap(self):
 		# just flip the switch
 		self.screen_shot = not self.screen_shot
-
-	def get_frame_num(self):
-		return self.frame_num
-	def set_frame_num(self, val):
-		self.frame_num = val
-
-	def get_display(self):
-		return self.display
-	def set_display(self, val):
-		self.display = val
 
 	def step_forward(self):
 		# just flip the switch
@@ -101,7 +90,7 @@ class Temp(object):
 	def __init__(self):
 		pass
 
-def browser(data_path, video_path, pts_path, audio_pipe, cam_intrinsics_path, running):
+def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 
 	record = Temp()
 	record.path = None
@@ -110,14 +99,15 @@ def browser(data_path, video_path, pts_path, audio_pipe, cam_intrinsics_path, ru
 	c = Temp()
 
 	c.captures = [cv2.VideoCapture(path) for path in video_path]
-	# c.total_frames = min([c.get(7) for c in c.captures])
-	# record.fps = min([c.get(5) for c in captures])
-	total_frames = 999
+	total_frames = min([cap.get(7) for cap in c.captures])
+	record.fps = min([cap.get(5) for cap in c.captures])
 
 	r, img_arr = c.captures[0].read()
-	r, img_arr2 =c.captures[1].read()
+	if len(c.captures)==2:
+		r, img_arr2 =c.captures[1].read()
 
 
+	img_arr = cv2.cvtColor(img_arr, cv2.COLOR_BGR2RGB)
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 	image = glumpy.Image(img_arr)
 	image.x, image.y = 0,0
@@ -143,7 +133,6 @@ def browser(data_path, video_path, pts_path, audio_pipe, cam_intrinsics_path, ru
 	cam_intrinsics.H_map = []
 
 	g_pool = Temp()
-	g_pool.running = running
 
 
 	if cam_intrinsics_path is not None:
@@ -166,32 +155,25 @@ def browser(data_path, video_path, pts_path, audio_pipe, cam_intrinsics_path, ru
 		draw()
 
 	def on_close():
-		g_pool.running.value = 0
-		# while pipe_video.poll(0.3):
-		while 0:
-			try:
-				pipe_video.recv()
-			except:
-				print "exception, nothing to recv."
-				break
+		pass
 
 
 		print "Close event !"
 
 	def on_idle(dt):
 		bar.update_fps(dt)
+		sleep(0.03)
 
 		if bar.play or bar.get_single:
-			#this kills video playback at approx 280 frames when the audio process is not active
-			# audio_pipe.send(bar.play) 
-
 			# load new images
-			bar.frame_num.value =10
-		
-
 			r, img1 = c.captures[0].read()
-			r, img2 =c.captures[1].read()
+			if len(c.captures)==2:
+				r, img_arr2 =c.captures[1].read()
 
+			if not r:
+				bar.play.value = 0
+				return
+			bar.frame_num.value +=1
 			#stop playback when at the end of file.
 
 			if bar.frame_num.value == 0:
@@ -199,26 +181,27 @@ def browser(data_path, video_path, pts_path, audio_pipe, cam_intrinsics_path, ru
 
 			# Extract corresponing Pupil posistions.
 			# Here we are taking only the first values of the frame for positions hence 0 index
-			x_screen, y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
+			try:
+				x_screen, y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
 														gaze.map[bar.frame_num.value][0]['eye_y']), 
 														fig.width, fig.height, flip_y=False)
+				img1[int(y_screen), int(x_screen)] = [255,255,255]
 
-			# make the pupil pos center pixel in world video white
-			img1[int(y_screen), int(x_screen)] = [255,255,255]
-			# overlay_img[int(l_y_screen)+1, int(l_x_screen)+1] = [255,255,255]
-			# overlay_img[int(l_y_screen), int(l_x_screen)+1] = [255,255,255]
-			# overlay_img[int(l_y_screen)+1, int(l_x_screen)] = [255,255,255]
+				# update gaze.x_screen, gaze.y_screen /OPENGL COORIDANTE SYSTEM 
+				gaze.x_screen,gaze.y_screen = flip_horizontal((x_screen,y_screen), fig.height)
+				gaze_point.update((	gaze.x_screen, gaze.y_screen))
 
-
+			except:
+				pass
 			
-			if cam_intrinsics_path is not None and bar.display is not 0:
+			if cam_intrinsics_path is not None and bar.display.value is not 0:
 				# undistor world image
 				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
 				# Undistort the gaze point based on the distortion coefs 
 				x_screen, y_screen = undistort_point((x_screen, y_screen), 
 									cam_intrinsics.K, cam_intrinsics.dist_coefs)
 
-				if bar.display in (2,3):
+				if bar.display.value in (2,3):
 					# homography mapping
 					overlay, H = homography_map(img2, img1) # map img1 onto img2 (the world onto the source video)
 					# cam_intrinsics.H_map.append([bar.frame_num.value, H])
@@ -230,43 +213,39 @@ def browser(data_path, video_path, pts_path, audio_pipe, cam_intrinsics_path, ru
 
 					img1=overlay #overwrite img with the overlay
 
-				if bar.display == 3:
+				if bar.display.value == 3:
 					cv2.circle(img2, (int(x_screen), int(y_screen)), 10, (0,255,0,100), 1) 
 					img1=img2 #overwrite img1 with the source video
 				
 			
-			# update gaze.x_screen, gaze.y_screen /OPENGL COORIDANTE SYSTEM 
-			gaze.x_screen,gaze.y_screen = flip_horizontal((x_screen,y_screen), fig.height)
-			gaze_point.update((	gaze.x_screen, gaze.y_screen))
-
 			# update the img array
 			img_arr[...] = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
 
 
 			#recorder logic
-			if bar.record_video and not bar.record_running:
+			if bar.record_video.value and not bar.record_running.value:
 				record.path = os.path.join(bar.data_path, "out.avi")
-				record.writer = cv2.VideoWriter(record.path,cv2.cv.CV_FOURCC(*'DIVX'),record.fps, (img2.shape[1],img2.shape[0]) )
+				record.writer = cv2.VideoWriter(record.path,cv2.cv.CV_FOURCC(*'DIVX'),record.fps, (img1.shape[1],img1.shape[0]) )
 				bar.record_running.value = 1
 
-			if bar.record_video and bar.record_running:
+			if bar.record_video.value and bar.record_running.value:
 				# Save image frames to video writer
-				record.writer.write(cv2.cvtColor(img2, cv2.COLOR_BGR2RGB))
+				try:
+					cv2.circle(img1, (int(x_screen), int(y_screen)), 10, (0,255,0,100), 1) 
+				except:
+					pass
+				record.writer.write(img1)
 
 			# Finish all recordings, clean up. 
-			if not bar.record_video and bar.record_running:
+			if not bar.record_video.value and bar.record_running.value:
 				record.writer = None
-				bar.record_running = 0
+				bar.record_running.value = 0
 
 
 
 			#just grab one image.
 			bar.get_single = 0
-	
-		# else:
-		# 	sleep(0.5)
-		# np.save("data/homography_map.npy", cam_intrinsics.H_map)
-		
+
 
 		image.update()
 		fig.redraw()

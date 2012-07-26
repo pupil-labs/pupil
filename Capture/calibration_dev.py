@@ -75,13 +75,14 @@ ax = fig.gca(projection='3d')
 
 
 cal_pt_cloud = np.load('cal_pt_cloud.npy')
+# cal_pt_cloud = np.load('cal_pt_cloud_529.npy')
 
 Z = cal_pt_cloud 
 #plot input data
 #ax.scatter(Z[:,0],Z[:,1],Z[:,2], c= "r")
 #ax.scatter(Z[:,0],Z[:,1],[z+0 for z in Z[:,3]], c= "b")
 
-s =3
+s =2
 
 if s == 1:
     #create fn plane from coeffients
@@ -100,9 +101,13 @@ if s == 1:
     Zobserved = Z[:,2]
     Zmodel = x*X + y*Y +c
     Distance = Zobserved-Zmodel
-    Distance *=Distance
-    Error = np.sum(Distance)
-    print Error
+    X_Distance = Distance*320
+    Distance = np.abs(Distance)
+    #average Residual
+    X_Error = np.sum(Distance)/Distance.shape[0]
+    # convert from normalized to screen units
+    X_Error*=320
+    print 'Average Residual in X in Pixels of World Camera',X_Error
 
     Z = cal_pt_cloud 
     ax.scatter(Z[:,0],Z[:,1],Z[:,2], c= "r")
@@ -124,15 +129,20 @@ if s == 1:
     Zobserved = Z[:,3]
     Zmodel = x*X + y*Y +c
     Distance = Zobserved-Zmodel
-    Distance *=Distance
-    Error = np.sum(Distance)
-    print Error
+    Y_Distance = Distance*240
+
+    Distance = np.abs(Distance)
+    #average Residual
+    Y_Error = np.sum(Distance)/Distance.shape[0]
+    # convert from normalized to screen units
+    Y_Error*=240
+    print 'Average Residual in X in Pixels of World Camera',Y_Error
 
 
     Z = cal_pt_cloud 
     ax.scatter(Z[:,0],Z[:,1],Z[:,3], c= "b")
 
-if s==3:
+if s==2:
     #create fn plane from coeffients
     Z = cal_pt_cloud 
     x,y,xx,yy,xy,xxyy,c = Fit_Polynomial_Surf(Z[:,0],Z[:,1],Z[:,2])
@@ -142,6 +152,8 @@ if s==3:
     Z =x*X + y*Y + xx*X*X + yy*Y*Y + xy*X*Y + xxyy*Y*Y*X*X +c
     ax.plot_surface(X, Y, Z, rstride=1, cstride=1, linewidth=.1, antialiased=True,alpha=0.4,color='r')
     
+    # print "X Coeffs: x,y,xx,yy,xy,xxyy,c",x,y,xx,yy,xy,xxyy,c 
+
     #calculate residuals
     Z = cal_pt_cloud 
     X = Z[:,0]
@@ -149,13 +161,20 @@ if s==3:
     Zobserved = Z[:,2]
     Zmodel = x*X + y*Y + xx*X*X + yy*Y*Y + xy*X*Y + xxyy*Y*Y*X*X +c
     Distance = Zobserved-Zmodel
-    Distance *=Distance
-    Error = np.sum(Distance)
-    print Error
+    # Distance *=Distance
+    X_Distance = Distance*320
+    Distance = np.abs(Distance)
+    #average Residual
+    X_Error = np.sum(Distance)/Distance.shape[0]
+    # convert from normalized to screen units
+    X_Error*=320
+    print 'Average Residual in X in Pixels of World Camera',X_Error
+
+
     Z = cal_pt_cloud 
     ax.scatter(Z[:,0],Z[:,1],Z[:,2], c= "r")
 
-if s ==3:
+if s ==2:
     #create fn plane from coeffients
     Z = cal_pt_cloud 
     x,y,xx,yy,xy,xxyy,c = Fit_Polynomial_Surf(Z[:,0],Z[:,1],Z[:,3])
@@ -165,22 +184,31 @@ if s ==3:
     Z =x*X + y*Y + xx*X*X + yy*Y*Y + xy*X*Y + xxyy*Y*Y*X*X +c
     ax.plot_surface(X, Y, Z, rstride=1, cstride=1, linewidth=.1, antialiased=True,alpha=0.4,color='b')
     
+    # print "Y Coeffs: x,y,xx,yy,xy,xxyy,c",x,y,xx,yy,xy,xxyy,c 
+
     #calculate residuals
     Z = cal_pt_cloud 
     X = Z[:,0]
     Y = Z[:,1]
     Zobserved = Z[:,3]
     Zmodel = x*X + y*Y + xx*X*X + yy*Y*Y + xy*X*Y + xxyy*Y*Y*X*X +c
-    Distance = Zobserved-Zmodel
-    Distance *=Distance
-    Error = np.sum(Distance)
-    print Error
+    Distance = Zobserved-Zmodel 
+    Y_Distance = Distance*240
+    Distance = np.abs(Distance)
+    Y_Error = np.sum(Distance)/Distance.shape[0]
+    Y_Error*=240
+    print 'Average Residual in Y in Pixels of World Camera',Y_Error
     Z = cal_pt_cloud 
     ax.scatter(Z[:,0],Z[:,1],Z[:,3], c= "b")
 
-# ax.set_zlim3d(-1.5, 1.5)
-#plt.axis([-1,.5, -1,.5,])
-plt.xlabel("Pupil X")
-plt.ylabel("Pupil Y")
-plt.title("Z is Pattern in X(red) / Y(blue), no of sambles: %i" %Z.shape[0])
+
+plt.xlabel("Pupil in Eye-Space X")
+plt.ylabel("Pupil in Eye-Space Y")
+plt.title("Z: pattern pts in X(red)/Y(blue),planes are map Fn's. Samples: %i" %Z.shape[0])
+
+fig_error = plt.figure()
+plt.scatter(X_Distance,Y_Distance)
+plt.title("Residuals")
+plt.xlabel("Pupil X Residuals in World-Space, avg. Residual %f pixels" %X_Error)
+plt.ylabel("Pupil Y Residuals World-Space, avg. Residual %f pixels" %Y_Error)
 plt.show()

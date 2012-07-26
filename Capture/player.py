@@ -94,6 +94,7 @@ def player(g_pool):
 			elif command == 'load_video':
 				src_id = g_pool.player_rx.recv() # path to video
 				capture.cap = cv2.VideoCapture(src_id)
+				print capture.cap
 				# subtract last 10 frames so player process does not get errors for none type in cv2 grab
 				# capture.remaining_frames = capture.cap.get(7)-10 
 
@@ -101,8 +102,11 @@ def player(g_pool):
 				capture.remaining_frames -= 1	
 				if capture.remaining_frames:
 					status, img = capture.cap.read()
-					g_pool.player_rx.send(True)
-					img_arr[...] = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+					if status:
+						img_arr[...] = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+						g_pool.player_rx.send(True)
+					else:
+						g_pool.player_rx.send(False)
 
 					image.draw(x=image.x, y=image.y, z=0.0, 
 								width=fig.width, height=fig.height)

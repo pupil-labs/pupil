@@ -66,63 +66,17 @@ class Browser(object):
 		try:
 			self.cam_intrinsics_path = [os.path.join(self.data_path, 'camera_matrix.npy')]
 			self.cam_intrinsics_path.append(os.path.join(self.data_path, 'dist_coefs.npy'))
+			np.load(cam_intrinsics_path[0])
 		except:
 			print "Could not find camera intrinsics .npy files."
 			self.cam_intrinsics_path = None
 
 
 
-def grab(pipe, src, running):
-	"""grab:
-		- Initialize a camera feed (from file)
-		- Return Images on demand
-	"""
-
-	captures = [cv2.VideoCapture(path) for path in src]
-	total_frames = min([c.get(7) for c in captures])
-	fps = min([c.get(5) for c in captures])
-	pipe.send(fps)
-	current_frame= 5
-	while running.value:
-		start_time = time.time()
-
-		results = [c.read() for c in captures]
-		status = [result for result, img in results]		
-		imgs = [img for result, img in results]		
-
-		if all(status):
-			pipe.send(current_frame)
-			for img in imgs:
-				pipe.send(img)
-
-		current_frame+=1
-
-		time_passed = time.time()-start_time
-		time.sleep(max(0,1/fps-time_passed))
-
-		if current_frame > total_frames:
-			for c in captures:
-				c.set(1,0)
-			current_frame = 0
-	print "grab routine exit"
-
-
 
 def main(data_path, video_path, audio_path, pts_path, cam_intrinsics_path):	
-	rx_video, tx_video = Pipe(False)
-	rx_audio, tx_audio = Pipe(False)
+	browser(data_path, video_path, pts_path, cam_intrinsics_path)
 
-	running = Value('i', 1)
-
-	p_browser = Process(target=browser, args=(data_path, video_path, pts_path, tx_audio, cam_intrinsics_path, running))
-	p_audio = Process(target=play_audio, args=(rx_audio,audio_path, running))
-
-	p_browser.start()
-	# p_audio.start()
-	
-	# grab(tx_video, video_path, running)
-
-	p_browser.join()
 
 if __name__ == '__main__':
 	#	data_path = "/Volumes/HD_Two/Users/Will/Documents/2012/MIT/Thesis/Thesis_Data/Capture/05052012/mpk_stata_05052012/003"

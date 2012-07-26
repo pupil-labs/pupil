@@ -25,7 +25,7 @@ class Bar(atb.Bar):
 	"""docstring for Bar"""
 	def __init__(self, name,g_pool, defs):
 		super(Bar, self).__init__(name,**defs) 
-		self.fps = 0.0 
+		self.fps = c_float(0.0) 
 		
 		self.calibrate = g_pool.calibrate
 		self.pattern = c_bool(0)
@@ -39,9 +39,9 @@ class Bar(atb.Bar):
 		self.record_running = c_bool(0)
 		self.play = c_bool(0)
 		# play and record are tied together via pointers to the objects
-		self.play = self.record_video
+		# self.play = self.record_video
 
-		self.add_var("FPS", step=0.01, getter=self.get_fps)
+		self.add_var("FPS",self.fps, step=0.01)
 		self.add_var("Find Calibration Pattern", self.pattern, key="P", help="Find Calibration Pattern")
 		self.add_button("Screen Shot", self.screen_cap, key="SPACE", help="Capture A Frame")
 		self.add_var("Calibrate", self.calibrate, key="C", help="Start/Stop Calibration Process")
@@ -54,10 +54,7 @@ class Bar(atb.Bar):
 
 	def update_fps(self, dt):
 		temp_fps = 1/dt
-		self.fps += 0.3*(temp_fps-self.fps)
-
-	def get_fps(self):
-		return self.fps
+		self.fps.value += 0.3*(temp_fps-self.fps.value)
 
 	def screen_cap(self):
 		# just flip the switch
@@ -145,19 +142,21 @@ def world(src, g_pool):
 		# Nine Point calibration state machine timing
 		if bar.calibrate_nine.value:
 			bar.calibrate.value = True
+			bar.pattern.value = True
 
-			if bar.calibrate_nine_step.value > 40:
+
+			if bar.calibrate_nine_step.value > 20:
 				bar.calibrate_nine_step.value = 0
 				bar.calibrate_nine_stage.value += 1
 
 			if bar.calibrate_nine_stage.value > 8:
 				bar.calibrate_nine_stage.value = 0 
-				bar.calibrate_nine.value = 0
 				bar.calibrate.value = False
 				bar.calibrate_nine.value = False
+				bar.pattern.value = False
 
 
-			if bar.calibrate_nine_step.value in range(10,30):
+			if bar.calibrate_nine_step.value in range(10,15):
 				collect_data = True
 
 			circle_id = pattern.map[bar.calibrate_nine_stage.value]
@@ -243,7 +242,7 @@ def world(src, g_pool):
 			video_path = os.path.join(record.path,"world.avi")
 			#FFV1 -- good speed lossless big file
 			#DIVX -- good speed good compression medium file
-			record.writer = cv2.VideoWriter(video_path,cv.CV_FOURCC(*'DIVX'),bar.fps, (img.shape[1],img.shape[0]) )
+			record.writer = cv2.VideoWriter(video_path,cv.CV_FOURCC(*'DIVX'),bar.fps.value, (img.shape[1],img.shape[0]) )
 			
 			# audio data to audio process
 			audio_path = os.path.join(record.path, "world.wav")
@@ -284,6 +283,7 @@ def world(src, g_pool):
 		if bar.play.value and not player.playing and player.play_list_len:
 			g_pool.player_pipe_new.set()
 			g_pool.player_tx.send('load_video')
+			print player.play_list[player.current_video]
 			g_pool.player_tx.send(player.play_list[player.current_video])
 			player.playing = True
 
@@ -291,7 +291,6 @@ def world(src, g_pool):
 			g_pool.player_pipe_new.set()
 			g_pool.player_tx.send('next_frame')
 			status = g_pool.player_tx.recv()
-
 			if status:
 				pass
 			else:
