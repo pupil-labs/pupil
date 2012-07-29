@@ -12,10 +12,9 @@ from player import player
 from methods import Temp
 from array import array
 from struct import unpack, pack
-import pyaudio
-import wave
-
-from audio import normalize, trim, add_silence
+# import pyaudio
+# import wave
+# from audio import normalize, trim, add_silence
 
 from ctypes import *
 
@@ -35,14 +34,15 @@ def main():
 	muliprocess_cam = 0
 	
 	#use video for debugging
-	use_video = 0
+	use_video = 1
  	
 	if(use_video):
 		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
 		world_src = -1
 
 	if(muliprocess_cam):
-		world_id = world_src
+		world_
+		id = world_src
 		world_src, world_feed = Pipe()
 
 	# create shared globals 

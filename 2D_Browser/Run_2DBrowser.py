@@ -8,7 +8,7 @@ from glob import glob
 
 from multiprocessing import Process, Pipe, Value
 from browser_2d import browser
-from audio import play_audio
+# from audio import play_audio
 
 class Browser(object):
 	"""Command Line manager for 2D Browser"""

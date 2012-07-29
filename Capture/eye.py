@@ -185,20 +185,18 @@ def eye(src, g_pool):
 		###IMAGE PROCESSING 
 		gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
 
-
+		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
 		binary_img = bin_thresholding(gray_img,image_upper=bar.bin_thresh.value)
-		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
 		binary_img = cv2.dilate(binary_img, kernel, iterations=3)
-	
-		spec_mask = cv2.inRange(gray_img, np.asarray(0.),np.asarray(250.0))
-		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
+		spec_mask = bin_thresholding(gray_img, image_upper=250)
 		spec_mask = cv2.erode(spec_mask, kernel, iterations=1)
 
 		edges =  cv2.Canny(gray_img,bar.canny_thresh.value*10, bar.canny_thresh.value*10-bar.canny_tolerance.value*10,apertureSize= bar.canny_apture.value) 
+		# edges = dif_gaus(gray_img,20.,24.)
 		edges = cv2.min(edges, spec_mask) 
 		edges = cv2.min(edges,binary_img)
+
 		result = fit_ellipse(edges,binary_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_size.value,size_tolerance=bar.pupil_size_tolerance.value)
-		
 		overlay_b = cv2.max(edges,gray_img)
 		overlay =cv2.cvtColor(overlay_b, cv2.COLOR_GRAY2RGB)
 		overlay[:,:,2] = cv2.max(overlay_b,binary_img)

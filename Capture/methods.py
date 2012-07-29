@@ -69,7 +69,7 @@ def grayscale(image):
 	return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
 
-def bin_thresholding(image, image_lower=0, image_upper=255):
+def bin_thresholding(image, image_lower=0, image_upper=256):
 	"""
 	needs docstring	
 	"""
@@ -109,6 +109,29 @@ def adaptive_threshold(image, image_lower=0.0, image_upper=255.0):
 	#binary_img = 255-binary_img
 	return binary_img
 
+def dif_gaus(image, lower, upper):
+        lower, upper = int(lower-1), int(upper-1)
+        lower = cv2.GaussianBlur(image,ksize=(lower,lower),sigmaX=0)
+        upper = cv2.GaussianBlur(image,ksize=(upper,upper),sigmaX=0)
+        # upper +=50
+        # lower +=50
+
+        dif = lower-upper
+        # dif *= .1
+        # dif = cv2.medianBlur(dif,3)
+        # dif = 255-dif
+        dif = cv2.inRange(dif, np.asarray(200), 
+				np.asarray(256))
+
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
+        dif = cv2.dilate(dif, kernel, iterations=2)
+        dif = cv2.erode(dif, kernel, iterations=1)
+        # dif = cv2.max(image,dif)
+
+        # dif = cv2.dilate(dif, kernel, iterations=1)
+
+
+        return dif 
 
 def equalize(image, image_lower=0.0, image_upper=255.0):
 	image_lower = int(image_lower*2)/2

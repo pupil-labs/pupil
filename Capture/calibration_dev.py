@@ -202,9 +202,9 @@ if s ==2:
     ax.scatter(Z[:,0],Z[:,1],Z[:,3], c= "b")
 
 
-plt.xlabel("Pupil in Eye-Space X")
-plt.ylabel("Pupil in Eye-Space Y")
-plt.title("Z: pattern pts in X(red)/Y(blue),planes are map Fn's. Samples: %i" %Z.shape[0])
+plt.xlabel("Pupil x in Eye-Space")
+plt.ylabel("Pupil y Eye-Space")
+plt.title("Z: pattern x(red) y(blue),planes are map Fn's. Samples: %i" %Z.shape[0])
 
 fig_error = plt.figure()
 plt.scatter(X_Distance,Y_Distance)
