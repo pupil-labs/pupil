@@ -217,7 +217,7 @@ def size_deviation(ellipse,target_size):
 	return abs(target_size-max(axis))
 
 
-def circle_grid(image, circle_id=None, pattern_size=(4,11)):
+def circle_grid_old(image, circle_id=None, pattern_size=(4,11)):
 	"""Circle grid: finds an assymetric circle pattern
 	- circle_id: sorted from bottom left to top right (column first)
 	- If no circle_id is given, then the mean of circle positions is returned approx. center
@@ -233,6 +233,34 @@ def circle_grid(image, circle_id=None, pattern_size=(4,11)):
 			return centers[circle_id][0], centers
 	else:
 		return None, None
+
+def circle_grid_old(image, circle_id=None, pattern_size=(4,11)):
+	"""Circle grid: finds an assymetric circle pattern
+	- circle_id: sorted from bottom left to top right (column first)
+	- If no circle_id is given, then the mean of circle positions is returned approx. center
+	- If no pattern is detected, function returns None
+	"""
+	status, centers = cv2.findCirclesGridDefault(image, pattern_size, flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
+	if status:
+		if circle_id is None:
+			result = centers.sum(0)/centers.shape[0]
+			# mean is [[x,y]]
+			return result[0], centers
+		else:
+			return centers[circle_id][0], centers
+	else:
+		return None, None
+def circle_grid(image, pattern_size=(4,11)):
+	"""Circle grid: finds an assymetric circle pattern
+	- circle_id: sorted from bottom left to top right (column first)
+	- If no circle_id is given, then the mean of circle positions is returned approx. center
+	- If no pattern is detected, function returns None
+	"""
+	status, centers = cv2.findCirclesGridDefault(image, pattern_size, flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
+	if status:
+		return centers
+	else:
+		return None
 
 
 

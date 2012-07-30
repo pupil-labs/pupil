@@ -28,7 +28,7 @@ class Point():
 class Ellipse():
 	"""Simple Ellipse opengl drawing"""
 	def __init__(self, center=(0.0,0.0), width=0.0, height=0.0, 
-				angle=0.0, color=(255,0,0,0.5), step=8):
+				angle=0.0, color=(255,0,0,0.5), step=20):
 		self.center = center
 		self.width = width
 		self.height = height

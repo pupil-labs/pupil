@@ -2,7 +2,7 @@ import glumpy
 import OpenGL.GL as gl
 import OpenGL.GLUT as glut
 import glumpy.atb as atb
-from ctypes import c_int,c_bool,c_float
+from ctypes import c_int,c_bool,c_float,c_char_p
 import cPickle as pickle
 import numpy as np
 
@@ -17,15 +17,15 @@ from multiprocessing import Queue, Value
 
 class Bar(atb.Bar):
 	"""docstring for Bar"""
-	def __init__(self, name,g_pool, defs):
-		super(Bar, self).__init__(name,**defs) 
+	def __init__(self, name,g_pool, bar_defs):
+		super(Bar, self).__init__(name,**bar_defs) 
 		self.fps = c_float(0.0) 
 		self.sleep = c_float(0.0)
 		self.display = c_int(1)
-		self.pupil_point = c_bool(1)
-		self.exit = c_bool(0)
+		self.draw_pupil = c_bool(1)
 		self.draw_roi = c_bool(0)
 		self.bin_thresh = c_int(60)
+		self.blur = c_int(3)
 		self.pupil_ratio = c_float(.6)
 		self.pupil_angle = c_float(0.0)
 
@@ -33,36 +33,37 @@ class Bar(atb.Bar):
 		self.pupil_size_tolerance = c_float(40.)
 		self.canny_apture = c_int(7)
 		self.canny_thresh = c_int(200)
-		self.canny_tolerance = c_int(10)
-
+		self.canny_ratio = c_int(2)
+		self.tst = c_char_p("sdsd")
 
 		#add class field here and it will become session persistant
 		self.session_save = {'sleep':self.sleep,
 							'display':self.display,
-							'pupil_point':self.pupil_point,
+							'draw_pupil':self.draw_pupil,
 							'bin_thresh':self.bin_thresh,
 							'pupil_ratio':self.pupil_ratio,
 							'pupil_size':self.pupil_size,
 							'pupil_size_tolerance':self.pupil_size_tolerance,
 							'canny_apture':self.canny_apture,
 							'canny_thresh':self.canny_thresh,
-							'canny_tolerance':self.canny_tolerance}
+							'canny_ratio':self.canny_ratio}
 
 		self.load()
 		
-		self.add_var("Display/FPS",self.fps, step=0.1)
+		self.add_var("Display/FPS",self.fps, step=0.1,readonly=True)
 		self.add_var("Display/SlowDown",self.sleep, step=0.01,min=0.0)
 		self.add_var("Display/Mode", self.display, step=1,max=4, min=0, help="select the view-mode")
-		self.add_var("Display/Show_Pupil_Point", self.pupil_point)		
+		self.add_var("Display/Show_Pupil_Point", self.draw_pupil)		
 		self.add_var("Display/Draw_ROI", self.draw_roi, help="drag on screen to select a region of interest")		
-		self.add_var("Bin/Threshold", self.bin_thresh, step=1, max=256, min=0)
+		self.add_var("Darkspot/Threshold", self.bin_thresh, step=1, max=256, min=0)
 		self.add_var("Pupil/Ratio", self.pupil_ratio, step=.05, max=1., min=0.)
-		self.add_var("Pupil/Angle", self.pupil_angle)
+		self.add_var("Pupil/Angle", self.pupil_angle,step=1.0,readonly=True)
 		self.add_var("Pupil/Size", self.pupil_size, step=1, min=0)
 		self.add_var("Pupil/Size_Tolerance", self.pupil_size_tolerance, step=1, min=0)
+		self.add_var("Canny/MeanBlur", self.blur,step=2,max=5,min=1)
 		self.add_var("Canny/Apture",self.canny_apture, step=2, max=7, min=1)
-		self.add_var("Canny/Edge_Threshold", self.canny_thresh, step=1,min=1)
-		self.add_var("Canny/Tolerance", self.canny_tolerance, step=1,min=1)
+		self.add_var("Canny/Lower_Threshold", self.canny_thresh, step=1,min=1)
+		self.add_var("Canny/LowerUpperRatio", self.canny_ratio, step=1,min=0,help="Canny recommended a ration between 3/1 and 2/1")
 		self.add_var("SaveSettings&Exit", g_pool.quit)
 
 
@@ -95,10 +96,15 @@ class Bar(atb.Bar):
 				print "Warning the Sessions file is from a different version, not all fields may be updated"
 
 class Roi(object):
-	"""this is a simple Region of Interest class
+	"""this is a simple 2D Region of Interest class
 	it is applied on numpy arrays for convinient slicing
 	like this:
+	
 	roi_array_slice = full_array[r.lY:r.uY,r.lX:r.uX]
+	#do something with roi_array_slice
+	full_array[r.lY:r.uY,r.lX:r.uX] = roi_array_slice
+	
+	this creates a view, no data coping done
 	"""
 	def __init__(self, array_shape):
 		self.array_shape = array_shape
@@ -149,6 +155,7 @@ def eye(src, g_pool):
 	pupil.screen_coords = (0,0)
 	pupil.ellipse = None
 	pupil.map_coords = (0,0)
+	
 	try:
 		pupil.pt_cloud = np.load('cal_pt_cloud.npy')
 	except:
@@ -157,6 +164,7 @@ def eye(src, g_pool):
 		pupil.coefs = calibrate_poly(pupil.pt_cloud)
 	else:
 		pupil.coefs = None
+	
 	r = Roi(img_arr.shape)
 	
 	# local object
@@ -173,7 +181,7 @@ def eye(src, g_pool):
 	atb.init()
 	bar = Bar("Eye",g_pool, dict(label="Controls",
 			help="Scene controls", color=(50,50,50), alpha=50,
-			text='light', position=(10, 10), size=(200, 250)) )
+			text='light', refresh=.1, position=(10, 10), size=(200, 250)) )
 
 
 
@@ -182,6 +190,7 @@ def eye(src, g_pool):
 		
 		s,img = cap.read_RGB()
  		sleep(bar.sleep.value)
+		
 		###IMAGE PROCESSING 
 		gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
 
@@ -191,15 +200,21 @@ def eye(src, g_pool):
 		spec_mask = bin_thresholding(gray_img, image_upper=250)
 		spec_mask = cv2.erode(spec_mask, kernel, iterations=1)
 
-		edges =  cv2.Canny(gray_img,bar.canny_thresh.value*10, bar.canny_thresh.value*10-bar.canny_tolerance.value*10,apertureSize= bar.canny_apture.value) 
+		if bar.blur.value >1:
+			gray_img = cv2.medianBlur(gray_img,bar.blur.value)
+
+		edges =  cv2.Canny(gray_img,bar.canny_thresh.value, bar.canny_thresh.value*bar.canny_ratio.value,apertureSize= bar.canny_apture.value) 
 		# edges = dif_gaus(gray_img,20.,24.)
 		edges = cv2.min(edges, spec_mask) 
 		edges = cv2.min(edges,binary_img)
 
 		result = fit_ellipse(edges,binary_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_size.value,size_tolerance=bar.pupil_size_tolerance.value)
+		
 		overlay_b = cv2.max(edges,gray_img)
 		overlay =cv2.cvtColor(overlay_b, cv2.COLOR_GRAY2RGB)
 		overlay[:,:,2] = cv2.max(overlay_b,binary_img)
+		overlay[:,:,1] = cv2.min(overlay_b,spec_mask)
+
 		if result is not None:
 			pupil.ellipse, others= result
 			for pre,((x,y),axs,ang) in others:
@@ -214,27 +229,22 @@ def eye(src, g_pool):
 		elif bar.display.value == 1:
 			img_arr[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
 		elif bar.display.value == 2:
-			img_arr[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(spec_mask, cv2.COLOR_GRAY2RGB)
-		elif bar.display.value == 3:
-			img_arr[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(binary_img, cv2.COLOR_GRAY2RGB)
-		else:
 			img_arr[r.lY:r.uY,r.lX:r.uX] = overlay
-	
+		else:
+			pass
 		if result is not None:
 			pupil.image_coords = r.add_vector(pupil.ellipse['center'])
-
-			#update pupil size,angle and ratio for the ellipse fiter algorithm
-			bar.pupil_size.value  =  bar.pupil_size.value + .3*(pupil.ellipse['major']-bar.pupil_size.value)
+			#update pupil size,angle and ratio for the ellipse filter algorithm
+			bar.pupil_size.value  = bar.pupil_size.value +  .3*(pupil.ellipse['major']-bar.pupil_size.value)
 			bar.pupil_ratio.value = bar.pupil_ratio.value + .7*(pupil.ellipse['ratio']-bar.pupil_ratio.value)
 			bar.pupil_angle.value = bar.pupil_angle.value + 1.*(pupil.ellipse['angle']-bar.pupil_angle.value)
 
 			
-			# numpy array wants (row,col) for an image this = (height,width)
-			# therefore: img.shape[1] = xval, img.shape[0] = yval
-			pupil.norm_coords = normalize(pupil.image_coords, img.shape[1], img.shape[0])
+			pupil.norm_coords = normalize(pupil.image_coords, img.shape[1], img.shape[0])# numpy array wants (row,col) for an image this = (height,width)
 			pupil.screen_coords = denormalize(pupil.norm_coords, fig.width, fig.height)
-			pupil_point.update(pupil.screen_coords)
-			pupil_ellipse.update(pupil.screen_coords, pupil.ellipse)
+			if bar.draw_pupil.value:
+				pupil_point.update(pupil.screen_coords)
+				pupil_ellipse.update(pupil.screen_coords, pupil.ellipse)
 
 			# for the world screen
 			pupil.map_coords = map_vector(pupil.norm_coords, pupil.coefs)
@@ -293,7 +303,7 @@ def eye(src, g_pool):
 		image.draw(x=image.x, y=image.y, z=0.0, 
 					width=fig.width, height=fig.height)
 		
-		if bar.pupil_point and pupil.ellipse:
+		if bar.draw_pupil and pupil.ellipse:
 			pupil_point.draw()
 			pupil_ellipse.draw()
 
@@ -301,7 +311,7 @@ def eye(src, g_pool):
 	def on_close():
 		bar.save()
 		g_pool.quit.value = True
-		print "EYE Process closed from window"
+		print "EYE Process closing from window event"
 
 	def on_mouse_press(x, y, button):
 		x,y = denormalize(normalize((x,y),fig.width,fig.height),img_arr.shape[1],img_arr.shape[0],flip_y=True) 

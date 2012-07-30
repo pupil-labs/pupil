@@ -28,7 +28,7 @@ class Bar(atb.Bar):
 		self.fps = c_float(0.0) 
 		
 		self.calibrate = g_pool.calibrate
-		self.pattern = c_bool(0)
+		self.find_pattern = c_bool(0)
 		self.screen_shot = False
 		self.calibration_images = False
 		self.calibrate_nine = c_bool(0)
@@ -42,7 +42,7 @@ class Bar(atb.Bar):
 		# self.play = self.record_video
 
 		self.add_var("FPS",self.fps, step=0.01)
-		self.add_var("Find Calibration Pattern", self.pattern, key="P", help="Find Calibration Pattern")
+		self.add_var("Find Calibration Pattern", self.find_pattern, key="P", help="Find Calibration Pattern")
 		self.add_button("Screen Shot", self.screen_cap, key="SPACE", help="Capture A Frame")
 		self.add_var("Calibrate", self.calibrate, key="C", help="Start/Stop Calibration Process")
 		self.add_var("Nine_Pt", self.calibrate_nine, key="9", help="Start/Stop 9 Point Calibration Process")
@@ -56,9 +56,10 @@ class Bar(atb.Bar):
 		temp_fps = 1/dt
 		self.fps.value += 0.3*(temp_fps-self.fps.value)
 
+
 	def screen_cap(self):
-		# just flip the switch
-		self.screen_shot = not self.screen_shot
+		self.find_pattern.value = True
+		self.screen_shot = True
 
 
 class Temp(object):
@@ -81,7 +82,7 @@ def world(src, g_pool):
 
 	# pattern object
 	pattern = Temp()
-	pattern.board = None
+	pattern.centers = None
 	pattern.norm_coords = (0,0)
 	pattern.image_coords = (0,0)
 	pattern.screen_coords = (0,0)
@@ -120,7 +121,8 @@ def world(src, g_pool):
 	atb.init()
 	bar = Bar("World",g_pool, dict(label="Controls",
 			help="Scene controls", color=(50,50,50), alpha=50,
-			text='light', position=(10, 10), size=(200, 250)) )
+			text='light',refresh=.1, position=(10, 10), size=(200, 250)) )
+
 
 
 
@@ -129,7 +131,7 @@ def world(src, g_pool):
 		fig.clear(0.0, 0.0, 0.0, 1.0)
 		image.draw(x=image.x, y=image.y, z=0.0, 
 					width=fig.width, height=fig.height)
-		if pattern.board is not None:
+		if pattern.centers is not None:
 			pattern_point.draw()
 		gaze_point.draw()
 
@@ -138,32 +140,24 @@ def world(src, g_pool):
 	def on_idle(dt):
 		bar.update_fps(dt)
 
-		collect_data =False
 		# Nine Point calibration state machine timing
 		if bar.calibrate_nine.value:
 			bar.calibrate.value = True
-			bar.pattern.value = True
-
-
-			if bar.calibrate_nine_step.value > 20:
+			bar.find_pattern.value = False
+			if bar.calibrate_nine_step.value > 30:
 				bar.calibrate_nine_step.value = 0
 				bar.calibrate_nine_stage.value += 1
-
 			if bar.calibrate_nine_stage.value > 8:
 				bar.calibrate_nine_stage.value = 0 
 				bar.calibrate.value = False
 				bar.calibrate_nine.value = False
-				bar.pattern.value = False
-
-
-			if bar.calibrate_nine_step.value in range(10,15):
-				collect_data = True
-
+				bar.find_pattern.value = False
+			if bar.calibrate_nine_step.value in range(10,25):
+				bar.find_pattern.value = True
 			circle_id = pattern.map[bar.calibrate_nine_stage.value]
 			g_pool.player_pipe_new.set()
 			g_pool.player_tx.send("calibrate")
 			g_pool.player_tx.send((circle_id, bar.calibrate_nine_step.value))
-
 
 			bar.calibrate_nine_step.value += 1
 
@@ -176,56 +170,49 @@ def world(src, g_pool):
 		img_arr[...] = img
 
 		# update gaze points from shared variable pool
-		gaze.map_coords = g_pool.pupil_x.value, g_pool.pupil_y.value
-		gaze.screen_coords = denormalize(gaze.map_coords, fig.width, fig.height)
-		# print "gaze.screen_coords: ", gaze.screen_coords
+		gaze.screen_coords = denormalize((g_pool.pupil_x.value, g_pool.pupil_y.value), fig.width, fig.height)
 		gaze_point.update(gaze.screen_coords)
 
-		if bar.pattern:
-			#pattern.board = chessboard(img)
-			pattern.board, pattern.board_centers = circle_grid(img)
-
-		if bar.pattern and bar.calibrate_nine.value:
-			pattern.board, pattern.board_centers = circle_grid(img, pattern.map[bar.calibrate_nine_stage.value])
-
-		if pattern.board is not None and collect_data:
-			# numpy array wants (row,col) for an image this = (height,width)
-			# therefore: img.shape[1] = xval, img.shape[0] = yval
-			pattern.image_coords = pattern.board # this is the mean of the pattern found
+		#pattern detection and its various uses
+		pattern.centers = None
+		if bar.find_pattern.value:
+			pattern.centers = circle_grid(img)
+		
+		if pattern.centers is not None:
+			if bar.calibrate_nine.value:
+				pattern.image_coords = pattern.centers[circle_id][0]
+			else:
+				mean = pattern.centers.sum(0)/pattern.centers.shape[0]
+				pattern.image_coords = mean[0]
 			pattern.norm_coords = normalize(pattern.image_coords, img.shape[1], img.shape[0])
 			pattern.screen_coords = denormalize(pattern.norm_coords, fig.width, fig.height)
 			pattern_point.update(pattern.screen_coords)
-
-			# broadcast pattern.norm_coords for calibration in eye process
 			g_pool.pattern_x.value, g_pool.pattern_y.value = pattern.norm_coords
 		else:
 			# If no pattern detected send 0,0 -- check this condition in eye process
 			g_pool.pattern_x.value, g_pool.pattern_y.value = 0, 0
 
-		if bar.screen_shot and bar.pattern and (pattern.board is not None):
+
+		#gather pattern centers and find cam intrisics
+		if bar.screen_shot and pattern.centers is not None:
+			bar.screen_shot = False
 			# calibrate the camera intrinsics if the board is found
 			# append list of circle grid center points to pattern.img_points
 			# append generic list of circle grid pattern type to  pattern.obj_points
-			pattern.img_points.append(pattern.board_centers)
+			pattern.img_points.append(pattern.centers)
 			pattern.obj_points.append(pattern.obj_grid)
-			print "Number of Images Captured:", len(pattern.img_points)
+			print "Number of Patterns Captured:", len(pattern.img_points)
 			#if pattern.img_points.shape[0] > 10:
 			if len(pattern.img_points) > 10:
-				bar.calibration_images = True
-
-			bar.screen_shot = False
-
-		if (not bar.pattern) and bar.calibration_images:
-			camera_matrix, dist_coefs = calibrate_camera(np.asarray(pattern.img_points), 
-												np.asarray(pattern.obj_points), 
-												(img.shape[1], img.shape[0]))
-			np.save("camera_matrix.npy", camera_matrix)
-			np.save("dist_coefs.npy", dist_coefs)
-
-			bar.calibration_images = False
-
-
+				camera_matrix, dist_coefs = calibrate_camera(np.asarray(pattern.img_points), 
+													np.asarray(pattern.obj_points), 
+													(img.shape[1], img.shape[0]))
+				np.save("camera_matrix.npy", camera_matrix)
+				np.save("dist_coefs.npy", dist_coefs)
+				pattern.img_points = []
+				bar.find_pattern.value = False
 		
+
 		# Setup recording process
 		if bar.record_video and not bar.record_running:
 			record.path = os.path.join(record.path_parent, "data%03d/" %record.counter)
@@ -301,7 +288,6 @@ def world(src, g_pool):
 			player.current_video += 1
 			if player.current_video >= player.play_list_len:
 				player.current_video = 0
-
 
 		image.update()
 		fig.redraw()

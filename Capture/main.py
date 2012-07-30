@@ -31,18 +31,17 @@ def main():
 	# you can't run world camera in its own process
 	# it must reside in the main loop
 	# this is all taken care of by setting this to true
-	muliprocess_cam = 0
+	muliprocess_cam = 1
 	
 	#use video for debugging
 	use_video = 1
  	
 	if(use_video):
 		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
-		world_src = -1
+		world_src = 0
 
 	if(muliprocess_cam):
-		world_
-		id = world_src
+		world_id = world_src
 		world_src, world_feed = Pipe()
 
 	# create shared globals 
