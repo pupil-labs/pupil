@@ -1,12 +1,10 @@
 import os, sys
-
 import glumpy 
 import OpenGL.GL as gl
 import OpenGL.GLUT as glut
 import glumpy.atb as atb
 from ctypes import *
 import numpy as np
-
 from glob import glob
 
 import cv2
@@ -18,7 +16,6 @@ from methods import Temp,capture
 from calibrate import *
 from gl_shapes import Point
 
-from multiprocessing import Queue, Value
 
 
 class Bar(atb.Bar):
@@ -114,9 +111,6 @@ def world(src, g_pool):
 			text='light',refresh=.1, position=(10, 10), size=(200, 250)) )
 
 
-
-
-
 	def on_draw():
 		fig.clear(0.0, 0.0, 0.0, 1.0)
 		image.draw(x=image.x, y=image.y, z=0.0, 
@@ -124,7 +118,6 @@ def world(src, g_pool):
 		if pattern.centers is not None:
 			pattern_point.draw()
 		gaze_point.draw()
-
 
 
 	def on_idle(dt):

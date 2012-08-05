@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 
 from time import sleep
-from multiprocessing import Process, Queue, Pipe, Event
+from multiprocessing import Process, Pipe, Event
 from multiprocessing.sharedctypes import RawValue, Value # RawValue is shared memory without lock, handle with care, this is usefull for ATB it needs cTypes
 from eye import eye
 from world import world
@@ -31,7 +31,7 @@ def main():
 	# you can't run world camera in its own process
 	# it must reside in the main loop
 	# this is all taken care of by setting this to true
-	muliprocess_cam = 0
+	muliprocess_cam = 1
 	
 	#use video for debugging
 	use_video = 0
@@ -56,14 +56,13 @@ def main():
 	g_pool.cal9_stage = Value('i',0)	
 	g_pool.cal9_step = Value('i',0)
 	g_pool.cal9_circle_id = RawValue('i',0)
-	g_pool.play = RawValue(c_bool,0)
-	g_pool.quit = RawValue(c_bool,0)
 	g_pool.pos_record = Value(c_bool, 0)
 	g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
-	g_pool.player_refresh = Event()
 	g_pool.audio_record = Value(c_bool,False)
 	g_pool.audio_rx, g_pool.audio_tx = Pipe(False)
-
+	g_pool.player_refresh = Event()
+	g_pool.play = RawValue(c_bool,0)
+	g_pool.quit = RawValue(c_bool,0)
 
 	p_eye = Process(target=eye, args=(eye_src, g_pool))
 	p_world = Process(target=world, args=(world_src,g_pool))

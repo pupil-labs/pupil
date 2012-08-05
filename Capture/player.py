@@ -5,10 +5,11 @@ import glumpy.atb as atb
 from ctypes import *
 import numpy as np
 import cv2
-from methods import capture
+from methods import capture,Temp
 from time import sleep
 from glob import glob
 import os, sys
+
 
 def make_grid(dim=(11,4)):
 	"""
@@ -34,11 +35,6 @@ def make_grid(dim=(11,4)):
 	return grid
 
 
-class Temp(object):
-	"""Temp class to make objects"""
-	def __init__(self):
-		pass
-
 def player(g_pool):
 	"""player
 		- Shows 9 point calibration pattern
@@ -46,14 +42,12 @@ def player(g_pool):
 		- Get src videos from directory (glob)
 		- Iterate through videos on each record event
 	"""
-	cap = Temp()
 
 	img_arr = np.zeros((720,1280,3), dtype=np.uint8)
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 	image = glumpy.Image(img_arr)
 	image.x, image.y = 0,0
 	grid = make_grid()
-
 
 	# player object
 	player = Temp()

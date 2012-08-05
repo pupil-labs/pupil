@@ -283,6 +283,8 @@ def gen_pattern_grid(size=(4,11)):
 			pattern_grid.append([(2*j)+i%2,i,0])
 	return np.asarray(pattern_grid, dtype='f4')
 
+
+
 def normalize(pos, width, height):
 	"""
 	normalize return as float

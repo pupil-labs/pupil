@@ -5,15 +5,11 @@ import glumpy.atb as atb
 from ctypes import c_int,c_bool,c_float,c_char_p
 import cPickle as pickle
 import numpy as np
-
 from time import sleep
-
-
 from methods import *
 from calibrate import *
 from gl_shapes import Point, Ellipse
 from methods import Temp,capture
-from multiprocessing import Queue, Value
 
 class Bar(atb.Bar):
 	"""docstring for Bar"""
