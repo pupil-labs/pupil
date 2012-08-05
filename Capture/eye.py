@@ -34,11 +34,9 @@ class Bar(atb.Bar):
 		self.canny_apture = c_int(7)
 		self.canny_thresh = c_int(200)
 		self.canny_ratio = c_int(2)
-		self.tst = c_char_p("sdsd")
 
 		#add class field here and it will become session persistant
-		self.session_save = {'sleep':self.sleep,
-							'display':self.display,
+		self.session_save = {'display':self.display,
 							'draw_pupil':self.draw_pupil,
 							'bin_thresh':self.bin_thresh,
 							'pupil_ratio':self.pupil_ratio,
@@ -50,14 +48,14 @@ class Bar(atb.Bar):
 
 		self.load()
 		
-		self.add_var("Display/FPS",self.fps, step=0.1,readonly=True)
+		self.add_var("Display/FPS",self.fps, step=1.,readonly=True)
 		self.add_var("Display/SlowDown",self.sleep, step=0.01,min=0.0)
-		self.add_var("Display/Mode", self.display, step=1,max=4, min=0, help="select the view-mode")
+		self.add_var("Display/Mode", self.display, step=1,max=2, min=0, help="select the view-mode")
 		self.add_var("Display/Show_Pupil_Point", self.draw_pupil)		
 		self.add_var("Display/Draw_ROI", self.draw_roi, help="drag on screen to select a region of interest")		
 		self.add_var("Darkspot/Threshold", self.bin_thresh, step=1, max=256, min=0)
 		self.add_var("Pupil/Ratio", self.pupil_ratio, step=.05, max=1., min=0.)
-		self.add_var("Pupil/Angle", self.pupil_angle,step=1.0,readonly=True)
+		# self.add_var("Pupil/Angle", self.pupil_angle,step=1.0,readonly=True)
 		self.add_var("Pupil/Size", self.pupil_size, step=1, min=0)
 		self.add_var("Pupil/Size_Tolerance", self.pupil_size_tolerance, step=1, min=0)
 		self.add_var("Canny/MeanBlur", self.blur,step=2,max=5,min=1)
@@ -193,12 +191,11 @@ def eye(src, g_pool):
 		
 		###IMAGE PROCESSING 
 		gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
-
 		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
 		binary_img = bin_thresholding(gray_img,image_upper=bar.bin_thresh.value)
-		binary_img = cv2.dilate(binary_img, kernel, iterations=3)
+		cv2.dilate(binary_img, kernel,binary_img, iterations=3)
 		spec_mask = bin_thresholding(gray_img, image_upper=250)
-		spec_mask = cv2.erode(spec_mask, kernel, iterations=1)
+		cv2.erode(spec_mask, kernel,spec_mask, iterations=1)
 
 		if bar.blur.value >1:
 			gray_img = cv2.medianBlur(gray_img,bar.blur.value)
@@ -212,8 +209,8 @@ def eye(src, g_pool):
 		
 		overlay_b = cv2.max(edges,gray_img)
 		overlay =cv2.cvtColor(overlay_b, cv2.COLOR_GRAY2RGB)
-		overlay[:,:,2] = cv2.max(overlay_b,binary_img)
-		overlay[:,:,1] = cv2.min(overlay_b,spec_mask)
+		overlay[:,:,2] = cv2.max(overlay_b,binary_img) #blue channel
+		overlay[:,:,1] = cv2.min(overlay_b,spec_mask) #red channel
 
 		if result is not None:
 			pupil.ellipse, others= result
@@ -235,7 +232,7 @@ def eye(src, g_pool):
 		if result is not None:
 			pupil.image_coords = r.add_vector(pupil.ellipse['center'])
 			#update pupil size,angle and ratio for the ellipse filter algorithm
-			bar.pupil_size.value  = bar.pupil_size.value +  .3*(pupil.ellipse['major']-bar.pupil_size.value)
+			bar.pupil_size.value  = bar.pupil_size.value +  .5*(pupil.ellipse['major']-bar.pupil_size.value)
 			bar.pupil_ratio.value = bar.pupil_ratio.value + .7*(pupil.ellipse['ratio']-bar.pupil_ratio.value)
 			bar.pupil_angle.value = bar.pupil_angle.value + 1.*(pupil.ellipse['angle']-bar.pupil_angle.value)
 

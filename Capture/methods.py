@@ -13,13 +13,17 @@ class Temp(object):
 
 class capture():
 	"""docstring for capture"""
-	def __init__(self, src, size):
+	def __init__(self, src, size=None):
 		self.src = src
+		self.auto_rewind = True
 		if isinstance(self.src, int) or isinstance(self.src, str):
 			#set up as cv2 capture
 			self.VideoCapture = cv2.VideoCapture(src)
 			self.set_size(size)
 			self.get_frame = self.VideoCapture.read
+		elif src == None:
+			self.VideoCapture = None
+			self.get_frame = None
 		else:
 			#set up as pipe end
 			self.VideoCapture = src
@@ -27,21 +31,21 @@ class capture():
 			self.np_size = size[::-1]
 			self.VideoCapture.send(self.size)
 			self.get_frame = self.VideoCapture.recv
-
-
 	
-	def set_size(self,(width,height)):
-		self.size = (width,height)
-		self.np_size = (height,width)
-		if isinstance(self.src, int) and width is not None:
-			self.VideoCapture.set(3, width)
-			self.VideoCapture.set(4, height)
-
+	def set_size(self,size):
+		if size is not None:
+			if isinstance(self.src, int):
+				self.size = size
+				width,height = size
+				self.VideoCapture.set(3, width)
+				self.VideoCapture.set(4, height)
+			else:
+				self.size = self.VideoCapture.get(3),self.VideoCapture.get(4)
+			self.np_size = self.size[::-1]
 
 	def read(self):
 		s, img =self.get_frame()
-		if not s:
-			#this is only for looping videos
+		if  self.auto_rewind and not s:
 			self.rewind()
 			s, img = self.get_frame()
 		return s,img

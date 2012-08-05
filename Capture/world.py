@@ -26,35 +26,31 @@ class Bar(atb.Bar):
 	def __init__(self, name,g_pool, defs):
 		super(Bar, self).__init__(name,**defs) 
 		self.fps = c_float(0.0) 
-		
 		self.calibrate = g_pool.calibrate
 		self.find_pattern = c_bool(0)
 		self.screen_shot = False
 		self.calibration_images = False
-		self.calibrate_nine = c_bool(0)
-		self.calibrate_nine_step = c_int(0)
-		self.calibrate_nine_stage = c_int(0)
-		self.calib_running = c_bool(0)
+		self.calibrate_nine = g_pool.cal9
+		self.calibrate_nine_step = g_pool.cal9_step
+		self.calibrate_nine_stage =  g_pool.cal9_stage
+		self.calib_running = g_pool.calibrate
 		self.record_video = c_bool(0)
 		self.record_running = c_bool(0)
-		self.play = c_bool(0)
+		self.play = g_pool.play
 		# play and record are tied together via pointers to the objects
 		# self.play = self.record_video
 
-		self.add_var("FPS",self.fps, step=0.01)
+		self.add_var("FPS",self.fps, step=1., readonly=True)
 		self.add_var("Find Calibration Pattern", self.find_pattern, key="P", help="Find Calibration Pattern")
 		self.add_button("Screen Shot", self.screen_cap, key="SPACE", help="Capture A Frame")
 		self.add_var("Calibrate", self.calibrate, key="C", help="Start/Stop Calibration Process")
 		self.add_var("Nine_Pt", self.calibrate_nine, key="9", help="Start/Stop 9 Point Calibration Process")
-		self.add_var("Nine_Pt_Stage", self.calibrate_nine_stage)
-		self.add_var("Nine_Pt_Step", self.calibrate_nine_step)
 		self.add_var("Record Video", self.record_video, key="R", help="Start/Stop Recording")
 		self.add_var("Play Source Video", self.play)
 		self.add_var("Exit", g_pool.quit)
 
 	def update_fps(self, dt):
-		temp_fps = 1/dt
-		self.fps.value += 0.3*(temp_fps-self.fps.value)
+		self.fps.value += .1*(1/dt-self.fps.value)
 
 
 	def screen_cap(self):
@@ -105,13 +101,7 @@ def world(src, g_pool):
 	record.path = None
 	record.counter = 0
 
-	# player object
-	player = Temp()
-	player.play_list = glob('src_video/*')
-	player.playlist = [os.path.join(record.path_parent, path) for path in player.play_list]
-	player.current_video = 0
-	player.play_list_len = len(player.play_list)
-	player.playing = False
+
 
 	# initialize gl shape primitives
 	pattern_point = Point(color=(0,255,0,0.5)) 
@@ -154,14 +144,10 @@ def world(src, g_pool):
 				bar.find_pattern.value = False
 			if bar.calibrate_nine_step.value in range(10,25):
 				bar.find_pattern.value = True
-			circle_id = pattern.map[bar.calibrate_nine_stage.value]
-			g_pool.player_pipe_new.set()
-			g_pool.player_tx.send("calibrate")
-			g_pool.player_tx.send((circle_id, bar.calibrate_nine_step.value))
-
+			
+			g_pool.cal9_circle_id.value = pattern.map[bar.calibrate_nine_stage.value]
 			bar.calibrate_nine_step.value += 1
-
-
+		g_pool.player_refresh.set()
 
 		# get an image from the grabber
 		s,img = cap.read_RGB()
@@ -266,31 +252,9 @@ def world(src, g_pool):
 			record.writer = None
 			bar.record_running = 0
 
-
-		if bar.play.value and not player.playing and player.play_list_len:
-			g_pool.player_pipe_new.set()
-			g_pool.player_tx.send('load_video')
-			print player.play_list[player.current_video]
-			g_pool.player_tx.send(player.play_list[player.current_video])
-			player.playing = True
-
-		if player.playing: 
-			g_pool.player_pipe_new.set()
-			g_pool.player_tx.send('next_frame')
-			status = g_pool.player_tx.recv()
-			if status:
-				pass
-			else:
-				bar.play.value = 0
-
-		if player.playing and not bar.play.value:
-			player.playing = False
-			player.current_video += 1
-			if player.current_video >= player.play_list_len:
-				player.current_video = 0
-
 		image.update()
 		fig.redraw()
+		
 		if g_pool.quit.value:
 			print "WORLD Process closing from global or atb"
 			fig.window.stop()

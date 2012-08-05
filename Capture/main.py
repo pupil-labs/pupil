@@ -31,16 +31,16 @@ def main():
 	# you can't run world camera in its own process
 	# it must reside in the main loop
 	# this is all taken care of by setting this to true
-	muliprocess_cam = 1
+	muliprocess_cam = 0
 	
 	#use video for debugging
-	use_video = 1
+	use_video = 0
  	
-	if(use_video):
+	if use_video:
 		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
 		world_src = 0
 
-	if(muliprocess_cam):
+	if muliprocess_cam:
 		world_id = world_src
 		world_src, world_feed = Pipe()
 
@@ -52,17 +52,21 @@ def main():
 	g_pool.pattern_y = Value('d', 0.0) 
 	g_pool.frame_count_record = Value('i', 0)
 	g_pool.calibrate = RawValue(c_bool, 0)
+	g_pool.cal9 = RawValue(c_bool, 0)
+	g_pool.cal9_stage = Value('i',0)	
+	g_pool.cal9_step = Value('i',0)
+	g_pool.cal9_circle_id = RawValue('i',0)
+	g_pool.play = RawValue(c_bool,0)
 	g_pool.quit = RawValue(c_bool,0)
 	g_pool.pos_record = Value(c_bool, 0)
 	g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
-	g_pool.player_pipe_new = Event()
-	g_pool.player_rx, g_pool.player_tx = Pipe(True)
+	g_pool.player_refresh = Event()
 	g_pool.audio_record = Value(c_bool,False)
 	g_pool.audio_rx, g_pool.audio_tx = Pipe(False)
 
 
-	p_show_eye = Process(target=eye, args=(eye_src, g_pool))
-	p_show_world = Process(target=world, args=(world_src,g_pool))
+	p_eye = Process(target=eye, args=(eye_src, g_pool))
+	p_world = Process(target=world, args=(world_src,g_pool))
 	p_player = Process(target=player, args=(g_pool,))
 
 	# Audio:
@@ -71,9 +75,9 @@ def main():
 	
 	if audio: p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3)) 
 
-	p_show_eye.start()
+	p_eye.start()
 	sleep(.3)
-	p_show_world.start()
+	p_world.start()
 	sleep(.3)
 	p_player.start()
 	sleep(.3)
@@ -83,9 +87,11 @@ def main():
 		grab(world_feed,world_id,g_pool)
 
 
-	p_show_eye.join()
-	p_show_world.join()
+	p_eye.join()
+	p_world.join()
+	p_player.join()
 	if audio: p_audio.join()
+
 	print "main exit"
 
 def grab(pipe,src_id,g_pool):

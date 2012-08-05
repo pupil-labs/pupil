@@ -5,7 +5,10 @@ import glumpy.atb as atb
 from ctypes import *
 import numpy as np
 import cv2
+from methods import capture
 from time import sleep
+from glob import glob
+import os, sys
 
 def make_grid(dim=(11,4)):
 	"""
@@ -43,26 +46,35 @@ def player(g_pool):
 		- Get src videos from directory (glob)
 		- Iterate through videos on each record event
 	"""
-	capture = Temp()
-	capture.remaining_frames = 0
-	capture.cap = None
+	cap = Temp()
 
-	# Get image array from queue, initialize glumpy, map img_arr to opengl texture 
 	img_arr = np.zeros((720,1280,3), dtype=np.uint8)
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 	image = glumpy.Image(img_arr)
 	image.x, image.y = 0,0
 	grid = make_grid()
 
+
+	# player object
+	player = Temp()
+	player.play_list = glob('src_video/*')
+	path_parent = os.path.dirname( os.path.abspath(sys.argv[0]))
+	player.playlist = [os.path.join(path_parent, path) for path in player.play_list]
+	player.captures = [capture(src) for src in player.playlist]
+	print "Player found %i videos in src_video"%len(player.captures)
+	player.captures =  [c for c in player.captures if c is not None]
+	print "Player sucessfully loaded %i videos in src_video"%len(player.captures)
+	for c in player.captures: c.auto_rewind = False
+	player.current_video = 0
+
 	def on_draw():
 		fig.clear(1.0, 1.0, 1.0, 1.0)
 		
-		if g_pool.player_pipe_new.wait(0.3):
-			command = g_pool.player_rx.recv()
-			g_pool.player_pipe_new.clear()
+		if g_pool.player_refresh.wait(0.3):
+			g_pool.player_refresh.clear()
 
-			if command == 'calibrate':
-				circle_id,step = g_pool.player_rx.recv()
+			if g_pool.cal9.value:
+				circle_id,step = g_pool.cal9_circle_id.value,g_pool.cal9_step.value
 				gl.glEnable(gl.GL_POINT_SMOOTH)
 				gl.glPushMatrix()
 				gl.glTranslatef(0.0,fig.height/2,0.)
@@ -77,32 +89,19 @@ def player(g_pool):
 				grid.draw(gl.GL_POINTS, 'pnc')
 				gl.glPopMatrix()
 
-			elif command == 'load_video':
-				src_id = g_pool.player_rx.recv() # path to video
-				capture.cap = cv2.VideoCapture(src_id)
-				# subtract last 10 frames so player process does not get errors for none type in cv2 grab
-				# capture.remaining_frames = capture.cap.get(7)-10 
-
-			elif command == 'next_frame':
-				capture.remaining_frames -= 1	
-				if capture.remaining_frames:
-					status, img = capture.cap.read()
-					if status:
-						img_arr[...] = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-						g_pool.player_rx.send(True)
-					else:
-						g_pool.player_rx.send(False)
-
-					image.draw(x=image.x, y=image.y, z=0.0, 
-								width=fig.width, height=fig.height)
-					
+			elif g_pool.play.value:
+				s, img = player.captures[player.current_video].read_RGB()
+				if s:
+					img_arr[...] = img
+					image.draw(x=image.x, y=image.y, z=0.0, width=fig.width, height=fig.height)	
 					image.update()	
 				else:
-					g_pool.player_rx.send(False)	
-			else:
-				#do nothing 
-				pass
-		
+					player.captures[player.current_video].rewind()
+					player.current_video +=1
+					if player.current_video >= len(player.captures):
+						player.current_video = 0
+					g_pool.play.value = False	
+
 		if g_pool.quit.value:
 			print "Player Process closing from global or atb"
 			fig.window.stop()

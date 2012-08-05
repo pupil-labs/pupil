@@ -1,7 +1,7 @@
 (dp1
 S'pupil_size'
 p2
-F68.095527648925781
+F61.679512023925781
 sS'draw_pupil'
 p3
 I01
@@ -10,16 +10,16 @@ p4
 I3
 sS'display'
 p5
-I1
+I2
 sS'pupil_size_tolerance'
 p6
-F20
+F15
 sS'bin_thresh'
 p7
 I70
 sS'sleep'
 p8
-F0.014999999664723873
+F0
 sS'canny_thresh'
 p9
 I31
@@ -28,5 +28,5 @@ p10
 I3
 sS'pupil_ratio'
 p11
-F0.94885927438735962
+F0.94099223613739014
 s.
