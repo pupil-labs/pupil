@@ -20,8 +20,8 @@ from ctypes import *
 
 def main():
 	
- 	# assing the right id to the cameras
-	eye_src = 1
+ 	# passing the right id to the cameras
+	eye_src = 0
 	world_src = 0
 
 
@@ -37,7 +37,7 @@ def main():
 	use_video = 0
  	
 	if use_video:
-		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
+		eye_src = "/Volumes/HD_Two/Users/Will/Documents/Programming/Pupil_wiki/videos/green_eye_VISandIR_2.mov" # using a path to a video files allows for developement without a headset. Must be full path (replace with your own path)
 		world_src = 0
 
 	if muliprocess_cam:
@@ -98,7 +98,7 @@ def grab(pipe,src_id,g_pool):
 		- Initialize a camera feed
 		-this is needed for certain cameras that have to run in the main loop.
 		- it pushed image frames to the capture class 
-			that it initialize with one pipeend as the source
+			that it initialize with one pipe end as the source
 	"""
 
 	quit = g_pool.quit
