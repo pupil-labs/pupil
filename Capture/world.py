@@ -1,18 +1,14 @@
 import os, sys
 import glumpy 
-import OpenGL.GL as gl
-import OpenGL.GLUT as glut
 import glumpy.atb as atb
-from ctypes import *
+import OpenGL.GL as gl
+from ctypes import  c_int,c_bool,c_float
 import numpy as np
 from glob import glob
-
 import cv2
 import cv2.cv as cv
-
 from methods import normalize, denormalize, chessboard, circle_grid, gen_pattern_grid, calibrate_camera
 from methods import Temp,capture
-
 from calibrate import *
 from gl_shapes import Point
 

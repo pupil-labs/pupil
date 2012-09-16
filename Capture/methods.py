@@ -26,6 +26,7 @@ class capture():
 			self.get_frame = None
 		else:
 			#set up as pipe end
+			self.auto_rewind = False
 			self.VideoCapture = src
 			self.size = size
 			self.np_size = size[::-1]

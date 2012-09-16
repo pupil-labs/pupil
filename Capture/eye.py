@@ -1,8 +1,7 @@
 import glumpy 
 import OpenGL.GL as gl
-import OpenGL.GLUT as glut
 import glumpy.atb as atb
-from ctypes import c_int,c_bool,c_float,c_char_p
+from ctypes import c_int,c_bool,c_float
 import cPickle as pickle
 import numpy as np
 from time import sleep
@@ -175,7 +174,7 @@ def eye(src, g_pool):
 	atb.init()
 	bar = Bar("Eye",g_pool, dict(label="Controls",
 			help="Scene controls", color=(50,50,50), alpha=50,
-			text='light', refresh=.1, position=(10, 10), size=(200, 250)) )
+			text='light', refresh=.1, position=(10, 10), size=(200, 300)) )
 
 
 

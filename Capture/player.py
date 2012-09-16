@@ -1,14 +1,12 @@
+import os, sys
 import glumpy 
 import OpenGL.GL as gl
-import OpenGL.GLUT as glut
 import glumpy.atb as atb
-from ctypes import *
 import numpy as np
 import cv2
 from methods import capture,Temp
 from time import sleep
 from glob import glob
-import os, sys
 
 
 def make_grid(dim=(11,4)):
@@ -95,6 +93,13 @@ def player(g_pool):
 					if player.current_video >= len(player.captures):
 						player.current_video = 0
 					g_pool.play.value = False	
+			else:
+				noise = (np.random.rand(img_arr.shape[0],img_arr.shape[1])*255).astype(img_arr.dtype)
+				img_arr[...] = np.dstack((noise,noise, noise))
+				
+
+				image.draw(x=image.x, y=image.y, z=0.0, width=fig.width, height=fig.height)	
+				image.update()	
 
 		if g_pool.quit.value:
 			print "Player Process closing from global or atb"

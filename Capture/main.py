@@ -1,8 +1,6 @@
 import os, sys
-
 import numpy as np 
 import cv2
-
 from time import sleep
 from multiprocessing import Process, Pipe, Event
 from multiprocessing.sharedctypes import RawValue, Value # RawValue is shared memory without lock, handle with care, this is usefull for ATB it needs cTypes
@@ -13,7 +11,7 @@ from methods import Temp
 from array import array
 from struct import unpack, pack
 # import pyaudio
-# import wave
+# import waveatb.
 # from audio import normalize, trim, add_silence
 
 from ctypes import *
@@ -21,8 +19,8 @@ from ctypes import *
 def main():
 	
  	# assing the right id to the cameras
-	eye_src = 1
-	world_src = 0
+	eye_src = 0
+	world_src = 1
 
 
 	audio = False
@@ -34,7 +32,7 @@ def main():
 	muliprocess_cam = 1
 	
 	#use video for debugging
-	use_video = 0
+	use_video = 1
  	
 	if use_video:
 		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
@@ -71,7 +69,6 @@ def main():
 	# Audio:
 	# src=3 for logitech, rate=16000 for logitech 
 	# defaults for built in MacBook microphone
-	
 	if audio: p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3)) 
 
 	p_eye.start()
@@ -113,6 +110,36 @@ def grab(pipe,src_id,g_pool):
 		except:
 			pass
 	print "Local Grab exit"
+
+def xmos_grab(pipe,src_id,g_pool):
+	"""grab:
+		- Initialize a camera feed
+		-this is needed for certain cameras that have to run in the main loop.
+		- it pushed image frames to the capture class 
+			that it initialize with one pipeend as the source
+	"""
+
+	quit = g_pool.quit
+	cap = cv2.VideoCapture(src_id)
+	size = pipe.recv()
+	size= size[::-1] # swap sizes as numpy is row first
+
+	cam = cam_interface()
+	buffer = np.zeros(size, dtype=np.uint8) #this should always be a multiple of 4
+	cam.aptina_setWindowSize(cam.id0,(size[1],size[0])) #swap sizes back 
+	cam.aptina_setWindowPosition(cam.id0,(240,100))
+	cam.aptina_LED_control(cam.id0,Disable = 0,Invert =0)
+	cam.aptina_AEC_AGC(cam.id0,1,1) # Auto Exposure Control + Auto Gain Control
+	cam.aptina_HDR(cam.id0,1)
+	while not quit.value:
+		if cam.get_frame(id,buffer): #returns True on sucess
+			try:
+				pipe.send(True, buffer)
+			except:
+				pass
+	cam.release()	
+	print "Local Grab exit"
+
 
 
 if __name__ == '__main__':
