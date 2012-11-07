@@ -1,4 +1,4 @@
-import glumpy 
+import glumpy
 import OpenGL.GL as gl
 import glumpy.atb as atb
 from ctypes import c_int,c_bool,c_float
@@ -13,8 +13,8 @@ from methods import Temp,capture
 class Bar(atb.Bar):
 	"""docstring for Bar"""
 	def __init__(self, name,g_pool, bar_defs):
-		super(Bar, self).__init__(name,**bar_defs) 
-		self.fps = c_float(0.0) 
+		super(Bar, self).__init__(name,**bar_defs)
+		self.fps = c_float(0.0)
 		self.sleep = c_float(0.0)
 		self.display = c_int(1)
 		self.draw_pupil = c_bool(1)
@@ -42,12 +42,12 @@ class Bar(atb.Bar):
 							'canny_ratio':self.canny_ratio}
 
 		self.load()
-		
+
 		self.add_var("Display/FPS",self.fps, step=1.,readonly=True)
 		self.add_var("Display/SlowDown",self.sleep, step=0.01,min=0.0)
 		self.add_var("Display/Mode", self.display, step=1,max=2, min=0, help="select the view-mode")
-		self.add_var("Display/Show_Pupil_Point", self.draw_pupil)		
-		self.add_var("Display/Draw_ROI", self.draw_roi, help="drag on screen to select a region of interest")		
+		self.add_var("Display/Show_Pupil_Point", self.draw_pupil)
+		self.add_var("Display/Draw_ROI", self.draw_roi, help="drag on screen to select a region of interest")
 		self.add_var("Darkspot/Threshold", self.bin_thresh, step=1, max=256, min=0)
 		self.add_var("Pupil/Ratio", self.pupil_ratio, step=.05, max=1., min=0.)
 		# self.add_var("Pupil/Angle", self.pupil_angle,step=1.0,readonly=True)
@@ -92,11 +92,11 @@ class Roi(object):
 	"""this is a simple 2D Region of Interest class
 	it is applied on numpy arrays for convinient slicing
 	like this:
-	
+
 	roi_array_slice = full_array[r.lY:r.uY,r.lX:r.uX]
 	#do something with roi_array_slice
 	full_array[r.lY:r.uY,r.lX:r.uX] = roi_array_slice
-	
+
 	this creates a view, no data coping done
 	"""
 	def __init__(self, array_shape):
@@ -118,7 +118,7 @@ class Roi(object):
 				self.lX = min(x,self.nX)
 				self.lY = min(y,self.nY)
 				self.uX = max(x,self.nX)
-				self.uY = max(y,self.nY)		
+				self.uY = max(y,self.nY)
 
 	def add_vector(self,(x,y)):
 		"""
@@ -132,7 +132,7 @@ def eye(src, g_pool):
 		- Initialize glumpy figure, image, atb controls
 		- Execute the glumpy main glut loop
 	"""
-	#init capture, initialize glumpy, map img_arr to opengl texture 
+	#init capture, initialize glumpy, map img_arr to opengl texture
 	cap = capture(src,(640,320))
 	s, img_arr = cap.read_RGB()
 
@@ -148,7 +148,7 @@ def eye(src, g_pool):
 	pupil.screen_coords = (0,0)
 	pupil.ellipse = None
 	pupil.map_coords = (0,0)
-	
+
 	try:
 		pupil.pt_cloud = np.load('cal_pt_cloud.npy')
 	except:
@@ -157,9 +157,9 @@ def eye(src, g_pool):
 		pupil.coefs = calibrate_poly(pupil.pt_cloud)
 	else:
 		pupil.coefs = None
-	
+
 	r = Roi(img_arr.shape)
-	
+
 	# local object
 	l_pool = Temp()
 	l_pool.calib_running = False
@@ -180,11 +180,11 @@ def eye(src, g_pool):
 
 	def on_idle(dt):
 		bar.update_fps(dt)
-		
+
 		s,img = cap.read_RGB()
  		sleep(bar.sleep.value)
-		
-		###IMAGE PROCESSING 
+
+		###IMAGE PROCESSING
 		gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
 		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
 		binary_img = bin_thresholding(gray_img,image_upper=bar.bin_thresh.value)
@@ -195,13 +195,13 @@ def eye(src, g_pool):
 		if bar.blur.value >1:
 			gray_img = cv2.medianBlur(gray_img,bar.blur.value)
 
-		edges =  cv2.Canny(gray_img,bar.canny_thresh.value, bar.canny_thresh.value*bar.canny_ratio.value,apertureSize= bar.canny_apture.value) 
+		edges =  cv2.Canny(gray_img,bar.canny_thresh.value, bar.canny_thresh.value*bar.canny_ratio.value,apertureSize= bar.canny_apture.value)
 		# edges = dif_gaus(gray_img,20.,24.)
-		edges = cv2.min(edges, spec_mask) 
+		edges = cv2.min(edges, spec_mask)
 		edges = cv2.min(edges,binary_img)
 
 		result = fit_ellipse(edges,binary_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_size.value,size_tolerance=bar.pupil_size_tolerance.value)
-		
+
 		overlay_b = cv2.max(edges,gray_img)
 		overlay =cv2.cvtColor(overlay_b, cv2.COLOR_GRAY2RGB)
 		overlay[:,:,2] = cv2.max(overlay_b,binary_img) #blue channel
@@ -231,7 +231,7 @@ def eye(src, g_pool):
 			bar.pupil_ratio.value = bar.pupil_ratio.value + .7*(pupil.ellipse['ratio']-bar.pupil_ratio.value)
 			bar.pupil_angle.value = bar.pupil_angle.value + 1.*(pupil.ellipse['angle']-bar.pupil_angle.value)
 
-			
+
 			pupil.norm_coords = normalize(pupil.image_coords, img.shape[1], img.shape[0])# numpy array wants (row,col) for an image this = (height,width)
 			pupil.screen_coords = denormalize(pupil.norm_coords, fig.width, fig.height)
 			if bar.draw_pupil.value:
@@ -243,26 +243,27 @@ def eye(src, g_pool):
 			g_pool.pupil_x.value, g_pool.pupil_y.value = pupil.map_coords
 		else:
 			pupil.ellipse = None
+			# pupil.map_coords = None, None #whithout this line the last know pupil position is recorded if none is found
 
 		###CALIBRATION and MAPPING###
 		# Initialize Calibration (setup variables and lists)
 		if g_pool.calibrate.value and not l_pool.calib_running:
 			l_pool.calib_running = True
-			pupil.pt_cloud = [] 
+			pupil.pt_cloud = []
 			pupil.coefs = None
 
-		# While Calibrating... 
+		# While Calibrating...
 		if l_pool.calib_running and (g_pool.pattern_x.value or g_pool.pattern_y.value) and pupil.ellipse:
 			pupil.pt_cloud.append([pupil.norm_coords[0],pupil.norm_coords[1],
 								g_pool.pattern_x.value, g_pool.pattern_y.value])
 
 		# Calculate coefs
-		if not g_pool.calibrate.value and l_pool.calib_running:         
+		if not g_pool.calibrate.value and l_pool.calib_running:
 			l_pool.calib_running = 0
 			if pupil.pt_cloud:
 				pupil.coefs = calibrate_poly(pupil.pt_cloud)
 
-		
+
 		###RECORDING###
 		# Setup variables and lists for recording
 		if g_pool.pos_record.value and not l_pool.record_running:
@@ -271,7 +272,7 @@ def eye(src, g_pool):
 			l_pool.record_positions = []
 			l_pool.record_running = True
 
-		# While recording... 
+		# While recording...
 		if l_pool.record_running:
 			l_pool.record_positions.append([pupil.map_coords[0], pupil.map_coords[1], dt, g_pool.frame_count_record.value])
 
@@ -283,18 +284,18 @@ def eye(src, g_pool):
 
 		image.update()
 		fig.redraw()
-		
+
 		if g_pool.quit.value:
 			print "EYE Process closing from global or atb"
 			bar.save()
 			fig.window.stop()
 
-	
+
 	def on_draw():
 		fig.clear(0.0, 0.0, 0.0, 1.0)
-		image.draw(x=image.x, y=image.y, z=0.0, 
+		image.draw(x=image.x, y=image.y, z=0.0,
 					width=fig.width, height=fig.height)
-		
+
 		if bar.draw_pupil and pupil.ellipse:
 			pupil_point.draw()
 			pupil_ellipse.draw()
@@ -306,12 +307,12 @@ def eye(src, g_pool):
 		print "EYE Process closing from window event"
 
 	def on_mouse_press(x, y, button):
-		x,y = denormalize(normalize((x,y),fig.width,fig.height),img_arr.shape[1],img_arr.shape[0],flip_y=True) 
+		x,y = denormalize(normalize((x,y),fig.width,fig.height),img_arr.shape[1],img_arr.shape[0],flip_y=True)
 		if bar.draw_roi.value:
 			r.setStart((x,y))
-			
+
 	def on_mouse_drag(x, y, dx, dy, buttons):
-		x,y = denormalize(normalize((x,y),fig.width,fig.height),img_arr.shape[1],img_arr.shape[0],flip_y=True) 
+		x,y = denormalize(normalize((x,y),fig.width,fig.height),img_arr.shape[1],img_arr.shape[0],flip_y=True)
 		if bar.draw_roi.value:
 			r.setEnd((x,y))
 
@@ -319,10 +320,10 @@ def eye(src, g_pool):
 	fig.window.push_handlers(atb.glumpy.Handlers(fig.window))
 	fig.window.push_handlers(on_draw)
 	fig.window.push_handlers(on_mouse_press,on_mouse_drag)
-	fig.window.push_handlers(on_close)	
+	fig.window.push_handlers(on_close)
 	fig.window.set_title("Eye")
-	fig.window.set_position(650,0)    
-	glumpy.show()   
+	fig.window.set_position(650,0)
+	glumpy.show()
 
 
 

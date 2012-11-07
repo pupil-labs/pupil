@@ -1,5 +1,5 @@
 import os, sys
-import glumpy 
+import glumpy
 import OpenGL.GL as gl
 import glumpy.atb as atb
 import numpy as np
@@ -27,7 +27,7 @@ def make_grid(dim=(11,4)):
 	n = (1., 1., 1.)
 	c= (0.0, 0.0, 0.0, 1.0)
 	vertices = [((x,y,0.0), n, c) for x,y in p]
-	vertices  = np.array(vertices, 
+	vertices  = np.array(vertices,
 				dtype = [('position','f4',3), ('normal','f4',3), ('color','f4',4)] )
 	grid = glumpy.graphics.VertexBuffer(vertices)
 	return grid
@@ -61,7 +61,7 @@ def player(g_pool):
 
 	def on_draw():
 		fig.clear(1.0, 1.0, 1.0, 1.0)
-		
+
 		if g_pool.player_refresh.wait(0.3):
 			g_pool.player_refresh.clear()
 
@@ -85,21 +85,21 @@ def player(g_pool):
 				s, img = player.captures[player.current_video].read_RGB()
 				if s:
 					img_arr[...] = img
-					image.draw(x=image.x, y=image.y, z=0.0, width=fig.width, height=fig.height)	
-					image.update()	
+					image.draw(x=image.x, y=image.y, z=0.0, width=fig.width, height=fig.height)
+					image.update()
 				else:
 					player.captures[player.current_video].rewind()
 					player.current_video +=1
 					if player.current_video >= len(player.captures):
 						player.current_video = 0
-					g_pool.play.value = False	
+					g_pool.play.value = False
 			else:
-				noise = (np.random.rand(img_arr.shape[0],img_arr.shape[1])*255).astype(img_arr.dtype)
-				img_arr[...] = np.dstack((noise,noise, noise))
-				
+				pass
+				# noise = (np.random.rand(img_arr.shape[0],img_arr.shape[1])*255).astype(img_arr.dtype)
+				# img_arr[...] = np.dstack((noise,noise, noise))
 
-				image.draw(x=image.x, y=image.y, z=0.0, width=fig.width, height=fig.height)	
-				image.update()	
+				image.draw(x=image.x, y=image.y, z=0.0, width=fig.width, height=fig.height)
+				image.update()
 
 		if g_pool.quit.value:
 			print "Player Process closing from global or atb"
@@ -107,15 +107,15 @@ def player(g_pool):
 
 	def on_close():
 		g_pool.quit.value = True
-		print "Player Process closed from window"			
+		print "Player Process closed from window"
 
 	def on_idle(dt):
 		fig.redraw()
 
 	fig.window.push_handlers(on_idle)
-	fig.window.push_handlers(on_draw)	
-	fig.window.push_handlers(on_close)	
+	fig.window.push_handlers(on_draw)
+	fig.window.push_handlers(on_close)
 	fig.window.set_title("Player")
-	fig.window.set_position(0,0)	
-	glumpy.show() 	
+	fig.window.set_position(0,0)
+	glumpy.show()
 

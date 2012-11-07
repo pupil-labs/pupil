@@ -25,14 +25,14 @@ class capture():
 			self.VideoCapture = None
 			self.get_frame = None
 		else:
-			#set up as pipe end
+			#set up as pipe
 			self.auto_rewind = False
 			self.VideoCapture = src
 			self.size = size
 			self.np_size = size[::-1]
-			self.VideoCapture.send(self.size)
-			self.get_frame = self.VideoCapture.recv
-	
+			self.VideoCapture.send(self.size) #send desired size to the capture function in the main
+			self.get_frame = self.VideoCapture.recv #retrieve first frame
+
 	def set_size(self,size):
 		if size is not None:
 			if isinstance(self.src, int):
@@ -67,7 +67,27 @@ class capture():
 		self.VideoCapture.set(1,0) #seeek to 0
 
 
+def local_grab(pipe,src_id,g_pool):
+    """grab:
+        - Initialize a camera feed
+        -this is needed for certain cameras that have to run in the main loop.
+        - it pushed image frames to the capture class
+            that it initialize with one pipeend as the source
+    """
 
+    quit = g_pool.quit
+    cap = cv2.VideoCapture(src_id)
+    size = pipe.recv() #recieve designed size from caputure instance from inside the other process.
+    cap.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, size[0])
+    cap.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, size[1])
+
+    while not quit.value:
+        try:
+            # cap.read() #uncomment to read at .5 fps
+            pipe.send(cap.read())
+        except:
+            pass
+    print "Local Grab exit"
 
 
 def grayscale(image):
@@ -76,9 +96,9 @@ def grayscale(image):
 
 def bin_thresholding(image, image_lower=0, image_upper=256):
 	"""
-	needs docstring	
+	needs docstring
 	"""
-	binary_img = cv2.inRange(image, np.asarray(image_lower), 
+	binary_img = cv2.inRange(image, np.asarray(image_lower),
 				np.asarray(image_upper))
 
 	# kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5,5))
@@ -89,14 +109,14 @@ def adaptive_threshold(image, image_lower=0.0, image_upper=255.0):
 	"""extract_darkspot:
 			head manager function to filter eye image by
 			- erasing specular reflections
-			- fitting ellipse to filtered image 
+			- fitting ellipse to filtered image
 		Out: filtered image and center of ellipse
 	"""
 	image_lower = int(image_lower)*4
-	image_lower +=1 
+	image_lower +=1
 	image_lower = max(image_lower,3)
-	binary_img = cv2.adaptiveThreshold(image, maxValue= 255, 
-											adaptiveMethod= cv2.ADAPTIVE_THRESH_MEAN_C, 
+	binary_img = cv2.adaptiveThreshold(image, maxValue= 255,
+											adaptiveMethod= cv2.ADAPTIVE_THRESH_MEAN_C,
 											thresholdType= cv2.THRESH_BINARY_INV,
 											blockSize=image_lower,
 											C=image_upper-50)
@@ -125,7 +145,7 @@ def dif_gaus(image, lower, upper):
         # dif *= .1
         # dif = cv2.medianBlur(dif,3)
         # dif = 255-dif
-        dif = cv2.inRange(dif, np.asarray(200), 
+        dif = cv2.inRange(dif, np.asarray(200),
 				np.asarray(256))
 
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
@@ -136,14 +156,14 @@ def dif_gaus(image, lower, upper):
         # dif = cv2.dilate(dif, kernel, iterations=1)
 
 
-        return dif 
+        return dif
 
 def equalize(image, image_lower=0.0, image_upper=255.0):
 	image_lower = int(image_lower*2)/2
 	image_lower +=1
 	image_lower = max(3,image_lower)
 	mean = cv2.medianBlur(image,255)
-	image = image - (mean-100) 
+	image = image - (mean-100)
 	# kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
 	# cv2.dilate(image, kernel, image, iterations=1)
 	return image
@@ -153,14 +173,14 @@ def erase_specular(image,lower_threshold=0.0, upper_threshold=150.0):
 	"""erase_specular: removes specular reflections
 			within given threshold using a binary mask (hi_mask)
 	"""
-	thresh = cv2.inRange(image, 
-				np.asarray(float(lower_threshold)), 
+	thresh = cv2.inRange(image,
+				np.asarray(float(lower_threshold)),
 				np.asarray(256.0))
 
 	kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
 	hi_mask = cv2.dilate(thresh, kernel, iterations=2)
-	
-	specular = cv2.inpaint(image, hi_mask, 2, flags=cv2.INPAINT_TELEA) 
+
+	specular = cv2.inpaint(image, hi_mask, 2, flags=cv2.INPAINT_TELEA)
 	# return cv2.max(hi_mask,image)
 	return specular
 
@@ -178,19 +198,19 @@ def chessboard(image, pattern_size=(9,5)):
 
 def fit_ellipse(image,bin_dark_img, contour_size=5,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
-			fit an ellipse around the pupil 
+			fit an ellipse around the pupil
 			the largest white spot within a binary image
 	"""
 	c_img = image.copy()
-	contours, hierarchy = cv2.findContours(c_img, 
-											mode=cv2.RETR_LIST, 
+	contours, hierarchy = cv2.findContours(c_img,
+											mode=cv2.RETR_LIST,
 											method=cv2.CHAIN_APPROX_NONE,offset=(0,0))
-	
-	largest_ellipse = {'center': (None,None), 
-						'axes': (None, None), 'angle': None, 
-						'area': 0.0, 'ratio': None, 
+
+	largest_ellipse = {'center': (None,None),
+						'axes': (None, None), 'angle': None,
+						'area': 0.0, 'ratio': None,
 						'major': None, 'minor': None}
-	
+
 
 	shape = image.shape
 	ellipses = (cv2.fitEllipse(c) for c in contours if len(c) >= contour_size)
@@ -206,7 +226,7 @@ def fit_ellipse(image,bin_dark_img, contour_size=5,ratio=.6,target_size=20.,size
 		largest_ellipse['axes'] = largest[1]
 		largest_ellipse['major'] = max(largest[1])
 		largest_ellipse['minor'] = min(largest[1])
-		largest_ellipse['ratio'] = largest_ellipse['minor']/largest_ellipse['major']  
+		largest_ellipse['ratio'] = largest_ellipse['minor']/largest_ellipse['major']
 		return largest_ellipse,ellipses
 	return None
 
@@ -255,6 +275,7 @@ def circle_grid_old(image, circle_id=None, pattern_size=(4,11)):
 			return centers[circle_id][0], centers
 	else:
 		return None, None
+
 def circle_grid(image, pattern_size=(4,11)):
 	"""Circle grid: finds an assymetric circle pattern
 	- circle_id: sorted from bottom left to top right (column first)
@@ -273,7 +294,7 @@ def calibrate_camera(img_pts, obj_pts, img_size):
 	# generate pattern size
 	camera_matrix = np.zeros((3,3))
 	dist_coef = np.zeros(4)
-	rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_pts, img_pts, 
+	rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_pts, img_pts,
 													img_size, camera_matrix, dist_coef)
 	return camera_matrix, dist_coefs
 
@@ -310,7 +331,7 @@ def denormalize(pos, width, height, flip_y=True):
 	return int(x),int(y)
 
 if __name__ == '__main__':
-	tst = []	
+	tst = []
 	for x in range(10):
 		tst.append(gen_pattern_grid())
 	tst = np.asarray(tst)
@@ -325,7 +346,7 @@ def xmos_grab(q,id,size):
 	drop = 50
 	cam = cam_interface()
 	buffer = np.zeros(size, dtype=np.uint8) #this should always be a multiple of 4
-	cam.aptina_setWindowSize(cam.id0,(size[1],size[0])) #swap sizes back 
+	cam.aptina_setWindowSize(cam.id0,(size[1],size[0])) #swap sizes back
 	cam.aptina_setWindowPosition(cam.id0,(240,100))
 	cam.aptina_LED_control(cam.id0,Disable = 0,Invert =0)
 	cam.aptina_AEC_AGC(cam.id0,1,1) # Auto Exposure Control + Auto Gain Control
@@ -335,7 +356,7 @@ def xmos_grab(q,id,size):
 		if cam.get_frame(id,buffer): #returns True on sucess
 			try:
 				q.put(buffer,False)
-				drop = 50 
+				drop = 50
 			except:
 				drop -= 1
 				if not drop:

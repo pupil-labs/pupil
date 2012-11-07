@@ -1,5 +1,5 @@
 import os, sys
-import glumpy 
+import glumpy
 import glumpy.atb as atb
 import OpenGL.GL as gl
 from ctypes import  c_int,c_bool,c_float
@@ -17,8 +17,8 @@ from gl_shapes import Point
 class Bar(atb.Bar):
 	"""docstring for Bar"""
 	def __init__(self, name,g_pool, defs):
-		super(Bar, self).__init__(name,**defs) 
-		self.fps = c_float(0.0) 
+		super(Bar, self).__init__(name,**defs)
+		self.fps = c_float(0.0)
 		self.calibrate = g_pool.calibrate
 		self.find_pattern = c_bool(0)
 		self.screen_shot = False
@@ -61,7 +61,7 @@ def world(src, g_pool):
 		- Initialize glumpy figure, image, atb controls
 		- Execute glumpy main loop
 	"""
-	cap = capture(src,(640,480))
+	cap = capture(src,(1280,720))
 	s, img_arr = cap.read_RGB()
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 
@@ -97,7 +97,7 @@ def world(src, g_pool):
 
 
 	# initialize gl shape primitives
-	pattern_point = Point(color=(0,255,0,0.5)) 
+	pattern_point = Point(color=(0,255,0,0.5))
 	gaze_point = Point(color=(255,0,0,0.5))
 
 	# Initialize ant tweak bar inherits from atb.Bar (see Bar class)
@@ -109,7 +109,7 @@ def world(src, g_pool):
 
 	def on_draw():
 		fig.clear(0.0, 0.0, 0.0, 1.0)
-		image.draw(x=image.x, y=image.y, z=0.0, 
+		image.draw(x=image.x, y=image.y, z=0.0,
 					width=fig.width, height=fig.height)
 		if pattern.centers is not None:
 			pattern_point.draw()
@@ -127,13 +127,13 @@ def world(src, g_pool):
 				bar.calibrate_nine_step.value = 0
 				bar.calibrate_nine_stage.value += 1
 			if bar.calibrate_nine_stage.value > 8:
-				bar.calibrate_nine_stage.value = 0 
+				bar.calibrate_nine_stage.value = 0
 				bar.calibrate.value = False
 				bar.calibrate_nine.value = False
 				bar.find_pattern.value = False
 			if bar.calibrate_nine_step.value in range(10,25):
 				bar.find_pattern.value = True
-			
+
 			g_pool.cal9_circle_id.value = pattern.map[bar.calibrate_nine_stage.value]
 			bar.calibrate_nine_step.value += 1
 		g_pool.player_refresh.set()
@@ -152,10 +152,10 @@ def world(src, g_pool):
 		pattern.centers = None
 		if bar.find_pattern.value:
 			pattern.centers = circle_grid(img)
-		
+
 		if pattern.centers is not None:
 			if bar.calibrate_nine.value:
-				pattern.image_coords = pattern.centers[circle_id][0]
+				pattern.image_coords = pattern.centers[g_pool.cal9_circle_id.value][0]
 			else:
 				mean = pattern.centers.sum(0)/pattern.centers.shape[0]
 				pattern.image_coords = mean[0]
@@ -179,19 +179,19 @@ def world(src, g_pool):
 			print "Number of Patterns Captured:", len(pattern.img_points)
 			#if pattern.img_points.shape[0] > 10:
 			if len(pattern.img_points) > 10:
-				camera_matrix, dist_coefs = calibrate_camera(np.asarray(pattern.img_points), 
-													np.asarray(pattern.obj_points), 
+				camera_matrix, dist_coefs = calibrate_camera(np.asarray(pattern.img_points),
+													np.asarray(pattern.obj_points),
 													(img.shape[1], img.shape[0]))
 				np.save("camera_matrix.npy", camera_matrix)
 				np.save("dist_coefs.npy", dist_coefs)
 				pattern.img_points = []
 				bar.find_pattern.value = False
-		
+
 
 		# Setup recording process
 		if bar.record_video and not bar.record_running:
 			record.path = os.path.join(record.path_parent, "data%03d/" %record.counter)
-			while True: 
+			while True:
 				try:
 					os.mkdir(record.path)
 					break
@@ -205,7 +205,7 @@ def world(src, g_pool):
 			#FFV1 -- good speed lossless big file
 			#DIVX -- good speed good compression medium file
 			record.writer = cv2.VideoWriter(video_path,cv.CV_FOURCC(*'DIVX'),bar.fps.value, (img.shape[1],img.shape[0]) )
-			
+
 			# audio data to audio process
 			audio_path = os.path.join(record.path, "world.wav")
 			try:
@@ -225,37 +225,37 @@ def world(src, g_pool):
 		# While Recording...
 		if bar.record_video and bar.record_running:
 			# Save image frames to video writer
-			# increment the frame_count_record value 
-			# Eye positions can be associated with frames of recording even if different framerates 
+			# increment the frame_count_record value
+			# Eye positions can be associated with frames of recording even if different framerates
 			g_pool.frame_count_record.value += 1
 			record.writer.write(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
-		# Finish all recordings, clean up. 
+		# Finish all recordings, clean up.
 		if not bar.record_video and bar.record_running:
 			try:
 				g_pool.audio_record.value = 0
 			except:
 				print "no audio recorded"
-			
+
 			g_pool.pos_record.value = 0
 			record.writer = None
 			bar.record_running = 0
 
 		image.update()
 		fig.redraw()
-		
+
 		if g_pool.quit.value:
 			print "WORLD Process closing from global or atb"
 			fig.window.stop()
 
 	def on_close():
 		g_pool.quit.value = True
-		print "WORLD Process closed from window"			
+		print "WORLD Process closed from window"
 
 	fig.window.push_handlers(on_idle)
 	fig.window.push_handlers(atb.glumpy.Handlers(fig.window))
-	fig.window.push_handlers(on_draw)	
-	fig.window.push_handlers(on_close)	
+	fig.window.push_handlers(on_draw)
+	fig.window.push_handlers(on_close)
 	fig.window.set_title("World")
-	fig.window.set_position(0,0)	
-	glumpy.show() 	
+	fig.window.set_position(0,0)
+	glumpy.show()
