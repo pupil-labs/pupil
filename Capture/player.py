@@ -60,10 +60,10 @@ def player(g_pool):
 	player.current_video = 0
 
 	def on_draw():
-		fig.clear(1.0, 1.0, 1.0, 1.0)
 
-		if g_pool.player_refresh.wait(0.3):
+		if g_pool.player_refresh.wait(0.1):
 			g_pool.player_refresh.clear()
+			fig.clear(1.0, 1.0, 1.0, 1.0)
 
 			if g_pool.cal9.value:
 				circle_id,step = g_pool.cal9_circle_id.value,g_pool.cal9_step.value
@@ -93,13 +93,7 @@ def player(g_pool):
 					if player.current_video >= len(player.captures):
 						player.current_video = 0
 					g_pool.play.value = False
-			else:
-				pass
-				# noise = (np.random.rand(img_arr.shape[0],img_arr.shape[1])*255).astype(img_arr.dtype)
-				# img_arr[...] = np.dstack((noise,noise, noise))
 
-				image.draw(x=image.x, y=image.y, z=0.0, width=fig.width, height=fig.height)
-				image.update()
 
 		if g_pool.quit.value:
 			print "Player Process closing from global or atb"
@@ -116,6 +110,6 @@ def player(g_pool):
 	fig.window.push_handlers(on_draw)
 	fig.window.push_handlers(on_close)
 	fig.window.set_title("Player")
-	fig.window.set_position(0,0)
+	fig.window.set_position(100,0)
 	glumpy.show()
 
