@@ -19,25 +19,25 @@ from ctypes import *
 
 
 def main():
-    # assing the right id to the cameras
+    #assign the right id to the cameras
     eye_src = 1
     world_src = 0
+    eye_size = (640,320)
+    world_size = (1280,720)
 
     # when using some h264 compression cameras
     # you can't run world camera grabber in its own process
     # it must reside in the main loop
     # this is all taken care of by setting this to true
-    muliprocess_cam = 0
+    muliprocess_cam = 1
 
     #use video for debugging
-    use_video = 0
+    use_video = 1
 
     audio = False
 
     # use the player: a seperate window for video playback and 9 point calibration animation
-    use_player = True
-
-
+    use_player = 1
 
     if use_video:
         eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
@@ -70,27 +70,25 @@ def main():
     # end shared globals
 
     # set up sub processes
-    p_eye = Process(target=eye, args=(eye_src, g_pool))
-    # p_world = Process(target=world, args=(world_src,g_pool))
+    p_eye = Process(target=eye, args=(eye_src,eye_size, g_pool))
+    p_world = Process(target=world, args=(world_src,world_size,g_pool))
     if use_player: p_player = Process(target=player, args=(g_pool,))
     if audio: p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3))
 
     # spawn sub processes
-    # p_world.start()
+    p_world.start()
     sleep(.3)
     p_eye.start()
     sleep(.3)
-    if player:
-        p_player.start()
-        sleep(.3)
+    if use_player: p_player.start()
     if audio: p_audio.start()
-    world(world_src,g_pool)
+
     if muliprocess_cam:
         local_grab(world_feed,world_id,g_pool)
 
     # exit / clean-up
     p_eye.join()
-    # p_world.join()
+    p_world.join()
     if use_player: p_player.join()
     if audio: p_audio.join()
     print "main exit"

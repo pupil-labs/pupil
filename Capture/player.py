@@ -56,7 +56,7 @@ def player(g_pool):
 	print "Player found %i videos in src_video"%len(player.captures)
 	player.captures =  [c for c in player.captures if c is not None]
 	print "Player sucessfully loaded %i videos in src_video"%len(player.captures)
-	for c in player.captures: c.auto_rewind = False
+	# for c in player.captures: c.auto_rewind = False
 	player.current_video = 0
 
 	def on_draw():

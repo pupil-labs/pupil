@@ -127,13 +127,15 @@ class Roi(object):
 		return (self.lX+x,self.lY+y)
 
 
-def eye(src, g_pool):
+def eye(src,size,g_pool):
 	"""eye
 		- Initialize glumpy figure, image, atb controls
 		- Execute the glumpy main glut loop
 	"""
 	#init capture, initialize glumpy, map img_arr to opengl texture
-	cap = capture(src,(640,320))
+	cap = capture(src,size)
+	if isinstance(cap.src, str): #if using a debug video
+		cap.auto_rewind = True
 	s, img_arr = cap.read_RGB()
 
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))

@@ -56,12 +56,12 @@ class Temp(object):
 	def __init__(self):
 		pass
 
-def world(src, g_pool):
+def world(src,size, g_pool):
 	"""world
 		- Initialize glumpy figure, image, atb controls
 		- Execute glumpy main loop
 	"""
-	cap = capture(src,(1280,720))
+	cap = capture(src,size)
 	s, img_arr = cap.read_RGB()
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 
