@@ -19,25 +19,30 @@ from ctypes import *
 
 
 def main():
-
     # assing the right id to the cameras
     eye_src = 1
     world_src = 0
 
-    audio = False
-
-    # when using the logitech h264 compression camera
-    # you can't run world camera in its own process
+    # when using some h264 compression cameras
+    # you can't run world camera grabber in its own process
     # it must reside in the main loop
     # this is all taken care of by setting this to true
-    muliprocess_cam = 1
+    muliprocess_cam = 0
 
     #use video for debugging
     use_video = 0
 
+    audio = False
+
+    # use the player: a seperate window for video playback and 9 point calibration animation
+    use_player = True
+
+
+
     if use_video:
         eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
         world_src = 0
+
 
     if muliprocess_cam:
         world_id = world_src
@@ -62,44 +67,33 @@ def main():
     g_pool.player_refresh = Event()
     g_pool.play = RawValue(c_bool,0)
     g_pool.quit = RawValue(c_bool,0)
+    # end shared globals
 
+    # set up sub processes
     p_eye = Process(target=eye, args=(eye_src, g_pool))
-    p_world = Process(target=world, args=(world_src,g_pool))
-    p_player = Process(target=player, args=(g_pool,))
-
-    # Audio:
-    # src=3 for logitech, rate=16000 for logitech
-    # defaults for built in MacBook microphone
+    # p_world = Process(target=world, args=(world_src,g_pool))
+    if use_player: p_player = Process(target=player, args=(g_pool,))
     if audio: p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3))
 
-
-    p_world.start()
+    # spawn sub processes
+    # p_world.start()
     sleep(.3)
     p_eye.start()
     sleep(.3)
-    p_player.start()
-    sleep(.3)
+    if player:
+        p_player.start()
+        sleep(.3)
     if audio: p_audio.start()
-
-    if(muliprocess_cam):
+    world(world_src,g_pool)
+    if muliprocess_cam:
         local_grab(world_feed,world_id,g_pool)
 
-
+    # exit / clean-up
     p_eye.join()
-    p_world.join()
-    p_player.join()
+    # p_world.join()
+    if use_player: p_player.join()
     if audio: p_audio.join()
-
     print "main exit"
-
-
-
-
-
 
 if __name__ == '__main__':
     main()
-
-
-
-
