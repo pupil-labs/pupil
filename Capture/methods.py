@@ -66,6 +66,48 @@ class capture():
 		self.VideoCapture.set(1,0) #seeek to 0
 
 
+
+def local_grab_threaded(pipe_world,src_id_world,pipe_eye,src_id_eye,g_pool):
+	import threading
+	from time import sleep, time
+
+	class capture_thread(threading.Thread):
+		"""docstring for capture_thread"""
+		def __init__(self,pipe,src):
+			threading.Thread.__init__(self)
+			self.pipe = pipe
+			self.src = src
+			self.cap_init(src)
+
+		def cap_init(self,src_id):
+			self.cap = cv2.VideoCapture(src_id)
+			size = self.pipe.recv() #recieve desired size from caputure instance from inside the other process.
+			self.cap.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, size[0])
+			self.cap.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, size[1])
+		def run(self):
+			tick = time()
+			while not g_pool.quit.value:
+				tick = time()
+				self.pipe.send(self.cap.read())
+				sleep(max(0,1/31.-(time()-tick)))
+
+	"""grab:
+		- Initialize a camera feed
+		-this is needed for certain cameras that have to run in the main loop.
+		- it pushes image frames to the capture class
+		  that is initialize with one pipeend as the source
+	"""
+	thread1 = capture_thread(pipe_world,src_id_world)
+	thread2 = capture_thread(pipe_eye,src_id_eye)
+	thread1.start() # This actually causes the thread to run
+	thread2.start()
+	thread1.join()  # This waits until the thread has completed
+	thread2.join()
+
+	print "Local Grab exit"
+
+
+
 def local_grab(pipe,src_id,g_pool):
     """grab:
         - Initialize a camera feed

@@ -10,8 +10,8 @@ import numpy as np
 
 def fit_polynomial_surf(X,Y,Z):
     """
-    Takes three lists of points and 
-    performs Singular Value Decomposition 
+    Takes three lists of points and
+    performs Singular Value Decomposition
     to find a linerar least squares fit surface
     """
 
@@ -27,7 +27,7 @@ def fit_polynomial_surf(X,Y,Z):
     V = Vt.transpose();
     Ut = U.transpose();
     pseudINV = np.dot(V, np.dot(np.diag(1/w), Ut));
-    coefs = np.dot(pseudINV, Z); 
+    coefs = np.dot(pseudINV, Z);
     c, x,y,xx,yy,xy,xxyy = coefs
     """
     print "coeffs"
@@ -44,7 +44,7 @@ def fit_polynomial_surf(X,Y,Z):
 def calibrate_poly(points):
     """
     calibrate takes data in the form of [[x1,y1,x2,y2],[x1,y1,x2,y2],...]
-    and finds the transformation that leads from x1,y1 to x2,y2 
+    and finds the transformation that leads from x1,y1 to x2,y2
 
     x2 =x*X + y*Y + xx*X*X + yy*Y*Y + xy*X*Y + xxyy*Y*Y*X*X +c
     y2 =x*X + y*Y + xx*X*X + yy*Y*Y + xy*X*Y + xxyy*Y*Y*X*X +c
@@ -55,7 +55,7 @@ def calibrate_poly(points):
     points = np.array(points)
     #save points to file
     np.save('cal_pt_cloud.npy', points)
-    
+
     x_cofs =fit_polynomial_surf(points[:,0],points[:,1],points[:,2])
     y_cofs =fit_polynomial_surf(points[:,0],points[:,1],points[:,3])
 
@@ -68,12 +68,12 @@ def calibrate_poly(points):
 
 def fitPlane(X,Y,Z):
     """
-    Takes three lists of points and 
-    performs Singular Value Decomposition 
+    Takes three lists of points and
+    performs Singular Value Decomposition
     to find a linerar least squares fit plane
     """
     #make a 2d array with row-wise vectors
-    X,Y,Z = np.array(X), np.array(Y), np.array(Z), 
+    X,Y,Z = np.array(X), np.array(Y), np.array(Z),
     Data = np.hstack((X[:,np.newaxis],Y[:,np.newaxis],Z[:,np.newaxis]))
 
     # set centroid to origin
@@ -97,7 +97,7 @@ def fitPlane(X,Y,Z):
 def calibrate_linear(points):
     """
     calibrate takes data in the form of [[x1,y1,x2,y2],[x1,y1,x2,y2],...]
-    and finds the linear transformation that leads from x1,y1 to x2,y2 
+    and finds the linear transformation that leads from x1,y1 to x2,y2
 
     x2 = ax*x1+bx*y1+cx
     y2 = ay*x1+by+y1+cy
@@ -108,12 +108,12 @@ def calibrate_linear(points):
     points = np.array(points)
     #save points to file
     np.save('cal_pt_cloud.npy', points)
-    
+
     ax,bx,cx = fitPlane(points[:,0],points[:,1],points[:,2])
     ay,by,cy = fitPlane(points[:,0],points[:,1],points[:,3])
 
     coefficients = (ax,bx,cx,ay,by,cy)
-    
+
     return coefficients
 
 def map_vector(vector,coefficients):
@@ -124,15 +124,14 @@ def map_vector(vector,coefficients):
     """
     if coefficients is None:
         return vector
-    
+
     if len(coefficients )== 14:
         return map_vector_poly(vector,coefficients)
     elif len(coefficients )== 6:
         return map_vector_linear(vector,coefficients)
-    
-    else: 
-        return 0,0
-    
+    else:
+        return vector
+
 
 def map_vector_linear(vector,coefficients):
     """
@@ -142,25 +141,25 @@ def map_vector_linear(vector,coefficients):
     """
     x= vector[0]
     y= vector[1]
-    c = coefficients 
+    c = coefficients
 
     x2 = c[0]*x + c[1]*y + c[2]
     y2 = c[3]*x + c[4]*y + c[5]
 
     return x2,y2
-    
-    
+
+
 def map_vector_poly(vector,coefficients):
     """
     map eye vector to world vector based on coefficents
     x2 =x*X + y*Y + xx*X*X + yy*Y*Y + xy*X*Y + xxyy*Y*Y*X*X +c
     y2 =x*X + y*Y + xx*X*X + yy*Y*Y + xy*X*Y + xxyy*Y*Y*X*X +c
     """
-    
+
     X= vector[0]
     Y= vector[1]
-    c = coefficients 
-    
+    c = coefficients
+
     x2 =c[0]*X + c[1]*Y + c[2]*X*X + c[3]*Y*Y + c[4]*X*Y + c[5]*Y*Y*X*X +c[6]
     y2 =c[7]*X + c[8]*Y + c[9]*X*X + c[10]*Y*Y + c[11]*X*Y + c[12]*Y*Y*X*X +c[13]
 

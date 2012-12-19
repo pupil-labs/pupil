@@ -8,7 +8,7 @@ from multiprocessing.sharedctypes import RawValue, Value
 from eye import eye
 from world import world
 from player import player
-from methods import Temp, local_grab
+from methods import Temp, local_grab_threaded
 # from array import array
 # from struct import unpack, pack
 # import pyaudio
@@ -20,10 +20,11 @@ from ctypes import *
 
 def main():
     #assign the right id to the cameras
-    eye_src = 1
-    world_src = 0
+    eye_src = 0
+    world_src = 1
     eye_size = (640,320)
     world_size = (1280,720)
+    # world_size = (640,480)
 
     # when using some h264 compression cameras
     # you can't run world camera grabber in its own process
@@ -32,7 +33,7 @@ def main():
     muliprocess_cam = 1
 
     #use video for debugging
-    use_video = 1
+    use_video = 0
 
     audio = False
 
@@ -47,6 +48,8 @@ def main():
     if muliprocess_cam:
         world_id = world_src
         world_src, world_feed = Pipe()
+        eye_id = eye_src
+        eye_src, eye_feed = Pipe()
 
     # create shared globals
     g_pool = Temp()
@@ -84,7 +87,7 @@ def main():
     if audio: p_audio.start()
 
     if muliprocess_cam:
-        local_grab(world_feed,world_id,g_pool)
+        local_grab_threaded(world_feed,world_id,eye_feed,eye_id,g_pool)
 
     # exit / clean-up
     p_eye.join()

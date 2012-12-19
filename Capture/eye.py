@@ -176,7 +176,7 @@ def eye(src,size,g_pool):
 	atb.init()
 	bar = Bar("Eye",g_pool, dict(label="Controls",
 			help="Scene controls", color=(50,50,50), alpha=50,
-			text='light', refresh=.1, position=(10, 10), size=(200, 300)) )
+			text='light', refresh=.2, position=(10, 10), size=(200, 300)) )
 
 
 
@@ -210,6 +210,7 @@ def eye(src,size,g_pool):
 		overlay[:,:,1] = cv2.min(overlay_b,spec_mask) #red channel
 
 		if result is not None:
+			#display some centers for debugging
 			pupil.ellipse, others= result
 			for pre,((x,y),axs,ang) in others:
 				x,y = int(x),int(y)
@@ -243,6 +244,7 @@ def eye(src,size,g_pool):
 			# for the world screen
 			pupil.map_coords = map_vector(pupil.norm_coords, pupil.coefs)
 			g_pool.pupil_x.value, g_pool.pupil_y.value = pupil.map_coords
+			# g_pool.pupil_x.value, g_pool.pupil_y.value = 1.0,0.0
 		else:
 			pupil.ellipse = None
 			# pupil.map_coords = None, None #whithout this line the last know pupil position is recorded if none is found
@@ -255,7 +257,7 @@ def eye(src,size,g_pool):
 			pupil.coefs = None
 
 		# While Calibrating...
-		if l_pool.calib_running and (g_pool.pattern_x.value or g_pool.pattern_y.value) and pupil.ellipse:
+		if l_pool.calib_running and ((g_pool.pattern_x.value != 0) or (g_pool.pattern_y.value != 0)) and pupil.ellipse:
 			pupil.pt_cloud.append([pupil.norm_coords[0],pupil.norm_coords[1],
 								g_pool.pattern_x.value, g_pool.pattern_y.value])
 
