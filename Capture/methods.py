@@ -63,7 +63,7 @@ class capture():
 		return s,img
 
 	def rewind(self):
-		self.VideoCapture.set(1,0) #seeek to 0
+		self.VideoCapture.set(1,0) #seek to 0
 
 
 

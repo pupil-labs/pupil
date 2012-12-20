@@ -17,71 +17,6 @@ from methods import Temp, local_grab
 
 from ctypes import *
 
-def show_all_cameras():
-	"""
-	this is a small script that shows all attached cameras.
-	it does not work if you have more than two cameras.
-	"""
-	import cv2
-
-	def quick_cap(src):
-		vc = cv2.VideoCapture(id)
-		vc.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, 640)
-		vc.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, 480)
-		return vc
-	cams = []
-	id = 1
-	while id!=-1:
-		vc = quick_cap(id)
-		if vc.isOpened():
-			rval, frame = vc.read()
-		else:
-			rval = 0
-		if rval:
-			cams.append((vc,id))
-			id-=1
-		else:
-			break
-	print "found %i capture devices" %id
-
-	while 1:
-		for vc,id in cams:
-			rval, frame = vc.read()
-			cv2.imshow("camera_id: "+ str(id), frame)
-			cv2.moveWindow("camera_id: "+ str(id), id*640, 0)
-		key = cv2.waitKey(20)
-		if key == 27: # exit on ESC
-			break
-
-
-def toggle_capture_devices():
-	"""
-	toggle though all attached camareas to find out
-	assigned ids
-	"""
-	import cv2
-
-	def quick_cap(src):
-		vc = cv2.VideoCapture(id)
-		vc.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, 640)
-		vc.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, 480)
-		return vc
-
-	id = 0
-	vc = quick_cap(id)
-	rval, frame = vc.read()
-	while rval:
-		key = cv2.waitKey(20)
-		if key == 27: # exit on ESC
-			break
-		if key == 32: # n
-			id +=1
-			vc = quick_cap(id)
-
-		rval, frame = vc.read()
-		cv2.imshow("camera_id: "+ str(id), frame)
-
-
 def main():
 	#assign the right id to the cameras
 	eye_src = 1
@@ -90,11 +25,12 @@ def main():
 	world_size = (1280,720)
 	# world_size = (640,480)
 
+
 	# when using some h264 compression cameras
 	# you can't run world camera grabber in its own process
 	# it must reside in the main loop
 	# this is all taken care of by setting this to true
-	muliprocess_cam = 1
+	# muliprocess_cam = 1
 
 	#use video for debugging
 	use_video = 0
@@ -105,13 +41,13 @@ def main():
 	use_player = 1
 
 	if use_video:
-		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # unsing a path to a videofiles allows for developement without a headset.
+		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # using a path to a videofiles allows for developement without a headset.
 		world_src = 0
 
 
-	if muliprocess_cam:
-		world_id = world_src
-		world_src, world_feed = Pipe()
+	# if muliprocess_cam:
+	# 	world_id = world_src
+	# 	world_src, world_feed = Pipe()
 		# world_id = world_src
 		# world_src, world_feed = Pipe()
 
@@ -138,26 +74,28 @@ def main():
 
 	# set up sub processes
 	p_eye = Process(target=eye, args=(eye_src,eye_size, g_pool))
-	p_world = Process(target=world, args=(world_src,world_size,g_pool))
+	# p_world = Process(target=world, args=(world_src,world_size,g_pool))
 	if use_player: p_player = Process(target=player, args=(g_pool,))
 	if audio: p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3))
 
 	# spawn sub processes
-	p_world.start()
-	sleep(.3)
+	# p_world.start()
+	# sleep(.3)
 	p_eye.start()
 	sleep(.3)
 	if use_player: p_player.start()
 	if audio: p_audio.start()
 
-	if muliprocess_cam:
-		local_grab(world_feed,world_id,g_pool)
+
+	world(world_src,world_size,g_pool)
+	# if muliprocess_cam:
+	# 	local_grab(world_feed,world_id,g_pool)
 		# local_grab_threaded(world_feed,world_id,eye_feed,eye_id,g_pool)
 
 
 	# exit / clean-up
 	p_eye.join()
-	p_world.join()
+	# p_world.join()
 	if use_player: p_player.join()
 	if audio: p_audio.join()
 	print "main exit"
