@@ -59,6 +59,11 @@ def player(g_pool):
 	# for c in player.captures: c.auto_rewind = False
 	player.current_video = 0
 
+	gl.glEnable( gl.GL_BLEND )
+	gl.glEnable(gl.GL_POINT_SMOOTH)
+	gl.glColor4f(1.0,0.0,0.0,1.0)
+
+
 	def on_draw():
 
 		if g_pool.player_refresh.wait(0.1):
@@ -67,17 +72,17 @@ def player(g_pool):
 
 			if g_pool.cal9.value:
 				circle_id,step = g_pool.cal9_circle_id.value,g_pool.cal9_step.value
-				gl.glEnable(gl.GL_POINT_SMOOTH)
 				gl.glPushMatrix()
 				gl.glTranslatef(0.0,fig.height/2,0.)
 				gl.glScalef(fig.height-30,fig.height-30,0.0)
 				gl.glTranslatef((float(fig.width)/float(fig.height))/2.0-10.0/16.0, -.45,0.)
-				gl.glPointSize((float(fig.height)/20.0)*(1.1-(step+1)/80.0))
-				gl.glColor4f(1.0,0.0,0.0,1.0)
+				gl.glPointSize((float(fig.height)/20.0)*(1.01-(step+1)/80.0))
+				gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ZERO)
 				gl.glBegin(gl.GL_POINTS)
 				gl.glVertex3f(grid.vertices['position'][circle_id][0],grid.vertices['position'][circle_id][1],0.5)
 				gl.glEnd()
 				gl.glPointSize(float(fig.height)/20.0)
+				gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
 				grid.draw(gl.GL_POINTS, 'pnc')
 				gl.glPopMatrix()
 
