@@ -127,10 +127,10 @@ def world(src, size, g_pool):
         g_pool.player_refresh.set()
 
         # get an image from the grabber
-        s, img = cap.read_RGB()
+        s, img = cap.read()
 
         # update the image to display
-        img_arr[...] = img
+        img_arr[...] = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
         # update gaze points from shared variable pool
         gaze.screen_coords = denormalize((g_pool.pupil_x.value, g_pool.pupil_y.value), fig.width, fig.height)
@@ -214,7 +214,7 @@ def world(src, size, g_pool):
             # increment the frame_count_record value
             # Eye positions can be associated with frames of recording even if different framerates
             g_pool.frame_count_record.value += 1
-            record.writer.write(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+            record.writer.write(img)
 
         # Finish all recordings, clean up.
         if not bar.record_video and bar.record_running:
