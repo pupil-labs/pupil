@@ -68,8 +68,8 @@ def homography_map(img1, img2):
 	img1 = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
 	img2 = cv2.cvtColor(img2, cv2.COLOR_RGB2GRAY)
 
-	kp1, desc1 = surf.detect(img1, None, useProvidedKeypoints=False)
-	kp2, desc2 = surf.detect(img2, None, useProvidedKeypoints=False)
+	kp1, desc1 = surf.detectAndCompute(img1, None) #None, useProvidedKeypoints=False
+	kp2, desc2 = surf.detectAndCompute(img2, None) #None, useProvidedKeypoints=False
 	desc1.shape = (-1, surf.descriptorSize())
 	desc2.shape = (-1, surf.descriptorSize())
 	print 'img1 - %d features, img2 - %d features' % (len(kp1), len(kp2))

@@ -3,3 +3,5 @@
 .DS_Store*
 Thumbs.db
 *.pyc
+*.mov
+data*

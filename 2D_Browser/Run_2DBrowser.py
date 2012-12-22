@@ -66,7 +66,7 @@ class Browser(object):
 		try:
 			self.cam_intrinsics_path = [os.path.join(self.data_path, 'camera_matrix.npy')]
 			self.cam_intrinsics_path.append(os.path.join(self.data_path, 'dist_coefs.npy'))
-			np.load(cam_intrinsics_path[0])
+			np.load(self.cam_intrinsics_path[0])
 		except:
 			print "Could not find camera intrinsics .npy files."
 			self.cam_intrinsics_path = None

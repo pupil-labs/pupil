@@ -168,7 +168,7 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 			# load new images
 			r, img1 = c.captures[0].read()
 			if len(c.captures)==2:
-				r, img_arr2 =c.captures[1].read()
+				r, img2 =c.captures[1].read()
 
 			if not r:
 				bar.play.value = 0
