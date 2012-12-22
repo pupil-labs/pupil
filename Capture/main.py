@@ -19,13 +19,13 @@ from ctypes import c_bool, c_int
 
 def main():
 	#assign the right id to the cameras
-	eye_src = 1
-	world_src = 0
+	eye_src = 0
+	world_src = 1
 	#video size
 	eye_size = (640,320)
 	world_size = (1280,720)
 	# world_size = (640,480) # if your cpu is to slow use this setting
-	player_size = (1280,720)
+	player_size = (1280,720) # make sure that any video player through here has this size!
 
 	#use video for debugging
 	use_video = 0
@@ -54,6 +54,8 @@ def main():
 	g_pool.cal9_step = Value('i', 0)
 	g_pool.cal9_circle_id = RawValue('i' ,0)
 	g_pool.pos_record = Value(c_bool, 0)
+	g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
+
 	g_pool.audio_record = Value(c_bool,False)
 	g_pool.audio_rx, g_pool.audio_tx = Pipe(False)
 	g_pool.player_refresh = Event()

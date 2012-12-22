@@ -23,7 +23,6 @@ class Bar(atb.Bar):
 		self.blur = c_int(3)
 		self.pupil_ratio = c_float(.6)
 		self.pupil_angle = c_float(0.0)
-
 		self.pupil_size = c_float(80.)
 		self.pupil_size_tolerance = c_float(40.)
 		self.canny_apture = c_int(7)
@@ -47,7 +46,7 @@ class Bar(atb.Bar):
 		self.add_var("Display/SlowDown",self.sleep, step=0.01,min=0.0)
 		self.add_var("Display/Mode", self.display, step=1,max=2, min=0, help="select the view-mode")
 		self.add_var("Display/Show_Pupil_Point", self.draw_pupil)
-		self.add_var("Display/Draw_ROI", self.draw_roi, help="drag on screen to select a region of interest")
+		self.add_button("Draw_ROI", self.roi, help="drag on screen to select a region of interest", Group="Display")
 		self.add_var("Darkspot/Threshold", self.bin_thresh, step=1, max=256, min=0)
 		self.add_var("Pupil/Ratio", self.pupil_ratio, step=.05, max=1., min=0.)
 		# self.add_var("Pupil/Angle", self.pupil_angle,step=1.0,readonly=True)
@@ -71,6 +70,9 @@ class Bar(atb.Bar):
 		settings_file = open('session_settings','wb')
 		pickle.dump(new_settings,settings_file)
 		settings_file.close
+
+	def roi(self):
+		self.draw_roi.value = 1
 
 
 	def load(self):
@@ -219,11 +221,19 @@ def eye(src,size,g_pool):
 				# overlay[y+1,x,:] = [0,255,0]
 				# overlay[y+1,x+1,:]=[0,255,0]
 
+
+
 		if bar.display.value == 0:
 			img_arr[...] = img
 		elif bar.display.value == 1:
 			img_arr[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
 		elif bar.display.value == 2:
+			if bar.draw_roi.value:
+				overlay[0:r.uY-r.lY:2,0,:]= [255,255,255]
+				overlay[0:r.uY-r.lY:2,r.uX-r.lX-1,:]= [255,255,255]
+				overlay[0,0:r.uX-r.lX:2,:]= [255,255,255]
+				overlay[r.uY-r.lY-1,0:r.uX-r.lX:2,:]= [255,255,255]
+			img_arr[...] = img
 			img_arr[r.lY:r.uY,r.lX:r.uX] = overlay
 		else:
 			pass
@@ -320,10 +330,13 @@ def eye(src,size,g_pool):
 		if bar.draw_roi.value:
 			r.setEnd((x,y))
 
+	def on_mouse_release(x, y, buttons):
+		bar.draw_roi.value = 0
+
 	fig.window.push_handlers(on_idle)
 	fig.window.push_handlers(atb.glumpy.Handlers(fig.window))
 	fig.window.push_handlers(on_draw)
-	fig.window.push_handlers(on_mouse_press,on_mouse_drag)
+	fig.window.push_handlers(on_mouse_press,on_mouse_drag,on_mouse_release)
 	fig.window.push_handlers(on_close)
 	fig.window.set_title("Eye")
 	fig.window.set_position(650,0)
