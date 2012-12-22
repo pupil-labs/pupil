@@ -101,5 +101,4 @@ def main():
 	print "main exit"
 
 if __name__ == '__main__':
-	# toggle_capture_devices()
 	main()
