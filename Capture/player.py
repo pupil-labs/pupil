@@ -33,7 +33,7 @@ def make_grid(dim=(11,4)):
 	return grid
 
 
-def player(g_pool):
+def player(g_pool,size):
 	"""player
 		- Shows 9 point calibration pattern
 		- Plays a source video synchronized with world process
@@ -41,7 +41,7 @@ def player(g_pool):
 		- Iterate through videos on each record event
 	"""
 
-	img_arr = np.zeros((720,1280,3), dtype=np.uint8)
+	img_arr = np.zeros((size[1],size[0],3), dtype=np.uint8)
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 	image = glumpy.Image(img_arr)
 	image.x, image.y = 0,0

@@ -21,11 +21,11 @@ def main():
 	#assign the right id to the cameras
 	eye_src = 1
 	world_src = 0
-
 	#video size
 	eye_size = (640,320)
 	world_size = (1280,720)
 	# world_size = (640,480) # if your cpu is to slow use this setting
+	player_size = (1280,720)
 
 	#use video for debugging
 	use_video = 0
@@ -63,7 +63,7 @@ def main():
 
 	# set up sub processes
 	p_eye = Process(target=eye, args=(eye_src,eye_size, g_pool))
-	if use_player: p_player = Process(target=player, args=(g_pool,))
+	if use_player: p_player = Process(target=player, args=(g_pool,player_size))
 	if audio: p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3))
 
 	# spawn sub processes
