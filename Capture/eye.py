@@ -9,7 +9,7 @@ from methods import *
 from calibrate import *
 from gl_shapes import Point, Ellipse
 from methods import Temp,capture
-
+from os import path
 class Bar(atb.Bar):
 	"""docstring for Bar"""
 	def __init__(self, name,g_pool, bar_defs):
@@ -292,7 +292,13 @@ def eye(src,size,g_pool):
 
 		# Save values and flip switch to off for recording
 		if not g_pool.pos_record.value and l_pool.record_running:
-			np.save(l_pool.record_path, np.asarray(l_pool.record_positions))
+			positions_path = path.join(l_pool.record_path, "pupil_positions.npy")
+			cal_pt_cloud_path = path.join(l_pool.record_path, "cal_pt_cloud.npy")
+			np.save(positions_path, np.asarray(l_pool.record_positions))
+			try:
+				np.save(cal_pt_cloud_path, np.asarray(pupil.pt_cloud))
+			except:
+				print "Warning: No calibration data associated with this recording."
 			l_pool.record_running = False
 
 

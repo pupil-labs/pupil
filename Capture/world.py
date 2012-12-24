@@ -201,9 +201,8 @@ def world(src, size, g_pool):
                 print "no audio initialized"
 
             # positions data to eye process
-            positions_path = os.path.join(record.path, "pupil_positions.npy")
             g_pool.pos_record.value = True
-            g_pool.eye_tx.send(positions_path)
+            g_pool.eye_tx.send(record.path)
 
             bar.record_running = 1
             g_pool.frame_count_record.value = 0
@@ -222,6 +221,17 @@ def world(src, size, g_pool):
                 g_pool.audio_record.value = 0
             except:
                 print "no audio recorded"
+
+            # conviniece function: copy camera intrinsics into each data folder at the end of a recording.
+            try:
+                camera_matrix = np.load("camera_matrix.npy")
+                dist_coefs = np.load("dist_coefs.npy")
+                cam_path = os.path.join(record.path, "camera_matrix.npy")
+                dist_path = os.path.join(record.path, "dist_coefs.npy")
+                np.save(cam_path, camera_matrix)
+                np.save(dist_path, dist_coefs)
+            except:
+                print "no camera intrinsics found, will not copy them into data folder"
 
             g_pool.pos_record.value = 0
             record.writer = None
