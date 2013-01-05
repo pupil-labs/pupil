@@ -20,12 +20,12 @@ class Browser(object):
 	def parseCommandLineFlags(self):
 		parser = argparse.ArgumentParser(description="2D Browser for PUPIL data.  \
 					Recorded eye movements are superimposed onto the recorded video stream for purposes of analysis.")
-		parser.add_argument('-d', '--data_path', type=str, 
+		parser.add_argument('-d', '--data_path', type=str,
 			help='The data directory from the capture routine (only required input).',
 			required=True)
- 
+
 		try:
-			args = parser.parse_args(namespace=self)						
+			args = parser.parse_args(namespace=self)
 		except:
 			parser.print_help()
 			sys.exit()
@@ -36,7 +36,7 @@ class Browser(object):
 
 	def load_data(self):
 		os.chdir(self.data_path)
-		try: 
+		try:
 			self.video_path = [os.path.join(self.data_path, "world.avi")]
 		except:
 			print "Could not load video 'world.avi' please check the file name and data directory given."
@@ -53,13 +53,13 @@ class Browser(object):
 
 		try:
 			self.audio_path = os.path.join(self.data_path, "world.wav")
-		except: 
+		except:
 			print "Could not load audio 'world.wav' please check the file name and data directory given."
 			self.audio_path = None
 
 		try:
-			self.pts_path = os.path.join(self.data_path, "pupil_positions.npy")
-		except: 
+			self.pts_path = os.path.join(self.data_path, "gaze_positions.npy")
+		except:
 			print "Could not load pupil positions 'pupil_positions.npy' please check the file name and data directory given."
 			self.pts_path = None
 
@@ -74,7 +74,7 @@ class Browser(object):
 
 
 
-def main(data_path, video_path, audio_path, pts_path, cam_intrinsics_path):	
+def main(data_path, video_path, audio_path, pts_path, cam_intrinsics_path):
 	browser(data_path, video_path, pts_path, cam_intrinsics_path)
 
 

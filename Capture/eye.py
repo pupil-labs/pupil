@@ -36,6 +36,7 @@ class Bar(atb.Bar):
 							'pupil_ratio':self.pupil_ratio,
 							'pupil_size':self.pupil_size,
 							'pupil_size_tolerance':self.pupil_size_tolerance,
+							'mean_blur':self.blur,
 							'canny_apture':self.canny_apture,
 							'canny_thresh':self.canny_thresh,
 							'canny_ratio':self.canny_ratio}
@@ -52,10 +53,10 @@ class Bar(atb.Bar):
 		# self.add_var("Pupil/Angle", self.pupil_angle,step=1.0,readonly=True)
 		self.add_var("Pupil/Size", self.pupil_size, step=1, min=0)
 		self.add_var("Pupil/Size_Tolerance", self.pupil_size_tolerance, step=1, min=0)
-		self.add_var("Canny/MeanBlur", self.blur,step=2,max=5,min=1)
-		self.add_var("Canny/Apture",self.canny_apture, step=2, max=7, min=1)
+		self.add_var("Canny/MeanBlur", self.blur,step=2,max=7,min=1)
+		self.add_var("Canny/Apture",self.canny_apture, step=2, max=7, min=3)
 		self.add_var("Canny/Lower_Threshold", self.canny_thresh, step=1,min=1)
-		self.add_var("Canny/LowerUpperRatio", self.canny_ratio, step=1,min=0,help="Canny recommended a ration between 3/1 and 2/1")
+		self.add_var("Canny/LowerUpperRatio", self.canny_ratio, step=1,min=0,help="Canny recommended a ratio between 3/1 and 2/1")
 		self.add_var("SaveSettings&Exit", g_pool.quit)
 
 
@@ -151,10 +152,11 @@ def eye(src,size,g_pool):
 	pupil.image_coords = (0,0)
 	pupil.screen_coords = (0,0)
 	pupil.ellipse = None
-	pupil.map_coords = (0,0)
+	pupil.gaze_coords = (0,0)
 
 	try:
-		pupil.pt_cloud = np.load('cal_pt_cloud.npy')
+		pupil.pt_cloud = list(np.load('cal_pt_cloud.npy'))  #LIST just makes it conform with \
+															#how our pupil data is captured during calibration
 	except:
 		pupil.pt_cloud = None
 	if pupil.pt_cloud is not None:
@@ -252,12 +254,11 @@ def eye(src,size,g_pool):
 				pupil_ellipse.update(pupil.screen_coords, pupil.ellipse)
 
 			# for the world screen
-			pupil.map_coords = map_vector(pupil.norm_coords, pupil.coefs)
-			g_pool.pupil_x.value, g_pool.pupil_y.value = pupil.map_coords
-			# g_pool.pupil_x.value, g_pool.pupil_y.value = 1.0,0.0
+			pupil.gaze_coords = map_vector(pupil.norm_coords, pupil.coefs)
+			g_pool.gaze_x.value, g_pool.gaze_y.value = pupil.gaze_coords
 		else:
 			pupil.ellipse = None
-			# pupil.map_coords = None, None #whithout this line the last know pupil position is recorded if none is found
+			# pupil.gaze_coords = None, None #whithout this line the last know pupil position is recorded if none is found
 
 		###CALIBRATION and MAPPING###
 		# Initialize Calibration (setup variables and lists)
@@ -276,6 +277,8 @@ def eye(src,size,g_pool):
 			l_pool.calib_running = 0
 			if pupil.pt_cloud:
 				pupil.coefs = calibrate_poly(pupil.pt_cloud)
+				np.save('cal_pt_cloud.npy', np.array(pupil.pt_cloud))
+
 
 
 		###RECORDING###
@@ -288,11 +291,11 @@ def eye(src,size,g_pool):
 
 		# While recording...
 		if l_pool.record_running:
-			l_pool.record_positions.append([pupil.map_coords[0], pupil.map_coords[1], dt, g_pool.frame_count_record.value])
+			l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1], dt, g_pool.frame_count_record.value])
 
 		# Save values and flip switch to off for recording
 		if not g_pool.pos_record.value and l_pool.record_running:
-			positions_path = path.join(l_pool.record_path, "pupil_positions.npy")
+			positions_path = path.join(l_pool.record_path, "gaze_positions.npy")
 			cal_pt_cloud_path = path.join(l_pool.record_path, "cal_pt_cloud.npy")
 			np.save(positions_path, np.asarray(l_pool.record_positions))
 			try:
@@ -333,6 +336,7 @@ def eye(src,size,g_pool):
 
 	def on_mouse_drag(x, y, dx, dy, buttons):
 		x,y = denormalize(normalize((x,y),fig.width,fig.height),img_arr.shape[1],img_arr.shape[0],flip_y=True)
+		x,y = max(0,min(fig.width,x)),max(0,min(fig.height,y))
 		if bar.draw_roi.value:
 			r.setEnd((x,y))
 

@@ -12,8 +12,6 @@ from methods import Temp,capture
 from calibrate import *
 from gl_shapes import Point
 
-
-
 class Bar(atb.Bar):
     """docstring for Bar"""
     def __init__(self, name,g_pool, defs):
@@ -94,7 +92,7 @@ def world(src, size, g_pool):
     atb.init()
     bar = Bar("World", g_pool, dict(label="Controls",
             help="Scene controls", color=(50, 50, 50), alpha=50,
-            text='light', refresh=.2, position=(10, 10), size=(200, 250)))
+            text='light', refresh=.2, position=(img_arr.shape[1]-200-10, 10), size=(200, 200)))
 
     def on_draw():
         fig.clear(0.0, 0.0, 0.0, 1.0)
@@ -133,7 +131,7 @@ def world(src, size, g_pool):
         img_arr[...] = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
         # update gaze points from shared variable pool
-        gaze.screen_coords = denormalize((g_pool.pupil_x.value, g_pool.pupil_y.value), fig.width, fig.height)
+        gaze.screen_coords = denormalize((g_pool.gaze_x.value, g_pool.gaze_y.value), fig.width, fig.height)
         gaze_point.update(gaze.screen_coords)
 
         #pattern detection and its various uses

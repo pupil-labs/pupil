@@ -19,8 +19,8 @@ from ctypes import c_bool, c_int
 
 def main():
 	#assign the right id to the cameras
-	eye_src = 0
-	world_src = 1
+	eye_src = 1
+	world_src = 0
 	#video size
 	eye_size = (640,320)
 	world_size = (1280,720)
@@ -43,8 +43,8 @@ def main():
 
 	# create shared globals
 	g_pool = Temp()
-	g_pool.pupil_x = Value('d', 0.0)
-	g_pool.pupil_y = Value('d', 0.0)
+	g_pool.gaze_x = Value('d', 0.0)
+	g_pool.gaze_y = Value('d', 0.0)
 	g_pool.pattern_x = Value('d', 0.0)
 	g_pool.pattern_y = Value('d', 0.0)
 	g_pool.frame_count_record = Value('i', 0)

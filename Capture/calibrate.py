@@ -3,7 +3,6 @@ Title: Pupil: Eye Tracking Software
 calibrate.py
 Authors: Moritz Kassner & William Patera
 Date: July 12, 2011
-Notes: Prototype tested with 2 XBox Live Webcams on Macbook Pro OSX 10.6.7 and Ubuntu 10.10 using OpenCV 2.2
 '''
 
 import numpy as np
@@ -54,7 +53,6 @@ def calibrate_poly(points):
     """
     points = np.array(points)
     #save points to file
-    np.save('cal_pt_cloud.npy', points)
 
     x_cofs =fit_polynomial_surf(points[:,0],points[:,1],points[:,2])
     y_cofs =fit_polynomial_surf(points[:,0],points[:,1],points[:,3])
