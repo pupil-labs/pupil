@@ -35,7 +35,6 @@ class Bar(atb.Bar):
 							'bin_thresh':self.bin_thresh,
 							'pupil_ratio':self.pupil_ratio,
 							'pupil_size':self.pupil_size,
-							'pupil_size_tolerance':self.pupil_size_tolerance,
 							'mean_blur':self.blur,
 							'canny_apture':self.canny_apture,
 							'canny_thresh':self.canny_thresh,
@@ -45,7 +44,7 @@ class Bar(atb.Bar):
 
 		self.add_var("Display/FPS",self.fps, step=1.,readonly=True)
 		self.add_var("Display/SlowDown",self.sleep, step=0.01,min=0.0)
-		self.add_var("Display/Mode", self.display, step=1,max=2, min=0, help="select the view-mode")
+		self.add_var("Display/Mode", self.display, step=1,max=3, min=0, help="select the view-mode")
 		self.add_var("Display/Show_Pupil_Point", self.draw_pupil)
 		self.add_button("Draw_ROI", self.roi, help="drag on screen to select a region of interest", Group="Display")
 		self.add_var("Darkspot/Threshold", self.bin_thresh, step=1, max=256, min=0)
@@ -140,7 +139,6 @@ def eye(src,size,g_pool):
 	if isinstance(cap.src, str): #if using a debug video
 		cap.auto_rewind = True
 	s, img_arr = cap.read_RGB()
-
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 	image = glumpy.Image(img_arr)
 	image.x, image.y = 0,0
@@ -153,7 +151,7 @@ def eye(src,size,g_pool):
 	pupil.screen_coords = (0,0)
 	pupil.ellipse = None
 	pupil.gaze_coords = (0,0)
-
+	pupil.prev_img = cv2.cvtColor(img_arr, cv2.COLOR_RGB2GRAY)
 	try:
 		pupil.pt_cloud = list(np.load('cal_pt_cloud.npy'))  #LIST just makes it conform with \
 															#how our pupil data is captured during calibration
@@ -237,6 +235,13 @@ def eye(src,size,g_pool):
 				overlay[r.uY-r.lY-1,0:r.uX-r.lX:2,:]= [255,255,255]
 			img_arr[...] = img
 			img_arr[r.lY:r.uY,r.lX:r.uX] = overlay
+
+		elif bar.display.value == 3:
+			t_img = np.zeros(gray_img.shape,dtype= gray_img.dtype)
+			t_img += 125
+			t_img +=  gray_img-pupil.prev_img
+			img_arr[...] = cv2.cvtColor(t_img, cv2.COLOR_GRAY2RGB)
+			pupil.prev_img = gray_img
 		else:
 			pass
 		if result is not None:
@@ -245,6 +250,9 @@ def eye(src,size,g_pool):
 			bar.pupil_size.value  = bar.pupil_size.value +  .5*(pupil.ellipse['major']-bar.pupil_size.value)
 			bar.pupil_ratio.value = bar.pupil_ratio.value + .7*(pupil.ellipse['ratio']-bar.pupil_ratio.value)
 			bar.pupil_angle.value = bar.pupil_angle.value + 1.*(pupil.ellipse['angle']-bar.pupil_angle.value)
+			# if pupil found tighten the size tolerance
+			bar.pupil_size_tolerance.value -=1
+			bar.pupil_size_tolerance.value = max(10,bar.pupil_size_tolerance.value)
 
 
 			pupil.norm_coords = normalize(pupil.image_coords, img.shape[1], img.shape[0])# numpy array wants (row,col) for an image this = (height,width)
@@ -259,6 +267,9 @@ def eye(src,size,g_pool):
 		else:
 			pupil.ellipse = None
 			# pupil.gaze_coords = None, None #whithout this line the last know pupil position is recorded if none is found
+			# if pupil not found widen the size tolerance
+			bar.pupil_size_tolerance.value +=1
+			bar.pupil_size_tolerance.value = min(bar.pupil_size_tolerance.value,80)
 
 		###CALIBRATION and MAPPING###
 		# Initialize Calibration (setup variables and lists)

@@ -4,10 +4,10 @@ p2
 I1
 sS'pupil_size'
 p3
-F65.755813598632812
+F98.544692993164062
 sS'draw_pupil'
 p4
-I01
+I00
 sS'canny_ratio'
 p5
 I2
@@ -28,5 +28,5 @@ p10
 I3
 sS'pupil_ratio'
 p11
-F0.836445152759552
+F0.8762049674987793
 s.
