@@ -23,6 +23,8 @@ class Bar(atb.Bar):
 		self.blur = c_int(3)
 		self.pupil_ratio = c_float(.6)
 		self.pupil_angle = c_float(0.0)
+		self.pupil_min_size = c_float(50.)
+		self.pupil_max_size = c_float(100.)
 		self.pupil_size = c_float(80.)
 		self.pupil_size_tolerance = c_float(40.)
 		self.canny_apture = c_int(7)
@@ -35,6 +37,8 @@ class Bar(atb.Bar):
 							'bin_thresh':self.bin_thresh,
 							'pupil_ratio':self.pupil_ratio,
 							'pupil_size':self.pupil_size,
+							'pupil_min_size':self.pupil_min_size,
+							'pupil_max_size':self.pupil_max_size,
 							'mean_blur':self.blur,
 							'canny_apture':self.canny_apture,
 							'canny_thresh':self.canny_thresh,
@@ -50,6 +54,8 @@ class Bar(atb.Bar):
 		self.add_var("Darkspot/Threshold", self.bin_thresh, step=1, max=256, min=0)
 		self.add_var("Pupil/Ratio", self.pupil_ratio, step=.05, max=1., min=0.)
 		# self.add_var("Pupil/Angle", self.pupil_angle,step=1.0,readonly=True)
+		self.add_var("Pupil/Min_Size", self.pupil_min_size, step=1, min=0)
+		self.add_var("Pupil/Max_Size", self.pupil_max_size, step=1, min=0)
 		self.add_var("Pupil/Size", self.pupil_size, step=1, min=0)
 		self.add_var("Pupil/Size_Tolerance", self.pupil_size_tolerance, step=1, min=0)
 		self.add_var("Canny/MeanBlur", self.blur,step=2,max=7,min=1)
@@ -254,6 +260,8 @@ def eye(src,size,g_pool):
 			bar.pupil_size_tolerance.value -=1
 			bar.pupil_size_tolerance.value = max(10,bar.pupil_size_tolerance.value)
 
+			bar.pupil_size.value  = max(bar.pupil_min_size.value,min(bar.pupil_max_size.value,bar.pupil_size.value))
+
 
 			pupil.norm_coords = normalize(pupil.image_coords, img.shape[1], img.shape[0])# numpy array wants (row,col) for an image this = (height,width)
 			pupil.screen_coords = denormalize(pupil.norm_coords, fig.width, fig.height)
@@ -269,7 +277,7 @@ def eye(src,size,g_pool):
 			# pupil.gaze_coords = None, None #whithout this line the last know pupil position is recorded if none is found
 			# if pupil not found widen the size tolerance
 			bar.pupil_size_tolerance.value +=1
-			bar.pupil_size_tolerance.value = min(bar.pupil_size_tolerance.value,80)
+			bar.pupil_size_tolerance.value = min(bar.pupil_size_tolerance.value,40)
 
 		###CALIBRATION and MAPPING###
 		# Initialize Calibration (setup variables and lists)
