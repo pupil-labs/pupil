@@ -310,7 +310,7 @@ def eye(src,size,g_pool):
 
 		# While recording...
 		if l_pool.record_running:
-			l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1], dt, g_pool.frame_count_record.value])
+			l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], dt, g_pool.frame_count_record.value])
 
 		# Save values and flip switch to off for recording
 		if not g_pool.pos_record.value and l_pool.record_running:

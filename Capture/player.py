@@ -43,7 +43,7 @@ def player(g_pool,size):
 
 	img_arr = np.zeros((size[1],size[0],3), dtype=np.uint8)
 	fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
-	image = glumpy.Image(img_arr)
+	image = glumpy.Image(img_arr,interpolation="bicubic")
 	image.x, image.y = 0,0
 	grid = make_grid()
 

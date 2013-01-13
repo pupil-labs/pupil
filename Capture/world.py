@@ -19,6 +19,7 @@ class Bar(atb.Bar):
         self.fps = c_float(0.0)
         self.calibrate = g_pool.calibrate
         self.find_pattern = c_bool(0)
+        self.optical_flow = c_bool(0)
         self.screen_shot = False
         self.calibration_images = False
         self.calibrate_nine = g_pool.cal9
@@ -33,6 +34,7 @@ class Bar(atb.Bar):
 
         self.add_var("FPS", self.fps, step=1., readonly=True)
         self.add_var("Find Calibration Pattern", self.find_pattern, key="P", help="Find Calibration Pattern")
+        self.add_var("Optical Flow", self.optical_flow, key="O", help="Activate Optical Flow")
         self.add_button("Screen Shot", self.screen_cap, key="SPACE", help="Capture A Frame")
         self.add_var("Calibrate", self.calibrate, key="C", help="Start/Stop Calibration Process")
         self.add_var("Nine_Pt", self.calibrate_nine, key="9", help="Start/Stop 9 Point Calibration Process")
@@ -57,7 +59,7 @@ def world(src, size, g_pool):
     s, img_arr = cap.read_RGB()
     fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 
-    image = glumpy.Image(img_arr)
+    image = glumpy.Image(img_arr,interpolation="bicubic")
     image.x, image.y = 0, 0
 
     # pattern object
@@ -72,6 +74,11 @@ def world(src, size, g_pool):
     pattern.map = (0, 2, 7, 16, 21, 23, 39, 40, 42)
     pattern.board_centers = None
 
+    #opticalflow object
+    flow = Temp()
+    flow.first =  None
+    flow.point =  None
+    flow.new_ref = False
     # gaze object
     gaze = Temp()
     gaze.map_coords = (0, 0)
@@ -98,8 +105,7 @@ def world(src, size, g_pool):
         fig.clear(0.0, 0.0, 0.0, 1.0)
         image.draw(x=image.x, y=image.y, z=0.0,
                     width=fig.width, height=fig.height)
-        if pattern.centers is not None:
-            pattern_point.draw()
+        pattern_point.draw()
         gaze_point.draw()
 
     def on_idle(dt):
@@ -152,6 +158,30 @@ def world(src, size, g_pool):
         else:
             # If no pattern detected send 0,0 -- check this condition in eye process
             g_pool.pattern_x.value, g_pool.pattern_y.value = 0, 0
+
+
+        #optical flow for natural marker calibration method
+        if bar.optical_flow.value:
+            if flow.new_ref:
+                flow.first = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
+                flow.new_ref = False
+
+            if flow.point is not None:
+                gray = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
+                nextPts, status, err = cv2.calcOpticalFlowPyrLK(flow.first,gray,flow.point)
+
+                if status[0]:
+                    flow.point = nextPts
+                    flow.first = gray
+                    nextPts = nextPts[0]
+
+                    norm_coords = normalize(nextPts, img.shape[1], img.shape[0])
+                    screen_cords = denormalize(norm_coords, fig.width, fig.height)
+                    pattern_point.update(screen_cords)
+                    g_pool.pattern_x.value, g_pool.pattern_y.value = norm_coords
+                else:
+                    g_pool.pattern_x.value, g_pool.pattern_y.value = 0, 0
+
 
         #gather pattern centers and find cam intrisics
         if bar.screen_shot and pattern.centers is not None:
@@ -245,6 +275,16 @@ def world(src, size, g_pool):
     def on_close():
         g_pool.quit.value = True
         print "WORLD Process closed from window"
+
+    @fig.event
+    def on_mouse_press(x, y, button):
+        pos = x,y
+        pos = normalize(pos, fig.width, fig.height  )
+        pos = denormalize(pos,img_arr.shape[1], img_arr.shape[0]) #pos in img pixels
+
+        if bar.optical_flow.value:
+            flow.point = np.array([pos,],dtype=np.float32)
+            flow.new_ref = True
 
     fig.window.push_handlers(on_idle)
     fig.window.push_handlers(atb.glumpy.Handlers(fig.window))

@@ -19,16 +19,16 @@ from ctypes import c_bool, c_int
 
 def main():
 	#assign the right id to the cameras
-	eye_src = 1
-	world_src = 0
+	eye_src = 0
+	world_src = 1
 	#video size
 	eye_size = (640,320)
 	world_size = (1280,720)
 	# world_size = (640,480) # if your cpu is to slow use this setting
-	player_size = (1280,720) # make sure that any video player through here has this size!
+	player_size = (1280,720) # make sure that any video played through here has this size!
 
 	#use video for debugging
-	use_video = 0
+	use_video = 1
 
 	audio = False
 
