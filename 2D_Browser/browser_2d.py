@@ -1,6 +1,6 @@
 import os, sys, argparse
 
-import glumpy 
+import glumpy
 import OpenGL.GL as gl
 import OpenGL.GLUT as glut
 import glumpy.atb as atb
@@ -21,8 +21,8 @@ from video_homography import homography_map, undistort_point
 class Bar(atb.Bar):
 	"""docstring for Bar"""
 	def __init__(self, name, data_path, total_frames, framelist, defs):
-		super(Bar, self).__init__(name,**defs) 
-		self.fps = c_float(0.0) 
+		super(Bar, self).__init__(name,**defs)
+		self.fps = c_float(0.0)
 		self.play = c_bool(0)
 		self.get_single = c_bool(0)
 		self.frame_num = c_int(0)
@@ -75,7 +75,7 @@ class Bar(atb.Bar):
 		if len(self.framelist.keyframes) > 1:
 			self.framelist.keyframes = sorted(self.framelist.keyframes)
 			self.framelist.otherframes = range(self.framelist.keyframes[0], self.framelist.keyframes[-1])
-			
+
 			self.framelist.otherframes = [i for i in self.framelist.otherframes if i not in self.framelist.keyframes]
 
 			print "Non Keyframes:\n%s" %(self.framelist.otherframes)
@@ -120,7 +120,7 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 	# gaze.dt = gaze.list[:,2]
 	gaze_point = Point(color=(255,0,0,0.3), scale=40.0)
 	gaze_list = list(gaze.list)
-	gaze.map = [[{'eye_x': s[0], 'eye_y': s[1], 'dt': s[2]} for s in gaze_list if s[3] == frame] for frame in range(int(gaze_list[-1][-1])+1)]
+	gaze.map = [[{'eye_x': s[0], 'eye_y': s[1], 'dt': s[2]} for s in gaze_list if s[-1] == frame] for frame in range(int(gaze_list[-1][-1])+1)]
 	gaze.pts = np.array([[i[0]['eye_x'], i[0]['eye_y']] for i in gaze.map if len(i) > 0], dtype=np.float32)
 
 
@@ -150,7 +150,7 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 
 	def on_draw():
 		fig.clear(0.0, 0.0, 0.0, 1.0)
-		image.draw(x=image.x, y=image.y, z=0.0, 
+		image.draw(x=image.x, y=image.y, z=0.0,
 					width=fig.width, height=fig.height)
 		draw()
 
@@ -182,23 +182,23 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 			# Extract corresponing Pupil posistions.
 			# Here we are taking only the first values of the frame for positions hence 0 index
 			try:
-				x_screen, y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'], 
-														gaze.map[bar.frame_num.value][0]['eye_y']), 
+				x_screen, y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'],
+														gaze.map[bar.frame_num.value][0]['eye_y']),
 														fig.width, fig.height, flip_y=False)
 				img1[int(y_screen), int(x_screen)] = [255,255,255]
 
-				# update gaze.x_screen, gaze.y_screen /OPENGL COORIDANTE SYSTEM 
+				# update gaze.x_screen, gaze.y_screen /OPENGL COORIDANTE SYSTEM
 				gaze.x_screen,gaze.y_screen = flip_horizontal((x_screen,y_screen), fig.height)
 				gaze_point.update((	gaze.x_screen, gaze.y_screen))
 
 			except:
 				pass
-			
+
 			if cam_intrinsics_path is not None and bar.display.value is not 0:
 				# undistor world image
 				img1 = cv2.undistort(img1, cam_intrinsics.K, cam_intrinsics.dist_coefs)
-				# Undistort the gaze point based on the distortion coefs 
-				x_screen, y_screen = undistort_point((x_screen, y_screen), 
+				# Undistort the gaze point based on the distortion coefs
+				x_screen, y_screen = undistort_point((x_screen, y_screen),
 									cam_intrinsics.K, cam_intrinsics.dist_coefs)
 
 				if bar.display.value in (2,3):
@@ -214,10 +214,10 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 					img1=overlay #overwrite img with the overlay
 
 				if bar.display.value == 3:
-					cv2.circle(img2, (int(x_screen), int(y_screen)), 10, (0,255,0,100), 1) 
+					cv2.circle(img2, (int(x_screen), int(y_screen)), 10, (0,255,0,100), 1)
 					img1=img2 #overwrite img1 with the source video
-				
-			
+
+
 			# update the img array
 			img_arr[...] = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
 
@@ -231,12 +231,12 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 			if bar.record_video.value and bar.record_running.value:
 				# Save image frames to video writer
 				try:
-					cv2.circle(img1, (int(x_screen), int(y_screen)), 10, (0,255,0,100), 1) 
+					cv2.circle(img1, (int(x_screen), int(y_screen)), 10, (0,255,0,100), 1)
 				except:
 					pass
 				record.writer.write(img1)
 
-			# Finish all recordings, clean up. 
+			# Finish all recordings, clean up.
 			if not bar.record_video.value and bar.record_running.value:
 				record.writer = None
 				bar.record_running.value = 0
@@ -252,12 +252,12 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 		if bar.exit:
 			on_close()
 			fig.window.stop()
-	
+
 
 	fig.window.push_handlers(on_idle)
 	fig.window.push_handlers(atb.glumpy.Handlers(fig.window))
-	fig.window.push_handlers(on_draw)	
-	fig.window.push_handlers(on_close)	
+	fig.window.push_handlers(on_draw)
+	fig.window.push_handlers(on_close)
 	fig.window.set_title("Browser")
-	fig.window.set_position(0,0)	
-	glumpy.show() 	
+	fig.window.set_position(0,0)
+	glumpy.show()

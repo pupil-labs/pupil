@@ -6,8 +6,8 @@ import time
 def main():
     # change this path to point to the data folder you would like to play
     data_folder = "/Users/mkassner/MIT/pupil_thesis_data/MIT_statue"
-    data_folder = "/Users/mkassner/MIT/pupil_google_code/code/Capture/data004"
-    data_folder = "/Users/mkassner/Downloads/02/data004"
+    # data_folder = "/Users/mkassner/MIT/pupil_google_code/code/Capture/data000"
+    # data_folder = "/Users/mkassner/Downloads/02/data004"
 
 
     video_path = data_folder + "/world.avi"
@@ -61,9 +61,9 @@ def main():
                 past_gaze.append([x,y])
 
 
-        vap = 20 #Visual_Attention_Span
+        vap = 10 #Visual_Attention_Span
         window_string = "the last %i frames of visual attention" %vap
-        overlay = np.zeros(img.shape,dtype=img.dtype)
+        overlay = np.ones(img.shape[:-1],dtype=img.dtype)
 
         # remove everything but the last "vap" number of gaze postions from the list of past_gazes
         for x in xrange(len(past_gaze)-vap):
@@ -72,23 +72,27 @@ def main():
 
         # draw recent gaze postions as white dots on an overlay image.
         for gaze_point in past_gaze[::-1]:
-            cv.circle(overlay,(int(gaze_point[0]),int(gaze_point[1])), int(vap*2), (255, 255, 255), int(vap*6), cv.cv.CV_AA)
-            vap -=.9 # less recent gaze points are smaller
-            vap = max(1,vap)
+            try:
+                overlay[int(gaze_point[1]),int(gaze_point[0])] = 0
+            except:
+                pass
 
-
+        out = cv.distanceTransform(overlay,cv.cv.CV_DIST_L2, 5)
+        wide = 1/(out/50+1)
+        narrow =  1/(out/20+1)
+        # print out
+        # out = cv.cvtColor(out,cv.COLOR_GRAY2RGB)
         #render the area of visual attention as sharp images on a blurred background
-        blurred = cv.blur(img,(21,21))
-        blurred = cv.cvtColor(blurred,cv.COLOR_BGR2GRAY)
-        blurred = cv.cvtColor(blurred,cv.COLOR_GRAY2BGR)
-
-        blurred *=.8
-
         # muliply this overlay with the img (white circle = 1, black banground = 0)
-        # img = cv.multiply(img,overlay/255)
-        mask = (overlay==255)
-        blurred[mask] = img[mask]
-        cv.imshow(window_string, blurred)
+
+
+        img *=cv.cvtColor(narrow,cv.COLOR_GRAY2RGB)
+        # hsv = cv.cvtColor(img,cv.COLOR_RGB2HSV)
+        # # hsv[:,:,1] *=wide
+        # hsv[:,:,0] *=narrow
+        # img = cv.cvtColor(hsv,cv.COLOR_HSV2RGB)
+
+        cv.imshow(window_string, img)
 
         status, img = cap.read()
         frame += 1
