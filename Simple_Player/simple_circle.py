@@ -3,6 +3,8 @@ import numpy as np
 
 
 def main():
+    save_video = False
+
     # change this path to point to the data folder you would like to play
     # data_folder = "/Users/mkassner/Downloads/CATMAI_VDO/youtube_data004"
     # data_folder = "/Users/mkassner/Downloads/CATMAI_VDO/phone_data003"
@@ -12,6 +14,7 @@ def main():
 
     video_path = data_folder + "/world.avi"
     gaze_positions_path = data_folder + "/gaze_positions.npy"
+    record_path = data_folder + "/world_viz.avi"
 
     cap = cv.VideoCapture(video_path)
     gaze_list = list(np.load(gaze_positions_path))
@@ -23,18 +26,28 @@ def main():
                          for s in gaze_list if s[-1] == frame] \
                          for frame in range(int(gaze_list[-1][-1]) + 1)]
 
-    # for elm in positions_by_frame:
-    #     print elm
 
     status, img = cap.read()
     height, width = img.shape[0:2]
     frame = 0
+
+    if save_video:
+        fps = cap.get(5)
+        #FFV1 -- good speed lossless big file
+        #DIVX -- good speed good compression medium file
+        writer = cv.VideoWriter(record_path, cv.cv.CV_FOURCC(*'DIVX'), fps, (img.shape[1], img.shape[0]))
+
+
     while status:
         current_gaze = positions_by_frame[frame]
         for gaze_point in current_gaze:
             x_screen, y_screen = denormalize((gaze_point['x'], gaze_point['y']), width, height, flip_y=False)
             cv.circle(img, (x_screen, y_screen), 35, (255, 255, 255), 2, cv.cv.CV_AA)
         cv.imshow("world", img)
+
+        if save_video:
+            writer.write(img)
+
         status, img = cap.read()
         frame += 1
         ch = cv.waitKey(60)
