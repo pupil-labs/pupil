@@ -11,7 +11,7 @@ from glob import glob
 
 def make_grid(dim=(11,4)):
 	"""
-	this function generates the struckture for an asymetrical circle grid
+	this function generates the structure for an asymetrical circle grid
 	It returns a Vertext Buffer Object that is used by glumpy to draw it in
 	the opengl Window.
 	"""
@@ -65,39 +65,37 @@ def player(g_pool,size):
 
 
 	def on_draw():
+		g_pool.player_refresh.clear()
+		fig.clear(1.0, 1.0, 1.0, 1.0)
 
-		if g_pool.player_refresh.wait(0.1):
-			g_pool.player_refresh.clear()
-			fig.clear(1.0, 1.0, 1.0, 1.0)
+		if g_pool.cal9.value:
+			circle_id,step = g_pool.cal9_circle_id.value,g_pool.cal9_step.value
+			gl.glPushMatrix()
+			gl.glTranslatef(0.0,fig.height/2,0.)
+			gl.glScalef(fig.height-30,fig.height-30,0.0)
+			gl.glTranslatef((float(fig.width)/float(fig.height))/2.0-10.0/16.0, -.45,0.)
+			gl.glPointSize((float(fig.height)/20.0)*(1.01-(step+1)/80.0))
+			gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ZERO)
+			gl.glBegin(gl.GL_POINTS)
+			gl.glVertex3f(grid.vertices['position'][circle_id][0],grid.vertices['position'][circle_id][1],0.5)
+			gl.glEnd()
+			gl.glPointSize(float(fig.height)/20.0)
+			gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+			grid.draw(gl.GL_POINTS, 'pnc')
+			gl.glPopMatrix()
 
-			if g_pool.cal9.value:
-				circle_id,step = g_pool.cal9_circle_id.value,g_pool.cal9_step.value
-				gl.glPushMatrix()
-				gl.glTranslatef(0.0,fig.height/2,0.)
-				gl.glScalef(fig.height-30,fig.height-30,0.0)
-				gl.glTranslatef((float(fig.width)/float(fig.height))/2.0-10.0/16.0, -.45,0.)
-				gl.glPointSize((float(fig.height)/20.0)*(1.01-(step+1)/80.0))
-				gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ZERO)
-				gl.glBegin(gl.GL_POINTS)
-				gl.glVertex3f(grid.vertices['position'][circle_id][0],grid.vertices['position'][circle_id][1],0.5)
-				gl.glEnd()
-				gl.glPointSize(float(fig.height)/20.0)
-				gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-				grid.draw(gl.GL_POINTS, 'pnc')
-				gl.glPopMatrix()
-
-			elif g_pool.play.value:
-				s, img = player.captures[player.current_video].read_RGB()
-				if s:
-					img_arr[...] = img
-					image.draw(x=image.x, y=image.y, z=0.0, width=fig.width, height=fig.height)
-					image.update()
-				else:
-					player.captures[player.current_video].rewind()
-					player.current_video +=1
-					if player.current_video >= len(player.captures):
-						player.current_video = 0
-					g_pool.play.value = False
+		elif g_pool.play.value:
+			s, img = player.captures[player.current_video].read_RGB()
+			if s:
+				img_arr[...] = img
+				image.draw(x=image.x, y=image.y, z=0.0, width=fig.width, height=fig.height)
+				image.update()
+			else:
+				player.captures[player.current_video].rewind()
+				player.current_video +=1
+				if player.current_video >= len(player.captures):
+					player.current_video = 0
+				g_pool.play.value = False
 
 
 		if g_pool.quit.value:
@@ -109,7 +107,8 @@ def player(g_pool,size):
 		print "Player Process closed from window"
 
 	def on_idle(dt):
-		fig.redraw()
+		if g_pool.player_refresh.wait(0.1):
+			fig.redraw()
 
 	fig.window.push_handlers(on_idle)
 	fig.window.push_handlers(on_draw)

@@ -237,7 +237,7 @@ def chessboard(image, pattern_size=(9,5)):
 		return None
 
 
-def fit_ellipse(image,bin_dark_img, contour_size=5,ratio=.6,target_size=20.,size_tolerance=20.):
+def fit_ellipse(image,bin_dark_img, contour_size=20,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 	"""
 	c_img = image.copy()
@@ -253,10 +253,10 @@ def fit_ellipse(image,bin_dark_img, contour_size=5,ratio=.6,target_size=20.,size
 
 	shape = image.shape
 	ellipses = (cv2.fitEllipse(c) for c in contours if len(c) >= contour_size)
-	ellipses = (e for e in ellipses if 0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1])
+	ellipses = (e for e in ellipses if (0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1]))
 	ellipses = (e for e in ellipses if bin_dark_img[e[0][1],e[0][0]])
-	ellipses = ((size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio))
-	ellipses = [(size_dif,e) for size_dif,e in ellipses if size_dif<size_tolerance]
+	ellipses = ((size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio)) # roundness test
+	ellipses = [(size_dif,e) for size_dif,e in ellipses if size_dif<size_tolerance ] # size closest to target size
 	ellipses.sort(key=lambda e: e[0]) #sort size_deviation
 	if ellipses:
 		largest = ellipses[0][1]
@@ -269,10 +269,10 @@ def fit_ellipse(image,bin_dark_img, contour_size=5,ratio=.6,target_size=20.,size
 		return largest_ellipse,ellipses
 	return None
 
-def is_round(ellipse,ratio,tolerance=.2):
+def is_round(ellipse,ratio,tolerance=.5):
 	center, (axis1,axis2), angle = ellipse
 
-	if axis1 and axis2 and min(axis2,axis1)/max(axis2,axis1) > ratio - tolerance:
+	if axis1 and axis2 and abs( ratio - min(axis2,axis1)/max(axis2,axis1)) <  tolerance:
 		return True
 	else:
 		return False

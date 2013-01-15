@@ -62,7 +62,8 @@ def calibrate_poly(points):
 
     return coefficients
 
-
+def residuals():
+    pass
 
 def fitPlane(X,Y,Z):
     """

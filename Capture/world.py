@@ -29,6 +29,7 @@ class Bar(atb.Bar):
         self.record_video = c_bool(0)
         self.record_running = c_bool(0)
         self.play = g_pool.play
+        self.half_speed =c_bool(0)
         # play and record are tied together via pointers to the objects
         # self.play = self.record_video
 
@@ -40,6 +41,7 @@ class Bar(atb.Bar):
         self.add_var("Nine_Pt", self.calibrate_nine, key="9", help="Start/Stop 9 Point Calibration Process")
         self.add_var("Record Video", self.record_video, key="R", help="Start/Stop Recording")
         self.add_var("Play Source Video", self.play)
+        self.add_var("Half Framerate", self.half_speed)
         self.add_var("Exit", g_pool.quit)
 
     def update_fps(self, dt):
@@ -79,6 +81,7 @@ def world(src, size, g_pool):
     flow.first =  None
     flow.point =  None
     flow.new_ref = False
+    flow.count = 0
     # gaze object
     gaze = Temp()
     gaze.map_coords = (0, 0)
@@ -131,6 +134,8 @@ def world(src, size, g_pool):
         g_pool.player_refresh.set()
 
         # get an image from the grabber
+        if bar.half_speed.value:
+            s, img = cap.read()
         s, img = cap.read()
 
         # update the image to display
@@ -166,9 +171,9 @@ def world(src, size, g_pool):
                 flow.first = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
                 flow.new_ref = False
 
-            if flow.point is not None:
+            if flow.point is not None and flow.count:
                 gray = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
-                nextPts, status, err = cv2.calcOpticalFlowPyrLK(flow.first,gray,flow.point)
+                nextPts, status, err = cv2.calcOpticalFlowPyrLK(flow.first,gray,flow.point,winSize=(100,100))
 
                 if status[0]:
                     flow.point = nextPts
@@ -179,6 +184,8 @@ def world(src, size, g_pool):
                     screen_cords = denormalize(norm_coords, fig.width, fig.height)
                     pattern_point.update(screen_cords)
                     g_pool.pattern_x.value, g_pool.pattern_y.value = norm_coords
+                    flow.count -=1
+                    print flow.count
                 else:
                     g_pool.pattern_x.value, g_pool.pattern_y.value = 0, 0
 
@@ -285,6 +292,7 @@ def world(src, size, g_pool):
         if bar.optical_flow.value:
             flow.point = np.array([pos,],dtype=np.float32)
             flow.new_ref = True
+            flow.count = 30
 
     fig.window.push_handlers(on_idle)
     fig.window.push_handlers(atb.glumpy.Handlers(fig.window))

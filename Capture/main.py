@@ -17,6 +17,7 @@ from methods import Temp, local_grab
 
 from ctypes import c_bool, c_int
 
+
 def main():
 	#assign the right id to the cameras
 	eye_src = 0
@@ -34,7 +35,6 @@ def main():
 
 	# use the player: a seperate window for video playback and 9 point calibration animation
 	use_player = 1
-
 
 
 	if use_video:

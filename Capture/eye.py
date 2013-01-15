@@ -222,10 +222,10 @@ def eye(src,size,g_pool):
 			pupil.ellipse, others= result
 			for pre,((x,y),axs,ang) in others:
 				x,y = int(x),int(y)
-				overlay[y,x,:]   = [0,255,0]
-				# overlay[y,x+1,:] = [0,255,0]
-				# overlay[y+1,x,:] = [0,255,0]
-				# overlay[y+1,x+1,:]=[0,255,0]
+				overlay[y,x,:]   = [100,100,255]
+				overlay[y,x+1,:] = [100,100,255]
+				overlay[y+1,x,:] = [100,100,255]
+				overlay[y+1,x+1,:]=[100,100,255]
 
 
 

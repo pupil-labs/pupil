@@ -76,6 +76,7 @@ ax = fig.gca(projection='3d')
 
 cal_pt_cloud = np.load('cal_pt_cloud.npy')
 # cal_pt_cloud = np.load('cal_pt_cloud_529.npy')
+# cal_pt_cloud = np.load('cal_pt_cloud_good.npy')
 
 Z = cal_pt_cloud
 #plot input data
@@ -142,6 +143,7 @@ if s == 1:
     Z = cal_pt_cloud
     ax.scatter(Z[:,0],Z[:,1],Z[:,3], c= "b")
 
+
 if s==2:
     #create fn plane from coeffients
     Z = cal_pt_cloud
@@ -172,7 +174,10 @@ if s==2:
 
 
     Z = cal_pt_cloud
-    ax.scatter(Z[:,0],Z[:,1],Z[:,2], c= "r")
+    thresh = 9/320.
+
+    ax.scatter(Z[Distance<thresh,0],Z[Distance<thresh,1],Z[Distance<thresh,2], c="r",)
+    ax.scatter(Z[Distance>=thresh,0],Z[Distance>=thresh,1],Z[Distance>=thresh,2], c="y")
 
 if s ==2:
     #create fn plane from coeffients
@@ -199,7 +204,10 @@ if s ==2:
     Y_Error*=240
     print 'Average Residual in Y in Pixels of World Camera',Y_Error
     Z = cal_pt_cloud
-    ax.scatter(Z[:,0],Z[:,1],Z[:,3], c= "b")
+    thresh = 9/240.
+
+    ax.scatter(Z[Distance<thresh,0],Z[Distance<thresh,1],Z[Distance<thresh,3], c="b",)
+    ax.scatter(Z[Distance>=thresh,0],Z[Distance>=thresh,1],Z[Distance>=thresh,3], c="y")
 
 
 plt.xlabel("Pupil x in Eye-Space")
