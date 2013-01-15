@@ -98,15 +98,16 @@ def player(g_pool,size):
 				g_pool.play.value = False
 
 
-		if g_pool.quit.value:
-			print "Player Process closing from global or atb"
-			fig.window.stop()
 
 	def on_close():
 		g_pool.quit.value = True
 		print "Player Process closed from window"
 
 	def on_idle(dt):
+		if g_pool.quit.value:
+			print "Player Process closing from global or atb"
+			fig.window.stop()
+
 		if g_pool.player_refresh.wait(0.1):
 			fig.redraw()
 
