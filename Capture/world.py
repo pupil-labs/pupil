@@ -45,7 +45,7 @@ class Bar(atb.Bar):
         self.add_var("Exit", g_pool.quit)
 
     def update_fps(self, dt):
-        self.fps.value += .2 * (1 / dt - self.fps.value)
+        self.fps.value += .05 * (1 / dt - self.fps.value)
 
     def screen_cap(self):
         self.find_pattern.value = True
