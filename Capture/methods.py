@@ -237,13 +237,19 @@ def chessboard(image, pattern_size=(9,5)):
 		return None
 
 
-def fit_ellipse(image,bin_dark_img, contour_size=20,ratio=.6,target_size=20.,size_tolerance=20.):
+def fit_ellipse(image,edges,bin_dark_img, contour_size=20,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 	"""
-	c_img = image.copy()
+	c_img = edges.copy()
 	contours, hierarchy = cv2.findContours(c_img,
 											mode=cv2.RETR_LIST,
 											method=cv2.CHAIN_APPROX_NONE,offset=(0,0))
+
+	contours = [c for c in contours if len(c) >= contour_size]
+	for c in contours:
+		if convexity(c,image):
+			cv2.drawContours(image, c, -1, (255,255,255))
+
 
 	largest_ellipse = {'center': (None,None),
 						'axes': (None, None), 'angle': None,
@@ -251,8 +257,8 @@ def fit_ellipse(image,bin_dark_img, contour_size=20,ratio=.6,target_size=20.,siz
 						'major': None, 'minor': None}
 
 
-	shape = image.shape
-	ellipses = (cv2.fitEllipse(c) for c in contours if len(c) >= contour_size)
+	shape = edges.shape
+	ellipses = (cv2.fitEllipse(c) for c in contours if convexity(c,image))
 	ellipses = (e for e in ellipses if (0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1]))
 	ellipses = (e for e in ellipses if bin_dark_img[e[0][1],e[0][0]])
 	ellipses = ((size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio)) # roundness test
@@ -279,6 +285,19 @@ def is_round(ellipse,ratio,tolerance=.5):
 def size_deviation(ellipse,target_size):
 	center, axis, angle = ellipse
 	return abs(target_size-max(axis))
+
+def convexity(contour,img=None):
+	if img is not None:
+		hull = cv2.convexHull(contour, returnPoints=1)
+		cv2.drawContours(img, hull, -1, (255,0,0))
+	hull = cv2.convexHull(contour, returnPoints=0)
+	if len(hull)>3:
+		res = cv2.convexityDefects(contour, hull) # return: start_index, end_index, farthest_pt_index, fixpt_depth)
+		if res is  None:
+			return False
+		if len(res)>13:
+			return True
+	return False
 
 
 def circle_grid_old(image, circle_id=None, pattern_size=(4,11)):
