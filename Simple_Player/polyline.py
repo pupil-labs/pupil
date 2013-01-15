@@ -9,8 +9,7 @@ def main():
 
     # change this path to point to the data folder you would like to play
     data_folder = "/Users/mkassner/MIT/pupil_thesis_data/MIT_statue"
-    data_folder = "/Users/mkassner/MIT/pupil_google_code/code/Capture/data004"
-    data_folder = "/Users/mkassner/Downloads/02/data004"
+
 
 
     video_path = data_folder + "/world.avi"
@@ -20,15 +19,14 @@ def main():
     cap = cv.VideoCapture(video_path)
     gaze_list = list(np.load(gaze_positions_path))
 
-    # this line takes the gaze list and makes a list
+    # this takes the gaze list and makes a list
     # with the length of the number of recorded frames.
     # Each slot conains a list that has 0, 1 or more assosiated gaze postions.
-    positions_by_frame = [[{'x': s[0], 'y': s[1], 'dt': s[2]} \
-                         for s in gaze_list if s[-1] == frame] \
-                         for frame in range(int(gaze_list[-1][-1]) + 1)]
-
-    # for elm in positions_by_frame:
-    #     print elm
+    positions_by_frame = [[] for frame in range(int(gaze_list[-1][-1]) + 1)]
+    while gaze_list:
+        s = gaze_list.pop(0)
+        frame = int(s[-1])
+        positions_by_frame[frame].append({'x': s[0], 'y': s[1], 'dt': s[2]})
 
     status, img = cap.read()
     prevgray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -38,9 +36,7 @@ def main():
     t = time.time()
 
     fps = cap.get(5)
-    fps = 30.3245
     wait =  int((1./fps)*1000)
-    print wait
 
     if save_video:
         #FFV1 -- good speed lossless big file

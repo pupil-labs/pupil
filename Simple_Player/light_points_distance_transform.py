@@ -7,9 +7,7 @@ def main():
     save_video = False
     # change this path to point to the data folder you would like to play
     data_folder = "/Users/mkassner/MIT/pupil_thesis_data/MIT_statue"
-    # data_folder = "/Users/mkassner/MIT/pupil_google_code/code/Capture/data000"
-    # data_folder = "/Users/mkassner/Downloads/02/data004"
-    data_folder="/Users/mkassner/Downloads/02/data005"
+
 
     video_path = data_folder + "/world.avi"
     gaze_positions_path = data_folder + "/gaze_positions.npy"
@@ -18,13 +16,14 @@ def main():
     cap = cv.VideoCapture(video_path)
     gaze_list = list(np.load(gaze_positions_path))
 
-    # this line takes the gaze list and makes a list
+    # this takes the gaze list and makes a list
     # with the length of the number of recorded frames.
     # Each slot conains a list that has 0, 1 or more assosiated gaze postions.
-    positions_by_frame = [[{'x': s[0], 'y': s[1], 'dt': s[2]} \
-                         for s in gaze_list if s[-1] == frame] \
-                         for frame in range(int(gaze_list[-1][-1]) + 1)]
-
+    positions_by_frame = [[] for frame in range(int(gaze_list[-1][-1]) + 1)]
+    while gaze_list:
+        s = gaze_list.pop(0)
+        frame = int(s[-1])
+        positions_by_frame[frame].append({'x': s[0], 'y': s[1], 'dt': s[2]})
 
     status, img = cap.read()
     prevgray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -33,8 +32,10 @@ def main():
     past_gaze = []
     t = time.time()
 
+    fps = cap.get(5)
+    wait =  int((1./fps)*1000)
+
     if save_video:
-        fps = cap.get(5)
         #FFV1 -- good speed lossless big file
         #DIVX -- good speed good compression medium file
         writer = cv.VideoWriter(record_path, cv.cv.CV_FOURCC(*'DIVX'), fps, (img.shape[1], img.shape[0]))
@@ -94,7 +95,7 @@ def main():
         # muliply this overlay with the img (white circle = 1, black banground = 0)
 
 
-        img *=cv.cvtColor(narrow,cv.COLOR_GRAY2RGB)
+        img *=cv.cvtColor(wide,cv.COLOR_GRAY2RGB)
         # hsv = cv.cvtColor(img,cv.COLOR_RGB2HSV)
         # # hsv[:,:,1] *=wide
         # hsv[:,:,0] *=narrow
@@ -108,7 +109,7 @@ def main():
 
         status, img = cap.read()
         frame += 1
-        ch = cv.waitKey(30)
+        ch = cv.waitKey(wait)
         if ch == 27:
             break
 
