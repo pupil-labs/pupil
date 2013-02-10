@@ -38,7 +38,7 @@ def main():
 
 
 	if use_video:
-		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # using a path to a videofiles allows for developement without a headset.
+		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_ir_03.mov" # using a path to a videofiles allows for developement without a headset.
 		world_src = 0
 
 	# create shared globals

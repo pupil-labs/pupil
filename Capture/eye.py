@@ -8,7 +8,7 @@ from time import sleep
 from methods import *
 from calibrate import *
 from gl_shapes import Point, Ellipse
-from methods import Temp,capture
+from methods import Temp,capture,make_eye_kernel
 from os import path
 class Bar(atb.Bar):
 	"""docstring for Bar"""
@@ -28,6 +28,7 @@ class Bar(atb.Bar):
 		self.canny_apture = c_int(7)
 		self.canny_thresh = c_int(200)
 		self.canny_ratio = c_int(2)
+		self.record_eye = c_bool(0)
 
 		#add class field here and it will become session persistant
 		self.session_save = {'display':self.display,
@@ -54,8 +55,9 @@ class Bar(atb.Bar):
 		self.add_var("Pupil/Size_Tolerance", self.pupil_size_tolerance, step=1, min=0)
 		self.add_var("Canny/MeanBlur", self.blur,step=2,max=7,min=1)
 		self.add_var("Canny/Apture",self.canny_apture, step=2, max=7, min=3)
-		# self.add_var("Canny/Lower_Threshold", self.canny_thresh, step=1,min=1)
-		# self.add_var("Canny/LowerUpperRatio", self.canny_ratio, step=1,min=0,help="Canny recommended a ratio between 3/1 and 2/1")
+		self.add_var("Canny/Lower_Threshold", self.canny_thresh, step=1,min=1)
+		self.add_var("Canny/LowerUpperRatio", self.canny_ratio, step=1,min=0,help="Canny recommended a ratio between 3/1 and 2/1")
+		self.add_var("record_eye_video", self.record_eye, help="when recording also save the eye video stream")
 		self.add_var("SaveSettings&Exit", g_pool.quit)
 
 
@@ -99,7 +101,7 @@ class Roi(object):
 	#do something with roi_array_slice
 	full_array[r.lY:r.uY,r.lX:r.uX] = roi_array_slice
 
-	this creates a view, no data coping done
+	this creates a view, no data copying done
 	"""
 	def __init__(self, array_shape):
 		self.array_shape = array_shape
@@ -109,6 +111,7 @@ class Roi(object):
 		self.uY = array_shape[0]-0
 		self.nX = 0
 		self.nY = 0
+		self.load()
 
 	def setStart(self,(x,y)):
 		x,y = max(0,x),max(0,y)
@@ -127,6 +130,35 @@ class Roi(object):
 		adds the roi offset to a len2 vector
 		"""
 		return (self.lX+x,self.lY+y)
+
+	def set(self,vals):
+		if vals is not None and len(vals) is 4:
+			self.lX,self.lY,self.uX,self.uY = vals
+
+	def get(self):
+		return self.lX,self.lY,self.uX,self.uY
+
+	def save(self):
+		new_settings = Temp()
+		new_settings.array_shape = self.array_shape
+		new_settings.vals = self.get()
+		settings_file = open('session_settings_roi','wb')
+		pickle.dump(new_settings,settings_file)
+		settings_file.close
+
+	def load(self):
+			try:
+				settings_file = open('session_settings_roi','rb')
+				new_settings = pickle.load(settings_file)
+				settings_file.close
+			except IOError:
+				print "No session_settings_roi file found. Using defaults"
+				return
+
+			if new_settings.array_shape == self.array_shape:
+				self.set(new_settings.vals)
+			else:
+				print "Warning: Image Array size changed, disregarding saved Region of Interest"
 
 
 def eye(src,size,g_pool):
@@ -163,6 +195,8 @@ def eye(src,size,g_pool):
 		pupil.coefs = None
 
 	r = Roi(img_arr.shape)
+	p_r = Roi(img_arr.shape)
+
 
 	# local object
 	l_pool = Temp()
@@ -170,16 +204,17 @@ def eye(src,size,g_pool):
 	l_pool.record_running = False
 	l_pool.record_positions = []
 	l_pool.record_path = None
-
+	l_pool.writer = None
 	# initialize gl shape primitives
 	pupil_point = Point()
 	pupil_ellipse = Ellipse()
+
+	l_pool.region_r = 20
 
 	atb.init()
 	bar = Bar("Eye",g_pool, dict(label="Controls",
 			help="Scene controls", color=(50,50,50), alpha=50,
 			text='light', refresh=.2, position=(10, 10), size=(200, 300)) )
-
 
 
 	def on_idle(dt):
@@ -190,26 +225,58 @@ def eye(src,size,g_pool):
 
 		###IMAGE PROCESSING
 		gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
+
+		# integral = cv2.integral(gray_img)
+
+		###2D filter response as fisrt estimation of pupil position for ROI
+		downscale = 4
+		best_m = 0
+		region_r = min(max(9,l_pool.region_r),61)
+		lable = 0
+		for s in (region_r-4,region_r,region_r+4):
+			#simple best of three optimization
+			kernel = make_eye_kernel(s,int(3*s))
+			g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REFLECT_101)        # ddepth = -1, means destination image has depth same as input image.
+			m = np.amax(g_img)
+			# print s,m
+			x,y = np.where(g_img == m)
+			x,y = downscale*y[0],downscale*x[0]
+			cv2.putText(gray_img, str(s)+"-"+str(m), (x,y+lable), cv2.FONT_HERSHEY_SIMPLEX, .35,(255,255,255))
+			lable+=40
+			inner_r = (s*downscale)/2
+			outer_r = int(s*downscale*1.)
+			if m > best_m:
+				best_m = m
+				l_pool.region_r = s
+				vals = [max(0,v) for v in (x-outer_r,y-outer_r,x+outer_r,y+outer_r)]
+				p_r.set(vals)
+			# cv2.rectangle(gray_img, (x-inner_r,y-inner_r), (x+inner_r,y+inner_r), (0,0,0))
+			# cv2.rectangle(gray_img,  (x-outer_r,y-outer_r), (x+outer_r,y+outer_r), (255,255,255))
+		# g_img= cv2.normalize(g_img,alpha = 0,beta = 255,norm_type = cv2.NORM_MINMAX)
+		# gray_img = cv2.resize(g_img,gray_img.shape[::-1], interpolation=cv2.INTER_NEAREST)
+
+		pupil_img = gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX]
+
 		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
-		binary_img = bin_thresholding(gray_img,image_upper=bar.bin_thresh.value)
+		binary_img = bin_thresholding(pupil_img,image_upper=bar.bin_thresh.value)
 		cv2.dilate(binary_img, kernel,binary_img, iterations=3)
-		spec_mask = bin_thresholding(gray_img, image_upper=250)
+		spec_mask = bin_thresholding(pupil_img, image_upper=250)
 		cv2.erode(spec_mask, kernel,spec_mask, iterations=1)
 
 		if bar.blur.value >1:
-			gray_img = cv2.medianBlur(gray_img,bar.blur.value)
+			gray_img = cv2.medianBlur(pupil_img,bar.blur.value)
 
-		edges =  cv2.Canny(gray_img,bar.canny_thresh.value, bar.canny_thresh.value*bar.canny_ratio.value,apertureSize= bar.canny_apture.value)
+		edges =  cv2.Canny(pupil_img,bar.canny_thresh.value, bar.canny_thresh.value*bar.canny_ratio.value,apertureSize= bar.canny_apture.value)
 		# edges = dif_gaus(gray_img,20.,24.)
 		edges = cv2.min(edges, spec_mask)
 		edges = cv2.min(edges,binary_img)
 
-		result = fit_ellipse(gray_img,edges,binary_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_size.value,size_tolerance=bar.pupil_size_tolerance.value)
+		result = fit_ellipse(img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX],edges,binary_img,ratio=bar.pupil_ratio.value,target_size=bar.pupil_size.value,size_tolerance=bar.pupil_size_tolerance.value)
 
-		overlay =cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
+		overlay =cv2.cvtColor(pupil_img, cv2.COLOR_GRAY2RGB)
 		# overlay[:,:,0] = cv2.max(edges,gray_img) #green channel
-		overlay[:,:,2] = cv2.max(gray_img,binary_img) #blue channel
-		overlay[:,:,1] = cv2.min(gray_img,spec_mask) #red channel
+		overlay[:,:,2] = cv2.max(pupil_img,binary_img) #blue channel
+		overlay[:,:,1] = cv2.min(pupil_img,spec_mask) #red channel
 
 		if result is not None:
 			#display some centers for debugging
@@ -221,38 +288,42 @@ def eye(src,size,g_pool):
 				# overlay[y+1,x,:] = [100,100,255]
 				# overlay[y+1,x+1,:]=[100,100,255]
 
+		gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX] = pupil_img
 
+		if bar.draw_roi.value:
+				gray_img[:,0] = 255
+				gray_img[:,-1]= 255
+				gray_img[0,:] = 255
+				gray_img[-1,:]= 255
 
 		if bar.display.value == 0:
 			img_arr[...] = img
 		elif bar.display.value == 1:
 			img_arr[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
 		elif bar.display.value == 2:
-			if bar.draw_roi.value:
-				overlay[0:r.uY-r.lY:2,0,:]= [255,255,255]
-				overlay[0:r.uY-r.lY:2,r.uX-r.lX-1,:]= [255,255,255]
-				overlay[0,0:r.uX-r.lX:2,:]= [255,255,255]
-				overlay[r.uY-r.lY-1,0:r.uX-r.lX:2,:]= [255,255,255]
 			img_arr[...] = img
-			img_arr[r.lY:r.uY,r.lX:r.uX] = overlay
+			img_arr[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] = overlay
 
 		elif bar.display.value == 3:
-			t_img = np.zeros(gray_img.shape,dtype= gray_img.dtype)
-			t_img += 125
-			t_img +=  gray_img-pupil.prev_img
-			img_arr[...] = cv2.cvtColor(t_img, cv2.COLOR_GRAY2RGB)
-			pupil.prev_img = gray_img
+			# t_img = np.zeros(gray_img.shape,dtype= gray_img.dtype)
+			# t_img += 125
+			# t_img +=  gray_img-pupil.prev_img
+			# img_arr[...] = cv2.cvtColor(t_img, cv2.COLOR_GRAY2RGB)
+			# pupil.prev_img = gray_img
+
+			img_arr[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
+
 		else:
 			pass
 		if result is not None:
-			pupil.image_coords = r.add_vector(pupil.ellipse['center'])
+			pupil.image_coords = r.add_vector(p_r.add_vector(pupil.ellipse['center']))
 			#update pupil size,angle and ratio for the ellipse filter algorithm
 			bar.pupil_size.value  = bar.pupil_size.value +  .5*(pupil.ellipse['major']-bar.pupil_size.value)
 			bar.pupil_ratio.value = bar.pupil_ratio.value + .7*(pupil.ellipse['ratio']-bar.pupil_ratio.value)
 			bar.pupil_angle.value = bar.pupil_angle.value + 1.*(pupil.ellipse['angle']-bar.pupil_angle.value)
 			# if pupil found tighten the size tolerance
 			bar.pupil_size_tolerance.value -=1
-			bar.pupil_size_tolerance.value = max(10,bar.pupil_size_tolerance.value)
+			bar.pupil_size_tolerance.value = max(40,bar.pupil_size_tolerance.value)
 
 
 			pupil.norm_coords = normalize(pupil.image_coords, img.shape[1], img.shape[0])# numpy array wants (row,col) for an image this = (height,width)
@@ -297,13 +368,20 @@ def eye(src,size,g_pool):
 		if g_pool.pos_record.value and not l_pool.record_running:
 			l_pool.record_path = g_pool.eye_rx.recv()
 			print "l_pool.record_path: ", l_pool.record_path
+
+			video_path = path.join(l_pool.record_path, "eye.avi")
+            #FFV1 -- good speed lossless big file
+            #DIVX -- good speed good compression medium file
+			if bar.record_eye.value:
+				l_pool.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (img.shape[1], img.shape[0]))
 			l_pool.record_positions = []
 			l_pool.record_running = True
 
 		# While recording...
 		if l_pool.record_running:
 			l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], dt, g_pool.frame_count_record.value])
-
+			if l_pool.writer is not None:
+				l_pool.writer.write(cv2.cvtColor(img,cv2.cv.COLOR_BGR2RGB))
 		# Save values and flip switch to off for recording
 		if not g_pool.pos_record.value and l_pool.record_running:
 			positions_path = path.join(l_pool.record_path, "gaze_positions.npy")
@@ -313,6 +391,7 @@ def eye(src,size,g_pool):
 				np.save(cal_pt_cloud_path, np.asarray(pupil.pt_cloud))
 			except:
 				print "Warning: No calibration data associated with this recording."
+			l_pool.writer = None
 			l_pool.record_running = False
 
 
@@ -336,6 +415,7 @@ def eye(src,size,g_pool):
 
 
 	def on_close():
+		r.save()
 		bar.save()
 		g_pool.quit.value = True
 		print "EYE Process closing from window event"
