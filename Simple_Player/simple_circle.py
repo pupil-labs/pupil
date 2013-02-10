@@ -6,8 +6,7 @@ def main():
     save_video = False
 
     # change this path to point to the data folder you would like to play
-    data_folder = "/Users/mkassner/Downloads/CATMAI_VDO/youtube_data004"
-
+    data_folder = "/Users/mkassner/Desktop/pupil_sample_videos/01/data000"
 
 
     video_path = data_folder + "/world.avi"
@@ -27,7 +26,6 @@ def main():
         positions_by_frame[frame].append({'x': s[0], 'y': s[1], 'dt': s[2]})
 
 
-
     status, img = cap.read()
     height, width = img.shape[0:2]
     frame = 0
@@ -43,10 +41,13 @@ def main():
 
 
     while status:
+
+        # all gaze points of the current frame
         current_gaze = positions_by_frame[frame]
         for gaze_point in current_gaze:
             x_screen, y_screen = denormalize((gaze_point['x'], gaze_point['y']), width, height, flip_y=False)
             cv.circle(img, (x_screen, y_screen), 35, (255, 255, 255), 2, cv.cv.CV_AA)
+
         cv.imshow("world", img)
 
         if save_video:
@@ -67,7 +68,6 @@ def denormalize(pos, width, height, flip_y=True):
     y = pos[1]
     if flip_y:
         y=-y
-
     x = (x * width / 2.) + (width / 2.)
     y = (y * height / 2.) + (height / 2.)
     return int(x), int(y)

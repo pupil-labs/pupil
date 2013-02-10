@@ -8,8 +8,7 @@ def main():
     save_video = False
 
     # change this path to point to the data folder you would like to play
-    data_folder = "/Users/mkassner/MIT/pupil_thesis_data/MIT_statue"
-
+    data_folder = "/Users/mkassner/Desktop/pupil_sample_videos/01/data000"
 
 
     video_path = data_folder + "/world.avi"
@@ -44,9 +43,6 @@ def main():
         writer = cv.VideoWriter(record_path, cv.cv.CV_FOURCC(*'DIVX'), fps, (img.shape[1], img.shape[0]))
 
     while status:
-        nt = time.time()
-        # print nt-t
-        t = nt
         # apply optical flow displacement to previous gaze
         if past_gaze:
             gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -55,7 +51,7 @@ def main():
             prevgray = gray
             past_gaze = list(nextPts)
 
-            #contrain gaze positions to
+            #contrain gaze positions to screen dimensions
             c_gaze = []
             for x,y in past_gaze:
                 if x >0 and x<width and y >0 and y <height:
@@ -74,15 +70,12 @@ def main():
 
         vap = 20 #Visual_Attention_Span
         window_string = "the last %i frames of visual attention" %vap
-        overlay = np.zeros(img.shape,dtype=img.dtype)
 
         # remove everything but the last "vap" number of gaze postions from the list of past_gazes
         for x in xrange(len(past_gaze)-vap):
             past_gaze.pop(0)
 
-
-        # draw recent gaze postions as white dots on an overlay image.
-        for gaze_point in past_gaze[::-1]:
+        for gaze_point in past_gaze[::-1]: #going through the list backwards
             cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), int(vap), (255, 255, 255), 1, cv.cv.CV_AA)
             vap -=.9 # less recent gaze points are smaller
             vap = max(1,vap)
@@ -117,4 +110,4 @@ def denormalize(pos, width, height, flip_y=True):
 
 
 if __name__ == '__main__':
-    cProfile.run("main()")
+    main()

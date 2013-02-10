@@ -5,9 +5,10 @@ import time
 
 def main():
     save_video = False
-    # change this path to point to the data folder you would like to play
-    data_folder = "/Users/mkassner/MIT/pupil_thesis_data/MIT_statue"
 
+
+    # change this path to point to the data folder you would like to play
+    data_folder = "/Users/mkassner/Desktop/pupil_sample_videos/01/data000"
 
     video_path = data_folder + "/world.avi"
     gaze_positions_path = data_folder + "/gaze_positions.npy"
@@ -24,6 +25,7 @@ def main():
         s = gaze_list.pop(0)
         frame = int(s[-1])
         positions_by_frame[frame].append({'x': s[0], 'y': s[1], 'dt': s[2]})
+
 
     status, img = cap.read()
     prevgray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -61,7 +63,6 @@ def main():
             past_gaze = c_gaze
 
 
-
         #load and map current gaze postions and append to the past_gaze list
         current_gaze = positions_by_frame[frame]
         for gaze_point in current_gaze:
@@ -87,19 +88,11 @@ def main():
                 pass
 
         out = cv.distanceTransform(overlay,cv.cv.CV_DIST_L2, 5)
-        wide = 1/(out/50+1)
-        narrow =  1/(out/20+1)
-        # print out
-        # out = cv.cvtColor(out,cv.COLOR_GRAY2RGB)
-        #render the area of visual attention as sharp images on a blurred background
-        # muliply this overlay with the img (white circle = 1, black banground = 0)
 
+        wide = 1/(out/50+1)
+        # narrow =  1/(out/20+1)
 
         img *=cv.cvtColor(wide,cv.COLOR_GRAY2RGB)
-        # hsv = cv.cvtColor(img,cv.COLOR_RGB2HSV)
-        # # hsv[:,:,1] *=wide
-        # hsv[:,:,0] *=narrow
-        # img = cv.cvtColor(hsv,cv.COLOR_HSV2RGB)
 
         cv.imshow(window_string, img)
 
@@ -128,4 +121,4 @@ def denormalize(pos, width, height, flip_y=True):
 
 
 if __name__ == '__main__':
-    cProfile.run("main()")
+    main()
