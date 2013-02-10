@@ -29,7 +29,7 @@ def main():
 	player_size = (1280,720) # make sure that any video played through here has this size!
 
 	#use video for debugging
-	use_video = 1
+	use_video = 0
 
 	audio = False
 
