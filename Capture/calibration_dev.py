@@ -175,7 +175,8 @@ if s==2:
 
     Z = cal_pt_cloud
     thresh = 9/320.
-
+    X_Outliers = Distance>=thresh
+    X_Inliers = np.logical_not(X_Outliers)
     ax.scatter(Z[Distance<thresh,0],Z[Distance<thresh,1],Z[Distance<thresh,2], c="r",)
     ax.scatter(Z[Distance>=thresh,0],Z[Distance>=thresh,1],Z[Distance>=thresh,2], c="y")
 
@@ -205,7 +206,8 @@ if s ==2:
     print 'Average Residual in Y in Pixels of World Camera',Y_Error
     Z = cal_pt_cloud
     thresh = 9/240.
-
+    Y_Outliers = Distance>=thresh
+    Y_Inliers = np.logical_not(Y_Outliers)
     ax.scatter(Z[Distance<thresh,0],Z[Distance<thresh,1],Z[Distance<thresh,3], c="b",)
     ax.scatter(Z[Distance>=thresh,0],Z[Distance>=thresh,1],Z[Distance>=thresh,3], c="y")
 
@@ -215,6 +217,8 @@ plt.ylabel("Pupil y Eye-Space")
 plt.title("Z: pattern x(red) y(blue),planes are map Fn's. Samples: %i" %Z.shape[0])
 
 fig_error = plt.figure()
+
+
 plt.scatter(X_Distance,Y_Distance)
 plt.title("Residuals")
 plt.xlabel("Pupil X Residuals in World-Space, avg. Residual %f pixels" %X_Error)

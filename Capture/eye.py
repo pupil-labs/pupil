@@ -23,8 +23,6 @@ class Bar(atb.Bar):
 		self.blur = c_int(3)
 		self.pupil_ratio = c_float(.6)
 		self.pupil_angle = c_float(0.0)
-		self.pupil_min_size = c_float(50.)
-		self.pupil_max_size = c_float(100.)
 		self.pupil_size = c_float(80.)
 		self.pupil_size_tolerance = c_float(40.)
 		self.canny_apture = c_int(7)
@@ -37,8 +35,6 @@ class Bar(atb.Bar):
 							'bin_thresh':self.bin_thresh,
 							'pupil_ratio':self.pupil_ratio,
 							'pupil_size':self.pupil_size,
-							'pupil_min_size':self.pupil_min_size,
-							'pupil_max_size':self.pupil_max_size,
 							'mean_blur':self.blur,
 							'canny_apture':self.canny_apture,
 							'canny_thresh':self.canny_thresh,
@@ -54,14 +50,12 @@ class Bar(atb.Bar):
 		self.add_var("Darkspot/Threshold", self.bin_thresh, step=1, max=256, min=0)
 		self.add_var("Pupil/Ratio", self.pupil_ratio, step=.05, max=1., min=0.)
 		# self.add_var("Pupil/Angle", self.pupil_angle,step=1.0,readonly=True)
-		self.add_var("Pupil/Min_Size", self.pupil_min_size, step=1, min=0)
-		self.add_var("Pupil/Max_Size", self.pupil_max_size, step=1, min=0)
 		self.add_var("Pupil/Size", self.pupil_size, step=1, min=0)
 		self.add_var("Pupil/Size_Tolerance", self.pupil_size_tolerance, step=1, min=0)
 		self.add_var("Canny/MeanBlur", self.blur,step=2,max=7,min=1)
 		self.add_var("Canny/Apture",self.canny_apture, step=2, max=7, min=3)
-		self.add_var("Canny/Lower_Threshold", self.canny_thresh, step=1,min=1)
-		self.add_var("Canny/LowerUpperRatio", self.canny_ratio, step=1,min=0,help="Canny recommended a ratio between 3/1 and 2/1")
+		# self.add_var("Canny/Lower_Threshold", self.canny_thresh, step=1,min=1)
+		# self.add_var("Canny/LowerUpperRatio", self.canny_ratio, step=1,min=0,help="Canny recommended a ratio between 3/1 and 2/1")
 		self.add_var("SaveSettings&Exit", g_pool.quit)
 
 
@@ -210,12 +204,12 @@ def eye(src,size,g_pool):
 		edges = cv2.min(edges, spec_mask)
 		edges = cv2.min(edges,binary_img)
 
-		result = fit_ellipse(edges,binary_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_size.value,size_tolerance=bar.pupil_size_tolerance.value)
+		result = fit_ellipse(gray_img,edges,binary_img,bar.bin_thresh.value, ratio=bar.pupil_ratio.value,target_size=bar.pupil_size.value,size_tolerance=bar.pupil_size_tolerance.value)
 
-		overlay_b = cv2.max(edges,gray_img)
-		overlay =cv2.cvtColor(overlay_b, cv2.COLOR_GRAY2RGB)
-		overlay[:,:,2] = cv2.max(overlay_b,binary_img) #blue channel
-		overlay[:,:,1] = cv2.min(overlay_b,spec_mask) #red channel
+		overlay =cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
+		# overlay[:,:,0] = cv2.max(edges,gray_img) #green channel
+		overlay[:,:,2] = cv2.max(gray_img,binary_img) #blue channel
+		overlay[:,:,1] = cv2.min(gray_img,spec_mask) #red channel
 
 		if result is not None:
 			#display some centers for debugging
@@ -223,9 +217,9 @@ def eye(src,size,g_pool):
 			for pre,((x,y),axs,ang) in others:
 				x,y = int(x),int(y)
 				overlay[y,x,:]   = [100,100,255]
-				overlay[y,x+1,:] = [100,100,255]
-				overlay[y+1,x,:] = [100,100,255]
-				overlay[y+1,x+1,:]=[100,100,255]
+				# overlay[y,x+1,:] = [100,100,255]
+				# overlay[y+1,x,:] = [100,100,255]
+				# overlay[y+1,x+1,:]=[100,100,255]
 
 
 
@@ -259,8 +253,6 @@ def eye(src,size,g_pool):
 			# if pupil found tighten the size tolerance
 			bar.pupil_size_tolerance.value -=1
 			bar.pupil_size_tolerance.value = max(10,bar.pupil_size_tolerance.value)
-
-			bar.pupil_size.value  = max(bar.pupil_min_size.value,min(bar.pupil_max_size.value,bar.pupil_size.value))
 
 
 			pupil.norm_coords = normalize(pupil.image_coords, img.shape[1], img.shape[0])# numpy array wants (row,col) for an image this = (height,width)

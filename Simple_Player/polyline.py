@@ -8,9 +8,7 @@ def main():
     save_video = False
 
     # change this path to point to the data folder you would like to play
-    data_folder = "/Users/mkassner/MIT/pupil_thesis_data/MIT_statue"
-    data_folder = "/Users/mkassner/MIT/pupil_google_code/code/Capture/data004"
-    data_folder = "/Users/mkassner/Downloads/02/data004"
+    data_folder = "/Users/mkassner/Desktop/pupil_sample_videos/01/data000"
 
 
     video_path = data_folder + "/world.avi"
@@ -20,15 +18,14 @@ def main():
     cap = cv.VideoCapture(video_path)
     gaze_list = list(np.load(gaze_positions_path))
 
-    # this line takes the gaze list and makes a list
+    # this takes the gaze list and makes a list
     # with the length of the number of recorded frames.
     # Each slot conains a list that has 0, 1 or more assosiated gaze postions.
-    positions_by_frame = [[{'x': s[0], 'y': s[1], 'dt': s[2]} \
-                         for s in gaze_list if s[-1] == frame] \
-                         for frame in range(int(gaze_list[-1][-1]) + 1)]
-
-    # for elm in positions_by_frame:
-    #     print elm
+    positions_by_frame = [[] for frame in range(int(gaze_list[-1][-1]) + 1)]
+    while gaze_list:
+        s = gaze_list.pop(0)
+        frame = int(s[-1])
+        positions_by_frame[frame].append({'x': s[0], 'y': s[1], 'dt': s[2]})
 
     status, img = cap.read()
     prevgray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -38,9 +35,7 @@ def main():
     t = time.time()
 
     fps = cap.get(5)
-    fps = 30.3245
     wait =  int((1./fps)*1000)
-    print wait
 
     if save_video:
         #FFV1 -- good speed lossless big file
@@ -48,9 +43,6 @@ def main():
         writer = cv.VideoWriter(record_path, cv.cv.CV_FOURCC(*'DIVX'), fps, (img.shape[1], img.shape[0]))
 
     while status:
-        nt = time.time()
-        # print nt-t
-        t = nt
         # apply optical flow displacement to previous gaze
         if past_gaze:
             gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -59,7 +51,7 @@ def main():
             prevgray = gray
             past_gaze = list(nextPts)
 
-            #contrain gaze positions to
+            #contrain gaze positions to screen dimensions
             c_gaze = []
             for x,y in past_gaze:
                 if x >0 and x<width and y >0 and y <height:
@@ -78,15 +70,12 @@ def main():
 
         vap = 20 #Visual_Attention_Span
         window_string = "the last %i frames of visual attention" %vap
-        overlay = np.zeros(img.shape,dtype=img.dtype)
 
         # remove everything but the last "vap" number of gaze postions from the list of past_gazes
         for x in xrange(len(past_gaze)-vap):
             past_gaze.pop(0)
 
-
-        # draw recent gaze postions as white dots on an overlay image.
-        for gaze_point in past_gaze[::-1]:
+        for gaze_point in past_gaze[::-1]: #going through the list backwards
             cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), int(vap), (255, 255, 255), 1, cv.cv.CV_AA)
             vap -=.9 # less recent gaze points are smaller
             vap = max(1,vap)
@@ -121,4 +110,4 @@ def denormalize(pos, width, height, flip_y=True):
 
 
 if __name__ == '__main__':
-    cProfile.run("main()")
+    main()

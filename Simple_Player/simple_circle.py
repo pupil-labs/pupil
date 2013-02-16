@@ -6,10 +6,7 @@ def main():
     save_video = False
 
     # change this path to point to the data folder you would like to play
-    # data_folder = "/Users/mkassner/Downloads/CATMAI_VDO/youtube_data004"
-    # data_folder = "/Users/mkassner/Downloads/CATMAI_VDO/phone_data003"
-    # data_folder = "/Users/mkassner/Downloads/02/data004"
-    # data_folder = "/Users/mkassner/Downloads/samy_oil/random"
+    data_folder = "/Users/mkassner/Desktop/pupil_sample_videos/01/data000"
 
 
     video_path = data_folder + "/world.avi"
@@ -19,30 +16,38 @@ def main():
     cap = cv.VideoCapture(video_path)
     gaze_list = list(np.load(gaze_positions_path))
 
-    # this line takes the gaze list and makes a list
+    # this takes the gaze list and makes a list
     # with the length of the number of recorded frames.
     # Each slot conains a list that has 0, 1 or more assosiated gaze postions.
-    positions_by_frame = [[{'x': s[0], 'y': s[1], 'dt': s[2]} \
-                         for s in gaze_list if s[-1] == frame] \
-                         for frame in range(int(gaze_list[-1][-1]) + 1)]
+    positions_by_frame = [[] for frame in range(int(gaze_list[-1][-1]) + 1)]
+    while gaze_list:
+        s = gaze_list.pop(0)
+        frame = int(s[-1])
+        positions_by_frame[frame].append({'x': s[0], 'y': s[1], 'dt': s[2]})
 
 
     status, img = cap.read()
     height, width = img.shape[0:2]
     frame = 0
 
+    fps = cap.get(5)
+    wait =  int((1./fps)*1000)
+
+
     if save_video:
-        fps = cap.get(5)
         #FFV1 -- good speed lossless big file
         #DIVX -- good speed good compression medium file
         writer = cv.VideoWriter(record_path, cv.cv.CV_FOURCC(*'DIVX'), fps, (img.shape[1], img.shape[0]))
 
 
     while status:
+
+        # all gaze points of the current frame
         current_gaze = positions_by_frame[frame]
         for gaze_point in current_gaze:
             x_screen, y_screen = denormalize((gaze_point['x'], gaze_point['y']), width, height, flip_y=False)
             cv.circle(img, (x_screen, y_screen), 35, (255, 255, 255), 2, cv.cv.CV_AA)
+
         cv.imshow("world", img)
 
         if save_video:
@@ -50,7 +55,7 @@ def main():
 
         status, img = cap.read()
         frame += 1
-        ch = cv.waitKey(60)
+        ch = cv.waitKey(wait)
         if ch == 27:
             break
 
@@ -63,7 +68,6 @@ def denormalize(pos, width, height, flip_y=True):
     y = pos[1]
     if flip_y:
         y=-y
-
     x = (x * width / 2.) + (width / 2.)
     y = (y * height / 2.) + (height / 2.)
     return int(x), int(y)
