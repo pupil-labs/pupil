@@ -3,7 +3,6 @@
 import numpy as np
 import cv2
 from ctypes import *
-from vector import Vector
 
 
 def pre_integral_pupil_respone_filter():
@@ -283,6 +282,10 @@ def chessboard(image, pattern_size=(9,5)):
 
 
 def curvature(c):
+	try:
+		from vector import Vector
+	except:
+		return
 	c = c[:,0]
 	curvature = []
 	for i in xrange(len(c)-2):

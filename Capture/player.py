@@ -99,7 +99,7 @@ def player(g_pool,size):
 
 	def on_key_release(symbol, modifiers):
 		print 'Key released (symbol=%s, modifiers=%s)'% (symbol,modifiers)
-		if symbol == 57:
+		if symbol == ord('9'):
 			g_pool.cal9.value = True
 
 	def on_close():
