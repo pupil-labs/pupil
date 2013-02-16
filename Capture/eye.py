@@ -236,7 +236,7 @@ def eye(src,size,g_pool):
 		for s in (region_r-4,region_r,region_r+4):
 			#simple best of three optimization
 			kernel = make_eye_kernel(s,int(3*s))
-			g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REFLECT_101)        # ddepth = -1, means destination image has depth same as input image.
+			g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REPLICATE)        # ddepth = -1, means destination image has depth same as input image.
 			m = np.amax(g_img)
 			# print s,m
 			x,y = np.where(g_img == m)
@@ -256,6 +256,8 @@ def eye(src,size,g_pool):
 		# gray_img = cv2.resize(g_img,gray_img.shape[::-1], interpolation=cv2.INTER_NEAREST)
 
 		pupil_img = gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX]
+
+		# pupil_img = cv2.morphologyEx(pupil_img, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT,(5,5)),iterations=2)
 
 		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
 		binary_img = bin_thresholding(pupil_img,image_upper=bar.bin_thresh.value)

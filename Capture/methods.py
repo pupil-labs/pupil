@@ -401,7 +401,7 @@ def convexity_defect(contour, curvature):
 	return kinks
 
 
-def fit_ellipse(image,edges,bin_dark_img, contour_size=100,ratio=.6,target_size=20.,size_tolerance=20.):
+def fit_ellipse(image,edges,bin_dark_img, contour_size=50,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 	"""
 	c_img = edges.copy()

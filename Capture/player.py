@@ -97,7 +97,10 @@ def player(g_pool,size):
 					player.current_video = 0
 				g_pool.play.value = False
 
-
+	def on_key_release(symbol, modifiers):
+		print 'Key released (symbol=%s, modifiers=%s)'% (symbol,modifiers)
+		if symbol == 57:
+			g_pool.cal9.value = True
 
 	def on_close():
 		g_pool.quit.value = True
@@ -111,9 +114,7 @@ def player(g_pool,size):
 		if g_pool.player_refresh.wait(0.1):
 			fig.redraw()
 
-	fig.window.push_handlers(on_idle)
-	fig.window.push_handlers(on_draw)
-	fig.window.push_handlers(on_close)
+	fig.window.push_handlers(on_idle,on_draw,on_close,on_key_release)
 	fig.window.set_title("Player")
 	fig.window.set_position(100,0)
 	glumpy.show()

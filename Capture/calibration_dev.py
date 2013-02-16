@@ -75,7 +75,7 @@ ax = fig.gca(projection='3d')
 
 
 cal_pt_cloud = np.load('cal_pt_cloud.npy')
-# cal_pt_cloud = np.load('cal_pt_cloud_529.npy')
+cal_pt_cloud = np.load('cal_pt_cloud_529.npy')
 # cal_pt_cloud = np.load('cal_pt_cloud_good.npy')
 
 Z = cal_pt_cloud
