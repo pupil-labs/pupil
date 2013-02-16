@@ -88,7 +88,7 @@ def player(g_pool,size):
 			s, img = player.captures[player.current_video].read_RGB()
 			if s:
 				img_arr[...] = img
-				image.draw(x=image.x, y=image.y, z=0.0, width=fig.width, height=fig.height)
+				image.draw( x = image.x, y = image.y, z = 0.0, width = fig.width, height = fig.height)
 				image.update()
 			else:
 				player.captures[player.current_video].rewind()
@@ -96,6 +96,11 @@ def player(g_pool,size):
 				if player.current_video >= len(player.captures):
 					player.current_video = 0
 				g_pool.play.value = False
+		else:
+			img  = np.ones(img_arr.shape,img_arr.dtype)*255
+			cv2.putText(img,"Press 9 to start 9-point calibration" , cv2.FONT_HERSHEY_SIMPLEX, 1,(0,0,0))
+			image.draw( x = image.x, y = image.y, z = 0.0, width = fig.width, height = fig.height)
+			image.update()
 
 	def on_key_release(symbol, modifiers):
 		print 'Key released (symbol=%s, modifiers=%s)'% (symbol,modifiers)
