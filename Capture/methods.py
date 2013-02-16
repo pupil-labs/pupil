@@ -12,7 +12,7 @@ def pre_integral_pupil_respone_filter():
 	region_r = min(max(9,l_pool.region_r),61)
 	lable = 0
 	for s in (region_r-4,region_r,region_r+4):
-		#simple best of three optimization
+		#simple best of three optimization over time.
 		kernel = make_eye_kernel(s,int(3*s))
 		g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REFLECT_101)        # ddepth = -1, means destination image has depth same as input image.
 		m = np.amax(g_img)
@@ -275,10 +275,6 @@ def chessboard(image, pattern_size=(9,5)):
 		return mean[0], corners
 	else:
 		return None
-
-
-
-
 
 
 def curvature(c):

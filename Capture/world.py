@@ -102,7 +102,7 @@ def world(src, size, g_pool):
     atb.init()
     bar = Bar("World", g_pool, dict(label="Controls",
             help="Scene controls", color=(50, 50, 50), alpha=50,
-            text='light', refresh=.2, position=(img_arr.shape[1]-200-10, 10), size=(200, 200)))
+            text='light', refresh=.2, position=(10, 10), size=(200, 200)))
 
     def on_draw():
         fig.clear(0.0, 0.0, 0.0, 1.0)

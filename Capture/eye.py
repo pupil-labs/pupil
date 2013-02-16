@@ -25,7 +25,7 @@ class Bar(atb.Bar):
 		self.pupil_angle = c_float(0.0)
 		self.pupil_size = c_float(80.)
 		self.pupil_size_tolerance = c_float(40.)
-		self.canny_apture = c_int(7)
+		self.canny_aperture = c_int(7)
 		self.canny_thresh = c_int(200)
 		self.canny_ratio = c_int(2)
 		self.record_eye = c_bool(0)
@@ -37,7 +37,7 @@ class Bar(atb.Bar):
 							'pupil_ratio':self.pupil_ratio,
 							'pupil_size':self.pupil_size,
 							'mean_blur':self.blur,
-							'canny_apture':self.canny_apture,
+							'canny_aperture':self.canny_aperture,
 							'canny_thresh':self.canny_thresh,
 							'canny_ratio':self.canny_ratio}
 
@@ -54,7 +54,7 @@ class Bar(atb.Bar):
 		self.add_var("Pupil/Size", self.pupil_size, step=1, min=0)
 		self.add_var("Pupil/Size_Tolerance", self.pupil_size_tolerance, step=1, min=0)
 		self.add_var("Canny/MeanBlur", self.blur,step=2,max=7,min=1)
-		self.add_var("Canny/Apture",self.canny_apture, step=2, max=7, min=3)
+		self.add_var("Canny/Aperture",self.canny_aperture, step=2, max=7, min=3)
 		self.add_var("Canny/Lower_Threshold", self.canny_thresh, step=1,min=1)
 		self.add_var("Canny/LowerUpperRatio", self.canny_ratio, step=1,min=0,help="Canny recommended a ratio between 3/1 and 2/1")
 		self.add_var("record_eye_video", self.record_eye, help="when recording also save the eye video stream")
@@ -233,7 +233,7 @@ def eye(src,size,g_pool):
 		best_m = 0
 		region_r = min(max(9,l_pool.region_r),61)
 		lable = 0
-		for s in (region_r-4,region_r,region_r+4):
+		for s in (region_r-1,region_r,region_r+1):
 			#simple best of three optimization
 			kernel = make_eye_kernel(s,int(3*s))
 			g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REPLICATE)        # ddepth = -1, means destination image has depth same as input image.
@@ -268,7 +268,7 @@ def eye(src,size,g_pool):
 		if bar.blur.value >1:
 			gray_img = cv2.medianBlur(pupil_img,bar.blur.value)
 
-		edges =  cv2.Canny(pupil_img,bar.canny_thresh.value, bar.canny_thresh.value*bar.canny_ratio.value,apertureSize= bar.canny_apture.value)
+		edges =  cv2.Canny(pupil_img,bar.canny_thresh.value, bar.canny_thresh.value*bar.canny_ratio.value,apertureSize= bar.canny_aperture.value)
 		# edges = dif_gaus(gray_img,20.,24.)
 		edges = cv2.min(edges, spec_mask)
 		edges = cv2.min(edges,binary_img)
@@ -324,8 +324,10 @@ def eye(src,size,g_pool):
 			bar.pupil_ratio.value = bar.pupil_ratio.value + .7*(pupil.ellipse['ratio']-bar.pupil_ratio.value)
 			bar.pupil_angle.value = bar.pupil_angle.value + 1.*(pupil.ellipse['angle']-bar.pupil_angle.value)
 			# if pupil found tighten the size tolerance
-			bar.pupil_size_tolerance.value -=1
-			bar.pupil_size_tolerance.value = max(40,bar.pupil_size_tolerance.value)
+
+			bar.pupil_size.value = max(80,min(300,bar.pupil_size.value))
+			# bar.pupil_size_tolerance.value -=1
+			# bar.pupil_size_tolerance.value = max(10,bar.pupil_size_tolerance.value)
 
 
 			pupil.norm_coords = normalize(pupil.image_coords, img.shape[1], img.shape[0])# numpy array wants (row,col) for an image this = (height,width)
@@ -341,8 +343,8 @@ def eye(src,size,g_pool):
 			pupil.ellipse = None
 			# pupil.gaze_coords = None, None #whithout this line the last know pupil position is recorded if none is found
 			# if pupil not found widen the size tolerance
-			bar.pupil_size_tolerance.value +=1
-			bar.pupil_size_tolerance.value = min(bar.pupil_size_tolerance.value,40)
+			# bar.pupil_size_tolerance.value +=1
+			# bar.pupil_size_tolerance.value = min(bar.pupil_size_tolerance.value,40)
 
 		###CALIBRATION and MAPPING###
 		# Initialize Calibration (setup variables and lists)
