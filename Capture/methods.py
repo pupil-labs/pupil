@@ -236,44 +236,45 @@ def chessboard(image, pattern_size=(9,5)):
 	else:
 		return None
 
-
-def fit_ellipse(image,edges,bin_dark_img, contour_size=20,ratio=.6,target_size=20.,size_tolerance=20.):
+def fit_ellipse(image,edges,bin_dark_img, contour_size=50,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 	"""
 	c_img = edges.copy()
 	contours, hierarchy = cv2.findContours(c_img,
-											mode=cv2.RETR_LIST,
-											method=cv2.CHAIN_APPROX_NONE,offset=(0,0))
+	                                        mode=cv2.RETR_LIST,
+	                                        method=cv2.CHAIN_APPROX_NONE,offset=(0,0))
 
 	contours = [c for c in contours if len(c) >= contour_size]
 	for c in contours:
-		if convexity(c,image):
-			cv2.drawContours(image, c, -1, (255,255,255))
-
-
-	largest_ellipse = {'center': (None,None),
-						'axes': (None, None), 'angle': None,
-						'area': 0.0, 'ratio': None,
-						'major': None, 'minor': None}
-
+	        if convexity(c,image):
+	                cv2.drawContours(image, c, -1, (255,255,255))
 
 	shape = edges.shape
-	ellipses = (cv2.fitEllipse(c) for c in contours if convexity(c,image))
+	ellipses = (cv2.fitEllipse(c) for c in contours if convexity(c,image)) # this is not clear yet. It seems that we are filtering out curves with few defects
 	ellipses = (e for e in ellipses if (0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1]))
 	ellipses = (e for e in ellipses if bin_dark_img[e[0][1],e[0][0]])
 	ellipses = ((size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio)) # roundness test
 	ellipses = [(size_dif,e) for size_dif,e in ellipses if size_dif<size_tolerance ] # size closest to target size
 	ellipses.sort(key=lambda e: e[0]) #sort size_deviation
 	if ellipses:
+		best_ellipse = {'center': (None,None),
+				'axes': (None, None),
+				'angle': None,
+				'area': 0.0,
+				'ratio': None,
+				'major': None,
+				'minor': None}
+
 		largest = ellipses[0][1]
-		largest_ellipse['center'] = largest[0]
-		largest_ellipse['angle'] = largest[-1]
-		largest_ellipse['axes'] = largest[1]
-		largest_ellipse['major'] = max(largest[1])
-		largest_ellipse['minor'] = min(largest[1])
-		largest_ellipse['ratio'] = largest_ellipse['minor']/largest_ellipse['major']
-		return largest_ellipse,ellipses
+		best_ellipse['center'] = largest[0]
+		best_ellipse['angle'] = largest[-1]
+		best_ellipse['axes'] = largest[1]
+		best_ellipse['major'] = max(largest[1])
+		best_ellipse['minor'] = min(largest[1])
+		best_ellipse['ratio'] = best_ellipse['minor']/best_ellipse['major']
+		return best_ellipse,ellipses
 	return None
+
 
 def is_round(ellipse,ratio,tolerance=.5):
 	center, (axis1,axis2), angle = ellipse
