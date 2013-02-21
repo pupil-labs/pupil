@@ -229,7 +229,7 @@ def eye(src,size,g_pool):
 		# integral = cv2.integral(gray_img)
 
 		###2D filter response as fisrt estimation of pupil position for ROI
-		downscale = 4
+		downscale = 8
 		best_m = 0
 		region_r = min(max(9,l_pool.region_r),61)
 		lable = 0
@@ -241,7 +241,7 @@ def eye(src,size,g_pool):
 			# print s,m
 			x,y = np.where(g_img == m)
 			x,y = downscale*y[0],downscale*x[0]
-			cv2.putText(gray_img, str(s)+"-"+str(m), (x,y+lable), cv2.FONT_HERSHEY_SIMPLEX, .35,(255,255,255))
+			# cv2.putText(gray_img, str(s)+"-"+str(m), (x,y+lable), cv2.FONT_HERSHEY_SIMPLEX, .35,(255,255,255))
 			lable+=40
 			inner_r = (s*downscale)/2
 			outer_r = int(s*downscale*1.)

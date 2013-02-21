@@ -461,11 +461,6 @@ def fit_ellipse(image,edges,bin_dark_img, contour_size=50,ratio=.6,target_size=2
 	# cv2.drawContours(image, good_contours, -1, (255,255,255),thickness=1)
 	# good_contours = np.concatenate(good_contours)
 	# good_contours = [good_contours]
-	largest_ellipse = {'center': (None,None),
-						'axes': (None, None), 'angle': None,
-						'area': 0.0, 'ratio': None,
-						'major': None, 'minor': None}
-
 
 	shape = edges.shape
 	ellipses = (cv2.fitEllipse(c) for c in good_contours)
@@ -475,14 +470,22 @@ def fit_ellipse(image,edges,bin_dark_img, contour_size=50,ratio=.6,target_size=2
 	ellipses = [(size_dif,e) for size_dif,e in ellipses if size_dif<size_tolerance ] # size closest to target size
 	ellipses.sort(key=lambda e: e[0]) #sort size_deviation
 	if ellipses:
+		best_ellipse = {'center': (None,None),
+				'axes': (None, None),
+				'angle': None,
+				'area': 0.0,
+				'ratio': None,
+				'major': None,
+				'minor': None}
+
 		largest = ellipses[0][1]
-		largest_ellipse['center'] = largest[0]
-		largest_ellipse['angle'] = largest[-1]
-		largest_ellipse['axes'] = largest[1]
-		largest_ellipse['major'] = max(largest[1])
-		largest_ellipse['minor'] = min(largest[1])
-		largest_ellipse['ratio'] = largest_ellipse['minor']/largest_ellipse['major']
-		return largest_ellipse,ellipses
+		best_ellipse['center'] = largest[0]
+		best_ellipse['angle'] = largest[-1]
+		best_ellipse['axes'] = largest[1]
+		best_ellipse['major'] = max(largest[1])
+		best_ellipse['minor'] = min(largest[1])
+		best_ellipse['ratio'] = best_ellipse['minor']/best_ellipse['major']
+		return best_ellipse,ellipses
 	return None
 
 def is_round(ellipse,ratio,tolerance=.5):
@@ -510,13 +513,6 @@ def fit_ellipse_old(image,edges,bin_dark_img, contour_size=20,ratio=.6,target_si
 	        if convexity(c,image):
 	                cv2.drawContours(image, c, -1, (255,255,255))
 
-
-	best_ellipse = {'center': (None,None),
-	                    'axes': (None, None), 'angle': None,
-	                    'area': 0.0, 'ratio': None,
-	                    'major': None, 'minor': None}
-
-
 	shape = edges.shape
 	ellipses = (cv2.fitEllipse(c) for c in contours if convexity(c,image))
 	ellipses = (e for e in ellipses if (0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1]))
@@ -525,12 +521,20 @@ def fit_ellipse_old(image,edges,bin_dark_img, contour_size=20,ratio=.6,target_si
 	ellipses = [(size_dif,e) for size_dif,e in ellipses if size_dif<size_tolerance ] # size closest to target size
 	ellipses.sort(key=lambda e: e[0]) #sort size_deviation
 	if ellipses:
-		best = ellipses[0][1]
-		best_ellipse['center'] = best[0]
-		best_ellipse['angle'] = best[-1]
-		best_ellipse['axes'] = best[1]
-		best_ellipse['major'] = max(best[1])
-		best_ellipse['minor'] = min(best[1])
+		best_ellipse = {'center': (None,None),
+				'axes': (None, None),
+				'angle': None,
+				'area': 0.0,
+				'ratio': None,
+				'major': None,
+				'minor': None}
+
+		largest = ellipses[0][1]
+		best_ellipse['center'] = largest[0]
+		best_ellipse['angle'] = largest[-1]
+		best_ellipse['axes'] = largest[1]
+		best_ellipse['major'] = max(largest[1])
+		best_ellipse['minor'] = min(largest[1])
 		best_ellipse['ratio'] = best_ellipse['minor']/best_ellipse['major']
 		return best_ellipse,ellipses
 	return None

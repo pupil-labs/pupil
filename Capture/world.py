@@ -134,8 +134,6 @@ def world(src, size, g_pool):
         g_pool.player_refresh.set()
 
         # get an image from the grabber
-        if bar.half_speed.value:
-            s, img = cap.read()
         s, img = cap.read()
 
         # update the image to display
@@ -274,6 +272,11 @@ def world(src, size, g_pool):
 
         image.update()
         fig.redraw()
+
+        ###cut framerate in half for slow machines.
+        if bar.half_speed.value:
+            s, img = cap.read()
+
 
         if g_pool.quit.value:
             print "WORLD Process closing from global or atb"
