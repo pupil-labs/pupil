@@ -1,7 +1,7 @@
 (dp1
 S'mean_blur'
 p2
-I1
+I5
 sS'pupil_size'
 p3
 F96.296218872070312
@@ -28,7 +28,7 @@ p10
 F100
 sS'canny_apture'
 p11
-I3
+I7
 sS'pupil_ratio'
 p12
 F0.77511215209960938
