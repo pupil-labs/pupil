@@ -9,12 +9,6 @@ from eye import eye
 from world import world
 from player import player
 from methods import Temp, local_grab
-# from array import array
-# from struct import unpack, pack
-# import pyaudio
-# import waveatb.
-# from audio import normalize, trim, add_silence
-
 from ctypes import c_bool, c_int
 
 
@@ -23,7 +17,7 @@ def main():
 	eye_src = 0
 	world_src = 1
 	#video size
-	eye_size = (640,320)
+	eye_size = (640,360)
 	world_size = (1280,720)
 	# world_size = (640,480) # if your cpu is to slow use this setting
 	player_size = (1280,720) # make sure that any video played through here has this size!
@@ -74,7 +68,7 @@ def main():
 	if audio: p_audio.start()
 
 	# when using some cameras (like our current worldcamera logitch c510)
-	# you can't run world camera grabber in its own process
+	# you can't run world camera grabber in its own process it seems to be a mjpeg issue
 	# it must reside in the main loop
 	world(world_src,world_size,g_pool)
 
