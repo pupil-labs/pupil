@@ -86,11 +86,12 @@ def local_grab_threaded(pipe_world,src_id_world,pipe_eye,src_id_eye,g_pool):
 			self.cap.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, size[1])
 		def run(self):
 			tick = time()
+			d = self.cap.read()
 			while not g_pool.quit.value:
+				self.pipe.send(d)
+				d = self.cap.read()
+				sleep(max(0,1/32.-(time()-tick)))
 				tick = time()
-				self.pipe.send(self.cap.read())
-				sleep(max(0,1/31.-(time()-tick)))
-
 	"""grab:
 		- Initialize a camera feed
 		-this is needed for certain cameras that have to run in the main loop.
