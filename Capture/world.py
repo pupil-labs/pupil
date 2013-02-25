@@ -86,7 +86,6 @@ def world(src, size, g_pool):
     gaze = Temp()
     gaze.map_coords = (0, 0)
     gaze.screen_coords = (0, 0)
-
     # record object
     record = Temp()
     record.writer = None
@@ -114,6 +113,7 @@ def world(src, size, g_pool):
     def on_idle(dt):
         bar.update_fps(dt)
 
+
         # Nine Point calibration state machine timing
         if bar.calibrate_nine.value:
             bar.calibrate.value = True
@@ -135,6 +135,7 @@ def world(src, size, g_pool):
 
         # get an image from the grabber
         s, img = cap.read()
+
 
         # update the image to display
         img_arr[...] = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
