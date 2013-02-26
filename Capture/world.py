@@ -93,6 +93,8 @@ def world(src, size, g_pool):
     record.path = None
     record.counter = 0
 
+    t = Temp()
+    t.toggle = 10
     # initialize gl shape primitives
     pattern_point = Point(color=(0, 255, 0, 0.5))
     gaze_point = Point(color=(255, 0, 0, 0.5))
@@ -139,6 +141,21 @@ def world(src, size, g_pool):
 
         # update the image to display
         img_arr[...] = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+        ###display just every second screen for slow machines.
+        if bar.half_speed.value:
+            if not t.toggle:
+                image.update()
+                t.toggle = 3;
+            else:
+                t.toggle -=1
+        else:
+            image.update()
+
+        fig.redraw()
+
+
+
 
         # update gaze points from shared variable pool
         gaze.screen_coords = denormalize((g_pool.gaze_x.value, g_pool.gaze_y.value), fig.width, fig.height)
@@ -270,13 +287,6 @@ def world(src, size, g_pool):
             g_pool.pos_record.value = 0
             record.writer = None
             bar.record_running = 0
-
-        image.update()
-        fig.redraw()
-
-        ###cut framerate in half for slow machines.
-        if bar.half_speed.value:
-            s, img = cap.read()
 
 
         if g_pool.quit.value:

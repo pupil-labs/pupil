@@ -1,7 +1,7 @@
 (dp1
 S'mean_blur'
 p2
-I1
+I3
 sS'canny_thresh'
 p3
 I20
@@ -16,7 +16,7 @@ p6
 I01
 sS'bin_thresh'
 p7
-I100
+I120
 sS'canny_aperture'
 p8
 I3
@@ -25,5 +25,5 @@ p9
 I2
 sS'pupil_ratio'
 p10
-F0.59259295463562012
+F0.41655942797660828
 s.

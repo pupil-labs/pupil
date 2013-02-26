@@ -266,7 +266,7 @@ def eye(src,size,g_pool):
 		cv2.erode(spec_mask, kernel,spec_mask, iterations=1)
 
 		if bar.blur.value >1:
-			gray_img = cv2.medianBlur(pupil_img,bar.blur.value)
+			pupil_img = cv2.medianBlur(pupil_img,bar.blur.value)
 
 		edges =  cv2.Canny(pupil_img,bar.canny_thresh.value, bar.canny_thresh.value*bar.canny_ratio.value,apertureSize= bar.canny_aperture.value)
 		# edges = dif_gaus(gray_img,20.,24.)
