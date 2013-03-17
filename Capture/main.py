@@ -5,17 +5,17 @@ from time import sleep
 from multiprocessing import Process, Pipe, Event
 from multiprocessing.sharedctypes import RawValue, Value
 # RawValue is shared memory without lock, handle with care, this is usefull for ATB it needs cTypes
-from eye import eye
-from world import world
+from eye import eye, eye_profiled
+from world import world, world_profiled
 from player import player
-from methods import Temp, local_grab
-# from array import array
-# from struct import unpack, pack
+from methods import Temp
+
 # import pyaudio
 # import waveatb.
 # from audio import normalize, trim, add_silence
 
 from ctypes import c_bool, c_int
+
 
 
 def main():
@@ -105,9 +105,9 @@ def main():
 	# end shared globals
 
 	# set up sub processes
-	p_eye = Process(target=eye, args=(eye_src,eye_size, g_pool))
+	p_eye = Process(target=eye_profiled, args=(eye_src,eye_size, g_pool))
 	if use_player: p_player = Process(target=player, args=(g_pool,player_size))
-	if audio: p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3))
+	if audio: p_audio = Process(target=record_audio, args=(g_pool.audio_rx,g.g_pool.audio_record,3))
 
 	# spawn sub processes
 	p_eye.start()
@@ -116,8 +116,8 @@ def main():
 
 	# when using some cameras (like our current worldcamera logitch c510)
 	# you can't run world camera grabber in its own process
-	# it must reside in the main loop
-	world(world_src,world_size,g_pool)
+	# it must reside in the main loop when you run on MacOS.
+	world_profiled(world_src,world_size,g_pool)
 
 	# exit / clean-up
 	p_eye.join()

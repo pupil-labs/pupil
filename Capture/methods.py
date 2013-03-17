@@ -643,7 +643,7 @@ def gen_pattern_grid(size=(4,11)):
 
 
 
-def normalize(pos, width, height):
+def normalize(pos, (width, height),flip_y=False):
 	"""
 	normalize return as float
 	"""
@@ -651,20 +651,23 @@ def normalize(pos, width, height):
 	y = pos[1]
 	x = (x-width/2.)/(width/2.)
 	y = (y-height/2.)/(height/2.)
+	if flip_y:
+		return x,-y
 	return x,y
 
-def denormalize(pos, width, height, flip_y=True):
+def denormalize(pos, (width, height), flip_y=False):
 	"""
-	denormalize and return as int
+	denormalize
 	"""
 	x = pos[0]
 	y = pos[1]
 	x = (x*width/2.)+(width/2.)
 	if flip_y:
-		y = (-y*height/2.)+(height/2.)
-	else:
-		y = (y*height/2.)+(height/2.)
-	return int(x),int(y)
+		y = -y
+	y = (y*height/2.)+(height/2.)
+	return x,y
+
+
 
 if __name__ == '__main__':
 	# tst = []
