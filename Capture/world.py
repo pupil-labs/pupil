@@ -132,7 +132,6 @@ def world(src, size, g_pool):
     record.counter = 0
 
     # initialize capture, check if it works
-    print size
     cap = capture(src, size)
     s, img = cap.read_RGB()
     if not s:
@@ -174,7 +173,7 @@ def world(src, size, g_pool):
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
         bar.update_fps()
         # get an image from the grabber
-        s, img = cap.read_RGB()
+        s, img = cap.read()
 
         # Nine Point calibration state machine timing
         if bar.calibrate_nine.value:
@@ -317,10 +316,11 @@ def world(src, size, g_pool):
                 print "no camera intrinsics found, will not copy them into data folder"
 
             g_pool.pos_record.value = 0
-            record.writer = None
+            del record.writer
             bar.record_running = 0
 
         clear_gl_screen()
+        cv2.cvtColor(img, cv2.COLOR_BGR2RGB,img)
         draw_gl_texture(img)
 
 

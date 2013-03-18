@@ -3,7 +3,7 @@ import cPickle as pickle
 import numpy as np
 import atb
 from glfw import *
-from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm
+from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 from time import time, sleep
 from methods import *
 from calibrate import *
@@ -16,10 +16,11 @@ class Bar(atb.Bar):
         super(Bar, self).__init__(name,**bar_defs)
         self.fps = c_float(0.0)
         self.timestamp = time()
+        self.dt = c_float(0.0)
         self.sleep = c_float(0.0)
         self.display = c_int(1)
         self.draw_pupil = c_bool(1)
-        self.draw_roi = c_bool(0)
+        self.draw_roi = c_int(0)
         self.bin_thresh = c_int(60)
         self.blur = c_int(3)
         self.pupil_ratio = c_float(.6)
@@ -66,7 +67,7 @@ class Bar(atb.Bar):
         dt = self.timestamp - old_time
         if dt:
             self.fps.value += .05 * (1 / dt - self.fps.value)
-
+        self.dt = dt
 
     def save(self):
         new_settings = dict([(key,field.value) for key, field in self.session_save.items()])
@@ -75,7 +76,7 @@ class Bar(atb.Bar):
         settings_file.close
 
     def roi(self):
-        self.draw_roi.value = 1
+        self.draw_roi.value = 2
 
 
     def load(self):
@@ -171,6 +172,8 @@ def eye(src,size,g_pool):
     """eye
     """
 
+
+
     # # callback functions
     def on_resize(w, h):
         atb.TwWindowSize(w, h);
@@ -188,16 +191,25 @@ def eye(src,size,g_pool):
 
     def on_button(button, pressed):
         if not atb.TwEventMouseButtonGLFW(button,pressed):
-            if pressed:
-                pos = glfwGetMousePos()
-                pos = normalize(pos,glfwGetWindowSize())
-                pos = denormalize(pos,(img.shape[1],img.shape[0]) ) #pos in img pixels
-
+            if bar.draw_roi.value:
+                if pressed:
+                    pos = glfwGetMousePos()
+                    pos = normalize(pos,glfwGetWindowSize())
+                    pos = denormalize(pos,(img.shape[1],img.shape[0]) ) #pos in img pixels
+                    r.setStart(pos)
+                    bar.draw_roi.value = 1
+                else:
+                    bar.draw_roi.value = 0
 
     def on_pos(x, y):
         if atb.TwMouseMotion(x,y):
             bar.update()
-
+        else:
+            if bar.draw_roi.value == 1:
+                pos = glfwGetMousePos()
+                pos = normalize(pos,glfwGetWindowSize())
+                pos = denormalize(pos,(img.shape[1],img.shape[0]) ) #pos in img pixels
+                r.setEnd(pos)
 
     def on_scroll(pos):
         if not atb.TwMouseWheel(pos):
@@ -329,15 +341,22 @@ def eye(src,size,g_pool):
         if bar.blur.value >1:
             pupil_img = cv2.medianBlur(pupil_img,bar.blur.value)
 
-        edges =  cv2.Canny(pupil_img,bar.canny_thresh.value, bar.canny_thresh.value*bar.canny_ratio.value,apertureSize= bar.canny_aperture.value)
-        # edges = dif_gaus(gray_img,20.,24.)
-        edges = cv2.min(edges, spec_mask)
-        edges = cv2.min(edges,binary_img)
+        contours =  cv2.Canny(pupil_img,bar.canny_thresh.value, bar.canny_thresh.value*bar.canny_ratio.value,apertureSize= bar.canny_aperture.value)
+        contours = cv2.min(contours, spec_mask)
+        contours = cv2.min(contours,binary_img)
 
-        result = fit_ellipse(img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX],edges,binary_img,ratio=bar.pupil_ratio.value,target_size=bar.pupil_size.value,size_tolerance=bar.pupil_size_tolerance.value)
+        result = fit_ellipse_convexity_check(img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX],
+                            contours,
+                            binary_img,
+                            ratio=bar.pupil_ratio.value,
+                            target_size=bar.pupil_size.value,
+                            size_tolerance=bar.pupil_size_tolerance.value)
 
+
+
+        # # Vizualizations
         overlay =cv2.cvtColor(pupil_img, cv2.COLOR_GRAY2RGB)
-        # overlay[:,:,0] = cv2.max(edges,gray_img) #green channel
+        overlay[:,:,0] = cv2.max(pupil_img,contours) #green channel
         overlay[:,:,2] = cv2.max(pupil_img,binary_img) #blue channel
         overlay[:,:,1] = cv2.min(pupil_img,spec_mask) #red channel
 
@@ -347,17 +366,27 @@ def eye(src,size,g_pool):
             for pre,((x,y),axs,ang) in others:
                 x,y = int(x),int(y)
                 overlay[y,x,:]   = [100,100,255]
-                # overlay[y,x+1,:] = [100,100,255]
-                # overlay[y+1,x,:] = [100,100,255]
-                # overlay[y+1,x+1,:]=[100,100,255]
+
+        #draw a dotted frame around the automatic pupil ROI in overlay...
+        overlay_blue = overlay[:,:,2]
+        overlay_blue[::2,0] = 255
+        overlay_blue[::2,-1]= 255
+        overlay_blue[0,::2] = 255
+        overlay_blue[-1,::2]= 255
+
+        #...and gray image
+        pupil_img[::2,0] = 255
+        pupil_img[::2,-1]= 255
+        pupil_img[0,::2] = 255
+        pupil_img[-1,::2]= 255
 
         gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX] = pupil_img
 
-        if bar.draw_roi.value:
-                gray_img[:,0] = 255
-                gray_img[:,-1]= 255
-                gray_img[0,:] = 255
-                gray_img[-1,:]= 255
+        #draw a solid frame around the user defined ROI
+        gray_img[:,0] = 255
+        gray_img[:,-1]= 255
+        gray_img[0,:] = 255
+        gray_img[-1,:]= 255
 
 
         if bar.display.value == 0:
@@ -365,42 +394,42 @@ def eye(src,size,g_pool):
         elif bar.display.value == 1:
             img[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
         elif bar.display.value == 2:
-            img[...] = img
-            img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] = overlay
-
-        elif bar.display.value == 3:
-            # t_img = np.zeros(gray_img.shape,dtype= gray_img.dtype)
-            # t_img += 125
-            # t_img +=  gray_img-pupil.prev_img
-            # img[...] = cv2.cvtColor(t_img, cv2.COLOR_GRAY2RGB)
-            # pupil.prev_img = gray_img
-
             img[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
-
+            img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] = overlay
+        elif bar.display.value == 3:
+            pass
         else:
             pass
+
+
+
         if result is not None:
             pupil.image_coords = r.add_vector(p_r.add_vector(pupil.ellipse['center']))
             #update pupil size,angle and ratio for the ellipse filter algorithm
             bar.pupil_size.value  = bar.pupil_size.value +  .5*(pupil.ellipse['major']-bar.pupil_size.value)
             bar.pupil_ratio.value = bar.pupil_ratio.value + .7*(pupil.ellipse['ratio']-bar.pupil_ratio.value)
             bar.pupil_angle.value = bar.pupil_angle.value + 1.*(pupil.ellipse['angle']-bar.pupil_angle.value)
+
             # if pupil found tighten the size tolerance
+            bar.pupil_size_tolerance.value -=1
+            bar.pupil_size_tolerance.value =max(10,min(50,bar.pupil_size_tolerance.value))
 
-            bar.pupil_size.value = max(80,min(300,bar.pupil_size.value))
-            # bar.pupil_size_tolerance.value -=1
-            # bar.pupil_size_tolerance.value = max(10,bar.pupil_size_tolerance.value)
+            # clamp pupil size
+            bar.pupil_size.value = max(60,min(300,bar.pupil_size.value))
 
 
-            pupil.norm_coords = normalize(pupil.image_coords, (img.shape[1], img.shape[0]) )# numpy array wants (row,col) for an image this = (height,width)
+            pupil.norm_coords = normalize(pupil.image_coords, (img.shape[1], img.shape[0]),flip_y=True )# numpy array wants (row,col) for an image this = (height,width)
 
-            # for the world screen
+            # from pupil to gaze
             pupil.gaze_coords = map_vector(pupil.norm_coords, pupil.coefs)
             g_pool.gaze_x.value, g_pool.gaze_y.value = pupil.gaze_coords
+
         else:
             pupil.ellipse = None
             g_pool.gaze_x.value, g_pool.gaze_y.value = 0.,0.
             pupil.gaze_coords = None, None #whithout this line the last know pupil position is recorded if none is found
+
+            bar.pupil_size_tolerance.value +=1
 
 
         ###CALIBRATION and MAPPING###
@@ -439,7 +468,7 @@ def eye(src,size,g_pool):
 
         # While recording...
         if l_pool.record_running:
-            l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], dt, g_pool.frame_count_record.value])
+            l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], bar.dt, g_pool.frame_count_record.value])
             if l_pool.writer is not None:
                 l_pool.writer.write(cv2.cvtColor(img,cv2.cv.COLOR_BGR2RGB))
         # Save values and flip switch to off for recording
@@ -458,15 +487,20 @@ def eye(src,size,g_pool):
         clear_gl_screen()
         draw_gl_texture(img)
 
+        if bar.draw_pupil and pupil.ellipse:
+            pts = cv2.ellipse2Poly( (int(pupil.image_coords[0]),int(pupil.image_coords[1])),
+                                    (int(pupil.ellipse["axes"][0]/2),int(pupil.ellipse["axes"][1]/2)),
+                                    int(pupil.ellipse["angle"]),
+                                    0,
+                                    360,
+                                    15)
+            draw_gl_polyline(pts,(1.,0,0,.5))
+            draw_gl_point_norm(pupil.norm_coords,(1.,0.,0.,0.5))
+
         bar.update()
         bar.draw()
         glfwSwapBuffers()
 
-
-        if bar.draw_pupil and pupil.ellipse:
-            # pupil_point.draw()
-            # pupil_ellipse.draw()
-            pass
 
     #end while running
     print "EYE Process closed"
@@ -474,19 +508,5 @@ def eye(src,size,g_pool):
     bar.save()
     glfwCloseWindow()
     glfwTerminate()
-
-    # def on_mouse_press(x, y, button):
-    #   x,y = denormalize(normalize((x,y),fig.width,fig.height),img.shape[1],img.shape[0],flip_y=True)
-    #   if bar.draw_roi.value:
-    #       r.setStart((x,y))
-
-    # def on_mouse_drag(x, y, dx, dy, buttons):
-    #   x,y = denormalize(normalize((x,y),fig.width,fig.height),img.shape[1],img.shape[0],flip_y=True)
-    #   x,y = max(0,min(fig.width,x)),max(0,min(fig.height,y))
-    #   if bar.draw_roi.value:
-    #       r.setEnd((x,y))
-
-    # def on_mouse_release(x, y, buttons):
-    #   bar.draw_roi.value = 0
 
 

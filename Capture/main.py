@@ -20,10 +20,11 @@ from ctypes import c_bool, c_int
 
 def main():
 	#assign the right id to the cameras
-	eye_src = 0
-	world_src = 1
+	eye_src = 1
+	world_src = 0
+
 	#video size
-	eye_size = (640,360) #what is a non scaled resolution here?
+	eye_size = (640,360)
 	"""
 		HD-6000 v4l2-ctl -d /dev/video0 --list-formats-ext
 		Size: Discrete 640x480
@@ -39,8 +40,6 @@ def main():
 		Size: Discrete 160x120
 	"""
 	world_size = (1280,720)
-	# world_size = (640,480) # if your cpu is to slow use this setting
-	player_size = (1280,720) # make sure that any video played through here has this size!
 	"""
 		c-525 v4l2-ctl -d /dev/video0 --list-formats-ext
 	    Size: Discrete 640x480
@@ -69,6 +68,9 @@ def main():
         Size: Discrete 1792x1008
         Size: Discrete 1920x1080
     """
+
+	player_size = (800,600)
+
 	#use video for debugging
 	use_video = 0
 

@@ -92,7 +92,7 @@ def player(g_pool,size):
 
         glfwPollEvents()
 
-        if g_pool.player_refresh.wait(0.1):
+        if g_pool.player_refresh.wait(0.01):
             g_pool.player_refresh.clear()
 
             clear_gl_screen()

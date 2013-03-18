@@ -400,7 +400,7 @@ def convexity_defect(contour, curvature):
 	return kinks
 
 
-def fit_ellipse(image,edges,bin_dark_img, contour_size=50,ratio=.6,target_size=20.,size_tolerance=20.):
+def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=50,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 	"""
 	c_img = edges.copy()
@@ -411,18 +411,18 @@ def fit_ellipse(image,edges,bin_dark_img, contour_size=50,ratio=.6,target_size=2
 
 	contours = [c for c in contours if c.shape[0]>contour_size]
 
-	cv2.drawContours(image, contours, -1, (255,255,255),thickness=1,lineType=cv2.cv.CV_AA)
+	cv2.drawContours(debug_img, contours, -1, (255,255,255),thickness=1,lineType=cv2.cv.CV_AA)
 
 	# print contours
 
-	# cv2.drawContours(image, contours, -1, (255,255,255),thickness=1)
+	# cv2.drawContours(debug_img, contours, -1, (255,255,255),thickness=1)
 	good_contours = contours
 	# split_contours = []
 	# i = 0
 	# for c in contours:
 	# 	curvature = np.abs(GetAnglesPolyline(c))
 	# 	kink= extract_at_angle(c,curvature,150)
-	# 	cv2.drawContours(image, kink, -1, (255,0,0),thickness=2)
+	# 	cv2.drawContours(debug_img, kink, -1, (255,0,0),thickness=2)
 	# 	split_contours += split_at_angle(c,curvature,150)
 
 
@@ -431,34 +431,34 @@ def fit_ellipse(image,edges,bin_dark_img, contour_size=50,ratio=.6,target_size=2
 	# for c in split_contours:
 	# 	i +=40
 	# 	kink =  convexity_defect(c,GetAnglesPolyline(c))
-	# 	cv2.drawContours(image, kink, -1, (255,0,0),thickness=1)
+	# 	cv2.drawContours(debug_img, kink, -1, (255,0,0),thickness=1)
 	# 	if c.shape[0]/float(len(kink)+1)>3 and c.shape[0]>=5:
-	# 		cv2.drawContours(image, np.array([c]), -1, (i,i,i),thickness=1)
+	# 		cv2.drawContours(debug_img, np.array([c]), -1, (i,i,i),thickness=1)
 	# 		good_contours.append(c)
 	# 	else:
-	# 		cv2.drawContours(image, np.array([c]), -1, (255,0,0),thickness=1)
+	# 		cv2.drawContours(debug_img, np.array([c]), -1, (255,0,0),thickness=1)
 
 	# for c in split_contours:
 	# 	kink =  convexity_defect(c,GetAnglesPolyline(c))
-	# 	cv2.drawContours(image, kink, -1, (255,0,0),thickness=1)
+	# 	cv2.drawContours(debug_img, kink, -1, (255,0,0),thickness=1)
 	# 	if c.shape[0]/float(len(kink)+1)>3 and c.shape[0]>=5:
-	# 		cv2.drawContours(image, c, -1, (0,255,0),thickness=1)
+	# 		cv2.drawContours(debug_img, c, -1, (0,255,0),thickness=1)
 	# 		good_contours.append(c)
 
 
-	# cv2.drawContours(image, good_contours, -1, (0,255,0),thickness=1)
+	# cv2.drawContours(debug_img, good_contours, -1, (0,255,0),thickness=1)
 
 	# split_contours.sort(key=lambda c: -c.shape[0])
 	# for c in split_contours[:]:
 	# 	if len(c)>=5:
-	# 		cv2.drawContours(image, c[0:1], -1, (0,0,255),thickness=2)
-	# 		cv2.drawContours(image, c[-1:], -1, (0,255,0),thickness=2)
-	# 		cv2.drawContours(image, c, -1, (0,255,0),thickness=1)
+	# 		cv2.drawContours(debug_img, c[0:1], -1, (0,0,255),thickness=2)
+	# 		cv2.drawContours(debug_img, c[-1:], -1, (0,255,0),thickness=2)
+	# 		cv2.drawContours(debug_img, c, -1, (0,255,0),thickness=1)
 
-	# 		# cv2.polylines(image,[c[:,0]], isClosed=False, color=(255,0,0),thickness= 1)
+	# 		# cv2.polylines(debug_img,[c[:,0]], isClosed=False, color=(255,0,0),thickness= 1)
 	# 		good_contours.append(c)
 
-	# cv2.drawContours(image, good_contours, -1, (255,255,255),thickness=1)
+	# cv2.drawContours(debug_img, good_contours, -1, (255,255,255),thickness=1)
 	# good_contours = np.concatenate(good_contours)
 	# good_contours = [good_contours]
 
@@ -488,7 +488,7 @@ def fit_ellipse(image,edges,bin_dark_img, contour_size=50,ratio=.6,target_size=2
 		return best_ellipse,ellipses
 	return None
 
-def is_round(ellipse,ratio,tolerance=.5):
+def is_round(ellipse,ratio,tolerance=.1):
 	center, (axis1,axis2), angle = ellipse
 
 	if axis1 and axis2 and abs( ratio - min(axis2,axis1)/max(axis2,axis1)) <  tolerance:
@@ -500,7 +500,7 @@ def size_deviation(ellipse,target_size):
 	return abs(target_size-max(axis))
 
 
-def fit_ellipse_old(image,edges,bin_dark_img, contour_size=20,ratio=.6,target_size=20.,size_tolerance=20.):
+def fit_ellipse_convexity_check(image,edges,bin_dark_img, contour_size=20,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 	"""
 	c_img = edges.copy()
@@ -539,21 +539,11 @@ def fit_ellipse_old(image,edges,bin_dark_img, contour_size=20,ratio=.6,target_si
 		return best_ellipse,ellipses
 	return None
 
-def is_round(ellipse,ratio,tolerance=.5):
-	center, (axis1,axis2), angle = ellipse
-
-	if axis1 and axis2 and abs( ratio - min(axis2,axis1)/max(axis2,axis1)) <  tolerance:
-		return True
-	else:
-		return False
-def size_deviation(ellipse,target_size):
-	center, axis, angle = ellipse
-	return abs(target_size-max(axis))
 
 def convexity_2(contour,img=None):
-	# if img is not None:
-		# hull = cv2.convexHull(contour, returnPoints=1)
-		# cv2.drawContours(img, hull, -1, (255,0,0))
+	if img is not None:
+		hull = cv2.convexHull(contour, returnPoints=1)
+		cv2.drawContours(img, hull, -1, (255,0,0))
 	hull = cv2.convexHull(contour, returnPoints=0)
 	if len(hull)>12:
 		res = cv2.convexityDefects(contour, hull) # return: start_index, end_index, farthest_pt_index, fixpt_depth)
@@ -567,7 +557,7 @@ def convexity_2(contour,img=None):
 def convexity(contour,img=None):
 	if img is not None:
 		hull = cv2.convexHull(contour, returnPoints=1)
-		# cv2.drawContours(img, hull, -1, (255,0,0))
+		cv2.drawContours(img, hull, -1, (255,0,0))
 	hull = cv2.convexHull(contour, returnPoints=0)
 	if len(hull)>3:
 		res = cv2.convexityDefects(contour, hull) # return: start_index, end_index, farthest_pt_index, fixpt_depth)
@@ -577,40 +567,6 @@ def convexity(contour,img=None):
 			return True
 	return False
 
-
-def circle_grid_old(image, circle_id=None, pattern_size=(4,11)):
-	"""Circle grid: finds an assymetric circle pattern
-	- circle_id: sorted from bottom left to top right (column first)
-	- If no circle_id is given, then the mean of circle positions is returned approx. center
-	- If no pattern is detected, function returns None
-	"""
-	status, centers = cv2.findCirclesGridDefault(image, pattern_size, flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
-	if status:
-		if circle_id is None:
-			result = centers.sum(0)/centers.shape[0]
-			# mean is [[x,y]]
-			return result[0], centers
-		else:
-			return centers[circle_id][0], centers
-	else:
-		return None, None
-
-def circle_grid_old(image, circle_id=None, pattern_size=(4,11)):
-	"""Circle grid: finds an assymetric circle pattern
-	- circle_id: sorted from bottom left to top right (column first)
-	- If no circle_id is given, then the mean of circle positions is returned approx. center
-	- If no pattern is detected, function returns None
-	"""
-	status, centers = cv2.findCirclesGridDefault(image, pattern_size, flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
-	if status:
-		if circle_id is None:
-			result = centers.sum(0)/centers.shape[0]
-			# mean is [[x,y]]
-			return result[0], centers
-		else:
-			return centers[circle_id][0], centers
-	else:
-		return None, None
 
 def circle_grid(image, pattern_size=(4,11)):
 	"""Circle grid: finds an assymetric circle pattern
@@ -623,8 +579,6 @@ def circle_grid(image, pattern_size=(4,11)):
 		return centers
 	else:
 		return None
-
-
 
 def calibrate_camera(img_pts, obj_pts, img_size):
 	# generate pattern size

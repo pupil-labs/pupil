@@ -24,6 +24,15 @@ def adjust_gl_view(w,h):
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
+def draw_gl_polyline((positions),(r,g,b,a),closed=True):
+    glColor4f(r,g,b,a)
+    if closed:
+        glBegin(GL_LINE_LOOP)
+    else:
+        glBegin(GL_LINE_STRIP)
+    for x,y in positions:
+        glVertex3f(x,y,0.0)
+    glEnd()
 
 def draw_gl_point((x,y),(r,g,b,a)):
 	glColor4f(r,g,b,a)
@@ -96,6 +105,6 @@ def draw_gl_texture(image):
     glTexCoord2f(0.0, 1.0)
     glVertex2f(0.0, height)
     glEnd()
-    glFlush()
+    # glFlush()
     glDisable(GL_TEXTURE_2D)
 
