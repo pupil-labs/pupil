@@ -1,6 +1,5 @@
 import os, sys
 import OpenGL.GL as gl
-import atb
 from glfw import *
 import numpy as np
 import cv2

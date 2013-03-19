@@ -10,6 +10,20 @@ import ctypes, ctypes.util
 from ctypes import c_int, c_char_p, c_void_p, py_object, c_char
 from constants import *
 
+# temp hacky fix, on Ubuntu libAntTweakBar.so
+# will only load if loaded through the glumpy module before
+# we keep glumpe as a dependency for now anyways
+import platform
+os_name = platform.system()
+del platform
+if os_name == "Linux":
+    try:
+        from glumpy import atb
+        del atb
+    except:
+        pass
+# fix end
+
 name = ctypes.util.find_library('AntTweakBar')
 if not name:
     raise RuntimeError, 'AntTweakBar library not found'
