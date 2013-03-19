@@ -1,14 +1,18 @@
-import cv2 as cv
+self.uYimport cv2 as cv
 import numpy as np
 import cProfile
 import time
+import svgwrite
+
 
 def main():
 
     save_video = False
-
+    save_svg = True
     # change this path to point to the data folder you would like to play
-    data_folder = "/Users/mkassner/MIT/pupil_google_code/code/Capture/data011"
+    # data_folder = "/Users/mkassner/Downloads/02/data006"
+    data_folder = "/Users/mkassner/Desktop/pupil/Capture/data006"
+
 
 
     video_path = data_folder + "/world.avi"
@@ -17,6 +21,7 @@ def main():
 
     cap = cv.VideoCapture(video_path)
     gaze_list = list(np.load(gaze_positions_path))
+
 
     # this takes the gaze list and makes a list
     # with the length of the number of recorded frames.
@@ -35,14 +40,21 @@ def main():
     t = time.time()
 
     fps = cap.get(5)
-    wait =  int((1./fps)*1000)
+    wait =  int((1./fps)*100)
 
     if save_video:
         #FFV1 -- good speed lossless big file
         #DIVX -- good speed good compression medium file
         writer = cv.VideoWriter(record_path, cv.cv.CV_FOURCC(*'DIVX'), fps, (img.shape[1], img.shape[0]))
 
+    if save_svg:
+        svg_document = svgwrite.Drawing(filename = "world_viz.svg",
+                                size = ("%ipx" %img.shape[1], "%ipx" %img.shape[0]))
+
     while status:
+        nt = time.time()
+        # print nt-t
+        t = nt
         # apply optical flow displacement to previous gaze
         if past_gaze:
             gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -51,7 +63,7 @@ def main():
             prevgray = gray
             past_gaze = list(nextPts)
 
-            #contrain gaze positions to screen dimensions
+            #contrain gaze positions to
             c_gaze = []
             for x,y in past_gaze:
                 if x >0 and x<width and y >0 and y <height:
@@ -68,21 +80,25 @@ def main():
                 past_gaze.append([x,y])
 
 
-        vap = 20 #Visual_Attention_Span
+        vap = 2000 #Visual_Attention_Span
         window_string = "the last %i frames of visual attention" %vap
+        overlay = np.zeros(img.shape,dtype=img.dtype)
 
         # remove everything but the last "vap" number of gaze postions from the list of past_gazes
         for x in xrange(len(past_gaze)-vap):
             past_gaze.pop(0)
 
-        for gaze_point in past_gaze[::-1]: #going through the list backwards
-            cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), int(vap), (255, 255, 255), 1, cv.cv.CV_AA)
-            vap -=.9 # less recent gaze points are smaller
-            vap = max(1,vap)
+
+        # # draw recent gaze postions as white dots on an overlay image.
+        # for gaze_point in past_gaze[::-1]:
+        #     # cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), int(vap), (255, 255, 255), 1, cv.cv.CV_AA)
+        #     vap -=.9 # less recent gaze points are smaller
+        #     vap = max(1,vap)
 
         if past_gaze:
             pts = np.array(past_gaze,dtype=np.int32)
             cv.polylines(img, [pts], isClosed=False, color=(255,255,255),lineType=cv.cv.CV_AA)
+
 
 
         cv.imshow(window_string, img)
@@ -94,7 +110,11 @@ def main():
         ch = cv.waitKey(wait)
         if ch == 27:
             break
-
+    string =  past_gaze
+    string = [(int(x),int(y)) for x,y in string]
+    svg_document.add(svgwrite.shapes.Polyline(string, fill='none',stroke='black'))
+    svg_document.tostring()
+    svg_document.save()
 
 def denormalize(pos, width, height, flip_y=True):
     """

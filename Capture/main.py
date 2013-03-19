@@ -5,22 +5,71 @@ from time import sleep
 from multiprocessing import Process, Pipe, Event
 from multiprocessing.sharedctypes import RawValue, Value
 # RawValue is shared memory without lock, handle with care, this is usefull for ATB it needs cTypes
-from eye import eye
-from world import world
+from eye import eye, eye_profiled
+from world import world, world_profiled
 from player import player
-from methods import Temp, local_grab
+from methods import Temp
+
+# import pyaudio
+# import waveatb.
+# from audio import normalize, trim, add_silence
+
 from ctypes import c_bool, c_int
+
 
 
 def main():
 	#assign the right id to the cameras
-	eye_src = 0
-	world_src = 1
+	eye_src = 1
+	world_src = 0
+
 	#video size
 	eye_size = (640,360)
+	"""
+		HD-6000 v4l2-ctl -d /dev/video0 --list-formats-ext
+		Size: Discrete 640x480
+		Size: Discrete 1280x720
+		Size: Discrete 960x544
+		Size: Discrete 800x448
+		Size: Discrete 640x360
+		Size: Discrete 800x600
+		Size: Discrete 416x240
+		Size: Discrete 352x288
+		Size: Discrete 176x144
+		Size: Discrete 320x240
+		Size: Discrete 160x120
+	"""
 	world_size = (1280,720)
-	# world_size = (640,480) # if your cpu is to slow use this setting
-	player_size = (1280,720) # make sure that any video played through here has this size!
+	"""
+		c-525 v4l2-ctl -d /dev/video0 --list-formats-ext
+	    Size: Discrete 640x480
+        Size: Discrete 160x120
+        Size: Discrete 176x144
+        Size: Discrete 320x176
+        Size: Discrete 320x240
+        Size: Discrete 432x240
+        Size: Discrete 352x288
+        Size: Discrete 544x288
+        Size: Discrete 640x360
+        Size: Discrete 752x416
+        Size: Discrete 800x448
+        Size: Discrete 864x480
+        Size: Discrete 960x544
+        Size: Discrete 1024x576
+        Size: Discrete 800x600
+        Size: Discrete 1184x656
+        Size: Discrete 960x720
+        Size: Discrete 1280x720
+        Size: Discrete 1392x768
+        Size: Discrete 1504x832
+        Size: Discrete 1600x896
+        Size: Discrete 1280x960
+        Size: Discrete 1712x960
+        Size: Discrete 1792x1008
+        Size: Discrete 1920x1080
+    """
+
+	player_size = (800,600)
 
 	#use video for debugging
 	use_video = 0
@@ -32,7 +81,7 @@ def main():
 
 
 	if use_video:
-		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # using a path to a videofiles allows for developement without a headset.
+		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_ir_03.mov" # using a path to a videofiles allows for developement without a headset.
 		world_src = 0
 
 	# create shared globals
@@ -58,9 +107,9 @@ def main():
 	# end shared globals
 
 	# set up sub processes
-	p_eye = Process(target=eye, args=(eye_src,eye_size, g_pool))
+	p_eye = Process(target=eye_profiled, args=(eye_src,eye_size, g_pool))
 	if use_player: p_player = Process(target=player, args=(g_pool,player_size))
-	if audio: p_audio = Process(target=record_audio, args=(audio_rx,audio_record,3))
+	if audio: p_audio = Process(target=record_audio, args=(g_pool.audio_rx,g.g_pool.audio_record,3))
 
 	# spawn sub processes
 	p_eye.start()
@@ -68,9 +117,9 @@ def main():
 	if audio: p_audio.start()
 
 	# when using some cameras (like our current worldcamera logitch c510)
-	# you can't run world camera grabber in its own process it seems to be a mjpeg issue
-	# it must reside in the main loop
-	world(world_src,world_size,g_pool)
+	# you can't run world camera grabber in its own process
+	# it must reside in the main loop when you run on MacOS.
+	world_profiled(world_src,world_size,g_pool)
 
 	# exit / clean-up
 	p_eye.join()

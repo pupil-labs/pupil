@@ -8,7 +8,9 @@ def main():
     save_video = False
 
     # change this path to point to the data folder you would like to play
-    data_folder = "/Users/mkassner/MIT/pupil_google_code/code/Capture/data011"
+    data_folder = "/Users/mkassner/Downloads/02/data006"
+    data_folder = "/Users/mkassner/MIT/pupil_thesis_data/MIT_statue"
+
 
 
     video_path = data_folder + "/world.avi"
@@ -17,6 +19,7 @@ def main():
 
     cap = cv.VideoCapture(video_path)
     gaze_list = list(np.load(gaze_positions_path))
+
 
     # this takes the gaze list and makes a list
     # with the length of the number of recorded frames.
@@ -43,6 +46,9 @@ def main():
         writer = cv.VideoWriter(record_path, cv.cv.CV_FOURCC(*'DIVX'), fps, (img.shape[1], img.shape[0]))
 
     while status:
+        nt = time.time()
+        # print nt-t
+        t = nt
         # apply optical flow displacement to previous gaze
         if past_gaze:
             gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -51,7 +57,7 @@ def main():
             prevgray = gray
             past_gaze = list(nextPts)
 
-            #contrain gaze positions to screen dimensions
+            #contrain gaze positions to
             c_gaze = []
             for x,y in past_gaze:
                 if x >0 and x<width and y >0 and y <height:
@@ -70,19 +76,44 @@ def main():
 
         vap = 20 #Visual_Attention_Span
         window_string = "the last %i frames of visual attention" %vap
+        overlay = np.zeros(img.shape,dtype=img.dtype)
 
         # remove everything but the last "vap" number of gaze postions from the list of past_gazes
         for x in xrange(len(past_gaze)-vap):
             past_gaze.pop(0)
 
-        for gaze_point in past_gaze[::-1]: #going through the list backwards
-            cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), int(vap), (255, 255, 255), 1, cv.cv.CV_AA)
-            vap -=.9 # less recent gaze points are smaller
-            vap = max(1,vap)
 
+        # draw recent gaze postions as white dots on an overlay image
+
+        string = []
+        size = vap - len(past_gaze) # the most recent point is always vap big regardless of actual point hist lengh.
+
+        p_gaze = np.array(past_gaze)
+        d = np.abs(p_gaze[:-1]-p_gaze[1:])
+        d = d[:,0]+d[:,1]
+        print d
+
+        for gaze_point, next_point in zip(past_gaze[:-1],past_gaze[1:]):
+            x_dist =  abs(gaze_point[0] - next_point[0])
+            y_dist = abs(gaze_point[1] - next_point[1])
+            man = x_dist + y_dist
+            if man < 20:
+                string.append((int(gaze_point[0]),int(gaze_point[1])))
+                cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size*2, (255, 255, 255), 1, cv.cv.CV_AA)
+            else:
+                cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size, (255, 0, 0), 1, cv.cv.CV_AA)
+                pass
+
+            size +=1 # more recent gaze points are bigger
+        # print manhattan
+        if string:
+            # print pts.shape
+            pts = np.array(string,dtype=np.int32)
+            cv.polylines(img, [pts], isClosed=False, color=(255,255,255),thickness= 5,lineType=cv.cv.CV_AA)
         if past_gaze:
+            # print pts.shape
             pts = np.array(past_gaze,dtype=np.int32)
-            cv.polylines(img, [pts], isClosed=False, color=(255,255,255),lineType=cv.cv.CV_AA)
+            # cv.polylines(img, [pts], isClosed=False, color=(255,255,255),lineType=cv.cv.CV_AA)
 
 
         cv.imshow(window_string, img)

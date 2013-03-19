@@ -1,22 +1,23 @@
 import os, sys
-import glumpy
-import glumpy.atb as atb
-import OpenGL.GL as gl
+
 from ctypes import  c_int,c_bool,c_float
 import numpy as np
 from glob import glob
 import cv2
-import cv2.cv as cv
+from glfw import *
+import atb
 from methods import normalize, denormalize, chessboard, circle_grid, gen_pattern_grid, calibrate_camera
 from methods import Temp,capture
-from calibrate import *
-from gl_shapes import Point
+# from gl_shapes import Point
+from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm
+from time import time
 
 class Bar(atb.Bar):
     """docstring for Bar"""
     def __init__(self, name,g_pool, defs):
         super(Bar, self).__init__(name, **defs)
         self.fps = c_float(0.0)
+        self.timestamp = time()
         self.calibrate = g_pool.calibrate
         self.find_pattern = c_bool(0)
         self.optical_flow = c_bool(0)
@@ -29,7 +30,6 @@ class Bar(atb.Bar):
         self.record_video = c_bool(0)
         self.record_running = c_bool(0)
         self.play = g_pool.play
-        self.half_speed =c_bool(0)
         # play and record are tied together via pointers to the objects
         # self.play = self.record_video
 
@@ -41,41 +41,79 @@ class Bar(atb.Bar):
         self.add_var("Nine_Pt", self.calibrate_nine, key="9", help="Start/Stop 9 Point Calibration Process")
         self.add_var("Record Video", self.record_video, key="R", help="Start/Stop Recording")
         self.add_var("Play Source Video", self.play)
-        self.add_var("Half Framerate", self.half_speed)
         self.add_var("Exit", g_pool.quit)
 
-    def update_fps(self, dt):
-        self.fps.value += .05 * (1 / dt - self.fps.value)
+    def update_fps(self):
+        old_time, self.timestamp = self.timestamp, time()
+        dt = self.timestamp - old_time
+        if dt:
+            self.fps.value += .05 * (1 / dt - self.fps.value)
 
     def screen_cap(self):
         self.find_pattern.value = True
         self.screen_shot = True
 
+def world_profiled(src,size,g_pool):
+    import cProfile
+    from world import world
+    cProfile.runctx("world(src,size,g_pool)",{'src':src,"size":size,"g_pool":g_pool},locals(),"world.pstats")
+
 
 def world(src, size, g_pool):
     """world
-        - Initialize glumpy figure, image, atb controls
-        - Execute glumpy main loop
     """
-    cap = capture(src, size)
-    s, img_arr = cap.read_RGB()
-    fig = glumpy.figure((img_arr.shape[1], img_arr.shape[0]))
 
-    image = glumpy.Image(img_arr,interpolation="bicubic")
-    image.x, image.y = 0, 0
+    def on_resize(w, h):
+        atb.TwWindowSize(w, h);
+        adjust_gl_view(w,h)
 
+    def on_key(key, pressed):
+        if not atb.TwEventKeyboardGLFW(key,pressed):
+            if pressed:
+                if key == GLFW_KEY_ESC:
+                    on_close()
+
+    def on_char(char, pressed):
+        if not atb.TwEventCharGLFW(char,pressed):
+            pass
+
+    def on_button(button, pressed):
+        if not atb.TwEventMouseButtonGLFW(button,pressed):
+            if pressed:
+                pos = glfwGetMousePos()
+                pos = normalize(pos,glfwGetWindowSize())
+                pos = denormalize(pos,(img.shape[1],img.shape[0]) ) #pos in img pixels
+
+                if bar.optical_flow.value:
+                    flow.point = np.array([pos,],dtype=np.float32)
+                    flow.new_ref = True
+                    flow.count = 30
+
+
+    def on_pos(x, y):
+        if atb.TwMouseMotion(x,y):
+            bar.update()
+
+
+    def on_scroll(pos):
+        if not atb.TwMouseWheel(pos):
+            pass
+
+    def on_close():
+        g_pool.quit.value = True
+        print "WORLD Process closing from window"
+
+    ###objects as variable containers
     # pattern object
     pattern = Temp()
     pattern.centers = None
-    pattern.norm_coords = (0, 0)
-    pattern.image_coords = (0, 0)
-    pattern.screen_coords = (0, 0)
+    pattern.norm_coords = (0., 0.)
+    pattern.image_coords = (0., 0.)
     pattern.obj_grid = gen_pattern_grid((4, 11))  # calib grid
     pattern.obj_points = []
     pattern.img_points = []
     pattern.map = (0, 2, 7, 16, 21, 23, 39, 40, 42)
     pattern.board_centers = None
-
     #opticalflow object
     flow = Temp()
     flow.first =  None
@@ -84,9 +122,8 @@ def world(src, size, g_pool):
     flow.count = 0
     # gaze object
     gaze = Temp()
-    gaze.map_coords = (0, 0)
-    gaze.screen_coords = (0, 0)
-
+    gaze.map_coords = (0., 0.)
+    gaze.image_coords = (0., 0.)
     # record object
     record = Temp()
     record.writer = None
@@ -94,25 +131,49 @@ def world(src, size, g_pool):
     record.path = None
     record.counter = 0
 
-    # initialize gl shape primitives
-    pattern_point = Point(color=(0, 255, 0, 0.5))
-    gaze_point = Point(color=(255, 0, 0, 0.5))
+    # initialize capture, check if it works
+    cap = capture(src, size)
+    s, img = cap.read_RGB()
+    if not s:
+        print "World: Error could not get image"
+        return
+    height,width = img.shape[:2]
 
-    # Initialize ant tweak bar inherits from atb.Bar (see Bar class)
+    # Initialize ant tweak bar inherits from atb.Bar
     atb.init()
     bar = Bar("World", g_pool, dict(label="Controls",
             help="Scene controls", color=(50, 50, 50), alpha=50,
-            text='light', refresh=.2, position=(img_arr.shape[1]-200-10, 10), size=(200, 200)))
+            text='light', refresh=.2, position=(10, 10), size=(200, 200)))
 
-    def on_draw():
-        fig.clear(0.0, 0.0, 0.0, 1.0)
-        image.draw(x=image.x, y=image.y, z=0.0,
-                    width=fig.width, height=fig.height)
-        pattern_point.draw()
-        gaze_point.draw()
+    # Initialize glfw
+    glfwInit()
+    glfwOpenWindow(width, height, 0, 0, 0, 8, 0, 0, GLFW_WINDOW)
+    glfwSetWindowTitle("World")
+    glfwSetWindowPos(0,0)
 
-    def on_idle(dt):
-        bar.update_fps(dt)
+
+    #register callbacks
+    glfwSetWindowSizeCallback(on_resize)
+    glfwSetWindowCloseCallback(on_close)
+    glfwSetKeyCallback(on_key)
+    glfwSetCharCallback(on_char)
+    glfwSetMouseButtonCallback(on_button)
+    glfwSetMousePosCallback(on_pos)
+    glfwSetMouseWheelCallback(on_scroll)
+
+    #gl_state settings
+    import OpenGL.GL as gl
+    gl.glEnable(gl.GL_POINT_SMOOTH)
+    gl.glPointSize(20)
+    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+    gl.glEnable(gl.GL_BLEND)
+    del gl
+
+    #event loop
+    while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
+        bar.update_fps()
+        # get an image from the grabber
+        s, img = cap.read()
 
         # Nine Point calibration state machine timing
         if bar.calibrate_nine.value:
@@ -133,17 +194,7 @@ def world(src, size, g_pool):
             bar.calibrate_nine_step.value += 1
         g_pool.player_refresh.set()
 
-        # get an image from the grabber
-        if bar.half_speed.value:
-            s, img = cap.read()
-        s, img = cap.read()
 
-        # update the image to display
-        img_arr[...] = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-
-        # update gaze points from shared variable pool
-        gaze.screen_coords = denormalize((g_pool.gaze_x.value, g_pool.gaze_y.value), fig.width, fig.height)
-        gaze_point.update(gaze.screen_coords)
 
         #pattern detection and its various uses
         pattern.centers = None
@@ -156,14 +207,11 @@ def world(src, size, g_pool):
             else:
                 mean = pattern.centers.sum(0) / pattern.centers.shape[0]
                 pattern.image_coords = mean[0]
-            pattern.norm_coords = normalize(pattern.image_coords, img.shape[1], img.shape[0])
-            pattern.screen_coords = denormalize(pattern.norm_coords, fig.width, fig.height)
-            pattern_point.update(pattern.screen_coords)
-            g_pool.pattern_x.value, g_pool.pattern_y.value = pattern.norm_coords
+
+            pattern.norm_coords = normalize(pattern.image_coords, (img.shape[1],img.shape[0]),flip_y=True)
         else:
             # If no pattern detected send 0,0 -- check this condition in eye process
-            g_pool.pattern_x.value, g_pool.pattern_y.value = 0, 0
-
+            pattern.norm_coords = 0,0
 
         #optical flow for natural marker calibration method
         if bar.optical_flow.value:
@@ -180,14 +228,13 @@ def world(src, size, g_pool):
                     flow.first = gray
                     nextPts = nextPts[0]
 
-                    norm_coords = normalize(nextPts, img.shape[1], img.shape[0])
-                    screen_cords = denormalize(norm_coords, fig.width, fig.height)
-                    pattern_point.update(screen_cords)
-                    g_pool.pattern_x.value, g_pool.pattern_y.value = norm_coords
+                    pattern.image_coords = nextPts
+                    pattern.norm_coords = normalize(nextPts, (img.shape[1],img.shape[0]),flip_y=True)
                     flow.count -=1
                     print flow.count
                 else:
-                    g_pool.pattern_x.value, g_pool.pattern_y.value = 0, 0
+                    # If no pattern detected send 0,0 -- check this condition in eye process
+                    pattern.norm_coords = 0,0
 
 
         #gather pattern centers and find cam intrisics
@@ -225,7 +272,7 @@ def world(src, size, g_pool):
             video_path = os.path.join(record.path, "world.avi")
             #FFV1 -- good speed lossless big file
             #DIVX -- good speed good compression medium file
-            record.writer = cv2.VideoWriter(video_path, cv.CV_FOURCC(*'DIVX'), bar.fps.value, (img.shape[1], img.shape[0]))
+            record.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (img.shape[1], img.shape[0]))
 
             # audio data to audio process
             audio_path = os.path.join(record.path, "world.wav")
@@ -269,35 +316,33 @@ def world(src, size, g_pool):
                 print "no camera intrinsics found, will not copy them into data folder"
 
             g_pool.pos_record.value = 0
-            record.writer = None
+            del record.writer
             bar.record_running = 0
 
-        image.update()
-        fig.redraw()
+        clear_gl_screen()
+        cv2.cvtColor(img, cv2.COLOR_BGR2RGB,img)
+        draw_gl_texture(img)
 
-        if g_pool.quit.value:
-            print "WORLD Process closing from global or atb"
-            fig.window.stop()
 
-    def on_close():
-        g_pool.quit.value = True
-        print "WORLD Process closed from window"
+        # render and broadcast pattern point
+        if pattern.norm_coords[0] or pattern.norm_coords[1]:
+            draw_gl_point_norm(pattern.norm_coords,(0.,1.,0.,0.5))
+            # draw_gl_point(pattern.image_coords,(0.,1.,0.,0.5))
+            g_pool.pattern_x.value, g_pool.pattern_y.value = pattern.norm_coords
+        else:
+            # If no pattern detected send 0,0 -- check this condition in eye process
+            g_pool.pattern_x.value, g_pool.pattern_y.value = 0,0
 
-    @fig.event
-    def on_mouse_press(x, y, button):
-        pos = x,y
-        pos = normalize(pos, fig.width, fig.height  )
-        pos = denormalize(pos,img_arr.shape[1], img_arr.shape[0]) #pos in img pixels
+        # update gaze point from shared variable pool and draw on screen. If both coords are 0: no pupil pos was detected.
+        if g_pool.gaze_x.value or g_pool.gaze_y.value:
+            draw_gl_point_norm((g_pool.gaze_x.value, g_pool.gaze_y.value),(1.,0.,0.,0.5))
 
-        if bar.optical_flow.value:
-            flow.point = np.array([pos,],dtype=np.float32)
-            flow.new_ref = True
-            flow.count = 30
+        bar.update()
+        bar.draw()
+        glfwSwapBuffers()
 
-    fig.window.push_handlers(on_idle)
-    fig.window.push_handlers(atb.glumpy.Handlers(fig.window))
-    fig.window.push_handlers(on_draw)
-    fig.window.push_handlers(on_close)
-    fig.window.set_title("World")
-    fig.window.set_position(0, 0)
-    glumpy.show()
+    #end while running
+    print "WORLD Process closed"
+    glfwCloseWindow()
+    glfwTerminate()
+

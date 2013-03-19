@@ -3,5 +3,6 @@
 .DS_Store*
 Thumbs.db
 *.pyc
+*.pstats
 *.mov
 data*
