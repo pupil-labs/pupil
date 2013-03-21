@@ -204,12 +204,11 @@ def eye(src,size,g_pool):
     def on_pos(x, y):
         if atb.TwMouseMotion(x,y):
             bar.update()
-        else:
-            if bar.draw_roi.value == 1:
-                pos = glfwGetMousePos()
-                pos = normalize(pos,glfwGetWindowSize())
-                pos = denormalize(pos,(img.shape[1],img.shape[0]) ) #pos in img pixels
-                r.setEnd(pos)
+        if bar.draw_roi.value == 1:
+            pos = glfwGetMousePos()
+            pos = normalize(pos,glfwGetWindowSize())
+            pos = denormalize(pos,(img.shape[1],img.shape[0]) ) #pos in img pixels
+            r.setEnd(pos)
 
     def on_scroll(pos):
         if not atb.TwMouseWheel(pos):
