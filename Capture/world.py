@@ -30,16 +30,16 @@ class Bar(atb.Bar):
         self.record_video = c_bool(0)
         self.record_running = c_bool(0)
         self.play = g_pool.play
-        # play and record are tied together via pointers to the objects
+        # play and record can be tied together via pointers to the objects
         # self.play = self.record_video
 
         self.add_var("FPS", self.fps, step=1., readonly=True)
-        self.add_var("Find Calibration Pattern", self.find_pattern, key="P", help="Find Calibration Pattern")
-        self.add_var("Optical Flow", self.optical_flow, key="O", help="Activate Optical Flow")
+        self.add_var("Find Calibration Pattern", self.find_pattern, key="p", help="Find Calibration Pattern")
+        self.add_var("Optical Flow", self.optical_flow, key="o", help="Activate Optical Flow")
         self.add_button("Screen Shot", self.screen_cap, key="SPACE", help="Capture A Frame")
-        self.add_var("Calibrate", self.calibrate, key="C", help="Start/Stop Calibration Process")
-        self.add_var("Nine_Pt", self.calibrate_nine, key="9", help="Start/Stop 9 Point Calibration Process")
-        self.add_var("Record Video", self.record_video, key="R", help="Start/Stop Recording")
+        self.add_var("Calibrate", self.calibrate, key="c", help="Start/Stop Calibration Process")
+        self.add_var("Nine_Pt", self.calibrate_nine, key="9", help="Start/Stop 9 Point Calibration Process (Tip: hit 9 in the player window)")
+        self.add_var("Record Video", self.record_video, key="r", help="Start/Stop Recording")
         self.add_var("Play Source Video", self.play)
         self.add_var("Exit", g_pool.quit)
 
