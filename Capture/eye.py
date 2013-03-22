@@ -122,7 +122,8 @@ class Roi(object):
 
     def setEnd(self,(x,y)):
             x,y = max(0,x),max(0,y)
-            if x != self.nX and y != self.nY:
+            #make sure the ROI actually contains pixels
+            if abs(self.nX - x) > 2 and abs(self.nY - y)>2:
                 self.lX = min(x,self.nX)
                 self.lY = min(y,self.nY)
                 self.uX = max(x,self.nX)
@@ -169,11 +170,9 @@ def eye_profiled(src,size,g_pool):
     cProfile.runctx("eye(src,size,g_pool)",{'src':src,"size":size,"g_pool":g_pool},locals(),"eye.pstats")
 
 def eye(src,size,g_pool):
-    """eye
     """
-
-
-
+    this process needs a docstring
+    """
     # # callback functions
     def on_resize(w, h):
         atb.TwWindowSize(w, h);
@@ -267,6 +266,8 @@ def eye(src,size,g_pool):
     glfwOpenWindow(width, height, 0, 0, 0, 8, 0, 0, GLFW_WINDOW)
     glfwSetWindowTitle("Eye")
     glfwSetWindowPos(800,0)
+    if isinstance(src, str):
+        glfwSwapInterval(0) # turn of v-sync when using video as src for benchmarking
 
 
     #register callbacks
@@ -290,17 +291,15 @@ def eye(src,size,g_pool):
     #event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
         bar.update_fps()
-
         s,img = cap.read_RGB()
-
-        sleep(bar.sleep.value)
+        sleep(bar.sleep.value) # for debugging only
 
         ###IMAGE PROCESSING
         gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
 
         # integral = cv2.integral(gray_img)
 
-        ###2D filter response as fisrt estimation of pupil position for ROI
+        ###2D filter response as first estimation of pupil position for automated ROI creation
         downscale = 8
         best_m = 0
         region_r = min(max(9,l_pool.region_r),61)
@@ -322,12 +321,11 @@ def eye(src,size,g_pool):
                 l_pool.region_r = s
                 vals = [max(0,v) for v in (x-outer_r,y-outer_r,x+outer_r,y+outer_r)]
                 p_r.set(vals)
-            # cv2.rectangle(gray_img, (x-inner_r,y-inner_r), (x+inner_r,y+inner_r), (0,0,0))
-            # cv2.rectangle(gray_img,  (x-outer_r,y-outer_r), (x+outer_r,y+outer_r), (255,255,255))
-        # g_img= cv2.normalize(g_img,alpha = 0,beta = 255,norm_type = cv2.NORM_MINMAX)
-        # gray_img = cv2.resize(g_img,gray_img.shape[::-1], interpolation=cv2.INTER_NEAREST)
 
+
+        # create view into the gray_img with the bounds of the rough pupil estimation
         pupil_img = gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX]
+
 
         # pupil_img = cv2.morphologyEx(pupil_img, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT,(5,5)),iterations=2)
 
@@ -340,10 +338,17 @@ def eye(src,size,g_pool):
         if bar.blur.value >1:
             pupil_img = cv2.medianBlur(pupil_img,bar.blur.value)
 
-        contours =  cv2.Canny(pupil_img,bar.canny_thresh.value, bar.canny_thresh.value*bar.canny_ratio.value,apertureSize= bar.canny_aperture.value)
+
+        # create contours using Canny edge dectetion
+        contours = cv2.Canny(pupil_img,bar.canny_thresh.value,
+                            bar.canny_thresh.value*bar.canny_ratio.value,
+                            apertureSize= bar.canny_aperture.value)
+        # remove contours in areas not dark enough and where the glint (specteal refelction from IR leds) is
         contours = cv2.min(contours, spec_mask)
         contours = cv2.min(contours,binary_img)
 
+
+        # Ellipse fitting from countours
         result = fit_ellipse_convexity_check(img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX],
                             contours,
                             binary_img,
@@ -359,14 +364,8 @@ def eye(src,size,g_pool):
         overlay[:,:,2] = cv2.max(pupil_img,binary_img) #blue channel
         overlay[:,:,1] = cv2.min(pupil_img,spec_mask) #red channel
 
-        if result is not None:
-            #display some centers for debugging
-            pupil.ellipse, others= result
-            for pre,((x,y),axs,ang) in others:
-                x,y = int(x),int(y)
-                overlay[y,x,:]   = [100,100,255]
 
-        #draw a dotted frame around the automatic pupil ROI in overlay...
+        #draw a blue dotted frame around the automatic pupil ROI in overlay...
         overlay_blue = overlay[:,:,2]
         overlay_blue[::2,0] = 255
         overlay_blue[::2,-1]= 255
@@ -379,7 +378,6 @@ def eye(src,size,g_pool):
         pupil_img[0,::2] = 255
         pupil_img[-1,::2]= 255
 
-        gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX] = pupil_img
 
         #draw a solid frame around the user defined ROI
         gray_img[:,0] = 255
@@ -396,13 +394,12 @@ def eye(src,size,g_pool):
             img[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
             img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] = overlay
         elif bar.display.value == 3:
-            pass
+            img = cv2.cvtColor(pupil_img, cv2.COLOR_GRAY2RGB)
         else:
             pass
 
-
-
         if result is not None:
+            pupil.ellipse, others = result
             pupil.image_coords = r.add_vector(p_r.add_vector(pupil.ellipse['center']))
             #update pupil size,angle and ratio for the ellipse filter algorithm
             bar.pupil_size.value  = bar.pupil_size.value +  .5*(pupil.ellipse['major']-bar.pupil_size.value)
@@ -416,8 +413,11 @@ def eye(src,size,g_pool):
             # clamp pupil size
             bar.pupil_size.value = max(60,min(300,bar.pupil_size.value))
 
+            # clamp pupil ratio
+            bar.pupil_ratio.value = max(.5,bar.pupil_ratio.value)
 
-            pupil.norm_coords = normalize(pupil.image_coords, (img.shape[1], img.shape[0]),flip_y=True )# numpy array wants (row,col) for an image this = (height,width)
+            # normalize
+            pupil.norm_coords = normalize(pupil.image_coords, (img.shape[1], img.shape[0]),flip_y=True )
 
             # from pupil to gaze
             pupil.gaze_coords = map_vector(pupil.norm_coords, pupil.coefs)
@@ -443,10 +443,10 @@ def eye(src,size,g_pool):
             pupil.pt_cloud.append([pupil.norm_coords[0],pupil.norm_coords[1],
                                 g_pool.pattern_x.value, g_pool.pattern_y.value])
 
-        # Calculate coefs
+        # Calculate mapping coefs
         if not g_pool.calibrate.value and l_pool.calib_running:
             l_pool.calib_running = 0
-            if pupil.pt_cloud:
+            if pupil.pt_cloud: # some data was actually collected
                 pupil.coefs = calibrate_poly(pupil.pt_cloud)
                 np.save('cal_pt_cloud.npy', np.array(pupil.pt_cloud))
 
@@ -470,7 +470,8 @@ def eye(src,size,g_pool):
             l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], bar.dt, g_pool.frame_count_record.value])
             if l_pool.writer is not None:
                 l_pool.writer.write(cv2.cvtColor(img,cv2.cv.COLOR_BGR2RGB))
-        # Save values and flip switch to off for recording
+
+        # Done Recording: Save values and flip switch to off for recording
         if not g_pool.pos_record.value and l_pool.record_running:
             positions_path = path.join(l_pool.record_path, "gaze_positions.npy")
             cal_pt_cloud_path = path.join(l_pool.record_path, "cal_pt_cloud.npy")
@@ -483,6 +484,8 @@ def eye(src,size,g_pool):
             l_pool.record_running = False
 
 
+
+        ### GL-drawing
         clear_gl_screen()
         draw_gl_texture(img)
 
