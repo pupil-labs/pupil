@@ -359,27 +359,19 @@ def eye(src,size,g_pool):
 
 
         # # Vizualizations
-        overlay =cv2.cvtColor(pupil_img, cv2.COLOR_GRAY2RGB)
+        overlay =cv2.cvtColor(pupil_img, cv2.COLOR_GRAY2RGB) #create an RGB view onto the gray pupil ROI
         overlay[:,:,0] = cv2.max(pupil_img,contours) #green channel
         overlay[:,:,2] = cv2.max(pupil_img,binary_img) #blue channel
         overlay[:,:,1] = cv2.min(pupil_img,spec_mask) #red channel
 
 
         #draw a blue dotted frame around the automatic pupil ROI in overlay...
-        overlay_blue = overlay[:,:,2]
-        overlay_blue[::2,0] = 255
-        overlay_blue[::2,-1]= 255
-        overlay_blue[0,::2] = 255
-        overlay_blue[-1,::2]= 255
+        overlay[::2,0] = 0,0,255
+        overlay[::2,-1]= 0,0,255
+        overlay[0,::2] = 0,0,255
+        overlay[-1,::2]= 0,0,255
 
-        #...and gray image
-        pupil_img[::2,0] = 255
-        pupil_img[::2,-1]= 255
-        pupil_img[0,::2] = 255
-        pupil_img[-1,::2]= 255
-
-
-        #draw a solid frame around the user defined ROI
+        # and a solid (white) frame around the user defined ROI
         gray_img[:,0] = 255
         gray_img[:,-1]= 255
         gray_img[0,:] = 255

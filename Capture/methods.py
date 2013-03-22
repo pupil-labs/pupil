@@ -4,48 +4,6 @@ import numpy as np
 import cv2
 from ctypes import *
 
-
-def pre_integral_pupil_respone_filter():
-###2D filter response as fisrt estimation of pupil position for ROI
-	downscale = 4
-	best_m = 0
-	region_r = min(max(9,l_pool.region_r),61)
-	lable = 0
-	for s in (region_r-4,region_r,region_r+4):
-		#simple best of three optimization over time.
-		kernel = make_eye_kernel(s,int(3*s))
-		g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REFLECT_101)        # ddepth = -1, means destination image has depth same as input image.
-		m = np.amax(g_img)
-		# print s,m
-		x,y = np.where(g_img == m)
-		x,y = downscale*y[0],downscale*x[0]
-		cv2.putText(gray_img, str(s)+"-"+str(m), (x,y), cv2.FONT_HERSHEY_SIMPLEX, .35,(255,255,255))
-		lable+=40
-		inner_r = (s*downscale)/2
-		outer_r = int(s*downscale*1.)
-		if m > best_m:
-			best_m = m
-			l_pool.region_r = s
-			vals = [max(0,v) for v in (x-outer_r,y-outer_r,x+outer_r,y+outer_r)]
-			p_r.set(vals)
-		# cv2.rectangle(gray_img, (x-inner_r,y-inner_r), (x+inner_r,y+inner_r), (0,0,0))
-		# cv2.rectangle(gray_img,  (x-outer_r,y-outer_r), (x+outer_r,y+outer_r), (255,255,255))
-	# g_img= cv2.normalize(g_img,alpha = 0,beta = 255,norm_type = cv2.NORM_MINMAX)
-	# gray_img = cv2.resize(g_img,gray_img.shape[::-1], interpolation=cv2.INTER_NEAREST)
-
-
-
-def make_eye_kernel(inner_size,outer_size):
-	offset = (outer_size - inner_size)/2
-	inner_count = inner_size**2
-	outer_count = outer_size**2-inner_count
-	val_inner = -1.0 / inner_count
-	val_outer = -val_inner*inner_count/outer_count
-	inner = np.ones((inner_size,inner_size),np.float32)*val_inner
-	kernel = np.ones((outer_size,outer_size),np.float32)*val_outer
-	kernel[offset:offset+inner_size,offset:offset+inner_size]= inner
-	return kernel
-
 class Temp(object):
 	"""Temp class to make objects"""
 	def __init__(self):
@@ -164,7 +122,6 @@ def local_grab(pipe,src_id,g_pool):
 
     while not quit.value:
         try:
-            # cap.read() #uncomment to read at .5 fps
             pipe.send(cap.read())
         except:
             pass
@@ -182,38 +139,19 @@ def bin_thresholding(image, image_lower=0, image_upper=256):
 	binary_img = cv2.inRange(image, np.asarray(image_lower),
 				np.asarray(image_upper))
 
-	# kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5,5))
-	# cv2.dilate(binary_img, kernel, binary_img, iterations=1)
 	return binary_img
 
-def adaptive_threshold(image, image_lower=0.0, image_upper=255.0):
-	"""extract_darkspot:
-			head manager function to filter eye image by
-			- erasing specular reflections
-			- fitting ellipse to filtered image
-		Out: filtered image and center of ellipse
-	"""
-	image_lower = int(image_lower)*4
-	image_lower +=1
-	image_lower = max(image_lower,3)
-	binary_img = cv2.adaptiveThreshold(image, maxValue= 255,
-											adaptiveMethod= cv2.ADAPTIVE_THRESH_MEAN_C,
-											thresholdType= cv2.THRESH_BINARY_INV,
-											blockSize=image_lower,
-											C=image_upper-50)
 
-	# kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))
-	# cv2.erode(binary_img, kernel, binary_img, iterations=1)
-
-	kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (7,7))
-	cv2.erode(binary_img, kernel, binary_img, iterations=1)
-
-
-
-
-	# cv2.dilate(binary_img, kernel, binary_img, iterations=1)
-	#binary_img = 255-binary_img
-	return binary_img
+def make_eye_kernel(inner_size,outer_size):
+	offset = (outer_size - inner_size)/2
+	inner_count = inner_size**2
+	outer_count = outer_size**2-inner_count
+	val_inner = -1.0 / inner_count
+	val_outer = -val_inner*inner_count/outer_count
+	inner = np.ones((inner_size,inner_size),np.float32)*val_inner
+	kernel = np.ones((outer_size,outer_size),np.float32)*val_outer
+	kernel[offset:offset+inner_size,offset:offset+inner_size]= inner
+	return kernel
 
 def dif_gaus(image, lower, upper):
         lower, upper = int(lower-1), int(upper-1)
@@ -221,22 +159,16 @@ def dif_gaus(image, lower, upper):
         upper = cv2.GaussianBlur(image,ksize=(upper,upper),sigmaX=0)
         # upper +=50
         # lower +=50
-
         dif = lower-upper
         # dif *= .1
         # dif = cv2.medianBlur(dif,3)
         # dif = 255-dif
-        dif = cv2.inRange(dif, np.asarray(200),
-				np.asarray(256))
-
+        dif = cv2.inRange(dif, np.asarray(200),np.asarray(256))
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
         dif = cv2.dilate(dif, kernel, iterations=2)
         dif = cv2.erode(dif, kernel, iterations=1)
         # dif = cv2.max(image,dif)
-
         # dif = cv2.dilate(dif, kernel, iterations=1)
-
-
         return dif
 
 def equalize(image, image_lower=0.0, image_upper=255.0):

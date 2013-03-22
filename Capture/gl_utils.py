@@ -105,6 +105,5 @@ def draw_gl_texture(image):
     glTexCoord2f(0.0, 1.0)
     glVertex2f(0.0, height)
     glEnd()
-    # glFlush()
     glDisable(GL_TEXTURE_2D)
 
