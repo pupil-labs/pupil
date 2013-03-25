@@ -159,9 +159,9 @@ def world(src, size, g_pool):
             bar.camera_ctl[control["name"]]=c_int(control["value"])
             bar.camera_state[control["name"]]=c_int(control["value"])
             bar.add_var("Camera/"+control["name"],bar.camera_ctl[control["name"]],max=control["max"],min=control["min"],step=control["step"])
-        elif control["type"]=="(menue)":
+        elif control["type"]=="(menu)":
             bar.camera_ctl[control["name"]]=c_int(control["value"])
-            bar.camera_[control["name"]]=c_int(control["value"])
+            bar.camera_state[control["name"]]=c_int(control["value"])
             bar.add_var("Camera/"+control["name"],bar.camera_ctl[control["name"]],max=control["max"],min=control["min"],step=1)
         else:
             pass
