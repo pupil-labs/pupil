@@ -20,8 +20,8 @@ from ctypes import c_bool, c_int
 
 def main():
 	#assign the right id to the cameras
-	eye_src = 1
-	world_src = 0
+	eye_src = 0
+	world_src = 1
 
 	#video size
 	eye_size = (640,360)
@@ -81,7 +81,7 @@ def main():
 
 
 	if use_video:
-		eye_src = "/Users/mkassner/MIT/pupil_google_code/wiki/videos/green_eye_ir_03.mov" # using a path to a videofiles allows for developement without a headset.
+		eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # using a path to a videofiles allows for developement without a headset.
 		world_src = 0
 
 	# create shared globals

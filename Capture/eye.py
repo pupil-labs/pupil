@@ -261,6 +261,28 @@ def eye(src,size,g_pool):
             help="Scene controls", color=(50,50,50), alpha=50,
             text='light', refresh=.2, position=(10, 10), size=(200, 300)) )
 
+    #add 4vl2 camera controls to ATB bar
+    import v4l2_ctl
+    controls = v4l2_ctl.extract_controls(src)
+    bar.camera_ctl = dict()
+    bar.camera_state = dict()
+    for control in controls:
+        if control["type"]=="(bool)":
+            bar.camera_ctl[control["name"]]=c_bool(control["value"])
+            bar.camera_state[control["name"]]=c_bool(control["value"])
+            bar.add_var("Camera/"+control["name"],bar.camera_ctl[control["name"]])
+        elif control["type"]=="(int)":
+            bar.camera_ctl[control["name"]]=c_int(control["value"])
+            bar.camera_state[control["name"]]=c_int(control["value"])
+            bar.add_var("Camera/"+control["name"],bar.camera_ctl[control["name"]],max=control["max"],min=control["min"],step=control["step"])
+        elif control["type"]=="(menue)":
+            bar.camera_ctl[control["name"]]=c_int(control["value"])
+            bar.camera_[control["name"]]=c_int(control["value"])
+            bar.add_var("Camera/"+control["name"],bar.camera_ctl[control["name"]],max=control["max"],min=control["min"],step=1)
+        else:
+            pass
+
+
     # Initialize glfw
     glfwInit()
     glfwOpenWindow(width, height, 0, 0, 0, 8, 0, 0, GLFW_WINDOW)
@@ -294,6 +316,13 @@ def eye(src,size,g_pool):
         s,img = cap.read_RGB()
         sleep(bar.sleep.value) # for debugging only
 
+        #update camera control if needed
+        for k in bar.camera_ctl.viewkeys():
+            if bar.camera_state[k].value != bar.camera_ctl[k].value:
+                print k, ":", bar.camera_ctl[k].value
+                v4l2_ctl.set(src,k,bar.camera_ctl[k].value)
+                bar.camera_state[k].value= bar.camera_ctl[k].value
+
         ###IMAGE PROCESSING
         gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
 
@@ -307,7 +336,7 @@ def eye(src,size,g_pool):
         for s in (region_r-1,region_r,region_r+1):
             #simple best of three optimization
             kernel = make_eye_kernel(s,int(3*s))
-            g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REPLICATE)        # ddepth = -1, means destination image has depth same as input image.
+            g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REPLICATE)
             m = np.amax(g_img)
             # print s,m
             x,y = np.where(g_img == m)
@@ -502,5 +531,4 @@ def eye(src,size,g_pool):
     bar.save()
     glfwCloseWindow()
     glfwTerminate()
-
 
