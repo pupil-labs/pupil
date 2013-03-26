@@ -11,16 +11,21 @@ get_control = "-C"
 list_control = "-l"
 
 def set(device_number,control,value):
+    """
+    set a value
+    open loop
+    no error checking
+    """
     device = "-d"+str(device_number)
     sp.Popen([v4l2_ctl,device,set_control+control+"="+str(value)])
 
 def get(device_number,control):
+    """
+    under construction: no errorchecking or conversion
+    """
     device = "-d"+str(device_number)
-    stdout = sp.check_output([v4l2_ctl,device,get_control+control], stdout=sp.PIPE)
-    print stdout
-    int(stdout.split(":")[-1])
+    stdout = sp.check_output([v4l2_ctl,device,get_control+control])
     return stdout
-
 
 def extract_controls(device_number):
     """
