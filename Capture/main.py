@@ -20,8 +20,8 @@ from ctypes import c_bool, c_int
 
 def main():
 	#assign the right id to the cameras
-	eye_src = 0
-	world_src = 1
+	eye_src = 1
+	world_src = 0
 
 	#video size
 	eye_size = (640,360)

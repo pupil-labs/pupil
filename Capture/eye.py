@@ -1,4 +1,4 @@
-from ctypes import c_int,c_bool,c_float
+from ctypes import c_int,c_int64,c_bool,c_float
 import cPickle as pickle
 import numpy as np
 import atb
@@ -331,9 +331,9 @@ def eye(src,size,g_pool):
         ###2D filter response as first estimation of pupil position for automated ROI creation
         downscale = 8
         best_m = 0
-        region_r = min(max(9,l_pool.region_r),61)
+        region_r = min(max(8,l_pool.region_r),61)
         lable = 0
-        for s in (region_r-1,region_r,region_r+1):
+        for s in (region_r+v for v in xrange(-7,7)):
             #simple best of three optimization
             kernel = make_eye_kernel(s,int(3*s))
             g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REPLICATE)
