@@ -672,7 +672,7 @@ class Bar(object):
         groups = name.split('/')
         name = groups[-1]
         _typemap = {ctypes.c_bool:      TW_TYPE_BOOL8,
-                    ctypes.c_int:       TW_TYPE_INT16,
+                    ctypes.c_int:       TW_TYPE_INT32,
                     ctypes.c_long:      TW_TYPE_INT32,
                     ctypes.c_float:     TW_TYPE_FLOAT,
                     ctypes.c_float * 3: TW_TYPE_COLOR3F,
@@ -688,7 +688,7 @@ class Bar(object):
             if t  == bool:
                 vtype = TW_TYPE_BOOL8
             elif t == int:
-                vtype = TW_TYPE_INT16
+                vtype = TW_TYPE_INT32
             elif t == long:
                 vtype = TW_TYPE_INT32
             elif t == float:
