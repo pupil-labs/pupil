@@ -164,6 +164,7 @@ class Roi(object):
             else:
                 print "Warning: Image Array size changed, disregarding saved Region of Interest"
 
+
 def eye_profiled(src,size,g_pool):
     import cProfile
     from eye import eye
@@ -447,7 +448,7 @@ def eye(src,size,g_pool):
         else:
             pupil.ellipse = None
             g_pool.gaze_x.value, g_pool.gaze_y.value = 0.,0.
-            pupil.gaze_coords = None, None #whithout this line the last know pupil position is recorded if none is found
+            pupil.gaze_coords = None #whithout this line the last know pupil position is recorded if none is found
 
             bar.pupil_size_tolerance.value +=1
 
@@ -488,7 +489,8 @@ def eye(src,size,g_pool):
 
         # While recording...
         if l_pool.record_running:
-            l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], bar.dt, g_pool.frame_count_record.value])
+            if pupil.gaze_coords is not None:
+                l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], bar.dt, g_pool.frame_count_record.value])
             if l_pool.writer is not None:
                 l_pool.writer.write(cv2.cvtColor(img,cv2.cv.COLOR_BGR2RGB))
 

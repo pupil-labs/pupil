@@ -263,20 +263,6 @@ def GetAnglesPolyline(polyline):
     # return alpha #radians
 
 
-
-
-# def split_at_angle(contour, curvature, angle):
-# 	segments = [[]]
-# 	contour = list(contour)
-# 	while len(contour)>0:
-# 		segments[-1].append(list(contour.pop(0)))
-# 		if len(curvature)>0:
-# 			if curvature.pop(0)<angle:
-# 				segments[-1] = np.array(segments[-1])
-# 				segments.append([])
-# 	segments[-1] = np.array(segments[-1])
-# 	return segments
-
 def split_at_angle(contour, curvature, angle):
 	"""
 	contour is array([[[108, 290]],[[111, 290]]], dtype=int32) shape=(number of points,1,dimension(2) )
@@ -330,7 +316,6 @@ def convexity_defect(contour, curvature):
 	for s in kink_index: # list of slice indecies 0,i0,i1,i2,None
 		kinks.append(contour[s+1]) # because the curvature is n-2 (1st and last are not exsistent)
 	return kinks
-
 
 def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=50,ratio=.6,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
