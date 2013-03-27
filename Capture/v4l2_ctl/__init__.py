@@ -40,9 +40,9 @@ def extract_controls(device_number):
     return a list with a dict for every control
     fields: name, type (menue, int, bool), all other keywords and values are extracted form the response
     """
-
+    device = "-d"+str(device_number)
     try:
-        ret = sp.check_output(["v4l2-ctl","-d0","-l"])
+        ret = sp.check_output(["v4l2-ctl",device,"-l"])
     except:
         print "v4l2-ctl not found. No uvc control panel will be added"
         return []
