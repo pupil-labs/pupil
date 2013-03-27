@@ -3,7 +3,8 @@ import OpenGL.GL as gl
 from glfw import *
 import numpy as np
 import cv2
-from methods import capture,Temp
+from methods import Temp
+from capture import capture
 from time import sleep
 from glob import glob
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen

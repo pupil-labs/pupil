@@ -6,8 +6,8 @@ from glfw import *
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 from time import time, sleep
 from methods import *
+from capture import capture
 from calibrate import *
-from methods import Temp,capture,make_eye_kernel
 from os import path
 
 class Bar(atb.Bar):

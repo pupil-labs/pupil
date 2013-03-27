@@ -6,8 +6,8 @@ from glob import glob
 import cv2
 from glfw import *
 import atb
-from methods import normalize, denormalize, chessboard, circle_grid, gen_pattern_grid, calibrate_camera
-from methods import Temp,capture
+from methods import normalize, denormalize, chessboard, circle_grid, gen_pattern_grid, calibrate_camera,Temp
+from capture import capture
 # from gl_shapes import Point
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm
 from time import time
