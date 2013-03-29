@@ -14,13 +14,15 @@ import scipy.cluster.vq as vq
 """
 ransac is performed on points_infile
 if successful the inliers are written to points_outfile
-and a backup copy of points_infile is saved as points_backup_file (in case points_infile==points_outfile)
+and a backup copy of points_infile is saved as points_backup_file (if points_infile==points_outfile)
 the computed coefficients are written to coeff_outfile
 """
 #points_infile='cal_pt_cloud_529.npy'
 #points_infile='cal_pt_cloud_good.npy'
 points_infile='cal_pt_cloud.npy'
+#points_infile='cal_pt_cloud_test.npy'
 points_outfile='cal_pt_cloud.npy'
+#points_outfile='cal_pt_cloud_ransac_inliers.npy'
 points_backup_file='cal_pt_cloud~.npy'
 coeff_outfile='calibration_ransac.npy'
 nine_point_calibration=True #if points_infile was generated via 9-point calibration method model candidate points are chosen one from each point cluster
@@ -37,7 +39,7 @@ d - the number of close data values required to assert that a model fits well to
 
 n=7 #there is also an experimental 9 coefficient model
 k=1000
-t=6 #inlier threshold in pixels
+t=10 #inlier threshold in pixels
 d=0.9 #minimum number of points required to be inliers (as a ratio of total points)
 
 ########################################################################################################
@@ -93,6 +95,9 @@ if nine_point_calibration:
 	clusters=np.empty(9,dtype='object')
 	for j in range(0,9):
 		clusters[j]=M[code==j]
+		if len(clusters[j])==0:
+			print "kmeans failed to find nine clusters"
+			nine_point_calibration=False
 
 
 #init
@@ -235,5 +240,6 @@ if best_error < sys.float_info.max:
 
 else:
 	print "failed to find a candidate model after %d iterations." %(i)
+	print "try another calibration, increasing t, decreasing d or increasing k"
 
 		
