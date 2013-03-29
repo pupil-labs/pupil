@@ -21,7 +21,6 @@ def bin_thresholding(image, image_lower=0, image_upper=256):
 
 	return binary_img
 
-
 def make_eye_kernel(inner_size,outer_size):
 	offset = (outer_size - inner_size)/2
 	inner_count = inner_size**2

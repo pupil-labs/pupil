@@ -1,4 +1,5 @@
-from ctypes import c_int,c_bool,c_float
+
+from ctypes import c_int,c_bool,c_float,pointer
 import cPickle as pickle
 import numpy as np
 import atb
@@ -44,10 +45,13 @@ class Bar(atb.Bar):
                             'canny_ratio':self.canny_ratio}
 
         self.load()
-
+        dispay_mode_enum = atb.enum("Mode",{"Camera Image":0,
+                                            "Region of Interest":1,
+                                            "Egdes":2,
+                                            "Corse Pupil Region":3})
         self.add_var("Display/FPS",self.fps, step=1.,readonly=True)
         self.add_var("Display/SlowDown",self.sleep, step=0.01,min=0.0)
-        self.add_var("Display/Mode", self.display, step=1,max=3, min=0, help="select the view-mode")
+        self.add_var("Display/Mode", self.display,vtype=dispay_mode_enum, help="select the view-mode")
         self.add_var("Display/Show_Pupil_Point", self.draw_pupil)
         self.add_button("Draw_ROI", self.roi, help="drag on screen to select a region of interest", Group="Display")
         self.add_var("Darkspot/Threshold", self.bin_thresh, step=1, max=256, min=0)
@@ -203,7 +207,7 @@ def eye(src,size,g_pool):
 
     def on_pos(x, y):
         if atb.TwMouseMotion(x,y):
-            bar.update()
+            pass
         if bar.draw_roi.value == 1:
             pos = glfwGetMousePos()
             pos = normalize(pos,glfwGetWindowSize())
@@ -259,29 +263,40 @@ def eye(src,size,g_pool):
 
     atb.init()
     bar = Bar("Eye",g_pool, dict(label="Controls",
-            help="Scene controls", color=(50,50,50), alpha=50,
-            text='light', refresh=.2, position=(10, 10), size=(200, 300)) )
+            help="eye detection controls", color=(50,50,50), alpha=50,
+            text='light',position=(10, 10),refresh=.1, size=(200, 300)) )
 
-    #add 4vl2 camera controls to ATB bar
+
+
     import v4l2_ctl
     controls = v4l2_ctl.extract_controls(src)
-    bar.camera_ctl = dict()
-    bar.camera_state = dict()
-    for control in controls:
-        if control["type"]=="(bool)":
-            bar.camera_ctl[control["name"]]=c_bool(control["value"])
-            bar.camera_state[control["name"]]=c_bool(control["value"])
-            bar.add_var("Camera/"+control["name"],bar.camera_ctl[control["name"]])
-        elif control["type"]=="(int)":
-            bar.camera_ctl[control["name"]]=c_int(control["value"])
-            bar.camera_state[control["name"]]=c_int(control["value"])
-            bar.add_var("Camera/"+control["name"],bar.camera_ctl[control["name"]],max=control["max"],min=control["min"],step=control["step"])
-        elif control["type"]=="(menu)":
-            bar.camera_ctl[control["name"]]=c_int(control["value"])
-            bar.camera_state[control["name"]]=c_int(control["value"])
-            bar.add_var("Camera/"+control["name"],bar.camera_ctl[control["name"]],max=control["max"],min=control["min"],step=1)
-        else:
-            pass
+    if controls is not None:
+        #add 4vl2 camera controls to a seperate ATB bar
+        c_bar = atb.Bar(name="Camera_Controls", label="Camera",
+            help="UVC Camera Controls", color=(50,50,50), alpha=50,
+            text='light',position=(220, 10), size=(200, 300))
+        c_bar.camera_ctl = dict()
+        c_bar.camera_state = dict()
+        for control in controls:
+            if control["type"]=="(bool)":
+                c_bar.camera_ctl[control["name"]]=c_bool(control["value"])
+                c_bar.camera_state[control["name"]]=c_bool(control["value"])
+                c_bar.add_var("Camera/"+control["name"],c_bar.camera_ctl[control["name"]])
+            elif control["type"]=="(int)":
+                c_bar.camera_ctl[control["name"]]=c_int(control["value"])
+                c_bar.camera_state[control["name"]]=c_int(control["value"])
+                c_bar.add_var("Camera/"+control["name"],c_bar.camera_ctl[control["name"]],max=control["max"],min=control["min"],step=control["step"])
+            elif control["type"]=="(menu)":
+                c_bar.camera_ctl[control["name"]]=c_int(control["value"])
+                c_bar.camera_state[control["name"]]=c_int(control["value"])
+                vtype= atb.enum(control["name"],control["menu"])
+                c_bar.add_var("Camera/"+control["name"],c_bar.camera_ctl[control["name"]],vtype=vtype)
+            else:
+                pass
+    else:
+        c_bar = None
+
+
 
 
     # Initialize glfw
@@ -310,7 +325,6 @@ def eye(src,size,g_pool):
     gl.glEnable(gl.GL_BLEND)
     del gl
 
-
     #event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
         bar.update_fps()
@@ -318,11 +332,12 @@ def eye(src,size,g_pool):
         sleep(bar.sleep.value) # for debugging only
 
         #update camera control if needed
-        for k in bar.camera_ctl.viewkeys():
-            if bar.camera_state[k].value != bar.camera_ctl[k].value:
-                print k, ":", bar.camera_ctl[k].value
-                v4l2_ctl.set(src,k,bar.camera_ctl[k].value)
-                bar.camera_state[k].value= bar.camera_ctl[k].value
+        if c_bar:
+            for k in c_bar.camera_ctl.viewkeys():
+                if c_bar.camera_state[k].value != c_bar.camera_ctl[k].value:
+                    print k, ":", c_bar.camera_ctl[k].value
+                    v4l2_ctl.set(src,k,c_bar.camera_ctl[k].value)
+                    c_bar.camera_state[k].value= c_bar.camera_ctl[k].value
 
         ###IMAGE PROCESSING
         gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
@@ -351,7 +366,6 @@ def eye(src,size,g_pool):
                 l_pool.region_r = s
                 vals = [max(0,v) for v in (x-outer_r,y-outer_r,x+outer_r,y+outer_r)]
                 p_r.set(vals)
-
 
         # create view into the gray_img with the bounds of the rough pupil estimation
         pupil_img = gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX]
@@ -522,8 +536,7 @@ def eye(src,size,g_pool):
             draw_gl_polyline(pts,(1.,0,0,.5))
             draw_gl_point_norm(pupil.norm_coords,(1.,0.,0.,0.5))
 
-        bar.update()
-        bar.draw()
+        atb.draw()
         glfwSwapBuffers()
 
 
@@ -531,6 +544,7 @@ def eye(src,size,g_pool):
     print "EYE Process closed"
     r.save()
     bar.save()
+    atb.terminate()
     glfwCloseWindow()
     glfwTerminate()
 

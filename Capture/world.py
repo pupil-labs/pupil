@@ -93,8 +93,7 @@ def world(src, size, g_pool):
 
     def on_pos(x, y):
         if atb.TwMouseMotion(x,y):
-            bar.update()
-
+            pass
 
     def on_scroll(pos):
         if not atb.TwMouseWheel(pos):
@@ -144,28 +143,37 @@ def world(src, size, g_pool):
     atb.init()
     bar = Bar("World", g_pool, dict(label="Controls",
             help="Scene controls", color=(50, 50, 50), alpha=50,
-            text='light', refresh=.2, position=(10, 10), size=(200, 200)))
+            text='light', position=(10, 10),refresh=.1, size=(200, 200)))
 
-    #add 4vl2 camera controls to ATB bar
     import v4l2_ctl
     controls = v4l2_ctl.extract_controls(src)
-    bar.camera_ctl = dict()
-    bar.camera_state = dict()
-    for control in controls:
-        if control["type"]=="(bool)":
-            bar.camera_ctl[control["name"]]=c_bool(control["value"])
-            bar.camera_state[control["name"]]=c_bool(control["value"])
-            bar.add_var("Camera/"+control["name"],bar.camera_ctl[control["name"]])
-        elif control["type"]=="(int)":
-            bar.camera_ctl[control["name"]]=c_int(control["value"])
-            bar.camera_state[control["name"]]=c_int(control["value"])
-            bar.add_var("Camera/"+control["name"],bar.camera_ctl[control["name"]],max=control["max"],min=control["min"],step=control["step"])
-        elif control["type"]=="(menu)":
-            bar.camera_ctl[control["name"]]=c_int(control["value"])
-            bar.camera_state[control["name"]]=c_int(control["value"])
-            bar.add_var("Camera/"+control["name"],bar.camera_ctl[control["name"]],max=control["max"],min=control["min"],step=1)
-        else:
-            pass
+    if controls is not None:
+        #add 4vl2 camera controls to a seperate ATB bar
+        c_bar = atb.Bar(name="Camera_Controls", label="Camera",
+            help="UVC Camera Controls", color=(50,50,50), alpha=50,
+            text='light',position=(220, 10), size=(200, 300))
+        c_bar.camera_ctl = dict()
+        c_bar.camera_state = dict()
+        for control in controls:
+            if control["type"]=="(bool)":
+                c_bar.camera_ctl[control["name"]]=c_bool(control["value"])
+                c_bar.camera_state[control["name"]]=c_bool(control["value"])
+                c_bar.add_var("Camera/"+control["name"],c_bar.camera_ctl[control["name"]])
+            elif control["type"]=="(int)":
+                c_bar.camera_ctl[control["name"]]=c_int(control["value"])
+                c_bar.camera_state[control["name"]]=c_int(control["value"])
+                c_bar.add_var("Camera/"+control["name"],c_bar.camera_ctl[control["name"]],max=control["max"],min=control["min"],step=control["step"])
+            elif control["type"]=="(menu)":
+                c_bar.camera_ctl[control["name"]]=c_int(control["value"])
+                c_bar.camera_state[control["name"]]=c_int(control["value"])
+                vtype= atb.enum(control["name"],control["menu"])
+                c_bar.add_var("Camera/"+control["name"],c_bar.camera_ctl[control["name"]],vtype=vtype)
+            else:
+                pass
+    else:
+        c_bar = None
+
+
 
     # Initialize glfw
     glfwInit()
@@ -197,13 +205,13 @@ def world(src, size, g_pool):
         # get an image from the grabber
         s, img = cap.read()
 
-        #update camera control if needed
-        for k in bar.camera_ctl.viewkeys():
-            if bar.camera_state[k].value != bar.camera_ctl[k].value:
-                #print src,k,bar.camera_ctl[k].value
-                v4l2_ctl.set(src,k,bar.camera_ctl[k].value)
-                bar.camera_state[k].value= bar.camera_ctl[k].value
-
+       #update camera control if needed
+        if c_bar:
+            for k in c_bar.camera_ctl.viewkeys():
+                if c_bar.camera_state[k].value != c_bar.camera_ctl[k].value:
+                    print k, ":", c_bar.camera_ctl[k].value
+                    v4l2_ctl.set(src,k,c_bar.camera_ctl[k].value)
+                    c_bar.camera_state[k].value= c_bar.camera_ctl[k].value
 
         # Nine Point calibration state machine timing
         if bar.calibrate_nine.value:
@@ -367,8 +375,7 @@ def world(src, size, g_pool):
         if g_pool.gaze_x.value or g_pool.gaze_y.value:
             draw_gl_point_norm((g_pool.gaze_x.value, g_pool.gaze_y.value),(1.,0.,0.,0.5))
 
-        bar.update()
-        bar.draw()
+        atb.draw()
         glfwSwapBuffers()
 
     #end while running

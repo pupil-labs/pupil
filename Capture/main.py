@@ -16,8 +16,6 @@ from methods import Temp
 
 from ctypes import c_bool, c_int
 
-
-
 def main():
     #assign the right id to the cameras
     eye_src = 0
@@ -26,53 +24,26 @@ def main():
     #video size
     eye_size = (640,360)
     """
-        HD-6000 v4l2-ctl -d /dev/video0 --list-formats-ext
-        Size: Discrete 640x480
-        Size: Discrete 1280x720
-        Size: Discrete 960x544
-        Size: Discrete 800x448
-        Size: Discrete 640x360
-        Size: Discrete 800x600
-        Size: Discrete 416x240
-        Size: Discrete 352x288
-        Size: Discrete 176x144
-        Size: Discrete 320x240
-        Size: Discrete 160x120
+        HD-6000
+        v4l2-ctl -d /dev/video0 --list-formats-ext
+        640x480 1280x720 960x544 800x448 640x360 800x600
+        416x240 352x288 176x144 320x240 160x120
     """
     world_size = (1280,720)
     """
-        c-525 v4l2-ctl -d /dev/video0 --list-formats-ext
-        Size: Discrete 640x480
-        Size: Discrete 160x120
-        Size: Discrete 176x144
-        Size: Discrete 320x176
-        Size: Discrete 320x240
-        Size: Discrete 432x240
-        Size: Discrete 352x288
-        Size: Discrete 544x288
-        Size: Discrete 640x360
-        Size: Discrete 752x416
-        Size: Discrete 800x448
-        Size: Discrete 864x480
-        Size: Discrete 960x544
-        Size: Discrete 1024x576
-        Size: Discrete 800x600
-        Size: Discrete 1184x656
-        Size: Discrete 960x720
-        Size: Discrete 1280x720
-        Size: Discrete 1392x768
-        Size: Discrete 1504x832
-        Size: Discrete 1600x896
-        Size: Discrete 1280x960
-        Size: Discrete 1712x960
-        Size: Discrete 1792x1008
-        Size: Discrete 1920x1080
+        c-525
+        v4l2-ctl -d /dev/video0 --list-formats-ext
+        640x480 160x120 176x144 320x176 320x240 432x240
+        352x288 544x288 640x360 752x416 800x448 864x480
+        960x544 1024x576 800x600 1184x656 960x720
+        1280x720 1392x768 1504x832 1600x896 1280x960
+        1712x960 1792x1008 1920x1080
     """
 
     player_size = (800,600)
 
     #use video for debugging
-    use_video = 0
+    use_video = 1
 
     audio = False
 

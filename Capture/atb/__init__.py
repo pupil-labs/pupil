@@ -52,6 +52,12 @@ def _dict_to_defs(args):
     return " ".join(r)
 
 
+def draw():
+    check_error(TwDraw())
+
+def terminate():
+    check_error(TwTerminate())
+
 class Bar(object):
     '''
     Bar is an internal structure used to store tweak bar attributes and
@@ -575,14 +581,6 @@ class Bar(object):
     :type: int
     ''')
 
-
-    def __del__(self):
-        check_error(TwDeleteAllBars(self._bar))
-        check_error(TwTerminate())
-
-    def draw(self):
-        check_error(TwDraw())
-
     def clear(self):
         check_error(TwRemoveAllVars(self._bar))
 
@@ -688,7 +686,7 @@ class Bar(object):
             if t  == bool:
                 vtype = TW_TYPE_BOOL8
             elif t == int:
-                vtype = TW_TYPE_INT32
+                vtype = TW_TYPE_INT16
             elif t == long:
                 vtype = TW_TYPE_INT32
             elif t == float:
