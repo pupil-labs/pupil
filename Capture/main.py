@@ -41,7 +41,7 @@ def main():
 
 
     #video size
-    eye_size = (640,360)
+    eye_size = (416,240)
     """
         HD-6000
         v4l2-ctl -d /dev/video0 --list-formats-ext
