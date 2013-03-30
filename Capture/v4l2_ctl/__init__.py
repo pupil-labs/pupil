@@ -22,15 +22,46 @@ def set(device_number,control,value):
     device = "-d"+str(device_number)
     sp.Popen([v4l2_ctl,device,set_control+control+"="+str(value)])
 
-
-
 def get(device_number,control):
     """
+    get a value
     """
     device = "-d"+str(device_number)
     print "getting control:", device_number,control,value
     ret = sp.check_output(["v4l2-ctl",device,get_control+control])
     return int(ret.split(":")[-1])
+
+def get_from_device(data):
+    """
+    get a value
+    """
+    #print "getter",data
+    device = "-d"+data["device"]
+    control = data["name"]
+    ret = sp.check_output(["v4l2-ctl",device,get_control+control])
+    return int(ret.split(":")[-1])
+
+def getter(data):
+    """
+    this is a fake getter, it just pulls data from the dict that contains the last changed value on the host
+    no data is actually read from the device (because that is to slow)
+    use get_from_device() instead
+    """
+    return int(data["value"])
+
+def setter(val,data):
+    """
+    set a value
+    open loop
+    no error checking
+    """
+    #print "setter", data,val
+    value = int(val) # turn bools into ints
+    device = "-d"+data["device"]
+    control=data["name"]
+    data["value"]=val
+    sp.Popen([v4l2_ctl,device,set_control+control+"="+str(value)])
+
 
 def extract_controls(device_number):
     """
@@ -89,3 +120,22 @@ def extract_controls(device_number):
             line = lines.pop(0) #take next line
         controls.append(control)
     return controls
+
+
+def list_devices():
+    """
+    output:
+    HD Webcam C525 (usb-0000:02:03.0-1):
+    /dev/video0
+
+    Microsoft LifeCam HD-6000 for (usb-0000:02:03.0-2):
+    /dev/video1
+
+    """
+    try:
+        ret = sp.check_output(["v4l2-ctl","--list-devices"])
+    except:
+        return []
+    print ret
+    lines = ret.split("\n")
+

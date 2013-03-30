@@ -274,28 +274,26 @@ def eye(src,size,g_pool):
         #add 4vl2 camera controls to a seperate ATB bar
         c_bar = atb.Bar(name="Camera_Controls", label="Camera",
             help="UVC Camera Controls", color=(50,50,50), alpha=50,
-            text='light',position=(220, 10), size=(200, 300))
-        c_bar.camera_ctl = dict()
-        c_bar.camera_state = dict()
+            text='light',position=(220, 10),refresh=5., size=(200, 300))
+        c_bar.controls = dict()
         for control in controls:
+            c_bar.controls[control["name"]] = control #we save the control in the bar as an internal strcture to save state and prevent the data passed to atb via pointer to get destroyed
+            c_bar.controls[control["name"]]["device"]=str(src)
             if control["type"]=="(bool)":
-                c_bar.camera_ctl[control["name"]]=c_bool(control["value"])
-                c_bar.camera_state[control["name"]]=c_bool(control["value"])
-                c_bar.add_var("Camera/"+control["name"],c_bar.camera_ctl[control["name"]])
+                c_bar.add_var(control["name"],vtype=atb.TW_TYPE_BOOL8,getter=v4l2_ctl.getter,setter=v4l2_ctl.setter,data=c_bar.controls[control["name"]])
             elif control["type"]=="(int)":
-                c_bar.camera_ctl[control["name"]]=c_int(control["value"])
-                c_bar.camera_state[control["name"]]=c_int(control["value"])
-                c_bar.add_var("Camera/"+control["name"],c_bar.camera_ctl[control["name"]],max=control["max"],min=control["min"],step=control["step"])
+                c_bar.add_var(control["name"],vtype=atb.TW_TYPE_INT32,getter=v4l2_ctl.getter,setter=v4l2_ctl.setter,data=c_bar.controls[control["name"]])
+                c_bar.define(definition='min='+str(control["min"]), varname=control["name"])
+                c_bar.define(definition='max='+str(control["max"]), varname=control["name"])
+                c_bar.define(definition='step='+str(control["step"]), varname=control["name"])
             elif control["type"]=="(menu)":
-                c_bar.camera_ctl[control["name"]]=c_int(control["value"])
-                c_bar.camera_state[control["name"]]=c_int(control["value"])
                 vtype= atb.enum(control["name"],control["menu"])
-                c_bar.add_var("Camera/"+control["name"],c_bar.camera_ctl[control["name"]],vtype=vtype)
+                c_bar.add_var(control["name"],vtype=vtype,getter=v4l2_ctl.getter,setter=v4l2_ctl.setter,data=c_bar.controls[control["name"]])
             else:
                 pass
+        del controls
     else:
         c_bar = None
-
 
 
 
@@ -330,14 +328,6 @@ def eye(src,size,g_pool):
         bar.update_fps()
         s,img = cap.read_RGB()
         sleep(bar.sleep.value) # for debugging only
-
-        #update camera control if needed
-        if c_bar:
-            for k in c_bar.camera_ctl.viewkeys():
-                if c_bar.camera_state[k].value != c_bar.camera_ctl[k].value:
-                    print k, ":", c_bar.camera_ctl[k].value
-                    v4l2_ctl.set(src,k,c_bar.camera_ctl[k].value)
-                    c_bar.camera_state[k].value= c_bar.camera_ctl[k].value
 
         ###IMAGE PROCESSING
         gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
