@@ -39,7 +39,6 @@ def main():
             print "Error: Auto_assing_cameras could not detect world camera, please check if you have the camera attached"
             return
 
-
     #video size
     eye_size = (416,240)
     """
