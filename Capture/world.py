@@ -154,7 +154,7 @@ def world(src, size, g_pool):
             text='light',position=(220, 10),refresh=10., size=(200, 300))
         c_bar.controls = dict()
         for control in controls:
-            c_bar.controls[control["name"]] = control #we save the control in the bar as an internal strcture to save state and prevent the data passed to atb via pointer to get destroyed
+            c_bar.controls[control["name"]] = control #we save the control in the bar as an internal strcture to save state and prevent the data passed to atb via pointers to get destroyed
             c_bar.controls[control["name"]]["device"]=str(src)
             if control["type"]=="(bool)":
                 c_bar.add_var(control["name"],vtype=atb.TW_TYPE_BOOL8,getter=v4l2_ctl.getter,setter=v4l2_ctl.setter,data=c_bar.controls[control["name"]])
@@ -223,7 +223,6 @@ def world(src, size, g_pool):
             g_pool.cal9_circle_id.value = pattern.map[bar.calibrate_nine_stage.value]
             bar.calibrate_nine_step.value += 1
         g_pool.player_refresh.set()
-
 
 
         #pattern detection and its various uses

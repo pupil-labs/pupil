@@ -17,9 +17,28 @@ from methods import Temp
 from ctypes import c_bool, c_int
 
 def main():
-    #assign the right id to the cameras
-    eye_src = 0
-    world_src = 1
+    auto_assing_cameras = False
+    if not auto_assing_cameras:
+        #manually assign the right id to the cameras
+        eye_src = 0
+        world_src = 1
+    else:
+        eye_src = None
+        world_src = None
+        from v4l2_ctl import list_devices
+        for d in list_devices():
+            print "found Camera: "+d["name"]
+            if "6000" in d["name"]:
+                eye_src = d["src_id"]
+            elif "C510" or "C525" or "C615" in d["name"]:
+                world_src = d["src_id"]
+        if eye_src is None:
+            print "Error: Auto_assing_cameras could not detect eye camera, please check if you have the camera attached"
+            return
+        if world_src is None:
+            print "Error: Auto_assing_cameras could not detect world camera, please check if you have the camera attached"
+            return
+
 
     #video size
     eye_size = (640,360)
@@ -40,16 +59,17 @@ def main():
         1712x960 1792x1008 1920x1080
     """
 
-    player_size = (800,600)
-
-    #use video for debugging
-    use_video = 1
-
-    audio = False
 
     # use the player: a seperate window for video playback and 9 point calibration animation
     use_player = 1
 
+    player_size = (800,600) #this can be whatever you like
+
+
+    #use video for debugging
+    use_video = 0
+
+    audio = False
 
     if use_video:
         eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # using a path to a videofiles allows for developement without a headset.
@@ -88,7 +108,7 @@ def main():
     if audio: p_audio.start()
 
     # on linux we need to give the camera driver some time before you request another camera
-    sleep(0.2)
+    sleep(1)
 
     # on Mac, when using some cameras (like our current worldcamera logitch c510)
     # you can't run world camera grabber in its own process

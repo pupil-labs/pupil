@@ -49,6 +49,7 @@ def getter(data):
     """
     return int(data["value"])
 
+
 def setter(val,data):
     """
     set a value
@@ -136,6 +137,23 @@ def list_devices():
         ret = sp.check_output(["v4l2-ctl","--list-devices"])
     except:
         return []
-    print ret
-    lines = ret.split("\n")
 
+    paragraphs = ret.split("\n\n")
+    devices = []
+    for p in paragraphs:
+        if p:
+            device = {}
+            dev_str,loc= p.split(":\n")
+            dev,serial = dev_str.split("(")
+            serial = serial[:-1]
+            src = int(loc[-1])
+            loc = loc.replace("\t","")
+            device["name"]=dev
+            device["serial"]=serial
+            device["location"]=loc
+            device["src_id"]=src
+            devices.append(device)
+    return devices
+
+if __name__ == '__main__':
+    print list_devices()
