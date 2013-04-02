@@ -7,9 +7,10 @@ from glfw import *
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 from time import time, sleep
 from methods import *
-from capture import capture
+from uvc_capture import Capture, atb_get,atb_set
 from calibrate import *
 from os import path
+
 
 class Bar(atb.Bar):
     """docstring for Bar"""
@@ -223,7 +224,7 @@ def eye(src,size,g_pool):
         print "EYE Process closing from window"
 
     # initialize capture, check if it works
-    cap = capture(src, size)
+    cap = Capture(src, size)
     s, img = cap.read_RGB()
     if not s:
         print "EYE: Error could not get image"
@@ -268,30 +269,35 @@ def eye(src,size,g_pool):
 
 
 
-    import v4l2_ctl
-    controls = v4l2_ctl.extract_controls(src)
-    if controls is not None:
-        #add 4vl2 camera controls to a seperate ATB bar
-        c_bar = atb.Bar(name="Camera_Controls", label="Camera",
+    #add 4vl2 camera controls to a seperate ATB bar
+    if cap.uvc_controls is not None:
+        c_bar = atb.Bar(name="Camera_Controls", label=cap.name,
             help="UVC Camera Controls", color=(50,50,50), alpha=50,
-            text='light',position=(220, 10),refresh=5., size=(200, 300))
-        c_bar.controls = dict()
-        for control in controls:
-            c_bar.controls[control["name"]] = control #we save the control in the bar as an internal strcture to save state and prevent the data passed to atb via pointer to get destroyed
-            c_bar.controls[control["name"]]["device"]=str(src)
+            text='light',position=(220, 10),refresh=1., size=(200, 200))
+
+        # c_bar.add_var("auto_refresher",vtype=atb.TW_TYPE_BOOL8,getter=cap.uvc_refresh_all,setter=None,readonly=True)
+        # c_bar.define(definition='visible=0', varname="auto_refresher")
+
+        sorted_controls = [(n,cap.uvc_controls[n]["order"]) for n in cap.uvc_controls]
+        sorted_controls.sort(key=lambda c: c[1])
+        
+        for name,order in sorted_controls:
+            control = cap.uvc_controls[name]
             if control["type"]=="(bool)":
-                c_bar.add_var(control["name"],vtype=atb.TW_TYPE_BOOL8,getter=v4l2_ctl.getter,setter=v4l2_ctl.setter,data=c_bar.controls[control["name"]])
+                c_bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=atb_get,setter=atb_set,data=control)
             elif control["type"]=="(int)":
-                c_bar.add_var(control["name"],vtype=atb.TW_TYPE_INT32,getter=v4l2_ctl.getter,setter=v4l2_ctl.setter,data=c_bar.controls[control["name"]])
-                c_bar.define(definition='min='+str(control["min"]), varname=control["name"])
-                c_bar.define(definition='max='+str(control["max"]), varname=control["name"])
-                c_bar.define(definition='step='+str(control["step"]), varname=control["name"])
+                c_bar.add_var(name,vtype=atb.TW_TYPE_INT32,getter=atb_get,setter=atb_set,data=control)
+                c_bar.define(definition='min='+str(control["min"]),   varname=name)
+                c_bar.define(definition='max='+str(control["max"]),   varname=name)
+                c_bar.define(definition='step='+str(control["step"]), varname=name)
             elif control["type"]=="(menu)":
-                vtype= atb.enum(control["name"],control["menu"])
-                c_bar.add_var(control["name"],vtype=vtype,getter=v4l2_ctl.getter,setter=v4l2_ctl.setter,data=c_bar.controls[control["name"]])
+                vtype= atb.enum(name,control["menu"])
+                c_bar.add_var(name,vtype=vtype,getter=atb_get,setter=atb_set,data=control)
             else:
                 pass
-        del controls
+        c_bar.add_button("refresh",cap.uvc_refresh_all)
+        c_bar.add_button("load defaults",cap.uvc_set_default)
+
     else:
         c_bar = None
 
@@ -437,7 +443,7 @@ def eye(src,size,g_pool):
             bar.pupil_size_tolerance.value =max(10,min(50,bar.pupil_size_tolerance.value))
 
             # clamp pupil size
-            bar.pupil_size.value = max(60,min(300,bar.pupil_size.value))
+            bar.pupil_size.value = max(30,min(300,bar.pupil_size.value))
 
             # clamp pupil ratio
             bar.pupil_ratio.value = max(.5,bar.pupil_ratio.value)

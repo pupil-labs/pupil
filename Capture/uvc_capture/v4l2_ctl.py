@@ -8,9 +8,7 @@ This is a somewhat hacky interface to v4l2-ctl through shell calls
 import subprocess as sp
 v4l2_ctl = "v4l2-ctl"
 # device = "-d"+str(device_number)
-set_control = "-c"
-get_control = "-C"
-list_control = "-L"
+
 
 def set(device_number,control,value):
     """
@@ -20,49 +18,69 @@ def set(device_number,control,value):
     """
     value = int(value) # turn bools into ints
     device = "-d"+str(device_number)
-    sp.Popen([v4l2_ctl,device,set_control+control+"="+str(value)])
+    sp.Popen([v4l2_ctl,device,"-c"+control+"="+str(value)])
 
 def get(device_number,control):
     """
-    get a value
+    get a single control value
     """
     device = "-d"+str(device_number)
     print "getting control:", device_number,control,value
-    ret = sp.check_output(["v4l2-ctl",device,get_control+control])
+    ret = sp.check_output(["v4l2-ctl",device,"-C"+control])
     return int(ret.split(":")[-1])
 
-def get_from_device(data):
+def getter_from_device(control):
     """
     get a value
     """
-    #print "getter",data
-    device = "-d"+data["device"]
-    control = data["name"]
-    ret = sp.check_output(["v4l2-ctl",device,get_control+control])
+    #print "getter",control
+    device = "-d"+ str(control["src"])
+    control_name = control["name"]
+    ret = sp.check_output(["v4l2-ctl",device,"-C"+control_name])
     return int(ret.split(":")[-1])
 
-def getter(data):
+def getter(control):
     """
     this is a fake getter, it just pulls data from the dict that contains the last changed value on the host
-    no data is actually read from the device (because that is to slow)
-    use get_from_device() instead
+    no control is actually read from the device (because that is to slow)
+    use getter_from_device() or get() instead
     """
-    return int(data["value"])
+    return int(control["value"])
 
-
-def setter(val,data):
+def setter(val,control):
     """
     set a value
     open loop
     no error checking
     """
-    #print "setter", data,val
+    #print "setter", control,val
     value = int(val) # turn bools into ints
-    device = "-d"+data["device"]
-    control=data["name"]
-    data["value"]=val
-    sp.Popen([v4l2_ctl,device,set_control+control+"="+str(value)])
+    device = "-d"+str(control["src"])
+    control_name = control["name"]
+    control["value"]=val
+    sp.Popen([v4l2_ctl,device,"-c"+control_name+"="+str(value)])
 
+def update_from_device(controls):
+    """
+    update all control values
+    """
+    control_names = [c for c in controls]
+    control_string = ",".join(control_names)
+    src = controls[control_names[0]]["src"]
+    device = "-d"+str(src)
+
+    try:
+        ret = sp.check_output(["v4l2-ctl",device,"-C"+control_string])
+    except:
+        #print "could not update uvc controls on device:",device, "please try again"
+        return
+
+    for line in ret.split("\n"):
+        try:
+            name,val = line.split(":")
+            controls[name]["value"] = int(val)
+        except:
+            pass
 
 def extract_controls(device_number):
     """
@@ -86,19 +104,20 @@ def extract_controls(device_number):
     """
     device = "-d"+str(device_number)
     try:
-        ret = sp.check_output(["v4l2-ctl",device,list_control])
+        ret = sp.check_output(["v4l2-ctl",device,"-L"])
     except:
         print "v4l2-ctl not found. No uvc control panel will be added"
         return []
 
     lines = ret.split("\n")
-    controls = []
+    controls = {}
+    control_order = 0
     line = lines.pop(0) #look at first line
     while lines:
         words = line.split(" ")
         words = [word for word in words if len(word)>0] #get rid of remaining spaces
         control = dict()
-        control["name"] = words.pop(0)
+        control_name = words.pop(0)
         control["type"] =  words.pop(0)
         colon = words.pop(0) #throw away..
         while words:
@@ -119,7 +138,13 @@ def extract_controls(device_number):
                     break
         else:
             line = lines.pop(0) #take next line
-        controls.append(control)
+
+        #once done we add the device id and control name and add control to the controls dict
+        control["name"] = control_name
+        control["src"] = device_number
+        control["order"] = control_order
+        control_order += 1
+        controls[control_name] = control
     return controls
 
 
@@ -144,8 +169,8 @@ def list_devices():
         if p:
             device = {}
             dev_str,loc= p.split(":\n")
-            dev,serial = dev_str.split("(")
-            serial = serial[:-1]
+            dev,serial = dev_str[:-20], dev_str[-20:]
+            serial = serial[1:-1]
             src = int(loc[-1])
             loc = loc.replace("\t","")
             device["name"]=dev

@@ -17,27 +17,9 @@ from methods import Temp
 from ctypes import c_bool, c_int
 
 def main():
-    auto_assing_cameras = False
-    if not auto_assing_cameras:
-        #manually assign the right id to the cameras
-        eye_src = 0
-        world_src = 1
-    else:
-        eye_src = None
-        world_src = None
-        from v4l2_ctl import list_devices
-        for d in list_devices():
-            print "found Camera: "+d["name"]
-            if "6000" in d["name"]:
-                eye_src = d["src_id"]
-            elif "C510" or "C525" or "C615" in d["name"]:
-                world_src = d["src_id"]
-        if eye_src is None:
-            print "Error: Auto_assing_cameras could not detect eye camera, please check if you have the camera attached"
-            return
-        if world_src is None:
-            print "Error: Auto_assing_cameras could not detect world camera, please check if you have the camera attached"
-            return
+
+    eye_src = ["6000"]
+    world_src = ["C510","C525","C615","(046d:081d)"]
 
     #video size
     eye_size = (416,240)
