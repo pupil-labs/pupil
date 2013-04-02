@@ -18,15 +18,20 @@ from ctypes import c_bool, c_int
 
 def main():
 
+    #to assing by name: string(s) in list
     eye_src = ["6000"]
     world_src = ["C510","C525","C615","(046d:081d)"]
 
-
-    # eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # using a path to a videofiles allows for developement without a headset.
+    #to assign cameras directly: use ints
+    # eye_src = 1
     # world_src = 0
 
+    #to use a video: string (no list)
+    #eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov"
+    #world_src = 0
+
     #video size
-    eye_size = (416,240)
+    eye_size = (640,360)
     """
         HD-6000
         v4l2-ctl -d /dev/video0 --list-formats-ext
