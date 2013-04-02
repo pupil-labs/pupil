@@ -280,7 +280,7 @@ def eye(src,size,g_pool):
 
         sorted_controls = [(n,cap.uvc_controls[n]["order"]) for n in cap.uvc_controls]
         sorted_controls.sort(key=lambda c: c[1])
-        
+
         for name,order in sorted_controls:
             control = cap.uvc_controls[name]
             if control["type"]=="(bool)":
