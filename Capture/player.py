@@ -4,7 +4,7 @@ from glfw import *
 import numpy as np
 import cv2
 from methods import Temp
-from capture import capture
+from uvc_capture import Capture
 from time import sleep
 from glob import glob
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen
@@ -43,7 +43,7 @@ def player(g_pool,size):
     player.play_list = glob('src_video/*')
     path_parent = os.path.dirname( os.path.abspath(sys.argv[0]))
     player.playlist = [os.path.join(path_parent, path) for path in player.play_list]
-    player.captures = [capture(src) for src in player.playlist]
+    player.captures = [Capture(src) for src in player.playlist]
     print "Player found %i videos in src_video"%len(player.captures)
     player.captures =  [c for c in player.captures if c is not None]
     print "Player sucessfully loaded %i videos in src_video"%len(player.captures)

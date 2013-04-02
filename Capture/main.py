@@ -21,6 +21,10 @@ def main():
     eye_src = ["6000"]
     world_src = ["C510","C525","C615","(046d:081d)"]
 
+
+    # eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # using a path to a videofiles allows for developement without a headset.
+    # world_src = 0
+
     #video size
     eye_size = (416,240)
     """
@@ -47,14 +51,7 @@ def main():
     player_size = (800,600) #this can be whatever you like
 
 
-    #use video for debugging
-    use_video = 0
-
     audio = False
-
-    if use_video:
-        eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov" # using a path to a videofiles allows for developement without a headset.
-        world_src = 0
 
     # create shared globals
     g_pool = Temp()
