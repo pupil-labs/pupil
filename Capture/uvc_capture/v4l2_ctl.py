@@ -1,7 +1,7 @@
 """
 v4l2-ctl is a shell ultity that comes with 4vl2-utils:
 it allows getting and setting controls of UVC-capture devices
-This is a somewhat hacky interface to v4l2-ctl through shell calls
+This is a somewhat hacky interface to v4l2-ctl through subprocess calls
 """
 
 
