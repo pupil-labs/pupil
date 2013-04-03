@@ -11,9 +11,10 @@ from raw import *
 
 class Control(object):
     """docstring for uvcc_Control"""
-    def __init__(self,name,handle):
+    def __init__(self,name,i,handle):
         self.handle = handle
         self.name = name
+        self.order = i
         self.assess_type()
 
     def get_val(self):
@@ -31,8 +32,8 @@ class Control(object):
         find out if the range is bool or int
         """
         self.current = self.get_val()
-        self.minimum = None
-        self.maximum = None
+        self.min = None
+        self.max = None
         self.step    = None
         self.default = None
         self.menu    = None #some day in the future we will extract the control menu entries here.
@@ -63,8 +64,10 @@ class Camera(object):
         self.name = uvccCamProduct(self.handle)
         self.manufacurer = uvccCamManufacturer(self.handle)
         self.serial = uvccCamSerialNumber(self.handle)
+        self.controls = None
 
-        ###list of all controls implemented by uvcc, the names evaluate to ints using a dict lookup in raw.py
+    def init_controls(self):
+         ###list of all controls implemented by uvcc, the names evaluate to ints using a dict lookup in raw.py
         controls_str=('UVCC_REQ_SCANNING_MODE',
                         'UVCC_REQ_EXPOSURE_AUTOMODE',
                         'UVCC_REQ_EXPOSURE_AUTOPRIO',
@@ -88,8 +91,10 @@ class Camera(object):
                         ) #'__UVCC_REQ_OUT_OF_RANGE'
 
         self.controls = {}
+        i = 0
         for c in controls_str:
-            self.controls[c] = Control(c,self.handle)
+            self.controls[c] = Control(c,i,self.handle)
+            i +=1
 
     def load_defaults(self):
         for c in self.controls.itervalues():
@@ -120,6 +125,7 @@ if __name__ == '__main__':
     uvc_cameras = Camera_List()
     for cam in uvc_cameras:
         print cam.name
+        cam.init_controls()
         cam.load_defaults()
         for c in cam.controls.itervalues():
             if c.flags == "active":
