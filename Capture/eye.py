@@ -554,4 +554,5 @@ def eye(src,size,g_pool):
     atb.terminate()
     glfwCloseWindow()
     glfwTerminate()
+    cap.release()
 

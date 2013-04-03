@@ -143,10 +143,7 @@ class Capture():
         self.cap.set(1,0) #seek to the beginning
 
 
-    if os_name == "Linux":
-        pass
-    elif os_name == "Darwin":
-        pass
+
 
 
 if __name__ == '__main__':

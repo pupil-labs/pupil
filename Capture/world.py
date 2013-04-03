@@ -387,3 +387,5 @@ def world(src, size, g_pool):
     print "WORLD Process closed"
     glfwCloseWindow()
     glfwTerminate()
+    cap.release()
+
