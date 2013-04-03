@@ -18,9 +18,9 @@ os_name = platform.system()
 del platform
 
 if os_name == "Linux":
-    import v4l2_ctl_oop as uvc_control 
+    import v4l2_ctl_oop as uvc
 elif os_name == "Darwin":
-    import uvcc as uvc_control
+    import uvcc as uvc
 
 
 class Capture():
@@ -39,35 +39,58 @@ class Capture():
 
         # checking src and handling all cases:
         src_type = type(src)
+        if src_type is not str: #we are looking for an actual camera not a video file...
+            self.uvc_camera_list = uvc.Camera_List()
 
-        if src_type is list:
-            #looking for attached cameras that match the suggested names
-            matching_devices = []
-            for device in list_devices():
-                if any([s in device["name"] for s in src]):
-                    matching_devices.append(device)
+            if src_type is list:
+                #looking for attached cameras that match the suggested names
+                matching_devices = []
+                for device in self.uvc_camera_list:
+                    if any([s in device.name for s in src]):
+                        matching_devices.append(device)
 
-            if len(matching_devices) >1:
-                print "Warning: found",len(matching_devices),"devices that match the src string pattern. Using the first one"
-            if len(matching_devices) ==0:
-                print "ERROR: No device found that matched",src,
-                self.cap = None
-                self.src = None
-                self._get_frame_= self._read_empty_
-                return
+                if len(matching_devices) >1:
+                    print "Warning: found",len(matching_devices),"devices that match the src string pattern. Using the first one"
+                if len(matching_devices) ==0:
+                    print "ERROR: No device found that matched",src,
+                    self.cap = None
+                    self.src = None
+                    self._get_frame_= self._read_empty_
+                    uvc_camera_list.release()
+                    return
 
-            print "camera selected:", matching_devices[0]["name"], "id:",matching_devices[0]["src_id"]
-            self.src = matching_devices[0]["src_id"]
-            self.name = matching_devices[0]["name"]
-        elif src_type is int:
-            self.src = src
-            self.name = "unnamed"
-            for device in list_devices():
-                if int(device["src_id"]) == src:
-                    self.name = device["name"]
-        elif src_type is str:
+                self.uvc_camera = matching_devices[0]
+                print "camera selected:", self.uvc_camera.name, "id:",self.uvc_camera.cv_id
+                self.name = self.uvc_camera.name
+                self.src = self.uvc_camera.cv_id
+
+            elif src_type is int:
+                self.src = src
+                self.name = "unnamed"
+                for device in self.uvc_camera_list:
+                    if int(device.cv_id) == src:
+                        self.uvc_camera = device
+                        print "camera selected:", self.uvc_camera.name, "id:",self.uvc_camera.cv_id
+                        self.name = self.uvc_camera.name
+                        self.src = self.uvc_camera.cv_id
+
+
+            #do all the uvc cpature relevant setup
+            self.cap = VideoCapture(self.src)
+            self.set_size(size)
+            self._get_frame_ = self.cap.read
+            self.uvc_camera.init_controls()
+
+
+        ###setup as video playback
+        if src_type is str:
             if isfile(src):
                 self.src = src
+                # we initialize the actual capture based on cv2.VideoCapture
+                self.cap = VideoCapture(self.src)
+                self._get_frame_ = self.cap.read
+                #do all the vidoe file relevant setup
+                self.uvc_controls = None
             else:
                 print "ERROR could not find:",src
                 self.src = None
@@ -76,22 +99,12 @@ class Capture():
                 return
 
 
-        # we initialize the actual capture based on cv2.VideoCapture
-        self.cap = VideoCapture(self.src)
-        self._get_frame_ = self.cap.read
-
-        if type(self.src) is int:
-            #do all the uvc cpature relevant setup
-            self.is_uvc_capture = True
-            self.set_size(size)
-            self.uvc_controls = self.extract_controls()
-
-        else:
-            #do all the vidoe file relevant setup
-            self.is_uvc_capture = False
-            self.uvc_controls = None
-
-
+    def release(self):
+        print "Cleaned up uvc_control."
+        try:
+            self.uvc_camera_list.release()
+        except:
+            pass
 
     def set_size(self,size):
         width,height = size
@@ -136,24 +149,12 @@ class Capture():
         pass
 
 
-###these are special functions for the atb bar.
-### you have to pass the specific control dict to to "data" in tw_add_var
-### and name it the name of the control
-if os_name == "Linux":
-    atb_get = v4l2_ctl.getter
-    atb_set = v4l2_ctl.setter
-elif os_name == "Darwin":
-    atb_get = None
-    atb_set = None
-else:
-    atb_get = None
-    atb_set = None
-
 if __name__ == '__main__':
-    cap = Capture(["C"],(1280,720))
-    #s,img = cap.read()
+    cap = Capture(["525"],(1280,720))
+    s,img = cap.read()
     #print img.shape
     # print cap.uvc_controls
     # cap.v4l2_set_default()
-    cap.uvc_refresh_all()
+    cap.uvc_camera.refresh_all()
+    cap.release()
     print "done"

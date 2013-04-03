@@ -68,7 +68,10 @@ controls = ('UVCC_REQ_SCANNING_MODE',
 
 req_dict = dict(zip(controls,range(len(controls))))
 
-__uvcc_dll = CDLL('uvcc.so')
+import os.path
+dll_name = "uvcc.so"
+dllabspath = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + dll_name
+__uvcc_dll = CDLL(dllabspath)
 
 __uvcc_dll.uvccInit.argtypes = []
 __uvcc_dll.uvccExit.argtypes = []
@@ -177,12 +180,12 @@ if __name__ == '__main__':
     for i in range(cam_n):  # it seems cameras are sorted from high to low for opencv
         print "idVendor",hex(cam_list[i].contents.devDesc.idProduct)
         print "ifNo", cam_list[i].contents.idLocation
-        print get_CamProductName(cam_list[i].contents)
-        print get_CamManufacturer(cam_list[i].contents)
-        print get_CamSerialNumber(cam_list[i].contents)
+        print uvccCamProduct(cam_list[i].contents)
+        # print get_CamManufacturer(cam_list[i].contents)
+        # print get_CamSerialNumber(cam_list[i].contents)
 
-    print uvccSendRequest("UVCC_REQ_BRIGHTNESS_ABS",UVC_GET_DEF,cam_list[cam_n-1])
-    print uvccGetVal("UVCC_REQ_BRIGHTNESS_ABS",cam_list[cam_n-1])
+    # print uvccSendRequest("UVCC_REQ_BRIGHTNESS_ABS",UVC_GET_DEF,cam_list[cam_n-1])
+    # print uvccGetVal("UVCC_REQ_BRIGHTNESS_ABS",cam_list[cam_n-1])
     # print set_val(0,"UVCC_REQ_BRIGHTNESS_ABS",cam_list[cam_n-1])
 
     __uvcc_dll.uvccReleaseCamList(cam_list,cam_n)

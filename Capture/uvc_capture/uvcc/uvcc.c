@@ -568,18 +568,18 @@ static int get_dev_desc(IOUSBDeviceInterface197 **devIf,
 	ior = (*devIf)->DeviceRequest(devIf, &req);
 	/* iSight doesn't wanna interact if it's suspended.. also os x 10.6 usb handeling is buggy as fuck */
 	if(ior == kIOReturnNotResponding)
-	{	/* try unsuspending that bitch *
-		//printf("fuck you!\n");
+	{	 /* try unsuspending that bitch */
 		(*devIf)->USBDeviceSuspend(devIf, FALSE);
 		ior = (*devIf)->DeviceRequest(devIf, &req);
-		(*devIf)->USBDeviceSuspend(devIf, TRUE); */
-		//if(ior == kIOReturnNotResponding)
+		(*devIf)->USBDeviceSuspend(devIf, TRUE);
+		// if(ior == kIOReturnNotResponding)
 		// {	/* last resort.. */
-		 (*devIf)->USBDeviceOpen(devIf);
+  //           printf("Not awake \n");
+		// (*devIf)->USBDeviceOpen(devIf);
 		// (*devIf)->USBDeviceReEnumerate(devIf, 0);
-		 ior = (*devIf)->DeviceRequest(devIf, &req);
-		 (*devIf)->USBDeviceClose(devIf);
-		 //}
+		//  ior = (*devIf)->DeviceRequest(devIf, &req);
+		//  (*devIf)->USBDeviceClose(devIf);
+		//  }
 	}
 	if(ior != kIOReturnSuccess)
 	{

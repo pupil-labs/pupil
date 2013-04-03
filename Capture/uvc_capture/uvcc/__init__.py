@@ -96,6 +96,9 @@ class Camera(object):
             self.controls[c] = Control(c,i,self.handle)
             i +=1
 
+    def refresh_all(self):
+        pass
+
     def load_defaults(self):
         for c in self.controls.itervalues():
             if c.flags == "active" and c.default is not None:
@@ -108,10 +111,13 @@ class Camera_List(list):
         uvccInit()
         self.cam_list = pointer(pointer(uvccCam()))
         self.cam_n = uvccGetCamList(self.cam_list)
-        #sort them as the cameras appear in OpenCV VideoCapture
-        for i in range(self.cam_n)[::-1]:
-            self.append(Camera(self.cam_list[i],i))
 
+        #sort them as the cameras appear in OpenCV VideoCapture
+        sort_cams = [self.cam_list[i] for i in range(self.cam_n)]
+        sort_cams.sort(key=lambda l:-l.contents.idLocation) #from my tests so far OTKit sorts them by idLocation order
+
+        for i in range(self.cam_n):
+            self.append(Camera(sort_cams[i],i))
 
     def release(self):
         """
@@ -125,6 +131,7 @@ if __name__ == '__main__':
     uvc_cameras = Camera_List()
     for cam in uvc_cameras:
         print cam.name
+        print cam.cv_id
         cam.init_controls()
         cam.load_defaults()
         for c in cam.controls.itervalues():
