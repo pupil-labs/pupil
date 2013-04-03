@@ -15,30 +15,23 @@ class Control(object):
         self.handle = handle
         self.name = name
         self.order = i
+        self.value = None
         self.assess_type()
 
-    def get_val(self):
-        return uvccGetVal(self.name,self.handle)
-
-    def set_val(self,val):
-        return uvccSetVal(val,self.name,self.handle)
-
-    def get_(self,request):
-        return uvccSendRequest(self.name,request,self.handle)
 
     def assess_type(self):
         """
         find out if a control is active
         find out if the range is bool or int
         """
-        self.current = self.get_val()
+        self.value = self.get_val_from_device()
         self.min = None
         self.max = None
         self.step    = None
         self.default = None
         self.menu    = None #some day in the future we will extract the control menu entries here.
 
-        if self.current != None:
+        if self.value != None:
             self.min =  self.get_(UVC_GET_MIN)
             self.max =  self.get_(UVC_GET_MAX)
             self.step    =  self.get_(UVC_GET_RES)
@@ -47,13 +40,33 @@ class Control(object):
             if (self.max,self.min) == (None,None):
                 self.type  = "bool"
                 self.flags = "active"
+            # elif (self.max,self.min) == (None,None):
+            #     ###I guess this should be a menu
+            #     self.type  = "int"
+            #     self.flags = "active"
+            #     self.min = 0
+            #     self.max = 20
+            #     self.step = 1
             else:
                 self.type  = "int"
                 self.flags = "active"
         else:
             self.type  = "unknown control type"
             self.flags = "inactive"
+            self.value = None
 
+    def get_val_from_device(self):
+        return uvccGetVal(self.name,self.handle)
+
+    def get_val(self):
+        return self.value
+
+    def set_val(self,val):
+        self.value = val
+        return uvccSetVal(val,self.name,self.handle)
+
+    def get_(self,request):
+        return uvccSendRequest(self.name,request,self.handle)
 
 
 class Camera(object):
@@ -97,7 +110,9 @@ class Camera(object):
             i +=1
 
     def refresh_all(self):
-        pass
+        for c in self.controls.itervalues():
+            if c.flags == "active":
+                c.value = c.get_val_from_device()
 
     def load_defaults(self):
         for c in self.controls.itervalues():
@@ -136,5 +151,5 @@ if __name__ == '__main__':
         cam.load_defaults()
         for c in cam.controls.itervalues():
             if c.flags == "active":
-                print c.name, " "*(40-len(c.name)), c.current,c.type, c.min,c.max,c.step
+                print c.name, " "*(40-len(c.name)), c.value, c.min,c.max,c.step
     uvc_cameras.release()

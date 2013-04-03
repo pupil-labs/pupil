@@ -90,7 +90,7 @@ class Capture():
                 self.cap = VideoCapture(self.src)
                 self._get_frame_ = self.cap.read
                 #do all the vidoe file relevant setup
-                self.uvc_controls = None
+                self.uvc_camera = None
             else:
                 print "ERROR could not find:",src
                 self.src = None

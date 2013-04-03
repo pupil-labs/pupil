@@ -7,7 +7,7 @@ import cv2
 from glfw import *
 import atb
 from methods import normalize, denormalize, chessboard, circle_grid, gen_pattern_grid, calibrate_camera,Temp
-from uvc_capture import Capture, atb_set,atb_get
+from uvc_capture import Capture
 # from gl_shapes import Point
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm
 from time import time
@@ -146,37 +146,48 @@ def world(src, size, g_pool):
             text='light', position=(10, 10),refresh=.1, size=(200, 200)))
 
 
-    #add 4vl2 camera controls to a seperate ATB bar
-    if cap.uvc_controls is not None:
-        c_bar = atb.Bar(name="Camera_Controls", label=cap.name,
+    #add camera controls to a seperate ATB bar
+    if cap.uvc_camera is not None:
+        c_bar = atb.Bar(name="Camera_Controls", label=cap.uvc_camera.name,
             help="UVC Camera Controls", color=(50,50,50), alpha=50,
-            text='light',position=(220, 10),refresh=5., size=(200, 200))
+            text='light',position=(220, 10),refresh=2., size=(200, 200))
 
-        #c_bar.add_var("auto_refresher",vtype=atb.TW_TYPE_BOOL8,getter=cap.uvc_refresh_all,setter=None,readonly=True)
-        #c_bar.define(definition='visible=0', varname="auto_refresher")
+        # c_bar.add_var("auto_refresher",vtype=atb.TW_TYPE_BOOL8,getter=cap.uvc_refresh_all,setter=None,readonly=True)
+        # c_bar.define(definition='visible=0', varname="auto_refresher")
 
-        sorted_controls = [(n,cap.uvc_controls[n]["order"]) for n in cap.uvc_controls]
-        sorted_controls.sort(key=lambda c: c[1])
-        
-        for name,order in sorted_controls:
-            control = cap.uvc_controls[name]
-            if control["type"]=="(bool)":
-                c_bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=atb_get,setter=atb_set,data=control)
-            elif control["type"]=="(int)":
-                c_bar.add_var(name,vtype=atb.TW_TYPE_INT32,getter=atb_get,setter=atb_set,data=control)
-                c_bar.define(definition='min='+str(control["min"]),   varname=name)
-                c_bar.define(definition='max='+str(control["max"]),   varname=name)
-                c_bar.define(definition='step='+str(control["step"]), varname=name)
-            elif control["type"]=="(menu)":
-                vtype= atb.enum(name,control["menu"])
-                c_bar.add_var(name,vtype=vtype,getter=atb_get,setter=atb_set,data=control)
+        sorted_controls = [c for c in cap.uvc_camera.controls.itervalues()]
+        sorted_controls.sort(key=lambda c: c.order)
+
+        for control in sorted_controls:
+            name = control.name[9:].capitalize() #pretify the name
+            if control.type=="bool":
+                c_bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=control.get_val,setter=control.set_val)
+            elif control.type=='int':
+                c_bar.add_var(name,vtype=atb.TW_TYPE_INT32,getter=control.get_val,setter=control.set_val)
+                c_bar.define(definition='min='+str(control.min),   varname=name)
+                c_bar.define(definition='max='+str(control.max),   varname=name)
+                c_bar.define(definition='step='+str(control.step), varname=name)
+            elif control.type=="menu":
+                if control.menu is None:
+                    vtype = None
+                else:
+                    vtype= atb.enum(name,control.menu)
+                c_bar.add_var(name,vtype=vtype,getter=control.get_val,setter=control.set_val)
+                if control.menu is None:
+                    c_bar.define(definition='min='+str(control.min),   varname=name)
+                    c_bar.define(definition='max='+str(control.max),   varname=name)
+                    c_bar.define(definition='step='+str(control.step), varname=name)
             else:
                 pass
-        c_bar.add_button("refresh",cap.uvc_refresh_all)
-        c_bar.add_button("load defaults",cap.uvc_set_default)
+            if control.flags == "inactive":
+                pass
+                # c_bar.define(definition='readonly=1',varname=control.name)
+        c_bar.add_button("refresh",cap.uvc_camera.refresh_all)
+        c_bar.add_button("load defaults",cap.uvc_camera.load_defaults)
 
     else:
         c_bar = None
+
 
     # Initialize glfw
     glfwInit()
