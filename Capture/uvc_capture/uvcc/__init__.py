@@ -1,6 +1,61 @@
+"""
+OOP style interface for uvcc c_types binding
+
+Three classes:
+    Camera_List intitializes and manages the UVCC library and device_list handle
+    Camera holds each device handle, names, controls ect.
+    Control is the actual Control with methods for getting and setting them.
+"""
+
 from raw import *
 
-class uvcc_camera(object):
+class Control(object):
+    """docstring for uvcc_Control"""
+    def __init__(self,name,handle):
+        self.handle = handle
+        self.name = name
+        self.assess_type()
+
+    def get_val(self):
+        return uvccGetVal(self.name,self.handle)
+
+    def set_val(self,val):
+        return uvccSetVal(val,self.name,self.handle)
+
+    def get_(self,request):
+        return uvccSendRequest(self.name,request,self.handle)
+
+    def assess_type(self):
+        """
+        find out if a control is active
+        find out if the range is bool or int
+        """
+        self.current = self.get_val()
+        self.minimum = None
+        self.maximum = None
+        self.step    = None
+        self.default = None
+        self.menu    = None #some day in the future we will extract the control menu entries here.
+
+        if self.current != None:
+            self.min =  self.get_(UVC_GET_MIN)
+            self.max =  self.get_(UVC_GET_MAX)
+            self.step    =  self.get_(UVC_GET_RES)
+            self.default =  self.get_(UVC_GET_DEF)
+
+            if (self.max,self.min) == (None,None):
+                self.type  = "bool"
+                self.flags = "active"
+            else:
+                self.type  = "int"
+                self.flags = "active"
+        else:
+            self.type  = "unknown control type"
+            self.flags = "inactive"
+
+
+
+class Camera(object):
     """docstring for uvcc_camera"""
     def __init__(self, handle,cv_id):
         self.handle = handle
@@ -9,7 +64,8 @@ class uvcc_camera(object):
         self.manufacurer = uvccCamManufacturer(self.handle)
         self.serial = uvccCamSerialNumber(self.handle)
 
-        self.controls =('UVCC_REQ_SCANNING_MODE',
+        ###list of all controls implemented by uvcc, the names evaluate to ints using a dict lookup in raw.py
+        controls_str=('UVCC_REQ_SCANNING_MODE',
                         'UVCC_REQ_EXPOSURE_AUTOMODE',
                         'UVCC_REQ_EXPOSURE_AUTOPRIO',
                         'UVCC_REQ_EXPOSURE_ABS',
@@ -29,37 +85,30 @@ class uvcc_camera(object):
                         'UVCC_REQ_GAMMA_ABS',
                         'UVCC_REQ_WB_TEMP_AUTO',
                         'UVCC_REQ_WB_TEMP_ABS',
-                        '__UVCC_REQ_OUT_OF_RANGE')
+                        ) #'__UVCC_REQ_OUT_OF_RANGE'
 
-    def get_val(self, c):
-        return uvccGet_val(c,self.handle)
+        self.controls = {}
+        for c in controls_str:
+            self.controls[c] = Control(c,self.handle)
 
-    def set_val(self, c):
-        return uvccSet_val(c,self.handle)
+    def load_defaults(self):
+        for c in self.controls.itervalues():
+            if c.flags == "active" and c.default is not None:
+                c.set_val(c.default)
 
-    def get_(self,c,request):
-        return uvccGet_(c,request,self.handle)
-
-class uvcc_control(object):
+class Camera_List(list):
     """docstring for uvcc_control"""
 
     def __init__(self):
         uvccInit()
         self.cam_list = pointer(pointer(uvccCam()))
         self.cam_n = uvccGetCamList(self.cam_list)
-        self.cameras = []
         #sort them as the cameras appear in OpenCV VideoCapture
         for i in range(self.cam_n)[::-1]:
-            self.cameras.append(uvcc_camera(self.cam_list[i],i))
-
-    def __getitem__(self,key):
-        if key >= self.cam_n:
-            raise KeyError("UVCC: Wrong Camera index")
-        else:
-            return self.cameras[key]
+            self.append(Camera(self.cam_list[i],i))
 
 
-    def terminate(self):
+    def release(self):
         """
         call when done with class instance
         """
@@ -68,6 +117,11 @@ class uvcc_control(object):
 
 
 if __name__ == '__main__':
-    uvc_cameras = uvcc_control()
-    print uvc_cameras[1].get_val("UVCC_REQ_FOCUS_AUTO")
-    uvc_cameras.terminate()
+    uvc_cameras = Camera_List()
+    for cam in uvc_cameras:
+        print cam.name
+        cam.load_defaults()
+        for c in cam.controls.itervalues():
+            if c.flags == "active":
+                print c.name, " "*(40-len(c.name)), c.current,c.type, c.min,c.max,c.step
+    uvc_cameras.release()

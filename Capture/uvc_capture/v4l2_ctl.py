@@ -2,6 +2,20 @@
 v4l2-ctl is a shell ultity that comes with 4vl2-utils:
 it allows getting and setting controls of UVC-capture devices
 This is a somewhat hacky interface to v4l2-ctl through subprocess calls
+
+controls are extracted and saved in a dict. Each control is a dict itself.
+controls:
+    name1:
+            min: 0
+            max: 255
+            ...
+            type: "int" or "bool" or "menu"
+            menu:
+                menu_entry1: 0
+                menu_entry2: 1
+            src: opencv device id as in /dev/video[src_id]
+    name2:
+
 """
 
 

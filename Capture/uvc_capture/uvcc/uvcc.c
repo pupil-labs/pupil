@@ -15,6 +15,9 @@
  * look at "Mac OS X 10.6 Core Library > Drivers, Kernel & Hardware > User-Space Device Access > USB Device Inteface Guide" (especially the SampleUSBMIDIDriver and Deva_Example projects), Dominic Szablewski's uvc camera control ( http://www.phoboslab.org/log/2009/07/uvc-camera-control-for-mac-os-x ) and the libusb project ( http://libusb.org ) to see where this code came from..
  */
 
+
+
+// moritz kassner: uncommented 405/415/416
 #include <IOKit/IOKitLib.h>
 #include <IOKit/IOCFPlugIn.h>
 #include <mach/mach_init.h>
@@ -399,7 +402,7 @@ unsigned int uvccSendRawRequest(struct uvccCam *cam,
 	//ior = (*ctrlIf)->ControlRequest(ctrlIf, 0, request);
     if(ior == kIOUSBPipeStalled)
     {
-        uvcc_err("ControlRequest", ior);
+        // uvcc_err("ControlRequest", ior);
         (*(cam->ctrlIf))->GetNumEndpoints(cam->ctrlIf, &nEP);
         for(i = 0; i <= nEP; i++)
         {
@@ -409,8 +412,8 @@ unsigned int uvccSendRawRequest(struct uvccCam *cam,
         }
         if(((*(cam->ctrlIf))->ControlRequest(cam->ctrlIf, 0, request)) == kIOUSBPipeStalled)
         {
-            if(!logger) fprintf(stderr, "uvcc error: Second stall directly following clear/reset, request is probably unsupported or malformatted.");
-            else asl_log(logger, NULL, ASL_LEVEL_ERR, "Second stall directly following clear/reset, request is probably unsupported or malformatted.");
+            // if(!logger) fprintf(stderr, "uvcc error: Second stall directly following clear/reset, request is probably unsupported or malformatted.");
+            // else asl_log(logger, NULL, ASL_LEVEL_ERR, "Second stall directly following clear/reset, request is probably unsupported or malformatted.");
             return UVCCE_CTRL_REQUEST_UNSUPPORTED_OR_MALFORMATTED;
         }
     }

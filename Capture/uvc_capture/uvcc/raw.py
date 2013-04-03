@@ -43,12 +43,7 @@ UVC_GET_INFO     = 0x86
 UVC_GET_DEF      = 0x87
 
 
-
-
-def enum(*sequential, **named):
-    enums = dict(zip(sequential, range(len(sequential))), **named)
-    return type('Enum', (), enums)
-
+### we use a dict to replace the enum
 controls = ('UVCC_REQ_SCANNING_MODE',
                 'UVCC_REQ_EXPOSURE_AUTOMODE',
                 'UVCC_REQ_EXPOSURE_AUTOPRIO',
@@ -71,7 +66,6 @@ controls = ('UVCC_REQ_SCANNING_MODE',
                 'UVCC_REQ_WB_TEMP_ABS',
                 '__UVCC_REQ_OUT_OF_RANGE')
 
-req_type = enum(*controls)
 req_dict = dict(zip(controls,range(len(controls))))
 
 __uvcc_dll = CDLL('uvcc.so')
@@ -104,22 +98,7 @@ def uvccGetCamList(cam_list):
 def uvccReleaseCamList(cam_list,cam_n):
     return __uvcc_dll.uvccReleaseCamList(cam_list,cam_n)
 
-def uvccSet_val(val,control,camera):
-    bRequest = UVC_SET_CUR
-    val = c_int(val)
-    err = __uvcc_dll.uvccSendRequest(camera,bRequest,req_dict[control],byref(val))
-    if err == 0:
-        return val.value
-
-def uvccGet_val(control,camera):
-    bRequest = UVC_GET_CUR
-    val = c_int(0)
-    err = __uvcc_dll.uvccSendRequest(camera,bRequest,req_dict[control],byref(val))
-    if err == 0:
-        return val.value
-
-
-def uvccGet_(control,request,camera):
+def uvccSendRequest(control,request,camera):
     bRequest = request
     val = c_int(0)
     err = __uvcc_dll.uvccSendRequest(camera,bRequest,req_dict[control],byref(val))
@@ -171,21 +150,39 @@ def uvccCamQTUniqueID(camera):
         str_len  = __uvcc_dll.uvccUni2Char(uni_buf,str_buf,20,0)
         return str_buf
 
+### simple wrappers
+def uvccSetVal(val,control,camera):
+    bRequest = UVC_SET_CUR
+    val = c_int(val)
+    err = __uvcc_dll.uvccSendRequest(camera,bRequest,req_dict[control],byref(val))
+    if err == 0:
+        return val.value
+
+def uvccGetVal(control,camera):
+    bRequest = UVC_GET_CUR
+    val = c_int(0)
+    err = __uvcc_dll.uvccSendRequest(camera,bRequest,req_dict[control],byref(val))
+    if err == 0:
+        return val.value
+
+
 
 if __name__ == '__main__':
+
+
     __uvcc_dll.uvccInit()
     cam_list = pointer(pointer(uvccCam()))
     cam_n =  __uvcc_dll.uvccGetCamList(cam_list)
 
-    for i in range(cam_n):  # it seems cameras are sorted from hi to low for opencv
+    for i in range(cam_n):  # it seems cameras are sorted from high to low for opencv
         print "idVendor",hex(cam_list[i].contents.devDesc.idProduct)
         print "ifNo", cam_list[i].contents.idLocation
         print get_CamProductName(cam_list[i].contents)
         print get_CamManufacturer(cam_list[i].contents)
         print get_CamSerialNumber(cam_list[i].contents)
 
-    print get_("UVCC_REQ_BRIGHTNESS_ABS",UVC_GET_DEF,cam_list[cam_n-1])
-    print get_val("UVCC_REQ_BRIGHTNESS_ABS",cam_list[cam_n-1])
+    print uvccSendRequest("UVCC_REQ_BRIGHTNESS_ABS",UVC_GET_DEF,cam_list[cam_n-1])
+    print uvccGetVal("UVCC_REQ_BRIGHTNESS_ABS",cam_list[cam_n-1])
     # print set_val(0,"UVCC_REQ_BRIGHTNESS_ABS",cam_list[cam_n-1])
 
     __uvcc_dll.uvccReleaseCamList(cam_list,cam_n)
