@@ -282,7 +282,7 @@ def eye(src,size,g_pool):
         sorted_controls.sort(key=lambda c: c.order)
 
         for control in sorted_controls:
-            name = control.name[9:].capitalize() #pretify the name
+            name = control.atb_name
             if control.type=="bool":
                 c_bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=control.get_val,setter=control.set_val)
             elif control.type=='int':
@@ -306,7 +306,7 @@ def eye(src,size,g_pool):
                 pass
                 # c_bar.define(definition='readonly=1',varname=control.name)
 
-        c_bar.add_button("refresh",cap.uvc_camera.refresh_all)
+        c_bar.add_button("refresh",cap.uvc_camera.update_from_device)
         c_bar.add_button("load defaults",cap.uvc_camera.load_defaults)
 
     else:

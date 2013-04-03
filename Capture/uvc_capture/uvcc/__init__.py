@@ -14,6 +14,7 @@ class Control(object):
     def __init__(self,name,i,handle):
         self.handle = handle
         self.name = name
+        self.atb_name = name[9:].capitalize() #pretify the name
         self.order = i
         self.value = None
         self.assess_type()
@@ -109,7 +110,7 @@ class Camera(object):
             self.controls[c] = Control(c,i,self.handle)
             i +=1
 
-    def refresh_all(self):
+    def update_from_device(self):
         for c in self.controls.itervalues():
             if c.flags == "active":
                 c.value = c.get_val_from_device()

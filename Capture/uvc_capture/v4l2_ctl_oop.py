@@ -9,6 +9,8 @@ class Control(dict):
             self[key] = val
 
         self.name = self['name']
+        self.atb_name = self['name']
+        self.order = self['order']
         self.value = self['value']
         self.default = self['default']
         self.type  = self['type']
@@ -35,7 +37,7 @@ class Control(dict):
 
 
     def get_val(self):
-        return self['val']
+        return self['value']
 
     def set_val(self,val):
         set(self['src'],self['name'],val)
