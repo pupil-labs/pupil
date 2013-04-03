@@ -53,7 +53,7 @@ enum uvccRequests
 
 struct uvccModelId
 {
-	UInt16 id`;
+	UInt16 idVendor;
 	UInt16 idProduct;
 };
 

@@ -273,7 +273,6 @@ int uvccGetCamWithModelId(struct uvccModelId *mId, struct uvccCam *cam)
 	CFDictionarySetValue(mdRef, CFSTR(kUSBProductID), nRef);
 	CFRelease(nRef);
 	camSrv = IOServiceGetMatchingService(uvcc_port, mdRef);
-
 	pIfKr = IOCreatePlugInInterfaceForService(camSrv, kIOUSBDeviceUserClientTypeID, kIOCFPlugInInterfaceID, &pIf, &score);
 	if(pIfKr != kIOReturnSuccess || !pIf)
 	{

@@ -10,6 +10,12 @@ make_all: uvcc.so
 uvcc.so: $(OBJ)
 	-gcc $(CFLAGS) -o $@ $^ $(INC) $(LIBS) # $^ = dependencies , $@=Target
 	#mv *.so c/
+# uvcc.o: $(OBJ)
+# 	-gcc $(CFLAGS) -c $^ $(INC) $(LIBS)
+
+# uvcc.so: uvcc-wrappers.c uvcc.o
+# 	-gcc $(CFLAGS) -o $@ $^ $(INC) $(LIBS)  # $^ = dependencies , $@=Target
+# 	#mv *.so c/
 
 .PHONY: clean
 

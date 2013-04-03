@@ -64,12 +64,16 @@ TwEventCharGLFW    = __dll__.TwEventCharGLFW
 # TwEventSpecialGLUT     = __dll__.TwEventSpecialGLUT
 # TwEventMouseWheelGLUT  = __dll__.TwEventMouseWheelGLFW
 
-# On Mac OS Snow Leopard, the following definitions seems to be necessary to
-# ensure 64bits pointers anywhere needed
-c_pointer = ctypes.c_ulonglong
-
-# In case of problem, this definition must be used
-#c_pointer = ctypes.c_void_p
+#detect 64bit
+import sys
+if (sys.maxsize > 2**32):
+    # On Mac OS Snow Leopard, the following definitions seems to be necessary to
+    # ensure 64bits pointers anywhere needed
+    c_pointer = ctypes.c_ulonglong
+else:
+    #normal
+    c_pointer = ctypes.c_void_p
+del sys
 
 TwGetLastError.restype = c_char_p
 TwGetBarName.restype = c_char_p

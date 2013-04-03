@@ -7,7 +7,7 @@ p3
 I56
 sS'pupil_size'
 p4
-F43.18939208984375
+F30
 sS'canny_ratio'
 p5
 I2
@@ -16,7 +16,7 @@ p6
 I01
 sS'bin_thresh'
 p7
-I87
+I118
 sS'canny_aperture'
 p8
 I3
@@ -25,5 +25,5 @@ p9
 I1
 sS'pupil_ratio'
 p10
-F0.78990769386291504
+F0.5
 s.

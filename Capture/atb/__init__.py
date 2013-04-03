@@ -30,10 +30,6 @@ def enum(name, values):
 def init():
     check_error(TwInit(TW_OPENGL, 0))
 
-# handets in __del__
-# def shutdown():
-#     check_error( TwTerminate() )
-
 def _dict_to_defs(args):
     '''
     Converts a dictionary like {a:'b', 1:2} to the string "a=b 1=2" suitable
