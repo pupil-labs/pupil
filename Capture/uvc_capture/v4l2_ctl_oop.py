@@ -1,22 +1,33 @@
 from v4l2_ctl import *
 
 class Control(dict):
-    """docstring for uvcc_Control"""
+    """
+    docstring
+    """
     def __init__(self,c):
-        for key,val in c.items()
+        for key,val in c.items():
             self[key] = val
 
         self.name = self['name']
-        self.current = self['val']
-        self.min = self['min']
-        self.max = self['max']
-        self.step    = self['step']
-        self.default = self['def']
-        if 'menu' in self:
-            self.menu = self[menu]
+        self.value = self['value']
+        self.default = self['default']
+        self.type  = self['type']
+        if self.type == 'menu':
+            self.menu = self['menu']
+            self.min = None
+            self.max = None
+            self.step = None
+        elif self.type == 'bool':
+            self.min = 0
+            self.max = 1
+            self.step = 1
+            self.menu=None
         else:
             self.menu=None
-        self.type  = self['type']
+            self.step = self['step']
+            self.min = self['min']
+            self.max = self['max']
+        
         if 'flags' in self:
             self.flags = self['flags']
         else:
@@ -28,7 +39,7 @@ class Control(dict):
 
     def set_val(self,val):
         set(self['src'],self['name'],val)
-        self['val'] = val
+        self['value'] = val
 
 
 class Camera(object):
@@ -48,10 +59,11 @@ class Camera(object):
             self.controls[c] = Control(control_dict[c])
 
     def load_defaults(self):
-        pass
+        for c in self.controls.itervalues():
+            c.set_val(c.default)
 
     def update_from_device(self):
-        pass
+        update_from_device(self.controls)
 
 class Camera_List(list):
     """docstring for Camera_List"""
@@ -75,6 +87,7 @@ if __name__ == '__main__':
         print cam.name
         cam.init_controls()
         cam.load_defaults()
+        cam.update_from_device()
         for c in cam.controls.itervalues():
             if c.flags == "active":
                 print c.name, " "*(40-len(c.name)), c.current,c.type, c.min,c.max,c.step

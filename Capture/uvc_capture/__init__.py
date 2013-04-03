@@ -18,12 +18,9 @@ os_name = platform.system()
 del platform
 
 if os_name == "Linux":
-    import v4l2_ctl
-    list_devices = v4l2_ctl.list_devices
+    import v4l2_ctl_oop as uvc_control 
 elif os_name == "Darwin":
-
-    def list_devices():
-        return []
+    import uvcc as uvc_control
 
 
 class Capture():
@@ -134,41 +131,10 @@ class Capture():
 
 
     if os_name == "Linux":
-
-        def extract_controls(self):
-            return v4l2_ctl.extract_controls(self.src)
-
-        def uvc_get(self,control_name):
-            device_id= self.src
-            return v4l2_ctl.get(device_id,control_name)
-
-        def uvc_set(self,value,control_name):
-            device_id = self.src
-            v4l2_ctl.set(device_id,control_name,value)
-
-        def uvc_refresh_all(self):
-            v4l2_ctl.update_from_device(self.uvc_controls)
-
-        def uvc_set_default(self):
-            for control in self.uvc_controls:
-                self.uvc_set(self.uvc_controls[control]["default"],control)
-
+        pass
     elif os_name == "Darwin":
+        pass
 
-        def extract_controls(self):
-            return None
-
-        def uvc_get(self,control_name):
-            pass
-
-        def uvc_set(self,value,control_name):
-            pass
-
-        def uvc_refresh_all(self):
-            pass
-
-        def uvc_set_default(self):
-            pass
 
 ###these are special functions for the atb bar.
 ### you have to pass the specific control dict to to "data" in tw_add_var

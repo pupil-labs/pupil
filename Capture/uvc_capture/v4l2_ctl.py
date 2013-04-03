@@ -154,6 +154,7 @@ def extract_controls(device_number):
             line = lines.pop(0) #take next line
 
         #once done we add the device id and control name and add control to the controls dict
+        control["type"] = control["type"][1:-1] #strip of the brackets
         control["name"] = control_name
         control["src"] = device_number
         control["order"] = control_order
@@ -196,3 +197,4 @@ def list_devices():
 
 if __name__ == '__main__':
     print list_devices()
+    print extract_controls(0)
