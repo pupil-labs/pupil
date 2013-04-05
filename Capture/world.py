@@ -140,7 +140,7 @@ def world(src, size, g_pool):
     bar.calibrate_nine_step = g_pool.cal9_step
     bar.calibrate_nine_stage = g_pool.cal9_stage
     bar.calibrate_auto_advance = c_bool(0)
-    bar.calibrate_next = c_bool(1)
+    bar.calibrate_next = c_bool(0)
     bar.calib_running = g_pool.calibrate
     bar.record_video = c_bool(0)
     bar.record_running = c_bool(0)
