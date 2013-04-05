@@ -53,7 +53,7 @@ def main():
     # use the player: a seperate window for video playback and 9 point calibration animation
     use_player = 1
 
-    player_size = (800,600) #this can be whatever you like
+    player_size = (640,480) #this can be whatever you like
 
 
     audio = False
@@ -67,7 +67,7 @@ def main():
     g_pool.frame_count_record = Value('i', 0)
     g_pool.calibrate = RawValue(c_bool, 0)
     g_pool.cal9 = RawValue(c_bool, 0)
-    g_pool.cal9_stage = Value('i', 0)
+    g_pool.cal9_stage = RawValue('i', 0)
     g_pool.cal9_step = Value('i', 0)
     g_pool.cal9_circle_id = RawValue('i' ,0)
     g_pool.pos_record = Value(c_bool, 0)

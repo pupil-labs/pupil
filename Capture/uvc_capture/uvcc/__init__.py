@@ -52,7 +52,7 @@ class Control(object):
                 self.type  = "int"
                 self.flags = "active"
         else:
-            self.type  = "unknown control type"
+            self.type  = "unknown control"
             self.flags = "inactive"
             self.value = None
 

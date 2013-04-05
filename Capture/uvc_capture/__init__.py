@@ -56,7 +56,7 @@ class Capture():
                     self.cap = None
                     self.src = None
                     self._get_frame_= self._read_empty_
-                    uvc_camera_list.release()
+                    self.uvc_camera_list.release()
                     return
 
                 self.uvc_camera = matching_devices[0]

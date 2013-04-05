@@ -264,7 +264,7 @@ def eye(src,size,g_pool):
 
     atb.init()
     bar = Bar("Eye",g_pool, dict(label="Controls",
-            help="eye detection controls", color=(50,50,50), alpha=50,
+            help="eye detection controls", color=(50,50,50), alpha=100,
             text='light',position=(10, 10),refresh=.1, size=(200, 300)) )
 
 
@@ -272,7 +272,7 @@ def eye(src,size,g_pool):
     #add 4vl2 camera controls to a seperate ATB bar
     if cap.uvc_camera is not None:
         c_bar = atb.Bar(name="Camera_Controls", label=cap.uvc_camera.name,
-            help="UVC Camera Controls", color=(50,50,50), alpha=50,
+            help="UVC Camera Controls", color=(50,50,50), alpha=100,
             text='light',position=(220, 10),refresh=2., size=(200, 200))
 
         # c_bar.add_var("auto_refresher",vtype=atb.TW_TYPE_BOOL8,getter=cap.uvc_refresh_all,setter=None,readonly=True)
