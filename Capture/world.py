@@ -74,7 +74,7 @@ def world(src, size, g_pool):
     pattern.img_points = []
     pattern.map = (0, 2, 7, 16, 21, 23, 39, 40, 42)
     pattern.board_centers = None
-    #opticalflow object
+    #optical flow object
     flow = Temp()
     flow.first =  None
     flow.point =  None
@@ -96,7 +96,7 @@ def world(src, size, g_pool):
     s, img = cap.read_RGB()
 
     if not s:
-        print "World: Error could not get image"
+        print "World: Error could not get image from Camera"
         return
 
 
@@ -124,6 +124,37 @@ def world(src, size, g_pool):
         """
         return data.value
 
+    def start_calibration():
+        c_type = bar.calibration_type.value
+        if  c_type == cal_type["Directed 9-Point"]:
+            print 'WORLD: Starting Directed 9-Point calibration.'
+            bar.calibrate_auto_advance.value = 0
+            bar.calibrate_next.value = 0
+            bar.calibrate_nine_step.value = 0
+            bar.calibrate_nine_stage.value = 0
+            bar.calibrate.value = 1
+            bar.find_pattern.value = 0
+            bar.calibrate_nine.value = 1
+        elif c_type == cal_type["Automated 9-Point"]:
+            print 'WORLD: Starting Automated 9-Point calibration.'
+            bar.calibrate_auto_advance.value = 1
+            bar.calibrate_next.value = 0
+            bar.calibrate_nine_step.value = 0
+            bar.calibrate_nine_stage.value = 0
+            bar.calibrate.value = 1
+            bar.find_pattern.value = 0
+            bar.calibrate_nine.value = 1
+        elif c_type == cal_type["Manual 9-Point"]:
+            print 'WORLD: Starting Manual 9-Point calibration.'
+            bar.calibrate.value = 1
+            bar.find_pattern.value = 1
+            bar.calibrate_nine.value = 0
+        elif c_type == cal_type["Natural Features"]:
+            print 'WORLD: Starting Natural Features calibration.'
+            bar.optical_flow.value = 1
+            bar.calibrate.value = 1
+
+
     ### Initialize ant tweak bar inherits from atb.Bar
     atb.init()
     bar = atb.Bar(name = "World", label="Controls",
@@ -135,11 +166,12 @@ def world(src, size, g_pool):
     bar.find_pattern = c_bool(0)
     bar.optical_flow = c_bool(0)
     bar.screen_shot = False
+    bar.calibration_type = c_int(0)
     bar.calibration_images = False
     bar.calibrate_nine = g_pool.cal9
     bar.calibrate_nine_step = g_pool.cal9_step
     bar.calibrate_nine_stage = g_pool.cal9_stage
-    bar.calibrate_auto_advance = c_bool(0)
+    bar.calibrate_auto_advance = c_bool(1)
     bar.calibrate_next = c_bool(0)
     bar.calib_running = g_pool.calibrate
     bar.record_video = c_bool(0)
@@ -147,23 +179,28 @@ def world(src, size, g_pool):
     bar.play = g_pool.play
     bar.window_size = c_int(0)
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
+    cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Manual 9-Point":2,"Natural Features":3}
+    calibrate_type_enum = atb.enum("Calibration Method",cal_type)
     # play and record can be tied together via pointers to the objects
     # bar.play = bar.record_video
     bar.add_var("FPS", bar.fps, step=1., readonly=True)
     bar.add_var("Display_Size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
-    bar.add_var("Cal/Find_Calibration_Pattern", bar.find_pattern, key="p", help="Find Calibration Pattern")
-    bar.add_var("Cal/Optical_Flow", bar.optical_flow, key="o", help="Activate Optical Flow")
-    bar.add_button("Cal/Screen_Shot", screen_cap, key="s", help="Capture A Frame")
-    bar.add_var("Cal/Calibrate", bar.calibrate, key="c", help="Start/Stop Calibration Process")
-    bar.add_var("Cal9/Start", bar.calibrate_nine, key="9", help="Start/Stop 9 Point Calibration Process (Tip: hit 9 in the player window)")
+    bar.add_var("Calibration_Method",bar.calibration_type, vtype=calibrate_type_enum)
+    bar.add_button("Start_Calibration",start_calibration, key='c')
+    bar.add_var("Record Video", bar.record_video, key="r", help="Start/Stop Recording")
+    bar.add_separator("Sep0")
+    bar.add_var("Cal9/Next_Point",bar.calibrate_next,key="SPACE", help="Hit space to calibrate on next dot")
+    bar.add_var("Cal9/Start", bar.calibrate_nine, help="Start/Stop 9 Point Calibration Process (Tip: hit 9 in the player window)")
     bar.add_var("Cal9/Nine_Pt_stage", bar.calibrate_nine, key="9", help="Start/Stop 9 Point Calibration Process (Tip: hit 9 in the player window)")
     bar.add_var("Cal9/Stage",bar.calibrate_nine_stage,help="Please look at dot ... to calibrate")
     bar.add_var("Cal9/Auto_Advance", bar.calibrate_auto_advance)
-    bar.add_var("Cal9/Next_Point",bar.calibrate_next,key="SPACE", help="Hit space to calibrate on next dot")
-    bar.add_var("Record Video", bar.record_video, key="r", help="Start/Stop Recording")
+    bar.add_var("Cal/Find_Calibration_Pattern", bar.find_pattern, key="p", help="Find Calibration Pattern")
+    bar.add_var("Cal/Calibrate", bar.calibrate, help="Internal flag to collect calibration datas")
+    bar.add_var("Cal/Optical_Flow", bar.optical_flow, key="o", help="Activate Optical Flow")
+    bar.add_button("Cal/Screen_Shot", screen_cap, key="s", help="Capture A Frame")
+    bar.add_separator("Sep1")
     bar.add_var("Play Source Video", bar.play)
     bar.add_var("Exit", g_pool.quit)
-
 
     ###add camera controls to a seperate ATB bar
     if cap.uvc_camera is not None:
@@ -193,7 +230,7 @@ def world(src, size, g_pool):
                     c_bar.define(definition='min='+str(control.min),   varname=name)
                     c_bar.define(definition='max='+str(control.max),   varname=name)
                     c_bar.define(definition='step='+str(control.step), varname=name)
-            elif control.type == "unknown control":
+            elif control.type == "unknown type":
                 pass
         c_bar.add_button("refresh",cap.uvc_camera.update_from_device)
         c_bar.add_button("load defaults",cap.uvc_camera.load_defaults)
@@ -234,7 +271,6 @@ def world(src, size, g_pool):
 
         # Nine Point calibration state machine timing
         if bar.calibrate_nine.value:
-            bar.calibrate.value = True
             if bar.calibrate_nine_step.value > 30:
                 bar.calibrate_nine_step.value = 0
                 bar.calibrate_nine_stage.value += 1
@@ -250,6 +286,7 @@ def world(src, size, g_pool):
                 bar.find_pattern.value = False
 
             g_pool.cal9_circle_id.value = pattern.map[bar.calibrate_nine_stage.value]
+
             if bar.calibrate_next.value or bar.calibrate_auto_advance.value:
                 bar.calibrate_nine_step.value += 1
             else:
@@ -258,7 +295,7 @@ def world(src, size, g_pool):
         g_pool.player_refresh.set()
 
 
-        #pattern detection and its various uses
+        ###pattern detection and its various uses
         pattern.centers = None
         if bar.find_pattern.value:
             pattern.centers = circle_grid(img)
@@ -291,7 +328,7 @@ def world(src, size, g_pool):
                     nextPts = nextPts[0]
 
                     pattern.image_coords = nextPts
-                    pattern.norm_coords = normalize(nextPts, (img.shape[1],img.shape[0]),flip_y=True)
+                    pattern.norm_coords = normalize(nextPts,(img.shape[1],img.shape[0]),flip_y=True)
                     flow.count -=1
                     print flow.count
                 else:
@@ -318,7 +355,7 @@ def world(src, size, g_pool):
                 pattern.img_points = []
                 bar.find_pattern.value = False
 
-        # Setup recording process
+        ### Setup recording process
         if bar.record_video and not bar.record_running:
             record.path = os.path.join(record.path_parent, "data%03d/" % record.counter)
             while True:
@@ -355,9 +392,10 @@ def world(src, size, g_pool):
         if bar.record_video and bar.record_running:
             # Save image frames to video writer
             # increment the frame_count_record value
-            # Eye positions can be associated with frames of recording even if different framerates
-            g_pool.frame_count_record.value += 1
+            # Eye positions can be associated with frames of recording even if different framerates are used
             record.writer.write(img)
+            g_pool.frame_count_record.value += 1
+
 
         # Finish all recordings, clean up.
         if not bar.record_video and bar.record_running:
@@ -366,7 +404,7 @@ def world(src, size, g_pool):
             except:
                 print "no audio recorded"
 
-            # conviniece function: copy camera intrinsics into each data folder at the end of a recording.
+            # for conviniece: copy camera intrinsics into each data folder at the end of a recording.
             try:
                 camera_matrix = np.load("camera_matrix.npy")
                 dist_coefs = np.load("dist_coefs.npy")
@@ -381,6 +419,8 @@ def world(src, size, g_pool):
             del record.writer
             bar.record_running = 0
 
+
+        ###render the screen
         clear_gl_screen()
         cv2.cvtColor(img, cv2.COLOR_BGR2RGB,img)
         draw_gl_texture(img)

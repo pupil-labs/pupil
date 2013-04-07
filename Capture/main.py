@@ -90,12 +90,12 @@ def main():
     p_eye.start()
     if audio: p_audio.start()
 
-    # on linux we need to give the camera driver some time before you request another camera
+    # on Linux, we need to give the camera driver some time before you request another camera
     sleep(1)
 
-    # on Mac, when using some cameras (like our current worldcamera logitch c510)
+    # on Mac, when using some cameras (like our current logitech worldcamera)
     # you can't run world camera grabber in its own process
-    # it must reside in the main loop when you run on MacOS.
+    # it must reside in the main process when you run on MacOS.
     world(world_src,world_size,g_pool)
 
     # exit / clean-up

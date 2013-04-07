@@ -109,9 +109,14 @@ def player(g_pool,size):
                     gl.glVertex3f(p[0],p[1],0.0)
                 gl.glEnd()
 
+
+                ###display the animated target dot
                 gl.glPointSize((40)*(1.01-(step+1)/80.0))
                 gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ZERO)
-                gl.glColor4f(1.0,0.0,0.0,1.0)
+                if g_pool.pattern_x.value or g_pool.pattern_y.value: ###if pattern detected
+                    gl.glColor4f(0.0,1.0,0.0,1.0)
+                else:
+                    gl.glColor4f(1.0,0.0,0.0,1.0)
                 gl.glBegin(gl.GL_POINTS)
                 gl.glVertex3f(grid[circle_id][0],grid[circle_id][1],0.0)
                 gl.glEnd()
