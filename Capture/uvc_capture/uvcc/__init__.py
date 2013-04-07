@@ -25,14 +25,25 @@ class Control(object):
         find out if a control is active
         find out if the range is bool or int
         """
-        self.value = self.get_val_from_device()
+        self.value = None
         self.min = None
         self.max = None
         self.step    = None
         self.default = None
         self.menu    = None #some day in the future we will extract the control menu entries here.
 
-        if self.value != None:
+        self.info = self.get_info()
+        """
+        D0 1 = Supports GET value requests      Capability
+        D1 1 = Supports SET value requests      Capability
+        D2 1 = Disabled due to automatic mode (under device control)    State
+        D3 1 = Autoupdate Control   Capability
+        D4 1 = Asynchronous Control Capability
+        D5 1 = Disabled due to incompatibility with Commit state.   Statex
+        """
+
+        if self.info > 0 :  # Control supported
+            self.value = self.get_val_from_device()
             self.min =  self.get_(UVC_GET_MIN)
             self.max =  self.get_(UVC_GET_MAX)
             self.step    =  self.get_(UVC_GET_RES)
@@ -40,7 +51,6 @@ class Control(object):
 
             if (self.max,self.min) == (None,None):
                 self.type  = "bool"
-                self.flags = "active"
             # elif (self.max,self.min) == (None,None):
             #     ###I guess this should be a menu
             #     self.type  = "int"
@@ -50,10 +60,14 @@ class Control(object):
             #     self.step = 1
             else:
                 self.type  = "int"
+
+            if self.info >> 3 & 1: # Disabled due to automatic mode (under device control)
+                self.flags = "inactive"
+            else:
                 self.flags = "active"
         else:
-            self.type  = "unknown control"
-            self.flags = "inactive"
+            self.type  = "unknown type"
+            self.flags = "control not supported"
             self.value = None
 
     def get_val_from_device(self):
@@ -65,6 +79,9 @@ class Control(object):
     def set_val(self,val):
         self.value = val
         return uvccSetVal(val,self.name,self.handle)
+
+    def get_info(self):
+        return uvccRequestInfo(self.name,self.handle)
 
     def get_(self,request):
         return uvccSendRequest(self.name,request,self.handle)
@@ -82,27 +99,7 @@ class Camera(object):
 
     def init_controls(self):
          ###list of all controls implemented by uvcc, the names evaluate to ints using a dict lookup in raw.py
-        controls_str=('UVCC_REQ_SCANNING_MODE',
-                        'UVCC_REQ_EXPOSURE_AUTOMODE',
-                        'UVCC_REQ_EXPOSURE_AUTOPRIO',
-                        'UVCC_REQ_EXPOSURE_ABS',
-                        'UVCC_REQ_EXPOSURE_REL',
-                        'UVCC_REQ_FOCUS_AUTO',
-                        'UVCC_REQ_FOCUS_ABS',
-                        'UVCC_REQ_FOCUS_REL',
-                        'UVCC_REQ_IRIS_ABS',
-                        'UVCC_REQ_IRIS_REL',
-                        'UVCC_REQ_BACKLIGHT_COMPENSATION_ABS',
-                        'UVCC_REQ_BRIGHTNESS_ABS',
-                        'UVCC_REQ_CONTRAST_ABS',
-                        'UVCC_REQ_GAIN_ABS',
-                        'UVCC_REQ_POWER_LINE_FREQ',
-                        'UVCC_REQ_SATURATION_ABS',
-                        'UVCC_REQ_SHARPNESS_ABS',
-                        'UVCC_REQ_GAMMA_ABS',
-                        'UVCC_REQ_WB_TEMP_AUTO',
-                        'UVCC_REQ_WB_TEMP_ABS',
-                        ) #'__UVCC_REQ_OUT_OF_RANGE'
+        controls_str = uvcc_controls
 
         self.controls = {}
         i = 0
@@ -151,6 +148,6 @@ if __name__ == '__main__':
         cam.init_controls()
         cam.load_defaults()
         for c in cam.controls.itervalues():
-            if c.flags == "active":
+            if c.flags != "control not supported":
                 print c.name, " "*(40-len(c.name)), c.value, c.min,c.max,c.step
     uvc_cameras.release()

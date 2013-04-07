@@ -9,7 +9,7 @@ it requires:
     - on mac: uvcc (binary is distributed with this module)
 """
 
-from cv2 import VideoCapture, cvtColor, COLOR_RGB2BGR,COLOR_RGB2HSV
+from cv2 import VideoCapture, cvtColor, COLOR_RGB2BGR,COLOR_RGB2HSV, cv
 import numpy as np
 from os.path import isfile
 
@@ -21,7 +21,8 @@ if os_name == "Linux":
     import v4l2_ctl_oop as uvc
 elif os_name == "Darwin":
     import uvcc as uvc
-
+else:
+    raise Exception("UVC Capture Error. No UVC Control backend found for this OS")
 
 class Capture():
     """
