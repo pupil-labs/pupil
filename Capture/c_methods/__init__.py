@@ -7,10 +7,24 @@ Only wrappers are exposed not the loaded libraries.
 from ctypes import *
 from numpy.ctypeslib import ndpointer
 
-import os.path
+
+
+import os
+
 dll_name = "methods.so"
 dllabspath = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + dll_name
+
+if not os.path.isfile(dllabspath):
+    print "c-methods: Did not find binary file. Comiling now."
+    import subprocess
+    cwd = os.getcwd()
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    subprocess.call("make")
+    os.chdir(cwd)
+    print "c-methods: compiling done."
+
 __methods_dll = CDLL(dllabspath)
+
 
 
 __methods_dll.filter.argtypes = [ndpointer(c_float),  # integral image
