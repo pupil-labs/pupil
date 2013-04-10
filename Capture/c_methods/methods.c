@@ -66,8 +66,8 @@ void filter(const float *img, const int rows, const int cols, int * x_pos,int *y
     int max_h = 80;
     int h, i, j;
     float best_response = -10000;
-    point_t best_pos;
-    int best_w;
+    point_t best_pos ={0,0};
+    int best_w = 0;
     int step = 4;
 
     for (h = min_h; h < max_h; h+=step)
@@ -102,3 +102,4 @@ void filter(const float *img, const int rows, const int cols, int * x_pos,int *y
     *y_pos = (int)best_pos.c;
     *width = best_w;
     }
+
