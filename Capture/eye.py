@@ -400,7 +400,7 @@ def eye(src,size,g_pool):
 
 
         # Ellipse fitting from countours
-        result = fit_ellipse_convexity_check(img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX],
+        result = fit_ellipse(img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX],
                             contours,
                             binary_img,
                             ratio=bar.pupil_ratio.value,
@@ -490,6 +490,7 @@ def eye(src,size,g_pool):
         if not g_pool.calibrate.value and l_pool.calib_running:
             l_pool.calib_running = 0
             if pupil.pt_cloud: # some data was actually collected
+                print "Calibrating with", len(pupil.pt_cloud), "colleced data points."
                 pupil.coefs = calibrate_poly(pupil.pt_cloud)
                 np.save('cal_pt_cloud.npy', np.array(pupil.pt_cloud))
 

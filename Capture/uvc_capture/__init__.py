@@ -5,8 +5,8 @@ it adds some fuctionalty like:
     - assosication by name patterns instead of id's (0,1,2..)
 it requires:
     - opencv 2.3+
-    - on linux: v4l2-ctl (via apt-get install v4l2-util)
-    - on mac: uvcc (binary is distributed with this module)
+    - on Linux: v4l2-ctl (via apt-get install v4l2-util)
+    - on MacOS: uvcc (binary is distributed with this module)
 """
 
 from cv2 import VideoCapture, cvtColor, COLOR_RGB2BGR,COLOR_RGB2HSV, cv
@@ -153,6 +153,6 @@ if __name__ == '__main__':
     #print img.shape
     # print cap.uvc_controls
     # cap.v4l2_set_default()
-    cap.uvc_camera.refresh_all()
+    cap.uvc_camera.update_from_device()
     cap.release()
     print "done"

@@ -191,7 +191,7 @@ def world(src, size, g_pool):
     bar.add_separator("Sep0")
     bar.add_var("Cal9/Next_Point",bar.calibrate_next,key="SPACE", help="Hit space to calibrate on next dot")
     bar.add_var("Cal9/Start", bar.calibrate_nine, help="Start/Stop 9 Point Calibration Process (Tip: hit 9 in the player window)")
-    bar.add_var("Cal9/Nine_Pt_stage", bar.calibrate_nine, key="9", help="Start/Stop 9 Point Calibration Process (Tip: hit 9 in the player window)")
+    bar.add_var("Cal9/Nine_Pt_stage", bar.calibrate_nine, help="Internal start flag please use the Start Calibration Button")
     bar.add_var("Cal9/Stage",bar.calibrate_nine_stage,help="Please look at dot ... to calibrate")
     bar.add_var("Cal9/Auto_Advance", bar.calibrate_auto_advance)
     bar.add_var("Cal/Find_Calibration_Pattern", bar.find_pattern, key="p", help="Find Calibration Pattern")
@@ -291,11 +291,10 @@ def world(src, size, g_pool):
                 bar.calibrate_nine_step.value += 1
             else:
                 pass
-
         g_pool.player_refresh.set()
 
 
-        ###pattern detection and its various uses
+        ###asymetrical point-pattern detection and its various uses
         pattern.centers = None
         if bar.find_pattern.value:
             pattern.centers = circle_grid(img)
