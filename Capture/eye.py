@@ -7,6 +7,7 @@ from glfw import *
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 from time import time, sleep
 from methods import *
+from c_methods import eye_filter
 from uvc_capture import Capture
 from calibrate import *
 from os import path
@@ -349,30 +350,34 @@ def eye(src,size,g_pool):
         ###IMAGE PROCESSING
         gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
 
-        # integral = cv2.integral(gray_img)
-
+        integral = cv2.integral(gray_img)
+        integral =  np.array(integral,dtype=c_float)
+        # print integral.shape
+        # print integral.dtype
+        x,y,w = eye_filter(integral)
+        p_r.set((y,x,y+w,x+w))
         ###2D filter response as first estimation of pupil position for automated ROI creation
-        downscale = 8
-        best_m = 0
-        region_r = min(max(8,l_pool.region_r),61)
-        lable = 0
-        for s in (region_r+v for v in xrange(-7,7)):
-            #simple best of three optimization
-            kernel = make_eye_kernel(s,int(3*s))
-            g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REPLICATE)
-            m = np.amax(g_img)
-            # print s,m
-            x,y = np.where(g_img == m)
-            x,y = downscale*y[0],downscale*x[0]
-            # cv2.putText(gray_img, str(s)+"-"+str(m), (x,y+lable), cv2.FONT_HERSHEY_SIMPLEX, .35,(255,255,255))
-            lable+=40
-            inner_r = (s*downscale)/2
-            outer_r = int(s*downscale*1.)
-            if m > best_m:
-                best_m = m
-                l_pool.region_r = s
-                vals = [max(0,v) for v in (x-outer_r,y-outer_r,x+outer_r,y+outer_r)]
-                p_r.set(vals)
+        # downscale = 8
+        # best_m = 0
+        # region_r = min(max(8,l_pool.region_r),61)
+        # lable = 0
+        # for s in (region_r+v for v in xrange(-7,7)):
+        #     #simple best of three optimization
+        #     kernel = make_eye_kernel(s,int(3*s))
+        #     g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REPLICATE)
+        #     m = np.amax(g_img)
+        #     # print s,m
+        #     x,y = np.where(g_img == m)
+        #     x,y = downscale*y[0],downscale*x[0]
+        #     # cv2.putText(gray_img, str(s)+"-"+str(m), (x,y+lable), cv2.FONT_HERSHEY_SIMPLEX, .35,(255,255,255))
+        #     lable+=40
+        #     inner_r = (s*downscale)/2
+        #     outer_r = int(s*downscale*1.)
+        #     if m > best_m:
+        #         best_m = m
+        #         l_pool.region_r = s
+        #         vals = [max(0,v) for v in (x-outer_r,y-outer_r,x+outer_r,y+outer_r)]
+        #         p_r.set(vals)
 
         # create view into the gray_img with the bounds of the rough pupil estimation
         pupil_img = gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX]
