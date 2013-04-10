@@ -166,7 +166,7 @@ def world(src, size, g_pool):
     bar.find_pattern = c_bool(0)
     bar.optical_flow = c_bool(0)
     bar.screen_shot = False
-    bar.calibration_type = c_int(0)
+    bar.calibration_type = c_int(1)
     bar.calibration_images = False
     bar.calibrate_nine = g_pool.cal9
     bar.calibrate_nine_step = g_pool.cal9_step
