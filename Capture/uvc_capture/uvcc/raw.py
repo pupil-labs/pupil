@@ -201,10 +201,12 @@ if __name__ == '__main__':
     cam_n =  __uvcc_dll.uvccGetCamList(cam_list)
 
     for i in range(cam_n):  # it seems cameras are sorted from high to low for opencv
-        print "idVendor",hex(cam_list[i].contents.devDesc.idVendor)
-        print "idProduct",hex(cam_list[i].contents.devDesc.idProduct)
-        print "ifNo", cam_list[i].contents.idLocation
-        print uvccCamProduct(cam_list[i].contents)
+        # print "idVendor",hex(cam_list[i].contents.devDesc.idVendor)
+        # print "idProduct",hex(cam_list[i].contents.devDesc.idProduct)
+        # print "ifNo", cam_list[i].contents.idLocation
+        print "Product Name:",uvccCamProduct(cam_list[i].contents)
+        print "Manufacturer:", uvccCamManufacturer(cam_list[i].contents)
+        print "Serial:",uvccCamSerialNumber(cam_list[i].contents)
         uid = uvccModelId()
         uid = cam_list[i].contents.mId.contents
         cam = cam_list[i].contents

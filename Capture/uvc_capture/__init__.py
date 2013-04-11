@@ -47,7 +47,7 @@ class Capture():
                 #looking for attached cameras that match the suggested names
                 matching_devices = []
                 for device in self.uvc_camera_list:
-                    if any([s in device.name for s in src]):
+                    if any([s in (device.name or device.manufacurer or device.serial) for s in src]):
                         matching_devices.append(device)
 
                 if len(matching_devices) >1:
@@ -148,11 +148,12 @@ class Capture():
 
 
 if __name__ == '__main__':
-    cap = Capture(["525"],(1280,720))
+    cap = Capture(["HD Webcam C523",],(1280,720))
     s,img = cap.read()
+    if s:
     #print img.shape
     # print cap.uvc_controls
     # cap.v4l2_set_default()
-    cap.uvc_camera.update_from_device()
-    cap.release()
+        cap.uvc_camera.update_from_device()
+        cap.release()
     print "done"
