@@ -40,7 +40,7 @@ inline float area(const float *img,point_t size,point_t start,point_t end,point_
             + img[(offset.r + start.r) * size.c + offset.c + start.c]
             - img[(offset.r + start.r) * size.c + offset.c + end.c]
             - img[(offset.r + end.r  ) * size.c + offset.c + start.c];
-}
+    }
 
 inline eye_t make_eye(int h){
     int w = 3*h;
