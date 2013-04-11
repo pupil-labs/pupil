@@ -61,7 +61,6 @@ inline eye_t make_eye(int h){
 void filter(const float *img, const int rows, const int cols, int * x_pos,int *y_pos,int *width)
 {
     point_t img_size = {rows,cols};
-
     int min_h = 1;
     int max_h = 80;
     int h, i, j;

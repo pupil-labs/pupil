@@ -6,25 +6,24 @@ Only wrappers are exposed not the loaded libraries.
 
 from ctypes import *
 from numpy.ctypeslib import ndpointer
-
-
-
 import os
 
+source_loc = os.path.dirname(os.path.abspath(__file__))
+
+###Run Autocomiler
+#  Binaries are not distributed instead a make file and source are in the c-methods folder
+#  Make is invoked when this module is imported or run.
+# print "c-methods: compiling now."
+import subprocess
+compiler_status = subprocess.check_output("make",cwd=source_loc)
+print "c-methods:",compiler_status
+del subprocess
+# print "c-methods: compiling done."
+
 dll_name = "methods.so"
-dllabspath = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + dll_name
-
-###Autocompiler will run if binary is not found and build from source.
+dllabspath = source_loc + os.path.sep + dll_name
 if not os.path.isfile(dllabspath):
-    print "c-methods: Did not find binary file. Comiling now."
-    import subprocess
-    cwd = os.getcwd()
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    subprocess.call("make")
-    os.chdir(cwd)
-    del subprocess
-    print "c-methods: compiling done."
-
+    raise Exception("c-methods Error could not find binary.")
 
 __methods_dll = CDLL(dllabspath)
 
