@@ -20,7 +20,7 @@ def main():
 
     #to assign by name: string(s) in list
     eye_src = ["6000"]
-    world_src = ["C510","C525","C615","(046d:081d)"]
+    world_src = ["C510","C525","C615","(046d:081d)", "UVC Camera"]
 
     #to assign cameras directly: use ints
     # eye_src = 0
@@ -72,7 +72,6 @@ def main():
     g_pool.cal9_circle_id = RawValue('i' ,0)
     g_pool.pos_record = Value(c_bool, 0)
     g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
-
     g_pool.audio_record = Value(c_bool,False)
     g_pool.audio_rx, g_pool.audio_tx = Pipe(False)
     g_pool.player_refresh = Event()

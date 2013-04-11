@@ -68,19 +68,22 @@ class Capture():
             elif src_type is int:
                 self.src = src
                 self.name = "unnamed"
-                for device in self.uvc_camera_list:
-                    if int(device.cv_id) == src:
-                        self.uvc_camera = device
-                        print "camera selected:", self.uvc_camera.name, "id:",self.uvc_camera.cv_id
-                        self.name = self.uvc_camera.name
-                        self.src = self.uvc_camera.cv_id
+                self.uvc_camera = None
+                # for now we dont use uvc controls when assigning with id.
+                # for device in self.uvc_camera_list:
+                #     if int(device.cv_id) == src:
+                #         self.uvc_camera = device
+                #         print "camera selected:", self.uvc_camera.name, "id:",self.uvc_camera.cv_id
+                #         self.name = self.uvc_camera.name
+                #         self.src = self.uvc_camera.cv_id
 
 
             #do all the uvc cpature relevant setup
             self.cap = VideoCapture(self.src)
             self.set_size(size)
             self._get_frame_ = self.cap.read
-            self.uvc_camera.init_controls()
+            if self.uvc_camera:
+                self.uvc_camera.init_controls()
 
 
         ###setup as video playback

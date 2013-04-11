@@ -93,8 +93,12 @@ class Camera(object):
         self.handle = handle
         self.cv_id = cv_id
         self.name = uvccCamProduct(self.handle)
+        if not self.name:
+            self.name = "UVC Camera"
         self.manufacurer = uvccCamManufacturer(self.handle)
         self.serial = uvccCamSerialNumber(self.handle)
+        self.idProduct = self.handle.contents.devDesc.idProduct
+        self.idVendor =  self.handle.contents.devDesc.idVendor
         self.controls = None
 
     def init_controls(self):

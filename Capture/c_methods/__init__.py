@@ -16,7 +16,7 @@ source_loc = os.path.dirname(os.path.abspath(__file__))
 # print "c-methods: compiling now."
 import subprocess
 compiler_status = subprocess.check_output("make",cwd=source_loc)
-print "c-methods:",compiler_status
+# print "c-methods:",compiler_status
 del subprocess
 # print "c-methods: compiling done."
 
@@ -30,13 +30,13 @@ __methods_dll = CDLL(dllabspath)
 __methods_dll.filter.argtypes = [ndpointer(c_float),  # integral image
                                 c_size_t,           # rows/shape[0]
                                 c_size_t,           # cols/shape[1]
-                                POINTER(c_int),     # maximal response pos height
-                                POINTER(c_int),     # maximal response pos width
+                                POINTER(c_int),     # maximal response top left anchor pos height
+                                POINTER(c_int),     # maximal response top left anchor pos width
                                 POINTER(c_int)]     # maxinal response window size
 
 def eye_filter(integral):
-    rows,cols = integral.shape[0],integral.shape[1]
-    x,y,w = c_int(),c_int(),c_int()
+    rows, cols = integral.shape[0],integral.shape[1]
+    x, y, w = c_int(), c_int(), c_int()
     __methods_dll.filter(integral,rows,cols,x,y,w)
     return x.value,y.value,w.value
 
