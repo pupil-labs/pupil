@@ -124,16 +124,14 @@ class Roi(object):
 
     def setStart(self,(x,y)):
         x,y = int(x),int(y)
-        print "start",x,y
         x,y = max(0,x),max(0,y)
         self.nX,self.nY = x,y
 
     def setEnd(self,(x,y)):
             x,y = int(x),int(y)
             x,y = max(0,x),max(0,y)
-            print "End",x,y
-            #make sure the ROI actually contains pixels
-            if abs(self.nX - x) > 30 and abs(self.nY - y)>30:
+            #make sure the ROI actually contains enough pixels
+            if abs(self.nX - x) > 25 and abs(self.nY - y)>25:
                 self.lX = min(x,self.nX)
                 self.lY = min(y,self.nY)
                 self.uX = max(x,self.nX)
