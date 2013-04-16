@@ -49,7 +49,7 @@ class Capture():
             self.uvc_camera_list = uvc.Camera_List()
 
             if os_name == "Darwin":
-                _dummy.release() #and here we put it back to sleep.
+                # _dummy.release() #and here we put it back to sleep.
                 del _dummy
 
             if src_type is list:
@@ -70,7 +70,7 @@ class Capture():
                     return
 
                 self.uvc_camera = matching_devices[0]
-                print "camera selected:", self.uvc_camera.name, "id:",self.uvc_camera.cv_id
+                print "camera selected: %s  with id: %s" %(self.uvc_camera.name,self.uvc_camera.cv_id)
                 self.name = self.uvc_camera.name
                 self.src = self.uvc_camera.cv_id
 
