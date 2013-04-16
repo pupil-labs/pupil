@@ -4,7 +4,7 @@ import cv2
 from time import sleep
 from multiprocessing import Process, Pipe, Event
 from multiprocessing.sharedctypes import RawValue, Value
-# RawValue is shared memory without lock, handle with care, this is usefull for ATB it needs cTypes
+# RawValue is shared memory without lock, handle with care, this is usefull for ATB it needs c_types
 from eye import eye, eye_profiled
 from world import world, world_profiled
 from player import player
@@ -20,7 +20,7 @@ def main():
 
     #to assign by name: string(s) in list
     eye_src = ["6000"]
-    world_src = ["C510","C525","C615","C920","(046d:081d)","UVC Camera"]
+    world_src = ["(046d:081d)","C525","C615","C920"] # "(046d:081d)" is the name (automated replacement) name of C510
 
     #to assign cameras directly: use ints
     # eye_src = 0
@@ -34,14 +34,14 @@ def main():
     eye_size = (640,360)
     """
         HD-6000
-        v4l2-ctl -d /dev/video0 --list-formats-ext
+        v4l2-ctl -d /dev/videoN --list-formats-ext
         640x480 1280x720 960x544 800x448 640x360 800x600
         416x240 352x288 176x144 320x240 160x120
     """
     world_size = (1280,720)
     """
         c-525
-        v4l2-ctl -d /dev/video0 --list-formats-ext
+        v4l2-ctl -d /dev/videoN --list-formats-ext
         640x480 160x120 176x144 320x176 320x240 432x240
         352x288 544x288 640x360 752x416 800x448 864x480
         960x544 1024x576 800x600 1184x656 960x720

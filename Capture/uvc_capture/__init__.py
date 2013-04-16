@@ -41,13 +41,14 @@ class Capture():
         # checking src and handling all cases:
         src_type = type(src)
         if src_type is not str: #we are looking for an actual camera not a video file...
+            _dummy = VideoCapture(-1)
             self.uvc_camera_list = uvc.Camera_List()
-
+            del _dummy
             if src_type is list:
                 #looking for attached cameras that match the suggested names
                 matching_devices = []
                 for device in self.uvc_camera_list:
-                    if any([s in (device.name or device.manufacurer or device.serial) for s in src]):
+                    if any([s in device.name for s in src]):
                         matching_devices.append(device)
 
                 if len(matching_devices) >1:
@@ -151,7 +152,7 @@ class Capture():
 
 
 if __name__ == '__main__':
-    cap = Capture(["HD Webcam C523",],(1280,720))
+    cap = Capture(["HD Webcam C525",],(1280,720))
     s,img = cap.read()
     if s:
     #print img.shape

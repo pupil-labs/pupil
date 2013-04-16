@@ -93,12 +93,14 @@ class Camera(object):
         self.handle = handle
         self.cv_id = cv_id
         self.name = uvccCamProduct(self.handle)
-        if not self.name:
-            self.name = "UVC Camera"
         self.manufacurer = uvccCamManufacturer(self.handle)
         self.serial = uvccCamSerialNumber(self.handle)
         self.idProduct = self.handle.contents.devDesc.idProduct
         self.idVendor =  self.handle.contents.devDesc.idVendor
+        self.idString = "(" + str(hex(self.idVendor)).replace("x","") + ":" + str(hex(self.idProduct)).replace("x","") + ")"
+        ### some cameras dont have names: we give it one based on the USB Vendor and Product ID
+        if not self.name:
+            self.name = "UVC Camera" + " " + self.idString
         self.controls = None
 
     def init_controls(self):
@@ -134,8 +136,8 @@ class Camera_List(list):
         sort_cams = [self.cam_list[i] for i in range(self.cam_n)]
         #from my tests QTKit sorts them by idLocation order
         sort_cams.sort(key=lambda l:-l.contents.idLocation)
-        #further test indicate that the FaceTime camera is always last
-        sort_cams.sort(key=lambda t: "FaceTime" in uvccCamProduct(t))
+        #further test indicate that the FaceTime camera is always last - we sort by bools
+        # sort_cams.sort(key=lambda t: "FaceTime" in uvccCamProduct(t))
 
         for i in range(len(sort_cams)):
             self.append(Camera(sort_cams[i],i))
@@ -149,13 +151,15 @@ class Camera_List(list):
 
 
 if __name__ == '__main__':
+    import cv2
+    _ = cv2.VideoCapture(-1) # we need to wake the isight camera up if we want to query it....
     uvc_cameras = Camera_List()
     for cam in uvc_cameras:
         print cam.name
         print cam.cv_id
         cam.init_controls()
         cam.load_defaults()
-        # for c in cam.controls.itervalues():
-            # if c.flags != "control not supported":
-                # print c.name, " "*(40-len(c.name)), c.value, c.min,c.max,c.step
+        for c in cam.controls.itervalues():
+            if c.flags != "control not supported":
+                print c.name, " "*(40-len(c.name)), c.value, c.min,c.max,c.step
     uvc_cameras.release()
