@@ -21,6 +21,7 @@ if os_name == "Linux":
     import v4l2_ctl_oop as uvc
 elif os_name == "Darwin":
     import uvcc as uvc
+
 else:
     raise Exception("UVC Capture Error. No UVC Control backend found for this OS")
 
@@ -41,9 +42,16 @@ class Capture():
         # checking src and handling all cases:
         src_type = type(src)
         if src_type is not str: #we are looking for an actual camera not a video file...
-            _dummy = VideoCapture(-1)
+
+            if os_name == "Darwin":
+                _dummy = VideoCapture(-1) #we need to wake up the iSight camera...
+
             self.uvc_camera_list = uvc.Camera_List()
-            del _dummy
+
+            if os_name == "Darwin":
+                _dummy.release() #and here we put it back to sleep.
+                del _dummy
+
             if src_type is list:
                 #looking for attached cameras that match the suggested names
                 matching_devices = []
