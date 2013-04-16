@@ -39,7 +39,7 @@ class Control(object):
         D2 1 = Disabled due to automatic mode (under device control)    State
         D3 1 = Autoupdate Control   Capability
         D4 1 = Asynchronous Control Capability
-        D5 1 = Disabled due to incompatibility with Commit state.   Statex
+        D5 1 = Disabled due to incompatibility with Commit state.   State
         """
 
         if self.info > 0 :  # Control supported
@@ -49,7 +49,7 @@ class Control(object):
             self.step    =  self.get_(UVC_GET_RES)
             self.default =  self.get_(UVC_GET_DEF)
 
-            if (self.max,self.min) == (None,None):
+            if ((self.max,self.min) == (None,None)) or ((self.max,self.min) == (1,0)) :
                 self.type  = "bool"
             # elif (self.max,self.min) == (None,None):
             #     ###I guess this should be a menu
@@ -130,10 +130,14 @@ class Camera_List(list):
         self.cam_n = uvccGetCamList(self.cam_list)
 
         #sort them as the cameras appear in OpenCV VideoCapture
+        #see cap_qtkit.mm in the opencv source for how ids get assingned.
         sort_cams = [self.cam_list[i] for i in range(self.cam_n)]
-        sort_cams.sort(key=lambda l:-l.contents.idLocation) #from my tests so far OTKit sorts them by idLocation order
+        #from my tests QTKit sorts them by idLocation order
+        sort_cams.sort(key=lambda l:-l.contents.idLocation)
+        #further test indicate that the FaceTime camera is always last
+        sort_cams.sort(key=lambda t: "FaceTime" in uvccCamProduct(t))
 
-        for i in range(self.cam_n):
+        for i in range(len(sort_cams)):
             self.append(Camera(sort_cams[i],i))
 
     def release(self):
@@ -151,7 +155,7 @@ if __name__ == '__main__':
         print cam.cv_id
         cam.init_controls()
         cam.load_defaults()
-        for c in cam.controls.itervalues():
-            if c.flags != "control not supported":
-                print c.name, " "*(40-len(c.name)), c.value, c.min,c.max,c.step
+        # for c in cam.controls.itervalues():
+            # if c.flags != "control not supported":
+                # print c.name, " "*(40-len(c.name)), c.value, c.min,c.max,c.step
     uvc_cameras.release()
