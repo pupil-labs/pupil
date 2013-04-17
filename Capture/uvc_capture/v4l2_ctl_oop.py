@@ -46,7 +46,8 @@ class Control(dict):
 
 class Camera(object):
     """docstring for uvcc_camera"""
-    def __init__(self,c):
+    def __init__(self,cam):
+        c = cam.dict
         self.dict = c
         self.cvId = c['src_id']
         self.name = c['name']
@@ -55,7 +56,7 @@ class Camera(object):
         self.init_controls()
 
     def init_controls(self):
-        control_dict = extract_controls(self.cv_id)
+        control_dict = extract_controls(self.cvId)
 
         self.controls = {}
         for c in control_dict:
@@ -97,4 +98,4 @@ if __name__ == '__main__':
         cam.update_from_device()
         for c in cam.controls.itervalues():
             if c.flags == "active":
-                print c.name, " "*(40-len(c.name)), c.current,c.type, c.min,c.max,c.step
+                print c.name, " "*(40-len(c.name)), c.value,c.type, c.min,c.max,c.step
