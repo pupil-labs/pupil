@@ -7,7 +7,7 @@ import cv2
 from glfw import *
 import atb
 from methods import normalize, denormalize, chessboard, circle_grid, gen_pattern_grid, calibrate_camera,Temp
-from uvc_capture import Capture
+from uvc_capture import autoCreateCapture
 # from gl_shapes import Point
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm
 from time import time
@@ -91,13 +91,16 @@ def world(src, size, g_pool):
     record.path = None
     record.counter = 0
 
-    ### initialize capture, check if it works
-    cap = Capture(src, size)
-    s, img = cap.read_RGB()
-
-    if not s:
-        print "World: Error could not get image from Camera"
+    # initialize capture, check if it works
+    cap = autoCreateCapture(src, size)
+    if cap is None:
+        print "WORLD: Error could not create Capture"
         return
+    s, img = cap.read_RGB()
+    if not s:
+        print "WORLD: Error could not get image"
+        return
+    height,width = img.shape[:2]
 
 
     ###helpers called by the main atb bar
@@ -202,15 +205,18 @@ def world(src, size, g_pool):
     bar.add_var("Play Source Video", bar.play)
     bar.add_var("Exit", g_pool.quit)
 
-    ###add camera controls to a seperate ATB bar
-    if cap.uvc_camera is not None:
-        c_bar = atb.Bar(name="Camera_Controls", label=cap.uvc_camera.name,
+    #add 4vl2 camera controls to a seperate ATB bar
+    if cap.controls is not None:
+        c_bar = atb.Bar(name="Camera_Controls", label=cap.name,
             help="UVC Camera Controls", color=(50,50,50), alpha=100,
             text='light',position=(220, 10),refresh=2., size=(200, 200))
+
         # c_bar.add_var("auto_refresher",vtype=atb.TW_TYPE_BOOL8,getter=cap.uvc_refresh_all,setter=None,readonly=True)
         # c_bar.define(definition='visible=0', varname="auto_refresher")
-        sorted_controls = [c for c in cap.uvc_camera.controls.itervalues()]
+
+        sorted_controls = [c for c in cap.controls.itervalues()]
         sorted_controls.sort(key=lambda c: c.order)
+
         for control in sorted_controls:
             name = control.atb_name
             if control.type=="bool":
@@ -230,14 +236,17 @@ def world(src, size, g_pool):
                     c_bar.define(definition='min='+str(control.min),   varname=name)
                     c_bar.define(definition='max='+str(control.max),   varname=name)
                     c_bar.define(definition='step='+str(control.step), varname=name)
-            elif control.type == "unknown type":
+            else:
                 pass
-        c_bar.add_button("refresh",cap.uvc_camera.update_from_device)
-        c_bar.add_button("load defaults",cap.uvc_camera.load_defaults)
+            if control.flags == "inactive":
+                pass
+                # c_bar.define(definition='readonly=1',varname=control.name)
+
+        c_bar.add_button("refresh",cap.update_from_device)
+        c_bar.add_button("load defaults",cap.load_defaults)
 
     else:
         c_bar = None
-
 
     ### Initialize glfw
     glfwInit()
@@ -445,5 +454,4 @@ def world(src, size, g_pool):
     print "WORLD Process closed"
     glfwCloseWindow()
     glfwTerminate()
-    cap.release()
 

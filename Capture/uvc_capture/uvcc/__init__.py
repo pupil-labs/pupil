@@ -41,7 +41,6 @@ class Control(object):
         D4 1 = Asynchronous Control Capability
         D5 1 = Disabled due to incompatibility with Commit state.   State
         """
-
         if self.info > 0 :  # Control supported
             self.value = self.get_val_from_device()
             self.min =  self.get_(UVC_GET_MIN)
@@ -89,23 +88,25 @@ class Control(object):
 
 class Camera(object):
     """docstring for uvcc_camera"""
-    def __init__(self, handle,cv_id):
-        self.handle = handle
-        self.cv_id = cv_id
-        self.name = uvccCamProduct(self.handle)
-        self.manufacurer = uvccCamManufacturer(self.handle)
-        self.serial = uvccCamSerialNumber(self.handle)
-        self.idProduct = self.handle.contents.devDesc.idProduct
-        self.idVendor =  self.handle.contents.devDesc.idVendor
-        self.idString = "(" + str(hex(self.idVendor)).replace("x","") + ":" + str(hex(self.idProduct)).replace("x","") + ")"
-        ### some cameras dont have names: we give it one based on the USB Vendor and Product ID
-        if not self.name:
-            self.name = "UVC Camera" + " " + self.idString
+    def __init__(self, cam):
+        uvccInit()
+        self.handle = uvccGetCamWithQTUniqueID(cam.uId)
+        assert self.handle is not None, "UVCC could not open camera based on uId %s" %uId
+        self.cvId = cam.cvId
+        self.uId = cam.uId
+        self.name = cam.name
+        self.manufacurer = cam.manufacurer
+        self.serial = cam.serial
+        self.idString =cam.idString
         self.controls = None
+        # uvccOpenCam(self.handle)
+        self.init_controls()
+        # uvccCloseCam(self.handle)
+
 
     def init_controls(self):
          ###list of all controls implemented by uvcc, the names evaluate to ints using a dict lookup in raw.py
-        controls_str = uvcc_controls
+        controls_str = uvcc_controls[:-1] #the last one is not really a control
 
         self.controls = {}
         i = 0
@@ -123,43 +124,66 @@ class Camera(object):
             if c.flags == "active" and c.default is not None:
                 c.set_val(c.default)
 
+
+    def __del__(self):
+        print "UVCC released"
+        uvccReleaseCam(self.handle)
+        uvccExit()
+
+
+class Cam():
+    """a simple class that only contains info about a camera"""
+    def __init__(self,handle,id):
+        self.cvId = id
+        self.uId = uvccCamQTUniqueID(handle)
+        self.name = uvccCamProduct(handle)
+        self.manufacurer = uvccCamManufacturer(handle)
+        self.serial = uvccCamSerialNumber(handle)
+        self.idString = "(%04x:%04x)" %(handle.contents.mId.contents.idVendor,handle.contents.mId.contents.idProduct)
+        ### some cameras dont have names: we give it one based on the USB Vendor and Product ID
+        if not self.name and self.manufacurer:
+            self.name = "UVC Camera by " + self.manufacurer + " " + self.idString
+        elif not self.name:
+            self.name = "UVC Camera " + self.idString
+
+
 class Camera_List(list):
     """docstring for uvcc_control"""
 
     def __init__(self):
         uvccInit()
-        self.cam_list = pointer(pointer(uvccCam()))
-        self.cam_n = uvccGetCamList(self.cam_list)
+        cam_n,cam_list = uvccGetCamList()
 
         #sort them as the cameras appear in OpenCV VideoCapture
         #see cap_qtkit.mm in the opencv source for how ids get assingned.
-        sort_cams = [self.cam_list[i] for i in range(self.cam_n)]
+        sort_cams = [cam_list[i] for i in range(cam_n)]
         #from my tests QTKit sorts them by idLocation order
         sort_cams.sort(key=lambda l:-l.contents.idLocation)
         #further test indicate that the FaceTime camera is always last - we sort by bools
         # sort_cams.sort(key=lambda t: "FaceTime" in uvccCamProduct(t))
 
         for i in range(len(sort_cams)):
-            self.append(Camera(sort_cams[i],i))
+            self.append(Cam(sort_cams[i],i))
 
-    def release(self):
-        """
-        call when done with class instance
-        """
-        uvccReleaseCamList(self.cam_list,self.cam_n)
+        uvccReleaseCamList(cam_list,cam_n)
         uvccExit()
 
 
+
 if __name__ == '__main__':
-    import cv2
-    _ = cv2.VideoCapture(-1) # we need to wake the isight camera up if we want to query it....
+    # import cv2
+    # _ = cv2.VideoCapture(-1) # we can to wake the isight camera up if we want to query more information....
     uvc_cameras = Camera_List()
     for cam in uvc_cameras:
+        print type(cam)
         print cam.name
-        print cam.cv_id
-        cam.init_controls()
-        cam.load_defaults()
-        for c in cam.controls.itervalues():
-            if c.flags != "control not supported":
-                print c.name, " "*(40-len(c.name)), c.value, c.min,c.max,c.step
-    uvc_cameras.release()
+        print cam.cvId
+        print cam.uId
+    camera = Camera(uvc_cameras[0])
+
+    print camera.name
+    #     cam.init_controls()
+    #     cam.load_defaults()
+    for c in camera.controls.itervalues():
+        if c.flags != "control not supported":
+            print c.name, " "*(40-len(c.name)), c.value, c.min,c.max,c.step

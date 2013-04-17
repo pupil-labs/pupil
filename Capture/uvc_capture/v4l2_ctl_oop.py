@@ -29,7 +29,7 @@ class Control(dict):
             self.step = self['step']
             self.min = self['min']
             self.max = self['max']
-        
+
         if 'flags' in self:
             self.flags = self['flags']
         else:
@@ -48,10 +48,11 @@ class Camera(object):
     """docstring for uvcc_camera"""
     def __init__(self,c):
         self.dict = c
-        self.cv_id = c['src_id']
+        self.cvId = c['src_id']
         self.name = c['name']
         self.manufacurer = None
         self.serial = c['serial']
+        self.init_controls()
 
     def init_controls(self):
         control_dict = extract_controls(self.cv_id)
@@ -67,30 +68,33 @@ class Camera(object):
     def update_from_device(self):
         update_from_device(self.controls)
 
+class Cam():
+    """a simple class that only contains info about a camera"""
+    def __init__(self,c):
+        self.dict = c
+        self.cvId = c['src_id']
+        self.name = c['name']
+        self.manufacurer = None
+        self.serial = c['serial']
+
+
 class Camera_List(list):
     """docstring for Camera_List"""
 
     def __init__(self):
         for c in list_devices():
-            self.append(Camera(c))
+            self.append(Cam(c))
 
-
-    def release(self):
-        """
-        call when done with class instance
-        """
-        pass
 
 
 
 if __name__ == '__main__':
     uvc_cameras = Camera_List()
-    for cam in uvc_cameras:
-        print cam.name
-        cam.init_controls()
+    for c in uvc_cameras:
+        c.name
+        cam = Camera(c)
         cam.load_defaults()
         cam.update_from_device()
         for c in cam.controls.itervalues():
             if c.flags == "active":
                 print c.name, " "*(40-len(c.name)), c.current,c.type, c.min,c.max,c.step
-    uvc_cameras.release()

@@ -3,7 +3,7 @@ INC= -I/opt/local/include -I/usr/local/include
 CFLAGS= -shared -fPIC -Wall
 
 LIBS = -framework IOKit -framework CoreFoundation  -L/usr/local/lib
-OBJ = uvcc.c
+OBJ = libuvcc.c
 
 make_all: uvcc.so
 

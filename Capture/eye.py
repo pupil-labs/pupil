@@ -8,7 +8,7 @@ from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_po
 from time import time, sleep
 from methods import *
 from c_methods import eye_filter
-from uvc_capture import Capture
+from uvc_capture import autoCreateCapture
 from calibrate import *
 from os import path
 
@@ -227,14 +227,16 @@ def eye(src,size,g_pool):
         print "EYE Process closing from window"
 
     # initialize capture, check if it works
-    cap = Capture(src, size)
+    cap = autoCreateCapture(src, size)
+    if cap is None:
+        print "EYE: Error could not create Capture"
+        return
     s, img = cap.read_RGB()
     if not s:
         print "EYE: Error could not get image"
         return
     height,width = img.shape[:2]
 
-    cap.auto_rewind = True
 
     # pupil object
     pupil = Temp()
@@ -273,15 +275,15 @@ def eye(src,size,g_pool):
 
 
     #add 4vl2 camera controls to a seperate ATB bar
-    if cap.uvc_camera is not None:
-        c_bar = atb.Bar(name="Camera_Controls", label=cap.uvc_camera.name,
+    if cap.controls is not None:
+        c_bar = atb.Bar(name="Camera_Controls", label=cap.name,
             help="UVC Camera Controls", color=(50,50,50), alpha=100,
             text='light',position=(220, 10),refresh=2., size=(200, 200))
 
         # c_bar.add_var("auto_refresher",vtype=atb.TW_TYPE_BOOL8,getter=cap.uvc_refresh_all,setter=None,readonly=True)
         # c_bar.define(definition='visible=0', varname="auto_refresher")
 
-        sorted_controls = [c for c in cap.uvc_camera.controls.itervalues()]
+        sorted_controls = [c for c in cap.controls.itervalues()]
         sorted_controls.sort(key=lambda c: c.order)
 
         for control in sorted_controls:
@@ -309,8 +311,8 @@ def eye(src,size,g_pool):
                 pass
                 # c_bar.define(definition='readonly=1',varname=control.name)
 
-        c_bar.add_button("refresh",cap.uvc_camera.update_from_device)
-        c_bar.add_button("load defaults",cap.uvc_camera.load_defaults)
+        c_bar.add_button("refresh",cap.update_from_device)
+        c_bar.add_button("load defaults",cap.load_defaults)
 
     else:
         c_bar = None
@@ -562,5 +564,4 @@ def eye(src,size,g_pool):
     atb.terminate()
     glfwCloseWindow()
     glfwTerminate()
-    cap.release()
 

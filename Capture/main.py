@@ -19,8 +19,8 @@ from ctypes import c_bool, c_int
 def main():
 
     #to assign by name: string(s) in list
-    eye_src = ["6000"]
-    world_src = ["(046d:081d)","C525","C615","C920"] # "(046d:081d)" is the name (automated replacement) name of C510
+    eye_src = ["Microsoft","(045e:076f)"]
+    world_src = ["(046d:081d)","C525","C615","C920"] # "(046d:081d)" is the (automated replacement) name of C510
 
     #to assign cameras directly: use ints
     # eye_src = 0
@@ -56,8 +56,8 @@ def main():
     player_size = (640,480) #this can be whatever you like
 
 
+    # world_uvc_camera, eye_uvc_camera = None,None
     audio = False
-
     # create shared globals
     g_pool = Temp()
     g_pool.gaze_x = Value('d', 0.0)
