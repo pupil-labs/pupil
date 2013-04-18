@@ -217,7 +217,6 @@ def uvccGetVal(control,camera):
 
 
 
-
 if __name__ == '__main__':
     uvccInit()
     cam_n,cam_list = uvccGetCamList()

@@ -21,12 +21,30 @@ if os_name == "Linux":
     import v4l2_ctl_oop as uvc
 elif os_name == "Darwin":
     import uvcc as uvc
-
 else:
-    raise Exception("UVC Capture Error. No UVC Control backend found for this OS")
+    ### On OS without UVC Camera controll support we use empty classes.
+    class uvc(object):
+        """dummy uvc class that exposes similar methods but does nothing"""
+        def __init__(self):
+            pass
+
+        class Camera_List(list):
+            """empty class"""
+            def __init__(self):
+                pass
+
+        class Camera(object):
+            """empty class"""
+            def __init__(self):
+                pass
+
+
 
 class CameraCapture(uvc.Camera):
-    """docstring for Capture"""
+    """
+    CameraCapture Class for Image grabbing and control
+    inherits from an OS specitic Camera that defines all uvc control methods
+    """
     def __init__(self, cam,size=(640,480)):
         super(CameraCapture, self).__init__(cam)
 
@@ -56,9 +74,12 @@ class CameraCapture(uvc.Camera):
         return s,img
 
 class noUVCCapture():
-    """docstring for Capture"""
+    """
+    VideoCapture without uvc control
+    """
     def __init__(self, src,size=(640,480)):
         self.controls = None
+        self.cvId = src
         ###add cv videocapture capabilities
         self.cap = VideoCapture(src)
         self.set_size(size)
@@ -86,6 +107,7 @@ class noUVCCapture():
 
 class FileCapture():
     """
+    simple file capture that can auto_rewind
     """
     def __init__(self,src):
         self.auto_rewind = True
@@ -123,50 +145,50 @@ class FileCapture():
 
 
 def autoCreateCapture(src,size=(640,480)):
-        # checking src and handling all cases:
-        src_type = type(src)
+    # checking src and handling all cases:
+    src_type = type(src)
 
-        #looking for attached cameras that match the suggested names
-        if src_type is list:
-            matching_devices = []
-            for device in uvc.Camera_List():
-                if any([s in device.name for s in src]):
-                    matching_devices.append(device)
+    #looking for attached cameras that match the suggested names
+    if src_type is list:
+        matching_devices = []
+        for device in uvc.Camera_List():
+            if any([s in device.name for s in src]):
+                matching_devices.append(device)
 
-            if len(matching_devices) >1:
-                print "Warning: found",len(matching_devices),"devices that match the src string pattern. Using the first one"
-            if len(matching_devices) ==0:
-                print "ERROR: No device found that matched",src,
-                return
+        if len(matching_devices) >1:
+            print "Warning: found",len(matching_devices),"devices that match the src string pattern. Using the first one"
+        if len(matching_devices) ==0:
+            print "ERROR: No device found that matched",src,
+            return
 
-            cap = CameraCapture(matching_devices[0],size)
-            print "camera selected: %s  with id: %s" %(cap.name,cap.cvId)
-            return cap
+        cap = CameraCapture(matching_devices[0],size)
+        print "camera selected: %s  with id: %s" %(cap.name,cap.cvId)
+        return cap
 
-        #looking for attached cameras that match cv_id
-        elif src_type is int:
-            for device in uvc.Camera_List():
-                if device.cvId == src:
-                    cap = CameraCapture(device,size)
-                    print "camera selected: %s  with id: %s" %(cap.name,cap.cvId)
-                    return cap
+    #looking for attached cameras that match cv_id
+    elif src_type is int:
+        for device in uvc.Camera_List():
+            if device.cvId == src:
+                cap = CameraCapture(device,size)
+                print "camera selected: %s  with id: %s" %(cap.name,cap.cvId)
+                return cap
 
-            #no matching id found or uvc control not supported: trying capture without uvc controls
-            cap = noUVCCapture(src,size)
-            print "no UVC support: using camera with id: %s" %(cap.name,cap.cvId)
+        #no matching id found or uvc control not supported: trying capture without uvc controls
+        cap = noUVCCapture(src,size)
+        print "no UVC support: using camera with id: %s" %(cap.cvId)
 
 
-        #looking for videofiles
-        elif src_type is str:
-            assert isfile(src),("autoCreateCapture: Could not locate", src)
-            print "Using video file as source ",src
-            return FileCapture(src)
-        else:
-            raise Exception("autoCreateCapture: Could not create capture, wrong src_type")
+    #looking for videofiles
+    elif src_type is str:
+        assert isfile(src),("autoCreateCapture: Could not locate VideoFile:", src)
+        print "Using video file as source ",src
+        return FileCapture(src)
+    else:
+        raise Exception("autoCreateCapture: Could not create capture, wrong src_type")
 
 
 if __name__ == '__main__':
-    cap = autoCreateCapture(["Microsoft"],(1280,720))
+    cap = autoCreateCapture(["FaceTime"],(1280,720))
     if cap:
         print cap.controls
         # cap.v4l2_set_default()
