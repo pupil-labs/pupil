@@ -95,9 +95,6 @@ class Camera(object):
         self.cvId = cam.cvId
         self.uId = cam.uId
         self.name = cam.name
-        self.manufacurer = cam.manufacurer
-        self.serial = cam.serial
-        self.idString =cam.idString
         self.controls = None
         # uvccOpenCam(self.handle)
         self.init_controls()
@@ -133,41 +130,22 @@ class Camera(object):
 
 class Cam():
     """a simple class that only contains info about a camera"""
-    def __init__(self,handle,id):
-        self.cvId = id
-        self.uId = uvccCamQTUniqueID(handle)
-        self.name = uvccCamProduct(handle)
-        self.manufacurer = uvccCamManufacturer(handle)
-        self.serial = uvccCamSerialNumber(handle)
-        self.idString = "(%04x:%04x)" %(handle.contents.mId.contents.idVendor,handle.contents.mId.contents.idProduct)
-        ### some cameras dont have names: we give it one based on the USB Vendor and Product ID
-        if not self.name and self.manufacurer:
-            self.name = "UVC Camera by " + self.manufacurer + " " + self.idString
-        elif not self.name:
-            self.name = "UVC Camera " + self.idString
-
+    def __init__(self,name,uId,cvId):
+        self.cvId = cvId
+        self.uId = uId
+        self.name = name
 
 class Camera_List(list):
     """docstring for uvcc_control"""
 
     def __init__(self):
-        uvccInit()
-        cam_n,cam_list = uvccGetCamList()
-
-        #sort them as the cameras appear in OpenCV VideoCapture
-        #see cap_qtkit.mm in the opencv source for how ids get assingned.
-        sort_cams = [cam_list[i] for i in range(cam_n)]
-        #from my tests QTKit sorts them by idLocation order
-        sort_cams.sort(key=lambda l:-l.contents.idLocation)
-        #further test indicate that the FaceTime camera is always last - we sort by bools
-        # sort_cams.sort(key=lambda t: "FaceTime" in uvccCamProduct(t))
-
-        for i in range(len(sort_cams)):
-            self.append(Cam(sort_cams[i],i))
-
-        uvccReleaseCamList(cam_list,cam_n)
-        uvccExit()
-
+        import QTKit
+        # QTCaptureDevice inputDevicesWithMediaType:QTMediaTypeVideo
+        qt_cameras =  QTKit.QTCaptureDevice.inputDevicesWithMediaType_(QTKit.QTMediaTypeVideo)
+        for cvId,q in enumerate(qt_cameras):
+            uId =  q.uniqueID()
+            name = q.localizedDisplayName().encode('utf-8')
+            self.append(Cam(name,uId,cvId))
 
 
 if __name__ == '__main__':
@@ -175,15 +153,14 @@ if __name__ == '__main__':
     # _ = cv2.VideoCapture(-1) # we can to wake the isight camera up if we want to query more information....
     uvc_cameras = Camera_List()
     for cam in uvc_cameras:
-        print type(cam)
         print cam.name
         print cam.cvId
         print cam.uId
-    camera = Camera(uvc_cameras[0])
+    # camera = Camera(uvc_cameras[1])
 
-    print camera.name
-    #     cam.init_controls()
-    #     cam.load_defaults()
-    for c in camera.controls.itervalues():
-        if c.flags != "control not supported":
-            print c.name, " "*(40-len(c.name)), c.value, c.min,c.max,c.step
+    # print camera.name
+    # #     cam.init_controls()
+    # #     cam.load_defaults()
+    # for c in camera.controls.itervalues():
+    #     if c.flags != "control not supported":
+    #         print c.name, " "*(40-len(c.name)), c.value, c.min,c.max,c.step

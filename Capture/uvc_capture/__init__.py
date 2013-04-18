@@ -91,7 +91,7 @@ class FileCapture():
         self.auto_rewind = True
         self.controls = None #No UVC controls available with file capture
         # we initialize the actual capture based on cv2.VideoCapture
-        self.cap = VideoCapture(self.src)
+        self.cap = VideoCapture(src)
         self._get_frame_ = self.cap.read
 
 
@@ -159,6 +159,7 @@ def autoCreateCapture(src,size=(640,480)):
         #looking for videofiles
         elif src_type is str:
             assert isfile(src),("autoCreateCapture: Could not locate", src)
+            print "Using video file as source ",src
             return FileCapture(src)
         else:
             raise Exception("autoCreateCapture: Could not create capture, wrong src_type")

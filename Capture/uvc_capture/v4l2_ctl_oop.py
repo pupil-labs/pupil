@@ -87,8 +87,6 @@ class Camera_List(list):
             self.append(Cam(c))
 
 
-
-
 if __name__ == '__main__':
     uvc_cameras = Camera_List()
     for c in uvc_cameras:
