@@ -1,4 +1,5 @@
-from ctypes import c_int,c_bool,c_float
+
+from ctypes import c_int,c_bool,c_float,pointer
 import cPickle as pickle
 import numpy as np
 import atb
@@ -6,9 +7,11 @@ from glfw import *
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 from time import time, sleep
 from methods import *
+from c_methods import eye_filter
+from uvc_capture import autoCreateCapture
 from calibrate import *
-from methods import Temp,capture,make_eye_kernel
 from os import path
+
 
 class Bar(atb.Bar):
     """docstring for Bar"""
@@ -44,10 +47,13 @@ class Bar(atb.Bar):
                             'canny_ratio':self.canny_ratio}
 
         self.load()
-
+        dispay_mode_enum = atb.enum("Mode",{"Camera Image":0,
+                                            "Region of Interest":1,
+                                            "Egdes":2,
+                                            "Corse Pupil Region":3})
         self.add_var("Display/FPS",self.fps, step=1.,readonly=True)
         self.add_var("Display/SlowDown",self.sleep, step=0.01,min=0.0)
-        self.add_var("Display/Mode", self.display, step=1,max=3, min=0, help="select the view-mode")
+        self.add_var("Display/Mode", self.display,vtype=dispay_mode_enum, help="select the view-mode")
         self.add_var("Display/Show_Pupil_Point", self.draw_pupil)
         self.add_button("Draw_ROI", self.roi, help="drag on screen to select a region of interest", Group="Display")
         self.add_var("Darkspot/Threshold", self.bin_thresh, step=1, max=256, min=0)
@@ -117,13 +123,15 @@ class Roi(object):
         self.load()
 
     def setStart(self,(x,y)):
+        x,y = int(x),int(y)
         x,y = max(0,x),max(0,y)
         self.nX,self.nY = x,y
 
     def setEnd(self,(x,y)):
+            x,y = int(x),int(y)
             x,y = max(0,x),max(0,y)
-            #make sure the ROI actually contains pixels
-            if abs(self.nX - x) > 2 and abs(self.nY - y)>2:
+            #make sure the ROI actually contains enough pixels
+            if abs(self.nX - x) > 25 and abs(self.nY - y)>25:
                 self.lX = min(x,self.nX)
                 self.lY = min(y,self.nY)
                 self.uX = max(x,self.nX)
@@ -164,6 +172,7 @@ class Roi(object):
             else:
                 print "Warning: Image Array size changed, disregarding saved Region of Interest"
 
+
 def eye_profiled(src,size,g_pool):
     import cProfile
     from eye import eye
@@ -202,7 +211,7 @@ def eye(src,size,g_pool):
 
     def on_pos(x, y):
         if atb.TwMouseMotion(x,y):
-            bar.update()
+            pass
         if bar.draw_roi.value == 1:
             pos = glfwGetMousePos()
             pos = normalize(pos,glfwGetWindowSize())
@@ -218,14 +227,16 @@ def eye(src,size,g_pool):
         print "EYE Process closing from window"
 
     # initialize capture, check if it works
-    cap = capture(src, size)
+    cap = autoCreateCapture(src, size)
+    if cap is None:
+        print "EYE: Error could not create Capture"
+        return
     s, img = cap.read_RGB()
     if not s:
         print "EYE: Error could not get image"
         return
     height,width = img.shape[:2]
 
-    cap.auto_rewind = True
 
     # pupil object
     pupil = Temp()
@@ -258,8 +269,55 @@ def eye(src,size,g_pool):
 
     atb.init()
     bar = Bar("Eye",g_pool, dict(label="Controls",
-            help="Scene controls", color=(50,50,50), alpha=50,
-            text='light', refresh=.2, position=(10, 10), size=(200, 300)) )
+            help="eye detection controls", color=(50,50,50), alpha=100,
+            text='light',position=(10, 10),refresh=.1, size=(200, 300)) )
+
+
+
+    #add 4vl2 camera controls to a seperate ATB bar
+    if cap.controls is not None:
+        c_bar = atb.Bar(name="Camera_Controls", label=cap.name,
+            help="UVC Camera Controls", color=(50,50,50), alpha=100,
+            text='light',position=(220, 10),refresh=2., size=(200, 200))
+
+        # c_bar.add_var("auto_refresher",vtype=atb.TW_TYPE_BOOL8,getter=cap.uvc_refresh_all,setter=None,readonly=True)
+        # c_bar.define(definition='visible=0', varname="auto_refresher")
+
+        sorted_controls = [c for c in cap.controls.itervalues()]
+        sorted_controls.sort(key=lambda c: c.order)
+
+        for control in sorted_controls:
+            name = control.atb_name
+            if control.type=="bool":
+                c_bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=control.get_val,setter=control.set_val)
+            elif control.type=='int':
+                c_bar.add_var(name,vtype=atb.TW_TYPE_INT32,getter=control.get_val,setter=control.set_val)
+                c_bar.define(definition='min='+str(control.min),   varname=name)
+                c_bar.define(definition='max='+str(control.max),   varname=name)
+                c_bar.define(definition='step='+str(control.step), varname=name)
+            elif control.type=="menu":
+                if control.menu is None:
+                    vtype = None
+                else:
+                    vtype= atb.enum(name,control.menu)
+                c_bar.add_var(name,vtype=vtype,getter=control.get_val,setter=control.set_val)
+                if control.menu is None:
+                    c_bar.define(definition='min='+str(control.min),   varname=name)
+                    c_bar.define(definition='max='+str(control.max),   varname=name)
+                    c_bar.define(definition='step='+str(control.step), varname=name)
+            else:
+                pass
+            if control.flags == "inactive":
+                pass
+                # c_bar.define(definition='readonly=1',varname=control.name)
+
+        c_bar.add_button("refresh",cap.update_from_device)
+        c_bar.add_button("load defaults",cap.load_defaults)
+
+    else:
+        c_bar = None
+
+
 
     # Initialize glfw
     glfwInit()
@@ -287,7 +345,6 @@ def eye(src,size,g_pool):
     gl.glEnable(gl.GL_BLEND)
     del gl
 
-
     #event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
         bar.update_fps()
@@ -297,31 +354,34 @@ def eye(src,size,g_pool):
         ###IMAGE PROCESSING
         gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
 
-        # integral = cv2.integral(gray_img)
-
+        integral = cv2.integral(gray_img)
+        integral =  np.array(integral,dtype=c_float)
+        # print integral.shape
+        # print integral.dtype
+        x,y,w = eye_filter(integral)
+        p_r.set((y,x,y+w,x+w))
         ###2D filter response as first estimation of pupil position for automated ROI creation
-        downscale = 8
-        best_m = 0
-        region_r = min(max(9,l_pool.region_r),61)
-        lable = 0
-        for s in (region_r-1,region_r,region_r+1):
-            #simple best of three optimization
-            kernel = make_eye_kernel(s,int(3*s))
-            g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REPLICATE)        # ddepth = -1, means destination image has depth same as input image.
-            m = np.amax(g_img)
-            # print s,m
-            x,y = np.where(g_img == m)
-            x,y = downscale*y[0],downscale*x[0]
-            # cv2.putText(gray_img, str(s)+"-"+str(m), (x,y+lable), cv2.FONT_HERSHEY_SIMPLEX, .35,(255,255,255))
-            lable+=40
-            inner_r = (s*downscale)/2
-            outer_r = int(s*downscale*1.)
-            if m > best_m:
-                best_m = m
-                l_pool.region_r = s
-                vals = [max(0,v) for v in (x-outer_r,y-outer_r,x+outer_r,y+outer_r)]
-                p_r.set(vals)
-
+        # downscale = 8
+        # best_m = 0
+        # region_r = min(max(8,l_pool.region_r),61)
+        # lable = 0
+        # for s in (region_r+v for v in xrange(-7,7)):
+        #     #simple best of three optimization
+        #     kernel = make_eye_kernel(s,int(3*s))
+        #     g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REPLICATE)
+        #     m = np.amax(g_img)
+        #     # print s,m
+        #     x,y = np.where(g_img == m)
+        #     x,y = downscale*y[0],downscale*x[0]
+        #     # cv2.putText(gray_img, str(s)+"-"+str(m), (x,y+lable), cv2.FONT_HERSHEY_SIMPLEX, .35,(255,255,255))
+        #     lable+=40
+        #     inner_r = (s*downscale)/2
+        #     outer_r = int(s*downscale*1.)
+        #     if m > best_m:
+        #         best_m = m
+        #         l_pool.region_r = s
+        #         vals = [max(0,v) for v in (x-outer_r,y-outer_r,x+outer_r,y+outer_r)]
+        #         p_r.set(vals)
 
         # create view into the gray_img with the bounds of the rough pupil estimation
         pupil_img = gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX]
@@ -349,7 +409,7 @@ def eye(src,size,g_pool):
 
 
         # Ellipse fitting from countours
-        result = fit_ellipse_convexity_check(img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX],
+        result = fit_ellipse(img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX],
                             contours,
                             binary_img,
                             ratio=bar.pupil_ratio.value,
@@ -403,7 +463,7 @@ def eye(src,size,g_pool):
             bar.pupil_size_tolerance.value =max(10,min(50,bar.pupil_size_tolerance.value))
 
             # clamp pupil size
-            bar.pupil_size.value = max(60,min(300,bar.pupil_size.value))
+            bar.pupil_size.value = max(30,min(300,bar.pupil_size.value))
 
             # clamp pupil ratio
             bar.pupil_ratio.value = max(.5,bar.pupil_ratio.value)
@@ -418,7 +478,7 @@ def eye(src,size,g_pool):
         else:
             pupil.ellipse = None
             g_pool.gaze_x.value, g_pool.gaze_y.value = 0.,0.
-            pupil.gaze_coords = None, None #whithout this line the last know pupil position is recorded if none is found
+            pupil.gaze_coords = None #whithout this line the last know pupil position is recorded if none is found
 
             bar.pupil_size_tolerance.value +=1
 
@@ -439,6 +499,7 @@ def eye(src,size,g_pool):
         if not g_pool.calibrate.value and l_pool.calib_running:
             l_pool.calib_running = 0
             if pupil.pt_cloud: # some data was actually collected
+                print "Calibrating with", len(pupil.pt_cloud), "colleced data points."
                 pupil.coefs = calibrate_poly(pupil.pt_cloud)
                 np.save('cal_pt_cloud.npy', np.array(pupil.pt_cloud))
 
@@ -459,7 +520,8 @@ def eye(src,size,g_pool):
 
         # While recording...
         if l_pool.record_running:
-            l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], bar.dt, g_pool.frame_count_record.value])
+            if pupil.gaze_coords is not None:
+                l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], bar.dt, g_pool.frame_count_record.value])
             if l_pool.writer is not None:
                 l_pool.writer.write(cv2.cvtColor(img,cv2.cv.COLOR_BGR2RGB))
 
@@ -491,8 +553,7 @@ def eye(src,size,g_pool):
             draw_gl_polyline(pts,(1.,0,0,.5))
             draw_gl_point_norm(pupil.norm_coords,(1.,0.,0.,0.5))
 
-        bar.update()
-        bar.draw()
+        atb.draw()
         glfwSwapBuffers()
 
 
@@ -500,7 +561,7 @@ def eye(src,size,g_pool):
     print "EYE Process closed"
     r.save()
     bar.save()
+    atb.terminate()
     glfwCloseWindow()
     glfwTerminate()
-
 

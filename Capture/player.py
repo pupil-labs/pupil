@@ -3,7 +3,8 @@ import OpenGL.GL as gl
 from glfw import *
 import numpy as np
 import cv2
-from methods import capture,Temp
+from methods import Temp
+from uvc_capture import autoCreateCapture
 from time import sleep
 from glob import glob
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen
@@ -35,6 +36,7 @@ def player(g_pool,size):
         - Iterate through videos on each record event
     """
 
+
     grid = make_grid()
 
     # player object
@@ -42,7 +44,7 @@ def player(g_pool,size):
     player.play_list = glob('src_video/*')
     path_parent = os.path.dirname( os.path.abspath(sys.argv[0]))
     player.playlist = [os.path.join(path_parent, path) for path in player.play_list]
-    player.captures = [capture(src) for src in player.playlist]
+    player.captures = [autoCreateCapture(src) for src in player.playlist]
     print "Player found %i videos in src_video"%len(player.captures)
     player.captures =  [c for c in player.captures if c is not None]
     print "Player sucessfully loaded %i videos in src_video"%len(player.captures)
@@ -59,6 +61,8 @@ def player(g_pool,size):
     def on_char(char, pressed):
         if char  == ord('9'):
             g_pool.cal9.value = True
+            g_pool.calibrate.value = True
+
 
 
     def on_close():
@@ -108,9 +112,14 @@ def player(g_pool,size):
                     gl.glVertex3f(p[0],p[1],0.0)
                 gl.glEnd()
 
+
+                ###display the animated target dot
                 gl.glPointSize((40)*(1.01-(step+1)/80.0))
                 gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ZERO)
-                gl.glColor4f(1.0,0.0,0.0,1.0)
+                if g_pool.pattern_x.value or g_pool.pattern_y.value: ###if pattern detected
+                    gl.glColor4f(0.0,0.5,0.0,1.0)
+                else:
+                    gl.glColor4f(0.5,0.0,0.0,1.0)
                 gl.glBegin(gl.GL_POINTS)
                 gl.glVertex3f(grid[circle_id][0],grid[circle_id][1],0.0)
                 gl.glEnd()

@@ -30,10 +30,6 @@ def enum(name, values):
 def init():
     check_error(TwInit(TW_OPENGL, 0))
 
-# handets in __del__
-# def shutdown():
-#     check_error( TwTerminate() )
-
 def _dict_to_defs(args):
     '''
     Converts a dictionary like {a:'b', 1:2} to the string "a=b 1=2" suitable
@@ -51,6 +47,12 @@ def _dict_to_defs(args):
         r.append(k+v)
     return " ".join(r)
 
+
+def draw():
+    check_error(TwDraw())
+
+def terminate():
+    check_error(TwTerminate())
 
 class Bar(object):
     '''
@@ -575,14 +577,6 @@ class Bar(object):
     :type: int
     ''')
 
-
-    def __del__(self):
-        check_error(TwDeleteAllBars(self._bar))
-        check_error(TwTerminate())
-
-    def draw(self):
-        check_error(TwDraw())
-
     def clear(self):
         check_error(TwRemoveAllVars(self._bar))
 
@@ -672,7 +666,7 @@ class Bar(object):
         groups = name.split('/')
         name = groups[-1]
         _typemap = {ctypes.c_bool:      TW_TYPE_BOOL8,
-                    ctypes.c_int:       TW_TYPE_INT16,
+                    ctypes.c_int:       TW_TYPE_INT32,
                     ctypes.c_long:      TW_TYPE_INT32,
                     ctypes.c_float:     TW_TYPE_FLOAT,
                     ctypes.c_float * 3: TW_TYPE_COLOR3F,

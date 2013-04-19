@@ -66,7 +66,7 @@ def main():
         #load and map current gaze postions and append to the past_gaze list
         current_gaze = positions_by_frame[frame]
         for gaze_point in current_gaze:
-            x,y = denormalize((gaze_point['x'], gaze_point['y']), width, height, flip_y=False)
+            x,y = denormalize((gaze_point['x'], gaze_point['y']), width, height)
             if x >0 and x<width and y >0 and y <height:
                 past_gaze.append([x,y])
 

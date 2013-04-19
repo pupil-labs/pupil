@@ -1,13 +1,13 @@
 (dp1
 S'mean_blur'
 p2
-I1
+I5
 sS'canny_thresh'
 p3
-I582
+I347
 sS'pupil_size'
 p4
-F75.889617919921875
+F100.25301361083984
 sS'canny_ratio'
 p5
 I2
@@ -16,7 +16,7 @@ p6
 I01
 sS'bin_thresh'
 p7
-I138
+I149
 sS'canny_aperture'
 p8
 I5
@@ -25,5 +25,5 @@ p9
 I2
 sS'pupil_ratio'
 p10
-F0.66142088174819946
+F0.68342864513397217
 s.
