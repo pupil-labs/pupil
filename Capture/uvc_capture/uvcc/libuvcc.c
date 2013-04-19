@@ -475,8 +475,8 @@ int uvccSendRawRequest(uvccCam *cam,
 	ior = (*(cam->ctrlIf))->ControlRequest(cam->ctrlIf, 0, request);
     if(ior == kIOUSBPipeStalled)
     {
-		if(!logger) fprintf(stderr, "uvcc error! uvccSendRawRequest: Pipe indicated stall, request is probably unsupported or malformatted.");
-		else asl_log(logger, NULL, ASL_LEVEL_ERR, "uvccSendRawRequest: Pipe indicated stall, request is probably unsupported or malformatted.");
+		// if(!logger) fprintf(stderr, "uvcc error! uvccSendRawRequest: Pipe indicated stall, request is probably unsupported or malformatted.");
+		// else asl_log(logger, NULL, ASL_LEVEL_ERR, "uvccSendRawRequest: Pipe indicated stall, request is probably unsupported or malformatted.");
 		return UVCC_ERR_CTRL_REQUEST_UNSUPPORTED_OR_MALFORMATTED;
         /*uvcc_err("uvccSendRawRequest: ControlRequest", ior);
         (*(cam->ctrlIf))->GetNumEndpoints(cam->ctrlIf, &nEP);

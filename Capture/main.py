@@ -20,7 +20,7 @@ def main():
 
     #to assign by name: string(s) in list
     eye_src = ["Microsoft", "6000"]
-    world_src = ["Logitech Camera","(046d:081d)","C525","C615"] # "(046d:081d)" is the (automated replacement) name of C510
+    world_src = ["Logitech Camera","(046d:081d)","C525","C615","C920"] # "(046d:081d)" is the (automated replacement) name of C510
     #to assign cameras directly: use ints
     # eye_src = 0
     # world_src =1
