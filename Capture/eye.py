@@ -56,10 +56,10 @@ class Bar(atb.Bar):
         self.add_var("Display/Mode", self.display,vtype=dispay_mode_enum, help="select the view-mode")
         self.add_var("Display/Show_Pupil_Point", self.draw_pupil)
         self.add_button("Draw_ROI", self.roi, help="drag on screen to select a region of interest", Group="Display")
-        self.add_var("Darkspot/Threshold", self.bin_thresh, step=1, max=256, min=0)
-        self.add_var("Pupil/Ratio", self.pupil_ratio, step=.05, max=1., min=0.)
-        # self.add_var("Pupil/Angle", self.pupil_angle,step=1.0,readonly=True)
-        self.add_var("Pupil/Size", self.pupil_size, step=1, min=0)
+        self.add_var("Pupil/Shade", self.bin_thresh,readonly=True)
+        self.add_var("Pupil/Ratio", self.pupil_ratio, readonly=True)
+        self.add_var("Pupil/Angle", self.pupil_angle,step=.1,readonly=True)
+        self.add_var("Pupil/Size", self.pupil_size, readonly=True)
         self.add_var("Pupil/Size_Tolerance", self.pupil_size_tolerance, step=1, min=0)
         self.add_var("Canny/MeanBlur", self.blur,step=2,max=7,min=1)
         self.add_var("Canny/Aperture",self.canny_aperture, step=2, max=7, min=3)
@@ -356,41 +356,71 @@ def eye(src,size,g_pool):
 
         integral = cv2.integral(gray_img)
         integral =  np.array(integral,dtype=c_float)
-        # print integral.shape
-        # print integral.dtype
         x,y,w = eye_filter(integral)
         p_r.set((y,x,y+w,x+w))
-        ###2D filter response as first estimation of pupil position for automated ROI creation
-        # downscale = 8
-        # best_m = 0
-        # region_r = min(max(8,l_pool.region_r),61)
-        # lable = 0
-        # for s in (region_r+v for v in xrange(-7,7)):
-        #     #simple best of three optimization
-        #     kernel = make_eye_kernel(s,int(3*s))
-        #     g_img = cv2.filter2D(gray_img[::downscale,::downscale],cv2.CV_32F,kernel,borderType=cv2.BORDER_REPLICATE)
-        #     m = np.amax(g_img)
-        #     # print s,m
-        #     x,y = np.where(g_img == m)
-        #     x,y = downscale*y[0],downscale*x[0]
-        #     # cv2.putText(gray_img, str(s)+"-"+str(m), (x,y+lable), cv2.FONT_HERSHEY_SIMPLEX, .35,(255,255,255))
-        #     lable+=40
-        #     inner_r = (s*downscale)/2
-        #     outer_r = int(s*downscale*1.)
-        #     if m > best_m:
-        #         best_m = m
-        #         l_pool.region_r = s
-        #         vals = [max(0,v) for v in (x-outer_r,y-outer_r,x+outer_r,y+outer_r)]
-        #         p_r.set(vals)
 
         # create view into the gray_img with the bounds of the rough pupil estimation
         pupil_img = gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX]
 
-
         # pupil_img = cv2.morphologyEx(pupil_img, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT,(5,5)),iterations=2)
 
+        hist = cv2.calcHist([pupil_img],[0],None,[256],[0,256]) #(images, channels, mask, histSize, ranges[, hist[, accumulate]])
+        norm_hist = cv2.normalize(hist,0,1,cv2.NORM_MINMAX)
+        bins = np.arange(hist.shape[0])
+        # spikes = bins[norm_hist[:,0]>.2]
+        spikes = bins[hist[:,0]>40] #every color seen in more than 40 pixels
+        if spikes.shape[0] >0:
+            lowest_spike = spikes.min()
+        offset = 20
+        sx,sy = 100,1
+        colors = ((255,0,0),(0,0,255),(0,255,255))
+        h,w,chan = img.shape
+        for i,h in zip(bins,norm_hist[:,0]):
+            c = colors[1]
+            cv2.line(img,(w,int(i*sy)),(w-int(h*sx),int(i*sy)),c)
+        cv2.line(img,(w,int(lowest_spike*sy)),(w-40,int(lowest_spike*sy)),colors[0])
+        cv2.line(img,(w,int((lowest_spike+offset)*sy)),(w-40,int((lowest_spike+offset)*sy)),colors[2])
+
+
+        #k-mena on the histogram is not better than just the lowest spike +offset
+        # term_crit = (cv2.TERM_CRITERIA_EPS, 30, 0.1)
+        # compactness, bestLabels, centers = cv2.kmeans(data=hist, K=2, criteria=term_crit, attempts=10, flags=cv2.KMEANS_PP_CENTERS)
+        # cv2.line(img,(0,1),(int(compactness),1),(0,0,0))
+        # good_cluster = np.argmax(centers)
+        # # A = hist[bestLabels.ravel() == good_cluster]
+        # # B = hist[bestLabels.ravel() != good_cluster]
+        # bins = np.arange(hist.shape[0])
+        # good_bins = bins[bestLabels.ravel() == good_cluster]
+        # good_bins_mean = good_bins.sum()/good_bins.shape[0]
+        # good_bins_min = good_bins.min()
+        # sx,sy = 1,1
+        # colors = ((255,0,0),(0,0,255))
+        # h,w,chan = img.shape
+        # for h, i, label in zip(hist[:,0],range(hist.shape[0]), bestLabels.ravel()):
+        #     c = colors[label]
+        #     cv2.line(img,(w,int(i*sy)),(w-int(h*sx),int(i*sy)),c)
+
+
+
+        #direct k-means on the image is best but expensive
+        # Z = pupil_img.reshape((-1,1))
+        # Z = np.float32(Z)
+        # # define criteria, number of clusters(K) and apply kmeans()
+        # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        # K = 5
+        # ret,label,center = cv2.kmeans(Z,K,criteria,2,cv2.KMEANS_RANDOM_CENTERS)
+        # # Now convert back into uint8, and make original image
+        # center = np.uint8(center)
+        # res = center[label.flatten()]
+        # binary_img = res.reshape((pupil_img.shape))
+        # binary_img = bin_thresholding(binary_img,image_upper=res.min()+1)
+        # bar.bin_thresh.value = res.min()+1
+
+
+
+        bar.bin_thresh.value = lowest_spike
+        binary_img = bin_thresholding(pupil_img,image_upper=lowest_spike+offset)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
-        binary_img = bin_thresholding(pupil_img,image_upper=bar.bin_thresh.value)
         cv2.dilate(binary_img, kernel,binary_img, iterations=3)
         spec_mask = bin_thresholding(pupil_img, image_upper=250)
         cv2.erode(spec_mask, kernel,spec_mask, iterations=1)
@@ -403,19 +433,17 @@ def eye(src,size,g_pool):
         contours = cv2.Canny(pupil_img,bar.canny_thresh.value,
                             bar.canny_thresh.value*bar.canny_ratio.value,
                             apertureSize= bar.canny_aperture.value)
+
         # remove contours in areas not dark enough and where the glint (specteal refelction from IR leds) is
         contours = cv2.min(contours, spec_mask)
         contours = cv2.min(contours,binary_img)
-
 
         # Ellipse fitting from countours
         result = fit_ellipse(img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX],
                             contours,
                             binary_img,
-                            ratio=bar.pupil_ratio.value,
                             target_size=bar.pupil_size.value,
                             size_tolerance=bar.pupil_size_tolerance.value)
-
 
 
         # # Vizualizations
@@ -423,7 +451,6 @@ def eye(src,size,g_pool):
         overlay[:,:,0] = cv2.max(pupil_img,contours) #green channel
         overlay[:,:,2] = cv2.max(pupil_img,binary_img) #blue channel
         overlay[:,:,1] = cv2.min(pupil_img,spec_mask) #red channel
-
 
         #draw a blue dotted frame around the automatic pupil ROI in overlay...
         overlay[::2,0] = 0,0,255

@@ -196,7 +196,7 @@ def convexity_defect(contour, curvature):
 		kinks.append(contour[s+1]) # because the curvature is n-2 (1st and last are not exsistent)
 	return kinks
 
-def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=100,ratio=.6,target_size=20.,size_tolerance=20.):
+def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=100,target_ratio=1.0,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 	"""
 	c_img = edges.copy()
@@ -262,7 +262,7 @@ def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=100,ratio=.6,target_s
 	ellipses = (cv2.fitEllipse(c) for c in good_contours)
 	ellipses = (e for e in ellipses if (0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1]))
 	ellipses = (e for e in ellipses if bin_dark_img[e[0][1],e[0][0]])
-	ellipses = ((size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio)) # roundness test
+	ellipses = ((size_deviation(e,target_size),e) for e in ellipses if is_round(e,target_ratio)) # roundness test
 	ellipses = [(size_dif,e) for size_dif,e in ellipses if size_dif<size_tolerance ] # size closest to target size
 	ellipses.sort(key=lambda e: e[0]) #sort size_deviation
 	if ellipses:
@@ -284,7 +284,7 @@ def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=100,ratio=.6,target_s
 		return best_ellipse,ellipses
 	return None
 
-def is_round(ellipse,ratio,tolerance=.1):
+def is_round(ellipse,ratio,tolerance=.5):
 	center, (axis1,axis2), angle = ellipse
 
 	if axis1 and axis2 and abs( ratio - min(axis2,axis1)/max(axis2,axis1)) <  tolerance:
@@ -295,45 +295,6 @@ def size_deviation(ellipse,target_size):
 	center, axis, angle = ellipse
 	return abs(target_size-max(axis))
 
-
-def fit_ellipse_convexity_check(image,edges,bin_dark_img, contour_size=60,ratio=.6,target_size=60.,size_tolerance=20.):
-	""" fit_ellipse:
-	"""
-	c_img = edges.copy()
-	contours, hierarchy = cv2.findContours(c_img,
-	                                        mode=cv2.RETR_LIST,
-	                                        method=cv2.CHAIN_APPROX_NONE,offset=(0,0))
-
-	contours = [c for c in contours if len(c) >= contour_size]
-	for c in contours:
-	        if convexity(c,image):
-	                cv2.drawContours(image, c, -1, (255,255,255))
-
-	shape = edges.shape
-	ellipses = (cv2.fitEllipse(c) for c in contours if convexity(c,image))
-	ellipses = (e for e in ellipses if (0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1]))
-	ellipses = (e for e in ellipses if bin_dark_img[e[0][1],e[0][0]])
-	ellipses = ((size_deviation(e,target_size),e) for e in ellipses if is_round(e,ratio)) # roundness test
-	ellipses = [(size_dif,e) for size_dif,e in ellipses if size_dif<size_tolerance ] # size closest to target size
-	ellipses.sort(key=lambda e: e[0]) #sort size_deviation
-	if ellipses:
-		best_ellipse = {'center': (None,None),
-				'axes': (None, None),
-				'angle': None,
-				'area': 0.0,
-				'ratio': None,
-				'major': None,
-				'minor': None}
-
-		largest = ellipses[0][1]
-		best_ellipse['center'] = largest[0]
-		best_ellipse['angle'] = largest[-1]
-		best_ellipse['axes'] = largest[1]
-		best_ellipse['major'] = max(largest[1])
-		best_ellipse['minor'] = min(largest[1])
-		best_ellipse['ratio'] = best_ellipse['minor']/best_ellipse['major']
-		return best_ellipse,ellipses
-	return None
 
 
 def convexity_2(contour,img=None):
