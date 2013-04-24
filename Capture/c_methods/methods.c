@@ -59,6 +59,11 @@ inline eye_t make_eye(int h){
 }
 
 void filter(const float *img, const int rows, const int cols, int * x_pos,int *y_pos,int *width)
+// Algorithm inspired by:
+// Robust real-time pupil tracking in highly off-axis images
+// Lech Świrski Andreas Bulling Neil A. Dodgson
+// Computer Laboratory, University of Cambridge, United Kingdom
+// Eye Tracking Research & Applications 2012
 {
     point_t img_size = {rows,cols};
     int min_h = 8;
