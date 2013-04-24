@@ -428,13 +428,12 @@ def eye(src,size,g_pool):
         if bar.blur.value >1:
             pupil_img = cv2.medianBlur(pupil_img,bar.blur.value)
 
-
         # create contours using Canny edge dectetion
         contours = cv2.Canny(pupil_img,bar.canny_thresh.value,
                             bar.canny_thresh.value*bar.canny_ratio.value,
                             apertureSize= bar.canny_aperture.value)
 
-        # remove contours in areas not dark enough and where the glint (specteal refelction from IR leds) is
+        # remove contours in areas not dark enough and where the glint (spectral refelction from IR leds)
         contours = cv2.min(contours, spec_mask)
         contours = cv2.min(contours,binary_img)
 
@@ -491,9 +490,6 @@ def eye(src,size,g_pool):
 
             # clamp pupil size
             bar.pupil_size.value = max(30,min(300,bar.pupil_size.value))
-
-            # clamp pupil ratio
-            bar.pupil_ratio.value = max(.5,bar.pupil_ratio.value)
 
             # normalize
             pupil.norm_coords = normalize(pupil.image_coords, (img.shape[1], img.shape[0]),flip_y=True )

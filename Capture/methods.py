@@ -284,7 +284,7 @@ def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=100,target_ratio=1.0,
 		return best_ellipse,ellipses
 	return None
 
-def is_round(ellipse,ratio,tolerance=.5):
+def is_round(ellipse,ratio,tolerance=.6):
 	center, (axis1,axis2), angle = ellipse
 
 	if axis1 and axis2 and abs( ratio - min(axis2,axis1)/max(axis2,axis1)) <  tolerance:
