@@ -365,9 +365,7 @@ def eye(src,size,g_pool):
         # pupil_img = cv2.morphologyEx(pupil_img, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT,(5,5)),iterations=2)
 
         hist = cv2.calcHist([pupil_img],[0],None,[256],[0,256]) #(images, channels, mask, histSize, ranges[, hist[, accumulate]])
-        norm_hist = cv2.normalize(hist,0,1,cv2.NORM_MINMAX)
         bins = np.arange(hist.shape[0])
-        # spikes = bins[norm_hist[:,0]>.2]
         spikes = bins[hist[:,0]>40] #every color seen in more than 40 pixels
         if spikes.shape[0] >0:
             lowest_spike = spikes.min()
@@ -375,7 +373,9 @@ def eye(src,size,g_pool):
         sx,sy = 100,1
         colors = ((255,0,0),(0,0,255),(0,255,255))
         h,w,chan = img.shape
-        for i,h in zip(bins,norm_hist[:,0]):
+        #nomralize
+        hist *= 1./hist.max()
+        for i,h in zip(bins,hist[:,0]):
             c = colors[1]
             cv2.line(img,(w,int(i*sy)),(w-int(h*sx),int(i*sy)),c)
         cv2.line(img,(w,int(lowest_spike*sy)),(w-40,int(lowest_spike*sy)),colors[0])
