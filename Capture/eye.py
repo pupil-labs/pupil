@@ -378,8 +378,8 @@ def eye(src,size,g_pool):
         for i,h in zip(bins,hist[:,0]):
             c = colors[1]
             cv2.line(img,(w,int(i*sy)),(w-int(h*sx),int(i*sy)),c)
-        cv2.line(img,(w,int(lowest_spike*sy)),(w-40,int(lowest_spike*sy)),colors[0])
-        cv2.line(img,(w,int((lowest_spike+offset)*sy)),(w-40,int((lowest_spike+offset)*sy)),colors[2])
+        cv2.line(img,(w,int(lowest_spike*sy)),(int(w-.5*sx),int(lowest_spike*sy)),colors[0])
+        cv2.line(img,(w,int((lowest_spike+offset)*sy)),(int(w-.5*sx),int((lowest_spike+offset)*sy)),colors[2])
 
 
         #k-mena on the histogram is not better than just the lowest spike +offset

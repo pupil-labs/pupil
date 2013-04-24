@@ -64,7 +64,7 @@ def draw_gl_texture(image):
     We draw the image as a texture on a quad that is perfeclty set into our window.
     """
     height, width, channels = image.shape
-    if  channels == 3: c_blend = GL_RGB
+    if  channels == 3: gl_blend = GL_RGB
     else: gl_blend = GL_RGBA
     # Create Texture
     glTexImage2D(GL_TEXTURE_2D,
