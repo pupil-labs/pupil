@@ -357,7 +357,10 @@ def eye(src,size,g_pool):
         integral = cv2.integral(gray_img)
         integral =  np.array(integral,dtype=c_float)
         x,y,w = eye_filter(integral)
-        p_r.set((y,x,y+w,x+w))
+        if w:
+            p_r.set((y,x,y+w,x+w))
+        else:
+            p_r.set((0,0,-1,-1))
 
         # create view into the gray_img with the bounds of the rough pupil estimation
         pupil_img = gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX]
@@ -373,7 +376,7 @@ def eye(src,size,g_pool):
         sx,sy = 100,1
         colors = ((255,0,0),(0,0,255),(0,255,255))
         h,w,chan = img.shape
-        #nomralize
+        #normalize
         hist *= 1./hist.max()
         for i,h in zip(bins,hist[:,0]):
             c = colors[1]

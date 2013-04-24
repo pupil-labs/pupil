@@ -66,7 +66,7 @@ void filter(const float *img, const int rows, const int cols, int * x_pos,int *y
 // Eye Tracking Research & Applications 2012
 {
     point_t img_size = {rows,cols};
-    int min_h = 8;
+    int min_h = 16;
     int max_h = 80;
     int h, i, j;
     float best_response = -10000;
