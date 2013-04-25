@@ -372,7 +372,9 @@ def eye(src,size,g_pool):
         spikes = bins[hist[:,0]>40] #every color seen in more than 40 pixels
         if spikes.shape[0] >0:
             lowest_spike = spikes.min()
-        offset = 20
+        offset = 40
+
+        ##display the histogram
         sx,sy = 100,1
         colors = ((255,0,0),(0,0,255),(0,255,255))
         h,w,chan = img.shape
@@ -385,7 +387,7 @@ def eye(src,size,g_pool):
         cv2.line(img,(w,int((lowest_spike+offset)*sy)),(int(w-.5*sx),int((lowest_spike+offset)*sy)),colors[2])
 
 
-        #k-mena on the histogram is not better than just the lowest spike +offset
+        #k-means on the histogram is not better than just the lowest spike +offset
         # term_crit = (cv2.TERM_CRITERIA_EPS, 30, 0.1)
         # compactness, bestLabels, centers = cv2.kmeans(data=hist, K=2, criteria=term_crit, attempts=10, flags=cv2.KMEANS_PP_CENTERS)
         # cv2.line(img,(0,1),(int(compactness),1),(0,0,0))
