@@ -527,7 +527,7 @@ def eye(src,size,g_pool):
         if not g_pool.calibrate.value and l_pool.calib_running:
             l_pool.calib_running = 0
             if pupil.pt_cloud: # some data was actually collected
-                print "Calibrating with", len(pupil.pt_cloud), "colleced data points."
+                print "Calibrating with", len(pupil.pt_cloud), "collected data points."
                 pupil.coefs = calibrate_poly(pupil.pt_cloud)
                 np.save('cal_pt_cloud.npy', np.array(pupil.pt_cloud))
 
