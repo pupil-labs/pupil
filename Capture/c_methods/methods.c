@@ -1,5 +1,9 @@
 #include <stdio.h>
 
+
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 typedef struct {
    int    r;
    int    c;
@@ -20,6 +24,7 @@ typedef struct
     square_t inner;
     int w_half;
     int w;
+    int h;
 }eye_t;
 
 // inline float area(const float *img,point_t size,point_t start,point_t end){
@@ -45,6 +50,7 @@ inline float area(const float *img,point_t size,point_t start,point_t end,point_
 inline eye_t make_eye(int h){
     int w = 3*h;
     eye_t eye;
+    eye.h = h;
     eye.w = w;
     eye.outer.s = (point_t){0,0};
     eye.outer.e = (point_t){w,w};
@@ -71,10 +77,11 @@ void filter(const float *img, const int rows, const int cols, int * x_pos,int *y
     int h, i, j;
     float best_response = -10000;
     point_t best_pos ={0,0};
-    int best_w = 0;
-    int step = 4;
+    int best_h = 0;
+    int h_step = 3;
+    int step = 5;
 
-    for (h = min_h; h < max_h; h+=step)
+    for (h = min_h; h < max_h; h+=h_step)
         {
             eye_t eye = make_eye(h);
             // printf("inner factor%f outer.factor %f center %i \n",eye.inner.f,eye.outer.f,(int)eye.w_half );
@@ -92,18 +99,51 @@ void filter(const float *img, const int rows, const int cols, int * x_pos,int *y
                         best_response = response;
                         best_pos = (point_t){i,j};
                         // printf("%i %i", (int)best_pos.r,(int)best_pos.c);
-                        best_w = eye.w;
+                        best_h = eye.h;
                     }
                 }
                 // printf("\n");
             }
         }
+
+
+
+    // now we refine the search at pixel resolution
+    point_t window_lower = {MAX(0,best_pos.r-step+1),MAX(0,best_pos.c-step+1)};
+    point_t window_upper = {MIN(img_size.r,best_pos.r+step),MIN(img_size.c,best_pos.c+step)};
+    for (h = best_h-h_step+1; h < best_h+h_step; h+=1)
+        {
+            eye_t eye = make_eye(h);
+            // printf("inner factor%f outer.factor %f center %i \n",eye.inner.f,eye.outer.f,(int)eye.w_half );
+            for (i=window_lower.r; i<MIN(window_upper.r,img_size.r-eye.w); i +=1)
+            {
+                for (j=window_lower.c; j<MIN(window_upper.c,img_size.c-eye.w); j +=1)
+                {
+
+                    // printf("|%2.0f",img[i * cols + j]);
+                    point_t offset = {i,j};
+                    float response =  eye.outer.f*area(img,img_size,eye.outer.s,eye.outer.e,offset)
+                                     +eye.inner.f*area(img,img_size,eye.inner.s,eye.inner.e,offset);
+                    // printf("| %5.2f ",response);
+                    if(response > best_response){
+                        // printf("!");
+                        best_response = response;
+                        best_pos = (point_t){i,j};
+                        // printf("%i %i", (int)best_pos.r,(int)best_pos.c);
+                        best_h = eye.h;
+                    }
+                }
+                // printf("\n");
+            }
+        }
+
+
     // point_t start = {0,0};
     // point_t end = {1,1};
     // printf("FULL IMG SUM %1.0f\n",img[(img_size.r-1) * img_size.c + (img_size.c-1)] );
     // printf("AREA:%f\n",area(img,img_size,start,end,(point_t){0,0}));
     *x_pos = (int)best_pos.r;
     *y_pos = (int)best_pos.c;
-    *width = best_w;
+    *width = best_h*3;
     }
 

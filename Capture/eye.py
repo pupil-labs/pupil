@@ -362,9 +362,11 @@ def eye(src,size,g_pool):
         else:
             p_r.set((0,0,-1,-1))
 
+
+
         # create view into the gray_img with the bounds of the rough pupil estimation
         pupil_img = gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX]
-
+        pupil_img[w/2,w/2] = 255
         # pupil_img = cv2.morphologyEx(pupil_img, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT,(5,5)),iterations=2)
 
         hist = cv2.calcHist([pupil_img],[0],None,[256],[0,256]) #(images, channels, mask, histSize, ranges[, hist[, accumulate]])
@@ -494,7 +496,7 @@ def eye(src,size,g_pool):
             bar.pupil_size_tolerance.value =max(10,min(50,bar.pupil_size_tolerance.value))
 
             # clamp pupil size
-            bar.pupil_size.value = max(30,min(300,bar.pupil_size.value))
+            bar.pupil_size.value = max(20,min(300,bar.pupil_size.value))
 
             # normalize
             pupil.norm_coords = normalize(pupil.image_coords, (img.shape[1], img.shape[0]),flip_y=True )

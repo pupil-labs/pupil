@@ -196,7 +196,7 @@ def convexity_defect(contour, curvature):
 		kinks.append(contour[s+1]) # because the curvature is n-2 (1st and last are not exsistent)
 	return kinks
 
-def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=100,target_ratio=1.0,target_size=20.,size_tolerance=20.):
+def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=80,target_ratio=1.0,target_size=20.,size_tolerance=20.):
 	""" fit_ellipse:
 	"""
 	c_img = edges.copy()
