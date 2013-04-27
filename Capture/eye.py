@@ -366,32 +366,32 @@ def eye(src,size,g_pool):
 
         # create view into the gray_img with the bounds of the rough pupil estimation
         pupil_img = gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX]
-        pupil_img[w/2,w/2] = 255
+
         # pupil_img = cv2.morphologyEx(pupil_img, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT,(5,5)),iterations=2)
+        if True:
+            hist = cv2.calcHist([pupil_img],[0],None,[256],[0,256]) #(images, channels, mask, histSize, ranges[, hist[, accumulate]])
+            bins = np.arange(hist.shape[0])
+            spikes = bins[hist[:,0]>40] #every color seen in more than 40 pixels
+            if spikes.shape[0] >0:
+                lowest_spike = spikes.min()
+            offset = 40
 
-        hist = cv2.calcHist([pupil_img],[0],None,[256],[0,256]) #(images, channels, mask, histSize, ranges[, hist[, accumulate]])
-        bins = np.arange(hist.shape[0])
-        spikes = bins[hist[:,0]>40] #every color seen in more than 40 pixels
-        if spikes.shape[0] >0:
-            lowest_spike = spikes.min()
-        offset = 40
-
-        ##display the histogram
-        sx,sy = 100,1
-        colors = ((255,0,0),(0,0,255),(0,255,255))
-        h,w,chan = img.shape
-        #normalize
-        hist *= 1./hist.max()
-        for i,h in zip(bins,hist[:,0]):
-            c = colors[1]
-            cv2.line(img,(w,int(i*sy)),(w-int(h*sx),int(i*sy)),c)
-        cv2.line(img,(w,int(lowest_spike*sy)),(int(w-.5*sx),int(lowest_spike*sy)),colors[0])
-        cv2.line(img,(w,int((lowest_spike+offset)*sy)),(int(w-.5*sx),int((lowest_spike+offset)*sy)),colors[2])
+            ##display the histogram
+            sx,sy = 100,1
+            colors = ((255,0,0),(0,0,255),(0,255,255))
+            h,w,chan = img.shape
+            #normalize
+            hist *= 1./hist.max()
+            for i,h in zip(bins,hist[:,0]):
+                c = colors[1]
+                cv2.line(img,(w,int(i*sy)),(w-int(h*sx),int(i*sy)),c)
+            cv2.line(img,(w,int(lowest_spike*sy)),(int(w-.5*sx),int(lowest_spike*sy)),colors[0])
+            cv2.line(img,(w,int((lowest_spike+offset)*sy)),(int(w-.5*sx),int((lowest_spike+offset)*sy)),colors[2])
 
 
-        #k-means on the histogram is not better than just the lowest spike +offset
-        # term_crit = (cv2.TERM_CRITERIA_EPS, 30, 0.1)
-        # compactness, bestLabels, centers = cv2.kmeans(data=hist, K=2, criteria=term_crit, attempts=10, flags=cv2.KMEANS_PP_CENTERS)
+        # # k-means on the histogram finds peaks but thats no good for us...
+        # term_crit = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        # compactness, bestLabels, centers = cv2.kmeans(data=hist, K=2, criteria=term_crit, attempts=10, flags=cv2.KMEANS_RANDOM_CENTERS)
         # cv2.line(img,(0,1),(int(compactness),1),(0,0,0))
         # good_cluster = np.argmax(centers)
         # # A = hist[bestLabels.ravel() == good_cluster]
@@ -400,35 +400,37 @@ def eye(src,size,g_pool):
         # good_bins = bins[bestLabels.ravel() == good_cluster]
         # good_bins_mean = good_bins.sum()/good_bins.shape[0]
         # good_bins_min = good_bins.min()
-        # sx,sy = 1,1
-        # colors = ((255,0,0),(0,0,255))
+
         # h,w,chan = img.shape
         # for h, i, label in zip(hist[:,0],range(hist.shape[0]), bestLabels.ravel()):
         #     c = colors[label]
         #     cv2.line(img,(w,int(i*sy)),(w-int(h*sx),int(i*sy)),c)
 
 
-
-        #direct k-means on the image is best but expensive
-        # Z = pupil_img.reshape((-1,1))
-        # Z = np.float32(Z)
-        # # define criteria, number of clusters(K) and apply kmeans()
-        # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-        # K = 5
-        # ret,label,center = cv2.kmeans(Z,K,criteria,2,cv2.KMEANS_RANDOM_CENTERS)
-        # # Now convert back into uint8, and make original image
-        # center = np.uint8(center)
-        # res = center[label.flatten()]
-        # binary_img = res.reshape((pupil_img.shape))
-        # binary_img = bin_thresholding(binary_img,image_upper=res.min()+1)
-        # bar.bin_thresh.value = res.min()+1
+        else:
+            # direct k-means on the image is best but expensive
+            Z = pupil_img[::w/30+1,::w/30+1].reshape((-1,1))
+            Z = np.float32(Z)
+            # define criteria, number of clusters(K) and apply kmeans()
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 2.0)
+            K = 5
+            ret,label,center = cv2.kmeans(Z,K,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
+            offset = 0
+            center.sort(axis=0)
+            lowest_spike =  int(center[1])
+            # # Now convert back into uint8, and make original image
+            # center = np.uint8(center)
+            # res = center[label.flatten()]
+            # binary_img = res.reshape((pupil_img.shape))
+            # binary_img = bin_thresholding(binary_img,image_upper=res.min()+1)
+            # bar.bin_thresh.value = res.min()+1
 
 
 
         bar.bin_thresh.value = lowest_spike
         binary_img = bin_thresholding(pupil_img,image_upper=lowest_spike+offset)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
-        cv2.dilate(binary_img, kernel,binary_img, iterations=3)
+        cv2.dilate(binary_img, kernel,binary_img, iterations=2)
         spec_mask = bin_thresholding(pupil_img, image_upper=250)
         cv2.erode(spec_mask, kernel,spec_mask, iterations=1)
 
