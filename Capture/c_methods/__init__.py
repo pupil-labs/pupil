@@ -14,10 +14,15 @@ source_loc = os.path.dirname(os.path.abspath(__file__))
 #  Binaries are not distributed instead a make file and source are in the c-methods folder
 #  Make is invoked when this module is imported or run.
 # print "c-methods: compiling now."
-import subprocess
-compiler_status = subprocess.check_output("make",cwd=source_loc)
+arch_64bit = sizeof(c_void_p) == 8
+if arch_64bit:
+    c_flags = "CFLAGS=-m64"
+else:
+    c_flags = "CFLAGS=-m32"
+from subprocess import check_output
+compiler_status = check_output(["make",c_flags],cwd=source_loc)
 # print "c-methods:",compiler_status
-del subprocess
+del check_output
 # print "c-methods: compiling done."
 
 dll_name = "methods.so"

@@ -65,15 +65,14 @@ TwEventCharGLFW    = __dll__.TwEventCharGLFW
 # TwEventMouseWheelGLUT  = __dll__.TwEventMouseWheelGLFW
 
 #detect 64bit
-import sys
-if (sys.maxsize > 2**32):
+arch_64bit = ctypes.sizeof(ctypes.c_void_p) == 8
+if arch_64bit:
     # On Mac OS Snow Leopard, the following definitions seems to be necessary to
     # ensure 64bits pointers anywhere needed
     c_pointer = ctypes.c_ulonglong
 else:
     #normal
     c_pointer = ctypes.c_void_p
-del sys
 
 TwGetLastError.restype = c_char_p
 TwGetBarName.restype = c_char_p

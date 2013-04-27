@@ -78,7 +78,7 @@ void filter(const float *img, const int rows, const int cols, int * x_pos,int *y
     float best_response = -10000;
     point_t best_pos ={0,0};
     int best_h = 0;
-    int h_step = 3;
+    int h_step = 4;
     int step = 5;
 
     for (h = min_h; h < max_h; h+=h_step)
@@ -108,7 +108,7 @@ void filter(const float *img, const int rows, const int cols, int * x_pos,int *y
 
 
 
-    // now we refine the search at pixel resolution
+    // now we refine the search at pixel resolution This hole part can be commented out if needed
     point_t window_lower = {MAX(0,best_pos.r-step+1),MAX(0,best_pos.c-step+1)};
     point_t window_upper = {MIN(img_size.r,best_pos.r+step),MIN(img_size.c,best_pos.c+step)};
     for (h = best_h-h_step+1; h < best_h+h_step; h+=1)
