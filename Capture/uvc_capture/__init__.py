@@ -177,7 +177,8 @@ def autoCreateCapture(src,size=(640,480)):
 
         #no matching id found or uvc control not supported: trying capture without uvc controls
         cap = noUVCCapture(src,size)
-        print "no UVC support: using camera with id: %s" %(cap.cvId)
+        print "WARNING: no UVC support: Using camera with id: %s" %(cap.cvId)
+        return cap
 
 
     #looking for videofiles
