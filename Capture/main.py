@@ -21,7 +21,8 @@ def main():
     #to assign by name: string(s) in list
     eye_src = ["Microsoft", "6000"]
     world_src = ["Logitech Camera","(046d:081d)","C525","C615","C920"] # "(046d:081d)" is the (automated replacement) name of C510
-    #to assign cameras directly: use ints
+
+    #uncomment to assign cameras directly: use ints
     # eye_src = 0
     # world_src =1
 
@@ -79,7 +80,7 @@ def main():
     # end shared globals
 
     # set up sub processes
-    p_eye = Process(target=eye, args=(eye_src,eye_size, g_pool))
+    p_eye = Process(target=eye_profiled, args=(eye_src,eye_size, g_pool))
     if use_player: p_player = Process(target=player, args=(g_pool,player_size))
     if audio: p_audio = Process(target=record_audio, args=(g_pool.audio_rx,g.g_pool.audio_record,3))
 

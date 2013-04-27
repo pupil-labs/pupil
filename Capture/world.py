@@ -147,11 +147,11 @@ def world(src, size, g_pool):
             bar.calibrate.value = 1
             bar.find_pattern.value = 0
             bar.calibrate_nine.value = 1
-        elif c_type == cal_type["Manual 9-Point"]:
-            print 'WORLD: Starting Manual 9-Point calibration.'
-            bar.calibrate.value = 1
-            bar.find_pattern.value = 1
-            bar.calibrate_nine.value = 0
+        # elif c_type == cal_type["Manual 9-Point"]:
+        #     print 'WORLD: Starting Manual 9-Point calibration.'
+        #     bar.calibrate.value = 1
+        #     bar.find_pattern.value = 1
+        #     bar.calibrate_nine.value = 0
         elif c_type == cal_type["Natural Features"]:
             print 'WORLD: Starting Natural Features calibration.'
             bar.optical_flow.value = 1
@@ -182,7 +182,7 @@ def world(src, size, g_pool):
     bar.play = g_pool.play
     bar.window_size = c_int(0)
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
-    cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Manual 9-Point":2,"Natural Features":3}
+    cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Natural Features":3}#"Manual 9-Point":2
     calibrate_type_enum = atb.enum("Calibration Method",cal_type)
     # play and record can be tied together via pointers to the objects
     # bar.play = bar.record_video

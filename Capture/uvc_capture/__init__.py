@@ -17,6 +17,8 @@ import platform
 os_name = platform.system()
 del platform
 
+
+###OS specific imports and defs
 if os_name == "Linux":
     import v4l2_ctl_oop as uvc
 elif os_name == "Darwin":
@@ -37,7 +39,7 @@ else:
             """empty class"""
             def __init__(self):
                 pass
-
+###end OS imports and defs
 
 
 class CameraCapture(uvc.Camera):
@@ -175,7 +177,8 @@ def autoCreateCapture(src,size=(640,480)):
 
         #no matching id found or uvc control not supported: trying capture without uvc controls
         cap = noUVCCapture(src,size)
-        print "no UVC support: using camera with id: %s" %(cap.cvId)
+        print "WARNING: no UVC support: Using camera with id: %s" %(cap.cvId)
+        return cap
 
 
     #looking for videofiles
