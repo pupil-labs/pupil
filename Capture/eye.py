@@ -357,7 +357,7 @@ def eye(src,size,g_pool):
         integral = cv2.integral(gray_img)
         integral =  np.array(integral,dtype=c_float)
         x,y,w = eye_filter(integral)
-        if w:
+        if w>0:
             p_r.set((y,x,y+w,x+w))
         else:
             p_r.set((0,0,-1,-1))
@@ -438,7 +438,8 @@ def eye(src,size,g_pool):
             pupil_img = cv2.medianBlur(pupil_img,bar.blur.value)
 
         # create contours using Canny edge dectetion
-        contours = cv2.Canny(pupil_img,bar.canny_thresh.value,
+        contours = cv2.Canny(pupil_img,
+                            bar.canny_thresh.value,
                             bar.canny_thresh.value*bar.canny_ratio.value,
                             apertureSize= bar.canny_aperture.value)
 
