@@ -17,7 +17,6 @@ os_name = platform.system()
 del platform
 if os_name == "Linux":
     import OpenGL.GL
-    del OpenGL.GL
 
 name = ctypes.util.find_library('AntTweakBar')
 if not name:
