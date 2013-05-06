@@ -34,6 +34,21 @@ def draw_gl_polyline((positions),(r,g,b,a),closed=True):
         glVertex3f(x,y,0.0)
     glEnd()
 
+def draw_gl_polyline_norm((positions),(r,g,b,a),closed=True):
+    glMatrixMode(GL_PROJECTION)
+    glPushMatrix()
+    glLoadIdentity()
+    gluOrtho2D(-1, 1, -1, 1) #origin at the center positive up, positve right
+    glMatrixMode(GL_MODELVIEW)
+    glPushMatrix()
+    glLoadIdentity()
+    draw_gl_polyline(positions,(r,g,b,a),closed)
+    glMatrixMode(GL_PROJECTION)
+    glPopMatrix()
+    glMatrixMode(GL_MODELVIEW)
+    glPopMatrix()
+
+
 def draw_gl_point((x,y),(r,g,b,a)):
 	glColor4f(r,g,b,a)
 	glBegin(GL_POINTS)

@@ -6,7 +6,7 @@ def main():
     save_video = False
 
     # change this path to point to the data folder you would like to play
-    data_folder = "/Users/mkassner/Pupil/pupil_google_code/code/Capture/data002"
+    data_folder = "/Users/mkassner/Pupil/pupil_google_code/code/Capture/data007"
 
 
     video_path = data_folder + "/world.avi"

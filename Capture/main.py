@@ -24,9 +24,9 @@ def main():
 
     #uncomment to assign cameras directly: use ints
     # eye_src = 0
-    # world_src =1
+    # world_src = 1
 
-    #to use a video: string (no list)
+    #to use a video: string (not inside a list)
     # eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov"
     # world_src = 0
 
@@ -52,8 +52,7 @@ def main():
 
     # use the player: a seperate window for video playback and 9 point calibration animation
     use_player = 1
-
-    player_size = (640,480) #this can be whatever you like
+    player_size = (640,480) #startup size: this can be whatever you like
 
 
     # world_uvc_camera, eye_uvc_camera = None,None
@@ -77,10 +76,15 @@ def main():
     g_pool.player_refresh = Event()
     g_pool.play = RawValue(c_bool,0)
     g_pool.quit = RawValue(c_bool,0)
+    g_pool.eye_src = eye_src
+    g_pool.eye_size = eye_size
+    g_pool.world_src = world_src
+    g_pool.world_size = world_size
+
     # end shared globals
 
     # set up sub processes
-    p_eye = Process(target=eye_profiled, args=(eye_src,eye_size, g_pool))
+    p_eye = Process(target=eye, args=(g_pool,))
     if use_player: p_player = Process(target=player, args=(g_pool,player_size))
     if audio: p_audio = Process(target=record_audio, args=(g_pool.audio_rx,g.g_pool.audio_record,3))
 
@@ -95,7 +99,7 @@ def main():
     # on Mac, when using some cameras (like our current logitech worldcamera)
     # you can't run world camera grabber in its own process
     # it must reside in the main process when you run on MacOS.
-    world(world_src,world_size,g_pool)
+    world_profiled(g_pool)
 
     # exit / clean-up
     p_eye.join()

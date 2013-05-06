@@ -9,16 +9,16 @@ import atb
 from methods import normalize, denormalize, chessboard, circle_grid, gen_pattern_grid, calibrate_camera,Temp
 from uvc_capture import autoCreateCapture
 # from gl_shapes import Point
-from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm
+from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm,draw_gl_polyline_norm
 from time import time
+from calibrate import *
 
-
-def world_profiled(src,size,g_pool):
+def world_profiled(g_pool):
     import cProfile
     from world import world
-    cProfile.runctx("world(src,size,g_pool)",{'src':src,"size":size,"g_pool":g_pool},locals(),"world.pstats")
+    cProfile.runctx("world(g_pool,)",{"g_pool":g_pool},locals(),"world.pstats")
 
-def world(src, size, g_pool):
+def world(g_pool):
     """world
     """
     ###Callback funtions
@@ -92,7 +92,7 @@ def world(src, size, g_pool):
     record.counter = 0
 
     # initialize capture, check if it works
-    cap = autoCreateCapture(src, size)
+    cap = autoCreateCapture(g_pool.world_src, g_pool.world_size)
     if cap is None:
         print "WORLD: Error could not create Capture"
         return
@@ -170,6 +170,7 @@ def world(src, size, g_pool):
     bar.optical_flow = c_bool(0)
     bar.screen_shot = False
     bar.calibration_type = c_int(1)
+    bar.show_calib_result = c_bool(0)
     bar.calibration_images = False
     bar.calibrate_nine = g_pool.cal9
     bar.calibrate_nine_step = g_pool.cal9_step
@@ -190,6 +191,7 @@ def world(src, size, g_pool):
     bar.add_var("Display_Size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
     bar.add_var("Calibration_Method",bar.calibration_type, vtype=calibrate_type_enum)
     bar.add_button("Start_Calibration",start_calibration, key='c')
+    bar.add_var("show calibration result",bar.show_calib_result, help="yellow lines indecate fit error, red outline shows the calibrated area.")
     bar.add_var("Record Video", bar.record_video, key="r", help="Start/Stop Recording")
     bar.add_separator("Sep0")
     bar.add_var("Cal9/Next_Point",bar.calibrate_next,key="SPACE", help="Hit space to calibrate on next dot")
@@ -272,6 +274,7 @@ def world(src, size, g_pool):
     gl.glEnable(gl.GL_BLEND)
     del gl
 
+
     ###event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
         update_fps()
@@ -280,6 +283,8 @@ def world(src, size, g_pool):
 
         # Nine Point calibration state machine timing
         if bar.calibrate_nine.value:
+            bar.show_calib_result.value = False
+
             if bar.calibrate_nine_step.value > 30:
                 bar.calibrate_nine_step.value = 0
                 bar.calibrate_nine_stage.value += 1
@@ -289,6 +294,7 @@ def world(src, size, g_pool):
                 bar.calibrate.value = False
                 bar.calibrate_nine.value = False
                 bar.find_pattern.value = False
+                bar.show_calib_result.value = 1
             if bar.calibrate_nine_step.value in range(10, 25):
                 bar.find_pattern.value = True
             else:
@@ -428,11 +434,25 @@ def world(src, size, g_pool):
             bar.record_running = 0
 
 
+
+
         ###render the screen
         clear_gl_screen()
         cv2.cvtColor(img, cv2.COLOR_BGR2RGB,img)
         draw_gl_texture(img)
 
+        if bar.show_calib_result.value:
+            cal_pt_cloud = np.load("cal_pt_cloud.npy")
+            ###render calibration results:
+            pX,pY,wX,wY = cal_pt_cloud.transpose()
+            map_fn = get_map_from_cloud(cal_pt_cloud,(width,height))
+            modelled_world_pts = map_fn((pX,pY))
+            pts = np.array(modelled_world_pts,dtype=np.float32).transpose()
+            calib_bounds =  cv2.convexHull(pts)[:,0]
+
+            for observed,modelled in zip(zip(wX,wY),np.array(modelled_world_pts).transpose()):
+                draw_gl_polyline_norm((modelled,observed),(1.,0.5,0.,.5))
+            draw_gl_polyline_norm(calib_bounds,(1.0,0,0,.5))
 
         # render and broadcast pattern point
         if pattern.norm_coords[0] or pattern.norm_coords[1]:
