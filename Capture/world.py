@@ -283,7 +283,7 @@ def world(g_pool):
 
         # Nine Point calibration state machine timing
         if bar.calibrate_nine.value:
-            bar.show_calib_result.value = False
+            # bar.show_calib_result.value = False
 
             if bar.calibrate_nine_step.value > 30:
                 bar.calibrate_nine_step.value = 0
@@ -294,7 +294,7 @@ def world(g_pool):
                 bar.calibrate.value = False
                 bar.calibrate_nine.value = False
                 bar.find_pattern.value = False
-                bar.show_calib_result.value = 1
+                # bar.show_calib_result.value = 1
             if bar.calibrate_nine_step.value in range(10, 25):
                 bar.find_pattern.value = True
             else:
@@ -441,15 +441,14 @@ def world(g_pool):
         cv2.cvtColor(img, cv2.COLOR_BGR2RGB,img)
         draw_gl_texture(img)
 
+        ###render calibration results:
         if bar.show_calib_result.value:
             cal_pt_cloud = np.load("cal_pt_cloud.npy")
-            ###render calibration results:
             pX,pY,wX,wY = cal_pt_cloud.transpose()
             map_fn = get_map_from_cloud(cal_pt_cloud,(width,height))
             modelled_world_pts = map_fn((pX,pY))
             pts = np.array(modelled_world_pts,dtype=np.float32).transpose()
             calib_bounds =  cv2.convexHull(pts)[:,0]
-
             for observed,modelled in zip(zip(wX,wY),np.array(modelled_world_pts).transpose()):
                 draw_gl_polyline_norm((modelled,observed),(1.,0.5,0.,.5))
             draw_gl_polyline_norm(calib_bounds,(1.0,0,0,.5))
