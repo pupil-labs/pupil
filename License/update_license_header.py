@@ -72,7 +72,5 @@ def update_header():
 		write_header(f, pattern, license_txt)
 
 if __name__ == '__main__':
-	# print get_files("../",includes,excludes)
 	# run update_header() to add headers to found files
-	# update_header()
-	pass
+	update_header()
