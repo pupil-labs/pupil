@@ -16,7 +16,6 @@ license_txt = """\
 cwd = os.getcwd()
 pupil_dir = os.path.join(*os.path.split(cwd)[:-1])
 
-file_name = '../Simple_Player/blurred_circle_history.py'
 pattern = re.compile('(\'{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n(\'{3}|[*][/])', re.DOTALL|re.MULTILINE)
 
 # choose files types to include
