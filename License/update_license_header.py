@@ -2,25 +2,31 @@ import fnmatch
 import os
 import re
 
-# load license_header.txt
-license_txt = file('license_header.txt', 'r').read()
-pattern = re.compile('\([*]\)~(.+?)~\([*]\)', re.DOTALL|re.MULTILINE)
+license_txt = """\
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
-
-# choose files names/types to include
-# choose directories and file names/types to exclude from search
-includes = ['*.py', '*.c']
-excludes = ['.git*','src_video', 'uvcc', 'data*', 'License']
-# header_pattern = re.compile('(?:\n[\t ]*)\("{3}|\*)(.*?)\("{3}|*/)')
+ Distributed under the terms of the CC BY-NC-SA License. 
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)\
+"""
 
 # find out the cwd and change to the top level Pupil folder
 cwd = os.getcwd()
 pupil_dir = os.path.join(*os.path.split(cwd)[:-1])
 
+file_name = '../Simple_Player/blurred_circle_history.py'
+pattern = re.compile('(\'{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n(\'{3}|[*][/])', re.DOTALL|re.MULTILINE)
+
+# choose files types to include
+# choose directories to exclude from search
+includes = ['*.py', '*.c'] 
+excludes = ['.git', 'atb', 'glfw', 'src_video', 'v4l2_ctl', 'data', 'License'] 
+
 # transform glob patterns to regular expressions
 includes = r'|'.join([fnmatch.translate(x) for x in includes])
 excludes = r'|'.join([fnmatch.translate(x) for x in excludes]) or r'$.'
-
 
 def get_files(start_dir, includes, excludes):
 	# use os.walk to recursively dig down into the Pupil directory
@@ -32,22 +38,41 @@ def get_files(start_dir, includes, excludes):
 			match_files += files
 	return match_files
 
-def write_header(files, license_txt):
-	# Add a license/docstring header to selected files
-	for f in files:
-		# read original and copy to data for pre-pending
-		with file(f, 'r') as original:
-			data = original.read()
+def write_header(file_name, pattern, license_txt):
+	# find and replace license header
+	# or add new header if not existing
+	c_comment = ['/*\n', '\n*/\n']
+	py_comment = ["'''\n","\n'''\n"]
+	file_type = os.path.splitext(file_name)[-1]
 
-		# add license header and append file data
-		with file(f, 'w') as modified:
-			#if header already exists
+	if file_type == '.py':
+		license_txt = py_comment[0] + license_txt + py_comment[1]
+	if file_type == '.c':
+		license_txt = c_comment[0] + license_txt + c_comment[1]
+
+	with file(file_name, 'r') as original: 
+		data = original.read()
+
+	with file(file_name, 'w') as modified:
+		if re.findall(pattern, data):
+			# if header already exists, then update
+			modified.write(re.sub(pattern, license_txt, data))
+			modified.close()
+		else:
+			# else write the license header
 			modified.write(license_txt + data)
 			modified.close()
 
-def remove_header(file, pattern):
-	# find doc string or multiline comment in top of file and remove it
-	pass
+def update_header():
+	# Add a license/docstring header to selected files
+	match_files = get_files(pupil_dir, includes, excludes)
+	print match_files 
+
+	for f in match_files:
+		write_header(f, pattern, license_txt)
+
 if __name__ == '__main__':
-	# print "%s" %(pattern.findall(license_txt))
-	print get_files("../",includes,excludes)
+	# print get_files("../",includes,excludes)
+	# run update_header() to add headers to found files
+	# update_header()
+	pass

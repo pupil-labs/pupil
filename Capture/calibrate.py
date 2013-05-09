@@ -1,10 +1,3 @@
-'''
-Title: Pupil: Eye Tracking Software
-calibrate.py
-Authors: Moritz Kassner & William Patera
-Date: July 12, 2011
-'''
-
 import numpy as np
 
 def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),verbose=False):
