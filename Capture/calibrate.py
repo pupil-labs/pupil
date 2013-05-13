@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -11,11 +11,11 @@ import numpy as np
 
 def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),verbose=False):
     # fit once unsing all avaialbe data
-    model_n = 9
+    model_n = 7
     cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
     map_fn = make_map_function(cx,cy,model_n)
     err_dist,err_mean,err_rms = fit_error_screen(err_x,err_y,screen_size)
-    threshold = 15 #pixel in world space
+    threshold = 55 #pixel in world space
     #fit again disregarding extreme outliers
     cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)
     map_fn = make_map_function(cx,cy,model_n)
@@ -30,8 +30,6 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),verbose=False):
             %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
             100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0])
     return map_fn
-
-
 
 def fit_poly_surface(cal_pt_cloud,n=7):
     M = make_model(cal_pt_cloud,n)
@@ -131,12 +129,12 @@ if __name__ == '__main__':
     # ax.scatter(Z[:,0],Z[:,1],Z[:,3], c= "b")
 
     ##fit once
-    model_n = 9
+    model_n = 7
     cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
     map_fn = make_map_function(cx,cy,model_n)
     err_dist,err_mean,err_rms = fit_error_screen(err_x,err_y,(1280,720))
     print err_rms,"in pixel"
-    threshold =15 # err_rms*2
+    threshold =65 # err_rms*2
 
     #fit again disregarding krass outlines
     cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)
@@ -177,8 +175,8 @@ if __name__ == '__main__':
     ax.scatter(inliers[:,0],inliers[:,1],inliers[:,2], c= "r")
     ax.scatter(inliers[:,0],inliers[:,1],inliers[:,3], c= "b")
     Z = cal_pt_cloud
-    X = np.linspace(min(Z[:,0]),max(Z[:,0]),num=30,endpoint=True)
-    Y = np.linspace(min(Z[:,1]),max(Z[:,1]),num=30,endpoint=True)
+    X = np.linspace(min(Z[:,0])-.2,max(Z[:,0])+.2,num=30,endpoint=True)
+    Y = np.linspace(min(Z[:,1])-.2,max(Z[:,1]+.2),num=30,endpoint=True)
     X, Y = np.meshgrid(X,Y)
     ZX,ZY = map_fn((X,Y))
     ax.plot_surface(X, Y, ZX, rstride=1, cstride=1, linewidth=.1, antialiased=True,alpha=0.4,color='r')

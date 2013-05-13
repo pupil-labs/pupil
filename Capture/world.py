@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -89,6 +89,10 @@ def world(g_pool):
     flow.point =  None
     flow.new_ref = False
     flow.count = 0
+
+
+    ###black dot
+    black_dot_count = 0
     # gaze object
     gaze = Temp()
     gaze.map_coords = (0., 0.)
@@ -136,6 +140,7 @@ def world(g_pool):
         """
         return data.value
 
+
     def start_calibration():
         c_type = bar.calibration_type.value
         if  c_type == cal_type["Directed 9-Point"]:
@@ -166,6 +171,20 @@ def world(g_pool):
             bar.optical_flow.value = 1
             bar.calibrate.value = 1
 
+        elif c_type == cal_type["Black Dot"]:
+            print 'WORLD: Starting Black Dot calibration.'
+            bar.find_dot.value = 1
+            bar.calibrate.value = 1
+
+    def stop_calibration():
+        bar.calibrate_auto_advance.value = 0
+        bar.calibrate_next.value = 0
+        bar.calibrate_nine_step.value = 0
+        bar.calibrate_nine_stage.value = 0
+        bar.calibrate.value = 0
+        bar.find_pattern.value = 0
+        bar.calibrate_nine.value = 0
+        bar.find_dot.value = 0
 
     ### Initialize ant tweak bar inherits from atb.Bar
     atb.init()
@@ -176,6 +195,7 @@ def world(g_pool):
     bar.timestamp = time()
     bar.calibrate = g_pool.calibrate
     bar.find_pattern = c_bool(0)
+    bar.find_dot = c_bool(0)
     bar.optical_flow = c_bool(0)
     bar.screen_shot = False
     bar.calibration_type = c_int(1)
@@ -192,7 +212,7 @@ def world(g_pool):
     bar.play = g_pool.play
     bar.window_size = c_int(0)
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
-    cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Natural Features":3}#"Manual 9-Point":2
+    cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Natural Features":3,"Black Dot":4}#"Manual 9-Point":2
     calibrate_type_enum = atb.enum("Calibration Method",cal_type)
     # play and record can be tied together via pointers to the objects
     # bar.play = bar.record_video
@@ -200,6 +220,8 @@ def world(g_pool):
     bar.add_var("Display_Size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
     bar.add_var("Calibration_Method",bar.calibration_type, vtype=calibrate_type_enum)
     bar.add_button("Start_Calibration",start_calibration, key='c')
+    bar.add_button("Stop_Calibration",stop_calibration, key='d')
+
     bar.add_var("show calibration result",bar.show_calib_result, help="yellow lines indecate fit error, red outline shows the calibrated area.")
     bar.add_var("Record Video", bar.record_video, key="r", help="Start/Stop Recording")
     bar.add_separator("Sep0")
@@ -209,6 +231,7 @@ def world(g_pool):
     bar.add_var("Cal9/Stage",bar.calibrate_nine_stage,help="Please look at dot ... to calibrate")
     bar.add_var("Cal9/Auto_Advance", bar.calibrate_auto_advance)
     bar.add_var("Cal/Find_Calibration_Pattern", bar.find_pattern, key="p", help="Find Calibration Pattern")
+    bar.add_var("Cal/Find_Black_Dot", bar.find_dot, help="find black dot detector")
     bar.add_var("Cal/Calibrate", bar.calibrate, help="Internal flag to collect calibration datas")
     bar.add_var("Cal/Optical_Flow", bar.optical_flow, key="o", help="Activate Optical Flow")
     bar.add_button("Cal/Screen_Shot", screen_cap, key="s", help="Capture A Frame")
@@ -281,7 +304,7 @@ def world(g_pool):
     gl.glPointSize(20)
     gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
     gl.glEnable(gl.GL_BLEND)
-    del gl
+    # del gl
 
 
     ###event loop
@@ -289,6 +312,7 @@ def world(g_pool):
         update_fps()
         # get an image from the grabber
         s, img = cap.read()
+
 
         # Nine Point calibration state machine timing
         if bar.calibrate_nine.value:
@@ -357,6 +381,33 @@ def world(g_pool):
                 else:
                     # If no pattern detected send 0,0 -- check this condition in eye process
                     pattern.norm_coords = 0,0
+
+        ###black dot detection
+        if bar.find_dot.value:
+            s_img = cv2.cvtColor(img[::2,::2],cv2.COLOR_BGR2GRAY)
+            params = cv2.SimpleBlobDetector_Params()
+            # params.minDistBetweenBlobs = 500.0
+            params.minArea = 100.0
+            params.maxArea = 2000.
+            params.filterByColor = 1
+            params.blobColor = 0
+            params.minThreshold = 90.
+            detector = cv2.SimpleBlobDetector(params)
+            kps = detector.detect(s_img)
+
+            if bar.calibrate_next.value:
+                bar.calibrate_next.value = False
+                black_dot_count = 1*30
+
+            if black_dot_count and len(kps)>0:
+                black_dot_count -=1
+                kp = kps[0]
+                pt = (kp.pt[0]*2,kp.pt[1]*2)
+                # print black_dot_count
+                pattern.norm_coords = normalize(pt,(img.shape[1],img.shape[0]),flip_y=True)
+            else:
+                pattern.norm_coords = 0,0
+
 
 
         #gather pattern centers and find cam intrisics
@@ -461,6 +512,12 @@ def world(g_pool):
             for observed,modelled in zip(zip(wX,wY),np.array(modelled_world_pts).transpose()):
                 draw_gl_polyline_norm((modelled,observed),(1.,0.5,0.,.5))
             draw_gl_polyline_norm(calib_bounds,(1.0,0,0,.5))
+
+        if bar.find_dot:
+            for kp in kps:
+                gl.glPointSize(int(kp.size)*4)
+                draw_gl_point((kp.pt[0]*2,kp.pt[1]*2),(0.,1.,1.,.5))
+            gl.glPointSize(20)
 
         # render and broadcast pattern point
         if pattern.norm_coords[0] or pattern.norm_coords[1]:
