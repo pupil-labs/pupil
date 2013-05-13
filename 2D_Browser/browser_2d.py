@@ -184,7 +184,7 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 			try:
 				x_screen, y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'],
 														gaze.map[bar.frame_num.value][0]['eye_y']),
-														fig.width, fig.height, flip_y=False)
+														fig.width, fig.height, flip_y=True)
 				img1[int(y_screen), int(x_screen)] = [255,255,255]
 
 				# update gaze.x_screen, gaze.y_screen /OPENGL COORIDANTE SYSTEM
