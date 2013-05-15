@@ -670,7 +670,8 @@ class Bar(object):
                     ctypes.c_long:      TW_TYPE_INT32,
                     ctypes.c_float:     TW_TYPE_FLOAT,
                     ctypes.c_float * 3: TW_TYPE_COLOR3F,
-                    ctypes.c_float * 4: TW_TYPE_COLOR4F}
+                    ctypes.c_float * 4: TW_TYPE_COLOR4F,
+                    ctypes.c_char * 512: TW_TYPE_CSSTRING(512)}
         _typemap_inv = dict([(v, k) for k, v in _typemap.iteritems()])
 
         if vtype is None and value is not None:

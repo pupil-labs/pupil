@@ -9,7 +9,7 @@
 '''
 import os, sys
 
-from ctypes import  c_int,c_bool,c_float
+from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
 from glob import glob
 import cv2
@@ -214,6 +214,8 @@ def world(g_pool):
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
     cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Natural Features":3,"Black Dot":4}#"Manual 9-Point":2
     calibrate_type_enum = atb.enum("Calibration Method",cal_type)
+    bar.rec_name = create_string_buffer(512)
+
     # play and record can be tied together via pointers to the objects
     # bar.play = bar.record_video
     bar.add_var("FPS", bar.fps, step=1., readonly=True)
@@ -221,8 +223,8 @@ def world(g_pool):
     bar.add_var("Calibration_Method",bar.calibration_type, vtype=calibrate_type_enum)
     bar.add_button("Start_Calibration",start_calibration, key='c')
     bar.add_button("Stop_Calibration",stop_calibration, key='d')
-
     bar.add_var("show calibration result",bar.show_calib_result, help="yellow lines indecate fit error, red outline shows the calibrated area.")
+    bar.add_var("rec_name",bar.rec_name)
     bar.add_var("Record Video", bar.record_video, key="r", help="Start/Stop Recording")
     bar.add_separator("Sep0")
     bar.add_var("Cal9/Next_Point",bar.calibrate_next,key="SPACE", help="Hit space to calibrate on next dot")
