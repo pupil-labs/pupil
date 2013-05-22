@@ -19,10 +19,6 @@ from world import world, world_profiled
 from player import player
 from methods import Temp
 
-# import pyaudio
-# import wave.
-# from audio import normalize, trim, add_silence
-
 from ctypes import c_bool, c_int
 
 def main():
@@ -70,8 +66,8 @@ def main():
     g_pool = Temp()
     g_pool.gaze_x = Value('d', 0.0)
     g_pool.gaze_y = Value('d', 0.0)
-    g_pool.pattern_x = Value('d', 0.0)
-    g_pool.pattern_y = Value('d', 0.0)
+    g_pool.ref_x = Value('d', 0.0)
+    g_pool.ref_y = Value('d', 0.0)
     g_pool.frame_count_record = Value('i', 0)
     g_pool.calibrate = RawValue(c_bool, 0)
     g_pool.cal9 = RawValue(c_bool, 0)
@@ -80,8 +76,6 @@ def main():
     g_pool.cal9_circle_id = RawValue('i' ,0)
     g_pool.pos_record = Value(c_bool, 0)
     g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
-    g_pool.audio_record = Value(c_bool,False)
-    g_pool.audio_rx, g_pool.audio_tx = Pipe(False)
     g_pool.player_refresh = Event()
     g_pool.play = RawValue(c_bool,0)
     g_pool.quit = RawValue(c_bool,0)
@@ -89,18 +83,15 @@ def main():
     g_pool.eye_size = eye_size
     g_pool.world_src = world_src
     g_pool.world_size = world_size
-
     # end shared globals
 
     # set up sub processes
     p_eye = Process(target=eye, args=(g_pool,))
     if use_player: p_player = Process(target=player, args=(g_pool,player_size))
-    if audio: p_audio = Process(target=record_audio, args=(g_pool.audio_rx,g.g_pool.audio_record,3))
 
     # spawn sub processes
     if use_player: p_player.start()
     p_eye.start()
-    if audio: p_audio.start()
 
     # on Linux, we need to give the camera driver some time before you request another camera
     sleep(1)
@@ -113,7 +104,6 @@ def main():
     # exit / clean-up
     p_eye.join()
     if use_player: p_player.join()
-    if audio: p_audio.join()
     print "main exit"
 
 if __name__ == '__main__':

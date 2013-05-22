@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -17,25 +17,6 @@ from uvc_capture import autoCreateCapture
 from time import sleep
 from glob import glob
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen
-
-
-# def make_grid(dim=(11,4)):
-#     """
-#     this function generates the structure for an asymetrical circle grid
-#     centerd around 0 width=1, height scaled accordinly
-#     """
-#     x,y = range(dim[0]),range(dim[1])
-#     p = np.array([[[s,i] for s in x] for i in y], dtype=np.float32)
-#     p[:,1::2,1] += 0.5
-
-#     # width  (on sceen this is the height) of pattern is 1
-#     # height is scaled accordingly to preserve aspect ratio
-#     p[:,:,0] /= (dim[1]+1)*2
-#     p[:,:,1] /= (dim[1]+1)
-#     p = np.reshape(p, (-1,2), 'F')
-#     ###center around 0
-#     p += (-.5,-float(dim[1])/dim[0])
-#     return p
 
 
 def make_grid(dim=(11,4)):
@@ -144,7 +125,7 @@ def player(g_pool,size):
                 ###display the animated target dot
                 gl.glPointSize((40)*(1.01-(step+1)/80.0))
                 gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ZERO)
-                if g_pool.pattern_x.value or g_pool.pattern_y.value: ###if pattern detected
+                if g_pool.ref_x.value or g_pool.ref_y.value: ###if pattern detected
                     gl.glColor4f(0.0,0.5,0.0,1.0)
                 else:
                     gl.glColor4f(0.5,0.0,0.0,1.0)
