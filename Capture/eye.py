@@ -531,9 +531,9 @@ def eye(g_pool):
             pupil.pt_cloud = []
 
         # While Calibrating...
-        if l_pool.calib_running and ((g_pool.pattern_x.value != 0) or (g_pool.pattern_y.value != 0)) and pupil.ellipse:
+        if l_pool.calib_running and ((g_pool.ref_x.value != 0) or (g_pool.ref_y.value != 0)) and pupil.ellipse:
             pupil.pt_cloud.append([pupil.norm_coords[0],pupil.norm_coords[1],
-                                g_pool.pattern_x.value, g_pool.pattern_y.value])
+                                g_pool.ref_x.value, g_pool.ref_y.value])
 
         # Calculate mapping coefs
         if not g_pool.calibrate.value and l_pool.calib_running:
