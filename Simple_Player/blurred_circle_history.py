@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -59,7 +59,8 @@ def main():
         if past_gaze:
             gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
             prevPts = np.array(past_gaze,dtype=np.float32)
-            nextPts, status, err = cv.calcOpticalFlowPyrLK(prevgray, gray,prevPts)
+            nextPts = prevPts.copy()
+            nextPts, status, err = cv.calcOpticalFlowPyrLK(prevgray, gray,prevPts,nextPts)
             prevgray = gray
             past_gaze = list(nextPts)
 
