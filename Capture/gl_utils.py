@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -57,13 +57,14 @@ def draw_gl_polyline_norm((positions),(r,g,b,a),closed=True):
     glPopMatrix()
 
 
-def draw_gl_point((x,y),(r,g,b,a)):
-	glColor4f(r,g,b,a)
-	glBegin(GL_POINTS)
-	glVertex3f(x,y,0.0)
-	glEnd()
+def draw_gl_point((x,y),size=20,color=(1.,0.5,0.5,.5)):
+    glColor4f(*color)
+    glPointSize(int(size))
+    glBegin(GL_POINTS)
+    glVertex3f(x,y,0.0)
+    glEnd()
 
-def draw_gl_point_norm(pos,color):
+def draw_gl_point_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
 
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
@@ -73,7 +74,7 @@ def draw_gl_point_norm(pos,color):
     glPushMatrix()
     glLoadIdentity()
 
-    draw_gl_point(pos,color)
+    draw_gl_point(pos,size,color)
 
     glMatrixMode(GL_PROJECTION)
     glPopMatrix()

@@ -368,14 +368,14 @@ def world(g_pool):
             draw_gl_polyline_norm(calib_bounds,(1.0,0,0,.5))
 
         #render visual feedback from detector
-        ref.detector.display()
+        ref.detector.display(img)
         # render detector point
         if ref.detector.pos[0] or ref.detector.pos[1]:
-            draw_gl_point_norm(ref.detector.pos,(0.,1.,0.,0.5))
+            draw_gl_point_norm(ref.detector.pos,color=(0.,1.,0.,0.5))
 
         # update gaze point from shared variable pool and draw on screen. If both coords are 0: no pupil pos was detected.
         if g_pool.gaze_x.value !=0 or g_pool.gaze_y.value !=0:
-            draw_gl_point_norm((g_pool.gaze_x.value, g_pool.gaze_y.value),(1.,0.,0.,0.5))
+            draw_gl_point_norm((g_pool.gaze_x.value, g_pool.gaze_y.value),color=(1.,0.,0.,0.5))
 
         atb.draw()
         glfwSwapBuffers()

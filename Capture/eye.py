@@ -265,7 +265,6 @@ def eye(g_pool):
     r = Roi(img.shape)
     p_r = Roi(img.shape)
 
-
     # local object
     l_pool = Temp()
     l_pool.calib_running = False
@@ -279,7 +278,6 @@ def eye(g_pool):
     bar = Bar("Eye",g_pool, dict(label="Controls",
             help="eye detection controls", color=(50,50,50), alpha=100,
             text='light',position=(10, 10),refresh=.1, size=(200, 300)) )
-
 
 
     #add 4vl2 camera controls to a seperate ATB bar
@@ -362,6 +360,8 @@ def eye(g_pool):
         ###IMAGE PROCESSING
         gray_img = grayscale(img[r.lY:r.uY,r.lX:r.uX])
 
+
+        ### coarse pupil-detection
         integral = cv2.integral(gray_img)
         integral =  np.array(integral,dtype=c_float)
         x,y,w = eye_filter(integral)
@@ -369,13 +369,13 @@ def eye(g_pool):
             p_r.set((y,x,y+w,x+w))
         else:
             p_r.set((0,0,-1,-1))
-
-
-
         # create view into the gray_img with the bounds of the rough pupil estimation
         pupil_img = gray_img[p_r.lY:p_r.uY,p_r.lX:p_r.uX]
 
+
         # pupil_img = cv2.morphologyEx(pupil_img, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT,(5,5)),iterations=2)
+
+        ### binary thresholding of pupil dark areas
         if True:
             hist = cv2.calcHist([pupil_img],[0],None,[256],[0,256]) #(images, channels, mask, histSize, ranges[, hist[, accumulate]])
             bins = np.arange(hist.shape[0])
@@ -388,35 +388,14 @@ def eye(g_pool):
             sx,sy = 100,1
             colors = ((255,0,0),(0,0,255),(0,255,255))
             h,w,chan = img.shape
-            #normalize
-            hist *= 1./hist.max()
+            hist *= 1./hist.max()  #normalize for display
             for i,h in zip(bins,hist[:,0]):
                 c = colors[1]
                 cv2.line(img,(w,int(i*sy)),(w-int(h*sx),int(i*sy)),c)
             cv2.line(img,(w,int(lowest_spike*sy)),(int(w-.5*sx),int(lowest_spike*sy)),colors[0])
             cv2.line(img,(w,int((lowest_spike+offset)*sy)),(int(w-.5*sx),int((lowest_spike+offset)*sy)),colors[2])
 
-
-        # # k-means on the histogram finds peaks but thats no good for us...
-        # term_crit = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-        # compactness, bestLabels, centers = cv2.kmeans(data=hist, K=2, criteria=term_crit, attempts=10, flags=cv2.KMEANS_RANDOM_CENTERS)
-        # cv2.line(img,(0,1),(int(compactness),1),(0,0,0))
-        # good_cluster = np.argmax(centers)
-        # # A = hist[bestLabels.ravel() == good_cluster]
-        # # B = hist[bestLabels.ravel() != good_cluster]
-        # bins = np.arange(hist.shape[0])
-        # good_bins = bins[bestLabels.ravel() == good_cluster]
-        # good_bins_mean = good_bins.sum()/good_bins.shape[0]
-        # good_bins_min = good_bins.min()
-
-        # h,w,chan = img.shape
-        # for h, i, label in zip(hist[:,0],range(hist.shape[0]), bestLabels.ravel()):
-        #     c = colors[label]
-        #     cv2.line(img,(w,int(i*sy)),(w-int(h*sx),int(i*sy)),c)
-
-
-        else:
-            # direct k-means on the image is best but expensive
+        else: # direct k-means on the image is better but expensive
             Z = pupil_img[::w/30+1,::w/30+1].reshape((-1,1))
             Z = np.float32(Z)
             # define criteria, number of clusters(K) and apply kmeans()
@@ -433,14 +412,13 @@ def eye(g_pool):
             # binary_img = bin_thresholding(binary_img,image_upper=res.min()+1)
             # bar.bin_thresh.value = res.min()+1
 
-
-
         bar.bin_thresh.value = lowest_spike
         binary_img = bin_thresholding(pupil_img,image_upper=lowest_spike+offset)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
         cv2.dilate(binary_img, kernel,binary_img, iterations=2)
         spec_mask = bin_thresholding(pupil_img, image_upper=250)
         cv2.erode(spec_mask, kernel,spec_mask, iterations=1)
+
 
         if bar.blur.value >1:
             pupil_img = cv2.medianBlur(pupil_img,bar.blur.value)
@@ -494,7 +472,9 @@ def eye(g_pool):
         else:
             pass
 
-        if result is not None:
+
+        ### Work with detected ellipses
+        if result is not None: ###found a pupil
             pupil.ellipse, others = result
             pupil.image_coords = r.add_vector(p_r.add_vector(pupil.ellipse['center']))
             #update pupil size,angle and ratio for the ellipse filter algorithm
@@ -514,9 +494,10 @@ def eye(g_pool):
 
             # from pupil to gaze
             pupil.gaze_coords = map_pupil(pupil.norm_coords)
+            # puplish to globals
             g_pool.gaze_x.value, g_pool.gaze_y.value = pupil.gaze_coords
 
-        else:
+        else: #did not find a pupil
             pupil.ellipse = None
             g_pool.gaze_x.value, g_pool.gaze_y.value = 0.,0.
             pupil.gaze_coords = None #whithout this line the last know pupil position is recorded if none is found
@@ -540,8 +521,9 @@ def eye(g_pool):
             l_pool.calib_running = 0
             if pupil.pt_cloud: # some data was actually collected
                 print "Calibrating with", len(pupil.pt_cloud), "collected data points."
-                map_pupil = get_map_from_cloud(np.array(pupil.pt_cloud),g_pool.world_size,verbose=True)
-                np.save('cal_pt_cloud.npy',np.array(pupil.pt_cloud))
+                pupil.pt_cloud = np.array(pupil.pt_cloud)
+                map_pupil = get_map_from_cloud(pupil.pt_cloud,g_pool.world_size,verbose=True)
+                np.save('cal_pt_cloud.npy',pupil.pt_cloud)
 
 
         ###RECORDING###
@@ -551,8 +533,6 @@ def eye(g_pool):
             print "l_pool.record_path: ", l_pool.record_path
 
             video_path = path.join(l_pool.record_path, "eye.avi")
-            #FFV1 -- good speed lossless big file
-            #DIVX -- good speed good compression medium file
             if bar.record_eye.value:
                 l_pool.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (img.shape[1], img.shape[0]))
             l_pool.record_positions = []
@@ -591,7 +571,7 @@ def eye(g_pool):
                                     360,
                                     15)
             draw_gl_polyline(pts,(1.,0,0,.5))
-            draw_gl_point_norm(pupil.norm_coords,(1.,0.,0.,0.5))
+            draw_gl_point_norm(pupil.norm_coords,color=(1.,0.,0.,0.5))
 
         atb.draw()
         glfwSwapBuffers()

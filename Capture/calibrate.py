@@ -10,6 +10,10 @@
 import numpy as np
 
 def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),verbose=False):
+    """
+    we do a simple two pass fitting to a pari of bi-variate polynomials
+    return the function to map vector
+    """
     # fit once unsing all avaialbe data
     model_n = 7
     cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)

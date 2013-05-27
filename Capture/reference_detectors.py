@@ -9,50 +9,89 @@
 '''
 import cv2
 import numpy as np
-from methods import normalize
+from methods import normalize,denormalize
+from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline_norm
+
 class Ref_Detector(object):
     """
     base class of reference detectors
-    They need to have some methods exposed that will be called.
+    build a detector based on this class. It needs to have interfaces
+    defined by these methods:
+    you NEED to do at least what is done in these fn-prototypes
+
     ...
     """
     def __init__(self,global_calibrate,shared_x,shared_y):
         self.global_calibrate = global_calibrate
+        self.global_calibrate.value = True
         self.shared_x = shared_x
         self.shared_y = shared_y
-        self.pos = 0., 0. ### 0,0 is detected as invalid position
+        self.pos = 0,0 # 0,0 is used to indicate no point detected
 
     def detect(self,img):
-        pass
+        """
+        get called once every frame.
+        reference positon need to be pupiled to shard_x and y
+        if no referece was found, pupilish 0,0
+        """
+        self.shared_x.value = 0
+        self.shared_y.value = 0
 
     def advance(self):
+        """
+        gets called when the user hit spacebar in the world window
+        """
         pass
 
     def new_ref(self,pos):
+        """
+        gets called when the user click on the wolrd window screen
+        """
         pass
 
-    def publish(self):
-        pass
-
-    def display(self):
+    def display(self,img):
+        """
+        gets called and the end of each image loop. use ref to img data to draw some results
+        or
+        use opengl calls.
+        """
         pass
 
     def is_done(self):
+        """
+        gets called after detect()
+        return true if the calibration routine has finished.
+        the caller will then reduc the ref-count of this instance to 0 triggering __del__
+
+        if your calibration routine does not end by itself, the use will induce the end using the gui
+        in which case the ref-count will get 0 as well.
+        """
         return False
 
     def __del__(self):
         self.global_calibrate.value = False
 
-# just to emphasize that the empty skeleton
-# is a non-active detector that is used when we are not callibrating
-no_Detector = Ref_Detector
+class no_Detector(Ref_Detector):
+    """
+    docstring for no_Detector
+    this dummy class is instaciated when no calibration is running, it does nothing
+    """
+    def __init__(self, global_calibrate,shared_x,shared_y):
+        global_calibrate.value = False
+        shared_x.value = 0
+        shared_y.value = 0
+        self.pos = 0,0
+
+    def detect(self,img):
+        pass
+
+    def __del__(self):
+        pass
 
 class Black_Dot_Detector(Ref_Detector):
     """docstring for black_dot_detector"""
     def __init__(self, global_calibrate,shared_x,shared_y):
         super(Black_Dot_Detector, self).__init__(global_calibrate,shared_x,shared_y)
-        self.global_calibrate.value = True
-
         params = cv2.SimpleBlobDetector_Params()
         # params.minDistBetweenBlobs = 500.0
         params.minArea = 100.0
@@ -77,9 +116,10 @@ class Black_Dot_Detector(Ref_Detector):
             self.pos = 0,0
         self.publish()
 
-    def display(self):
-        pass
-        # canditate_points
+    def display(self,img):
+        for kp in self.canditate_points:
+            draw_gl_point((kp.pt[0]*2,kp.pt[1]*2),size=int(kp.size)*4,color=(0.,1.,1.,.5))
+
 
     def publish(self):
         self.shared_x.value, self.shared_y.value = self.pos
@@ -92,7 +132,6 @@ class Nine_Point_Detector(Ref_Detector):
     """docstring for Nine_Point_"""
     def __init__(self, global_calibrate,shared_x,shared_y,shared_stage,shared_step,shared_cal9_active,shared_circle_id,auto_advance=False):
         super(Nine_Point_Detector, self).__init__(global_calibrate,shared_x,shared_y)
-        self.global_calibrate.value = True
         self.shared_cal9_active = shared_cal9_active
         self.shared_cal9_active.value = True
         self.shared_stage = shared_stage
@@ -158,7 +197,6 @@ class Natural_Features_Detector(Ref_Detector):
     """docstring for Natural_Features_Detector"""
     def __init__(self,global_calibrate,shared_x,shared_y,):
         super(Natural_Features_Detector, self).__init__(global_calibrate,shared_x,shared_y)
-        self.global_calibrate.value = True
         self.first_img = None
         self.point = None
         self.count = 0
