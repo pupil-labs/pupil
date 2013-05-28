@@ -1,5 +1,12 @@
-#!/usr/bin/env python
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
+ Distributed under the terms of the CC BY-NC-SA License.
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
 import numpy as np
 import cv2
 
@@ -284,7 +291,7 @@ def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=80,target_ratio=1.0,t
 		return best_ellipse,ellipses
 	return None
 
-def is_round(ellipse,ratio,tolerance=.6):
+def is_round(ellipse,ratio,tolerance=.8):
 	center, (axis1,axis2), angle = ellipse
 
 	if axis1 and axis2 and abs( ratio - min(axis2,axis1)/max(axis2,axis1)) <  tolerance:

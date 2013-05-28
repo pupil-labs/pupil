@@ -1,0 +1,33 @@
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+Pupil - open source eye tracking platform
+Copyright (C) 2012-2013  Moritz Kassner & William Patera
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+Motivation
+
+We want Pupil to proliferate! We want you to use Pupil to empower and inspire whatever you do. Be it academic research, teaching, art or personally motivated projects.
+
+The software is open and the hardware is very accessible and modifiable because we think that you should be more of a member of the Pupil community than a customer of the Pupil product. We encourage the modification of software and hardware in accordance to the open source license.
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+Software
+
+All source code written by us is open source according to CC BY-NC-SA license < http://creativecommons.org/licenses/by-nc-sa/3.0/legalcode >. We want you to change and improve the code. Just make sure to credit us, and we hope that you will share your work with the Pupil community.
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+Documentation
+
+All content of the documentation written by Moritz Kassner and William Patera is open source, according to CC BY-NC-SA license.  See < http://creativecommons.org/licenses/by-nc-sa/3.0/legalcode >
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+Using PUPIL in your research and work
+
+You can use Pupil in your research, academic work, art projects and personal work. We only ask you to credit us appropriately. Pupil is developed and maintained by Moritz Kassner & William Patera.
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+Using PUPIL commercially
+
+If you plan to use Pupil in a comercial context please contact us so we can work out an appropriate licence with you.  Contact pupil.orders [at] gmail [dot] com 
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------

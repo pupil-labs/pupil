@@ -1,3 +1,12 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2013  Moritz Kassner & William Patera
+
+ Distributed under the terms of the CC BY-NC-SA License.
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
 
 from ctypes import c_int,c_bool,c_float,pointer
 import cPickle as pickle
@@ -9,7 +18,7 @@ from time import time, sleep
 from methods import *
 from c_methods import eye_filter
 from uvc_capture import autoCreateCapture
-from calibrate import *
+from calibrate import get_map_from_cloud
 from os import path
 
 
@@ -173,12 +182,12 @@ class Roi(object):
                 print "Warning: Image Array size changed, disregarding saved Region of Interest"
 
 
-def eye_profiled(src,size,g_pool):
+def eye_profiled(g_pool):
     import cProfile
     from eye import eye
-    cProfile.runctx("eye(src,size,g_pool)",{'src':src,"size":size,"g_pool":g_pool},locals(),"eye.pstats")
+    cProfile.runctx("eye(g_pool,)",{"g_pool":g_pool},locals(),"eye.pstats")
 
-def eye(src,size,g_pool):
+def eye(g_pool):
     """
     this process needs a docstring
     """
@@ -227,7 +236,7 @@ def eye(src,size,g_pool):
         print "EYE Process closing from window"
 
     # initialize capture, check if it works
-    cap = autoCreateCapture(src, size)
+    cap = autoCreateCapture(g_pool.eye_src, g_pool.eye_size)
     if cap is None:
         print "EYE: Error could not create Capture"
         return
@@ -244,15 +253,14 @@ def eye(src,size,g_pool):
     pupil.image_coords = (0.,0.)
     pupil.ellipse = None
     pupil.gaze_coords = (0.,0.)
+
     try:
-        pupil.pt_cloud = list(np.load('cal_pt_cloud.npy'))  #LIST just makes it conform with \
-                                                            #how our pupil data is captured during calibration
+        pupil.pt_cloud = np.load('cal_pt_cloud.npy')
+        map_pupil = get_map_from_cloud(pupil.pt_cloud,g_pool.world_size) ###world video size here
     except:
         pupil.pt_cloud = None
-    if pupil.pt_cloud is not None:
-        pupil.coefs = calibrate_poly(pupil.pt_cloud)
-    else:
-        pupil.coefs = None
+        def map_pupil(vector):
+                return vector
 
     r = Roi(img.shape)
     p_r = Roi(img.shape)
@@ -324,7 +332,7 @@ def eye(src,size,g_pool):
     glfwOpenWindow(width, height, 0, 0, 0, 8, 0, 0, GLFW_WINDOW)
     glfwSetWindowTitle("Eye")
     glfwSetWindowPos(800,0)
-    if isinstance(src, str):
+    if isinstance(g_pool.eye_src, str):
         glfwSwapInterval(0) # turn of v-sync when using video as src for benchmarking
 
 
@@ -505,7 +513,7 @@ def eye(src,size,g_pool):
             pupil.norm_coords = normalize(pupil.image_coords, (img.shape[1], img.shape[0]),flip_y=True )
 
             # from pupil to gaze
-            pupil.gaze_coords = map_vector(pupil.norm_coords, pupil.coefs)
+            pupil.gaze_coords = map_pupil(pupil.norm_coords)
             g_pool.gaze_x.value, g_pool.gaze_y.value = pupil.gaze_coords
 
         else:
@@ -516,25 +524,24 @@ def eye(src,size,g_pool):
             bar.pupil_size_tolerance.value +=1
 
 
-        ###CALIBRATION and MAPPING###
+        ###CALIBRATION###
         # Initialize Calibration (setup variables and lists)
         if g_pool.calibrate.value and not l_pool.calib_running:
             l_pool.calib_running = True
             pupil.pt_cloud = []
-            pupil.coefs = None
 
         # While Calibrating...
-        if l_pool.calib_running and ((g_pool.pattern_x.value != 0) or (g_pool.pattern_y.value != 0)) and pupil.ellipse:
+        if l_pool.calib_running and ((g_pool.ref_x.value != 0) or (g_pool.ref_y.value != 0)) and pupil.ellipse:
             pupil.pt_cloud.append([pupil.norm_coords[0],pupil.norm_coords[1],
-                                g_pool.pattern_x.value, g_pool.pattern_y.value])
+                                g_pool.ref_x.value, g_pool.ref_y.value])
 
         # Calculate mapping coefs
         if not g_pool.calibrate.value and l_pool.calib_running:
             l_pool.calib_running = 0
             if pupil.pt_cloud: # some data was actually collected
                 print "Calibrating with", len(pupil.pt_cloud), "collected data points."
-                pupil.coefs = calibrate_poly(pupil.pt_cloud)
-                np.save('cal_pt_cloud.npy', np.array(pupil.pt_cloud))
+                map_pupil = get_map_from_cloud(np.array(pupil.pt_cloud),g_pool.world_size,verbose=True)
+                np.save('cal_pt_cloud.npy',np.array(pupil.pt_cloud))
 
 
         ###RECORDING###

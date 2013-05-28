@@ -1,3 +1,12 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2013  Moritz Kassner & William Patera
+
+ Distributed under the terms of the CC BY-NC-SA License. 
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
 import cv2 as cv
 import numpy as np
 
@@ -6,7 +15,7 @@ def main():
     save_video = False
 
     # change this path to point to the data folder you would like to play
-    data_folder = "/Users/mkassner/Pupil/pupil_google_code/code/Capture/data002"
+    data_folder = "/Users/mkassner/Pupil/pupil_google_code/code/Capture/data012"
 
 
     video_path = data_folder + "/world.avi"

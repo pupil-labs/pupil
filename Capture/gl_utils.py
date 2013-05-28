@@ -1,4 +1,12 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
+ Distributed under the terms of the CC BY-NC-SA License. 
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 
@@ -33,6 +41,21 @@ def draw_gl_polyline((positions),(r,g,b,a),closed=True):
     for x,y in positions:
         glVertex3f(x,y,0.0)
     glEnd()
+
+def draw_gl_polyline_norm((positions),(r,g,b,a),closed=True):
+    glMatrixMode(GL_PROJECTION)
+    glPushMatrix()
+    glLoadIdentity()
+    gluOrtho2D(-1, 1, -1, 1) #origin at the center positive up, positve right
+    glMatrixMode(GL_MODELVIEW)
+    glPushMatrix()
+    glLoadIdentity()
+    draw_gl_polyline(positions,(r,g,b,a),closed)
+    glMatrixMode(GL_PROJECTION)
+    glPopMatrix()
+    glMatrixMode(GL_MODELVIEW)
+    glPopMatrix()
+
 
 def draw_gl_point((x,y),(r,g,b,a)):
 	glColor4f(r,g,b,a)

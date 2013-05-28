@@ -1,26 +1,35 @@
-import os, sys
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
-from ctypes import  c_int,c_bool,c_float
+ Distributed under the terms of the CC BY-NC-SA License.
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
+import os, sys
+from time import time
+from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
-from glob import glob
 import cv2
+from glob import glob
 from glfw import *
 import atb
 from methods import normalize, denormalize, chessboard, circle_grid, gen_pattern_grid, calibrate_camera,Temp
 from uvc_capture import autoCreateCapture
-# from gl_shapes import Point
-from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm
-from time import time
+from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm,draw_gl_polyline_norm
+from calibrate import *
+from reference_detectors import *
 
-
-def world_profiled(src,size,g_pool):
+def world_profiled(g_pool):
     import cProfile
     from world import world
-    cProfile.runctx("world(src,size,g_pool)",{'src':src,"size":size,"g_pool":g_pool},locals(),"world.pstats")
+    cProfile.runctx("world(g_pool,)",{"g_pool":g_pool},locals(),"world.pstats")
 
-def world(src, size, g_pool):
+def world(g_pool):
     """world
     """
+
     ###Callback funtions
     def on_resize(w, h):
         atb.TwWindowSize(w, h);
@@ -42,11 +51,7 @@ def world(src, size, g_pool):
                 pos = glfwGetMousePos()
                 pos = normalize(pos,glfwGetWindowSize())
                 pos = denormalize(pos,(img.shape[1],img.shape[0]) ) #pos in img pixels
-
-                if bar.optical_flow.value:
-                    flow.point = np.array([pos,],dtype=np.float32)
-                    flow.new_ref = True
-                    flow.count = 30
+                ref.detector.new_ref(pos)
 
 
     def on_pos(x, y):
@@ -61,25 +66,18 @@ def world(src, size, g_pool):
         g_pool.quit.value = True
         print "WORLD Process closing from window"
 
-
-
+    ref = Temp()
+    ref.detector = no_Detector(g_pool.calibrate,g_pool.ref_x,g_pool.ref_y)
     ###objects as variable containers
     # pattern object
     pattern = Temp()
     pattern.centers = None
-    pattern.norm_coords = (0., 0.)
-    pattern.image_coords = (0., 0.)
     pattern.obj_grid = gen_pattern_grid((4, 11))  # calib grid
     pattern.obj_points = []
     pattern.img_points = []
     pattern.map = (0, 2, 7, 16, 21, 23, 39, 40, 42)
     pattern.board_centers = None
-    #optical flow object
-    flow = Temp()
-    flow.first =  None
-    flow.point =  None
-    flow.new_ref = False
-    flow.count = 0
+
     # gaze object
     gaze = Temp()
     gaze.map_coords = (0., 0.)
@@ -92,7 +90,7 @@ def world(src, size, g_pool):
     record.counter = 0
 
     # initialize capture, check if it works
-    cap = autoCreateCapture(src, size)
+    cap = autoCreateCapture(g_pool.world_src, g_pool.world_size)
     if cap is None:
         print "WORLD: Error could not create Capture"
         return
@@ -110,10 +108,6 @@ def world(src, size, g_pool):
         if dt:
             bar.fps.value += .05 * (1 / dt - bar.fps.value)
 
-    def screen_cap():
-        bar.find_pattern.value = True
-        bar.screen_shot = True
-
     def set_window_size(mode,data):
         height,width = img.shape[:2]
         ratio = (1,.75,.5,.25)[mode]
@@ -127,36 +121,47 @@ def world(src, size, g_pool):
         """
         return data.value
 
+
     def start_calibration():
+
         c_type = bar.calibration_type.value
         if  c_type == cal_type["Directed 9-Point"]:
             print 'WORLD: Starting Directed 9-Point calibration.'
-            bar.calibrate_auto_advance.value = 0
-            bar.calibrate_next.value = 0
-            bar.calibrate_nine_step.value = 0
-            bar.calibrate_nine_stage.value = 0
-            bar.calibrate.value = 1
-            bar.find_pattern.value = 0
-            bar.calibrate_nine.value = 1
+            ref.detector = Nine_Point_Detector(global_calibrate=g_pool.calibrate,
+                                            shared_x=g_pool.ref_x,
+                                            shared_y=g_pool.ref_y,
+                                            shared_stage=g_pool.cal9_stage,
+                                            shared_step=g_pool.cal9_step,
+                                            shared_cal9_active=g_pool.cal9,
+                                            shared_circle_id=g_pool.cal9_circle_id,
+                                            auto_advance=False)
         elif c_type == cal_type["Automated 9-Point"]:
             print 'WORLD: Starting Automated 9-Point calibration.'
-            bar.calibrate_auto_advance.value = 1
-            bar.calibrate_next.value = 0
-            bar.calibrate_nine_step.value = 0
-            bar.calibrate_nine_stage.value = 0
-            bar.calibrate.value = 1
-            bar.find_pattern.value = 0
-            bar.calibrate_nine.value = 1
-        # elif c_type == cal_type["Manual 9-Point"]:
-        #     print 'WORLD: Starting Manual 9-Point calibration.'
-        #     bar.calibrate.value = 1
-        #     bar.find_pattern.value = 1
-        #     bar.calibrate_nine.value = 0
+            ref.detector = Nine_Point_Detector(global_calibrate=g_pool.calibrate,
+                                            shared_x=g_pool.ref_x,
+                                            shared_y=g_pool.ref_y,
+                                            shared_stage=g_pool.cal9_stage,
+                                            shared_step=g_pool.cal9_step,
+                                            shared_cal9_active=g_pool.cal9,
+                                            shared_circle_id=g_pool.cal9_circle_id,
+                                            auto_advance=True)
         elif c_type == cal_type["Natural Features"]:
             print 'WORLD: Starting Natural Features calibration.'
-            bar.optical_flow.value = 1
-            bar.calibrate.value = 1
+            ref.detector = Natural_Features_Detector(global_calibrate=g_pool.calibrate,
+                                                    shared_x=g_pool.ref_x,
+                                                    shared_y=g_pool.ref_y)
+        elif c_type == cal_type["Black Dot"]:
+            print 'WORLD: Starting Black Dot calibration.'
+            ref.detector = Black_Dot_Detector(global_calibrate=g_pool.calibrate,
+                                            shared_x=g_pool.ref_x,
+                                            shared_y=g_pool.ref_y)
+    def advance_calibration():
+        ref.detector.advance()
 
+    def stop_calibration():
+        ref.detector = no_Detector(global_calibrate=g_pool.calibrate,
+                                shared_x=g_pool.ref_x,
+                                shared_y=g_pool.ref_y)
 
     ### Initialize ant tweak bar inherits from atb.Bar
     atb.init()
@@ -165,42 +170,29 @@ def world(src, size, g_pool):
             text='light', position=(10, 10),refresh=.3, size=(200, 200))
     bar.fps = c_float(0.0)
     bar.timestamp = time()
-    bar.calibrate = g_pool.calibrate
-    bar.find_pattern = c_bool(0)
-    bar.optical_flow = c_bool(0)
-    bar.screen_shot = False
     bar.calibration_type = c_int(1)
+    bar.show_calib_result = c_bool(0)
     bar.calibration_images = False
-    bar.calibrate_nine = g_pool.cal9
-    bar.calibrate_nine_step = g_pool.cal9_step
-    bar.calibrate_nine_stage = g_pool.cal9_stage
-    bar.calibrate_auto_advance = c_bool(1)
-    bar.calibrate_next = c_bool(0)
-    bar.calib_running = g_pool.calibrate
     bar.record_video = c_bool(0)
     bar.record_running = c_bool(0)
     bar.play = g_pool.play
     bar.window_size = c_int(0)
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
-    cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Natural Features":3}#"Manual 9-Point":2
+    cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Natural Features":3,"Black Dot":4}#"Manual 9-Point":2
     calibrate_type_enum = atb.enum("Calibration Method",cal_type)
+    bar.rec_name = create_string_buffer(512)
+
     # play and record can be tied together via pointers to the objects
     # bar.play = bar.record_video
     bar.add_var("FPS", bar.fps, step=1., readonly=True)
     bar.add_var("Display_Size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
-    bar.add_var("Calibration_Method",bar.calibration_type, vtype=calibrate_type_enum)
-    bar.add_button("Start_Calibration",start_calibration, key='c')
-    bar.add_var("Record Video", bar.record_video, key="r", help="Start/Stop Recording")
-    bar.add_separator("Sep0")
-    bar.add_var("Cal9/Next_Point",bar.calibrate_next,key="SPACE", help="Hit space to calibrate on next dot")
-    bar.add_var("Cal9/Start", bar.calibrate_nine, help="Start/Stop 9 Point Calibration Process (Tip: hit 9 in the player window)")
-    bar.add_var("Cal9/Nine_Pt_stage", bar.calibrate_nine, help="Internal start flag please use the Start Calibration Button")
-    bar.add_var("Cal9/Stage",bar.calibrate_nine_stage,help="Please look at dot ... to calibrate")
-    bar.add_var("Cal9/Auto_Advance", bar.calibrate_auto_advance)
-    bar.add_var("Cal/Find_Calibration_Pattern", bar.find_pattern, key="p", help="Find Calibration Pattern")
-    bar.add_var("Cal/Calibrate", bar.calibrate, help="Internal flag to collect calibration datas")
-    bar.add_var("Cal/Optical_Flow", bar.optical_flow, key="o", help="Activate Optical Flow")
-    bar.add_button("Cal/Screen_Shot", screen_cap, key="s", help="Capture A Frame")
+    bar.add_var("Cal/Calibration_Method",bar.calibration_type, vtype=calibrate_type_enum)
+    bar.add_button("Cal/Start_Calibration",start_calibration, key='c')
+    bar.add_button("Cal/Next_Point",advance_calibration,key="SPACE", help="Hit space to calibrate on next dot")
+    bar.add_button("Cal/Stop_Calibration",stop_calibration, key='d')
+    bar.add_var("Cal/show_calibration_result",bar.show_calib_result, help="yellow lines indecate fit error, red outline shows the calibrated area.")
+    bar.add_var("Rec/rec_name",bar.rec_name)
+    bar.add_var("Rec/Record_Video", bar.record_video, key="r", help="Start/Stop Recording")
     bar.add_separator("Sep1")
     bar.add_var("Play Source Video", bar.play)
     bar.add_var("Exit", g_pool.quit)
@@ -270,98 +262,39 @@ def world(src, size, g_pool):
     gl.glPointSize(20)
     gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
     gl.glEnable(gl.GL_BLEND)
-    del gl
+
 
     ###event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
         update_fps()
         # get an image from the grabber
         s, img = cap.read()
+        ref.detector.detect(img)
+        if ref.detector.is_done():
+            stop_calibration()
 
-        # Nine Point calibration state machine timing
-        if bar.calibrate_nine.value:
-            if bar.calibrate_nine_step.value > 30:
-                bar.calibrate_nine_step.value = 0
-                bar.calibrate_nine_stage.value += 1
-                bar.calibrate_next.value = False
-            if bar.calibrate_nine_stage.value > 8:
-                bar.calibrate_nine_stage.value = 0
-                bar.calibrate.value = False
-                bar.calibrate_nine.value = False
-                bar.find_pattern.value = False
-            if bar.calibrate_nine_step.value in range(10, 25):
-                bar.find_pattern.value = True
-            else:
-                bar.find_pattern.value = False
-
-            g_pool.cal9_circle_id.value = pattern.map[bar.calibrate_nine_stage.value]
-
-            if bar.calibrate_next.value or bar.calibrate_auto_advance.value:
-                bar.calibrate_nine_step.value += 1
-            else:
-                pass
         g_pool.player_refresh.set()
 
 
-        ###asymetrical point-pattern detection and its various uses
-        pattern.centers = None
-        if bar.find_pattern.value:
-            pattern.centers = circle_grid(img)
-
-        if pattern.centers is not None:
-            if bar.calibrate_nine.value:
-                pattern.image_coords = pattern.centers[g_pool.cal9_circle_id.value][0]
-            else:
-                mean = pattern.centers.sum(0) / pattern.centers.shape[0]
-                pattern.image_coords = mean[0]
-
-            pattern.norm_coords = normalize(pattern.image_coords, (img.shape[1],img.shape[0]),flip_y=True)
-        else:
-            # If no pattern detected send 0,0 -- check this condition in eye process
-            pattern.norm_coords = 0,0
-
-        #optical flow for natural marker calibration method
-        if bar.optical_flow.value:
-            if flow.new_ref:
-                flow.first = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
-                flow.new_ref = False
-
-            if flow.point is not None and flow.count:
-                gray = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
-                nextPts, status, err = cv2.calcOpticalFlowPyrLK(flow.first,gray,flow.point,winSize=(100,100))
-
-                if status[0]:
-                    flow.point = nextPts
-                    flow.first = gray
-                    nextPts = nextPts[0]
-
-                    pattern.image_coords = nextPts
-                    pattern.norm_coords = normalize(nextPts,(img.shape[1],img.shape[0]),flip_y=True)
-                    flow.count -=1
-                    print flow.count
-                else:
-                    # If no pattern detected send 0,0 -- check this condition in eye process
-                    pattern.norm_coords = 0,0
-
-
-        #gather pattern centers and find cam intrisics
-        if bar.screen_shot and pattern.centers is not None:
-            bar.screen_shot = False
-            # calibrate the camera intrinsics if the board is found
-            # append list of circle grid center points to pattern.img_points
-            # append generic list of circle grid pattern type to  pattern.obj_points
-            pattern.img_points.append(pattern.centers)
-            pattern.obj_points.append(pattern.obj_grid)
-            print "Number of Patterns Captured:", len(pattern.img_points)
-            #if pattern.img_points.shape[0] > 10:
-            if len(pattern.img_points) > 10:
-                camera_matrix, dist_coefs = calibrate_camera(np.asarray(pattern.img_points),
-                                                    np.asarray(pattern.obj_points),
-                                                    (img.shape[1], img.shape[0]))
-                np.save("camera_matrix.npy", camera_matrix)
-                np.save("dist_coefs.npy", dist_coefs)
-                pattern.img_points = []
-                bar.find_pattern.value = False
+        # #gather pattern centers and find cam intrisics
+        # if bar.screen_shot and pattern.centers is not None:
+        #     bar.screen_shot = False
+        #     # calibrate the camera intrinsics if the board is found
+        #     # append list of circle grid center points to pattern.img_points
+        #     # append generic list of circle grid pattern type to  pattern.obj_points
+        #     pattern.centers = circle_grid(img)
+        #     pattern.img_points.append(pattern.centers)
+        #     pattern.obj_points.append(pattern.obj_grid)
+        #     print "Number of Patterns Captured:", len(pattern.img_points)
+        #     #if pattern.img_points.shape[0] > 10:
+        #     if len(pattern.img_points) > 10:
+        #         camera_matrix, dist_coefs = calibrate_camera(np.asarray(pattern.img_points),
+        #                                             np.asarray(pattern.obj_points),
+        #                                             (img.shape[1], img.shape[0]))
+        #         np.save("camera_matrix.npy", camera_matrix)
+        #         np.save("dist_coefs.npy", dist_coefs)
+        #         pattern.img_points = []
+        #         bar.find_pattern.value = False
 
         ### Setup recording process
         if bar.record_video and not bar.record_running:
@@ -381,13 +314,6 @@ def world(src, size, g_pool):
             #DIVX -- good speed good compression medium file
             record.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (img.shape[1], img.shape[0]))
 
-            # audio data to audio process
-            audio_path = os.path.join(record.path, "world.wav")
-            try:
-                g_pool.audio_record.value = 1
-                g_pool.audio_tx.send(audio_path)
-            except:
-                print "no audio initialized"
 
             # positions data to eye process
             g_pool.pos_record.value = True
@@ -407,11 +333,6 @@ def world(src, size, g_pool):
 
         # Finish all recordings, clean up.
         if not bar.record_video and bar.record_running:
-            try:
-                g_pool.audio_record.value = 0
-            except:
-                print "no audio recorded"
-
             # for conviniece: copy camera intrinsics into each data folder at the end of a recording.
             try:
                 camera_matrix = np.load("camera_matrix.npy")
@@ -428,20 +349,29 @@ def world(src, size, g_pool):
             bar.record_running = 0
 
 
+
         ###render the screen
         clear_gl_screen()
         cv2.cvtColor(img, cv2.COLOR_BGR2RGB,img)
         draw_gl_texture(img)
 
+        ###render calibration results:
+        if bar.show_calib_result.value:
+            cal_pt_cloud = np.load("cal_pt_cloud.npy")
+            pX,pY,wX,wY = cal_pt_cloud.transpose()
+            map_fn = get_map_from_cloud(cal_pt_cloud,(width,height))
+            modelled_world_pts = map_fn((pX,pY))
+            pts = np.array(modelled_world_pts,dtype=np.float32).transpose()
+            calib_bounds =  cv2.convexHull(pts)[:,0]
+            for observed,modelled in zip(zip(wX,wY),np.array(modelled_world_pts).transpose()):
+                draw_gl_polyline_norm((modelled,observed),(1.,0.5,0.,.5))
+            draw_gl_polyline_norm(calib_bounds,(1.0,0,0,.5))
 
-        # render and broadcast pattern point
-        if pattern.norm_coords[0] or pattern.norm_coords[1]:
-            draw_gl_point_norm(pattern.norm_coords,(0.,1.,0.,0.5))
-            # draw_gl_point(pattern.image_coords,(0.,1.,0.,0.5))
-            g_pool.pattern_x.value, g_pool.pattern_y.value = pattern.norm_coords
-        else:
-            # If no pattern detected send 0,0 -- check this condition in eye process
-            g_pool.pattern_x.value, g_pool.pattern_y.value = 0,0
+        #render visual feedback from detector
+        ref.detector.display()
+        # render detector point
+        if ref.detector.pos[0] or ref.detector.pos[1]:
+            draw_gl_point_norm(ref.detector.pos,(0.,1.,0.,0.5))
 
         # update gaze point from shared variable pool and draw on screen. If both coords are 0: no pupil pos was detected.
         if g_pool.gaze_x.value !=0 or g_pool.gaze_y.value !=0:
