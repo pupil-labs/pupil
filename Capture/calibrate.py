@@ -9,7 +9,7 @@
 '''
 import numpy as np
 
-def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35, verbose=False,selection=False):
+def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35, verbose=False,return_inlier_map=False):
     """
     we do a simple two pass fitting to a pari of bi-variate polynomials
     return the function to map vector
@@ -33,7 +33,7 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35, verbose=Fa
             %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
             100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0])
 
-    if selection:
+    if return_inlier_map:
         return map_fn,err_dist<=threshold
     return map_fn
 

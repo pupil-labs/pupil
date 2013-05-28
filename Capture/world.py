@@ -361,7 +361,7 @@ def world(g_pool):
         ###render calibration results:
         if bar.show_calib_result.value:
             cal_pt_cloud = np.load("cal_pt_cloud.npy")
-            map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(width,height),selection=True)
+            map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(width,height),return_inlier_map=True)
             pX,pY,wX,wY = cal_pt_cloud[inlier_map].transpose()
             modelled_world_pts = map_fn((pX,pY))
             pts = np.array((wX,wY),dtype=np.float32).transpose()
