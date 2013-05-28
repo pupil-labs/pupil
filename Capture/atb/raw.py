@@ -72,6 +72,7 @@ else:
 TwGetLastError.restype = c_char_p
 TwGetBarName.restype = c_char_p
 TwNewBar.restype = c_pointer
+TwDeleteBar.argtypes = c_pointer,
 TwAddSeparator.restype = c_pointer
 TwAddSeparator.argtypes = [c_pointer, c_char_p, c_char_p]
 TwAddVarRW.restype   = c_pointer
