@@ -73,6 +73,7 @@ def eye(g_pool):
 
     ###helpers called by the main atb bar
     def start_roi():
+        bar.display.value = 1
         bar.draw_roi.value = 2
 
     def update_fps():
@@ -144,9 +145,9 @@ def eye(g_pool):
 
     atb.init()
     ###Create Main ATB Controls
-    bar = atb.Bar(name = "Eye", label="Controls",
+    bar = atb.Bar(name = "Eye", label="Display",
             help="Scene controls", color=(50, 50, 50), alpha=100,
-            text='light', position=(10, 10),refresh=.3, size=(200, 200))
+            text='light', position=(10, 10),refresh=.3, size=(200, 100))
     bar.fps = c_float(0.0)
     bar.timestamp = time()
     bar.dt = c_float(0.0)
@@ -163,7 +164,7 @@ def eye(g_pool):
     bar.canny_aperture = c_int(load('bar.canny_aperture',5))
     bar.canny_thresh = c_int(load('bar.canny_thresh',200))
     bar.canny_ratio = c_int(2)
-    bar.record_eye = c_bool(0)
+    bar.record_eye = c_bool(load('bar.record_eye',0))
 
     dispay_mode_enum = atb.enum("Mode",{"Camera Image":0,
                                         "Region of Interest":1,
@@ -171,11 +172,12 @@ def eye(g_pool):
                                         "Corse Pupil Region":3})
 
     bar.add_var("FPS",bar.fps, step=1.,readonly=True)
-    bar.add_var("SlowDown",bar.sleep, step=0.01,min=0.0)
     bar.add_var("Mode", bar.display,vtype=dispay_mode_enum, help="select the view-mode")
     bar.add_var("Show_Pupil_Point", bar.draw_pupil)
     bar.add_button("Draw_ROI", start_roi, help="drag on screen to select a region of interest")
+
     bar.add_var("record_eye_video", bar.record_eye, help="when recording also save the eye video stream")
+    bar.add_var("SlowDown",bar.sleep, step=0.01,min=0.0)
     bar.add_var("SaveSettings&Exit", g_pool.quit)
 
     #add 4vl2 camera controls to a seperate ATB bar
@@ -222,7 +224,7 @@ def eye(g_pool):
         c_bar = None
 
     ###create a bar for the detector
-    pupil_detector.create_atb_bar(pos=(10,220))
+    pupil_detector.create_atb_bar(pos=(10,120))
 
 
     # Initialize glfw
@@ -352,9 +354,7 @@ def eye(g_pool):
             gray_img[:,-1]= 255
             gray_img[0,:] = 255
             gray_img[-1,:]= 255
-
             img[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
-
 
             pupil_img =img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] #create an RGB view onto the gray pupil ROI
             #draw a blue dotted frame around the automatic pupil ROI in overlay...
@@ -387,6 +387,7 @@ def eye(g_pool):
     save('roi',r.get())
     save('bar.display',bar.display.value)
     save('bar.draw_pupil',bar.draw_pupil.value)
+    save('bar.record_eye',bar.record_eye.value)
     # save('bar.blur',bar.blur.value)
     # save('bar.pupil_size_tolerance',bar.pupil_size_tolerance.value)
     # save('bar.canny_aperture',bar.canny_aperture.value)

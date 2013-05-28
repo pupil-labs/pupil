@@ -17,6 +17,8 @@ class Pupil_Detector(object):
     """base class for pupil detector"""
     def __init__(self):
         super(Pupil_Detector, self).__init__()
+        var1 = c_int(0)
+
     def detect(self,img,roi,p_roi,visualize=False):
         #hint: create a view into the img with the bounds of the coarse pupil estimation
         pupil_img = img[roi.lY:roi.uY,roi.lX:roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
@@ -43,7 +45,7 @@ class Pupil_Detector(object):
         self.bar = atb.Bar(name = "Pupil_Detector", label="Controls",
             help="pupil detection params", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.3, size=(200, 200))
-        # bar.add_var("VAR1",self.var1, step=1.,readonly=False)
+        bar.add_var("VAR1",self.var1, step=1.,readonly=False)
 
 class Canny_Detector(Pupil_Detector):
     """a Pupil detector based on Canny_Edges"""
@@ -52,7 +54,7 @@ class Canny_Detector(Pupil_Detector):
         self.min_contour_size = 80
         self.bin_thresh = c_int(0)
         self.target_ratio=1.0
-        self.target_size=100.
+        self.target_size=c_float(100.)
         self.size_tolerance=20.
         self.blur = c_int(1)
         self.canny_thresh = c_int(200)
@@ -121,7 +123,7 @@ class Canny_Detector(Pupil_Detector):
         # contours is a list containging array([[[108, 290]],[[111, 290]]], dtype=int32) shape=(number of points,1,dimension(2) )
 
         # the pupil target size is the one closest to the pupil_roi width or heigth (is the same)
-        # self.target_size = p_roi.uX-p_roi.lX
+        # self.target_size.value = p_roi.uX-p_roi.lX
 
         good_contours = [c for c in contours if c.shape[0]>self.min_contour_size]
         shape = edges.shape
@@ -150,9 +152,9 @@ class Canny_Detector(Pupil_Detector):
 
 
     def create_atb_bar(self,pos):
-        self._bar = atb.Bar(name = "Canny_Pupil_Detector", label="Controls",
+        self._bar = atb.Bar(name = "Canny_Pupil_Detector", label="Pupil_Detector",
             help="pupil detection params", color=(50, 50, 50), alpha=100,
-            text='light', position=pos,refresh=.3, size=(200, 200))
+            text='light', position=pos,refresh=.3, size=(200, 100))
         self._bar.add_var("Pupil_Aparent_Size",self.target_size)
         self._bar.add_var("Pupil_Shade",self.bin_thresh, readonly=True)
         self._bar.add_var("Image_Blur",self.blur, step=2,min=1,max=9)
