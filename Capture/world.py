@@ -268,10 +268,10 @@ def world(g_pool):
         update_fps()
 
         ###get input characters entered in player
-        if g_pool.player_char.value is not '0':
-            player_char = g_pool.player_char.value
-            g_pool.player_char.value = '0'
-            on_char(player_char,False)
+        if g_pool.player_input.value:
+            player_input = g_pool.player_input.value
+            g_pool.player_input.value = 0
+            on_char(player_input,True)
 
         # get an image from the grabber
         s, img = cap.read()

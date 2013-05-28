@@ -189,10 +189,10 @@ if __name__ == '__main__':
     plt.ylabel("Pupil y Eye-Space")
     plt.title("Z: Gaze x (blue) Gaze y (red) World-Space, yellow=outliers")
 
-    X,Y,_,_ = cal_pt_cloud.transpose()
+    # X,Y,_,_ = cal_pt_cloud.transpose()
 
-    pts= map_fn((X,Y))
-    import cv2
-    pts = np.array(pts,dtype=np.float32).transpose()
-    print cv2.convexHull(pts)[:,0]
+    # pts= map_fn((X,Y))
+    # import cv2
+    # pts = np.array(pts,dtype=np.float32).transpose()
+    # print cv2.convexHull(pts)[:,0]
     plt.show()

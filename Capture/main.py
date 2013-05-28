@@ -19,7 +19,7 @@ from world import world, world_profiled
 from player import player
 from methods import Temp
 
-from ctypes import c_bool, c_int,c_char
+from ctypes import c_bool, c_int
 
 def main():
 
@@ -77,7 +77,7 @@ def main():
     g_pool.pos_record = Value(c_bool, 0)
     g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
     g_pool.player_refresh = Event()
-    g_pool.player_char = Value(c_char,'0')
+    g_pool.player_input = Value('i',0)
     g_pool.play = RawValue(c_bool,0)
     g_pool.quit = RawValue(c_bool,0)
     g_pool.eye_src = eye_src

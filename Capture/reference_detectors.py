@@ -229,3 +229,22 @@ class Natural_Features_Detector(Ref_Detector):
         self.first_img = None
         self.point = np.array([pos,],dtype=np.float32)
         self.count = 30
+
+
+class Camera_Intrinsics_Calibration(Ref_Detector):
+    """docstring for Camera_Intrinsics_Calibration"""
+    def __init__(self,global_calibrate,shared_x,shared_y):
+
+
+    def detect(self):
+        pass
+
+        #     #if pattern.img_points.shape[0] > 10:
+        #     if len(pattern.img_points) > 10:
+        #         camera_matrix, dist_coefs = calibrate_camera(np.asarray(pattern.img_points),
+        #                                             np.asarray(pattern.obj_points),
+        #                                             (img.shape[1], img.shape[0]))
+        #         np.save("camera_matrix.npy", camera_matrix)
+        #         np.save("dist_coefs.npy", dist_coefs)
+        #         pattern.img_points = []
+        #         bar.find_pattern.value = False

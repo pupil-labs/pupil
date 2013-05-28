@@ -72,8 +72,8 @@ def player(g_pool,size):
         if key == GLFW_KEY_ESC:
                 on_close()
     def on_char(char, pressed):
-        if not pressed or 1:
-            g_pool.player_char.value = char(char)
+        if pressed:
+            g_pool.player_input.value = char
 
 
     def on_close():
