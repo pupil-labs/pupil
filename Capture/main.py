@@ -19,7 +19,7 @@ from world import world, world_profiled
 from player import player
 from methods import Temp
 
-from ctypes import c_bool, c_int
+from ctypes import c_bool, c_int,c_char
 
 def main():
 
@@ -69,14 +69,15 @@ def main():
     g_pool.ref_x = Value('d', 0.0)
     g_pool.ref_y = Value('d', 0.0)
     g_pool.frame_count_record = Value('i', 0)
-    g_pool.calibrate = RawValue(c_bool, 0)
-    g_pool.cal9 = RawValue(c_bool, 0)
-    g_pool.cal9_stage = RawValue('i', 0)
+    g_pool.calibrate = Value(c_bool, 0)
+    g_pool.cal9 = Value(c_bool, 0)
+    g_pool.cal9_stage = Value('i', 0)
     g_pool.cal9_step = Value('i', 0)
-    g_pool.cal9_circle_id = RawValue('i' ,0)
+    g_pool.cal9_circle_id = Value('i' ,0)
     g_pool.pos_record = Value(c_bool, 0)
     g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
     g_pool.player_refresh = Event()
+    g_pool.player_char = Value(c_char,'0')
     g_pool.play = RawValue(c_bool,0)
     g_pool.quit = RawValue(c_bool,0)
     g_pool.eye_src = eye_src

@@ -249,7 +249,7 @@ def convexity_defect(contour, curvature):
 	return kinks
 
 def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=80,target_ratio=1.0,target_size=20.,size_tolerance=20.):
-	""" fit_ellipse:
+	""" fit_ellipse: old, pleae look at pupil_detectors.py
 	"""
 	c_img = edges.copy()
 	contours, hierarchy = cv2.findContours(c_img,

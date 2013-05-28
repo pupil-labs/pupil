@@ -123,7 +123,6 @@ def world(g_pool):
 
 
     def start_calibration():
-
         c_type = bar.calibration_type.value
         if  c_type == cal_type["Directed 9-Point"]:
             print 'WORLD: Starting Directed 9-Point calibration.'
@@ -267,6 +266,13 @@ def world(g_pool):
     ###event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
         update_fps()
+
+        ###get input characters entered in player
+        if g_pool.player_char.value is not '0':
+            player_char = g_pool.player_char.value
+            g_pool.player_char.value = '0'
+            on_char(player_char,False)
+
         # get an image from the grabber
         s, img = cap.read()
         ref.detector.detect(img)

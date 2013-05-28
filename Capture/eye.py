@@ -344,7 +344,7 @@ def eye(g_pool):
             l_pool.record_running = False
 
 
-        ###visualzations on the img_array
+        ###direct visualzations on the img data
         if bar.display.value == (0 or 2):
             img = img
         elif bar.display.value == 1:

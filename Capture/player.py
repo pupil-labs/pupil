@@ -72,10 +72,8 @@ def player(g_pool,size):
         if key == GLFW_KEY_ESC:
                 on_close()
     def on_char(char, pressed):
-        if char  == ord('9'):
-            g_pool.cal9.value = True
-            g_pool.calibrate.value = True
-
+        if not pressed or 1:
+            g_pool.player_char.value = char(char)
 
 
     def on_close():

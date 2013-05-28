@@ -772,5 +772,5 @@ class Bar(object):
             arg = '%s %s' % (self.name, definition)
         check_error(TwDefine(arg))
 
-    def __del__(self):
+    def destroy(self):
         TwDeleteBar(self._bar)
