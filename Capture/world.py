@@ -368,7 +368,7 @@ def world(g_pool):
             draw_gl_polyline_norm(calib_bounds,(1.0,0,0,.5))
 
         #render visual feedback from detector
-        ref.detector.display()
+        ref.detector.display(img)
         # render detector point
         if ref.detector.pos[0] or ref.detector.pos[1]:
             draw_gl_point_norm(ref.detector.pos,(0.,1.,0.,0.5))
