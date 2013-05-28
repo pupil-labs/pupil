@@ -9,7 +9,7 @@
 '''
 import numpy as np
 
-def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),verbose=False):
+def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35, verbose=False,selection=False):
     """
     we do a simple two pass fitting to a pari of bi-variate polynomials
     return the function to map vector
@@ -19,7 +19,6 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),verbose=False):
     cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
     map_fn = make_map_function(cx,cy,model_n)
     err_dist,err_mean,err_rms = fit_error_screen(err_x,err_y,screen_size)
-    threshold = 55 #pixel in world space
     #fit again disregarding extreme outliers
     cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)
     map_fn = make_map_function(cx,cy,model_n)
@@ -33,7 +32,11 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),verbose=False):
         print "used %i datapoints out of the full dataset %i: subset is %i percent" \
             %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
             100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0])
+
+    if selection:
+        return map_fn,err_dist<=threshold
     return map_fn
+
 
 def fit_poly_surface(cal_pt_cloud,n=7):
     M = make_model(cal_pt_cloud,n)

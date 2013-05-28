@@ -69,14 +69,6 @@ def world(g_pool):
     ref = Temp()
     ref.detector = no_Detector(g_pool.calibrate,g_pool.ref_x,g_pool.ref_y)
     ###objects as variable containers
-    # pattern object
-    pattern = Temp()
-    pattern.centers = None
-    pattern.obj_grid = gen_pattern_grid((4, 11))  # calib grid
-    pattern.obj_points = []
-    pattern.img_points = []
-    pattern.map = (0, 2, 7, 16, 21, 23, 39, 40, 42)
-    pattern.board_centers = None
 
     # gaze object
     gaze = Temp()
@@ -154,6 +146,11 @@ def world(g_pool):
             ref.detector = Black_Dot_Detector(global_calibrate=g_pool.calibrate,
                                             shared_x=g_pool.ref_x,
                                             shared_y=g_pool.ref_y)
+        elif c_type == cal_type["Camera Intrinsics Calibration"]:
+            print 'WORLD: Starting Camera Intrinsics Calibration'
+            ref.detector = Camera_Intrinsics_Calibration(global_calibrate=g_pool.calibrate,
+                                            shared_x=g_pool.ref_x,
+                                            shared_y=g_pool.ref_y)
     def advance_calibration():
         ref.detector.advance()
 
@@ -177,7 +174,7 @@ def world(g_pool):
     bar.play = g_pool.play
     bar.window_size = c_int(0)
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
-    cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Natural Features":3,"Black Dot":4}#"Manual 9-Point":2
+    cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Natural Features":3,"Black Dot":4,"Camera Intrinsics Calibration":5}#"Manual 9-Point":2
     calibrate_type_enum = atb.enum("Calibration Method",cal_type)
     bar.rec_name = create_string_buffer(512)
 
@@ -364,14 +361,21 @@ def world(g_pool):
         ###render calibration results:
         if bar.show_calib_result.value:
             cal_pt_cloud = np.load("cal_pt_cloud.npy")
-            pX,pY,wX,wY = cal_pt_cloud.transpose()
-            map_fn = get_map_from_cloud(cal_pt_cloud,(width,height))
+            map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(width,height),selection=True)
+            pX,pY,wX,wY = cal_pt_cloud[inlier_map].transpose()
             modelled_world_pts = map_fn((pX,pY))
-            pts = np.array(modelled_world_pts,dtype=np.float32).transpose()
+            pts = np.array((wX,wY),dtype=np.float32).transpose()
             calib_bounds =  cv2.convexHull(pts)[:,0]
             for observed,modelled in zip(zip(wX,wY),np.array(modelled_world_pts).transpose()):
                 draw_gl_polyline_norm((modelled,observed),(1.,0.5,0.,.5))
-            draw_gl_polyline_norm(calib_bounds,(1.0,0,0,.5))
+            draw_gl_polyline_norm(calib_bounds,(.0,1.,0,.5))
+            #outliers
+            pX,pY,wX,wY = cal_pt_cloud[~inlier_map].transpose()
+            modelled_world_pts = map_fn((pX,pY))
+            pts = np.array(modelled_world_pts,dtype=np.float32).transpose()
+            for observed,modelled in zip(zip(wX,wY),np.array(modelled_world_pts).transpose()):
+                draw_gl_polyline_norm((modelled,observed),(1.,0.,0.,.5))
+
 
         #render visual feedback from detector
         ref.detector.display(img)

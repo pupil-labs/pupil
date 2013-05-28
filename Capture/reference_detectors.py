@@ -231,20 +231,59 @@ class Natural_Features_Detector(Ref_Detector):
         self.count = 30
 
 
-class Camera_Intrinsics_Calibration(Ref_Detector):
+class Camera_Intrinsics_Calibration(no_Detector):
     """docstring for Camera_Intrinsics_Calibration"""
     def __init__(self,global_calibrate,shared_x,shared_y):
+        super(Camera_Intrinsics_Calibration, self).__init__(global_calibrate,shared_x,shared_y)
+        self.collect_new = False
+        self.obj_grid = _gen_pattern_grid((4, 11))
+        self.img_points = []
+        self.obj_points = []
+        self.count = 10
+        self.img_shape = None
+
+    def detect(self,img):
+        if self.collect_new:
+            status, grid_points = cv2.findCirclesGridDefault(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
+            if status:
+                self.img_points.append(grid_points)
+                self.obj_points.append(self.obj_grid)
+                self.collect_new = False
+                self.count -=1
+                print "%i of Patterns still to capture" %(self.count)
+                self.img_shape = img.shape
+
+    def advance(self):
+        self.collect_new = True
+
+    def is_done(self):
+        return self.count <= 0
+
+    def __del__(self):
+        if not self.count:
+            camera_matrix, dist_coefs = _calibrate_camera(np.asarray(self.img_points),
+                                                        np.asarray(self.obj_points),
+                                                        (self.img_shape[1], self.img_shape[0]))
+            np.save("camera_matrix.npy", camera_matrix)
+            np.save("dist_coefs.npy", dist_coefs)
+            print "Camera Instrinsics calculated and saved to file"
+        else:
+            print "Waring: Not enough images captured, please try again"
+
+###private helper fns...
+def _calibrate_camera(img_pts, obj_pts, img_size):
+    # generate pattern size
+    camera_matrix = np.zeros((3,3))
+    dist_coef = np.zeros(4)
+    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_pts, img_pts,
+                                                    img_size, camera_matrix, dist_coef)
+    return camera_matrix, dist_coefs
+
+def _gen_pattern_grid(size=(4,11)):
+    pattern_grid = []
+    for i in xrange(size[1]):
+        for j in xrange(size[0]):
+            pattern_grid.append([(2*j)+i%2,i,0])
+    return np.asarray(pattern_grid, dtype='f4')
 
 
-    def detect(self):
-        pass
-
-        #     #if pattern.img_points.shape[0] > 10:
-        #     if len(pattern.img_points) > 10:
-        #         camera_matrix, dist_coefs = calibrate_camera(np.asarray(pattern.img_points),
-        #                                             np.asarray(pattern.obj_points),
-        #                                             (img.shape[1], img.shape[0]))
-        #         np.save("camera_matrix.npy", camera_matrix)
-        #         np.save("dist_coefs.npy", dist_coefs)
-        #         pattern.img_points = []
-        #         bar.find_pattern.value = False

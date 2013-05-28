@@ -329,7 +329,7 @@ def eye(g_pool):
             if pupil.gaze_coords is not None:
                 l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], bar.dt, g_pool.frame_count_record.value])
             if l_pool.writer is not None:
-                l_pool.writer.write(cv2.cvtColor(img,cv2.cv.COLOR_BGR2RGB))
+                l_pool.writer.write(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))
 
         # Done Recording: Save values and flip switch to off for recording
         if not g_pool.pos_record.value and l_pool.record_running:
