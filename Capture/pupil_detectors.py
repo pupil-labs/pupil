@@ -34,7 +34,7 @@ class Pupil_Detector(object):
                         'ratio': None,
                         'major': None,
                         'minor': None,
-                        'goodness': 0} #some estimation on who sure you are about the detected ellipse and its fit 0=bad, 1=good
+                        'goodness': 0} #some estimation on who sure you are about the detected ellipse and its fit smaller is better
 
         return [pupil_ellipse,] #return list of canditade pupil ellipses, sorted by certainty, if none is foud return empty list
 
@@ -46,6 +46,8 @@ class Pupil_Detector(object):
             help="pupil detection params", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.3, size=(200, 200))
         bar.add_var("VAR1",self.var1, step=1.,readonly=False)
+
+
 
 class Canny_Detector(Pupil_Detector):
     """a Pupil detector based on Canny_Edges"""
@@ -127,16 +129,22 @@ class Canny_Detector(Pupil_Detector):
 
         good_contours = [c for c in contours if c.shape[0]>self.min_contour_size]
         shape = edges.shape
-        ellipses = (cv2.fitEllipse(c) for c in good_contours)
-        ellipses = (e for e in ellipses if (0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1])) #center is iside roi
-        ellipses = (e for e in ellipses if binary_img[e[0][1],e[0][0]]) #center is on a dark pixel
-        ellipses = ((size_deviation(e,self.target_size.value),e) for e in ellipses if is_round(e,self.target_ratio)) # roundness test
-        ellipses = [(size_dif,e) for size_dif,e in ellipses if size_dif<self.size_tolerance ] # size closest to target size
-        ellipses.sort(key=lambda e: e[0]) #sort size_deviation
+        ellipses = ((cv2.fitEllipse(c),c) for c in good_contours)
+        ellipses = ((e,c) for e,c in ellipses if (0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1])) #center is iside roi
+        ellipses = ((e,c) for e,c in ellipses if binary_img[e[0][1],e[0][0]]) #center is on a dark pixel
+        ellipses = [(size_deviation(e,self.target_size.value),e,c) for e,c in ellipses if is_round(e,self.target_ratio)] # roundness test
         result = []
-        for size_dif,e in ellipses:
+        for size_dif,e,c in ellipses:
             pupil_ellipse = {}
-            pupil_ellipse['goodness'] = size_deviation
+            pupil_ellipse['contour'] = c
+            a,b = e[1][0]/2.,e[1][1]/2.
+            # pupil_ellipse['circumference'] = np.pi*abs(3*(a+b)-np.sqrt(10*a*b+3*(a**2+b**2)))
+            pupil_ellipse['contour_area'] = cv2.contourArea(c)
+            pupil_ellipse['ellipse_area'] = np.pi*a*b
+            if abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area']) <10:
+                pupil_ellipse['goodness'] = 0 #perfect match we'll take this one
+            else:
+                pupil_ellipse['goodness'] = size_dif
             pupil_ellipse['center'] = e[0]
             pupil_ellipse['angle'] = e[-1]
             pupil_ellipse['axes'] = e[1]
@@ -145,15 +153,17 @@ class Canny_Detector(Pupil_Detector):
             pupil_ellipse['ratio'] = pupil_ellipse['minor']/pupil_ellipse['major']
             result.append(pupil_ellipse)
 
-        if result:
-            self.target_size.value = result[0]['major']
 
+        if result:
+            result.sort(key=lambda e: e['goodness'])
+            self.target_size.value = result[0]['major']
+        result = [r for r in result if r['goodness']<self.size_tolerance]
         return result
 
 
     def create_atb_bar(self,pos):
         self._bar = atb.Bar(name = "Canny_Pupil_Detector", label="Pupil_Detector",
-            help="pupil detection params", color=(50, 50, 50), alpha=100,
+            help="pupil detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.3, size=(200, 100))
         self._bar.add_var("Pupil_Aparent_Size",self.target_size)
         self._bar.add_var("Pupil_Shade",self.bin_thresh, readonly=True)

@@ -184,7 +184,6 @@ def world(g_pool):
     bar.add_var("Display_Size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
     bar.add_var("Cal/Calibration_Method",bar.calibration_type, vtype=calibrate_type_enum)
     bar.add_button("Cal/Start_Calibration",start_calibration, key='c')
-    bar.add_button("hidden_additonal_key",start_calibration, key='9', definition='visible=0')
     bar.add_button("Cal/Next_Point",advance_calibration,key="SPACE", help="Hit space to calibrate on next dot")
     bar.add_button("Cal/Stop_Calibration",stop_calibration, key='d')
     bar.add_var("Cal/show_calibration_result",bar.show_calib_result, help="yellow lines indecate fit error, red outline shows the calibrated area.")
@@ -258,7 +257,7 @@ def world(g_pool):
     gl.glEnable(gl.GL_POINT_SMOOTH)
     gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
     gl.glEnable(gl.GL_BLEND)
-    del dl
+    del gl
 
     ###event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:

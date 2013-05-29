@@ -15,7 +15,13 @@ from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline_norm
 class Ref_Detector(object):
     """
     base class of reference detectors
-    build a detector based on this class. It needs to have interfaces
+    build a detector based on this class.
+
+    Instatiating a class based on Ref_Detector
+    will trigger the eye-proces to collect callibration data.
+    Deliting it will prefrom calibration fitting.
+
+    Your derived class needs to have interfaces
     defined by these methods:
     you NEED to do at least what is done in these fn-prototypes
 
@@ -75,6 +81,7 @@ class no_Detector(Ref_Detector):
     """
     docstring for no_Detector
     this dummy class is instaciated when no calibration is running, it does nothing
+    a detector based on this will not trigger the world process to collect data for calibration.
     """
     def __init__(self, global_calibrate,shared_x,shared_y):
         global_calibrate.value = False
@@ -232,7 +239,11 @@ class Natural_Features_Detector(Ref_Detector):
 
 
 class Camera_Intrinsics_Calibration(no_Detector):
-    """docstring for Camera_Intrinsics_Calibration"""
+    """Camera_Intrinsics_Calibration
+        not being an actual calibration,
+        this method is used to calculate camera intrinsics.
+
+    """
     def __init__(self,global_calibrate,shared_x,shared_y):
         super(Camera_Intrinsics_Calibration, self).__init__(global_calibrate,shared_x,shared_y)
         self.collect_new = False
