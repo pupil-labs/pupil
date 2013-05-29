@@ -186,7 +186,7 @@ def world(g_pool):
     bar.add_button("Cal/Start_Calibration",start_calibration, key='c')
     bar.add_button("Cal/Next_Point",advance_calibration,key="SPACE", help="Hit space to calibrate on next dot")
     bar.add_button("Cal/Stop_Calibration",stop_calibration, key='d')
-    bar.add_var("Cal/show_calibration_result",bar.show_calib_result, help="yellow lines indecate fit error, red outline shows the calibrated area.")
+    bar.add_var("Cal/show_calibration_result",bar.show_calib_result, help="yellow: indecate calibration error, red:discarded outliners, outline shows the calibrated area.")
     bar.add_var("Rec/rec_name",bar.rec_name)
     bar.add_var("Rec/Record_Video", bar.record_video, key="r", help="Start/Stop Recording")
     bar.add_separator("Sep1")
@@ -351,7 +351,6 @@ def world(g_pool):
             pts = np.array(modelled_world_pts,dtype=np.float32).transpose()
             for observed,modelled in zip(zip(wX,wY),np.array(modelled_world_pts).transpose()):
                 draw_gl_polyline_norm((modelled,observed),(1.,0.,0.,.5))
-
 
 
         ###render visual feedback from detector
