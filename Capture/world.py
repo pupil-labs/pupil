@@ -162,8 +162,8 @@ def world(g_pool):
     ### Initialize ant tweak bar inherits from atb.Bar
     atb.init()
     bar = atb.Bar(name = "World", label="Controls",
-            help="Scene controls", color=(50, 50, 50), alpha=100,
-            text='light', position=(10, 10),refresh=.3, size=(200, 200))
+            help="Scene controls", color=(50, 50, 50), alpha=100,valueswidth=150,
+            text='light', position=(10, 10),refresh=.3, size=(300, 200))
     bar.fps = c_float(0.0)
     bar.timestamp = time()
     bar.calibration_type = c_int(1)
@@ -182,25 +182,22 @@ def world(g_pool):
     # bar.play = bar.record_video
     bar.add_var("FPS", bar.fps, step=1., readonly=True)
     bar.add_var("Display_Size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
-    bar.add_var("Cal/Calibration_Method",bar.calibration_type, vtype=calibrate_type_enum)
-    bar.add_button("Cal/Start_Calibration",start_calibration, key='c')
-    bar.add_button("Cal/Next_Point",advance_calibration,key="SPACE", help="Hit space to calibrate on next dot")
-    bar.add_button("Cal/Stop_Calibration",stop_calibration, key='d')
-    bar.add_var("Cal/show_calibration_result",bar.show_calib_result, help="yellow: indecate calibration error, red:discarded outliners, outline shows the calibrated area.")
-    bar.add_var("Rec/rec_name",bar.rec_name)
+    bar.add_var("Calibration_Method",bar.calibration_type,group="Calibration", vtype=calibrate_type_enum, help="Please choose your desired calibration method.")
+    bar.add_button("Start_Calibration",start_calibration,group="Calibration", key='c', help="click to begin calibrating")
+    bar.add_button("Next_Point",advance_calibration,group="Calibration",key="SPACE", help="Hit space to calibrate on next dot")
+    bar.add_button("Stop_Calibration",stop_calibration,group="Calibration", key='d', help="click to stop collecting data and calculate calibration. Note: 9-point will stop by itself")
+    bar.add_var("show_calibration_result",bar.show_calib_result,group="Calibration", help="yellow: indecate calibration error, red:discarded outliners, outline shows the calibrated area.")
+    bar.add_var("Rec/rec_name",bar.rec_name, help="creates folder Data_Name_XXX, where xxx is an increasing number")
     bar.add_var("Rec/Record_Video", bar.record_video, key="r", help="Start/Stop Recording")
     bar.add_separator("Sep1")
-    bar.add_var("Play Source Video", bar.play)
+    bar.add_var("Play Video", bar.play, help="play a video in the Player window")
     bar.add_var("Exit", g_pool.quit)
 
     #add 4vl2 camera controls to a seperate ATB bar
     if cap.controls is not None:
         c_bar = atb.Bar(name="Camera_Controls", label=cap.name,
             help="UVC Camera Controls", color=(50,50,50), alpha=100,
-            text='light',position=(220, 10),refresh=2., size=(200, 200))
-
-        # c_bar.add_var("auto_refresher",vtype=atb.TW_TYPE_BOOL8,getter=cap.uvc_refresh_all,setter=None,readonly=True)
-        # c_bar.define(definition='visible=0', varname="auto_refresher")
+            text='light',position=(320, 10),refresh=2., size=(200, 200))
 
         sorted_controls = [c for c in cap.controls.itervalues()]
         sorted_controls.sort(key=lambda c: c.order)
