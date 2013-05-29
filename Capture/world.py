@@ -339,8 +339,9 @@ def world(g_pool):
             map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(width,height),return_inlier_map=True)
             pX,pY,wX,wY = cal_pt_cloud[inlier_map].transpose()
             modelled_world_pts = map_fn((pX,pY))
-            pts = np.array((wX,wY),dtype=np.float32).transpose()
-            calib_bounds =  cv2.convexHull(pts)[:,0]
+            ref_pts = cal_pt_cloud[:,np.newaxis,2:4]
+            ref_pts = np.array(ref_pts,dtype=np.float32)
+            calib_bounds =  cv2.convexHull(ref_pts)[:,0]
             for observed,modelled in zip(zip(wX,wY),np.array(modelled_world_pts).transpose()):
                 draw_gl_polyline_norm((modelled,observed),(1.,0.5,0.,.5))
             draw_gl_polyline_norm(calib_bounds,(.0,1.,0,.5))
@@ -350,6 +351,7 @@ def world(g_pool):
             pts = np.array(modelled_world_pts,dtype=np.float32).transpose()
             for observed,modelled in zip(zip(wX,wY),np.array(modelled_world_pts).transpose()):
                 draw_gl_polyline_norm((modelled,observed),(1.,0.,0.,.5))
+
 
 
         ###render visual feedback from detector
