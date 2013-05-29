@@ -367,6 +367,7 @@ def convexity(contour,img=None):
 	if img is not None:
 		hull = cv2.convexHull(contour, returnPoints=1)
 		cv2.drawContours(img, hull, -1, (255,0,0))
+
 	hull = cv2.convexHull(contour, returnPoints=0)
 	if len(hull)>3:
 		res = cv2.convexityDefects(contour, hull) # return: start_index, end_index, farthest_pt_index, fixpt_depth)
