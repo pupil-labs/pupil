@@ -18,7 +18,7 @@ def main():
 
     # change this path to point to the data folder you would like to play
     data_folder = "/Users/mkassner/Downloads/02/data006"
-    data_folder = "/Users/mkassner/MIT/pupil_thesis_data/MIT_statue"
+    data_folder = "../Capture/data001"
 
 
 
@@ -100,8 +100,8 @@ def main():
 
         p_gaze = np.array(past_gaze)
         d = np.abs(p_gaze[:-1]-p_gaze[1:])
-        d = d[:,0]+d[:,1]
-        print d
+        if len(d):
+            d = d[:,0]+d[:,1]
 
         for gaze_point, next_point in zip(past_gaze[:-1],past_gaze[1:]):
             x_dist =  abs(gaze_point[0] - next_point[0])
