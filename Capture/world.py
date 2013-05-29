@@ -184,6 +184,7 @@ def world(g_pool):
     bar.add_var("Display_Size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
     bar.add_var("Cal/Calibration_Method",bar.calibration_type, vtype=calibrate_type_enum)
     bar.add_button("Cal/Start_Calibration",start_calibration, key='c')
+    bar.add_button("hidden_additonal_key",start_calibration, key='9', definition='visible=0')
     bar.add_button("Cal/Next_Point",advance_calibration,key="SPACE", help="Hit space to calibrate on next dot")
     bar.add_button("Cal/Stop_Calibration",stop_calibration, key='d')
     bar.add_var("Cal/show_calibration_result",bar.show_calib_result, help="yellow lines indecate fit error, red outline shows the calibrated area.")
@@ -255,10 +256,9 @@ def world(g_pool):
     #gl_state settings
     import OpenGL.GL as gl
     gl.glEnable(gl.GL_POINT_SMOOTH)
-    gl.glPointSize(20)
     gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
     gl.glEnable(gl.GL_BLEND)
-
+    del dl
 
     ###event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
@@ -279,26 +279,6 @@ def world(g_pool):
         g_pool.player_refresh.set()
 
 
-        # #gather pattern centers and find cam intrisics
-        # if bar.screen_shot and pattern.centers is not None:
-        #     bar.screen_shot = False
-        #     # calibrate the camera intrinsics if the board is found
-        #     # append list of circle grid center points to pattern.img_points
-        #     # append generic list of circle grid pattern type to  pattern.obj_points
-        #     pattern.centers = circle_grid(img)
-        #     pattern.img_points.append(pattern.centers)
-        #     pattern.obj_points.append(pattern.obj_grid)
-        #     print "Number of Patterns Captured:", len(pattern.img_points)
-        #     #if pattern.img_points.shape[0] > 10:
-        #     if len(pattern.img_points) > 10:
-        #         camera_matrix, dist_coefs = calibrate_camera(np.asarray(pattern.img_points),
-        #                                             np.asarray(pattern.obj_points),
-        #                                             (img.shape[1], img.shape[0]))
-        #         np.save("camera_matrix.npy", camera_matrix)
-        #         np.save("dist_coefs.npy", dist_coefs)
-        #         pattern.img_points = []
-        #         bar.find_pattern.value = False
-
         ### Setup recording process
         if bar.record_video and not bar.record_running:
             record.path = os.path.join(record.path_parent, "data%03d/" % record.counter)
@@ -313,8 +293,6 @@ def world(g_pool):
 
             #video
             video_path = os.path.join(record.path, "world.avi")
-            #FFV1 -- good speed lossless big file
-            #DIVX -- good speed good compression medium file
             record.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (img.shape[1], img.shape[0]))
 
 
