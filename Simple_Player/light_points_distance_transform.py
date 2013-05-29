@@ -17,7 +17,7 @@ def main():
 
 
     # change this path to point to the data folder you would like to play
-    data_folder = "/Users/mkassner/MIT/pupil_google_code/code/Capture/data011"
+    data_folder = "../Capture/data001"
 
     video_path = data_folder + "/world.avi"
     gaze_positions_path = data_folder + "/gaze_positions.npy"
@@ -98,11 +98,12 @@ def main():
                 pass
 
         out = cv.distanceTransform(overlay,cv.cv.CV_DIST_L2, 5)
+        if type(out)==tuple:
+            out = out[0]
+        # wide = 1/(out/50+1)
+        narrow =  1/(out/20+1)
 
-        wide = 1/(out/50+1)
-        # narrow =  1/(out/20+1)
-
-        img *=cv.cvtColor(wide,cv.COLOR_GRAY2RGB)
+        img *=cv.cvtColor(narrow,cv.COLOR_GRAY2RGB)
 
         cv.imshow(window_string, img)
 
