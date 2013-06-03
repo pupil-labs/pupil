@@ -19,7 +19,7 @@ class Ref_Detector(object):
 
     Instatiating a class based on Ref_Detector
     will trigger the eye-proces to collect callibration data.
-    Deliting it will prefrom calibration fitting.
+    destroying it will perform calibration fitting.
 
     Your derived class needs to have interfaces
     defined by these methods:

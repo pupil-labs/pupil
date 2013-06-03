@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -240,7 +240,7 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 			if bar.record_video.value and bar.record_running.value:
 				# Save image frames to video writer
 				try:
-					cv2.circle(img1, (int(x_screen), int(y_screen)), 10, (0,255,0,100), 1)
+					cv2.circle(img1, (int(x_screen), int(y_screen)), 20, (0,255,0,100), 1)
 				except:
 					pass
 				record.writer.write(img1)

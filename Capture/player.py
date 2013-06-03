@@ -134,7 +134,7 @@ def player(g_pool,size):
             elif g_pool.play.value:
                 s, img = player.captures[player.current_video].read_RGB()
                 if s:
-                    draw_gl_texture(image)
+                    draw_gl_texture(img)
                 else:
                     player.captures[player.current_video].rewind()
                     player.current_video +=1
