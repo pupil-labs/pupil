@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -15,7 +15,7 @@ FLANN_INDEX_KDTREE = 1	# bug: flann enums are missing
 
 flann_params = dict(algorithm = FLANN_INDEX_KDTREE,
 					trees = 4)
-					
+
 def anorm2(a):
 	return (a*a).sum(-1)
 def anorm(a):
@@ -48,16 +48,18 @@ def match(match_fn, desc1, desc2, kp1, kp2, r_threshold):
 	"""
 	# call the matching function passing descriptor vectors
 	# m is a list of index values for matched keypoints
-	m = match_fn(desc1, desc2, r_threshold) 
+	m = match_fn(desc1, desc2, r_threshold)
 	matched_p1 = np.array([kp1[i].pt for i, j in m], np.float32) # get img1 keypoints from match index
 	matched_p2 = np.array([kp2[j].pt for i, j in m], np.float32) # get img2 keypoints from match index
-
+	print "matched:", matched_p2.shape,matched_p1.shape
+	if matched_p2.shape[0] ==0:
+		return None,False,None,None
 	H, status = cv2.findHomography(matched_p2, matched_p1, cv2.RANSAC, 5.0) # find homography matrix
-	
+
 	# status is a binary mask corresponding to points used from matched points?
 	print '%d / %d	inliers/matched' % (np.sum(status), len(status))
-	
-	return H, status, matched_p1, matched_p2 
+
+	return H, status, matched_p1, matched_p2
 
 def draw_match_overlay(img1, img2, H):
 	h1, w1 = img1.shape[:2]
@@ -84,7 +86,8 @@ def homography_map(img1, img2):
 	print 'img1 - %d features, img2 - %d features' % (len(kp1), len(kp2))
 
 	H, status, p1, p2 = match(match_flann, desc1, desc2, kp1, kp2, r_threshold=0.60)
-
+	if status is None:
+		return None,None
 	img_overlay = draw_match_overlay(img1, img2, H)
 	return cv2.cvtColor(img_overlay,cv2.COLOR_GRAY2RGB), H
 

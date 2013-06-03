@@ -182,6 +182,8 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 			r, img1 = c.captures[0].read()
 			if len(c.captures)==2:
 				r, img2 =c.captures[1].read()
+				if r and img1.shape != img2.shape:
+					img2 = cv2.resize(img2,(img1.shape[1],img1.shape[0]))
 
 			if not r:
 				bar.play.value = 0
@@ -218,16 +220,17 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 					# homography mapping
 					overlay, H = homography_map(img2, img1) # map img1 onto img2 (the world onto the source video)
 					# cam_intrinsics.H_map.append([bar.frame_num.value, H])
+					if overlay is not None:
 
-					pt_homog = np.array([x_screen, y_screen, 1])
-					pt_homog = np.dot(H, pt_homog)
-					pt_homog /= pt_homog[-1] # normalize the gaze.pts
-					x_screen, y_screen, z = pt_homog
+						pt_homog = np.array([x_screen, y_screen, 1])
+						pt_homog = np.dot(H, pt_homog)
+						pt_homog /= pt_homog[-1] # normalize the gaze.pts
+						x_screen, y_screen, z = pt_homog
 
-					img1=overlay #overwrite img with the overlay
+						img1=overlay #overwrite img with the overlay
 
 				if bar.display.value == 3:
-					cv2.circle(img2, (int(x_screen), int(y_screen)), 10, (0,255,0,100), 1)
+					# cv2.circle(img2, (int(x_screen), int(y_screen)), 10, (0,255,0,100), 1)
 					img1=img2 #overwrite img1 with the source video
 
 
