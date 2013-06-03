@@ -127,11 +127,15 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 	# gaze.x_pos = gaze.list[:,0]
 	# gaze.y_pos = gaze.list[:,1]
 	# gaze.dt = gaze.list[:,2]
-	gaze_point = Point(color=(255,0,0,0.3), scale=40.0)
 	gaze_list = list(gaze.list)
-	gaze.map = [[{'eye_x': s[0], 'eye_y': s[1], 'dt': s[2]} for s in gaze_list if s[-1] == frame] for frame in range(int(gaze_list[-1][-1])+1)]
-	gaze.pts = np.array([[i[0]['eye_x'], i[0]['eye_y']] for i in gaze.map if len(i) > 0], dtype=np.float32)
 
+	gaze_point = Point(color=(255,0,0,0.3), scale=40.0)
+	positions_by_frame = [[] for frame in range(int(gaze_list[-1][-1]) + 1)]
+	while gaze_list:
+		s = gaze_list.pop(0)
+		frame = int(s[-1])
+		positions_by_frame[frame].append({'x': s[0], 'y': s[1], 'dt': s[2]})
+	gaze.map = positions_by_frame
 
 	# keyframe list object
 	framelist = Temp()
@@ -191,15 +195,15 @@ def browser(data_path, video_path, pts_path, cam_intrinsics_path):
 			# Extract corresponing Pupil posistions.
 			# Here we are taking only the first values of the frame for positions hence 0 index
 			try:
-				x_screen, y_screen = denormalize((gaze.map[bar.frame_num.value][0]['eye_x'],
-														gaze.map[bar.frame_num.value][0]['eye_y']),
-														fig.width, fig.height, flip_y=False)
+				x_screen, y_screen = denormalize((gaze.map[bar.frame_num.value][0]['x'],
+														gaze.map[bar.frame_num.value][0]['y']),
+														fig.width, fig.height, flip_y=True)
 				img1[int(y_screen), int(x_screen)] = [255,255,255]
 
 				# update gaze.x_screen, gaze.y_screen /OPENGL COORIDANTE SYSTEM
 				gaze.x_screen,gaze.y_screen = flip_horizontal((x_screen,y_screen), fig.height)
 				gaze_point.update((	gaze.x_screen, gaze.y_screen))
-
+				print x_screen, y_screen
 			except:
 				pass
 
