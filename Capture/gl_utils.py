@@ -32,17 +32,19 @@ def adjust_gl_view(w,h):
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
-def draw_gl_polyline((positions),(r,g,b,a),closed=True):
+def draw_gl_polyline((positions),(r,g,b,a),type='Loop'):
     glColor4f(r,g,b,a)
-    if closed:
+    if type=='Loop':
         glBegin(GL_LINE_LOOP)
-    else:
+    elif type=='Strip':
         glBegin(GL_LINE_STRIP)
+    else:
+        glBegin(GL_LINES)
     for x,y in positions:
         glVertex3f(x,y,0.0)
     glEnd()
 
-def draw_gl_polyline_norm((positions),(r,g,b,a),closed=True):
+def draw_gl_polyline_norm((positions),(r,g,b,a),type='Loop'):
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
@@ -50,7 +52,7 @@ def draw_gl_polyline_norm((positions),(r,g,b,a),closed=True):
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()
-    draw_gl_polyline(positions,(r,g,b,a),closed)
+    draw_gl_polyline(positions,(r,g,b,a),type)
     glMatrixMode(GL_PROJECTION)
     glPopMatrix()
     glMatrixMode(GL_MODELVIEW)

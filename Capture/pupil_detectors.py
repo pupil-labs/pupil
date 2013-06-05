@@ -58,7 +58,7 @@ class Canny_Detector(Pupil_Detector):
         self.target_ratio=1.0
         self.target_size=c_float(100.)
         self.goodness = c_float(1.)
-        self.size_tolerance=20.
+        self.size_tolerance=10.
         self.blur = c_int(1)
         self.canny_thresh = c_int(200)
         self.canny_ratio= c_int(2)
@@ -131,7 +131,7 @@ class Canny_Detector(Pupil_Detector):
         good_contours = [c for c in contours if c.shape[0]>self.min_contour_size]
         shape = edges.shape
         ellipses = ((cv2.fitEllipse(c),c) for c in good_contours)
-        ellipses = ((e,c) for e,c in ellipses if (0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1])) #center is iside roi
+        ellipses = ((e,c) for e,c in ellipses if (0 < e[0][1] < shape[0] and 0< e[0][0] < shape[1])) #center is inside roi
         ellipses = ((e,c) for e,c in ellipses if binary_img[e[0][1],e[0][0]]) #center is on a dark pixel
         ellipses = [(size_deviation(e,self.target_size.value),e,c) for e,c in ellipses if is_round(e,self.target_ratio)] # roundness test
         result = []
@@ -158,10 +158,17 @@ class Canny_Detector(Pupil_Detector):
         if result:
             result.sort(key=lambda e: e['goodness'])
             self.target_size.value = result[0]['major']
+
         result = [r for r in result if r['goodness']<self.size_tolerance]
 
         if result:
             self.goodness.value = result[0]['goodness']
+
+            if result[0]['goodness'] ==0:
+                self.target_size.value = result[0]['major']
+            else:
+                self.target_size.value  = self.target_size.value +  .5 * (result[0]['major']-self.target_size.value)
+
         else:
             self.goodness.value = 100
 

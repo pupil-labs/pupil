@@ -334,20 +334,15 @@ def world(g_pool):
         if bar.show_calib_result.value:
             cal_pt_cloud = np.load("cal_pt_cloud.npy")
             map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(width,height),return_inlier_map=True)
-            pX,pY,wX,wY = cal_pt_cloud[inlier_map].transpose()
-            modelled_world_pts = map_fn((pX,pY))
-            ref_pts = cal_pt_cloud[:,np.newaxis,2:4]
+            cal_pt_cloud[:,0:2] =  np.array(map_fn(cal_pt_cloud[:,0:2].transpose())).transpose()
+            ref_pts = cal_pt_cloud[inlier_map][:,np.newaxis,2:4]
             ref_pts = np.array(ref_pts,dtype=np.float32)
             calib_bounds =  cv2.convexHull(ref_pts)[:,0]
-            for observed,modelled in zip(zip(wX,wY),np.array(modelled_world_pts).transpose()):
-                draw_gl_polyline_norm((modelled,observed),(1.,0.5,0.,.5))
-            draw_gl_polyline_norm(calib_bounds,(.0,1.,0,.5))
-            #outliers
-            pX,pY,wX,wY = cal_pt_cloud[~inlier_map].transpose()
-            modelled_world_pts = map_fn((pX,pY))
-            pts = np.array(modelled_world_pts,dtype=np.float32).transpose()
-            for observed,modelled in zip(zip(wX,wY),np.array(modelled_world_pts).transpose()):
-                draw_gl_polyline_norm((modelled,observed),(1.,0.,0.,.5))
+            outlier = np.concatenate((cal_pt_cloud[~inlier_map][:,0:2],cal_pt_cloud[~inlier_map][:,2:4])).reshape(-1,2)
+            inlier = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1).reshape(-1,2)
+            draw_gl_polyline_norm(inlier,(1.,0.5,0.,.5),type='Lines')
+            draw_gl_polyline_norm(outlier,(1.,0.,0.,.5),type='Lines')
+            draw_gl_polyline_norm(calib_bounds,(.0,1.,0,.5),type='Loop')
 
 
         ###render visual feedback from detector
@@ -368,3 +363,10 @@ def world(g_pool):
     glfwCloseWindow()
     glfwTerminate()
 
+if __name__ == '__main__':
+        cal_pt_cloud = np.load("cal_pt_cloud.npy")
+        map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(1280,720),return_inlier_map=True)
+        print cal_pt_cloud[inlier_map][:,0:2].shape
+        print cal_pt_cloud[inlier_map][0,2:4]
+        inlier = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1)
+        print inlier.reshape(-1,2)
