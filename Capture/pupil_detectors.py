@@ -57,6 +57,7 @@ class Canny_Detector(Pupil_Detector):
         self.bin_thresh = c_int(0)
         self.target_ratio=1.0
         self.target_size=c_float(100.)
+        self.goodness = c_float(1.)
         self.size_tolerance=20.
         self.blur = c_int(1)
         self.canny_thresh = c_int(200)
@@ -158,6 +159,12 @@ class Canny_Detector(Pupil_Detector):
             result.sort(key=lambda e: e['goodness'])
             self.target_size.value = result[0]['major']
         result = [r for r in result if r['goodness']<self.size_tolerance]
+
+        if result:
+            self.goodness.value = result[0]['goodness']
+        else:
+            self.goodness.value = 100
+
         return result
 
 
@@ -167,6 +174,7 @@ class Canny_Detector(Pupil_Detector):
             text='light', position=pos,refresh=.3, size=(200, 100))
         self._bar.add_var("Pupil_Aparent_Size",self.target_size)
         self._bar.add_var("Pupil_Shade",self.bin_thresh, readonly=True)
+        self._bar.add_var("Pupil_Certainty",self.goodness, readonly=True)
         self._bar.add_var("Image_Blur",self.blur, step=2,min=1,max=9)
         self._bar.add_var("Canny_aparture",self.canny_aperture, step=2,min=3,max=7)
         self._bar.add_var("canny_threshold",self.canny_thresh, step=1,min=0)

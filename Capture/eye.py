@@ -81,6 +81,7 @@ def eye(g_pool):
         dt = bar.timestamp - old_time
         if dt:
             bar.fps.value += .05 * (1 / dt - bar.fps.value)
+            bar.dt.value = dt
 
     def get_from_data(data):
         """
@@ -90,7 +91,7 @@ def eye(g_pool):
 
 
     # load session persisten settings
-    session_settings = shelve.open('session_settings',protocol=2)
+    session_settings = shelve.open('user_settings',protocol=2)
     def load(var_name,default):
         try:
             return session_settings[var_name]
@@ -327,7 +328,7 @@ def eye(g_pool):
         # While recording...
         if l_pool.record_running:
             if pupil.gaze_coords is not None:
-                l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], bar.dt, g_pool.frame_count_record.value])
+                l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], bar.dt.value, g_pool.frame_count_record.value])
             if l_pool.writer is not None:
                 l_pool.writer.write(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))
 
@@ -345,10 +346,7 @@ def eye(g_pool):
 
 
         ###direct visualzations on the img data
-        if bar.display.value == (0 or 2):
-            img = img
-        elif bar.display.value == 1:
-            # # # Vizualizations
+        if bar.display.value == 1:
             # and a solid (white) frame around the user defined ROI
             gray_img[:,0] = 255
             gray_img[:,-1]= 255
