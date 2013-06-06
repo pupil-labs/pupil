@@ -75,6 +75,8 @@ class Canny_Detector(Pupil_Detector):
         spikes = bins[hist[:,0]>40] #every color seen in more than 40 pixels
         if spikes.shape[0] >0:
             lowest_spike = spikes.min()
+        else:
+            lowest_spike = 200
         offset = 40
 
         if visualize:
