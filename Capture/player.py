@@ -132,14 +132,18 @@ def player(g_pool,size):
                 gl.glEnd()
 
             elif g_pool.play.value:
-                s, img = player.captures[player.current_video].read_RGB()
-                if s:
-                    draw_gl_texture(img)
+                if len(player.captures):
+                    s, img = player.captures[player.current_video].read()
+                    if s:
+                        draw_gl_texture(img)
+                    else:
+                        player.captures[player.current_video].rewind()
+                        player.current_video +=1
+                        if player.current_video >= len(player.captures):
+                            player.current_video = 0
+                        g_pool.play.value = False
                 else:
-                    player.captures[player.current_video].rewind()
-                    player.current_video +=1
-                    if player.current_video >= len(player.captures):
-                        player.current_video = 0
+                    print 'PLAYER: Warning: No Videos available to play. Please put your vidoes into a folder called "src_video" in Capture.'
                     g_pool.play.value = False
             glfwSwapBuffers()
 
