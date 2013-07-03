@@ -277,7 +277,10 @@ def world(g_pool):
 
         ### Setup recording process
         if bar.record_video and not bar.record_running:
-            record.path = os.path.join(record.path_parent, "data%03d/" % record.counter)
+            if bar.rec_name:
+                record.path = os.path.join(record.path_parent, bar.rec_name.value)
+            else:
+                record.path = os.path.join(record.path_parent, "data%03d/" % record.counter)
             while True:
                 try:
                     os.mkdir(record.path)
