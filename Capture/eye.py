@@ -256,7 +256,7 @@ def eye(g_pool):
     #event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
         update_fps()
-        s,img = cap.read_RGB()
+        s,img = cap.read()
         sleep(bar.sleep.value) # for debugging only
 
         ###IMAGE PROCESSING and clipping to user defined eye-region
@@ -330,7 +330,7 @@ def eye(g_pool):
             if pupil.gaze_coords is not None:
                 l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], bar.dt.value, g_pool.frame_count_record.value])
             if l_pool.writer is not None:
-                l_pool.writer.write(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))
+                l_pool.writer.write(img)
 
         # Done Recording: Save values and flip switch to off for recording
         if not g_pool.pos_record.value and l_pool.record_running:
@@ -356,10 +356,10 @@ def eye(g_pool):
 
             pupil_img =img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] #create an RGB view onto the gray pupil ROI
             #draw a blue dotted frame around the automatic pupil ROI in overlay...
-            pupil_img[::2,0] = 0,0,255
-            pupil_img[::2,-1]= 0,0,255
-            pupil_img[0,::2] = 0,0,255
-            pupil_img[-1,::2]= 0,0,255
+            pupil_img[::2,0] = 255,0,0
+            pupil_img[::2,-1]= 255,0,0
+            pupil_img[0,::2] = 255,0,0
+            pupil_img[-1,::2]= 255,0,0
 
             img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] = pupil_img
 
@@ -381,7 +381,7 @@ def eye(g_pool):
 
     ###end while running
 
-    ###save session persisten settings
+    ###save session persistent settings
     save('roi',r.get())
     save('bar.display',bar.display.value)
     save('bar.draw_pupil',bar.draw_pupil.value)

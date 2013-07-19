@@ -327,7 +327,6 @@ def world(g_pool):
 
         ###render the screen
         clear_gl_screen()
-        cv2.cvtColor(img, cv2.COLOR_BGR2RGB,img)
         draw_gl_texture(img)
 
         ###render calibration results:
@@ -337,11 +336,12 @@ def world(g_pool):
             cal_pt_cloud[:,0:2] =  np.array(map_fn(cal_pt_cloud[:,0:2].transpose())).transpose()
             ref_pts = cal_pt_cloud[inlier_map][:,np.newaxis,2:4]
             ref_pts = np.array(ref_pts,dtype=np.float32)
-            calib_bounds =  cv2.convexHull(ref_pts)[:,0]
-            outlier = np.concatenate((cal_pt_cloud[~inlier_map][:,0:2],cal_pt_cloud[~inlier_map][:,2:4])).reshape(-1,2)
-            inlier = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1).reshape(-1,2)
-            draw_gl_polyline_norm(inlier,(1.,0.5,0.,.5),type='Lines')
-            draw_gl_polyline_norm(outlier,(1.,0.,0.,.5),type='Lines')
+            calib_bounds =  cv2.convexHull(ref_pts)[:,0] #we dont need that extra encapsulation opencv likes so much
+            # create a list [[px1,py1],[wx1,wy1],[px2,py2],[wx2,wy2]...] of outliers and inliers for gl_lines
+            outliers = np.concatenate((cal_pt_cloud[~inlier_map][:,0:2],cal_pt_cloud[~inlier_map][:,2:4])).reshape(-1,2)
+            inliers = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1).reshape(-1,2)
+            draw_gl_polyline_norm(inliers,(1.,0.5,0.,.5),type='Lines')
+            draw_gl_polyline_norm(outliers,(1.,0.,0.,.5),type='Lines')
             draw_gl_polyline_norm(calib_bounds,(.0,1.,0,.5),type='Loop')
 
 
@@ -366,7 +366,8 @@ def world(g_pool):
 if __name__ == '__main__':
         cal_pt_cloud = np.load("cal_pt_cloud.npy")
         map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(1280,720),return_inlier_map=True)
-        print cal_pt_cloud[inlier_map][:,0:2].shape
-        print cal_pt_cloud[inlier_map][0,2:4]
+        # print cal_pt_cloud[inlier_map][:,0:2].shape
+        # print cal_pt_cloud[inlier_map][0,2:4]
         inlier = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1)
+        print inlier
         print inlier.reshape(-1,2)

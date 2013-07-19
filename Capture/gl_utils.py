@@ -16,7 +16,7 @@ def clear_gl_screen():
 def adjust_gl_view(w,h):
     """
     adjust view onto our scene so
-    that a quad from 0,0  1,1 fits into it perfecly
+    that a quad from 0,0 to 1,1 fits into it perfecly
     """
     if h == 0:
         h = 1
@@ -89,13 +89,18 @@ def draw_gl_texture(image):
     """
     We draw the image as a texture on a quad that is perfeclty set into our window.
     """
+
     height, width, channels = image.shape
-    if  channels == 3: gl_blend = GL_RGB
-    else: gl_blend = GL_RGBA
+    if  channels == 3:
+        gl_blend = GL_BGR
+        gl_blend_init = GL_RGB
+    else:
+        gl_blend = GL_BGRA
+        gl_blend_init = GL_RGBA
     # Create Texture
     glTexImage2D(GL_TEXTURE_2D,
                         0,
-                        gl_blend,
+                        gl_blend_init,
                         width,
                         height,
                         0,

@@ -24,7 +24,8 @@ class Pupil_Detector(object):
         pupil_img = img[roi.lY:roi.uY,roi.lX:roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
 
         if visualize:
-            ###draw into image whatever you like it will be displayed otherwise you shall not modify img data inplace!
+            ### draw into image whatever you like it will be displayed
+            ### otherwise you shall not modify img data inplace!
             pass
 
         pupil_ellipse = {'center': (None,None),
@@ -34,9 +35,9 @@ class Pupil_Detector(object):
                         'ratio': None,
                         'major': None,
                         'minor': None,
-                        'goodness': 0} #some estimation on who sure you are about the detected ellipse and its fit smaller is better
+                        'goodness': 0} #some estimation on who sure you are about the detected ellipse and its fit. Smaller is better
 
-        return [pupil_ellipse,] #return list of canditade pupil ellipses, sorted by certainty, if none is foud return empty list
+        return [pupil_ellipse,] #return list of canditade pupil ellipses, sorted by certainty, if none is found return empty list
 
     def display(self,img,roi,p_roi):
         return img
@@ -82,7 +83,7 @@ class Canny_Detector(Pupil_Detector):
         if visualize:
             ##display the histogram
             sx,sy = 100,1
-            colors = ((255,0,0),(0,0,255),(0,255,255))
+            colors = ((0,0,255),(255,0,0),(255,255,0))
             h,w,chan = img.shape
             hist *= 1./hist.max()  #normalize for display
 
@@ -116,9 +117,9 @@ class Canny_Detector(Pupil_Detector):
         if visualize:
             overlay =  img[roi.lY:roi.uY,roi.lX:roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
             pupil_img = grayscale(overlay)
-            overlay[:,:,0] = cv2.max(pupil_img,edges) #green channel
-            overlay[:,:,2] = cv2.max(pupil_img,binary_img) #blue channel
-            overlay[:,:,1] = cv2.min(pupil_img,spec_mask) #red channel
+            overlay[:,:,1] = cv2.max(pupil_img,edges) #b channel
+            overlay[:,:,0] = cv2.max(pupil_img,binary_img) #g channel
+            overlay[:,:,2] = cv2.min(pupil_img,spec_mask) #b channel
 
 
         ###from edges to contours to ellipses
