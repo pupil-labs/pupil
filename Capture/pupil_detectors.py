@@ -20,12 +20,12 @@ class Pupil_Detector(object):
         var1 = c_int(0)
 
     def detect(self,img,roi,p_roi,visualize=False):
-        #hint: create a view into the img with the bounds of the coarse pupil estimation
+        # hint: create a view into the img with the bounds of the coarse pupil estimation
         pupil_img = img[roi.lY:roi.uY,roi.lX:roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
 
         if visualize:
-            ### draw into image whatever you like it will be displayed
-            ### otherwise you shall not modify img data inplace!
+            # draw into image whatever you like and it will be displayed
+            # otherwise you shall not modify img data inplace!
             pass
 
         candidate_pupil_ellipse = {'center': (None,None),
@@ -35,12 +35,12 @@ class Pupil_Detector(object):
                         'ratio': None,
                         'major': None,
                         'minor': None,
-                        'goodness': 0} #some estimation on who sure you are about the detected ellipse and its fit. Smaller is better
+                        'goodness': 0} #some estimation on how sure you are about the detected ellipse and its fit. Smaller is better
 
-        ###if you use region of interest p_r and r make sure to return pupil coordinates relative to the full image
+        # If you use region of interest p_r and r make sure to return pupil coordinates relative to the full image
         candidate_pupil_ellipse['center'] = roi.add_vector(p_roi.add_vector(candidate_pupil_ellipse['center']))
 
-        return [candidate_pupil_ellipse,] #return list of canditade pupil ellipses, sorted by certainty, if none is found return empty list
+        return [candidate_pupil_ellipse,] # return list of candidate pupil ellipses, sorted by certainty, if none is found return empty list
 
 
     def create_atb_bar(self,pos):
@@ -71,10 +71,10 @@ class Canny_Detector(Pupil_Detector):
         pupil_img = img[roi.lY:roi.uY,roi.lX:roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
         pupil_img = grayscale(pupil_img)
 
-        ### binary thresholding of pupil dark areas
+        # binary thresholding of pupil dark areas
         hist = cv2.calcHist([pupil_img],[0],None,[256],[0,256]) #(images, channels, mask, histSize, ranges[, hist[, accumulate]])
         bins = np.arange(hist.shape[0])
-        spikes = bins[hist[:,0]>40] #every color seen in more than 40 pixels
+        spikes = bins[hist[:,0]>40] # every color seen in more than 40 pixels
         if spikes.shape[0] >0:
             lowest_spike = spikes.min()
         else:
@@ -82,11 +82,11 @@ class Canny_Detector(Pupil_Detector):
         offset = 40
 
         if visualize:
-            ##display the histogram
+            # display the histogram
             sx,sy = 100,1
             colors = ((0,0,255),(255,0,0),(255,255,0))
             h,w,chan = img.shape
-            hist *= 1./hist.max()  #normalize for display
+            hist *= 1./hist.max()  # normalize for display
 
             for i,h in zip(bins,hist[:,0]):
                 c = colors[1]
@@ -94,7 +94,7 @@ class Canny_Detector(Pupil_Detector):
             cv2.line(img,(w,int(lowest_spike*sy)),(int(w-.5*sx),int(lowest_spike*sy)),colors[0])
             cv2.line(img,(w,int((lowest_spike+offset)*sy)),(int(w-.5*sx),int((lowest_spike+offset)*sy)),colors[2])
 
-        ### create dark and spectral glint masks
+        # create dark and spectral glint masks
         self.bin_thresh.value = lowest_spike
         binary_img = bin_thresholding(pupil_img,image_upper=lowest_spike+offset)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
@@ -123,7 +123,7 @@ class Canny_Detector(Pupil_Detector):
             overlay[:,:,2] = cv2.min(pupil_img,spec_mask) #b channel
 
 
-        ###from edges to contours to ellipses
+        # from edges to contours to ellipses
         contours, hierarchy = cv2.findContours(edges,
                                             mode=cv2.RETR_LIST,
                                             method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
@@ -135,14 +135,14 @@ class Canny_Detector(Pupil_Detector):
         good_contours = [c for c in contours if c.shape[0]>self.min_contour_size]
         shape = edges.shape
         ellipses = ((cv2.fitEllipse(c),c) for c in good_contours)
-        ellipses = ((e,c) for e,c in ellipses if (0 < e[0][1] < shape[0] and 0< e[0][0] < shape[1])) #center is inside roi
-        ellipses = ((e,c) for e,c in ellipses if binary_img[e[0][1],e[0][0]]) #center is on a dark pixel
+        ellipses = ((e,c) for e,c in ellipses if (0 < e[0][1] < shape[0] and 0< e[0][0] < shape[1])) # center is inside roi
+        ellipses = ((e,c) for e,c in ellipses if binary_img[e[0][1],e[0][0]]) # center is on a dark pixel
         ellipses = [(size_deviation(e,self.target_size.value),e,c) for e,c in ellipses if is_round(e,self.target_ratio)] # roundness test
         result = []
         for size_dif,e,c in ellipses:
             pupil_ellipse = {}
             pupil_ellipse['contour'] = c
-            a,b = e[1][0]/2.,e[1][1]/2. #majar minor radii of canditate ellipse
+            a,b = e[1][0]/2.,e[1][1]/2. # majar minor radii of candidate ellipse
             # pupil_ellipse['circumference'] = np.pi*abs(3*(a+b)-np.sqrt(10*a*b+3*(a**2+b**2)))
             pupil_ellipse['contour_area'] = cv2.contourArea(c)
             pupil_ellipse['ellipse_area'] = np.pi*a*b
@@ -150,7 +150,7 @@ class Canny_Detector(Pupil_Detector):
                 pupil_ellipse['goodness'] = 0 #perfect match we'll take this one
             else:
                 pupil_ellipse['goodness'] = size_dif
-            pupil_ellipse['center'] = roi.add_vector(p_roi.add_vector(e[0])) ##compensate for roi offsets
+            pupil_ellipse['center'] = roi.add_vector(p_roi.add_vector(e[0])) # compensate for roi offsets
             pupil_ellipse['angle'] = e[-1]
             pupil_ellipse['axes'] = e[1]
             pupil_ellipse['major'] = max(e[1])
@@ -168,7 +168,7 @@ class Canny_Detector(Pupil_Detector):
         if result:
             self.goodness.value = result[0]['goodness']
 
-            if result[0]['goodness'] ==0: ###perfect match
+            if result[0]['goodness'] ==0: # perfect match!
                 self.target_size.value = result[0]['major']
             else:
                 self.target_size.value  = self.target_size.value +  .5 * (result[0]['major']-self.target_size.value)

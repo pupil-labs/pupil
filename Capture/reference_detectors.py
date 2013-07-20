@@ -17,7 +17,7 @@ class Ref_Detector(object):
     base class of reference detectors
     build a detector based on this class.
 
-    Instatiating a class based on Ref_Detector
+    Instantiating a class based on Ref_Detector
     will trigger the eye-proces to collect callibration data.
     destroying it will perform calibration fitting.
 
@@ -80,7 +80,7 @@ class Ref_Detector(object):
 class no_Detector(Ref_Detector):
     """
     docstring for no_Detector
-    this dummy class is instaciated when no calibration is running, it does nothing
+    this dummy class is instantiated when no calibration is running, it does nothing
     a detector based on this will not trigger the world process to collect data for calibration.
     """
     def __init__(self, global_calibrate,shared_x,shared_y):
@@ -281,7 +281,7 @@ class Camera_Intrinsics_Calibration(no_Detector):
         else:
             print "Waring: Not enough images captured, please try again"
 
-###private helper fns...
+# private helper functions
 def _calibrate_camera(img_pts, obj_pts, img_size):
     # generate pattern size
     camera_matrix = np.zeros((3,3))

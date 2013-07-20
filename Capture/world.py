@@ -30,7 +30,7 @@ def world(g_pool):
     """world
     """
 
-    ###Callback funtions
+    # Callback functions
     def on_resize(w, h):
         atb.TwWindowSize(w, h);
         adjust_gl_view(w,h)
@@ -50,7 +50,7 @@ def world(g_pool):
             if pressed:
                 pos = glfwGetMousePos()
                 pos = normalize(pos,glfwGetWindowSize())
-                pos = denormalize(pos,(img.shape[1],img.shape[0]) ) #pos in img pixels
+                pos = denormalize(pos,(img.shape[1],img.shape[0]) ) # Position in img pixels
                 ref.detector.new_ref(pos)
 
 
@@ -68,7 +68,7 @@ def world(g_pool):
 
     ref = Temp()
     ref.detector = no_Detector(g_pool.calibrate,g_pool.ref_x,g_pool.ref_y)
-    ###objects as variable containers
+    # Objects as variable containers
 
     # gaze object
     gaze = Temp()
@@ -81,7 +81,7 @@ def world(g_pool):
     record.path = None
     record.counter = 0
 
-    # initialize capture, check if it works
+    # Initialize capture, check if it works
     cap = autoCreateCapture(g_pool.world_src, g_pool.world_size)
     if cap is None:
         print "WORLD: Error could not create Capture"
@@ -93,7 +93,7 @@ def world(g_pool):
     height,width = img.shape[:2]
 
 
-    ###helpers called by the main atb bar
+    # helpers called by the main atb bar
     def update_fps():
         old_time, bar.timestamp = bar.timestamp, time()
         dt = bar.timestamp - old_time
@@ -105,7 +105,7 @@ def world(g_pool):
         ratio = (1,.75,.5,.25)[mode]
         w,h = int(width*ratio),int(height*ratio)
         glfwSetWindowSize(w,h)
-        data.value=mode #update the bar.value
+        data.value=mode # update the bar.value
 
     def get_from_data(data):
         """
@@ -117,7 +117,7 @@ def world(g_pool):
     def start_calibration():
         c_type = bar.calibration_type.value
         if  c_type == cal_type["Directed 9-Point"]:
-            print 'WORLD: Starting Directed 9-Point calibration.'
+            print 'WORLD: Starting Directed 9-Point Calibration.'
             ref.detector = Nine_Point_Detector(global_calibrate=g_pool.calibrate,
                                             shared_x=g_pool.ref_x,
                                             shared_y=g_pool.ref_y,
@@ -127,7 +127,7 @@ def world(g_pool):
                                             shared_circle_id=g_pool.cal9_circle_id,
                                             auto_advance=False)
         elif c_type == cal_type["Automated 9-Point"]:
-            print 'WORLD: Starting Automated 9-Point calibration.'
+            print 'WORLD: Starting Automated 9-Point Calibration.'
             ref.detector = Nine_Point_Detector(global_calibrate=g_pool.calibrate,
                                             shared_x=g_pool.ref_x,
                                             shared_y=g_pool.ref_y,
@@ -137,12 +137,12 @@ def world(g_pool):
                                             shared_circle_id=g_pool.cal9_circle_id,
                                             auto_advance=True)
         elif c_type == cal_type["Natural Features"]:
-            print 'WORLD: Starting Natural Features calibration.'
+            print 'WORLD: Starting Natural Features Calibration.'
             ref.detector = Natural_Features_Detector(global_calibrate=g_pool.calibrate,
                                                     shared_x=g_pool.ref_x,
                                                     shared_y=g_pool.ref_y)
         elif c_type == cal_type["Black Dot"]:
-            print 'WORLD: Starting Black Dot calibration.'
+            print 'WORLD: Starting Black Dot Calibration.'
             ref.detector = Black_Dot_Detector(global_calibrate=g_pool.calibrate,
                                             shared_x=g_pool.ref_x,
                                             shared_y=g_pool.ref_y)
@@ -159,7 +159,7 @@ def world(g_pool):
                                 shared_x=g_pool.ref_x,
                                 shared_y=g_pool.ref_y)
 
-    ### Initialize ant tweak bar inherits from atb.Bar
+    # Initialize ant tweak bar - inherits from atb.Bar
     atb.init()
     bar = atb.Bar(name = "World", label="Controls",
             help="Scene controls", color=(50, 50, 50), alpha=100,valueswidth=150,
@@ -193,7 +193,7 @@ def world(g_pool):
     bar.add_var("Play Video", bar.play, help="play a video in the Player window")
     bar.add_var("Exit", g_pool.quit)
 
-    #add 4vl2 camera controls to a seperate ATB bar
+    # add v4l2 camera controls to a seperate ATB bar
     if cap.controls is not None:
         c_bar = atb.Bar(name="Camera_Controls", label=cap.name,
             help="UVC Camera Controls", color=(50,50,50), alpha=100,
@@ -233,14 +233,14 @@ def world(g_pool):
     else:
         c_bar = None
 
-    ### Initialize glfw
+    # Initialize glfw
     glfwInit()
     height,width = img.shape[:2]
     glfwOpenWindow(width, height, 0, 0, 0, 8, 0, 0, GLFW_WINDOW)
     glfwSetWindowTitle("World")
     glfwSetWindowPos(0,0)
 
-    #register callbacks
+    # Register callbacks
     glfwSetWindowSizeCallback(on_resize)
     glfwSetWindowCloseCallback(on_close)
     glfwSetKeyCallback(on_key)
@@ -249,24 +249,24 @@ def world(g_pool):
     glfwSetMousePosCallback(on_pos)
     glfwSetMouseWheelCallback(on_scroll)
 
-    #gl_state settings
+    # gl_state settings
     import OpenGL.GL as gl
     gl.glEnable(gl.GL_POINT_SMOOTH)
     gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
     gl.glEnable(gl.GL_BLEND)
     del gl
 
-    ###event loop
+    # Event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
         update_fps()
 
-        ###get input characters entered in player
+        # Get input characters entered in player
         if g_pool.player_input.value:
             player_input = g_pool.player_input.value
             g_pool.player_input.value = 0
             on_char(player_input,True)
 
-        # get an image from the grabber
+        # Get an image from the grabber
         s, img = cap.read()
         ref.detector.detect(img)
         if ref.detector.is_done():
@@ -275,7 +275,7 @@ def world(g_pool):
         g_pool.player_refresh.set()
 
 
-        ### Setup recording process
+        # Setup recording process
         if bar.record_video and not bar.record_running:
             if bar.rec_name:
                 record.path = os.path.join(record.path_parent, bar.rec_name.value)
@@ -289,7 +289,7 @@ def world(g_pool):
                     print "We dont want to overwrite data, incrementing counter & trying to make new data folder"
                     record.counter += 1
                     record.path = os.path.join(record.path_parent, "data%03d/" % record.counter)
-            #video
+            # Video
             video_path = os.path.join(record.path, "world.avi")
             record.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (img.shape[1], img.shape[0]))
 
@@ -311,7 +311,7 @@ def world(g_pool):
 
         # Finish all recordings, clean up.
         if not bar.record_video and bar.record_running:
-            # for conviniece: copy camera intrinsics into each data folder at the end of a recording.
+            # for convenience: copy camera intrinsics into each data folder at the end of a recording.
             try:
                 camera_matrix = np.load("camera_matrix.npy")
                 dist_coefs = np.load("dist_coefs.npy")
@@ -328,18 +328,18 @@ def world(g_pool):
 
 
 
-        ###render the screen
+        # render the screen
         clear_gl_screen()
         draw_gl_texture(img)
 
-        ###render calibration results:
+        # render calibration results:
         if bar.show_calib_result.value:
             cal_pt_cloud = np.load("cal_pt_cloud.npy")
             map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(width,height),return_inlier_map=True)
             cal_pt_cloud[:,0:2] =  np.array(map_fn(cal_pt_cloud[:,0:2].transpose())).transpose()
             ref_pts = cal_pt_cloud[inlier_map][:,np.newaxis,2:4]
             ref_pts = np.array(ref_pts,dtype=np.float32)
-            calib_bounds =  cv2.convexHull(ref_pts)[:,0] #we dont need that extra encapsulation opencv likes so much
+            calib_bounds =  cv2.convexHull(ref_pts)[:,0] #we dont need that extra encapsulation that opencv likes so much
             # create a list [[px1,py1],[wx1,wy1],[px2,py2],[wx2,wy2]...] of outliers and inliers for gl_lines
             outliers = np.concatenate((cal_pt_cloud[~inlier_map][:,0:2],cal_pt_cloud[~inlier_map][:,2:4])).reshape(-1,2)
             inliers = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1).reshape(-1,2)
@@ -348,20 +348,20 @@ def world(g_pool):
             draw_gl_polyline_norm(calib_bounds,(.0,1.,0,.5),type='Loop')
 
 
-        ###render visual feedback from detector
+        # render visual feedback from detector
         ref.detector.display(img)
         # render detector point
         if ref.detector.pos[0] or ref.detector.pos[1]:
             draw_gl_point_norm(ref.detector.pos,color=(0.,1.,0.,0.5))
 
-        ###update gaze point from shared variable pool and draw on screen. If both coords are 0: no pupil pos was detected.
+        # update gaze point from shared variable pool and draw on screen. If both coords are 0: no pupil pos was detected.
         if g_pool.gaze_x.value !=0 or g_pool.gaze_y.value !=0:
             draw_gl_point_norm((g_pool.gaze_x.value, g_pool.gaze_y.value),color=(1.,0.,0.,0.5))
 
         atb.draw()
         glfwSwapBuffers()
 
-    ###end while running clean-up
+    # end while running and clean-up
     print "WORLD Process closed"
     glfwCloseWindow()
     glfwTerminate()

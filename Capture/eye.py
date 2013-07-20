@@ -26,7 +26,7 @@ def eye(g_pool):
     """
     this needs a docstring
     """
-    # # glfw callback functions
+    # glfw callback functions
     def on_resize(w, h):
         atb.TwWindowSize(w, h);
         adjust_gl_view(w,h)
@@ -47,7 +47,7 @@ def eye(g_pool):
                 if pressed:
                     pos = glfwGetMousePos()
                     pos = normalize(pos,glfwGetWindowSize())
-                    pos = denormalize(pos,(img.shape[1],img.shape[0]) ) #pos in img pixels
+                    pos = denormalize(pos,(img.shape[1],img.shape[0]) ) # pos in img pixels
                     r.setStart(pos)
                     bar.draw_roi.value = 1
                 else:
@@ -59,7 +59,7 @@ def eye(g_pool):
         if bar.draw_roi.value == 1:
             pos = glfwGetMousePos()
             pos = normalize(pos,glfwGetWindowSize())
-            pos = denormalize(pos,(img.shape[1],img.shape[0]) ) #pos in img pixels
+            pos = denormalize(pos,(img.shape[1],img.shape[0]) ) # pos in img pixels
             r.setEnd(pos)
 
     def on_scroll(pos):
@@ -71,7 +71,7 @@ def eye(g_pool):
         print "EYE Process closing from window"
 
 
-    ###helpers called by the main atb bar
+    # Helper functions called by the main atb bar
     def start_roi():
         bar.display.value = 1
         bar.draw_roi.value = 2
@@ -90,7 +90,7 @@ def eye(g_pool):
         return data.value
 
 
-    # load session persisten settings
+    # load session persistent settings
     session_settings = shelve.open('user_settings',protocol=2)
     def load(var_name,default):
         try:
@@ -100,12 +100,12 @@ def eye(g_pool):
     def save(var_name,var):
         session_settings[var_name] = var
 
-    # initialize capture
+    # Initialize capture
     cap = autoCreateCapture(g_pool.eye_src, g_pool.eye_size)
     if cap is None:
         print "EYE: Error could not create Capture"
         return
-    #check if it works
+    # check if it works
     s, img = cap.read_RGB()
     if not s:
         print "EYE: Error could not get image"
@@ -145,7 +145,7 @@ def eye(g_pool):
     pupil_detector = Canny_Detector()
 
     atb.init()
-    ###Create Main ATB Controls
+    # Create main ATB Controls
     bar = atb.Bar(name = "Eye", label="Display",
             help="Scene controls", color=(50, 50, 50), alpha=100,
             text='light', position=(10, 10),refresh=.3, size=(200, 100))
@@ -181,7 +181,7 @@ def eye(g_pool):
     bar.add_var("SlowDown",bar.sleep, step=0.01,min=0.0)
     bar.add_var("SaveSettings&Exit", g_pool.quit)
 
-    #add 4vl2 camera controls to a seperate ATB bar
+    # add v4l2 camera controls to a separate ATB bar
     if cap.controls is not None:
         c_bar = atb.Bar(name="Camera_Controls", label=cap.name,
             help="UVC Camera Controls", color=(50,50,50), alpha=100,
@@ -224,7 +224,7 @@ def eye(g_pool):
     else:
         c_bar = None
 
-    ###create a bar for the detector
+    # create a bar for the detector
     pupil_detector.create_atb_bar(pos=(10,120))
 
 
@@ -234,7 +234,7 @@ def eye(g_pool):
     glfwSetWindowTitle("Eye")
     glfwSetWindowPos(800,0)
     if isinstance(g_pool.eye_src, str):
-        glfwSwapInterval(0) # turn of v-sync when using video as src for benchmarking
+        glfwSwapInterval(0) # turn off v-sync when using video as src for benchmarking
 
 
     #register callbacks
@@ -246,25 +246,25 @@ def eye(g_pool):
     glfwSetMousePosCallback(on_pos)
     glfwSetMouseWheelCallback(on_scroll)
 
-    #gl_state settings
+    # gl_state settings
     import OpenGL.GL as gl
     gl.glEnable(gl.GL_POINT_SMOOTH)
     gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
     gl.glEnable(gl.GL_BLEND)
     del gl
 
-    #event loop
+    # event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
         update_fps()
         s,img = cap.read()
         sleep(bar.sleep.value) # for debugging only
 
-        ###IMAGE PROCESSING and clipping to user defined eye-region
+        # IMAGE PROCESSING and clipping to user defined eye-region
         eye_img = img[r.lY:r.uY,r.lX:r.uX]
         gray_img = grayscale(eye_img)
 
 
-        ### coarse pupil-detection
+        # coarse pupil detection
         integral = cv2.integral(gray_img)
         integral =  np.array(integral,dtype=c_float)
         x,y,w = eye_filter(integral)
@@ -273,10 +273,10 @@ def eye(g_pool):
         else:
             p_r.set((0,0,-1,-1))
 
-        ###fine pupil ellipse detection
+        # fine pupil ellipse detection
         result = pupil_detector.detect(img,roi=r,p_roi=p_r,visualize=bar.display.value == 2)
 
-        ### Work with detected ellipses
+        # Work with detected ellipses
         if result:
             pupil.ellipse = result[0]
             pupil.image_coords = pupil.ellipse['center']
@@ -284,15 +284,15 @@ def eye(g_pool):
             pupil.norm_coords = normalize(pupil.image_coords, (img.shape[1], img.shape[0]),flip_y=True )
             # from pupil to gaze
             pupil.gaze_coords = map_pupil(pupil.norm_coords)
-            # puplish to globals
+            # publish to globals
             g_pool.gaze_x.value, g_pool.gaze_y.value = pupil.gaze_coords
         else:
             pupil.ellipse = None
             g_pool.gaze_x.value, g_pool.gaze_y.value = 0.,0.
-            pupil.gaze_coords = None #whithout this line the last know pupil position is recorded if none is found
+            pupil.gaze_coords = None # without this line the last known pupil position is recorded if none is found
 
 
-        ###CALIBRATION###
+        ### CALIBRATION ###
         # Initialize Calibration (setup variables and lists)
         if g_pool.calibrate.value and not l_pool.calib_running:
             l_pool.calib_running = True
@@ -313,7 +313,7 @@ def eye(g_pool):
                 np.save('cal_pt_cloud.npy',pupil.pt_cloud)
 
 
-        ###RECORDING###
+        ### RECORDING ###
         # Setup variables and lists for recording
         if g_pool.pos_record.value and not l_pool.record_running:
             l_pool.record_path = g_pool.eye_rx.recv()
@@ -332,7 +332,7 @@ def eye(g_pool):
             if l_pool.writer is not None:
                 l_pool.writer.write(img)
 
-        # Done Recording: Save values and flip switch to off for recording
+        # Done Recording: Save values and flip switch to OFF for recording
         if not g_pool.pos_record.value and l_pool.record_running:
             positions_path = path.join(l_pool.record_path, "gaze_positions.npy")
             cal_pt_cloud_path = path.join(l_pool.record_path, "cal_pt_cloud.npy")
@@ -345,7 +345,7 @@ def eye(g_pool):
             l_pool.record_running = False
 
 
-        ###direct visualzations on the img data
+        # direct visualizations on the img data
         if bar.display.value == 1:
             # and a solid (white) frame around the user defined ROI
             gray_img[:,0] = 255
@@ -354,8 +354,8 @@ def eye(g_pool):
             gray_img[-1,:]= 255
             img[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
 
-            pupil_img =img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] #create an RGB view onto the gray pupil ROI
-            #draw a blue dotted frame around the automatic pupil ROI in overlay...
+            pupil_img =img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] # create an RGB view onto the gray pupil ROI
+            # draw a blue dotted frame around the automatic pupil ROI in overlay...
             pupil_img[::2,0] = 255,0,0
             pupil_img[::2,-1]= 255,0,0
             pupil_img[0,::2] = 255,0,0
@@ -366,7 +366,7 @@ def eye(g_pool):
         elif bar.display.value == 3:
             img = img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX]
 
-        ### GL-drawing
+        # GL-drawing
         clear_gl_screen()
         draw_gl_texture(img)
 
@@ -380,9 +380,9 @@ def eye(g_pool):
         atb.draw()
         glfwSwapBuffers()
 
-    ###end while running
+    # END while running
 
-    ###save session persistent settings
+    # save session persistent settings
     save('roi',r.get())
     save('bar.display',bar.display.value)
     save('bar.draw_pupil',bar.draw_pupil.value)

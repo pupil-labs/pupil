@@ -14,12 +14,12 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35, verbose=Fa
     we do a simple two pass fitting to a pari of bi-variate polynomials
     return the function to map vector
     """
-    # fit once unsing all avaialbe data
+    # fit once using all avaiable data
     model_n = 7
     cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
     map_fn = make_map_function(cx,cy,model_n)
     err_dist,err_mean,err_rms = fit_error_screen(err_x,err_y,screen_size)
-    #fit again disregarding extreme outliers
+    # fit again disregarding extreme outliers
     cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)
     map_fn = make_map_function(cx,cy,model_n)
     new_err_dist,new_err_mean,new_err_rms = fit_error_screen(new_err_x,new_err_y,screen_size)
@@ -46,7 +46,7 @@ def fit_poly_surface(cal_pt_cloud,n=7):
     pseudINV = np.dot(V, np.dot(np.diag(1/w), Ut))
     cx = np.dot(pseudINV, M[:,n])
     cy = np.dot(pseudINV, M[:,n+1])
-    #compute model error in world screen units if screen_res specified
+    # compute model error in world screen units if screen_res specified
     err_x=(np.dot(M[:,:n],cx)-M[:,n])
     err_y=(np.dot(M[:,:n],cy)-M[:,n+1])
     return cx,cy,err_x,err_y
@@ -130,12 +130,12 @@ if __name__ == '__main__':
     from mpl_toolkits.mplot3d import Axes3D
 
     cal_pt_cloud = np.load('cal_pt_cloud.npy')
-    # #plot input data
+    # plot input data
     # Z = cal_pt_cloud
     # ax.scatter(Z[:,0],Z[:,1],Z[:,2], c= "r")
     # ax.scatter(Z[:,0],Z[:,1],Z[:,3], c= "b")
 
-    ##fit once
+    # fit once
     model_n = 7
     cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
     map_fn = make_map_function(cx,cy,model_n)
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     print err_rms,"in pixel"
     threshold =65 # err_rms*2
 
-    #fit again disregarding krass outlines
+    # fit again disregarding crass outlines
     cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)
     map_fn = make_map_function(cx,cy,model_n)
     new_err_dist,new_err_mean,new_err_rms = fit_error_screen(new_err_x,new_err_y,(1280,720))
@@ -153,14 +153,14 @@ if __name__ == '__main__':
         %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
         100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0])
 
-    ###plot residuals
+    # plot residuals
     fig_error = plt.figure()
     plt.scatter(err_x,err_y,c="y")
     plt.scatter(new_err_x,new_err_y)
     plt.title("fitting residuals full data set (y) and better subset (b)")
 
 
-    ###plot projection of eye and world vs observed data
+    # plot projection of eye and world vs observed data
     X,Y,ZX,ZY = cal_pt_cloud.transpose().copy()
     X,Y = map_fn((X,Y))
     X *= 1280/2.
@@ -172,7 +172,7 @@ if __name__ == '__main__':
     plt.scatter(ZX,ZY,c='y')
     plt.title("world space projection in pixes, mapped and observed (y)")
 
-    ###plot the fitting functions 3D
+    # plot the fitting functions 3D plot
     fig = plt.figure()
     ax = fig.gca(projection='3d')
     outliers =cal_pt_cloud[err_dist>threshold]

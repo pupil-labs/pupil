@@ -28,7 +28,7 @@ def adjust_gl_view(w,h):
         glOrtho(-nRange, nRange, -nRange*h/w, nRange*h/w, -nRange, nRange)
     else:
         glOrtho(-nRange*w/h, nRange*w/h, -nRange, nRange, -nRange, nRange)
-    #switch back to Modelview
+    # switch back to Modelview
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
@@ -48,7 +48,7 @@ def draw_gl_polyline_norm((positions),(r,g,b,a),type='Loop'):
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
-    gluOrtho2D(-1, 1, -1, 1) #origin at the center positive up, positve right
+    gluOrtho2D(-1, 1, -1, 1) # origin at the center positive up, positve right
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()
@@ -71,7 +71,7 @@ def draw_gl_point_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
-    gluOrtho2D(-1, 1, -1, 1) #origin at the center positive up, positve right
+    gluOrtho2D(-1, 1, -1, 1) # origin at the center positive up, positve right
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()
@@ -87,7 +87,7 @@ def draw_gl_point_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
 
 def draw_gl_texture(image):
     """
-    We draw the image as a texture on a quad that is perfeclty set into our window.
+    We draw the image as a texture on a quad that is perfectly set into our window.
     """
 
     height, width, channels = image.shape
@@ -110,11 +110,11 @@ def draw_gl_texture(image):
     glEnable(GL_TEXTURE_2D)
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) # interpolation here
 
-    # # Set Projection Matrix
+    # Set Projection Matrix
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluOrtho2D(0, width, height, 0) #origin in the top left corner just like the img np-array
-    # # Switch back to Model View Matrix
+    gluOrtho2D(0, width, height, 0) # origin in the top left corner just like the img np-array
+    # Switch back to Model View Matrix
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
@@ -127,7 +127,7 @@ def draw_gl_texture(image):
     # indices = [0,1,2,3]
     # glDrawElements(GL_QUADS,1,GL_UNSIGNED_SHORT,indices)
     glColor4f(1.0,1.0,1.0,1.0)
-    # # Draw textured Quad.
+    # Draw textured Quad.
     glBegin(GL_QUADS)
     glTexCoord2f(0.0, 0.0)
     glVertex2f(0.0, 0.0)

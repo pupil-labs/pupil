@@ -17,11 +17,11 @@ class Temp(object):
 
 class Roi(object):
     """this is a simple 2D Region of Interest class
-    it is applied on numpy arrays for convinient slicing
+    it is applied on numpy arrays for convenient slicing
     like this:
 
     roi_array_slice = full_array[r.lY:r.uY,r.lX:r.uX]
-    #do something with roi_array_slice
+    # do something with roi_array_slice
     full_array[r.lY:r.uY,r.lX:r.uX] = roi_array_slice
 
     this creates a view, no data copying done
@@ -43,7 +43,7 @@ class Roi(object):
     def setEnd(self,(x,y)):
             x,y = int(x),int(y)
             x,y = max(0,x),max(0,y)
-            #make sure the ROI actually contains enough pixels
+            # make sure the ROI actually contains enough pixels
             if abs(self.nX - x) > 25 and abs(self.nY - y)>25:
                 self.lX = min(x,self.nX)
                 self.lY = min(y,self.nY)
@@ -249,7 +249,7 @@ def convexity_defect(contour, curvature):
 	return kinks
 
 def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=80,target_ratio=1.0,target_size=20.,size_tolerance=20.):
-	""" fit_ellipse: old, pleae look at pupil_detectors.py
+	""" fit_ellipse: old, please look at pupil_detectors.py
 	"""
 	c_img = edges.copy()
 	contours, hierarchy = cv2.findContours(c_img,

@@ -11,7 +11,7 @@
 def toggle_capture_devices():
 	"""
 	toggle though all attached camareas to find out
-	assigned ids
+	ids assigned to cameras by your machine - as integers
 	"""
 	import cv2
 

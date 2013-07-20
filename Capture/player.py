@@ -21,21 +21,21 @@ from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen
 
 def make_grid(dim=(11,4)):
     """
-    this function generates the structure for an asymetrical circle grid
-    centerd around 0 width=1, height scaled accordinly
+    this function generates the structure for an assymetrical circle grid
+    centerd around 0 width=1, height scaled accordingly
     """
     x,y = range(dim[0]),range(dim[1])
     p = np.array([[[s,i] for s in x] for i in y], dtype=np.float32)
     p[:,1::2,1] += 0.5
     p = np.reshape(p, (-1,2), 'F')
 
-    ###scale height = 1
+    # scale height = 1
     x_scale =  1./(np.amax(p[:,0])-np.amin(p[:,0]))
     y_scale =  1./(np.amax(p[:,1])-np.amin(p[:,1]))
 
     p *=x_scale,x_scale/.5
 
-    ###center x,y around (0,0)
+    # center x,y around (0,0)
     x_offset = (np.amax(p[:,0])-np.amin(p[:,0]))/2.
     y_offset = (np.amax(p[:,1])-np.amin(p[:,1]))/2.
     p -= x_offset,y_offset
@@ -81,7 +81,7 @@ def player(g_pool,size):
         print "Player Process closing from window"
 
 
-    # initialize glfw
+    # Initialize glfw
     glfwInit()
     glfwOpenWindow(size[0], size[1], 0, 0, 0, 8, 0, 0, GLFW_WINDOW)
     glfwSetWindowTitle("Player")
@@ -89,14 +89,14 @@ def player(g_pool,size):
     glfwDisable(GLFW_AUTO_POLL_EVENTS)
 
 
-    #Callbacks
+    # Callbacks
     glfwSetWindowSizeCallback(on_resize)
     glfwSetWindowCloseCallback(on_close)
     glfwSetKeyCallback(on_key)
     glfwSetCharCallback(on_char)
 
 
-    #gl state settings
+    # gl state settings
     gl.glEnable( gl.GL_BLEND )
     gl.glEnable(gl.GL_POINT_SMOOTH)
     gl.glClearColor(1.,1.,1.,0.)
@@ -120,7 +120,7 @@ def player(g_pool,size):
                     gl.glVertex3f(p[0],p[1],0.0)
                 gl.glEnd()
 
-                ###display the animated target dot
+                # display the animated target dot
                 gl.glPointSize((40)*(1.01-(step+1)/80.0))
                 gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ZERO)
                 if g_pool.ref_x.value or g_pool.ref_y.value: ###if pattern detected
@@ -143,7 +143,7 @@ def player(g_pool,size):
                             player.current_video = 0
                         g_pool.play.value = False
                 else:
-                    print 'PLAYER: Warning: No Videos available to play. Please put your vidoes into a folder called "src_video" in Capture.'
+                    print 'PLAYER: Warning: No Videos available to play. Please put your vidoes into a folder called "src_video" in the Capture folder.'
                     g_pool.play.value = False
             glfwSwapBuffers()
 
