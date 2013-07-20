@@ -15,14 +15,59 @@ class Temp(object):
 	def __init__(self):
 		pass
 
+class Roi(object):
+    """this is a simple 2D Region of Interest class
+    it is applied on numpy arrays for convenient slicing
+    like this:
+
+    roi_array_slice = full_array[r.lY:r.uY,r.lX:r.uX]
+    # do something with roi_array_slice
+    full_array[r.lY:r.uY,r.lX:r.uX] = roi_array_slice
+
+    this creates a view, no data copying done
+    """
+    def __init__(self, array_shape):
+        self.array_shape = array_shape
+        self.lX = 0
+        self.lY = 0
+        self.uX = array_shape[1]-0
+        self.uY = array_shape[0]-0
+        self.nX = 0
+        self.nY = 0
+
+    def setStart(self,(x,y)):
+        x,y = int(x),int(y)
+        x,y = max(0,x),max(0,y)
+        self.nX,self.nY = x,y
+
+    def setEnd(self,(x,y)):
+            x,y = int(x),int(y)
+            x,y = max(0,x),max(0,y)
+            # make sure the ROI actually contains enough pixels
+            if abs(self.nX - x) > 25 and abs(self.nY - y)>25:
+                self.lX = min(x,self.nX)
+                self.lY = min(y,self.nY)
+                self.uX = max(x,self.nX)
+                self.uY = max(y,self.nY)
+
+    def add_vector(self,(x,y)):
+        """
+        adds the roi offset to a len2 vector
+        """
+        return (self.lX+x,self.lY+y)
+
+    def set(self,vals):
+        if vals is not None and len(vals) is 4:
+            self.lX,self.lY,self.uX,self.uY = vals
+
+    def get(self):
+        return self.lX,self.lY,self.uX,self.uY
+
 def grayscale(image):
 	return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
 
 def bin_thresholding(image, image_lower=0, image_upper=256):
-	"""
-	needs docstring
-	"""
 	binary_img = cv2.inRange(image, np.asarray(image_lower),
 				np.asarray(image_upper))
 
@@ -204,7 +249,7 @@ def convexity_defect(contour, curvature):
 	return kinks
 
 def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=80,target_ratio=1.0,target_size=20.,size_tolerance=20.):
-	""" fit_ellipse:
+	""" fit_ellipse: old, please look at pupil_detectors.py
 	"""
 	c_img = edges.copy()
 	contours, hierarchy = cv2.findContours(c_img,
@@ -322,6 +367,7 @@ def convexity(contour,img=None):
 	if img is not None:
 		hull = cv2.convexHull(contour, returnPoints=1)
 		cv2.drawContours(img, hull, -1, (255,0,0))
+
 	hull = cv2.convexHull(contour, returnPoints=0)
 	if len(hull)>3:
 		res = cv2.convexityDefects(contour, hull) # return: start_index, end_index, farthest_pt_index, fixpt_depth)
@@ -402,28 +448,4 @@ if __name__ == '__main__':
 	#	 |
 	#  *-*
 	print "result:", GetAnglesPolyline(np.array([[[0, 0]],[[0, 1]],[[1, 1]],[[2, 1]],[[2, 2]],[[1, 3]],[[1, 4]],[[2,4]]], dtype=np.int32))
-
-
-
-def xmos_grab(q,id,size):
-	size= size[::-1] # swap sizes as numpy is row first
-	drop = 50
-	cam = cam_interface()
-	buffer = np.zeros(size, dtype=np.uint8) #this should always be a multiple of 4
-	cam.aptina_setWindowSize(cam.id0,(size[1],size[0])) #swap sizes back
-	cam.aptina_setWindowPosition(cam.id0,(240,100))
-	cam.aptina_LED_control(cam.id0,Disable = 0,Invert =0)
-	cam.aptina_AEC_AGC(cam.id0,1,1) # Auto Exposure Control + Auto Gain Control
-	cam.aptina_HDR(cam.id0,1)
-	q.put(buffer.shape)
-	while 1:
-		if cam.get_frame(id,buffer): #returns True on sucess
-			try:
-				q.put(buffer,False)
-				drop = 50
-			except:
-				drop -= 1
-				if not drop:
-					cam.release()
-					return
 

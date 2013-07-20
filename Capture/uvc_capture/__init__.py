@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -29,7 +29,7 @@ del platform
 
 ###OS specific imports and defs
 if os_name == "Linux":
-    import v4l2_ctl_oop as uvc
+    import v4l2_ctl as uvc
 elif os_name == "Darwin":
     import uvcc as uvc
 else:

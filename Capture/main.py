@@ -13,7 +13,7 @@ import cv2
 from time import sleep
 from multiprocessing import Process, Pipe, Event
 from multiprocessing.sharedctypes import RawValue, Value
-# RawValue is shared memory without lock, handle with care, this is usefull for ATB it needs c_types
+# RawValue is shared memory without lock.  Please handle with care.  This is useful for ATB as it needs c_types
 from eye import eye, eye_profiled
 from world import world, world_profiled
 from player import player
@@ -23,27 +23,29 @@ from ctypes import c_bool, c_int
 
 def main():
 
-    #to assign by name: string(s) in list
+    # To assign by name: put string(s) in list
     eye_src = ["Microsoft", "6000"]
-    world_src = ["Logitech Camera","(046d:081d)","C525","C615","C920"] # "(046d:081d)" is the (automated replacement) name of C510
-
-    #uncomment to assign cameras directly: use ints
+    world_src = ["Logitech Camera", "C525","C615","C920","C930e"]
+    # Uncomment below two lines to assign cameras directly, using integers as demonstrated below
     # eye_src = 0
     # world_src = 1
 
-    #to use a video: string (not inside a list)
-    # eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov"
+    # Uncomment below two lines line to use a pre-recorded video without world camera. Use a string to specify the path to your video file as demonstrated below
+    # eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
     # world_src = 0
 
-    #video size
+    # Eye Camera video size in pixels (width,height) 
     eye_size = (640,360)
+    # List of available sizes for HD-600 camera, copy paste above to change the size
     """
         HD-6000
         v4l2-ctl -d /dev/videoN --list-formats-ext
         640x480 1280x720 960x544 800x448 640x360 800x600
         416x240 352x288 176x144 320x240 160x120
     """
+    # World Camera video size in pixels (width,height)
     world_size = (1280,720)
+    # List of available sizes for c-525 camera, copy paste above to change the size
     """
         c-525
         v4l2-ctl -d /dev/videoN --list-formats-ext
@@ -55,28 +57,29 @@ def main():
     """
 
 
-    # use the player: a seperate window for video playback and 9 point calibration animation
+    # Use the player - a seperate window for video playback and 9 point calibration animation
     use_player = 1
-    player_size = (640,480) #startup size: this can be whatever you like
+    player_size = (640,480) #startup size for the player window: this can be whatever you like
 
 
     # world_uvc_camera, eye_uvc_camera = None,None
-    audio = False
-    # create shared globals
+    audio = False # depreciated
+    # Create shared globals
     g_pool = Temp()
     g_pool.gaze_x = Value('d', 0.0)
     g_pool.gaze_y = Value('d', 0.0)
     g_pool.ref_x = Value('d', 0.0)
     g_pool.ref_y = Value('d', 0.0)
     g_pool.frame_count_record = Value('i', 0)
-    g_pool.calibrate = RawValue(c_bool, 0)
-    g_pool.cal9 = RawValue(c_bool, 0)
-    g_pool.cal9_stage = RawValue('i', 0)
+    g_pool.calibrate = Value(c_bool, 0)
+    g_pool.cal9 = Value(c_bool, 0)
+    g_pool.cal9_stage = Value('i', 0)
     g_pool.cal9_step = Value('i', 0)
-    g_pool.cal9_circle_id = RawValue('i' ,0)
+    g_pool.cal9_circle_id = Value('i' ,0)
     g_pool.pos_record = Value(c_bool, 0)
     g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
     g_pool.player_refresh = Event()
+    g_pool.player_input = Value('i',0)
     g_pool.play = RawValue(c_bool,0)
     g_pool.quit = RawValue(c_bool,0)
     g_pool.eye_src = eye_src
@@ -85,23 +88,23 @@ def main():
     g_pool.world_size = world_size
     # end shared globals
 
-    # set up sub processes
+    # set up subprocesses
     p_eye = Process(target=eye, args=(g_pool,))
     if use_player: p_player = Process(target=player, args=(g_pool,player_size))
 
-    # spawn sub processes
+    # spawn subprocesses
     if use_player: p_player.start()
     p_eye.start()
 
     # on Linux, we need to give the camera driver some time before you request another camera
     sleep(1)
 
-    # on Mac, when using some cameras (like our current logitech worldcamera)
-    # you can't run world camera grabber in its own process
+    # on MacOS, when using some cameras (like our current logitech worldcamera)
+    # you can't run the world camera grabber in its own process
     # it must reside in the main process when you run on MacOS.
     world_profiled(g_pool)
 
-    # exit / clean-up
+    # Exit / clean-up
     p_eye.join()
     if use_player: p_player.join()
     print "main exit"

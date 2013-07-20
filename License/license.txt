@@ -13,7 +13,7 @@ The software is open and the hardware is very accessible and modifiable because 
 ------------------------------------------------------------------------------------------
 Software
 
-All source code written by us is open source according to CC BY-NC-SA license < http://creativecommons.org/licenses/by-nc-sa/3.0/legalcode >. We want you to change and improve the code. Just make sure to credit us, and we hope that you will share your work with the Pupil community.
+All source code written by us is open source according to CC BY-NC-SA license < http://creativecommons.org/licenses/by-nc-sa/3.0/legalcode >. We want you to change and improve the code. All software is distributed in the hope that it will be useful, but without any warranty. Just make sure to credit us, and we hope that you will share your work with the Pupil community.
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Documentation
@@ -28,6 +28,6 @@ You can use Pupil in your research, academic work, art projects and personal wor
 ------------------------------------------------------------------------------------------
 Using PUPIL commercially
 
-If you plan to use Pupil in a comercial context please contact us so we can work out an appropriate licence with you.  Contact pupil.orders [at] gmail [dot] com 
+If you plan to use Pupil in a comercial context please contact us so we can work out an appropriate licence with you.  Contact sales [at] pupil-labs [dot] com 
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------

@@ -15,7 +15,13 @@ from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline_norm
 class Ref_Detector(object):
     """
     base class of reference detectors
-    build a detector based on this class. It needs to have interfaces
+    build a detector based on this class.
+
+    Instantiating a class based on Ref_Detector
+    will trigger the eye-proces to collect callibration data.
+    destroying it will perform calibration fitting.
+
+    Your derived class needs to have interfaces
     defined by these methods:
     you NEED to do at least what is done in these fn-prototypes
 
@@ -31,21 +37,21 @@ class Ref_Detector(object):
     def detect(self,img):
         """
         get called once every frame.
-        reference positon need to be pupiled to shard_x and y
-        if no referece was found, pupilish 0,0
+        reference positon need to be published to shared_x and shared_y
+        if no referece was found, publish 0,0
         """
         self.shared_x.value = 0
         self.shared_y.value = 0
 
     def advance(self):
         """
-        gets called when the user hit spacebar in the world window
+        gets called when the user hits spacebar in the world window
         """
         pass
 
     def new_ref(self,pos):
         """
-        gets called when the user click on the wolrd window screen
+        gets called when the user clicks on the wolrd window screen
         """
         pass
 
@@ -61,7 +67,7 @@ class Ref_Detector(object):
         """
         gets called after detect()
         return true if the calibration routine has finished.
-        the caller will then reduc the ref-count of this instance to 0 triggering __del__
+        the caller will then reduce the ref-count of this instance to 0 triggering __del__
 
         if your calibration routine does not end by itself, the use will induce the end using the gui
         in which case the ref-count will get 0 as well.
@@ -74,7 +80,8 @@ class Ref_Detector(object):
 class no_Detector(Ref_Detector):
     """
     docstring for no_Detector
-    this dummy class is instaciated when no calibration is running, it does nothing
+    this dummy class is instantiated when no calibration is running, it does nothing
+    a detector based on this will not trigger the world process to collect data for calibration.
     """
     def __init__(self, global_calibrate,shared_x,shared_y):
         global_calibrate.value = False
@@ -229,4 +236,65 @@ class Natural_Features_Detector(Ref_Detector):
         self.first_img = None
         self.point = np.array([pos,],dtype=np.float32)
         self.count = 30
+
+
+class Camera_Intrinsics_Calibration(no_Detector):
+    """Camera_Intrinsics_Calibration
+        not being an actual calibration,
+        this method is used to calculate camera intrinsics.
+
+    """
+    def __init__(self,global_calibrate,shared_x,shared_y):
+        super(Camera_Intrinsics_Calibration, self).__init__(global_calibrate,shared_x,shared_y)
+        self.collect_new = False
+        self.obj_grid = _gen_pattern_grid((4, 11))
+        self.img_points = []
+        self.obj_points = []
+        self.count = 10
+        self.img_shape = None
+
+    def detect(self,img):
+        if self.collect_new:
+            status, grid_points = cv2.findCirclesGridDefault(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
+            if status:
+                self.img_points.append(grid_points)
+                self.obj_points.append(self.obj_grid)
+                self.collect_new = False
+                self.count -=1
+                print "%i of Patterns still to capture" %(self.count)
+                self.img_shape = img.shape
+
+    def advance(self):
+        self.collect_new = True
+
+    def is_done(self):
+        return self.count <= 0
+
+    def __del__(self):
+        if not self.count:
+            camera_matrix, dist_coefs = _calibrate_camera(np.asarray(self.img_points),
+                                                        np.asarray(self.obj_points),
+                                                        (self.img_shape[1], self.img_shape[0]))
+            np.save("camera_matrix.npy", camera_matrix)
+            np.save("dist_coefs.npy", dist_coefs)
+            print "Camera Instrinsics calculated and saved to file"
+        else:
+            print "Waring: Not enough images captured, please try again"
+
+# private helper functions
+def _calibrate_camera(img_pts, obj_pts, img_size):
+    # generate pattern size
+    camera_matrix = np.zeros((3,3))
+    dist_coef = np.zeros(4)
+    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_pts, img_pts,
+                                                    img_size, camera_matrix, dist_coef)
+    return camera_matrix, dist_coefs
+
+def _gen_pattern_grid(size=(4,11)):
+    pattern_grid = []
+    for i in xrange(size[1]):
+        for j in xrange(size[0]):
+            pattern_grid.append([(2*j)+i%2,i,0])
+    return np.asarray(pattern_grid, dtype='f4')
+
 

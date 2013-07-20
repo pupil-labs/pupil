@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -15,7 +15,7 @@ def main():
     save_video = False
 
     # change this path to point to the data folder you would like to play
-    data_folder = "/Users/mkassner/Pupil/pupil_google_code/code/Capture/data012"
+    data_folder = "/Users/mkassner/Pupil/pupil_google_code/code/Capture/data040"
 
 
     video_path = data_folder + "/world.avi"
@@ -55,7 +55,7 @@ def main():
         current_gaze = positions_by_frame[frame]
         for gaze_point in current_gaze:
             x_screen, y_screen = denormalize((gaze_point['x'], gaze_point['y']), width, height)
-            cv.circle(img, (x_screen, y_screen), 35, (255, 255, 255), 2, cv.cv.CV_AA)
+            cv.circle(img, (x_screen, y_screen), 30, (255, 255, 255), 2, cv.cv.CV_AA)
 
         cv.imshow("world", img)
 
