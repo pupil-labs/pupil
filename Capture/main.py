@@ -25,14 +25,13 @@ def main():
 
     #to assign by name: string(s) in list
     eye_src = ["Microsoft", "6000"]
-    world_src = ["Logitech Camera","(046d:081d)","C525","C615","C920","C930e"] # "(046d:081d)" is the (automated replacement) name of C510
-
+    world_src = ["Logitech Camera", "C525","C615","C920","C930e"]
     #uncomment to assign cameras directly: use ints
     # eye_src = 0
     # world_src = 1
 
     #to use a video: string (not inside a list)
-    # eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/green_eye_VISandIR_2.mov"
+    eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
     # world_src = 0
 
     #video size

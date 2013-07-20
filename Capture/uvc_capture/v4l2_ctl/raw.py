@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -140,7 +140,7 @@ def extract_controls(device_number):
         words = line.split(" ")
         words = [word for word in words if len(word)>0] #get rid of remaining spaces
         control = dict()
-        control_name = words.pop(0)
+        control_name = words.pop(0) ###BUG this can fail if the line is empty...
         control["type"] =  words.pop(0)
         colon = words.pop(0) #throw away..
         while words:
@@ -160,7 +160,7 @@ def extract_controls(device_number):
                     line = menu_line # end of menue continue with the outer loop
                     break
         else:
-            line = lines.pop(0) #take next line
+            line = lines.pop(0) #take next line  BUG: dont we ignore the last line this way?
 
         #once done we add the device id and control name and add control to the controls dict
         control["type"] = control["type"][1:-1] #strip of the brackets

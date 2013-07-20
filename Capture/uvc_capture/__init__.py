@@ -29,7 +29,7 @@ del platform
 
 ###OS specific imports and defs
 if os_name == "Linux":
-    import v4l2_ctl_oop as uvc
+    import v4l2_ctl as uvc
 elif os_name == "Darwin":
     import uvcc as uvc
 else:

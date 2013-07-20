@@ -279,7 +279,7 @@ def eye(g_pool):
         ### Work with detected ellipses
         if result:
             pupil.ellipse = result[0]
-            pupil.image_coords = r.add_vector(p_r.add_vector(pupil.ellipse['center']))
+            pupil.image_coords = pupil.ellipse['center']
             # normalize
             pupil.norm_coords = normalize(pupil.image_coords, (img.shape[1], img.shape[0]),flip_y=True )
             # from pupil to gaze
@@ -365,6 +365,7 @@ def eye(g_pool):
 
         elif bar.display.value == 3:
             img = img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX]
+
         ### GL-drawing
         clear_gl_screen()
         draw_gl_texture(img)

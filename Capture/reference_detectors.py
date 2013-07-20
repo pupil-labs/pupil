@@ -37,21 +37,21 @@ class Ref_Detector(object):
     def detect(self,img):
         """
         get called once every frame.
-        reference positon need to be pupiled to shard_x and y
-        if no referece was found, pupilish 0,0
+        reference positon need to be published to shared_x and shared_y
+        if no referece was found, publish 0,0
         """
         self.shared_x.value = 0
         self.shared_y.value = 0
 
     def advance(self):
         """
-        gets called when the user hit spacebar in the world window
+        gets called when the user hits spacebar in the world window
         """
         pass
 
     def new_ref(self,pos):
         """
-        gets called when the user click on the wolrd window screen
+        gets called when the user clicks on the wolrd window screen
         """
         pass
 
@@ -67,7 +67,7 @@ class Ref_Detector(object):
         """
         gets called after detect()
         return true if the calibration routine has finished.
-        the caller will then reduc the ref-count of this instance to 0 triggering __del__
+        the caller will then reduce the ref-count of this instance to 0 triggering __del__
 
         if your calibration routine does not end by itself, the use will induce the end using the gui
         in which case the ref-count will get 0 as well.

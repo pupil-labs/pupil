@@ -28,7 +28,7 @@ class Pupil_Detector(object):
             ### otherwise you shall not modify img data inplace!
             pass
 
-        pupil_ellipse = {'center': (None,None),
+        candidate_pupil_ellipse = {'center': (None,None),
                         'axes': (None, None),
                         'angle': None,
                         'area': None,
@@ -37,10 +37,11 @@ class Pupil_Detector(object):
                         'minor': None,
                         'goodness': 0} #some estimation on who sure you are about the detected ellipse and its fit. Smaller is better
 
-        return [pupil_ellipse,] #return list of canditade pupil ellipses, sorted by certainty, if none is found return empty list
+        ###if you use region of interest p_r and r make sure to return pupil coordinates relative to the full image
+        candidate_pupil_ellipse['center'] = roi.add_vector(p_roi.add_vector(candidate_pupil_ellipse['center']))
 
-    def display(self,img,roi,p_roi):
-        return img
+        return [candidate_pupil_ellipse,] #return list of canditade pupil ellipses, sorted by certainty, if none is found return empty list
+
 
     def create_atb_bar(self,pos):
         self.bar = atb.Bar(name = "Pupil_Detector", label="Controls",
@@ -141,7 +142,7 @@ class Canny_Detector(Pupil_Detector):
         for size_dif,e,c in ellipses:
             pupil_ellipse = {}
             pupil_ellipse['contour'] = c
-            a,b = e[1][0]/2.,e[1][1]/2.
+            a,b = e[1][0]/2.,e[1][1]/2. #majar minor radii of canditate ellipse
             # pupil_ellipse['circumference'] = np.pi*abs(3*(a+b)-np.sqrt(10*a*b+3*(a**2+b**2)))
             pupil_ellipse['contour_area'] = cv2.contourArea(c)
             pupil_ellipse['ellipse_area'] = np.pi*a*b
@@ -149,7 +150,7 @@ class Canny_Detector(Pupil_Detector):
                 pupil_ellipse['goodness'] = 0 #perfect match we'll take this one
             else:
                 pupil_ellipse['goodness'] = size_dif
-            pupil_ellipse['center'] = e[0]
+            pupil_ellipse['center'] = roi.add_vector(p_roi.add_vector(e[0])) ##compensate for roi offsets
             pupil_ellipse['angle'] = e[-1]
             pupil_ellipse['axes'] = e[1]
             pupil_ellipse['major'] = max(e[1])
@@ -167,7 +168,7 @@ class Canny_Detector(Pupil_Detector):
         if result:
             self.goodness.value = result[0]['goodness']
 
-            if result[0]['goodness'] ==0:
+            if result[0]['goodness'] ==0: ###perfect match
                 self.target_size.value = result[0]['major']
             else:
                 self.target_size.value  = self.target_size.value +  .5 * (result[0]['major']-self.target_size.value)
