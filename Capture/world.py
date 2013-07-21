@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -147,6 +147,12 @@ def world(g_pool):
             ref.detector = Black_Dot_Detector(global_calibrate=g_pool.calibrate,
                                             shared_x=g_pool.ref_x,
                                             shared_y=g_pool.ref_y)
+        elif c_type == cal_type["Black Ring"]:
+            print 'WORLD: Starting Black Ring Calibration.'
+            ref.detector = Black_Ring_Detector(global_calibrate=g_pool.calibrate,
+                                            shared_x=g_pool.ref_x,
+                                            shared_y=g_pool.ref_y)
+
         elif c_type == cal_type["Camera Intrinsics Calibration"]:
             print 'WORLD: Starting Camera Intrinsics Calibration'
             ref.detector = Camera_Intrinsics_Calibration(global_calibrate=g_pool.calibrate,
@@ -175,7 +181,7 @@ def world(g_pool):
     bar.play = g_pool.play
     bar.window_size = c_int(0)
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
-    cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Natural Features":3,"Black Dot":4,"Camera Intrinsics Calibration":5}#"Manual 9-Point":2
+    cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Natural Features":3,"Black Dot":4,"Black Ring":5,"Camera Intrinsics Calibration":6}#"Manual 9-Point":2
     calibrate_type_enum = atb.enum("Calibration Method",cal_type)
     bar.rec_name = create_string_buffer(512)
 

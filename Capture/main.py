@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -22,6 +22,7 @@ from methods import Temp
 
 from ctypes import c_bool, c_int
 
+
 def main():
 
     # To assign by name: put string(s) in list
@@ -35,9 +36,9 @@ def main():
     # eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
     # world_src = 0
 
-    # Eye Camera video size in pixels (width,height) 
+    # Eye Camera video size in pixels (width,height)
     eye_size = (640,360)
-    # List of available sizes for HD-600 camera, copy paste above to change the size
+    # List of available sizes for HD-6000 camera, copy paste above to change the size
     """
         HD-6000
         v4l2-ctl -d /dev/videoN --list-formats-ext

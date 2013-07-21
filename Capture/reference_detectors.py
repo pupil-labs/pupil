@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -11,7 +11,9 @@
 import cv2
 import numpy as np
 from methods import normalize,denormalize
-from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline_norm
+from c_methods import ring_filter,c_float
+
+from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 
 class Ref_Detector(object):
     """
@@ -109,14 +111,14 @@ class Black_Dot_Detector(Ref_Detector):
         params.minThreshold = 90.
         self.detector = cv2.SimpleBlobDetector(params)
         self.counter = 0
-        self.canditate_points = None
+        self.candidate_points = None
 
     def detect(self,img):
         s_img = cv2.cvtColor(img[::2,::2],cv2.COLOR_BGR2GRAY)
-        self.canditate_points = self.detector.detect(s_img)
-        if self.counter and len(self.canditate_points)>0:
+        self.candidate_points = self.detector.detect(s_img)
+        if self.counter and len(self.candidate_points)>0:
             self.counter -= 1
-            kp = self.canditate_points[0]
+            kp = self.candidate_points[0]
             pt = (kp.pt[0]*2,kp.pt[1]*2)
             self.pos = normalize(pt,(img.shape[1],img.shape[0]),flip_y=True)
             print self.pos
@@ -125,7 +127,7 @@ class Black_Dot_Detector(Ref_Detector):
         self.publish()
 
     def display(self,img):
-        for kp in self.canditate_points:
+        for kp in self.candidate_points:
             draw_gl_point((kp.pt[0]*2,kp.pt[1]*2),size=int(kp.size)*4,color=(0.,1.,1.,.5))
 
 
@@ -134,6 +136,66 @@ class Black_Dot_Detector(Ref_Detector):
 
     def advance(self):
         self.counter = 30*1
+
+class Black_Ring_Detector(Ref_Detector):
+    """docstring for black_ring_detector"""
+    def __init__(self, global_calibrate,shared_x,shared_y):
+        super(Black_Ring_Detector, self).__init__(global_calibrate,shared_x,shared_y)
+        params = cv2.SimpleBlobDetector_Params()
+        self.ring_filter = ring_filter
+        self.r = 1
+        self.w = 1
+        # params.minDistBetweenBlobs = 500.0
+        # params.minArea = 100.0
+        # params.maxArea = 2000.
+        # params.filterByColor = 1
+        # params.blobColor = 0
+        # params.minThreshold = 90.
+        # self.detector = cv2.SimpleBlobDetector(params)
+        self.counter = 0
+        # self.candidate_points = None
+
+    def detect(self,img):
+        s_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        # self.candidate_points = self.detector.detect(s_img)
+
+        # coarse ring detection
+        integral = cv2.integral(s_img)
+        integral =  np.array(integral,dtype=c_float)
+        row,col,w,r = self.ring_filter(integral)
+        response_center = col+w/2.,row+w/2.
+        response_threshold = 30
+        # print x,y, w,r
+        # print r
+        self.x = int(col)
+        self.y = int(row)
+        self.r = int(r)
+        self.w = int(w)
+        if (self.counter or 1) and r>=response_threshold:
+            self.counter -= 1
+            self.pos = normalize(response_center,(img.shape[1],img.shape[0]),flip_y=True)
+            # print self.pos
+        else:
+            self.pos = 0,0
+        self.publish()
+
+    def display(self,img):
+        draw_gl_polyline(  [[self.x,self.y],
+                            [self.x+self.w,self.y],
+                            [self.x+self.w,self.y+self.w],
+                            [self.x,self.y+self.w]],
+                            (0.,1.,0.,.8),
+                            type='Loop')
+        draw_gl_point_norm(self.pos,size=self.r,color=(1.,0.,0.,.5))
+
+
+    def publish(self):
+        self.shared_x.value, self.shared_y.value = self.pos
+
+    def advance(self):
+        self.counter = 30*1
+
+
 
 
 class Nine_Point_Detector(Ref_Detector):
