@@ -3,10 +3,11 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License.
+ Distributed under the terms of the CC BY-NC-SA License. 
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+
 import numpy as np
 
 def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35, verbose=False,return_inlier_map=False):

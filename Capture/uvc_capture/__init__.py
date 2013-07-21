@@ -3,10 +3,11 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License.
+ Distributed under the terms of the CC BY-NC-SA License. 
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+
 """
 uvc_capture is a module that build on opencv"s camera_capture
 it adds some fuctionalty like:
@@ -33,7 +34,7 @@ if os_name == "Linux":
 elif os_name == "Darwin":
     import uvcc as uvc
 else:
-    ### On OS without UVC Camera controll support we use empty classes.
+    ### On OS without UVC Camera control support we use empty classes.
     class uvc(object):
         """dummy uvc class that exposes similar methods but does nothing"""
         def __init__(self):

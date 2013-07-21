@@ -8,6 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+
 from ctypes import *
 from cf_string import CFSTR, cfstring_to_string_release
 

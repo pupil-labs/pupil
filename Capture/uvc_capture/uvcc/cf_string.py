@@ -7,6 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+
 # Python string to/from CFString conversion helper functions:
 
 from ctypes import *
