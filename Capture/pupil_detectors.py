@@ -128,7 +128,7 @@ class Canny_Detector(Pupil_Detector):
         contours, hierarchy = cv2.findContours(edges,
                                             mode=cv2.RETR_LIST,
                                             method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
-        # contours is a list containging array([[[108, 290]],[[111, 290]]], dtype=int32) shape=(number of points,1,dimension(2) )
+        # contours is a list containing array([[[108, 290]],[[111, 290]]], dtype=int32) shape=(number of points,1,dimension(2) )
 
         # the pupil target size is the one closest to the pupil_roi width or heigth (is the same)
         # self.target_size.value = p_roi.uX-p_roi.lX
