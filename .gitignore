@@ -6,3 +6,5 @@ Thumbs.db
 *.pstats
 *.mov
 data*
+.floo
+.sublime-project
