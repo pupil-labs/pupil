@@ -54,7 +54,6 @@ def world(g_pool):
                 pos = denormalize(pos,(img.shape[1],img.shape[0]) ) # Position in img pixels
                 ref.detector.new_ref(pos)
 
-
     def on_pos(x, y):
         if atb.TwMouseMotion(x,y):
             pass
@@ -67,9 +66,6 @@ def world(g_pool):
         g_pool.quit.value = True
         print "WORLD Process closing from window"
 
-    ref = Temp()
-    ref.detector = no_Detector(g_pool.calibrate,g_pool.ref_x,g_pool.ref_y)
-    # Objects as variable containers
 
     # gaze object
     gaze = Temp()
@@ -87,7 +83,7 @@ def world(g_pool):
     if cap is None:
         print "WORLD: Error could not create Capture"
         return
-    s, img = cap.read_RGB()
+    s, img = cap.read()
     if not s:
         print "WORLD: Error could not get image"
         return
@@ -114,11 +110,16 @@ def world(g_pool):
         """
         return data.value
 
+    def start_calibration(c_type,data):
+        from gc import get_referrers
+        cal_type = bar.cal_type
 
-    def start_calibration():
-        c_type = bar.calibration_type.value
+        # prepare destruction of old ref_detector.
+        if ref.detector is not None:
+            ref.detector.del_bar()
+
+        #create new ref detector
         if  c_type == cal_type["Directed 9-Point"]:
-            print 'WORLD: Starting Directed 9-Point Calibration.'
             ref.detector = Nine_Point_Detector(global_calibrate=g_pool.calibrate,
                                             shared_x=g_pool.ref_x,
                                             shared_y=g_pool.ref_y,
@@ -126,9 +127,10 @@ def world(g_pool):
                                             shared_step=g_pool.cal9_step,
                                             shared_cal9_active=g_pool.cal9,
                                             shared_circle_id=g_pool.cal9_circle_id,
-                                            auto_advance=False)
+                                            auto_advance=False,
+                                            atb_pos=bar.next_atb_pos)
+
         elif c_type == cal_type["Automated 9-Point"]:
-            print 'WORLD: Starting Automated 9-Point Calibration.'
             ref.detector = Nine_Point_Detector(global_calibrate=g_pool.calibrate,
                                             shared_x=g_pool.ref_x,
                                             shared_y=g_pool.ref_y,
@@ -136,66 +138,72 @@ def world(g_pool):
                                             shared_step=g_pool.cal9_step,
                                             shared_cal9_active=g_pool.cal9,
                                             shared_circle_id=g_pool.cal9_circle_id,
-                                            auto_advance=True)
+                                            auto_advance=True,
+                                            atb_pos=bar.next_atb_pos)
+
         elif c_type == cal_type["Natural Features"]:
-            print 'WORLD: Starting Natural Features Calibration.'
             ref.detector = Natural_Features_Detector(global_calibrate=g_pool.calibrate,
                                                     shared_x=g_pool.ref_x,
-                                                    shared_y=g_pool.ref_y)
-        elif c_type == cal_type["Black Dot"]:
-            print 'WORLD: Starting Black Dot Calibration.'
-            ref.detector = Black_Dot_Detector(global_calibrate=g_pool.calibrate,
-                                            shared_x=g_pool.ref_x,
-                                            shared_y=g_pool.ref_y)
-        elif c_type == cal_type["Black Ring"]:
-            print 'WORLD: Starting Black Ring Calibration.'
-            ref.detector = Black_Ring_Detector(global_calibrate=g_pool.calibrate,
-                                            shared_x=g_pool.ref_x,
-                                            shared_y=g_pool.ref_y)
+                                                    shared_y=g_pool.ref_y,
+                                                    atb_pos=bar.next_atb_pos)
+
+        elif c_type == cal_type["Manual White Ring"]:
+
+            ref.detector = Manual_White_Ring_Detector(global_calibrate=g_pool.calibrate,
+                                                        shared_x=g_pool.ref_x,
+                                                        shared_y=g_pool.ref_y,
+                                                        atb_pos=bar.next_atb_pos)
+
+        elif c_type == cal_type["Automated White Ring"]:
+            ref.detector = Automated_White_Ring_Detector(global_calibrate=g_pool.calibrate,
+                                                        shared_x=g_pool.ref_x,
+                                                        shared_y=g_pool.ref_y,
+                                                        atb_pos=bar.next_atb_pos)
 
         elif c_type == cal_type["Camera Intrinsics Calibration"]:
-            print 'WORLD: Starting Camera Intrinsics Calibration'
             ref.detector = Camera_Intrinsics_Calibration(global_calibrate=g_pool.calibrate,
                                             shared_x=g_pool.ref_x,
-                                            shared_y=g_pool.ref_y)
-    def advance_calibration():
-        ref.detector.advance()
+                                            shared_y=g_pool.ref_y,
+                                            atb_pos=bar.next_atb_pos)
 
-    def stop_calibration():
-        ref.detector = no_Detector(global_calibrate=g_pool.calibrate,
-                                shared_x=g_pool.ref_x,
-                                shared_y=g_pool.ref_y)
+        # save the value for atb bar
+        data.value=c_type
+
+
 
     # Initialize ant tweak bar - inherits from atb.Bar
     atb.init()
     bar = atb.Bar(name = "World", label="Controls",
             help="Scene controls", color=(50, 50, 50), alpha=100,valueswidth=150,
             text='light', position=(10, 10),refresh=.3, size=(300, 200))
+    bar.next_atb_pos = (10,220)
     bar.fps = c_float(0.0)
     bar.timestamp = time()
-    bar.calibration_type = c_int(1)
+    bar.calibration_type = c_int(0)
     bar.show_calib_result = c_bool(0)
-    bar.calibration_images = False
     bar.record_video = c_bool(0)
     bar.record_running = c_bool(0)
     bar.play = g_pool.play
     bar.window_size = c_int(0)
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
-    cal_type = {"Directed 9-Point":0,"Automated 9-Point":1,"Natural Features":3,"Black Dot":4,"Black Ring":5,"Camera Intrinsics Calibration":6}#"Manual 9-Point":2
-    calibrate_type_enum = atb.enum("Calibration Method",cal_type)
+    bar.cal_type = ["Directed 9-Point",
+                    "Automated 9-Point",
+                    "Natural Features",
+                    "Manual White Ring",
+                    "Automated White Ring",
+                    "Camera Intrinsics Calibration"]
+    bar.cal_type = dict(zip(bar.cal_type,range(len(bar.cal_type))))
+    bar.calibrate_type_enum = atb.enum("Calibration Method",bar.cal_type)
     bar.rec_name = create_string_buffer(512)
 
     # play and record can be tied together via pointers to the objects
     # bar.play = bar.record_video
     bar.add_var("FPS", bar.fps, step=1., readonly=True)
     bar.add_var("Display_Size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
-    bar.add_var("Calibration_Method",bar.calibration_type,group="Calibration", vtype=calibrate_type_enum, help="Please choose your desired calibration method.")
-    bar.add_button("Start_Calibration",start_calibration,group="Calibration", key='c', help="click to begin calibrating")
-    bar.add_button("Next_Point",advance_calibration,group="Calibration",key="SPACE", help="Hit space to calibrate on next dot")
-    bar.add_button("Stop_Calibration",stop_calibration,group="Calibration", key='d', help="click to stop collecting data and calculate calibration. Note: 9-point will stop by itself")
-    bar.add_var("show_calibration_result",bar.show_calib_result,group="Calibration", help="yellow: indecate calibration error, red:discarded outliners, outline shows the calibrated area.")
-    bar.add_var("Rec/rec_name",bar.rec_name, help="creates folder Data_Name_XXX, where xxx is an increasing number")
-    bar.add_var("Rec/Record_Video", bar.record_video, key="r", help="Start/Stop Recording")
+    bar.add_var("Calibration_Method",setter=start_calibration,getter=get_from_data,data=bar.calibration_type, vtype=bar.calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
+    bar.add_var("Show_calibration_result",bar.show_calib_result, group="Calibration", help="yellow: indicates calibration error, red:discarded outliners, outline shows the calibrated area.")
+    bar.add_var("Rec/rec_name",bar.rec_name, group="Recording", help="creates folder Data_Name_XXX, where xxx is an increasing number")
+    bar.add_var("Rec/Record_Video", bar.record_video, key="r", group="Recording", help="Start/Stop Recording")
     bar.add_separator("Sep1")
     bar.add_var("Play Video", bar.play, help="play a video in the Player window")
     bar.add_var("Exit", g_pool.quit)
@@ -240,6 +248,12 @@ def world(g_pool):
     else:
         c_bar = None
 
+
+    # Initialize default Ref Detector
+    ref = Temp()
+    ref.detector = None
+    start_calibration(bar.cal_type['Automated 9-Point'],bar.calibration_type)
+
     # Initialize glfw
     glfwInit()
     height,width = img.shape[:2]
@@ -276,9 +290,6 @@ def world(g_pool):
         # Get an image from the grabber
         s, img = cap.read()
         ref.detector.detect(img)
-        if ref.detector.is_done():
-            stop_calibration()
-
         g_pool.player_refresh.set()
 
 
@@ -356,10 +367,8 @@ def world(g_pool):
 
 
         # render visual feedback from detector
-        ref.detector.display(img)
-        # render detector point
-        if ref.detector.pos[0] or ref.detector.pos[1]:
-            draw_gl_point_norm(ref.detector.pos,color=(0.,1.,0.,0.5))
+        ref.detector.gl_display()
+
 
         # update gaze point from shared variable pool and draw on screen. If both coords are 0: no pupil pos was detected.
         if g_pool.gaze_x.value !=0 or g_pool.gaze_y.value !=0:
