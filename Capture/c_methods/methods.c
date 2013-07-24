@@ -91,21 +91,52 @@ inline ring_t make_ring(int w){
     ring_t ring;
     ring.w_i = w;
     ring.w_m = 3*w;
-    ring.w_o = 5*w;
+    ring.w_o = 9*w;
     ring.outer.s = (point_t){0,0};
-    ring.outer.e = (point_t){5*w,5*w};
-    ring.middle.s = (point_t){w,w};
-    ring.middle.e = (point_t){4*w,4*w};
-    ring.inner.s = (point_t){2*w,2*w};
-    ring.inner.e = (point_t){3*w,3*w};
+    ring.outer.e = (point_t){9*w,9*w};
+    ring.middle.s = (point_t){3*w,3*w};
+    ring.middle.e = (point_t){6*w,6*w};
+    ring.inner.s = (point_t){4*w,4*w};
+    ring.inner.e = (point_t){5*w,5*w};
     ring.inner.a = w*w;
     ring.middle.a = 9*w*w;
-    ring.outer.a = 25*w*w;
+    ring.outer.a = 81*w*w;
     ring.outer.f =  -.5/ring.outer.a;
     ring.middle.f =  1.0/ring.middle.a;
     ring.inner.f =  -.5/ring.inner.a;
     return ring;
 }
+
+
+// inline ring_t make_double_ring(int w){
+//     ring_t ring;
+//     ring.w_0 = w;
+//     ring.w_1 = 3*w;
+//     ring.w_2 = 9*w;
+//     ring.w_3 = 15*w
+
+//     ring.w_0.s = (point_t){4*w,4*w};
+//     ring.w_0.e = (point_t){5*w,5*w};
+//     ring.w_0.a = w*w;
+
+//     ring.w_0.s = (point_t){4*w,4*w};
+//     ring.w_0.e = (point_t){5*w,5*w};
+//     ring.w_0.a = w*w;
+
+//     ring.w_0.s = (point_t){4*w,4*w};
+//     ring.w_0.e = (point_t){5*w,5*w};
+//     ring.w_0.a = w*w;
+
+//     ring.w_0.s = (point_t){4*w,4*w};
+//     ring.w_0.e = (point_t){5*w,5*w};
+//     ring.w_0.a = w*w;
+//     ring.middle.a = 9*w*w;
+//     ring.outer.a = 81*w*w;
+//     ring.outer.f =  -.5/ring.outer.a;
+//     ring.middle.f =  1.0/ring.middle.a;
+//     ring.inner.f =  -.5/ring.inner.a;
+//     return ring;
+// }
 
 
 void filter(const float *img, const int rows, const int cols, int * x_pos,int *y_pos,int *width)
