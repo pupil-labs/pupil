@@ -107,7 +107,7 @@ def eye(g_pool):
         print "EYE: Error could not create Capture"
         return
     # check if it works
-    s, img = cap.read_RGB()
+    s, img = cap.read()
     if not s:
         print "EYE: Error could not get image"
         return
