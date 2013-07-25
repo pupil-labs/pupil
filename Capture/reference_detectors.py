@@ -305,6 +305,10 @@ class Automated_Threshold_Ring_Detector(object):
         self.site_size = 100 # size of the circular area
         self.candidate_ellipses = []
 
+        self.show_edges = c_bool(1)
+        self.apature = c_int(7)
+        self.dist_threshold = c_int(5)
+        self.area_threshold = c_int(28)
 
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = "Automated_White_Ring_Detector", label="Automated White Ring Detector",
@@ -313,7 +317,11 @@ class Automated_Threshold_Ring_Detector(object):
         self._bar.add_button("  begin calibrating  ", self.start)
         self._bar.add_button("  end calibrating  ", self.stop)
         self._bar.add_separator("Sep1")
+        self._bar.add_var("show edges",self.show_edges)
         self._bar.add_var("counter", getter=self.get_count)
+        self._bar.add_var("apature", self.apature, min=3,step=2)
+        self._bar.add_var("area threshold", self.area_threshold)
+        self._bar.add_var("eccetricity threshold", self.dist_threshold)
 
     def start(self):
         audio.say("Starting Calibration")
@@ -347,7 +355,7 @@ class Automated_Threshold_Ring_Detector(object):
             # self.candidate_points = self.detector.detect(s_img)
 
             # get threshold image used to get crisp-clean edges
-            edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 5, 7)
+            edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.apature.value, 7)
             # cv2.flip(edges,1 ,dst = edges,)
             # display the image for debugging purpuses
             # img[:] = cv2.cvtColor(edges,cv2.COLOR_GRAY2BGR)
@@ -364,7 +372,8 @@ class Automated_Threshold_Ring_Detector(object):
             # keep only contours                        with parents     and      children
             contained_contours = contours[np.logical_and(hierarchy[:,3]>=0, hierarchy[:,2]>=0)]
             # turn on to debug contours
-            # cv2.drawContours(img, contained_contours,-1, (0,0,255))
+            if self.show_edges.value:
+                cv2.drawContours(img, contained_contours,-1, (0,0,255))
 
             # need at least 5 points to fit ellipse
             contained_contours =  [c for c in contained_contours if len(c) >= 5]
@@ -374,7 +383,7 @@ class Automated_Threshold_Ring_Detector(object):
             # filter for ellipses that have similar area as the source contour
             for e,c in zip(ellipses,contained_contours):
                 a,b = e[1][0]/2.,e[1][1]/2.
-                if abs(cv2.contourArea(c)-np.pi*a*b) <10:
+                if abs(cv2.contourArea(c)-np.pi*a*b) <self.area_threshold.value:
                     self.candidate_ellipses.append(e)
 
 
@@ -385,7 +394,7 @@ class Automated_Threshold_Ring_Detector(object):
                 for e in ellipses:
                     close_ones = []
                     for other in ellipses:
-                        if man_dist(e,other)<10:
+                        if man_dist(e,other)<self.dist_threshold.value:
                             close_ones.append(other)
                     if len(close_ones)>=3:
                         # sort by major axis to return smallest ellipse first
