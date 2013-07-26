@@ -46,7 +46,7 @@ def main():
         416x240 352x288 176x144 320x240 160x120
     """
     # World Camera video size in pixels (width,height)
-    world_size = (1920,1080)
+    world_size = (1280,720)
     # List of available sizes for c-525 camera, copy paste above to change the size
     """
         c-525
@@ -63,72 +63,27 @@ def main():
     use_player = 1
     player_size = (640,480) #startup size for the player window: this can be whatever you like
 
-    class multiprocessing_vector(object):
-        """Creation of a vector class using multiprocessing Value object
-            allows for shared vectors in multiprocessing environment
-
-        """
-        def __init__(self,vector,dtype):
-            super(multiprocessing_vector, self).__init__()
-            self._vector = [Value(dtype,s)for s in vector]
-
-        @property
-        def value(self):
-            """I'm the 'value' property."""
-            return [s.value for s in self._vector]
-
-        @value.setter
-        def value(self, new_vector):
-            for s,n_s in zip(self._vector,new_vector):
-                s.value=n_s
-
-        @value.deleter
-        def x(self):
-            raise Exception("Not implemented")
-
-    class multiprocessing_list(list):
-        """Overloading Python list object with multiprocessing Value object
-            allows for shared lists in multiprocessing environment
-
-        """
-        def __init__(self, vector,dtype):
-            super(multiprocessing_list, self).__init__()
-            for s in vector:
-                self.append = Value(s,dtpe)
-
-        self.__getitem__(self,key):
-            return self[key].value
-
-        self.__setitem__(self,key,value):
-            self[key].value = value
-
-
-
     # world_uvc_camera, eye_uvc_camera = None,None
     audio = False # depreciated
-    # Create shared globals
+    # Create and initialize shared globals
     g_pool = Temp()
-    g_pool.gaze_x = Value('d', 0.0)
-    g_pool.gaze_y = Value('d', 0.0)
-    g_pool.ref_x = Value('d', 0.0)
-    g_pool.ref_y = Value('d', 0.0)
+    g_pool.gaze = Array('d',(0.0,0.0))
+    g_pool.ref = Array('d',(0.0,0.0))
+    g_pool.marker = Array('d',(0.0,0.0))
+    g_pool.marker_state = Value('d',0.0)
     g_pool.frame_count_record = Value('i', 0)
     g_pool.calibrate = Value(c_bool, 0)
-    g_pool.cal9 = Value(c_bool, 0)
-    g_pool.cal9_stage = Value('i', 0)
-    g_pool.cal9_step = Value('i', 0)
-    g_pool.cal9_circle_id = Value('i' ,0)
     g_pool.pos_record = Value(c_bool, 0)
     g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
     g_pool.player_refresh = Event()
     g_pool.player_input = Value('i',0)
     g_pool.play = RawValue(c_bool,0)
     g_pool.quit = RawValue(c_bool,0)
+    # shared constants
     g_pool.eye_src = eye_src
     g_pool.eye_size = eye_size
     g_pool.world_src = world_src
     g_pool.world_size = world_size
-    # end shared globals
 
     # set up subprocesses
     p_eye = Process(target=eye, args=(g_pool,))

@@ -121,8 +121,7 @@ def world(g_pool):
         #create new ref detector
         if  c_type == cal_type["Directed 9-Point"]:
             ref.detector = Nine_Point_Detector(global_calibrate=g_pool.calibrate,
-                                            shared_x=g_pool.ref_x,
-                                            shared_y=g_pool.ref_y,
+                                            shared_pos=g_pool.ref,
                                             shared_stage=g_pool.cal9_stage,
                                             shared_step=g_pool.cal9_step,
                                             shared_cal9_active=g_pool.cal9,
@@ -131,39 +130,32 @@ def world(g_pool):
                                             atb_pos=bar.next_atb_pos)
 
         elif c_type == cal_type["Automated 9-Point"]:
-            ref.detector = Nine_Point_Detector(global_calibrate=g_pool.calibrate,
-                                            shared_x=g_pool.ref_x,
-                                            shared_y=g_pool.ref_y,
-                                            shared_stage=g_pool.cal9_stage,
-                                            shared_step=g_pool.cal9_step,
-                                            shared_cal9_active=g_pool.cal9,
-                                            shared_circle_id=g_pool.cal9_circle_id,
+            ref.detector = Animated_Nine_Point_Detector(global_calibrate=g_pool.calibrate,
+                                            shared_pos=g_pool.ref,
+                                            screen_marker_pos = g_pool.marker,
+                                            screen_marker_state = g_pool.marker_state,
                                             auto_advance=True,
                                             atb_pos=bar.next_atb_pos)
 
         elif c_type == cal_type["Natural Features"]:
             ref.detector = Natural_Features_Detector(global_calibrate=g_pool.calibrate,
-                                                    shared_x=g_pool.ref_x,
-                                                    shared_y=g_pool.ref_y,
+                                                    shared_pos=g_pool.ref,
                                                     atb_pos=bar.next_atb_pos)
 
         elif c_type == cal_type["Manual White Ring"]:
 
             ref.detector = Manual_White_Ring_Detector(global_calibrate=g_pool.calibrate,
-                                                        shared_x=g_pool.ref_x,
-                                                        shared_y=g_pool.ref_y,
+                                                        shared_pos=g_pool.ref,
                                                         atb_pos=bar.next_atb_pos)
 
         elif c_type == cal_type["Automated White Ring"]:
             ref.detector = Automated_White_Ring_Detector(global_calibrate=g_pool.calibrate,
-                                                        shared_x=g_pool.ref_x,
-                                                        shared_y=g_pool.ref_y,
+                                                        shared_pos=g_pool.ref,
                                                         atb_pos=bar.next_atb_pos)
 
         elif c_type == cal_type["Camera Intrinsics Calibration"]:
             ref.detector = Camera_Intrinsics_Calibration(global_calibrate=g_pool.calibrate,
-                                            shared_x=g_pool.ref_x,
-                                            shared_y=g_pool.ref_y,
+                                            shared_pos=g_pool.ref,
                                             atb_pos=bar.next_atb_pos)
 
         # save the value for atb bar
@@ -252,7 +244,7 @@ def world(g_pool):
     # Initialize default Ref Detector
     ref = Temp()
     ref.detector = None
-    start_calibration(bar.cal_type['Automated 9-Point'],bar.calibration_type)
+    start_calibration(bar.cal_type['Camera Intrinsics Calibration'],bar.calibration_type)
 
     # Initialize glfw
     glfwInit()
@@ -371,8 +363,8 @@ def world(g_pool):
 
 
         # update gaze point from shared variable pool and draw on screen. If both coords are 0: no pupil pos was detected.
-        if g_pool.gaze_x.value !=0 or g_pool.gaze_y.value !=0:
-            draw_gl_point_norm((g_pool.gaze_x.value, g_pool.gaze_y.value),color=(1.,0.,0.,0.5))
+        if not g_pool.gaze[:] == [0.,0.]:
+            draw_gl_point_norm(g_pool.gaze[:],color=(1.,0.,0.,0.5))
 
         atb.draw()
         glfwSwapBuffers()

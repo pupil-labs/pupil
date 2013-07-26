@@ -274,10 +274,10 @@ def eye(g_pool):
             # from pupil to gaze
             pupil.gaze_coords = map_pupil(pupil.norm_coords)
             # publish to globals
-            g_pool.gaze_x.value, g_pool.gaze_y.value = pupil.gaze_coords
+            g_pool.gaze[:] = pupil.gaze_coords
         else:
             pupil.ellipse = None
-            g_pool.gaze_x.value, g_pool.gaze_y.value = 0.,0.
+            g_pool.gaze[:] = 0.,0.
             pupil.gaze_coords = None # without this line the last known pupil position is recorded if none is found
 
 
@@ -288,9 +288,9 @@ def eye(g_pool):
             pupil.pt_cloud = []
 
         # While Calibrating... collect data
-        if l_pool.calib_running and ((g_pool.ref_x.value != 0) or (g_pool.ref_y.value != 0)) and pupil.ellipse:
+        if l_pool.calib_running and (not(g_pool.ref[:]==[0.,0.])) and pupil.ellipse:
             pupil.pt_cloud.append([pupil.norm_coords[0],pupil.norm_coords[1],
-                                g_pool.ref_x.value, g_pool.ref_y.value])
+                                    g_pool.ref[0], g_pool.ref[1]])
 
         # Calculate mapping coefs if data has been collected
         if not g_pool.calibrate.value and l_pool.calib_running:

@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from methods import normalize,denormalize
 from c_methods import ring_filter,c_float,c_bool,c_int
-
+from multiprocessing import Array
 from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 
 import atb
@@ -30,12 +30,11 @@ class Ref_Detector_Template(object):
 
     ...
     """
-    def __init__(self,global_calibrate,shared_x,shared_y,atb_pos):
+    def __init__(self,global_calibrate,shared_pos,atb_pos):
         self.active = False
         self.global_calibrate = global_calibrate
         self.global_calibrate.value = False
-        self.shared_x = shared_x
-        self.shared_y = shared_y
+        self.shared_pos = shared_pos
         self.pos = 0,0 # 0,0 is used to indicate no point detected
         self.var1 = c_int(0)
 
@@ -52,13 +51,12 @@ class Ref_Detector_Template(object):
     def detect(self,img):
         """
         get called once every frame.
-        reference positon need to be published to shared_x and shared_y
+        reference positon need to be published to shared_pos
         if no reference was found, publish 0,0
         """
         if self.active:
             # detect a reference from the image and broadcast the result as norm. coordinates
-            self.shared_x.value = 0.
-            self.shared_y.value = 0.
+            self.shared_pos[:] = 0.,0.
             # make sure to set these to 0 when you are not detecting a reference
         else:
             pass
@@ -106,8 +104,7 @@ class Ref_Detector_Template(object):
 
         '''
         self.global_calibrate.value = False
-        self.shared_x.value = 0.
-        self.shared_y.value = 0.
+        self.shared_pos[:] = 0.,0.
 
 
 
@@ -122,14 +119,13 @@ class Automated_Threshold_Ring_Detector(object):
             Find contours and filter into 2 level list using RETR_CCOMP
             Fit ellipses
     """
-    def __init__(self,global_calibrate,shared_x,shared_y,atb_pos):
+    def __init__(self,global_calibrate,shared_pos,atb_pos):
         self.active = False
         self.detected = False
         self.publish = False
         self.global_calibrate = global_calibrate
         self.global_calibrate.value = False
-        self.shared_x = shared_x
-        self.shared_y = shared_y
+        self.shared_pos = shared_pos
         self.pos = 0,0 # 0,0 is used to indicate no point detected
         self.counter = 0
         # sites are the nine point positions in the FOV
@@ -139,8 +135,8 @@ class Automated_Threshold_Ring_Detector(object):
 
         self.show_edges = c_bool(1)
         self.apature = c_int(7)
-        self.dist_threshold = c_int(5)
-        self.area_threshold = c_int()
+        self.dist_threshold = c_int(10)
+        self.area_threshold = c_int(30)
 
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = "Automated_White_Ring_Detector", label="Automated White Ring Detector",
@@ -162,15 +158,13 @@ class Automated_Threshold_Ring_Detector(object):
                         (-.9, .9), ( 0, .9), ( .9, .9)]
 
         self.global_calibrate.value = True
-        self.shared_x.value = 0
-        self.shared_y.value = 0
+        self.shared_pos[:] = 0,0
         self.active = True
 
     def stop(self):
         audio.say("Stopping Calibration")
         self.global_calibrate.value = False
-        self.shared_x.value = 0
-        self.shared_y.value = 0
+        self.shared_pos[:] = 0,0
         self.active = False
 
     def get_count(self):
@@ -179,7 +173,7 @@ class Automated_Threshold_Ring_Detector(object):
     def detect(self,img):
         """
         gets called once every frame.
-        reference positon need to be published to shared_x and shared_y
+        reference positon need to be published to shared_pos
         if no reference was found, publish 0,0
         """
         if self.active:
@@ -259,9 +253,9 @@ class Automated_Threshold_Ring_Detector(object):
 
             if self.counter and self.detected:
                 self.counter -= 1
-                self.shared_x.value, self.shared_y.value = self.pos
+                self.shared_pos[:] = self.pos
             else:
-                self.shared_x.value, self.shared_y.value = 0,0
+                self.shared_pos[:] = 0,0
 
             if not self.counter and len(self.sites)==0:
                 self.stop()
@@ -316,56 +310,68 @@ class Automated_Threshold_Ring_Detector(object):
 
         '''
         self.global_calibrate.value = False
-        self.shared_x.value = 0.
-        self.shared_y.value = 0.
+        self.shared_pos[:] = 0.,0.
 
 class Animated_Nine_Point_Detector(object):
     """docstring for Nine_Point_"""
-    def __init__(self, global_calibrate,shared_x,shared_y,screen_marker_x,screen_marker_y,screen_marker_state,auto_advance=False,atb_pos=(0,0)):
+    def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,auto_advance=False,atb_pos=(0,0)):
         self.active = False
         self.detected = False
         self.global_calibrate = global_calibrate
         self.global_calibrate.value = False
 
-        self.shared_x = shared_x
-        self.shared_y = shared_y
+        self.shared_pos = shared_pos
 
-        self.screen_marker_x = screen_marker_x
-        self.screen_marker_y = screen_marker_y
-        self.screen_marker_state = screen_marker_state # used for v
-
+        self.shared_screen_marker_pos = screen_marker_pos
+        self.shared_screen_marker_state = screen_marker_state # used for v
+        self.screen_marker_state = -1
+        self.screen_marker_max = 90 # maximum bound for state
         self.pos = 0,0 # 0,0 is used to indicate no point detected
 
-        self.share
+
+        self.active_site = 0
+        self.sites = []
         self.auto_advance = auto_advance
 
-        if self.auto_advance:
-            atb_lable = "Automatic 9 Point Detector"
-        else:
-            atb_lable = "Directed 9 Point Detector"
 
+        self.candidate_ellipses = []
+
+        self.show_edges = c_bool(1)
+        self.apature = c_int(7)
+        self.dist_threshold = c_int(10)
+        self.area_threshold = c_int(30)
+
+        if self.auto_advance:
+            atb_label = "Automatic 9 Point Detector"
+        else:
+            atb_label = "Directed 9 Point Detector"
       # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-        self._bar = atb.Bar(name = "9_Point_Reference_Detector", label=atb_lable,
+        self._bar = atb.Bar(name = "9_Point_Reference_Detector", label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 150))
         self._bar.add_button("  begin calibrating  ", self.start)
         if not self.auto_advance:
             self._bar.add_button("  next point", self.advance, key="SPACE")
         self._bar.add_separator("Sep1")
-        self._bar.add_var("9 point stage", getter=self.get_stage)
-        self._bar.add_var("9 point step", getter=self.get_step)
 
-    def get_stage(self):
-        return self.stage
-
-    def get_step(self):
-        return self.step
 
     def start(self):
-        audio.say("Starting 9 Point Calibration")
+        audio.say("Starting Calibration")
+        self.sites = [  (-.9,-.9), ( 0,-.9), ( .9,-.9),
+                        (-.9, 0), ( 0, 0), ( .9, 0),
+                        (-.9, .9), ( 0, .9), ( .9, .9)]
+
+        self.sites = [  ( 0, 0),
+                        (-.9,.9), (0.,0.9),(.9,.9),
+                        (.9,0.),
+                        (.9,-.9), (0., -.9),( -.9, -.9),
+                        (-.9,0.),
+                        (0.,0.) ]
+
+        self.active_site = 0
+        self.screen_marker_state = 0
         self.global_calibrate.value = True
-        self.shared_x.value = 0
-        self.shared_y.value = 0
+        self.shared_pos[:] = 0,0
         self.active = True
 
     def stop(self):
@@ -384,29 +390,97 @@ class Animated_Nine_Point_Detector(object):
 
     def detect(self,img):
         if self.active:
-            # Statemachine
-            if self.step > 30:
-                self.step = 0
-                self.stage += 1
-                self.next = False
-            # done exit now (is_done() will now return True)
-            if self.stage > 8:
-                return
-            # Detection
-            self.pos = 0,0
-            self.detected = False
+            #detect the marker
+            gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+            # self.candidate_points = self.detector.detect(s_img)
 
-            if self.step in range(10, 25):
-                status, self.grid_points = cv2.findCirclesGridDefault(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
-                if status:
-                    self.detected = True
-                    img_pos = self.grid_points[self.map[self.stage]][0]
-                    self.pos = normalize(img_pos, (img.shape[1],img.shape[0]),flip_y=True)
-            # Advance
-            if self.next or self.auto_advance:
-                self.step += 1
+            # get threshold image used to get crisp-clean edges
+            edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.apature.value, 7)
+            # cv2.flip(edges,1 ,dst = edges,)
+            # display the image for debugging purpuses
+            # img[:] = cv2.cvtColor(edges,cv2.COLOR_GRAY2BGR)
+             # from edges to contours to ellipses CV_RETR_CCsOMP ls fr hole
+            contours, hierarchy = cv2.findContours(edges,
+                                            mode=cv2.RETR_TREE,
+                                            method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
 
-            self.publish()
+
+            # remove extra encapsulation
+            hierarchy = hierarchy[0]
+            # turn outmost list into array
+            contours =  np.array(contours)
+            # keep only contours                        with parents     and      children
+            contained_contours = contours[np.logical_and(hierarchy[:,3]>=0, hierarchy[:,2]>=0)]
+            # turn on to debug contours
+            if self.show_edges.value:
+                cv2.drawContours(img, contained_contours,-1, (0,0,255))
+
+            # need at least 5 points to fit ellipse
+            contained_contours =  [c for c in contained_contours if len(c) >= 5]
+
+            ellipses = [cv2.fitEllipse(c) for c in contained_contours]
+            self.candidate_ellipses = []
+            # filter for ellipses that have similar area as the source contour
+            for e,c in zip(ellipses,contained_contours):
+                a,b = e[1][0]/2.,e[1][1]/2.
+                if abs(cv2.contourArea(c)-np.pi*a*b) <self.area_threshold.value:
+                    self.candidate_ellipses.append(e)
+
+
+            def man_dist(e,other):
+                return abs(e[0][0]-other[0][0])+abs(e[0][1]-other[0][1])
+
+            def get_cluster(ellipses):
+                for e in ellipses:
+                    close_ones = []
+                    for other in ellipses:
+                        if man_dist(e,other)<self.dist_threshold.value:
+                            close_ones.append(other)
+                    if len(close_ones)>=3:
+                        # sort by major axis to return smallest ellipse first
+                        close_ones.sort(key=lambda e: max(e[1]))
+                        return close_ones
+                return []
+
+            self.candidate_ellipses = get_cluster(self.candidate_ellipses)
+
+
+
+            if len(self.candidate_ellipses) > 0:
+                self.detected= True
+                marker_pos = self.candidate_ellipses[0][0]
+                self.pos = normalize(marker_pos,(img.shape[1],img.shape[0]),flip_y=True)
+
+            else:
+                self.detected = False
+                self.pos = 0,0 #indicate that no reference is detected
+
+
+            # Animate the screen marker
+            if self.screen_marker_state < self.screen_marker_max:
+                if self.detected:
+                    self.screen_marker_state += 1
+            else:
+                self.screen_marker_state = 0
+                if self.active_site < 8:
+                    self.active_site += 1
+                    print self.active_site
+                else:
+                    self.stop()
+
+
+            # function to smoothly interpolate between points input:(0-90) output: (0-1)
+            interpolation_weight = np.tanh(((self.screen_marker_state-2/3.*self.screen_marker_max)*4.)/(1/3.*self.screen_marker_max))*(-.5)+.5
+
+            #use np.arrays for per element wise math
+            current = np.array(self.sites[self.active_site])
+            next = np.array(self.sites[self.active_site+1])
+            # weighted sum to interpolate between current and next
+            new_pos =  current * interpolation_weight + next * (1-interpolation_weight)
+            #broadcast next commanded marker postion of screen
+            self.shared_screen_marker_pos[:] = list(new_pos)
+
+            # self.publish()
 
 
 
@@ -414,15 +488,9 @@ class Animated_Nine_Point_Detector(object):
         self.next=True
 
     def publish(self):
-        self.shared_stage.value = self.stage
-        self.shared_step.value = self.step
-        self.shared_circle_id.value = self.map[self.stage]
-        self.shared_x.value, self.shared_y.value = self.pos
+        self.shared_pos[:] = self.pos
 
     def reset(self):
-        self.step = 0
-        self.stage = 0
-        self.is_done = False
         self.pos = 0,0
 
     def gl_display(self):
@@ -433,8 +501,20 @@ class Animated_Nine_Point_Detector(object):
         better:
             show the detected postion even if not published
         """
-        if self.detected:
-            draw_gl_polyline(self.grid_points[:,0],(0.,0.,1.,.5), type="Strip")
+
+        if self.active and self.detected:
+            for e in self.candidate_ellipses:
+                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                    (int(e[1][0]/2),int(e[1][1]/2)),
+                                    int(e[-1]),0,360,15)
+                draw_gl_polyline(pts,(0.,1.,0,1.))
+
+            if False:
+                draw_gl_point_norm(self.pos,size=20,color=(0.,1.,0.,.5))
+            else:
+                draw_gl_point_norm(self.pos,size=20.,color=(1.,0.,0.,.5))
+        else:
+            pass
 
     def del_bar(self):
         """Delete the ATB bar manually.
@@ -454,13 +534,12 @@ class Animated_Nine_Point_Detector(object):
 
 class Nine_Point_Detector(object):
     """docstring for Nine_Point_"""
-    def __init__(self, global_calibrate,shared_x,shared_y,shared_stage,shared_step,shared_cal9_active,shared_circle_id,auto_advance=False,atb_pos=(0,0)):
+    def __init__(self, global_calibrate,shared_pos,shared_stage,shared_step,shared_cal9_active,shared_circle_id,auto_advance=False,atb_pos=(0,0)):
         self.active = False
         self.detected = False
         self.global_calibrate = global_calibrate
         self.global_calibrate.value = False
-        self.shared_x = shared_x
-        self.shared_y = shared_y
+        self.shared_pos = shared_pos
         self.pos = 0,0 # 0,0 is used to indicate no point detected
         self.var1 = c_int(0)
 
@@ -476,12 +555,12 @@ class Nine_Point_Detector(object):
         self.map = (0, 2, 7, 16, 21, 23, 39, 40, 42)
         self.grid_points = None
         if self.auto_advance:
-            atb_lable = "Automatic 9 Point Detector"
+            atb_label = "Automatic 9 Point Detector"
         else:
-            atb_lable = "Directed 9 Point Detector"
+            atb_label = "Directed 9 Point Detector"
 
       # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-        self._bar = atb.Bar(name = "9_Point_Reference_Detector", label=atb_lable,
+        self._bar = atb.Bar(name = "9_Point_Reference_Detector", label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 150))
         self._bar.add_button("  begin calibrating  ", self.start)
@@ -500,8 +579,7 @@ class Nine_Point_Detector(object):
     def start(self):
         audio.say("Starting 9 Point Calibration")
         self.global_calibrate.value = True
-        self.shared_x.value = 0
-        self.shared_y.value = 0
+        self.shared_pos = 0,0
         self.active = True
 
     def stop(self):
@@ -553,7 +631,7 @@ class Nine_Point_Detector(object):
         self.shared_stage.value = self.stage
         self.shared_step.value = self.step
         self.shared_circle_id.value = self.map[self.stage]
-        self.shared_x.value, self.shared_y.value = self.pos
+        self.shared_pos = self.pos
 
     def reset(self):
         self.step = 0
@@ -592,7 +670,7 @@ class Natural_Features_Detector(object):
     """Calibrate using natural features in a scene.
         Features are selected by a user by clicking on
     """
-    def __init__(self,global_calibrate,shared_x,shared_y,atb_pos):
+    def __init__(self,global_calibrate,shared_pos,atb_pos):
         self.first_img = None
         self.point = None
         self.count = 0
@@ -600,8 +678,7 @@ class Natural_Features_Detector(object):
         self.active = False
         self.global_calibrate = global_calibrate
         self.global_calibrate.value = False
-        self.shared_x = shared_x
-        self.shared_y = shared_y
+        self.shared_pos = shared_pos
         self.pos = 0,0 # 0,0 is used to indicate no point detected
         self.var1 = c_int(0)
         self.r = 40.0 # radius of circle displayed
@@ -616,15 +693,13 @@ class Natural_Features_Detector(object):
     def start(self):
         audio.say("Starting Calibration")
         self.global_calibrate.value = True
-        self.shared_x.value = 0
-        self.shared_y.value = 0
+        self.shared_pos[:] = 0,0
         self.active = True
 
     def stop(self):
         audio.say("Stopping Calibration")
         self.global_calibrate.value = False
-        self.shared_x.value = 0
-        self.shared_y.value = 0
+        self.shared_pos[:] = 0,0
         self.active = False
 
     def detect(self,img):
@@ -656,7 +731,7 @@ class Natural_Features_Detector(object):
             draw_gl_point_norm(self.pos,size=self.r,color=(0.,1.,0.,.5))
 
     def publish(self):
-        self.shared_x.value, self.shared_y.value = self.pos
+        self.shared_pos[:] = self.pos
 
     def new_ref(self,pos):
         self.first_img = None
@@ -675,8 +750,8 @@ class Natural_Features_Detector(object):
 
     def __del__(self):
         self.global_calibrate.value = False
-        self.shared_x.value = 0.
-        self.shared_y.value = 0.
+        self.shared_pos[:] = 0,0
+
 
 
 class Camera_Intrinsics_Calibration(object):
@@ -685,7 +760,7 @@ class Camera_Intrinsics_Calibration(object):
         this method is used to calculate camera intrinsics.
 
     """
-    def __init__(self,global_calibrate,shared_x,shared_y, atb_pos=(0,0)):
+    def __init__(self,global_calibrate,shared_pos, atb_pos=(0,0)):
         self.collect_new = False
         self.calculated = False
         self.obj_grid = _gen_pattern_grid((4, 11))
@@ -785,7 +860,7 @@ def _gen_pattern_grid(size=(4,11)):
 
 if __name__ == '__main__':
 
-    active_detector_class = Automated_Threshold_Ring_Detector
+    active_detector_class = Animated_Nine_Point_Detector
 
 
     from glfw import *
@@ -921,8 +996,8 @@ if __name__ == '__main__':
 
 
     ref = Temp()
-    g_calibrate, g_ref_x, g_ref_y = c_bool(0), c_float(0),c_float(0)
-    ref.detector = active_detector_class(g_calibrate,g_ref_x,g_ref_y, (10,230))
+    g_calibrate, g_ref,s_ref,marker = c_bool(0), Array('d',(0,0)), Array('d',(0,0)), c_int(0)
+    ref.detector = active_detector_class(g_calibrate,g_ref, s_ref,marker,(10,230))
     # Objects as variable containers
 
     # Initialize glfw

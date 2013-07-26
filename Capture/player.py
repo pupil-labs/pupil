@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -17,7 +17,7 @@ from methods import Temp
 from uvc_capture import autoCreateCapture
 from time import sleep
 from glob import glob
-from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen
+from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm
 
 
 def make_grid(dim=(11,4)):
@@ -111,26 +111,20 @@ def player(g_pool,size):
             g_pool.player_refresh.clear()
 
             clear_gl_screen()
-            if g_pool.cal9.value:
-                circle_id,step = g_pool.cal9_circle_id.value,g_pool.cal9_step.value
-                gl.glColor4f(0.0,0.0,0.0,1.0)
-                gl.glPointSize(40)
-                gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-                gl.glBegin(gl.GL_POINTS)
-                for p in grid:
-                    gl.glVertex3f(p[0],p[1],0.0)
-                gl.glEnd()
+            if not g_pool.marker[:] == [0,0]:
+                draw_gl_point_norm(g_pool.marker[:], 20.0, (0.,1.,0.,.5))
+
+
+                # circle_id,step = g_pool.cal9_circle_id.value,g_pool.cal9_step.value
+                # gl.glColor4f(0.0,0.0,0.0,1.0)
+                # gl.glPointSize(40)
+                # gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+                # gl.glBegin(gl.GL_POINTS)
+                # for p in grid:
+                #     gl.glVertex3f(p[0],p[1],0.0)
+                # gl.glEnd()
 
                 # display the animated target dot
-                gl.glPointSize((40)*(1.01-(step+1)/80.0))
-                gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ZERO)
-                if g_pool.ref_x.value or g_pool.ref_y.value: ###if pattern detected
-                    gl.glColor4f(0.0,0.5,0.0,1.0)
-                else:
-                    gl.glColor4f(0.5,0.0,0.0,1.0)
-                gl.glBegin(gl.GL_POINTS)
-                gl.glVertex3f(grid[circle_id][0],grid[circle_id][1],0.0)
-                gl.glEnd()
 
             elif g_pool.play.value:
                 if len(player.captures):
