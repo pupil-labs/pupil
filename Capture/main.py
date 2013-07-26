@@ -13,7 +13,7 @@ import numpy as np
 import cv2
 from time import sleep
 from multiprocessing import Process, Pipe, Event
-from multiprocessing.sharedctypes import RawValue, Value
+from multiprocessing.sharedctypes import RawValue, Value, Array
 # RawValue is shared memory without lock.  Please handle with care.  This is useful for ATB as it needs c_types
 from eye import eye, eye_profiled
 from world import world, world_profiled
@@ -46,7 +46,7 @@ def main():
         416x240 352x288 176x144 320x240 160x120
     """
     # World Camera video size in pixels (width,height)
-    world_size = (1280,720)
+    world_size = (1920,1080)
     # List of available sizes for c-525 camera, copy paste above to change the size
     """
         c-525
@@ -62,6 +62,46 @@ def main():
     # Use the player - a seperate window for video playback and 9 point calibration animation
     use_player = 1
     player_size = (640,480) #startup size for the player window: this can be whatever you like
+
+    class multiprocessing_vector(object):
+        """Creation of a vector class using multiprocessing Value object
+            allows for shared vectors in multiprocessing environment
+
+        """
+        def __init__(self,vector,dtype):
+            super(multiprocessing_vector, self).__init__()
+            self._vector = [Value(dtype,s)for s in vector]
+
+        @property
+        def value(self):
+            """I'm the 'value' property."""
+            return [s.value for s in self._vector]
+
+        @value.setter
+        def value(self, new_vector):
+            for s,n_s in zip(self._vector,new_vector):
+                s.value=n_s
+
+        @value.deleter
+        def x(self):
+            raise Exception("Not implemented")
+
+    class multiprocessing_list(list):
+        """Overloading Python list object with multiprocessing Value object
+            allows for shared lists in multiprocessing environment
+
+        """
+        def __init__(self, vector,dtype):
+            super(multiprocessing_list, self).__init__()
+            for s in vector:
+                self.append = Value(s,dtpe)
+
+        self.__getitem__(self,key):
+            return self[key].value
+
+        self.__setitem__(self,key,value):
+            self[key].value = value
+
 
 
     # world_uvc_camera, eye_uvc_camera = None,None

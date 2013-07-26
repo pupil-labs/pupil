@@ -49,7 +49,7 @@ def eye(g_pool):
                     pos = glfwGetMousePos()
                     pos = normalize(pos,glfwGetWindowSize())
                     pos = denormalize(pos,(img.shape[1],img.shape[0]) ) # pos in img pixels
-                    r.setStart(pos)
+                    u_r.setStart(pos)
                     bar.draw_roi.value = 1
                 else:
                     bar.draw_roi.value = 0
@@ -61,7 +61,7 @@ def eye(g_pool):
             pos = glfwGetMousePos()
             pos = normalize(pos,glfwGetWindowSize())
             pos = denormalize(pos,(img.shape[1],img.shape[0]) ) # pos in img pixels
-            r.setEnd(pos)
+            u_r.setEnd(pos)
 
     def on_scroll(pos):
         if not atb.TwMouseWheel(pos):
@@ -131,8 +131,8 @@ def eye(g_pool):
             """
             return vector
 
-    r = Roi(img.shape)
-    r.set(load('roi',default=None))
+    u_r = Roi(img.shape)
+    u_r.set(load('roi',default=None))
     p_r = Roi(img.shape)
 
     # local object
@@ -157,15 +157,6 @@ def eye(g_pool):
     bar.display = c_int(load('bar.display',0))
     bar.draw_pupil = c_bool(load('bar.draw_pupil',True))
     bar.draw_roi = c_int(0)
-    bar.bin_thresh = c_int(60)
-    bar.blur = c_int(load('bar.blur',1))
-    bar.pupil_ratio = c_float(1.0)
-    bar.pupil_angle = c_float(0.0)
-    bar.pupil_size = c_float(80.)
-    bar.pupil_size_tolerance = c_float(load('bar.pupil_size_tolerance',40))
-    bar.canny_aperture = c_int(load('bar.canny_aperture',5))
-    bar.canny_thresh = c_int(load('bar.canny_thresh',200))
-    bar.canny_ratio = c_int(2)
     bar.record_eye = c_bool(load('bar.record_eye',0))
 
     dispay_mode_enum = atb.enum("Mode",{"Camera Image":0,
@@ -182,14 +173,11 @@ def eye(g_pool):
     bar.add_var("SlowDown",bar.sleep, step=0.01,min=0.0)
     bar.add_var("SaveSettings&Exit", g_pool.quit)
 
-    # add v4l2 camera controls to a separate ATB bar
+    # add uvc camera controls to a separate ATB bar
     if cap.controls is not None:
         c_bar = atb.Bar(name="Camera_Controls", label=cap.name,
             help="UVC Camera Controls", color=(50,50,50), alpha=100,
             text='light',position=(220, 10),refresh=2., size=(200, 200))
-
-        # c_bar.add_var("auto_refresher",vtype=atb.TW_TYPE_BOOL8,getter=cap.uvc_refresh_all,setter=None,readonly=True)
-        # c_bar.define(definition='visible=0', varname="auto_refresher")
 
         sorted_controls = [c for c in cap.controls.itervalues()]
         sorted_controls.sort(key=lambda c: c.order)
@@ -261,7 +249,7 @@ def eye(g_pool):
         sleep(bar.sleep.value) # for debugging only
 
         # IMAGE PROCESSING and clipping to user defined eye-region
-        eye_img = img[r.lY:r.uY,r.lX:r.uX]
+        eye_img = img[u_r.lY:u_r.uY,u_r.lX:u_r.uX]
         gray_img = grayscale(eye_img)
 
 
@@ -275,7 +263,7 @@ def eye(g_pool):
             p_r.set((0,0,-1,-1))
 
         # fine pupil ellipse detection
-        result = pupil_detector.detect(img,roi=r,p_roi=p_r,visualize=bar.display.value == 2)
+        result = pupil_detector.detect(img,u_roi=u_r,p_roi=p_r,visualize=bar.display.value == 2)
 
         # Work with detected ellipses
         if result:
@@ -353,19 +341,19 @@ def eye(g_pool):
             gray_img[:,-1]= 255
             gray_img[0,:] = 255
             gray_img[-1,:]= 255
-            img[r.lY:r.uY,r.lX:r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
+            img[u_r.lY:u_r.uY,u_r.lX:u_r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
 
-            pupil_img =img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] # create an RGB view onto the gray pupil ROI
-            # draw a blue dotted frame around the automatic pupil ROI in overlay...
+            pupil_img =img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] # create an RGB view onto the gray pupil ROI
+            # draw a frame around the automatic pupil ROI in overlay...
             pupil_img[::2,0] = 255,0,0
             pupil_img[::2,-1]= 255,0,0
             pupil_img[0,::2] = 255,0,0
             pupil_img[-1,::2]= 255,0,0
 
-            img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] = pupil_img
+            img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] = pupil_img
 
         elif bar.display.value == 3:
-            img = img[r.lY:r.uY,r.lX:r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX]
+            img = img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX]
 
         # GL-drawing
         clear_gl_screen()
@@ -384,14 +372,10 @@ def eye(g_pool):
     # END while running
 
     # save session persistent settings
-    save('roi',r.get())
+    save('roi',u_r.get())
     save('bar.display',bar.display.value)
     save('bar.draw_pupil',bar.draw_pupil.value)
     save('bar.record_eye',bar.record_eye.value)
-    # save('bar.blur',bar.blur.value)
-    # save('bar.pupil_size_tolerance',bar.pupil_size_tolerance.value)
-    # save('bar.canny_aperture',bar.canny_aperture.value)
-    # save('bar.canny_thresh',bar.canny_thresh.value)
     session_settings.close()
 
     atb.terminate()

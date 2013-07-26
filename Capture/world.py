@@ -208,7 +208,7 @@ def world(g_pool):
     bar.add_var("Play Video", bar.play, help="play a video in the Player window")
     bar.add_var("Exit", g_pool.quit)
 
-    # add v4l2 camera controls to a seperate ATB bar
+    # add uvc camera controls to a seperate ATB bar
     if cap.controls is not None:
         c_bar = atb.Bar(name="Camera_Controls", label=cap.name,
             help="UVC Camera Controls", color=(50,50,50), alpha=100,

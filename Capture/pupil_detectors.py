@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -20,9 +20,9 @@ class Pupil_Detector(object):
         super(Pupil_Detector, self).__init__()
         var1 = c_int(0)
 
-    def detect(self,img,roi,p_roi,visualize=False):
+    def detect(self,img,u_roi,p_roi,visualize=False):
         # hint: create a view into the img with the bounds of the coarse pupil estimation
-        pupil_img = img[roi.lY:roi.uY,roi.lX:roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
+        pupil_img = img[u_roi.lY:u_roi.uY,u_roi.lX:u_roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
 
         if visualize:
             # draw into image whatever you like and it will be displayed
@@ -39,7 +39,7 @@ class Pupil_Detector(object):
                         'goodness': 0} #some estimation on how sure you are about the detected ellipse and its fit. Smaller is better
 
         # If you use region of interest p_r and r make sure to return pupil coordinates relative to the full image
-        candidate_pupil_ellipse['center'] = roi.add_vector(p_roi.add_vector(candidate_pupil_ellipse['center']))
+        candidate_pupil_ellipse['center'] = u_roi.add_vector(p_roi.add_vector(candidate_pupil_ellipse['center']))
 
         return [candidate_pupil_ellipse,] # return list of candidate pupil ellipses, sorted by certainty, if none is found return empty list
 
@@ -67,9 +67,9 @@ class Canny_Detector(Pupil_Detector):
         self.canny_ratio= c_int(2)
         self.canny_aperture = c_int(5)
 
-    def detect(self,img,roi,p_roi,visualize=False):
+    def detect(self,img,u_roi,p_roi,visualize=False):
 
-        pupil_img = img[roi.lY:roi.uY,roi.lX:roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
+        pupil_img = img[u_roi.lY:u_roi.uY,u_roi.lX:u_roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
         pupil_img = grayscale(pupil_img)
 
         # binary thresholding of pupil dark areas
@@ -117,7 +117,7 @@ class Canny_Detector(Pupil_Detector):
         edges = cv2.min(edges,binary_img)
 
         if visualize:
-            overlay =  img[roi.lY:roi.uY,roi.lX:roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
+            overlay =  img[u_roi.lY:u_roi.uY,u_roi.lX:u_roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
             pupil_img = grayscale(overlay)
             overlay[:,:,1] = cv2.max(pupil_img,edges) #b channel
             overlay[:,:,0] = cv2.max(pupil_img,binary_img) #g channel
@@ -151,7 +151,7 @@ class Canny_Detector(Pupil_Detector):
                 pupil_ellipse['goodness'] = 0 #perfect match we'll take this one
             else:
                 pupil_ellipse['goodness'] = size_dif
-            pupil_ellipse['center'] = roi.add_vector(p_roi.add_vector(e[0])) # compensate for roi offsets
+            pupil_ellipse['center'] = u_roi.add_vector(p_roi.add_vector(e[0])) # compensate for roi offsets
             pupil_ellipse['angle'] = e[-1]
             pupil_ellipse['axes'] = e[1]
             pupil_ellipse['major'] = max(e[1])

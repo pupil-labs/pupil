@@ -111,174 +111,6 @@ class Ref_Detector_Template(object):
 
 
 
-class Automated_White_Ring_Detector(object):
-    """Detector looks for a white ring on a black background.
-        Using 9 positions/points within the FOV
-        Ref detector will direct one to good positions with audio cues
-        Calibration only collects data at the good positions
-    """
-    def __init__(self,global_calibrate,shared_x,shared_y,atb_pos):
-        self.active = False
-        self.detected = False
-        self.publish = False
-        self.global_calibrate = global_calibrate
-        self.global_calibrate.value = False
-        self.shared_x = shared_x
-        self.shared_y = shared_y
-        self.pos = 0,0 # 0,0 is used to indicate no point detected
-        self.x = 0
-        self.y = 0
-        self.r = 0
-        self.w = 0
-        self.counter = 0
-
-        # sites are the nine point positions in the FOV
-        self.sites = []
-        self.site_size = 220 # size of the circular area
-
-
-
-        # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-        self._bar = atb.Bar(name = "Automated_White_Ring_Detector", label="Automated White Ring Detector",
-            help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_button("  begin calibrating  ", self.start)
-        self._bar.add_button("  end calibrating  ", self.stop)
-        self._bar.add_separator("Sep1")
-        self._bar.add_var("counter", getter=self.get_count)
-        self._bar.add_var("marker detection response", getter=self.get_response)
-
-    def start(self):
-        audio.say("Starting Calibration")
-        self.sites = [  (-.9,-.9), ( 0,-.9), ( .9,-.9),
-                        (-.9, 0), ( 0, 0), ( .9, 0),
-                        (-.9, .9), ( 0, .9), ( .9, .9)]
-
-        self.global_calibrate.value = True
-        self.shared_x.value = 0
-        self.shared_y.value = 0
-        self.active = True
-
-    def stop(self):
-        audio.say("Stopping Calibration")
-        self.global_calibrate.value = False
-        self.shared_x.value = 0
-        self.shared_y.value = 0
-        self.active = False
-
-    def get_count(self):
-        return self.counter
-
-    def get_response(self):
-        return self.r
-
-    def detect(self,img):
-        """
-        gets called once every frame.
-        reference positon need to be published to shared_x and shared_y
-        if no reference was found, publish 0,0
-        """
-        if self.active:
-            s_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            # self.candidate_points = self.detector.detect(s_img)
-
-            # gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            # cv2.adaptiveThreshold(gray, 200, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 5, 7,gray)
-            # img[:] = cv2.cvtColor(gray,cv2.COLOR_GRAY2BGR)
-
-            # coarse ring detection
-            integral = cv2.integral(s_img)
-            integral =  np.array(integral,dtype=c_float)
-            row,col,w,r = ring_filter(integral)
-            response_center = col+w/2.,row+w/2.
-            response_threshold = 50
-            # print x,y, w,r
-            self.x = int(col)
-            self.y = int(row)
-            self.r = int(r)
-            self.w = int(w)
-
-            if r>=response_threshold:
-                self.detected= True
-                self.pos = normalize(response_center,(img.shape[1],img.shape[0]),flip_y=True)
-
-                if not self.counter:
-                    for i in range(len(self.sites)):
-                        screen_site = denormalize(self.sites[i],(img.shape[1],img.shape[0]),flip_y=True)
-                        screen_dist = np.sqrt((response_center[0]-screen_site[0])**2+(response_center[1]-screen_site[1])**2)
-                        if screen_dist <= self.site_size/2.:
-                            self.sites.pop(i)
-                            audio.beep()
-                            self.counter = 30
-                            break
-            else:
-                self.detected= False
-                self.pos = 0,0 #indicate that no reference is detected
-
-
-            if self.counter and self.detected:
-                self.counter -= 1
-                self.shared_x.value, self.shared_y.value = self.pos
-            else:
-                self.shared_x.value, self.shared_y.value = 0,0
-
-            if not self.counter and len(self.sites)==0:
-                self.stop()
-        else:
-            pass
-
-
-    def new_ref(self,pos):
-        """
-        gets called when the user clicks on the world window screen
-        """
-        pass
-
-    def gl_display(self):
-        """
-        use gl calls to render
-        at least:
-            the published position of the reference
-        better:
-            show the detected postion even if not published
-        """
-
-        if self.active:
-            for site in self.sites:
-                draw_gl_point_norm(site,size=self.site_size,color=(0.,1.,0.,.5))
-
-        if self.active and self.detected:
-            draw_gl_polyline(  [[self.x,self.y],
-                                [self.x+self.w,self.y],
-                                [self.x+self.w,self.y+self.w],
-                                [self.x,self.y+self.w]],
-                                (0.,1.,0.,.8),
-                                type='Loop')
-            if self.counter:
-                draw_gl_point_norm(self.pos,size=self.r,color=(0.,1.,0.,.5))
-            else:
-                draw_gl_point_norm(self.pos,size=self.r,color=(1.,0.,0.,.5))
-        else:
-            pass
-
-    def del_bar(self):
-        """Delete the ATB bar manually.
-            Python's garbage collector doesn't work on the object otherwise
-            Due to the fact that ATB is a c library wrapped in ctypes
-
-        """
-        self._bar.destroy()
-        del self._bar
-
-    def __del__(self):
-        '''Do what is required for clean up. This happes when a user changes the detector. It can happen at any point
-
-        '''
-        self.global_calibrate.value = False
-        self.shared_x.value = 0.
-        self.shared_y.value = 0.
-
-
 class Automated_Threshold_Ring_Detector(object):
     """Detector looks for a white ring on a black background.
         Using 9 positions/points within the FOV
@@ -308,7 +140,7 @@ class Automated_Threshold_Ring_Detector(object):
         self.show_edges = c_bool(1)
         self.apature = c_int(7)
         self.dist_threshold = c_int(5)
-        self.area_threshold = c_int(28)
+        self.area_threshold = c_int()
 
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = "Automated_White_Ring_Detector", label="Automated White Ring Detector",
@@ -487,40 +319,50 @@ class Automated_Threshold_Ring_Detector(object):
         self.shared_x.value = 0.
         self.shared_y.value = 0.
 
-
-class Manual_White_Ring_Detector(object):
-    """Detector looks for a white ring on a black background.
-
-    """
-    def __init__(self,global_calibrate,shared_x,shared_y,atb_pos):
+class Animated_Nine_Point_Detector(object):
+    """docstring for Nine_Point_"""
+    def __init__(self, global_calibrate,shared_x,shared_y,screen_marker_x,screen_marker_y,screen_marker_state,auto_advance=False,atb_pos=(0,0)):
         self.active = False
         self.detected = False
-        self.publish = False
         self.global_calibrate = global_calibrate
         self.global_calibrate.value = False
+
         self.shared_x = shared_x
         self.shared_y = shared_y
+
+        self.screen_marker_x = screen_marker_x
+        self.screen_marker_y = screen_marker_y
+        self.screen_marker_state = screen_marker_state # used for v
+
         self.pos = 0,0 # 0,0 is used to indicate no point detected
-        self.x = 0
-        self.y = 0
-        self.r = 0
-        self.w = 0
-        self.counter = 0
 
+        self.share
+        self.auto_advance = auto_advance
 
-        # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-        self._bar = atb.Bar(name = "Reference_Detector", label="Manual White Ring Detector",
+        if self.auto_advance:
+            atb_lable = "Automatic 9 Point Detector"
+        else:
+            atb_lable = "Directed 9 Point Detector"
+
+      # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
+        self._bar = atb.Bar(name = "9_Point_Reference_Detector", label=atb_lable,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
+            text='light', position=atb_pos,refresh=.3, size=(300, 150))
         self._bar.add_button("  begin calibrating  ", self.start)
-        self._bar.add_button("  end calibrating  ", self.stop)
-        self._bar.add_button("  sample this point", self.sample_point, key="SPACE")
+        if not self.auto_advance:
+            self._bar.add_button("  next point", self.advance, key="SPACE")
         self._bar.add_separator("Sep1")
-        self._bar.add_var("counter", getter=self.get_count)
-        self._bar.add_var("marker detection response", getter=self.get_response)
+        self._bar.add_var("9 point stage", getter=self.get_stage)
+        self._bar.add_var("9 point step", getter=self.get_step)
+
+    def get_stage(self):
+        return self.stage
+
+    def get_step(self):
+        return self.step
 
     def start(self):
-        audio.say("Starting Calibration")
+        audio.say("Starting 9 Point Calibration")
         self.global_calibrate.value = True
         self.shared_x.value = 0
         self.shared_y.value = 0
@@ -529,20 +371,9 @@ class Manual_White_Ring_Detector(object):
     def stop(self):
         audio.say("Stopping Calibration")
         self.global_calibrate.value = False
-        self.shared_x.value = 0
-        self.shared_y.value = 0
+        self.reset()
+        self.publish()
         self.active = False
-
-    def get_count(self):
-        return self.counter
-
-    def get_response(self):
-        return self.r
-
-    def sample_point(self):
-        audio.beep()
-        self.counter = 30
-
 
     def new_ref(self,pos):
         """
@@ -550,48 +381,49 @@ class Manual_White_Ring_Detector(object):
         """
         pass
 
+
     def detect(self,img):
-        """
-        gets called once every frame.
-        reference positon need to be published to shared_x and shared_y
-        if no reference was found, publish 0,0
-        """
         if self.active:
-            s_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            # self.candidate_points = self.detector.detect(s_img)
+            # Statemachine
+            if self.step > 30:
+                self.step = 0
+                self.stage += 1
+                self.next = False
+            # done exit now (is_done() will now return True)
+            if self.stage > 8:
+                return
+            # Detection
+            self.pos = 0,0
+            self.detected = False
 
-            # gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            # cv2.adaptiveThreshold(gray, 200, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 5, 7,gray)
-            # img[:] = cv2.cvtColor(gray,cv2.COLOR_GRAY2BGR)
+            if self.step in range(10, 25):
+                status, self.grid_points = cv2.findCirclesGridDefault(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
+                if status:
+                    self.detected = True
+                    img_pos = self.grid_points[self.map[self.stage]][0]
+                    self.pos = normalize(img_pos, (img.shape[1],img.shape[0]),flip_y=True)
+            # Advance
+            if self.next or self.auto_advance:
+                self.step += 1
 
-            # coarse ring detection
-            integral = cv2.integral(s_img)
-            integral =  np.array(integral,dtype=c_float)
-            row,col,w,r = ring_filter(integral)
-            response_center = col+w/2.,row+w/2.
-            response_threshold = 50
-            # print x,y, w,r
-            self.x = int(col)
-            self.y = int(row)
-            self.r = int(r)
-            self.w = int(w)
-
-            if r>=response_threshold:
-                self.detected= True
-                self.pos = normalize(response_center,(img.shape[1],img.shape[0]),flip_y=True)
-            else:
-                self.detected= False
-                self.pos = 0,0 #indicate that no reference is detected
+            self.publish()
 
 
-            if self.counter and self.detected:
-                self.counter -= 1
-                self.shared_x.value, self.shared_y.value = self.pos
-            else:
-                self.shared_x.value, self.shared_y.value = 0,0
-        else:
-            pass
 
+    def advance(self):
+        self.next=True
+
+    def publish(self):
+        self.shared_stage.value = self.stage
+        self.shared_step.value = self.step
+        self.shared_circle_id.value = self.map[self.stage]
+        self.shared_x.value, self.shared_y.value = self.pos
+
+    def reset(self):
+        self.step = 0
+        self.stage = 0
+        self.is_done = False
+        self.pos = 0,0
 
     def gl_display(self):
         """
@@ -601,30 +433,8 @@ class Manual_White_Ring_Detector(object):
         better:
             show the detected postion even if not published
         """
-        if self.active and self.detected:
-            draw_gl_polyline(  [[self.x,self.y],
-                                [self.x+self.w,self.y],
-                                [self.x+self.w,self.y+self.w],
-                                [self.x,self.y+self.w]],
-                                (0.,1.,0.,.8),
-                                type='Loop')
-            if self.counter:
-                draw_gl_point_norm(self.pos,size=self.r,color=(0.,1.,0.,.5))
-            else:
-                draw_gl_point_norm(self.pos,size=self.r,color=(1.,0.,0.,.5))
-        else:
-            pass
-
-    def is_done(self):
-        """
-        gets called after detect()
-        return true if the calibration routine has finished.
-        the caller will then reduce the ref-count of this instance to 0 triggering __del__
-
-        if your calibration routine does not end by itself, the use will induce the end using the gui
-        in which case the ref-count will get 0 as well.
-        """
-        return False
+        if self.detected:
+            draw_gl_polyline(self.grid_points[:,0],(0.,0.,1.,.5), type="Strip")
 
     def del_bar(self):
         """Delete the ATB bar manually.
@@ -637,12 +447,9 @@ class Manual_White_Ring_Detector(object):
 
 
     def __del__(self):
-        '''Do what is required for clean up. This happes when a user changes the detector. It can happen at any point
-
-        '''
+        self.reset()
+        self.publish()
         self.global_calibrate.value = False
-        self.shared_x.value = 0.
-        self.shared_y.value = 0.
 
 
 class Nine_Point_Detector(object):
@@ -1055,9 +862,6 @@ if __name__ == '__main__':
         helper for atb getter and setter use
         """
         return data.value
-
-    def advance_calibration():
-        ref.detector.advance()
 
 
     # Initialize ant tweak bar - inherits from atb.Bar
