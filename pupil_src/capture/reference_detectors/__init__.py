@@ -8,6 +8,14 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+# make shared modules available across pupil_src
+if __name__ == '__main__':
+    from sys import path as syspath
+    from os import path as ospath
+    loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
+    syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
+    del syspath, ospath
+
 import cv2
 import numpy as np
 from methods import normalize,denormalize
@@ -345,13 +353,13 @@ class Animated_Nine_Point_Detector(object):
             atb_label = "Automatic 9 Point Detector"
         else:
             atb_label = "Directed 9 Point Detector"
-      # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
+        # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = "9_Point_Reference_Detector", label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 150))
         self._bar.add_button("  begin calibrating  ", self.start)
-        if not self.auto_advance:
-            self._bar.add_button("  next point", self.advance, key="SPACE")
+        # if not self.auto_advance:
+        #     self._bar.add_button("  next point", self.advance, key="SPACE")
         self._bar.add_separator("Sep1")
 
 
@@ -861,7 +869,6 @@ def _gen_pattern_grid(size=(4,11)):
 if __name__ == '__main__':
 
     active_detector_class = Animated_Nine_Point_Detector
-
 
     from glfw import *
     import atb

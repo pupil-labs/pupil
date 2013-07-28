@@ -1,10 +1,14 @@
 # OS generated files #
-######################
-.DS_Store*
+.DS_Store
 Thumbs.db
+
+# python generated files #
 *.pyc
 *.pstats
-*.mov
-data*
+
+# user generated files will be ignored if in directory named 'recordings...' #
+recordings*/
+
+# IDE generated files #
 .floo
 .sublime-project

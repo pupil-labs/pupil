@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 from ctypes import c_int,c_bool,c_float
 import numpy as np
 import atb
@@ -20,7 +19,6 @@ from c_methods import eye_filter
 from uvc_capture import autoCreateCapture
 from calibrate import get_map_from_cloud
 from pupil_detectors import Canny_Detector
-from os import path
 import shelve
 
 def eye(g_pool):

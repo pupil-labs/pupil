@@ -8,7 +8,11 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os, sys
+# make shared modules available across pupil_src
+import sys, os
+loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
+sys.path.append(os.path.join(loc[0], 'pupil_src', 'shared_modules'))
+
 import numpy as np
 import cv2
 from time import sleep
