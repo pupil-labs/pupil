@@ -25,7 +25,7 @@ def main():
 
     # To assign by name: put string(s) in list
     eye_src = ["Microsoft", "6000"]
-    world_src = ["Logitech Camera", "C525","C615","C920","C930e"]
+    world_src = ["Logitech Camera", "C525","C615","C920","C930e", "UVC Camera", "(046d:081d)" ]
     # Uncomment below two lines to assign cameras directly, using integers as demonstrated below
     # eye_src = 0
     # world_src = 1
@@ -34,7 +34,7 @@ def main():
     # eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
     # world_src = 0
 
-    # Eye Camera video size in pixels (width,height) 
+    # Eye Camera video size in pixels (width,height)
     eye_size = (640,360)
     # List of available sizes for HD-600 camera, copy paste above to change the size
     """
