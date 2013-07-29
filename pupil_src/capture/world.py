@@ -30,6 +30,7 @@ from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_po
 from calibrate import *
 import reference_detectors
 from recorder import Recorder
+from show_calibration import Show_Calibration
 
 def world_profiled(g_pool):
     import cProfile
@@ -134,16 +135,26 @@ def world(g_pool):
         data.value=selection
 
     def record_video():
-        if not g_pool.pos_record.value:
+        if any([True for p in g.plugins if isinstance(p,Recorder)]):
+            [p.stop() for p in g.plugins if isinstance(p,Recorder)]
+            print "stopping recording"
+        else:
             # set up folder within recordings named by user input in atb
             if not bar.rec_name.value:
                 bar.rec_name.value = strftime("%Y_%m_%d", localtime())
             recorder = Recorder(bar.rec_name.value, bar.fps.value, img.shape, g_pool.pos_record,
                                 g_pool.frame_count_record, g_pool.eye_tx)
             g.plugins.append(recorder)
-        else:
-            print "recording in process"
 
+    def show_calib_result():
+        if any([True for p in g.plugins if isinstance(p,Show_Calibration)]):
+            for p in g.plugins:
+                if isinstance(p,Show_Calibration):
+                    p.alive = False
+            print "calibration results closed"
+        else:
+            calib = Show_Calibration(img.shape)
+            g.plugins.append(calib)
 
 
 
@@ -171,7 +182,7 @@ def world(g_pool):
     bar.add_var("fps", bar.fps, step=1., readonly=True)
     bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
     bar.add_var("calibration method",setter=start_calibration,getter=get_from_data,data=bar.calibration_type, vtype=bar.calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
-    bar.add_var("show calibration result",bar.show_calib_result, group="Calibration", help="yellow: indicates calibration error, red:discarded outliners, outline shows the calibrated area.")
+    bar.add_button("show calibration result",show_calib_result, group="Calibration", help="Click to show calibration result.")
     bar.add_var("session name",bar.rec_name, group="Recording", help="creates folder Data_Name_XXX, where xxx is an increasing number")
     bar.add_button("start recording", record_video, key="r", group="Recording", help="Start/Stop Recording")
     bar.add_separator("Sep1")
@@ -272,22 +283,6 @@ def world(g_pool):
         clear_gl_screen()
         draw_gl_texture(img)
 
-        # render calibration results:
-        if bar.show_calib_result.value:
-            cal_pt_cloud = np.load("cal_pt_cloud.npy")
-            map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(width,height),return_inlier_map=True)
-            cal_pt_cloud[:,0:2] =  np.array(map_fn(cal_pt_cloud[:,0:2].transpose())).transpose()
-            ref_pts = cal_pt_cloud[inlier_map][:,np.newaxis,2:4]
-            ref_pts = np.array(ref_pts,dtype=np.float32)
-            calib_bounds =  cv2.convexHull(ref_pts)[:,0] #we dont need that extra encapsulation that opencv likes so much
-            # create a list [[px1,py1],[wx1,wy1],[px2,py2],[wx2,wy2]...] of outliers and inliers for gl_lines
-            outliers = np.concatenate((cal_pt_cloud[~inlier_map][:,0:2],cal_pt_cloud[~inlier_map][:,2:4])).reshape(-1,2)
-            inliers = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1).reshape(-1,2)
-            draw_gl_polyline_norm(inliers,(1.,0.5,0.,.5),type='Lines')
-            draw_gl_polyline_norm(outliers,(1.,0.,0.,.5),type='Lines')
-            draw_gl_polyline_norm(calib_bounds,(.0,1.,0,.5),type='Loop')
-
-
         # render visual feedback from loaded plugins
         for p in g.plugins:
             p.gl_display()
@@ -305,11 +300,4 @@ def world(g_pool):
     glfwCloseWindow()
     glfwTerminate()
 
-if __name__ == '__main__':
-        cal_pt_cloud = np.load("cal_pt_cloud.npy")
-        map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(1280,720),return_inlier_map=True)
-        # print cal_pt_cloud[inlier_map][:,0:2].shape
-        # print cal_pt_cloud[inlier_map][0,2:4]
-        inlier = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1)
-        print inlier
-        print inlier.reshape(-1,2)
+
