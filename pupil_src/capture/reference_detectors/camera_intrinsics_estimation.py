@@ -5,10 +5,7 @@ from gl_utils import draw_gl_polyline
 import atb
 import audio
 
-
-from template import Plugin
-
-
+from plugin import Plugin
 
 class Camera_Intrinsics_Estimation(Plugin):
 	"""Camera_Intrinsics_Calibration

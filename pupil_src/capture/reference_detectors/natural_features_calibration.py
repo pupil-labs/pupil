@@ -7,7 +7,7 @@ from ctypes import c_int,c_bool
 import atb
 import audio
 
-from template import Plugin
+from plugin import Plugin
 
 class Natural_Features_Calibration(Plugin):
 	"""Calibrate using natural features in a scene.

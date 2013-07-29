@@ -1,4 +1,3 @@
-
 import cv2
 import numpy as np
 from methods import normalize,denormalize
@@ -8,7 +7,7 @@ from ctypes import c_int,c_bool
 import atb
 import audio
 
-from template import Plugin
+from plugin import Plugin
 
 class Screen_Marker_Calibration(Plugin):
     """Calibrate using a marker on your screen

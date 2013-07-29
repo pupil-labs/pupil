@@ -7,7 +7,7 @@ from ctypes import c_int,c_bool
 import atb
 import audio
 
-from template import Plugin
+from plugin import Plugin
 
 class Manual_Marker_Calibration(Plugin):
     """Detector looks for a white ring on a black background.
