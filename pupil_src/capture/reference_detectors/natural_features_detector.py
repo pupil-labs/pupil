@@ -6,11 +6,14 @@ from gl_utils import draw_gl_point_norm
 import atb
 import audio
 
-class Natural_Features_Detector(object):
+from template import Plugin
+
+class Natural_Features_Detector(Plugin):
 	"""Calibrate using natural features in a scene.
 		Features are selected by a user by clicking on
 	"""
 	def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
+		Plugin.__init__(self)
 		self.first_img = None
 		self.point = None
 		self.count = 0
@@ -42,7 +45,7 @@ class Natural_Features_Detector(object):
 		self.shared_pos[:] = 0,0
 		self.active = False
 
-	def detect(self,img):
+	def update(self,img):
 		if self.active:
 			if self.first_img is None:
 				self.first_img = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
@@ -77,16 +80,6 @@ class Natural_Features_Detector(object):
 		self.first_img = None
 		self.point = np.array([pos,],dtype=np.float32)
 		self.count = 30
-
-
-	def del_bar(self):
-		"""Delete the ATB bar manually.
-			Python's garbage collector doesn't work on the object otherwise
-			Due to the fact that ATB is a c library wrapped in ctypes
-
-		"""
-		self._bar.destroy()
-		del self._bar
 
 	def __del__(self):
 		self.global_calibrate.value = False

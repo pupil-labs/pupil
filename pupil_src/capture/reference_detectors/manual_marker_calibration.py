@@ -19,7 +19,7 @@ class Automated_Threshold_Ring_Detector(Plugin):
             Fit ellipses
     """
     def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
-        Plugin.__init__()
+        Plugin.__init__(self)
         self.active = False
         self.detected = False
         self.publish = False

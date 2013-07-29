@@ -5,13 +5,19 @@ from gl_utils import draw_gl_polyline
 import atb
 import audio
 
-class Camera_Intrinsics_Calibration(Plugin):
+
+from template import Plugin
+
+
+
+class Camera_Intrinsics_Estimation(Plugin):
 	"""Camera_Intrinsics_Calibration
 		not being an actual calibration,
 		this method is used to calculate camera intrinsics.
 
 	"""
 	def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
+		Plugin.__init__(self)
 		self.collect_new = False
 		self.calculated = False
 		self.obj_grid = _gen_pattern_grid((4, 11))
@@ -47,7 +53,7 @@ class Camera_Intrinsics_Calibration(Plugin):
 		np.save("dist_coefs.npy", dist_coefs)
 		audio.say("Camera calibrated and saved to file")
 
-	def detect(self,img):
+	def update(self,img):
 		if self.collect_new:
 			status, grid_points = cv2.findCirclesGridDefault(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
 			if status:
@@ -73,15 +79,6 @@ class Camera_Intrinsics_Calibration(Plugin):
 		for grid_points in self.img_points:
 			calib_bounds =  cv2.convexHull(grid_points)[:,0] #we dont need that extra encapsulation that opencv likes so much
 			draw_gl_polyline(calib_bounds,(0.,0.,1.,.5), type="Loop")
-
-	def del_bar(self):
-		"""Delete the ATB bar manually.
-			Python's garbage collector doesn't work on the object otherwise
-			Due to the fact that ATB is a c library wrapped in ctypes
-
-		"""
-		self._bar.destroy()
-		del self._bar
 
 	def __del__(self):
 		pass
