@@ -124,7 +124,7 @@ def world(g_pool):
             g.current_ref_detector.alive = False
 
         # remove old ref detector from list of plugins
-        g.plugins = [p for p in plugins if p.alive]
+        g.plugins = [p for p in g.plugins if p.alive]
 
         print "selected: ",reference_detectors.name_by_index[selection]
         g.current_ref_detector = reference_detectors.detector_by_index[selection](global_calibrate=g_pool.calibrate,
@@ -133,7 +133,7 @@ def world(g_pool):
                                                                     screen_marker_state = g_pool.marker_state,
                                                                     atb_pos=bar.next_atb_pos)
 
-        plugins.append(g.current_ref_detector)
+        g.plugins.append(g.current_ref_detector)
         # save the value for atb bar
         data.value=selection
 
@@ -214,7 +214,7 @@ def world(g_pool):
     g = Temp()
     g.plugins = []
     g.current_ref_detector = None
-    start_calibration(reference_detectors.index_by_name['Automated Threshold Ring Detector'],bar.calibration_type)
+    start_calibration(0,bar.calibration_type)
 
     # Initialize glfw
     glfwInit()
@@ -255,7 +255,7 @@ def world(g_pool):
         for p in g.plugins:
             p.update(img)
 
-        g.plugins = [p for p in plugins if p.alive]
+        g.plugins = [p for p in g.plugins if p.alive]
 
         g_pool.player_refresh.set()
 

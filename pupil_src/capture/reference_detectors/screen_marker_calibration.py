@@ -4,6 +4,7 @@ import numpy as np
 from methods import normalize,denormalize
 from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 
+from ctypes import c_int,c_bool
 import atb
 import audio
 
@@ -12,8 +13,8 @@ from template import Plugin
 class Screen_Marker_Calibration(Plugin):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites
-    Points are collected at sites not between 
-    
+    Points are collected at sites not between
+
     """
     def __init__(self, global_calibrate, shared_pos, screen_marker_pos, screen_marker_state, atb_pos=(0,0)):
         Plugin.__init__(self)

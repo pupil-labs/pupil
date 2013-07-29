@@ -21,7 +21,7 @@ if __name__ == '__main__':
 from screen_marker_calibration import Screen_Marker_Calibration
 from manual_marker_calibration import Manual_Marker_Calibration
 from natural_features_calibration import Natural_Features_Calibration
-from camera_intrinsics_estimation import Camera_Intrinsics_Estimation 
+from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
 
 
 name_by_index = [   'Screen Marker Calibration',
@@ -40,7 +40,7 @@ detector_by_name = dict(zip(name_by_index,detector_by_index))
 
 if __name__ == '__main__':
 
-    active_detector_class = Animated_Nine_Point_Detector
+    active_detector_class = Camera_Intrinsics_Estimation
 
     from glfw import *
     import atb
