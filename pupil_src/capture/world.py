@@ -28,7 +28,7 @@ from methods import normalize, denormalize, chessboard, circle_grid, gen_pattern
 from uvc_capture import autoCreateCapture
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm,draw_gl_polyline_norm
 from calibrate import *
-from reference_detectors import *
+import reference_detectors
 
 def world_profiled(g_pool):
     import cProfile
@@ -118,56 +118,21 @@ def world(g_pool):
         """
         return data.value
 
-    def start_calibration(c_type,data):
-        from gc import get_referrers
-        cal_type = bar.cal_type
-
+    def start_calibration(selection,data):
         # prepare destruction of old ref_detector.
         if ref.detector is not None:
             ref.detector.del_bar()
 
-        #create new ref detector
-        if  c_type == cal_type["Directed 9-Point"]:
-            ref.detector = Nine_Point_Detector(global_calibrate=g_pool.calibrate,
-                                            shared_pos=g_pool.ref,
-                                            shared_stage=g_pool.cal9_stage,
-                                            shared_step=g_pool.cal9_step,
-                                            shared_cal9_active=g_pool.cal9,
-                                            shared_circle_id=g_pool.cal9_circle_id,
-                                            auto_advance=False,
-                                            atb_pos=bar.next_atb_pos)
 
-        elif c_type == cal_type["Automated 9-Point"]:
-            ref.detector = Animated_Nine_Point_Detector(global_calibrate=g_pool.calibrate,
-                                            shared_pos=g_pool.ref,
-                                            screen_marker_pos = g_pool.marker,
-                                            screen_marker_state = g_pool.marker_state,
-                                            auto_advance=True,
-                                            atb_pos=bar.next_atb_pos)
-
-        elif c_type == cal_type["Natural Features"]:
-            ref.detector = Natural_Features_Detector(global_calibrate=g_pool.calibrate,
-                                                    shared_pos=g_pool.ref,
-                                                    atb_pos=bar.next_atb_pos)
-
-        elif c_type == cal_type["Manual White Ring"]:
-
-            ref.detector = Manual_White_Ring_Detector(global_calibrate=g_pool.calibrate,
-                                                        shared_pos=g_pool.ref,
-                                                        atb_pos=bar.next_atb_pos)
-
-        elif c_type == cal_type["Automated White Ring"]:
-            ref.detector = Automated_White_Ring_Detector(global_calibrate=g_pool.calibrate,
-                                                        shared_pos=g_pool.ref,
-                                                        atb_pos=bar.next_atb_pos)
-
-        elif c_type == cal_type["Camera Intrinsics Calibration"]:
-            ref.detector = Camera_Intrinsics_Calibration(global_calibrate=g_pool.calibrate,
-                                            shared_pos=g_pool.ref,
-                                            atb_pos=bar.next_atb_pos)
-
+        selected_detector = reference_detectors.name_by_index[selection]
+        print "selected: ",selected_detector
+        ref.detector = reference_detectors.detector_by_index[selection](global_calibrate=g_pool.calibrate,
+                                                                    shared_pos=g_pool.ref,
+                                                                    screen_marker_pos = g_pool.marker,
+                                                                    screen_marker_state = g_pool.marker_state,
+                                                                    atb_pos=bar.next_atb_pos)
         # save the value for atb bar
-        data.value=c_type
+        data.value=selection
 
 
 
@@ -186,14 +151,8 @@ def world(g_pool):
     bar.play = g_pool.play
     bar.window_size = c_int(0)
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
-    bar.cal_type = ["Directed 9-Point",
-                    "Automated 9-Point",
-                    "Natural Features",
-                    "Manual White Ring",
-                    "Automated White Ring",
-                    "Camera Intrinsics Calibration"]
-    bar.cal_type = dict(zip(bar.cal_type,range(len(bar.cal_type))))
-    bar.calibrate_type_enum = atb.enum("Calibration Method",bar.cal_type)
+
+    bar.calibrate_type_enum = atb.enum("Calibration Method",reference_detectors.index_by_name)
     bar.rec_name = create_string_buffer(512)
     bar.rec_name.value = strftime("%Y_%m_%d", localtime())
     # play and record can be tied together via pointers to the objects
@@ -252,7 +211,7 @@ def world(g_pool):
     # Initialize default Ref Detector
     ref = Temp()
     ref.detector = None
-    start_calibration(bar.cal_type['Camera Intrinsics Calibration'],bar.calibration_type)
+    start_calibration(reference_detectors.index_by_name['Automated Threshold Ring Detector'],bar.calibration_type)
 
     # Initialize glfw
     glfwInit()
