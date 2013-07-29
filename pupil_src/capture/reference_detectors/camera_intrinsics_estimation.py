@@ -26,8 +26,10 @@ class Camera_Intrinsics_Estimation(Plugin):
 		self.count = 10
 		self.img_shape = None
 
+
+		atb_label = "estimate camera instrinsics"
 		# Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-		self._bar = atb.Bar(name = "Reference_Detector", label="Camera Calibration",
+		self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
 			help="ref detection parameters", color=(50, 50, 50), alpha=100,
 			text='light', position=atb_pos,refresh=.3, size=(300, 100))
 		self._bar.add_button("  Capture Pattern", self.advance, key="SPACE")

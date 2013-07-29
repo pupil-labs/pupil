@@ -68,7 +68,7 @@ class Ref_Detector_Template(Plugin):
 
     """
     def __init__(self, global_calibrate, shared_pos, screen_marker_pos, screen_marker_state, atb_pos=(0,0)):
-        Plugin.__init__()
+        Plugin.__init__(self)
 
         self.active = False
         self.global_calibrate = global_calibrate

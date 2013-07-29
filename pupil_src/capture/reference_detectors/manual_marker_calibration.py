@@ -7,7 +7,7 @@ from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 import atb
 import audio
 
-class Automated_Threshold_Ring_Detector(Plugin):
+class manual_marker_calibration(Plugin):
     """Detector looks for a white ring on a black background.
         Using 9 positions/points within the FOV
         Ref detector will direct one to good positions with audio cues
@@ -38,8 +38,10 @@ class Automated_Threshold_Ring_Detector(Plugin):
         self.dist_threshold = c_int(10)
         self.area_threshold = c_int(30)
 
+
+        atb_label = "calibrate using handheld marker"
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-        self._bar = atb.Bar(name = "Automated_White_Ring_Detector", label="Automated White Ring Detector",
+        self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
         self._bar.add_button("  begin calibrating  ", self.start)
