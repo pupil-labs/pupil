@@ -7,7 +7,9 @@ from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 import atb
 import audio
 
-class manual_marker_calibration(Plugin):
+from template import Plugin
+
+class Manual_Marker_Calibration(Plugin):
     """Detector looks for a white ring on a black background.
         Using 9 positions/points within the FOV
         Ref detector will direct one to good positions with audio cues

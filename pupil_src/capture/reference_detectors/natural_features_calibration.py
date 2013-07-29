@@ -8,7 +8,7 @@ import audio
 
 from template import Plugin
 
-class Natural_Features_Detector(Plugin):
+class Natural_Features_Calibration(Plugin):
 	"""Calibrate using natural features in a scene.
 		Features are selected by a user by clicking on
 	"""
