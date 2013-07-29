@@ -17,7 +17,7 @@ if __name__ == '__main__':
     del syspath, ospath
 
 import os, sys
-from time import time
+from time import time, strftime, localtime
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
 import cv2
@@ -82,7 +82,7 @@ def world(g_pool):
     # record object
     record = Temp()
     record.writer = None
-    record.path_parent = os.path.dirname(os.path.abspath(sys.argv[0]))
+    record.base_path = os.path.join(os.path.abspath(__file__).rsplit('pupil_src', 1)[0], "recordings")
     record.path = None
     record.counter = 0
 
@@ -154,7 +154,7 @@ def world(g_pool):
 
     bar.calibrate_type_enum = atb.enum("Calibration Method",reference_detectors.index_by_name)
     bar.rec_name = create_string_buffer(512)
-
+    bar.rec_name.value = strftime("%Y_%m_%d", localtime())
     # play and record can be tied together via pointers to the objects
     # bar.play = bar.record_video
     bar.add_var("FPS", bar.fps, step=1., readonly=True)
@@ -254,18 +254,35 @@ def world(g_pool):
 
         # Setup recording process
         if bar.record_video and not bar.record_running:
-            if bar.rec_name:
-                record.path = os.path.join(record.path_parent, bar.rec_name.value)
-            else:
-                record.path = os.path.join(record.path_parent, "data%03d/" % record.counter)
+            
+            # set up base folder called "recordings"
+            try:
+                os.mkdir(record.base_path)
+            except:
+                print "recordings folder already exists, using existing."
+            
+            # set up folder within recordings named by user input in atb
+            if not bar.rec_name.value:
+                bar.rec_name.value = strftime("%Y_%m_%d", localtime())
+
+            session = os.path.join(record.base_path, bar.rec_name.value)
+            
+            try:
+                os.mkdir(session)
+            except:
+                print "recordings session folder already exists, using existing."
+            
+            # set up self incrementing folder within session folder    
+            record.counter = 0 
             while True:
+                record.path = os.path.join(record.base_path, session, "%03d/" % record.counter)
                 try:
                     os.mkdir(record.path)
                     break
                 except:
                     print "We dont want to overwrite data, incrementing counter & trying to make new data folder"
                     record.counter += 1
-                    record.path = os.path.join(record.path_parent, "data%03d/" % record.counter)
+
             # Video
             video_path = os.path.join(record.path, "world.avi")
             record.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (img.shape[1], img.shape[0]))

@@ -7,7 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
+import os
 from ctypes import c_int,c_bool,c_float
 import numpy as np
 import atb
@@ -306,7 +306,7 @@ def eye(g_pool):
             l_pool.record_path = g_pool.eye_rx.recv()
             print "l_pool.record_path: ", l_pool.record_path
 
-            video_path = path.join(l_pool.record_path, "eye.avi")
+            video_path = os.path.join(l_pool.record_path, "eye.avi")
             if bar.record_eye.value:
                 l_pool.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (img.shape[1], img.shape[0]))
             l_pool.record_positions = []
@@ -321,8 +321,8 @@ def eye(g_pool):
 
         # Done Recording: Save values and flip switch to OFF for recording
         if not g_pool.pos_record.value and l_pool.record_running:
-            positions_path = path.join(l_pool.record_path, "gaze_positions.npy")
-            cal_pt_cloud_path = path.join(l_pool.record_path, "cal_pt_cloud.npy")
+            positions_path = os.path.join(l_pool.record_path, "gaze_positions.npy")
+            cal_pt_cloud_path = os.path.join(l_pool.record_path, "cal_pt_cloud.npy")
             np.save(positions_path, np.asarray(l_pool.record_positions))
             try:
                 np.save(cal_pt_cloud_path, np.asarray(pupil.pt_cloud))
