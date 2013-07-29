@@ -60,7 +60,8 @@ def world(g_pool):
                 pos = glfwGetMousePos()
                 pos = normalize(pos,glfwGetWindowSize())
                 pos = denormalize(pos,(img.shape[1],img.shape[0]) ) # Position in img pixels
-                ref.detector.on_click(pos)
+                for p in g.plugins:
+                    p.on_click(pos)
 
     def on_pos(x, y):
         if atb.TwMouseMotion(x,y):
