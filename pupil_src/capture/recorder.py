@@ -52,7 +52,7 @@ class Recorder(Plugin):
 
 
 	def update(self, img):
-		self.shared_record.value += 1
+		self.shared_frame_count.value += 1
 		self.writer.write(img)
 
 	def stop(self):
@@ -66,8 +66,9 @@ class Recorder(Plugin):
 		except:
 			print "no camera intrinsics found, will not copy them into recordings folder"
 
-
-		self.shared_record.value = 0
+		print "Stopping recording"
+		self.shared_record.value = False
 		self.alive = False
+
 
 
