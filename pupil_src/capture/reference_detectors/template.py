@@ -33,7 +33,7 @@ class Plugin(object):
     @alive.setter
     def alive(self, value):
         if isinstance(value,bool):
-
+            self._alive = value
 
     def on_click(self,pos):
         """

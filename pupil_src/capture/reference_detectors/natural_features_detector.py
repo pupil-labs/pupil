@@ -26,8 +26,7 @@ class Natural_Features_Detector(Plugin):
 		self.var1 = c_int(0)
 		self.r = 40.0 # radius of circle displayed
 
-        atb_label = "calibrate using natural features"
-		# Creating an ATB Bar is required. Show at least some info about the Ref_Detector
+		atb_label = "calibrate using natural features"
 		self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
 			help="ref detection parameters", color=(50, 50, 50), alpha=100,
 			text='light', position=atb_pos,refresh=.3, size=(300, 100))

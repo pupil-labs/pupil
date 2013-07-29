@@ -60,7 +60,7 @@ def world(g_pool):
                 pos = glfwGetMousePos()
                 pos = normalize(pos,glfwGetWindowSize())
                 pos = denormalize(pos,(img.shape[1],img.shape[0]) ) # Position in img pixels
-                ref.detector.new_ref(pos)
+                ref.detector.on_click(pos)
 
     def on_pos(x, y):
         if atb.TwMouseMotion(x,y):
@@ -120,20 +120,22 @@ def world(g_pool):
 
     def start_calibration(selection,data):
         # prepare destruction of old ref_detector.
-        if ref.detector is not None:
-            ref.detector.del_bar()
+        if g.current_ref_detector:
+            g.current_ref_detector.alive = False
 
+        # remove old ref detector from list of plugins
+        g.plugins = [p for p in plugins if p.alive]
 
-        selected_detector = reference_detectors.name_by_index[selection]
-        print "selected: ",selected_detector
-        ref.detector = reference_detectors.detector_by_index[selection](global_calibrate=g_pool.calibrate,
+        print "selected: ",reference_detectors.name_by_index[selection]
+        g.current_ref_detector = reference_detectors.detector_by_index[selection](global_calibrate=g_pool.calibrate,
                                                                     shared_pos=g_pool.ref,
                                                                     screen_marker_pos = g_pool.marker,
                                                                     screen_marker_state = g_pool.marker_state,
                                                                     atb_pos=bar.next_atb_pos)
+
+        plugins.append(g.current_ref_detector)
         # save the value for atb bar
         data.value=selection
-
 
 
     # Initialize ant tweak bar - inherits from atb.Bar
@@ -208,9 +210,10 @@ def world(g_pool):
         c_bar = None
 
 
-    # Initialize default Ref Detector
-    ref = Temp()
-    ref.detector = None
+    # create container for globally scoped vars (within world)
+    g = Temp()
+    g.plugins = []
+    g.current_ref_detector = None
     start_calibration(reference_detectors.index_by_name['Automated Threshold Ring Detector'],bar.calibration_type)
 
     # Initialize glfw
@@ -248,32 +251,37 @@ def world(g_pool):
 
         # Get an image from the grabber
         s, img = cap.read()
-        ref.detector.detect(img)
+
+        for p in g.plugins:
+            p.update(img)
+
+        g.plugins = [p for p in plugins if p.alive]
+
         g_pool.player_refresh.set()
 
 
         # Setup recording process
         if bar.record_video and not bar.record_running:
-            
+
             # set up base folder called "recordings"
             try:
                 os.mkdir(record.base_path)
             except:
                 print "recordings folder already exists, using existing."
-            
+
             # set up folder within recordings named by user input in atb
             if not bar.rec_name.value:
                 bar.rec_name.value = strftime("%Y_%m_%d", localtime())
 
             session = os.path.join(record.base_path, bar.rec_name.value)
-            
+
             try:
                 os.mkdir(session)
             except:
                 print "recordings session folder already exists, using existing."
-            
-            # set up self incrementing folder within session folder    
-            record.counter = 0 
+
+            # set up self incrementing folder within session folder
+            record.counter = 0
             while True:
                 record.path = os.path.join(record.base_path, session, "%03d/" % record.counter)
                 try:
@@ -342,8 +350,9 @@ def world(g_pool):
             draw_gl_polyline_norm(calib_bounds,(.0,1.,0,.5),type='Loop')
 
 
-        # render visual feedback from detector
-        ref.detector.gl_display()
+        # render visual feedback from loaded plugins
+        for p in g.plugins:
+            p.gl_display()
 
 
         # update gaze point from shared variable pool and draw on screen. If both coords are 0: no pupil pos was detected.
