@@ -24,7 +24,6 @@ from multiprocessing import Array
 from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 
 import atb
-
 import audio
 
 class Ref_Detector_Template(object):
@@ -38,7 +37,7 @@ class Ref_Detector_Template(object):
 
     ...
     """
-    def __init__(self,global_calibrate,shared_pos,atb_pos):
+    def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
         self.active = False
         self.global_calibrate = global_calibrate
         self.global_calibrate.value = False
@@ -114,8 +113,6 @@ class Ref_Detector_Template(object):
         self.global_calibrate.value = False
         self.shared_pos[:] = 0.,0.
 
-
-
 class Automated_Threshold_Ring_Detector(object):
     """Detector looks for a white ring on a black background.
         Using 9 positions/points within the FOV
@@ -127,7 +124,7 @@ class Automated_Threshold_Ring_Detector(object):
             Find contours and filter into 2 level list using RETR_CCOMP
             Fit ellipses
     """
-    def __init__(self,global_calibrate,shared_pos,atb_pos):
+    def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
         self.active = False
         self.detected = False
         self.publish = False
@@ -322,7 +319,7 @@ class Automated_Threshold_Ring_Detector(object):
 
 class Animated_Nine_Point_Detector(object):
     """docstring for Nine_Point_"""
-    def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,auto_advance=False,atb_pos=(0,0)):
+    def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
         self.active = False
         self.detected = False
         self.global_calibrate = global_calibrate
@@ -339,7 +336,6 @@ class Animated_Nine_Point_Detector(object):
 
         self.active_site = 0
         self.sites = []
-        self.auto_advance = auto_advance
 
 
         self.candidate_ellipses = []
@@ -349,17 +345,13 @@ class Animated_Nine_Point_Detector(object):
         self.dist_threshold = c_int(10)
         self.area_threshold = c_int(30)
 
-        if self.auto_advance:
-            atb_label = "Automatic 9 Point Detector"
-        else:
-            atb_label = "Directed 9 Point Detector"
+
+        atb_label = "9 Point Detector"
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = "9_Point_Reference_Detector", label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 150))
         self._bar.add_button("  begin calibrating  ", self.start)
-        # if not self.auto_advance:
-        #     self._bar.add_button("  next point", self.advance, key="SPACE")
         self._bar.add_separator("Sep1")
 
 
@@ -542,7 +534,7 @@ class Animated_Nine_Point_Detector(object):
 
 class Nine_Point_Detector(object):
     """docstring for Nine_Point_"""
-    def __init__(self, global_calibrate,shared_pos,shared_stage,shared_step,shared_cal9_active,shared_circle_id,auto_advance=False,atb_pos=(0,0)):
+    def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
         self.active = False
         self.detected = False
         self.global_calibrate = global_calibrate
@@ -559,21 +551,16 @@ class Nine_Point_Detector(object):
         self.stage = 0
         self.step = 0
         self.next = False
-        self.auto_advance = auto_advance
         self.map = (0, 2, 7, 16, 21, 23, 39, 40, 42)
         self.grid_points = None
-        if self.auto_advance:
-            atb_label = "Automatic 9 Point Detector"
-        else:
-            atb_label = "Directed 9 Point Detector"
+
+        atb_label = "9 Point Detector"
 
       # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = "9_Point_Reference_Detector", label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 150))
         self._bar.add_button("  begin calibrating  ", self.start)
-        if not self.auto_advance:
-            self._bar.add_button("  next point", self.advance, key="SPACE")
         self._bar.add_separator("Sep1")
         self._bar.add_var("9 point stage", getter=self.get_stage)
         self._bar.add_var("9 point step", getter=self.get_step)
@@ -625,7 +612,7 @@ class Nine_Point_Detector(object):
                     img_pos = self.grid_points[self.map[self.stage]][0]
                     self.pos = normalize(img_pos, (img.shape[1],img.shape[0]),flip_y=True)
             # Advance
-            if self.next or self.auto_advance:
+            if self.next or 1:
                 self.step += 1
 
             self.publish()
@@ -678,7 +665,7 @@ class Natural_Features_Detector(object):
     """Calibrate using natural features in a scene.
         Features are selected by a user by clicking on
     """
-    def __init__(self,global_calibrate,shared_pos,atb_pos):
+    def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
         self.first_img = None
         self.point = None
         self.count = 0
@@ -768,7 +755,7 @@ class Camera_Intrinsics_Calibration(object):
         this method is used to calculate camera intrinsics.
 
     """
-    def __init__(self,global_calibrate,shared_pos, atb_pos=(0,0)):
+    def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
         self.collect_new = False
         self.calculated = False
         self.obj_grid = _gen_pattern_grid((4, 11))
@@ -861,6 +848,20 @@ def _gen_pattern_grid(size=(4,11)):
     return np.asarray(pattern_grid, dtype='f4')
 
 
+
+
+name_by_index = ['Automated Threshold Ring Detector',
+                    'Animated Nine Point Detector',
+                    'Natural Features Detector',
+                    'Camera Intrinsics Calibration']
+
+detector_by_index = [Automated_Threshold_Ring_Detector,
+                    Animated_Nine_Point_Detector,
+                    Natural_Features_Detector,
+                    Camera_Intrinsics_Calibration]
+
+index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
+detector_by_name = dict(zip(name_by_index,detector_by_index))
 
 
 
