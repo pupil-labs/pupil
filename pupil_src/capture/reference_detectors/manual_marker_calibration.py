@@ -7,28 +7,30 @@ from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 import atb
 import audio
 
+class Automated_Threshold_Ring_Detector(Plugin):
+    """Detector looks for a white ring on a black background.
+        Using 9 positions/points within the FOV
+        Ref detector will direct one to good positions with audio cues
+        Calibration only collects data at the good positions
 
-class Animated_Nine_Point_Detector(object):
-    """docstring for Nine_Point_"""
+        Steps:
+            Adaptive threshold to obtain robust edge-based image of marker
+            Find contours and filter into 2 level list using RETR_CCOMP
+            Fit ellipses
+    """
     def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
+        Plugin.__init__()
         self.active = False
         self.detected = False
+        self.publish = False
         self.global_calibrate = global_calibrate
         self.global_calibrate.value = False
-
         self.shared_pos = shared_pos
-
-        self.shared_screen_marker_pos = screen_marker_pos
-        self.shared_screen_marker_state = screen_marker_state # used for v
-        self.screen_marker_state = -1
-        self.screen_marker_max = 90 # maximum bound for state
         self.pos = 0,0 # 0,0 is used to indicate no point detected
-
-
-        self.active_site = 0
+        self.counter = 0
+        # sites are the nine point positions in the FOV
         self.sites = []
-
-
+        self.site_size = 100 # size of the circular area
         self.candidate_ellipses = []
 
         self.show_edges = c_bool(1)
@@ -36,15 +38,18 @@ class Animated_Nine_Point_Detector(object):
         self.dist_threshold = c_int(10)
         self.area_threshold = c_int(30)
 
-
-        atb_label = "9 Point Detector"
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-        self._bar = atb.Bar(name = "9_Point_Reference_Detector", label=atb_label,
+        self._bar = atb.Bar(name = "Automated_White_Ring_Detector", label="Automated White Ring Detector",
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 150))
+            text='light', position=atb_pos,refresh=.3, size=(300, 100))
         self._bar.add_button("  begin calibrating  ", self.start)
+        self._bar.add_button("  end calibrating  ", self.stop)
         self._bar.add_separator("Sep1")
-
+        self._bar.add_var("show edges",self.show_edges)
+        self._bar.add_var("counter", getter=self.get_count)
+        self._bar.add_var("apature", self.apature, min=3,step=2)
+        self._bar.add_var("area threshold", self.area_threshold)
+        self._bar.add_var("eccetricity threshold", self.dist_threshold)
 
     def start(self):
         audio.say("Starting Calibration")
@@ -52,15 +57,6 @@ class Animated_Nine_Point_Detector(object):
                         (-.9, 0), ( 0, 0), ( .9, 0),
                         (-.9, .9), ( 0, .9), ( .9, .9)]
 
-        self.sites = [  ( 0, 0),
-                        (-.9,.9), (0.,0.9),(.9,.9),
-                        (.9,0.),
-                        (.9,-.9), (0., -.9),( -.9, -.9),
-                        (-.9,0.),
-                        (0.,0.) ]
-
-        self.active_site = 0
-        self.screen_marker_state = 0
         self.global_calibrate.value = True
         self.shared_pos[:] = 0,0
         self.active = True
@@ -68,20 +64,19 @@ class Animated_Nine_Point_Detector(object):
     def stop(self):
         audio.say("Stopping Calibration")
         self.global_calibrate.value = False
-        self.reset()
-        self.publish()
+        self.shared_pos[:] = 0,0
         self.active = False
 
-    def new_ref(self,pos):
-        """
-        gets called when the user clicks on the world window screen
-        """
-        pass
+    def get_count(self):
+        return self.counter
 
-
-    def detect(self,img):
+    def update(self,img):
+        """
+        gets called once every frame.
+        reference positon need to be published to shared_pos
+        if no reference was found, publish 0,0
+        """
         if self.active:
-            #detect the marker
             gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
             # self.candidate_points = self.detector.detect(s_img)
 
@@ -142,47 +137,37 @@ class Animated_Nine_Point_Detector(object):
                 marker_pos = self.candidate_ellipses[0][0]
                 self.pos = normalize(marker_pos,(img.shape[1],img.shape[0]),flip_y=True)
 
+                if not self.counter:
+                    for i in range(len(self.sites)):
+                        screen_site = denormalize(self.sites[i],(img.shape[1],img.shape[0]),flip_y=True)
+                        screen_dist = np.sqrt((marker_pos[0]-screen_site[0])**2+(marker_pos[1]-screen_site[1])**2)
+                        if screen_dist <= self.site_size/2.:
+                            self.sites.pop(i)
+                            audio.beep()
+                            self.counter = 30
+                            break
             else:
                 self.detected = False
                 self.pos = 0,0 #indicate that no reference is detected
 
 
-            # Animate the screen marker
-            if self.screen_marker_state < self.screen_marker_max:
-                if self.detected:
-                    self.screen_marker_state += 1
+            if self.counter and self.detected:
+                self.counter -= 1
+                self.shared_pos[:] = self.pos
             else:
-                self.screen_marker_state = 0
-                if self.active_site < 8:
-                    self.active_site += 1
-                    print self.active_site
-                else:
-                    self.stop()
+                self.shared_pos[:] = 0,0
+
+            if not self.counter and len(self.sites)==0:
+                self.stop()
+        else:
+            pass
 
 
-            # function to smoothly interpolate between points input:(0-90) output: (0-1)
-            interpolation_weight = np.tanh(((self.screen_marker_state-2/3.*self.screen_marker_max)*4.)/(1/3.*self.screen_marker_max))*(-.5)+.5
-
-            #use np.arrays for per element wise math
-            current = np.array(self.sites[self.active_site])
-            next = np.array(self.sites[self.active_site+1])
-            # weighted sum to interpolate between current and next
-            new_pos =  current * interpolation_weight + next * (1-interpolation_weight)
-            #broadcast next commanded marker postion of screen
-            self.shared_screen_marker_pos[:] = list(new_pos)
-
-            # self.publish()
-
-
-
-    def advance(self):
-        self.next=True
-
-    def publish(self):
-        self.shared_pos[:] = self.pos
-
-    def reset(self):
-        self.pos = 0,0
+    def new_ref(self,pos):
+        """
+        gets called when the user clicks on the world window screen
+        """
+        pass
 
     def gl_display(self):
         """
@@ -193,6 +178,10 @@ class Animated_Nine_Point_Detector(object):
             show the detected postion even if not published
         """
 
+        if self.active:
+            for site in self.sites:
+                draw_gl_point_norm(site,size=self.site_size,color=(0.,1.,0.,.5))
+
         if self.active and self.detected:
             for e in self.candidate_ellipses:
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
@@ -200,24 +189,16 @@ class Animated_Nine_Point_Detector(object):
                                     int(e[-1]),0,360,15)
                 draw_gl_polyline(pts,(0.,1.,0,1.))
 
-            if False:
-                draw_gl_point_norm(self.pos,size=20,color=(0.,1.,0.,.5))
+            if self.counter:
+                draw_gl_point_norm(self.pos,size=self.site_size,color=(0.,1.,0.,.5))
             else:
                 draw_gl_point_norm(self.pos,size=20.,color=(1.,0.,0.,.5))
         else:
             pass
 
-    def del_bar(self):
-        """Delete the ATB bar manually.
-            Python's garbage collector doesn't work on the object otherwise
-            Due to the fact that ATB is a c library wrapped in ctypes
-
-        """
-        self._bar.destroy()
-        del self._bar
-
-
     def __del__(self):
-        self.reset()
-        self.publish()
+        '''Do what is required for clean up. This happes when a user changes the detector. It can happen at any point
+
+        '''
         self.global_calibrate.value = False
+        self.shared_pos[:] = 0.,0.

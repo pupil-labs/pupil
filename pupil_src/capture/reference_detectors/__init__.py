@@ -50,9 +50,9 @@ class Plugin(object):
 
     Creating an ATB Bar in __init__ is required in the class that is based on this class
     Show at least some info about the Ref_Detector
-    self._bar = atb.Bar(name = "A_Unique_Name", label=atb_label,
-                        help="ref detection parameters", color=(50, 50, 50), alpha=100,
-                        text='light', position=atb_pos,refresh=.3, size=(300, 150))
+    self._bar = atb.Bar(name = self.__class__.__name__, label='your_label',
+                help="ref detection parameters", color=(50, 50, 50), alpha=100,
+                text='light', position=atb_pos,refresh=.3, size=(300, 150))
     """
     def __init__(self):
         self._alive = True

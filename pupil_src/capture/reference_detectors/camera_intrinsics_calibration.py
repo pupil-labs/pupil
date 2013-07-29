@@ -5,7 +5,7 @@ from gl_utils import draw_gl_polyline
 import atb
 import audio
 
-class Camera_Intrinsics_Calibration(object):
+class Camera_Intrinsics_Calibration(Plugin):
 	"""Camera_Intrinsics_Calibration
 		not being an actual calibration,
 		this method is used to calculate camera intrinsics.
