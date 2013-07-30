@@ -38,7 +38,7 @@ class Screen_Marker_Calibration(Plugin):
 
         self.candidate_ellipses = []
 
-        self.show_edges = c_bool(1)
+        self.show_edges = c_bool(0)
         self.apature = c_int(7)
         self.dist_threshold = c_int(10)
         self.area_threshold = c_int(30)
@@ -51,18 +51,22 @@ class Screen_Marker_Calibration(Plugin):
             text='light', position=atb_pos,refresh=.3, size=(300, 150))
         self._bar.add_button("  begin calibrating  ", self.start, key='c')
         self._bar.add_separator("Sep1")
+        self._bar.add_var("show edges",self.show_edges)
+        self._bar.add_var("apature", self.apature, min=3,step=2)
+        self._bar.add_var("area threshold", self.area_threshold)
+        self._bar.add_var("eccetricity threshold", self.dist_threshold)
 
 
     def start(self):
         audio.say("Starting Calibration")
 
-        c = 1
-        self.sites = [  ( -.3, 0),
+        c = 1.
+        self.sites = [  (.0, 0),
                         (-c,c), (0.,c),(c,c),
                         (c,0.),
                         (c,-c), (0., -c),( -c, -c),
                         (-c,0.),
-                        (.3,0.),(.3,0.)]
+                        (.0,0.),(.0,0.)]
 
         self.active_site = 0
         self.shared_screen_marker_state.value = 1
@@ -140,13 +144,13 @@ class Screen_Marker_Calibration(Plugin):
                 return abs(e[0][0]-other[0][0])+abs(e[0][1]-other[0][1])
 
             def get_cluster(ellipses):
-                # retrun the first cluser of at least 2 concetric ellipses
+                # retrun the first cluser of at least 3 concetric ellipses
                 for e in ellipses:
                     close_ones = []
                     for other in ellipses:
                         if man_dist(e,other)<self.dist_threshold.value:
                             close_ones.append(other)
-                    if len(close_ones)>=3:
+                    if len(close_ones)>=4:
                         # sort by major axis to return smallest ellipse first
                         close_ones.sort(key=lambda e: max(e[1]))
                         return close_ones
@@ -212,7 +216,6 @@ class Screen_Marker_Calibration(Plugin):
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
                 draw_gl_polyline(pts,(0.,1.,0,1.))
-            draw_gl_point_norm(self.pos,size=10.,color=(0.,0.,1.,.5))
         else:
             pass
 
