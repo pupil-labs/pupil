@@ -27,7 +27,7 @@ class Screen_Marker_Calibration(Plugin):
 
         self.shared_screen_marker_pos = screen_marker_pos
         self.shared_screen_marker_state = screen_marker_state # used for v
-        self.screen_marker_state = -1
+        self.screen_marker_state = 0
         self.screen_marker_max = 90 # maximum bound for state
         self.pos = 0,0 # 0,0 is used to indicate no point detected
 
@@ -55,27 +55,25 @@ class Screen_Marker_Calibration(Plugin):
 
     def start(self):
         audio.say("Starting Calibration")
-        self.sites = [  (-.9,-.9), ( 0,-.9), ( .9,-.9),
-                        (-.9, 0), ( 0, 0), ( .9, 0),
-                        (-.9, .9), ( 0, .9), ( .9, .9)]
 
-
-        c = .75
-        self.sites = [  ( 0, 0),
+        c = 1
+        self.sites = [  ( -.3, 0),
                         (-c,c), (0.,c),(c,c),
                         (c,0.),
                         (c,-c), (0., -c),( -c, -c),
                         (-c,0.),
-                        (0.,0.),(0.00001,0.00001)]
+                        (.3,0.),(.3,0.)]
 
         self.active_site = 0
-        self.screen_marker_state = 0
+        self.shared_screen_marker_state.value = 1
         self.global_calibrate.value = True
         self.shared_pos[:] = 0,0
         self.active = True
 
     def stop(self):
         audio.say("Stopping Calibration")
+        self.screen_marker_state = 0
+        self.shared_screen_marker_state.value = 0
         self.global_calibrate.value = False
         self.reset()
         self.publish()
@@ -129,6 +127,8 @@ class Screen_Marker_Calibration(Plugin):
 
             ellipses = [cv2.fitEllipse(c) for c in contained_contours]
             self.candidate_ellipses = []
+
+
             # filter for ellipses that have similar area as the source contour
             for e,c in zip(ellipses,contained_contours):
                 a,b = e[1][0]/2.,e[1][1]/2.
@@ -140,6 +140,7 @@ class Screen_Marker_Calibration(Plugin):
                 return abs(e[0][0]-other[0][0])+abs(e[0][1]-other[0][1])
 
             def get_cluster(ellipses):
+                # retrun the first cluser of at least 2 concetric ellipses
                 for e in ellipses:
                     close_ones = []
                     for other in ellipses:
@@ -164,13 +165,14 @@ class Screen_Marker_Calibration(Plugin):
                 self.detected = False
                 self.pos = 0,0 #indicate that no reference is detected
 
+
+            #only broadcast a valid ref position if within sample window of calibraiton routine
             if 0< self.screen_marker_state < self.screen_marker_max-50:
                 pass
             else:
                 self.pos = 0,0
 
-            self.shared_pos[:] = self.pos
-
+            self.publish()
             # Animate the screen marker
             if self.screen_marker_state < self.screen_marker_max:
                 if self.detected:
@@ -181,7 +183,6 @@ class Screen_Marker_Calibration(Plugin):
                 print self.active_site
                 if self.active_site == 10:
                     self.stop()
-                    self.shared_screen_marker_pos[:] = 0,0
                     return
 
             # function to smoothly interpolate between points input:(0-90) output: (0-1)
@@ -194,9 +195,6 @@ class Screen_Marker_Calibration(Plugin):
             new_pos =  current * interpolation_weight + next * (1-interpolation_weight)
             #broadcast next commanded marker postion of screen
             self.shared_screen_marker_pos[:] = list(new_pos)
-
-
-
 
 
     def gl_display(self):
@@ -214,11 +212,7 @@ class Screen_Marker_Calibration(Plugin):
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
                 draw_gl_polyline(pts,(0.,1.,0,1.))
-
-            if False:
-                draw_gl_point_norm(self.pos,size=20,color=(0.,1.,0.,.5))
-            else:
-                draw_gl_point_norm(self.pos,size=20.,color=(1.,0.,0.,.5))
+            draw_gl_point_norm(self.pos,size=10.,color=(0.,0.,1.,.5))
         else:
             pass
 

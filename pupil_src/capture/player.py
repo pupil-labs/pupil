@@ -121,45 +121,45 @@ def player(g_pool,size):
 
 
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
-
         glfwPollEvents()
-
         if g_pool.player_refresh.wait(0.01):
             g_pool.player_refresh.clear()
 
             clear_gl_screen()
-            if not g_pool.marker[:] == [0,0]:
+            if g_pool.marker_state.value !=0:
 
-                draw_gl_point_norm(g_pool.marker[:],10,(1,0,0,1))
-                # Set Projection Matrix
+                # Set Matrix unsing gluOrtho2D to include padding for the marker of radius r
+                #
+                ############################
+                #            r             #
+                # 0,0##################w,h #
+                # #                      # #
+                # #                      # #
+                #r#                      #r#
+                # #                      # #
+                # #                      # #
+                # 0,h##################w,h #
+                #            r             #
+                ############################
+                r = 60
                 gl.glMatrixMode(gl.GL_PROJECTION)
                 gl.glLoadIdentity()
-                gluOrtho2D(0,glfwGetWindowSize()[0],glfwGetWindowSize()[1], 0) # origin in the top left corner just like the img np-array
+                # compensate for radius of marker
+                gluOrtho2D(-r,glfwGetWindowSize()[0]+r,glfwGetWindowSize()[1]+r, -r) # origin in the top left corner just like the img np-array
                 # Switch back to Model View Matrix
                 gl.glMatrixMode(gl.GL_MODELVIEW)
                 gl.glLoadIdentity()
-                # draw_gl_point_norm(g_pool.marker[:], 20.0, (0.,1.,0.,.5))
-                # draw_gl_point_norm(g_pool.marker[:], 5.0, (1.,1.,0.,.5))
 
 
                 screen_pos = denormalize(g_pool.marker[:],glfwGetWindowSize(),flip_y=True)
+
+                #some feedback on the detection state
                 draw_marker(screen_pos)
                 if g_pool.ref[:] == [0.,0.]:
+                    # world ref is detected
                     draw_gl_point(screen_pos, 5.0, (1.,0.,0.,1.))
                 else:
                     draw_gl_point(screen_pos, 5.0, (0.,1.,0.,1.))
-
-
-                # circle_id,step = g_pool.cal9_circle_id.value,g_pool.cal9_step.value
-                # gl.glColor4f(0.0,0.0,0.0,1.0)
-                # gl.glPointSize(40)
-                # gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-                # gl.glBegin(gl.GL_POINTS)
-                # for p in grid:
-                #     gl.glVertex3f(p[0],p[1],0.0)
-                # gl.glEnd()
-
-                # display the animated target dot
 
             elif g_pool.play.value:
                 if len(player.captures):
