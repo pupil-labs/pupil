@@ -1,7 +1,7 @@
 import atb
 import numpy as np
 from gl_utils import draw_gl_polyline_norm
-from ctypes import c_float
+from ctypes import c_float,c_int
 import cv2
 
 from plugin import Plugin
@@ -25,16 +25,22 @@ class Show_Calibration(Plugin):
         self.outliers = np.concatenate((cal_pt_cloud[~inlier_map][:,0:2],cal_pt_cloud[~inlier_map][:,2:4])).reshape(-1,2)
         self.inliers = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1).reshape(-1,2)
 
-        self.inlier_ratio = c_float(self.inliers.shape[0]/float(cal_pt_cloud.shape[0]))
-        self.calib_area_ratio = c_float(cv2.contourArea(self.calib_bounds)/float(width*height))
+
+        self.inlier_ratio = c_float(cal_pt_cloud[inlier_map].shape[0]/float(cal_pt_cloud.shape[0]))
+        self.inlier_count = c_int(cal_pt_cloud[inlier_map].shape[0])
+        # hull = cv2.approxPolyDP(self.calib_bounds, 0.001,closed=True)
+        # print cv2.contourArea(self.calib_bounds)
+        full_screen_area = 2.*2.
+        self.calib_area_ratio = c_float(cv2.contourArea(self.calib_bounds)/full_screen_area)
 
         help_str = "yellow: indicates calibration error, red:discarded outliners, outline shows the calibrated area."
 
         self._bar = atb.Bar(name = self.__class__.__name__, label='calibration results',
             help=help_str, color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_var("fraction of used data points", self.inlier_ratio, readonly=True)
-        self._bar.add_var("fraction of calibrated screen area", self.calib_area_ratio, readonly=True)
+            text='light', position=atb_pos,refresh=.3, size=(300, 140))
+        self._bar.add_var("number of used samples", self.inlier_count, readonly=True)
+        self._bar.add_var("fraction of used data points", self.inlier_ratio, readonly=True,precision=2)
+        self._bar.add_var("fraction of calibrated screen area", self.calib_area_ratio, readonly=True,precision=2)
         self._bar.add_button("close", self.close, key="x", help="close calibration results visualization")
 
     def gl_display(self):

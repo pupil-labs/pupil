@@ -49,7 +49,7 @@ class Screen_Marker_Calibration(Plugin):
         self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 150))
-        self._bar.add_button("  begin calibrating  ", self.start)
+        self._bar.add_button("  begin calibrating  ", self.start, key='c')
         self._bar.add_separator("Sep1")
 
 
@@ -59,12 +59,14 @@ class Screen_Marker_Calibration(Plugin):
                         (-.9, 0), ( 0, 0), ( .9, 0),
                         (-.9, .9), ( 0, .9), ( .9, .9)]
 
+
+        c = .75
         self.sites = [  ( 0, 0),
-                        (-.9,.9), (0.,0.9),(.9,.9),
-                        (.9,0.),
-                        (.9,-.9), (0., -.9),( -.9, -.9),
-                        (-.9,0.),
-                        (0.,0.) ]
+                        (-c,c), (0.,c),(c,c),
+                        (c,0.),
+                        (c,-c), (0., -c),( -c, -c),
+                        (-c,0.),
+                        (0.,0.),(0.00001,0.00001)]
 
         self.active_site = 0
         self.screen_marker_state = 0
@@ -162,6 +164,12 @@ class Screen_Marker_Calibration(Plugin):
                 self.detected = False
                 self.pos = 0,0 #indicate that no reference is detected
 
+            if 0< self.screen_marker_state < self.screen_marker_max-50:
+                pass
+            else:
+                self.pos = 0,0
+
+            self.shared_pos[:] = self.pos
 
             # Animate the screen marker
             if self.screen_marker_state < self.screen_marker_max:
@@ -169,12 +177,12 @@ class Screen_Marker_Calibration(Plugin):
                     self.screen_marker_state += 1
             else:
                 self.screen_marker_state = 0
-                if self.active_site < 8:
-                    self.active_site += 1
-                    print self.active_site
-                else:
+                self.active_site += 1
+                print self.active_site
+                if self.active_site == 10:
                     self.stop()
-
+                    self.shared_screen_marker_pos[:] = 0,0
+                    return
 
             # function to smoothly interpolate between points input:(0-90) output: (0-1)
             interpolation_weight = np.tanh(((self.screen_marker_state-2/3.*self.screen_marker_max)*4.)/(1/3.*self.screen_marker_max))*(-.5)+.5
@@ -187,7 +195,6 @@ class Screen_Marker_Calibration(Plugin):
             #broadcast next commanded marker postion of screen
             self.shared_screen_marker_pos[:] = list(new_pos)
 
-            # self.publish()
 
 
 

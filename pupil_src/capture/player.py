@@ -20,12 +20,12 @@ import OpenGL.GL as gl
 from glfw import *
 import numpy as np
 import cv2
-from methods import Temp
+from methods import Temp,denormalize
 from uvc_capture import autoCreateCapture
 from time import sleep
 from glob import glob
-from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm
-
+from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_polyline,draw_gl_point
+from OpenGL.GLU import gluOrtho2D
 
 def make_grid(dim=(11,4)):
     """
@@ -88,6 +88,16 @@ def player(g_pool,size):
         g_pool.quit.value = True
         print "Player Process closing from window"
 
+    def draw_circle(pos,r,c):
+        pts = cv2.ellipse2Poly(tuple(pos),(r,r),0,0,360,5)
+        draw_gl_polyline(pts,c,'Polygon')
+
+    def draw_marker(pos):
+        pos = int(pos[0]),int(pos[1])
+        black = (0.,0.,0.,1.)
+        white = (1.,1.,1.,1.)
+        for r,c in zip((50,40,30,20,10),(black,white,black,white,black)):
+            draw_circle(pos,r,c)
 
     # Initialize glfw
     glfwInit()
@@ -119,7 +129,25 @@ def player(g_pool,size):
 
             clear_gl_screen()
             if not g_pool.marker[:] == [0,0]:
-                draw_gl_point_norm(g_pool.marker[:], 20.0, (0.,1.,0.,.5))
+
+                draw_gl_point_norm(g_pool.marker[:],10,(1,0,0,1))
+                # Set Projection Matrix
+                gl.glMatrixMode(gl.GL_PROJECTION)
+                gl.glLoadIdentity()
+                gluOrtho2D(0,glfwGetWindowSize()[0],glfwGetWindowSize()[1], 0) # origin in the top left corner just like the img np-array
+                # Switch back to Model View Matrix
+                gl.glMatrixMode(gl.GL_MODELVIEW)
+                gl.glLoadIdentity()
+                # draw_gl_point_norm(g_pool.marker[:], 20.0, (0.,1.,0.,.5))
+                # draw_gl_point_norm(g_pool.marker[:], 5.0, (1.,1.,0.,.5))
+
+
+                screen_pos = denormalize(g_pool.marker[:],glfwGetWindowSize(),flip_y=True)
+                draw_marker(screen_pos)
+                if g_pool.ref[:] == [0.,0.]:
+                    draw_gl_point(screen_pos, 5.0, (1.,0.,0.,1.))
+                else:
+                    draw_gl_point(screen_pos, 5.0, (0.,1.,0.,1.))
 
 
                 # circle_id,step = g_pool.cal9_circle_id.value,g_pool.cal9_step.value
