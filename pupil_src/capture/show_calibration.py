@@ -32,7 +32,7 @@ class Show_Calibration(Plugin):
 
         self._bar = atb.Bar(name = self.__class__.__name__, label='calibration results',
             help=help_str, color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 80))
+            text='light', position=atb_pos,refresh=.3, size=(300, 100))
         self._bar.add_var("fraction of used data points", self.inlier_ratio, readonly=True)
         self._bar.add_var("fraction of calibrated screen area", self.calib_area_ratio, readonly=True)
         self._bar.add_button("close", self.close, key="x", help="close calibration results visualization")
