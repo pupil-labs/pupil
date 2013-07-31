@@ -77,6 +77,7 @@ TwAddSeparator.restype = c_pointer
 TwAddSeparator.argtypes = [c_pointer, c_char_p, c_char_p]
 TwAddVarRW.restype   = c_pointer
 TwAddVarRW.argtypes  = [c_pointer, c_char_p, c_int, c_void_p, c_void_p]
+TwRemoveVar.argtypes = [c_pointer,c_char_p]
 TwAddVarRO.restype   = c_pointer
 TwAddVarRO.argtypes  = [c_pointer, c_char_p, c_int, c_void_p, c_void_p]
 TwAddVarCB.restype   = c_pointer
