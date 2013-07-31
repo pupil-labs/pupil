@@ -17,7 +17,7 @@ if __name__ == '__main__':
     del syspath, ospath
 
 import os, sys
-from time import time, strftime, localtime
+from time import time
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
 import cv2
@@ -29,7 +29,7 @@ from uvc_capture import autoCreateCapture
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm,draw_gl_polyline_norm
 from calibrate import *
 import reference_detectors
-from recorder import Recorder
+import recorder
 from show_calibration import Show_Calibration
 
 def world_profiled(g_pool):
@@ -115,7 +115,7 @@ def world(g_pool):
         """
         return data.value
 
-    def start_calibration(selection,data):
+    def open_calibration(selection,data):
         # prepare destruction of old ref_detector.
         if g.current_ref_detector:
             g.current_ref_detector.alive = False
@@ -134,19 +134,19 @@ def world(g_pool):
         # save the value for atb bar
         data.value=selection
 
-    def record_video():
-        if any([True for p in g.plugins if isinstance(p,Recorder)]):
-            [p.stop() for p in g.plugins if isinstance(p,Recorder)]
-            print "stopping recording"
+    def toggle_record_video():
+        if any([True for p in g.plugins if isinstance(p,recorder.Recorder)]):
+            # stop and schedule for deletion
+            [p.stop_and_destruct() for p in g.plugins if isinstance(p,recorder.Recorder)]
         else:
             # set up folder within recordings named by user input in atb
             if not bar.rec_name.value:
-                bar.rec_name.value = strftime("%Y_%m_%d", localtime())
-            recorder = Recorder(bar.rec_name.value, bar.fps.value, img.shape, g_pool.pos_record,
+                bar.rec_name.value = recorder.get_auto_name()
+            recorder_instance = recorder.Recorder(bar.rec_name.value, bar.fps.value, img.shape, g_pool.pos_record,
                                 g_pool.frame_count_record, g_pool.eye_tx)
-            g.plugins.append(recorder)
+            g.plugins.append(recorder_instance)
 
-    def show_calib_result():
+    def toggle_show_calib_result():
         if any([True for p in g.plugins if isinstance(p,Show_Calibration)]):
             for p in g.plugins:
                 if isinstance(p,Show_Calibration):
@@ -156,7 +156,22 @@ def world(g_pool):
             calib = Show_Calibration(img.shape)
             g.plugins.append(calib)
 
+    def show_calib_result():
+        # kill old if any
+        if any([True for p in g.plugins if isinstance(p,Show_Calibration)]):
+            for p in g.plugins:
+                if isinstance(p,Show_Calibration):
+                    p.alive = False
+            g.plugins = [p for p in g.plugins if p.alive]
+        # make new
+        calib = Show_Calibration(img.shape)
+        g.plugins.append(calib)
 
+    def hide_calib_result():
+        if any([True for p in g.plugins if isinstance(p,Show_Calibration)]):
+            for p in g.plugins:
+                if isinstance(p,Show_Calibration):
+                    p.alive = False
 
     # Initialize ant tweak bar - inherits from atb.Bar
     atb.init()
@@ -176,18 +191,19 @@ def world(g_pool):
 
     bar.calibrate_type_enum = atb.enum("Calibration Method",reference_detectors.index_by_name)
     bar.rec_name = create_string_buffer(512)
-    bar.rec_name.value = strftime("%Y_%m_%d", localtime())
+    bar.rec_name.value = recorder.get_auto_name()
     # play and record can be tied together via pointers to the objects
     # bar.play = bar.record_video
     bar.add_var("fps", bar.fps, step=1., readonly=True)
     bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
-    bar.add_var("calibration method",setter=start_calibration,getter=get_from_data,data=bar.calibration_type, vtype=bar.calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
-    bar.add_button("show calibration result",show_calib_result, group="Calibration", help="Click to show calibration result.")
+    bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=bar.calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
+    bar.add_button("show calibration result",toggle_show_calib_result, group="Calibration", help="Click to show calibration result.")
     bar.add_var("session name",bar.rec_name, group="Recording", help="creates folder Data_Name_XXX, where xxx is an increasing number")
-    bar.add_button("start recording", record_video, key="r", group="Recording", help="Start/Stop Recording")
+    bar.add_button("start recording", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
     bar.add_separator("Sep1")
     bar.add_var("play video", bar.play, help="play a video in the Player window")
     bar.add_var("exit", g_pool.quit)
+
 
     # add uvc camera controls to a seperate ATB bar
     if cap.controls is not None:
@@ -234,7 +250,7 @@ def world(g_pool):
     g = Temp()
     g.plugins = []
     g.current_ref_detector = None
-    start_calibration(0,bar.calibration_type)
+    open_calibration(0,bar.calibration_type)
 
     # Initialize glfw
     glfwInit()

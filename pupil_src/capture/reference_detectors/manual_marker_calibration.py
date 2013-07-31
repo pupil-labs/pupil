@@ -37,7 +37,7 @@ class Manual_Marker_Calibration(Plugin):
         self.candidate_ellipses = []
 
         self.show_edges = c_bool(1)
-        self.apature = c_int(7)
+        self.aperture = c_int(7)
         self.dist_threshold = c_int(10)
         self.area_threshold = c_int(30)
 
@@ -52,7 +52,7 @@ class Manual_Marker_Calibration(Plugin):
         self._bar.add_separator("Sep1")
         self._bar.add_var("show edges",self.show_edges)
         self._bar.add_var("counter", getter=self.get_count)
-        self._bar.add_var("apature", self.apature, min=3,step=2)
+        self._bar.add_var("aperture", self.aperture, min=3,step=2)
         self._bar.add_var("area threshold", self.area_threshold)
         self._bar.add_var("eccetricity threshold", self.dist_threshold)
 
@@ -66,6 +66,8 @@ class Manual_Marker_Calibration(Plugin):
         audio.say("Stopping Calibration")
         self.global_calibrate.value = False
         self.shared_pos[:] = 0,0
+        self.smooth_pos = 0,0
+        self.counter = 0
         self.active = False
 
     def get_count(self):
@@ -82,7 +84,7 @@ class Manual_Marker_Calibration(Plugin):
             # self.candidate_points = self.detector.detect(s_img)
 
             # get threshold image used to get crisp-clean edges
-            edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.apature.value, 7)
+            edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.aperture.value, 7)
             # cv2.flip(edges,1 ,dst = edges,)
             # display the image for debugging purpuses
             # img[:] = cv2.cvtColor(edges,cv2.COLOR_GRAY2BGR)
@@ -197,7 +199,7 @@ class Manual_Marker_Calibration(Plugin):
         """
 
         if self.active:
-            draw_gl_point_norm(self.smooth_pos,size=10,color=(1.,1.,0.,.5))
+            draw_gl_point_norm(self.smooth_pos,size=15,color=(1.,1.,0.,.5))
 
         if self.active and self.detected:
             for e in self.candidate_ellipses:
@@ -206,11 +208,8 @@ class Manual_Marker_Calibration(Plugin):
                                     int(e[-1]),0,360,15)
                 draw_gl_polyline(pts,(0.,1.,0,1.))
 
-
             if self.counter:
                 draw_gl_point_norm(self.pos,size=30.,color=(0.,1.,0.,.5))
-            else:
-                draw_gl_point_norm(self.pos,size=20.,color=(1.,0.,0.,.5))
         else:
             pass
 

@@ -39,7 +39,7 @@ class Screen_Marker_Calibration(Plugin):
         self.candidate_ellipses = []
 
         self.show_edges = c_bool(0)
-        self.apature = c_int(7)
+        self.aperture = c_int(7)
         self.dist_threshold = c_int(10)
         self.area_threshold = c_int(30)
 
@@ -48,11 +48,11 @@ class Screen_Marker_Calibration(Plugin):
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 150))
+            text='light', position=atb_pos,refresh=.3, size=(300, 80))
         self._bar.add_button("  begin calibrating  ", self.start, key='c')
         self._bar.add_separator("Sep1")
         self._bar.add_var("show edges",self.show_edges)
-        self._bar.add_var("apature", self.apature, min=3,step=2)
+        self._bar.add_var("aperture", self.aperture, min=3,step=2)
         self._bar.add_var("area threshold", self.area_threshold)
         self._bar.add_var("eccetricity threshold", self.dist_threshold)
 
@@ -106,7 +106,7 @@ class Screen_Marker_Calibration(Plugin):
             # self.candidate_points = self.detector.detect(s_img)
 
             # get threshold image used to get crisp-clean edges
-            edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.apature.value, 7)
+            edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.aperture.value, 7)
             # cv2.flip(edges,1 ,dst = edges,)
             # display the image for debugging purpuses
             # img[:] = cv2.cvtColor(edges,cv2.COLOR_GRAY2BGR)

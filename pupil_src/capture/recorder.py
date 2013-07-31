@@ -3,6 +3,7 @@ import cv2
 import atb
 
 from plugin import Plugin
+from time import strftime,localtime
 
 class Recorder(Plugin):
 	"""Capture Recorder"""
@@ -48,14 +49,14 @@ class Recorder(Plugin):
 		self._bar = atb.Bar(name = self.__class__.__name__, label='rec: '+session_str,
 			help="capture recording control", color=(200, 0, 0), alpha=100,
 			text='light', position=atb_pos,refresh=.3, size=(300, 80))
-		self._bar.add_button("stop", self.stop, key="s", help="stop recording")
+		self._bar.add_button("stop", self.stop_and_destruct, key="s", help="stop recording")
 
 
 	def update(self, img):
 		self.shared_frame_count.value += 1
 		self.writer.write(img)
 
-	def stop(self):
+	def stop_and_destruct(self):
 		try:
 			camera_matrix = np.load("camera_matrix.npy")
 			dist_coefs = np.load("dist_coefs.npy")
@@ -70,5 +71,8 @@ class Recorder(Plugin):
 		self.shared_record.value = False
 		self.alive = False
 
+
+def get_auto_name():
+	return strftime("%Y_%m_%d", localtime())
 
 
