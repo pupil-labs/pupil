@@ -27,6 +27,7 @@ from glob import glob
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_polyline,draw_gl_point
 from OpenGL.GLU import gluOrtho2D
 
+
 def make_grid(dim=(11,4)):
     """
     this function generates the structure for an assymetrical circle grid

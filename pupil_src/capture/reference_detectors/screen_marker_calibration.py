@@ -189,8 +189,9 @@ class Screen_Marker_Calibration(Plugin):
                     self.stop()
                     return
 
-            # function to smoothly interpolate between points input:(0-90) output: (0-1)
-            interpolation_weight = np.tanh(((self.screen_marker_state-2/3.*self.screen_marker_max)*4.)/(1/3.*self.screen_marker_max))*(-.5)+.5
+            # function to smoothly interpolate between points input:(0-screen_marker_max) output: (0-1)
+            m, s = self.screen_marker_max, self.screen_marker_state
+            interpolation_weight = np.tanh(((s-2/3.*m)*4.)/(1/3.*m))*(-.5)+.5
 
             #use np.arrays for per element wise math
             current = np.array(self.sites[self.active_site])
