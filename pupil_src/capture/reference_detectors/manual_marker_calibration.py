@@ -36,7 +36,7 @@ class Manual_Marker_Calibration(Plugin):
         self.counter_max = 30
         self.candidate_ellipses = []
 
-        self.show_edges = c_bool(1)
+        self.show_edges = c_bool(0)
         self.aperture = c_int(7)
         self.dist_threshold = c_int(10)
         self.area_threshold = c_int(30)
@@ -47,20 +47,20 @@ class Manual_Marker_Calibration(Plugin):
         self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_button("  begin calibrating  ", self.start, key='c')
-        self._bar.add_button("  end calibrating  ", self.stop)
-        self._bar.add_separator("Sep1")
-        self._bar.add_var("show edges",self.show_edges)
-        self._bar.add_var("counter", getter=self.get_count)
-        self._bar.add_var("aperture", self.aperture, min=3,step=2)
-        self._bar.add_var("area threshold", self.area_threshold)
-        self._bar.add_var("eccetricity threshold", self.dist_threshold)
+        self._bar.add_button("start", self.start, key='c')
+        # self._bar.add_var("show edges",self.show_edges, group="Advanced")
+        # self._bar.add_var("counter", getter=self.get_count, group="Advanced")
+        # self._bar.add_var("aperture", self.aperture, min=3,step=2, group="Advanced")
+        # self._bar.add_var("area threshold", self.area_threshold, group="Advanced")
+        # self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Advanced")
 
     def start(self):
         audio.say("Starting Calibration")
         self.global_calibrate.value = True
         self.shared_pos[:] = 0,0
         self.active = True
+        self._bar.remove("start")
+        self._bar.add_button("stop", self.stop, key='c')
 
     def stop(self):
         audio.say("Stopping Calibration")
@@ -69,6 +69,9 @@ class Manual_Marker_Calibration(Plugin):
         self.smooth_pos = 0,0
         self.counter = 0
         self.active = False
+        self._bar.remove("stop")
+        self._bar.add_button("start", self.stop, key='c')
+
 
     def get_count(self):
         return self.counter

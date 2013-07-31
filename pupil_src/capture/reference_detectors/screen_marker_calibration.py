@@ -49,7 +49,7 @@ class Screen_Marker_Calibration(Plugin):
         self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 80))
-        self._bar.add_button("  begin calibrating  ", self.start, key='c')
+        self._bar.add_button("  start calibrating  ", self.start, key='c')
         self._bar.add_separator("Sep1")
         self._bar.add_var("show edges",self.show_edges)
         self._bar.add_var("aperture", self.aperture, min=3,step=2)
