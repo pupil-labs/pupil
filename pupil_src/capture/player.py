@@ -89,7 +89,7 @@ def player(g_pool,size):
         print "Player Process closing from window"
 
     def draw_circle(pos,r,c):
-        pts = cv2.ellipse2Poly(tuple(pos),(r,r),0,0,360,5)
+        pts = cv2.ellipse2Poly(tuple(pos),(r,r),0,0,360,10)
         draw_gl_polyline(pts,c,'Polygon')
 
     def draw_marker(pos):
@@ -115,9 +115,12 @@ def player(g_pool,size):
 
 
     # gl state settings
-    gl.glEnable( gl.GL_BLEND )
     gl.glEnable(gl.GL_POINT_SMOOTH)
+    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+    gl.glEnable(gl.GL_BLEND)
+    gl.glDisable (gl.GL_DEPTH_TEST)
     gl.glClearColor(1.,1.,1.,0.)
+
 
 
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
