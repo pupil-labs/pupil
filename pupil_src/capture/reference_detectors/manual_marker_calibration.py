@@ -35,7 +35,6 @@ class Manual_Marker_Calibration(Plugin):
         self.counter = 0
         self.counter_max = 30
         self.candidate_ellipses = []
-
         self.show_edges = c_bool(0)
         self.aperture = c_int(7)
         self.dist_threshold = c_int(10)
