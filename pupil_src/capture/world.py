@@ -21,12 +21,11 @@ from time import time
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
 import cv2
-from glob import glob
 from glfw import *
 import atb
-from methods import normalize, denormalize, chessboard, circle_grid, gen_pattern_grid, calibrate_camera,Temp
+from methods import normalize, denormalize,Temp
+from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm
 from uvc_capture import autoCreateCapture
-from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm,draw_gl_polyline_norm
 from calibrate import *
 import reference_detectors
 import recorder

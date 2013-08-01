@@ -12,7 +12,7 @@ from ctypes import c_int,c_bool,c_float
 import numpy as np
 import atb
 from glfw import *
-from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point,draw_gl_point_norm,draw_gl_polyline
+from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline
 from time import time, sleep
 from methods import *
 from c_methods import eye_filter
