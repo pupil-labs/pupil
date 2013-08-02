@@ -19,8 +19,16 @@ from time import sleep
 from multiprocessing import Process, Pipe, Event
 from multiprocessing.sharedctypes import RawValue, Value, Array
 # RawValue is shared memory without lock.  Please handle with care.  This is useful for ATB as it needs c_types
-from eye import eye, eye_profiled
-from world import world, world_profiled
+
+
+profiled = True
+if profiled:
+	from eye import eye_profiled as eye
+	from world import world_profiled as world
+else:
+	from eye import eye
+	from world import world
+
 from player import player
 from methods import Temp
 
@@ -34,7 +42,7 @@ def main():
 	world_src = ["Logitech Camera", "C525","C615","C920","C930e"]
 	# Uncomment below two lines to assign cameras directly, using integers as demonstrated below
 	# eye_src = 0
-	# world_src = 1
+	world_src = 0
 
 	# Uncomment below two lines line to use a pre-recorded video without world camera. Use a string to specify the path to your video file as demonstrated below
 	# eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
@@ -103,7 +111,7 @@ def main():
 	# on MacOS, when using some cameras (like our current logitech worldcamera)
 	# you can't run the world camera grabber in its own process
 	# it must reside in the main process when you run on MacOS.
-	world_profiled(g_pool)
+	world(g_pool)
 
 	# Exit / clean-up
 	p_eye.join()

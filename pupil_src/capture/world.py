@@ -32,9 +32,13 @@ import recorder
 from show_calibration import Show_Calibration
 
 def world_profiled(g_pool):
-    import cProfile
+    import cProfile,subprocess,os
     from world import world
     cProfile.runctx("world(g_pool,)",{"g_pool":g_pool},locals(),"world.pstats")
+    loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
+    gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
+    subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
+    print "created cpu time graph for world process. Please check out the png next to the world.py file"
 
 def world(g_pool):
     """world

@@ -382,6 +382,11 @@ def eye(g_pool):
     print "EYE Process closed"
 
 def eye_profiled(g_pool):
-    import cProfile
+    import cProfile,subprocess,os
     from eye import eye
     cProfile.runctx("eye(g_pool,)",{"g_pool":g_pool},locals(),"eye.pstats")
+    loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
+    gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
+    subprocess.call("python "+gprof2dot_loc+" -f pstats eye.pstats | dot -Tpng -o eye_cpu_time.png", shell=True)
+    print "created cpu time graph for eye process. Please check out the png next to the eye.py file"
+
