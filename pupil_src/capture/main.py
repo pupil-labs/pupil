@@ -13,9 +13,8 @@ import sys, os
 loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
 sys.path.append(os.path.join(loc[0], 'pupil_src', 'shared_modules'))
 
-import numpy as np
-import cv2
 from time import sleep
+from ctypes import c_bool, c_int
 from multiprocessing import Process, Pipe, Event
 from multiprocessing.sharedctypes import RawValue, Value, Array
 
@@ -30,7 +29,6 @@ else:
 from player import player
 from methods import Temp
 
-from ctypes import c_bool, c_int
 
 
 def main():
@@ -40,7 +38,7 @@ def main():
 	world_src = ["Logitech Camera", "C525","C615","C920","C930e"]
 	# Uncomment below two lines to assign cameras directly, using integers as demonstrated below
 	# eye_src = 0
-	world_src = 0
+	# world_src = 0
 
 	# Uncomment below two lines line to use a pre-recorded video without world camera. Use a string to specify the path to your video file as demonstrated below
 	# eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
@@ -73,8 +71,6 @@ def main():
 	use_player = 1
 	player_size = (640,480) #startup size for the player window: this can be whatever you like
 
-	# world_uvc_camera, eye_uvc_camera = None,None
-	audio = False # depreciated
 	# Create and initialize shared globals
 	g_pool = Temp()
 	g_pool.gaze = Array('d',(0.0,0.0))
