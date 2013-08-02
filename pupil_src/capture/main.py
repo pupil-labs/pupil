@@ -18,11 +18,9 @@ import cv2
 from time import sleep
 from multiprocessing import Process, Pipe, Event
 from multiprocessing.sharedctypes import RawValue, Value, Array
-# RawValue is shared memory without lock.  Please handle with care.  This is useful for ATB as it needs c_types
 
-
-profiled = True
-if profiled:
+#if you pass any additional argument when calling this script. The profiler will be used.
+if len(sys.argv) >=2:
 	from eye import eye_profiled as eye
 	from world import world_profiled as world
 else:
