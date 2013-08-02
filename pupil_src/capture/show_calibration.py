@@ -20,7 +20,7 @@ class Show_Calibration(Plugin):
         ref_pts = cal_pt_cloud[inlier_map][:,np.newaxis,2:4]
         ref_pts = np.array(ref_pts,dtype=np.float32)
 
-        self.calib_bounds =  cv2.convexHull(ref_pts)[:,0] #we dont need that extra encapsulation that opencv likes so much
+        self.calib_bounds =  cv2.convexHull(ref_pts)
         # create a list [[px1,py1],[wx1,wy1],[px2,py2],[wx2,wy2]...] of outliers and inliers for gl_lines
         self.outliers = np.concatenate((cal_pt_cloud[~inlier_map][:,0:2],cal_pt_cloud[~inlier_map][:,2:4])).reshape(-1,2)
         self.inliers = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1).reshape(-1,2)
@@ -46,7 +46,7 @@ class Show_Calibration(Plugin):
     def gl_display(self):
         draw_gl_polyline_norm(self.inliers,(1.,0.5,0.,.5),type='Lines')
         draw_gl_polyline_norm(self.outliers,(1.,0.,0.,.5),type='Lines')
-        draw_gl_polyline_norm(self.calib_bounds,(.0,1.,0,.5),type='Loop')
+        draw_gl_polyline_norm(self.calib_bounds[:,0],(.0,1.,0,.5),type='Loop')
 
     def close(self):
         self.alive = False
