@@ -46,7 +46,7 @@ def on_scroll(pos):
         pass
 
 def on_close():
-    quit.value = True
+    # quit.value = True
     print "WORLD Process closing from window"
 
 # helpers called by the main atb bar
@@ -111,25 +111,25 @@ gl.glEnable(gl.GL_BLEND)
 del gl
 
 # Event loop
-while glfwGetWindowParam(GLFW_OPENED) and not quit.value:
+while glfwGetWindowParam(GLFW_OPENED): # and not quit.value
     update_fps()
 
     # Get an image from the grabber
     # s, img = cap.read()
     img = np.zeros((480,640,3))
 
-    for p in g.plugins:
-        p.update(img)
+    # for p in g.plugins:
+    #     p.update(img)
 
-    g.plugins = [p for p in g.plugins if p.alive]
+    # g.plugins = [p for p in g.plugins if p.alive]
 
     # render the screen
     clear_gl_screen()
     draw_gl_texture(img)
 
     # render visual feedback from loaded plugins
-    for p in g.plugins:
-        p.gl_display()
+    # for p in g.plugins:
+    #     p.gl_display()
 
 
     atb.draw()
