@@ -7,7 +7,7 @@ license_txt = """\
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)\
 """
@@ -20,8 +20,8 @@ pattern = re.compile('(\'{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n(\'{3}|[*][/])', re
 
 # choose files types to include
 # choose directories to exclude from search
-includes = ['*.py', '*.c'] 
-excludes = ['.git', 'atb', 'glfw', 'src_video', 'v4l2_ctl', 'data', 'License', 'shader.py', 'vertex_buffer.py'] 
+includes = ['*.py', '*.c']
+excludes = ['.git', 'atb', 'glfw', 'src_video', 'v4l2_ctl', 'data', 'License', 'shader.py', 'vertex_buffer.py', 'gprof2dot.py','git_version.py']
 
 # transform glob patterns to regular expressions
 includes = r'|'.join([fnmatch.translate(x) for x in includes])
@@ -49,7 +49,7 @@ def write_header(file_name, pattern, license_txt):
 	if file_type == '.c':
 		license_txt = c_comment[0] + license_txt + c_comment[1]
 
-	with file(file_name, 'r') as original: 
+	with file(file_name, 'r') as original:
 		data = original.read()
 
 	with file(file_name, 'w') as modified:
@@ -65,7 +65,7 @@ def write_header(file_name, pattern, license_txt):
 def update_header():
 	# Add a license/docstring header to selected files
 	match_files = get_files(pupil_dir, includes, excludes)
-	print match_files 
+	print match_files
 
 	for f in match_files:
 		write_header(f, pattern, license_txt)
