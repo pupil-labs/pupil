@@ -31,6 +31,7 @@ del platform
 ###OS specific imports and defs
 if os_name == "Linux":
     import v4l2_ctl as uvc
+    from v4l2_capture import VideoCapture
 elif os_name == "Darwin":
     import uvcc as uvc
 else:
@@ -62,7 +63,7 @@ class CameraCapture(uvc.Camera):
 
         ###add cv videocapture capabilities
         self.cap = VideoCapture(self.cvId)
-        self.set_size(size)
+        # self.set_size(size)
         self.read = self.cap.read
 
     def set_size(self,size):

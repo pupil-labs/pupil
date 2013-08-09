@@ -14,6 +14,7 @@ This file contains bindings to a webcam capture module that works with v4l2 and 
 
 from ctypes import *
 from numpy.ctypeslib import ndpointer
+import numpy as np
 import os
 
 ### Get location of  this file
@@ -43,50 +44,25 @@ dllabspath = source_loc + os.path.sep + dll_name
 if not os.path.isfile(dllabspath):
     raise Exception("v4l2 capture Error could not find binary.")
 
-__dll = CDLL(dllabspath)
+dll = CDLL(dllabspath)
 
 
 ### C-Types Argtypes and Restype
-# __dll.filter.argtypes = [ndpointer(c_float),  # integral image
+# dll.filter.argtypes = [ndpointer(c_float),  # integral image
 #                                 c_size_t,           # rows/shape[0]
 #                                 c_size_t,           # cols/shape[1]
 #                                 POINTER(c_int),     # maximal response top left anchor pos height
 #                                 POINTER(c_int),     # maximal response top left anchor pos width
 #                                 POINTER(c_int)]     # maxinal response window size
 
-__dll.open_device.argtypes = [c_char_p,]
-__dll.open_device.restype = c_void_p
-__dll.close_device.argtypes = [c_void_p,]
-__dll.close_device.restype = c_int
-__dll.get_buffer.restype = c_void_p
-__dll.release_buffer.restype = c_int
-
-
-class timeval(Structure):
-    _fields_ = [('tv_sec', c_long),
-                ('tv_usec', c_long)]
-
-class v4l2_buffer_mem(Union):
-    _fields_ = [("offset",c_uint32),
-                ("userptr", c_ulong),
-                ("planes", c_void_p), #struct v4l2_planes
-                ('fd', c_int32)]
-
-class v4l2_buffer(Structure):
-    _fields_ = [('index', c_uint32 ),
-                ('type', c_uint32),
-                ('bytesused', c_uint32),
-                ('flags', c_uint32),
-                ('field',c_uint32),
-                ('timestamp', timeval),
-                ('timecode', c_void_p), # struct timecode
-                ('sequence', c_uint32),
-                # memory location
-                ('memory', c_uint32),
-                ('m', v4l2_buffer_mem),
-                ('length', c_uint32),
-                ('reserved2', c_uint32),
-                ('reserved', c_uint32)]
+dll.open_device.argtypes = [c_char_p,]
+dll.open_device.restype = c_void_p
+dll.close_device.argtypes = [c_void_p,]
+dll.close_device.restype = c_int
+dll.get_buffer.restype = c_void_p
+dll.release_buffer.restype = c_int
+dll.init_device.argtypes = [c_int,POINTER(c_uint32),POINTER(c_uint32),POINTER(c_uint32)]
+from definitions import *
 
 
 # open device
@@ -98,11 +74,97 @@ class v4l2_buffer(Structure):
 # stop stream
 # umap buffer
 
+
+class VideoCapture(object):
+    """docstring for v4l2_capture"""
+    def __init__(self, src_id,size=(1280,720),fps=24):
+        if src_id not in range(21):
+            raise Exception("V4L2 Capture src_id not a number between 0-20")
+        self.src_id = src_id
+        self.src_str = "/dev/video"+str(int(src_id))
+        self.width,self.height = size
+        self.fps = fps
+        self.open = False
+        self.initialized = False
+        self.streaming = False
+        self.device = -1
+        self._open()
+        self._init()
+        self._start()
+        self._buf = None
+
+    def _open(self):
+        self.device = dll.open_device(c_char_p(self.src_str))
+        self.open = True
+
+    def _init(self):
+        if self.open:
+            width,height,fps= c_uint32(self.width),c_uint32(self.height),c_uint32(self.fps)
+            dll.init_device(self.device,width,height,fps)
+            self.initialized = True
+            self.width,self.height,self.fps = width.value,height.value,fps.value
+
+
+    def _start(self):
+        if self.initialized:
+            dll.start_capturing(self.device)
+            self.streaming = True
+
+    def read(self):
+        if self._buf:
+            buf = self._buf
+            dll.release_buffer(self.device,byref(buf))
+        buf  = v4l2_buffer()
+        buf_ptr =  dll.get_buffer(self.device,byref(buf))
+        buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
+        a = np.frombuffer(buf_ptr.contents,c_uint8)
+        a.shape = (self.height,self.width,3)
+        self._buf = buf
+        return True, a
+
+    def read_copy(self):
+        buf  = v4l2_buffer()
+        buf_ptr =  dll.get_buffer(self.device,byref(buf))
+        buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
+        if buf_ptr.contents:
+            a = np.frombuffer(buf_ptr.contents,c_uint8)
+            a.shape = (self.height,self.width,3)
+            b = a.copy()
+            dll.release_buffer(self.device,byref(buf))
+            return True, b
+        else:
+            print "Grab error, retrying"
+            dll.release_buffer(self.device,byref(buf))
+            return self.read() 
+    
+
+    def _stop(self):
+        if self.streaming:
+            dll.stop_capturing(self.device)
+            self.streaming = False
+
+    def _uninit(self):
+        if self.initialized:
+            dll.uninit_device(self.device)
+            self.initialized = False
+
+
+    def _close(self):
+        if self.open:
+            self.device = dll.close_device(self.device)
+            self.open=False
+            print "Closed: "+self.src_str
+
+    def __del__(self):
+        self._stop()
+        self._uninit()
+        self._close()
+
 ### Debugging
 if __name__ == '__main__':
     import numpy as np
     import cv2
-
+    from time import sleep
 
     # cap = cv2.VideoCapture(0)
     # cap.set(3,1920)
@@ -110,26 +172,35 @@ if __name__ == '__main__':
     # print cap.get(3)
     # for x in range(900):
     #     s,img = cap.read()
-    device =  __dll.open_device(c_char_p("/dev/video0"))
-    __dll.init_device(device)
-    __dll.start_capturing(device)
-    for x in range(900):
-        # s= img.copy()
-        # np.random.random((1920,1080,3))
-        # __dll.mainloop(device)
-        buf  = v4l2_buffer()
-        buf_ptr =  __dll.get_buffer(device,byref(buf))
-        # buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
-        # a = np.frombuffer(buf_ptr.contents,c_uint8)
-        # a.shape = (1080,1920,3)
-        # print a.shape
-        # print a[:9]
-        # np.save("img.npy",a)
-        # del a
-        # del buf_ptr
-        __dll.release_buffer(device,byref(buf))
-    print "stopping"
-    __dll.stop_capturing(device)
-    __dll.uninit_device(device)
-    print __dll.close_device(device)
-    # __dll.fprintf(stderr, "\n")
+    # device =  dll.open_device(c_char_p("/dev/video0"))
+    # width,height,fps = c_uint32(1920),c_uint32(1080),c_uint32(30)
+    # dll.init_device(device,width,height,fps)
+    # dll.start_capturing(device)
+    # for x in range(300):
+    #     # s= img.copy()
+    #     # np.random.random((1920,1080,3))
+    #     # dll.mainloop(device)
+    #     buf  = v4l2_buffer()
+    #     buf_ptr =  dll.get_buffer(device,byref(buf))
+    #     buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
+    #     a = np.frombuffer(buf_ptr.contents,c_uint8)
+    #     a.shape = (height.value,width.value,3)
+    #     # print a.shape
+    #     # print buf.index
+    #     # sleep(1)
+    #     # print a[:9]
+    #     # np.save("img.npy",a)
+    #     # b = a.copy()
+    #     # del a
+    #     # del buf_ptr
+    #     dll.release_buffer(device,byref(buf))
+    # print "stopping"
+    # dll.stop_capturing(device)
+    # dll.uninit_device(device)
+    # dll.close_device(device)
+    # # dll.fprintf(stderr, "\n")
+    cap = VideoCapture(0,(1280,720),30)
+    for x in range(300):
+        img = cap.read()
+        # print img.shape
+    del cap
