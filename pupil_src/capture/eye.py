@@ -46,7 +46,7 @@ def eye(g_pool):
                 if pressed:
                     pos = glfwGetMousePos()
                     pos = normalize(pos,glfwGetWindowSize())
-                    pos = denormalize(pos,(img.shape[1],img.shape[0]) ) # pos in img pixels
+                    pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
                     u_r.setStart(pos)
                     bar.draw_roi.value = 1
                 else:
@@ -58,7 +58,7 @@ def eye(g_pool):
         if bar.draw_roi.value == 1:
             pos = glfwGetMousePos()
             pos = normalize(pos,glfwGetWindowSize())
-            pos = denormalize(pos,(img.shape[1],img.shape[0]) ) # pos in img pixels
+            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
             u_r.setEnd(pos)
 
     def on_scroll(pos):
@@ -105,11 +105,11 @@ def eye(g_pool):
         print "EYE: Error could not create Capture"
         return
     # check if it works
-    s, img = cap.read()
-    if not s:
+    frame = cap.get_frame()
+    if frame.img is None:
         print "EYE: Error could not get image"
         return
-    height,width = img.shape[:2]
+    height,width = frame.img.shape[:2]
 
 
     # pupil object
@@ -129,9 +129,9 @@ def eye(g_pool):
             """
             return vector
 
-    u_r = Roi(img.shape)
+    u_r = Roi(frame.img.shape)
     u_r.set(load('roi',default=None))
-    p_r = Roi(img.shape)
+    p_r = Roi(frame.img.shape)
 
     # local object
     l_pool = Temp()
@@ -171,45 +171,7 @@ def eye(g_pool):
     bar.add_var("SlowDown",bar.sleep, step=0.01,min=0.0)
     bar.add_var("SaveSettings&Exit", g_pool.quit)
 
-    # add uvc camera controls to a separate ATB bar
-    if cap.controls is not None:
-        c_bar = atb.Bar(name="Camera_Controls", label=cap.name,
-            help="UVC Camera Controls", color=(50,50,50), alpha=100,
-            text='light',position=(220, 10),refresh=2., size=(200, 200))
-
-        sorted_controls = [c for c in cap.controls.itervalues()]
-        sorted_controls.sort(key=lambda c: c.order)
-
-        for control in sorted_controls:
-            name = control.atb_name
-            if control.type=="bool":
-                c_bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=control.get_val,setter=control.set_val)
-            elif control.type=='int':
-                c_bar.add_var(name,vtype=atb.TW_TYPE_INT32,getter=control.get_val,setter=control.set_val)
-                c_bar.define(definition='min='+str(control.min),   varname=name)
-                c_bar.define(definition='max='+str(control.max),   varname=name)
-                c_bar.define(definition='step='+str(control.step), varname=name)
-            elif control.type=="menu":
-                if control.menu is None:
-                    vtype = None
-                else:
-                    vtype= atb.enum(name,control.menu)
-                c_bar.add_var(name,vtype=vtype,getter=control.get_val,setter=control.set_val)
-                if control.menu is None:
-                    c_bar.define(definition='min='+str(control.min),   varname=name)
-                    c_bar.define(definition='max='+str(control.max),   varname=name)
-                    c_bar.define(definition='step='+str(control.step), varname=name)
-            else:
-                pass
-            if control.flags == "inactive":
-                pass
-                # c_bar.define(definition='readonly=1',varname=control.name)
-
-        c_bar.add_button("refresh",cap.update_from_device)
-        c_bar.add_button("load defaults",cap.load_defaults)
-
-    else:
-        c_bar = None
+    cap.create_atb_bar(pos=(300,10))
 
     # create a bar for the detector
     pupil_detector.create_atb_bar(pos=(10,120))
@@ -243,11 +205,11 @@ def eye(g_pool):
     # event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
         update_fps()
-        s,img = cap.read()
+        frame = cap.get_frame()
         sleep(bar.sleep.value) # for debugging only
 
         # IMAGE PROCESSING and clipping to user defined eye-region
-        eye_img = img[u_r.lY:u_r.uY,u_r.lX:u_r.uX]
+        eye_img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX]
         gray_img = grayscale(eye_img)
 
 
@@ -261,14 +223,14 @@ def eye(g_pool):
             p_r.set((0,0,-1,-1))
 
         # fine pupil ellipse detection
-        result = pupil_detector.detect(img,u_roi=u_r,p_roi=p_r,visualize=bar.display.value == 2)
+        result = pupil_detector.detect(frame.img,u_roi=u_r,p_roi=p_r,visualize=bar.display.value == 2)
 
         # Work with detected ellipses
         if result:
             pupil.ellipse = result[0]
             pupil.image_coords = pupil.ellipse['center']
             # normalize
-            pupil.norm_coords = normalize(pupil.image_coords, (img.shape[1], img.shape[0]),flip_y=True )
+            pupil.norm_coords = normalize(pupil.image_coords, (frame.img.shape[1], frame.img.shape[0]),flip_y=True )
             # from pupil to gaze
             pupil.gaze_coords = map_pupil(pupil.norm_coords)
             # publish to globals
@@ -308,7 +270,7 @@ def eye(g_pool):
 
             video_path = os.path.join(l_pool.record_path, "eye.avi")
             if bar.record_eye.value:
-                l_pool.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (img.shape[1], img.shape[0]))
+                l_pool.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (frame.img.shape[1], frame.img.shape[0]))
             l_pool.record_positions = []
             l_pool.record_running = True
 
@@ -317,7 +279,7 @@ def eye(g_pool):
             if pupil.gaze_coords is not None:
                 l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], bar.dt.value, g_pool.frame_count_record.value])
             if l_pool.writer is not None:
-                l_pool.writer.write(img)
+                l_pool.writer.write(frame.img)
 
         # Done Recording: Save values and flip switch to OFF for recording
         if not g_pool.pos_record.value and l_pool.record_running:
@@ -332,30 +294,30 @@ def eye(g_pool):
             l_pool.record_running = False
 
 
-        # direct visualizations on the img data
+        # direct visualizations on the frame.img data
         if bar.display.value == 1:
             # and a solid (white) frame around the user defined ROI
             gray_img[:,0] = 255
             gray_img[:,-1]= 255
             gray_img[0,:] = 255
             gray_img[-1,:]= 255
-            img[u_r.lY:u_r.uY,u_r.lX:u_r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
+            frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
 
-            pupil_img =img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] # create an RGB view onto the gray pupil ROI
+            pupil_img =frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] # create an RGB view onto the gray pupil ROI
             # draw a frame around the automatic pupil ROI in overlay...
             pupil_img[::2,0] = 255,0,0
             pupil_img[::2,-1]= 255,0,0
             pupil_img[0,::2] = 255,0,0
             pupil_img[-1,::2]= 255,0,0
 
-            img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] = pupil_img
+            frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] = pupil_img
 
         elif bar.display.value == 3:
-            img = img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX]
+            frame.img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX]
 
         # GL-drawing
         clear_gl_screen()
-        draw_gl_texture(img)
+        draw_gl_texture(frame.img)
 
         if bar.draw_pupil and pupil.ellipse:
             pts = cv2.ellipse2Poly( (int(pupil.image_coords[0]),int(pupil.image_coords[1])),

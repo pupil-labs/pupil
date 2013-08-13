@@ -64,7 +64,7 @@ def world(g_pool):
             if pressed:
                 pos = glfwGetMousePos()
                 pos = normalize(pos,glfwGetWindowSize())
-                pos = denormalize(pos,(img.shape[1],img.shape[0]) ) # Position in img pixels
+                pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
                 for p in g.plugins:
                     p.on_click(pos)
 
@@ -91,11 +91,11 @@ def world(g_pool):
     if cap is None:
         print "WORLD: Error could not create Capture"
         return
-    s, img = cap.read()
-    if not s:
+    frame = cap.get_frame()
+    if frame.img is None:
         print "WORLD: Error could not get image"
         return
-    height,width = img.shape[:2]
+    height,width = frame.img.shape[:2]
 
 
     # helpers called by the main atb bar
@@ -106,12 +106,17 @@ def world(g_pool):
             bar.fps.value += .05 * (1 / dt - bar.fps.value)
 
     def set_window_size(mode,data):
-        height,width = img.shape[:2]
+        height,width = frame.img.shape[:2]
         ratio = (1,.75,.5,.25)[mode]
         w,h = int(width*ratio),int(height*ratio)
         glfwSetWindowSize(w,h)
         data.value=mode # update the bar.value
 
+    def get_from_data(data):
+        """
+        helper for atb getter and setter use
+        """
+        return data.value
 
     def open_calibration(selection,data):
         # prepare destruction of old ref_detector.
@@ -140,7 +145,7 @@ def world(g_pool):
             # set up folder within recordings named by user input in atb
             if not bar.rec_name.value:
                 bar.rec_name.value = recorder.get_auto_name()
-            recorder_instance = recorder.Recorder(bar.rec_name.value, bar.fps.value, img.shape, g_pool.pos_record,
+            recorder_instance = recorder.Recorder(bar.rec_name.value, bar.fps.value, frame.img.shape, g_pool.pos_record,
                                 g_pool.frame_count_record, g_pool.eye_tx)
             g.plugins.append(recorder_instance)
 
@@ -151,7 +156,7 @@ def world(g_pool):
                     p.alive = False
             print "calibration results closed"
         else:
-            calib = Show_Calibration(img.shape)
+            calib = Show_Calibration(frame.img.shape)
             g.plugins.append(calib)
 
     def show_calib_result():
@@ -162,7 +167,7 @@ def world(g_pool):
                     p.alive = False
             g.plugins = [p for p in g.plugins if p.alive]
         # make new
-        calib = Show_Calibration(img.shape)
+        calib = Show_Calibration(frame.img.shape)
         g.plugins.append(calib)
 
     def hide_calib_result():
@@ -193,8 +198,8 @@ def world(g_pool):
     # play and record can be tied together via pointers to the objects
     # bar.play = bar.record_video
     bar.add_var("fps", bar.fps, step=1., readonly=True)
-    bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=lambda d: d.value,data=bar.window_size)
-    bar.add_var("calibration method",setter=open_calibration,getter=lambda d: d.value,data=bar.calibration_type, vtype=bar.calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
+    bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
+    bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=bar.calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
     bar.add_button("show calibration result",toggle_show_calib_result, group="Calibration", help="Click to show calibration result.")
     bar.add_var("session name",bar.rec_name, group="Recording", help="creates folder Data_Name_XXX, where xxx is an increasing number")
     bar.add_button("start recording", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
@@ -204,44 +209,7 @@ def world(g_pool):
 
 
     # add uvc camera controls to a seperate ATB bar
-    if cap.controls is not None:
-        c_bar = atb.Bar(name="Camera_Controls", label=cap.name,
-            help="UVC Camera Controls", color=(50,50,50), alpha=100,
-            text='light',position=(320, 10),refresh=2., size=(200, 200))
-
-        sorted_controls = [c for c in cap.controls.itervalues()]
-        sorted_controls.sort(key=lambda c: c.order)
-
-        for control in sorted_controls:
-            name = control.atb_name
-            if control.type=="bool":
-                c_bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=control.get_val,setter=control.set_val)
-            elif control.type=='int':
-                c_bar.add_var(name,vtype=atb.TW_TYPE_INT32,getter=control.get_val,setter=control.set_val)
-                c_bar.define(definition='min='+str(control.min),   varname=name)
-                c_bar.define(definition='max='+str(control.max),   varname=name)
-                c_bar.define(definition='step='+str(control.step), varname=name)
-            elif control.type=="menu":
-                if control.menu is None:
-                    vtype = None
-                else:
-                    vtype= atb.enum(name,control.menu)
-                c_bar.add_var(name,vtype=vtype,getter=control.get_val,setter=control.set_val)
-                if control.menu is None:
-                    c_bar.define(definition='min='+str(control.min),   varname=name)
-                    c_bar.define(definition='max='+str(control.max),   varname=name)
-                    c_bar.define(definition='step='+str(control.step), varname=name)
-            else:
-                pass
-            if control.flags == "inactive":
-                pass
-                # c_bar.define(definition='readonly=1',varname=control.name)
-
-        c_bar.add_button("refresh",cap.update_from_device)
-        c_bar.add_button("load defaults",cap.load_defaults)
-
-    else:
-        c_bar = None
+    cap.create_atb_bar(pos=(310,10))
 
 
     # create container for globally scoped vars (within world)
@@ -252,7 +220,7 @@ def world(g_pool):
 
     # Initialize glfw
     glfwInit()
-    height,width = img.shape[:2]
+    height,width = frame.img.shape[:2]
     glfwOpenWindow(width, height, 0, 0, 0, 8, 0, 0, GLFW_WINDOW)
     glfwSetWindowTitle("World")
     glfwSetWindowPos(0,0)
@@ -284,10 +252,10 @@ def world(g_pool):
             on_char(player_input,True)
 
         # Get an image from the grabber
-        s, img = cap.read()
+        frame = cap.get_frame()
 
         for p in g.plugins:
-            p.update(img)
+            p.update(frame.img)
 
         g.plugins = [p for p in g.plugins if p.alive]
 
@@ -295,7 +263,7 @@ def world(g_pool):
 
         # render the screen
         clear_gl_screen()
-        draw_gl_texture(img)
+        draw_gl_texture(frame.img)
 
         # render visual feedback from loaded plugins
         for p in g.plugins:
