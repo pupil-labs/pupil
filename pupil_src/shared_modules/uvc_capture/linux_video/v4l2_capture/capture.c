@@ -92,7 +92,7 @@ void *get_buffer(int fd,struct v4l2_buffer *buf){
 
 		if (-1 == xioctl(fd, VIDIOC_DQBUF, buf)) {
 			switch (errno) {
-			case EAGAIN:
+			case EAGAIN: // no buffer available yet.
 				return 0;
 
 			case EIO:

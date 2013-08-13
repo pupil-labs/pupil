@@ -120,12 +120,17 @@ class VideoCapture(object):
             dll.release_buffer(self.device,byref(buf))
         buf  = v4l2_buffer()
         buf_ptr =  dll.get_buffer(self.device,byref(buf))
-        buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
-        img = np.frombuffer(buf_ptr.contents,c_uint8)
-        img.shape = (self.height,self.width,3)
-        timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000.
-        self._buf = buf
-        return Frame(timestamp, img)
+        if buf_ptr:
+            buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
+            img = np.frombuffer(buf_ptr.contents,c_uint8)
+            img.shape = (self.height,self.width,3)
+            timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000.
+            self._buf = buf
+            return Frame(timestamp, img)
+        else:
+            print "Grab error, retrying"
+            self._buf = None
+            return self.read() 
 
     def read_copy(self):
         buf  = v4l2_buffer()

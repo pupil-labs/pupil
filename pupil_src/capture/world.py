@@ -87,7 +87,7 @@ def world(g_pool):
     gaze.image_coords = (0., 0.)
 
     # Initialize capture, check if it works
-    cap = autoCreateCapture(g_pool.world_src, g_pool.world_size)
+    cap = autoCreateCapture(g_pool.world_src, g_pool.world_size,24)
     if cap is None:
         print "WORLD: Error could not create Capture"
         return
@@ -209,7 +209,7 @@ def world(g_pool):
 
 
     # add uvc camera controls to a seperate ATB bar
-    cap.create_atb_bar(pos=(310,10))
+    cap.create_atb_bar(pos=(320,10))
 
 
     # create container for globally scoped vars (within world)

@@ -171,7 +171,7 @@ def eye(g_pool):
     bar.add_var("SlowDown",bar.sleep, step=0.01,min=0.0)
     bar.add_var("SaveSettings&Exit", g_pool.quit)
 
-    cap.create_atb_bar(pos=(300,10))
+    cap.create_atb_bar(pos=(220,10))
 
     # create a bar for the detector
     pupil_detector.create_atb_bar(pos=(10,120))
