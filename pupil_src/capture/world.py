@@ -112,11 +112,6 @@ def world(g_pool):
         glfwSetWindowSize(w,h)
         data.value=mode # update the bar.value
 
-    def get_from_data(data):
-        """
-        helper for atb getter and setter use
-        """
-        return data.value
 
     def open_calibration(selection,data):
         # prepare destruction of old ref_detector.
@@ -198,8 +193,8 @@ def world(g_pool):
     # play and record can be tied together via pointers to the objects
     # bar.play = bar.record_video
     bar.add_var("fps", bar.fps, step=1., readonly=True)
-    bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
-    bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=bar.calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
+    bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=lambda d: d.value,data=bar.window_size)
+    bar.add_var("calibration method",setter=open_calibration,getter=lambda d: d.value,data=bar.calibration_type, vtype=bar.calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
     bar.add_button("show calibration result",toggle_show_calib_result, group="Calibration", help="Click to show calibration result.")
     bar.add_var("session name",bar.rec_name, group="Recording", help="creates folder Data_Name_XXX, where xxx is an increasing number")
     bar.add_button("start recording", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
