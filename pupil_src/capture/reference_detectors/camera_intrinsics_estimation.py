@@ -52,8 +52,9 @@ class Camera_Intrinsics_Estimation(Plugin):
 		np.save("dist_coefs.npy", dist_coefs)
 		audio.say("Camera calibrated and saved to file")
 
-	def update(self,img):
+	def update(self,frame):
 		if self.collect_new:
+			img = frame.img
 			status, grid_points = cv2.findCirclesGridDefault(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
 			if status:
 				self.img_points.append(grid_points)

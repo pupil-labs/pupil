@@ -253,9 +253,8 @@ def world(g_pool):
 
         # Get an image from the grabber
         frame = cap.get_frame()
-
         for p in g.plugins:
-            p.update(frame.img)
+            p.update(frame)
 
         g.plugins = [p for p in g.plugins if p.alive]
 

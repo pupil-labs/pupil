@@ -124,11 +124,11 @@ class VideoCapture(object):
             buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
             img = np.frombuffer(buf_ptr.contents,c_uint8)
             img.shape = (self.height,self.width,3)
-            timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000.
+            timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000000.
             self._buf = buf
             return Frame(timestamp, img)
         else:
-            print "Grab error, retrying"
+            print "Failed to retrieve frame from "+ self.src_str+", Retrying"
             self._buf = None
             return self.read() 
 

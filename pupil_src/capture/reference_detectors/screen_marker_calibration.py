@@ -28,7 +28,7 @@ class Screen_Marker_Calibration(Plugin):
         self.shared_screen_marker_pos = screen_marker_pos
         self.shared_screen_marker_state = screen_marker_state # used for v
         self.screen_marker_state = 0
-        self.screen_marker_max = 90 # maximum bound for state
+        self.screen_marker_max = 70 # maximum bound for state
         self.pos = 0,0 # 0,0 is used to indicate no point detected
 
 
@@ -99,8 +99,9 @@ class Screen_Marker_Calibration(Plugin):
     def reset(self):
         self.pos = 0,0
 
-    def update(self,img):
+    def update(self,frame):
         if self.active:
+            img = frame.img
             #detect the marker
             gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
             # self.candidate_points = self.detector.detect(s_img)
@@ -171,7 +172,8 @@ class Screen_Marker_Calibration(Plugin):
 
 
             #only broadcast a valid ref position if within sample window of calibraiton routine
-            if 0< self.screen_marker_state < self.screen_marker_max-50:
+            on_position = 0 < self.screen_marker_state < self.screen_marker_max-50
+            if on_position:
                 pass
             else:
                 self.pos = 0,0
@@ -179,7 +181,7 @@ class Screen_Marker_Calibration(Plugin):
             self.publish()
             # Animate the screen marker
             if self.screen_marker_state < self.screen_marker_max:
-                if self.detected:
+                if self.detected or not on_position:
                     self.screen_marker_state += 1
             else:
                 self.screen_marker_state = 0

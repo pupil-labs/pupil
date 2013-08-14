@@ -46,8 +46,9 @@ class Natural_Features_Calibration(Plugin):
 		self.shared_pos[:] = 0,0
 		self.active = False
 
-	def update(self,img):
+	def update(self,frame):
 		if self.active:
+			img = frame.img
 			if self.first_img is None:
 				self.first_img = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
 

@@ -9,7 +9,8 @@
 '''
 
 """
-uvc_capture is a module that build on opencv"s camera_capture
+uvc_capture is a module that extends opencv"s camera_capture for mac and windows
+on Linux it repleaces it completelty.
 it adds some fuctionalty like:
     - access to all uvc controls
     - assosication by name patterns instead of id's (0,1,2..)
@@ -37,6 +38,7 @@ else:
     from other_video import Camera_Capture,Camera_List
 
 
+# non os specific defines
 class FileCapture():
     """
     simple file capture that can auto_rewind
@@ -116,7 +118,7 @@ def autoCreateCapture(src,size=(640,480),fps=30):
 
 
 if __name__ == '__main__':
-    cap = autoCreateCapture(1,(1280,720))
+    cap = autoCreateCapture(1,(1280,720),30)
     if cap:
         print cap.controls
     print "done"
