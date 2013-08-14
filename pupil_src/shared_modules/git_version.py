@@ -95,8 +95,8 @@ def get_git_version(abbrev=4):
     # If the current version is different from what's in the
     # RELEASE-VERSION file, update the file to be current.
 
-    if version != release_version:
-        write_release_version(version)
+    # if version != release_version:
+    #     write_release_version(version)
 
     # Finally, return the current version.
 
@@ -112,5 +112,32 @@ def pep386adapt(version):
         return version
 
 
+
+def get_last_tag():
+    try:
+        p = Popen(['git', 'describe'],
+                  stdout=PIPE, stderr=PIPE)
+        p.stderr.close()
+        line = p.stdout.readlines()[0]
+        return line.strip()
+
+    except:
+        return None
+
+def get_tag_commit():
+    """
+    returns string: 'tag'-'commits since tag'-'7 digit commit id'
+    """
+    try:
+        p = Popen(['git', 'describe'],
+                  stdout=PIPE, stderr=PIPE)
+        p.stderr.close()
+        line = p.stdout.readlines()[0]
+        return line.strip()
+
+    except:
+        return None
+
 if __name__ == "__main__":
     print get_git_version()
+    print get_tag_commit()

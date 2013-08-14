@@ -277,7 +277,7 @@ def eye(g_pool):
         # While recording...
         if l_pool.record_running:
             if pupil.gaze_coords is not None:
-                l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1], bar.dt.value, g_pool.frame_count_record.value])
+                l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1],frame.timestamp])
             if l_pool.writer is not None:
                 l_pool.writer.write(frame.img)
 

@@ -75,13 +75,14 @@ class Manual_Marker_Calibration(Plugin):
     def get_count(self):
         return self.counter
 
-    def update(self,img):
+    def update(self,frame):
         """
         gets called once every frame.
         reference positon need to be published to shared_pos
         if no reference was found, publish 0,0
         """
         if self.active:
+            img = frame.img
             gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
             # self.candidate_points = self.detector.detect(s_img)
 

@@ -1,9 +1,11 @@
 import os, sys
 import cv2
 import atb
-
+import numpy as np
 from plugin import Plugin
-from time import strftime,localtime
+from time import strftime,localtime,time,gmtime
+from ctypes import create_string_buffer
+from git_version import get_tag_commit
 
 class Recorder(Plugin):
 	"""Capture Recorder"""
@@ -13,8 +15,10 @@ class Recorder(Plugin):
 		self.base_path = os.path.join(os.path.abspath(__file__).rsplit('pupil_src', 1)[0], "recordings")
 		self.shared_record = shared_record
 		self.shared_frame_count = shared_frame_count
+		self.timestamps = []
 		self.eye_tx = eye_tx
 
+		self.start_time = time()
 		# set up base folder called "recordings"
 		try:
 			os.mkdir(self.base_path)
@@ -40,7 +44,8 @@ class Recorder(Plugin):
 
 		video_path = os.path.join(self.path, "world.avi")
 		self.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), fps, (img_shape[1], img_shape[0]))
-
+		self.height = img_shape[0]
+		self.width = img_shape[1]
 		# positions path to eye process
 		self.shared_record.value = True
 		self.eye_tx.send(self.path)
@@ -49,23 +54,44 @@ class Recorder(Plugin):
 		self._bar = atb.Bar(name = self.__class__.__name__, label='rec: '+session_str,
 			help="capture recording control", color=(200, 0, 0), alpha=100,
 			text='light', position=atb_pos,refresh=.3, size=(300, 80))
+		self._bar.rec_name = create_string_buffer(512)
+		self._bar.add_var("rec time",self._bar.rec_name, getter=lambda: create_string_buffer(self.get_rec_time_str(),512), readonly=True)
+		# self._bar.add_var("frame number",getter=lambda:shared_frame_count.value,readonly=True)
 		self._bar.add_button("stop", self.stop_and_destruct, key="s", help="stop recording")
 
+	def get_rec_time_str(self):
+		rec_time = gmtime(time()-self.start_time)
+		return strftime("%H:%M:%S", rec_time)
 
-	def update(self, img):
+	def update(self, frame):
 		self.shared_frame_count.value += 1
-		self.writer.write(img)
+		self.timestamps.append(frame.timestamp)
+		self.writer.write(frame.img)
 
 	def stop_and_destruct(self):
 		try:
 			camera_matrix = np.load("camera_matrix.npy")
 			dist_coefs = np.load("dist_coefs.npy")
 			cam_path = os.path.join(self.path, "camera_matrix.npy")
-			dist_path = os.path.join(self.path, "dist_coefs.npy")
+			dist_path = os.path.join(self.path, "dist_coefs.npy")			
 			np.save(cam_path, camera_matrix)
 			np.save(dist_path, dist_coefs)
 		except:
 			print "no camera intrinsics found, will not copy them into recordings folder"
+
+		timestamps_path = os.path.join(self.path, "timestamps.npy")
+		np.save(timestamps_path,np.array(self.timestamps))
+
+		meta_info_path = os.path.join(self.path, "info.csv")
+
+		with open(meta_info_path, 'w') as f:
+			f.write("Pupil Recording:\t"+self.session_str+ "\n")
+			f.write("Start Date: \t"+ strftime("%d.%m.%Y", localtime(self.start_time))+ "\n")			
+			f.write("Start Time: \t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")			
+			f.write("Duration Time: \t"+ self.get_rec_time_str()+ "\n")
+			f.write("World Camera Frames: \t"+ str(self.shared_frame_count.value)+ "\n")
+			f.write("World Camera Resolution: \t"+ str(self.width)+"x"+str(self.height)+"\n")
+			f.write("Capture Software Version: \t"+ get_tag_commit()+ "\n")
 
 		print "Stopping recording"
 		self.shared_record.value = False
