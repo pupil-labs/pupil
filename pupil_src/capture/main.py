@@ -61,7 +61,6 @@ def main():
 	g_pool.ref = Array('d',(0.0,0.0))
 	g_pool.marker = Array('d',(0.0,0.0))
 	g_pool.marker_state = Value('d',0.0)
-	g_pool.frame_count_record = Value('i', 0)
 	g_pool.calibrate = Value(c_bool, 0)
 	g_pool.pos_record = Value(c_bool, 0)
 	g_pool.eye_rx, g_pool.eye_tx = Pipe(False)

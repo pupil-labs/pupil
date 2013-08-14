@@ -145,8 +145,7 @@ def world(g_pool):
             # set up folder within recordings named by user input in atb
             if not bar.rec_name.value:
                 bar.rec_name.value = recorder.get_auto_name()
-            recorder_instance = recorder.Recorder(bar.rec_name.value, bar.fps.value, frame.img.shape, g_pool.pos_record,
-                                g_pool.frame_count_record, g_pool.eye_tx)
+            recorder_instance = recorder.Recorder(bar.rec_name.value, bar.fps.value, frame.img.shape, g_pool.pos_record, g_pool.eye_tx)
             g.plugins.append(recorder_instance)
 
     def toggle_show_calib_result():

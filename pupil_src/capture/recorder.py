@@ -9,12 +9,12 @@ from git_version import get_tag_commit
 
 class Recorder(Plugin):
 	"""Capture Recorder"""
-	def __init__(self, session_str, fps, img_shape, shared_record, shared_frame_count, eye_tx):
+	def __init__(self, session_str, fps, img_shape, shared_record, eye_tx):
 		Plugin.__init__(self)
 		self.session_str = session_str
 		self.base_path = os.path.join(os.path.abspath(__file__).rsplit('pupil_src', 1)[0], "recordings")
 		self.shared_record = shared_record
-		self.shared_frame_count = shared_frame_count
+		self.frame_count = 0
 		self.timestamps = []
 		self.eye_tx = eye_tx
 
@@ -56,7 +56,6 @@ class Recorder(Plugin):
 			text='light', position=atb_pos,refresh=.3, size=(300, 80))
 		self._bar.rec_name = create_string_buffer(512)
 		self._bar.add_var("rec time",self._bar.rec_name, getter=lambda: create_string_buffer(self.get_rec_time_str(),512), readonly=True)
-		# self._bar.add_var("frame number",getter=lambda:shared_frame_count.value,readonly=True)
 		self._bar.add_button("stop", self.stop_and_destruct, key="s", help="stop recording")
 
 	def get_rec_time_str(self):
@@ -64,7 +63,7 @@ class Recorder(Plugin):
 		return strftime("%H:%M:%S", rec_time)
 
 	def update(self, frame):
-		self.shared_frame_count.value += 1
+		self.frame_count += 1
 		self.timestamps.append(frame.timestamp)
 		self.writer.write(frame.img)
 
@@ -89,7 +88,7 @@ class Recorder(Plugin):
 			f.write("Start Date: \t"+ strftime("%d.%m.%Y", localtime(self.start_time))+ "\n")			
 			f.write("Start Time: \t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")			
 			f.write("Duration Time: \t"+ self.get_rec_time_str()+ "\n")
-			f.write("World Camera Frames: \t"+ str(self.shared_frame_count.value)+ "\n")
+			f.write("World Camera Frames: \t"+ str(self.frame_count)+ "\n")
 			f.write("World Camera Resolution: \t"+ str(self.width)+"x"+str(self.height)+"\n")
 			f.write("Capture Software Version: \t"+ get_tag_commit()+ "\n")
 
