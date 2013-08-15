@@ -37,7 +37,7 @@ def main():
 	world_src = ["Logitech Camera", "C525","C615","C920","C930e"]
 
 	# to assign cameras directly, using integers as demonstrated below
-	# eye_src = 0
+	eye_src = 1
 	# world_src = 0
 
 	# to use a pre-recorded video.
@@ -46,7 +46,7 @@ def main():
 	# world_src = 0
 
 	# Camera video size in pixels (width,height)
-	eye_size = (360,240)
+	eye_size = (640,360)
 	world_size = (1280,720)
 
 

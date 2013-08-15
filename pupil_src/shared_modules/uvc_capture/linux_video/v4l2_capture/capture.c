@@ -105,7 +105,7 @@ void *get_buffer(int fd,struct v4l2_buffer *buf){
 				errno_exit("VIDIOC_DQBUF");
 			}
 		}
-
+		// printf("flags %u \n", buf->flags);
 		assert(buf->index < n_buffers);
 		// printf("image size %ld\n",
 		//    buf->bytesused);
