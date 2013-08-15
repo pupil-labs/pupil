@@ -82,7 +82,7 @@ void *get_buffer(int fd,struct v4l2_buffer *buf){
 		}
 
 		if (0 == r) {
-			return 0
+			return 0;
 			// fprintf(stderr, "select timeout\n");
 			// exit(EXIT_FAILURE);
 		}
