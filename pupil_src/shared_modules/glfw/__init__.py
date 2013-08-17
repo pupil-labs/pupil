@@ -254,7 +254,7 @@ GLFWvidmode._fields_ = [ ('Width',     c_int),
 
 # Function pointer types
 GLFWwindowsizefun    = CFUNCTYPE(None, c_int, c_int)
-GLFWwindowclosefun   = CFUNCTYPE(c_int)
+GLFWwindowclosefun   = CFUNCTYPE(None)
 GLFWwindowrefreshfun = CFUNCTYPE(None)
 GLFWmousebuttonfun   = CFUNCTYPE(None, c_int, c_int)
 GLFWmouseposfun      = CFUNCTYPE(None, c_int, c_int)

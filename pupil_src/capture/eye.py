@@ -204,8 +204,8 @@ def eye(g_pool):
 
     # event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
-        update_fps()
         frame = cap.get_frame()
+        update_fps()
         sleep(bar.sleep.value) # for debugging only
 
         # IMAGE PROCESSING and clipping to user defined eye-region
@@ -337,10 +337,11 @@ def eye(g_pool):
     save('bar.draw_pupil',bar.draw_pupil.value)
     save('bar.record_eye',bar.record_eye.value)
     session_settings.close()
-
+    cap.close()
     atb.terminate()
     glfwCloseWindow()
     glfwTerminate()
+
     print "EYE Process closed"
 
 def eye_profiled(g_pool):

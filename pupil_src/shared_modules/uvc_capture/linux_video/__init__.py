@@ -15,18 +15,6 @@ class Camera_Capture(object):
         self.get_frame = self.capture.read
 
 
-    def set_size(self,size):
-        pass
-
-    def get_size(self):
-        return self.capture.width,self.capture.height
-
-    def set_fps(self,fps):
-        pass
-
-    def get_fps(self):
-        return self.capture.fps
-
     def create_atb_bar(self,pos):
         # add uvc camera controls to a separate ATB bar
         size = (200,200)
@@ -34,6 +22,9 @@ class Camera_Capture(object):
         self.bar = atb.Bar(name="Camera", label=self.name,
             help="UVC Camera Controls", color=(50,50,50), alpha=100,
             text='light',position=pos,refresh=2., size=size)
+
+
+        self.bar.add_var('framerate', vtype = atb.enum('framerate',self.capture.rates_menu), getter = lambda:self.capture.current_rate_idx, setter=self.capture.set_rate_idx )
 
         sorted_controls = [c for c in self.controls.itervalues()]
         sorted_controls.sort(key=lambda c: c.order)
@@ -68,6 +59,10 @@ class Camera_Capture(object):
 
         return size
 
-    def kill_atb_bar(self,pos):
-        return size
+    def close(self):
+        self.kill_atb_bar()
+        del self.capture
 
+    def kill_atb_bar(self):
+        self.bar.destroy()
+        del self.bar

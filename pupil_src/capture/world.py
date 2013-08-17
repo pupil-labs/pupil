@@ -242,8 +242,6 @@ def world(g_pool):
 
     # Event loop
     while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
-        update_fps()
-
         # Get input characters entered in player
         if g_pool.player_input.value:
             player_input = g_pool.player_input.value
@@ -252,6 +250,8 @@ def world(g_pool):
 
         # Get an image from the grabber
         frame = cap.get_frame()
+        update_fps()
+
         for p in g.plugins:
             p.update(frame)
 
@@ -277,7 +277,9 @@ def world(g_pool):
 
     # end while running and clean-up
     print "WORLD Process closed"
+    cap.close()
     glfwCloseWindow()
     glfwTerminate()
+
 
 
