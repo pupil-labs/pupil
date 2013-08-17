@@ -37,7 +37,7 @@ def main():
 	world_src = ["Logitech Camera", "C525","self.get_rates(self.size)C615","C920","C930e"]
 
 	# to assign cameras directly, using integers as demonstrated below
-	eye_src = 1
+	# eye_src = 1
 	# world_src = 0
 
 	# to use a pre-recorded video.
