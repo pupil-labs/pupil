@@ -12,6 +12,7 @@ license_txt = """\
 ----------------------------------------------------------------------------------~(*)\
 """
 
+
 # find out the cwd and change to the top level Pupil folder
 cwd = os.getcwd()
 pupil_dir = os.path.join(*os.path.split(cwd)[:-1])
