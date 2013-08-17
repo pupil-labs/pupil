@@ -597,7 +597,7 @@ class v4l2_buffer(ctypes.Structure):
         ('reserved', ctypes.c_uint32),
     ]
 
-
+V4L2_BUF_FLAG_ERROR = 0x0040
 V4L2_BUF_FLAG_MAPPED = 0x0001
 V4L2_BUF_FLAG_QUEUED = 0x0002
 V4L2_BUF_FLAG_DONE = 0x0004

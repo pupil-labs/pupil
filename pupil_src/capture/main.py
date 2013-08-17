@@ -34,7 +34,7 @@ def main():
 
 	# To assign by name: put string(s) in list
 	eye_src = ["Microsoft", "6000"]
-	world_src = ["Logitech Camera", "C525","C615","C920","C930e"]
+	world_src = ["Logitech Camera", "C525","self.get_rates(self.size)C615","C920","C930e"]
 
 	# to assign cameras directly, using integers as demonstrated below
 	eye_src = 1

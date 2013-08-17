@@ -48,7 +48,7 @@ static void errno_exit(const char *s)
 	exit(EXIT_FAILURE);
 }
 
-static int xioctl(int fh, int request, void *arg)
+int xioctl(int fh, int request, void *arg)
 {
 	int r;
 
@@ -161,7 +161,7 @@ void uninit_device(int vd)
 }
 
 
-static void init_mmap(int fd)
+void init_mmap(int fd)
 {
 	struct v4l2_requestbuffers req;
 
@@ -220,11 +220,12 @@ static void init_mmap(int fd)
 }
 
 
-void init_device(int fd,uint *width,uint *height,uint *fps)
+
+void verify_device(int fd)
 {
 	struct v4l2_capability cap;
-	struct v4l2_cropcap cropcap;
-	struct v4l2_crop crop;
+	// struct v4l2_cropcap cropcap;
+	// struct v4l2_crop crop;
 	// unsigned int min;
 
 	if (-1 == xioctl(fd, VIDIOC_QUERYCAP, &cap)) {
@@ -251,79 +252,114 @@ void init_device(int fd,uint *width,uint *height,uint *fps)
 	}
 
 
-
-	/* Select video input, video standard and tune here. */
-
-
-	CLEAR(cropcap);
-
-	cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-
-	if (0 == xioctl(fd, VIDIOC_CROPCAP, &cropcap)) {
-		crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		crop.c = cropcap.defrect; /* reset to default */
-
-		if (-1 == xioctl(fd, VIDIOC_S_CROP, &crop)) {
-			switch (errno) {
-			case EINVAL:
-				/* Cropping not supported. */
-				break;
-			default:
-				/* Errors ignored. */
-				break;
-			}
-		}
-	} else {
-		/* Errors ignored. */
-	}
-
-	struct v4l2_format fmt;
-	CLEAR(fmt);
-	fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-
-	fmt.fmt.pix.width       = *width; //replace
-	fmt.fmt.pix.height      = *height; //replace
-	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_BGR24; //replace
-	fmt.fmt.pix.field       = V4L2_FIELD_ANY;
-
-	if (-1 == xioctl(fd, VIDIOC_S_FMT, &fmt))
-		errno_exit("VIDIOC_S_FMT");
-
-
-	if (-1 == xioctl(fd, VIDIOC_G_FMT, &fmt))
-		errno_exit("VIDIOC_G_FMT");
-	fprintf(stderr, "Set resolution: %u x %u \r\n",fmt.fmt.pix.width, fmt.fmt.pix.height );
-	*width = fmt.fmt.pix.width; 
-	*height = fmt.fmt.pix.height; 
-
-	// /* Buggy driver paranoia. */
-	// min = fmt.fmt.pix.width * 2;
-	// if (fmt.fmt.pix.bytesperline < min)
-	// 	fmt.fmt.pix.bytesperline = min;
-	// min = fmt.fmt.pix.bytesperline * fmt.fmt.pix.height;
-	// if (fmt.fmt.pix.sizeimage < min)
-	// 	fmt.fmt.pix.sizeimage = min;
-
-
-	struct v4l2_streamparm params;
-	CLEAR(params);
-	params.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-
-	if (xioctl(fd, VIDIOC_G_PARM, &params) == -1)
-		fprintf(stderr, "Unable to get stream parameters for device: %s", dev_name);
-
-	params.parm.capture.timeperframe.numerator = 1;
-	params.parm.capture.timeperframe.denominator = *fps;
-
-	if (xioctl(fd, VIDIOC_S_PARM, &params) == -1)
-		fprintf(stderr, "Unable to set stream parameters for device: %s", dev_name);
-
-	if (xioctl(fd, VIDIOC_G_PARM, &params) == -1)
-		fprintf(stderr, "Unable to set stream parameters for device: %s", dev_name);
-	fprintf(stderr, "framerate: %i/%i \n",params.parm.capture.timeperframe.numerator ,params.parm.capture.timeperframe.denominator  );
-	*fps = params.parm.capture.timeperframe.denominator;
-	init_mmap(fd);	
+	return 0;
 }
+
+// void init_device(int fd,struct v4l2_format *fmt, struct v4l2_streamparm *params)
+// {
+// 	struct v4l2_capability cap;
+// 	struct v4l2_cropcap cropcap;
+// 	struct v4l2_crop crop;
+// 	unsigned int min;
+
+// 	if (-1 == xioctl(fd, VIDIOC_QUERYCAP, &cap)) {
+// 		if (EINVAL == errno) {
+// 			fprintf(stderr, "%s is no V4L2 device\n",
+// 			        dev_name);
+// 			exit(EXIT_FAILURE);
+// 		} else {
+// 			errno_exit("VIDIOC_QUERYCAP");
+// 		}
+// 	}
+
+// 	if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
+// 		fprintf(stderr, "%s is no video capture device\n",
+// 		        dev_name);
+// 		exit(EXIT_FAILURE);
+// 	}
+
+
+// 	if (!(cap.capabilities & V4L2_CAP_STREAMING)) {
+// 		fprintf(stderr, "%s does not support streaming i/o\n",
+// 		        dev_name);
+// 		exit(EXIT_FAILURE);
+// 	}
+
+
+
+// 	/* Select video input, video standard and tune here. */
+
+
+// 	CLEAR(cropcap);
+
+// 	cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+// 	if (0 == xioctl(fd, VIDIOC_CROPCAP, &cropcap)) {
+// 		crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+// 		crop.c = cropcap.defrect; /* reset to default */
+
+// 		if (-1 == xioctl(fd, VIDIOC_S_CROP, &crop)) {
+// 			switch (errno) {
+// 			case EINVAL:
+// 				/* Cropping not supported. */
+// 				break;
+// 			default:
+// 				/* Errors ignored. */
+// 				break;
+// 			}
+// 		}
+// 	} else {
+// 		/* Errors ignored. */
+// 	}
+
+// 	struct v4l2_format fmt;
+// 	CLEAR(*fmt);
+// 	fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+// 	fmt.fmt.pix.width       = *width; //replace
+// 	fmt.fmt.pix.height      = *height; //replace
+// 	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_BGR24; //replace
+// 	fmt.fmt.pix.field       = V4L2_FIELD_ANY;
+
+// 	if (-1 == xioctl(fd, VIDIOC_S_FMT, &fmt))
+// 		errno_exit("VIDIOC_S_FMT");
+
+
+// 	if (-1 == xioctl(fd, VIDIOC_G_FMT, &fmt))
+// 		errno_exit("VIDIOC_G_FMT");
+// 	fprintf(stderr, "Set resolution: %u x %u \r\n",fmt.fmt.pix.width, fmt.fmt.pix.height );
+// 	*width = fmt.fmt.pix.width; 
+// 	*height = fmt.fmt.pix.height; 
+
+// 	/* Buggy driver paranoia. */
+// 	min = fmt.fmt.pix.width * 2;
+// 	if (fmt.fmt.pix.bytesperline < min)
+// 		fmt.fmt.pix.bytesperline = min;
+// 	min = fmt.fmt.pix.bytesperline * fmt.fmt.pix.height;
+// 	if (fmt.fmt.pix.sizeimage < min)
+// 		fmt.fmt.pix.sizeimage = min;
+
+
+// 	struct v4l2_streamparm params;
+// 	CLEAR(params);
+// 	params.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+// 	if (xioctl(fd, VIDIOC_G_PARM, &params) == -1)
+// 		fprintf(stderr, "Unable to get stream parameters for device: %s", dev_name);
+
+// 	params.parm.capture.timeperframe.numerator = *fps_numer;
+// 	params.parm.capture.timeperframe.denominator = *fps_denom;
+
+// 	if (xioctl(fd, VIDIOC_S_PARM, &params) == -1)
+// 		fprintf(stderr, "Unable to set stream parameters for device: %s", dev_name);
+
+// 	if (xioctl(fd, VIDIOC_G_PARM, &params) == -1)
+// 		fprintf(stderr, "Unable to set stream parameters for device: %s", dev_name);
+// 	fprintf(stderr, "framerate: %i/%i \n",params.parm.capture.timeperframe.numerator ,params.parm.capture.timeperframe.denominator  );
+// 	*fps_numer =params.parm.capture.timeperframe.numerator;
+// 	*fps_denom = params.parm.capture.timeperframe.denominator;
+// 	init_mmap(fd);	
+// }
 
 int close_device(int fd)
 {
@@ -361,6 +397,39 @@ int open_device(char *dev_name_)
 }
 
 
+void enum_frameformats(int fd){
+
+	enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    struct v4l2_fmtdesc fmt;
+    struct v4l2_frmsizeenum frmsize;
+
+    fmt.index = 0;
+    fmt.type = type;
+    while (xioctl(fd, VIDIOC_ENUM_FMT, &fmt) >= 0) {
+        frmsize.pixel_format = fmt.pixelformat;
+        char c[4];
+        c[0] =  (char) (fmt.pixelformat>>0);
+        c[1] =  (char) (fmt.pixelformat>>8);        
+        c[2] =  (char) (fmt.pixelformat>>16);
+        c[3] =  (char) (fmt.pixelformat>>24);
+        printf("Pixelformat %s \n", c);
+        frmsize.index = 0;
+        while (xioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frmsize) >= 0) {
+            if (frmsize.type == V4L2_FRMSIZE_TYPE_DISCRETE) {
+                printf("%dx%d\n", 
+                                  frmsize.discrete.width,
+                                  frmsize.discrete.height);
+            } else if (frmsize.type == V4L2_FRMSIZE_TYPE_STEPWISE) {
+                printf("%dx%d\n", 
+                                  frmsize.stepwise.max_width,
+                                  frmsize.stepwise.max_height);
+            }
+                frmsize.index++;
+            }
+            fmt.index++;
+    }
+}
+
 // 	open_device();
 // 	init_device();
 // 	start_capturing();
@@ -373,40 +442,9 @@ int open_device(char *dev_name_)
 
 
 
-// struct v4l2_frmivalenum temp;
-// memset(&temp, 0, sizeof(temp));
-// temp.pixel_format = V4L2_PIX_FMT_YUYV;
-// temp.width = 640;
-// temp.height = 480;
- 
-// v4l2_ioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &temp);
-// if (temp.type == V4L2_FRMIVAL_TYPE_DISCRETE) {
-//     while (v4l2_ioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &temp) != -1) {
-//         cout << float(temp.discrete.denominator)/temp.discrete.numerator << " fps" << endl;
-//         temp.index += 1;
-//     }
-// }
-// float stepval = 0;
-// if (temp.type == V4L2_FRMIVAL_TYPE_CONTINUOUS) {
-//     stepval = 1;
-// }
-// if (temp.type == V4L2_FRMIVAL_TYPE_STEPWISE || temp.type == V4L2_FRMIVAL_TYPE_CONTINUOUS) {
-//     float minval = float(temp.stepwise.min.numerator)/temp.stepwise.min.denominator;
-//     float maxval = float(temp.stepwise.max.numerator)/temp.stepwise.max.denominator;
-//     if (stepval == 0) {
-//         stepval = float(temp.stepwise.step.numerator)/temp.stepwise.step.denominator;
-//     }
-//     for (float cval = minval; cval <= maxval; cval += stepval) {
-//         cout << 1/cval << " fps" << endl;
-//     }
-// }
-
-
-
    // enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
    //  struct v4l2_fmtdesc fmt;
    //  struct v4l2_frmsizeenum frmsize;
-   //  struct v4l2_frmivalenum frmival;
 
    //  fmt.index = 0;
    //  fmt.type = type;
