@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -11,6 +11,21 @@
 
 from ctypes import *
 from cf_string import CFSTR, cfstring_to_string_release
+import os
+### Get location of  this file
+source_loc = os.path.dirname(os.path.abspath(__file__))
+del os
+### Run Autocompiler
+#  Binaries are not distributed instead a make file and source are in this folder
+#  Make is invoked when this module is imported or run.
+
+from subprocess import check_output
+# print " compiling now."
+compiler_status = check_output(["make"],cwd=source_loc)
+# print compiler_status
+del check_output
+# print "c-methods: compiling done."
+
 
 ### defines and constants
 class uvccModelId(Structure):
