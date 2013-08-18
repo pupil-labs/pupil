@@ -397,38 +397,38 @@ int open_device(char *dev_name_)
 }
 
 
-void enum_frameformats(int fd){
+// void enum_frameformats(int fd){
 
-	enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    struct v4l2_fmtdesc fmt;
-    struct v4l2_frmsizeenum frmsize;
+// 	enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+//     struct v4l2_fmtdesc fmt;
+//     struct v4l2_frmsizeenum frmsize;
 
-    fmt.index = 0;
-    fmt.type = type;
-    while (xioctl(fd, VIDIOC_ENUM_FMT, &fmt) >= 0) {
-        frmsize.pixel_format = fmt.pixelformat;
-        char c[4];
-        c[0] =  (char) (fmt.pixelformat>>0);
-        c[1] =  (char) (fmt.pixelformat>>8);        
-        c[2] =  (char) (fmt.pixelformat>>16);
-        c[3] =  (char) (fmt.pixelformat>>24);
-        printf("Pixelformat %s \n", c);
-        frmsize.index = 0;
-        while (xioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frmsize) >= 0) {
-            if (frmsize.type == V4L2_FRMSIZE_TYPE_DISCRETE) {
-                printf("%dx%d\n", 
-                                  frmsize.discrete.width,
-                                  frmsize.discrete.height);
-            } else if (frmsize.type == V4L2_FRMSIZE_TYPE_STEPWISE) {
-                printf("%dx%d\n", 
-                                  frmsize.stepwise.max_width,
-                                  frmsize.stepwise.max_height);
-            }
-                frmsize.index++;
-            }
-            fmt.index++;
-    }
-}
+//     fmt.index = 0;
+//     fmt.type = type;
+//     while (xioctl(fd, VIDIOC_ENUM_FMT, &fmt) >= 0) {
+//         frmsize.pixel_format = fmt.pixelformat;
+//         char c[4];
+//         c[0] =  (char) (fmt.pixelformat>>0);
+//         c[1] =  (char) (fmt.pixelformat>>8);        
+//         c[2] =  (char) (fmt.pixelformat>>16);
+//         c[3] =  (char) (fmt.pixelformat>>24);
+//         printf("Pixelformat %s \n", c);
+//         frmsize.index = 0;
+//         while (xioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frmsize) >= 0) {
+//             if (frmsize.type == V4L2_FRMSIZE_TYPE_DISCRETE) {
+//                 printf("%dx%d\n", 
+//                                   frmsize.discrete.width,
+//                                   frmsize.discrete.height);
+//             } else if (frmsize.type == V4L2_FRMSIZE_TYPE_STEPWISE) {
+//                 printf("%dx%d\n", 
+//                                   frmsize.stepwise.max_width,
+//                                   frmsize.stepwise.max_height);
+//             }
+//                 frmsize.index++;
+//             }
+//             fmt.index++;
+//     }
+// }
 
 // 	open_device();
 // 	init_device();

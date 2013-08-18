@@ -16,6 +16,7 @@ from ctypes import *
 from numpy.ctypeslib import ndpointer
 import numpy as np
 import os
+from time import time
 
 ### Get location of  this file
 source_loc = os.path.dirname(os.path.abspath(__file__))
@@ -191,7 +192,8 @@ class VideoCapture(object):
             raise Exception("Could not set v4l2 parameters")
         if (-1 == dll.xioctl(self.device, VIDIOC_G_PARM, byref(self.v4l2_streamparm))):
             raise Exception("Could not get v4l2 parameters")
-        print "Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator,self.v4l2_streamparm.parm.capture.timeperframe.denominator)
+        print "Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
+                                                      self.v4l2_streamparm.parm.capture.timeperframe.denominator)
 
         #structure for atb menue
         size = self.v4l2_format.fmt.pix.width,self.v4l2_format.fmt.pix.height
@@ -203,7 +205,8 @@ class VideoCapture(object):
         #structure for atb menue
         self.rates = enum_rates(self.device,v4l2_fourcc(*'MJPG'),size)
         self.rates_menu = dict(zip([str(float(d)/n) for n,d in self.rates], range(len(self.rates))))
-        fps = self.v4l2_streamparm.parm.capture.timeperframe.numerator,self.v4l2_streamparm.parm.capture.timeperframe.denominator
+        fps = self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
+              self.v4l2_streamparm.parm.capture.timeperframe.denominator
         self.current_rate_idx = self.rates.index(fps)
         
 
@@ -233,10 +236,12 @@ class VideoCapture(object):
             raise Exception("Could not set v4l2 parameters")
         if (-1 == dll.xioctl(self.device, VIDIOC_G_PARM, byref(self.v4l2_streamparm))):
             raise Exception("Could not get v4l2 parameters")
-        print "Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator,self.v4l2_streamparm.parm.capture.timeperframe.denominator)
+        print "Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator, \
+                                                      self.v4l2_streamparm.parm.capture.timeperframe.denominator)
 
         #update for atb menue
-        fps = self.v4l2_streamparm.parm.capture.timeperframe.numerator,self.v4l2_streamparm.parm.capture.timeperframe.denominator
+        fps = self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
+              self.v4l2_streamparm.parm.capture.timeperframe.denominator
         self.current_rate_idx = self.rates.index(fps)
         
         self._init()
@@ -286,10 +291,15 @@ class VideoCapture(object):
             self._active_buffer = buf
             #is the frame ok?
             if not buf.flags & V4L2_BUF_FLAG_ERROR:
+                if buf.flags & V4L2_BUF_FLAG_TIMESTAMP_MASK:
+                    print "buffer timestamp monotonic"
                 buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
                 img = np.frombuffer(buf_ptr.contents,c_uint8)
                 img.shape = (self.v4l2_format.fmt.pix.height,self.v4l2_format.fmt.pix.width,3)
-                timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000000.
+                #unfortunatly this is useless because the timestamp is instable and sometimes wrong
+                # timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000000.
+                timestamp = time()
+                # print timestamp, buf.index
                 return Frame(timestamp, img)
             else:
                 print "Frame corrupted skipping it"
@@ -370,11 +380,11 @@ if __name__ == '__main__' :
     # dll.uninit_device(device)
     # dll.close_device(device)
     # dll.fprintf(stderr, "\n")
-    cap = VideoCapture(2,(1280,720),30)
+    cap = VideoCapture(0,(1280,720),30)
 
-    for x in range(30):
+    for x in range(400):
         frame = cap.read()
-        print frame.img.shape
+        # print frame.img.shape
     # cap.set_rate(1)
 
     # for x in range(30):

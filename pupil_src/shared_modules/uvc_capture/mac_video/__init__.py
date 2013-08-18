@@ -206,9 +206,11 @@ class Camera_Capture(object):
 
         return size
 
-    def kill_atb_bar(self,pos):
-        return size
+    def kill_atb_bar(self):
+        pass
 
+    def close(self):
+        pass
 
 
 class Cam():

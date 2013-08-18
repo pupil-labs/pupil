@@ -49,8 +49,12 @@ class Camera_Capture():
     def get_fps(self):
         return self.capture.get(5)
 
-    def make_atb_bar(self,pos):
-        return pos
+    def create_atb_bar(self,pos):
+        size = 0,0
+        return size
 
-    def kill_atb_bar(self,pos):
-        return pos
+    def kill_atb_bar(self):
+        pass
+
+    def close(self):
+        pass
