@@ -7,7 +7,7 @@ Thumbs.db
 *.pstats
 
 # binaries #
-#.so
+*.so
 
 # user generated files will be ignored if in directory named 'recordings...' #
 recordings*/
