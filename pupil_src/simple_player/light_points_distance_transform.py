@@ -14,28 +14,48 @@ import cProfile
 import time
 
 def main():
+
     save_video = False
 
-
     # change this path to point to the data folder you would like to play
-    data_folder = "../Capture/data001"
+    data_folder = "../../recordings/2013_08_17/000"
+
+
 
     video_path = data_folder + "/world.avi"
+    timestamps_path = data_folder + "/timestamps.npy"
     gaze_positions_path = data_folder + "/gaze_positions.npy"
     record_path = data_folder + "/world_viz.avi"
 
     cap = cv.VideoCapture(video_path)
     gaze_list = list(np.load(gaze_positions_path))
+    timestamps = list(np.load(timestamps_path))
+    # gaze_list: gaze x | gaze y | pupil x | pupil y | timestamp
+    # timestamps timestamp
 
-    # this takes the gaze list and makes a list
+
+    # this takes the timestamps list and makes a list
     # with the length of the number of recorded frames.
-    # Each slot conains a list that has 0, 1 or more assosiated gaze postions.
-    positions_by_frame = [[] for frame in range(int(gaze_list[-1][-1]) + 1)]
-    while gaze_list:
-        s = gaze_list.pop(0)
-        frame = int(s[-1])
-        positions_by_frame[frame].append({'x': s[0], 'y': s[1], 'dt': s[2]})
+    # Each slot conains a list that will have 0, 1 or more assosiated gaze postions.
+    positions_by_frame = [[] for i in timestamps]
+   
 
+    no_frames = len(timestamps)
+    frame_idx = 0
+    data_point = gaze_list.pop(0)
+    gaze_point = data_point[:2]
+    gaze_timestamp = data_point[4]
+    while gaze_list:
+        # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
+        if gaze_timestamp <= (timestamps[frame_idx]+timestamps[frame_idx+2]/2.):
+            positions_by_frame[frame_idx].append({'x': gaze_point[0],'y':gaze_point[1], 'timestamp':gaze_timestamp})
+            data_point = gaze_list.pop(0)
+            gaze_point = data_point[:2]
+            gaze_timestamp = data_point[4]
+        else:
+            frame_idx+=1
+            if frame_idx >= no_frames: #becasue we incremented before this means len-1
+                break
 
     status, img = cap.read()
     prevgray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
