@@ -48,15 +48,15 @@ def main():
     gaze_timestamp = data_point[4]
     while gaze_list:
         # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
-        if gaze_timestamp <= (timestamps[frame_idx]+timestamps[frame_idx+2]/2.):
+        if gaze_timestamp <= (timestamps[frame_idx]+timestamps[frame_idx+1])/2.:
             positions_by_frame[frame_idx].append({'x': gaze_point[0],'y':gaze_point[1], 'timestamp':gaze_timestamp})
             data_point = gaze_list.pop(0)
             gaze_point = data_point[:2]
             gaze_timestamp = data_point[4]
         else:
-            frame_idx+=1
-            if frame_idx >= no_frames: #becasue we incremented before this means len-1
+            if frame_idx >= no_frames-2: 
                 break
+            frame_idx+=1
 
     status, img = cap.read()
     prevgray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
