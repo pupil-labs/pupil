@@ -11,6 +11,10 @@ Thumbs.db
 
 # user generated files will be ignored if in directory named 'recordings...' #
 recordings*/
+*.db
+*.npy
+*.png
+
 
 # IDE generated files #
 .floo

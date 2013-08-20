@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -151,7 +151,7 @@ if __name__ == '__main__':
     map_fn = make_map_function(cx,cy,model_n)
     err_dist,err_mean,err_rms = fit_error_screen(err_x,err_y,(1280,720))
     print err_rms,"in pixel"
-    threshold =65 # err_rms*2
+    threshold =15 # err_rms*2
 
     # fit again disregarding crass outlines
     cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)

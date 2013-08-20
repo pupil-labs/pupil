@@ -72,7 +72,7 @@ class Recorder(Plugin):
 			camera_matrix = np.load("camera_matrix.npy")
 			dist_coefs = np.load("dist_coefs.npy")
 			cam_path = os.path.join(self.path, "camera_matrix.npy")
-			dist_path = os.path.join(self.path, "dist_coefs.npy")			
+			dist_path = os.path.join(self.path, "dist_coefs.npy")
 			np.save(cam_path, camera_matrix)
 			np.save(dist_path, dist_coefs)
 		except:
@@ -85,12 +85,15 @@ class Recorder(Plugin):
 
 		with open(meta_info_path, 'w') as f:
 			f.write("Pupil Recording:\t"+self.session_str+ "\n")
-			f.write("Start Date: \t"+ strftime("%d.%m.%Y", localtime(self.start_time))+ "\n")			
-			f.write("Start Time: \t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")			
+			f.write("Start Date: \t"+ strftime("%d.%m.%Y", localtime(self.start_time))+ "\n")
+			f.write("Start Time: \t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")
 			f.write("Duration Time: \t"+ self.get_rec_time_str()+ "\n")
 			f.write("World Camera Frames: \t"+ str(self.frame_count)+ "\n")
 			f.write("World Camera Resolution: \t"+ str(self.width)+"x"+str(self.height)+"\n")
 			f.write("Capture Software Version: \t"+ get_tag_commit()+ "\n")
+			f.write("Platform:\t"+sys.platform+"\n")
+			f.write("user:\t"+os.getlogin+"\n")
+
 
 		print "Stopping recording"
 		self.shared_record.value = False

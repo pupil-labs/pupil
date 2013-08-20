@@ -152,6 +152,7 @@ class Canny_Detector(Pupil_Detector):
             pupil_ellipse['contour'] = c
             a,b = e[1][0]/2.,e[1][1]/2. # majar minor radii of candidate ellipse
             # pupil_ellipse['circumference'] = np.pi*abs(3*(a+b)-np.sqrt(10*a*b+3*(a**2+b**2)))
+            # pupil_ellipse['convex_hull'] = cv2.convexHull(pupil_ellipse['contour'])
             pupil_ellipse['contour_area'] = cv2.contourArea(c)
             pupil_ellipse['ellipse_area'] = np.pi*a*b
             if abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area']) <10:

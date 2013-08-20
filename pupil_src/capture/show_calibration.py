@@ -13,8 +13,13 @@ class Show_Calibration(Plugin):
         Plugin.__init__(self)
 
         height,width = img_shape[:2]
+        try:
+            cal_pt_cloud = np.load("cal_pt_cloud.npy")
+        except:
+            print "PLease calibrate first"
+            self.close()
+            return
 
-        cal_pt_cloud = np.load("cal_pt_cloud.npy")
         map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(width, height),return_inlier_map=True)
         cal_pt_cloud[:,0:2] =  np.array(map_fn(cal_pt_cloud[:,0:2].transpose())).transpose()
         ref_pts = cal_pt_cloud[inlier_map][:,np.newaxis,2:4]
@@ -44,9 +49,10 @@ class Show_Calibration(Plugin):
         self._bar.add_button("close", self.close, key="x", help="close calibration results visualization")
 
     def gl_display(self):
-        draw_gl_polyline_norm(self.inliers,(1.,0.5,0.,.5),type='Lines')
-        draw_gl_polyline_norm(self.outliers,(1.,0.,0.,.5),type='Lines')
-        draw_gl_polyline_norm(self.calib_bounds[:,0],(.0,1.,0,.5),type='Loop')
+        if self.inliers is not None:
+            draw_gl_polyline_norm(self.inliers,(1.,0.5,0.,.5),type='Lines')
+            draw_gl_polyline_norm(self.outliers,(1.,0.,0.,.5),type='Lines')
+            draw_gl_polyline_norm(self.calib_bounds[:,0],(.0,1.,0,.5),type='Loop')
 
     def close(self):
         self.alive = False
