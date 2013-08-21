@@ -84,15 +84,24 @@ class Recorder(Plugin):
 		meta_info_path = os.path.join(self.path, "info.csv")
 
 		with open(meta_info_path, 'w') as f:
-			f.write("Pupil Recording:\t"+self.session_str+ "\n")
+			f.write("Pupil Recording Name:\t"+self.session_str+ "\n")
 			f.write("Start Date: \t"+ strftime("%d.%m.%Y", localtime(self.start_time))+ "\n")
 			f.write("Start Time: \t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")
 			f.write("Duration Time: \t"+ self.get_rec_time_str()+ "\n")
 			f.write("World Camera Frames: \t"+ str(self.frame_count)+ "\n")
 			f.write("World Camera Resolution: \t"+ str(self.width)+"x"+str(self.height)+"\n")
 			f.write("Capture Software Version: \t"+ get_tag_commit()+ "\n")
-			f.write("Platform:\t"+sys.platform+"\n")
 			f.write("user:\t"+os.getlogin()+"\n")
+			try:
+				sysname, nodename, release, version, machine = os.uname()
+			except:
+				sysname, nodename, release, version, machine = sys.platform,None,None,None,None
+			f.write("Platform:\t"+sysname+"\n")
+			f.write("Machine:\t"+nodename+"\n")
+			f.write("Release:\t"+release+"\n")
+			f.write("Version:\t"+version+"\n")
+
+
 
 
 		print "Stopping recording"
