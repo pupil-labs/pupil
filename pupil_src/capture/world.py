@@ -139,8 +139,9 @@ def world(g_pool):
 
     def toggle_record_video():
         if any([True for p in g.plugins if isinstance(p,recorder.Recorder)]):
-            # stop and schedule for deletion
-            [p.stop_and_destruct() for p in g.plugins if isinstance(p,recorder.Recorder)]
+            for p in g.plugins:
+                if isinstance(p,recorder.Recorder):
+                    p.alive = False
         else:
             # set up folder within recordings named by user input in atb
             if not bar.rec_name.value:
@@ -153,7 +154,6 @@ def world(g_pool):
             for p in g.plugins:
                 if isinstance(p,Show_Calibration):
                     p.alive = False
-            print "calibration results closed"
         else:
             calib = Show_Calibration(frame.img.shape)
             g.plugins.append(calib)
@@ -201,7 +201,7 @@ def world(g_pool):
     bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=bar.calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
     bar.add_button("show calibration result",toggle_show_calib_result, group="Calibration", help="Click to show calibration result.")
     bar.add_var("session name",bar.rec_name, group="Recording", help="creates folder Data_Name_XXX, where xxx is an increasing number")
-    bar.add_button("start recording", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
+    bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
     bar.add_separator("Sep1")
     bar.add_var("play video", bar.play, help="play a video in the Player window")
     bar.add_var("exit", g_pool.quit)
@@ -274,6 +274,11 @@ def world(g_pool):
 
         atb.draw()
         glfwSwapBuffers()
+
+    # de-init all running plugins
+    for p in g.plugins:
+        p.alive = False
+    g.plugins = [p for p in g.plugins if p.alive]
 
     # end while running and clean-up
     print "WORLD Process closed"

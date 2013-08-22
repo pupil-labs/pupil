@@ -331,6 +331,18 @@ def eye(g_pool):
 
     # END while running
 
+    # Quite while Recording: Save values 
+    if l_pool.record_running:
+        positions_path = os.path.join(l_pool.record_path, "gaze_positions.npy")
+        cal_pt_cloud_path = os.path.join(l_pool.record_path, "cal_pt_cloud.npy")
+        np.save(positions_path, np.asarray(l_pool.record_positions))
+        try:
+            np.save(cal_pt_cloud_path, np.asarray(pupil.pt_cloud))
+        except:
+            print "Warning: No calibration data associated with this recording."
+        l_pool.writer = None
+
+
     # save session persistent settings
     save('roi',u_r.get())
     save('bar.display',bar.display.value)

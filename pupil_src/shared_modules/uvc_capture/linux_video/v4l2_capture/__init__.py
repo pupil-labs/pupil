@@ -296,9 +296,8 @@ class VideoCapture(object):
                 buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
                 img = np.frombuffer(buf_ptr.contents,c_uint8)
                 img.shape = (self.v4l2_format.fmt.pix.height,self.v4l2_format.fmt.pix.width,3)
-                #unfortunatly this is useless because the timestamp is instable and sometimes wrong
-                # timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000000.
-                timestamp = time()
+                timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000000.
+                # timestamp = time()
                 # print timestamp, buf.index
                 return Frame(timestamp, img)
             else:
@@ -382,9 +381,10 @@ if __name__ == '__main__' :
     # dll.fprintf(stderr, "\n")
     cap = VideoCapture(0,(1280,720),30)
 
-    for x in range(400):
+    for x in range(40):
         frame = cap.read()
         # print frame.img.shape
+        print frame.timestamp
     # cap.set_rate(1)
 
     # for x in range(30):

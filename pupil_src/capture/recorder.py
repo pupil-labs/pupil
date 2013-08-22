@@ -42,6 +42,15 @@ class Recorder(Plugin):
 				print "We dont want to overwrite data, incrementing counter & trying to make new data folder"
 				counter += 1
 
+		self.meta_info_path = os.path.join(self.path, "info.csv")
+
+		with open(self.meta_info_path, 'w') as f:
+			f.write("Pupil Recording Name:\t"+self.session_str+ "\n")
+			f.write("Start Date: \t"+ strftime("%d.%m.%Y", localtime(self.start_time))+ "\n")
+			f.write("Start Time: \t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")
+
+
+
 		video_path = os.path.join(self.path, "world.avi")
 		self.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), fps, (img_shape[1], img_shape[0]))
 		self.height = img_shape[0]
@@ -81,12 +90,8 @@ class Recorder(Plugin):
 		timestamps_path = os.path.join(self.path, "timestamps.npy")
 		np.save(timestamps_path,np.array(self.timestamps))
 
-		meta_info_path = os.path.join(self.path, "info.csv")
 
-		with open(meta_info_path, 'w') as f:
-			f.write("Pupil Recording Name:\t"+self.session_str+ "\n")
-			f.write("Start Date: \t"+ strftime("%d.%m.%Y", localtime(self.start_time))+ "\n")
-			f.write("Start Time: \t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")
+		with open(self.meta_info_path, 'a') as f:
 			f.write("Duration Time: \t"+ self.get_rec_time_str()+ "\n")
 			f.write("World Camera Frames: \t"+ str(self.frame_count)+ "\n")
 			f.write("World Camera Resolution: \t"+ str(self.width)+"x"+str(self.height)+"\n")
@@ -103,13 +108,14 @@ class Recorder(Plugin):
 
 
 
-
 		print "Stopping recording"
 		self.shared_record.value = False
 		self.alive = False
 
+	def __del__(self):
+		"""incase the plugin get deleted while recording
+		"""
+		self.stop_and_destruct()
 
 def get_auto_name():
 	return strftime("%Y_%m_%d", localtime())
-
-

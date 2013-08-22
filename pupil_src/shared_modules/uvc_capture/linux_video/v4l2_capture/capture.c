@@ -22,6 +22,7 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
+#include <time.h>
 
 #include <linux/videodev2.h>
 #include <libv4l2.h>
@@ -107,10 +108,15 @@ void *get_buffer(int fd,struct v4l2_buffer *buf){
 		}
 		// printf("flags %u \n", buf->flags);
 		assert(buf->index < n_buffers);
-		// printf("image size %ld\n",
-		//    buf->bytesused);
+		// printf("time %ld %ld %u \n",
+		   // buf->timestamp.tv_sec,buf->timestamp.tv_usec,buf->index);
 		// process_image(buffers[buf.index].start, buf.bytesused);
 
+		struct timespec raw_tv;
+		clock_gettime(CLOCK_MONOTONIC_RAW, &raw_tv);
+		// printf("current time %ld, %ld\n", raw_tv.tv_sec, raw_tv.tv_nsec);
+		buf->timestamp.tv_sec = (long) raw_tv.tv_sec;
+		buf->timestamp.tv_usec = raw_tv.tv_nsec/1000; 
 		return buffers[buf->index].start;
 	}
 }
@@ -221,7 +227,7 @@ void init_mmap(int fd)
 
 
 
-void verify_device(int fd)
+int verify_device(int fd)
 {
 	struct v4l2_capability cap;
 	// struct v4l2_cropcap cropcap;

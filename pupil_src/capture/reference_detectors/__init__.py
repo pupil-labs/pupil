@@ -24,10 +24,10 @@ from natural_features_calibration import Natural_Features_Calibration
 from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
 
 
-name_by_index = [   'Screen Marker Calibration',
-                    'Manual Marker Calibration',
-                    'Natural Features Calibration',
-                    'Camera Intrinsics Estimation']
+name_by_index = [   'Screen Marker',
+                    'Manual Marker',
+                    'Natural Features',
+                    'Camera Intrinsics']
 
 detector_by_index = [   Screen_Marker_Calibration,
                         Manual_Marker_Calibration,

@@ -11,6 +11,7 @@ Thumbs.db
 
 # user generated files will be ignored if in directory named 'recordings...' #
 recordings*/
+user_settings
 *.db
 *.npy
 *.png
