@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -13,10 +13,10 @@ import numpy as np
 
 def main():
 
-    save_video = False
+    save_video = True
 
     # change this path to point to the data folder you would like to play
-    data_folder = "../../recordings/2013_08_17/000"
+    data_folder = "/Users/mkassner/Desktop/002"
 
 
 
@@ -26,8 +26,8 @@ def main():
     record_path = data_folder + "/world_viz.avi"
 
     cap = cv.VideoCapture(video_path)
-    gaze_list = list(np.load(gaze_positions_path))
-    timestamps = list(np.load(timestamps_path))
+    gaze_list = np.load(gaze_positions_path)
+    timestamps = np.load(timestamps_path)
     # gaze_list: gaze x | gaze y | pupil x | pupil y | timestamp
     # timestamps timestamp
 
@@ -36,7 +36,21 @@ def main():
     # with the length of the number of recorded frames.
     # Each slot conains a list that will have 0, 1 or more assosiated gaze postions.
     positions_by_frame = [[] for i in timestamps]
-   
+
+    # timestamps = range(len(timestamps))
+    gaze_stamps = gaze_list[:,-1]
+
+    print timestamps
+    for t in gaze_stamps:
+        print t
+    print "///////////////////////////"
+    # print gaze_stamps
+    return
+    gaze_stamps = np.array(range(len(gaze_stamps)))
+    gaze_stamps *= 24/30.
+    gaze_stamps +=15
+    gaze_list[:,-1] = gaze_stamps
+    gaze_list = gaze_list.tolist()
 
     no_frames = len(timestamps)
     frame_idx = 0
@@ -46,12 +60,14 @@ def main():
     while gaze_list:
         # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
         if gaze_timestamp <= (timestamps[frame_idx]+timestamps[frame_idx+1])/2.:
-            positions_by_frame[frame_idx].append({'x': gaze_point[0],'y':gaze_point[1], 'timestamp':gaze_timestamp})
+            positions_by_frame[frame_idx].append({'x': gaze_point[0],'y':gaze_point[1]-.2, 'timestamp':gaze_timestamp})
             data_point = gaze_list.pop(0)
             gaze_point = data_point[:2]
             gaze_timestamp = data_point[4]
+            # print gaze_timestamp
         else:
-            if frame_idx >= no_frames-2: 
+            # print "frame",timestamps[frame_idx]
+            if frame_idx >= no_frames-2:
                 break
             frame_idx+=1
 
@@ -61,8 +77,8 @@ def main():
     frame = 0
 
     fps = cap.get(5)
+    fps = 20
     wait =  int((1./fps)*1000)
-
 
     if save_video:
         #FFV1 -- good speed lossless big file

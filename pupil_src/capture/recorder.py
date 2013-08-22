@@ -92,7 +92,7 @@ class Recorder(Plugin):
 			f.write("World Camera Resolution: \t"+ str(self.width)+"x"+str(self.height)+"\n")
 			f.write("Capture Software Version: \t"+ get_tag_commit()+ "\n")
 			f.write("Platform:\t"+sys.platform+"\n")
-			f.write("user:\t"+os.getlogin+"\n")
+			f.write("user:\t"+os.getlogin()+"\n")
 
 
 		print "Stopping recording"
