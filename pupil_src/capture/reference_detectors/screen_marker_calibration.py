@@ -40,8 +40,8 @@ class Screen_Marker_Calibration(Plugin):
 
         self.show_edges = c_bool(0)
         self.aperture = c_int(7)
-        self.dist_threshold = c_int(10)
-        self.area_threshold = c_int(30)
+        self.dist_threshold = c_int(5)
+        self.area_threshold = c_int(20)
 
 
         atb_label = "calibrate on screen"
@@ -111,7 +111,6 @@ class Screen_Marker_Calibration(Plugin):
             # cv2.flip(edges,1 ,dst = edges,)
             # display the image for debugging purpuses
             # img[:] = cv2.cvtColor(edges,cv2.COLOR_GRAY2BGR)
-             # from edges to contours to ellipses CV_RETR_CCsOMP ls fr hole
             contours, hierarchy = cv2.findContours(edges,
                                             mode=cv2.RETR_TREE,
                                             method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
