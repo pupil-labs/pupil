@@ -143,6 +143,12 @@ class Camera_Capture(object):
         self.uId = cam.uId
         self.name = cam.name
         self.controls = Controls(self.uId)
+
+        try:
+            self.controls['UVCC_REQ_FOCUS_AUTO'].set_val(0)
+        except KeyError:
+            pass
+
         self.capture = VideoCapture(self.src_id)
         self.set_size(size)
 
