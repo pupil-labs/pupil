@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -18,9 +18,15 @@ def main():
 
     save_video = False
 
-    # change this path to point to the data folder you would like to play
-    data_folder = "../../recordings/2013_08_17/000"
+    try:
+        data_folder = sys.argv[1]
+    except:
+        print "You did not supply a datafolder when you called this script. \
+               \nI will use the path hardcoded into the script instead."
+        data_folder = "/Users/mkassner/Desktop/002"
 
+    if not os.path.isdir(data_folder):
+        raise Exception("Please supply a recording folder")
 
 
     video_path = data_folder + "/world.avi"
@@ -39,14 +45,14 @@ def main():
     # with the length of the number of recorded frames.
     # Each slot conains a list that will have 0, 1 or more assosiated gaze postions.
     positions_by_frame = [[] for i in timestamps]
-   
+
 
     no_frames = len(timestamps)
     frame_idx = 0
     data_point = gaze_list.pop(0)
     gaze_point = data_point[:2]
     gaze_timestamp = data_point[4]
-    while gaze_list:
+    while status and frame < no_frames:
         # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
         if gaze_timestamp <= (timestamps[frame_idx]+timestamps[frame_idx+1])/2.:
             positions_by_frame[frame_idx].append({'x': gaze_point[0],'y':gaze_point[1], 'timestamp':gaze_timestamp})
@@ -54,7 +60,7 @@ def main():
             gaze_point = data_point[:2]
             gaze_timestamp = data_point[4]
         else:
-            if frame_idx >= no_frames-2: 
+            if frame_idx >= no_frames-2:
                 break
             frame_idx+=1
 

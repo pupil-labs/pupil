@@ -7,17 +7,24 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
+import sys,os
 import cv2 as cv
 import numpy as np
+
 
 def main():
 
     save_video = False
 
-    # change this path to point to the data folder you would like to play
-    data_folder = "/Users/mkassner/Desktop/002"
+    try:
+        data_folder = sys.argv[1]
+    except:
+        print "You did not supply a datafolder when you called this script. \
+               \nI will use the path hardcoded into the script instead."
+        data_folder = "/Users/mkassner/Desktop/002"
 
+    if not os.path.isdir(data_folder):
+        raise Exception("Please supply a recording directory")
 
 
     video_path = data_folder + "/world.avi"
@@ -70,7 +77,7 @@ def main():
         writer = cv.VideoWriter(record_path, cv.cv.CV_FOURCC(*'DIVX'), fps, (img.shape[1], img.shape[0]))
 
 
-    while status:
+    while status and frame < no_frames:
 
         # all gaze points of the current frame
         current_gaze = positions_by_frame[frame]
