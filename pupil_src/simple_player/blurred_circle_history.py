@@ -24,7 +24,7 @@ def main():
         data_folder = "/Users/mkassner/Desktop/002"
 
     if not os.path.isdir(data_folder):
-        raise Exception("Please supply a recording folder")
+        raise Exception("Please supply a recording directory")
 
 
     video_path = data_folder + "/world.avi"
