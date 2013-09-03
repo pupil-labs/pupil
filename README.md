@@ -11,3 +11,7 @@ See [getting pupil](https://code.google.com/p/pupil/wiki/Getting_Pupil "getting 
 
 ## License
 All source code written by us is open source for noncommercial uses as specified the [CC BY-NC-SA license](http://creativecommons.org/licenses/by-nc-sa/3.0/ "CC BY-NC-SA license"). We want you to change and improve the code. Just make sure to credit us, and we hope that you will share your work with the Pupil community.  If you have questions or ideas about commercial use, send us an email!
+
+## Links
+ - [Pupil Labs](http://pupil-labs.com "Pupil Labs")
+ - [Pupil Wiki](https://code.google.com/p/pupil/wiki/Headset_Intro?tm=6 "Pupil Wiki")
