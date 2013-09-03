@@ -14,8 +14,12 @@ class Camera_Capture(object):
             self.controls['focus_auto'].set_val(0)
         except KeyError:
             pass
-
-
+        if '6000' in self.name:
+            print "adjusting exposure for HD-6000 camera"
+            try:
+                self.controls['exposure_absolute'].set_val(156)
+            except KeyError:
+                pass
         self.capture = VideoCapture(self.src_id,size,fps)
         self.get_frame = self.capture.read
 
