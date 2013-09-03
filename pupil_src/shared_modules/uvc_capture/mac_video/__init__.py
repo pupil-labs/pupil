@@ -149,6 +149,14 @@ class Camera_Capture(object):
         except KeyError:
             pass
 
+        if '6000' in self.name:
+            print "adjusting exposure for HD-6000 camera"
+            try:
+                pass
+                self.controls['UVCC_REQ_EXPOSURE_AUTOMODE'].set_val(1)
+                self.controls['UVCC_REQ_EXPOSURE_ABS'].set_val(156)
+            except KeyError:
+                pass
         self.capture = VideoCapture(self.src_id)
         self.set_size(size)
 
