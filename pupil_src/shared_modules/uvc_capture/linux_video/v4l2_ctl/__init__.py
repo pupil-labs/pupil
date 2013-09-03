@@ -61,7 +61,8 @@ class Controls(dict):
         for c in control_dict:
             self[c] = Control(control_dict[c])
 
-        self.update_from_device = update_from_device
+    def update_from_device(self):
+        update_from_device(self)
 
     def load_defaults(self):
         for c in self.itervalues():
@@ -92,10 +93,10 @@ class Camera_List(list):
 if __name__ == '__main__':
     uvc_cameras = Camera_List()
     for c in uvc_cameras:
-        c.name
-        cam = Camera(c)
-        cam.load_defaults()
-        cam.update_from_device()
-        for c in cam.controls.itervalues():
+        print c.name
+        controls = Controls(c.src_id)
+        controls.load_defaults()
+        controls.update_from_device()
+        for c in controls.itervalues():
             if c.flags == "active":
                 print c.name, " "*(40-len(c.name)), c.value,c.type, c.min,c.max,c.step

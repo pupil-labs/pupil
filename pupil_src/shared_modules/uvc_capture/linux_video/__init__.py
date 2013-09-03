@@ -10,8 +10,13 @@ class Camera_Capture(object):
         self.serial = cam.serial
         self.name = cam.name
         self.controls = Controls(self.src_id)
-        self.capture = VideoCapture(self.src_id,size,fps)
+        try:
+            self.controls['focus_auto'].set_val(0)
+        except KeyError:
+            pass
 
+
+        self.capture = VideoCapture(self.src_id,size,fps)
         self.get_frame = self.capture.read
 
 
