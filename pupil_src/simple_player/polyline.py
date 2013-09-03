@@ -17,8 +17,16 @@ def main():
 
     save_video = False
 
-    # change this path to point to the data folder you would like to play
-    data_folder = "../../recordings/2013_08_17/000"
+    try:
+        data_folder = sys.argv[1]
+    except:
+        print "You did not supply a datafolder when you called this script. \
+               \nI will use the path hardcoded into the script instead."
+        data_folder = "/Users/mkassner/Desktop/002"
+
+    if not os.path.isdir(data_folder):
+        raise Exception("Please supply a recording folder")
+
 
 
 
@@ -38,7 +46,7 @@ def main():
     # with the length of the number of recorded frames.
     # Each slot conains a list that will have 0, 1 or more assosiated gaze postions.
     positions_by_frame = [[] for i in timestamps]
-   
+
 
     no_frames = len(timestamps)
     frame_idx = 0
@@ -53,7 +61,7 @@ def main():
             gaze_point = data_point[:2]
             gaze_timestamp = data_point[4]
         else:
-            if frame_idx >= no_frames-2: 
+            if frame_idx >= no_frames-2:
                 break
             frame_idx+=1
 
