@@ -18,6 +18,7 @@ if __name__ == '__main__':
 
 import os, sys
 from time import time
+import shelve
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
 import cv2
@@ -79,6 +80,20 @@ def world(g_pool):
     def on_close():
         g_pool.quit.value = True
         print "WORLD Process closing from window"
+
+
+
+
+
+    # load session persistent settings
+    session_settings = shelve.open('user_settings_world',protocol=2)
+    def load(var_name,default):
+        try:
+            return session_settings[var_name]
+        except:
+            return default
+    def save(var_name,var):
+        session_settings[var_name] = var
 
 
     # gaze object
@@ -183,12 +198,12 @@ def world(g_pool):
     bar.next_atb_pos = (10,220)
     bar.fps = c_float(0.0)
     bar.timestamp = time()
-    bar.calibration_type = c_int(0)
+    bar.calibration_type = c_int(load("calibration_type",0))
     bar.show_calib_result = c_bool(0)
     bar.record_video = c_bool(0)
     bar.record_running = c_bool(0)
     bar.play = g_pool.play
-    bar.window_size = c_int(0)
+    bar.window_size = c_int(load("window_size",0))
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
 
     bar.calibrate_type_enum = atb.enum("Calibration Method",reference_detectors.index_by_name)
@@ -215,7 +230,7 @@ def world(g_pool):
     g = Temp()
     g.plugins = []
     g.current_ref_detector = None
-    open_calibration(0,bar.calibration_type)
+    open_calibration(bar.calibration_type.value,bar.calibration_type)
 
     # Initialize glfw
     glfwInit()
@@ -223,6 +238,9 @@ def world(g_pool):
     glfwOpenWindow(width, height, 0, 0, 0, 8, 0, 0, GLFW_WINDOW)
     glfwSetWindowTitle("World")
     glfwSetWindowPos(0,0)
+
+    #set the last saved window size
+    set_window_size(bar.window_size.value,bar.window_size)
 
     # Register callbacks
     glfwSetWindowSizeCallback(on_resize)
@@ -279,6 +297,10 @@ def world(g_pool):
     for p in g.plugins:
         p.alive = False
     g.plugins = [p for p in g.plugins if p.alive]
+
+    # save user settings
+    save('window_size',bar.window_size.value)
+    save('calibration_type',bar.calibration_type.value)
 
     # end while running and clean-up
     print "WORLD Process closed"

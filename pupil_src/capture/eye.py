@@ -90,7 +90,7 @@ def eye(g_pool):
 
 
     # load session persistent settings
-    session_settings = shelve.open('user_settings',protocol=2)
+    session_settings = shelve.open('user_settings_eye',protocol=2)
     def load(var_name,default):
         try:
             return session_settings[var_name]
@@ -331,7 +331,7 @@ def eye(g_pool):
 
     # END while running
 
-    # Quite while Recording: Save values 
+    # Quite while Recording: Save values
     if l_pool.record_running:
         positions_path = os.path.join(l_pool.record_path, "gaze_positions.npy")
         cal_pt_cloud_path = os.path.join(l_pool.record_path, "cal_pt_cloud.npy")
