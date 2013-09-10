@@ -21,7 +21,6 @@ from time import time
 import shelve
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
-import cv2
 from glfw import *
 import atb
 from methods import normalize, denormalize,Temp
@@ -292,20 +291,22 @@ def world(g_pool):
         atb.draw()
         glfwSwapBuffers()
 
+
+    # end while running and clean-up
+
     # de-init all running plugins
     for p in g.plugins:
         p.alive = False
     g.plugins = [p for p in g.plugins if p.alive]
 
-    # save user settings
     save('window_size',bar.window_size.value)
     save('calibration_type',bar.calibration_type.value)
+    session_settings.close()
 
-    # end while running and clean-up
-    print "WORLD Process closed"
     cap.close()
     glfwCloseWindow()
     glfwTerminate()
+    print "WORLD Process closed"
 
 
 
