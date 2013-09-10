@@ -66,6 +66,7 @@ class Recorder(Plugin):
         self._bar.rec_name = create_string_buffer(512)
         self._bar.add_var("rec time",self._bar.rec_name, getter=lambda: create_string_buffer(self.get_rec_time_str(),512), readonly=True)
         self._bar.add_button("stop", self.stop_and_destruct, key="s", help="stop recording")
+        self._bar.define("contained=true")
 
     def get_rec_time_str(self):
         rec_time = gmtime(time()-self.start_time)

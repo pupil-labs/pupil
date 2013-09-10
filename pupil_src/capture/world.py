@@ -221,7 +221,6 @@ def world(g_pool):
     bar.add_var("play video", bar.play, help="play a video in the Player window")
     bar.add_var("exit", g_pool.quit)
 
-
     # add uvc camera controls to a seperate ATB bar
     cap.create_atb_bar(pos=(320,10))
 
