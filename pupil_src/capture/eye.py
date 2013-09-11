@@ -112,34 +112,11 @@ def eye(g_pool):
     height,width = frame.img.shape[:2]
 
 
-    # pupil object
-    pupil = Temp()
-    pupil.norm_coords = (0.,0.)
-    pupil.image_coords = (0.,0.)
-    pupil.ellipse = None
-    pupil.gaze_coords = (0.,0.)
-
-    try:
-        pupil.pt_cloud = np.load('cal_pt_cloud.npy')
-        map_pupil = get_map_from_cloud(pupil.pt_cloud,g_pool.world_size)
-    except:
-        pupil.pt_cloud = None
-        def map_pupil(vector):
-            """ 1 to 1 mapping
-            """
-            return vector
-
     u_r = Roi(frame.img.shape)
     u_r.set(load('roi',default=None))
     p_r = Roi(frame.img.shape)
 
-    # local object
-    l_pool = Temp()
-    l_pool.calib_running = False
-    l_pool.record_running = False
-    l_pool.record_positions = []
-    l_pool.record_path = None
-    l_pool.writer = None
+    writer = None
 
     pupil_detector = Canny_Detector()
 
@@ -223,75 +200,32 @@ def eye(g_pool):
             p_r.set((0,0,-1,-1))
 
         # fine pupil ellipse detection
-        result = pupil_detector.detect(frame.img,u_roi=u_r,p_roi=p_r,visualize=bar.display.value == 2)
+        result = pupil_detector.detect(frame,u_roi=u_r,p_roi=p_r,visualize=bar.display.value == 2)
 
+        g_pool.pupil_queue.put(result)
         # Work with detected ellipses
-        if result:
-            pupil.ellipse = result[0]
-            pupil.image_coords = pupil.ellipse['center']
-            # normalize
-            pupil.norm_coords = normalize(pupil.image_coords, (frame.img.shape[1], frame.img.shape[0]),flip_y=True )
-            # from pupil to gaze
-            pupil.gaze_coords = map_pupil(pupil.norm_coords)
-            # publish to globals
-            g_pool.gaze[:] = pupil.gaze_coords
-        else:
-            pupil.ellipse = None
-            g_pool.gaze[:] = 0.,0.
-            pupil.gaze_coords = None # without this line the last known pupil position is recorded if none is found
 
 
-        ### CALIBRATION ###
-        # Initialize Calibration (setup variables and lists)
-        if g_pool.calibrate.value and not l_pool.calib_running:
-            l_pool.calib_running = True
-            pupil.pt_cloud = []
-
-        # While Calibrating... collect data
-        if l_pool.calib_running and (not(g_pool.ref[:]==[0.,0.])) and pupil.ellipse:
-            pupil.pt_cloud.append([pupil.norm_coords[0],pupil.norm_coords[1],
-                                    g_pool.ref[0], g_pool.ref[1]])
-
-        # Calculate mapping coefs if data has been collected
-        if not g_pool.calibrate.value and l_pool.calib_running:
-            l_pool.calib_running = 0
-            if pupil.pt_cloud: # some data was actually collected
-                print "Calibrating with", len(pupil.pt_cloud), "collected data points."
-                pupil.pt_cloud = np.array(pupil.pt_cloud)
-                map_pupil = get_map_from_cloud(pupil.pt_cloud,g_pool.world_size,verbose=True)
-                np.save('cal_pt_cloud.npy',pupil.pt_cloud)
-
-
-        ### RECORDING ###
+        ### RECORDING of Eye Video ###
         # Setup variables and lists for recording
-        if g_pool.pos_record.value and not l_pool.record_running:
-            l_pool.record_path = g_pool.eye_rx.recv()
-            print "l_pool.record_path: ", l_pool.record_path
+        if g_pool.eye_rx.poll():
+            command = g_pool.eye_rx.recv()
+            if command is not None:
+                record_path = command
+                print "INFO: Will save eye video to: ", record_path
+                video_path = os.path.join(record_path, "eye.avi")
+                timestamps_path = os.path.join(record_path, "eye_timestamps.npy")
+                writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (frame.img.shape[1], frame.img.shape[0]))
+                timestamps = []
+            else:
+                print "INFO: Done recording eye."
+                writer = None
+                np.save(timestamps_path,np.asarray(timestamps))
+                del timestamps
 
-            video_path = os.path.join(l_pool.record_path, "eye.avi")
-            if bar.record_eye.value:
-                l_pool.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (frame.img.shape[1], frame.img.shape[0]))
-            l_pool.record_positions = []
-            l_pool.record_running = True
-
-        # While recording...
-        if l_pool.record_running:
-            if pupil.gaze_coords is not None:
-                l_pool.record_positions.append([pupil.gaze_coords[0], pupil.gaze_coords[1],pupil.norm_coords[0],pupil.norm_coords[1],frame.timestamp])
-            if l_pool.writer is not None:
-                l_pool.writer.write(frame.img)
-
-        # Done Recording: Save values and flip switch to OFF for recording
-        if not g_pool.pos_record.value and l_pool.record_running:
-            positions_path = os.path.join(l_pool.record_path, "gaze_positions.npy")
-            cal_pt_cloud_path = os.path.join(l_pool.record_path, "cal_pt_cloud.npy")
-            np.save(positions_path, np.asarray(l_pool.record_positions))
-            try:
-                np.save(cal_pt_cloud_path, np.asarray(pupil.pt_cloud))
-            except:
-                print "Warning: No calibration data associated with this recording."
-            l_pool.writer = None
-            l_pool.record_running = False
+        if writer:
+            writer.write(frame.img)
+            timestamps.append(frame.timestamp)
 
 
         # direct visualizations on the frame.img data
@@ -319,12 +253,12 @@ def eye(g_pool):
         clear_gl_screen()
         draw_gl_texture(frame.img)
 
-        if bar.draw_pupil and pupil.ellipse:
-            pts = cv2.ellipse2Poly( (int(pupil.image_coords[0]),int(pupil.image_coords[1])),
-                                    (int(pupil.ellipse["axes"][0]/2),int(pupil.ellipse["axes"][1]/2)),
-                                    int(pupil.ellipse["angle"]),0,360,15)
+        if result['norm_pupil'] is not None:
+            pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
+                                    (int(result["axes"][0]/2),int(result["axes"][1]/2)),
+                                    int(result["angle"]),0,360,15)
             draw_gl_polyline(pts,(1.,0,0,.5))
-            draw_gl_point_norm(pupil.norm_coords,color=(1.,0.,0.,0.5))
+            draw_gl_point_norm(result['norm_pupil'],color=(1.,0.,0.,0.5))
 
         atb.draw()
         glfwSwapBuffers()
@@ -332,15 +266,12 @@ def eye(g_pool):
     # END while running
 
     # Quite while Recording: Save values
-    if l_pool.record_running:
-        positions_path = os.path.join(l_pool.record_path, "gaze_positions.npy")
-        cal_pt_cloud_path = os.path.join(l_pool.record_path, "cal_pt_cloud.npy")
-        np.save(positions_path, np.asarray(l_pool.record_positions))
-        try:
-            np.save(cal_pt_cloud_path, np.asarray(pupil.pt_cloud))
-        except:
-            print "Warning: No calibration data associated with this recording."
-        l_pool.writer = None
+    if writer:
+        print "INFO: Done recording eye"
+        writer = None
+        np.save(timestamps_path,np.asarray(timestamps))
+        del timestamps
+
 
 
     # save session persistent settings

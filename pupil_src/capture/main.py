@@ -15,7 +15,7 @@ sys.path.append(os.path.join(loc[0], 'pupil_src', 'shared_modules'))
 
 from time import sleep
 from ctypes import c_bool, c_int
-from multiprocessing import Process, Pipe, Event
+from multiprocessing import Process, Pipe, Event,Queue
 from multiprocessing.sharedctypes import RawValue, Value, Array
 
 #if you pass any additional argument when calling this script. The profiler will be used.
@@ -42,8 +42,8 @@ def main():
 
 	# to use a pre-recorded video.
 	# Use a string to specify the path to your video file as demonstrated below
-	# eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
-	# world_src = 0
+	eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
+	# world_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
 
 	# Camera video size in pixels (width,height)
 	eye_size = (640,360)
@@ -57,12 +57,9 @@ def main():
 
 	# Create and initialize shared globals
 	g_pool = Temp()
-	g_pool.gaze = Array('d',(0.0,0.0))
-	g_pool.ref = Array('d',(0.0,0.0))
+	g_pool.pupil_queue = Queue()
 	g_pool.marker = Array('d',(0.0,0.0))
 	g_pool.marker_state = Value('d',0.0)
-	g_pool.calibrate = Value(c_bool, 0)
-	g_pool.pos_record = Value(c_bool, 0)
 	g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
 	g_pool.player_refresh = Event()
 	g_pool.player_input = Value('i',0)

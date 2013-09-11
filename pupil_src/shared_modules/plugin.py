@@ -41,7 +41,7 @@ class Plugin(object):
         """
         pass
 
-    def update(self,img):
+    def update(self,img,recent_pupil_posotions):
         """
         gets called once every frame
         """

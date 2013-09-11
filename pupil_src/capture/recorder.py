@@ -9,13 +9,14 @@ from git_version import get_tag_commit
 
 class Recorder(Plugin):
     """Capture Recorder"""
-    def __init__(self, session_str, fps, img_shape, shared_record, eye_tx):
+    def __init__(self, session_str, fps, img_shape, record_eye, eye_tx):
         Plugin.__init__(self)
         self.session_str = session_str
         self.base_path = os.path.join(os.path.abspath(__file__).rsplit('pupil_src', 1)[0], "recordings")
-        self.shared_record = shared_record
+        self.record_eye = record_eye
         self.frame_count = 0
         self.timestamps = []
+        self.gaze_list = []
         self.eye_tx = eye_tx
 
         self.start_time = time()
@@ -56,8 +57,8 @@ class Recorder(Plugin):
         self.height = img_shape[0]
         self.width = img_shape[1]
         # positions path to eye process
-        self.shared_record.value = True
-        self.eye_tx.send(self.path)
+        if self.record_eye:
+            self.eye_tx.send(self.path)
 
         atb_pos = (10, 540)
         self._bar = atb.Bar(name = self.__class__.__name__, label='REC: '+session_str,
@@ -72,12 +73,36 @@ class Recorder(Plugin):
         rec_time = gmtime(time()-self.start_time)
         return strftime("%H:%M:%S", rec_time)
 
-    def update(self, frame):
+    def update(self, frame,recent_pupil_positons):
         self.frame_count += 1
+        for p in recent_pupil_positons:
+            if p['norm_pupil'] is not None:
+                gaze_pt = p['norm_gaze'][0],p['norm_gaze'][1],p['norm_pupil'][0],p['norm_pupil'][1],p['timestamp']
+                self.gaze_list.append(gaze_pt)
         self.timestamps.append(frame.timestamp)
         self.writer.write(frame.img)
 
     def stop_and_destruct(self):
+        if self.record_eye:
+            try:
+                self.eye_tx.send(None)
+            except:
+                print "WARNING: Could not stop eye-recording. Please report this bug!"
+
+        gaze_list_path = os.path.join(self.path, "gaze_positions.npy")
+        np.save(gaze_list_path,np.asarray(self.gaze_list))
+
+        timestamps_path = os.path.join(self.path, "timestamps.npy")
+        np.save(timestamps_path,np.array(self.timestamps))
+
+
+        try:
+            cal_pt_cloud = np.load("cal_pt_cloud.npy")
+            cal_pt_cloud_path = os.path.join(self.path, "cal_pt_cloud.npy")
+            np.save(cal_pt_cloud_path, cal_pt_cloud)
+        except:
+            print "WARNING: No calibration data found. Please calibrate first."
+
         try:
             camera_matrix = np.load("camera_matrix.npy")
             dist_coefs = np.load("dist_coefs.npy")
@@ -86,10 +111,7 @@ class Recorder(Plugin):
             np.save(cam_path, camera_matrix)
             np.save(dist_path, dist_coefs)
         except:
-            print "no camera intrinsics found, will not copy them into recordings folder"
-
-        timestamps_path = os.path.join(self.path, "timestamps.npy")
-        np.save(timestamps_path,np.array(self.timestamps))
+            print "No camera intrinsics found, will not copy them into recordings folder."
 
 
         try:
@@ -110,9 +132,6 @@ class Recorder(Plugin):
         except:
             print "Could not save metadata. Please report this bug!"
 
-
-        print "Stopping recording"
-        self.shared_record.value = False
         self.alive = False
 
     def __del__(self):

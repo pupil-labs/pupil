@@ -26,7 +26,7 @@ import atb
 from methods import normalize, denormalize,Temp
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm
 from uvc_capture import autoCreateCapture
-from calibrate import *
+import calibrate
 import reference_detectors
 import recorder
 from show_calibration import Show_Calibration
@@ -141,8 +141,7 @@ def world(g_pool):
         g.plugins = [p for p in g.plugins if p.alive]
 
         print "selected: ",reference_detectors.name_by_index[selection]
-        g.current_ref_detector = reference_detectors.detector_by_index[selection](global_calibrate=g_pool.calibrate,
-                                                                    shared_pos=g_pool.ref,
+        g.current_ref_detector = reference_detectors.detector_by_index[selection](
                                                                     screen_marker_pos = g_pool.marker,
                                                                     screen_marker_state = g_pool.marker_state,
                                                                     atb_pos=bar.next_atb_pos)
@@ -160,7 +159,7 @@ def world(g_pool):
             # set up folder within recordings named by user input in atb
             if not bar.rec_name.value:
                 bar.rec_name.value = recorder.get_auto_name()
-            recorder_instance = recorder.Recorder(bar.rec_name.value, bar.fps.value, frame.img.shape, g_pool.pos_record, g_pool.eye_tx)
+            recorder_instance = recorder.Recorder(bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx)
             g.plugins.append(recorder_instance)
 
     def toggle_show_calib_result():
@@ -198,9 +197,7 @@ def world(g_pool):
     bar.fps = c_float(0.0)
     bar.timestamp = time()
     bar.calibration_type = c_int(load("calibration_type",0))
-    bar.show_calib_result = c_bool(0)
-    bar.record_video = c_bool(0)
-    bar.record_running = c_bool(0)
+    bar.record_eye = c_bool(load("record_eye",0))
     bar.play = g_pool.play
     bar.window_size = c_int(load("window_size",0))
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
@@ -216,6 +213,7 @@ def world(g_pool):
     bar.add_button("show calibration result",toggle_show_calib_result, group="Calibration", help="Click to show calibration result.")
     bar.add_var("session name",bar.rec_name, group="Recording", help="creates folder Data_Name_XXX, where xxx is an increasing number")
     bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
+    bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
     bar.add_separator("Sep1")
     bar.add_var("play video", bar.play, help="play a video in the Player window")
     bar.add_var("exit", g_pool.quit)
@@ -230,15 +228,27 @@ def world(g_pool):
     g.current_ref_detector = None
     open_calibration(bar.calibration_type.value,bar.calibration_type)
 
+
+    try:
+        pt_cloud = np.load('cal_pt_cloud.npy')
+        map_pupil = calibrate.get_map_from_cloud(pt_cloud,(width,height))
+    except:
+        def map_pupil(vector):
+            """ 1 to 1 mapping
+            """
+            return vector
+
     # Initialize glfw
     glfwInit()
-    height,width = frame.img.shape[:2]
     glfwOpenWindow(width, height, 0, 0, 0, 8, 0, 0, GLFW_WINDOW)
     glfwSetWindowTitle("World")
     glfwSetWindowPos(0,0)
 
     #set the last saved window size
     set_window_size(bar.window_size.value,bar.window_size)
+
+
+
 
     # Register callbacks
     glfwSetWindowSizeCallback(on_resize)
@@ -268,8 +278,17 @@ def world(g_pool):
         frame = cap.get_frame()
         update_fps()
 
+        recent_pupil_positions = []
+        while not g_pool.pupil_queue.empty():
+            p = g_pool.pupil_queue.get()
+            if p['norm_pupil'] is None:
+                p['norm_gaze'] = None
+            else:
+                p['norm_gaze'] = map_pupil(p['norm_pupil'])
+            recent_pupil_positions.append(p)
+
         for p in g.plugins:
-            p.update(frame)
+            p.update(frame,recent_pupil_positions)
 
         g.plugins = [p for p in g.plugins if p.alive]
 
@@ -285,8 +304,9 @@ def world(g_pool):
 
 
         # update gaze point from shared variable pool and draw on screen. If both coords are 0: no pupil pos was detected.
-        if not g_pool.gaze[:] == [0.,0.]:
-            draw_gl_point_norm(g_pool.gaze[:],color=(1.,0.,0.,0.5))
+        for pt in recent_pupil_positions:
+            if pt['norm_gaze'] is not None:
+                draw_gl_point_norm(pt['norm_gaze'],color=(1.,0.,0.,0.5))
 
         atb.draw()
         glfwSwapBuffers()
@@ -301,6 +321,7 @@ def world(g_pool):
 
     save('window_size',bar.window_size.value)
     save('calibration_type',bar.calibration_type.value)
+    save('record_eye',bar.record_eye.value)
     session_settings.close()
 
     cap.close()

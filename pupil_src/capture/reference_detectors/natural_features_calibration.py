@@ -46,7 +46,7 @@ class Natural_Features_Calibration(Plugin):
 		self.shared_pos[:] = 0,0
 		self.active = False
 
-	def update(self,frame):
+	def update(self,frame,pupil_posistions):
 		if self.active:
 			img = frame.img
 			if self.first_img is None:

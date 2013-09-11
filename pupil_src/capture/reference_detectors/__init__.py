@@ -84,7 +84,7 @@ class Ref_Detector_Template(Plugin):
         self.active = False
 
 
-    def update(self,frame):
+    def update(self,frame,pupil_posistions):
         if self.active:
             img = frame.img
         else:

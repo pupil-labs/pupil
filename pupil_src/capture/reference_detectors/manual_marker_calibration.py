@@ -75,7 +75,7 @@ class Manual_Marker_Calibration(Plugin):
     def get_count(self):
         return self.counter
 
-    def update(self,frame):
+    def update(self,frame,pupil_posistions):
         """
         gets called once every frame.
         reference positon need to be published to shared_pos

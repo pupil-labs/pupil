@@ -134,6 +134,37 @@ def make_map_function(cx,cy,n):
 
     return fn
 
+
+def preprocess_data(pupil_pts,ref_pts):
+    ###small utility function to deal with timestamped but uncorrelated data
+    # input must be lists that contail dicts with atleast "timestamp" and "norm_pos"
+    cal_data = []
+
+    if len(ref_pts)<=2:
+        return cal_data
+
+    cur_ref_pt = ref_pts.pop(0)
+    next_ref_pt = ref_pts.pop(0)
+    while True:
+        matched = []
+        while pupil_pts:
+            #select all points past the half-way point between current and next ref data sample
+            if pupil_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
+                matched.append(pupil_pts.pop(0))
+            else:
+                for p_pt in matched:
+                    #only use close points
+                    if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
+                        data_pt = p_pt["norm_pupil"][0], p_pt["norm_pupil"][1],cur_ref_pt['norm_pos'][0],cur_ref_pt['norm_pos'][0]
+                        cal_data.append(data_pt)
+                break
+        if ref_pts:
+            cur_ref_pt = next_ref_pt
+            next_ref_pt = ref_pts.pop(0)
+        else:
+            break
+    return cal_data
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from matplotlib import cm

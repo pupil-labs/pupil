@@ -13,7 +13,7 @@ class Camera_Intrinsics_Estimation(Plugin):
 		this method is used to calculate camera intrinsics.
 
 	"""
-	def __init__(self, global_calibrate,shared_pos,screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
+	def __init__(self, screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
 		Plugin.__init__(self)
 		self.collect_new = False
 		self.calculated = False

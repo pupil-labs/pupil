@@ -27,7 +27,8 @@ class Pupil_Detector(object):
         super(Pupil_Detector, self).__init__()
         var1 = c_int(0)
 
-    def detect(self,img,u_roi,p_roi,visualize=False):
+    def detect(self,frame,u_roi,p_roi,visualize=False):
+        img = frame.img
         # hint: create a view into the img with the bounds of the coarse pupil estimation
         pupil_img = img[u_roi.lY:u_roi.uY,u_roi.lX:u_roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
 
@@ -47,8 +48,19 @@ class Pupil_Detector(object):
 
         # If you use region of interest p_r and r make sure to return pupil coordinates relative to the full image
         candidate_pupil_ellipse['center'] = u_roi.add_vector(p_roi.add_vector(candidate_pupil_ellipse['center']))
+        candidate_pupil_ellipse['timestamp'] = frame.timestamp
+        result = candidate_pupil_ellipse #pretentind we found something
+        if result:
+            return candidate_pupil_ellipse #return dict with at
 
-        return [candidate_pupil_ellipse,] # return list of candidate pupil ellipses, sorted by certainty, if none is found return empty list
+        else:
+            self.goodness.value = 100
+            no_result = {}
+            no_result['timestamp'] = frame.timestamp
+            no_result['norm_pupil'] = None
+            return no_result
+
+
 
 
     def create_atb_bar(self,pos):
@@ -74,8 +86,8 @@ class Canny_Detector(Pupil_Detector):
         self.canny_ratio= c_int(2)
         self.canny_aperture = c_int(5)
 
-    def detect(self,img,u_roi,p_roi,visualize=False):
-
+    def detect(self,frame,u_roi,p_roi,visualize=False):
+        img = frame.img
         pupil_img = img[u_roi.lY:u_roi.uY,u_roi.lX:u_roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
         pupil_img = grayscale(pupil_img)
 
@@ -165,27 +177,29 @@ class Canny_Detector(Pupil_Detector):
             pupil_ellipse['major'] = max(e[1])
             pupil_ellipse['minor'] = min(e[1])
             pupil_ellipse['ratio'] = pupil_ellipse['minor']/pupil_ellipse['major']
+            pupil_ellipse['norm_pupil'] = normalize(pupil_ellipse['center'], (img.shape[1], img.shape[0]),flip_y=True )
+            pupil_ellipse['timestamp'] = frame.timestamp
             result.append(pupil_ellipse)
 
 
         if result:
             result.sort(key=lambda e: e['goodness'])
-            self.target_size.value = result[0]['major']
 
-        result = [r for r in result if r['goodness']<self.size_tolerance]
-
-        if result:
             self.goodness.value = result[0]['goodness']
 
             if result[0]['goodness'] ==0: # perfect match!
                 self.target_size.value = result[0]['major']
             else:
                 self.target_size.value  = self.target_size.value +  .5 * (result[0]['major']-self.target_size.value)
+            return result[0]
 
         else:
             self.goodness.value = 100
+            no_result = {}
+            no_result['timestamp'] = frame.timestamp
+            no_result['norm_pupil'] = None
+            return no_result
 
-        return result
 
 
     def create_atb_bar(self,pos):

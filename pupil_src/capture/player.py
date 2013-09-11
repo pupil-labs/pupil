@@ -159,10 +159,9 @@ def player(g_pool,size):
 
                 #some feedback on the detection state
                 draw_marker(screen_pos)
-                if g_pool.ref[:] == [0.,0.]:
-                    # world ref is detected
+                if g_pool.marker_state.value == 1:
                     draw_gl_point(screen_pos, 5.0, (1.,0.,0.,1.))
-                else:
+                elif g_pool.marker_state.value == 2 :
                     draw_gl_point(screen_pos, 5.0, (0.,1.,0.,1.))
 
             elif g_pool.play.value:

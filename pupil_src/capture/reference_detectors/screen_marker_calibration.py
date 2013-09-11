@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from methods import normalize,denormalize
 from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
-
+import calibrate
 from ctypes import c_int,c_bool
 import atb
 import audio
@@ -15,22 +15,17 @@ class Screen_Marker_Calibration(Plugin):
     Points are collected at sites not between
 
     """
-    def __init__(self, global_calibrate, shared_pos, screen_marker_pos, screen_marker_state, atb_pos=(0,0)):
+    def __init__(self, screen_marker_pos, screen_marker_state, atb_pos=(0,0)):
         Plugin.__init__(self)
-
         self.active = False
         self.detected = False
-        self.global_calibrate = global_calibrate
-        self.global_calibrate.value = False
 
-        self.shared_pos = shared_pos
 
         self.shared_screen_marker_pos = screen_marker_pos
         self.shared_screen_marker_state = screen_marker_state # used for v
         self.screen_marker_state = 0
         self.screen_marker_max = 70 # maximum bound for state
         self.pos = 0,0 # 0,0 is used to indicate no point detected
-
 
         self.active_site = 0
         self.sites = []
@@ -43,6 +38,7 @@ class Screen_Marker_Calibration(Plugin):
         self.dist_threshold = c_int(5)
         self.area_threshold = c_int(20)
 
+        self.world_size = None
 
         atb_label = "calibrate on screen"
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
@@ -70,18 +66,29 @@ class Screen_Marker_Calibration(Plugin):
 
         self.active_site = 0
         self.shared_screen_marker_state.value = 1
-        self.global_calibrate.value = True
-        self.shared_pos[:] = 0,0
         self.active = True
+        self.ref_list = []
+        self.pupil_list = []
 
     def stop(self):
         audio.say("Stopping Calibration")
         self.screen_marker_state = 0
         self.shared_screen_marker_state.value = 0
-        self.global_calibrate.value = False
-        self.reset()
-        self.publish()
         self.active = False
+        print len(self.pupil_list), len(self.ref_list)
+        cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
+
+        print "Collected ", len(cal_pt_cloud), " data points."
+
+        if len(cal_pt_cloud) < 20:
+            print "Did not collect enough data."
+            return
+
+        cal_pt_cloud = np.array(cal_pt_cloud)
+        global map_pupil
+        map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,verbose=True)
+        np.save('cal_pt_cloud.npy',cal_pt_cloud)
+
 
     def new_ref(self,pos):
         """
@@ -93,13 +100,9 @@ class Screen_Marker_Calibration(Plugin):
     def advance(self):
         self.next=True
 
-    def publish(self):
-        self.shared_pos[:] = self.pos
 
-    def reset(self):
-        self.pos = 0,0
 
-    def update(self,frame):
+    def update(self,frame,recent_pupil_positions):
         if self.active:
             img = frame.img
             #detect the marker
@@ -170,14 +173,19 @@ class Screen_Marker_Calibration(Plugin):
                 self.pos = 0,0 #indicate that no reference is detected
 
 
-            #only broadcast a valid ref position if within sample window of calibraiton routine
+            #only save a valid ref position if within sample window of calibraiton routine
             on_position = 0 < self.screen_marker_state < self.screen_marker_max-50
-            if on_position:
-                pass
-            else:
-                self.pos = 0,0
+            if on_position and self.detected:
+                ref = {}
+                ref["norm_pos"] = self.pos
+                ref["timestamp"] = frame.timestamp
+                self.ref_list.append(ref)
 
-            self.publish()
+            #always save pupil positions
+            for p_pt in recent_pupil_positions:
+                if p_pt['norm_pupil'] is not None:
+                    self.pupil_list.append(p_pt)
+
             # Animate the screen marker
             if self.screen_marker_state < self.screen_marker_max:
                 if self.detected or not on_position:
@@ -187,6 +195,7 @@ class Screen_Marker_Calibration(Plugin):
                 self.active_site += 1
                 print self.active_site
                 if self.active_site == 10:
+                    self.world_size = img.shape[1],img.shape[0]
                     self.stop()
                     return
 
@@ -201,6 +210,11 @@ class Screen_Marker_Calibration(Plugin):
             new_pos =  current * interpolation_weight + next * (1-interpolation_weight)
             #broadcast next commanded marker postion of screen
             self.shared_screen_marker_pos[:] = list(new_pos)
+            if on_position and self.detected:
+                self.shared_screen_marker_state.value = 2
+            else:
+                self.shared_screen_marker_state.value = 1
+
 
 
     def gl_display(self):
@@ -223,6 +237,6 @@ class Screen_Marker_Calibration(Plugin):
 
 
     def __del__(self):
-        self.reset()
-        self.publish()
-        self.global_calibrate.value = False
+        self.screen_marker_state = 0
+        self.shared_screen_marker_state.value = 0
+        self.active = False
