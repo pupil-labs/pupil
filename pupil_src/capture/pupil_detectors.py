@@ -170,7 +170,6 @@ class Canny_Detector(Pupil_Detector):
 
         if result:
             result.sort(key=lambda e: e['goodness'])
-            self.target_size.value = result[0]['major']
 
         result = [r for r in result if r['goodness']<self.size_tolerance]
 
