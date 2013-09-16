@@ -53,6 +53,11 @@ class Plugin(object):
         """
         pass
 
+    def gl_display_player_window(self):
+        """gets called once every frame
+        """
+        pass
+
     def __del__(self):
         pass
 

@@ -41,9 +41,15 @@ def world(g_pool):
     """world
     """
 
+
     # Callback functions
-    def on_resize(window,w, h):
+    def on_resize_world(window,w, h):
+        glfwMakeContextCurrent(window)
+        adjust_gl_view(w,h)
         atb.TwWindowSize(w, h)
+
+    def on_resize_player(window,w, h):
+        glfwMakeContextCurrent(window)
         adjust_gl_view(w,h)
 
     def on_key(window, key, scancode, action, mods):
@@ -76,8 +82,6 @@ def world(g_pool):
     def on_close(window):
         g_pool.quit.value = True
         print "WORLD Process closing from window"
-
-
 
 
     # load session persistent settings
@@ -211,46 +215,62 @@ def world(g_pool):
     g = Temp()
     g.plugins = []
     g.current_ref_detector = None
-    # open_calibration(bar.calibration_type.value,bar.calibration_type)
 
 
     try:
         pt_cloud = np.load('cal_pt_cloud.npy')
         map_pupil = calibrate.get_map_from_cloud(pt_cloud,(width,height))
     except:
+        print "no calibration found"
         def map_pupil(vector):
             """ 1 to 1 mapping
             """
             return vector
+    g_pool.map_pupil = map_pupil
+
+
+    open_calibration(bar.calibration_type.value,bar.calibration_type)
 
     # Initialize glfw
     glfwInit()
     world_window = glfwCreateWindow(width, height, "World", None, None)
     glfwSetWindowPos(world_window,0,0)
-    on_resize(world_window,width,height)
+    on_resize_world(world_window,width,height)
     #set the last saved window size
     set_window_size(bar.window_size.value,bar.window_size)
 
-    glfwMakeContextCurrent(world_window)
+    player_window = glfwCreateWindow(640, 360, "Player", None, None)
+    glfwSetWindowPos(player_window,20,20)
+    on_resize_player(player_window,640,360)
 
-    # Register callbacks
-    glfwSetWindowSizeCallback(world_window,on_resize)
+
+    # Register callbacks world_window
+    glfwSetWindowSizeCallback(world_window,on_resize_world)
     glfwSetWindowCloseCallback(world_window,on_close)
     glfwSetKeyCallback(world_window,on_key)
     glfwSetCharCallback(world_window,on_char)
     glfwSetMouseButtonCallback(world_window,on_button)
     glfwSetCursorPosCallback(world_window,on_pos)
     glfwSetScrollCallback(world_window,on_scroll)
+    #Register cllbacks player_window
+    glfwSetWindowSizeCallback(player_window,on_resize_player)
+    glfwSetWindowCloseCallback(player_window,on_close)
+    glfwSetKeyCallback(player_window,on_key)
+    glfwSetCharCallback(player_window,on_char)
 
     # gl_state settings
     import OpenGL.GL as gl
-    gl.glEnable(gl.GL_POINT_SMOOTH)
-    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-    gl.glEnable(gl.GL_BLEND)
+    for context in (player_window,world_window):
+        glfwMakeContextCurrent(context)
+        gl.glEnable(gl.GL_POINT_SMOOTH)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glEnable(gl.GL_BLEND)
+        gl.glClearColor(1.,1.,1.,0.)
+
     del gl
 
     # Event loop
-    while not glfwWindowShouldClose(world_window) and not g_pool.quit.value:
+    while not glfwWindowShouldClose(world_window) and not glfwWindowShouldClose(player_window) and not g_pool.quit.value:
 
         # Get an image from the grabber
         frame = cap.get_frame()
@@ -262,7 +282,7 @@ def world(g_pool):
             if p['norm_pupil'] is None:
                 p['norm_gaze'] = None
             else:
-                p['norm_gaze'] = map_pupil(p['norm_pupil'])
+                p['norm_gaze'] = g_pool.map_pupil(p['norm_pupil'])
             recent_pupil_positions.append(p)
 
         for p in g.plugins:
@@ -271,21 +291,32 @@ def world(g_pool):
         g.plugins = [p for p in g.plugins if p.alive]
 
 
-        # render the screen
+
+        glfwMakeContextCurrent(player_window)
+        clear_gl_screen()
+
+        # render visual feedback from loaded plugins in player window
+        for p in g.plugins:
+            p.gl_display_player_window()
+
+
+        # render camera image in world_window
+        glfwMakeContextCurrent(world_window)
         clear_gl_screen()
         draw_gl_texture(frame.img)
 
-        # render visual feedback from loaded plugins
+        # render visual feedback from loaded plugins in world window
         for p in g.plugins:
             p.gl_display()
 
 
-        # update gaze point from shared variable pool and draw on screen.
+        # update gaze point from shared variable pool and draw on world_window.
         for pt in recent_pupil_positions:
             if pt['norm_gaze'] is not None:
                 draw_gl_point_norm(pt['norm_gaze'],color=(1.,0.,0.,0.5))
 
         atb.draw()
+        glfwSwapBuffers(player_window)
         glfwSwapBuffers(world_window)
         glfwPollEvents()
 
@@ -302,6 +333,7 @@ def world(g_pool):
     session_settings.close()
 
     cap.close()
+    glfwDestroyWindow(player_window)
     glfwDestroyWindow(world_window)
     glfwTerminate()
     print "WORLD Process closed"

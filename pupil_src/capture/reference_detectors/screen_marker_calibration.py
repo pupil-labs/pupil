@@ -2,6 +2,9 @@ import cv2
 import numpy as np
 from methods import normalize,denormalize
 from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
+import OpenGL.GL as gl
+from glfw import glfwGetWindowSize,glfwGetCurrentContext
+from OpenGL.GLU import gluOrtho2D
 import calibrate
 from ctypes import c_int,c_bool
 import atb
@@ -9,29 +12,41 @@ import audio
 
 from plugin import Plugin
 
+
+
+def draw_circle(pos,r,c):
+    pts = cv2.ellipse2Poly(tuple(pos),(r,r),0,0,360,10)
+    draw_gl_polyline(pts,c,'Polygon')
+
+def draw_marker(pos):
+    pos = int(pos[0]),int(pos[1])
+    black = (0.,0.,0.,1.)
+    white = (1.,1.,1.,1.)
+    for r,c in zip((50,40,30,20,10),(black,white,black,white,black)):
+        draw_circle(pos,r,c)
+
+
+
 class Screen_Marker_Calibration(Plugin):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites
     Points are collected at sites not between
 
     """
-    def __init__(self, screen_marker_pos, screen_marker_state, atb_pos=(0,0)):
+    def __init__(self, g_pool, atb_pos=(0,0)):
         Plugin.__init__(self)
+        self.g_pool = g_pool
         self.active = False
         self.detected = False
-
-
-        self.shared_screen_marker_pos = screen_marker_pos
-        self.shared_screen_marker_state = screen_marker_state # used for v
         self.screen_marker_state = 0
         self.screen_marker_max = 70 # maximum bound for state
-        self.pos = 0,0 # 0,0 is used to indicate no point detected
-
         self.active_site = 0
         self.sites = []
-
+        self.display_pos = None
+        self.on_position = False
 
         self.candidate_ellipses = []
+        self.pos = None
 
         self.show_edges = c_bool(0)
         self.aperture = c_int(7)
@@ -65,7 +80,6 @@ class Screen_Marker_Calibration(Plugin):
                         (.0,0.),(.0,0.)]
 
         self.active_site = 0
-        self.shared_screen_marker_state.value = 1
         self.active = True
         self.ref_list = []
         self.pupil_list = []
@@ -73,8 +87,8 @@ class Screen_Marker_Calibration(Plugin):
     def stop(self):
         audio.say("Stopping Calibration")
         self.screen_marker_state = 0
-        self.shared_screen_marker_state.value = 0
         self.active = False
+
         print len(self.pupil_list), len(self.ref_list)
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
 
@@ -85,8 +99,8 @@ class Screen_Marker_Calibration(Plugin):
             return
 
         cal_pt_cloud = np.array(cal_pt_cloud)
-        global map_pupil
-        map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,verbose=True)
+
+        self.g_pool.map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,verbose=True)
         np.save('cal_pt_cloud.npy',cal_pt_cloud)
 
 
@@ -98,9 +112,7 @@ class Screen_Marker_Calibration(Plugin):
 
 
     def advance(self):
-        self.next=True
-
-
+        pass
 
     def update(self,frame,recent_pupil_positions):
         if self.active:
@@ -209,11 +221,9 @@ class Screen_Marker_Calibration(Plugin):
             # weighted sum to interpolate between current and next
             new_pos =  current * interpolation_weight + next * (1-interpolation_weight)
             #broadcast next commanded marker postion of screen
-            self.shared_screen_marker_pos[:] = list(new_pos)
-            if on_position and self.detected:
-                self.shared_screen_marker_state.value = 2
-            else:
-                self.shared_screen_marker_state.value = 1
+            self.display_pos = list(new_pos)
+            self.on_position = on_position
+
 
 
 
@@ -236,7 +246,43 @@ class Screen_Marker_Calibration(Plugin):
             pass
 
 
+    def gl_display_player_window(self):
+        if self.active:
+            # Set Matrix unsing gluOrtho2D to include padding for the marker of radius r
+            #
+            ############################
+            #            r             #
+            # 0,0##################w,h #
+            # #                      # #
+            # #                      # #
+            #r#                      #r#
+            # #                      # #
+            # #                      # #
+            # 0,h##################w,h #
+            #            r             #
+            ############################
+            r = 60
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glLoadIdentity()
+            p_window_size = glfwGetWindowSize(glfwGetCurrentContext())
+            # compensate for radius of marker
+            gluOrtho2D(-r,p_window_size[0]+r,p_window_size[1]+r, -r) # origin in the top left corner just like the img np-array
+            # Switch back to Model View Matrix
+            gl.glMatrixMode(gl.GL_MODELVIEW)
+            gl.glLoadIdentity()
+
+            screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
+
+            draw_marker(screen_pos)
+            #some feedback on the detection state
+
+            if self.detected and self.on_position:
+                draw_gl_point(screen_pos, 5.0, (0.,1.,0.,1.))
+            else:
+                draw_gl_point(screen_pos, 5.0, (1.,0.,0.,1.))
+
+
     def __del__(self):
-        self.screen_marker_state = 0
-        self.shared_screen_marker_state.value = 0
         self.active = False
+
+

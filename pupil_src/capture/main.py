@@ -49,7 +49,7 @@ def main():
 	eye_size = (640,360)
 	world_size = (1280,720)
 
-	# Create and initialize IPC's
+	# Create and initialize IPC
 	g_pool = Temp()
 	g_pool.pupil_queue = Queue()
 	g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
@@ -61,7 +61,7 @@ def main():
 	# set up subprocesses
 	p_eye = Process(target=eye, args=(g_pool,))
 	# spawn subprocesses
-	# p_eye.start()
+	p_eye.start()
 
 	# On Linux, we need to give the camera driver some time before requesting another camera.
 	sleep(1)

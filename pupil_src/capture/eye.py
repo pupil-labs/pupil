@@ -25,49 +25,53 @@ def eye(g_pool):
     """
     this needs a docstring
     """
-    # glfw callback functions
-    def on_resize(w, h):
-        atb.TwWindowSize(w, h);
+
+ # Callback functions World
+    def on_resize(window,w, h):
         adjust_gl_view(w,h)
+        atb.TwWindowSize(w, h)
 
-    def on_key(key, pressed):
-        if not atb.TwEventKeyboardGLFW(key,pressed):
-            if pressed:
-                if key == GLFW_KEY_ESC:
-                    on_close()
 
-    def on_char(char, pressed):
-        if not atb.TwEventCharGLFW(char,pressed):
+    def on_key(window, key, scancode, action, mods):
+        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
+            if action == GLFW_PRESS:
+                if key == GLFW_KEY_ESCAPE:
+                    on_close(window)
+
+    def on_char(window,char):
+        if not atb.TwEventCharGLFW(char,1):
             pass
 
-    def on_button(button, pressed):
-        if not atb.TwEventMouseButtonGLFW(button,pressed):
-            if bar.draw_roi.value:
-                if pressed:
-                    pos = glfwGetMousePos()
-                    pos = normalize(pos,glfwGetWindowSize())
-                    pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
-                    u_r.setStart(pos)
-                    bar.draw_roi.value = 1
-                else:
-                    bar.draw_roi.value = 0
+    def on_button(window,button, action, mods):
+        if not atb.TwEventMouseButtonGLFW(button,int(action == GLFW_PRESS)):
+            if action == GLFW_PRESS:
+                pos = glfwGetCursorPos(window)
+                pos = normalize(pos,glfwGetWindowSize(window))
+                pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
+                u_r.setStart(pos)
+                bar.draw_roi.value = 1
+            else:
+                bar.draw_roi.value = 0
 
-    def on_pos(x, y):
-        if atb.TwMouseMotion(x,y):
+    def on_pos(window,x, y):
+        if atb.TwMouseMotion(int(x),int(y)):
             pass
         if bar.draw_roi.value == 1:
-            pos = glfwGetMousePos()
-            pos = normalize(pos,glfwGetWindowSize())
+            pos = x,y
+            pos = normalize(pos,glfwGetWindowSize(window))
             pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
             u_r.setEnd(pos)
 
-    def on_scroll(pos):
-        if not atb.TwMouseWheel(pos):
+    def on_scroll(window,x,y):
+        if not atb.TwMouseWheel(int(x)):
             pass
 
-    def on_close():
+    def on_close(window):
         g_pool.quit.value = True
-        print "EYE Process closing from window"
+        print "WORLD Process closing from window"
+
+
+
 
 
     # Helper functions called by the main atb bar
@@ -154,23 +158,24 @@ def eye(g_pool):
     pupil_detector.create_atb_bar(pos=(10,120))
 
 
-    # Initialize glfw
     glfwInit()
-    glfwOpenWindow(width, height, 0, 0, 0, 8, 0, 0, GLFW_WINDOW)
-    glfwSetWindowTitle("Eye")
-    glfwSetWindowPos(800,0)
-    if isinstance(g_pool.eye_src, str):
-        glfwSwapInterval(0) # turn off v-sync when using video as src for benchmarking
+    window = glfwCreateWindow(width, height, "Eye", None, None)
+    glfwSetWindowPos(window,800,0)
+    on_resize(window,width,height)
+    #set the last saved window size
 
 
-    #register callbacks
-    glfwSetWindowSizeCallback(on_resize)
-    glfwSetWindowCloseCallback(on_close)
-    glfwSetKeyCallback(on_key)
-    glfwSetCharCallback(on_char)
-    glfwSetMouseButtonCallback(on_button)
-    glfwSetMousePosCallback(on_pos)
-    glfwSetMouseWheelCallback(on_scroll)
+
+    # Register callbacks window
+    glfwSetWindowSizeCallback(window,on_resize)
+    glfwSetWindowCloseCallback(window,on_close)
+    glfwSetKeyCallback(window,on_key)
+    glfwSetCharCallback(window,on_char)
+    glfwSetMouseButtonCallback(window,on_button)
+    glfwSetCursorPosCallback(window,on_pos)
+    glfwSetScrollCallback(window,on_scroll)
+
+    glfwMakeContextCurrent(window)
 
     # gl_state settings
     import OpenGL.GL as gl
@@ -180,7 +185,7 @@ def eye(g_pool):
     del gl
 
     # event loop
-    while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
+    while not glfwWindowShouldClose(window) and not g_pool.quit.value:
         frame = cap.get_frame()
         update_fps()
         sleep(bar.sleep.value) # for debugging only
@@ -261,7 +266,8 @@ def eye(g_pool):
             draw_gl_point_norm(result['norm_pupil'],color=(1.,0.,0.,0.5))
 
         atb.draw()
-        glfwSwapBuffers()
+        glfwSwapBuffers(window)
+        glfwPollEvents()
 
     # END while running
 
@@ -282,7 +288,7 @@ def eye(g_pool):
     session_settings.close()
     cap.close()
     atb.terminate()
-    glfwCloseWindow()
+    glfwDestroyWindow(window)
     glfwTerminate()
 
     print "EYE Process closed"
