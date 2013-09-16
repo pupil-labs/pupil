@@ -269,6 +269,7 @@ def world(g_pool):
 
     del gl
 
+    display_list = []
     # Event loop
     while not glfwWindowShouldClose(world_window) and not glfwWindowShouldClose(player_window) and not g_pool.quit.value:
 
@@ -310,10 +311,14 @@ def world(g_pool):
             p.gl_display()
 
 
-        # update gaze point from shared variable pool and draw on world_window.
+        # update gaze point and draw on world_window.
         for pt in recent_pupil_positions:
             if pt['norm_gaze'] is not None:
-                draw_gl_point_norm(pt['norm_gaze'],color=(1.,0.,0.,0.5))
+                display_list.append(pt)
+                if len(display_list)>3:
+                    display_list.pop(0)
+        for pt in display_list:
+            draw_gl_point_norm(pt['norm_gaze'],color=(1.,.2,.2,0.5))
 
         atb.draw()
         glfwSwapBuffers(player_window)
