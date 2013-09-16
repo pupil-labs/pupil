@@ -3,7 +3,7 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2013  Moritz Kassner & William Patera
 
- Distributed under the terms of the CC BY-NC-SA License. 
+ Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -23,6 +23,7 @@ it requires:
 from cv2 import VideoCapture
 import numpy as np
 from os.path import isfile
+from time import time
 
 import platform
 os_name = platform.system()
@@ -39,6 +40,17 @@ else:
 
 
 # non os specific defines
+
+
+class Frame(object):
+    """docstring of Frame"""
+    def __init__(self, timestamp,img,compressed_img=None, compressed_pix_fmt=None):
+        self.timestamp = timestamp
+        self.img = img
+        self.compressed_img = compressed_img
+        self.compressed_pix_fmt = compressed_pix_fmt
+
+
 class FileCapture():
     """
     simple file capture that can auto_rewind
@@ -67,10 +79,22 @@ class FileCapture():
             s, img = self._get_frame_()
         return s,img
 
+    def get_frame(self):
+        s, img = self.read()
+        timestamp = time()
+        return Frame(timestamp,img)
 
     def rewind(self):
         self.cap.set(1,0) #seek to the beginning
 
+    def create_atb_bar(self,pos):
+        return 0,0
+
+    def kill_atb_bar(self):
+        pass
+
+    def close(self):
+        pass
 
 
 def autoCreateCapture(src,size=(640,480),fps=30):
