@@ -26,7 +26,6 @@ else:
 	from eye import eye
 	from world import world
 
-from player import player
 from methods import Temp
 
 
