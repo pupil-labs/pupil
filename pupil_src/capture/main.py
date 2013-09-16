@@ -42,42 +42,26 @@ def main():
 
 	# to use a pre-recorded video.
 	# Use a string to specify the path to your video file as demonstrated below
-	eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
+	# eye_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
 	# world_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
 
 	# Camera video size in pixels (width,height)
 	eye_size = (640,360)
 	world_size = (1280,720)
 
-
-	# Use the player - a seperate window for video playback and calibration animation
-	use_player = True
-	#startup size for the player window: this can be whatever you like
-	player_size = (640,360)
-
-	# Create and initialize shared globals
+	# Create and initialize IPC's
 	g_pool = Temp()
 	g_pool.pupil_queue = Queue()
-	g_pool.marker = Array('d',(0.0,0.0))
-	g_pool.marker_state = Value('d',0.0)
 	g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
-	g_pool.player_refresh = Event()
-	g_pool.player_input = Value('i',0)
-	g_pool.play = RawValue(c_bool,0)
 	g_pool.quit = RawValue(c_bool,0)
-	# shared constants
 	g_pool.eye_src = eye_src
 	g_pool.eye_size = eye_size
 	g_pool.world_src = world_src
 	g_pool.world_size = world_size
-
 	# set up subprocesses
 	p_eye = Process(target=eye, args=(g_pool,))
-	if use_player: p_player = Process(target=player, args=(g_pool,player_size))
-
 	# spawn subprocesses
-	if use_player: p_player.start()
-	p_eye.start()
+	# p_eye.start()
 
 	# On Linux, we need to give the camera driver some time before requesting another camera.
 	sleep(1)
@@ -89,8 +73,6 @@ def main():
 
 	# Exit / clean-up
 	p_eye.join()
-	if use_player: p_player.join()
-	print "main exit"
 
 if __name__ == '__main__':
 	main()

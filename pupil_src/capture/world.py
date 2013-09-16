@@ -21,65 +21,61 @@ from time import time
 import shelve
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
+
+#display
 from glfw import *
 import atb
+
+# helpers/utils
 from methods import normalize, denormalize,Temp
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm
 from uvc_capture import autoCreateCapture
 import calibrate
+# Plugins
 import reference_detectors
 import recorder
 from show_calibration import Show_Calibration
 
-def world_profiled(g_pool):
-    import cProfile,subprocess,os
-    from world import world
-    cProfile.runctx("world(g_pool,)",{"g_pool":g_pool},locals(),"world.pstats")
-    loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
-    gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-    subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
-    print "created cpu time graph for world process. Please check out the png next to the world.py file"
 
 def world(g_pool):
     """world
     """
 
     # Callback functions
-    def on_resize(w, h):
-        atb.TwWindowSize(w, h);
+    def on_resize(window,w, h):
+        atb.TwWindowSize(w, h)
         adjust_gl_view(w,h)
 
-    def on_key(key, pressed):
-        if not atb.TwEventKeyboardGLFW(key,pressed):
-            if pressed:
-                if key == GLFW_KEY_ESC:
-                    on_close()
+    def on_key(window, key, scancode, action, mods):
+        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
+            if action == GLFW_PRESS:
+                if key == GLFW_KEY_ESCAPE:
+                    on_close(window)
 
-    def on_char(char, pressed):
-        if not atb.TwEventCharGLFW(char,pressed):
+    def on_char(window,char):
+        if not atb.TwEventCharGLFW(char,1):
             pass
 
-    def on_button(button, pressed):
-        if not atb.TwEventMouseButtonGLFW(button,pressed):
-            if pressed:
-                pos = glfwGetMousePos()
-                pos = normalize(pos,glfwGetWindowSize())
+    def on_button(window,button, action, mods):
+        if not atb.TwEventMouseButtonGLFW(button,int(action == GLFW_PRESS)):
+            if action == GLFW_PRESS:
+                pos = glfwGetCursorPos(window)
+                pos = normalize(pos,glfwGetWindowSize(world_window))
                 pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
                 for p in g.plugins:
                     p.on_click(pos)
 
-    def on_pos(x, y):
-        if atb.TwMouseMotion(x,y):
+    def on_pos(window,x, y):
+        if atb.TwMouseMotion(int(x),int(y)):
             pass
 
-    def on_scroll(pos):
-        if not atb.TwMouseWheel(pos):
+    def on_scroll(window,x,y):
+        if not atb.TwMouseWheel(int(x)):
             pass
 
-    def on_close():
+    def on_close(window):
         g_pool.quit.value = True
         print "WORLD Process closing from window"
-
 
 
 
@@ -95,10 +91,6 @@ def world(g_pool):
         session_settings[var_name] = var
 
 
-    # gaze object
-    gaze = Temp()
-    gaze.map_coords = (0., 0.)
-    gaze.image_coords = (0., 0.)
 
     # Initialize capture, check if it works
     cap = autoCreateCapture(g_pool.world_src, g_pool.world_size,24)
@@ -123,7 +115,7 @@ def world(g_pool):
         height,width = frame.img.shape[:2]
         ratio = (1,.75,.5,.25)[mode]
         w,h = int(width*ratio),int(height*ratio)
-        glfwSetWindowSize(w,h)
+        glfwSetWindowSize(world_window,w,h)
         data.value=mode # update the bar.value
 
     def get_from_data(data):
@@ -141,11 +133,7 @@ def world(g_pool):
         g.plugins = [p for p in g.plugins if p.alive]
 
         print "selected: ",reference_detectors.name_by_index[selection]
-        g.current_ref_detector = reference_detectors.detector_by_index[selection](
-                                                                    screen_marker_pos = g_pool.marker,
-                                                                    screen_marker_state = g_pool.marker_state,
-                                                                    atb_pos=bar.next_atb_pos)
-
+        g.current_ref_detector = reference_detectors.detector_by_index[selection](g_pool,atb_pos=bar.next_atb_pos)
         g.plugins.append(g.current_ref_detector)
         # save the value for atb bar
         data.value=selection
@@ -188,7 +176,7 @@ def world(g_pool):
                 if isinstance(p,Show_Calibration):
                     p.alive = False
 
-    # Initialize ant tweak bar - inherits from atb.Bar
+    # Initialize ant tweak bar
     atb.init()
     bar = atb.Bar(name = "World", label="Controls",
             help="Scene controls", color=(50, 50, 50), alpha=100,valueswidth=150,
@@ -198,7 +186,6 @@ def world(g_pool):
     bar.timestamp = time()
     bar.calibration_type = c_int(load("calibration_type",0))
     bar.record_eye = c_bool(load("record_eye",0))
-    bar.play = g_pool.play
     bar.window_size = c_int(load("window_size",0))
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
 
@@ -206,7 +193,6 @@ def world(g_pool):
     bar.rec_name = create_string_buffer(512)
     bar.rec_name.value = recorder.get_auto_name()
     # play and record can be tied together via pointers to the objects
-    # bar.play = bar.record_video
     bar.add_var("fps", bar.fps, step=1., readonly=True)
     bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
     bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=bar.calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
@@ -215,7 +201,6 @@ def world(g_pool):
     bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
     bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
     bar.add_separator("Sep1")
-    bar.add_var("play video", bar.play, help="play a video in the Player window")
     bar.add_var("exit", g_pool.quit)
 
     # add uvc camera controls to a seperate ATB bar
@@ -226,7 +211,7 @@ def world(g_pool):
     g = Temp()
     g.plugins = []
     g.current_ref_detector = None
-    open_calibration(bar.calibration_type.value,bar.calibration_type)
+    # open_calibration(bar.calibration_type.value,bar.calibration_type)
 
 
     try:
@@ -240,24 +225,22 @@ def world(g_pool):
 
     # Initialize glfw
     glfwInit()
-    glfwOpenWindow(width, height, 0, 0, 0, 8, 0, 0, GLFW_WINDOW)
-    glfwSetWindowTitle("World")
-    glfwSetWindowPos(0,0)
-
+    world_window = glfwCreateWindow(width, height, "World", None, None)
+    glfwSetWindowPos(world_window,0,0)
+    on_resize(world_window,width,height)
     #set the last saved window size
     set_window_size(bar.window_size.value,bar.window_size)
 
-
-
+    glfwMakeContextCurrent(world_window)
 
     # Register callbacks
-    glfwSetWindowSizeCallback(on_resize)
-    glfwSetWindowCloseCallback(on_close)
-    glfwSetKeyCallback(on_key)
-    glfwSetCharCallback(on_char)
-    glfwSetMouseButtonCallback(on_button)
-    glfwSetMousePosCallback(on_pos)
-    glfwSetMouseWheelCallback(on_scroll)
+    glfwSetWindowSizeCallback(world_window,on_resize)
+    glfwSetWindowCloseCallback(world_window,on_close)
+    glfwSetKeyCallback(world_window,on_key)
+    glfwSetCharCallback(world_window,on_char)
+    glfwSetMouseButtonCallback(world_window,on_button)
+    glfwSetCursorPosCallback(world_window,on_pos)
+    glfwSetScrollCallback(world_window,on_scroll)
 
     # gl_state settings
     import OpenGL.GL as gl
@@ -267,12 +250,7 @@ def world(g_pool):
     del gl
 
     # Event loop
-    while glfwGetWindowParam(GLFW_OPENED) and not g_pool.quit.value:
-        # Get input characters entered in player
-        if g_pool.player_input.value:
-            player_input = g_pool.player_input.value
-            g_pool.player_input.value = 0
-            on_char(player_input,True)
+    while not glfwWindowShouldClose(world_window) and not g_pool.quit.value:
 
         # Get an image from the grabber
         frame = cap.get_frame()
@@ -292,7 +270,6 @@ def world(g_pool):
 
         g.plugins = [p for p in g.plugins if p.alive]
 
-        g_pool.player_refresh.set()
 
         # render the screen
         clear_gl_screen()
@@ -303,14 +280,14 @@ def world(g_pool):
             p.gl_display()
 
 
-        # update gaze point from shared variable pool and draw on screen. If both coords are 0: no pupil pos was detected.
+        # update gaze point from shared variable pool and draw on screen.
         for pt in recent_pupil_positions:
             if pt['norm_gaze'] is not None:
                 draw_gl_point_norm(pt['norm_gaze'],color=(1.,0.,0.,0.5))
 
         atb.draw()
-        glfwSwapBuffers()
-
+        glfwSwapBuffers(world_window)
+        glfwPollEvents()
 
     # end while running and clean-up
 
@@ -325,9 +302,17 @@ def world(g_pool):
     session_settings.close()
 
     cap.close()
-    glfwCloseWindow()
+    glfwDestroyWindow(world_window)
     glfwTerminate()
     print "WORLD Process closed"
 
+def world_profiled(g_pool):
+    import cProfile,subprocess,os
+    from world import world
+    cProfile.runctx("world(g_pool,)",{"g_pool":g_pool},locals(),"world.pstats")
+    loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
+    gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
+    subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
+    print "created cpu time graph for world process. Please check out the png next to the world.py file"
 
 
