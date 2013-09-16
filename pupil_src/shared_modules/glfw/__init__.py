@@ -334,7 +334,7 @@ charfun            = CFUNCTYPE(None, POINTER(GLFWwindow), c_uint)
 monitorfun         = CFUNCTYPE(None, POINTER(GLFWmonitor), c_int)
 
 # --- Init --------------------------------------------------------------------
-glfwInit                        = _glfw.glfwInit
+# glfwInit                        = _glfw.glfwInit
 glfwTerminate                   = _glfw.glfwTerminate
 #glfwGetVersion                 = _glfw.glfwGetVersion
 glfwGetVersionString            = _glfw.glfwGetVersionString
@@ -423,7 +423,7 @@ glfwSetTime                    = _glfw.glfwSetTime
 
 # --- Context -----------------------------------------------------------------
 glfwMakeContextCurrent         = _glfw.glfwMakeContextCurrent
-glfwGetCurrentContext          = _glfw.glfwGetCurrentContext
+# glfwGetCurrentContext          = _glfw.glfwGetCurrentContext
 glfwSwapBuffers                = _glfw.glfwSwapBuffers
 glfwSwapInterval               = _glfw.glfwSwapInterval
 glfwExtensionSupported         = _glfw.glfwExtensionSupported
@@ -439,6 +439,17 @@ __windows__ = []
 # This is to prevent garbage collection on callbacks
 __c_callbacks__ = {}
 __py_callbacks__ = {}
+
+
+def glfwInit():
+    import os
+    # glfw changes the directory,so we change it back.
+    cwd = os.getcwd()
+    # Initialize
+    _glfw.glfwInit()
+    # Restore the old cwd.
+    os.chdir(cwd)
+    del os
 
 
 def glfwCreateWindow(width=640, height=480, title="GLFW Window", monitor=None, share=None):
@@ -483,7 +494,7 @@ def glfwGetWindowPos(window):
     return xpos.value, ypos.value
 
 def glfwGetCursorPos(window):
-    xpos, ypos = c_int(0), c_int(0)
+    xpos, ypos = c_double(0), c_double(0)
     _glfw.glfwGetCursorPos(window, byref(xpos), byref(ypos))
     return xpos.value, ypos.value
 
@@ -491,6 +502,11 @@ def glfwGetWindowSize(window):
     width, height = c_int(0), c_int(0)
     _glfw.glfwGetWindowSize(window, byref(width), byref(height))
     return width.value, height.value
+
+def glfwGetCurrentContext():
+    _glfw.glfwGetCurrentContext.restype = POINTER(GLFWwindow)
+    return _glfw.glfwGetCurrentContext()
+
 
 def glfwGetFramebufferSize(window):
     width, height = c_int(0), c_int(0)
