@@ -27,18 +27,36 @@
 #  3. This notice may not be removed or altered from any source
 #     distribution.
 #
+# ----------------
+# changes by moritz kassner:
+# small bugfixes, changed binary loading routine.
 # -----------------------------------------------------------------------------
 
 import ctypes
 from ctypes import c_int,c_ushort,c_char_p,c_double,c_uint, c_char,Structure,CFUNCTYPE,byref,POINTER
-
+import platform
 from ctypes.util import find_library
-filename = find_library('glfw3')
-#filename = "/Volumes/Home/Users/rougier/local/lib/libglfw.dylib"
+
+os_name = platform.system()
+del platform
+
+###OS specific imports and defs
+if os_name == "Linux":
+    # import os
+    # loc = os.path.abspath(__file__)
+    # filename = os.path.join(loc,"linux_bin","libglfw.so")
+    filename = find_library('glfw')
+elif os_name == "Darwin":
+    filename = find_library('glfw3')
+else:
+    filename = find_library('glfw')
+
 if not filename:
     raise RuntimeError, 'GLFW library not found'
-_glfw = ctypes.CDLL(filename)
+
 del find_library
+
+_glfw = ctypes.CDLL(filename)
 
 
 # --- Version -----------------------------------------------------------------
