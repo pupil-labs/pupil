@@ -184,13 +184,14 @@ class Canny_Detector(Pupil_Detector):
 
         if result:
             result.sort(key=lambda e: e['goodness'])
-
             self.goodness.value = result[0]['goodness']
 
             if result[0]['goodness'] ==0: # perfect match!
                 self.target_size.value = result[0]['major']
             else:
-                self.target_size.value  = self.target_size.value +  .5 * (result[0]['major']-self.target_size.value)
+                self.target_size.value  = self.target_size.value +  .2 * (result[0]['major']-self.target_size.value)
+                result.sort(key=lambda e: abs(e['major']-self.target_size.value))
+
             return result[0]
 
         else:

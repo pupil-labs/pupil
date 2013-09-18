@@ -104,15 +104,7 @@ class Screen_Marker_Calibration(Plugin):
         np.save('cal_pt_cloud.npy',cal_pt_cloud)
 
 
-    def new_ref(self,pos):
-        """
-        gets called when the user clicks on the world window screen
-        """
-        pass
 
-
-    def advance(self):
-        pass
 
     def update(self,frame,recent_pupil_positions):
         if self.active:
@@ -182,7 +174,7 @@ class Screen_Marker_Calibration(Plugin):
 
             else:
                 self.detected = False
-                self.pos = 0,0 #indicate that no reference is detected
+                self.pos = None #indicate that no reference is detected
 
 
             #only save a valid ref position if within sample window of calibraiton routine

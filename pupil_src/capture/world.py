@@ -31,10 +31,11 @@ from methods import normalize, denormalize,Temp
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm
 from uvc_capture import autoCreateCapture
 import calibrate
-# Plugins
+# Plug-ins
 import reference_detectors
 import recorder
 from show_calibration import Show_Calibration
+from display_gaze import Display_Gaze
 
 
 def world(g_pool):
@@ -216,6 +217,8 @@ def world(g_pool):
     g.plugins = []
     g.current_ref_detector = None
 
+    #load gaze_display plugin
+    g.plugins.append(Display_Gaze(g_pool,None))
 
     try:
         pt_cloud = np.load('cal_pt_cloud.npy')
@@ -269,7 +272,6 @@ def world(g_pool):
 
     del gl
 
-    display_list = []
     # Event loop
     while not glfwWindowShouldClose(world_window) and not glfwWindowShouldClose(player_window) and not g_pool.quit.value:
 
@@ -289,8 +291,8 @@ def world(g_pool):
         for p in g.plugins:
             p.update(frame,recent_pupil_positions)
 
+        #check if a plugin need to be destroyed
         g.plugins = [p for p in g.plugins if p.alive]
-
 
 
         glfwMakeContextCurrent(player_window)
@@ -303,22 +305,11 @@ def world(g_pool):
 
         # render camera image in world_window
         glfwMakeContextCurrent(world_window)
-        clear_gl_screen()
         draw_gl_texture(frame.img)
 
         # render visual feedback from loaded plugins in world window
         for p in g.plugins:
             p.gl_display()
-
-
-        # update gaze point and draw on world_window.
-        for pt in recent_pupil_positions:
-            if pt['norm_gaze'] is not None:
-                display_list.append(pt)
-                if len(display_list)>3:
-                    display_list.pop(0)
-        for pt in display_list:
-            draw_gl_point_norm(pt['norm_gaze'],color=(1.,.2,.2,0.5))
 
         atb.draw()
         glfwSwapBuffers(player_window)

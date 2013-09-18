@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 from gl_utils import draw_gl_polyline
-
 import atb
 import audio
 
@@ -13,7 +12,7 @@ class Camera_Intrinsics_Estimation(Plugin):
 		this method is used to calculate camera intrinsics.
 
 	"""
-	def __init__(self, screen_marker_pos,screen_marker_state,atb_pos=(0,0)):
+	def __init__(self,g_pool,atb_pos=(0,0)):
 		Plugin.__init__(self)
 		self.collect_new = False
 		self.calculated = False
@@ -40,8 +39,7 @@ class Camera_Intrinsics_Estimation(Plugin):
 			audio.say("Capture 10 calibration patterns.")
 		self.collect_new = True
 
-	def new_ref(self,pos):
-		pass
+
 
 	def calculate(self):
 		self.calculated = True
@@ -52,7 +50,7 @@ class Camera_Intrinsics_Estimation(Plugin):
 		np.save("dist_coefs.npy", dist_coefs)
 		audio.say("Camera calibrated and saved to file")
 
-	def update(self,frame):
+	def update(self,frame,recent_pupil_positions):
 		if self.collect_new:
 			img = frame.img
 			status, grid_points = cv2.findCirclesGridDefault(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
