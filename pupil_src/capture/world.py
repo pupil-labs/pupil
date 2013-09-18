@@ -279,6 +279,8 @@ def world(g_pool):
         frame = cap.get_frame()
         update_fps()
 
+
+        #receive and map pupil positions
         recent_pupil_positions = []
         while not g_pool.pupil_queue.empty():
             p = g_pool.pupil_queue.get()
@@ -288,17 +290,16 @@ def world(g_pool):
                 p['norm_gaze'] = g_pool.map_pupil(p['norm_pupil'])
             recent_pupil_positions.append(p)
 
+        # allow each Plugin to do its work.
         for p in g.plugins:
             p.update(frame,recent_pupil_positions)
-
         #check if a plugin need to be destroyed
         g.plugins = [p for p in g.plugins if p.alive]
 
 
+        # render visual feedback from loaded plugins in player window
         glfwMakeContextCurrent(player_window)
         clear_gl_screen()
-
-        # render visual feedback from loaded plugins in player window
         for p in g.plugins:
             p.gl_display_player_window()
 
