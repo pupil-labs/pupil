@@ -195,22 +195,6 @@ def eye(g_pool):
         gray_img = grayscale(eye_img)
 
 
-        # coarse pupil detection
-        integral = cv2.integral(gray_img)
-        integral =  np.array(integral,dtype=c_float)
-        x,y,w = eye_filter(integral)
-        if w>0:
-            p_r.set((y,x,y+w,x+w))
-        else:
-            p_r.set((0,0,-1,-1))
-
-        # fine pupil ellipse detection
-        result = pupil_detector.detect(frame,u_roi=u_r,p_roi=p_r,visualize=bar.display.value == 2)
-
-        g_pool.pupil_queue.put(result)
-        # Work with detected ellipses
-
-
         ### RECORDING of Eye Video ###
         # Setup variables and lists for recording
         if g_pool.eye_rx.poll():
@@ -231,6 +215,24 @@ def eye(g_pool):
         if writer:
             writer.write(frame.img)
             timestamps.append(frame.timestamp)
+
+
+        # coarse pupil detection
+        integral = cv2.integral(gray_img)
+        integral =  np.array(integral,dtype=c_float)
+        x,y,w = eye_filter(integral)
+        if w>0:
+            p_r.set((y,x,y+w,x+w))
+        else:
+            p_r.set((0,0,-1,-1))
+
+        # fine pupil ellipse detection
+        result = pupil_detector.detect(frame,u_roi=u_r,p_roi=p_r,visualize=bar.display.value == 2)
+
+        g_pool.pupil_queue.put(result)
+        # Work with detected ellipses
+
+
 
 
         # direct visualizations on the frame.img data
