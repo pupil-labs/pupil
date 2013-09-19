@@ -165,7 +165,6 @@ def eye(g_pool):
     #set the last saved window size
 
 
-
     # Register callbacks window
     glfwSetWindowSizeCallback(window,on_resize)
     glfwSetWindowCloseCallback(window,on_close)
@@ -260,7 +259,7 @@ def eye(g_pool):
         clear_gl_screen()
         draw_gl_texture(frame.img)
 
-        if result['norm_pupil'] is not None:
+        if result['norm_pupil'] is not None and bar.draw_pupil.value:
             pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
                                     (int(result["axes"][0]/2),int(result["axes"][1]/2)),
                                     int(result["angle"]),0,360,15)
