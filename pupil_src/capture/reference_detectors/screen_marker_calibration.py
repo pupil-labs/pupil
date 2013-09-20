@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
 from methods import normalize,denormalize
-from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
+from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline, adjust_gl_view,clear_gl_screen
 import OpenGL.GL as gl
-from glfw import glfwGetWindowSize,glfwGetCurrentContext
+from glfw import *
 from OpenGL.GLU import gluOrtho2D
 import calibrate
 from ctypes import c_int,c_bool
@@ -24,6 +24,13 @@ def draw_marker(pos):
     white = (1.,1.,1.,1.)
     for r,c in zip((50,40,30,20,10),(black,white,black,white,black)):
         draw_circle(pos,r,c)
+
+
+# def calbacks
+def on_resize(window,w, h):
+    glfwMakeContextCurrent(window)
+    adjust_gl_view(w,h)
+
 
 
 
@@ -55,12 +62,27 @@ class Screen_Marker_Calibration(Plugin):
 
         self.world_size = None
 
+        self.cal_window = None
+
+
+        self.fullscreen = c_bool(1)
+        self.monitor_idx = c_int(0)
+        self.monitor_handles = glfwGetMonitors()
+        self.monitor_names = [glfwGetMonitorName(m) for m in self.monitor_handles]
+        monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
+        #primary_monitor = glfwGetPrimaryMonitor()
+
+
+
         atb_label = "calibrate on screen"
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 80))
+            text='light', position=atb_pos,refresh=.3, size=(300, 100))
+        self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
+        self._bar.add_var("fullscreen", self.fullscreen)
         self._bar.add_button("  start calibrating  ", self.start, key='c')
+
         self._bar.add_separator("Sep1")
         self._bar.add_var("show edges",self.show_edges)
         self._bar.add_var("aperture", self.aperture, min=3,step=2)
@@ -69,6 +91,9 @@ class Screen_Marker_Calibration(Plugin):
 
 
     def start(self):
+        if self.active:
+            return
+
         audio.say("Starting Calibration")
 
         c = 1.
@@ -84,10 +109,43 @@ class Screen_Marker_Calibration(Plugin):
         self.ref_list = []
         self.pupil_list = []
 
+
+        if self.fullscreen.value:
+            monitor = self.monitor_handles[self.monitor_idx.value]
+            mode = glfwGetVideoMode(monitor)
+            height,width= mode[0],mode[1]
+        else:
+            monitor = None
+            height,width= 640,360
+
+        self.cal_window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=None)
+        if not self.fullscreen.value:
+            glfwSetWindowPos(self.cal_window,200,0)
+
+        on_resize(self.cal_window,height,width)
+
+        #Register cllbacks
+        glfwSetWindowSizeCallback(self.cal_window,on_resize)
+        glfwSetWindowCloseCallback(self.cal_window,self.on_stop)
+        glfwSetKeyCallback(self.cal_window,self.on_key)
+        # glfwSetCharCallback(self.cal_window,on_char)
+
+    def on_key(self,window, key, scancode, action, mods):
+        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
+            if action == GLFW_PRESS:
+                if key == GLFW_KEY_ESCAPE:
+                    self.stop()
+
+    def on_stop(self,window):
+        self.stop()
+
     def stop(self):
         audio.say("Stopping Calibration")
         self.screen_marker_state = 0
         self.active = False
+
+        glfwDestroyWindow(self.cal_window)
+        self.cal_window = None
 
         print len(self.pupil_list), len(self.ref_list)
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
@@ -106,9 +164,12 @@ class Screen_Marker_Calibration(Plugin):
 
 
 
+
     def update(self,frame,recent_pupil_positions):
         if self.active:
             img = frame.img
+
+
             #detect the marker
             gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
             # self.candidate_points = self.detector.detect(s_img)
@@ -121,7 +182,6 @@ class Screen_Marker_Calibration(Plugin):
             contours, hierarchy = cv2.findContours(edges,
                                             mode=cv2.RETR_TREE,
                                             method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
-
 
             # remove extra encapsulation
             hierarchy = hierarchy[0]
@@ -205,6 +265,7 @@ class Screen_Marker_Calibration(Plugin):
 
             # function to smoothly interpolate between points input:(0-screen_marker_max) output: (0-1)
             m, s = self.screen_marker_max, self.screen_marker_state
+
             interpolation_weight = np.tanh(((s-2/3.*m)*4.)/(1/3.*m))*(-.5)+.5
 
             #use np.arrays for per element wise math
@@ -236,45 +297,62 @@ class Screen_Marker_Calibration(Plugin):
                 draw_gl_polyline(pts,(0.,1.,0,1.))
         else:
             pass
+        if self.cal_window:
+            self.gl_display_cal_window()
 
 
-    def gl_display_player_window(self):
+    def gl_display_cal_window(self):
+        active_window = glfwGetCurrentContext()
+        glfwMakeContextCurrent(self.cal_window)
+
+        clear_gl_screen()
+
+        # Set Matrix unsing gluOrtho2D to include padding for the marker of radius r
+        #
+        ############################
+        #            r             #
+        # 0,0##################w,h #
+        # #                      # #
+        # #                      # #
+        #r#                      #r#
+        # #                      # #
+        # #                      # #
+        # 0,h##################w,h #
+        #            r             #
+        ############################
+        r = 60
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
+        p_window_size = glfwGetWindowSize(self.cal_window)
+        # compensate for radius of marker
+        gluOrtho2D(-r,p_window_size[0]+r,p_window_size[1]+r, -r) # origin in the top left corner just like the img np-array
+        # Switch back to Model View Matrix
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity()
+
+        screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
+
+        draw_marker(screen_pos)
+        #some feedback on the detection state
+
+        if self.detected and self.on_position:
+            draw_gl_point(screen_pos, 5.0, (0.,1.,0.,1.))
+        else:
+            draw_gl_point(screen_pos, 5.0, (1.,0.,0.,1.))
+
+        glfwSwapBuffers(self.cal_window)
+        glfwMakeContextCurrent(active_window)
+
+
+    def cleanup(self):
+        """gets called when the plugin get terminated.
+           either volunatily or forced.
+        """
+        self._bar.destroy()
         if self.active:
-            # Set Matrix unsing gluOrtho2D to include padding for the marker of radius r
-            #
-            ############################
-            #            r             #
-            # 0,0##################w,h #
-            # #                      # #
-            # #                      # #
-            #r#                      #r#
-            # #                      # #
-            # #                      # #
-            # 0,h##################w,h #
-            #            r             #
-            ############################
-            r = 60
-            gl.glMatrixMode(gl.GL_PROJECTION)
-            gl.glLoadIdentity()
-            p_window_size = glfwGetWindowSize(glfwGetCurrentContext())
-            # compensate for radius of marker
-            gluOrtho2D(-r,p_window_size[0]+r,p_window_size[1]+r, -r) # origin in the top left corner just like the img np-array
-            # Switch back to Model View Matrix
-            gl.glMatrixMode(gl.GL_MODELVIEW)
-            gl.glLoadIdentity()
-
-            screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
-
-            draw_marker(screen_pos)
-            #some feedback on the detection state
-
-            if self.detected and self.on_position:
-                draw_gl_point(screen_pos, 5.0, (0.,1.,0.,1.))
-            else:
-                draw_gl_point(screen_pos, 5.0, (1.,0.,0.,1.))
+            self.stop()
 
 
-    def __del__(self):
-        self.active = False
+
 
 

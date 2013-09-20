@@ -45,13 +45,12 @@ def world(g_pool):
 
     # Callback functions
     def on_resize_world(window,w, h):
+        active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
         adjust_gl_view(w,h)
         atb.TwWindowSize(w, h)
+        glfwMakeContextCurrent(active_window)
 
-    def on_resize_player(window,w, h):
-        glfwMakeContextCurrent(window)
-        adjust_gl_view(w,h)
 
     def on_key(window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
@@ -212,6 +211,34 @@ def world(g_pool):
     cap.create_atb_bar(pos=(320,10))
 
 
+    # Initialize glfw
+    glfwInit()
+    world_window = glfwCreateWindow(width, height, "World", None, None)
+    glfwMakeContextCurrent(world_window)
+    glfwSetWindowPos(world_window,0,0)
+    on_resize_world(world_window,width,height)
+    #set the last saved window size
+    set_window_size(bar.window_size.value,bar.window_size)
+
+
+    # Register callbacks world_window
+    glfwSetWindowSizeCallback(world_window,on_resize_world)
+    glfwSetWindowCloseCallback(world_window,on_close)
+    glfwSetKeyCallback(world_window,on_key)
+    glfwSetCharCallback(world_window,on_char)
+    glfwSetMouseButtonCallback(world_window,on_button)
+    glfwSetCursorPosCallback(world_window,on_pos)
+    glfwSetScrollCallback(world_window,on_scroll)
+
+
+    # gl_state settings
+    import OpenGL.GL as gl
+    gl.glEnable(gl.GL_POINT_SMOOTH)
+    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+    gl.glEnable(gl.GL_BLEND)
+    gl.glClearColor(1.,1.,1.,0.)
+    del gl
+
     # create container for globally scoped vars (within world)
     g = Temp()
     g.plugins = []
@@ -220,6 +247,7 @@ def world(g_pool):
     #load gaze_display plugin
     g.plugins.append(Display_Gaze(g_pool,None))
 
+    # load last calibration data
     try:
         pt_cloud = np.load('cal_pt_cloud.npy')
         map_pupil = calibrate.get_map_from_cloud(pt_cloud,(width,height))
@@ -231,49 +259,12 @@ def world(g_pool):
             return vector
     g_pool.map_pupil = map_pupil
 
-
+    #load calibration plugin
     open_calibration(bar.calibration_type.value,bar.calibration_type)
 
-    # Initialize glfw
-    glfwInit()
-    world_window = glfwCreateWindow(width, height, "World", None, None)
-    glfwSetWindowPos(world_window,0,0)
-    on_resize_world(world_window,width,height)
-    #set the last saved window size
-    set_window_size(bar.window_size.value,bar.window_size)
-
-    player_window = glfwCreateWindow(640, 360, "Player", None, None)
-    glfwSetWindowPos(player_window,20,20)
-    on_resize_player(player_window,640,360)
-
-
-    # Register callbacks world_window
-    glfwSetWindowSizeCallback(world_window,on_resize_world)
-    glfwSetWindowCloseCallback(world_window,on_close)
-    glfwSetKeyCallback(world_window,on_key)
-    glfwSetCharCallback(world_window,on_char)
-    glfwSetMouseButtonCallback(world_window,on_button)
-    glfwSetCursorPosCallback(world_window,on_pos)
-    glfwSetScrollCallback(world_window,on_scroll)
-    #Register cllbacks player_window
-    glfwSetWindowSizeCallback(player_window,on_resize_player)
-    glfwSetWindowCloseCallback(player_window,on_close)
-    glfwSetKeyCallback(player_window,on_key)
-    glfwSetCharCallback(player_window,on_char)
-
-    # gl_state settings
-    import OpenGL.GL as gl
-    for context in (player_window,world_window):
-        glfwMakeContextCurrent(context)
-        gl.glEnable(gl.GL_POINT_SMOOTH)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-        gl.glEnable(gl.GL_BLEND)
-        gl.glClearColor(1.,1.,1.,0.)
-
-    del gl
 
     # Event loop
-    while not glfwWindowShouldClose(world_window) and not glfwWindowShouldClose(player_window) and not g_pool.quit.value:
+    while not glfwWindowShouldClose(world_window) and not g_pool.quit.value:
 
         # Get an image from the grabber
         frame = cap.get_frame()
@@ -296,24 +287,15 @@ def world(g_pool):
         #check if a plugin need to be destroyed
         g.plugins = [p for p in g.plugins if p.alive]
 
-
-        # render visual feedback from loaded plugins in player window
-        glfwMakeContextCurrent(player_window)
-        clear_gl_screen()
-        for p in g.plugins:
-            p.gl_display_player_window()
-
-
-        # render camera image in world_window
+        # render camera image
         glfwMakeContextCurrent(world_window)
         draw_gl_texture(frame.img)
 
-        # render visual feedback from loaded plugins in world window
+        # render visual feedback from loaded plugins
         for p in g.plugins:
             p.gl_display()
 
         atb.draw()
-        glfwSwapBuffers(player_window)
         glfwSwapBuffers(world_window)
         glfwPollEvents()
 
@@ -330,7 +312,6 @@ def world(g_pool):
     session_settings.close()
 
     cap.close()
-    glfwDestroyWindow(player_window)
     glfwDestroyWindow(world_window)
     glfwTerminate()
     print "WORLD Process closed"

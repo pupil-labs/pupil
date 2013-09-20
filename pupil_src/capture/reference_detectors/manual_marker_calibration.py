@@ -195,7 +195,7 @@ class Manual_Marker_Calibration(Plugin):
                 if p_pt['norm_pupil'] is not None:
                     self.pupil_list.append(p_pt)
 
-            if world_size is None:
+            if self.world_size is None:
                 self.world_size = img.shape[1],img.shape[0]
 
         else:
@@ -227,8 +227,14 @@ class Manual_Marker_Calibration(Plugin):
         else:
             pass
 
-    def __del__(self):
-        '''Do what is required for clean up. This happes when a user changes the detector. It can happen at any point
-
-        '''
-        pass
+    def cleanup(self):
+        """gets called when the plugin get terminated.
+        This happends either volunatily or forced.
+        if you have an atb bar or glfw window destroy it here.
+        """
+        if hasattr(self,"_bar"):
+                try:
+                    self._bar.destroy()
+                    del self._bar
+                except:
+                    print "Tried to delete an already dead bar. This is a bug. Please report"

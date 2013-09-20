@@ -22,12 +22,12 @@ class Plugin(object):
         Writing False to this will schedule the instance for deletion
         """
         if not self._alive:
-            if hasattr(self,"_bar"):
+            if hasattr(self,"cleanup"):
                 try:
-                    self._bar.destroy()
-                    del self._bar
+                    self.cleanup()
                 except:
-                    print "Tried to delete an already dead bar. This is a bug. Please report"
+                    print "cleanup failed. This is a bug. Please report"
+
         return self._alive
 
     @alive.setter
@@ -53,11 +53,13 @@ class Plugin(object):
         """
         pass
 
-    def gl_display_player_window(self):
-        """gets called once every frame
+    def cleanup(self):
+        """gets called when the plugin get terminated.
+        This happends either volunatily or forced.
+        if you have an atb bar or glfw window destroy it here.
         """
         pass
 
     def __del__(self):
-        pass
+        self._alive = False
 

@@ -94,3 +94,14 @@ class Natural_Features_Calibration(Plugin):
         self.point = np.array([pos,],dtype=np.float32)
         self.count = 30
 
+    def cleanup(self):
+        """gets called when the plugin get terminated.
+        This happends either volunatily or forced.
+        if you have an atb bar or glfw window destroy it here.
+        """
+        if hasattr(self,"_bar"):
+                try:
+                    self._bar.destroy()
+                    del self._bar
+                except:
+                    print "Tried to delete an already dead bar. This is a bug. Please report"
