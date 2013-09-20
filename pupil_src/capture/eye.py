@@ -287,6 +287,12 @@ def eye(g_pool):
     save('bar.draw_pupil',bar.draw_pupil.value)
     save('bar.record_eye',bar.record_eye.value)
     session_settings.close()
+
+    #flushing queue incase world process did not exit gracefully
+    while not g_pool.pupil_queue.empty():
+        g_pool.pupil_queue.get()
+
+    g_pool.pupil_queue.close()
     cap.close()
     atb.terminate()
     glfwDestroyWindow(window)
