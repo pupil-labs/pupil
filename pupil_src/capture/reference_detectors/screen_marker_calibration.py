@@ -179,6 +179,9 @@ class Screen_Marker_Calibration(Plugin):
         if self.active:
             img = frame.img
 
+            #get world image size for error fitting later.
+            if self.world_size is None:
+                self.world_size = img.shape[1],img.shape[0]
 
             #detect the marker
             gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
@@ -269,7 +272,6 @@ class Screen_Marker_Calibration(Plugin):
                 self.active_site += 1
                 print self.active_site
                 if self.active_site == 10:
-                    self.world_size = img.shape[1],img.shape[0]
                     self.stop()
                     return
 
