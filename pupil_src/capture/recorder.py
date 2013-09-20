@@ -134,10 +134,18 @@ class Recorder(Plugin):
 
         self.alive = False
 
+    def cleanup(self):
+        """gets called when the plugin get terminated.
+           either volunatily or forced.
+        """
+        self._bar.destroy()
+
     def __del__(self):
         """incase the plugin get deleted while recording
         """
         self.stop_and_destruct()
+
+
 
 def get_auto_name():
     return strftime("%Y_%m_%d", localtime())

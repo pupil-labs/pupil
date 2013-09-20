@@ -57,6 +57,14 @@ class Show_Calibration(Plugin):
     def close(self):
         self.alive = False
 
+    def cleanup(self):
+        """gets called when the plugin get terminated.
+           either volunatily or forced.
+        """
+        self._bar.destroy()
+
+
+
 if __name__ == '__main__':
     cal_pt_cloud = np.load("cal_pt_cloud.npy")
     map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(1280,720),return_inlier_map=True)

@@ -124,11 +124,21 @@ class Screen_Marker_Calibration(Plugin):
 
         on_resize(self.cal_window,height,width)
 
-        #Register cllbacks
+        #Register callbacks
         glfwSetWindowSizeCallback(self.cal_window,on_resize)
         glfwSetWindowCloseCallback(self.cal_window,self.on_stop)
         glfwSetKeyCallback(self.cal_window,self.on_key)
         # glfwSetCharCallback(self.cal_window,on_char)
+
+        # gl_state settings
+        active_window = glfwGetCurrentContext()
+        glfwMakeContextCurrent(self.cal_window)
+        gl.glEnable(gl.GL_POINT_SMOOTH)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glEnable(gl.GL_BLEND)
+        gl.glClearColor(1.,1.,1.,0.)
+        glfwMakeContextCurrent(active_window)
+
 
     def on_key(self,window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
