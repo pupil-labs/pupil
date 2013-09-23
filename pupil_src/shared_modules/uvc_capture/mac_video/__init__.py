@@ -149,7 +149,7 @@ class Camera_Capture(object):
         except KeyError:
             pass
 
-        if '6000' in self.name:
+        if '6000' in self.name and 0: #we dont control enough to do this right.
             print "adjusting exposure for HD-6000 camera"
             try:
                 pass
