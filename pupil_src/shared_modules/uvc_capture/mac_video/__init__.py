@@ -149,10 +149,9 @@ class Camera_Capture(object):
         except KeyError:
             pass
 
-        if '6000' in self.name:
+        if '6000' in self.name and False: #on mac we dont have enough controls to use this right.
             print "adjusting exposure for HD-6000 camera"
             try:
-                pass
                 self.controls['UVCC_REQ_EXPOSURE_AUTOMODE'].set_val(1)
                 self.controls['UVCC_REQ_EXPOSURE_ABS'].set_val(156)
             except KeyError:

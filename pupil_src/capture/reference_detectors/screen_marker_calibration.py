@@ -143,7 +143,7 @@ class Screen_Marker_Calibration(Plugin):
     def on_key(self,window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
             if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
+                if key == GLFW_KEY_ESCAPE or GLFW_KEY_C:
                     self.stop()
 
     def on_stop(self,window):

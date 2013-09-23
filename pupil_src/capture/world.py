@@ -129,14 +129,12 @@ def world(g_pool):
         return data.value
 
     def open_calibration(selection,data):
-        # prepare destruction of old ref_detector.
+        # prepare destruction of old ref_detector... and remove it
         if g.current_ref_detector:
             g.current_ref_detector.alive = False
-
-        # remove old ref detector from list of plugins
         g.plugins = [p for p in g.plugins if p.alive]
 
-        print "selected: ",reference_detectors.name_by_index[selection]
+        # print "selected: ",reference_detectors.name_by_index[selection]
         g.current_ref_detector = reference_detectors.detector_by_index[selection](g_pool,atb_pos=bar.next_atb_pos)
         g.plugins.append(g.current_ref_detector)
         # save the value for atb bar
@@ -193,13 +191,13 @@ def world(g_pool):
     bar.window_size = c_int(load("window_size",0))
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
 
-    bar.calibrate_type_enum = atb.enum("Calibration Method",reference_detectors.index_by_name)
+    calibrate_type_enum = atb.enum("Calibration Method",reference_detectors.index_by_name)
     bar.rec_name = create_string_buffer(512)
     bar.rec_name.value = recorder.get_auto_name()
     # play and record can be tied together via pointers to the objects
     bar.add_var("fps", bar.fps, step=1., readonly=True)
     bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
-    bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=bar.calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
+    bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
     bar.add_button("show calibration result",toggle_show_calib_result, group="Calibration", help="Click to show calibration result.")
     bar.add_var("session name",bar.rec_name, group="Recording", help="creates folder Data_Name_XXX, where xxx is an increasing number")
     bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
@@ -299,7 +297,6 @@ def world(g_pool):
         glfwSwapBuffers(world_window)
         glfwPollEvents()
 
-    # end while running and clean-up
 
     # de-init all running plugins
     for p in g.plugins:
