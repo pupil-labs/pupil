@@ -1,10 +1,13 @@
 import cv2
 import numpy as np
-from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen
+from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point
+from methods import normalize
 import atb
 import audio
 from ctypes import c_int,c_bool
 import OpenGL.GL as gl
+from OpenGL.GLU import gluOrtho2D
+
 from glfw import *
 
 
@@ -33,9 +36,11 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.count = 10
         self.img_shape = None
 
+        self.display_grid = _make_grid()
+
 
         self._window = None
-        self.fullscreen = c_bool(1)
+        self.fullscreen = c_bool(0)
         self.monitor_idx = c_int(0)
         self.monitor_handles = glfwGetMonitors()
         self.monitor_names = [glfwGetMonitorName(m) for m in self.monitor_handles]
@@ -145,7 +150,45 @@ class Camera_Intrinsics_Estimation(Plugin):
             self.gl_display_in_window()
 
     def gl_display_in_window(self):
-        pass
+        active_window = glfwGetCurrentContext()
+        glfwMakeContextCurrent(self._window)
+
+        clear_gl_screen()
+        #todo write code to display pattern.
+
+        # r = 60.
+        # gl.glMatrixMode(gl.GL_PROJECTION)
+        # gl.glLoadIdentity()
+        # p_window_size = glfwGetWindowSize(self._window)
+        # # compensate for radius of marker
+        # x_border,y_border = normalize((r,r),p_window_size)
+
+        # # if p_window_size[0]<p_window_size[1]: #taller
+        # #     ratio = p_window_size[1]/float(p_window_size[0])
+        # #     gluOrtho2D(-x_border,1+x_border,y_border, 1-y_border) # origin in the top left corner just like the img np-array
+
+        # # else: #wider
+        # #     ratio = p_window_size[0]/float(p_window_size[1])
+        # #     gluOrtho2D(-x_border,ratio+x_border,y_border, 1-y_border) # origin in the top left corner just like the img np-array
+
+        # gluOrtho2D(-x_border,1+x_border,y_border, 1-y_border) # origin in the top left corner just like the img np-array
+
+        # # Switch back to Model View Matrix
+        # gl.glMatrixMode(gl.GL_MODELVIEW)
+        # gl.glLoadIdentity()
+
+        # for p in self.display_grid:
+        #     draw_gl_point(p)
+        # #some feedback on the detection state
+
+        # # if self.detected and self.on_position:
+        # #     draw_gl_point(screen_pos, 5.0, (0.,1.,0.,1.))
+        # # else:
+        # #     draw_gl_point(screen_pos, 5.0, (1.,0.,0.,1.))
+
+        glfwSwapBuffers(self._window)
+        glfwMakeContextCurrent(active_window)
+
 
 
     def cleanup(self):
@@ -179,4 +222,28 @@ def _gen_pattern_grid(size=(4,11)):
         for j in xrange(size[0]):
             pattern_grid.append([(2*j)+i%2,i,0])
     return np.asarray(pattern_grid, dtype='f4')
+
+
+def _make_grid(dim=(11,4)):
+    """
+    this function generates the structure for an assymetrical circle grid
+    centerd around 0 width=1, height scaled accordingly
+    """
+    x,y = range(dim[0]),range(dim[1])
+    p = np.array([[[s,i] for s in x] for i in y], dtype=np.float32)
+    p[:,1::2,1] += 0.5
+    p = np.reshape(p, (-1,2), 'F')
+
+    # scale height = 1
+    x_scale =  1./(np.amax(p[:,0])-np.amin(p[:,0]))
+    y_scale =  1./(np.amax(p[:,1])-np.amin(p[:,1]))
+
+    p *=x_scale,x_scale/.5
+
+    # center x,y around (0,0)
+    x_offset = (np.amax(p[:,0])-np.amin(p[:,0]))/2.
+    y_offset = (np.amax(p[:,1])-np.amin(p[:,1]))/2.
+    p -= x_offset,y_offset
+    return p
+
 
