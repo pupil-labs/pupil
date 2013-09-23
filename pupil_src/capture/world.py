@@ -36,6 +36,7 @@ import reference_detectors
 import recorder
 from show_calibration import Show_Calibration
 from display_gaze import Display_Gaze
+from pupil_server import Pupil_Server
 
 
 def world(g_pool):
@@ -53,7 +54,7 @@ def world(g_pool):
 
 
     def on_key(window, key, scancode, action, mods):
-        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
+        if not atb.TwEventKeyboardGLFW(key,action):
             if action == GLFW_PRESS:
                 if key == GLFW_KEY_ESCAPE:
                     on_close(window)
@@ -63,7 +64,7 @@ def world(g_pool):
             pass
 
     def on_button(window,button, action, mods):
-        if not atb.TwEventMouseButtonGLFW(button,int(action == GLFW_PRESS)):
+        if not atb.TwEventMouseButtonGLFW(button,action):
             if action == GLFW_PRESS:
                 pos = glfwGetCursorPos(window)
                 pos = normalize(pos,glfwGetWindowSize(world_window))
@@ -244,6 +245,7 @@ def world(g_pool):
 
     #load gaze_display plugin
     g.plugins.append(Display_Gaze(g_pool,None))
+    g.plugins.append(Pupil_Server(g_pool,(10,400)))
 
     # load last calibration data
     try:
