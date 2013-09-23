@@ -62,7 +62,7 @@ class Screen_Marker_Calibration(Plugin):
 
         self.world_size = None
 
-        self.cal_window = None
+        self._window = None
 
 
         self.fullscreen = c_bool(1)
@@ -118,21 +118,21 @@ class Screen_Marker_Calibration(Plugin):
             monitor = None
             height,width= 640,360
 
-        self.cal_window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=None)
+        self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=None)
         if not self.fullscreen.value:
-            glfwSetWindowPos(self.cal_window,200,0)
+            glfwSetWindowPos(self._window,200,0)
 
-        on_resize(self.cal_window,height,width)
+        on_resize(self._window,height,width)
 
         #Register callbacks
-        glfwSetWindowSizeCallback(self.cal_window,on_resize)
-        glfwSetWindowCloseCallback(self.cal_window,self.on_stop)
-        glfwSetKeyCallback(self.cal_window,self.on_key)
-        # glfwSetCharCallback(self.cal_window,on_char)
+        glfwSetWindowSizeCallback(self._window,on_resize)
+        glfwSetWindowCloseCallback(self._window,self.on_stop)
+        glfwSetKeyCallback(self._window,self.on_key)
+        # glfwSetCharCallback(self._window,on_char)
 
         # gl_state settings
         active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(self.cal_window)
+        glfwMakeContextCurrent(self._window)
         gl.glEnable(gl.GL_POINT_SMOOTH)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glEnable(gl.GL_BLEND)
@@ -154,8 +154,8 @@ class Screen_Marker_Calibration(Plugin):
         self.screen_marker_state = 0
         self.active = False
 
-        glfwDestroyWindow(self.cal_window)
-        self.cal_window = None
+        glfwDestroyWindow(self._window)
+        self._window = None
 
         print len(self.pupil_list), len(self.ref_list)
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
@@ -309,13 +309,13 @@ class Screen_Marker_Calibration(Plugin):
                 draw_gl_polyline(pts,(0.,1.,0,1.))
         else:
             pass
-        if self.cal_window:
-            self.gl_display_cal_window()
+        if self._window:
+            self.gl_display_in_window()
 
 
-    def gl_display_cal_window(self):
+    def gl_display_in_window(self):
         active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(self.cal_window)
+        glfwMakeContextCurrent(self._window)
 
         clear_gl_screen()
 
@@ -335,7 +335,7 @@ class Screen_Marker_Calibration(Plugin):
         r = 60
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
-        p_window_size = glfwGetWindowSize(self.cal_window)
+        p_window_size = glfwGetWindowSize(self._window)
         # compensate for radius of marker
         gluOrtho2D(-r,p_window_size[0]+r,p_window_size[1]+r, -r) # origin in the top left corner just like the img np-array
         # Switch back to Model View Matrix
@@ -352,7 +352,7 @@ class Screen_Marker_Calibration(Plugin):
         else:
             draw_gl_point(screen_pos, 5.0, (1.,0.,0.,1.))
 
-        glfwSwapBuffers(self.cal_window)
+        glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
 
 
