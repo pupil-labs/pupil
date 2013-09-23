@@ -179,3 +179,4 @@ def _gen_pattern_grid(size=(4,11)):
         for j in xrange(size[0]):
             pattern_grid.append([(2*j)+i%2,i,0])
     return np.asarray(pattern_grid, dtype='f4')
+
