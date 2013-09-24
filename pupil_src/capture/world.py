@@ -179,6 +179,14 @@ def world(g_pool):
                 if isinstance(p,Show_Calibration):
                     p.alive = False
 
+    def toggle_server():
+        for p in g.plugins:
+            if isinstance(p,Pupil_Server):
+                p.alive = False
+                return
+        else:
+            new_plugin = Pupil_Server(g_pool,(10,400))
+            g.plugins.append(new_plugin)
     # Initialize ant tweak bar
     atb.init()
     bar = atb.Bar(name = "World", label="Controls",
@@ -203,6 +211,7 @@ def world(g_pool):
     bar.add_var("session name",bar.rec_name, group="Recording", help="creates folder Data_Name_XXX, where xxx is an increasing number")
     bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
     bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
+    bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
     bar.add_separator("Sep1")
     bar.add_var("exit", g_pool.quit)
 
@@ -245,7 +254,7 @@ def world(g_pool):
 
     #load gaze_display plugin
     g.plugins.append(Display_Gaze(g_pool,None))
-    g.plugins.append(Pupil_Server(g_pool,(10,400)))
+    # g.plugins.append(Pupil_Server(g_pool,(10,400)))
 
     # load last calibration data
     try:
@@ -269,7 +278,6 @@ def world(g_pool):
         # Get an image from the grabber
         frame = cap.get_frame()
         update_fps()
-
 
         #receive and map pupil positions
         recent_pupil_positions = []
@@ -323,5 +331,3 @@ def world_profiled(g_pool):
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
     print "created cpu time graph for world process. Please check out the png next to the world.py file"
-
-
