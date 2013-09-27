@@ -136,8 +136,9 @@ def make_map_function(cx,cy,n):
 
 
 def preprocess_data(pupil_pts,ref_pts):
-    ###small utility function to deal with timestamped but uncorrelated data
-    # input must be lists that contail dicts with atleast "timestamp" and "norm_pos"
+    '''small utility function to deal with timestamped but uncorrelated data
+    input must be lists that contain dicts with at least "timestamp" and "norm_pos"
+    '''
     cal_data = []
 
     if len(ref_pts)<=2:

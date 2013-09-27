@@ -142,51 +142,50 @@ def world(g_pool):
         data.value=selection
 
     def toggle_record_video():
-        if any([True for p in g.plugins if isinstance(p,recorder.Recorder)]):
-            for p in g.plugins:
-                if isinstance(p,recorder.Recorder):
-                    p.alive = False
-        else:
-            # set up folder within recordings named by user input in atb
-            if not bar.rec_name.value:
-                bar.rec_name.value = recorder.get_auto_name()
-            recorder_instance = recorder.Recorder(bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx)
-            g.plugins.append(recorder_instance)
+        for p in g.plugins:
+            if isinstance(p,recorder.Recorder):
+                p.alive = False
+                return
+        # set up folder within recordings named by user input in atb
+        if not bar.rec_name.value:
+            bar.rec_name.value = recorder.get_auto_name()
+
+        new_plugin = recorder.Recorder(bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx)
+        g.plugins.append(new_plugin)
 
     def toggle_show_calib_result():
-        if any([True for p in g.plugins if isinstance(p,Show_Calibration)]):
-            for p in g.plugins:
-                if isinstance(p,Show_Calibration):
-                    p.alive = False
-        else:
-            calib = Show_Calibration(frame.img.shape)
-            g.plugins.append(calib)
+        for p in g.plugins:
+            if isinstance(p,Show_Calibration):
+                p.alive = False
+                return
+
+        new_plugin = Show_Calibration(frame.img.shape)
+        g.plugins.append(new_plugin)
 
     def show_calib_result():
-        # kill old if any
-        if any([True for p in g.plugins if isinstance(p,Show_Calibration)]):
-            for p in g.plugins:
-                if isinstance(p,Show_Calibration):
-                    p.alive = False
-            g.plugins = [p for p in g.plugins if p.alive]
-        # make new
+        # first kill old if any
+        for p in g.plugins:
+            if isinstance(p,Show_Calibration):
+                p.alive = False
+        g.plugins = [p for p in g.plugins if p.alive]
+        # then make new
         calib = Show_Calibration(frame.img.shape)
         g.plugins.append(calib)
 
     def hide_calib_result():
-        if any([True for p in g.plugins if isinstance(p,Show_Calibration)]):
-            for p in g.plugins:
-                if isinstance(p,Show_Calibration):
-                    p.alive = False
+        for p in g.plugins:
+            if isinstance(p,Show_Calibration):
+                p.alive = False
 
     def toggle_server():
         for p in g.plugins:
             if isinstance(p,Pupil_Server):
                 p.alive = False
                 return
-        else:
-            new_plugin = Pupil_Server(g_pool,(10,400))
-            g.plugins.append(new_plugin)
+
+        new_plugin = Pupil_Server(g_pool,(10,400))
+        g.plugins.append(new_plugin)
+
     # Initialize ant tweak bar
     atb.init()
     bar = atb.Bar(name = "World", label="Controls",
