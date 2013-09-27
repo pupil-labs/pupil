@@ -42,9 +42,9 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35, verbose=Fa
         if verbose:
             print 'first iteration. root-mean-square residuals:', err_rms,"in pixel, this is bad!"
             print 'Warning, the data cannot be represented by the model in a meaningfull way.'
-            if return_inlier_map:
-                return map_fn,err_dist<=threshold
-            return map_fn
+        if return_inlier_map:
+            return map_fn,err_dist<=threshold
+        return map_fn
 
 
 
