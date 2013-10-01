@@ -20,3 +20,8 @@ user_settings
 # IDE generated files #
 .floo
 .sublime-project
+.flooignore
+
+# pyinstaller #
+dist/
+build/
