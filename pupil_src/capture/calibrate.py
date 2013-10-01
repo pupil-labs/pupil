@@ -165,78 +165,78 @@ def preprocess_data(pupil_pts,ref_pts):
             break
     return cal_data
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    from matplotlib import cm
-    from mpl_toolkits.mplot3d import Axes3D
+# if __name__ == '__main__':
+#     import matplotlib.pyplot as plt
+#     from matplotlib import cm
+#     from mpl_toolkits.mplot3d import Axes3D
 
-    cal_pt_cloud = np.load('cal_pt_cloud.npy')
-    # plot input data
-    # Z = cal_pt_cloud
-    # ax.scatter(Z[:,0],Z[:,1],Z[:,2], c= "r")
-    # ax.scatter(Z[:,0],Z[:,1],Z[:,3], c= "b")
+#     cal_pt_cloud = np.load('cal_pt_cloud.npy')
+#     # plot input data
+#     # Z = cal_pt_cloud
+#     # ax.scatter(Z[:,0],Z[:,1],Z[:,2], c= "r")
+#     # ax.scatter(Z[:,0],Z[:,1],Z[:,3], c= "b")
 
-    # fit once
-    model_n = 7
-    cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
-    map_fn = make_map_function(cx,cy,model_n)
-    err_dist,err_mean,err_rms = fit_error_screen(err_x,err_y,(1280,720))
-    print err_rms,"in pixel"
-    threshold =15 # err_rms*2
+#     # fit once
+#     model_n = 7
+#     cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
+#     map_fn = make_map_function(cx,cy,model_n)
+#     err_dist,err_mean,err_rms = fit_error_screen(err_x,err_y,(1280,720))
+#     print err_rms,"in pixel"
+#     threshold =15 # err_rms*2
 
-    # fit again disregarding crass outlines
-    cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)
-    map_fn = make_map_function(cx,cy,model_n)
-    new_err_dist,new_err_mean,new_err_rms = fit_error_screen(new_err_x,new_err_y,(1280,720))
-    print new_err_rms,"in pixel"
+#     # fit again disregarding crass outlines
+#     cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)
+#     map_fn = make_map_function(cx,cy,model_n)
+#     new_err_dist,new_err_mean,new_err_rms = fit_error_screen(new_err_x,new_err_y,(1280,720))
+#     print new_err_rms,"in pixel"
 
-    print "using %i datapoints out of the full dataset %i: subset is %i percent" \
-        %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
-        100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0])
+#     print "using %i datapoints out of the full dataset %i: subset is %i percent" \
+#         %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
+#         100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0])
 
-    # plot residuals
-    fig_error = plt.figure()
-    plt.scatter(err_x,err_y,c="y")
-    plt.scatter(new_err_x,new_err_y)
-    plt.title("fitting residuals full data set (y) and better subset (b)")
+#     # plot residuals
+#     fig_error = plt.figure()
+#     plt.scatter(err_x,err_y,c="y")
+#     plt.scatter(new_err_x,new_err_y)
+#     plt.title("fitting residuals full data set (y) and better subset (b)")
 
 
-    # plot projection of eye and world vs observed data
-    X,Y,ZX,ZY = cal_pt_cloud.transpose().copy()
-    X,Y = map_fn((X,Y))
-    X *= 1280/2.
-    Y *= 720/2.
-    ZX *= 1280/2.
-    ZY *= 720/2.
-    fig_projection = plt.figure()
-    plt.scatter(X,Y)
-    plt.scatter(ZX,ZY,c='y')
-    plt.title("world space projection in pixes, mapped and observed (y)")
+#     # plot projection of eye and world vs observed data
+#     X,Y,ZX,ZY = cal_pt_cloud.transpose().copy()
+#     X,Y = map_fn((X,Y))
+#     X *= 1280/2.
+#     Y *= 720/2.
+#     ZX *= 1280/2.
+#     ZY *= 720/2.
+#     fig_projection = plt.figure()
+#     plt.scatter(X,Y)
+#     plt.scatter(ZX,ZY,c='y')
+#     plt.title("world space projection in pixes, mapped and observed (y)")
 
-    # plot the fitting functions 3D plot
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    outliers =cal_pt_cloud[err_dist>threshold]
-    inliers = cal_pt_cloud[err_dist<=threshold]
-    ax.scatter(outliers[:,0],outliers[:,1],outliers[:,2], c= "y")
-    ax.scatter(outliers[:,0],outliers[:,1],outliers[:,3], c= "y")
-    ax.scatter(inliers[:,0],inliers[:,1],inliers[:,2], c= "r")
-    ax.scatter(inliers[:,0],inliers[:,1],inliers[:,3], c= "b")
-    Z = cal_pt_cloud
-    X = np.linspace(min(Z[:,0])-.2,max(Z[:,0])+.2,num=30,endpoint=True)
-    Y = np.linspace(min(Z[:,1])-.2,max(Z[:,1]+.2),num=30,endpoint=True)
-    X, Y = np.meshgrid(X,Y)
-    ZX,ZY = map_fn((X,Y))
-    ax.plot_surface(X, Y, ZX, rstride=1, cstride=1, linewidth=.1, antialiased=True,alpha=0.4,color='r')
-    ax.plot_surface(X, Y, ZY, rstride=1, cstride=1, linewidth=.1, antialiased=True,alpha=0.4,color='b')
-    plt.xlabel("Pupil x in Eye-Space")
-    plt.ylabel("Pupil y Eye-Space")
-    plt.title("Z: Gaze x (blue) Gaze y (red) World-Space, yellow=outliers")
+#     # plot the fitting functions 3D plot
+#     fig = plt.figure()
+#     ax = fig.gca(projection='3d')
+#     outliers =cal_pt_cloud[err_dist>threshold]
+#     inliers = cal_pt_cloud[err_dist<=threshold]
+#     ax.scatter(outliers[:,0],outliers[:,1],outliers[:,2], c= "y")
+#     ax.scatter(outliers[:,0],outliers[:,1],outliers[:,3], c= "y")
+#     ax.scatter(inliers[:,0],inliers[:,1],inliers[:,2], c= "r")
+#     ax.scatter(inliers[:,0],inliers[:,1],inliers[:,3], c= "b")
+#     Z = cal_pt_cloud
+#     X = np.linspace(min(Z[:,0])-.2,max(Z[:,0])+.2,num=30,endpoint=True)
+#     Y = np.linspace(min(Z[:,1])-.2,max(Z[:,1]+.2),num=30,endpoint=True)
+#     X, Y = np.meshgrid(X,Y)
+#     ZX,ZY = map_fn((X,Y))
+#     ax.plot_surface(X, Y, ZX, rstride=1, cstride=1, linewidth=.1, antialiased=True,alpha=0.4,color='r')
+#     ax.plot_surface(X, Y, ZY, rstride=1, cstride=1, linewidth=.1, antialiased=True,alpha=0.4,color='b')
+#     plt.xlabel("Pupil x in Eye-Space")
+#     plt.ylabel("Pupil y Eye-Space")
+#     plt.title("Z: Gaze x (blue) Gaze y (red) World-Space, yellow=outliers")
 
-    # X,Y,_,_ = cal_pt_cloud.transpose()
+#     # X,Y,_,_ = cal_pt_cloud.transpose()
 
-    # pts= map_fn((X,Y))
-    # import cv2
-    # pts = np.array(pts,dtype=np.float32).transpose()
-    # print cv2.convexHull(pts)[:,0]
-    plt.show()
+#     # pts= map_fn((X,Y))
+#     # import cv2
+#     # pts = np.array(pts,dtype=np.float32).transpose()
+#     # print cv2.convexHull(pts)[:,0]
+#     plt.show()

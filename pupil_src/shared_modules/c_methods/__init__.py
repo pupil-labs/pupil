@@ -16,32 +16,55 @@ Only wrappers are exposed not the loaded libraries.
 
 from ctypes import *
 from numpy.ctypeslib import ndpointer
-import os
+import os,sys
 
 ### Get location of  this file
-source_loc = os.path.dirname(os.path.abspath(__file__))
 
-### Run Autocompiler
-#  Binaries are not distributed instead a make file and source are in the c-methods folder
-#  Make is invoked when this module is imported or run.
 
-arch_64bit = sizeof(c_void_p) == 8
-if arch_64bit:
-    c_flags = "CFLAGS=-m64"
+# source_loc = os.path.dirname(os.path.abspath(__file__))
+
+
+
+if getattr(sys, 'frozen', False):
+    # we are running in a |PyInstaller| bundle
+    basedir = sys._MEIPASS
 else:
-    c_flags = "CFLAGS=-m32"
+    # we are running in a normal Python environment
+    basedir = os.path.dirname(__file__)
 
-from subprocess import check_output
-# print "c-methods: compiling now."
-compiler_status = check_output(["make",c_flags],cwd=source_loc)
-# print "c-methods:",compiler_status
-del check_output
-# print "c-methods: compiling done."
+
+# def resource_path(relative_path):
+#     """ Get absolute path to resource, works for dev and for PyInstaller """
+#     try:
+#         # PyInstaller creates a temp folder and stores path in _MEIPASS
+#         base_path = sys._MEIPASS
+#     except Exception:
+#         base_path = os.path.abspath(__file__)
+
+#     return os.path.join(base_path, relative_path)
+
+if not getattr(sys, 'frozen', False):
+    ### Run Autocompiler
+    #  Binaries are not distributed instead a make file and source are in the c-methods folder
+    #  Make is invoked when this module is imported or run.
+
+    arch_64bit = sizeof(c_void_p) == 8
+    if arch_64bit:
+        c_flags = "CFLAGS=-m64"
+    else:
+        c_flags = "CFLAGS=-m32"
+
+    from subprocess import check_output
+    # print "c-methods: compiling now."
+    compiler_status = check_output(["make",c_flags],cwd=basedir)
+    # print "c-methods:",compiler_status
+    del check_output
+    # print "c-methods: compiling done."
 
 
 ### C-Types binary loading
 dll_name = "methods.so"
-dllabspath = source_loc + os.path.sep + dll_name
+dllabspath = basedir + os.path.sep + dll_name
 if not os.path.isfile(dllabspath):
     raise Exception("c-methods Error could not find binary.")
 

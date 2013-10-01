@@ -12,15 +12,24 @@ class Recorder(Plugin):
     def __init__(self, session_str, fps, img_shape, record_eye, eye_tx):
         Plugin.__init__(self)
         self.session_str = session_str
-        self.base_path = os.path.join(os.path.abspath(__file__).rsplit('pupil_src', 1)[0], "recordings")
         self.record_eye = record_eye
         self.frame_count = 0
         self.timestamps = []
         self.gaze_list = []
         self.eye_tx = eye_tx
-
         self.start_time = time()
         # set up base folder called "recordings"
+
+
+        if getattr(sys, 'frozen', False):
+            # we are running in a |PyInstaller| bundle
+            self.base_path = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"recordings")
+        else:
+            # we are running in a normal Python environment
+            self.base_path = os.path.join(os.path.abspath(__file__).rsplit('pupil_src', 1)[0], "recordings")
+
+
+
         try:
             os.mkdir(self.base_path)
         except:
@@ -66,7 +75,7 @@ class Recorder(Plugin):
             text='light', position=atb_pos,refresh=.3, size=(300, 80))
         self._bar.rec_name = create_string_buffer(512)
         self._bar.add_var("rec time",self._bar.rec_name, getter=lambda: create_string_buffer(self.get_rec_time_str(),512), readonly=True)
-        self._bar.add_button("stop", self.stop_and_destruct, key="s", help="stop recording")
+        self._bar.add_button("stop",self.on_stop, key="s", help="stop recording")
         self._bar.define("contained=true")
 
     def get_rec_time_str(self):
@@ -88,7 +97,6 @@ class Recorder(Plugin):
                 self.eye_tx.send(None)
             except:
                 print "WARNING: Could not stop eye-recording. Please report this bug!"
-
         gaze_list_path = os.path.join(self.path, "gaze_positions.npy")
         np.save(gaze_list_path,np.asarray(self.gaze_list))
 
@@ -134,16 +142,20 @@ class Recorder(Plugin):
 
         self.alive = False
 
+
+    def on_stop(self):
+        """
+        get called from _bar to init termination. 
+        """
+        self.alive= False
+
+
     def cleanup(self):
         """gets called when the plugin get terminated.
            either volunatily or forced.
         """
-        self._bar.destroy()
-
-    def __del__(self):
-        """incase the plugin get deleted while recording
-        """
         self.stop_and_destruct()
+        self._bar.destroy()
 
 
 
