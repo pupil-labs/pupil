@@ -26,10 +26,17 @@ controls:
     name2:
 
 """
-
-
+import sys,os
 import subprocess as sp
-v4l2_ctl = "v4l2-ctl"
+
+if getattr(sys, 'frozen', False):
+    # we are running in a |PyInstaller| bundle
+    v4l2_ctl = os.path.join(sys._MEIPASS,'v4l2-ctl')
+else:
+    # we are running in a normal Python environment
+    v4l2_ctl = "v4l2-ctl"
+
+
 # device = "-d"+str(device_number)
 
 
@@ -49,7 +56,7 @@ def get(device_number,control):
     """
     device = "-d"+str(device_number)
     print "getting control:", device_number,control,value
-    ret = sp.check_output(["v4l2-ctl",device,"-C"+control])
+    ret = sp.check_output([v4l2_ctl,device,"-C"+control])
     return int(ret.split(":")[-1])
 
 def getter_from_device(control):
@@ -59,7 +66,7 @@ def getter_from_device(control):
     #print "getter",control
     device = "-d"+ str(control["src"])
     control_name = control["name"]
-    ret = sp.check_output(["v4l2-ctl",device,"-C"+control_name])
+    ret = sp.check_output([v4l2_ctl,device,"-C"+control_name])
     return int(ret.split(":")[-1])
 
 def getter(control):
@@ -93,7 +100,7 @@ def update_from_device(controls):
     device = "-d"+str(src)
 
     try:
-        ret = sp.check_output(["v4l2-ctl",device,"-C"+control_string])
+        ret = sp.check_output([v4l2_ctl,device,"-C"+control_string])
     except:
         #print "could not update uvc controls on device:",device, "please try again"
         return
@@ -127,7 +134,7 @@ def extract_controls(device_number):
     """
     device = "-d"+str(device_number)
     try:
-        ret = sp.check_output(["v4l2-ctl",device,"-L"])
+        ret = sp.check_output([v4l2_ctl,device,"-L"])
     except:
         print "v4l2-ctl not found. No uvc control panel will be added"
         return []
@@ -183,7 +190,7 @@ def list_devices():
 
     """
     try:
-        ret = sp.check_output(["v4l2-ctl","--list-devices"])
+        ret = sp.check_output([v4l2_ctl,"--list-devices"])
     except:
         return []
 

@@ -32,6 +32,7 @@
 # small bugfixes, changed binary loading routine.
 # -----------------------------------------------------------------------------
 
+import sys
 import ctypes
 from ctypes import c_int,c_ushort,c_char_p,c_double,c_uint, c_char,Structure,CFUNCTYPE,byref,POINTER
 import platform
@@ -40,24 +41,22 @@ from ctypes.util import find_library
 os_name = platform.system()
 del platform
 
-###OS specific imports and defs
-if os_name == "Linux":
-    # import os
-    # loc = os.path.abspath(__file__)
-    # filename = os.path.join(loc,"linux_bin","libglfw.so")
-    filename = find_library('glfw')
-elif os_name == "Darwin":
-    filename = find_library('glfw3')
+
+if getattr(sys, 'frozen', False):
+    # we are running in a |PyInstaller| bundle using the local version
+    filename = 'libglfw.so'
 else:
-    filename = find_library('glfw')
-
-if not filename:
-    raise RuntimeError, 'GLFW library not found'
-
-del find_library
+    # we are running in a normal Python environment
+    if os_name == "Linux":
+        filename = find_library('glfw')
+    elif os_name == "Darwin":
+        filename = find_library('glfw3')
+    else:
+        filename = find_library('glfw')
+    if not filename:
+        raise RuntimeError, 'GLFW library not found'
 
 _glfw = ctypes.CDLL(filename)
-
 
 # --- Version -----------------------------------------------------------------
 GLFW_VERSION_MAJOR      = 3

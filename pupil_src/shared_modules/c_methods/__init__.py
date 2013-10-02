@@ -23,27 +23,13 @@ import os,sys
 
 # source_loc = os.path.dirname(os.path.abspath(__file__))
 
-
-
 if getattr(sys, 'frozen', False):
     # we are running in a |PyInstaller| bundle
-    basedir = sys._MEIPASS
+    dll_path = 'methods.so'
 else:
     # we are running in a normal Python environment
     basedir = os.path.dirname(__file__)
 
-
-# def resource_path(relative_path):
-#     """ Get absolute path to resource, works for dev and for PyInstaller """
-#     try:
-#         # PyInstaller creates a temp folder and stores path in _MEIPASS
-#         base_path = sys._MEIPASS
-#     except Exception:
-#         base_path = os.path.abspath(__file__)
-
-#     return os.path.join(base_path, relative_path)
-
-if not getattr(sys, 'frozen', False):
     ### Run Autocompiler
     #  Binaries are not distributed instead a make file and source are in the c-methods folder
     #  Make is invoked when this module is imported or run.
@@ -60,15 +46,13 @@ if not getattr(sys, 'frozen', False):
     # print "c-methods:",compiler_status
     del check_output
     # print "c-methods: compiling done."
+    dll_path = basedir + os.path.sep + 'methods.so'
 
+    ### C-Types binary loading
+    if not os.path.isfile(dll_path):
+        raise Exception("c-methods Error could not compile binary.")
 
-### C-Types binary loading
-dll_name = "methods.so"
-dllabspath = basedir + os.path.sep + dll_name
-if not os.path.isfile(dllabspath):
-    raise Exception("c-methods Error could not find binary.")
-
-__methods_dll = CDLL(dllabspath)
+__methods_dll = CDLL(dll_path)
 
 
 ### C-Types Argtypes and Restype

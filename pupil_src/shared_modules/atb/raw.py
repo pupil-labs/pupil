@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD License. The full license is in
 # the file COPYING, distributed as part of this software.
 #-----------------------------------------------------------------------------
+import sys
 import ctypes, ctypes.util
 from ctypes import c_int, c_char_p, c_void_p, py_object, c_char
 from constants import *
@@ -18,7 +19,14 @@ del platform
 if os_name == "Linux":
     import OpenGL.GL
 
-name = ctypes.util.find_library('AntTweakBar')
+
+if getattr(sys, 'frozen', False):
+    # we are running in a |PyInstaller| bundle using the local version
+    name = 'libAntTweakBar.so'
+else:
+    # we are running in a normal Python environment
+    name = ctypes.util.find_library('AntTweakBar')
+
 if not name:
     raise RuntimeError, 'AntTweakBar library not found'
 __dll__ = ctypes.CDLL(name)
