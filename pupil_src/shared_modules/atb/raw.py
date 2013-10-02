@@ -22,7 +22,12 @@ if os_name == "Linux":
 
 if getattr(sys, 'frozen', False):
     # we are running in a |PyInstaller| bundle using the local version
-    name = 'libAntTweakBar.so'
+    if os_name == "Linux":
+        name = 'libAntTweakBar.so'
+    elif os_name == 'Darwin':
+        name = 'libAntTweakBar.dylib'
+    else:
+        name = 'libAntTweakBar.dll'
 else:
     # we are running in a normal Python environment
     name = ctypes.util.find_library('AntTweakBar')

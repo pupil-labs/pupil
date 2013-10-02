@@ -44,7 +44,12 @@ del platform
 
 if getattr(sys, 'frozen', False):
     # we are running in a |PyInstaller| bundle using the local version
-    filename = 'libglfw.so'
+    if os_name == "Linux":
+        filename = 'libglfw.so'
+    elif os_name == "Darwin":
+        filename = 'libglfw3.dylib'
+    else:
+        filename = 'libglfw.dll'
 else:
     # we are running in a normal Python environment
     if os_name == "Linux":
