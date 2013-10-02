@@ -22,6 +22,4 @@ user_settings
 .sublime-project
 .flooignore
 
-# pyinstaller #
-dist/
-build/
+
