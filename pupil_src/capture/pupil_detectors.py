@@ -51,7 +51,7 @@ class Pupil_Detector(object):
         candidate_pupil_ellipse['timestamp'] = frame.timestamp
         result = candidate_pupil_ellipse #pretentind we found something
         if result:
-            return candidate_pupil_ellipse #return dict with at
+            return candidate_pupil_ellipse
 
         else:
             self.goodness.value = 100

@@ -53,6 +53,7 @@ def main():
 	g_pool.pupil_queue = Queue()
 	g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
 	g_pool.quit = RawValue(c_bool,0)
+
 	g_pool.eye_src = eye_src
 	g_pool.eye_size = eye_size
 	g_pool.world_src = world_src

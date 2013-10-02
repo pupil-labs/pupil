@@ -26,18 +26,22 @@ class Pupil_Server(Plugin):
         self._bar.add_var("server address",self.address, getter=lambda:self.address, setter=self.set_server)
         self._bar.add_button("close", self.close, key="x", help="close calibration results visualization")
 
-    def set_server(self,address):
+    def set_server(self,new_address):
         try:
-            self.socket.bind(address.value)
-            self.address.value = address.value
+            self.socket.bind(new_address.value)
+            self.address.value = new_address.value
         except zmq.ZMQError:
             print "Could not set Socket."
 
     def update(self,img,recent_pupil_positions):
         for p in recent_pupil_positions:
             msg = "Pupil"
-            for key,value in p.iteritems():
-                msg += key+":"+str(value)
+            msg +=" pupil_pos:"+str(p["norm_pupil"])
+            msg +=" gaze_pos:"+str(p["norm_gaze"])
+            msg +=" timestamp"+str(p["timestamp"])
+            # or send everything
+            # for key,value in p.iteritems():
+            #     msg +=" "+key+":"+str(value)
             self.socket.send( msg )
 
     def close(self):
@@ -48,5 +52,5 @@ class Pupil_Server(Plugin):
            either volunatily or forced.
         """
         self._bar.destroy()
-        del self.context
+        self.context.destroy()
 

@@ -142,42 +142,49 @@ def world(g_pool):
         data.value=selection
 
     def toggle_record_video():
-        if any([True for p in g.plugins if isinstance(p,recorder.Recorder)]):
-            for p in g.plugins:
-                if isinstance(p,recorder.Recorder):
-                    p.alive = False
-        else:
-            # set up folder within recordings named by user input in atb
-            if not bar.rec_name.value:
-                bar.rec_name.value = recorder.get_auto_name()
-            recorder_instance = recorder.Recorder(bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx)
-            g.plugins.append(recorder_instance)
+        for p in g.plugins:
+            if isinstance(p,recorder.Recorder):
+                p.alive = False
+                return
+        # set up folder within recordings named by user input in atb
+        if not bar.rec_name.value:
+            bar.rec_name.value = recorder.get_auto_name()
+
+        new_plugin = recorder.Recorder(bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx)
+        g.plugins.append(new_plugin)
 
     def toggle_show_calib_result():
-        if any([True for p in g.plugins if isinstance(p,Show_Calibration)]):
-            for p in g.plugins:
-                if isinstance(p,Show_Calibration):
-                    p.alive = False
-        else:
-            calib = Show_Calibration(frame.img.shape)
-            g.plugins.append(calib)
+        for p in g.plugins:
+            if isinstance(p,Show_Calibration):
+                p.alive = False
+                return
+
+        new_plugin = Show_Calibration(frame.img.shape)
+        g.plugins.append(new_plugin)
 
     def show_calib_result():
-        # kill old if any
-        if any([True for p in g.plugins if isinstance(p,Show_Calibration)]):
-            for p in g.plugins:
-                if isinstance(p,Show_Calibration):
-                    p.alive = False
-            g.plugins = [p for p in g.plugins if p.alive]
-        # make new
+        # first kill old if any
+        for p in g.plugins:
+            if isinstance(p,Show_Calibration):
+                p.alive = False
+        g.plugins = [p for p in g.plugins if p.alive]
+        # then make new
         calib = Show_Calibration(frame.img.shape)
         g.plugins.append(calib)
 
     def hide_calib_result():
-        if any([True for p in g.plugins if isinstance(p,Show_Calibration)]):
-            for p in g.plugins:
-                if isinstance(p,Show_Calibration):
-                    p.alive = False
+        for p in g.plugins:
+            if isinstance(p,Show_Calibration):
+                p.alive = False
+
+    def toggle_server():
+        for p in g.plugins:
+            if isinstance(p,Pupil_Server):
+                p.alive = False
+                return
+
+        new_plugin = Pupil_Server(g_pool,(10,400))
+        g.plugins.append(new_plugin)
 
     # Initialize ant tweak bar
     atb.init()
@@ -203,6 +210,7 @@ def world(g_pool):
     bar.add_var("session name",bar.rec_name, group="Recording", help="creates folder Data_Name_XXX, where xxx is an increasing number")
     bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
     bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
+    bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
     bar.add_separator("Sep1")
     bar.add_var("exit", g_pool.quit)
 
@@ -245,7 +253,7 @@ def world(g_pool):
 
     #load gaze_display plugin
     g.plugins.append(Display_Gaze(g_pool,None))
-    g.plugins.append(Pupil_Server(g_pool,(10,400)))
+    # g.plugins.append(Pupil_Server(g_pool,(10,400)))
 
     # load last calibration data
     try:
@@ -269,7 +277,6 @@ def world(g_pool):
         # Get an image from the grabber
         frame = cap.get_frame()
         update_fps()
-
 
         #receive and map pupil positions
         recent_pupil_positions = []
@@ -323,5 +330,3 @@ def world_profiled(g_pool):
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
     print "created cpu time graph for world process. Please check out the png next to the world.py file"
-
-

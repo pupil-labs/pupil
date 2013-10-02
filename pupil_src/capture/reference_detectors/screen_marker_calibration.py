@@ -364,7 +364,3 @@ class Screen_Marker_Calibration(Plugin):
         if self.active:
             self.stop()
 
-
-
-
-

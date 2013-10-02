@@ -42,9 +42,9 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35, verbose=Fa
         if verbose:
             print 'first iteration. root-mean-square residuals:', err_rms,"in pixel, this is bad!"
             print 'Warning, the data cannot be represented by the model in a meaningfull way.'
-            if return_inlier_map:
-                return map_fn,err_dist<=threshold
-            return map_fn
+        if return_inlier_map:
+            return map_fn,err_dist<=threshold
+        return map_fn
 
 
 
@@ -136,8 +136,9 @@ def make_map_function(cx,cy,n):
 
 
 def preprocess_data(pupil_pts,ref_pts):
-    ###small utility function to deal with timestamped but uncorrelated data
-    # input must be lists that contail dicts with atleast "timestamp" and "norm_pos"
+    '''small utility function to deal with timestamped but uncorrelated data
+    input must be lists that contain dicts with at least "timestamp" and "norm_pos"
+    '''
     cal_data = []
 
     if len(ref_pts)<=2:
