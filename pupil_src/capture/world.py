@@ -88,10 +88,7 @@ def world(g_pool):
     # load session persistent settings
     session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_world'),protocol=2)
     def load(var_name,default):
-        try:
-            return session_settings[var_name]
-        except:
-            return default
+        return session_settings.get(var_name,default)
     def save(var_name,var):
         session_settings[var_name] = var
 
