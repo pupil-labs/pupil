@@ -213,7 +213,7 @@ def world(g_pool):
     bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
     bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
     bar.add_separator("Sep1")
-    bar.add_var("version",bar.version)
+    bar.add_var("version",bar.version, readonly=True)
     bar.add_var("exit", g_pool.quit)
 
     # add uvc camera controls to a seperate ATB bar
