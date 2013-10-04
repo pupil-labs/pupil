@@ -7,72 +7,95 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
-# make shared modules available across pupil_src
 import sys, os
-loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
-sys.path.append(os.path.join(loc[0], 'pupil_src', 'shared_modules'))
-
 from time import sleep
 from ctypes import c_bool, c_int
 from multiprocessing import Process, Pipe, Event,Queue
 from multiprocessing.sharedctypes import RawValue, Value, Array
 
-#if you pass any additional argument when calling this script. The profiler will be used.
-if len(sys.argv) >=2:
-	from eye import eye_profiled as eye
-	from world import world_profiled as world
+
+if getattr(sys, 'frozen', False):
+    # We are running in a |PyInstaller| bundle.
+    user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"settings")
+    version = "v0.3.0"
 else:
-	from eye import eye
-	from world import world
+    # We are running in a normal Python environment.
+    # first: Make shared modules available across pupil_src
+    pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
+    sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
+
+    user_dir = os.path.join(pupil_base_dir,'settings')
 
 from methods import Temp
+from git_version import get_tag_commit
+
+
+#if you pass any additional argument when calling this script. The profiler will be used.
+if len(sys.argv) >=2:
+    from eye import eye_profiled as eye
+    from world import world_profiled as world
+else:
+    from eye import eye
+    from world import world
+
 
 
 def main():
+    #get the current software version
+    if getattr(sys, 'frozen', False):
+        with open(os.path.join(sys._MEIPASS,'_version_string_')) as f:
+            version = f.read()
+    else:
+        version = get_tag_commit()
 
-	# To assign by name: put string(s) in list
-	eye_src = ["Microsoft", "6000"]
-	world_src = ["Logitech Camera","B525", "C525","C615","C920","C930e"]
+    # create folder for user settings and tmp data
+    if not os.path.isdir(user_dir):
+        os.mkdir(user_dir)
 
-	# to assign cameras directly, using integers as demonstrated below
-	# eye_src = 1
-	# world_src = 0
 
-	# to use a pre-recorded video.
-	# Use a string to specify the path to your video file as demonstrated below
-	# eye_src = "/Users/mkassner/Downloads/eye.avi"
-	# world_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
+    # To assign by name: put string(s) in list
+    eye_src = ["Microsoft", "6000"]
+    world_src = ["Logitech Camera","B525", "C525","C615","C920","C930e"]
 
-	# Camera video size in pixels (width,height)
-	eye_size = (640,360)
-	world_size = (1280,720)
+    # to assign cameras directly, using integers as demonstrated below
+    # eye_src = 1
+    # world_src = 0
 
-	# Create and initialize IPC
-	g_pool = Temp()
-	g_pool.pupil_queue = Queue()
-	g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
-	g_pool.quit = RawValue(c_bool,0)
+    # to use a pre-recorded video.
+    # Use a string to specify the path to your video file as demonstrated below
+    # eye_src = "/Users/mkassner/Downloads/eye.avi"
+    # world_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
 
-	g_pool.eye_src = eye_src
-	g_pool.eye_size = eye_size
-	g_pool.world_src = world_src
-	g_pool.world_size = world_size
-	# set up subprocesses
-	p_eye = Process(target=eye, args=(g_pool,))
-	# spawn subprocesses
-	p_eye.start()
+    # Camera video size in pixels (width,height)
+    eye_size = (320,240)
+    world_size = (1280,720)
 
-	# On Linux, we need to give the camera driver some time before requesting another camera.
-	sleep(1)
+    # Create and initialize IPC
+    g_pool = Temp()
+    g_pool.pupil_queue = Queue()
+    g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
+    g_pool.quit = RawValue(c_bool,0)
+    # make constants avaiable
+    g_pool.eye_src = eye_src
+    g_pool.eye_size = eye_size
+    g_pool.world_src = world_src
+    g_pool.world_size = world_size
+    g_pool.user_dir = user_dir
+    g_pool.version = version
+    # set up subprocesses
+    p_eye = Process(target=eye, args=(g_pool,))
 
-	# on MacOS, when using some cameras (like our current logitech worldcamera)
-	# you can't run the world camera grabber in its own process
-	# it must reside in the main process when you run on MacOS.
-	world(g_pool)
+    # spawn subprocesse
+    p_eye.start()
+    # On Linux, we need to give the camera driver some time before requesting another camera.
+    sleep(1)
+    # on MacOS, when using some cameras (like our current logitech worldcamera)
+    # you can't run the world camera grabber in its own process
+    # it must reside in the main process when you run on MacOS.
+    world(g_pool)
 
-	# Exit / clean-up
-	p_eye.join()
+    # Exit / clean-up
+    p_eye.join()
 
 if __name__ == '__main__':
-	main()
+    main()

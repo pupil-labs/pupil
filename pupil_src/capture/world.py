@@ -86,7 +86,7 @@ def world(g_pool):
 
 
     # load session persistent settings
-    session_settings = shelve.open('user_settings_world',protocol=2)
+    session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_world'),protocol=2)
     def load(var_name,default):
         try:
             return session_settings[var_name]
@@ -150,7 +150,7 @@ def world(g_pool):
         if not bar.rec_name.value:
             bar.rec_name.value = recorder.get_auto_name()
 
-        new_plugin = recorder.Recorder(bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx)
+        new_plugin = recorder.Recorder(g_pool,bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx)
         g.plugins.append(new_plugin)
 
     def toggle_show_calib_result():
@@ -159,7 +159,7 @@ def world(g_pool):
                 p.alive = False
                 return
 
-        new_plugin = Show_Calibration(frame.img.shape)
+        new_plugin = Show_Calibration(g_pool,frame.img.shape)
         g.plugins.append(new_plugin)
 
     def show_calib_result():
@@ -169,7 +169,7 @@ def world(g_pool):
                 p.alive = False
         g.plugins = [p for p in g.plugins if p.alive]
         # then make new
-        calib = Show_Calibration(frame.img.shape)
+        calib = Show_Calibration(g_pool,frame.img.shape)
         g.plugins.append(calib)
 
     def hide_calib_result():
@@ -201,6 +201,7 @@ def world(g_pool):
 
     calibrate_type_enum = atb.enum("Calibration Method",reference_detectors.index_by_name)
     bar.rec_name = create_string_buffer(512)
+    bar.version = create_string_buffer(g_pool.version,512)
     bar.rec_name.value = recorder.get_auto_name()
     # play and record can be tied together via pointers to the objects
     bar.add_var("fps", bar.fps, step=1., readonly=True)
@@ -212,6 +213,7 @@ def world(g_pool):
     bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
     bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
     bar.add_separator("Sep1")
+    bar.add_var("version",bar.version)
     bar.add_var("exit", g_pool.quit)
 
     # add uvc camera controls to a seperate ATB bar

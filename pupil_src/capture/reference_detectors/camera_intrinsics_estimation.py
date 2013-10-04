@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point
@@ -114,9 +115,9 @@ class Camera_Intrinsics_Estimation(Plugin):
         camera_matrix, dist_coefs = _calibrate_camera(np.asarray(self.img_points),
                                                     np.asarray(self.obj_points),
                                                     (self.img_shape[1], self.img_shape[0]))
-        np.save("camera_matrix.npy", camera_matrix)
-        np.save("dist_coefs.npy", dist_coefs)
-        audio.say("Camera calibrated and saved to file")
+        np.save(os.path.join(self.g_pool.user_dir,'camera_matrix.npy'), camera_matrix)
+        np.save(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"), dist_coefs)
+        audio.say("Camera calibrated. Calibration saved to user folder")
 
     def update(self,frame,recent_pupil_positions):
         if self.collect_new:

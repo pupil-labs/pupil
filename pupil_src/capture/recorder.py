@@ -5,12 +5,12 @@ import numpy as np
 from plugin import Plugin
 from time import strftime,localtime,time,gmtime
 from ctypes import create_string_buffer
-from git_version import get_tag_commit
 
 class Recorder(Plugin):
     """Capture Recorder"""
-    def __init__(self, session_str, fps, img_shape, record_eye, eye_tx):
+    def __init__(self,g_pool, session_str, fps, img_shape, record_eye, eye_tx):
         Plugin.__init__(self)
+        self.g_pool = g_pool
         self.session_str = session_str
         self.record_eye = record_eye
         self.frame_count = 0
@@ -105,15 +105,15 @@ class Recorder(Plugin):
 
 
         try:
-            cal_pt_cloud = np.load("cal_pt_cloud.npy")
+            cal_pt_cloud = np.load(os.path.join(self.g_pool.user_dir,"cal_pt_cloud.npy"))
             cal_pt_cloud_path = os.path.join(self.path, "cal_pt_cloud.npy")
             np.save(cal_pt_cloud_path, cal_pt_cloud)
         except:
             print "WARNING: No calibration data found. Please calibrate first."
 
         try:
-            camera_matrix = np.load("camera_matrix.npy")
-            dist_coefs = np.load("dist_coefs.npy")
+            camera_matrix = np.load(os.path.join(self.g_pool.user_dir,"camera_matrix.npy"))
+            dist_coefs = np.load(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"))
             cam_path = os.path.join(self.path, "camera_matrix.npy")
             dist_path = os.path.join(self.path, "dist_coefs.npy")
             np.save(cam_path, camera_matrix)
@@ -127,7 +127,7 @@ class Recorder(Plugin):
                 f.write("Duration Time: \t"+ self.get_rec_time_str()+ "\n")
                 f.write("World Camera Frames: \t"+ str(self.frame_count)+ "\n")
                 f.write("World Camera Resolution: \t"+ str(self.width)+"x"+str(self.height)+"\n")
-                f.write("Capture Software Version: \t"+ get_tag_commit()+ "\n")
+                f.write("Capture Software Version: \t"+ self.g_pool.version + "\n")
                 f.write("user:\t"+os.getlogin()+"\n")
                 try:
                     sysname, nodename, release, version, machine = os.uname()

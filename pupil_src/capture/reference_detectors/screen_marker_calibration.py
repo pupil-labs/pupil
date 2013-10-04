@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 from methods import normalize,denormalize
@@ -169,7 +170,7 @@ class Screen_Marker_Calibration(Plugin):
         cal_pt_cloud = np.array(cal_pt_cloud)
 
         self.g_pool.map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,verbose=True)
-        np.save('cal_pt_cloud.npy',cal_pt_cloud)
+        np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
 
 
