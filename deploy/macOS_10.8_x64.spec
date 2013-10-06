@@ -12,7 +12,7 @@ exe = EXE(pyz,
           name='pupil_capture',
           debug=True,
           strip=None,
-          upx=True,
+          upx=False,
           console=False )
 
 coll = COLLECT(exe,
@@ -28,4 +28,4 @@ coll = COLLECT(exe,
 
 app = BUNDLE(coll,
              name='pupil_capture.app',
-             icon=None)
+             icon='macos_icon.icns')
