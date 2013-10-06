@@ -24,6 +24,7 @@ coll = COLLECT(exe,
                [('libAntTweakBar.so', '/usr/lib/libAntTweakBar.so','BINARY')],
                [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
                [('v4l2-ctl', '/usr/bin/v4l2-ctl','BINARY')],
+               [('icon.ico', 'linux_icon.ico','DATA')],
                strip=None,
                upx=True,
                name='pupil_capture')
