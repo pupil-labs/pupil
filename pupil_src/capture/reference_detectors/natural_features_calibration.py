@@ -32,8 +32,15 @@ class Natural_Features_Calibration(Plugin):
         self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_button("Start", self.start, key='c')
-        self._bar.add_button("Stop", self.stop)
+        self._bar.add_button("start/stop", self.start_stop, key='c')
+
+
+    def start_stop(self):
+        if self.active:
+            self.stop()
+        else:
+            self.start()
+
 
     def start(self):
         audio.say("Starting Calibration")
@@ -66,7 +73,9 @@ class Natural_Features_Calibration(Plugin):
 
             if self.count:
                 gray = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
-                nextPts, status, err = cv2.calcOpticalFlowPyrLK(self.first_img,gray,self.point,winSize=(100,100))
+                # in cv2.3 nextPts is falsy required as an argument.
+                nextPts_dummy = self.point.copy()
+                nextPts,status, err = cv2.calcOpticalFlowPyrLK(self.first_img,gray,self.point,nextPts_dummy,winSize=(100,100))
                 if status[0]:
                     self.detected = True
                     self.point = nextPts
@@ -100,9 +109,6 @@ class Natural_Features_Calibration(Plugin):
         This happends either volunatily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
-        if hasattr(self,"_bar"):
-                try:
-                    self._bar.destroy()
-                    del self._bar
-                except:
-                    print "Tried to delete an already dead bar. This is a bug. Please report"
+        if self.active:
+            self.stop()
+        self._bar.destroy()

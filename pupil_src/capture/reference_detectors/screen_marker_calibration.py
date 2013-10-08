@@ -64,7 +64,7 @@ class Screen_Marker_Calibration(Plugin):
         self.world_size = None
 
         self._window = None
-
+        self.window_should_close = False
 
         self.fullscreen = c_bool(1)
         self.monitor_idx = c_int(0)
@@ -144,8 +144,10 @@ class Screen_Marker_Calibration(Plugin):
     def on_key(self,window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
             if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE or GLFW_KEY_C:
-                    self.stop()
+                if key ==  GLFW_KEY_C:
+                    self.on_stop(window)
+                if key == GLFW_KEY_ESCAPE:
+                    self.on_stop(window)
 
     def on_stop(self,window):
         self.stop()
@@ -154,9 +156,7 @@ class Screen_Marker_Calibration(Plugin):
         audio.say("Stopping Calibration")
         self.screen_marker_state = 0
         self.active = False
-
-        glfwDestroyWindow(self._window)
-        self._window = None
+        self.window_should_close = True
 
         print len(self.pupil_list), len(self.ref_list)
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
@@ -168,15 +168,20 @@ class Screen_Marker_Calibration(Plugin):
             return
 
         cal_pt_cloud = np.array(cal_pt_cloud)
-
-        self.g_pool.map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,verbose=True)
+        map_fn = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,verbose=True)
+        self.g_pool.map_pupil = map_fn
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
-
-
+    def close_window(self):
+        glfwDestroyWindow(self._window)
+        self._window = None
+        self.window_should_close = False
 
 
     def update(self,frame,recent_pupil_positions):
+        if self.window_should_close and self._window:
+            self.close_window()
+
         if self.active:
             img = frame.img
 
@@ -361,7 +366,8 @@ class Screen_Marker_Calibration(Plugin):
         """gets called when the plugin get terminated.
            either volunatily or forced.
         """
-        self._bar.destroy()
         if self.active:
             self.stop()
-
+        if self._window:
+            self.close_window()
+        self._bar.destroy()

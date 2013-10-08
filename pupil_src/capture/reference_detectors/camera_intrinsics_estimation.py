@@ -39,6 +39,7 @@ class Camera_Intrinsics_Estimation(Plugin):
 
         self.display_grid = _make_grid()
 
+        self.window_should_close = False
 
         self._window = None
         self.fullscreen = c_bool(0)
@@ -84,7 +85,7 @@ class Camera_Intrinsics_Estimation(Plugin):
 
         #Register callbacks
         glfwSetWindowSizeCallback(self._window,on_resize)
-        glfwSetWindowCloseCallback(self._window,self.close_window)
+        glfwSetWindowCloseCallback(self._window,self.on_close)
         glfwSetKeyCallback(self._window,self.on_key)
         # glfwSetCharCallback(self._window,on_char)
 
@@ -97,17 +98,22 @@ class Camera_Intrinsics_Estimation(Plugin):
         gl.glClearColor(1.,1.,1.,0.)
         glfwMakeContextCurrent(active_window)
 
-    def close_window(self,window):
-        glfwDestroyWindow(self._window)
-        self._window = None
 
     def on_key(self,window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
             if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE or GLFW_KEY_C:
-                    self.close_window(window)
+                if key == GLFW_KEY_ESCAPE:
+                    self.window_should_close = True
+                elif  key ==  GLFW_KEY_C:
+                    self.window_should_close = True
 
+    def on_close(self,window):
+        self.window_should_close = True
 
+    def close_window(self):
+        glfwDestroyWindow(self._window)
+        self._window = None
+        self.window_should_close = False
 
 
     def calculate(self):
@@ -134,6 +140,9 @@ class Camera_Intrinsics_Estimation(Plugin):
 
         if not self.count and not self.calculated:
             self.calculate()
+
+        if self.window_should_close and self._window:
+            self.close_window()
 
     def gl_display(self):
         """
@@ -198,7 +207,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         if you have an atb bar or glfw window destroy it here.
         """
         if self._window:
-            self.close_window(self._window)
+            self.close_window()
 
         if hasattr(self,"_bar"):
                 try:

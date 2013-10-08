@@ -67,7 +67,7 @@ def main():
     # world_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
 
     # Camera video size in pixels (width,height)
-    eye_size = (320,240)
+    eye_size = (640,360)
     world_size = (1280,720)
 
     # Create and initialize IPC
@@ -84,11 +84,12 @@ def main():
     g_pool.version = version
     # set up subprocesses
     p_eye = Process(target=eye, args=(g_pool,))
+    sleep(0.5)
 
     # spawn subprocesse
     p_eye.start()
     # On Linux, we need to give the camera driver some time before requesting another camera.
-    sleep(1)
+    sleep(0.5)
     # on MacOS, when using some cameras (like our current logitech worldcamera)
     # you can't run the world camera grabber in its own process
     # it must reside in the main process when you run on MacOS.

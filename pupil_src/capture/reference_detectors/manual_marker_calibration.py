@@ -46,26 +46,32 @@ class Manual_Marker_Calibration(Plugin):
         self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_button("start", self.start, key='c')
+        self._bar.add_button("start/stop", self.start_stop, key='c')
         # self._bar.add_var("show edges",self.show_edges, group="Advanced")
         # self._bar.add_var("counter", getter=self.get_count, group="Advanced")
         # self._bar.add_var("aperture", self.aperture, min=3,step=2, group="Advanced")
         # self._bar.add_var("area threshold", self.area_threshold, group="Advanced")
         # self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Advanced")
 
+    def start_stop(self):
+        if self.active:
+            self.stop()
+        else:
+            self.start()
+
     def start(self):
         audio.say("Starting Calibration")
         self.active = True
         self.ref_list = []
         self.pupil_list = []
-        self._bar.remove("start")
-        self._bar.add_button("stop", self.stop, key='c')
+
 
     def stop(self):
         audio.say("Stopping Calibration")
         self.smooth_pos = 0,0
         self.counter = 0
         self.active = False
+
 
         print len(self.pupil_list), len(self.ref_list)
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
@@ -77,8 +83,6 @@ class Manual_Marker_Calibration(Plugin):
         self.g_pool.map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,verbose=True)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
-        self._bar.remove("stop")
-        self._bar.add_button("start", self.stop, key='c')
 
 
     def get_count(self):
@@ -232,9 +236,6 @@ class Manual_Marker_Calibration(Plugin):
         This happends either volunatily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
-        if hasattr(self,"_bar"):
-                try:
-                    self._bar.destroy()
-                    del self._bar
-                except:
-                    print "Tried to delete an already dead bar. This is a bug. Please report"
+        if self.active:
+            self.stop()   
+        self._bar.destroy()
