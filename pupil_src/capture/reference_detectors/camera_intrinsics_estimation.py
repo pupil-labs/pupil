@@ -38,9 +38,10 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.img_shape = None
 
         self.display_grid = _make_grid()
+        
 
+        self.window_should_open = False
         self.window_should_close = False
-
         self._window = None
         self.fullscreen = c_bool(0)
         self.monitor_idx = c_int(0)
@@ -56,9 +57,13 @@ class Camera_Intrinsics_Estimation(Plugin):
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
         self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
         self._bar.add_var("fullscreen", self.fullscreen)
-        self._bar.add_button("  show pattern   ", self.open_window, key='c')
+        self._bar.add_button("  show pattern   ", self.do_open, key='c')
         self._bar.add_button("  Capture Pattern", self.advance, key="SPACE")
         self._bar.add_var("patterns to capture", getter=self.get_count)
+
+    def do_open(self):
+        if not self._window: 
+            self.window_should_open = True
 
     def get_count(self):
         return self.count
@@ -69,34 +74,36 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.collect_new = True
 
     def open_window(self):
-        if self.fullscreen.value:
-            monitor = self.monitor_handles[self.monitor_idx.value]
-            mode = glfwGetVideoMode(monitor)
-            height,width= mode[0],mode[1]
-        else:
-            monitor = None
-            height,width= 640,360
+        if not self._window: 
+            if self.fullscreen.value:
+                monitor = self.monitor_handles[self.monitor_idx.value]
+                mode = glfwGetVideoMode(monitor)
+                height,width= mode[0],mode[1]
+            else:
+                monitor = None
+                height,width= 640,360
 
-        self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=None)
-        if not self.fullscreen.value:
-            glfwSetWindowPos(self._window,200,0)
+            self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=None)
+            if not self.fullscreen.value:
+                glfwSetWindowPos(self._window,200,0)
 
-        on_resize(self._window,height,width)
+            on_resize(self._window,height,width)
 
-        #Register callbacks
-        glfwSetWindowSizeCallback(self._window,on_resize)
-        glfwSetWindowCloseCallback(self._window,self.on_close)
-        glfwSetKeyCallback(self._window,self.on_key)
-        # glfwSetCharCallback(self._window,on_char)
+            #Register callbacks
+            glfwSetWindowSizeCallback(self._window,on_resize)
+            glfwSetKeyCallback(self._window,self.on_key)
+            # glfwSetCharCallback(self._window,on_char)
 
-        # gl_state settings
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(self._window)
-        gl.glEnable(gl.GL_POINT_SMOOTH)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-        gl.glEnable(gl.GL_BLEND)
-        gl.glClearColor(1.,1.,1.,0.)
-        glfwMakeContextCurrent(active_window)
+            # gl_state settings
+            active_window = glfwGetCurrentContext()
+            glfwMakeContextCurrent(self._window)
+            gl.glEnable(gl.GL_POINT_SMOOTH)
+            gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+            gl.glEnable(gl.GL_BLEND)
+            gl.glClearColor(1.,1.,1.,0.)
+            glfwMakeContextCurrent(active_window)
+
+            self.window_should_open = False
 
 
     def on_key(self,window, key, scancode, action, mods):
@@ -111,9 +118,10 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.window_should_close = True
 
     def close_window(self):
-        glfwDestroyWindow(self._window)
-        self._window = None
-        self.window_should_close = False
+        if self._window:
+            glfwDestroyWindow(self._window)
+            self._window = None
+            self.window_should_close = False
 
 
     def calculate(self):
@@ -141,8 +149,11 @@ class Camera_Intrinsics_Estimation(Plugin):
         if not self.count and not self.calculated:
             self.calculate()
 
-        if self.window_should_close and self._window:
+        if self.window_should_close:
             self.close_window()
+
+        if self.window_should_open:
+            self.open_window()
 
     def gl_display(self):
         """

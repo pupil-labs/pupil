@@ -65,7 +65,7 @@ class Screen_Marker_Calibration(Plugin):
 
         self._window = None
         self.window_should_close = False
-
+        self.window_should_open = False
         self.fullscreen = c_bool(1)
         self.monitor_idx = c_int(0)
         self.monitor_handles = glfwGetMonitors()
@@ -109,36 +109,39 @@ class Screen_Marker_Calibration(Plugin):
         self.active = True
         self.ref_list = []
         self.pupil_list = []
+        self.window_should_open = True
 
+    def open_window(self):
+        if not self._window:
+            if self.fullscreen.value:
+                monitor = self.monitor_handles[self.monitor_idx.value]
+                mode = glfwGetVideoMode(monitor)
+                height,width= mode[0],mode[1]
+            else:
+                monitor = None
+                height,width= 640,360
 
-        if self.fullscreen.value:
-            monitor = self.monitor_handles[self.monitor_idx.value]
-            mode = glfwGetVideoMode(monitor)
-            height,width= mode[0],mode[1]
-        else:
-            monitor = None
-            height,width= 640,360
+            self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=None)
+            if not self.fullscreen.value:
+                glfwSetWindowPos(self._window,200,0)
 
-        self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=None)
-        if not self.fullscreen.value:
-            glfwSetWindowPos(self._window,200,0)
+            on_resize(self._window,height,width)
 
-        on_resize(self._window,height,width)
+            #Register callbacks
+            glfwSetWindowSizeCallback(self._window,on_resize)
+            glfwSetWindowCloseCallback(self._window,self.on_stop)
+            glfwSetKeyCallback(self._window,self.on_key)
+            # glfwSetCharCallback(self._window,on_char)
 
-        #Register callbacks
-        glfwSetWindowSizeCallback(self._window,on_resize)
-        glfwSetWindowCloseCallback(self._window,self.on_stop)
-        glfwSetKeyCallback(self._window,self.on_key)
-        # glfwSetCharCallback(self._window,on_char)
-
-        # gl_state settings
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(self._window)
-        gl.glEnable(gl.GL_POINT_SMOOTH)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-        gl.glEnable(gl.GL_BLEND)
-        gl.glClearColor(1.,1.,1.,0.)
-        glfwMakeContextCurrent(active_window)
+            # gl_state settings
+            active_window = glfwGetCurrentContext()
+            glfwMakeContextCurrent(self._window)
+            gl.glEnable(gl.GL_POINT_SMOOTH)
+            gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+            gl.glEnable(gl.GL_BLEND)
+            gl.glClearColor(1.,1.,1.,0.)
+            glfwMakeContextCurrent(active_window)
+            self.window_should_open = False
 
 
     def on_key(self,window, key, scancode, action, mods):
@@ -173,14 +176,18 @@ class Screen_Marker_Calibration(Plugin):
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
     def close_window(self):
-        glfwDestroyWindow(self._window)
-        self._window = None
-        self.window_should_close = False
+        if self._window:
+            glfwDestroyWindow(self._window)
+            self._window = None
+            self.window_should_close = False
 
 
     def update(self,frame,recent_pupil_positions):
-        if self.window_should_close and self._window:
+        if self.window_should_close:
             self.close_window()
+
+        if self.window_should_open:
+            self.open_window()
 
         if self.active:
             img = frame.img
