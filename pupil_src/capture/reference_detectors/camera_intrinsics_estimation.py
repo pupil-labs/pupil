@@ -207,14 +207,8 @@ class Camera_Intrinsics_Estimation(Plugin):
         if you have an atb bar or glfw window destroy it here.
         """
         if self._window:
-            self.close_window()
-
-        if hasattr(self,"_bar"):
-                try:
-                    self._bar.destroy()
-                    del self._bar
-                except:
-                    print "Tried to delete an already dead bar. This is a bug. Please report"
+            self.close_window()        
+        self._bar.destroy()
 
 
 # shared helper functions for detectors private to the module
