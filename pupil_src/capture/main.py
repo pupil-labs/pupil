@@ -66,7 +66,7 @@ def main():
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
     # eye_src = "/Users/mkassner/Downloads/eye.avi"
-    world_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
+    # world_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
 
     # Camera video size in pixels (width,height)
     eye_size = (640,360)

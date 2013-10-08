@@ -10,7 +10,7 @@ exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
           name='pupil_capture',
-          debug=True,
+          debug=False,
           strip=None,
           upx=True,
           console=True)
