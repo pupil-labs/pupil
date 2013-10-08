@@ -129,7 +129,7 @@ class Screen_Marker_Calibration(Plugin):
 
             #Register callbacks
             glfwSetWindowSizeCallback(self._window,on_resize)
-            glfwSetWindowCloseCallback(self._window,self.on_stop)
+            # glfwSetWindowCloseCallback(self._window,self.on_stop)
             glfwSetKeyCallback(self._window,self.on_key)
             # glfwSetCharCallback(self._window,on_char)
 
@@ -147,8 +147,8 @@ class Screen_Marker_Calibration(Plugin):
     def on_key(self,window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
             if action == GLFW_PRESS:
-                if key ==  GLFW_KEY_C:
-                    self.on_stop(window)
+                # if key ==  GLFW_KEY_C:
+                    # self.on_stop(window)
                 if key == GLFW_KEY_ESCAPE:
                     self.on_stop(window)
 
@@ -177,8 +177,10 @@ class Screen_Marker_Calibration(Plugin):
 
     def close_window(self):
         if self._window:
+            # glfwIconifyWindow(self._window)
             glfwDestroyWindow(self._window)
             self._window = None
+            # print "iconfied"
             self.window_should_close = False
 
 

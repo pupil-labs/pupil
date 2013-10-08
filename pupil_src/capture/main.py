@@ -53,6 +53,7 @@ def main():
         os.mkdir(user_dir)
     if not os.path.isdir(rec_dir):
         os.mkdir(rec_dir)
+        
 
 
     # To assign by name: put string(s) in list

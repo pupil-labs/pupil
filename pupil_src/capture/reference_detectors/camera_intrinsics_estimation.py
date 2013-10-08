@@ -111,8 +111,6 @@ class Camera_Intrinsics_Estimation(Plugin):
             if action == GLFW_PRESS:
                 if key == GLFW_KEY_ESCAPE:
                     self.window_should_close = True
-                elif  key ==  GLFW_KEY_C:
-                    self.window_should_close = True
 
     def on_close(self,window):
         self.window_should_close = True
