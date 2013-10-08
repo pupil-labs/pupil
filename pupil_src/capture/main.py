@@ -17,13 +17,13 @@ from multiprocessing.sharedctypes import RawValue, Value, Array
 if getattr(sys, 'frozen', False):
     # We are running in a |PyInstaller| bundle.
     user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"settings")
-    version = "v0.3.0"
+    rec_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"recordings")
 else:
     # We are running in a normal Python environment.
     # first: Make shared modules available across pupil_src
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
-
+    rec_dir = os.path.join(pupil_base_dir,'recordings')
     user_dir = os.path.join(pupil_base_dir,'settings')
 
 from methods import Temp
@@ -48,9 +48,11 @@ def main():
     else:
         version = get_tag_commit()
 
-    # create folder for user settings and tmp data
+    # create folder for user settings, tmp data and a recordings folder
     if not os.path.isdir(user_dir):
         os.mkdir(user_dir)
+    if not os.path.isdir(rec_dir):
+        os.mkdir(rec_dir)
 
 
     # To assign by name: put string(s) in list
@@ -64,7 +66,7 @@ def main():
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
     # eye_src = "/Users/mkassner/Downloads/eye.avi"
-    # world_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
+    world_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
 
     # Camera video size in pixels (width,height)
     eye_size = (640,360)
@@ -81,6 +83,7 @@ def main():
     g_pool.world_src = world_src
     g_pool.world_size = world_size
     g_pool.user_dir = user_dir
+    g_pool.rec_dir = rec_dir
     g_pool.version = version
     # set up subprocesses
     p_eye = Process(target=eye, args=(g_pool,))

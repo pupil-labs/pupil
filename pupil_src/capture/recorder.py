@@ -18,24 +18,8 @@ class Recorder(Plugin):
         self.gaze_list = []
         self.eye_tx = eye_tx
         self.start_time = time()
-        # set up base folder called "recordings"
 
-
-        if getattr(sys, 'frozen', False):
-            # we are running in a |PyInstaller| bundle
-            self.base_path = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"recordings")
-        else:
-            # we are running in a normal Python environment
-            self.base_path = os.path.join(os.path.abspath(__file__).rsplit('pupil_src', 1)[0], "recordings")
-
-
-
-        try:
-            os.mkdir(self.base_path)
-        except:
-            print "recordings folder already exists, using existing."
-
-        session = os.path.join(self.base_path, self.session_str)
+        session = os.path.join(self.g_pool.rec_dir, self.session_str)
         try:
             os.mkdir(session)
         except:
@@ -44,15 +28,15 @@ class Recorder(Plugin):
         # set up self incrementing folder within session folder
         counter = 0
         while True:
-            self.path = os.path.join(self.base_path, session, "%03d/" % counter)
+            self.rec_path = os.path.join(session, "%03d/" % counter)
             try:
-                os.mkdir(self.path)
+                os.mkdir(self.rec_path)
                 break
             except:
                 print "We dont want to overwrite data, incrementing counter & trying to make new data folder"
                 counter += 1
 
-        self.meta_info_path = os.path.join(self.path, "info.csv")
+        self.meta_info_path = os.path.join(self.rec_path, "info.csv")
 
         with open(self.meta_info_path, 'w') as f:
             f.write("Pupil Recording Name:\t"+self.session_str+ "\n")
@@ -61,13 +45,13 @@ class Recorder(Plugin):
 
 
 
-        video_path = os.path.join(self.path, "world.avi")
+        video_path = os.path.join(self.rec_path, "world.avi")
         self.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), fps, (img_shape[1], img_shape[0]))
         self.height = img_shape[0]
         self.width = img_shape[1]
         # positions path to eye process
         if self.record_eye:
-            self.eye_tx.send(self.path)
+            self.eye_tx.send(self.rec_path)
 
         atb_pos = (10, 540)
         self._bar = atb.Bar(name = self.__class__.__name__, label='REC: '+session_str,
@@ -97,16 +81,16 @@ class Recorder(Plugin):
                 self.eye_tx.send(None)
             except:
                 print "WARNING: Could not stop eye-recording. Please report this bug!"
-        gaze_list_path = os.path.join(self.path, "gaze_positions.npy")
+        gaze_list_path = os.path.join(self.rec_path, "gaze_positions.npy")
         np.save(gaze_list_path,np.asarray(self.gaze_list))
 
-        timestamps_path = os.path.join(self.path, "timestamps.npy")
+        timestamps_path = os.path.join(self.rec_path, "timestamps.npy")
         np.save(timestamps_path,np.array(self.timestamps))
 
 
         try:
             cal_pt_cloud = np.load(os.path.join(self.g_pool.user_dir,"cal_pt_cloud.npy"))
-            cal_pt_cloud_path = os.path.join(self.path, "cal_pt_cloud.npy")
+            cal_pt_cloud_path = os.path.join(self.rec_path, "cal_pt_cloud.npy")
             np.save(cal_pt_cloud_path, cal_pt_cloud)
         except:
             print "WARNING: No calibration data found. Please calibrate first."
@@ -114,8 +98,8 @@ class Recorder(Plugin):
         try:
             camera_matrix = np.load(os.path.join(self.g_pool.user_dir,"camera_matrix.npy"))
             dist_coefs = np.load(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"))
-            cam_path = os.path.join(self.path, "camera_matrix.npy")
-            dist_path = os.path.join(self.path, "dist_coefs.npy")
+            cam_path = os.path.join(self.rec_path, "camera_matrix.npy")
+            dist_path = os.path.join(self.rec_path, "dist_coefs.npy")
             np.save(cam_path, camera_matrix)
             np.save(dist_path, dist_coefs)
         except:
@@ -145,7 +129,7 @@ class Recorder(Plugin):
 
     def on_stop(self):
         """
-        get called from _bar to init termination. 
+        get called from _bar to init termination.
         """
         self.alive= False
 
