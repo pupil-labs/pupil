@@ -97,7 +97,7 @@ class FileCapture():
         pass
 
 
-def autoCreateCapture(src,size=(640,480),fps=30):
+def autoCreateCapture(src,size=(640,480),fps=30,special_id = 0):
     # checking src and handling all cases:
     src_type = type(src)
 
@@ -109,12 +109,17 @@ def autoCreateCapture(src,size=(640,480),fps=30):
                 matching_devices.append(device)
 
         if len(matching_devices) >1:
-            print "Warning: found",len(matching_devices),"devices that match the src string pattern. Using the first one."
-        if len(matching_devices) ==0:
+            print "Found",len(matching_devices),"devices that match any of %s. Using the %s one." %(src,('first','second','third')[special_id])
+        elif len(matching_devices) ==0:
             print "ERROR: No device found that matched",src,
             return
+        else:
+            #found just one
+            if special_id:
+                print "ERROR: Did not find %i devices that match %s" %(special_id+1,src)
+                return
 
-        cap = Camera_Capture(matching_devices[0],size,fps)
+        cap = Camera_Capture(matching_devices[special_id],size,fps)
         print "camera selected: %s  with id: %s" %(cap.name,cap.src_id)
         return cap
 
@@ -143,7 +148,4 @@ def autoCreateCapture(src,size=(640,480),fps=30):
 
 
 if __name__ == '__main__':
-    cap = autoCreateCapture(1,(1280,720),30)
-    if cap:
-        print cap.controls
-    print "done"
+    pass

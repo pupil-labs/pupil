@@ -39,7 +39,7 @@ from display_gaze import Display_Gaze
 from pupil_server import Pupil_Server
 
 
-def world(g_pool):
+def world(g_pool,cap_src,cap_size):
     """world
     """
 
@@ -95,7 +95,7 @@ def world(g_pool):
 
 
     # Initialize capture, check if it works
-    cap = autoCreateCapture(g_pool.world_src, g_pool.world_size,24)
+    cap = autoCreateCapture(cap_src, cap_size,24)
     if cap is None:
         print "WORLD: Error could not create Capture"
         return
@@ -159,20 +159,6 @@ def world(g_pool):
         new_plugin = Show_Calibration(g_pool,frame.img.shape)
         g.plugins.append(new_plugin)
 
-    def show_calib_result():
-        # first kill old if any
-        for p in g.plugins:
-            if isinstance(p,Show_Calibration):
-                p.alive = False
-        g.plugins = [p for p in g.plugins if p.alive]
-        # then make new
-        calib = Show_Calibration(g_pool,frame.img.shape)
-        g.plugins.append(calib)
-
-    def hide_calib_result():
-        for p in g.plugins:
-            if isinstance(p,Show_Calibration):
-                p.alive = False
 
     def toggle_server():
         for p in g.plugins:

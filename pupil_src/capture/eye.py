@@ -21,9 +21,9 @@ from calibrate import get_map_from_cloud
 from pupil_detectors import Canny_Detector
 import shelve
 
-def eye(g_pool):
+def eye(g_pool,cap_src, cap_size,cap_special_id = 0, side='mono'):
     """
-    this needs a docstring
+    this needs a docstring...
     """
 
  # Callback functions World
@@ -72,8 +72,6 @@ def eye(g_pool):
 
 
 
-
-
     # Helper functions called by the main atb bar
     def start_roi():
         bar.display.value = 1
@@ -101,7 +99,7 @@ def eye(g_pool):
         session_settings[var_name] = var
 
     # Initialize capture
-    cap = autoCreateCapture(g_pool.eye_src, g_pool.eye_size)
+    cap = autoCreateCapture(cap_src,cap_size,special_id = cap_special_id)
     if cap is None:
         print "EYE: Error could not create Capture"
         return
@@ -224,7 +222,7 @@ def eye(g_pool):
 
         # fine pupil ellipse detection
         result = pupil_detector.detect(frame,u_roi=u_r,p_roi=p_r,visualize=bar.display.value == 2)
-
+        result['side']=side
         g_pool.pupil_queue.put(result)
         # Work with detected ellipses
 
@@ -285,17 +283,14 @@ def eye(g_pool):
     save('bar.record_eye',bar.record_eye.value)
     session_settings.close()
 
-    #flushing queue incase world process did not exit gracefully
-    while not g_pool.pupil_queue.empty():
-        g_pool.pupil_queue.get()
 
-    g_pool.pupil_queue.close()
+
     cap.close()
     atb.terminate()
     glfwDestroyWindow(window)
     glfwTerminate()
 
-    print "EYE Process closed"
+    print "%s EYE Process closed" %side
 
 def eye_profiled(g_pool):
     import cProfile,subprocess,os
