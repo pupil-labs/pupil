@@ -53,7 +53,7 @@ def main():
         os.mkdir(user_dir)
     if not os.path.isdir(rec_dir):
         os.mkdir(rec_dir)
-        
+
 
 
     # To assign by name: put string(s) in list
@@ -101,6 +101,11 @@ def main():
 
     # Exit / clean-up
     p_eye.join()
+
+    #flushing queue incase world process did not exit gracefully
+    while not g_pool.pupil_queue.empty():
+        g_pool.pupil_queue.get()
+    g_pool.pupil_queue.close()
 
 if __name__ == '__main__':
     main()
