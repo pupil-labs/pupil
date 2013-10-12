@@ -133,7 +133,6 @@ def eye(g_pool,cap_src,cap_size):
     bar.display = c_int(load('bar.display',0))
     bar.draw_pupil = c_bool(load('bar.draw_pupil',True))
     bar.draw_roi = c_int(0)
-    bar.record_eye = c_bool(load('bar.record_eye',0))
 
     dispay_mode_enum = atb.enum("Mode",{"Camera Image":0,
                                         "Region of Interest":1,
@@ -145,7 +144,6 @@ def eye(g_pool,cap_src,cap_size):
     bar.add_var("Show_Pupil_Point", bar.draw_pupil)
     bar.add_button("Draw_ROI", start_roi, help="drag on screen to select a region of interest")
 
-    bar.add_var("record_eye_video", bar.record_eye, help="when recording also save the eye video stream")
     bar.add_var("SlowDown",bar.sleep, step=0.01,min=0.0)
     bar.add_var("SaveSettings&Exit", g_pool.quit)
 
@@ -282,7 +280,6 @@ def eye(g_pool,cap_src,cap_size):
     save('roi',u_r.get())
     save('bar.display',bar.display.value)
     save('bar.draw_pupil',bar.draw_pupil.value)
-    save('bar.record_eye',bar.record_eye.value)
     session_settings.close()
 
 
@@ -290,6 +287,11 @@ def eye(g_pool,cap_src,cap_size):
     atb.terminate()
     glfwDestroyWindow(window)
     glfwTerminate()
+
+    #flushing queue incase world process did not exit gracefully
+    while not g_pool.pupil_queue.empty():
+        g_pool.pupil_queue.get()
+    g_pool.pupil_queue.close()
 
     print "EYE Process closed"
 

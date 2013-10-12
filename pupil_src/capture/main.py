@@ -66,8 +66,8 @@ def main():
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    # eye_src = "/Users/mkassner/Downloads/eye.avi"
-    # world_src = "/Users/mkassner/Pupil/pupil_google_code/wiki/videos/eye_simple_filter.avi"
+    # eye_src = "/Users/mkassner/Downloads/wetransfer-fe724a/eye.avi"
+    # world_src = "/Users/mkassner/Downloads/wetransfer-fe724a/world.avi"
 
     # Camera video size in pixels (width,height)
     eye_size = (640,360)
@@ -94,10 +94,6 @@ def main():
 
     # Exit / clean-up
     p_eye.join()
-    #flushing queue incase world process did not exit gracefully
-    while not g_pool.pupil_queue.empty():
-        g_pool.pupil_queue.get()
-    g_pool.pupil_queue.close()
 
 if __name__ == '__main__':
     main()
