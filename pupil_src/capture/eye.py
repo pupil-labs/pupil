@@ -21,7 +21,7 @@ from calibrate import get_map_from_cloud
 from pupil_detectors import Canny_Detector
 import shelve
 
-def eye(g_pool):
+def eye(g_pool,cap_src,cap_size):
     """
     this needs a docstring
     """
@@ -101,7 +101,7 @@ def eye(g_pool):
         session_settings[var_name] = var
 
     # Initialize capture
-    cap = autoCreateCapture(g_pool.eye_src, g_pool.eye_size)
+    cap = autoCreateCapture(cap_src, cap_size)
     if cap is None:
         print "EYE: Error could not create Capture"
         return
@@ -293,10 +293,10 @@ def eye(g_pool):
 
     print "EYE Process closed"
 
-def eye_profiled(g_pool):
+def eye_profiled(g_pool,cap_src,cap_size):
     import cProfile,subprocess,os
     from eye import eye
-    cProfile.runctx("eye(g_pool,)",{"g_pool":g_pool},locals(),"eye.pstats")
+    cProfile.runctx("eye(g_pool,)",{"g_pool":g_pool,'cap_src':cap_src,'cap_size':cap_size},locals(),"eye.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye.pstats | dot -Tpng -o eye_cpu_time.png", shell=True)

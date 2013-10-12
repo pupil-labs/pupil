@@ -15,14 +15,14 @@ from multiprocessing.sharedctypes import RawValue, Value, Array
 
 
 if getattr(sys, 'frozen', False):
-    # We are running in a |PyInstaller| bundle.
     user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"settings")
     rec_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"recordings")
 else:
     # We are running in a normal Python environment.
-    # first: Make shared modules available across pupil_src
+    # Make all pupil shared_modules available to this Python session.
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
+	# Specifiy user dirs.
     rec_dir = os.path.join(pupil_base_dir,'recordings')
     user_dir = os.path.join(pupil_base_dir,'settings')
 
@@ -78,17 +78,12 @@ def main():
     g_pool.pupil_queue = Queue()
     g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
     g_pool.quit = RawValue(c_bool,0)
-    # make constants avaiable
-    g_pool.eye_src = eye_src
-    g_pool.eye_size = eye_size
-    g_pool.world_src = world_src
-    g_pool.world_size = world_size
+    # make some constants avaiable
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
     g_pool.version = version
     # set up subprocesses
-    p_eye = Process(target=eye, args=(g_pool,))
-    sleep(0.5)
+    p_eye = Process(target=eye, args=(g_pool,eye_src,eye_size))
 
     # spawn subprocesse
     p_eye.start()
@@ -97,7 +92,7 @@ def main():
     # on MacOS, when using some cameras (like our current logitech worldcamera)
     # you can't run the world camera grabber in its own process
     # it must reside in the main process when you run on MacOS.
-    world(g_pool)
+    world(g_pool,world_src,world_size)
 
     # Exit / clean-up
     p_eye.join()
@@ -105,6 +100,7 @@ def main():
     #flushing queue incase world process did not exit gracefully
     while not g_pool.pupil_queue.empty():
         g_pool.pupil_queue.get()
+
     g_pool.pupil_queue.close()
 
 if __name__ == '__main__':
