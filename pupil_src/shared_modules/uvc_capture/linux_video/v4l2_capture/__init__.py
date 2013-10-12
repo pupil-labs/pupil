@@ -123,7 +123,7 @@ def enum_rates_dict(device,format,size):
             stepval = 1
         else:
             stepval = float(interval.stepwise.step.numerator)/interval.stepwise.step.denominator
-        rates = range(minval,maxval,stepval)    
+        rates = range(minval,maxval,stepval)
     return rates
 
 def enum_rates(device,format,size):
@@ -144,7 +144,7 @@ def enum_rates(device,format,size):
             stepval = 1
         else:
             stepval = float(interval.stepwise.step.numerator)/interval.stepwise.step.denominator
-        rates = range(minval,maxval,stepval)    
+        rates = range(minval,maxval,stepval)
     return rates
 
 def fourcc_string(i):
@@ -159,7 +159,7 @@ class Frame(object):
     """docstring for Frame"""
     def __init__(self, timestamp,img,compressed_img=None, compressed_pix_fmt=None):
         self.timestamp = timestamp
-        self.img = img 
+        self.img = img
         self.compressed_img = compressed_img
         self.compressed_pix_fmt = compressed_pix_fmt
 
@@ -174,7 +174,7 @@ class VideoCapture(object):
         self.initialized = False
         self.streaming = False
         self.device = -1
-        
+
         self._open()
         self._verify()
 
@@ -186,18 +186,22 @@ class VideoCapture(object):
         self.v4l2_format.fmt.pix.pixelformat = V4L2_PIX_FMT_BGR24
         self.v4l2_format.fmt.pix.field       = V4L2_FIELD_ANY
         if (-1 == dll.xioctl(self.device, VIDIOC_S_FMT, byref(self.v4l2_format))):
+            self._close()
             raise Exception("Could not set v4l2 format")
         if (-1 == dll.xioctl(self.device, VIDIOC_G_FMT, byref(self.v4l2_format))):
+            self._close()
             raise Exception("Could not get v4l2 format")
         print "Size on %s: %ix%i" %(self.src_str,self.v4l2_format.fmt.pix.width,self.v4l2_format.fmt.pix.height)
-        
+
         self.v4l2_streamparm = v4l2_streamparm()
         self.v4l2_streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE
         self.v4l2_streamparm.parm.capture.timeperframe.numerator = 1
         self.v4l2_streamparm.parm.capture.timeperframe.denominator = fps
         if (-1 == dll.xioctl(self.device, VIDIOC_S_PARM, byref(self.v4l2_streamparm))):
+            self._close()
             raise Exception("Could not set v4l2 parameters")
         if (-1 == dll.xioctl(self.device, VIDIOC_G_PARM, byref(self.v4l2_streamparm))):
+            self._close()
             raise Exception("Could not get v4l2 parameters")
         print "Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
                                                       self.v4l2_streamparm.parm.capture.timeperframe.denominator)
@@ -207,15 +211,15 @@ class VideoCapture(object):
         self.sizes = enum_sizes(self.device,v4l2_fourcc(*'MJPG'))
         self.rates = enum_rates(self.device,v4l2_fourcc(*'MJPG'),size)
         self.sizes_menu = dict(zip([str(w)+"x"+str(h) for w,h in self.sizes], range(len(self.sizes))))
-        self.current_size_idx = self.sizes.index(size)        
-        
+        self.current_size_idx = self.sizes.index(size)
+
         #structure for atb menue
         self.rates = enum_rates(self.device,v4l2_fourcc(*'MJPG'),size)
         self.rates_menu = dict(zip([str(float(d)/n) for n,d in self.rates], range(len(self.rates))))
         fps = self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
               self.v4l2_streamparm.parm.capture.timeperframe.denominator
         self.current_rate_idx = self.rates.index(fps)
-        
+
 
         self._init()
         self._start()
@@ -240,8 +244,10 @@ class VideoCapture(object):
         self.v4l2_streamparm.parm.capture.timeperframe.numerator = new_rate[0]
         self.v4l2_streamparm.parm.capture.timeperframe.denominator =  new_rate[1]
         if (-1 == dll.xioctl(self.device, VIDIOC_S_PARM, byref(self.v4l2_streamparm))):
+            self._close()
             raise Exception("Could not set v4l2 parameters")
         if (-1 == dll.xioctl(self.device, VIDIOC_G_PARM, byref(self.v4l2_streamparm))):
+            self._close()
             raise Exception("Could not get v4l2 parameters")
         print "Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator, \
                                                       self.v4l2_streamparm.parm.capture.timeperframe.denominator)
@@ -250,7 +256,7 @@ class VideoCapture(object):
         fps = self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
               self.v4l2_streamparm.parm.capture.timeperframe.denominator
         self.current_rate_idx = self.rates.index(fps)
-        
+
         self._init()
         self._start()
 
@@ -279,17 +285,21 @@ class VideoCapture(object):
             dll.start_capturing(self.device)
             self.streaming = True
         else:
+            self._close()
             raise Exception("Capture Error: device is not initialized %s" %self.src_str)
 
 
     def read(self,retry=3):
         if not retry:
+            self._stop()
+            self._uninit()
+            self._close()
             raise Exception("Capture Error: Could not communicate with camera at: %s\
             Attach each camera to a single USB Controller, this may solve the problem."%self.src_str)
-       
+
         if self._active_buffer:
             dll.release_buffer(self.device,byref(self._active_buffer))
-        
+
         buf  = v4l2_buffer()
         buf_ptr =  dll.get_buffer(self.device,byref(buf))
 
@@ -313,14 +323,14 @@ class VideoCapture(object):
         else:
             print "Failed to retrieve frame from "+ self.src_str+", Retrying"
             self._active_buffer = None
-            return self.read(retry-1) 
-    
+            return self.read(retry-1)
+
     def _stop(self):
         if self.streaming:
             if self._active_buffer:
                 dll.release_buffer(self.device,byref(self._active_buffer))
                 self._active_buffer = None
-            
+
             dll.stop_capturing(self.device)
             self.streaming = False
 
