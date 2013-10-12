@@ -85,22 +85,18 @@ def main():
     # set up subprocesses
     p_eye = Process(target=eye, args=(g_pool,eye_src,eye_size))
 
-    # spawn subprocesse
+    # spawn subprocess
     p_eye.start()
     # On Linux, we need to give the camera driver some time before requesting another camera.
     sleep(0.5)
-    # on MacOS, when using some cameras (like our current logitech worldcamera)
-    # you can't run the world camera grabber in its own process
-    # it must reside in the main process when you run on MacOS.
+    # On MacOS cameras using MJPG compression (world camera) need to run in the main process.
     world(g_pool,world_src,world_size)
 
     # Exit / clean-up
     p_eye.join()
-
     #flushing queue incase world process did not exit gracefully
     while not g_pool.pupil_queue.empty():
         g_pool.pupil_queue.get()
-
     g_pool.pupil_queue.close()
 
 if __name__ == '__main__':
