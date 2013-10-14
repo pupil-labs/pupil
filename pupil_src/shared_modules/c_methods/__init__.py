@@ -52,6 +52,7 @@ else:
     if not os.path.isfile(dll_path):
         raise Exception("c-methods Error could not compile binary.")
 
+
 __methods_dll = CDLL(dll_path)
 
 

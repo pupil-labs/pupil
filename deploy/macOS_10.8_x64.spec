@@ -1,6 +1,6 @@
 # -*- mode: python -*-
 
-a = Analysis(['../pupil_src/capture/main.py'],
+a = Analysis(['../pupil_src/capture/build_test.py'],
              pathex=['../pupil_src/shared_modules/'],
              hiddenimports=[],
              hookspath=None,
@@ -13,7 +13,7 @@ exe = EXE(pyz,
           debug=True,
           strip=None,
           upx=False,
-          console=False )
+          console=True )
 
 coll = COLLECT(exe,
                a.binaries,

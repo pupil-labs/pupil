@@ -12,13 +12,6 @@ def main(target_dir):
 		f.write(version)
 		print 'Wrote version into: %s' %os.path.join(target_dir,'_version_string_')
 
-	try:
-		with open(os.path.join(target_dir+'.app','_version_string_'),'w') as f:
-			f.write(version)
-			print 'Wrote version into: %s '%os.path.join(target_dir+'.app','_version_string_')
-	except:
-		print"You are not bundling a macos app,did not write into the .app bundle"
-
 def get_version():
 	modules_path = os.path.join(os.path.abspath(__file__).rsplit(os.path.sep,2)[0],'pupil_src','shared_modules')
 	sys.path.append(modules_path)

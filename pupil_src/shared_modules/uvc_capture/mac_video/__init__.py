@@ -237,14 +237,14 @@ class Camera_List(list):
     """docstring for uvcc_control"""
 
     def __init__(self):
-        import QTKit #need to be imported locally
+        from QTKit import QTCaptureDevice,QTMediaTypeVideo #need to be imported locally
         # QTCaptureDevice inputDevicesWithMediaType:QTMediaTypeVideo
-        qt_cameras =  QTKit.QTCaptureDevice.inputDevicesWithMediaType_(QTKit.QTMediaTypeVideo)
+        qt_cameras =  QTCaptureDevice.inputDevicesWithMediaType_(QTMediaTypeVideo)
         for src_id,q in enumerate(qt_cameras):
             uId =  q.uniqueID()
             name = q.localizedDisplayName().encode('utf-8')
             self.append(Cam(name,uId,src_id))
-
+        del QTCaptureDevice,QTMediaTypeVideo
 
 if __name__ == '__main__':
     # import cv2

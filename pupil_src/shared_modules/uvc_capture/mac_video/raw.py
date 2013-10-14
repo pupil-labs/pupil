@@ -11,20 +11,29 @@
 
 from ctypes import *
 from cf_string import CFSTR, cfstring_to_string_release
-import os
-### Get location of  this file
-source_loc = os.path.dirname(os.path.abspath(__file__))
-del os
-### Run Autocompiler
-#  Binaries are not distributed instead a make file and source are in this folder
-#  Make is invoked when this module is imported or run.
+import os,sys
 
-from subprocess import check_output
-# print " compiling now."
-compiler_status = check_output(["make"],cwd=source_loc)
-# print compiler_status
-del check_output
-# print "c-methods: compiling done."
+
+
+
+
+if getattr(sys, 'frozen', False):
+    # we are running in a |PyInstaller| bundle
+    dll_path = 'uvcc.so'
+else:
+    ### Get location of  this file
+    source_loc = os.path.dirname(os.path.abspath(__file__))
+    ### Run Autocompiler
+    #  Binaries are not distributed instead a make file and source are in this folder
+    #  Make is invoked when this module is imported or run.
+
+    from subprocess import check_output
+    # print " compiling now."
+    compiler_status = check_output(["make"],cwd=source_loc)
+    # print compiler_status
+    del check_output
+    # print "c-methods: compiling done."
+    dll_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uvcc.so')
 
 
 ### defines and constants
@@ -97,10 +106,8 @@ control_dict = dict(zip(uvcc_controls,range(len(uvcc_controls))))
 
 
 ### import CDLL
-import os.path
-dll_name = "uvcc.so"
-dllabspath = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + dll_name
-__uvcc_dll = CDLL(dllabspath)
+
+__uvcc_dll = CDLL(dll_path)
 
 
 ### return and arg type defs

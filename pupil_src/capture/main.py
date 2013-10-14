@@ -7,7 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-import sys, os
+import sys, os,platform
 from time import sleep
 from ctypes import c_bool, c_int
 from multiprocessing import Process, Pipe, Event,Queue
@@ -15,8 +15,15 @@ from multiprocessing.sharedctypes import RawValue, Value, Array
 
 
 if getattr(sys, 'frozen', False):
-    user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"settings")
-    rec_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"recordings")
+    if platform.system() == 'Darwin':
+        user_dir = os.path.expanduser('~/Desktop/settings')
+        rec_dir = os.path.expanduser('~/Desktop/recordings')
+        version_file = '_version_string_'
+    else:
+        user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"settings")
+        rec_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"recordings")
+        version_file = os.path.join(sys._MEIPASS,'_version_string_')
+
 else:
     # We are running in a normal Python environment.
     # Make all pupil shared_modules available to this Python session.
@@ -43,7 +50,7 @@ else:
 def main():
     #get the current software version
     if getattr(sys, 'frozen', False):
-        with open(os.path.join(sys._MEIPASS,'_version_string_')) as f:
+        with open(version_file) as f:
             version = f.read()
     else:
         version = get_tag_commit()
