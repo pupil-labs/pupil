@@ -6,7 +6,7 @@
 # Distributed under the terms of the BSD License. The full license is in
 # the file COPYING, distributed as part of this software.
 #-----------------------------------------------------------------------------
-import sys
+import sys,os
 import ctypes, ctypes.util
 from ctypes import c_int, c_char_p, c_void_p, py_object, c_char
 from constants import *
@@ -23,18 +23,20 @@ if os_name == "Linux":
 if getattr(sys, 'frozen', False):
     # we are running in a |PyInstaller| bundle using the local version
     if os_name == "Linux":
-        name = 'libAntTweakBar.so'
+        filename = 'libAntTweakBar.so'
     elif os_name == 'Darwin':
-        name = 'libAntTweakBar.dylib'
+        filename = 'libAntTweakBar.dylib'
     else:
-        name = 'libAntTweakBar.dll'
+        filename = 'libAntTweakBar.dll'
+    dll_path = os.path.join(sys._MEIPASS,filename)
+
 else:
     # we are running in a normal Python environment
-    name = ctypes.util.find_library('AntTweakBar')
+    dll_path = ctypes.util.find_library('AntTweakBar')
 
-if not name:
+if not dll_path:
     raise RuntimeError, 'AntTweakBar library not found'
-__dll__ = ctypes.CDLL(name)
+__dll__ = ctypes.CDLL(dll_path)
 
 TwInit         = __dll__.TwInit
 TwTerminate    = __dll__.TwTerminate

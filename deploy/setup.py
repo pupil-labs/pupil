@@ -14,11 +14,9 @@ pupil_base_dir = os.path.abspath(__file__).rsplit(os.path.sep, 2)[0]
 shared_modules = os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules')
 sys.path.append(shared_modules)
 
-# APP = ['../pupil_src/capture/build_test.py']
 APP = ['../pupil_src/capture/main.py']
 DATA_FILES = []
 OPTIONS = {'argv_emulation': True,
-			# 'frameworks':'/usr/local/Cellar/opencv/2.4.5/lib/python2.7/site-packages/cv2.so',
 			#we need to pull our precompiled c binaries into the resources folder
 			'resources':[os.path.join(shared_modules,'c_methods','methods.so'),
 						 os.path.join(shared_modules,'uvc_capture','mac_video','uvcc.so'),

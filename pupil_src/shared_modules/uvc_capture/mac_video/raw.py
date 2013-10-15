@@ -14,12 +14,9 @@ from cf_string import CFSTR, cfstring_to_string_release
 import os,sys
 
 
-
-
-
 if getattr(sys, 'frozen', False):
     # we are running in a |PyInstaller| bundle
-    dll_path = 'uvcc.so'
+    dll_path = os.path.join(sys._MEIPASS,'uvcc.so')
 else:
     ### Get location of  this file
     source_loc = os.path.dirname(os.path.abspath(__file__))

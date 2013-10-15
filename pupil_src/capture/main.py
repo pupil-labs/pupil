@@ -16,13 +16,14 @@ from multiprocessing.sharedctypes import RawValue, Value, Array
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
-        user_dir = os.path.expanduser('~/Desktop/settings')
-        rec_dir = os.path.expanduser('~/Desktop/recordings')
-        version_file = '_version_string_'
+        user_dir = os.path.expanduser('~/Desktop/pupil_settings')
+        rec_dir = os.path.expanduser('~/Desktop/pupil_recordings')
+        version_file = os.path.join(sys._MEIPASS,'_version_string_')
     else:
         user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"settings")
         rec_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"recordings")
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
+
 
 else:
     # We are running in a normal Python environment.

@@ -17,10 +17,11 @@ Three classes:
     Camera  get initialized with a Cam instance it holds each device handle, names, controls ect.
     Control is the actual Control with methods for getting and setting them.
 """
-from cv2 import VideoCapture
+import sys
 import atb
 from time import time
 from raw import *
+from cv2 import VideoCapture
 
 class Control(object):
     """docstring for uvcc_Control"""
@@ -156,6 +157,7 @@ class Camera_Capture(object):
                 self.controls['UVCC_REQ_EXPOSURE_ABS'].set_val(156)
             except KeyError:
                 pass
+
         self.capture = VideoCapture(self.src_id)
         self.set_size(size)
 
@@ -237,14 +239,16 @@ class Camera_List(list):
     """docstring for uvcc_control"""
 
     def __init__(self):
-        from QTKit import QTCaptureDevice,QTMediaTypeVideo #need to be imported locally
-        # QTCaptureDevice inputDevicesWithMediaType:QTMediaTypeVideo
+        if getattr(sys, 'frozen', False):
+            #explicit import needed when frozen
+            import QTKit 
+
+        from QTKit import QTCaptureDevice,QTMediaTypeVideo
         qt_cameras =  QTCaptureDevice.inputDevicesWithMediaType_(QTMediaTypeVideo)
         for src_id,q in enumerate(qt_cameras):
             uId =  q.uniqueID()
             name = q.localizedDisplayName().encode('utf-8')
             self.append(Cam(name,uId,src_id))
-        del QTCaptureDevice,QTMediaTypeVideo
 
 if __name__ == '__main__':
     # import cv2

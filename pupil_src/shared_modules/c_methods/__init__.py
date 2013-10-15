@@ -25,7 +25,7 @@ import os,sys
 
 if getattr(sys, 'frozen', False):
     # we are running in a |PyInstaller| bundle
-    dll_path = 'methods.so'
+    dll_path = os.path.join(sys._MEIPASS,'methods.so')
 else:
     # we are running in a normal Python environment
     basedir = os.path.dirname(__file__)

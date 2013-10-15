@@ -32,7 +32,7 @@ class Camera_Capture():
 
     def get_frame(self):
         s, img = self.capture.read()
-        timestamp = time.time()
+        timestamp = time()
         return Frame(timestamp,img)
 
     def set_size(self,size):

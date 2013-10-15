@@ -6,17 +6,17 @@ Usage:
 """
 
 from setuptools import setup
-import sys,os
 
 
 # making shared modules accesible
-pupil_base_dir = os.path.abspath(__file__).rsplit(os.path.sep, 2)[0]
-shared_modules = os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules')
-sys.path.append(shared_modules)
+# pupil_base_dir = os.path.abspath(__file__).rsplit(os.path.sep, 2)[0]
+# shared_modules = os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules')
+# sys.path.append(shared_modules)
 
-APP = ['../pupil_src/capture/build_test.py']
+APP = ['build_test.py']
 DATA_FILES = []
 OPTIONS = {'argv_emulation': True,
+			# 'includes':'cv,cv2,numpy'
 			# 'frameworks':'/usr/local/Cellar/opencv/2.4.5/lib/python2.7/site-packages/cv2.so',
 			#we need to pull our precompiled c binaries into the resources folder
 			# 'resources':[os.path.join(shared_modules,'c_methods','methods.so'),
