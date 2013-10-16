@@ -7,26 +7,38 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+
+if __name__ == '__main__':
+    # make shared modules available across pupil_src
+    from sys import path as syspath
+    from os import path as ospath
+    loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
+    syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
+    del syspath, ospath
+
+
 import os
+from time import time, sleep
+import shelve
 from ctypes import c_int,c_bool,c_float
 import numpy as np
 import atb
 from glfw import *
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline
-from time import time, sleep
 from methods import *
 from c_methods import eye_filter
 from uvc_capture import autoCreateCapture
 from calibrate import get_map_from_cloud
 from pupil_detectors import Canny_Detector
-import shelve
 
 def eye(g_pool,cap_src,cap_size):
     """
-    this needs a docstring
+    Creates a window, gl context.
+    Grabs images from a capture.
+    Streams Pupil coordinates into g_pool.pupil_queue
     """
 
- # Callback functions World
+    # Callback functions
     def on_resize(window,w, h):
         adjust_gl_view(w,h)
         atb.TwWindowSize(w, h)
@@ -71,9 +83,6 @@ def eye(g_pool,cap_src,cap_size):
         print "WORLD Process closing from window"
 
 
-
-
-
     # Helper functions called by the main atb bar
     def start_roi():
         bar.display.value = 1
@@ -83,7 +92,7 @@ def eye(g_pool,cap_src,cap_size):
         old_time, bar.timestamp = bar.timestamp, time()
         dt = bar.timestamp - old_time
         if dt:
-            bar.fps.value += .05 * (1 / dt - bar.fps.value)
+            bar.fps.value += .05 * (1. / dt - bar.fps.value)
             bar.dt.value = dt
 
     def get_from_data(data):
@@ -109,6 +118,7 @@ def eye(g_pool,cap_src,cap_size):
     frame = cap.get_frame()
     if frame.img is None:
         print "EYE: Error could not get image"
+        cap.close()
         return
     height,width = frame.img.shape[:2]
 
@@ -155,10 +165,7 @@ def eye(g_pool,cap_src,cap_size):
 
     glfwInit()
     window = glfwCreateWindow(width, height, "Eye", None, None)
-    glfwSetWindowPos(window,800,0)
-    on_resize(window,width,height)
-    #set the last saved window size
-
+    glfwMakeContextCurrent(window)
 
     # Register callbacks window
     glfwSetWindowSizeCallback(window,on_resize)
@@ -169,7 +176,8 @@ def eye(g_pool,cap_src,cap_size):
     glfwSetCursorPosCallback(window,on_pos)
     glfwSetScrollCallback(window,on_scroll)
 
-    glfwMakeContextCurrent(window)
+    glfwSetWindowPos(window,800,0)
+    on_resize(window,width,height)
 
     # gl_state settings
     import OpenGL.GL as gl
@@ -179,17 +187,13 @@ def eye(g_pool,cap_src,cap_size):
     del gl
 
     # event loop
-    while not glfwWindowShouldClose(window) and not g_pool.quit.value:
+    while not g_pool.quit.value:
         frame = cap.get_frame()
         update_fps()
         sleep(bar.sleep.value) # for debugging only
 
-        # IMAGE PROCESSING and clipping to user defined eye-region
-        eye_img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX]
-        gray_img = grayscale(eye_img)
 
-
-        ### RECORDING of Eye Video ###
+        ###  RECORDING of Eye Video (on demand) ###
         # Setup variables and lists for recording
         if g_pool.eye_rx.poll():
             command = g_pool.eye_rx.recv()
@@ -211,6 +215,10 @@ def eye(g_pool,cap_src,cap_size):
             timestamps.append(frame.timestamp)
 
 
+        # IMAGE PROCESSING and clipping to user defined eye-region
+        eye_img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX]
+        gray_img = grayscale(eye_img)
+
         # coarse pupil detection
         integral = cv2.integral(gray_img)
         integral =  np.array(integral,dtype=c_float)
@@ -223,13 +231,11 @@ def eye(g_pool,cap_src,cap_size):
         # fine pupil ellipse detection
         result = pupil_detector.detect(frame,u_roi=u_r,p_roi=p_r,visualize=bar.display.value == 2)
 
+        # stream the result
         g_pool.pupil_queue.put(result)
-        # Work with detected ellipses
 
 
-
-
-        # direct visualizations on the frame.img data
+        # VISUALIZATION direct visualizations on the frame.img data
         if bar.display.value == 1:
             # and a solid (white) frame around the user defined ROI
             gray_img[:,0] = 255
@@ -267,13 +273,11 @@ def eye(g_pool,cap_src,cap_size):
 
     # END while running
 
-    # Quite while Recording: Save values
+    # in case eye reconding was still runnnig: Save&close
     if writer:
         print "INFO: Done recording eye"
         writer = None
         np.save(timestamps_path,np.asarray(timestamps))
-        del timestamps
-
 
 
     # save session persistent settings

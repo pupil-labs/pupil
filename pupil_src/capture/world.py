@@ -8,8 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-# make shared modules available across pupil_src
 if __name__ == '__main__':
+    # make shared modules available across pupil_src
     from sys import path as syspath
     from os import path as ospath
     loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
@@ -32,7 +32,7 @@ from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_p
 from uvc_capture import autoCreateCapture
 import calibrate
 # Plug-ins
-import reference_detectors
+import calibration_routines
 import recorder
 from show_calibration import Show_Calibration
 from display_gaze import Display_Gaze
@@ -41,17 +41,19 @@ from pupil_server import Pupil_Server
 
 def world(g_pool,cap_src,cap_size):
     """world
+    Creates a window, gl context.
+    Grabs images from a capture.
+    Receives Pupil coordinates from g_pool.pupil_queue
+    Can run various plug-ins.
     """
 
-
     # Callback functions
-    def on_resize_world(window,w, h):
+    def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
         adjust_gl_view(w,h)
         atb.TwWindowSize(w, h)
         glfwMakeContextCurrent(active_window)
-
 
     def on_key(window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,action):
@@ -85,13 +87,13 @@ def world(g_pool,cap_src,cap_size):
         print "WORLD Process closing from window"
 
 
+
     # load session persistent settings
     session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_world'),protocol=2)
     def load(var_name,default):
         return session_settings.get(var_name,default)
     def save(var_name,var):
         session_settings[var_name] = var
-
 
 
     # Initialize capture, check if it works
@@ -102,6 +104,7 @@ def world(g_pool,cap_src,cap_size):
     frame = cap.get_frame()
     if frame.img is None:
         print "WORLD: Error could not get image"
+        cap.close()
         return
     height,width = frame.img.shape[:2]
 
@@ -111,7 +114,7 @@ def world(g_pool,cap_src,cap_size):
         old_time, bar.timestamp = bar.timestamp, time()
         dt = bar.timestamp - old_time
         if dt:
-            bar.fps.value += .05 * (1 / dt - bar.fps.value)
+            bar.fps.value += .05 * (1. / dt - bar.fps.value)
 
     def set_window_size(mode,data):
         height,width = frame.img.shape[:2]
@@ -127,14 +130,14 @@ def world(g_pool,cap_src,cap_size):
         return data.value
 
     def open_calibration(selection,data):
-        # prepare destruction of old ref_detector... and remove it
-        if g.current_ref_detector:
-            g.current_ref_detector.alive = False
+        # prepare destruction of current ref_detector... and remove it
+        for p in g.plugins:
+            if isinstance(p,calibration_routines.detector_by_index):
+                p.alive = False
         g.plugins = [p for p in g.plugins if p.alive]
 
-        # print "selected: ",reference_detectors.name_by_index[selection]
-        g.current_ref_detector = reference_detectors.detector_by_index[selection](g_pool,atb_pos=bar.next_atb_pos)
-        g.plugins.append(g.current_ref_detector)
+        new_ref_detector = calibration_routines.detector_by_index[selection](g_pool,atb_pos=bar.next_atb_pos)
+        g.plugins.append(new_ref_detector)
         # save the value for atb bar
         data.value=selection
 
@@ -168,8 +171,8 @@ def world(g_pool,cap_src,cap_size):
         new_plugin = Pupil_Server(g_pool,(10,400))
         g.plugins.append(new_plugin)
 
-    # Initialize ant tweak bar
     atb.init()
+    # add main controls ATB bar
     bar = atb.Bar(name = "World", label="Controls",
             help="Scene controls", color=(50, 50, 50), alpha=100,valueswidth=150,
             text='light', position=(10, 10),refresh=.3, size=(300, 200))
@@ -180,12 +183,10 @@ def world(g_pool,cap_src,cap_size):
     bar.record_eye = c_bool(load("record_eye",0))
     bar.window_size = c_int(load("window_size",0))
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
-
-    calibrate_type_enum = atb.enum("Calibration Method",reference_detectors.index_by_name)
+    calibrate_type_enum = atb.enum("Calibration Method",calibration_routines.index_by_name)
     bar.rec_name = create_string_buffer(512)
     bar.version = create_string_buffer(g_pool.version,512)
     bar.rec_name.value = recorder.get_auto_name()
-    # play and record can be tied together via pointers to the objects
     bar.add_var("fps", bar.fps, step=1., readonly=True)
     bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
     bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
@@ -198,22 +199,16 @@ def world(g_pool,cap_src,cap_size):
     bar.add_var("version",bar.version, readonly=True)
     bar.add_var("exit", g_pool.quit)
 
-    # add uvc camera controls to a seperate ATB bar
+    # add uvc camera controls ATB bar
     cap.create_atb_bar(pos=(320,10))
-
 
     # Initialize glfw
     glfwInit()
     world_window = glfwCreateWindow(width, height, "World", None, None)
     glfwMakeContextCurrent(world_window)
-    glfwSetWindowPos(world_window,0,0)
-    on_resize_world(world_window,width,height)
-    #set the last saved window size
-    set_window_size(bar.window_size.value,bar.window_size)
-
 
     # Register callbacks world_window
-    glfwSetWindowSizeCallback(world_window,on_resize_world)
+    glfwSetWindowSizeCallback(world_window,on_resize)
     glfwSetWindowCloseCallback(world_window,on_close)
     glfwSetKeyCallback(world_window,on_key)
     glfwSetCharCallback(world_window,on_char)
@@ -221,6 +216,9 @@ def world(g_pool,cap_src,cap_size):
     glfwSetCursorPosCallback(world_window,on_pos)
     glfwSetScrollCallback(world_window,on_scroll)
 
+    #set the last saved window size
+    set_window_size(bar.window_size.value,bar.window_size)
+    glfwSetWindowPos(world_window,0,0)
 
     # gl_state settings
     import OpenGL.GL as gl
@@ -229,15 +227,6 @@ def world(g_pool,cap_src,cap_size):
     gl.glEnable(gl.GL_BLEND)
     gl.glClearColor(1.,1.,1.,0.)
     del gl
-
-    # create container for globally scoped vars (within world)
-    g = Temp()
-    g.plugins = []
-    g.current_ref_detector = None
-
-    #load gaze_display plugin
-    g.plugins.append(Display_Gaze(g_pool,None))
-    # g.plugins.append(Pupil_Server(g_pool,(10,400)))
 
     # load last calibration data
     try:
@@ -249,14 +238,23 @@ def world(g_pool,cap_src,cap_size):
             """ 1 to 1 mapping
             """
             return vector
+
+    # create container for globally scoped vars (within world)
+    g = Temp()
+    g.plugins = []
     g_pool.map_pupil = map_pupil
 
     #load calibration plugin
     open_calibration(bar.calibration_type.value,bar.calibration_type)
 
+    #load gaze_display plugin
+    g.plugins.append(Display_Gaze(g_pool,None))
+
+    #load pupil server plugin
+    # toggle_server()
 
     # Event loop
-    while not glfwWindowShouldClose(world_window) and not g_pool.quit.value:
+    while not g_pool.quit.value:
 
         # Get an image from the grabber
         frame = cap.get_frame()
@@ -275,6 +273,7 @@ def world(g_pool,cap_src,cap_size):
         # allow each Plugin to do its work.
         for p in g.plugins:
             p.update(frame,recent_pupil_positions)
+
         #check if a plugin need to be destroyed
         g.plugins = [p for p in g.plugins if p.alive]
 
@@ -294,7 +293,8 @@ def world(g_pool,cap_src,cap_size):
     # de-init all running plugins
     for p in g.plugins:
         p.alive = False
-    g.plugins = [p for p in g.plugins if p.alive]
+        #reading p.alive actually runs plug-in cleanup
+        _ = p.alive
 
     save('window_size',bar.window_size.value)
     save('calibration_type',bar.calibration_type.value)

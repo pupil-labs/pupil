@@ -237,5 +237,5 @@ class Manual_Marker_Calibration(Plugin):
         if you have an atb bar or glfw window destroy it here.
         """
         if self.active:
-            self.stop()   
+            self.stop()
         self._bar.destroy()

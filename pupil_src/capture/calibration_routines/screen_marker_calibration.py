@@ -27,12 +27,12 @@ def draw_marker(pos):
         draw_circle(pos,r,c)
 
 
-# def calbacks
+# window calbacks
 def on_resize(window,w, h):
+    active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
     adjust_gl_view(w,h)
-
-
+    glfwMakeContextCurrent(active_window)
 
 
 class Screen_Marker_Calibration(Plugin):
@@ -129,9 +129,8 @@ class Screen_Marker_Calibration(Plugin):
 
             #Register callbacks
             glfwSetWindowSizeCallback(self._window,on_resize)
-            # glfwSetWindowCloseCallback(self._window,self.on_stop)
             glfwSetKeyCallback(self._window,self.on_key)
-            # glfwSetCharCallback(self._window,on_char)
+            glfwSetWindowCloseCallback(self._window,self.on_close)
 
             # gl_state settings
             active_window = glfwGetCurrentContext()
@@ -147,13 +146,12 @@ class Screen_Marker_Calibration(Plugin):
     def on_key(self,window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
             if action == GLFW_PRESS:
-                # if key ==  GLFW_KEY_C:
-                    # self.on_stop(window)
                 if key == GLFW_KEY_ESCAPE:
-                    self.on_stop(window)
+                    self.stop()
 
-    def on_stop(self,window):
-        self.stop()
+    def on_close(self,window=None):
+        if self.active:
+            self.stop()
 
     def stop(self):
         audio.say("Stopping Calibration")
@@ -177,10 +175,8 @@ class Screen_Marker_Calibration(Plugin):
 
     def close_window(self):
         if self._window:
-            # glfwIconifyWindow(self._window)
             glfwDestroyWindow(self._window)
             self._window = None
-            # print "iconfied"
             self.window_should_close = False
 
 

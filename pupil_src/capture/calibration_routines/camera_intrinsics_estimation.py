@@ -10,16 +10,14 @@ import OpenGL.GL as gl
 from OpenGL.GLU import gluOrtho2D
 
 from glfw import *
-
-
 from plugin import Plugin
 
-# def calbacks
+# window calbacks
 def on_resize(window,w, h):
+    active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
     adjust_gl_view(w,h)
-
-
+    glfwMakeContextCurrent(active_window)
 
 class Camera_Intrinsics_Estimation(Plugin):
     """Camera_Intrinsics_Calibration
@@ -38,7 +36,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.img_shape = None
 
         self.display_grid = _make_grid()
-        
+
 
         self.window_should_open = False
         self.window_should_close = False
@@ -62,7 +60,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         self._bar.add_var("patterns to capture", getter=self.get_count)
 
     def do_open(self):
-        if not self._window: 
+        if not self._window:
             self.window_should_open = True
 
     def get_count(self):
@@ -74,7 +72,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.collect_new = True
 
     def open_window(self):
-        if not self._window: 
+        if not self._window:
             if self.fullscreen.value:
                 monitor = self.monitor_handles[self.monitor_idx.value]
                 mode = glfwGetVideoMode(monitor)
@@ -92,7 +90,8 @@ class Camera_Intrinsics_Estimation(Plugin):
             #Register callbacks
             glfwSetWindowSizeCallback(self._window,on_resize)
             glfwSetKeyCallback(self._window,self.on_key)
-            # glfwSetCharCallback(self._window,on_char)
+            glfwSetWindowCloseCallback(self._window,self.on_close)
+
 
             # gl_state settings
             active_window = glfwGetCurrentContext()
@@ -110,9 +109,10 @@ class Camera_Intrinsics_Estimation(Plugin):
         if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
             if action == GLFW_PRESS:
                 if key == GLFW_KEY_ESCAPE:
-                    self.window_should_close = True
+                    self.on_close()
 
-    def on_close(self,window):
+
+    def on_close(self,window=None):
         self.window_should_close = True
 
     def close_window(self):
@@ -216,7 +216,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         if you have an atb bar or glfw window destroy it here.
         """
         if self._window:
-            self.close_window()        
+            self.close_window()
         self._bar.destroy()
 
 

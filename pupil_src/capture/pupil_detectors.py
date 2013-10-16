@@ -46,12 +46,12 @@ class Pupil_Detector(object):
                         'minor': None,
                         'goodness': 0} #some estimation on how sure you are about the detected ellipse and its fit. Smaller is better
 
-        # If you use region of interest p_r and r make sure to return pupil coordinates relative to the full image
+        # If you use region of interest p_roi and u_roi make sure to return pupil coordinates relative to the full image
         candidate_pupil_ellipse['center'] = u_roi.add_vector(p_roi.add_vector(candidate_pupil_ellipse['center']))
         candidate_pupil_ellipse['timestamp'] = frame.timestamp
-        result = candidate_pupil_ellipse #pretentind we found something
+        result = candidate_pupil_ellipse #we found something
         if result:
-            return candidate_pupil_ellipse
+            return candidate_pupil_ellipse # all this will be sent to the world process, you can add whateever you need to this.
 
         else:
             self.goodness.value = 100
@@ -61,10 +61,8 @@ class Pupil_Detector(object):
             return no_result
 
 
-
-
     def create_atb_bar(self,pos):
-        self.bar = atb.Bar(name = "Pupil_Detector", label="Controls",
+        self.bar = atb.Bar(name = "Pupil_Detector", label="Pupil Detector Controls",
             help="pupil detection params", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.3, size=(200, 200))
         bar.add_var("VAR1",self.var1, step=1.,readonly=False)
