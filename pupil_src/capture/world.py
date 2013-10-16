@@ -16,6 +16,7 @@ if __name__ == '__main__':
     syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
     del syspath, ospath
 
+
 import os, sys
 from time import time
 import shelve
@@ -218,6 +219,7 @@ def world(g_pool,cap_src,cap_size):
 
     #set the last saved window size
     set_window_size(bar.window_size.value,bar.window_size)
+    on_resize(world_window, *glfwGetFramebufferSize(world_window))
     glfwSetWindowPos(world_window,0,0)
 
     # gl_state settings

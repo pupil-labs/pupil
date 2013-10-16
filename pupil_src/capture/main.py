@@ -70,11 +70,11 @@ def main():
 
     # to assign cameras directly, using integers as demonstrated below
     # eye_src = 1
-    world_src = 0
+    # world_src = 0
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    eye_src = "/Users/mkassner/Downloads/wetransfer-fe724a/eye.avi"
+    # eye_src = "/Users/mkassner/Downloads/wetransfer-fe724a/eye.avi"
     # world_src = "/Users/mkassner/Downloads/wetransfer-fe724a/world.avi"
 
     # Camera video size in pixels (width,height)
