@@ -1,4 +1,6 @@
+
 # -*- mode: python -*-
+from git_version import get_tag_commit
 
 a = Analysis(['../pupil_src/capture/main.py'],
              pathex=['../pupil_src/shared_modules/'],
@@ -13,7 +15,7 @@ exe = EXE(pyz,
           debug=False,
           strip=None,
           upx=False,
-          console=True)
+          console=False)
 
 coll = COLLECT(exe,
                a.binaries,
@@ -29,4 +31,5 @@ coll = COLLECT(exe,
 
 app = BUNDLE(coll,
              name='Pupil Capture.app',
-             icon='macos_icon.icns')
+             icon='macos_icon.icns',
+             version = str(get_tag_commit()))
