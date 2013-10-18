@@ -241,7 +241,7 @@ class Camera_List(list):
     def __init__(self):
         if getattr(sys, 'frozen', False):
             #explicit import needed when frozen
-            import QTKit 
+            import QTKit
 
         from QTKit import QTCaptureDevice,QTMediaTypeVideo
         qt_cameras =  QTCaptureDevice.inputDevicesWithMediaType_(QTMediaTypeVideo)
