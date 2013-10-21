@@ -10,8 +10,8 @@ Thumbs.db
 *.so
 
 # user generated files will be ignored if in directory named 'recordings...' #
-recordings*/
-user_settings
+recordings/
+settings/
 *.db
 *.npy
 *.png
@@ -20,3 +20,6 @@ user_settings
 # IDE generated files #
 .floo
 .sublime-project
+.flooignore
+
+

@@ -134,7 +134,8 @@ def autoCreateCapture(src,size=(640,480),fps=30):
 
     #looking for videofiles
     elif src_type is str:
-        assert isfile(src),("autoCreateCapture: Could not locate VideoFile:", src)
+        if not isfile(src):
+            raise Exception(("autoCreateCapture: Could not locate VideoFile:", src))
         print "Using video file as source ",src
         return FileCapture(src)
     else:

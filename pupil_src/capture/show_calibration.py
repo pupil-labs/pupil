@@ -1,20 +1,20 @@
-import atb
+import os
+import cv2
 import numpy as np
 from gl_utils import draw_gl_polyline_norm
 from ctypes import c_float,c_int
-import cv2
-
+import atb
 from plugin import Plugin
 from calibrate import get_map_from_cloud
 
 class Show_Calibration(Plugin):
     """Calibration results visualization plugin"""
-    def __init__(self, img_shape, atb_pos=(500,300)):
+    def __init__(self,g_pool,img_shape, atb_pos=(500,300)):
         Plugin.__init__(self)
 
         height,width = img_shape[:2]
         try:
-            cal_pt_cloud = np.load("cal_pt_cloud.npy")
+            cal_pt_cloud = np.load(os.path.join(g_pool.user_dir,"cal_pt_cloud.npy"))
         except:
             print "PLease calibrate first"
             self.close()
@@ -56,6 +56,15 @@ class Show_Calibration(Plugin):
 
     def close(self):
         self.alive = False
+
+    def cleanup(self):
+        """gets called when the plugin get terminated.
+           either volunatily or forced.
+        """
+        if hasattr(self,"_bar"):
+            self._bar.destroy()
+
+
 
 if __name__ == '__main__':
     cal_pt_cloud = np.load("cal_pt_cloud.npy")

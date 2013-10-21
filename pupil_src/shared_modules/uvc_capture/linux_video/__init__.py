@@ -1,6 +1,7 @@
 from v4l2_capture import VideoCapture
 from v4l2_ctl import Controls, Camera_List, Cam
 import atb
+from time import sleep
 
 
 class Camera_Capture(object):
@@ -21,6 +22,9 @@ class Camera_Capture(object):
                 self.controls['exposure_absolute'].set_val(156)
             except KeyError:
                 pass
+
+        #give camera some time to change settings.
+        sleep(0.3)
         self.capture = VideoCapture(self.src_id,size,fps)
         self.get_frame = self.capture.read
 
