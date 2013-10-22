@@ -12,7 +12,7 @@ import numpy as np
 
 def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35, verbose=False,return_inlier_map=False):
     """
-    we do a simple two pass fitting to a pari of bi-variate polynomials
+    we do a simple two pass fitting to a pair of bi-variate polynomials
     return the function to map vector
     """
     # fit once using all avaiable data

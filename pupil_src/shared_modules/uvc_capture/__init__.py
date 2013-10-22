@@ -29,6 +29,9 @@ import platform
 os_name = platform.system()
 del platform
 
+#logging
+import logging
+logger = logging.getLogger(__name__)
 
 ###OS specific imports and defs
 if os_name == "Linux":
@@ -40,8 +43,6 @@ else:
 
 
 # non os specific defines
-
-
 class Frame(object):
     """docstring of Frame"""
     def __init__(self, timestamp,img,compressed_img=None, compressed_pix_fmt=None):
@@ -109,13 +110,13 @@ def autoCreateCapture(src,size=(640,480),fps=30):
                 matching_devices.append(device)
 
         if len(matching_devices) >1:
-            print "Warning: found",len(matching_devices),"devices that match the src string pattern. Using the first one."
+            logger.warning('Found %i devices that match the src string pattern. Using the first one.'%matching_devices)
         if len(matching_devices) ==0:
-            print "ERROR: No device found that matched",src,
+            logger.error('No device found that matched %s'%src)
             return
 
         cap = Camera_Capture(matching_devices[0],size,fps)
-        print "camera selected: %s  with id: %s" %(cap.name,cap.src_id)
+        logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
         return cap
 
     #looking for attached cameras that match cv_id
@@ -123,20 +124,21 @@ def autoCreateCapture(src,size=(640,480),fps=30):
         for device in Camera_List():
             if device.src_id == src:
                 cap = Camera_Capture(device,size,fps)
-                print "camera selected: %s  with id: %s" %(cap.name,cap.src_id)
+                logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
                 return cap
 
         #control not supported: trying capture without uvc controls
         cap = Camera_Capture(src,size,fps)
-        print "WARNING: no UVC support: Using camera with id: %s" %(src)
+        logger.warning('No UVC support: Using camera with id: %s'%src)
         return cap
 
 
     #looking for videofiles
     elif src_type is str:
         if not isfile(src):
-            raise Exception(("autoCreateCapture: Could not locate VideoFile:", src))
-        print "Using video file as source ",src
+            logger.error('Could not locate VideoFile %s'%src)
+            return
+        logger.info("Using %s as video source"%src)
         return FileCapture(src)
     else:
         raise Exception("autoCreateCapture: Could not create capture, wrong src_type")

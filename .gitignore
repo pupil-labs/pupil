@@ -15,6 +15,7 @@ settings/
 *.db
 *.npy
 *.png
+*.log
 
 
 # IDE generated files #

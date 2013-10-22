@@ -20,6 +20,7 @@ if __name__ == '__main__':
 import os
 from time import time, sleep
 import shelve
+import logging
 from ctypes import c_int,c_bool,c_float
 import numpy as np
 import atb
@@ -37,6 +38,29 @@ def eye(g_pool,cap_src,cap_size):
     Grabs images from a capture.
     Streams Pupil coordinates into g_pool.pupil_queue
     """
+
+    # modify the root logger for this process
+    logger = logging.getLogger()
+    # remove inherited handlers
+    logger.handlers = []
+    logger.setLevel(logging.DEBUG)
+    # create file handler which logs even debug messages
+    fh = logging.FileHandler(os.path.join(g_pool.user_dir,'eye.log'),mode='w')
+    fh.setLevel(logging.DEBUG)
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter('EYE Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    formatter = logging.Formatter('E Y E Process [%(levelname)s] %(name)s : %(message)s')
+    ch.setFormatter(formatter)
+    # add the handlers to the logger
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+    # create logger for the context of this function
+    logger = logging.getLogger(__name__)
+
 
     # Callback functions
     def on_resize(window,w, h):
@@ -80,7 +104,7 @@ def eye(g_pool,cap_src,cap_size):
 
     def on_close(window):
         g_pool.quit.value = True
-        print "WORLD Process closing from window"
+        logger.info('Process closing from window')
 
 
     # Helper functions called by the main atb bar
@@ -112,12 +136,12 @@ def eye(g_pool,cap_src,cap_size):
     # Initialize capture
     cap = autoCreateCapture(cap_src, cap_size)
     if cap is None:
-        print "EYE: Error could not create Capture"
+        logger.error("Did not receive valid Capture")
         return
     # check if it works
     frame = cap.get_frame()
     if frame.img is None:
-        print "EYE: Error could not get image"
+        logger.error("Could not retrieve image from capture")
         cap.close()
         return
     height,width = frame.img.shape[:2]
@@ -199,13 +223,13 @@ def eye(g_pool,cap_src,cap_size):
             command = g_pool.eye_rx.recv()
             if command is not None:
                 record_path = command
-                print "INFO: Will save eye video to: ", record_path
+                logger.info("Will save eye video to: %(record_path)s")
                 video_path = os.path.join(record_path, "eye.avi")
                 timestamps_path = os.path.join(record_path, "eye_timestamps.npy")
                 writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (frame.img.shape[1], frame.img.shape[0]))
                 timestamps = []
             else:
-                print "INFO: Done recording eye."
+                logger.info("Done recording eye.")
                 writer = None
                 np.save(timestamps_path,np.asarray(timestamps))
                 del timestamps
@@ -275,7 +299,7 @@ def eye(g_pool,cap_src,cap_size):
 
     # in case eye reconding was still runnnig: Save&close
     if writer:
-        print "INFO: Done recording eye"
+        logger.info("Done recording eye.")
         writer = None
         np.save(timestamps_path,np.asarray(timestamps))
 
@@ -297,7 +321,7 @@ def eye(g_pool,cap_src,cap_size):
         g_pool.pupil_queue.get()
     g_pool.pupil_queue.close()
 
-    print "EYE Process closed"
+    logger.debug("Process done")
 
 def eye_profiled(g_pool,cap_src,cap_size):
     import cProfile,subprocess,os

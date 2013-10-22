@@ -10,7 +10,7 @@
 import sys, os,platform
 from time import sleep
 from ctypes import c_bool, c_int
-from multiprocessing import Process, Pipe, Event,Queue
+from multiprocessing import Process, Pipe, Event,Queue, get_logger,log_to_stderr
 from multiprocessing.sharedctypes import RawValue, Value, Array
 
 
@@ -33,6 +33,28 @@ else:
 	# Specifiy user dirs.
     rec_dir = os.path.join(pupil_base_dir,'recordings')
     user_dir = os.path.join(pupil_base_dir,'settings')
+
+import logging
+# create root logger for the main process before doing imports of logged modules
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+# create file handler which logs even debug messages
+fh = logging.FileHandler(os.path.join(user_dir,'world.log'),mode='w')
+fh.setLevel(logging.DEBUG)
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+# create formatter and add it to the handlers
+formatter = logging.Formatter('World Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+formatter = logging.Formatter('WORLD Process [%(levelname)s] %(name)s : %(message)s')
+ch.setFormatter(formatter)
+# add the handlers to the logger
+logger.addHandler(fh)
+logger.addHandler(ch)
+# mute OpenGL logger
+logging.getLogger("OpenGL").propagate = False
+logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 
 from methods import Temp
 from git_version import get_tag_commit

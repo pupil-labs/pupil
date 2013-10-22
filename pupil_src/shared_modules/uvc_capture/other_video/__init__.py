@@ -1,11 +1,15 @@
 from cv2 import VideoCapture
 from time import time
 
+#logging
+import logging
+logger = logging.getLogger(__name__)
+
 class Frame(object):
     """docstring of Frame"""
     def __init__(self, timestamp,img,compressed_img=None, compressed_pix_fmt=None):
         self.timestamp = timestamp
-        self.img = img 
+        self.img = img
         self.compressed_img = compressed_img
         self.compressed_pix_fmt = compressed_pix_fmt
 

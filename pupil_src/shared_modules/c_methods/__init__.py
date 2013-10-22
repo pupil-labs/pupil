@@ -17,11 +17,10 @@ Only wrappers are exposed not the loaded libraries.
 from ctypes import *
 from numpy.ctypeslib import ndpointer
 import os,sys
+#logging
+import logging
+logger = logging.getLogger(__name__)
 
-### Get location of  this file
-
-
-# source_loc = os.path.dirname(os.path.abspath(__file__))
 
 if getattr(sys, 'frozen', False):
     # we are running in a |PyInstaller| bundle
@@ -41,12 +40,13 @@ else:
         c_flags = "CFLAGS=-m32"
 
     from subprocess import check_output
-    # print "c-methods: compiling now."
+    logger.debug("Compiling now.")
     compiler_status = check_output(["make",c_flags],cwd=basedir)
-    # print "c-methods:",compiler_status
+    logger.debug('Compiler status: %s'%compiler_status)
     del check_output
-    # print "c-methods: compiling done."
+    logger.debug("Compiling done.")
     dll_path = basedir + os.path.sep + 'methods.so'
+
 
     ### C-Types binary loading
     if not os.path.isfile(dll_path):
