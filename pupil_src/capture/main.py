@@ -10,7 +10,7 @@
 import sys, os,platform
 from time import sleep
 from ctypes import c_bool, c_int
-from multiprocessing import Process, Pipe, Event,Queue, get_logger,log_to_stderr
+from multiprocessing import Process, Pipe, Event,Queue
 from multiprocessing.sharedctypes import RawValue, Value, Array
 
 
@@ -20,6 +20,7 @@ if getattr(sys, 'frozen', False):
         rec_dir = os.path.expanduser('~/Desktop/pupil_recordings')
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
     else:
+        # Specifiy user dirs.
         user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"settings")
         rec_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"recordings")
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
@@ -43,7 +44,7 @@ if not os.path.isdir(rec_dir):
 
 
 import logging
-# create root logger for the main process before doing imports of logged modules
+# Set up root logger for the main process before doing imports of logged modules.
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
@@ -64,9 +65,6 @@ logger.addHandler(ch)
 logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 
-from methods import Temp
-from git_version import get_tag_commit
-
 
 #if you pass any additional argument when calling this script. The profiler will be used.
 if len(sys.argv) >=2:
@@ -76,17 +74,18 @@ else:
     from eye import eye
     from world import world
 
+from methods import Temp
+
+#get the current software version
+if getattr(sys, 'frozen', False):
+    with open(version_file) as f:
+        version = f.read()
+else:
+    from git_version import get_tag_commit
+    version = get_tag_commit()
 
 
 def main():
-    #get the current software version
-    if getattr(sys, 'frozen', False):
-        with open(version_file) as f:
-            version = f.read()
-    else:
-        version = get_tag_commit()
-
-
     # To assign camera by name: put string(s) in list
     eye_src = ["Microsoft", "6000"]
     world_src = ["Logitech Camera","B525", "C525","C615","C920","C930e"]
