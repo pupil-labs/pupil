@@ -6,6 +6,9 @@ import numpy as np
 from plugin import Plugin
 from time import strftime,localtime,time,gmtime
 from ctypes import create_string_buffer
+#logging
+import logging
+logger = logging.getLogger(__name__)
 
 class Recorder(Plugin):
     """Capture Recorder"""
@@ -23,8 +26,10 @@ class Recorder(Plugin):
         session = os.path.join(self.g_pool.rec_dir, self.session_str)
         try:
             os.mkdir(session)
+            logger.debug("Created new recordings session dir %s"%session)
+
         except:
-            print "recordings session folder already exists, using existing."
+            logger.debug("Recordings session dir %s already exists, using it." %session)
 
         # set up self incrementing folder within session folder
         counter = 0
@@ -32,9 +37,10 @@ class Recorder(Plugin):
             self.rec_path = os.path.join(session, "%03d/" % counter)
             try:
                 os.mkdir(self.rec_path)
+                logger.debug("Created new recording dir %s"%self.rec_path)
                 break
             except:
-                print "We dont want to overwrite data, incrementing counter & trying to make new data folder"
+                logger.debug("We dont want to overwrite data, incrementing counter & trying to make new data folder")
                 counter += 1
 
         self.meta_info_path = os.path.join(self.rec_path, "info.csv")
@@ -43,7 +49,6 @@ class Recorder(Plugin):
             f.write("Pupil Recording Name:\t"+self.session_str+ "\n")
             f.write("Start Date: \t"+ strftime("%d.%m.%Y", localtime(self.start_time))+ "\n")
             f.write("Start Time: \t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")
-
 
 
         video_path = os.path.join(self.rec_path, "world.avi")
@@ -81,7 +86,7 @@ class Recorder(Plugin):
             try:
                 self.eye_tx.send(None)
             except:
-                print "WARNING: Could not stop eye-recording. Please report this bug!"
+                logger.warning("Could not stop eye-recording. Please report this bug!")
         gaze_list_path = os.path.join(self.rec_path, "gaze_positions.npy")
         np.save(gaze_list_path,np.asarray(self.gaze_list))
 
@@ -94,7 +99,7 @@ class Recorder(Plugin):
             cal_pt_cloud_path = os.path.join(self.rec_path, "cal_pt_cloud.npy")
             np.save(cal_pt_cloud_path, cal_pt_cloud)
         except:
-            print "WARNING: No calibration data found. Please calibrate first."
+            logger.warning("No calibration data found. Please calibrate first.")
 
         try:
             camera_matrix = np.load(os.path.join(self.g_pool.user_dir,"camera_matrix.npy"))
@@ -104,7 +109,7 @@ class Recorder(Plugin):
             np.save(cam_path, camera_matrix)
             np.save(dist_path, dist_coefs)
         except:
-            print "No camera intrinsics found, will not copy them into recordings folder."
+            logger.info("No camera intrinsics found, will not copy them into recordings folder.")
 
 
         try:
@@ -123,7 +128,7 @@ class Recorder(Plugin):
                 f.write("Release:\t"+release+"\n")
                 f.write("Version:\t"+version+"\n")
         except:
-            print "Could not save metadata. Please report this bug!"
+            logger.warning("Could not save metadata. Please report this bug!")
 
         self.alive = False
 

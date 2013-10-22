@@ -13,6 +13,9 @@ import audio
 
 from plugin import Plugin
 
+#logging
+import logging
+logger = logging.getLogger(__name__)
 
 
 def draw_circle(pos,r,c):
@@ -96,7 +99,7 @@ class Screen_Marker_Calibration(Plugin):
             return
 
         audio.say("Starting Calibration")
-
+        logger.info("Starting Calibration")
         c = 1.
         self.sites = [  (.0, 0),
                         (-c,c), (0.,c),(c,c),
@@ -155,21 +158,21 @@ class Screen_Marker_Calibration(Plugin):
 
     def stop(self):
         audio.say("Stopping Calibration")
+        logger.info('Stopping Calibration')
         self.screen_marker_state = 0
         self.active = False
         self.window_should_close = True
 
-        print len(self.pupil_list), len(self.ref_list)
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
 
-        print "Collected ", len(cal_pt_cloud), " data points."
+        logger.info("Collected %s data points." %len(cal_pt_cloud))
 
         if len(cal_pt_cloud) < 20:
-            print "Did not collect enough data."
+            logger.warning("Did not collect enough data.")
             return
 
         cal_pt_cloud = np.array(cal_pt_cloud)
-        map_fn = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,verbose=True)
+        map_fn = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size)
         self.g_pool.map_pupil = map_fn
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
@@ -281,7 +284,7 @@ class Screen_Marker_Calibration(Plugin):
             else:
                 self.screen_marker_state = 0
                 self.active_site += 1
-                print self.active_site
+                logger.debug("Moving screen marker to site no %s"%self.active_site)
                 if self.active_site == 10:
                     self.stop()
                     return

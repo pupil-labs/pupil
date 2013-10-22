@@ -49,7 +49,7 @@ def eye(g_pool,cap_src,cap_size):
     fh.setLevel(logging.DEBUG)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
+    ch.setLevel(logging.WARNING)
     # create formatter and add it to the handlers
     formatter = logging.Formatter('EYE Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)

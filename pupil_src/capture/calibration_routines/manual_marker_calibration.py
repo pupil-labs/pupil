@@ -8,8 +8,10 @@ import calibrate
 from ctypes import c_int,c_bool
 import atb
 import audio
-
 from plugin import Plugin
+#logging
+import logging
+logger = logging.getLogger(__name__)
 
 class Manual_Marker_Calibration(Plugin):
     """Detector looks for a white ring on a black background.
@@ -61,6 +63,7 @@ class Manual_Marker_Calibration(Plugin):
 
     def start(self):
         audio.say("Starting Calibration")
+        logger.info("Starting Calibration")
         self.active = True
         self.ref_list = []
         self.pupil_list = []
@@ -68,19 +71,19 @@ class Manual_Marker_Calibration(Plugin):
 
     def stop(self):
         audio.say("Stopping Calibration")
+        logger.info("Stopping Calibration")
         self.smooth_pos = 0,0
         self.counter = 0
         self.active = False
 
 
-        print len(self.pupil_list), len(self.ref_list)
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
-        print "Collected ", len(cal_pt_cloud), " data points."
+        logger.info("Collected %s data points." %len(cal_pt_cloud))
         if len(cal_pt_cloud) < 20:
-            print "Did not collect enough data."
+            logger.warning("Did not collect enough data.")
             return
         cal_pt_cloud = np.array(cal_pt_cloud)
-        self.g_pool.map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,verbose=True)
+        self.g_pool.map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
 
@@ -182,6 +185,7 @@ class Manual_Marker_Calibration(Plugin):
                     if self.smooth_vel < 0.01 and sample_ref_dist > 0.2:
                         self.sample_site = self.smooth_pos
                         audio.beep()
+                        logger.debug("Steady marker found. Starting to sample %s datapoints" %self.counter_max)
                         self.counter = self.counter_max
 
             if self.counter and self.detected:
@@ -193,6 +197,7 @@ class Manual_Marker_Calibration(Plugin):
                 if self.counter == 0:
                     #last sample before counter done and moving on
                     audio.tink()
+                    logger.debug("Sampled %s datapoints. Stopping to sample. Looking for steady marker again."%self.counter_max)
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:

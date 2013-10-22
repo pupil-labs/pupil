@@ -9,8 +9,12 @@
 '''
 
 import numpy as np
+#logging
+import logging
+logger = logging.getLogger(__name__)
 
-def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35, verbose=False,return_inlier_map=False):
+
+def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inlier_map=False):
     """
     we do a simple two pass fitting to a pair of bi-variate polynomials
     return the function to map vector
@@ -25,23 +29,21 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35, verbose=Fa
         map_fn = make_map_function(cx,cy,model_n)
         new_err_dist,new_err_mean,new_err_rms = fit_error_screen(new_err_x,new_err_y,screen_size)
 
+        logger.info('first iteration. root-mean-square residuals: %s, in pixel' %err_rms)
+        logger.info('second iteration: ignoring outliers. root-mean-square residuals: %s in pixel',new_err_rms)
 
-        if verbose:
-            print 'first iteration. root-mean-square residuals:', err_rms,"in pixel"
-            print 'second iteration: ignoring outliers. root-mean-square residuals:', new_err_rms, "in pixel"
-
-            print "used %i datapoints out of the full dataset %i: subset is %i percent" \
-                %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
-                100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0])
+        logger.info('used %i datapoints out of the full dataset %i: subset is %i percent' \
+            %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
+            100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0]))
 
         if return_inlier_map:
             return map_fn,err_dist<=threshold
         return map_fn
     else: # did disregard all pints. The data cannot be represented by the model in a meaningfull way:
         map_fn = make_map_function(cx,cy,model_n)
-        if verbose:
-            print 'first iteration. root-mean-square residuals:', err_rms,"in pixel, this is bad!"
-            print 'Warning, the data cannot be represented by the model in a meaningfull way.'
+        logger.info('First iteration. root-mean-square residuals: %s in pixel, this is bad!'%err_rms)
+        logger.warning('The data cannot be represented by the model in a meaningfull way.')
+
         if return_inlier_map:
             return map_fn,err_dist<=threshold
         return map_fn
