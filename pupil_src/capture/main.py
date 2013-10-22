@@ -34,6 +34,14 @@ else:
     rec_dir = os.path.join(pupil_base_dir,'recordings')
     user_dir = os.path.join(pupil_base_dir,'settings')
 
+
+# create folder for user settings, tmp data and a recordings folder
+if not os.path.isdir(user_dir):
+    os.mkdir(user_dir)
+if not os.path.isdir(rec_dir):
+    os.mkdir(rec_dir)
+
+
 import logging
 # create root logger for the main process before doing imports of logged modules
 logger = logging.getLogger()
@@ -77,13 +85,6 @@ def main():
             version = f.read()
     else:
         version = get_tag_commit()
-
-    # create folder for user settings, tmp data and a recordings folder
-    if not os.path.isdir(user_dir):
-        os.mkdir(user_dir)
-    if not os.path.isdir(rec_dir):
-        os.mkdir(rec_dir)
-
 
 
     # To assign camera by name: put string(s) in list
