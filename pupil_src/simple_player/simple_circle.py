@@ -16,6 +16,10 @@ def main():
 
     save_video = False
 
+    if getattr(sys, 'frozen', False):
+        save_video = True
+
+
     try:
         data_folder = sys.argv[1]
     except:
@@ -68,8 +72,7 @@ def main():
     frame = 0
 
     fps = cap.get(5)
-    fps = 20
-    wait =  int((1./fps)*1000)
+    # wait =  int((1./fps)*1000)
 
     if save_video:
         #FFV1 -- good speed lossless big file
@@ -92,7 +95,7 @@ def main():
 
         status, img = cap.read()
         frame += 1
-        ch = cv.waitKey(wait)
+        ch = cv.waitKey(1)
         if ch == 27:
             break
 
