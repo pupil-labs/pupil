@@ -28,6 +28,9 @@ controls:
 """
 import sys,os
 import subprocess as sp
+#logging
+import logging
+logger = logging.getLogger(__name__)
 
 if getattr(sys, 'frozen', False):
     # we are running in a |PyInstaller| bundle
@@ -55,7 +58,7 @@ def get(device_number,control):
     get a single control value
     """
     device = "-d"+str(device_number)
-    print "getting control:", device_number,control,value
+    logger.debug("getting control: %s %s %s"%(device_number,control,value))
     ret = sp.check_output([v4l2_ctl,device,"-C"+control])
     return int(ret.split(":")[-1])
 
@@ -136,7 +139,7 @@ def extract_controls(device_number):
     try:
         ret = sp.check_output([v4l2_ctl,device,"-L"])
     except:
-        print "v4l2-ctl not found. No uvc control panel will be added"
+        logger.warning("v4l2-ctl not found. No uvc control panel will be added")
         return []
 
     lines = ret.split("\n")

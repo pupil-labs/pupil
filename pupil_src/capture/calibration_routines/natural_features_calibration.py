@@ -10,6 +10,9 @@ import atb
 import audio
 
 from plugin import Plugin
+#logging
+import logging
+logger = logging.getLogger(__name__)
 
 class Natural_Features_Calibration(Plugin):
     """Calibrate using natural features in a scene.
@@ -44,23 +47,24 @@ class Natural_Features_Calibration(Plugin):
 
     def start(self):
         audio.say("Starting Calibration")
+        logger.info("Starting Calibration")
         self.active = True
         self.ref_list = []
         self.pupil_list = []
 
     def stop(self):
         audio.say("Stopping Calibration")
+        logger.info("Stopping Calibration")
         self.active = False
-        # print len(self.pupil_list), len(self.ref_list)
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
-        print "Collected ", len(cal_pt_cloud), " data points."
+        logger.info("Collected %s data points." %len(cal_pt_cloud))
         if len(cal_pt_cloud) < 20:
-            print "Did not collect enough data."
+            logger.warning("Did not collect enough data.")
             return
         cal_pt_cloud = np.array(cal_pt_cloud)
 
         img_size = self.first_img.shape[1],self.first_img.shape[0]
-        self.g_pool.map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,img_size,verbose=True)
+        self.g_pool.map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,img_size)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
     def update(self,frame,recent_pupil_positions):

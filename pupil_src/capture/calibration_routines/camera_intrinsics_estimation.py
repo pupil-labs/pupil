@@ -11,6 +11,10 @@ from OpenGL.GLU import gluOrtho2D
 
 from glfw import *
 from plugin import Plugin
+#logging
+import logging
+logger = logging.getLogger(__name__)
+
 
 # window calbacks
 def on_resize(window,w, h):
@@ -130,6 +134,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         np.save(os.path.join(self.g_pool.user_dir,'camera_matrix.npy'), camera_matrix)
         np.save(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"), dist_coefs)
         audio.say("Camera calibrated. Calibration saved to user folder")
+        logger.info("Camera calibrated. Calibration saved to user folder")
 
     def update(self,frame,recent_pupil_positions):
         if self.collect_new:

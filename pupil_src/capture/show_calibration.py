@@ -7,6 +7,10 @@ import atb
 from plugin import Plugin
 from calibrate import get_map_from_cloud
 
+#logging
+import logging
+logger = logging.getLogger(__name__)
+
 class Show_Calibration(Plugin):
     """Calibration results visualization plugin"""
     def __init__(self,g_pool,img_shape, atb_pos=(500,300)):
@@ -16,7 +20,7 @@ class Show_Calibration(Plugin):
         try:
             cal_pt_cloud = np.load(os.path.join(g_pool.user_dir,"cal_pt_cloud.npy"))
         except:
-            print "PLease calibrate first"
+            logger.warning("Please calibrate first")
             self.close()
             return
 
@@ -24,6 +28,12 @@ class Show_Calibration(Plugin):
         cal_pt_cloud[:,0:2] =  np.array(map_fn(cal_pt_cloud[:,0:2].transpose())).transpose()
         ref_pts = cal_pt_cloud[inlier_map][:,np.newaxis,2:4]
         ref_pts = np.array(ref_pts,dtype=np.float32)
+        logger.debug("calibration ref_pts %s"%ref_pts)
+
+        if len(ref_pts)== 0:
+            logger.warning("Calibration is bad. Please re-calibrate")
+            self.close()
+            return
 
         self.calib_bounds =  cv2.convexHull(ref_pts)
         # create a list [[px1,py1],[wx1,wy1],[px2,py2],[wx2,wy2]...] of outliers and inliers for gl_lines
@@ -34,8 +44,8 @@ class Show_Calibration(Plugin):
         self.inlier_ratio = c_float(cal_pt_cloud[inlier_map].shape[0]/float(cal_pt_cloud.shape[0]))
         self.inlier_count = c_int(cal_pt_cloud[inlier_map].shape[0])
         # hull = cv2.approxPolyDP(self.calib_bounds, 0.001,closed=True)
-        # print cv2.contourArea(self.calib_bounds)
-        full_screen_area = 2.*2.
+        full_screen_area = 2.* 2.
+        logger.debug("calibration bounds %s"%self.calib_bounds)
         self.calib_area_ratio = c_float(cv2.contourArea(self.calib_bounds)/full_screen_area)
 
         help_str = "yellow: indicates calibration error, red:discarded outliners, outline shows the calibrated area."

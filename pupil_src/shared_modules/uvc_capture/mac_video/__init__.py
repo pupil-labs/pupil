@@ -23,6 +23,11 @@ from time import time
 from raw import *
 from cv2 import VideoCapture
 
+#logging
+import logging
+logger = logging.getLogger(__name__)
+
+
 class Control(object):
     """docstring for uvcc_Control"""
     def __init__(self,name,i,handle):
@@ -123,7 +128,7 @@ class Controls(dict):
                 c.set_val(c.default)
 
     def __del__(self):
-        print "UVCC released"
+        logger.info("Capture control released")
         uvccReleaseCam(self.handle)
         uvccExit()
 
@@ -151,7 +156,7 @@ class Camera_Capture(object):
             pass
 
         if '6000' in self.name and False: #on mac we dont have enough controls to use this right.
-            print "adjusting exposure for HD-6000 camera"
+            logger.info("adjusting exposure for HD-6000 camera")
             try:
                 self.controls['UVCC_REQ_EXPOSURE_AUTOMODE'].set_val(1)
                 self.controls['UVCC_REQ_EXPOSURE_ABS'].set_val(156)

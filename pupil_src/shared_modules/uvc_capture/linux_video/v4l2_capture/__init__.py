@@ -16,7 +16,9 @@ from ctypes import *
 from numpy.ctypeslib import ndpointer
 import numpy as np
 import os,sys
-from time import time
+#logging
+import logging
+logger = logging.getLogger(__name__)
 
 if getattr(sys, 'frozen', False):
     # we are running in a |PyInstaller| bundle
@@ -39,11 +41,11 @@ if not getattr(sys, 'frozen', False):
         c_flags = "CFLAGS=-m32"
 
     from subprocess import check_output
-    # print " compiling now."
+    logger.debug("Compiling now.")
     compiler_status = check_output(["make",c_flags],cwd=basedir)
-    # print compiler_status
+    logger.debug('Compiler status: %(compiler_status)s')
     del check_output
-    # print "c-methods: compiling done."
+    logger.debug("Compiling done.")
 
 
 ### C-Types binary loading
@@ -191,7 +193,7 @@ class VideoCapture(object):
         if (-1 == dll.xioctl(self.device, VIDIOC_G_FMT, byref(self.v4l2_format))):
             self._close()
             raise Exception("Could not get v4l2 format")
-        print "Size on %s: %ix%i" %(self.src_str,self.v4l2_format.fmt.pix.width,self.v4l2_format.fmt.pix.height)
+        logger.info("Size on %s: %ix%i" %(self.src_str,self.v4l2_format.fmt.pix.width,self.v4l2_format.fmt.pix.height))
 
         self.v4l2_streamparm = v4l2_streamparm()
         self.v4l2_streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE
@@ -203,8 +205,8 @@ class VideoCapture(object):
         if (-1 == dll.xioctl(self.device, VIDIOC_G_PARM, byref(self.v4l2_streamparm))):
             self._close()
             raise Exception("Could not get v4l2 parameters")
-        print "Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
-                                                      self.v4l2_streamparm.parm.capture.timeperframe.denominator)
+        logger.info("Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
+                                                      self.v4l2_streamparm.parm.capture.timeperframe.denominator))
 
         #structure for atb menue
         size = self.v4l2_format.fmt.pix.width,self.v4l2_format.fmt.pix.height
@@ -249,8 +251,8 @@ class VideoCapture(object):
         if (-1 == dll.xioctl(self.device, VIDIOC_G_PARM, byref(self.v4l2_streamparm))):
             self._close()
             raise Exception("Could not get v4l2 parameters")
-        print "Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator, \
-                                                      self.v4l2_streamparm.parm.capture.timeperframe.denominator)
+        logger.info("Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator, \
+                                                      self.v4l2_streamparm.parm.capture.timeperframe.denominator))
 
         #update for atb menue
         fps = self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
@@ -309,19 +311,18 @@ class VideoCapture(object):
             #is the frame ok?
             if not buf.flags & V4L2_BUF_FLAG_ERROR:
                 if buf.flags & V4L2_BUF_FLAG_TIMESTAMP_MASK:
-                    print "buffer timestamp monotonic"
+                    logger.debug("buffer timestamp monotonic")
                 buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
                 img = np.frombuffer(buf_ptr.contents,c_uint8)
                 img.shape = (self.v4l2_format.fmt.pix.height,self.v4l2_format.fmt.pix.width,3)
                 timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000000.
-                # timestamp = time()
-                # print timestamp, buf.index
+                # logger.debug("%s %s" %(timestamp,buf.index))
                 return Frame(timestamp, img)
             else:
-                print "Frame corrupted skipping it"
+                logger.warning("Frame corrupted skipping it")
                 return self.read()
         else:
-            print "Failed to retrieve frame from "+ self.src_str+", Retrying"
+            logger.warning("Failed to retrieve frame from %s , Retrying"%self.src_str)
             self._active_buffer = None
             return self.read(retry-1)
 
@@ -344,7 +345,7 @@ class VideoCapture(object):
         if self.open:
             self.device = dll.close_device(self.device)
             self.open=False
-            print "Closed: "+self.src_str
+            logger.info("Closed: %s" %self.src_str)
 
     def __del__(self):
         self._stop()

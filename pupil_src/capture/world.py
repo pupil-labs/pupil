@@ -20,6 +20,7 @@ if __name__ == '__main__':
 import os, sys
 from time import time
 import shelve
+import logging
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
 
@@ -39,6 +40,9 @@ from show_calibration import Show_Calibration
 from display_gaze import Display_Gaze
 from pupil_server import Pupil_Server
 
+# create logger for the context of this function
+logger = logging.getLogger(__name__)
+
 
 def world(g_pool,cap_src,cap_size):
     """world
@@ -47,6 +51,7 @@ def world(g_pool,cap_src,cap_size):
     Receives Pupil coordinates from g_pool.pupil_queue
     Can run various plug-ins.
     """
+
 
     # Callback functions
     def on_resize(window,w, h):
@@ -85,7 +90,7 @@ def world(g_pool,cap_src,cap_size):
 
     def on_close(window):
         g_pool.quit.value = True
-        print "WORLD Process closing from window"
+        logger.info('Process closing from window')
 
 
 
@@ -100,11 +105,11 @@ def world(g_pool,cap_src,cap_size):
     # Initialize capture, check if it works
     cap = autoCreateCapture(cap_src, cap_size,24)
     if cap is None:
-        print "WORLD: Error could not create Capture"
+        logger.error("Did not receive valid Capture")
         return
     frame = cap.get_frame()
     if frame.img is None:
-        print "WORLD: Error could not get image"
+        logger.error("Could not retrieve image from capture")
         cap.close()
         return
     height,width = frame.img.shape[:2]
@@ -232,10 +237,11 @@ def world(g_pool,cap_src,cap_size):
 
     # load last calibration data
     try:
-        pt_cloud = np.load('cal_pt_cloud.npy')
+        pt_cloud = np.load(os.path.join(g_pool.user_dir,'cal_pt_cloud.npy'))
+        logger.info("Using calibration found in %s" %g_pool.user_dir)
         map_pupil = calibrate.get_map_from_cloud(pt_cloud,(width,height))
     except:
-        print "no calibration found"
+        logger.info("No calibration found.")
         def map_pupil(vector):
             """ 1 to 1 mapping
             """
@@ -306,7 +312,7 @@ def world(g_pool,cap_src,cap_size):
     cap.close()
     glfwDestroyWindow(world_window)
     glfwTerminate()
-    print "WORLD Process closed"
+    logger.debug("Process done")
 
 def world_profiled(g_pool,cap_src,cap_size):
     import cProfile,subprocess,os

@@ -2,6 +2,9 @@ from v4l2_capture import VideoCapture
 from v4l2_ctl import Controls, Camera_List, Cam
 import atb
 from time import sleep
+#logging
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Camera_Capture(object):
@@ -16,7 +19,7 @@ class Camera_Capture(object):
         except KeyError:
             pass
         if '6000' in self.name:
-            print "adjusting exposure for HD-6000 camera"
+            logger.info("adjusting exposure for HD-6000 camera")
             try:
                 self.controls['exposure_auto'].set_val(1)
                 self.controls['exposure_absolute'].set_val(156)
