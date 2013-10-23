@@ -100,7 +100,7 @@ def main():
     # world_src = "/Users/mkassner/Downloads/wetransfer-fe724a/world.avi"
 
     # Camera video size in pixels (width,height)
-    eye_size = (640,320)
+    eye_size = (640,360)
     world_size = (1280,720)
 
     # Create and initialize IPC

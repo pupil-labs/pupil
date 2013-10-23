@@ -43,7 +43,6 @@ def eye(g_pool,cap_src,cap_size):
     logger = logging.getLogger()
     # remove inherited handlers
     logger.handlers = []
-    logger.setLevel(logging.DEBUG)
     # create file handler which logs even debug messages
     fh = logging.FileHandler(os.path.join(g_pool.user_dir,'eye.log'),mode='w')
     fh.setLevel(logging.DEBUG)

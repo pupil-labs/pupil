@@ -43,7 +43,7 @@ if not getattr(sys, 'frozen', False):
     from subprocess import check_output
     logger.debug("Compiling now.")
     compiler_status = check_output(["make",c_flags],cwd=basedir)
-    logger.debug('Compiler status: %(compiler_status)s')
+    logger.debug('Compiler status: %s'%compiler_status)
     del check_output
     logger.debug("Compiling done.")
 
@@ -219,9 +219,10 @@ class VideoCapture(object):
         #structure for atb menue
         size = self.v4l2_format.fmt.pix.width,self.v4l2_format.fmt.pix.height
         self.sizes = enum_sizes(self.device,v4l2_fourcc(*self.prefered_format))
+        logger.debug("Sizes avaible on %s %s"%(self.src_str,self.sizes))
         self.rates = enum_rates(self.device,v4l2_fourcc(*self.prefered_format),size)
+        logger.debug("Rates avaible on %s @ %s: %s"%(self.src_str,size,self.rates))
         self.sizes_menu = dict(zip([str(w)+"x"+str(h) for w,h in self.sizes], range(len(self.sizes))))
-        logger.debug("rates %s"%self.sizes)
 
         self.current_size_idx = self.sizes.index(size)
         #structure for atb menue
