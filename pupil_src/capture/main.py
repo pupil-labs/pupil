@@ -87,7 +87,7 @@ else:
 
 def main():
     # To assign camera by name: put string(s) in list
-    eye_src = ["Microsoft", "6000"]
+    eye_src = ["Microsoft", "6000","USB Camera"]
     world_src = ["Logitech Camera","B525", "C525","C615","C920","C930e"]
 
     # to assign cameras directly, using integers as demonstrated below
@@ -100,7 +100,7 @@ def main():
     # world_src = "/Users/mkassner/Downloads/wetransfer-fe724a/world.avi"
 
     # Camera video size in pixels (width,height)
-    eye_size = (640,360)
+    eye_size = (640,320)
     world_size = (1280,720)
 
     # Create and initialize IPC

@@ -151,6 +151,8 @@ def extract_controls(device_number):
         words = [word for word in words if len(word)>0] #get rid of remaining spaces
         control = dict()
         control_name = words.pop(0) ###BUG this can fail if the line is empty...
+        if control_name == "error":
+            break
         control["type"] =  words.pop(0)
         colon = words.pop(0) #throw away..
         while words:

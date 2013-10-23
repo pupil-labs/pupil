@@ -168,7 +168,7 @@ class Frame(object):
 
 class VideoCapture(object):
     """docstring for v4l2_capture"""
-    def __init__(self, src_id,size=(1280,720),fps=24):
+    def __init__(self, src_id,size=(1280,720),fps=30):
         if src_id not in range(100):
             raise Exception("V4L2 Capture src_id not a number in 0-99")
         self.src_str = "/dev/video"+str(int(src_id))
@@ -179,6 +179,14 @@ class VideoCapture(object):
 
         self._open()
         self._verify()
+
+        self.formats = enum_formats(self.device)
+        logger.debug("Formats exposed by %s: %s"%(self.formats,self.src_str))
+        if ["MJPG"] in self.formats:
+            self.prefered_format =  "MJPG"
+        elif ["YUYV"] in self.formats:
+            self.prefered_format =  "YUYV"
+        logger.debug('Fromat choosen: %s'%self.prefered_format)
 
         #camera settings in v4l2 structures
         self.v4l2_format = v4l2_format()
@@ -210,13 +218,14 @@ class VideoCapture(object):
 
         #structure for atb menue
         size = self.v4l2_format.fmt.pix.width,self.v4l2_format.fmt.pix.height
-        self.sizes = enum_sizes(self.device,v4l2_fourcc(*'MJPG'))
-        self.rates = enum_rates(self.device,v4l2_fourcc(*'MJPG'),size)
+        self.sizes = enum_sizes(self.device,v4l2_fourcc(*self.prefered_format))
+        self.rates = enum_rates(self.device,v4l2_fourcc(*self.prefered_format),size)
         self.sizes_menu = dict(zip([str(w)+"x"+str(h) for w,h in self.sizes], range(len(self.sizes))))
-        self.current_size_idx = self.sizes.index(size)
+        logger.debug("rates %s"%self.sizes)
 
+        self.current_size_idx = self.sizes.index(size)
         #structure for atb menue
-        self.rates = enum_rates(self.device,v4l2_fourcc(*'MJPG'),size)
+        self.rates = enum_rates(self.device,v4l2_fourcc(*self.prefered_format),size)
         self.rates_menu = dict(zip([str(float(d)/n) for n,d in self.rates], range(len(self.rates))))
         fps = self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
               self.v4l2_streamparm.parm.capture.timeperframe.denominator
@@ -358,6 +367,9 @@ if __name__ == '__main__' :
     import numpy as np
     import cv2
     from time import sleep
+    logging.basicConfig()
+    logger.setLevel(logging.DEBUG)
+
 
     # cap = cv2.VideoCapture(0)
     # cap.set(3,1920)
@@ -402,7 +414,7 @@ if __name__ == '__main__' :
     for x in range(40):
         frame = cap.read()
         # print frame.img.shape
-        print frame.timestamp
+        # prin?t frame.timestamp
     # cap.set_rate(1)
 
     # for x in range(30):
