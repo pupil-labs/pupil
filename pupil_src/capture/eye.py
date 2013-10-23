@@ -30,7 +30,7 @@ from methods import *
 from c_methods import eye_filter
 from uvc_capture import autoCreateCapture
 from calibrate import get_map_from_cloud
-from pupil_detectors import Canny_Detector
+from pupil_detectors import Canny_Detector,MSER_Detector
 
 def eye(g_pool,cap_src,cap_size):
     """
@@ -45,7 +45,7 @@ def eye(g_pool,cap_src,cap_size):
     logger.handlers = []
     # create file handler which logs even debug messages
     fh = logging.FileHandler(os.path.join(g_pool.user_dir,'eye.log'),mode='w')
-    fh.setLevel(logging.DEBUG)
+    fh.setLevel(logging.INFO)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
     ch.setLevel(logging.WARNING)
@@ -253,7 +253,7 @@ def eye(g_pool,cap_src,cap_size):
 
         # fine pupil ellipse detection
         result = pupil_detector.detect(frame,u_roi=u_r,p_roi=p_r,visualize=bar.display.value == 2)
-
+        logger.debug('%s'%result)
         # stream the result
         g_pool.pupil_queue.put(result)
 
@@ -284,10 +284,11 @@ def eye(g_pool,cap_src,cap_size):
         draw_gl_texture(frame.img)
 
         if result['norm_pupil'] is not None and bar.draw_pupil.value:
-            pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
-                                    (int(result["axes"][0]/2),int(result["axes"][1]/2)),
-                                    int(result["angle"]),0,360,15)
-            draw_gl_polyline(pts,(1.,0,0,.5))
+            if result.has_key('axes'):
+                pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
+                                        (int(result["axes"][0]/2),int(result["axes"][1]/2)),
+                                        int(result["angle"]),0,360,15)
+                draw_gl_polyline(pts,(1.,0,0,.5))
             draw_gl_point_norm(result['norm_pupil'],color=(1.,0.,0.,0.5))
 
         atb.draw()
