@@ -19,7 +19,7 @@ it requires:
     - on Linux: v4l2-ctl (via apt-get install v4l2-util)
     - on MacOS: uvcc (binary is distributed with this module)
 """
-
+import os,sys
 from cv2 import VideoCapture
 import numpy as np
 from os.path import isfile
@@ -61,6 +61,14 @@ class FileCapture():
         self.controls = None #No UVC controls available with file capture
         # we initialize the actual capture based on cv2.VideoCapture
         self.cap = VideoCapture(src)
+        timestamps_loc = os.path.join(src.rsplit(os.path.sep,1)[0],'eye_timestamps.npy')
+        logger.info("trying to load timestamps with video at: %s"%timestamps_loc)
+        try:
+            self.timestamps = np.load(timestamps_loc).tolist()
+            logger.info("loaded %s timestamps"%len(self.timestamps))
+        except:
+            logger.info("did not find timestamps")
+            self.timestamps = None
         self._get_frame_ = self.cap.read
 
 
@@ -82,7 +90,10 @@ class FileCapture():
 
     def get_frame(self):
         s, img = self.read()
-        timestamp = time()
+        if self.timestamps:
+            timestamp = self.timestamps.pop(0)
+        else:
+            timestamp = time()
         return Frame(timestamp,img)
 
     def rewind(self):
