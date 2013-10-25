@@ -27,7 +27,6 @@ import atb
 from glfw import *
 from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline
 from methods import *
-from c_methods import eye_filter
 from uvc_capture import autoCreateCapture
 from calibrate import get_map_from_cloud
 from pupil_detectors import Canny_Detector,MSER_Detector
@@ -48,7 +47,7 @@ def eye(g_pool,cap_src,cap_size):
     fh.setLevel(logging.INFO)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
-    ch.setLevel(logging.WARNING)
+    ch.setLevel(logging.INFO)
     # create formatter and add it to the handlers
     formatter = logging.Formatter('EYE Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
@@ -144,11 +143,10 @@ def eye(g_pool,cap_src,cap_size):
         cap.close()
         return
     height,width = frame.img.shape[:2]
-
+    cap.auto_rewind = False
 
     u_r = Roi(frame.img.shape)
     u_r.set(load('roi',default=None))
-    p_r = Roi(frame.img.shape)
 
     writer = None
 
@@ -162,7 +160,7 @@ def eye(g_pool,cap_src,cap_size):
     bar.fps = c_float(0.0)
     bar.timestamp = time()
     bar.dt = c_float(0.0)
-    bar.sleep = c_float(0.0)
+    bar.sleep = c_float(load('bar.sleep',0.0))
     bar.display = c_int(load('bar.display',0))
     bar.draw_pupil = c_bool(load('bar.draw_pupil',True))
     bar.draw_roi = c_int(0)
@@ -212,6 +210,8 @@ def eye(g_pool,cap_src,cap_size):
     # event loop
     while not g_pool.quit.value:
         frame = cap.get_frame()
+        if frame.img is None:
+            break
         update_fps()
         sleep(bar.sleep.value) # for debugging only
 
@@ -240,41 +240,24 @@ def eye(g_pool,cap_src,cap_size):
 
         # IMAGE PROCESSING and clipping to user defined eye-region
         eye_img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX]
-        gray_img = grayscale(eye_img)
 
-        # coarse pupil detection
-        integral = cv2.integral(gray_img)
-        integral =  np.array(integral,dtype=c_float)
-        x,y,w = eye_filter(integral)
-        if w>0:
-            p_r.set((y,x,y+w,x+w))
-        else:
-            p_r.set((0,0,-1,-1))
-
-        # fine pupil ellipse detection
-        result = pupil_detector.detect(frame,u_roi=u_r,p_roi=p_r,visualize=bar.display.value == 2)
+        # pupil ellipse detection
+        result = pupil_detector.detect(frame,u_roi=u_r,visualize=bar.display.value == 2)
         logger.debug('%s'%result)
         # stream the result
         g_pool.pupil_queue.put(result)
 
 
+
         # VISUALIZATION direct visualizations on the frame.img data
         if bar.display.value == 1:
             # and a solid (white) frame around the user defined ROI
-            gray_img[:,0] = 255
-            gray_img[:,-1]= 255
-            gray_img[0,:] = 255
-            gray_img[-1,:]= 255
-            frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
+            r_img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX]
+            r_img[:,0] = 255,255,255
+            r_img[:,-1]= 255,255,255
+            r_img[0,:] = 255,255,255
+            r_img[-1,:]= 255,255,255
 
-            pupil_img =frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] # create an RGB view onto the gray pupil ROI
-            # draw a frame around the automatic pupil ROI in overlay...
-            pupil_img[::2,0] = 255,0,0
-            pupil_img[::2,-1]= 255,0,0
-            pupil_img[0,::2] = 255,0,0
-            pupil_img[-1,::2]= 255,0,0
-
-            frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX] = pupil_img
 
         elif bar.display.value == 3:
             frame.img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX]
@@ -305,6 +288,7 @@ def eye(g_pool,cap_src,cap_size):
 
 
     # save session persistent settings
+    save('bar.sleep',bar.sleep.value)
     save('roi',u_r.get())
     save('bar.display',bar.display.value)
     save('bar.draw_pupil',bar.draw_pupil.value)

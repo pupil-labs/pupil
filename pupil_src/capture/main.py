@@ -52,7 +52,7 @@ fh = logging.FileHandler(os.path.join(user_dir,'world.log'),mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.WARNING)
+ch.setLevel(logging.INFO)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('World Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -96,12 +96,12 @@ def main():
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    # eye_src = "/Users/mkassner/Downloads/wetransfer-fe724a/eye.avi"
+    eye_src = "/Users/mkassner/Desktop/pupil/2013_10_22_M19/000/eye.avi"
     # world_src = "/Users/mkassner/Downloads/wetransfer-fe724a/world.avi"
 
     # Camera video size in pixels (width,height)
     eye_size = (640,360)
-    world_size = (1280,720)
+    world_size = (640,480)
 
     # Create and initialize IPC
     g_pool = Temp()

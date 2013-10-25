@@ -139,7 +139,7 @@ inline ring_t make_ring(int w){
 // }
 
 
-void filter(const float *img, const int rows, const int cols, int * x_pos,int *y_pos,int *width)
+void filter(const float *img, const int rows, const int cols, int * x_pos,int *y_pos,int *width, int min_w,int max_w,float *response)
 // Algorithm based on:
 // Robust real-time pupil tracking in highly off-axis images
 // Lech Świrski Andreas Bulling Neil A. Dodgson
@@ -147,8 +147,8 @@ void filter(const float *img, const int rows, const int cols, int * x_pos,int *y
 // Eye Tracking Research & Applications 2012
 {
     point_t img_size = {rows,cols};
-    int min_h = 16;
-    int max_h = 80;
+    int min_h = min_w/3;
+    int max_h = max_w/3;
     int h, i, j;
     float best_response = -10000;
     point_t best_pos ={0,0};
@@ -220,6 +220,7 @@ void filter(const float *img, const int rows, const int cols, int * x_pos,int *y
     *x_pos = (int)best_pos.r;
     *y_pos = (int)best_pos.c;
     *width = best_h*3;
+    *response = best_response;
     }
 
 

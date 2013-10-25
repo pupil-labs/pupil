@@ -14,7 +14,7 @@ import numpy as np
 
 def main():
 
-    save_video = False
+    save_video = True
 
     if getattr(sys, 'frozen', False):
         save_video = True

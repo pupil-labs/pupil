@@ -62,7 +62,12 @@ __methods_dll.filter.argtypes = [ndpointer(c_float),  # integral image
                                 c_size_t,           # cols/shape[1]
                                 POINTER(c_int),     # maximal response top left anchor pos height
                                 POINTER(c_int),     # maximal response top left anchor pos width
-                                POINTER(c_int)]     # maxinal response window size
+                                POINTER(c_int),     # maxinal response window size
+                                c_int,     # maximal response min_w
+                                c_int,     # maximal response max_w
+                                POINTER(c_float)]     # maxinal response filter_response
+
+
 ### C-Types Argtypes and Restype
 __methods_dll.ring_filter.argtypes = [ndpointer(c_float),  # integral image
                                     c_size_t,           # rows/shape[0]
@@ -74,11 +79,13 @@ __methods_dll.ring_filter.argtypes = [ndpointer(c_float),  # integral image
 
 
 ### Function Wrappers
-def eye_filter(integral):
+def eye_filter(integral,min_w=10,max_w=100):
     rows, cols = integral.shape[0],integral.shape[1]
     x, y, w = c_int(), c_int(), c_int()
-    __methods_dll.filter(integral,rows,cols,x,y,w)
-    return x.value,y.value,w.value
+    response = c_float()
+    min_w,max_w = c_int(min_w),c_int(max_w)
+    __methods_dll.filter(integral,rows,cols,x,y,w,min_w,max_w,response)
+    return x.value,y.value,w.value,response.value
 
 ### Function Wrappers
 def ring_filter(integral):
