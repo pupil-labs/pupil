@@ -29,7 +29,7 @@ from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_p
 from methods import *
 from uvc_capture import autoCreateCapture
 from calibrate import get_map_from_cloud
-from pupil_detectors import Canny_Detector,MSER_Detector
+from pupil_detectors import Canny_Detector,MSER_Detector,Blob_Detector
 
 def eye(g_pool,cap_src,cap_size):
     """
@@ -167,8 +167,7 @@ def eye(g_pool,cap_src,cap_size):
 
     dispay_mode_enum = atb.enum("Mode",{"Camera Image":0,
                                         "Region of Interest":1,
-                                        "Algorithm":2,
-                                        "Corse Pupil Region":3})
+                                        "Algorithm":2})
 
     bar.add_var("FPS",bar.fps, step=1.,readonly=True)
     bar.add_var("Mode", bar.display,vtype=dispay_mode_enum, help="select the view-mode")
@@ -259,8 +258,6 @@ def eye(g_pool,cap_src,cap_size):
             r_img[-1,:]= 255,255,255
 
 
-        elif bar.display.value == 3:
-            frame.img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX][p_r.lY:p_r.uY,p_r.lX:p_r.uX]
 
         # GL-drawing
         clear_gl_screen()

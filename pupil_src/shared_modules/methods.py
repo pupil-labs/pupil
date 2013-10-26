@@ -246,6 +246,8 @@ def find_kink_and_dir_change(curvature,angle):
     return split
 
 
+def find_curv_disc(curvature):
+    pass
 
 
 def split_at_corner_index(contour,index):

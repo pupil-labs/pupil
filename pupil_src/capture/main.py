@@ -96,8 +96,8 @@ def main():
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    eye_src = "/Users/mkassner/Desktop/pupil/2013_10_22_M19/000/eye.avi"
-    # world_src = "/Users/mkassner/Downloads/wetransfer-fe724a/world.avi"
+    eye_src = "/Users/mkassner/Pupil/datasets/eye2_fieldtest/eye 32.avi"
+    # world_src = "/Users/mkassner/Downloads/wetrbansfer-fe724a/world.avi"
 
     # Camera video size in pixels (width,height)
     eye_size = (640,360)
