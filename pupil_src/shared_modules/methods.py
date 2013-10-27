@@ -246,8 +246,66 @@ def find_kink_and_dir_change(curvature,angle):
     return split
 
 
-def find_curv_disc(curvature):
-    pass
+def find_slope_disc(curvature,angle = 15):
+    # this only makes sense when your polyline is longish
+    if len(curvature)<4:
+        return []
+
+    i = 2
+    split_idx = []
+    for anchor1,anchor2,candidate in zip(curvature,curvature[1:],curvature[2:]):
+        base_slope = anchor2-anchor1
+        new_slope = anchor2 - candidate
+        dif = abs(base_slope-new_slope)
+        if dif>=angle:
+            split_idx.add(i)
+        print i,dif
+        i +=1
+
+    return split_list
+
+def find_slope_disc_test(curvature,angle = 15):
+    # this only makes sense when your polyline is longish
+    if len(curvature)<4:
+        return []
+    # mean = np.mean(curvature)
+    # print '------------------- start'
+    i = 2
+    split_idx = set()
+    for anchor1,anchor2,candidate in zip(curvature,curvature[1:],curvature[2:]):
+        base_slope = anchor2-anchor1
+        new_slope = anchor2 - candidate
+        dif = abs(base_slope-new_slope)
+        if dif>=angle:
+            split_idx.add(i)
+        # print i,dif
+        i +=1
+    i-= 3
+    for anchor1,anchor2,candidate in zip(curvature[::-1],curvature[:-1:][::-1],curvature[:-2:][::-1]):
+        avg = (anchor1+anchor2)/2.
+        dif = abs(avg-candidate)
+        if dif>=angle:
+            split_idx.add(i)
+        # print i,dif
+        i -=1
+    split_list = list(split_idx)
+    split_list.sort()
+    # print split_list
+    # print '-------end'
+    return split_list
+
+
+
+    # # var  = np.var(curvature)
+    # return mean,dif
+
+
+def points_at_corner_index(contour,index):
+    """
+    contour is array([[[108, 290]],[[111, 290]]], dtype=int32) shape=(number of points,1,dimension(2) )
+    #index n-2 because the curvature is n-2 (1st and last are not exsistent), this shifts the index (0 splits at first knot!)
+    """
+    return [contour[i+1] for i in index]
 
 
 def split_at_corner_index(contour,index):
@@ -480,6 +538,7 @@ if __name__ == '__main__':
     pl = np.array([[[0, 0]],[[0, 1]],[[1, 1]],[[2, 1]],[[2, 2]],[[1, 3]],[[1, 4]],[[2,4]]], dtype=np.int32)
     curvature = GetAnglesPolyline(pl)
     print curvature
-    idx =  find_kink_and_dir_change(curvature,60)
-    print idx
-    print split_at_corner_index(pl,idx)
+    print find_curv_disc(curvature)
+    # idx =  find_kink_and_dir_change(curvature,60)
+    # print idx
+    # print split_at_corner_index(pl,idx)

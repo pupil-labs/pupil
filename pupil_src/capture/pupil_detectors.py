@@ -24,6 +24,9 @@ import logging
 logger = logging.getLogger(__name__)
 from c_methods import eye_filter
 import random
+from glfw import *
+from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline,basic_gl_setup
+
 
 class Pupil_Detector(object):
     """base class for pupil detector"""
@@ -142,7 +145,18 @@ class Canny_Detector(Pupil_Detector):
         self.canny_aperture = c_int(7)
         self.intensity_range = c_int(17)
 
+        #debug window
+        self._window = None
+        self.window_should_open = False
+        self.window_should_close = False
+
     def detect(self,frame,u_roi,visualize=False):
+
+        if self.window_should_open:
+            self.open_window()
+        if self.window_should_close:
+            self.close_window()
+
         #get the user_roi
         img = frame.img
         r_img = img[u_roi.lY:u_roi.uY,u_roi.lX:u_roi.uX]
@@ -219,22 +233,21 @@ class Canny_Detector(Pupil_Detector):
         if visualize:
             overlay =  img[u_roi.lY:u_roi.uY,u_roi.lX:u_roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
             chn_img = grayscale(overlay)
-            overlay[:,:,0] = cv2.max(chn_img,edges) #b channel
-            # overlay[:,:,0] = cv2.max(chn_img,binary_img) #g channel
-            overlay[:,:,2] = cv2.min(chn_img,spec_mask) #b channel
+            overlay[:,:,2] = cv2.max(chn_img,edges) #b channel
+            overlay[:,:,0] = cv2.max(chn_img,binary_img) #g channel
+            overlay[:,:,1] = cv2.min(chn_img,spec_mask) #b channel
 
             pupil_img = frame.img[u_roi.lY:u_roi.uY,u_roi.lX:u_roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
             # draw a frame around the automatic pupil ROI in overlay...
-            pupil_img[::2,0] = 255,0,0
-            pupil_img[::2,-1]= 255,0,0
-            pupil_img[0,::2] = 255,0,0
-            pupil_img[-1,::2]= 255,0,0
+            pupil_img[::2,0] = 255,255,255
+            pupil_img[::2,-1]= 255,255,255
+            pupil_img[0,::2] = 255,255,255
+            pupil_img[-1,::2]= 255,255,255
 
-            pupil_img[::2,padding] = 255,0,0
-            pupil_img[::2,-padding]= 255,0,0
-            pupil_img[padding,::2] = 255,0,0
-            pupil_img[-padding,::2]= 255,0,0
-
+            pupil_img[::2,padding] = 255,255,255
+            pupil_img[::2,-padding]= 255,255,255
+            pupil_img[padding,::2] = 255,255,255
+            pupil_img[-padding,::2]= 255,255,255
             frame.img[u_roi.lY:u_roi.uY,u_roi.lX:u_roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX] = pupil_img
 
         # blur = pupil_img
@@ -258,10 +271,14 @@ class Canny_Detector(Pupil_Detector):
         # to short
         good_contours = [c for c in contours if c.shape[0]>self.min_contour_size]
         # now we learn things about each contour though looking at the curvature. For this we need to simplyfy the contour
-        arprox_contours = [cv2.approxPolyDP(c,epsilon=2,closed=False) for c in good_contours]
+        arprox_contours = [cv2.approxPolyDP(c,epsilon=1.5,closed=False) for c in good_contours]
         # cv2.drawContours(pupil_img,good_contours,-1,(255,255,0))
         # cv2.drawContours(pupil_img,arprox_contours,-1,(0,0,255))
-        x_shift = 0 #just vor display
+
+        if self._window:
+            debug_img = np.zeros(img.shape,img.dtype)
+
+        x_shift = coarse_pupil_width*2 #just vor display
         color = zip(range(0,250,30),range(0,255,30)[::-1],range(230,250))
         split_contours = []
         for c in arprox_contours:
@@ -275,22 +292,24 @@ class Canny_Detector(Pupil_Detector):
             # print len(segs)
             # segs.sort(key=lambda e:-len(e))
             for s in segs:
-                c = color.pop(0)
-                color.append(c)
-                cv2.polylines(pupil_img,[s],isClosed=False,color=c)
                 split_contours.append(s)
-                if visualize:
+                if self._window:
+                    c = color.pop(0)
+                    color.append(c)
+                    if s.shape[0] >=5:
+                        cv2.polylines(debug_img,[s],isClosed=False,color=c)
                     s = s.copy()
-                    s[:,:,1] +=x_shift
-                    s[:,:,0] +=img.shape[1]-coarse_pupil_width*2
-                    x_shift +=5
-                    cv2.polylines(img,[s],isClosed=False,color=c)
+                    s[:,:,1] +=  coarse_pupil_width*2
+                    cv2.polylines(debug_img,[s],isClosed=False,color=c)
+                    s[:,:,0] += x_shift
+                    x_shift += 5
+                    cv2.polylines(debug_img,[s],isClosed=False,color=c)
         # return {'timestamp':frame.timestamp,'norm_pupil':None}
 
 
 
 
-        good_contours = [c for c in split_contours if c.shape[0]>5]
+        good_contours = [c for c in split_contours if c.shape[0]>=5]
         # cv2.polylines(img,good_contours,isClosed=False,color=(255,255,0))
         shape = edges.shape
         ellipses = ((cv2.fitEllipse(c),c) for c in good_contours)
@@ -331,8 +350,11 @@ class Canny_Detector(Pupil_Detector):
             result.sort(key=lambda e: e['goodness'])
             # for now we assume that this contour is part of the pupil
             the_one = result[0]
-            cv2.polylines(img,[the_one["contour"]],isClosed=False,color=(255,0,0),thickness=1)
-
+            if self._window:
+                cv2.polylines(debug_img,[the_one["contour"]],isClosed=False,color=(255,0,0),thickness=2)
+                s = the_one["contour"].copy()
+                s[:,:,0] +=coarse_pupil_width*2
+                cv2.polylines(debug_img,[s],isClosed=False,color=(255,0,0),thickness=2)
             # but are there other segments that could be used for support?
             if len(result)>1:
                 the_one = result[0]
@@ -340,23 +362,28 @@ class Canny_Detector(Pupil_Detector):
                 # target_mean_curv = np.mean(curvature(the_one['contour'])
                 new_support = [the_one['contour'],]
                 for e in result[1:]:
+                    if self._window:
+                        cv2.polylines(debug_img,[e["contour"]],isClosed=False,color=(0,100,100))
                     manh_dist = abs(the_one["center"][0]-e['center'][0])+abs(the_one["center"][1]-e['center'][1])
                     size_dif = abs(the_one['major']-e['major'])
                     if manh_dist < the_one['major']:
                         if  size_dif < the_one['major']/3:
                             new_support.append(e["contour"])
-                        else:
-                            if visualize:
+                            if self._window:
+                                cv2.polylines(debug_img,[s],isClosed=False,color=(255,0,0),thickness=1)
                                 s = e["contour"].copy()
                                 s[:,:,0] +=coarse_pupil_width*2
-                                cv2.polylines(img,[s],isClosed=False,color=(0,0,255),thickness=1)
-                        # cv2.polylines(img,[e["contour"]],isClosed=False,color=(0,100,255))
+                                cv2.polylines(debug_img,[s],isClosed=False,color=(255,255,0),thickness=1)
+
+                        else:
+                            if self._window:
+                                s = e["contour"].copy()
+                                s[:,:,0] +=coarse_pupil_width*2
+                                cv2.polylines(debug_img,[s],isClosed=False,color=(0,0,255),thickness=1)
+
 
                 new_support = np.concatenate(new_support)
-                if visualize:
-                    s = new_support.copy()
-                    s[:,:,0] +=coarse_pupil_width*2
-                    cv2.polylines(img,[s],isClosed=False,color=(255,100,255))
+
                 self.goodness.value = the_one['goodness']
 
                 ###### do the ellipse fit and filter think again
@@ -394,6 +421,10 @@ class Canny_Detector(Pupil_Detector):
 
             #done - if the new ellipse is good, we just overwrote the old result
 
+        if self._window:
+            self.gl_display_in_window(debug_img)
+
+        if result:
             # update the target size
             if result[0]['goodness'] ==0: # perfect match!
                 self.target_size.value = result[0]['major']
@@ -417,6 +448,7 @@ class Canny_Detector(Pupil_Detector):
         self._bar = atb.Bar(name = "Canny_Pupil_Detector", label="Pupil_Detector",
             help="pupil detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.3, size=(200, 100))
+        self._bar.add_button("open debug window", self.toggle_window)
         self._bar.add_var("pupil_intensity_range",self.intensity_range)
         self._bar.add_var("Pupil_Aparent_Size",self.target_size)
         self._bar.add_var("Pupil_Shade",self.bin_thresh, readonly=True)
@@ -426,6 +458,66 @@ class Canny_Detector(Pupil_Detector):
         self._bar.add_var("canny_threshold",self.canny_thresh, step=1,min=0)
         self._bar.add_var("Canny_ratio",self.canny_ratio, step=1,min=1)
 
+    def toggle_window(self):
+        if self._window:
+            self.window_should_close = True
+        else:
+            self.window_should_open = True
+
+    def open_window(self):
+        if not self._window:
+            if 0: #we are not fullscreening
+                monitor = self.monitor_handles[self.monitor_idx.value]
+                mode = glfwGetVideoMode(monitor)
+                height,width= mode[0],mode[1]
+            else:
+                monitor = None
+                height,width= 640,360
+
+            active_window = glfwGetCurrentContext()
+            self._window = glfwCreateWindow(height, width, "Plugin Window", monitor=monitor, share=None)
+            if not 0:
+                glfwSetWindowPos(self._window,200,0)
+
+            self.on_resize(self._window,height,width)
+
+            #Register callbacks
+            glfwSetWindowSizeCallback(self._window,self.on_resize)
+            # glfwSetKeyCallback(self._window,self.on_key)
+            glfwSetWindowCloseCallback(self._window,self.on_close)
+
+            # gl_state settings
+            glfwMakeContextCurrent(self._window)
+            basic_gl_setup()
+            glfwMakeContextCurrent(active_window)
+
+            self.window_should_open = False
+
+    # window calbacks
+    def on_resize(self,window,w, h):
+        active_window = glfwGetCurrentContext()
+        glfwMakeContextCurrent(window)
+        adjust_gl_view(w,h)
+        glfwMakeContextCurrent(active_window)
+
+    def on_close(self,window):
+        self.window_should_close = True
+
+    def close_window(self):
+        if self._window:
+            glfwDestroyWindow(self._window)
+            self._window = None
+            self.window_should_close = False
+
+
+    def gl_display_in_window(self,img):
+        active_window = glfwGetCurrentContext()
+        glfwMakeContextCurrent(self._window)
+        clear_gl_screen()
+        # gl stuff that will show on your plugin window goes here
+        draw_gl_texture(img)
+        glfwSwapBuffers(self._window)
+        glfwMakeContextCurrent(active_window)
 
 
 

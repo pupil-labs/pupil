@@ -96,7 +96,20 @@ def main():
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    eye_src = "/Users/mkassner/Pupil/datasets/eye2_fieldtest/eye 32.avi"
+    # eye_src = "/Users/mkassner/Pupil/datasets/p1-right/frames/test.avi"
+    eye_src = "/Users/mkassner/Pupil/datasets/eye2_fieldtest/eye 33.avi"
+
+    # sometime one should not add support 11
+    # works @9309993 33 26 25 20 19 17 8 7 3
+    # sqinting 23 22 12 5
+    # mascarafail 24 (21 -only at the end) 30
+    # headset too high 27
+    # needed more intenstity range 28
+    # to dark 29 14 31
+    # hard 16,10,9 4 2
+    # fast, hard 32
+    #iris vs pupil 32,31,18,15,13,6
+
     # world_src = "/Users/mkassner/Downloads/wetrbansfer-fe724a/world.avi"
 
     # Camera video size in pixels (width,height)

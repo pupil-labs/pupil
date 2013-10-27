@@ -11,6 +11,12 @@
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 
+def basic_gl_setup():
+    glEnable(GL_POINT_SMOOTH)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    glEnable(GL_BLEND)
+    glClearColor(1.,1.,1.,0.)
+
 def clear_gl_screen():
     glClear(GL_COLOR_BUFFER_BIT)
 
