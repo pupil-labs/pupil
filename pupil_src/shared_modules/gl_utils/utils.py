@@ -94,7 +94,7 @@ def draw_gl_point_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
 
 
 
-def draw_gl_texture(image):
+def draw_gl_texture(image,interpolation=True):
     """
     We draw the image as a texture on a quad that is perfectly set into our window.
     """
@@ -117,7 +117,10 @@ def draw_gl_texture(image):
                         GL_UNSIGNED_BYTE,
                         image)
     glEnable(GL_TEXTURE_2D)
+
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) # interpolation here
+    if not interpolation:
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     # Set Projection Matrix
     glMatrixMode(GL_PROJECTION)

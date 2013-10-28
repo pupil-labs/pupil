@@ -130,6 +130,18 @@ def erase_specular(image,lower_threshold=0.0, upper_threshold=150.0):
     return specular
 
 
+def find_hough_circles(img):
+    circles = cv2.HoughCircles(pupil_img,cv2.cv.CV_HOUGH_GRADIENT,1,20,
+                            param1=50,param2=30,minRadius=0,maxRadius=80)
+    if circles is not None:
+        circles = np.uint16(np.around(circles))
+        for i in circles[0,:]:
+            # draw the outer circle
+            cv2.circle(img,(i[0],i[1]),i[2],(0,255,0),2)
+            # draw the center of the circle
+            cv2.circle(img,(i[0],i[1]),2,(0,0,255),3)
+
+
 
 def chessboard(image, pattern_size=(9,5)):
     status, corners = cv2.findChessboardCorners(image, pattern_size, flags=4)
@@ -521,6 +533,38 @@ def denormalize(pos, (width, height), flip_y=False):
 
 
 
+def dist_pts_ellipse(((ex,ey),(dx,dy),angle),pts):
+    """
+    """
+    pts = np.float64(pts)
+    rx,ry = dx/2., dy/2.
+    angle = (angle/180.)*np.pi
+    ex,ey =ex+0.000000001,ey-0.000000001 #hack to make 0 divisions possible this is UGLY!!!
+    pts -= np.array((ex,ey)) # move pts to ellipse appears at origin
+    M_rot = np.mat([[np.cos(angle),-np.sin(angle)],[np.sin(angle),np.cos(angle)]])
+    pts = np.array(pts*M_rot) #rotate so that ellipse axis align with coordinate system
+    # print "rotated",pts
+    norm_pts = pts/np.array((rx,ry)) #normalize such that ellipse radii=1
+    # print "normalize",norm_pts
+    norm_mag = np.sqrt((norm_pts*norm_pts).sum(axis=1))
+    norm_dist = abs(norm_mag-1) #distance of pt to ellipse in scaled space
+    # print 'norm_mag',norm_mag
+    # print 'norm_dist',norm_dist
+    ratio = (norm_dist)/norm_mag #scale factor to make the pts represent their dist to ellipse
+    # print 'ratio',ratio
+    scaled_error = np.transpose(norm_pts.T*ratio) # per vector scalar multiplication
+    # print "scaled error points", scaled_error
+    real_error = scaled_error*np.array((rx,ry))
+    # print "real point",real_error
+    error_mag = np.sqrt((real_error*real_error).sum(axis=1))
+    # print 'real_error',error_mag
+    # print 'result:',error_mag
+    return error_mag
+
+
+
+
+
 if __name__ == '__main__':
     # tst = []
     # for x in range(10):
@@ -535,10 +579,13 @@ if __name__ == '__main__':
     #    *   *-*
     #    |
     #  *-*
-    pl = np.array([[[0, 0]],[[0, 1]],[[1, 1]],[[2, 1]],[[2, 2]],[[1, 3]],[[1, 4]],[[2,4]]], dtype=np.int32)
-    curvature = GetAnglesPolyline(pl)
-    print curvature
-    print find_curv_disc(curvature)
+    # pl = np.array([[[0, 0]],[[0, 1]],[[1, 1]],[[2, 1]],[[2, 2]],[[1, 3]],[[1, 4]],[[2,4]]], dtype=np.int32)
+    # curvature = GetAnglesPolyline(pl)
+    # print curvature
+    # print find_curv_disc(curvature)
     # idx =  find_kink_and_dir_change(curvature,60)
     # print idx
     # print split_at_corner_index(pl,idx)
+    ellipse = ((1,0),(2,1),0)
+    pts = np.array([(2,0),(1.9,0),(-1.9,0)])
+    print dist_pts_ellipse(ellipse,pts)
