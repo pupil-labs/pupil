@@ -16,6 +16,7 @@ if __name__ == '__main__':
     del syspath, ospath
 
 import cv2
+from time import sleep
 import numpy as np
 from methods import *
 import atb
@@ -150,6 +151,9 @@ class Canny_Detector(Pupil_Detector):
         self.window_should_open = False
         self.window_should_close = False
 
+        #debug
+        self.should_sleep = False
+
     def detect(self,frame,u_roi,visualize=False):
 
         if self.window_should_open:
@@ -157,10 +161,15 @@ class Canny_Detector(Pupil_Detector):
         if self.window_should_close:
             self.close_window()
 
+
+
         #get the user_roi
         img = frame.img
         r_img = img[u_roi.lY:u_roi.uY,u_roi.lX:u_roi.uX]
         gray_img = grayscale(r_img)
+
+
+
         # coarse pupil detection
         integral = cv2.integral(gray_img)
         integral =  np.array(integral,dtype=c_float)
@@ -174,6 +183,7 @@ class Canny_Detector(Pupil_Detector):
         coarse_pupil_width = w/2.
         padding = coarse_pupil_width/4.
         pupil_img = gray_img[p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
+
 
         # binary thresholding of pupil dark areas
         hist = cv2.calcHist([pupil_img],[0],None,[256],[0,256]) #(images, channels, mask, histSize, ranges[, hist[, accumulate]])
@@ -248,6 +258,7 @@ class Canny_Detector(Pupil_Detector):
             pupil_img[::2,-padding]= 255,255,255
             pupil_img[padding,::2] = 255,255,255
             pupil_img[-padding,::2]= 255,255,255
+
             frame.img[u_roi.lY:u_roi.uY,u_roi.lX:u_roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX] = pupil_img
 
         # blur = pupil_img
@@ -296,8 +307,8 @@ class Canny_Detector(Pupil_Detector):
                 if self._window:
                     c = color.pop(0)
                     color.append(c)
-                    if s.shape[0] >=5:
-                        cv2.polylines(debug_img,[s],isClosed=False,color=c)
+                    # if s.shape[0] >=5:
+                    #     cv2.polylines(debug_img,[s],isClosed=False,color=c)
                     s = s.copy()
                     s[:,:,1] +=  coarse_pupil_width*2
                     cv2.polylines(debug_img,[s],isClosed=False,color=c)
@@ -321,19 +332,20 @@ class Canny_Detector(Pupil_Detector):
             pupil_ellipse = {}
             pupil_ellipse['contour'] = c
             a,b = e[1][0]/2.,e[1][1]/2. # majar minor radii of candidate ellipse
-            # pupil_ellipse['circumference'] = np.pi*abs(3*(a+b)-np.sqrt(10*a*b+3*(a**2+b**2)))
+            pupil_ellipse['circumference'] = np.pi*abs(3*(a+b)-np.sqrt(10*a*b+3*(a**2+b**2)))
             # pupil_ellipse['convex_hull'] = cv2.convexHull(pupil_ellipse['contour'])
             pupil_ellipse['contour_area'] = cv2.contourArea(cv2.convexHull(c))
             pupil_ellipse['ellipse_area'] = np.pi*a*b
             # print abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area'])
             if abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area']) <10:
-                pupil_ellipse['goodness'] = 0 #perfect match we'll take this one
+                pupil_ellipse['goodness'] = 0+size_dif/10 #perfect match we'll take this one
             else:
                 pupil_ellipse['goodness'] = size_dif
             if visualize:
                     pass
                     # cv2.drawContours(pupil_img,[cv2.convexHull(c)],-1,(size_dif,size_dif,255))
                     # cv2.drawContours(pupil_img,[c],-1,(size_dif,size_dif,255))
+            pupil_ellipse['pupil_center'] = e[0] # compensate for roi offsets
             pupil_ellipse['center'] = u_roi.add_vector(p_roi.add_vector(e[0])) # compensate for roi offsets
             pupil_ellipse['angle'] = e[-1]
             pupil_ellipse['axes'] = e[1]
@@ -350,24 +362,77 @@ class Canny_Detector(Pupil_Detector):
             result.sort(key=lambda e: e['goodness'])
             # for now we assume that this contour is part of the pupil
             the_one = result[0]
+            # (center, size, angle) = cv2.fitEllipse(the_one['contour'])
+            print "itself"
+            distances =  dist_pts_ellipse(cv2.fitEllipse(the_one['contour']),the_one['contour'])
+            print np.sum(distances)/float(distances.shape[0])
+            print "other"
+            with_another = np.concatenate((result[-1]['contour'],the_one['contour']))
+            distances =  dist_pts_ellipse(cv2.fitEllipse(the_one['contour']),with_another)
+            print np.sum(distances)/float(distances.shape[0])
+
+            perimeter_ratio =  cv2.arcLength(the_one["contour"],closed=False)/the_one['circumference']
+            if perimeter_ratio > .9:
+                size_thresh = 0
+                eccentricity_thresh = 0
+            elif perimeter_ratio > .5:
+                size_thresh = the_one['major']/(5.)
+                eccentricity_thresh = the_one['major']/2.
+                self.should_sleep = True
+            else:
+                size_thresh = the_one['major']/(3.)
+                eccentricity_thresh = the_one['major']/2.
+                self.should_sleep = True
+            if self._window:
+                center = np.uint16(np.around(the_one['pupil_center']))
+                cv2.circle(debug_img,tuple(center),int(eccentricity_thresh),(0,255,0),1)
+
             if self._window:
                 cv2.polylines(debug_img,[the_one["contour"]],isClosed=False,color=(255,0,0),thickness=2)
                 s = the_one["contour"].copy()
                 s[:,:,0] +=coarse_pupil_width*2
                 cv2.polylines(debug_img,[s],isClosed=False,color=(255,0,0),thickness=2)
             # but are there other segments that could be used for support?
+            new_support = [the_one['contour'],]
             if len(result)>1:
                 the_one = result[0]
                 target_axes = the_one['axes'][0]
                 # target_mean_curv = np.mean(curvature(the_one['contour'])
-                new_support = [the_one['contour'],]
                 for e in result[1:]:
                     if self._window:
                         cv2.polylines(debug_img,[e["contour"]],isClosed=False,color=(0,100,100))
-                    manh_dist = abs(the_one["center"][0]-e['center'][0])+abs(the_one["center"][1]-e['center'][1])
+                    center_dist = cv2.arcLength(np.array([the_one["pupil_center"],e['pupil_center']],dtype=np.int32),closed=False)
                     size_dif = abs(the_one['major']-e['major'])
-                    if manh_dist < the_one['major']:
-                        if  size_dif < the_one['major']/3:
+
+                    #lets make sure the countour is not behind the_one/'s coutour
+                    center_point = np.uint16(np.around(the_one['pupil_center']))
+                    other_center_point = np.uint16(np.around(e['pupil_center']))
+
+                    mid_point =  the_one["contour"][the_one["contour"].shape[0]/2][0]
+                    other_mid_point =  e["contour"][e["contour"].shape[0]/2][0]
+
+                    #reflect around mid_point
+                    p = center_point - mid_point
+                    p = np.array((-p[1],-p[0]))
+                    mir_center_point = p + mid_point
+                    dist_mid = cv2.arcLength(np.array([mid_point,other_mid_point]),closed=False)
+                    dist_center = cv2.arcLength(np.array([center_point,other_mid_point]),closed=False)
+                    if self._window:
+                        cv2.circle(debug_img,tuple(center_point),3,(0,255,0),2)
+                        cv2.circle(debug_img,tuple(other_center_point),2,(0,0,255),1)
+                        # cv2.circle(debug_img,tuple(mir_center_point),3,(0,255,0),2)
+                        # cv2.circle(debug_img,tuple(mid_point),2,(0,255,0),1)
+                        # cv2.circle(debug_img,tuple(other_mid_point),2,(0,0,255),1)
+                        cv2.polylines(debug_img,[np.array([center_point,other_mid_point]),np.array([mid_point,other_mid_point])],isClosed=False,color=(0,255,0))
+
+
+                    if center_dist < eccentricity_thresh:
+                    # print dist_mid-dist_center
+                    # if dist_mid > dist_center-20:
+
+                        if  size_dif < size_thresh:
+
+
                             new_support.append(e["contour"])
                             if self._window:
                                 cv2.polylines(debug_img,[s],isClosed=False,color=(255,0,0),thickness=1)
@@ -380,50 +445,64 @@ class Canny_Detector(Pupil_Detector):
                                 s = e["contour"].copy()
                                 s[:,:,0] +=coarse_pupil_width*2
                                 cv2.polylines(debug_img,[s],isClosed=False,color=(0,0,255),thickness=1)
-
-
-                new_support = np.concatenate(new_support)
-
-                self.goodness.value = the_one['goodness']
-
-                ###### do the ellipse fit and filter think again
-                ellipses = ((cv2.fitEllipse(c),c) for c in [new_support])
-                ellipses = ((e,c) for e,c in ellipses if (padding < e[0][1] < shape[0]-padding and padding< e[0][0] < shape[1]-padding)) # center is close to roi center
-                ellipses = ((e,c) for e,c in ellipses if binary_img[e[0][1],e[0][0]]) # center is on a dark pixel
-                ellipses = [(size_deviation(e,self.target_size.value),e,c) for e,c in ellipses if is_round(e,self.target_ratio)] # roundness test
-                for size_dif,e,c in ellipses:
-                    pupil_ellipse = {}
-                    pupil_ellipse['contour'] = c
-                    a,b = e[1][0]/2.,e[1][1]/2. # majar minor radii of candidate ellipse
-                    # pupil_ellipse['circumference'] = np.pi*abs(3*(a+b)-np.sqrt(10*a*b+3*(a**2+b**2)))
-                    # pupil_ellipse['convex_hull'] = cv2.convexHull(pupil_ellipse['contour'])
-                    pupil_ellipse['contour_area'] = cv2.contourArea(cv2.convexHull(c))
-                    pupil_ellipse['ellipse_area'] = np.pi*a*b
-                    # print abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area'])
-                    if abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area']) <10:
-                        pupil_ellipse['goodness'] = 0 #perfect match we'll take this one
                     else:
-                        pupil_ellipse['goodness'] = size_dif
-                    if visualize:
-                            pass
-                            # cv2.drawContours(pupil_img,[cv2.convexHull(c)],-1,(size_dif,size_dif,255))
-                            # cv2.drawContours(pupil_img,[c],-1,(size_dif,size_dif,255))
-                    pupil_ellipse['center'] = u_roi.add_vector(p_roi.add_vector(e[0])) # compensate for roi offsets
-                    pupil_ellipse['angle'] = e[-1]
-                    pupil_ellipse['axes'] = e[1]
-                    pupil_ellipse['major'] = max(e[1])
-                    pupil_ellipse['minor'] = min(e[1])
-                    pupil_ellipse['ratio'] = pupil_ellipse['minor']/pupil_ellipse['major']
-                    pupil_ellipse['norm_pupil'] = normalize(pupil_ellipse['center'], (img.shape[1], img.shape[0]),flip_y=True )
-                    pupil_ellipse['timestamp'] = frame.timestamp
-                    result = [pupil_ellipse,]
-                # the_new_one = result[0]
+                        if self._window:
+                            cv2.polylines(debug_img,[s],isClosed=False,color=(0,255,255),thickness=1)
+
+                    # new_support = np.concatenate(new_support)
+
+            self.goodness.value = the_one['goodness']
+
+            ###here we should AND original mask, selected contours with 2px thinkness (and 2px fitted ellipse -is the last one a good idea??)
+            support_mask = np.zeros(edges.shape,edges.dtype)
+            cv2.polylines(support_mask,new_support,isClosed=False,color=(255,255,255),thickness=2)
+            # #draw into the suport mast with thickness 2
+            new_edges = cv2.min(edges, support_mask)
+            new_contours = cv2.findNonZero(new_edges)
+            if self._window:
+                debug_img[0:support_mask.shape[0],0:support_mask.shape[1],2] = new_edges
+
+
+            ###### do the ellipse fit and filter think again
+            ellipses = ((cv2.fitEllipse(c),c) for c in [new_contours])
+            ellipses = ((e,c) for e,c in ellipses if (padding < e[0][1] < shape[0]-padding and padding< e[0][0] < shape[1]-padding)) # center is close to roi center
+            ellipses = ((e,c) for e,c in ellipses if binary_img[e[0][1],e[0][0]]) # center is on a dark pixel
+            ellipses = [(size_deviation(e,self.target_size.value),e,c) for e,c in ellipses if is_round(e,self.target_ratio)] # roundness test
+            for size_dif,e,c in ellipses:
+                pupil_ellipse = {}
+                pupil_ellipse['contour'] = c
+                a,b = e[1][0]/2.,e[1][1]/2. # majar minor radii of candidate ellipse
+                # pupil_ellipse['circumference'] = np.pi*abs(3*(a+b)-np.sqrt(10*a*b+3*(a**2+b**2)))
+                # pupil_ellipse['convex_hull'] = cv2.convexHull(pupil_ellipse['contour'])
+                pupil_ellipse['contour_area'] = cv2.contourArea(cv2.convexHull(c))
+                pupil_ellipse['ellipse_area'] = np.pi*a*b
+                # print abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area'])
+                if abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area']) <10:
+                    pupil_ellipse['goodness'] = 0 #perfect match we'll take this one
+                else:
+                    pupil_ellipse['goodness'] = size_dif
+                if visualize:
+                        pass
+                        # cv2.drawContours(pupil_img,[cv2.convexHull(c)],-1,(size_dif,size_dif,255))
+                        # cv2.drawContours(pupil_img,[c],-1,(size_dif,size_dif,255))
+                pupil_ellipse['center'] = u_roi.add_vector(p_roi.add_vector(e[0])) # compensate for roi offsets
+                pupil_ellipse['angle'] = e[-1]
+                pupil_ellipse['axes'] = e[1]
+                pupil_ellipse['major'] = max(e[1])
+                pupil_ellipse['minor'] = min(e[1])
+                pupil_ellipse['ratio'] = pupil_ellipse['minor']/pupil_ellipse['major']
+                pupil_ellipse['norm_pupil'] = normalize(pupil_ellipse['center'], (img.shape[1], img.shape[0]),flip_y=True )
+                pupil_ellipse['timestamp'] = frame.timestamp
+                result = [pupil_ellipse,]
+            # the_new_one = result[0]
 
             #done - if the new ellipse is good, we just overwrote the old result
 
         if self._window:
             self.gl_display_in_window(debug_img)
-
+            if self.should_sleep:
+                # sleep(3)
+                self.should_sleep = False
         if result:
             # update the target size
             if result[0]['goodness'] ==0: # perfect match!
@@ -515,7 +594,7 @@ class Canny_Detector(Pupil_Detector):
         glfwMakeContextCurrent(self._window)
         clear_gl_screen()
         # gl stuff that will show on your plugin window goes here
-        draw_gl_texture(img)
+        draw_gl_texture(img,interpolation=False)
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
 
