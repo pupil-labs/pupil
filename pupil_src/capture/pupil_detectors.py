@@ -338,9 +338,9 @@ class Canny_Detector(Pupil_Detector):
             pupil_ellipse['ellipse_area'] = np.pi*a*b
             # print abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area'])
             if abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area']) <10:
-                pupil_ellipse['goodness'] = 0+size_dif/10 #perfect match we'll take this one
+                pupil_ellipse['goodness'] = abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area'])/10 #perfect match we'll take this one
             else:
-                pupil_ellipse['goodness'] = size_dif
+                pupil_ellipse['goodness'] = abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area'])
             if visualize:
                     pass
                     # cv2.drawContours(pupil_img,[cv2.convexHull(c)],-1,(size_dif,size_dif,255))
@@ -363,13 +363,18 @@ class Canny_Detector(Pupil_Detector):
             # for now we assume that this contour is part of the pupil
             the_one = result[0]
             # (center, size, angle) = cv2.fitEllipse(the_one['contour'])
-            print "itself"
+            # print "itself"
             distances =  dist_pts_ellipse(cv2.fitEllipse(the_one['contour']),the_one['contour'])
-            print np.sum(distances)/float(distances.shape[0])
-            print "other"
+            # print np.average(distances)
+            # print np.sum(distances)/float(distances.shape[0])
+            # print "other"
+            # if self._window:
+                # cv2.polylines(debug_img,[result[-1]['contour']],isClosed=False,color=(255,255,255),thickness=3)
             with_another = np.concatenate((result[-1]['contour'],the_one['contour']))
-            distances =  dist_pts_ellipse(cv2.fitEllipse(the_one['contour']),with_another)
-            print np.sum(distances)/float(distances.shape[0])
+            distances =  dist_pts_ellipse(cv2.fitEllipse(with_another),with_another)
+            # if 1.5 > np.sum(distances)/float(distances.shape[0]):
+            #     if self._window:
+            #         cv2.polylines(debug_img,[result[-1]['contour']],isClosed=False,color=(255,255,255),thickness=3)
 
             perimeter_ratio =  cv2.arcLength(the_one["contour"],closed=False)/the_one['circumference']
             if perimeter_ratio > .9:
@@ -398,32 +403,45 @@ class Canny_Detector(Pupil_Detector):
                 the_one = result[0]
                 target_axes = the_one['axes'][0]
                 # target_mean_curv = np.mean(curvature(the_one['contour'])
-                for e in result[1:]:
+                for e in result:
+
+                    # with_another = np.concatenate((e['contour'],the_one['contour']))
+                    # with_another = np.concatenate([r['contour'] for r in result])
+                    with_another = e['contour']
+                    distances =  dist_pts_ellipse(cv2.fitEllipse(with_another),with_another)
+                    print np.std(distances)
+                    thick =  int(np.std(distances))
+                    if 1.5 > np.average(distances) or 1:
+                        if self._window:
+                            # print thick
+                            thick = min(20,thick)
+                            cv2.polylines(debug_img,[e['contour']],isClosed=False,color=(255,255,255),thickness=thick)
+
                     if self._window:
                         cv2.polylines(debug_img,[e["contour"]],isClosed=False,color=(0,100,100))
                     center_dist = cv2.arcLength(np.array([the_one["pupil_center"],e['pupil_center']],dtype=np.int32),closed=False)
                     size_dif = abs(the_one['major']-e['major'])
 
-                    #lets make sure the countour is not behind the_one/'s coutour
-                    center_point = np.uint16(np.around(the_one['pupil_center']))
-                    other_center_point = np.uint16(np.around(e['pupil_center']))
+                    # #lets make sure the countour is not behind the_one/'s coutour
+                    # center_point = np.uint16(np.around(the_one['pupil_center']))
+                    # other_center_point = np.uint16(np.around(e['pupil_center']))
 
-                    mid_point =  the_one["contour"][the_one["contour"].shape[0]/2][0]
-                    other_mid_point =  e["contour"][e["contour"].shape[0]/2][0]
+                    # mid_point =  the_one["contour"][the_one["contour"].shape[0]/2][0]
+                    # other_mid_point =  e["contour"][e["contour"].shape[0]/2][0]
 
-                    #reflect around mid_point
-                    p = center_point - mid_point
-                    p = np.array((-p[1],-p[0]))
-                    mir_center_point = p + mid_point
-                    dist_mid = cv2.arcLength(np.array([mid_point,other_mid_point]),closed=False)
-                    dist_center = cv2.arcLength(np.array([center_point,other_mid_point]),closed=False)
-                    if self._window:
-                        cv2.circle(debug_img,tuple(center_point),3,(0,255,0),2)
-                        cv2.circle(debug_img,tuple(other_center_point),2,(0,0,255),1)
-                        # cv2.circle(debug_img,tuple(mir_center_point),3,(0,255,0),2)
-                        # cv2.circle(debug_img,tuple(mid_point),2,(0,255,0),1)
-                        # cv2.circle(debug_img,tuple(other_mid_point),2,(0,0,255),1)
-                        cv2.polylines(debug_img,[np.array([center_point,other_mid_point]),np.array([mid_point,other_mid_point])],isClosed=False,color=(0,255,0))
+                    # #reflect around mid_point
+                    # p = center_point - mid_point
+                    # p = np.array((-p[1],-p[0]))
+                    # mir_center_point = p + mid_point
+                    # dist_mid = cv2.arcLength(np.array([mid_point,other_mid_point]),closed=False)
+                    # dist_center = cv2.arcLength(np.array([center_point,other_mid_point]),closed=False)
+                    # if self._window:
+                    #     cv2.circle(debug_img,tuple(center_point),3,(0,255,0),2)
+                    #     cv2.circle(debug_img,tuple(other_center_point),2,(0,0,255),1)
+                    #     # cv2.circle(debug_img,tuple(mir_center_point),3,(0,255,0),2)
+                    #     # cv2.circle(debug_img,tuple(mid_point),2,(0,255,0),1)
+                    #     # cv2.circle(debug_img,tuple(other_mid_point),2,(0,0,255),1)
+                    #     cv2.polylines(debug_img,[np.array([center_point,other_mid_point]),np.array([mid_point,other_mid_point])],isClosed=False,color=(0,255,0))
 
 
                     if center_dist < eccentricity_thresh:
@@ -505,7 +523,7 @@ class Canny_Detector(Pupil_Detector):
                 self.should_sleep = False
         if result:
             # update the target size
-            if result[0]['goodness'] ==0: # perfect match!
+            if result[0]['goodness'] >=3: # perfect match!
                 self.target_size.value = result[0]['major']
             else:
                 self.target_size.value  = self.target_size.value +  .2 * (result[0]['major']-self.target_size.value)

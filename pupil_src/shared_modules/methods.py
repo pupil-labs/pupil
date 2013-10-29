@@ -562,7 +562,77 @@ def dist_pts_ellipse(((ex,ey),(dx,dy),angle),pts):
     return error_mag
 
 
+evals = 0
 
+def metric(idecies,l):
+    """
+    example metric for search
+    """
+    global evals
+    evals +=1
+    return sum([l[i] for i in idecies]) < 2
+
+def down(path,l,fn):
+    """
+    sub-fn of quick_search
+    """
+    # print "@",path
+    ret = [path]
+    for next in range(path[-1]+1,len(l)):
+        if fn(path+[next],l):
+            ret.extend(down(path+[next],l,fn))
+    return ret
+
+
+def quick_combine(l,fn):
+    """
+    this search finds all combinations but assumes:
+        that a bad subset can not be bettered by adding more nodes
+        that a good set may not always be improved by a 'passing' superset
+
+    if all items and their combinations pass the evaluation fn you get n**2 -1 solutions
+    which leads to (2**n - 1) calls of your evaluation fn
+
+    the evaluation fn should accept idecies to your list and the list
+    it should return a binary result on wether this set is good
+    """
+    ret = []
+    for node in range(0,len(l)):
+        if fn([node],l):
+            ret.extend(down([node],l,fn))
+    return ret
+
+
+# def is_subset(needle,haystack):
+#     """ Check if needle is ordered subset of haystack in O(n)
+#     taken from:
+#     http://stackoverflow.com/questions/1318935/python-list-filtering-remove-subsets-from-list-of-lists
+#     """
+
+#     if len(haystack) < len(needle): return False
+
+#     index = 0
+#     for element in needle:
+#         try:
+#            index = haystack.index(element, index) + 1
+#         except ValueError:
+#             return False
+#     else:
+#        return True
+
+# def filter_subsets(lists):
+#     """ Given list of lists, return new list of lists without subsets
+#     taken from:
+#     http://stackoverflow.com/questions/1318935/python-list-filtering-remove-subsets-from-list-of-lists
+#     """
+
+#     for needle in lists:
+#         if not any(is_subset(needle, haystack) for haystack in lists
+#             if needle is not haystack):
+#             yield needle
+
+def filter_subsets(l):
+    return [m for i, m in enumerate(l) if not any(set(m).issubset(set(n)) for n in (l[:i] + l[i+1:]))]
 
 
 if __name__ == '__main__':
@@ -588,4 +658,11 @@ if __name__ == '__main__':
     # print split_at_corner_index(pl,idx)
     ellipse = ((1,0),(2,1),0)
     pts = np.array([(2,0),(1.9,0),(-1.9,0)])
-    print dist_pts_ellipse(ellipse,pts)
+    # print dist_pts_ellipse(ellipse,pts)
+
+
+    l = [0,2,0,1,0,1]
+
+    r =  quick_combine(l,metric)
+    print list(filter_subsets(r))
+    print evals
