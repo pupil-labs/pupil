@@ -134,24 +134,37 @@ class Canny_Detector(Pupil_Detector):
     """a Pupil detector based on Canny_Edges"""
     def __init__(self):
         super(Canny_Detector, self).__init__()
-        self.min_contour_size = 80
-        self.bin_thresh = c_int(0)
-        self.target_ratio=1.0
-        self.target_size=c_float(100.)
-        self.goodness = c_float(1.)
-        self.size_tolerance=10.
+
+        # coase pupil filter params
+        self.coarse_filter_min = 100
+        self.coarse_filter_max = 400
+
+        # canny edge detection params
         self.blur = c_int(1)
         self.canny_thresh = c_int(200)
         self.canny_ratio= c_int(2)
         self.canny_aperture = c_int(7)
+
+        # edge intensity filter params
         self.intensity_range = c_int(17)
+        self.bin_thresh = c_int(0)
+
+        # contour prefilter params
+        self.min_contour_size = 80
+
+        #ellipse filter params
+        self.target_ratio=1.0
+        self.target_size=c_float(100.)
+        self.goodness = c_float(1.)
+        self.size_tolerance=10.
+
 
         #debug window
         self._window = None
         self.window_should_open = False
         self.window_should_close = False
 
-        #debug
+        #debug settings
         self.should_sleep = False
 
     def detect(self,frame,u_roi,visualize=False):
@@ -169,11 +182,10 @@ class Canny_Detector(Pupil_Detector):
         gray_img = grayscale(r_img)
 
 
-
         # coarse pupil detection
         integral = cv2.integral(gray_img)
         integral =  np.array(integral,dtype=c_float)
-        x,y,w,response = eye_filter(integral,100,400)
+        x,y,w,response = eye_filter(integral,self.coarse_filter_min,self.coarse_filter_max)
         p_roi = Roi(gray_img.shape)
         if w>0:
             p_roi.set((y,x,y+w,x+w))
@@ -183,6 +195,7 @@ class Canny_Detector(Pupil_Detector):
         coarse_pupil_width = w/2.
         padding = coarse_pupil_width/4.
         pupil_img = gray_img[p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX]
+
 
 
         # binary thresholding of pupil dark areas
@@ -195,7 +208,6 @@ class Canny_Detector(Pupil_Detector):
         else:
             lowest_spike = 200
             highest_spike = 255
-
 
         offset = self.intensity_range.value
         spectral_offset = 5
@@ -234,6 +246,8 @@ class Canny_Detector(Pupil_Detector):
                             self.canny_thresh.value,
                             self.canny_thresh.value*self.canny_ratio.value,
                             apertureSize= self.canny_aperture.value)
+
+
         # edges = cv2.adaptiveThreshold(pupil_img,255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, self.canny_aperture.value, 7)
 
         # remove edges in areas not dark enough and where the glint is (spectral refelction from IR leds)
@@ -261,22 +275,13 @@ class Canny_Detector(Pupil_Detector):
 
             frame.img[u_roi.lY:u_roi.uY,u_roi.lX:u_roi.uX][p_roi.lY:p_roi.uY,p_roi.lX:p_roi.uX] = pupil_img
 
-        # blur = pupil_img
-        # # ret3,th3 = cv2.threshold(blur,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-        # ret3,thresh = cv2.threshold(blur,lowest_spike+offset,255,cv2.THRESH_BINARY)
-        # priont thresh.dtype
-        # # ret3,th3 = cv2.threshold(th3,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-        # edges = cv2.Laplacian(thresh,cv2.CV_64F)
 
-        # edges = thresh
-        # from edges to contours to ellipses
+        # from edges to contours
         contours, hierarchy = cv2.findContours(edges,
                                             mode=cv2.RETR_LIST,
                                             method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
         # contours is a list containing array([[[108, 290]],[[111, 290]]], dtype=int32) shape=(number of points,1,dimension(2) )
 
-        # the pupil target size is the one closest to the pupil_roi width or heigth (is the same)
-        # self.target_size.value = p_roi.uX-p_roi.lX
 
         ### first we want to filter out the bad stuff
         # to short
@@ -317,18 +322,18 @@ class Canny_Detector(Pupil_Detector):
                     cv2.polylines(debug_img,[s],isClosed=False,color=c)
         # return {'timestamp':frame.timestamp,'norm_pupil':None}
 
-
-
-
+        #these segments may now be smaller, we need to get rid of those not long enough for ellipse fitting
         good_contours = [c for c in split_contours if c.shape[0]>=5]
         # cv2.polylines(img,good_contours,isClosed=False,color=(255,255,0))
+
         shape = edges.shape
         ellipses = ((cv2.fitEllipse(c),c) for c in good_contours)
         ellipses = ((e,c) for e,c in ellipses if (padding < e[0][1] < shape[0]-padding and padding< e[0][0] < shape[1]-padding)) # center is close to roi center
         ellipses = ((e,c) for e,c in ellipses if binary_img[e[0][1],e[0][0]]) # center is on a dark pixel
-        ellipses = [(size_deviation(e,self.target_size.value),e,c) for e,c in ellipses if is_round(e,self.target_ratio)] # roundness test
+        ellipses = [(e,c) for e,c in ellipses if is_round(e,self.target_ratio)] # roundness test
         result = []
-        for size_dif,e,c in ellipses:
+        for e,c in ellipses:
+            size_dif = size_deviation(e,self.target_size.value)
             pupil_ellipse = {}
             pupil_ellipse['contour'] = c
             a,b = e[1][0]/2.,e[1][1]/2. # majar minor radii of candidate ellipse

@@ -172,7 +172,6 @@ def curvature(c):
     return curvature
 
 
-
 def GetAnglesPolyline(polyline):
     """
     see: http://stackoverflow.com/questions/3486172/angle-between-3-points
@@ -307,11 +306,6 @@ def find_slope_disc_test(curvature,angle = 15):
     return split_list
 
 
-
-    # # var  = np.var(curvature)
-    # return mean,dif
-
-
 def points_at_corner_index(contour,index):
     """
     contour is array([[[108, 290]],[[111, 290]]], dtype=int32) shape=(number of points,1,dimension(2) )
@@ -347,93 +341,6 @@ def convexity_defect(contour, curvature):
         kinks.append(contour[s+1]) # because the curvature is n-2 (1st and last are not exsistent)
     return kinks,kink_index
 
-def fit_ellipse(debug_img,edges,bin_dark_img, contour_size=80,target_ratio=1.0,target_size=20.,size_tolerance=20.):
-    """ fit_ellipse: old, please look at pupil_detectors.py
-    """
-    c_img = edges.copy()
-    contours, hierarchy = cv2.findContours(c_img,
-                                            mode=cv2.RETR_LIST,
-                                            method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
-    # contours is a list containging array([[[108, 290]],[[111, 290]]], dtype=int32) shape=(number of points,1,dimension(2) )
-
-    contours = [c for c in contours if c.shape[0]>contour_size]
-
-    cv2.drawContours(debug_img, contours, -1, (255,255,255),thickness=1,lineType=cv2.cv.CV_AA)
-
-    # print contours
-
-    # cv2.drawContours(debug_img, contours, -1, (255,255,255),thickness=1)
-    good_contours = contours
-    # split_contours = []
-    # i = 0
-    # for c in contours:
-    #   curvature = np.abs(GetAnglesPolyline(c))
-    #   kink= extract_at_angle(c,curvature,150)
-    #   cv2.drawContours(debug_img, kink, -1, (255,0,0),thickness=2)
-    #   split_contours += split_at_angle(c,curvature,150)
-
-
-    # # good_contours = split_contours
-    # good_contours = []
-    # for c in split_contours:
-    #   i +=40
-    #   kink =  convexity_defect(c,GetAnglesPolyline(c))
-    #   cv2.drawContours(debug_img, kink, -1, (255,0,0),thickness=1)
-    #   if c.shape[0]/float(len(kink)+1)>3 and c.shape[0]>=5:
-    #       cv2.drawContours(debug_img, np.array([c]), -1, (i,i,i),thickness=1)
-    #       good_contours.append(c)
-    #   else:
-    #       cv2.drawContours(debug_img, np.array([c]), -1, (255,0,0),thickness=1)
-
-    # for c in split_contours:
-    #   kink =  convexity_defect(c,GetAnglesPolyline(c))
-    #   cv2.drawContours(debug_img, kink, -1, (255,0,0),thickness=1)
-    #   if c.shape[0]/float(len(kink)+1)>3 and c.shape[0]>=5:
-    #       cv2.drawContours(debug_img, c, -1, (0,255,0),thickness=1)
-    #       good_contours.append(c)
-
-
-    # cv2.drawContours(debug_img, good_contours, -1, (0,255,0),thickness=1)
-
-    # split_contours.sort(key=lambda c: -c.shape[0])
-    # for c in split_contours[:]:
-    #   if len(c)>=5:
-    #       cv2.drawContours(debug_img, c[0:1], -1, (0,0,255),thickness=2)
-    #       cv2.drawContours(debug_img, c[-1:], -1, (0,255,0),thickness=2)
-    #       cv2.drawContours(debug_img, c, -1, (0,255,0),thickness=1)
-
-    #       # cv2.polylines(debug_img,[c[:,0]], isClosed=False, color=(255,0,0),thickness= 1)
-    #       good_contours.append(c)
-
-    # cv2.drawContours(debug_img, good_contours, -1, (255,255,255),thickness=1)
-    # good_contours = np.concatenate(good_contours)
-    # good_contours = [good_contours]
-
-    shape = edges.shape
-    ellipses = (cv2.fitEllipse(c) for c in good_contours)
-    ellipses = (e for e in ellipses if (0 <= e[0][1] <= shape[0] and 0<= e[0][0] <= shape[1]))
-    ellipses = (e for e in ellipses if bin_dark_img[e[0][1],e[0][0]])
-    ellipses = ((size_deviation(e,target_size),e) for e in ellipses if is_round(e,target_ratio)) # roundness test
-    ellipses = [(size_dif,e) for size_dif,e in ellipses if size_dif<size_tolerance ] # size closest to target size
-    ellipses.sort(key=lambda e: e[0]) #sort size_deviation
-    if ellipses:
-        best_ellipse = {'center': (None,None),
-                'axes': (None, None),
-                'angle': None,
-                'area': 0.0,
-                'ratio': None,
-                'major': None,
-                'minor': None}
-
-        largest = ellipses[0][1]
-        best_ellipse['center'] = largest[0]
-        best_ellipse['angle'] = largest[-1]
-        best_ellipse['axes'] = largest[1]
-        best_ellipse['major'] = max(largest[1])
-        best_ellipse['minor'] = min(largest[1])
-        best_ellipse['ratio'] = best_ellipse['minor']/best_ellipse['major']
-        return best_ellipse,ellipses
-    return None
 
 def is_round(ellipse,ratio,tolerance=.8):
     center, (axis1,axis2), angle = ellipse
@@ -449,33 +356,6 @@ def size_deviation(ellipse,target_size):
 
 
 
-def convexity_2(contour,img=None):
-    if img is not None:
-        hull = cv2.convexHull(contour, returnPoints=1)
-        cv2.drawContours(img, hull, -1, (255,0,0))
-    hull = cv2.convexHull(contour, returnPoints=0)
-    if len(hull)>12:
-        res = cv2.convexityDefects(contour, hull) # return: start_index, end_index, farthest_pt_index, fixpt_depth)
-        if res is  None:
-            return False
-        if len(res)>2:
-            return True
-    return False
-
-
-def convexity(contour,img=None):
-    if img is not None:
-        hull = cv2.convexHull(contour, returnPoints=1)
-        cv2.drawContours(img, hull, -1, (255,0,0))
-
-    hull = cv2.convexHull(contour, returnPoints=0)
-    if len(hull)>3:
-        res = cv2.convexityDefects(contour, hull) # return: start_index, end_index, farthest_pt_index, fixpt_depth)
-        if res is  None:
-            return False
-        if len(res)>3:
-            return True
-    return False
 
 
 def circle_grid(image, pattern_size=(4,11)):
@@ -535,6 +415,7 @@ def denormalize(pos, (width, height), flip_y=False):
 
 def dist_pts_ellipse(((ex,ey),(dx,dy),angle),pts):
     """
+    return unsigned euclidian distances of points to ellipse
     """
     pts = np.float64(pts)
     rx,ry = dx/2., dy/2.
@@ -562,45 +443,102 @@ def dist_pts_ellipse(((ex,ey),(dx,dy),angle),pts):
     return error_mag
 
 
-evals = 0
+
 
 def metric(idecies,l):
     """
     example metric for search
     """
+    # print 'evaluating', idecies
     global evals
     evals +=1
-    return sum([l[i] for i in idecies]) < 2
+    return sum([l[i] for i in idecies]) < 3
 
-def down(path,l,fn):
+
+def cached_metric(indecies,l,prune):
     """
-    sub-fn of quick_search
+    example metric for search
     """
-    # print "@",path
-    ret = [path]
-    for next in range(path[-1]+1,len(l)):
-        if fn(path+[next],l):
-            ret.extend(down(path+[next],l,fn))
-    return ret
+    if any(m.issubset(set(indecies)) for m in prune):
+        print "pruning", indecies
+        return False
+    else:
+        global evals
+        evals +=1
+        print 'evaluating', indecies
+
+        res = sum([l[i] for i in indecies]) < 3
+        if not res:
+            prune.append(set(indecies))
+        return res
 
 
 def quick_combine(l,fn):
     """
     this search finds all combinations but assumes:
         that a bad subset can not be bettered by adding more nodes
-        that a good set may not always be improved by a 'passing' superset
+        that a good set may not always be improved by a 'passing' superset (purging subsets will revoke this)
 
     if all items and their combinations pass the evaluation fn you get n**2 -1 solutions
     which leads to (2**n - 1) calls of your evaluation fn
 
+    it needs more evaluations than finding strongly connected components in a graph because:
+    (1,5) and (1,6) and (5,6) may work but (1,5,6) may not pass evaluation, (n,m) being list idx's
+
     the evaluation fn should accept idecies to your list and the list
     it should return a binary result on wether this set is good
     """
+
+    def down(path,l,fn):
+        # print "@",path
+        ret = [path]
+        for next in range(path[-1]+1,len(l)):
+            if fn(path+[next],l):
+                ret.extend(down(path+[next],l,fn))
+        return ret
+
+
     ret = []
     for node in range(0,len(l)):
         if fn([node],l):
             ret.extend(down([node],l,fn))
     return ret
+
+
+def pruning_quick_combine(l,fn,seed_idx=None):
+    """
+    l is a list of object to quick_combine.
+    the evaluation fn should accept idecies to your list and the list
+    it should return a binary result on wether this set is good
+    it should accept a list it can use as storage
+
+    this search finds all combinations but assumes:
+        that a bad subset can not be bettered by adding more nodes
+        that a good set may not always be improved by a 'passing' superset (purging subsets will revoke this)
+
+    if all items and their combinations pass the evaluation fn you get n**2 -1 solutions
+    which leads to (2**n - 1) calls of your evaluation fn
+
+    it needs more evaluations than finding strongly connected components in a graph because:
+    (1,5) and (1,6) and (5,6) may work but (1,5,6) may not pass evaluation, (n,m) being list idx's
+
+    """
+    if seed_idx:
+        unknown = [[node] for node in seed_idx]
+    else:
+        unknown = [[node] for node in range(len(l))]
+    results = []
+    cache = []
+    while unknown:
+        path = unknown.pop(0)
+        if fn(path,l,cache): # is this a good combination?
+            results.append(path)
+            decedents = [path+[i] for i in range(path[-1]+1,len(l)) ]
+            unknown.extend(decedents)
+
+    return results
+
+
 
 
 # def is_subset(needle,haystack):
@@ -661,8 +599,19 @@ if __name__ == '__main__':
     # print dist_pts_ellipse(ellipse,pts)
 
 
-    l = [0,2,0,1,0,1]
+    l = [1,3,1,2,1,2,0,2,2,4,4]
+    # evals = 0
+    # r = quick_combine(l,metric)
+    # # print r
+    # print filter_subsets(r)
+    # print evals
 
-    r =  quick_combine(l,metric)
-    print list(filter_subsets(r))
+    evals = 0
+    r = pruning_quick_combine(l,cached_metric,[0])
+    # print r
+    print filter_subsets(r)
     print evals
+
+
+
+
