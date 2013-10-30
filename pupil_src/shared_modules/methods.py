@@ -524,8 +524,10 @@ def pruning_quick_combine(l,fn,seed_idx=None):
 
     """
     if seed_idx:
+        #Warning right now, seeds need to be before non-seeds
         unknown = [[node] for node in seed_idx]
     else:
+        #start from every item
         unknown = [[node] for node in range(len(l))]
     results = []
     cache = []

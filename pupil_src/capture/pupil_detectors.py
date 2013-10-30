@@ -345,7 +345,7 @@ class Canny_Detector(Pupil_Detector):
             if abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area']) <10:
                 pupil_ellipse['goodness'] = abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area'])/10 #perfect match we'll take this one
             else:
-                pupil_ellipse['goodness'] = abs(pupil_ellipse['contour_area']-pupil_ellipse['ellipse_area'])
+                pupil_ellipse['goodness'] = size_dif
             if visualize:
                     pass
                     # cv2.drawContours(pupil_img,[cv2.convexHull(c)],-1,(size_dif,size_dif,255))
@@ -414,7 +414,7 @@ class Canny_Detector(Pupil_Detector):
                     # with_another = np.concatenate([r['contour'] for r in result])
                     with_another = e['contour']
                     distances =  dist_pts_ellipse(cv2.fitEllipse(with_another),with_another)
-                    print np.std(distances)
+                    # print np.std(distances)
                     thick =  int(np.std(distances))
                     if 1.5 > np.average(distances) or 1:
                         if self._window:
