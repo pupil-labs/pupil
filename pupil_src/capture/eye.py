@@ -237,11 +237,8 @@ def eye(g_pool,cap_src,cap_size):
             timestamps.append(frame.timestamp)
 
 
-        # IMAGE PROCESSING and clipping to user defined eye-region
-        eye_img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX]
-
         # pupil ellipse detection
-        result = pupil_detector.detect(frame,u_roi=u_r,visualize=bar.display.value == 2)
+        result = pupil_detector.detect(frame,user_roi=u_r,visualize=bar.display.value == 2)
         logger.debug('%s'%result)
         # stream the result
         g_pool.pupil_queue.put(result)

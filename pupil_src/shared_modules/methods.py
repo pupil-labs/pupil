@@ -21,9 +21,8 @@ class Roi(object):
     it is applied on numpy arrays for convenient slicing
     like this:
 
-    roi_array_slice = full_array[r.lY:r.uY,r.lX:r.uX]
+    roi_array_slice = full_array[r.view]
     # do something with roi_array_slice
-    full_array[r.lY:r.uY,r.lX:r.uX] = roi_array_slice
 
     this creates a view, no data copying done
     """
@@ -35,6 +34,14 @@ class Roi(object):
         self.uY = array_shape[0]-0
         self.nX = 0
         self.nY = 0
+
+    @property
+    def view(self):
+        return slice(self.lY,self.uY,),slice(self.lX,self.uX)
+
+    @view.setter
+    def view(self, value):
+        raise Exception('The view field is read-only. Use the set methods instead')
 
     def setStart(self,(x,y)):
         x,y = int(x),int(y)
@@ -64,8 +71,6 @@ class Roi(object):
     def get(self):
         return self.lX,self.lY,self.uX,self.uY
 
-def grayscale(image):
-    return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
 
 def bin_thresholding(image, image_lower=0, image_upper=256):
@@ -202,7 +207,7 @@ def GetAnglesPolyline(polyline):
 
     # float alpha = atan2(cross, dot);
     alpha = np.arctan2(cros,dot)
-    return alpha * 180. / np.pi #degrees
+    return alpha*(180./np.pi) #degrees
     # return alpha #radians
 
 
@@ -413,27 +418,27 @@ def denormalize(pos, (width, height), flip_y=False):
 
 
 
-def dist_pts_ellipse(((ex,ey),(dx,dy),angle),pts):
+def dist_pts_ellipse(((ex,ey),(dx,dy),angle),points):
     """
     return unsigned euclidian distances of points to ellipse
     """
-    pts = np.float64(pts)
+    pts = np.float64(points)
     rx,ry = dx/2., dy/2.
     angle = (angle/180.)*np.pi
     ex,ey =ex+0.000000001,ey-0.000000001 #hack to make 0 divisions possible this is UGLY!!!
-    pts -= np.array((ex,ey)) # move pts to ellipse appears at origin
+    pts = pts - np.array((ex,ey)) # move pts to ellipse appears at origin , with this we copy data -deliberatly!
     M_rot = np.mat([[np.cos(angle),-np.sin(angle)],[np.sin(angle),np.cos(angle)]])
     pts = np.array(pts*M_rot) #rotate so that ellipse axis align with coordinate system
     # print "rotated",pts
-    norm_pts = pts/np.array((rx,ry)) #normalize such that ellipse radii=1
+    pts /= np.array((rx,ry)) #normalize such that ellipse radii=1
     # print "normalize",norm_pts
-    norm_mag = np.sqrt((norm_pts*norm_pts).sum(axis=1))
+    norm_mag = np.sqrt((pts*pts).sum(axis=1))
     norm_dist = abs(norm_mag-1) #distance of pt to ellipse in scaled space
     # print 'norm_mag',norm_mag
     # print 'norm_dist',norm_dist
     ratio = (norm_dist)/norm_mag #scale factor to make the pts represent their dist to ellipse
     # print 'ratio',ratio
-    scaled_error = np.transpose(norm_pts.T*ratio) # per vector scalar multiplication
+    scaled_error = np.transpose(pts.T*ratio) # per vector scalar multiplication: makeing sure that boradcasting is done right
     # print "scaled error points", scaled_error
     real_error = scaled_error*np.array((rx,ry))
     # print "real point",real_error
@@ -445,14 +450,14 @@ def dist_pts_ellipse(((ex,ey),(dx,dy),angle),pts):
 
 
 
-def metric(idecies,l):
+def metric(l):
     """
     example metric for search
     """
     # print 'evaluating', idecies
     global evals
     evals +=1
-    return sum([l[i] for i in idecies]) < 3
+    return sum(l) < 3
 
 
 def cached_metric(indecies,l,prune):
@@ -473,39 +478,9 @@ def cached_metric(indecies,l,prune):
         return res
 
 
-def quick_combine(l,fn):
-    """
-    this search finds all combinations but assumes:
-        that a bad subset can not be bettered by adding more nodes
-        that a good set may not always be improved by a 'passing' superset (purging subsets will revoke this)
-
-    if all items and their combinations pass the evaluation fn you get n**2 -1 solutions
-    which leads to (2**n - 1) calls of your evaluation fn
-
-    it needs more evaluations than finding strongly connected components in a graph because:
-    (1,5) and (1,6) and (5,6) may work but (1,5,6) may not pass evaluation, (n,m) being list idx's
-
-    the evaluation fn should accept idecies to your list and the list
-    it should return a binary result on wether this set is good
-    """
-
-    def down(path,l,fn):
-        # print "@",path
-        ret = [path]
-        for next in range(path[-1]+1,len(l)):
-            if fn(path+[next],l):
-                ret.extend(down(path+[next],l,fn))
-        return ret
 
 
-    ret = []
-    for node in range(0,len(l)):
-        if fn([node],l):
-            ret.extend(down([node],l,fn))
-    return ret
-
-
-def pruning_quick_combine(l,fn,seed_idx=None):
+def pruning_quick_combine(l,fn,seed_idx=None,max_evals=1e20,max_depth=5):
     """
     l is a list of object to quick_combine.
     the evaluation fn should accept idecies to your list and the list
@@ -524,20 +499,34 @@ def pruning_quick_combine(l,fn,seed_idx=None):
 
     """
     if seed_idx:
-        #Warning right now, seeds need to be before non-seeds
-        unknown = [[node] for node in seed_idx]
+        non_seed_idx = [i for i in range(len(l)) if i not in seed_idx]
     else:
         #start from every item
-        unknown = [[node] for node in range(len(l))]
+        seed_idx = range(len(l))
+        non_seed_idx = []
+    mapping =  seed_idx+non_seed_idx
+    unknown = [[node] for node in range(len(seed_idx))]
+    # print mapping
     results = []
-    cache = []
-    while unknown:
+    prune = []
+    while unknown and max_evals:
         path = unknown.pop(0)
-        if fn(path,l,cache): # is this a good combination?
-            results.append(path)
-            decedents = [path+[i] for i in range(path[-1]+1,len(l)) ]
-            unknown.extend(decedents)
-
+        max_evals -= 1
+        # print '@idx',[mapping[i] for i in path]
+        # print '@content',path
+        if not len(path) > max_depth:
+        # is this combination even viable, or did a subset fail already
+            if not any(m.issubset(set(path)) for m in prune):
+                #we have not tested this and a subset of this was sucessfull before
+                if fn([l[mapping[i]] for i in path]):
+                    # yes this was good, keep as solution
+                    results.append([mapping[i] for i in path])
+                    # lets explore more by creating paths to each remaining node
+                    decedents = [path+[i] for i in range(path[-1]+1,len(mapping)) ]
+                    unknown.extend(decedents)
+                else:
+                    # print "pruning",path
+                    prune.append(set(path))
     return results
 
 
@@ -596,23 +585,28 @@ if __name__ == '__main__':
     # idx =  find_kink_and_dir_change(curvature,60)
     # print idx
     # print split_at_corner_index(pl,idx)
-    ellipse = ((1,0),(2,1),0)
-    pts = np.array([(2,0),(1.9,0),(-1.9,0)])
+    # ellipse = ((1,0),(2,1),0)
+    # pts = np.array([(2,0),(1.9,0),(-1.9,0)])
+    # print pts.dtype
     # print dist_pts_ellipse(ellipse,pts)
+    # print pts
+    # # print test()
 
-
-    l = [1,3,1,2,1,2,0,2,2,4,4]
-    # evals = 0
-    # r = quick_combine(l,metric)
-    # # print r
-    # print filter_subsets(r)
-    # print evals
+    l = [1,2,1,0,1,0]
+    print len(l)
+    # # evals = 0
+    # # r = quick_combine(l,metric)
+    # # # print r
+    # # print filter_subsets(r)
+    # # print evals
 
     evals = 0
-    r = pruning_quick_combine(l,cached_metric,[0])
+    r = pruning_quick_combine(l,metric,[2])
     # print r
     print filter_subsets(r)
     print evals
+
+
 
 
 
