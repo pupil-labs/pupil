@@ -96,8 +96,8 @@ def main():
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    # eye_src = "/Users/mkassner/Pupil/datasets/p1-right/frames/test.avi"
-    eye_src = "/Users/mkassner/Pupil/datasets/eye2_fieldtest/eye 34.avi"
+    eye_src = "/Users/mkassner/Pupil/datasets/p1-left/frames/test.avi"
+    eye_src = "/Users/mkassner/Pupil/datasets/eye2_fieldtest/eye 28.avi"
 
     # sometime one should not add support 11
     # works @9309993 33 26 25 20 19 17 8 7 3
@@ -105,7 +105,7 @@ def main():
     # mascarafail 24 (21 -only at the end) 30
     # headset too high 27
     # needed more intenstity range 28
-    # to dark 29 14 31, 9
+    # to dark 29 14 31, 9MORPH_RECT
     # hard 16,10, 4 2
     # fast, hard 32
     #iris vs pupil 32,31,18,15,13,6
