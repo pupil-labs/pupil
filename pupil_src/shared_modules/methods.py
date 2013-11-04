@@ -460,24 +460,6 @@ def metric(l):
     return sum(l) < 3
 
 
-def cached_metric(indecies,l,prune):
-    """
-    example metric for search
-    """
-    if any(m.issubset(set(indecies)) for m in prune):
-        print "pruning", indecies
-        return False
-    else:
-        global evals
-        evals +=1
-        print 'evaluating', indecies
-
-        res = sum([l[i] for i in indecies]) < 3
-        if not res:
-            prune.append(set(indecies))
-        return res
-
-
 
 
 def pruning_quick_combine(l,fn,seed_idx=None,max_evals=1e20,max_depth=5):

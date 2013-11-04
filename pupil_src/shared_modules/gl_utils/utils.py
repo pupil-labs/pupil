@@ -23,7 +23,7 @@ def clear_gl_screen():
 def adjust_gl_view(w,h):
     """
     adjust view onto our scene so
-    that a quad from 0,0 to 1,1 fits into it perfecly
+    that a quad from 0,0 to w,h fits into it perfecly
     """
     if h == 0:
         h = 1
@@ -96,7 +96,7 @@ def draw_gl_point_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
 
 def draw_gl_texture(image,interpolation=True):
     """
-    We draw the image as a texture on a quad that is perfectly set into our window.
+    We draw the image as a texture on a quad from 0,0 to img.width,img.height.
     """
 
     height, width, channels = image.shape
