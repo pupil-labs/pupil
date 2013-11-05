@@ -9,6 +9,11 @@
 '''
 
 import numpy as np
+try:
+    import numexpr as ne
+except:
+    ne = None
+import numexpr as ne
 import cv2
 
 class Temp(object):
@@ -431,11 +436,13 @@ def dist_pts_ellipse(((ex,ey),(dx,dy),angle),points):
     pts = np.float64(points)
     rx,ry = dx/2., dy/2.
     angle = (angle/180.)*np.pi
-    ex,ey =ex+0.000000001,ey-0.000000001 #hack to make 0 divisions possible this is UGLY!!!
+    # ex,ey =ex+0.000000001,ey-0.000000001 #hack to make 0 divisions possible this is UGLY!!!
     pts = pts - np.array((ex,ey)) # move pts to ellipse appears at origin , with this we copy data -deliberatly!
+
     M_rot = np.mat([[np.cos(angle),-np.sin(angle)],[np.sin(angle),np.cos(angle)]])
     pts = np.array(pts*M_rot) #rotate so that ellipse axis align with coordinate system
     # print "rotated",pts
+
     pts /= np.array((rx,ry)) #normalize such that ellipse radii=1
     # print "normalize",norm_pts
     norm_mag = np.sqrt((pts*pts).sum(axis=1))
@@ -453,6 +460,31 @@ def dist_pts_ellipse(((ex,ey),(dx,dy),angle),points):
     # print 'result:',error_mag
     return error_mag
 
+
+if ne:
+    def dist_pts_ellipse(((ex,ey),(dx,dy),angle),points):
+        """
+        return unsigned euclidian distances of points to ellipse
+        same as above but uses numexpr for 2x speedup
+        """
+        pts = np.float64(points)
+        pts.shape=(-1,2)
+        rx,ry = dx/2., dy/2.
+        angle = (angle/180.)*np.pi
+        # ex,ey = ex+0.000000001 , ey-0.000000001 #hack to make 0 divisions possible this is UGLY!!!
+        x = pts[:,0]
+        y = pts[:,1]
+        # px = '((x-ex) * cos(angle) + (y-ey) * sin(angle))/rx'
+        # py = '(-(x-ex) * sin(angle) + (y-ey) * cos(angle))/ry'
+        # norm_mag = 'sqrt(('+px+')**2+('+py+')**2)'
+        # norm_dist = 'abs('+norm_mag+'-1)'
+        # ratio = norm_dist + "/" + norm_mag
+        # x_err  = ''+px+'*'+ratio+'*rx'
+        # y_err =  ''+py+'*'+ratio+'*ry'
+        # term = 'sqrt(('+x_err+')**2 + ('+y_err+')**2 )'
+        term = 'sqrt((((x-ex) * cos(angle) + (y-ey) * sin(angle))/rx*abs(sqrt((((x-ex) * cos(angle) + (y-ey) * sin(angle))/rx)**2+((-(x-ex) * sin(angle) + (y-ey) * cos(angle))/ry)**2)-1)/sqrt((((x-ex) * cos(angle) + (y-ey) * sin(angle))/rx)**2+((-(x-ex) * sin(angle) + (y-ey) * cos(angle))/ry)**2)*rx)**2 + ((-(x-ex) * sin(angle) + (y-ey) * cos(angle))/ry*abs(sqrt((((x-ex) * cos(angle) + (y-ey) * sin(angle))/rx)**2+((-(x-ex) * sin(angle) + (y-ey) * cos(angle))/ry)**2)-1)/sqrt((((x-ex) * cos(angle) + (y-ey) * sin(angle))/rx)**2+((-(x-ex) * sin(angle) + (y-ey) * cos(angle))/ry)**2)*ry)**2 )'
+        error_mag = ne.evaluate(term)
+        return error_mag
 
 
 
@@ -573,26 +605,26 @@ if __name__ == '__main__':
     # idx =  find_kink_and_dir_change(curvature,60)
     # print idx
     # print split_at_corner_index(pl,idx)
-    # ellipse = ((1,0),(2,1),0)
-    # pts = np.array([(2,0),(1.9,0),(-1.9,0)])
+    ellipse = ((0,0),(np.sqrt(2),np.sqrt(2)),0)
+    pts = np.array([(0,1),(.5,.5),(0,-1)])
     # print pts.dtype
-    # print dist_pts_ellipse(ellipse,pts)
+    print dist_pts_ellipse(ellipse,pts)
     # print pts
     # # print test()
 
-    l = [1,2,1,0,1,0]
-    print len(l)
+    # l = [1,2,1,0,1,0]
+    # print len(l)
     # # evals = 0
     # # r = quick_combine(l,metric)
     # # # print r
     # # print filter_subsets(r)
     # # print evals
 
-    evals = 0
-    r = pruning_quick_combine(l,metric,[2])
+    # evals = 0
+    # r = pruning_quick_combine(l,metric,[2])
     # print r
-    print filter_subsets(r)
-    print evals
+    # print filter_subsets(r)
+    # print evals
 
 
 

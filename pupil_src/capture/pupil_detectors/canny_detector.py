@@ -57,16 +57,14 @@ class Canny_Detector(Pupil_Detector):
         self.auto_size_filter = c_bool(1)
         self.min_ratio = .3
         self.pupil_min = c_float(40.)
-        self.pupil_max = c_float(100.)
+        self.pupil_max = c_float(160.)
         self.target_size= c_float(100.)
         self.goodness = c_float(1.)
         self.strong_perimeter_ratio_range = .8, 1.1
         self.strong_area_ratio_range = .6,1.1
-        self.normal_perimeter_ratio_range = .5, 1.2
-        self.normal_area_ratio_range = .4,1.2
-
-        #
+        self.final_perimeter_ratio_range = .5, 1.2
         self.strong_prior = None
+
 
 
         #ellipse history
@@ -166,15 +164,6 @@ class Canny_Detector(Pupil_Detector):
         # remove edges in areas not dark enough and where the glint is (spectral refelction from IR leds)
         edges = cv2.min(edges, spec_mask)
         edges = cv2.min(edges,binary_img)
-
-        # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
-        # kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
-
-        # cv2.dilate(edges, kernel,edges, iterations=2)
-        # kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
-        # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
-
-        # cv2.erode(edges, kernel,edges, iterations=1)
 
         overlay =  img[u_r.view][p_r.view]
         if visualize:
@@ -290,11 +279,11 @@ class Canny_Detector(Pupil_Detector):
             # #draw into the suport mast with thickness 2
             new_edges = cv2.min(edges, support_mask)
             new_contours = cv2.findNonZero(new_edges)
-            # new_edges[new_edges!=0] = 255
-            # if self._window:
-            #     overlay[:,:,1] = cv2.max(overlay[:,:,1], new_edges)
-            #     overlay[:,:,2] = cv2.max(overlay[:,:,2], new_edges)
-            #     overlay[:,:,2] = cv2.max(overlay[:,:,2], new_edges)
+            if self._window:
+                new_edges[new_edges!=0] = 255
+                overlay[:,:,1] = cv2.max(overlay[:,:,1], new_edges)
+                overlay[:,:,2] = cv2.max(overlay[:,:,2], new_edges)
+                overlay[:,:,2] = cv2.max(overlay[:,:,2], new_edges)
             new_e = cv2.fitEllipse(new_contours)
             return new_e,new_contours
 
@@ -304,7 +293,7 @@ class Canny_Detector(Pupil_Detector):
             e = p_r.sub_vector(u_r.sub_vector(self.strong_prior[0])),self.strong_prior[1],self.strong_prior[2]
             # e = self.strong_prior
             if self._window:
-                cv2.ellipse(debug_img,e,(255,100,100),thickness=10)
+                cv2.ellipse(debug_img,e,(255,100,100),thickness=1)
             self.strong_prior = None
 
 
@@ -326,9 +315,7 @@ class Canny_Detector(Pupil_Detector):
                         if self.strong_perimeter_ratio_range[0]<= perimeter_ratio <= self.strong_perimeter_ratio_range[1] and self.strong_area_ratio_range[0]<= area_ratio <= self.strong_area_ratio_range[1]:
                             strong_seed_contours.append(idx)
                             if self._window:
-                                # cv2.ellipse(debug_img,e,(255,255,0),thickness=3)
-                                # self.strong_evidece.append( (u_r.add_vector(p_r.add_vector(e[0])),e[1],e[2]) )
-                                cv2.polylines(debug_img,[c],isClosed=False,color=(255,255,0),thickness=3)
+                                cv2.polylines(debug_img,[c],isClosed=False,color=(255,100,100),thickness=4)
                         else:
                             weak_seed_contours.append(idx)
                             if self._window:
@@ -357,7 +344,7 @@ class Canny_Detector(Pupil_Detector):
             return fit_variance <= self.inital_ellipse_fit_threshhold
 
 
-        solutions = pruning_quick_combine(split_contours,ellipse_eval,seed_idx,max_evals=10000)
+        solutions = pruning_quick_combine(split_contours,ellipse_eval,seed_idx,max_evals=1000,max_depth=5)
         solutions = filter_subsets(solutions)
         sc = np.array(split_contours)
         ratings = []
@@ -368,9 +355,9 @@ class Canny_Detector(Pupil_Detector):
             support_pixels,ellipse_circumference = ellipse_true_support(e,raw_edges)
             support_ratio =  support_pixels.shape[0]/ellipse_circumference
 
-            if support_ratio >=.4 and ellipse_filter(e):
+            if support_ratio >=self.strong_perimeter_ratio_range[0] and ellipse_filter(e):
                 ratings.append(support_pixels.shape[0])
-                if support_ratio >=.8:
+                if support_ratio >=self.strong_perimeter_ratio_range[0]:
                     self.strong_prior = u_r.add_vector(p_r.add_vector(e[0])),e[1],e[2]
                     if self._window:
                         cv2.ellipse(debug_img,e,(255,100,100))
@@ -386,10 +373,12 @@ class Canny_Detector(Pupil_Detector):
         # support_pixels,ellipse_circumference = ellipse_true_support(e,raw_edges)
         # e = cv2.fitEllipse(support_pixels)
         new_e,final_edges = final_fitting(sc[best],edges)
-        if ellipse_filter(new_e):
-            e = new_e
+        size_dif = abs(1 - max(e[1])/max(new_e[1]))
+        if ellipse_filter(new_e) and size_dif < .3:
             if self._window:
-                cv2.ellipse(debug_img,e,(0,200,150))
+                cv2.ellipse(debug_img,new_e,(0,255,0))
+            e = new_e
+
 
         pupil_ellipse = {}
         pupil_ellipse['ellipse'] = e
@@ -408,7 +397,6 @@ class Canny_Detector(Pupil_Detector):
 
         if self._window:
             self.gl_display_in_window(debug_img)
-
         return pupil_ellipse
 
 

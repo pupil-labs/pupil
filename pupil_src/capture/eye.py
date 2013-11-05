@@ -214,6 +214,10 @@ def eye(g_pool,cap_src,cap_size):
         update_fps()
         sleep(bar.sleep.value) # for debugging only
 
+        if pupil_detector.should_sleep:
+            sleep(16)
+            pupil_detector.should_sleep=False
+
 
         ###  RECORDING of Eye Video (on demand) ###
         # Setup variables and lists for recording
