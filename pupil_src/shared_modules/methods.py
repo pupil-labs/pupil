@@ -64,6 +64,12 @@ class Roi(object):
         """
         return (self.lX+x,self.lY+y)
 
+    def sub_vector(self,(x,y)):
+        """
+        subs the roi offset to a len2 vector
+        """
+        return (x-self.lX,y-self.lY)
+
     def set(self,vals):
         if vals is not None and len(vals) is 4:
             self.lX,self.lY,self.uX,self.uY = vals

@@ -54,15 +54,19 @@ class Canny_Detector(Pupil_Detector):
 
         #ellipse filter params
         self.inital_ellipse_fit_threshhold = 1.8
+        self.auto_size_filter = c_bool(1)
         self.min_ratio = .3
         self.pupil_min = c_float(40.)
-        self.pupil_max = c_float(200.)
+        self.pupil_max = c_float(100.)
         self.target_size= c_float(100.)
         self.goodness = c_float(1.)
         self.strong_perimeter_ratio_range = .8, 1.1
         self.strong_area_ratio_range = .6,1.1
         self.normal_perimeter_ratio_range = .5, 1.2
         self.normal_area_ratio_range = .4,1.2
+
+        #
+        self.strong_prior = None
 
 
         #ellipse history
@@ -192,10 +196,12 @@ class Canny_Detector(Pupil_Detector):
 
         if visualize:
             c = (100.,frame.img.shape[0]-100.)
-            e1 = ((c),(self.pupil_max.value,self.pupil_max.value),0)
-            e2 = ((c),(self.pupil_min.value,self.pupil_min.value),0)
-            cv2.ellipse(frame.img,e1,(0,0,255),1)
-            cv2.ellipse(frame.img,e2,(0,0,255),1)
+            e_max = ((c),(self.pupil_max.value,self.pupil_max.value),0)
+            e_recent = ((c),(self.target_size.value,self.target_size.value),0)
+            e_min = ((c),(self.pupil_min.value,self.pupil_min.value),0)
+            cv2.ellipse(frame.img,e_min,(0,0,255),1)
+            cv2.ellipse(frame.img,e_recent,(0,255,0),1)
+            cv2.ellipse(frame.img,e_max,(0,0,255),1)
 
         #get raw edge pix for later
         raw_edges = cv2.findNonZero(edges)
@@ -226,20 +232,18 @@ class Canny_Detector(Pupil_Detector):
                 if self._window:
                     c = color.pop(0)
                     color.append(c)
-                    # if s.shape[0] >2:
-                        # cv2.polylines(debug_img,[s],isClosed=False,color=map(lambda x: x/2,c))
                     s = s.copy()
                     s[:,:,1] +=  coarse_pupil_width*2
-                    # cv2.polylines(debug_img,[s],isClosed=False,color=c)
                     # s[:,:,0] += x_shift
                     # x_shift += 5
-                    # cv2.polylines(debug_img,[s],isClosed=False,color=c)
                     if s.shape[0] >3:
                         cv2.polylines(debug_img,[s],isClosed=False,color=map(lambda x: x,c),thickness = 1,lineType=4)#cv2.CV_AA
 
         if len(split_contours) == 0:
             # not a single usefull segment found -> no pupil found
             self.goodness.value = 100
+            if self._window:
+                self.gl_display_in_window(debug_img)
             return {'timestamp':frame.timestamp,'norm_pupil':None}
 
 
@@ -295,9 +299,19 @@ class Canny_Detector(Pupil_Detector):
             return new_e,new_contours
 
 
+        # if we had a bood ellipse before ,let see if it is still a good first guess:
+        if self.strong_prior:
+            e = p_r.sub_vector(u_r.sub_vector(self.strong_prior[0])),self.strong_prior[1],self.strong_prior[2]
+            # e = self.strong_prior
+            if self._window:
+                cv2.ellipse(debug_img,e,(255,100,100),thickness=10)
+            self.strong_prior = None
+
+
+
         # finding poential candidates for ellipse seeds that describe the pupil.
-        strong_seed_ellipses = []
-        weak_seed_ellipses = []
+        strong_seed_contours = []
+        weak_seed_contours = []
         for idx, c in enumerate(split_contours):
             if c.shape[0] >=5:
                 e = cv2.fitEllipse(c)
@@ -309,29 +323,24 @@ class Canny_Detector(Pupil_Detector):
                         # how much ellipse is supported by this contour?
                         perimeter_ratio,area_ratio = ellipse_support_ratio(e,[c])
                         logger.debug('Ellipse no %s with perimeter_ratio: %s , area_ratio: %s'%(idx,perimeter_ratio,area_ratio))
-                        seed_ellipse = {'e':e,
-                                        'base_countour_idx':[idx],
-                                        'fit_variance':fit_variance }
                         if self.strong_perimeter_ratio_range[0]<= perimeter_ratio <= self.strong_perimeter_ratio_range[1] and self.strong_area_ratio_range[0]<= area_ratio <= self.strong_area_ratio_range[1]:
-                            strong_seed_ellipses.append(seed_ellipse)
+                            strong_seed_contours.append(idx)
                             if self._window:
-                                # cv2.ellipse(overlay,e,(255,0,0),thickness=3)
-                                self.strong_evidece.append( (u_r.add_vector(p_r.add_vector(e[0])),map(lambda x:x/5.,e[1]),e[2]) )
-                                cv2.polylines(debug_img,[c],isClosed=False,color=(255,0,0),thickness=3)
+                                # cv2.ellipse(debug_img,e,(255,255,0),thickness=3)
+                                # self.strong_evidece.append( (u_r.add_vector(p_r.add_vector(e[0])),e[1],e[2]) )
+                                cv2.polylines(debug_img,[c],isClosed=False,color=(255,255,0),thickness=3)
                         else:
-                            weak_seed_ellipses.append(seed_ellipse)
+                            weak_seed_contours.append(idx)
                             if self._window:
                                 cv2.polylines(debug_img,[c],isClosed=False,color=(255,0,0),thickness=2)
 
+        if strong_seed_contours:
+            seed_idx = strong_seed_contours
 
+        elif weak_seed_contours:
+            seed_idx = weak_seed_contours
 
-        if strong_seed_ellipses:
-            seed_idx = [e['base_countour_idx'][0] for e in strong_seed_ellipses]
-
-        elif weak_seed_ellipses:
-            seed_idx = [e['base_countour_idx'][0] for e in weak_seed_ellipses]
-
-        if not (strong_seed_ellipses or weak_seed_ellipses):
+        if not (strong_seed_contours or weak_seed_contours):
             if self._window:
                 self.gl_display_in_window(debug_img)
             self.goodness.value = 100
@@ -354,30 +363,34 @@ class Canny_Detector(Pupil_Detector):
         ratings = []
         for s in solutions:
             e = cv2.fitEllipse(np.concatenate(sc[s]))
-            # if self._window:
-                # cv2.ellipse(debug_img,e,(0,0,255))
+            if self._window:
+                cv2.ellipse(debug_img,e,(0,150,100))
             support_pixels,ellipse_circumference = ellipse_true_support(e,raw_edges)
             support_ratio =  support_pixels.shape[0]/ellipse_circumference
-            if self._window:
-                pass
-                # cv2.ellipse(debug_img,e,(0,0,255),thickness = int(support_ratio*6))
-                # cv2.putText(debug_img, str(support_ratio),tuple(map(int,e[0])), cv2.FONT_HERSHEY_PLAIN,fontScale=1,color=(255,255,255))
 
-            if support_ratio >=.4:
+            if support_ratio >=.4 and ellipse_filter(e):
                 ratings.append(support_pixels.shape[0])
+                if support_ratio >=.8:
+                    self.strong_prior = u_r.add_vector(p_r.add_vector(e[0])),e[1],e[2]
+                    if self._window:
+                        cv2.ellipse(debug_img,e,(255,100,100))
             else:
+                #not a valid solution, bad rating
                 ratings.append(-1)
 
 
+        #final fitting and return of result
         best = solutions[ratings.index(max(ratings))]
         e = cv2.fitEllipse(np.concatenate(sc[best]))
         # cv2.ellipse(overlay,e,(0,255,255),thickness=2)
         # support_pixels,ellipse_circumference = ellipse_true_support(e,raw_edges)
         # e = cv2.fitEllipse(support_pixels)
-        e,final_edges = final_fitting(sc[best],edges)
-        # cv2.ellipse(overlay,e,(0,255,255),thickness=1)
-        if self._window:
-            self.gl_display_in_window(debug_img)
+        new_e,final_edges = final_fitting(sc[best],edges)
+        if ellipse_filter(new_e):
+            e = new_e
+            if self._window:
+                cv2.ellipse(debug_img,e,(0,200,150))
+
         pupil_ellipse = {}
         pupil_ellipse['ellipse'] = e
         pupil_ellipse['roi_center'] = e[0]
@@ -385,26 +398,18 @@ class Canny_Detector(Pupil_Detector):
         pupil_ellipse['minor'] = min(e[1])
         pupil_ellipse['axes'] = e[1]
         pupil_ellipse['angle'] = e[2]
-        e_img_center = u_r.add_vector(p_r.add_vector(e[0]))
+        e_img_center =u_r.add_vector(p_r.add_vector(e[0]))
         norm_center = normalize(e_img_center,(frame.img.shape[1], frame.img.shape[0]),flip_y=True)
         pupil_ellipse['norm_pupil'] = norm_center
         pupil_ellipse['center'] = e_img_center
         pupil_ellipse['timestamp'] = frame.timestamp
+
+        self.target_size.value = max(e[1])
+
+        if self._window:
+            self.gl_display_in_window(debug_img)
+
         return pupil_ellipse
-
-
-            # d = []
-            # for s in best_solutions:
-            #     e = cv2.fitEllipse(np.concatenate(sc[s]))
-            #     distances = dist_pts_ellipse(e,raw_edges)
-            #     #TODO: consider size of ellipse.
-            #     ellipse_true_support(e,raw_edges)
-            #     d.append(distances[distances<=1.3].shape[0])
-            #     cv2.ellipse(overlay,e,(0,0,155))
-            # best = best_solutions[d.index(max(d))]
-            # e = cv2.fitEllipse(np.concatenate(sc[best]))
-            # cv2.ellipse(overlay,e,(255,255,255),thickness=2)
-            # return {'timestamp':frame.timestamp,'norm_pupil':None}
 
 
 
