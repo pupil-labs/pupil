@@ -399,7 +399,7 @@ class Canny_Detector(Pupil_Detector):
             return fit_variance <= self.inital_ellipse_fit_threshhold
 
 
-        solutions = pruning_quick_combine(split_contours,ellipse_eval,seed_idx,max_evals=1000,max_depth=5)
+        solutions = pruning_quick_combine(split_contours,ellipse_eval,seed_idx,max_evals=1000,max_depth=4)
         solutions = filter_subsets(solutions)
         ratings = []
 
@@ -470,7 +470,7 @@ class Canny_Detector(Pupil_Detector):
         if self._window:
             #draw a little animation of confidence
             cv2.putText(debug_img, 'good',(410,debug_img.shape[0]-100), cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,100,100))
-            cv2.putText(debug_img, 'threshhold',(410,debug_img.shape[0]-int(self.final_perimeter_ratio_range[0]*100)), cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,100,100))
+            cv2.putText(debug_img, 'threshold',(410,debug_img.shape[0]-int(self.final_perimeter_ratio_range[0]*100)), cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,100,100))
             cv2.putText(debug_img, 'no detection',(410,debug_img.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,100,100))
             lines = np.array([[[2*x,debug_img.shape[0]-int(100*y)],[2*x,debug_img.shape[0]]] for x,y in enumerate(self.confidence_hist)])
             cv2.polylines(debug_img,lines,isClosed=False,color=(255,100,100))

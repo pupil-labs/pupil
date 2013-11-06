@@ -187,6 +187,7 @@ def curvature(c):
     return curvature
 
 
+
 def GetAnglesPolyline(polyline):
     """
     see: http://stackoverflow.com/questions/3486172/angle-between-3-points
@@ -219,6 +220,38 @@ def GetAnglesPolyline(polyline):
     alpha = np.arctan2(cros,dot)
     return alpha*(180./np.pi) #degrees
     # return alpha #radians
+
+# if ne:
+#     def GetAnglesPolyline(polyline):
+#         """
+#         see: http://stackoverflow.com/questions/3486172/angle-between-3-points
+#         ported to numpy
+#         returns n-2 signed angles
+#         same as above but implemented using numexpr
+#         SLOWER than just numpy!
+#         """
+
+#         points = polyline[:,0]
+#         a = points[0:-2] # all "a" points
+#         b = points[1:-1] # b
+#         c = points[2:]  # c points
+#         ax,ay = a[:,0],a[:,1]
+#         bx,by = b[:,0],b[:,1]
+#         cx,cy = c[:,0],c[:,1]
+#         # abx =  '(bx - ax)'
+#         # aby =  '(by - ay)'
+#         # cbx =  '(bx - cx)'
+#         # cby =  '(by - cy)'
+#         # # float dot = (ab.x * cb.x + ab.y * cb.y) dot product
+#         # dot = '%s * %s + %s * %s' %(abx,cbx,aby,cby)
+#         # # float cross = (ab.x * cb.y - ab.y * cb.x) cross product
+#         # cross = '(%s * %s - %s * %s)' %(abx,cby,aby,cbx)
+#         # # float alpha = atan2(cross, dot);
+#         # alpha = "arctan2(%s,%s)" %(cross,dot)
+#         # term = '%s*%s'%(alpha,180./np.pi)
+#         term = 'arctan2(((bx - ax) * (by - cy) - (by - ay) * (bx - cx)),(bx - ax) * (bx - cx) + (by - ay) * (by - cy))*57.2957795131'
+#         return ne.evaluate(term)
+
 
 
 def split_at_angle(contour, curvature, angle):
@@ -597,8 +630,9 @@ if __name__ == '__main__':
     #    *   *-*
     #    |
     #  *-*
-    # pl = np.array([[[0, 0]],[[0, 1]],[[1, 1]],[[2, 1]],[[2, 2]],[[1, 3]],[[1, 4]],[[2,4]]], dtype=np.int32)
-    # curvature = GetAnglesPolyline(pl)
+    pl = np.array([[[0, 0]],[[0, 1]],[[1, 1]],[[2, 1]],[[2, 2]],[[1, 3]],[[1, 4]],[[2,4]]], dtype=np.int32)
+    curvature = GetAnglesPolyline(pl)
+    print curvature
     # print curvature
     # print find_curv_disc(curvature)
     # idx =  find_kink_and_dir_change(curvature,60)
