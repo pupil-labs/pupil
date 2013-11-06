@@ -482,7 +482,7 @@ class Canny_Detector(Pupil_Detector):
         # if we get here - no pupil was found :-(
         if self._window:
             self.gl_display_in_window(debug_img)
-        self.goodness.value = 100
+        self.goodness.value = 0
         return {'timestamp':frame.timestamp,'norm_pupil':None}
 
 
