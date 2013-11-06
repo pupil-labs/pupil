@@ -160,7 +160,7 @@ def eye(g_pool,cap_src,cap_size):
     bar.fps = c_float(0.0)
     bar.timestamp = time()
     bar.dt = c_float(0.0)
-    bar.sleep = c_float(load('bar.sleep',0.0))
+    bar.sleep = c_float(0.0)
     bar.display = c_int(load('bar.display',0))
     bar.draw_pupil = c_bool(load('bar.draw_pupil',True))
     bar.draw_roi = c_int(0)
@@ -286,7 +286,6 @@ def eye(g_pool,cap_src,cap_size):
 
 
     # save session persistent settings
-    save('bar.sleep',bar.sleep.value)
     save('roi',u_r.get())
     save('bar.display',bar.display.value)
     save('bar.draw_pupil',bar.draw_pupil.value)
