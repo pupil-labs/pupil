@@ -76,7 +76,7 @@ class Recorder(Plugin):
         self.frame_count += 1
         for p in recent_pupil_positons:
             if p['norm_pupil'] is not None:
-                gaze_pt = p['norm_gaze'][0],p['norm_gaze'][1],p['norm_pupil'][0],p['norm_pupil'][1],p['timestamp']
+                gaze_pt = p['norm_gaze'][0],p['norm_gaze'][1],p['norm_pupil'][0],p['norm_pupil'][1],p['timestamp'],p['confidence']
                 self.gaze_list.append(gaze_pt)
         self.timestamps.append(frame.timestamp)
         self.writer.write(frame.img)

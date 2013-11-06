@@ -263,7 +263,6 @@ def world(g_pool,cap_src,cap_size):
 
     # Event loop
 
-    poss = []
     while not g_pool.quit.value:
 
         # Get an image from the grabber
@@ -279,7 +278,6 @@ def world(g_pool,cap_src,cap_size):
             else:
                 p['norm_gaze'] = g_pool.map_pupil(p['norm_pupil'])
                 gaze_pt = p['norm_gaze'][0],p['norm_gaze'][1],p['norm_pupil'][0],p['norm_pupil'][1],p['timestamp']
-                poss.append(gaze_pt)
             recent_pupil_positions.append(p)
 
 
@@ -318,7 +316,6 @@ def world(g_pool,cap_src,cap_size):
     glfwDestroyWindow(world_window)
     glfwTerminate()
     logger.debug("Process done")
-    np.save(os.path.join(g_pool.user_dir,"new_gaze"),np.array(poss))
 
 def world_profiled(g_pool,cap_src,cap_size):
     import cProfile,subprocess,os
