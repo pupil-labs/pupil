@@ -13,7 +13,6 @@ try:
     import numexpr as ne
 except:
     ne = None
-import numexpr as ne
 import cv2
 
 class Temp(object):
