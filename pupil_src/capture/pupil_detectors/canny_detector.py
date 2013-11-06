@@ -50,7 +50,7 @@ class Canny_Detector(Pupil_Detector):
         self.bin_thresh = c_int(0)
 
         # contour prefilter params
-        self.min_contour_size = 10
+        self.min_contour_size = c_int(30)
 
         #ellipse filter params
         self.inital_ellipse_fit_threshhold = 1.8
@@ -265,7 +265,7 @@ class Canny_Detector(Pupil_Detector):
 
         ### first we want to filter out the bad stuff
         # to short
-        good_contours = [c for c in contours if c.shape[0]>self.min_contour_size]
+        good_contours = [c for c in contours if c.shape[0]>self.min_contour_size.value]
         # now we learn things about each contour through looking at the curvature.
         # For this we need to simplyfy the contour so that pt to pt angles become more meaningfull
         aprox_contours = [cv2.approxPolyDP(c,epsilon=1.5,closed=False) for c in good_contours]
@@ -499,6 +499,7 @@ class Canny_Detector(Pupil_Detector):
         self._bar.add_var("pupil_min",self.pupil_min)
         self._bar.add_var("pupil_max",self.pupil_max)
         self._bar.add_var("Pupil_Aparent_Size",self.target_size)
+        self._bar.add_var("Contour min length",self.min_contour_size)
 
 
         self._bar.add_var("Pupil_Shade",self.bin_thresh, readonly=True)
