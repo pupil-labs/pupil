@@ -96,8 +96,8 @@ def main():
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    eye_src = "/Users/mkassner/Pupil/datasets/p1-left/frames/test.avi"
-    eye_src = "/Users/mkassner/Pupil/datasets/eye2_fieldtest/eye 33.avi"
+    eye_src = "/Users/mkassner/Pupil/datasets/p2-right/frames/test.avi"
+    eye_src = "/Users/mkassner/Pupil/datasets/eye2_fieldtest/eye 36.avi"
 
     # sometime one should not add support 11
     # works @9309993 33 26 25 20 19 17 8 7 3
