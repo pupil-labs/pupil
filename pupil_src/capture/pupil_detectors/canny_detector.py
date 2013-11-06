@@ -76,6 +76,7 @@ class Canny_Detector(Pupil_Detector):
         self.strong_evidece = []
 
         #debug window
+        self.suggested_size = 640,480
         self._window = None
         self.window_should_open = False
         self.window_should_close = False
@@ -86,7 +87,7 @@ class Canny_Detector(Pupil_Detector):
     def detect(self,frame,user_roi,visualize=False):
         u_r = user_roi
         if self.window_should_open:
-            self.open_window()
+            self.open_window((frame.img.shape[1],frame.img.shape[0]))
         if self.window_should_close:
             self.close_window()
 
@@ -286,7 +287,7 @@ class Canny_Detector(Pupil_Detector):
                     c = color.pop(0)
                     color.append(c)
                     s = s.copy()
-                    s[:,:,1] +=  coarse_pupil_width*2
+                    s[:,:,0] += debug_img.shape[1]-coarse_pupil_width*2
                     # s[:,:,0] += x_shift
                     # x_shift += 5
                     if s.shape[0] >3:
@@ -363,10 +364,14 @@ class Canny_Detector(Pupil_Detector):
                             strong_seed_contours.append(idx)
                             if self._window:
                                 cv2.polylines(debug_img,[c],isClosed=False,color=(255,100,100),thickness=4)
+                                e = (e[0][0]+debug_img.shape[1]-coarse_pupil_width*4,e[0][1]),e[1],e[2]
+                                cv2.ellipse(debug_img,e,color=(255,100,100),thickness=3)
                         else:
                             weak_seed_contours.append(idx)
                             if self._window:
                                 cv2.polylines(debug_img,[c],isClosed=False,color=(255,0,0),thickness=2)
+                                e = (e[0][0]+debug_img.shape[1]-coarse_pupil_width*4,e[0][1]),e[1],e[2]
+                                cv2.ellipse(debug_img,e,color=(255,0,0))
 
         sc = np.array(split_contours)
 
@@ -509,7 +514,7 @@ class Canny_Detector(Pupil_Detector):
         else:
             self.window_should_open = True
 
-    def open_window(self):
+    def open_window(self,size):
         if not self._window:
             if 0: #we are not fullscreening
                 monitor = self.monitor_handles[self.monitor_idx.value]
@@ -517,7 +522,7 @@ class Canny_Detector(Pupil_Detector):
                 height,width= mode[0],mode[1]
             else:
                 monitor = None
-                height,width= 640,360
+                height,width= size
 
             active_window = glfwGetCurrentContext()
             self._window = glfwCreateWindow(height, width, "Plugin Window", monitor=monitor, share=None)
