@@ -150,7 +150,7 @@ def eye(g_pool,cap_src,cap_size):
 
     writer = None
 
-    pupil_detector = Canny_Detector()
+    pupil_detector = Canny_Detector(g_pool)
 
     atb.init()
     # Create main ATB Controls
@@ -288,7 +288,7 @@ def eye(g_pool,cap_src,cap_size):
     save('bar.draw_pupil',bar.draw_pupil.value)
     session_settings.close()
 
-
+    pupil_detector.cleanup()
     cap.close()
     atb.terminate()
     glfwDestroyWindow(window)

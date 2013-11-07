@@ -18,6 +18,7 @@ if __name__ == '__main__':
 
 import cv2
 from time import sleep
+import shelve
 import numpy as np
 from methods import *
 import atb
@@ -32,21 +33,24 @@ import logging
 logger = logging.getLogger(__name__)
 class Canny_Detector(Pupil_Detector):
     """a Pupil detector based on Canny_Edges"""
-    def __init__(self):
+    def __init__(self,g_pool):
         super(Canny_Detector, self).__init__()
+
+        # load session persistent settings
+        self.session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_detector'),protocol=2)
 
         # coase pupil filter params
         self.coarse_filter_min = 100
         self.coarse_filter_max = 400
 
         # canny edge detection params
-        self.blur = c_int(1)
-        self.canny_thresh = c_int(200)
-        self.canny_ratio= c_int(2)
-        self.canny_aperture = c_int(7)
+        self.blur = 1
+        self.canny_thresh = 200
+        self.canny_ratio= 2
+        self.canny_aperture = 7
 
         # edge intensity filter params
-        self.intensity_range = c_int(17)
+        self.intensity_range = c_int(self.load('intensity_range',30))
         self.bin_thresh = c_int(0)
 
         # contour prefilter params
@@ -54,12 +58,10 @@ class Canny_Detector(Pupil_Detector):
 
         #ellipse filter params
         self.inital_ellipse_fit_threshhold = 1.8
-        self.auto_size_filter = c_bool(1)
         self.min_ratio = .3
-        self.pupil_min = c_float(40.)
-        self.pupil_max = c_float(160.)
+        self.pupil_min = c_float(self.load('pupil_min',40.))
+        self.pupil_max = c_float(self.load('pupil_max',160.))
         self.target_size= c_float(100.)
-        self.goodness = c_float(1.)
         self.strong_perimeter_ratio_range = .8, 1.1
         self.strong_area_ratio_range = .6,1.1
         self.final_perimeter_ratio_range = .6, 1.2
@@ -68,12 +70,10 @@ class Canny_Detector(Pupil_Detector):
 
         #detector dignostics
         #confidance in the mesurement 0(bad) to 1 (perfect)
-        # in this case we take the support ratio capped at 1.
-        self.confidence = c_float(100)
+        # in this case we take the support ratio capped at 1. (uncapped if the pupil comes from prior)
+        self.confidence = c_float(0)
         self.confidence_hist = []
 
-        #ellipse history
-        self.strong_evidece = []
 
         #debug window
         self.suggested_size = 640,480
@@ -83,6 +83,11 @@ class Canny_Detector(Pupil_Detector):
 
         #debug settings
         self.should_sleep = False
+
+    def load(self, var_name, default):
+        return self.session_settings.get(var_name,default)
+    def save(self, var_name, var):
+            self.session_settings[var_name] = var
 
     def detect(self,frame,user_roi,visualize=False):
         u_r = user_roi
@@ -158,13 +163,13 @@ class Canny_Detector(Pupil_Detector):
         #open operation to remove eye lashes
         pupil_img = cv2.morphologyEx(pupil_img, cv2.MORPH_OPEN, kernel)
 
-        if self.blur.value >1:
+        if self.blur > 1:
             pupil_img = cv2.medianBlur(pupil_img,self.blur.value)
 
         edges = cv2.Canny(pupil_img,
-                            self.canny_thresh.value,
-                            self.canny_thresh.value*self.canny_ratio.value,
-                            apertureSize= self.canny_aperture.value)
+                            self.canny_thresh,
+                            self.canny_thresh*self.canny_ratio,
+                            apertureSize= self.canny_aperture)
 
 
         # remove edges in areas not dark enough and where the glint is (spectral refelction from IR leds)
@@ -479,13 +484,6 @@ class Canny_Detector(Pupil_Detector):
 
 
 
-        # if we get here - no pupil was found :-(
-        if self._window:
-            self.gl_display_in_window(debug_img)
-        self.goodness.value = 0
-        return {'timestamp':frame.timestamp,'norm_pupil':None}
-
-
 
     # Display and interface methods
 
@@ -504,7 +502,7 @@ class Canny_Detector(Pupil_Detector):
 
         self._bar.add_var("Pupil_Shade",self.bin_thresh, readonly=True)
         self._bar.add_var("confidence",self.confidence, readonly=True)
-        self._bar.add_var("Image_Blur",self.blur, step=2,min=1,max=9)
+        # self._bar.add_var("Image_Blur",self.blur, step=2,min=1,max=9)
         # self._bar.add_var("Canny_aparture",self.canny_aperture, step=2,min=3,max=7)
         # self._bar.add_var("canny_threshold",self.canny_thresh, step=1,min=0)
         # self._bar.add_var("Canny_ratio",self.canny_ratio, step=1,min=1)
@@ -560,7 +558,6 @@ class Canny_Detector(Pupil_Detector):
             self._window = None
             self.window_should_close = False
 
-
     def gl_display_in_window(self,img):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(self._window)
@@ -570,3 +567,7 @@ class Canny_Detector(Pupil_Detector):
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
 
+    def cleanup(self):
+        self.save('intensity_range',self.intensity_range.value)
+        self.save('pupil_min',self.pupil_min.value)
+        self.save('pupil_max',self.pupil_max.value)
