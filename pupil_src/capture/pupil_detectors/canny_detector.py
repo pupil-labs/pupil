@@ -456,7 +456,7 @@ class Canny_Detector(Pupil_Detector):
         pupil_ellipse = {}
         pupil_ellipse['confidence'] = goodness
         pupil_ellipse['ellipse'] = e
-        pupil_ellipse['roi_center'] = e[0]
+        pupil_ellipse['pos_in_roi'] = e[0]
         pupil_ellipse['major'] = max(e[1])
         pupil_ellipse['minor'] = min(e[1])
         pupil_ellipse['axes'] = e[1]

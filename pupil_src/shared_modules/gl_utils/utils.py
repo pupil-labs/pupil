@@ -152,3 +152,10 @@ def draw_gl_texture(image,interpolation=True):
     glEnd()
     glDisable(GL_TEXTURE_2D)
 
+    # # Set Projection Matrix
+    # glMatrixMode(GL_PROJECTION)
+    # glLoadIdentity()
+    # gluOrtho2D(0, width, height, 0) # origin in the top left corner just like the img np-array
+    # # Switch back to Model View Matrix
+    # glMatrixMode(GL_MODELVIEW)
+    # glLoadIdentity()
