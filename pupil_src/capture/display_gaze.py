@@ -1,3 +1,13 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2013  Moritz Kassner & William Patera
+
+ Distributed under the terms of the CC BY-NC-SA License.
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
+
 from gl_utils import draw_gl_point_norm,Shader,VertexBuffer
 from plugin import Plugin
 import numpy as np
@@ -56,21 +66,23 @@ class Display_Gaze(Plugin):
             }"""
 
         fragment = """
-            vec4 color = vec4(.99,.1,.4,.5);
+            vec4 color = vec4(0.99,0.1,0.4,0.5); //translucent red
             vec4 faded_color = color;
             void main(void)
             {
                 faded_color.w = float(0.0);
-                //gl_TexCoord[0].xy is the interpoltaed texure coords (relavite to the underlying vertex), we often call them u and v
+                
+                //gl_TexCoord[0].xy is the interpolated texture coords (relative to the underlying vertex), we often call them u and v
                 //gl_FragCoord.xy is absolute window coords in pixelspace
+                
                 float dist = distance(gl_TexCoord[0].xy, vec2(0.5, 0.5)); // .5 is center
-                gl_FragColor = mix(color, faded_color, smoothstep(.4, 0.49, dist));
+                gl_FragColor = mix(color, faded_color, smoothstep(0.4, 0.49, dist));
 
                //if (dist < .4) {
-               //   gl_FragColor = mix(vec4(.90, .50, .40, 1.), vec4(.90, .50, .40,.8), smoothstep(.05, 0.4, dist));
+               //   gl_FragColor = mix(vec4(0.90, 0.50, 0.40, 1.0), vec4(0.90, 0.50, 0.40, 0.8), smoothstep(0.05, 0.4, dist));
                //}
                //else {
-               //  gl_FragColor = mix(vec4(.90, .50, .40, .8), vec4(.90, .50, .40,.0), smoothstep(.4, 0.49, dist));
+               //  gl_FragColor = mix(vec4(0.90, 0.50, 0.40, 0.8), vec4(0.90, 0.50, 0.40, 0.0), smoothstep(0.4, 0.49, dist));
                //
                //}
             }
