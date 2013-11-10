@@ -25,7 +25,7 @@ from ctypes import c_int,c_bool,c_float
 import numpy as np
 import atb
 from glfw import *
-from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline
+from gl_utils import basic_gl_setup,adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline
 from methods import *
 from uvc_capture import autoCreateCapture
 from calibrate import get_map_from_cloud
@@ -200,11 +200,7 @@ def eye(g_pool,cap_src,cap_size):
     on_resize(window,width,height)
 
     # gl_state settings
-    import OpenGL.GL as gl
-    gl.glEnable(gl.GL_POINT_SMOOTH)
-    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-    gl.glEnable(gl.GL_BLEND)
-    del gl
+    basic_gl_setup()
 
     # event loop
     while not g_pool.quit.value:

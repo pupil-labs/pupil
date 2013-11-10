@@ -30,7 +30,7 @@ import atb
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
-from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm
+from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm
 from uvc_capture import autoCreateCapture
 import calibrate
 # Plug-ins
@@ -228,12 +228,7 @@ def world(g_pool,cap_src,cap_size):
     glfwSetWindowPos(world_window,0,0)
 
     # gl_state settings
-    import OpenGL.GL as gl
-    gl.glEnable(gl.GL_POINT_SMOOTH)
-    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-    gl.glEnable(gl.GL_BLEND)
-    gl.glClearColor(1.,1.,1.,0.)
-    del gl
+    basic_gl_setup()
 
     # load last calibration data
     try:

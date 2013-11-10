@@ -10,3 +10,8 @@
 from utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point, draw_gl_point_norm, draw_gl_polyline_norm,draw_gl_polyline,basic_gl_setup
 from shader import Shader
 from vertex_buffer import VertexBuffer
+
+import numpy as np
+from OpenGL.GL import *
+
+
