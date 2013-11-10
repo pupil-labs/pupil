@@ -91,14 +91,14 @@ def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
            gl_Position = gl_ModelViewProjectionMatrix*gl_Vertex;
            // gl_PointSize = 100; //this can be usd if glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
            gl_FrontColor = gl_Color;
-
+           gl_TexCoord[0] = gl_MultiTexCoord0;
         }
         """
         FRAG_SHADER = """
         #version 120
         void main()
         {
-            float dist = distance(gl_PointCoord, vec2(0.5, 0.5)); // .5 is center
+            float dist = distance(gl_TexCoord[0].xy, vec2(0.5, 0.5)); // .5 is center
             gl_FragColor = mix(gl_Color, vec4(gl_Color.rgb,0.0), smoothstep(0.35, 0.49, dist));
             //gl_FragColor = gl_Color;
         }
@@ -109,10 +109,24 @@ def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
     simple_pt_shader.bind()
     glColor4f(*color)
     glPointSize(int(size))
-    glBegin(GL_POINTS)
+    # glBegin(GL_POINTS)
     for pt in points:
-        glVertex3f(pt[0],pt[1],0.0)
-    glEnd()
+        # glTranslatef(widht,height,0)
+        glBegin(GL_QUADS)
+        # glVertex3f(pt[0],pt[1],0.0)
+        width,height = pt
+        glTexCoord2f(0.0, 0.0)
+        glVertex2f(0.0, 0.0)
+        glTexCoord2f(1.0, 0.0)
+        glVertex2f(width, 0.0)
+        glTexCoord2f(1.0, 1.0)
+        glVertex2f(width, height)
+        glTexCoord2f(0.0, 1.0)
+        glVertex2f(0.0, height)
+        glEnd()
+        # glTranslatef(-widht,-height,0)
+
+    # glEnd()
     simple_pt_shader.unbind()
 
 def draw_gl_point_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
