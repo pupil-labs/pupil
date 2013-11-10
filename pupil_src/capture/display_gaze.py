@@ -30,8 +30,6 @@ class Display_Gaze(Plugin):
         self.pupil_display_list[:-3] = []
 
     def gl_display(self):
-        for pos in self.pupil_display_list:
-            size = 20
-            draw_gl_point_norm(pos,size,(1,1,1,1))
+        draw_gl_point_norm(self.pupil_display_list,size=35,color=(1.,.2,.4,.6))
 
 

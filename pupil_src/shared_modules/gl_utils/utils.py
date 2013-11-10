@@ -15,7 +15,7 @@ from shader import Shader
 def basic_gl_setup():
     # glEnable( GL_POINT_SPRITE )
     # glEnable(GL_POINT_SMOOTH) #disable for fragment shader use with gl_point
-    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
+    # glEnable(GL_VERTEX_PROGRAM_POINT_SIZE) # overwrite pointsize
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     glEnable(GL_BLEND)
     glClearColor(1.,1.,1.,0.)
@@ -81,15 +81,15 @@ def draw_gl_polyline_norm((positions),(r,g,b,a),type='Loop'):
 
 simple_pt_shader = None
 
-def draw_gl_point((x,y),size=20,color=(1.,0.5,0.5,.5)):
-    global simple_pt_shader # we cache the shader because we only create it the ifrst time we call this fn.
+def draw_gl_point(points,size=20,color=(1.,0.5,0.5,.5)):
+    global simple_pt_shader # we cache the shader because we only create it the first time we call this fn.
     if not simple_pt_shader:
         # shader defines
         VERT_SHADER = """
         #version 120
         void main () {
            gl_Position = gl_ModelViewProjectionMatrix*gl_Vertex;
-           gl_PointSize = 40;
+           // gl_PointSize = 100; //this can be usd if glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
            gl_FrontColor = gl_Color;
 
         }
@@ -98,21 +98,24 @@ def draw_gl_point((x,y),size=20,color=(1.,0.5,0.5,.5)):
         #version 120
         void main()
         {
-            vec2 p = gl_PointCoord;
             float dist = distance(gl_PointCoord, vec2(0.5, 0.5)); // .5 is center
-            gl_FragColor = mix(gl_Color, vec4(gl_Color.rgb,0.0), smoothstep(0.4, 0.49, dist));
+            gl_FragColor = mix(gl_Color, vec4(gl_Color.rgb,0.0), smoothstep(0.35, 0.49, dist));
             //gl_FragColor = gl_Color;
-
         }
         """
         #shader link and compile
         simple_pt_shader = Shader(VERT_SHADER, FRAG_SHADER)
 
+    if isinstance(points[0],float):
+        points = [points]
+
     simple_pt_shader.bind()
     glColor4f(*color)
     glPointSize(int(size))
     glBegin(GL_POINTS)
-    glVertex3f(x,y,0.0)
+
+    for pt in points:
+        glVertex3f(pt[0],pt[1],0.0)
     glEnd()
     simple_pt_shader.unbind()
 
@@ -133,8 +136,6 @@ def draw_gl_point_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
     glPopMatrix()
     glMatrixMode(GL_MODELVIEW)
     glPopMatrix()
-
-
 
 def draw_gl_texture(image,interpolation=True):
     """
