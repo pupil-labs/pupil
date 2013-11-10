@@ -111,7 +111,6 @@ def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
     glPointSize(int(size))
     glBegin(GL_POINTS)
     for pt in points:
-        print pt
         glVertex3f(pt[0],pt[1],0.0)
     glEnd()
     simple_pt_shader.unbind()
