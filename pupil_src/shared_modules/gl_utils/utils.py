@@ -81,7 +81,7 @@ def draw_gl_polyline_norm((positions),(r,g,b,a),type='Loop'):
 
 simple_pt_shader = None
 
-def draw_gl_point(points,size=20,color=(1.,0.5,0.5,.5)):
+def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
     global simple_pt_shader # we cache the shader because we only create it the first time we call this fn.
     if not simple_pt_shader:
         # shader defines
@@ -106,21 +106,23 @@ def draw_gl_point(points,size=20,color=(1.,0.5,0.5,.5)):
         #shader link and compile
         simple_pt_shader = Shader(VERT_SHADER, FRAG_SHADER)
 
-    if isinstance(points[0],float):
-        points = [points]
-
     simple_pt_shader.bind()
     glColor4f(*color)
     glPointSize(int(size))
     glBegin(GL_POINTS)
-
     for pt in points:
+        print pt
         glVertex3f(pt[0],pt[1],0.0)
     glEnd()
     simple_pt_shader.unbind()
 
-
 def draw_gl_point_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
+    draw_gl_points_norm([pos],size,color)
+
+def draw_gl_point(pos,size=20,color=(1.,0.5,0.5,.5)):
+    draw_gl_points([pos],size,color)
+
+def draw_gl_points_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
 
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
@@ -130,7 +132,7 @@ def draw_gl_point_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
     glPushMatrix()
     glLoadIdentity()
 
-    draw_gl_point(pos,size,color)
+    draw_gl_points(pos,size,color)
 
     glMatrixMode(GL_PROJECTION)
     glPopMatrix()

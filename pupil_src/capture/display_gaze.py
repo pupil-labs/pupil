@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from gl_utils import draw_gl_point_norm
+from gl_utils import draw_gl_points_norm
 from plugin import Plugin
 import numpy as np
 import OpenGL.GL as gl
@@ -30,6 +30,6 @@ class Display_Gaze(Plugin):
         self.pupil_display_list[:-3] = []
 
     def gl_display(self):
-        draw_gl_point_norm(self.pupil_display_list,size=35,color=(1.,.2,.4,.6))
+        draw_gl_points_norm(self.pupil_display_list,size=35,color=(1.,.2,.4,.6))
 
 
