@@ -13,9 +13,9 @@ from OpenGL.GLU import gluOrtho2D
 from shader import Shader
 
 def basic_gl_setup():
-    # glEnable( GL_POINT_SPRITE )
-    # glEnable(GL_POINT_SMOOTH) #disable for fragment shader use with gl_point
-    # glEnable(GL_VERTEX_PROGRAM_POINT_SIZE) # overwrite pointsize
+
+    glEnable( GL_POINT_SPRITE )
+    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE) # overwrite pointsize
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     glEnable(GL_BLEND)
     glClearColor(1.,1.,1.,0.)
@@ -80,53 +80,42 @@ def draw_gl_polyline_norm((positions),(r,g,b,a),type='Loop'):
 
 
 simple_pt_shader = None
-
+vb = None
 def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
     global simple_pt_shader # we cache the shader because we only create it the first time we call this fn.
     if not simple_pt_shader:
+
+        # we just draw single points, a VBO is much slower than this. But this is a little bit hacked.
+        #someday we should replace all legacy fn with vbo's and shaders...
         # shader defines
         VERT_SHADER = """
         #version 120
+        varying vec4 f_color;
         void main () {
-           gl_Position = gl_ModelViewProjectionMatrix*gl_Vertex;
-           // gl_PointSize = 100; //this can be usd if glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
-           gl_FrontColor = gl_Color;
-           gl_TexCoord[0] = gl_MultiTexCoord0;
-        }
+               gl_Position = vec4(gl_Vertex.xy,1.,1.);
+               gl_PointSize = gl_Vertex.z; //this needs to be used on some hardware we cheat ande use the z coord
+               f_color = gl_Color;
+               }
         """
+
         FRAG_SHADER = """
         #version 120
+        varying vec4 f_color;
         void main()
-        {
-            float dist = distance(gl_TexCoord[0].xy, vec2(0.5, 0.5)); // .5 is center
-            gl_FragColor = mix(gl_Color, vec4(gl_Color.rgb,0.0), smoothstep(0.35, 0.49, dist));
-            //gl_FragColor = gl_Color;
+        {    
+            float dist = distance(gl_PointCoord, vec2(0.5, 0.5));
+            gl_FragColor = mix(f_color, vec4(f_color.rgb,0.0), smoothstep(0.35, 0.5, dist));
         }
         """
         #shader link and compile
-        simple_pt_shader = Shader(VERT_SHADER, FRAG_SHADER)
+        simple_pt_shader = Shader(VERT_SHADER,FRAG_SHADER)
 
     simple_pt_shader.bind()
     glColor4f(*color)
-    glPointSize(int(size))
-    # glBegin(GL_POINTS)
+    glBegin(GL_POINTS)
     for pt in points:
-        # glTranslatef(widht,height,0)
-        glBegin(GL_QUADS)
-        # glVertex3f(pt[0],pt[1],0.0)
-        width,height = pt
-        glTexCoord2f(0.0, 0.0)
-        glVertex2f(0.0, 0.0)
-        glTexCoord2f(1.0, 0.0)
-        glVertex2f(width, 0.0)
-        glTexCoord2f(1.0, 1.0)
-        glVertex2f(width, height)
-        glTexCoord2f(0.0, 1.0)
-        glVertex2f(0.0, height)
-        glEnd()
-        # glTranslatef(-widht,-height,0)
-
-    # glEnd()
+        glVertex3f(pt[0],pt[1],size)
+    glEnd()
     simple_pt_shader.unbind()
 
 def draw_gl_point_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
