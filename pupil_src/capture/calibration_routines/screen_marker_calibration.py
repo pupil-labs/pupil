@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 from methods import normalize,denormalize
-from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline, adjust_gl_view,clear_gl_screen
+from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline, adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
 from OpenGL.GLU import gluOrtho2D
@@ -124,7 +124,7 @@ class Screen_Marker_Calibration(Plugin):
                 monitor = None
                 height,width= 640,360
 
-            self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=None)
+            self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen.value:
                 glfwSetWindowPos(self._window,200,0)
 
@@ -138,10 +138,7 @@ class Screen_Marker_Calibration(Plugin):
             # gl_state settings
             active_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self._window)
-            gl.glEnable(gl.GL_POINT_SMOOTH)
-            gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-            gl.glEnable(gl.GL_BLEND)
-            gl.glClearColor(1.,1.,1.,0.)
+            basic_gl_setup()
             glfwMakeContextCurrent(active_window)
             self.window_should_open = False
 
@@ -362,9 +359,9 @@ class Screen_Marker_Calibration(Plugin):
         #some feedback on the detection state
 
         if self.detected and self.on_position:
-            draw_gl_point(screen_pos, 5.0, (0.,1.,0.,1.))
+            draw_gl_point_norm(self.display_pos, 5, (0.,1.,0.,1.))
         else:
-            draw_gl_point(screen_pos, 5.0, (1.,0.,0.,1.))
+            draw_gl_point_norm(self.display_pos, 5, (1.,0.,0.,1.))
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)

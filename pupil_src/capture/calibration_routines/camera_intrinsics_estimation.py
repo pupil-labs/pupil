@@ -1,7 +1,7 @@
 import os
 import cv2
 import numpy as np
-from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point
+from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_point_norm,basic_gl_setup
 from methods import normalize
 import atb
 import audio
@@ -85,7 +85,7 @@ class Camera_Intrinsics_Estimation(Plugin):
                 monitor = None
                 height,width= 640,360
 
-            self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=None)
+            self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen.value:
                 glfwSetWindowPos(self._window,200,0)
 
@@ -100,10 +100,7 @@ class Camera_Intrinsics_Estimation(Plugin):
             # gl_state settings
             active_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self._window)
-            gl.glEnable(gl.GL_POINT_SMOOTH)
-            gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-            gl.glEnable(gl.GL_BLEND)
-            gl.glClearColor(1.,1.,1.,0.)
+            basic_gl_setup()
             glfwMakeContextCurrent(active_window)
 
             self.window_should_open = False
@@ -179,10 +176,11 @@ class Camera_Intrinsics_Estimation(Plugin):
 
         clear_gl_screen()
         #todo write code to display pattern.
-
         # r = 60.
         # gl.glMatrixMode(gl.GL_PROJECTION)
         # gl.glLoadIdentity()
+        # draw_gl_point((-.5,-.5),50.)
+
         # p_window_size = glfwGetWindowSize(self._window)
         # # compensate for radius of marker
         # x_border,y_border = normalize((r,r),p_window_size)
