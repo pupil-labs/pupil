@@ -80,7 +80,7 @@ def draw_gl_polyline_norm((positions),(r,g,b,a),type='Loop'):
 
 
 simple_pt_shader = None
-vb = None
+
 def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
     global simple_pt_shader # we cache the shader because we only create it the first time we call this fn.
     if not simple_pt_shader:
@@ -102,7 +102,7 @@ def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
         #version 120
         varying vec4 f_color;
         void main()
-        {    
+        {
             float dist = distance(gl_PointCoord, vec2(0.5, 0.5));
             gl_FragColor = mix(f_color, vec4(f_color.rgb,0.0), smoothstep(0.35, 0.5, dist));
         }
@@ -117,6 +117,7 @@ def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
         glVertex3f(pt[0],pt[1],size)
     glEnd()
     simple_pt_shader.unbind()
+
 
 def draw_gl_point_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
     draw_gl_points_norm([pos],size,color)
