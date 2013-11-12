@@ -30,6 +30,10 @@ def adjust_gl_view(w,h):
     """
     if h == 0:
         h = 1
+
+    if w == 0:
+        w = 1
+
     glViewport(0, 0, w, h)
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()

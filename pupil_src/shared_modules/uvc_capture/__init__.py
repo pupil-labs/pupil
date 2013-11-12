@@ -121,7 +121,7 @@ def autoCreateCapture(src,size=(640,480),fps=30):
                 matching_devices.append(device)
 
         if len(matching_devices) >1:
-            logger.warning('Found %i devices that match the src string pattern. Using the first one.'%matching_devices)
+            logger.warning('Found %s as devices that match the src string pattern Using the first one.'%[d.name for d in matching_devices] )
         if len(matching_devices) ==0:
             logger.error('No device found that matched %s'%src)
             return

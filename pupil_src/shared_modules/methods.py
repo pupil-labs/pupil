@@ -14,6 +14,8 @@ try:
 except:
     ne = None
 import cv2
+import logging
+logger = logging.getLogger(__name__)
 
 class Temp(object):
     """Temp class to make objects"""
@@ -75,11 +77,15 @@ class Roi(object):
         return (x-self.lX,y-self.lY)
 
     def set(self,vals):
-        if vals is not None and len(vals) is 4:
-            self.lX,self.lY,self.uX,self.uY = vals
+        if vals is not None and len(vals) is 5:
+            if vals[-1] == self.array_shape:
+                self.lX,self.lY,self.uX,self.uY,_ = vals
+            else:
+                logger.info('Image size has changed: Region of Interest has been reset')
+
 
     def get(self):
-        return self.lX,self.lY,self.uX,self.uY
+        return self.lX,self.lY,self.uX,self.uY,self.array_shape
 
 
 
