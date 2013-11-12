@@ -10,9 +10,13 @@
 import sys, os,platform
 from time import sleep
 from ctypes import c_bool, c_int
-from multiprocessing import Process, Pipe, Event,Queue
-from multiprocessing.sharedctypes import RawValue, Value, Array
-
+if platform.system() == 'Darwin':
+    from billiard import Process, Pipe, Event,Queue,forking_enable,freeze_support
+    from billiard.sharedctypes import RawValue, Value, Array
+else:
+    from multiprocessing import Process, Pipe, Event, Queue
+    forking_enable = lambda x: x #dummy fn
+    from multiprocessing.sharedctypes import RawValue, Value, Array
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
@@ -87,7 +91,7 @@ else:
 
 def main():
     # To assign camera by name: put string(s) in list
-    eye_src = ["Microsoft", "6000","USB Camera"]
+    eye_src = ["Microsoft", "6000","Integrated Camera"]
     world_src = ["Logitech Camera","B525", "C525","C615","C920","C930e"]
 
     # to assign cameras directly, using integers as demonstrated below
@@ -103,6 +107,10 @@ def main():
     eye_size = (640,360)
     world_size = (1280,720)
 
+
+    # on MacOS we will not use os.fork, elsewhere this does nothing.
+    forking_enable(0)
+
     # Create and initialize IPC
     g_pool = Temp()
     g_pool.pupil_queue = Queue()
@@ -115,7 +123,7 @@ def main():
     # set up subprocesses
     p_eye = Process(target=eye, args=(g_pool,eye_src,eye_size))
 
-    # spawn subprocess
+    # Spawn subprocess:
     p_eye.start()
     # On Linux, we need to give the camera driver some time before requesting another camera.
     sleep(0.5)
@@ -126,4 +134,5 @@ def main():
     p_eye.join()
 
 if __name__ == '__main__':
+    freeze_support()
     main()
