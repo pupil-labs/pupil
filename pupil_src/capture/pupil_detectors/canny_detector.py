@@ -54,7 +54,7 @@ class Canny_Detector(Pupil_Detector):
         self.bin_thresh = c_int(0)
 
         # contour prefilter params
-        self.min_contour_size = c_int(30)
+        self.min_contour_size = c_int(self.load('min_contour_size',80))
 
         #ellipse filter params
         self.inital_ellipse_fit_threshhold = 1.8
@@ -571,3 +571,4 @@ class Canny_Detector(Pupil_Detector):
         self.save('intensity_range',self.intensity_range.value)
         self.save('pupil_min',self.pupil_min.value)
         self.save('pupil_max',self.pupil_max.value)
+        self.save('min_contour_size',self.min_contour_size.value)

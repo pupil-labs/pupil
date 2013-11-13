@@ -82,7 +82,8 @@ class Roi(object):
                 self.lX,self.lY,self.uX,self.uY,_ = vals
             else:
                 logger.info('Image size has changed: Region of Interest has been reset')
-
+        elif vals is not None and len(vals) is 4:
+            self.lX,self.lY,self.uX,self.uY= vals
 
     def get(self):
         return self.lX,self.lY,self.uX,self.uY,self.array_shape

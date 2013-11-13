@@ -359,9 +359,9 @@ class Screen_Marker_Calibration(Plugin):
         #some feedback on the detection state
 
         if self.detected and self.on_position:
-            draw_gl_point_norm(self.display_pos, 5, (0.,1.,0.,1.))
+            draw_gl_point(screen_pos, 5, (0.,1.,0.,1.))
         else:
-            draw_gl_point_norm(self.display_pos, 5, (1.,0.,0.,1.))
+            draw_gl_point(screen_pos, 5, (1.,0.,0.,1.))
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)

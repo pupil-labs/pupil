@@ -96,7 +96,7 @@ def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
         #version 120
         varying vec4 f_color;
         void main () {
-               gl_Position = vec4(gl_Vertex.xy,1.,1.);
+               gl_Position = gl_ModelViewProjectionMatrix*vec4(gl_Vertex.xy,1.,1.);
                gl_PointSize = gl_Vertex.z; //this needs to be used on some hardware we cheat ande use the z coord
                f_color = gl_Color;
                }
