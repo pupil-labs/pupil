@@ -15,3 +15,6 @@ All source code written by us is open source for noncommercial uses as specified
 ## Links
  - [Pupil Labs](http://pupil-labs.com "Pupil Labs")
  - [Pupil Wiki](https://code.google.com/p/pupil/wiki/Headset_Intro?tm=6 "Pupil Wiki")
+___
+
+ [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/pupil-labs/pupil/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
