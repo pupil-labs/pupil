@@ -8,15 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-if __name__ == '__main__':
-    # make shared modules available across pupil_src
-    from sys import path as syspath
-    from os import path as ospath
-    loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
-    syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
-    del syspath, ospath
-
-
 import os
 from time import time, sleep
 import shelve
