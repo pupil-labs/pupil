@@ -14,7 +14,7 @@ import numpy as np
 
 def main():
 
-    save_video = True
+    save_video = False
 
     if getattr(sys, 'frozen', False):
         save_video = True
@@ -79,14 +79,14 @@ def main():
         #DIVX -- good speed good compression medium file
         writer = cv.VideoWriter(record_path, cv.cv.CV_FOURCC(*'DIVX'), fps, (img.shape[1], img.shape[0]))
 
+    past_gaze = []
 
     while status and frame < no_frames:
-
         # all gaze points of the current frame
         current_gaze = positions_by_frame[frame]
         for gaze_point in current_gaze:
             x_screen, y_screen = denormalize((gaze_point['x'], gaze_point['y']), width, height)
-            cv.circle(img, (x_screen, y_screen), 30, (255, 255, 255), 2, cv.cv.CV_AA)
+            cv.circle(img, (x_screen, y_screen), 30, (60, 20, 220), 2, cv.cv.CV_AA)
 
         cv.imshow("world", img)
 

@@ -135,7 +135,7 @@ def main():
 
         img *=cv.cvtColor(narrow,cv.COLOR_GRAY2RGB)
 
-        cv.imshow(window_string, img)
+        # cv.imshow(window_string, img)
 
         if save_video:
             writer.write(img)

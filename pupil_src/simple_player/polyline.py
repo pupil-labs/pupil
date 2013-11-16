@@ -110,12 +110,35 @@ def main():
         vap = 20 #Visual_Attention_Span
         window_string = "the last %i frames of visual attention" %vap
 
+
+        # check to see if at least 2 points are within the manhattan distance of the most current gaze point
+        # otherwise we assume that it is not a real fixation point
+        # put points we keep in a list called fixations
+        fixations = []
+        size = 20
+        size -= len(past_gaze) # the most recent point is always vap big regardless of actual point hist lengh.
+
+        p_gaze = np.array(past_gaze)
+        d = np.abs(p_gaze[:-1]-p_gaze[1:])
+        if len(d):
+            d = d[:,0]+d[:,1]
+
+        for gaze_point, next_point in zip(past_gaze[:-1],past_gaze[1:]):
+            x_dist =  abs(gaze_point[0] - next_point[0])
+            y_dist = abs(gaze_point[1] - next_point[1])
+            man = x_dist + y_dist
+            if man < 20:
+                fixations.append((int(gaze_point[0]),int(gaze_point[1])))
+                
+            size += 2 # more recent gaze points are bigger
+
+
         # remove everything but the last "vap" number of gaze postions from the list of past_gazes
         for x in xrange(len(past_gaze)-vap):
             past_gaze.pop(0)
 
-        for gaze_point in past_gaze[::-1]: #going through the list backwards
-            cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), int(vap), (255, 255, 255), 1, cv.cv.CV_AA)
+        for gaze_point in fixations[::-1]: #going through the list backwards
+            cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), int(vap), (60, 20, 220), 1, cv.cv.CV_AA)
             vap -=.9 # less recent gaze points are smaller
             vap = max(1,vap)
 
