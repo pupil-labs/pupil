@@ -18,6 +18,9 @@ def main():
 
     save_video = False
 
+    # manhattan_dist variable used to check for false positives
+    manhattan_dist = 25
+
     try:
         data_folder = sys.argv[1]
     except:
@@ -111,20 +114,15 @@ def main():
                 past_gaze.append([x,y])
 
 
-        vap = 10 #Visual_Attention_Span
-        window_string = "the last %i frames of visual attention" %vap
+        vap = 2 #Visual_Attention_Span - change to see history
+        window_string = "Simple Circle - Fixations Only"
         overlay = np.zeros(img.shape,dtype=img.dtype)
 
         # remove everything but the last "vap" number of gaze postions from the list of past_gazes
         for x in xrange(len(past_gaze)-vap):
             past_gaze.pop(0)
 
-
-        # draw recent gaze postions as white dots on an overlay image
-
-        fixations = []
-        size = 20
-        size -= len(past_gaze) # the most recent point is always vap big regardless of actual point hist lengh.
+        size = 20 
 
         p_gaze = np.array(past_gaze)
         d = np.abs(p_gaze[:-1]-p_gaze[1:])
@@ -135,25 +133,10 @@ def main():
             x_dist =  abs(gaze_point[0] - next_point[0])
             y_dist = abs(gaze_point[1] - next_point[1])
             man = x_dist + y_dist
-            if man < 20:
-                fixations.append((int(gaze_point[0]),int(gaze_point[1])))
-                cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size, (95, 240, 0), 1, cv.cv.CV_AA)
-            else:
-                cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size, (255, 0, 0), 1, cv.cv.CV_AA)
-                pass
-
-            size += 2 # more recent gaze points are bigger
+            if man < manhattan_dist:
+                cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size, (60, 20, 220), 2, cv.cv.CV_AA)
         
-        if fixations:
-            # print pts.shape
-            pts = np.array(fixations,dtype=np.int32)
-            cv.polylines(img, [pts], isClosed=False, color=(60,20,220),thickness= 2,lineType=cv.cv.CV_AA)
-        if past_gaze:
-            # print pts.shape
-            pts = np.array(past_gaze,dtype=np.int32)
-            # cv.polylines(img, [pts], isClosed=False, color=(255,255,255),lineType=cv.cv.CV_AA)
-
-
+    
         cv.imshow(window_string, img)
         if save_video:
             writer.write(img)

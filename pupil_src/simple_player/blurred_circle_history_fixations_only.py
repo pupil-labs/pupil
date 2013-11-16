@@ -15,8 +15,10 @@ import cProfile
 import time
 
 def main():
-
     save_video = False
+
+    # manhattan_dist variable used to check for false positives
+    manhattan_dist = 20
 
     try:
         data_folder = sys.argv[1]
@@ -27,7 +29,6 @@ def main():
 
     if not os.path.isdir(data_folder):
         raise Exception("Please supply a recording directory")
-
 
 
     video_path = data_folder + "/world.avi"
@@ -65,21 +66,21 @@ def main():
                 break
             frame_idx+=1
 
-
     status, img = cap.read()
     prevgray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     height, width = img.shape[0:2]
+    frame = 0
     past_gaze = []
     t = time.time()
 
     fps = cap.get(5)
     wait =  int((1./fps)*1000)
 
+
     if save_video:
         #FFV1 -- good speed lossless big file
         #DIVX -- good speed good compression medium file
         writer = cv.VideoWriter(record_path, cv.cv.CV_FOURCC(*'DIVX'), fps, (img.shape[1], img.shape[0]))
-    frame = 0
 
     while status and frame < no_frames:
         nt = time.time()
@@ -111,7 +112,7 @@ def main():
                 past_gaze.append([x,y])
 
 
-        vap = 10 #Visual_Attention_Span
+        vap = 20 #Visual_Attention_Span
         window_string = "the last %i frames of visual attention" %vap
         overlay = np.zeros(img.shape,dtype=img.dtype)
 
@@ -119,9 +120,9 @@ def main():
         for x in xrange(len(past_gaze)-vap):
             past_gaze.pop(0)
 
-
-        # draw recent gaze postions as white dots on an overlay image
-
+        # check to see if at least 2 points are within the manhattan distance of the most current gaze point
+        # otherwise we assume that it is not a real fixation point
+        # put points we keep in a list called fixations
         fixations = []
         size = 20
         size -= len(past_gaze) # the most recent point is always vap big regardless of actual point hist lengh.
@@ -137,26 +138,32 @@ def main():
             man = x_dist + y_dist
             if man < 20:
                 fixations.append((int(gaze_point[0]),int(gaze_point[1])))
-                cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size, (95, 240, 0), 1, cv.cv.CV_AA)
-            else:
-                cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size, (255, 0, 0), 1, cv.cv.CV_AA)
-                pass
 
             size += 2 # more recent gaze points are bigger
-        
-        if fixations:
-            # print pts.shape
-            pts = np.array(fixations,dtype=np.int32)
-            cv.polylines(img, [pts], isClosed=False, color=(60,20,220),thickness= 2,lineType=cv.cv.CV_AA)
-        if past_gaze:
-            # print pts.shape
-            pts = np.array(past_gaze,dtype=np.int32)
-            # cv.polylines(img, [pts], isClosed=False, color=(255,255,255),lineType=cv.cv.CV_AA)
+
+        # draw recent gaze postions as white dots on an overlay image.
+        for gaze_point in fixations[::-1]:
+            cv.circle(overlay,(int(gaze_point[0]),int(gaze_point[1])), int(vap*2), (255, 255, 255), int(vap*6))
+            vap -=.9 # less recent gaze points are smaller
+            vap = max(1,vap)
 
 
-        cv.imshow(window_string, img)
+        #render the area of visual attention as sharp images on a blurred background
+        blurred = cv.blur(img,(21,21))
+
+        #desaturate the image
+        # blurred = cv.cvtColor(blurred,cv.COLOR_BGR2GRAY)
+        # blurred = cv.cvtColor(blurred,cv.COLOR_GRAY2BGR)
+
+        blurred *=.8
+
+        # muliply this overlay with the img (white circle = 1, black banground = 0)
+        # img = cv.multiply(img,overlay/255)
+        mask = (overlay==255)
+        blurred[mask] = img[mask]
+        cv.imshow(window_string, blurred)
         if save_video:
-            writer.write(img)
+            writer.write(blurred)
 
         status, img = cap.read()
         frame += 1

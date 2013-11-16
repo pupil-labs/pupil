@@ -7,7 +7,6 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
 import sys,os
 import cv2 as cv
 import numpy as np
@@ -18,6 +17,9 @@ def main():
 
     save_video = False
 
+    # manhattan_dist variable used to check for false positives
+    manhattan_dist = 20
+
     try:
         data_folder = sys.argv[1]
     except:
@@ -27,6 +29,7 @@ def main():
 
     if not os.path.isdir(data_folder):
         raise Exception("Please supply a recording directory")
+
 
 
 
@@ -65,10 +68,10 @@ def main():
                 break
             frame_idx+=1
 
-
     status, img = cap.read()
     prevgray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     height, width = img.shape[0:2]
+    frame = 0
     past_gaze = []
     t = time.time()
 
@@ -79,12 +82,8 @@ def main():
         #FFV1 -- good speed lossless big file
         #DIVX -- good speed good compression medium file
         writer = cv.VideoWriter(record_path, cv.cv.CV_FOURCC(*'DIVX'), fps, (img.shape[1], img.shape[0]))
-    frame = 0
 
-    while status and frame < no_frames:
-        nt = time.time()
-        # print nt-t
-        t = nt
+    while status:
         # apply optical flow displacement to previous gaze
         if past_gaze:
             gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -94,7 +93,7 @@ def main():
             prevgray = gray
             past_gaze = list(nextPts)
 
-            #contrain gaze positions to
+            #contrain gaze positions to screen dimensions
             c_gaze = []
             for x,y in past_gaze:
                 if x >0 and x<width and y >0 and y <height:
@@ -110,20 +109,20 @@ def main():
             if x >0 and x<width and y >0 and y <height:
                 past_gaze.append([x,y])
 
-
+       
         vap = 10 #Visual_Attention_Span
         window_string = "the last %i frames of visual attention" %vap
-        overlay = np.zeros(img.shape,dtype=img.dtype)
+        overlay = np.ones(img.shape[:-1],dtype=img.dtype)
 
         # remove everything but the last "vap" number of gaze postions from the list of past_gazes
         for x in xrange(len(past_gaze)-vap):
             past_gaze.pop(0)
 
-
-        # draw recent gaze postions as white dots on an overlay image
-
+        # check to see if at least 2 points are within the manhattan distance of the most current gaze point
+        # otherwise we assume that it is not a real fixation point
+        # put points we keep in a list called fixations
         fixations = []
-        size = 20
+        size = 30
         size -= len(past_gaze) # the most recent point is always vap big regardless of actual point hist lengh.
 
         p_gaze = np.array(past_gaze)
@@ -135,23 +134,18 @@ def main():
             x_dist =  abs(gaze_point[0] - next_point[0])
             y_dist = abs(gaze_point[1] - next_point[1])
             man = x_dist + y_dist
-            if man < 20:
+            if man < manhattan_dist:
                 fixations.append((int(gaze_point[0]),int(gaze_point[1])))
-                cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size, (95, 240, 0), 1, cv.cv.CV_AA)
-            else:
-                cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size, (255, 0, 0), 1, cv.cv.CV_AA)
-                pass
+                
+        # remove everything but the last "vap" number of gaze postions from the list of past_gazes
+        for x in xrange(len(past_gaze)-vap):
+            past_gaze.pop(0)
 
-            size += 2 # more recent gaze points are bigger
-        
-        if fixations:
-            # print pts.shape
-            pts = np.array(fixations,dtype=np.int32)
-            cv.polylines(img, [pts], isClosed=False, color=(60,20,220),thickness= 2,lineType=cv.cv.CV_AA)
-        if past_gaze:
-            # print pts.shape
-            pts = np.array(past_gaze,dtype=np.int32)
-            # cv.polylines(img, [pts], isClosed=False, color=(255,255,255),lineType=cv.cv.CV_AA)
+        for gaze_point in fixations[::-1]: #going through the list backwards
+            cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), int(size), (95, 240, 0), 1, cv.cv.CV_AA)
+            size -=.9 # less recent gaze points are smaller
+            size = max(1,size)
+            cv.polylines(img, [np.array(fixations,dtype=np.int32)], isClosed=False, color=(60, 20, 220),thickness=2,lineType=cv.cv.CV_AA)
 
 
         cv.imshow(window_string, img)
