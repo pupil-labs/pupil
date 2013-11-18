@@ -164,7 +164,7 @@ class Marker_Detector(Plugin):
 
         for r in corners:
             cv2.polylines(img,[np.int0(r)],isClosed=True,color=(100,200,0))
-
+            print cv2.getPerspectiveTransform(np.array(((0.,0.),(0.,1.),(1.,1.),(1.,0.)),dtype=np.float32), r)
 
         # img[res[:,3],res[:,2]] =[0,255,0]
 
