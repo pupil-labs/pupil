@@ -574,7 +574,7 @@ def pruning_quick_combine(l,fn,seed_idx=None,max_evals=1e20,max_depth=5):
         # print '@idx',[mapping[i] for i in path]
         # print '@content',path
         if not len(path) > max_depth:
-        # is this combination even viable, or did a subset fail already
+            # is this combination even viable, or did a subset fail already?
             if not any(m.issubset(set(path)) for m in prune):
                 #we have not tested this and a subset of this was sucessfull before
                 if fn([l[mapping[i]] for i in path]):

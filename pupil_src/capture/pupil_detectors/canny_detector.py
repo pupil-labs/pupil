@@ -287,17 +287,19 @@ class Canny_Detector(Pupil_Detector):
 
             #TODO: split at shart inward turns
             for s in segs:
-                split_contours.append(s)
-                if self._window:
-                    c = color.pop(0)
-                    color.append(c)
-                    s = s.copy()
-                    s[:,:,0] += debug_img.shape[1]-coarse_pupil_width*2
-                    # s[:,:,0] += x_shift
-                    # x_shift += 5
-                    if s.shape[0] >3:
+                if s.shape[0]>2:
+                    split_contours.append(s)
+                    if self._window:
+                        c = color.pop(0)
+                        color.append(c)
+                        s = s.copy()
+                        s[:,:,0] += debug_img.shape[1]-coarse_pupil_width*2
+                        # s[:,:,0] += x_shift
+                        # x_shift += 5
                         cv2.polylines(debug_img,[s],isClosed=False,color=map(lambda x: x,c),thickness = 1,lineType=4)#cv2.CV_AA
 
+        split_contours.sort(key=lambda x:-x.shape[0])
+        # print [x.shape[0]for x in split_contours]
         if len(split_contours) == 0:
             # not a single usefull segment found -> no pupil found
             self.confidence.value = 0
@@ -364,7 +366,7 @@ class Canny_Detector(Pupil_Detector):
                     if fit_variance <= self.inital_ellipse_fit_threshhold:
                         # how much ellipse is supported by this contour?
                         perimeter_ratio,area_ratio = ellipse_support_ratio(e,[c])
-                        logger.debug('Ellipse no %s with perimeter_ratio: %s , area_ratio: %s'%(idx,perimeter_ratio,area_ratio))
+                        # logger.debug('Ellipse no %s with perimeter_ratio: %s , area_ratio: %s'%(idx,perimeter_ratio,area_ratio))
                         if self.strong_perimeter_ratio_range[0]<= perimeter_ratio <= self.strong_perimeter_ratio_range[1] and self.strong_area_ratio_range[0]<= area_ratio <= self.strong_area_ratio_range[1]:
                             strong_seed_contours.append(idx)
                             if self._window:
@@ -404,7 +406,7 @@ class Canny_Detector(Pupil_Detector):
             return fit_variance <= self.inital_ellipse_fit_threshhold
 
 
-        solutions = pruning_quick_combine(split_contours,ellipse_eval,seed_idx,max_evals=1000,max_depth=4)
+        solutions = pruning_quick_combine(split_contours,ellipse_eval,seed_idx,max_evals=1000,max_depth=5)
         solutions = filter_subsets(solutions)
         ratings = []
 
