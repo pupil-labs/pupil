@@ -158,6 +158,9 @@ def draw_gl_texture(image,interpolation=True):
     else:
         gl_blend = GL_BGRA
         gl_blend_init = GL_RGBA
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT,1)
+
     # Create Texture
     glTexImage2D(GL_TEXTURE_2D,
                         0,
