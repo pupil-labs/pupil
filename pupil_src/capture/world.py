@@ -39,6 +39,7 @@ import recorder
 from show_calibration import Show_Calibration
 from display_gaze import Display_Gaze
 from pupil_server import Pupil_Server
+from marker_detector import Marker_Detector
 
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
@@ -251,10 +252,13 @@ def world(g_pool,cap_src,cap_size):
     open_calibration(bar.calibration_type.value,bar.calibration_type)
 
     #load gaze_display plugin
-    g.plugins.append(Display_Gaze(g_pool,None))
+    g.plugins.append(Display_Gaze(g_pool))
 
     #load pupil server plugin
     # toggle_server()
+
+    #load marker_detector
+    g.plugins.append(Marker_Detector(g_pool))
 
     # Event loop
 

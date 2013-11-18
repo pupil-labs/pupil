@@ -17,7 +17,7 @@ from methods import denormalize
 
 class Display_Gaze(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool,atb_pos):
+    def __init__(self, g_pool,atb_pos=None):
         super(Display_Gaze, self).__init__()
         self.g_pool = g_pool
         self.atb_pos = atb_pos
