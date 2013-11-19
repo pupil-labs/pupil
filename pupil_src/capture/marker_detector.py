@@ -207,7 +207,7 @@ class Marker_Detector(Plugin):
             # y_slice = int(min(r[:,:,0])-1),int(max(r[:,:,0])+1)
             # x_slice = int(min(r[:,:,1])-1),int(max(r[:,:,1])+1)
             # marker_img = img[slice(*x_slice),slice(*y_slice)]
-            size = 30 # should be a multiple of marker grid
+            size = 60 # should be a multiple of marker grid
             M = cv2.getPerspectiveTransform(r,np.array(((0.,0.),(0.,size),(size,size),(size,0.)),dtype=np.float32) )
             flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
 
@@ -226,8 +226,9 @@ class Marker_Detector(Plugin):
             marker = decode(otsu, 6)
             if marker is not None:
                 angle,msg = marker
+                # roll points such that the marker points correspond with oriented marker
                 rot_r = np.roll(r,angle/90,axis=0)
-                # Matrix transform with rotation
+                # this way we get the matrix transform with rotation included
                 M = cv2.getPerspectiveTransform(rot_r,np.array(((0.,0.),(0.,size),(size,size),(size,0.)),dtype=np.float32) )
                 self.rects.append(r)
                 img[0:flat_marker_img.shape[0],offset:flat_marker_img.shape[1]+offset,1] = np.rot90(otsu,angle/90)
