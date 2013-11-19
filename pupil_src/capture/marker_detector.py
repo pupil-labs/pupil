@@ -195,7 +195,7 @@ class Marker_Detector(Plugin):
 
             msg = np.rot90(msg,angle/90)
 
-            # #this assumes a 6*6 grid marker key is the center 4
+            # #this assumes a 6*6 grid marker key is the center 4 can be used in a addion to the orientation key...
             # # B|*|*|W   ^
             # # *|W|B|*  / \
             # # *|B|W|*   |  UP
@@ -215,6 +215,7 @@ class Marker_Detector(Plugin):
             # y_slice = int(min(r[:,:,0])-1),int(max(r[:,:,0])+1)
             # x_slice = int(min(r[:,:,1])-1),int(max(r[:,:,1])+1)
             # marker_img = img[slice(*x_slice),slice(*y_slice)]
+            # marker_img *= 0.1
             size = 120 # should be a multiple of marker grid
             M = cv2.getPerspectiveTransform(r,np.array(((0.,0.),(0.,size),(size,size),(size,0.)),dtype=np.float32) )
             flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
@@ -241,6 +242,7 @@ class Marker_Detector(Plugin):
                 M = cv2.getPerspectiveTransform(rot_r,np.array(((0.,0.),(0.,size),(size,size),(size,0.)),dtype=np.float32) )
                 self.rects.append(r)
                 img[0:flat_marker_img.shape[0],offset:flat_marker_img.shape[1]+offset,1] = np.rot90(otsu,angle/90)
+                img[0:flat_marker_img.shape[0],offset:flat_marker_img.shape[1]+offset,2] = np.rot90(flat_marker_img,angle/90)
                 offset += size+10
                 if offset+size > img.shape[1]:
                     break
