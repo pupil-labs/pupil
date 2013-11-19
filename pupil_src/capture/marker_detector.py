@@ -30,8 +30,9 @@ class Marker_Detector(Plugin):
     def __init__(self,g_pool,atb_pos=(0,0)):
         Plugin.__init__(self)
 
+        self.rects = []
 
-        self.aperture = c_int(7)
+        self.aperture = c_int(9)
         self.window_should_open = False
         self.window_should_close = False
         self._window = None
@@ -113,7 +114,7 @@ class Marker_Detector(Plugin):
         # self.candidate_points = self.detector.detect(s_img)
 
         # get threshold image used to get crisp-clean edges
-        edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.aperture.value, 7)
+        edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.aperture.value, 9)
         # cv2.flip(edges,1 ,dst = edges,)
         # display the image for debugging purpuses
         # img[:] = cv2.cvtColor(edges,cv2.COLOR_GRAY2BGR)
@@ -143,28 +144,39 @@ class Marker_Detector(Plugin):
 
         aprox_contours = [cv2.approxPolyDP(c,epsilon=2.5,closed=True) for c in contained_contours]
 
-        rect_canditates = [c for c in aprox_contours if c.shape[0]==4]
+        rect_cand = [c for c in aprox_contours if c.shape[0]==4]
 
-        corners = np.array(rect_canditates,dtype=np.float32)
+        rects = np.array(rect_cand,dtype=np.float32)
 
 
-        # for r in corners:
+        # for r in rects:
         #     cv2.polylines(img,[np.int0(r)],isClosed=True,color=(0,0,200))
 
 
-        corners_shape = corners.shape
-        corners.shape = (-1,2) #flatten for cornerSubPix
+        rects_shape = rects.shape
+        rects.shape = (-1,2) #flatten for rectsubPix
 
         # subpixel corner fitting
-        # define the criteria to stop and refine the corners
+        # define the criteria to stop and refine the rects
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
-        cv2.cornerSubPix(gray_img,corners,(2,2),(-1,-1),criteria)
+        cv2.cornerSubPix(gray_img,rects,(3,3),(-1,-1),criteria)
 
-        corners.shape = corners_shape #back to old layout [[rect],[rect],[rect]...] with rect = [corner,corner,corncer,corner]
+        rects.shape = rects_shape #back to old layout [[rect],[rect],[rect]...] with rect = [corner,corner,corncer,corner]
 
-        for r in corners:
-            cv2.polylines(img,[np.int0(r)],isClosed=True,color=(100,200,0))
-            print cv2.getPerspectiveTransform(np.array(((0.,0.),(0.,1.),(1.,1.),(1.,0.)),dtype=np.float32), r)
+        self.rects = rects
+        offset = 100
+        for r in rects:
+            # cv2.polylines(img,[np.int0(r)],isClosed=True,color=(100,200,0))
+            # y_slice = int(min(r[:,:,0])-1),int(max(r[:,:,0])+1)
+            # x_slice = int(min(r[:,:,1])-1),int(max(r[:,:,1])+1)
+            # marker_img = img[slice(*x_slice),slice(*y_slice)]
+            size = 20
+            M = cv2.getPerspectiveTransform(r,np.array(((0.,0.),(0.,size),(size,size),(size,0.)),dtype=np.float32) )
+            flat_marker_img =  cv2.warpPerspective(img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
+            img[0:flat_marker_img.shape[0],offset:flat_marker_img.shape[1]+offset] = flat_marker_img
+            offset += size+10
+            if offset+size > img.shape[1]:
+                break
 
         # img[res[:,3],res[:,2]] =[0,255,0]
 
@@ -182,6 +194,11 @@ class Marker_Detector(Plugin):
         """
         for debugging now
         """
+
+        for r in self.rects:
+            r.shape = 4,2
+            draw_gl_polyline(r,(0.1,1.,1.,.5))
+
         if self._window:
             self.gl_display_in_window()
 
