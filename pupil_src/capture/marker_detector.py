@@ -171,7 +171,7 @@ class Marker_Detector(Plugin):
             msg = otsu[start::step,start::step]
             # border is: first row, last row, first column, last column
             if msg[0,:].any() or msg[-1:0].any() or msg[:,0].any() or msg[:,-1].any():
-                logger.debug("This is not a valid marker: \n %s" %msg)
+                # logger.debug("This is not a valid marker: \n %s" %msg)
                 return None
             # strip border to get the message
             msg = msg[1:-1,1:-1]/255
@@ -182,20 +182,21 @@ class Marker_Detector(Plugin):
             # *|*|*|*|*   |  P
             # B|*|*|*|B   |
             # 0,0 -1,0 -1,-1, 0,-1
-            # angles are clockwise rotation
+            # angles are counter-clockwise rotation
             corners = msg[0,0], msg[-1,0], msg[-1,-1], msg[0,-1]
-            print corners
             if corners == (1,0,0,0):
                 angle = 0
             elif corners == (0,1,0,0):
-                angle = 90
+                angle = 270
             elif corners == (0,0,1,0):
                 angle = 180
             elif corners == (0,0,0,1):
-                angle = 270
+                angle = 90
             else:
-                logger.debug("This marker does not have valid orientation: \n %s " %msg)
+                # logger.debug("This marker does not have valid orientation: \n %s " %msg)
                 return None
+
+            msg = np.rot90(msg,angle/90)
 
             return angle, msg
 
@@ -206,7 +207,7 @@ class Marker_Detector(Plugin):
             # y_slice = int(min(r[:,:,0])-1),int(max(r[:,:,0])+1)
             # x_slice = int(min(r[:,:,1])-1),int(max(r[:,:,1])+1)
             # marker_img = img[slice(*x_slice),slice(*y_slice)]
-            size = 60 # should be a multiple of marker grid
+            size = 30 # should be a multiple of marker grid
             M = cv2.getPerspectiveTransform(r,np.array(((0.,0.),(0.,size),(size,size),(size,0.)),dtype=np.float32) )
             flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
 
@@ -221,12 +222,15 @@ class Marker_Detector(Plugin):
             cv2.dilate(otsu,kernel,otsu, iterations=1)
 
 
+
             marker = decode(otsu, 6)
             if marker is not None:
                 angle,msg = marker
-                print angle
+                rot_r = np.roll(r,angle/90,axis=0)
+                # Matrix transform with rotation
+                M = cv2.getPerspectiveTransform(rot_r,np.array(((0.,0.),(0.,size),(size,size),(size,0.)),dtype=np.float32) )
                 self.rects.append(r)
-                img[0:flat_marker_img.shape[0],offset:flat_marker_img.shape[1]+offset,1] = otsu
+                img[0:flat_marker_img.shape[0],offset:flat_marker_img.shape[1]+offset,1] = np.rot90(otsu,angle/90)
                 offset += size+10
                 if offset+size > img.shape[1]:
                     break
