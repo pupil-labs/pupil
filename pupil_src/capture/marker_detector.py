@@ -163,20 +163,73 @@ class Marker_Detector(Plugin):
 
         rects.shape = rects_shape #back to old layout [[rect],[rect],[rect]...] with rect = [corner,corner,corncer,corner]
 
-        self.rects = rects
         offset = 100
+
+        def decode(square_img,grid):
+            step = square_img.shape[0]/grid
+            start = step/2
+            msg = otsu[start::step,start::step]
+            # border is: first row, last row, first column, last column
+            if msg[0,:].any() or msg[-1:0].any() or msg[:,0].any() or msg[:,-1].any():
+                logger.debug("This is not a valid marker: \n %s" %msg)
+                return None
+            # strip border to get the message
+            msg = msg[1:-1,1:-1]/255
+
+            # W|*|*|*|B   ^
+            # *|*|*|*|*  / \
+            # *|*|*|*|*   |  U
+            # *|*|*|*|*   |  P
+            # B|*|*|*|B   |
+            # 0,0 -1,0 -1,-1, 0,-1
+            # angles are clockwise rotation
+            corners = msg[0,0], msg[-1,0], msg[-1,-1], msg[0,-1]
+            print corners
+            if corners == (1,0,0,0):
+                angle = 0
+            elif corners == (0,1,0,0):
+                angle = 90
+            elif corners == (0,0,1,0):
+                angle = 180
+            elif corners == (0,0,0,1):
+                angle = 270
+            else:
+                logger.debug("This marker does not have valid orientation: \n %s " %msg)
+                return None
+
+            return angle, msg
+
+
+        self.rects = []
         for r in rects:
             # cv2.polylines(img,[np.int0(r)],isClosed=True,color=(100,200,0))
             # y_slice = int(min(r[:,:,0])-1),int(max(r[:,:,0])+1)
             # x_slice = int(min(r[:,:,1])-1),int(max(r[:,:,1])+1)
             # marker_img = img[slice(*x_slice),slice(*y_slice)]
-            size = 20
+            size = 60 # should be a multiple of marker grid
             M = cv2.getPerspectiveTransform(r,np.array(((0.,0.),(0.,size),(size,size),(size,0.)),dtype=np.float32) )
-            flat_marker_img =  cv2.warpPerspective(img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
-            img[0:flat_marker_img.shape[0],offset:flat_marker_img.shape[1]+offset] = flat_marker_img
-            offset += size+10
-            if offset+size > img.shape[1]:
-                break
+            flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
+
+            # Otsu documentation here :
+            # https://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_imgproc/py_thresholding/py_thresholding.html#thresholding
+            _ , otsu = cv2.threshold(flat_marker_img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+
+
+            # cosmetics -- getting a cleaner display of the rectangle marker
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
+            cv2.erode(otsu,kernel,otsu, iterations=1)
+            cv2.dilate(otsu,kernel,otsu, iterations=1)
+
+
+            marker = decode(otsu, 6)
+            if marker is not None:
+                angle,msg = marker
+                print angle
+                self.rects.append(r)
+                img[0:flat_marker_img.shape[0],offset:flat_marker_img.shape[1]+offset,1] = otsu
+                offset += size+10
+                if offset+size > img.shape[1]:
+                    break
 
         # img[res[:,3],res[:,2]] =[0,255,0]
 
