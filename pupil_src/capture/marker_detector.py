@@ -163,8 +163,6 @@ class Marker_Detector(Plugin):
 
         rects.shape = rects_shape #back to old layout [[rect],[rect],[rect]...] with rect = [corner,corner,corncer,corner]
 
-        offset = 100
-
         def decode(square_img,grid):
             step = square_img.shape[0]/grid
             start = step/2
@@ -176,21 +174,20 @@ class Marker_Detector(Plugin):
             # strip border to get the message
             msg = msg[1:-1,1:-1]/255
 
-            # W|*|*|*|B   ^
-            # *|*|*|*|*  / \
-            # *|*|*|*|*   |  U
-            # *|*|*|*|*   |  P
-            # B|*|*|*|B   |
+            # B|*|*|W   ^
+            # *|*|*|*  / \
+            # *|*|*|*   |  UP
+            # W|*|*|W   |
             # 0,0 -1,0 -1,-1, 0,-1
             # angles are counter-clockwise rotation
             corners = msg[0,0], msg[-1,0], msg[-1,-1], msg[0,-1]
-            if corners == (1,0,0,0):
+            if corners == (0,1,1,1):
                 angle = 0
-            elif corners == (0,1,0,0):
+            elif corners == (1,0,1,1):
                 angle = 270
-            elif corners == (0,0,1,0):
+            elif corners == (1,1,0,1):
                 angle = 180
-            elif corners == (0,0,0,1):
+            elif corners == (1,1,1,0):
                 angle = 90
             else:
                 # logger.debug("This marker does not have valid orientation: \n %s " %msg)
@@ -198,16 +195,27 @@ class Marker_Detector(Plugin):
 
             msg = np.rot90(msg,angle/90)
 
-            return angle, msg
+            # #this assumes a 6*6 grid marker key is the center 4
+            # # B|*|*|W   ^
+            # # *|W|B|*  / \
+            # # *|B|W|*   |  UP
+            # # W|*|*|W   |
+            # key = msg[1:3,1:3].flatten().tolist()
+            # if key == [1,0,0,1]:
+            #     return angle, msg
+            # else:
+            #     return None
 
+            return angle,msg
 
+        offset = 0
         self.rects = []
         for r in rects:
             # cv2.polylines(img,[np.int0(r)],isClosed=True,color=(100,200,0))
             # y_slice = int(min(r[:,:,0])-1),int(max(r[:,:,0])+1)
             # x_slice = int(min(r[:,:,1])-1),int(max(r[:,:,1])+1)
             # marker_img = img[slice(*x_slice),slice(*y_slice)]
-            size = 60 # should be a multiple of marker grid
+            size = 120 # should be a multiple of marker grid
             M = cv2.getPerspectiveTransform(r,np.array(((0.,0.),(0.,size),(size,size),(size,0.)),dtype=np.float32) )
             flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
 
@@ -217,9 +225,10 @@ class Marker_Detector(Plugin):
 
 
             # cosmetics -- getting a cleaner display of the rectangle marker
-            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
-            cv2.erode(otsu,kernel,otsu, iterations=1)
-            cv2.dilate(otsu,kernel,otsu, iterations=1)
+            kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5,5))
+            cv2.erode(otsu,kernel,otsu, iterations=2)
+            # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
+            # cv2.dilate(otsu,kernel,otsu, iterations=1)
 
 
 
@@ -254,7 +263,7 @@ class Marker_Detector(Plugin):
         """
 
         for r in self.rects:
-            r.shape = 4,2
+            r.shape = 4,2 #remove encapsulation
             draw_gl_polyline(r,(0.1,1.,1.,.5))
 
         if self._window:
@@ -265,38 +274,6 @@ class Marker_Detector(Plugin):
         glfwMakeContextCurrent(self._window)
 
         clear_gl_screen()
-        #todo write code to display pattern.
-        # r = 60.
-        # gl.glMatrixMode(gl.GL_PROJECTION)
-        # gl.glLoadIdentity()
-        # draw_gl_point((-.5,-.5),50.)
-
-        # p_window_size = glfwGetWindowSize(self._window)
-        # # compensate for radius of marker
-        # x_border,y_border = normalize((r,r),p_window_size)
-
-        # # if p_window_size[0]<p_window_size[1]: #taller
-        # #     ratio = p_window_size[1]/float(p_window_size[0])
-        # #     gluOrtho2D(-x_border,1+x_border,y_border, 1-y_border) # origin in the top left corner just like the img np-array
-
-        # # else: #wider
-        # #     ratio = p_window_size[0]/float(p_window_size[1])
-        # #     gluOrtho2D(-x_border,ratio+x_border,y_border, 1-y_border) # origin in the top left corner just like the img np-array
-
-        # gluOrtho2D(-x_border,1+x_border,y_border, 1-y_border) # origin in the top left corner just like the img np-array
-
-        # # Switch back to Model View Matrix
-        # gl.glMatrixMode(gl.GL_MODELVIEW)
-        # gl.glLoadIdentity()
-
-        # for p in self.display_grid:
-        #     draw_gl_point(p)
-        # #some feedback on the detection state
-
-        # # if self.detected and self.on_position:
-        # #     draw_gl_point(screen_pos, 5.0, (0.,1.,0.,1.))
-        # # else:
-        # #     draw_gl_point(screen_pos, 5.0, (1.,0.,0.,1.))
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
