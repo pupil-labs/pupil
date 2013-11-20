@@ -66,7 +66,7 @@ def draw_gl_polyline_norm((positions),(r,g,b,a),type='Loop'):
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
-    gluOrtho2D(-1, 1, -1, 1) # origin at the center positive up, positve right
+    gluOrtho2D(0, 1, 0, 1) # gl coord convention
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()
@@ -136,7 +136,7 @@ def draw_gl_points_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
-    gluOrtho2D(-1, 1, -1, 1) # origin at the center positive up, positve right
+    gluOrtho2D(0, 1, 0, 1) # gl coord convention
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()

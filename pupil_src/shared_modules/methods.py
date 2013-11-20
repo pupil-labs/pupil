@@ -448,10 +448,10 @@ def normalize(pos, (width, height),flip_y=False):
     """
     x = pos[0]
     y = pos[1]
-    x = (x-width/2.)/(width/2.)
-    y = (y-height/2.)/(height/2.)
+    x /=float(width)
+    y /=float(height)
     if flip_y:
-        return x,-y
+        return x,1-y
     return x,y
 
 def denormalize(pos, (width, height), flip_y=False):
@@ -460,10 +460,10 @@ def denormalize(pos, (width, height), flip_y=False):
     """
     x = pos[0]
     y = pos[1]
-    x = (x*width/2.)+(width/2.)
+    x *= width
     if flip_y:
-        y = -y
-    y = (y*height/2.)+(height/2.)
+        y = 1-y
+    y *= height
     return x,y
 
 
