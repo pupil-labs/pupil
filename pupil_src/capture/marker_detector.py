@@ -6,8 +6,6 @@ from methods import normalize
 import atb
 import audio
 from ctypes import c_int,c_bool
-import OpenGL.GL as gl
-from OpenGL.GLU import gluOrtho2D
 
 from glfw import *
 from plugin import Plugin
@@ -121,7 +119,7 @@ class Marker_Detector(Plugin):
          # from edges to contours to ellipses CV_RETR_CCsOMP ls fr hole
         contours, hierarchy = cv2.findContours(edges,
                                         mode=cv2.RETR_TREE,
-                                        method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
+                                        method=cv2.CHAIN_APPROX_SIMPLE,offset=(0,0)) #TC89_KCOS
 
 
         # remove extra encapsulation
@@ -239,18 +237,23 @@ class Marker_Detector(Plugin):
                 # roll points such that the marker points correspond with oriented marker
                 rot_r = np.roll(r,angle/90,axis=0)
                 # this way we get the matrix transform with rotation included
-                M = cv2.getPerspectiveTransform(rot_r,np.array(((0.,0.),(0.,size),(size,size),(size,0.)),dtype=np.float32) )
+                norm_to_marker = cv2.getPerspectiveTransform(np.array(((0.,0.),(0.,1),(1,1),(1,0.)),dtype=np.float32),rot_r)
+                marker_to_screen = cv2.getPerspectiveTransform(rot_r,np.array(((0.,0.),(0.,1),(1,1),(1,0.)),dtype=np.float32))
+
                 self.rects.append(r)
                 img[0:flat_marker_img.shape[0],offset:flat_marker_img.shape[1]+offset,1] = np.rot90(otsu,angle/90)
-                img[0:flat_marker_img.shape[0],offset:flat_marker_img.shape[1]+offset,2] = np.rot90(flat_marker_img,angle/90)
+                # img[0:flat_marker_img.shape[0],offset:flat_marker_img.shape[1]+offset,2] = np.rot90(flat_marker_img,angle/90)
+
+                centroid = [r.sum(axis=0)/4.]
+                center = np.array([[[.5,.5]]],dtype=np.float32)
+                center = cv2.perspectiveTransform(center,norm_to_marker)
+                cv2.polylines(img,np.int0(center),color = (0,0,255),isClosed=True)
+                cv2.polylines(img,np.int0(centroid),color = (255,255,0),isClosed=True)
+
                 offset += size+10
                 if offset+size > img.shape[1]:
                     break
 
-        # img[res[:,3],res[:,2]] =[0,255,0]
-
-
-        # cv2.drawContours(img, squares,-1, (255,0,0))
 
 
         if self.window_should_close:
