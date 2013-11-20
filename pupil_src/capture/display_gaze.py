@@ -11,7 +11,6 @@
 from gl_utils import draw_gl_points_norm
 from plugin import Plugin
 import numpy as np
-import OpenGL.GL as gl
 
 from methods import denormalize
 

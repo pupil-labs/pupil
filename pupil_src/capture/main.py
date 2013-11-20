@@ -15,6 +15,7 @@ from multiprocessing.sharedctypes import RawValue, Value, Array
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
+        # Specifiy user dirs.
         user_dir = os.path.expanduser('~/Desktop/pupil_settings')
         rec_dir = os.path.expanduser('~/Desktop/pupil_recordings')
         version_file = os.path.join(sys._MEIPASS,'_version_string_')

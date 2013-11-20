@@ -6,8 +6,6 @@ from methods import normalize
 import atb
 import audio
 from ctypes import c_int,c_bool
-import OpenGL.GL as gl
-from OpenGL.GLU import gluOrtho2D
 
 from glfw import *
 from plugin import Plugin

@@ -7,7 +7,9 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
+import OpenGL
+# OpenGL.FULL_LOGGING = True
+OpenGL.ERROR_LOGGING = False
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 from shader import Shader
