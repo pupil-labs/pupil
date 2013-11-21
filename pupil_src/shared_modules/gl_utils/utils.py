@@ -124,9 +124,12 @@ def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
     glEnd()
     simple_pt_shader.unbind()
 
+
+simple_checkerboard_shader = None
+
 def draw_gl_checkerboards(points,size=60,color=(1.,0.5,0.5,.5), grid=[7.0,7.0]):
-    global simple_pt_shader # we cache the shader because we only create it the first time we call this fn.
-    if not simple_pt_shader:
+    global simple_checkerboard_shader # we cache the shader because we only create it the first time we call this fn.
+    if not simple_checkerboard_shader:
         grid = np.array(grid)
         # step = size/grid
         # in this example the step would be 10
@@ -160,16 +163,16 @@ def draw_gl_checkerboards(points,size=60,color=(1.,0.5,0.5,.5), grid=[7.0,7.0]):
         }
         """
         #shader link and compile
-        simple_pt_shader = Shader(VERT_SHADER,FRAG_SHADER)
+        simple_checkerboard_shader = Shader(VERT_SHADER,FRAG_SHADER)
 
-    simple_pt_shader.bind()
-    simple_pt_shader.uniformf('grid', *grid)
+    simple_checkerboard_shader.bind()
+    simple_checkerboard_shader.uniformf('grid', *grid)
     glColor4f(*color)
     glBegin(GL_POINTS)
     for pt in points:
         glVertex3f(pt[0],pt[1],size)
     glEnd()
-    simple_pt_shader.unbind()
+    simple_checkerboard_shader.unbind()
 
 
 
