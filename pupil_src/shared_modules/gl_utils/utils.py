@@ -124,6 +124,54 @@ def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
     glEnd()
     simple_pt_shader.unbind()
 
+def draw_gl_checkerboard(points,size=60,color=(1.,0.5,0.5,.5), grid=[7.0,7.0]):
+    global simple_pt_shader # we cache the shader because we only create it the first time we call this fn.
+    if not simple_pt_shader:
+        grid = np.array(grid)
+        # step = size/grid
+        # in this example the step would be 10
+
+        # we just draw single points, a VBO is much slower than this. But this is a little bit hacked.
+        #someday we should replace all legacy fn with vbo's and shaders...
+        # shader defines
+        VERT_SHADER = """
+        #version 120
+        varying vec4 f_color;
+        void main () {
+               gl_Position = gl_ModelViewProjectionMatrix*vec4(gl_Vertex.xy,1.,1.);
+               gl_PointSize = gl_Vertex.z; //this needs to be used on some hardware we cheat and use the z coord
+               f_color = gl_Color;
+               }
+        """
+
+        FRAG_SHADER = """
+        #version 120
+        varying vec4 f_color;
+        uniform vec2 grid;
+        void main()
+        {   
+            // get the lowest integer value for the grid
+            float total = floor(gl_PointCoord.x*grid.x) + floor(gl_PointCoord.y*grid.y);
+            // make the checkerboard by alternating colors
+            bool isEven = mod(total,2.0)==0.0;
+            vec4 col1 = vec4(0.0,0.0,0.0,1.0);
+            vec4 col2 = vec4(1.0,1.0,1.0,1.0);
+            gl_FragColor = (isEven)? col1:col2;
+        }
+        """
+        #shader link and compile
+        simple_pt_shader = Shader(VERT_SHADER,FRAG_SHADER)
+
+    simple_pt_shader.bind()
+    simple_pt_shader.uniformf('grid', *grid)
+    glColor4f(*color)
+    glBegin(GL_POINTS)
+    for pt in points:
+        glVertex3f(pt[0],pt[1],size)
+    glEnd()
+    simple_pt_shader.unbind()
+
+
 
 def draw_gl_point_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
     draw_gl_points_norm([pos],size,color)
