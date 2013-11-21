@@ -124,7 +124,7 @@ def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
     glEnd()
     simple_pt_shader.unbind()
 
-def draw_gl_checkerboard(points,size=60,color=(1.,0.5,0.5,.5), grid=[7.0,7.0]):
+def draw_gl_checkerboards(points,size=60,color=(1.,0.5,0.5,.5), grid=[7.0,7.0]):
     global simple_pt_shader # we cache the shader because we only create it the first time we call this fn.
     if not simple_pt_shader:
         grid = np.array(grid)
