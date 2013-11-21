@@ -90,7 +90,7 @@ def detect_markers(img,grid_size,min_marker_perimeter=40,aperture=11,visualize=F
 
     # any rectagle will be made of 4 segemnts in its approximation we dont need to find a marker so small that we cannot read it in the end...
     #also we want all contours to be counter clockwise oriented, we use convex hull fot this:
-    rect_cand = [cv2.convexHull(c) for c in aprox_contours if c.shape[0]==4 and cv2.arcLength(c,closed=True) > min_marker_perimeter]
+    rect_cand = [cv2.convexHull(c,clockwise=True) for c in aprox_contours if c.shape[0]==4 and cv2.arcLength(c,closed=True) > min_marker_perimeter]
     # a covex quadrangle is not what we are looking for.
     rect_cand = [r for r in rect_cand if r.shape[0]==4]
 
@@ -127,10 +127,10 @@ def detect_markers(img,grid_size,min_marker_perimeter=40,aperture=11,visualize=F
         if marker is not None:
             angle,msg = marker
             # roll points such that the marker points correspond with oriented marker
-            rot_r = np.roll(r,angle/90,axis=0)
+            rot_r = np.roll(r,angle/90+1,axis=0)
 
             # this way we get the matrix transform with rotation included
-            marker_to_screen = cv2.getPerspectiveTransform(np.array(((1,0),(1,1),(0,1),(0,0)),dtype=np.float32),rot_r)
+            marker_to_screen = cv2.getPerspectiveTransform(np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32),rot_r)
             screen_to_marker = cv2.getPerspectiveTransform(rot_r,np.array(((0.,0.),(0.,1),(1,1),(1,0.)),dtype=np.float32))
             #marker coord system:
             # +-----------+
@@ -140,6 +140,7 @@ def detect_markers(img,grid_size,min_marker_perimeter=40,aperture=11,visualize=F
             # |0,0     1,0|  |
             # +-----------+
             # marker to be returned/broadcast out -- accessible to world
+            # verts are sorted counterclockwise with vert[0]=0,0 (origin) vert[1]= 1,0 vert[2] = 1,1 vert[3] 0,1
             marker = {'id':msg,'verts':rot_r,'marker_to_screen':marker_to_screen,'screen_to_marker':screen_to_marker}
             if visualize:
                 marker['img'] = np.rot90(otsu,-angle/90)
@@ -150,12 +151,36 @@ def detect_markers(img,grid_size,min_marker_perimeter=40,aperture=11,visualize=F
 def draw_markers(img,markers):
     for m in markers:
         centroid = [m['verts'].sum(axis=0)/4.]
-        bottom_left = m['verts'][0]
-        hat = np.array([[[0,0],[1,0],[1.5,.5],[1,1],[0,1]]],dtype=np.float32)
+        origin = m['verts'][0]
+        hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0]]],dtype=np.float32)
         hat = cv2.perspectiveTransform(hat,m['marker_to_screen'])
         cv2.polylines(img,np.int0(hat),color = (0,0,255),isClosed=True)
         cv2.polylines(img,np.int0(centroid),color = (255,255,0),isClosed=True,thickness=2)
-        cv2.putText(img,'id: '+str(m['id']),tuple(np.int0(bottom_left)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
+        cv2.putText(img,'id: '+str(m['id']),tuple(np.int0(origin)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
+
+# class Marker(object):
+#     """docstring for marker"""
+#     def __init__(self, name,verts,marker_to_screen,screen_to_marker):
+#         super(marker, self).__init__()
+#         self.name = name
+#         self.verts = verts
+#         self.marker_to_screen = marker_to_screen
+#         self.screen_to_marker = screen_to_marker
+#         self.img = None
+
+#     def gl_draw(self):
+#         hat = np.array([[[0,0],[1,0],[1.5,.5],[1,1],[0,1],[0,0]]],dtype=np.float32)
+#         hat = cv2.perspectiveTransform(hat,m['marker_to_screen'])
+#         draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
+
+
+
+class Reference_Surface(object):
+    """docstring for Reference Surface"""
+    def __init__(self, marker_names):
+        self.marker_names = marker_names
+
+
 
 
 if __name__ == '__main__':

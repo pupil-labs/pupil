@@ -29,8 +29,12 @@ class Marker_Detector(Plugin):
     def __init__(self,g_pool,atb_pos=(0,0)):
         Plugin.__init__(self)
 
+        # all markers that are detected in the most recent frame
         self.markers = []
+        self.surface = None
 
+
+        #detector vars
         self.aperture = c_int(9)
         self.min_marker_perimeter = 40
 
@@ -52,11 +56,13 @@ class Marker_Detector(Plugin):
         self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
             help="marker detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
-        self._bar.add_var("fullscreen", self.fullscreen)
-        self._bar.add_var("edge apature",self.aperture, step=2,min=3)
-        self._bar.add_var("draw markers",self.draw_markers)
-        self._bar.add_button("  open Window   ", self.do_open, key='c')
+        self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum,group="Window",)
+        self._bar.add_var("fullscreen", self.fullscreen,group="Window")
+        self._bar.add_button("  open Window   ", self.do_open, key='c',group="Window")
+
+
+        self._bar.add_var("edge aperture",self.aperture, step=2,min=3,group="Detector")
+        self._bar.add_var("draw markers",self.draw_markers,group="Detector")
 
     def do_open(self):
         if not self._window:
@@ -119,6 +125,13 @@ class Marker_Detector(Plugin):
         if self.draw_markers.value:
             draw_markers(img,self.markers)
 
+        markers_by_name = dict([(m['id'],m) for m in self.markers])
+        corners = 22,0,6,20
+        try:
+            self.surface = [markers_by_name[c]['verts'][i][0] for c,i in zip(corners,range(len(corners)))]
+        except KeyError:
+            self.surface = None
+
         if self.window_should_close:
             self.close_window()
 
@@ -131,9 +144,12 @@ class Marker_Detector(Plugin):
         """
 
         for m in self.markers:
-            hat = np.array([[[0,0],[1,0],[1.5,.5],[1,1],[0,1],[0,0]]],dtype=np.float32)
+            hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
             hat = cv2.perspectiveTransform(hat,m['marker_to_screen'])
             draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
+
+        if self.surface:
+            draw_gl_polyline(self.surface, (1.0,0.2,0.6,1.0))
 
         if self._window:
             self.gl_display_in_window()
