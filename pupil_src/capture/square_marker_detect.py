@@ -242,7 +242,7 @@ def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,ape
             #we use err in this configurtation it is simple the disance the pt has moved/pix in window
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,**lk_params)
             for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
-                if s and e<3:
+                if s: #ho do we ensure that this is a good move?
                     m['verts'] += pt-m['centroid']
                     m['marker_to_screen']= cv2.getPerspectiveTransform(np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32),m['verts'])
                     m['screen_to_marker'] = cv2.getPerspectiveTransform(m['verts'],np.array(((0.,0.),(0.,1),(1,1),(1,0.)),dtype=np.float32))
@@ -250,7 +250,7 @@ def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,ape
                 else:
                     m["frames_since_true_detection"] =100
 
-        markers = new_markers+[m for m in not_found if m["frames_since_true_detection"] < 20 ]
+        markers = new_markers+[m for m in not_found if m["frames_since_true_detection"] < 60 ]
 
     else:
         markers = new_markers
