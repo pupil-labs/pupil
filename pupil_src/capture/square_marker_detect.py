@@ -204,7 +204,7 @@ def draw_markers(img,markers):
         cv2.putText(img,'id: '+str(m['id']),tuple(np.int0(origin)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
 
 
-lk_params = dict( winSize  = (15, 15),
+lk_params = dict( winSize  = (55, 55),
                   maxLevel = 2,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
@@ -247,7 +247,7 @@ def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,ape
 
 
 
-        markers = new_markers+[m for m in not_found if m["frames_since_true_detection"] < 5 ]
+        markers = new_markers+[m for m in not_found if m["frames_since_true_detection"] < 20 ]
 
     else:
         markers = new_markers
