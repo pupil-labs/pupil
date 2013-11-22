@@ -35,8 +35,8 @@ class Marker_Detector(Plugin):
 
 
         #detector vars
-        self.aperture = c_int(9)
-        self.min_marker_perimeter = 60
+        self.aperture = c_int(11)
+        self.min_marker_perimeter = 40
 
         #debug vars
         self.draw_markers = c_bool(0)

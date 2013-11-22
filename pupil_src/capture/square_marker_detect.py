@@ -17,7 +17,7 @@ def get_close_markers(markers,centroids=None, min_distace=20):
         return np.array([ti[0][i], ti[1][i]])
 
     #calculate pairwise distance, return dense distace matrix (upper triangle)
-    distances =  pdist(centroids,'cityblock')
+    distances =  pdist(centroids,'euclidean')
 
     close_pairs = np.where(distances<min_distace)
     return full_idx(close_pairs)
@@ -29,9 +29,10 @@ def get_close_markers(markers,centroids=None, min_distace=20):
 def decode(square_img,grid):
     step = square_img.shape[0]/grid
     start = step/2
+    #look only at the center point of each grid cell
     msg = square_img[start::step,start::step]
-    # border is: first row, last row, first column, last column
-    if msg[0,:].any() or msg[-1:0].any() or msg[:,0].any() or msg[:,-1].any():
+    # border is: first row - last row and  first column - last column
+    if msg[0::grid-1,:].any() or msg[:,0::grid-1].any():
         # logger.debug("This is not a valid marker: \n %s" %msg)
         return None
     # strip border to get the message
@@ -53,8 +54,8 @@ def decode(square_img,grid):
         msg_int = 1
         corners = tuple([1-c for c in corners]) #simple inversion
     else:
-        #this is no valid marker but maybe a maldetected one? We return unknown marker with 0 rotation
-        return 0, -1
+        #this is no valid marker but maybe a maldetected one? We return unknown marker with None rotation
+        return None, -1
 
     #read rotation of marker by now we are guaranteed to have 3w and 1b
     if corners == (0,1,1,1):
@@ -155,11 +156,12 @@ def detect_markers(img,grid_size,min_marker_perimeter=40,aperture=11,visualize=F
             centroid = r.sum(axis=0)/4.
             centroid = centroid.flatten().tolist()
             # roll points such that the marker points correspond with oriented marker
-            rot_r = np.roll(r,angle/90+1,axis=0)
+            if angle is not None:
+                r = np.roll(r,angle/90+1,axis=0) #not the fastest when using these tiny arrays...
 
             # this way we get the matrix transform with rotation included
-            marker_to_screen = cv2.getPerspectiveTransform(np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32),rot_r)
-            screen_to_marker = cv2.getPerspectiveTransform(rot_r,np.array(((0.,0.),(0.,1),(1,1),(1,0.)),dtype=np.float32))
+            marker_to_screen = cv2.getPerspectiveTransform(np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32),r)
+            screen_to_marker = cv2.getPerspectiveTransform(r,np.array(((0.,0.),(0.,1),(1,1),(1,0.)),dtype=np.float32))
             #marker coord system:
             # +-----------+
             # |0,1     1,1|  ^
@@ -169,8 +171,8 @@ def detect_markers(img,grid_size,min_marker_perimeter=40,aperture=11,visualize=F
             # +-----------+
             # marker to be returned/broadcast out -- accessible to world
             # verts are sorted counterclockwise with vert[0]=0,0 (origin) vert[1]= 1,0 vert[2] = 1,1 vert[3] 0,1
-            marker = {'id':msg,'verts':rot_r,'marker_to_screen':marker_to_screen,'screen_to_marker':screen_to_marker}
-            if visualize and msg >=0:
+            marker = {'id':msg,'verts':r,'marker_to_screen':marker_to_screen,'screen_to_marker':screen_to_marker}
+            if visualize and angle is not None:
                 marker['img'] = np.rot90(otsu,-angle/90)
             markers.append(marker)
             centroids.append(centroid)
