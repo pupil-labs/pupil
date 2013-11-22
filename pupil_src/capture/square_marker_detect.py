@@ -1,6 +1,30 @@
 import cv2
 import numpy as np
 
+from scipy.spatial.distance import pdist,squareform
+
+
+
+def get_close_markers(markers,centroids=None, min_distace=20):
+    if centroids is None:
+        centroids = [m['centroid']for m in markers]
+    centroids = np.array(centroids)
+
+    ti = np.triu_indices(centroids.shape[0], 1)
+    def full_idx(i):
+        #get the pair from condensed matrix index
+        #defindend inline because ti changes every time
+        return np.array([ti[0][i], ti[1][i]])
+
+    #calculate pairwise distance, return dense distace matrix (upper triangle)
+    distances =  pdist(centroids,'cityblock')
+
+    close_pairs = np.where(distances<min_distace)
+    return full_idx(close_pairs)
+
+
+
+
 
 def decode(square_img,grid):
     step = square_img.shape[0]/grid
@@ -29,7 +53,8 @@ def decode(square_img,grid):
         msg_int = 1
         corners = tuple([1-c for c in corners]) #simple inversion
     else:
-        return None
+        #this is no valid marker but maybe a maldetected one? We return unknown marker with 0 rotation
+        return 0, -1
 
     #read rotation of marker by now we are guaranteed to have 3w and 1b
     if corners == (0,1,1,1):
@@ -107,6 +132,7 @@ def detect_markers(img,grid_size,min_marker_perimeter=40,aperture=11,visualize=F
     rects.shape = rects_shape #back to old layout [[rect],[rect],[rect]...] with rect = [corner,corner,corncer,corner]
 
     markers = []
+    centroids = []
     for r in rects:
 
         size = 20*grid_size
@@ -126,6 +152,8 @@ def detect_markers(img,grid_size,min_marker_perimeter=40,aperture=11,visualize=F
         marker = decode(otsu, grid_size)
         if marker is not None:
             angle,msg = marker
+            centroid = r.sum(axis=0)/4.
+            centroid = centroid.flatten().tolist()
             # roll points such that the marker points correspond with oriented marker
             rot_r = np.roll(r,angle/90+1,axis=0)
 
@@ -142,11 +170,29 @@ def detect_markers(img,grid_size,min_marker_perimeter=40,aperture=11,visualize=F
             # marker to be returned/broadcast out -- accessible to world
             # verts are sorted counterclockwise with vert[0]=0,0 (origin) vert[1]= 1,0 vert[2] = 1,1 vert[3] 0,1
             marker = {'id':msg,'verts':rot_r,'marker_to_screen':marker_to_screen,'screen_to_marker':screen_to_marker}
-            if visualize:
+            if visualize and msg >=0:
                 marker['img'] = np.rot90(otsu,-angle/90)
             markers.append(marker)
+            centroids.append(centroid)
+
+    if 1: #del double detected markers
+        min_distace = min_marker_perimeter/4
+        if len(centroids)>1:
+                remove = set()
+                close_markers = get_close_markers(markers,centroids,min_distace)
+                for f,s in close_markers.T:
+                    if cv2.arcLength(markers[f]['verts'],closed=True) < cv2.arcLength(markers[s]['verts'],closed=True):
+                        remove.add(f)
+                    else:
+                        remove.add(s)
+                remove = list(remove)
+                remove.sort(reverse=True)
+                for i in remove:
+                    del markers[i]
+
 
     return markers
+
 
 def draw_markers(img,markers):
     for m in markers:
@@ -157,6 +203,7 @@ def draw_markers(img,markers):
         cv2.polylines(img,np.int0(hat),color = (0,0,255),isClosed=True)
         cv2.polylines(img,np.int0(centroid),color = (255,255,0),isClosed=True,thickness=2)
         cv2.putText(img,'id: '+str(m['id']),tuple(np.int0(origin)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
+
 
 # class Marker(object):
 #     """docstring for marker"""

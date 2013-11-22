@@ -36,7 +36,7 @@ class Marker_Detector(Plugin):
 
         #detector vars
         self.aperture = c_int(9)
-        self.min_marker_perimeter = 40
+        self.min_marker_perimeter = 60
 
         #debug vars
         self.draw_markers = c_bool(0)
@@ -144,9 +144,10 @@ class Marker_Detector(Plugin):
         """
 
         for m in self.markers:
-            hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
-            hat = cv2.perspectiveTransform(hat,m['marker_to_screen'])
-            draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
+            if m['id'] !=-1:
+                hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
+                hat = cv2.perspectiveTransform(hat,m['marker_to_screen'])
+                draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
 
         if self.surface:
             draw_gl_polyline(self.surface, (1.0,0.2,0.6,1.0))
