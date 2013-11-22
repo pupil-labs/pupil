@@ -13,7 +13,7 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-from square_marker_detect import detect_markers, draw_markers
+from square_marker_detect import detect_markers_robust, draw_markers
 
 # window calbacks
 def on_resize(window,w, h):
@@ -31,7 +31,7 @@ class Marker_Detector(Plugin):
 
         # all markers that are detected in the most recent frame
         self.markers = []
-        self.surface = None
+        self.surfaces = []
 
 
         #detector vars
@@ -51,7 +51,7 @@ class Marker_Detector(Plugin):
         monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
         #primary_monitor = glfwGetPrimaryMonitor()
 
-        atb_label = "marker Detection"
+        atb_label = "marker detection"
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
             help="marker detection parameters", color=(50, 50, 50), alpha=100,
@@ -59,10 +59,16 @@ class Marker_Detector(Plugin):
         self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum,group="Window",)
         self._bar.add_var("fullscreen", self.fullscreen,group="Window")
         self._bar.add_button("  open Window   ", self.do_open, key='c',group="Window")
-
-
         self._bar.add_var("edge aperture",self.aperture, step=2,min=3,group="Detector")
         self._bar.add_var("draw markers",self.draw_markers,group="Detector")
+        atb_pos = atb_pos[0],atb_pos[1]+110
+        self._bar_markers = atb.Bar(name =self.__class__.__name__+'markers', label='registered surfaces',
+            help="list of registered ref surfaces", color=(50, 100, 50), alpha=100,
+            text='light', position=atb_pos,refresh=.3, size=(300, 100))
+
+
+
+
 
     def do_open(self):
         if not self._window:
@@ -121,16 +127,45 @@ class Marker_Detector(Plugin):
 
     def update(self,frame,recent_pupil_positions):
         img = frame.img
-        self.markers = detect_markers(img,grid_size = 5,min_marker_perimeter=self.min_marker_perimeter,aperture=self.aperture.value,visualize=0)
+        self.markers = detect_markers_robust(img,grid_size = 5,prev_markers=self.markers,min_marker_perimeter=self.min_marker_perimeter,aperture=self.aperture.value,visualize=0)
         if self.draw_markers.value:
             draw_markers(img,self.markers)
 
-        markers_by_name = dict([(m['id'],m) for m in self.markers])
+
+        def find_surface(markers,surface_ids):
+            direct_matches = [[m for m in markers if m['id']==s_id] for s_id in surface_ids]
+            corners_matched = [1 if len(c_matches) == 1 else 0 for c_matches in direct_matches]
+            if sum(corners_matched) ==4:
+                #four corners with each one match, this one is easy!
+                corner_markers = [c[0] for c in direct_matches]#get rid of the extra list
+                verts = np.array([m['verts'][0] for m in corner_markers]) #use the origin vertex as corner
+                surface_to_screen = cv2.getPerspectiveTransform(np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32),verts)
+                screen_to_surface = cv2.getPerspectiveTransform(verts,np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32))
+                return {'verts':verts,'surface_to_screen':surface_to_screen,'screen_to_surface':screen_to_surface}
+            elif sum(corners_matched)==3:
+                #missing one corner or one with to many choices
+                return None
+            elif sum(corners_matched)==2:
+                #missing two corner or two with to many choices this is not easy
+                return None
+            else:
+                #we are missing to much one or have to many choices
+                return None
+
+
+        # markers_by_name = dict([(m['id'],m) for m in self.markers])
         corners = 22,0,6,20
-        try:
-            self.surface = [markers_by_name[c]['verts'][i][0] for c,i in zip(corners,range(len(corners)))]
-        except KeyError:
-            self.surface = None
+        surface = find_surface(self.markers,corners)
+        if surface:
+            self.surfaces = [surface]
+        else:
+            self.surfaces = []
+
+
+        # try:
+        #     self.surface = [markers_by_name[c]['verts'][i][0] for c,i in zip(corners,range(len(corners)))]
+        # except KeyError:
+        #     self.surface = None
 
         if self.window_should_close:
             self.close_window()
@@ -146,11 +181,15 @@ class Marker_Detector(Plugin):
         for m in self.markers:
             if m['id'] !=-1:
                 hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
+                # hat = np.array([[[-2,-2],[-2,3],[-2,3.5],[3,3],[3,-2],[-2,-2]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m['marker_to_screen'])
                 draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
 
-        if self.surface:
-            draw_gl_polyline(self.surface, (1.0,0.2,0.6,1.0))
+        for s in  self.surfaces:
+            hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
+            hat = cv2.perspectiveTransform(hat,s['surface_to_screen'])
+            draw_gl_polyline(hat.reshape((6,2)),(1.0,0.2,0.6,1.0))
+            draw_gl_point(hat.reshape((6,2))[0],15,(1.0,0.2,0.6,1.0))
 
         if self._window:
             self.gl_display_in_window()
@@ -174,4 +213,5 @@ class Marker_Detector(Plugin):
         if self._window:
             self.close_window()
         self._bar.destroy()
+        self._bar_markers.destroy()
 

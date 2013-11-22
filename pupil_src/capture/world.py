@@ -258,7 +258,7 @@ def world(g_pool,cap_src,cap_size):
     # toggle_server()
 
     #load marker_detector
-    g.plugins.append(Marker_Detector(g_pool,(20,500) ) )
+    g.plugins.append(Marker_Detector(g_pool,(10,400) ) )
 
     # Event loop
 
