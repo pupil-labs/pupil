@@ -13,7 +13,7 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-from square_marker_detect import detect_markers_robust, draw_markers
+from square_marker_detect import detect_markers_robust,detect_markers_simple, draw_markers
 
 # window calbacks
 def on_resize(window,w, h):
@@ -35,6 +35,7 @@ class Marker_Detector(Plugin):
 
 
         #detector vars
+        self.robust_detection = c_bool(1)
         self.aperture = c_int(11)
         self.min_marker_perimeter = 40
 
@@ -60,6 +61,7 @@ class Marker_Detector(Plugin):
         self._bar.add_var("fullscreen", self.fullscreen,group="Window")
         self._bar.add_button("  open Window   ", self.do_open, key='c',group="Window")
         self._bar.add_var("edge aperture",self.aperture, step=2,min=3,group="Detector")
+        self._bar.add_var('robust_detection',self.robust_detection,group="Detector")
         self._bar.add_var("draw markers",self.draw_markers,group="Detector")
         atb_pos = atb_pos[0],atb_pos[1]+110
         self._bar_markers = atb.Bar(name =self.__class__.__name__+'markers', label='registered surfaces',
@@ -127,7 +129,11 @@ class Marker_Detector(Plugin):
 
     def update(self,frame,recent_pupil_positions):
         img = frame.img
-        self.markers = detect_markers_robust(img,grid_size = 5,prev_markers=self.markers,min_marker_perimeter=self.min_marker_perimeter,aperture=self.aperture.value,visualize=0)
+        if self.robust_detection.value:
+            self.markers = detect_markers_robust(img,grid_size = 5,prev_markers=self.markers,min_marker_perimeter=self.min_marker_perimeter,aperture=self.aperture.value,visualize=0)
+        else:
+            self.markers = detect_markers_simple(img,grid_size = 5,min_marker_perimeter=self.min_marker_perimeter,aperture=self.aperture.value,visualize=0)
+
         if self.draw_markers.value:
             draw_markers(img,self.markers)
 
