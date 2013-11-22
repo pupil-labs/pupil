@@ -135,7 +135,7 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
     centroids = []
     for r in rects:
 
-        size = 20*grid_size
+        size = 10*grid_size
         M = cv2.getPerspectiveTransform(r,np.array(((0,0),(size,0),(size,size),(0,size)),dtype=np.float32) ) #bottom left,top left, top right, bottom right in image
         flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
 
@@ -240,7 +240,7 @@ def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,ape
             # good = d < 1
 
             #we use err in this configurtation it is simple the disance the pt has moved/pix in window
-            new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,**lk_params)
+            new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,minEigThreshold=0.0005,**lk_params)
             for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
                 if s: #ho do we ensure that this is a good move?
                     m['verts'] += pt-m['centroid']
@@ -250,7 +250,7 @@ def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,ape
                 else:
                     m["frames_since_true_detection"] =100
 
-        markers = new_markers+[m for m in not_found if m["frames_since_true_detection"] < 60 ]
+        markers = new_markers+[m for m in not_found if m["frames_since_true_detection"] < 30 ]
 
     else:
         markers = new_markers
