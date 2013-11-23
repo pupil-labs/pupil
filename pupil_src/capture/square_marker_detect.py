@@ -67,13 +67,15 @@ def decode(square_img,grid):
     else:
         angle = 180
 
-    msg = np.rot90(msg,-angle/90)
-    # W  |LSB| 1 |W      ^
-    # 2  | 3 | 4 |5     / \
-    # 6  | 7 | 8 |9      |  UP
-    # MSB| 10| 11|W      |
+    msg = np.rot90(msg,-angle/90-2).transpose()
+    # Marker Encoding
+    #  W |LSB| W      ^
+    #  1 | 2 | 3     / \ UP
+    # MSB| 4 | W      |
     # print angle
-    # print msg.transpose() # we align the output of print to align with pixels that you see
+    # print msg    #the message is displayed as you see in the image
+
+
     msg = msg.tolist()
 
     #strip orientation corners from marker
@@ -228,6 +230,11 @@ lk_params = dict( winSize  = (25, 25),
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
 prev_img = None
+
+def FindSubImage(img, patch):
+    result = cv2.matchTemplate(patch,img,cv2.TM_CCOEFF_NORMED)
+    y,x = np.unravel_index(result.argmax(), result.shape)
+    return x,y
 
 def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False):
     global prev_img

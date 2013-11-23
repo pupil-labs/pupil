@@ -158,7 +158,7 @@ class Marker_Detector(Plugin):
 
 
         # markers_by_name = dict([(m['id'],m) for m in self.markers])
-        corners = 22,0,6,20
+        corners = 22,0,20,6
         surface = find_surface(self.markers,corners)
         if surface:
             self.surfaces = [surface]
