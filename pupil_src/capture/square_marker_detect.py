@@ -55,7 +55,7 @@ def decode(square_img,grid):
         corners = tuple([1-c for c in corners]) #simple inversion
     else:
         #this is no valid marker but maybe a maldetected one? We return unknown marker with None rotation
-        return None, -1
+        return None
 
     #read rotation of marker by now we are guaranteed to have 3w and 1b
     if corners == (0,1,1,1):
@@ -99,8 +99,7 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
 
     # remove extra encapsulation
     hierarchy = hierarchy[0]
-    # turn outmost list into array
-    contours =  np.array(contours)
+    contours = np.array(contours)
     # keep only contours                        with parents     and      children
     contained_contours = contours[np.logical_and(hierarchy[:,3]>=0, hierarchy[:,2]>=0)]
     # turn on to debug contours
@@ -112,7 +111,6 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
     #filter out rects
     aprox_contours = [cv2.approxPolyDP(c,epsilon=2.5,closed=True) for c in contained_contours]
 
-
     # any rectagle will be made of 4 segemnts in its approximation we dont need to find a marker so small that we cannot read it in the end...
     #also we want all contours to be counter clockwise oriented, we use convex hull fot this:
     rect_cand = [cv2.convexHull(c,clockwise=True) for c in aprox_contours if c.shape[0]==4 and cv2.arcLength(c,closed=True) > min_marker_perimeter]
@@ -122,28 +120,23 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
     if visualize:
         cv2.drawContours(gray_img, rect_cand,-1, (255,100,50))
 
-    # subpixel corner fitting
-    rects = np.array(rect_cand,dtype=np.float32)
-    rects_shape = rects.shape
-    rects.shape = (-1,2) #flatten for rectsubPix
-    # define the criteria to stop and refine the rects
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
-    cv2.cornerSubPix(gray_img,rects,(3,3),(-1,-1),criteria)
-    rects.shape = rects_shape #back to old layout [[rect],[rect],[rect]...] with rect = [corner,corner,corncer,corner]
 
     markers = []
     centroids = []
-    for r in rects:
 
-        size = 10*grid_size
-        M = cv2.getPerspectiveTransform(r,np.array(((0,0),(size,0),(size,size),(0,size)),dtype=np.float32) ) #bottom left,top left, top right, bottom right in image
+    size = 10*grid_size
+    #bottom left,top left, top right, bottom right in image
+    mapped_space = np.array( ((0,0),(size,0),(size,size),(0,size)) ,dtype=np.float32).reshape(4,1,2)
+    for r in rect_cand:
+        r = np.float32(r)
+        M = cv2.getPerspectiveTransform(r,mapped_space)
         flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
 
         # Otsu documentation here :
         # https://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_imgproc/py_thresholding/py_thresholding.html#thresholding
         _ , otsu = cv2.threshold(flat_marker_img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
-        # cosmetics -- getting a cleaner display of the rectangle marker
+        # getting a cleaner display of the rectangle marker
         kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
         cv2.erode(otsu,kernel,otsu, iterations=3)
         # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
@@ -152,25 +145,20 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
         marker = decode(otsu, grid_size)
         if marker is not None:
             angle,msg = marker
+
+            # define the criteria to stop and refine the rects
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
+            cv2.cornerSubPix(gray_img,r,(3,3),(-1,-1),criteria)
+
             centroid = r.sum(axis=0)/4.
             centroid.shape = (2)
             # roll points such that the marker points correspond with oriented marker
             if angle is not None:
                 r = np.roll(r,angle/90+1,axis=0) #not the fastest when using these tiny arrays...
-
             # this way we get the matrix transform with rotation included
-            marker_to_screen = cv2.getPerspectiveTransform(np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32),r)
-            screen_to_marker = cv2.getPerspectiveTransform(r,np.array(((0.,0.),(0.,1),(1,1),(1,0.)),dtype=np.float32))
-            #marker coord system:
-            # +-----------+
-            # |0,1     1,1|  ^
-            # |           | / \
-            # |           |  |  UP
-            # |0,0     1,0|  |
-            # +-----------+
-            # marker to be returned/broadcast out -- accessible to world
+
             # verts are sorted counterclockwise with vert[0]=0,0 (origin) vert[1]= 1,0 vert[2] = 1,1 vert[3] 0,1
-            marker = {'id':msg,'verts':r,'marker_to_screen':marker_to_screen,'screen_to_marker':screen_to_marker,'centroid':centroid,"frames_since_true_detection":0}
+            marker = {'id':msg,'verts':r,'centroid':centroid,"frames_since_true_detection":0}
             if visualize and angle is not None:
                 marker['img'] = np.rot90(otsu,-angle/90)
             markers.append(marker)
@@ -198,22 +186,48 @@ def draw_markers(img,markers):
         centroid = [m['verts'].sum(axis=0)/4.]
         origin = m['verts'][0]
         hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0]]],dtype=np.float32)
-        hat = cv2.perspectiveTransform(hat,m['marker_to_screen'])
+        hat = cv2.perspectiveTransform(hat,marker_to_screen(m))
         cv2.polylines(img,np.int0(hat),color = (0,0,255),isClosed=True)
         cv2.polylines(img,np.int0(centroid),color = (255,255,0),isClosed=True,thickness=2)
         cv2.putText(img,'id: '+str(m['id']),tuple(np.int0(origin)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
 
+def marker_to_screen(marker):
+    #verts need to be sorted counterclockwise stating at bottom left
+    #marker coord system:
+    # +-----------+
+    # |0,1     1,1|  ^
+    # |           | / \
+    # |           |  |  UP
+    # |0,0     1,0|  |
+    # +-----------+
+    mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
+    return cv2.getPerspectiveTransform(mapped_space_one,marker['verts'])
 
-lk_params = dict( winSize  = (55, 55),
-                  maxLevel = 2,
-                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
-prev_img = None
+def screen_to_marker(marker):
+    #verts need to be sorted counterclockwise stating at bottom left
+    #marker coord system:
+    # +-----------+
+    # |0,1     1,1|  ^
+    # |           | / \
+    # |           |  |  UP
+    # |0,0     1,0|  |
+    # +-----------+
+    mapped_space_one = np.array(((0,0),(size,0),(size,size),(0,size)),dtype=np.float32)
+    return cv2.getPerspectiveTransform(marker['verts'],mapped_space_one)
+
 
 def detect_markers_simple(img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False):
     gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     return detect_markers(gray_img,grid_size,min_marker_perimeter,aperture,visualize)
 
+
+
+lk_params = dict( winSize  = (25, 25),
+                  maxLevel = 1,
+                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+
+prev_img = None
 
 def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False):
     global prev_img
@@ -240,12 +254,10 @@ def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,ape
             # good = d < 1
 
             #we use err in this configurtation it is simple the disance the pt has moved/pix in window
-            new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,minEigThreshold=0.0005,**lk_params)
+            new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,minEigThreshold=0.001,**lk_params)
             for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
                 if s: #ho do we ensure that this is a good move?
                     m['verts'] += pt-m['centroid']
-                    m['marker_to_screen']= cv2.getPerspectiveTransform(np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32),m['verts'])
-                    m['screen_to_marker'] = cv2.getPerspectiveTransform(m['verts'],np.array(((0.,0.),(0.,1),(1,1),(1,0.)),dtype=np.float32))
                     m["frames_since_true_detection"] +=1
                 else:
                     m["frames_since_true_detection"] =100
@@ -283,8 +295,20 @@ class Reference_Surface(object):
     def __init__(self, marker_names):
         self.marker_names = marker_names
 
+def bench():
+    cap = cv2.VideoCapture('/Users/mkassner/Pupil/datasets/markers/many.mov')
+    status,img = cap.read()
+    markers = []
+    while status:
+        markers = detect_markers_robust(img,5,markers)
+        status,img = cap.read()
 
 
 
 if __name__ == '__main__':
-    pass
+    import cProfile,subprocess,os
+    cProfile.runctx("bench()",{},locals(),"world.pstats")
+    loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
+    gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
+    subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
+    print "created  time graph for  process. Please check out the png next to this file"

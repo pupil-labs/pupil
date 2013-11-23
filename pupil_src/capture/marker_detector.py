@@ -13,7 +13,7 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-from square_marker_detect import detect_markers_robust,detect_markers_simple, draw_markers
+from square_marker_detect import detect_markers_robust,detect_markers_simple, draw_markers,marker_to_screen
 
 # window calbacks
 def on_resize(window,w, h):
@@ -37,7 +37,7 @@ class Marker_Detector(Plugin):
         #detector vars
         self.robust_detection = c_bool(1)
         self.aperture = c_int(11)
-        self.min_marker_perimeter = 40
+        self.min_marker_perimeter = 80
 
         #debug vars
         self.draw_markers = c_bool(0)
@@ -145,9 +145,7 @@ class Marker_Detector(Plugin):
                 #four corners with each one match, this one is easy!
                 corner_markers = [c[0] for c in direct_matches]#get rid of the extra list
                 verts = np.array([m['verts'][0] for m in corner_markers]) #use the origin vertex as corner
-                surface_to_screen = cv2.getPerspectiveTransform(np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32),verts)
-                screen_to_surface = cv2.getPerspectiveTransform(verts,np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32))
-                return {'verts':verts,'surface_to_screen':surface_to_screen,'screen_to_surface':screen_to_surface}
+                return {'verts':verts}
             elif sum(corners_matched)==3:
                 #missing one corner or one with to many choices
                 return None
@@ -188,12 +186,12 @@ class Marker_Detector(Plugin):
             if m['id'] !=-1:
                 hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 # hat = np.array([[[-2,-2],[-2,3],[-2,3.5],[3,3],[3,-2],[-2,-2]]],dtype=np.float32)
-                hat = cv2.perspectiveTransform(hat,m['marker_to_screen'])
+                hat = cv2.perspectiveTransform(hat,marker_to_screen(m))
                 draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
 
         for s in  self.surfaces:
             hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
-            hat = cv2.perspectiveTransform(hat,s['surface_to_screen'])
+            hat = cv2.perspectiveTransform(hat,marker_to_screen(s))
             draw_gl_polyline(hat.reshape((6,2)),(1.0,0.2,0.6,1.0))
             draw_gl_point(hat.reshape((6,2))[0],15,(1.0,0.2,0.6,1.0))
 
