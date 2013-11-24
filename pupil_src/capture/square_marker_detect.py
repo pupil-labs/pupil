@@ -91,6 +91,23 @@ def decode(square_img,grid):
     return angle,msg_int
 
 
+def correct_gradient(gray_img,r):
+    # used just to increase speed - this simple check is still way to slow
+    # lets assume that a marker has a black border
+    # if we check two pixels one outside, one inside both close to the border
+    p1,_,p2,_ = r.reshape(4,2).tolist()
+    vector_across = p2[0]-p1[0],p2[1]-p1[1]
+    ratio = 5./np.sqrt(vector_across[0]**2+vector_across[1]**2) #we want to measure 5px away from the border
+    vector_across = int(vector_across[0]*ratio) , int(vector_across[1]*ratio)
+    outer = p1[1] - vector_across[1],  p1[0] - vector_across[0]
+    inner = p1[1] + vector_across[1] , p1[0] + vector_across[0]
+    try:
+        gradient = int(gray_img[outer]) - int(gray_img[inner])
+        return gradient > 20 #at least 20 shades darker inside
+    except:
+        #px outside of img frame, let the other method check
+        return True
+
 
 def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False):
     edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, aperture, 9)
@@ -130,41 +147,42 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
     #bottom left,top left, top right, bottom right in image
     mapped_space = np.array( ((0,0),(size,0),(size,size),(0,size)) ,dtype=np.float32).reshape(4,1,2)
     for r in rect_cand:
-        r = np.float32(r)
-        M = cv2.getPerspectiveTransform(r,mapped_space)
-        flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
+        if correct_gradient(gray_img,r):
+            r = np.float32(r)
+            M = cv2.getPerspectiveTransform(r,mapped_space)
+            flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
 
-        # Otsu documentation here :
-        # https://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_imgproc/py_thresholding/py_thresholding.html#thresholding
-        _ , otsu = cv2.threshold(flat_marker_img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+            # Otsu documentation here :
+            # https://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_imgproc/py_thresholding/py_thresholding.html#thresholding
+            _ , otsu = cv2.threshold(flat_marker_img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
-        # getting a cleaner display of the rectangle marker
-        kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
-        cv2.erode(otsu,kernel,otsu, iterations=3)
-        # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
-        # cv2.dilate(otsu,kernel,otsu, iterations=1)
+            # getting a cleaner display of the rectangle marker
+            kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
+            cv2.erode(otsu,kernel,otsu, iterations=3)
+            # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
+            # cv2.dilate(otsu,kernel,otsu, iterations=1)
 
-        marker = decode(otsu, grid_size)
-        if marker is not None:
-            angle,msg = marker
+            marker = decode(otsu, grid_size)
+            if marker is not None:
+                angle,msg = marker
 
-            # define the criteria to stop and refine the rects
-            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
-            cv2.cornerSubPix(gray_img,r,(3,3),(-1,-1),criteria)
+                # define the criteria to stop and refine the rects
+                criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
+                cv2.cornerSubPix(gray_img,r,(3,3),(-1,-1),criteria)
 
-            centroid = r.sum(axis=0)/4.
-            centroid.shape = (2)
-            # roll points such that the marker points correspond with oriented marker
-            if angle is not None:
-                r = np.roll(r,angle/90+1,axis=0) #not the fastest when using these tiny arrays...
-            # this way we get the matrix transform with rotation included
+                centroid = r.sum(axis=0)/4.
+                centroid.shape = (2)
+                # roll points such that the marker points correspond with oriented marker
+                if angle is not None:
+                    r = np.roll(r,angle/90+1,axis=0) #not the fastest when using these tiny arrays...
+                # this way we get the matrix transform with rotation included
 
-            # verts are sorted counterclockwise with vert[0]=0,0 (origin) vert[1]= 1,0 vert[2] = 1,1 vert[3] 0,1
-            marker = {'id':msg,'verts':r,'centroid':centroid,"frames_since_true_detection":0}
-            if visualize and angle is not None:
-                marker['img'] = np.rot90(otsu,-angle/90)
-            markers.append(marker)
-            centroids.append(centroid)
+                # verts are sorted counterclockwise with vert[0]=0,0 (origin) vert[1]= 1,0 vert[2] = 1,1 vert[3] 0,1
+                marker = {'id':msg,'verts':r,'centroid':centroid,"frames_since_true_detection":0}
+                if visualize and angle is not None:
+                    marker['img'] = np.rot90(otsu,-angle/90)
+                markers.append(marker)
+                centroids.append(centroid)
 
     if 1: #del double detected markers
         min_distace = min_marker_perimeter/4
@@ -188,12 +206,12 @@ def draw_markers(img,markers):
         centroid = [m['verts'].sum(axis=0)/4.]
         origin = m['verts'][0]
         hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0]]],dtype=np.float32)
-        hat = cv2.perspectiveTransform(hat,marker_to_screen(m))
+        hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
         cv2.polylines(img,np.int0(hat),color = (0,0,255),isClosed=True)
         cv2.polylines(img,np.int0(centroid),color = (255,255,0),isClosed=True,thickness=2)
         cv2.putText(img,'id: '+str(m['id']),tuple(np.int0(origin)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
 
-def marker_to_screen(marker):
+def m_marker_to_screen(marker):
     #verts need to be sorted counterclockwise stating at bottom left
     #marker coord system:
     # +-----------+
@@ -206,7 +224,7 @@ def marker_to_screen(marker):
     return cv2.getPerspectiveTransform(mapped_space_one,marker['verts'])
 
 
-def screen_to_marker(marker):
+def m_screen_to_marker(marker):
     #verts need to be sorted counterclockwise stating at bottom left
     #marker coord system:
     # +-----------+

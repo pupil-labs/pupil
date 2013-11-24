@@ -13,7 +13,7 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-from square_marker_detect import detect_markers_robust,detect_markers_simple, draw_markers,marker_to_screen
+from square_marker_detect import detect_markers_robust,detect_markers_simple, draw_markers,m_marker_to_screen
 
 # window calbacks
 def on_resize(window,w, h):
@@ -186,12 +186,12 @@ class Marker_Detector(Plugin):
             if m['id'] !=-1:
                 hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 # hat = np.array([[[-2,-2],[-2,3],[-2,3.5],[3,3],[3,-2],[-2,-2]]],dtype=np.float32)
-                hat = cv2.perspectiveTransform(hat,marker_to_screen(m))
+                hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
                 draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
 
         for s in  self.surfaces:
             hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
-            hat = cv2.perspectiveTransform(hat,marker_to_screen(s))
+            hat = cv2.perspectiveTransform(hat,m_marker_to_screen(s))
             draw_gl_polyline(hat.reshape((6,2)),(1.0,0.2,0.6,1.0))
             draw_gl_point(hat.reshape((6,2))[0],15,(1.0,0.2,0.6,1.0))
 
