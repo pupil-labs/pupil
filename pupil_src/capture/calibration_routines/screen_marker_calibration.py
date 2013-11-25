@@ -100,13 +100,11 @@ class Screen_Marker_Calibration(Plugin):
 
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
-        c = 1.
-        self.sites = [  (.0, 0),
-                        (-c,c), (0.,c),(c,c),
-                        (c,0.),
-                        (c,-c), (0., -c),( -c, -c),
-                        (-c,0.),
-                        (.0,0.),(.0,0.)]
+        self.sites = [  (.5, .5), (0,.5),
+                        (0.,1),(.5,1),(1.,1.),
+                        (1,.5),
+                        (1., 0),(.5, 0),(0,0.),
+                        (.5,.5),(.5,.5)]
 
         self.active_site = 0
         self.active = True
