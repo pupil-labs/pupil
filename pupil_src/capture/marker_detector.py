@@ -59,7 +59,7 @@ class Marker_Detector(Plugin):
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
         self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum,group="Window",)
         self._bar.add_var("fullscreen", self.fullscreen,group="Window")
-        self._bar.add_button("  open Window   ", self.do_open, key='c',group="Window")
+        self._bar.add_button("  open Window   ", self.do_open, key='m',group="Window")
         self._bar.add_var("edge aperture",self.aperture, step=2,min=3,group="Detector")
         self._bar.add_var('robust_detection',self.robust_detection,group="Detector")
         self._bar.add_var("draw markers",self.draw_markers,group="Detector")

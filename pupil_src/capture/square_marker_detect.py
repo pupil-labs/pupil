@@ -249,10 +249,6 @@ lk_params = dict( winSize  = (25, 25),
 
 prev_img = None
 
-def FindSubImage(img, patch):
-    result = cv2.matchTemplate(patch,img,cv2.TM_CCOEFF_NORMED)
-    y,x = np.unravel_index(result.argmax(), result.shape)
-    return x,y
 
 def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False):
     global prev_img

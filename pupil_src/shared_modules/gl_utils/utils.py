@@ -15,7 +15,6 @@ from OpenGL.GLU import gluOrtho2D
 from shader import Shader
 
 def basic_gl_setup():
-
     glEnable( GL_POINT_SPRITE )
     glEnable(GL_VERTEX_PROGRAM_POINT_SIZE) # overwrite pointsize
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -152,7 +151,7 @@ def draw_gl_checkerboards(points,size=60,color=(1.,0.5,0.5,.5), grid=[7.0,7.0]):
         varying vec4 f_color;
         uniform vec2 grid;
         void main()
-        {   
+        {
             // get the lowest integer value for the grid
             float total = floor(gl_PointCoord.x*grid.x) + floor(gl_PointCoord.y*grid.y);
             // make the checkerboard by alternating colors

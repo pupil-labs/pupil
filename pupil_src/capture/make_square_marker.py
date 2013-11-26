@@ -20,7 +20,7 @@ def encode_marker(mId):
     bitdepth = ((5-2)**2)-3
 
     if mId>=(2**bitdepth):
-        raise Exception("ERROR: ID overflow, this marker can only hold %i bit of information" %bitdepth)
+        raise Exception("ERROR: ID overflow, this marker can only hold %i bits of information" %bitdepth)
 
     msg = [0]*bitdepth
     for i in range(len(msg))[::-1]:
