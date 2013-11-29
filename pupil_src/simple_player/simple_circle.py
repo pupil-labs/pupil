@@ -36,6 +36,19 @@ def main():
     gaze_positions_path = data_folder + "/gaze_positions.npy"
     record_path = data_folder + "/world_viz.avi"
 
+
+    #deal with older recordings that use a different coodinate system.
+    with open(data_folder + "/info.csv") as info:
+        data = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
+    version = [v for k,v in data.iteritems() if "Capture Software Version" in k ][0]
+    version = int(filter(type(version).isdigit, version)[:3]) #(get major,minor,fix of version)
+    if version >= 36:
+        global denormalize
+    else:
+        denormalize = denormalize_legacy
+
+
+
     cap = cv.VideoCapture(video_path)
     gaze_list = list(np.load(gaze_positions_path))
     timestamps = list(np.load(timestamps_path))
@@ -44,7 +57,7 @@ def main():
 
     # this takes the timestamps list and makes a list
     # with the length of the number of recorded frames.
-    # Each slot conains a list that will have 0, 1 or more assosiated gaze postions.
+    # Each slot contains a list that will have 0, 1 or more associated gaze positions.
     positions_by_frame = [[] for i in timestamps]
 
 
@@ -54,15 +67,21 @@ def main():
     gaze_point = data_point[:2]
     gaze_timestamp = data_point[4]
     while gaze_list:
-        # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
-        if gaze_timestamp <= (timestamps[frame_idx]+timestamps[frame_idx+1])/2.:
-            positions_by_frame[frame_idx].append({'x': gaze_point[0],'y':gaze_point[1], 'timestamp':gaze_timestamp})
+        ts_between_frames = (timestamps[frame_idx]+timestamps[frame_idx+1])/2.
+        #gaze is timewise before the halfwaypoint of current and next frame
+        if gaze_timestamp <= ts_between_frames:
+            # now let make sure the gaze point is not for far in in the past,to acatually keep it:
+            if ts_between_frames - gaze_timestamp <= 1/15.:
+                positions_by_frame[frame_idx].append({'x': gaze_point[0],'y':gaze_point[1], 'timestamp':gaze_timestamp})
+
+            # get data for next iteration..
             data_point = gaze_list.pop(0)
             gaze_point = data_point[:2]
             gaze_timestamp = data_point[4]
         else:
             if frame_idx >= no_frames-2:
                 break
+            # move to next world frame if current gaze point is to far in the future
             frame_idx+=1
 
 
@@ -100,7 +119,21 @@ def main():
             break
 
 
+
 def denormalize(pos, width, height, flip_y=True):
+    """
+    denormalize
+    """
+    x = pos[0]
+    y = pos[1]
+    x *= width
+    if flip_y:
+        y = 1-y
+    y *= height
+    return int(x),int(y)
+
+
+def denormalize_legacy(pos, width, height, flip_y=True):
     """
     denormalize and return as int
     """
