@@ -82,6 +82,10 @@ class Recorder(Plugin):
         self.writer.write(frame.img)
 
     def stop_and_destruct(self):
+        #explicit release of VideoWriter
+        self.writer.release()
+        self.writer = None
+
         if self.record_eye:
             try:
                 self.eye_tx.send(None)
