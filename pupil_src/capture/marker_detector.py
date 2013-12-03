@@ -33,7 +33,7 @@ class Marker_Detector(Plugin):
 
         # all markers that are detected in the most recent frame
         self.markers = []
-        self.surfaces = [Reference_Surface()]
+        self.surfaces = []
 
 
         #detector vars
@@ -59,6 +59,9 @@ class Marker_Detector(Plugin):
         self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
             help="marker detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
+
+        self._bar.add_button("  add surface   ", self.add_surface, key='a',group="Ref_Surfaces")
+
         self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum,group="Window",)
         self._bar.add_var("fullscreen", self.fullscreen,group="Window")
         self._bar.add_button("  open Window   ", self.do_open, key='m',group="Window")
@@ -129,6 +132,9 @@ class Marker_Detector(Plugin):
             self.window_should_close = False
 
 
+    def add_surface(self):
+        self.surfaces.append(Reference_Surface())
+
     def update(self,frame,recent_pupil_positions):
         img = frame.img
         if self.robust_detection.value:
@@ -139,9 +145,8 @@ class Marker_Detector(Plugin):
         if self.draw_markers.value:
             draw_markers(img,self.markers)
 
-        if self.markers:
-            for s in self.surfaces:
-                s.build_correspondance(self.markers)
+        for s in self.surfaces:
+            s.locate(self.markers)
 
         if self.window_should_close:
             self.close_window()
