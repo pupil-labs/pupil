@@ -14,6 +14,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 from square_marker_detect import detect_markers_robust,detect_markers_simple, draw_markers,m_marker_to_screen
+from reference_surface import Reference_Surface
+
 
 # window calbacks
 def on_resize(window,w, h):
@@ -31,7 +33,7 @@ class Marker_Detector(Plugin):
 
         # all markers that are detected in the most recent frame
         self.markers = []
-        self.surfaces = []
+        self.surfaces = [Reference_Surface()]
 
 
         #detector vars
@@ -137,39 +139,9 @@ class Marker_Detector(Plugin):
         if self.draw_markers.value:
             draw_markers(img,self.markers)
 
-
-        def find_surface(markers,surface_ids):
-            direct_matches = [[m for m in markers if m['id']==s_id] for s_id in surface_ids]
-            corners_matched = [1 if len(c_matches) == 1 else 0 for c_matches in direct_matches]
-            if sum(corners_matched) ==4:
-                #four corners with each one match, this one is easy!
-                corner_markers = [c[0] for c in direct_matches]#get rid of the extra list
-                verts = np.array([m['verts'][0] for m in corner_markers]) #use the origin vertex as corner
-                return {'verts':verts}
-            elif sum(corners_matched)==3:
-                #missing one corner or one with to many choices
-                return None
-            elif sum(corners_matched)==2:
-                #missing two corner or two with to many choices this is not easy
-                return None
-            else:
-                #we are missing to much one or have to many choices
-                return None
-
-
-        # markers_by_name = dict([(m['id'],m) for m in self.markers])
-        corners = 22,0,20,6
-        surface = find_surface(self.markers,corners)
-        if surface:
-            self.surfaces = [surface]
-        else:
-            self.surfaces = []
-
-
-        # try:
-        #     self.surface = [markers_by_name[c]['verts'][i][0] for c,i in zip(corners,range(len(corners)))]
-        # except KeyError:
-        #     self.surface = None
+        if self.markers:
+            for s in self.surfaces:
+                s.build_correspondance(self.markers)
 
         if self.window_should_close:
             self.close_window()
@@ -190,10 +162,11 @@ class Marker_Detector(Plugin):
                 draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
 
         for s in  self.surfaces:
-            hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
-            hat = cv2.perspectiveTransform(hat,m_marker_to_screen(s))
-            draw_gl_polyline(hat.reshape((6,2)),(1.0,0.2,0.6,1.0))
-            draw_gl_point(hat.reshape((6,2))[0],15,(1.0,0.2,0.6,1.0))
+            s.gl_draw()
+            # hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
+            # hat = cv2.perspectiveTransform(hat,m_marker_to_screen(s))
+            # draw_gl_polyline(hat.reshape((6,2)),(1.0,0.2,0.6,1.0))
+            # draw_gl_point(hat.reshape((6,2))[0],15,(1.0,0.2,0.6,1.0))
 
         if self._window:
             self.gl_display_in_window()

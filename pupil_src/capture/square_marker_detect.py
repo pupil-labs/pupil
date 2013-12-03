@@ -173,11 +173,9 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
                 centroid = r.sum(axis=0)/4.
                 centroid.shape = (2)
                 # roll points such that the marker points correspond with oriented marker
-                if angle is not None:
-                    r = np.roll(r,angle/90+1,axis=0) #not the fastest when using these tiny arrays...
+                r = np.roll(r,angle/90+1,axis=0) #not the fastest when using these tiny arrays...
                 # this way we get the matrix transform with rotation included
 
-                # verts are sorted counterclockwise with vert[0]=0,0 (origin) vert[1]= 1,0 vert[2] = 1,1 vert[3] 0,1
                 marker = {'id':msg,'verts':r,'centroid':centroid,"frames_since_true_detection":0}
                 if visualize and angle is not None:
                     marker['img'] = np.rot90(otsu,-angle/90)
@@ -233,7 +231,7 @@ def m_screen_to_marker(marker):
     # |           |  |  UP
     # |0,0     1,0|  |
     # +-----------+
-    mapped_space_one = np.array(((0,0),(size,0),(size,size),(0,size)),dtype=np.float32)
+    mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
     return cv2.getPerspectiveTransform(marker['verts'],mapped_space_one)
 
 
@@ -293,28 +291,6 @@ def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,ape
     return markers
 
 
-
-# class Marker(object):
-#     """docstring for marker"""
-#     def __init__(self, name,verts,marker_to_screen,screen_to_marker):
-#         super(marker, self).__init__()
-#         self.name = name
-#         self.verts = verts
-#         self.marker_to_screen = marker_to_screen
-#         self.screen_to_marker = screen_to_marker
-#         self.img = None
-
-#     def gl_draw(self):
-#         hat = np.array([[[0,0],[1,0],[1.5,.5],[1,1],[0,1],[0,0]]],dtype=np.float32)
-#         hat = cv2.perspectiveTransform(hat,m['marker_to_screen'])
-#         draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
-
-
-
-class Reference_Surface(object):
-    """docstring for Reference Surface"""
-    def __init__(self, marker_names):
-        self.marker_names = marker_names
 
 def bench():
     cap = cv2.VideoCapture('/Users/mkassner/Pupil/datasets/markers/many.mov')
