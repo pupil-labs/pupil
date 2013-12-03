@@ -91,10 +91,11 @@ class Reference_Surface(object):
         - this mean value will be used from now on to estable surface transform
         """
 
+        persistent_markers = {}
         for k,m in self.markers.iteritems():
-            if len(m.collected_uv_coords)<self.required_build_up*.5:
-                del self.markers[k]
-
+            if len(m.collected_uv_coords)>self.required_build_up*.5:
+                persistent_markers[k] = m
+        self.markers = persistent_markers
         for m in self.markers.values():
             m.compute_robust_mean()
 
@@ -112,7 +113,7 @@ class Reference_Surface(object):
             visible_ids = set(marker_by_id.keys())
             requested_ids = set(self.markers.keys())
             overlap = visible_ids & requested_ids
-            if len(overlap):
+            if len(overlap)>=min(2,len(requested_ids)):
                 yx = np.array( [marker_by_id[i]['verts'] for i in overlap] )
                 uv = np.array( [self.markers[i].uv_coords for i in overlap] )
                 yx.shape=(-1,1,2)
@@ -141,11 +142,14 @@ class Reference_Surface(object):
         draw surface and markers
         """
         if self.m_to_screen is not None:
-            hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
+            frame = np.array([[[0,0],[0,1],[1,1],[1,0],[0,0]]],dtype=np.float32)
+            hat = np.array([[[.3,.7],[.5,.9],[.7,.7],[.3,.7]]],dtype=np.float32)
             hat = cv2.perspectiveTransform(hat,self.m_to_screen)
+            frame = cv2.perspectiveTransform(frame,self.m_to_screen)
             alpha = min(1,self.build_up_status/self.required_build_up)
-            draw_gl_polyline(hat.reshape((6,2)),(1.0,0.2,0.6,alpha))
-            draw_gl_point(hat.reshape((6,2))[0],15,(1.0,0.2,0.6,alpha))
+            draw_gl_polyline(frame.reshape((5,2)),(1.0,0.2,0.6,alpha))
+            draw_gl_polyline(hat.reshape((4,2)),(1.0,0.2,0.6,alpha))
+            draw_gl_point(frame.reshape((5,2))[0],15,(1.0,0.2,0.6,alpha))
 
 
 class Support_Marker(object):
@@ -161,6 +165,9 @@ class Support_Marker(object):
         self.collected_uv_coords.append(uv_coords)
 
     def compute_robust_mean(self,threshhold=.1):
+        """
+        right now its just the mean. Not so good...
+        """
         # a stacked list of marker uv coords. marker uv cords are 4 verts with each a uv position.
         uv = np.array(self.collected_uv_coords)
         # # the mean marker uv_coords including outliers
