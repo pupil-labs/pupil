@@ -32,8 +32,6 @@ def get_close_markers(markers,centroids=None, min_distace=20):
 
 
 
-
-
 def decode(square_img,grid):
     step = square_img.shape[0]/grid
     start = step/2
@@ -190,7 +188,7 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
                 markers.append(marker)
                 centroids.append(centroid)
 
-    if 1: #del double detected markers
+    if 0: #del double detected markers
         min_distace = min_marker_perimeter/4
         if len(centroids)>1:
                 remove = set()
@@ -216,6 +214,7 @@ def draw_markers(img,markers):
         cv2.polylines(img,np.int0(hat),color = (0,0,255),isClosed=True)
         cv2.polylines(img,np.int0(centroid),color = (255,255,0),isClosed=True,thickness=2)
         cv2.putText(img,'id: '+str(m['id']),tuple(np.int0(origin)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
+
 
 def m_marker_to_screen(marker):
     #verts need to be sorted counterclockwise stating at bottom left
@@ -249,48 +248,60 @@ def detect_markers_simple(img,grid_size,min_marker_perimeter=40,aperture=11,visu
 
 
 
-lk_params = dict( winSize  = (95, 95),
+
+#persistent vars for detect_markers_robust
+lk_params = dict( winSize  = (45, 45),
                   maxLevel = 1,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
-
 prev_img = None
+tick = 4
 
-
-def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False):
+def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False,true_detect_every_frame = 1):
     global prev_img
     gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
-    new_markers = detect_markers(gray_img,grid_size,min_marker_perimeter,aperture,visualize)
+    global tick
+    if not tick:
+        tick = true_detect_every_frame
+        new_markers = detect_markers(gray_img,grid_size,min_marker_perimeter,aperture,visualize)
+    else:
+        new_markers = []
+    tick -=1
 
 
     if prev_img is not None and prev_markers:
 
-        #not looking of stub markers yet
         new_ids = [m['id'] for m in new_markers]
 
-        #any old markers not found in the new list? - we ignore stub markers
+        #any old markers not found in the new list?
         not_found = [m for m in prev_markers if m['id'] not in new_ids and m['id'] >=0]
         if not_found:
             prev_pts = np.array([m['centroid'] for m in not_found])
-            # print 'before',prev_pts
-
-            # we could use  a forward backward check as error mesure...
-            # p1, st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
-            # p0r, st, err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
-            # d = abs(p0-p0r).reshape(-1, 2).max(-1)
-            # good = d < 1
-
-            #we use err in this configurtation
+            # new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,winSize=(100,100))
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,minEigThreshold=0.01,**lk_params)
             for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
                 if s: #ho do we ensure that this is a good move?
-                    m['verts'] += pt-m['centroid']
+                    m['verts'] += pt-m['centroid'] #uniformly translate verts by optlical flow offset
                     m["frames_since_true_detection"] +=1
                 else:
                     m["frames_since_true_detection"] =100
 
-        markers = new_markers+[m for m in not_found if m["frames_since_true_detection"] < 30 ]
 
+        #cocatenating like this will favour older markers in the doublication deletion process
+        markers = [m for m in not_found if m["frames_since_true_detection"] < 10 ]+new_markers
+        if 1: #del double detected markers
+            centroids = [m['centroid'] for m in markers]
+            min_distace = min_marker_perimeter/4.
+            if len(centroids)>1:
+                remove = set()
+                close_markers = get_close_markers(markers,centroids,min_distace)
+                for f,s in close_markers.T:
+                    #remove the markers further down in the list
+                    remove.add(s)
+                remove = list(remove)
+                remove.sort(reverse=True)
+                for i in remove:
+                    del markers[i]
     else:
         markers = new_markers
 

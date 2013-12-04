@@ -33,9 +33,6 @@ class Reference_Surface(object):
     """docstring for Reference Surface"""
     def __init__(self,name="unnamed"):
         self.name = name
-
-
-        self.atb_name = create_string_buffer(name,512)
         self.detected = 0
         self.markers = {}
 
@@ -95,7 +92,7 @@ class Reference_Surface(object):
                 self.markers[m['id']] = Support_Marker(m['id'])
                 self.markers[m['id']].add_uv_coords(uv)
 
-        #avg collection of uv correspondences acros detected markers
+        #average collection of uv correspondences acros detected markers
         self.build_up_status = sum([len(m.collected_uv_coords) for m in self.markers.values()])/float(len(self.markers))
 
         if self.build_up_status >= self.required_build_up:
@@ -108,7 +105,6 @@ class Reference_Surface(object):
         - of those markers select a good subset of uv coords and compute mean.
         - this mean value will be used from now on to estable surface transform
         """
-
         persistent_markers = {}
         for k,m in self.markers.iteritems():
             if len(m.collected_uv_coords)>self.required_build_up*.5:
@@ -159,6 +155,12 @@ class Reference_Surface(object):
     def atb_marker_status(self):
         return create_string_buffer("%s / %s" %(self.detected,len(self.markers)),512)
 
+    def atb_get_name(self):
+        return create_string_buffer(self.name,512)
+
+    def atb_set_name(self,name):
+        self.name = name.value
+
     def gl_draw(self):
         """
         draw surface and markers
@@ -202,6 +204,7 @@ class Support_Marker(object):
         # uv_subset = uv[distance<threshhold]
         # ratio = uv_subset.shape[0]/float(uv.shape[0])
         # #todo: find a good way to get some meaningfull and accurate numbers to use
+        #right now we take the mean of the last 30 datapoints
         uv_mean = np.mean(uv[-30:],axis=0)
         self.uv_coords = uv_mean
 

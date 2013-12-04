@@ -1,4 +1,8 @@
 
+
+import logging
+logger = logging.getLogger(__name__)
+
 class Plugin(object):
     """docstring for Plugin
 
@@ -23,11 +27,7 @@ class Plugin(object):
         """
         if not self._alive:
             if hasattr(self,"cleanup"):
-                try:
                     self.cleanup()
-                except:
-                    print "cleanup failed. This is a bug. Please report"
-
         return self._alive
 
     @alive.setter

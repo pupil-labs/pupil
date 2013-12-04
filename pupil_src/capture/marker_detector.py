@@ -11,6 +11,7 @@
 import os
 import cv2
 import numpy as np
+import shelve
 from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_point_norm,basic_gl_setup
 from methods import normalize
 import atb
@@ -39,18 +40,23 @@ class Marker_Detector(Plugin):
 
     """
     def __init__(self,g_pool,atb_pos=(0,0)):
-        Plugin.__init__(self)
+        super(Marker_Detector, self).__init__()
+
+
+        # load session persistent settings
+        self.session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_ar'),protocol=2)
+
 
         # all markers that are detected in the most recent frame
         self.markers = []
         # all registered surfaces
-        self.surfaces = []
+        self.surfaces = self.load('surfaces',[])
 
 
         #detector vars
         self.robust_detection = c_bool(1)
         self.aperture = c_int(11)
-        self.min_marker_perimeter = 40
+        self.min_marker_perimeter = 80
 
         #debug vars
         self.draw_markers = c_bool(0)
@@ -78,21 +84,25 @@ class Marker_Detector(Plugin):
         self._bar.add_var('robust_detection',self.robust_detection,group="Detector")
         self._bar.add_var("draw markers",self.draw_markers,group="Detector")
 
-
-
         atb_pos = atb_pos[0],atb_pos[1]+110
         self._bar_markers = atb.Bar(name =self.__class__.__name__+'markers', label='registered surfaces',
             help="list of registered ref surfaces", color=(50, 100, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar_markers.add_button("  add surface   ", self.add_surface, key='a')
+        self.update_bar_markers()
 
 
-
+    def load(self, var_name, default):
+        return self.session_settings.get(var_name,default)
+    def save(self, var_name, var):
+            self.session_settings[var_name] = var
 
 
     def do_open(self):
         if not self._window:
             self.window_should_open = True
+
+    def on_click(self,pos):
+        pass
 
     def advance(self):
         pass
@@ -134,7 +144,6 @@ class Marker_Detector(Plugin):
                 if key == GLFW_KEY_ESCAPE:
                     self.on_close()
 
-
     def on_close(self,window=None):
         self.window_should_close = True
 
@@ -143,8 +152,6 @@ class Marker_Detector(Plugin):
             glfwDestroyWindow(self._window)
             self._window = None
             self.window_should_close = False
-
-
 
     def add_surface(self):
         self.surfaces.append(Reference_Surface())
@@ -159,15 +166,20 @@ class Marker_Detector(Plugin):
         self._bar_markers.clear()
         self._bar_markers.add_button("  add surface   ", self.add_surface, key='a')
         for s,i in zip (self.surfaces,range(len(self.surfaces))):
-            self._bar_markers.add_var("%s_name"%i,s.atb_name,group=str(i),label='name')
+            self._bar_markers.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
             self._bar_markers.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
-            self._bar_markers.add_var("%s detected registered"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='registered_markers' )
+            self._bar_markers.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
 
 
     def update(self,frame,recent_pupil_positions):
         img = frame.img
         if self.robust_detection.value:
-            self.markers = detect_markers_robust(img,grid_size = 5,prev_markers=self.markers,min_marker_perimeter=self.min_marker_perimeter,aperture=self.aperture.value,visualize=0)
+            self.markers = detect_markers_robust(img,grid_size = 5,
+                                                    prev_markers=self.markers,
+                                                    min_marker_perimeter=self.min_marker_perimeter,
+                                                    aperture=self.aperture.value,
+                                                    visualize=0,
+                                                    true_detect_every_frame=3)
         else:
             self.markers = detect_markers_simple(img,grid_size = 5,min_marker_perimeter=self.min_marker_perimeter,aperture=self.aperture.value,visualize=0)
 
@@ -185,13 +197,11 @@ class Marker_Detector(Plugin):
 
     def gl_display(self):
         """
-        for debugging now
         """
 
         for m in self.markers:
             if m['id'] !=-1:
-                hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
-                # hat = np.array([[[-2,-2],[-2,3],[-2,3.5],[3,3],[3,-2],[-2,-2]]],dtype=np.float32)
+                hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
                 draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
 
@@ -217,6 +227,9 @@ class Marker_Detector(Plugin):
         This happends either volunatily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
+        self.save("surfaces",self.surfaces)
+        self.session_settings.close()
+
         if self._window:
             self.close_window()
         self._bar.destroy()
