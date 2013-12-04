@@ -5,7 +5,7 @@ from methods import normalize
 import calibrate
 from gl_utils import draw_gl_point_norm
 from ctypes import c_int,c_bool
-
+from glfw import GLFW_PRESS
 import atb
 import audio
 
@@ -103,10 +103,11 @@ class Natural_Features_Calibration(Plugin):
             draw_gl_point_norm(self.pos,size=self.r,color=(0.,1.,0.,.5))
 
 
-    def on_click(self,pos):
-        self.first_img = None
-        self.point = np.array([pos,],dtype=np.float32)
-        self.count = 30
+    def on_click(self,pos,button,action):
+        if action == GLFW_PRESS:
+            self.first_img = None
+            self.point = np.array([pos,],dtype=np.float32)
+            self.count = 30
 
     def cleanup(self):
         """gets called when the plugin get terminated.

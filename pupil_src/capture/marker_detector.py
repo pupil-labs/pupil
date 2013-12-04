@@ -101,8 +101,12 @@ class Marker_Detector(Plugin):
         if not self._window:
             self.window_should_open = True
 
-    def on_click(self,pos):
-        pass
+    def on_click(self,pos,button,action):
+        if action == GLFW_PRESS:
+            for s in self.surfaces:
+
+                new_pos =  s.xy_to_uv(np.array(pos))
+                s.move_vertex(1,new_pos)
 
     def advance(self):
         pass

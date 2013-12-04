@@ -74,12 +74,11 @@ def world(g_pool,cap_src,cap_size):
 
     def on_button(window,button, action, mods):
         if not atb.TwEventMouseButtonGLFW(button,action):
-            if action == GLFW_PRESS:
-                pos = glfwGetCursorPos(window)
-                pos = normalize(pos,glfwGetWindowSize(world_window))
-                pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
-                for p in g.plugins:
-                    p.on_click(pos)
+            pos = glfwGetCursorPos(window)
+            pos = normalize(pos,glfwGetWindowSize(world_window))
+            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
+            for p in g.plugins:
+                p.on_click(pos,button,action)
 
     def on_pos(window,x, y):
         if atb.TwMouseMotion(int(x),int(y)):

@@ -35,7 +35,7 @@ class Plugin(object):
         if isinstance(value,bool):
             self._alive = value
 
-    def on_click(self,pos):
+    def on_click(self,pos,button,action):
         """
         gets called when the user clicks in the window screen
         """
