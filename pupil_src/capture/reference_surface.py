@@ -136,21 +136,49 @@ class Reference_Surface(object):
                 # print 'uv',uv
                 # print 'yx',yx
                 self.m_to_screen,mask = cv2.findHomography(uv,yx)
-                # self.m_from_screen,mask = cv2.findHomography(yx,uv)
+                self.m_from_screen,mask = cv2.findHomography(yx,uv)
 
             else:
                 self.m_from_screen = None
                 self.m_to_screen = None
 
-    def get_screen_to_surface_transform(self):
-        """
-        if ref surface was found return transformation to it
-        """
 
-    def get_surface_to_screen_transform(self):
+    def xy_to_uv(self,pos):
+        if self.m_from_screen is not None:
+            #convinience lines to allow 'simple' vectors (x,y) to be used
+            shape = pos.shape
+            pos.shape = (-1,1,2)
+            new_pos = cv2.perspectiveTransform(pos,self.m_from_screen )
+            new_pos.shape = shape
+            return new_pos
+        else:
+            return None
+
+    def uv_to_xy(self,pos):
+        if self.m_to_screen is not None:
+            #convinience lines to allow 'simple' vectors (x,y) to be used
+            shape = pos.shape
+            pos.shape = (-1,1,2)
+            new_pos = cv2.perspectiveTransform(pos,self.m_to_screen )
+            new_pos.shape = shape
+            return new_pos
+        else:
+            return None
+
+    def move_vertex(self,vert_idx,new_pos):
         """
-        if ref surface was found return transformation from it
+        this fn is used to manipulate the surface bounday (coordinate system)
+        vec is translation in uv-space
+        if we move one vertex of the surface we need to find
+        the tranformation from old quadrangle to new quardangle
+        and apply that transformation to our marker uv-coords
         """
+        before = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
+        after = before.copy()
+        after[vert_idx]=new_pos
+        transform = cv2.getPerspectiveTransform(after,before)
+        for m in self.markers.values():
+            m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
 
     def atb_marker_status(self):
         return create_string_buffer("%s / %s" %(self.detected,len(self.markers)),512)
