@@ -1,8 +1,16 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2013  Moritz Kassner & William Patera
+
+ Distributed under the terms of the CC BY-NC-SA License.
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
+
 import cv2
 import numpy as np
-
-from scipy.spatial.distance import pdist,squareform
-
+from scipy.spatial.distance import pdist
 
 
 def get_close_markers(markers,centroids=None, min_distace=20):
@@ -272,7 +280,7 @@ def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,ape
             # d = abs(p0-p0r).reshape(-1, 2).max(-1)
             # good = d < 1
 
-            #we use err in this configurtation it is simple the disance the pt has moved/pix in window
+            #we use err in this configurtation
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,minEigThreshold=0.01,**lk_params)
             for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
                 if s: #ho do we ensure that this is a good move?

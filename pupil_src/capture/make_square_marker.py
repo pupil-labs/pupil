@@ -1,8 +1,15 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2013  Moritz Kassner & William Patera
+
+ Distributed under the terms of the CC BY-NC-SA License.
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
+
 import cv2
 import numpy as np
-
-
-
 
 def encode_marker(mId):
     marker_id_str = "%02d"%mId
@@ -58,3 +65,9 @@ def write_marker_png(mId,size):
 
 if __name__ == '__main__':
     write_marker_png(4,size=800)
+    write_marker_png(32,size=800)
+    write_marker_png(17,size=800)
+    write_marker_png(54,size=800)
+    write_marker_png(27,size=800)
+    write_marker_png(0,size=800)
+

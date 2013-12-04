@@ -63,8 +63,8 @@ class Recorder(Plugin):
         self._bar = atb.Bar(name = self.__class__.__name__, label='REC: '+session_str,
             help="capture recording control", color=(220, 0, 0), alpha=150,
             text='light', position=atb_pos,refresh=.3, size=(300, 80))
-        self._bar.rec_name = create_string_buffer(512)
-        self._bar.add_var("rec time",self._bar.rec_name, getter=lambda: create_string_buffer(self.get_rec_time_str(),512), readonly=True)
+        self._bar.rec_timw = create_string_buffer(512)
+        self._bar.add_var("rec time",self._bar.rec_time, getter=lambda: create_string_buffer(self.get_rec_time_str(),512), readonly=True)
         self._bar.add_button("stop",self.on_stop, key="s", help="stop recording")
         self._bar.define("contained=true")
 

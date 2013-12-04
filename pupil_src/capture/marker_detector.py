@@ -1,3 +1,13 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2013  Moritz Kassner & William Patera
+
+ Distributed under the terms of the CC BY-NC-SA License.
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
+
 import os
 import cv2
 import numpy as np
@@ -5,7 +15,7 @@ from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_poi
 from methods import normalize
 import atb
 import audio
-from ctypes import c_int,c_bool
+from ctypes import c_int,c_bool,create_string_buffer
 
 from glfw import *
 from plugin import Plugin
@@ -33,13 +43,14 @@ class Marker_Detector(Plugin):
 
         # all markers that are detected in the most recent frame
         self.markers = []
+        # all registered surfaces
         self.surfaces = []
 
 
         #detector vars
         self.robust_detection = c_bool(1)
         self.aperture = c_int(11)
-        self.min_marker_perimeter = 80
+        self.min_marker_perimeter = 40
 
         #debug vars
         self.draw_markers = c_bool(0)
@@ -60,18 +71,20 @@ class Marker_Detector(Plugin):
             help="marker detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
 
-        self._bar.add_button("  add surface   ", self.add_surface, key='a',group="Ref_Surfaces")
-
         self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum,group="Window",)
         self._bar.add_var("fullscreen", self.fullscreen,group="Window")
         self._bar.add_button("  open Window   ", self.do_open, key='m',group="Window")
         self._bar.add_var("edge aperture",self.aperture, step=2,min=3,group="Detector")
         self._bar.add_var('robust_detection',self.robust_detection,group="Detector")
         self._bar.add_var("draw markers",self.draw_markers,group="Detector")
+
+
+
         atb_pos = atb_pos[0],atb_pos[1]+110
         self._bar_markers = atb.Bar(name =self.__class__.__name__+'markers', label='registered surfaces',
             help="list of registered ref surfaces", color=(50, 100, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
+        self._bar_markers.add_button("  add surface   ", self.add_surface, key='a')
 
 
 
@@ -132,8 +145,24 @@ class Marker_Detector(Plugin):
             self.window_should_close = False
 
 
+
     def add_surface(self):
         self.surfaces.append(Reference_Surface())
+        self.update_bar_markers()
+
+    def remove_surface(self,i):
+        del self.surfaces[i]
+        self.update_bar_markers()
+
+
+    def update_bar_markers(self):
+        self._bar_markers.clear()
+        self._bar_markers.add_button("  add surface   ", self.add_surface, key='a')
+        for s,i in zip (self.surfaces,range(len(self.surfaces))):
+            self._bar_markers.add_var("%s_name"%i,s.atb_name,group=str(i),label='name')
+            self._bar_markers.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
+            self._bar_markers.add_var("%s detected registered"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='registered_markers' )
+
 
     def update(self,frame,recent_pupil_positions):
         img = frame.img
@@ -168,10 +197,6 @@ class Marker_Detector(Plugin):
 
         for s in  self.surfaces:
             s.gl_draw()
-            # hat = np.array([[[0,0],[0,1],[.5,1.5],[1,1],[1,0],[0,0]]],dtype=np.float32)
-            # hat = cv2.perspectiveTransform(hat,m_marker_to_screen(s))
-            # draw_gl_polyline(hat.reshape((6,2)),(1.0,0.2,0.6,1.0))
-            # draw_gl_point(hat.reshape((6,2))[0],15,(1.0,0.2,0.6,1.0))
 
         if self._window:
             self.gl_display_in_window()

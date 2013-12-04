@@ -1,7 +1,21 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2013  Moritz Kassner & William Patera
+
+ Distributed under the terms of the CC BY-NC-SA License.
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
+
 import numpy as np
 import cv2
 from gl_utils import draw_gl_polyline,draw_gl_point,draw_gl_point_norm
 from methods import GetAnglesPolyline
+
+#ctypes import for atb_vars:
+from ctypes import create_string_buffer
+
 
 def m_verts_to_screen(verts):
     #verts need to be sorted counterclockwise stating at bottom left
@@ -19,11 +33,15 @@ class Reference_Surface(object):
     """docstring for Reference Surface"""
     def __init__(self,name="unnamed"):
         self.name = name
+
+
+        self.atb_name = create_string_buffer(name,512)
+        self.detected = 0
         self.markers = {}
 
         self.defined = False
         self.build_up_status = 0
-        self.required_build_up = 30.
+        self.required_build_up = 90.
         self.m_to_screen = None
         self.m_from_screen = None
 
@@ -113,6 +131,7 @@ class Reference_Surface(object):
             visible_ids = set(marker_by_id.keys())
             requested_ids = set(self.markers.keys())
             overlap = visible_ids & requested_ids
+            self.detected = len(overlap)
             if len(overlap)>=min(2,len(requested_ids)):
                 yx = np.array( [marker_by_id[i]['verts'] for i in overlap] )
                 uv = np.array( [self.markers[i].uv_coords for i in overlap] )
@@ -136,6 +155,9 @@ class Reference_Surface(object):
         """
         if ref surface was found return transformation from it
         """
+
+    def atb_marker_status(self):
+        return create_string_buffer("%s / %s" %(self.detected,len(self.markers)),512)
 
     def gl_draw(self):
         """
@@ -180,7 +202,7 @@ class Support_Marker(object):
         # uv_subset = uv[distance<threshhold]
         # ratio = uv_subset.shape[0]/float(uv.shape[0])
         # #todo: find a good way to get some meaningfull and accurate numbers to use
-        uv_mean = np.mean(uv,axis=0)
+        uv_mean = np.mean(uv[-30:],axis=0)
         self.uv_coords = uv_mean
 
 
