@@ -227,7 +227,6 @@ class Reference_Surface(object):
             draw_gl_polyline(hat.reshape((4,2)),(1.0,0.2,0.6,alpha))
 
 
-
     def gl_draw_corners(self):
         """
         draw surface and markers

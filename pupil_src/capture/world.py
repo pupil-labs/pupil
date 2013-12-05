@@ -282,8 +282,10 @@ def world(g_pool,cap_src,cap_size):
             p = g_pool.pupil_queue.get()
             if p['norm_pupil'] is None:
                 p['norm_gaze'] = None
+                p['screen_gaze'] = None
             else:
                 p['norm_gaze'] = g_pool.map_pupil(p['norm_pupil'])
+                p['screen_gaze'] = denormalize(p['norm_gaze'],(frame.img.shape[1],frame.img.shape[0]),flip_y=True)
             recent_pupil_positions.append(p)
 
 

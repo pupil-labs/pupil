@@ -142,7 +142,6 @@ class Marker_Detector(Plugin):
             glfwSetKeyCallback(self._window,self.on_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
 
-
             # gl_state settings
             active_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self._window)
@@ -214,6 +213,13 @@ class Marker_Detector(Plugin):
             for s,v_idx in self.edit_surfaces:
                 new_pos =  s.xy_to_uv(np.array(pos))
                 s.move_vertex(v_idx,new_pos)
+
+        #map recent gaze onto detected surfaces
+        for p in recent_pupil_positions:
+            if p['screen_gaze'] is not None:
+                for s in self.surfaces:
+                    if s.m_to_screen is not None:
+                        p['realtime gaze on '+s.name] = tuple(s.xy_to_uv(np.array(p['screen_gaze'])))
 
         if self.window_should_close:
             self.close_window()

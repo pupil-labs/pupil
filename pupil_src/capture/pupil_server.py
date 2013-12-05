@@ -26,6 +26,9 @@ class Pupil_Server(Plugin):
         self._bar.add_var("server address",self.address, getter=lambda:self.address, setter=self.set_server)
         self._bar.add_button("close", self.close, key="x", help="close calibration results visualization")
 
+
+        self.exclude_list = ['ellipse','pos_in_roi','major','minor','axes','angle','center']
+
     def set_server(self,new_address):
         try:
             self.socket.bind(new_address.value)
@@ -36,12 +39,13 @@ class Pupil_Server(Plugin):
     def update(self,img,recent_pupil_positions):
         for p in recent_pupil_positions:
             msg = "Pupil"
-            msg +=" pupil_pos:"+str(p["norm_pupil"])
-            msg +=" gaze_pos:"+str(p["norm_gaze"])
-            msg +=" timestamp"+str(p["timestamp"])
+            # msg +=" pupil_pos:"+str(p["norm_pupil"])
+            # msg +=" gaze_pos:"+str(p["norm_gaze"])
+            # msg +=" timestamp"+str(p["timestamp"])
             # or send everything
-            # for key,value in p.iteritems():
-            #     msg +=" "+key+":"+str(value)
+            for key,value in p.iteritems():
+                if key not in self.exclude_list:
+                    msg +=" "+key+":"+str(value)
             self.socket.send( msg )
 
     def close(self):
