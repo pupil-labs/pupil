@@ -10,7 +10,7 @@
 
 import numpy as np
 import cv2
-from gl_utils import draw_gl_polyline,draw_gl_point,draw_gl_point_norm
+from gl_utils import draw_gl_polyline,draw_gl_point,draw_gl_point_norm,draw_gl_points
 from methods import GetAnglesPolyline
 
 #ctypes import for atb_vars:
@@ -213,7 +213,7 @@ class Reference_Surface(object):
     def atb_set_name(self,name):
         self.name = name.value
 
-    def gl_draw(self):
+    def gl_draw_frame(self):
         """
         draw surface and markers
         """
@@ -225,7 +225,17 @@ class Reference_Surface(object):
             alpha = min(1,self.build_up_status/self.required_build_up)
             draw_gl_polyline(frame.reshape((5,2)),(1.0,0.2,0.6,alpha))
             draw_gl_polyline(hat.reshape((4,2)),(1.0,0.2,0.6,alpha))
-            draw_gl_point(frame.reshape((5,2))[0],15,(1.0,0.2,0.6,alpha))
+
+
+
+    def gl_draw_corners(self):
+        """
+        draw surface and markers
+        """
+        if self.m_to_screen is not None:
+            frame = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
+            frame = cv2.perspectiveTransform(frame,self.m_to_screen)
+            draw_gl_points(frame.reshape((4,2)),15,(1.0,0.2,0.6,.5))
 
 
 class Support_Marker(object):

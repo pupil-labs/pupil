@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 import shelve
 from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_point_norm,basic_gl_setup
-from methods import normalize
+from methods import normalize,denormalize
 import atb
 import audio
 from ctypes import c_int,c_bool,create_string_buffer
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 from square_marker_detect import detect_markers_robust,detect_markers_simple, draw_markers,m_marker_to_screen
 from reference_surface import Reference_Surface
-
+from math import sqrt
 
 # window calbacks
 def on_resize(window,w, h):
@@ -42,7 +42,6 @@ class Marker_Detector(Plugin):
     def __init__(self,g_pool,atb_pos=(0,0)):
         super(Marker_Detector, self).__init__()
 
-
         # load session persistent settings
         self.session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_ar'),protocol=2)
 
@@ -52,6 +51,9 @@ class Marker_Detector(Plugin):
         # all registered surfaces
         self.surfaces = self.load('surfaces',[])
 
+        # edit surfaces
+        self.surface_edit_mode = c_bool(0)
+        self.edit_surfaces = []
 
         #detector vars
         self.robust_detection = c_bool(1)
@@ -61,6 +63,8 @@ class Marker_Detector(Plugin):
         #debug vars
         self.draw_markers = c_bool(0)
 
+
+        #multi monitor setup
         self.window_should_open = False
         self.window_should_close = False
         self._window = None
@@ -72,22 +76,20 @@ class Marker_Detector(Plugin):
         #primary_monitor = glfwGetPrimaryMonitor()
 
         atb_label = "marker detection"
-        # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
             help="marker detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
-
         self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum,group="Window",)
         self._bar.add_var("fullscreen", self.fullscreen,group="Window")
         self._bar.add_button("  open Window   ", self.do_open, key='m',group="Window")
-        self._bar.add_var("edge aperture",self.aperture, step=2,min=3,group="Detector")
+        # self._bar.add_var("edge aperture",self.aperture, step=2,min=3,group="Detector")
         self._bar.add_var('robust_detection',self.robust_detection,group="Detector")
         self._bar.add_var("draw markers",self.draw_markers,group="Detector")
 
         atb_pos = atb_pos[0],atb_pos[1]+110
         self._bar_markers = atb.Bar(name =self.__class__.__name__+'markers', label='registered surfaces',
             help="list of registered ref surfaces", color=(50, 100, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
+            text='light', position=atb_pos,refresh=.3, size=(300, 120))
         self.update_bar_markers()
 
 
@@ -102,11 +104,19 @@ class Marker_Detector(Plugin):
             self.window_should_open = True
 
     def on_click(self,pos,button,action):
-        if action == GLFW_PRESS:
-            for s in self.surfaces:
-
-                new_pos =  s.xy_to_uv(np.array(pos))
-                s.move_vertex(1,new_pos)
+        if self.surface_edit_mode.value:
+            if self.edit_surfaces:
+                if action == GLFW_RELEASE:
+                    self.edit_surfaces = []
+            # no sufaces verts in edit mode, lets see if the curser is close to one:
+            else:
+                if action == GLFW_PRESS:
+                    surf_verts = ((0.,0.),(1.,0.),(1.,1.),(0.,1.))
+                    x,y = pos
+                    for s in self.surfaces:
+                        for (vx,vy),i in zip(s.uv_to_xy(np.array(surf_verts)),range(4)):
+                            if sqrt((x-vx)**2 + (y-vy)**2) <15: #img pixels
+                                self.edit_surfaces.append((s,i))
 
     def advance(self):
         pass
@@ -169,6 +179,8 @@ class Marker_Detector(Plugin):
     def update_bar_markers(self):
         self._bar_markers.clear()
         self._bar_markers.add_button("  add surface   ", self.add_surface, key='a')
+        self._bar_markers.add_var("  edit mode   ", self.surface_edit_mode )
+
         for s,i in zip (self.surfaces,range(len(self.surfaces))):
             self._bar_markers.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
             self._bar_markers.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
@@ -193,6 +205,16 @@ class Marker_Detector(Plugin):
         for s in self.surfaces:
             s.locate(self.markers)
 
+        if self.surface_edit_mode:
+            window = glfwGetCurrentContext()
+            pos = glfwGetCursorPos(window)
+            pos = normalize(pos,glfwGetWindowSize(window))
+            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
+
+            for s,v_idx in self.edit_surfaces:
+                new_pos =  s.xy_to_uv(np.array(pos))
+                s.move_vertex(v_idx,new_pos)
+
         if self.window_should_close:
             self.close_window()
 
@@ -210,7 +232,12 @@ class Marker_Detector(Plugin):
                 draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
 
         for s in  self.surfaces:
-            s.gl_draw()
+            s.gl_draw_frame()
+
+        if self.surface_edit_mode.value:
+            for s in  self.surfaces:
+                s.gl_draw_corners()
+
 
         if self._window:
             self.gl_display_in_window()
@@ -227,8 +254,8 @@ class Marker_Detector(Plugin):
 
 
     def cleanup(self):
-        """gets called when the plugin get terminated.
-        This happends either volunatily or forced.
+        """ called when the plugin gets terminated.
+        This happends either voluntary or forced.
         if you have an atb bar or glfw window destroy it here.
         """
         self.save("surfaces",self.surfaces)
