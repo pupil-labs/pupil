@@ -185,7 +185,7 @@ def world(g_pool,cap_src,cap_size):
                 return
 
         new_plugin = Marker_Detector(g_pool,(10,400))
-        g.plugins.append(new_plugin)
+        g.plugins.insert(0,new_plugin) #do this before the server or recorder
 
 
     atb.init()

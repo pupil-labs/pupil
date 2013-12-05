@@ -21,7 +21,7 @@ class Pupil_Server(Plugin):
 
         self._bar = atb.Bar(name = self.__class__.__name__, label='Server',
             help=help_str, color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
+            text='light', position=atb_pos,refresh=.3, size=(300,60))
         self._bar.define("valueswidth=170")
         self._bar.add_var("server address",self.address, getter=lambda:self.address, setter=self.set_server)
         self._bar.add_button("close", self.close, key="x", help="close calibration results visualization")
