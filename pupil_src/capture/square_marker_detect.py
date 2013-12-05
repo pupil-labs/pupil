@@ -11,9 +11,10 @@
 import cv2
 import numpy as np
 from scipy.spatial.distance import pdist
+#because np.sqrt is slower when we do it on small arrays
+from math import sqrt
 
-
-def get_close_markers(markers,centroids=None, min_distace=20):
+def get_close_markers(markers,centroids=None, min_distance=20):
     if centroids is None:
         centroids = [m['centroid']for m in markers]
     centroids = np.array(centroids)
@@ -27,7 +28,7 @@ def get_close_markers(markers,centroids=None, min_distace=20):
     #calculate pairwise distance, return dense distace matrix (upper triangle)
     distances =  pdist(centroids,'euclidean')
 
-    close_pairs = np.where(distances<min_distace)
+    close_pairs = np.where(distances<min_distance)
     return full_idx(close_pairs)
 
 
@@ -58,22 +59,23 @@ def decode(square_img,grid):
         msg_int = 0
     elif sum(corners) ==1:
         msg_int = 1
-        corners = tuple([1-c for c in corners]) #simple inversion
+        corners = tuple([1-c for c in corners]) #just inversion
     else:
         #this is no valid marker but maybe a maldetected one? We return unknown marker with None rotation
         return None
 
     #read rotation of marker by now we are guaranteed to have 3w and 1b
+    #angle is number of 90deg rotations
     if corners == (0,1,1,1):
-        angle = 270
+        angle = 3
     elif corners == (1,0,1,1):
         angle = 0
     elif corners == (1,1,0,1):
-        angle = 90
+        angle = 1
     else:
-        angle = 180
+        angle = 2
 
-    msg = np.rot90(msg,-angle/90-2).transpose()
+    msg = np.rot90(msg,-angle-2).transpose()
     # Marker Encoding
     #  W |LSB| W      ^
     #  1 | 2 | 3     / \ UP
@@ -100,11 +102,12 @@ def decode(square_img,grid):
 def correct_gradient(gray_img,r):
     # used just to increase speed - this simple check is still way to slow
     # lets assume that a marker has a black border
-    # if we check two pixels one outside, one inside both close to the border
+    # we check two pixels one outside, one inside both close to the border
     p1,_,p2,_ = r.reshape(4,2).tolist()
     vector_across = p2[0]-p1[0],p2[1]-p1[1]
-    ratio = 5./np.sqrt(vector_across[0]**2+vector_across[1]**2) #we want to measure 5px away from the border
+    ratio = 5./sqrt(vector_across[0]**2+vector_across[1]**2) #we want to measure 5px away from the border
     vector_across = int(vector_across[0]*ratio) , int(vector_across[1]*ratio)
+    #indecies are flipped because numpy is row major
     outer = p1[1] - vector_across[1],  p1[0] - vector_across[0]
     inner = p1[1] + vector_across[1] , p1[0] + vector_across[0]
     try:
@@ -136,10 +139,11 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
     #filter out rects
     aprox_contours = [cv2.approxPolyDP(c,epsilon=2.5,closed=True) for c in contained_contours]
 
-    # any rectagle will be made of 4 segemnts in its approximation we dont need to find a marker so small that we cannot read it in the end...
-    #also we want all contours to be counter clockwise oriented, we use convex hull fot this:
+    # any rectagle will be made of 4 segemnts in its approximation
+    # also we dont need to find a marker so small that we cannot read it in the end...
+    # also we want all contours to be counter clockwise oriented, we use convex hull fot this:
     rect_cand = [cv2.convexHull(c,clockwise=True) for c in aprox_contours if c.shape[0]==4 and cv2.arcLength(c,closed=True) > min_marker_perimeter]
-    # a covex quadrangle is not what we are looking for.
+    # a non convex quadrangle is not what we are looking for.
     rect_cand = [r for r in rect_cand if r.shape[0]==4]
 
     if visualize:
@@ -147,10 +151,8 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
 
 
     markers = []
-    centroids = []
-
     size = 10*grid_size
-    #bottom left,top left, top right, bottom right in image
+    #top left,bottom left, bottom right, top right in image
     mapped_space = np.array( ((0,0),(size,0),(size,size),(0,size)) ,dtype=np.float32).reshape(4,1,2)
     for r in rect_cand:
         if correct_gradient(gray_img,r):
@@ -172,27 +174,28 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
             if marker is not None:
                 angle,msg = marker
 
-                # define the criteria to stop and refine the rects
+                # define the criteria to stop and refine the marker verts
                 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
                 cv2.cornerSubPix(gray_img,r,(3,3),(-1,-1),criteria)
 
                 centroid = r.sum(axis=0)/4.
                 centroid.shape = (2)
+                # angle is number of 90deg rotations
                 # roll points such that the marker points correspond with oriented marker
-                r = np.roll(r,angle/90+1,axis=0) #not the fastest when using these tiny arrays...
-                # this way we get the matrix transform with rotation included
+                # rolling may not make the verts appear as you expect,
+                # but using m_screen_to_marker() will get you the marker with proper rotation.
+                r = np.roll(r,angle+1,axis=0) #np.roll is not the fastest when using these tiny arrays...
 
                 marker = {'id':msg,'verts':r,'centroid':centroid,"frames_since_true_detection":0}
                 if visualize and angle is not None:
                     marker['img'] = np.rot90(otsu,-angle/90)
                 markers.append(marker)
-                centroids.append(centroid)
 
     if 0: #del double detected markers
         min_distace = min_marker_perimeter/4
-        if len(centroids)>1:
+        if len(markers)>1:
                 remove = set()
-                close_markers = get_close_markers(markers,centroids,min_distace)
+                close_markers = get_close_markers(markers,min_distace=min_distace)
                 for f,s in close_markers.T:
                     if cv2.arcLength(markers[f]['verts'],closed=True) < cv2.arcLength(markers[s]['verts'],closed=True):
                         remove.add(f)
@@ -290,11 +293,10 @@ def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,ape
         #cocatenating like this will favour older markers in the doublication deletion process
         markers = [m for m in not_found if m["frames_since_true_detection"] < 10 ]+new_markers
         if 1: #del double detected markers
-            centroids = [m['centroid'] for m in markers]
             min_distace = min_marker_perimeter/4.
-            if len(centroids)>1:
+            if len(markers)>1:
                 remove = set()
-                close_markers = get_close_markers(markers,centroids,min_distace)
+                close_markers = get_close_markers(markers,min_distance=min_distace)
                 for f,s in close_markers.T:
                     #remove the markers further down in the list
                     remove.add(s)
@@ -316,7 +318,7 @@ def bench():
     status,img = cap.read()
     markers = []
     while status:
-        markers = detect_markers_robust(img,5,markers)
+        markers = detect_markers_robust(img,5,markers,true_detect_every_frame=1)
         status,img = cap.read()
 
 

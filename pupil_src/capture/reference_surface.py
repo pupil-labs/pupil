@@ -30,7 +30,31 @@ def m_verts_from_screen(verts):
 
 
 class Reference_Surface(object):
-    """docstring for Reference Surface"""
+    """docstring for Reference Surface
+
+    The surface coodinate system is 0-1.
+    Origin is the bottom left corner, (1,1) is the top right
+
+    The first scalar in the pos vector is width we call this 'u'.
+    The second is height we call this 'v'.
+    The surface is thus defined by 4 vertecies:
+        Our convention is this order: (0,0),(1,0),(1,1),(0,1)
+
+    The surface is supported by a set of n>=1 Markers:
+        Each marker has an id, you can not not have markers with the same id twice.
+        Each marker has 4 verts (order is the same as the surface verts)
+        Each maker vertex has a uv coord that places it on the surface
+
+    When we find the surface in locate() we use the correspondence
+    of uv and screen coords of all 4 verts of all detected markers to get the
+    surface to screen homography.
+
+    This allows us to get homographies for partially visible surfaces,
+    all we need are 2 visible markers. (We could get away with just
+    one marker but in pracise this is to noisy.)
+    The more markers we find the more accurate the homography.
+
+    """
     def __init__(self,name="unnamed"):
         self.name = name
         self.detected = 0
@@ -92,7 +116,7 @@ class Reference_Surface(object):
                 self.markers[m['id']] = Support_Marker(m['id'])
                 self.markers[m['id']].add_uv_coords(uv)
 
-        #average collection of uv correspondences acros detected markers
+        #average collection of uv correspondences accros detected markers
         self.build_up_status = sum([len(m.collected_uv_coords) for m in self.markers.values()])/float(len(self.markers))
 
         if self.build_up_status >= self.required_build_up:
@@ -117,7 +141,7 @@ class Reference_Surface(object):
     def locate(self, visible_markers):
         """
         - find overlapping set of surface markers and visible_markers
-        - compute perspective transform (and inverse) based on this subset
+        - compute homography (and inverse) based on this subset
         """
 
         if not self.defined:
@@ -145,7 +169,7 @@ class Reference_Surface(object):
 
     def xy_to_uv(self,pos):
         if self.m_from_screen is not None:
-            #convinience lines to allow 'simple' vectors (x,y) to be used
+            #convenience lines to allow 'simple' vectors (x,y) to be used
             shape = pos.shape
             pos.shape = (-1,1,2)
             new_pos = cv2.perspectiveTransform(pos,self.m_from_screen )
@@ -156,7 +180,7 @@ class Reference_Surface(object):
 
     def uv_to_xy(self,pos):
         if self.m_to_screen is not None:
-            #convinience lines to allow 'simple' vectors (x,y) to be used
+            #convenience lines to allow 'simple' vectors (x,y) to be used
             shape = pos.shape
             pos.shape = (-1,1,2)
             new_pos = cv2.perspectiveTransform(pos,self.m_to_screen )
@@ -167,15 +191,15 @@ class Reference_Surface(object):
 
     def move_vertex(self,vert_idx,new_pos):
         """
-        this fn is used to manipulate the surface bounday (coordinate system)
-        vec is translation in uv-space
+        this fn is used to manipulate the surface boundary (coordinate system)
+        new_pos is in uv-space coords
         if we move one vertex of the surface we need to find
         the tranformation from old quadrangle to new quardangle
         and apply that transformation to our marker uv-coords
         """
         before = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
         after = before.copy()
-        after[vert_idx]=new_pos
+        after[vert_idx] = new_pos
         transform = cv2.getPerspectiveTransform(after,before)
         for m in self.markers.values():
             m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
@@ -206,7 +230,8 @@ class Reference_Surface(object):
 
 class Support_Marker(object):
     '''
-
+    This is a class only to be used by Reference_Surface
+    it decribes the used markers with the uv coords of its verts.
     '''
     def __init__(self,uid):
         self.uid = uid
