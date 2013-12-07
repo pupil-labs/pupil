@@ -216,7 +216,7 @@ class Marker_Detector(Plugin):
 
         #map recent gaze onto detected surfaces
         for p in recent_pupil_positions:
-            if p['screen_gaze'] is not None:
+            if p['norm_pupil'] is not None:
                 for s in self.surfaces:
                     if s.m_to_screen is not None:
                         p['realtime gaze on '+s.name] = tuple(s.xy_to_uv(np.array(p['screen_gaze'])))
