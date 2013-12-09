@@ -153,7 +153,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         if self.window_should_open:
             self.open_window()
 
-    def gl_display(self):
+    def gl_display(self,world_img_texture):
         """
         use gl calls to render
         at least:

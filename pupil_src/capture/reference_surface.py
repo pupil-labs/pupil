@@ -11,7 +11,7 @@
 import numpy as np
 import cv2
 from gl_utils import draw_gl_polyline,draw_gl_point,draw_gl_point_norm,draw_gl_points
-from methods import GetAnglesPolyline
+from methods import GetAnglesPolyline,normalize
 
 #ctypes import for atb_vars:
 from ctypes import create_string_buffer
@@ -165,6 +165,8 @@ class Reference_Surface(object):
             else:
                 self.m_from_screen = None
                 self.m_to_screen = None
+
+
 
 
     def xy_to_uv(self,pos):

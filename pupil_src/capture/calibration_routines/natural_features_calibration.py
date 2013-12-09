@@ -98,7 +98,7 @@ class Natural_Features_Calibration(Plugin):
                 if p_pt['norm_pupil'] is not None:
                     self.pupil_list.append(p_pt)
 
-    def gl_display(self):
+    def gl_display(self,world_img_texture):
         if self.detected:
             draw_gl_point_norm(self.pos,size=self.r,color=(0.,1.,0.,.5))
 

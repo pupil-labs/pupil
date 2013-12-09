@@ -297,9 +297,10 @@ def world(g_pool,cap_src,cap_size):
         world_img_tex = make_named_gl_texture(frame.img)
         draw_named_gl_texture(world_img_tex)
         make_coord_system_pixel_based(frame.img.shape)
+
         # render visual feedback from loaded plugins
         for p in g.plugins:
-            p.gl_display()
+            p.gl_display(world_img_tex)
 
         atb.draw()
         glfwSwapBuffers(world_window)

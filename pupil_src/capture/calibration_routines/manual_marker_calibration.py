@@ -212,7 +212,7 @@ class Manual_Marker_Calibration(Plugin):
 
 
 
-    def gl_display(self):
+    def gl_display(self,world_img_texture):
         """
         use gl calls to render
         at least:

@@ -12,7 +12,7 @@ import os
 import cv2
 import numpy as np
 import shelve
-from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_point_norm,basic_gl_setup,draw_named_gl_texture
+from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,draw_named_gl_texture
 from methods import normalize,denormalize
 import atb
 import audio
@@ -66,6 +66,8 @@ class Marker_Detector(Plugin):
         #debug vars
         self.draw_markers = c_bool(0)
 
+
+        self.img_shape = None
 
         #multi monitor setup
         self.window_should_open = False
@@ -192,6 +194,7 @@ class Marker_Detector(Plugin):
 
     def update(self,frame,recent_pupil_positions):
         img = frame.img
+        self.img_shape = frame.img.shape
         if self.robust_detection.value:
             self.markers = detect_markers_robust(img,grid_size = 5,
                                                     prev_markers=self.markers,
@@ -231,7 +234,7 @@ class Marker_Detector(Plugin):
         if self.window_should_open:
             self.open_window()
 
-    def gl_display(self):
+    def gl_display(self,world_img_texture):
         """
         """
 
@@ -249,12 +252,43 @@ class Marker_Detector(Plugin):
                 s.gl_draw_corners()
 
 
-        if self._window:
-            self.gl_display_in_window()
+        if self._window and self.surfaces:
+            if self.surfaces[0].m_to_screen is not None:
+                frame = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
+                surf_corners_in_img = cv2.perspectiveTransform(frame,self.surfaces[0].m_to_screen)
+                surf_corners_in_img.shape = (-1,2)
+                surf_corners_in_img_norm = np.array([normalize(pos,(self.img_shape[1],self.img_shape[0]),flip_y=True) for pos in surf_corners_in_img],dtype=np.float32)
+                draw_gl_points(surf_corners_in_img)
+                draw_gl_points_norm(surf_corners_in_img_norm,color=(1,0,1,1))
+                # surf_corners_in_img_norm.shape = (-1,1,2)
+                img_corners = np.array([[0,0],[0,1],[1,1],[1,0]],dtype=np.float32)
+                img_corners.shape = (-1,2)
+                surf_corners_in_img_norm.shape = (-1,2)
+                # return
+                m,mask = cv2.findHomography(surf_corners_in_img_norm,img_corners)
+                # print cv2.perspectiveTransform(img_corners,m)
 
-    def gl_display_in_window(self,world_img_texture):
+                self.gl_display_in_window(world_img_texture,m)
+
+
+    def gl_display_in_window(self,world_img_texture,M):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(self._window)
+
+
+        mat = np.eye(4,dtype=np.float32)
+        mat = mat.flatten()
+        # convert to OpenGL matrix
+        mat[0]        = M[0,0]
+        mat[4]        = M[0,1]
+        mat[12]       = M[0,2]
+        mat[1]        = M[1,0]
+        mat[5]        = M[1,1]
+        mat[13]       = M[1,2]
+        mat[3]        = M[2,0]
+        mat[7]        = M[2,1]
+        mat[15]       = M[2,2]
+
 
         clear_gl_screen()
 
@@ -262,12 +296,14 @@ class Marker_Detector(Plugin):
         glPushMatrix()
         glLoadIdentity()
         gluOrtho2D(0, 1, 0, 1) # gl coord convention
+
+
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
         glLoadIdentity()
+        glLoadMatrixf(mat)
 
-
-        draw_named_gl_texture)
+        draw_named_gl_texture(world_img_texture,((0,0),(1,0),(1,1),(0,1)) )
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()

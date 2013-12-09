@@ -58,7 +58,7 @@ class Show_Calibration(Plugin):
         self._bar.add_var("fraction of calibrated screen area", self.calib_area_ratio, readonly=True,precision=2)
         self._bar.add_button("close", self.close, key="x", help="close calibration results visualization")
 
-    def gl_display(self):
+    def gl_display(self,world_img_texture):
         if self.inliers is not None:
             draw_gl_polyline_norm(self.inliers,(1.,0.5,0.,.5),type='Lines')
             draw_gl_polyline_norm(self.outliers,(1.,0.,0.,.5),type='Lines')
