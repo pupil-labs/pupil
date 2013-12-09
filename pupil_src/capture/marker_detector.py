@@ -12,11 +12,14 @@ import os
 import cv2
 import numpy as np
 import shelve
-from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_point_norm,basic_gl_setup
+from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_point_norm,basic_gl_setup,draw_named_gl_texture
 from methods import normalize,denormalize
 import atb
 import audio
 from ctypes import c_int,c_bool,create_string_buffer
+
+from OpenGL.GL import *
+from OpenGL.GLU import gluOrtho2D
 
 from glfw import *
 from plugin import Plugin
@@ -114,9 +117,10 @@ class Marker_Detector(Plugin):
                     surf_verts = ((0.,0.),(1.,0.),(1.,1.),(0.,1.))
                     x,y = pos
                     for s in self.surfaces:
-                        for (vx,vy),i in zip(s.uv_to_xy(np.array(surf_verts)),range(4)):
-                            if sqrt((x-vx)**2 + (y-vy)**2) <15: #img pixels
-                                self.edit_surfaces.append((s,i))
+                        if s.detected>1:
+                            for (vx,vy),i in zip(s.uv_to_xy(np.array(surf_verts)),range(4)):
+                                if sqrt((x-vx)**2 + (y-vy)**2) <15: #img pixels
+                                    self.edit_surfaces.append((s,i))
 
     def advance(self):
         pass
@@ -248,11 +252,29 @@ class Marker_Detector(Plugin):
         if self._window:
             self.gl_display_in_window()
 
-    def gl_display_in_window(self):
+    def gl_display_in_window(self,world_img_texture):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(self._window)
 
         clear_gl_screen()
+
+        glMatrixMode(GL_PROJECTION)
+        glPushMatrix()
+        glLoadIdentity()
+        gluOrtho2D(0, 1, 0, 1) # gl coord convention
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        glLoadIdentity()
+
+
+        draw_named_gl_texture)
+
+        glMatrixMode(GL_PROJECTION)
+        glPopMatrix()
+        glMatrixMode(GL_MODELVIEW)
+        glPopMatrix()
+
+
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)

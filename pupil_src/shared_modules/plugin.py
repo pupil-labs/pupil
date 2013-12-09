@@ -47,7 +47,7 @@ class Plugin(object):
         """
         pass
 
-    def gl_display(self):
+    def gl_display(self,world_img_texture):
         """
         gets called once every frame
         """
