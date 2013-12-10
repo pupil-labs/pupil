@@ -45,14 +45,12 @@ class Marker_Detector(Plugin):
     def __init__(self,g_pool,atb_pos=(0,0)):
         super(Marker_Detector, self).__init__()
 
-        # load session persistent settings
-        self.session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_ar'),protocol=2)
-
 
         # all markers that are detected in the most recent frame
         self.markers = []
         # all registered surfaces
-        self.surfaces = self.load('surfaces',[])
+        self.surface_definitions = shelve.open(os.path.join(g_pool.user_dir,'surface_definitions'),protocol=2)
+        self.surfaces = [Reference_Surface(saved_definition=d) for d in self.load('square_marker_surfaces',[]) if isinstance(d,dict)]
 
         # edit surfaces
         self.surface_edit_mode = c_bool(0)
@@ -100,9 +98,9 @@ class Marker_Detector(Plugin):
 
 
     def load(self, var_name, default):
-        return self.session_settings.get(var_name,default)
+        return self.surface_definitions.get(var_name,default)
     def save(self, var_name, var):
-            self.session_settings[var_name] = var
+            self.surface_definitions[var_name] = var
 
 
     def do_open(self):
@@ -138,7 +136,7 @@ class Marker_Detector(Plugin):
                 monitor = None
                 height,width= 1280,720
 
-            self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
+            self._window = glfwCreateWindow(height, width, "Reference Surface", monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen.value:
                 glfwSetWindowPos(self._window,200,0)
 
@@ -312,8 +310,9 @@ class Marker_Detector(Plugin):
         This happends either voluntary or forced.
         if you have an atb bar or glfw window destroy it here.
         """
-        self.save("surfaces",self.surfaces)
-        self.session_settings.close()
+
+        self.save("square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces])
+        self.surface_definitions.close()
 
         if self._window:
             self.close_window()

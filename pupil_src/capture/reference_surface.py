@@ -55,7 +55,7 @@ class Reference_Surface(object):
     The more markers we find the more accurate the homography.
 
     """
-    def __init__(self,name="unnamed"):
+    def __init__(self,name="unnamed",saved_definition=None):
         self.name = name
         self.detected = 0
         self.markers = {}
@@ -66,6 +66,32 @@ class Reference_Surface(object):
         self.m_to_screen = None
         self.m_from_screen = None
 
+        if saved_definition is not None:
+            self.load_from_dict(saved_definition)
+
+
+
+    def save_to_dict(self):
+        """
+        save all markers and name of this surface to a dict.
+        """
+        markers = dict([(m_id,m.uv_coords) for m_id,m in self.markers.iteritems()])
+        return {'name':self.name,'markers':markers}
+
+
+    def load_from_dict(self,d):
+        """
+        load all markers of this surface to a dict.
+        """
+        self.name = d['name']
+        marker_dict = d['markers']
+        for m_id,uv_coords in marker_dict.iteritems():
+            self.markers[m_id] = Support_Marker(m_id)
+            self.markers[m_id].load_uv_coords(uv_coords)
+
+        #flag this surface as fully defined
+        self.defined = True
+        self.build_up_status = self.required_build_up
 
     def build_correspondance(self, visible_markers):
         """
@@ -248,6 +274,9 @@ class Support_Marker(object):
         self.uid = uid
         self.uv_coords = None
         self.collected_uv_coords = []
+
+    def load_uv_coords(self,uv_coords):
+        self.uv_coords = uv_coords
 
     def add_uv_coords(self,uv_coords):
         self.collected_uv_coords.append(uv_coords)
