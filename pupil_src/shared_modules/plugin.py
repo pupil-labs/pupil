@@ -41,7 +41,7 @@ class Plugin(object):
         """
         pass
 
-    def update(self,img,recent_pupil_posotions):
+    def update(self,frame,recent_pupil_positions,events):
         """
         gets called once every frame
         """
@@ -155,7 +155,7 @@ class Example_Plugin(Plugin):
             self.window_should_close = False
 
 
-    def update(self,frame,recent_pupil_positions):
+    def update(self,frame,recent_pupil_positions,events):
 
         if self.window_should_close:
             self.close_window()

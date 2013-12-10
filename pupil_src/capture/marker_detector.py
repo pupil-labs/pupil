@@ -64,7 +64,7 @@ class Marker_Detector(Plugin):
         #debug vars
         self.draw_markers = c_bool(0)
         self.show_surface_idx = c_int(0)
-
+        self.recent_pupil_positions = []
 
         self.img_shape = None
 
@@ -190,7 +190,7 @@ class Marker_Detector(Plugin):
             self._bar_markers.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             self._bar_markers.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
 
-    def update(self,frame,recent_pupil_positions):
+    def update(self,frame,recent_pupil_positions,events):
         img = frame.img
         self.img_shape = frame.img.shape
         if self.robust_detection.value:
@@ -208,6 +208,8 @@ class Marker_Detector(Plugin):
 
         for s in self.surfaces:
             s.locate(self.markers)
+            if s.m_to_screen is not None:
+                events.append({'type':'marker_ref_surface','name':s.name,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
         if self.surface_edit_mode:
             window = glfwGetCurrentContext()
@@ -280,7 +282,7 @@ class Marker_Detector(Plugin):
         # if you treat this quad as the corners of the ref surf, you can infer the ref corners in img space by multiplying the quad with m_to_screen
         surf_corners_in_img = cv2.perspectiveTransform(quad,surface.m_to_screen)
         surf_corners_in_img.shape = (-1,2)
-        # this is the ref surf coriner in normalized screen coords
+        # this is the ref surf container in normalized screen coords
         surf_corners_in_img_norm = np.array([normalize(pos,(self.img_shape[1],self.img_shape[0]),flip_y=True) for pos in surf_corners_in_img],dtype=np.float32)
         # m will be the transform to strech the img rects such that the corners of the surface of the img are at the corners of the norm. coord system.
         m = cv2.getPerspectiveTransform(surf_corners_in_img_norm,quad)

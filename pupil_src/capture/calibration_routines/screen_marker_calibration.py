@@ -178,7 +178,7 @@ class Screen_Marker_Calibration(Plugin):
             self.window_should_close = False
 
 
-    def update(self,frame,recent_pupil_positions):
+    def update(self,frame,recent_pupil_positions,events):
         if self.window_should_close:
             self.close_window()
 

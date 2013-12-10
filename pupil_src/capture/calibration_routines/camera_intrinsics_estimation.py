@@ -131,7 +131,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         audio.say("Camera calibrated. Calibration saved to user folder")
         logger.info("Camera calibrated. Calibration saved to user folder")
 
-    def update(self,frame,recent_pupil_positions):
+    def update(self,frame,recent_pupil_positions,events):
         if self.collect_new:
             img = frame.img
             status, grid_points = cv2.findCirclesGridDefault(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)

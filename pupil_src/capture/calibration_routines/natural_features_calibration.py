@@ -67,7 +67,7 @@ class Natural_Features_Calibration(Plugin):
         self.g_pool.map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,img_size)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
-    def update(self,frame,recent_pupil_positions):
+    def update(self,frame,recent_pupil_positions,events):
         if self.active:
             img = frame.img
             if self.first_img is None:

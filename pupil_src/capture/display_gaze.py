@@ -22,7 +22,7 @@ class Display_Gaze(Plugin):
         self.atb_pos = atb_pos
         self.pupil_display_list = []
 
-    def update(self,frame,recent_pupil_positions):
+    def update(self,frame,recent_pupil_positions,events):
         for pt in recent_pupil_positions:
             if pt['norm_gaze'] is not None:
                 self.pupil_display_list.append(pt['norm_gaze'])

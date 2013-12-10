@@ -272,6 +272,10 @@ def world(g_pool,cap_src,cap_size):
         frame = cap.get_frame()
         update_fps()
 
+
+        #a container that allows plugins to post and read events
+        events = []
+
         #receive and map pupil positions
         recent_pupil_positions = []
         while not g_pool.pupil_queue.empty():
@@ -286,7 +290,7 @@ def world(g_pool,cap_src,cap_size):
 
         # allow each Plugin to do its work.
         for p in g.plugins:
-            p.update(frame,recent_pupil_positions)
+            p.update(frame,recent_pupil_positions,events)
 
         #check if a plugin need to be destroyed
         g.plugins = [p for p in g.plugins if p.alive]
