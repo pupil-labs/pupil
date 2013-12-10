@@ -240,13 +240,13 @@ class Marker_Detector(Plugin):
 
     def gl_display(self):
         """
+        Display marker and surface info inside world screen
         """
 
         for m in self.markers:
-            if m['id'] !=-1:
-                hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
-                hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-                draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
+            hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
+            hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
+            draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
 
         for s in  self.surfaces:
             s.gl_draw_frame()
@@ -267,9 +267,12 @@ class Marker_Detector(Plugin):
 
 
     def gl_display_in_window(self,surface):
+        """
+        here we map a selected surface onto a seperate window.
+        """
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(self._window)
-
+        clear_gl_screen()
 
         # calculate the perspective transformation to render just the detected surface inside a window
         # quad is 4 corners in normalized coord space
@@ -285,8 +288,6 @@ class Marker_Detector(Plugin):
         m = cvmat_to_glmat(m)
 
 
-        clear_gl_screen()
-
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
@@ -297,7 +298,7 @@ class Marker_Detector(Plugin):
         #apply m  to our quad - this will screch the quad such that the ref suface will span the window extends
         glLoadMatrixf(m)
 
-        redraw_gl_texture(((0,0),(1,0),(1,1),(0,1)) )
+        redraw_gl_texture( ((0,0),(1,0),(1,1),(0,1)) )
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
