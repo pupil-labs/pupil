@@ -112,7 +112,7 @@ class Marker_Detector(Plugin):
             if self.edit_surfaces:
                 if action == GLFW_RELEASE:
                     self.edit_surfaces = []
-            # no sufaces verts in edit mode, lets see if the curser is close to one:
+            # no surfaces verts in edit mode, lets see if the curser is close to one:
             else:
                 if action == GLFW_PRESS:
                     surf_verts = ((0.,0.),(1.,0.),(1.,1.),(0.,1.))
@@ -219,12 +219,18 @@ class Marker_Detector(Plugin):
                 new_pos =  s.xy_to_uv(np.array(pos))
                 s.move_vertex(v_idx,new_pos)
 
-        #map recent gaze onto detected surfaces
+        #map recent gaze onto detected surfaces used for pupil server
         for p in recent_pupil_positions:
             if p['norm_pupil'] is not None:
                 for s in self.surfaces:
                     if s.m_to_screen is not None:
                         p['realtime gaze on '+s.name] = tuple(s.xy_to_uv(np.array(p['screen_gaze'])))
+
+
+        if self._window:
+            # save a local copy for when we display gaze for debugging on ref surface
+            self.recent_pupil_positions = recent_pupil_positions
+
 
         if self.window_should_close:
             self.close_window()
@@ -275,7 +281,6 @@ class Marker_Detector(Plugin):
         surf_corners_in_img_norm = np.array([normalize(pos,(self.img_shape[1],self.img_shape[0]),flip_y=True) for pos in surf_corners_in_img],dtype=np.float32)
         # m will be the transform to strech the img rects such that the corners of the surface of the img are at the corners of the norm. coord system.
         m = cv2.getPerspectiveTransform(surf_corners_in_img_norm,quad)
-
         # cv uses 3x3 gl uses 4x4 tranformation matricies
         m = cvmat_to_glmat(m)
 
@@ -298,6 +303,14 @@ class Marker_Detector(Plugin):
         glPopMatrix()
         glMatrixMode(GL_MODELVIEW)
         glPopMatrix()
+
+
+        #now lets get recent pupil positions on this surface:
+        try:
+            gaze_on_surface = [p['realtime gaze on '+surface.name] for p in self.recent_pupil_positions]
+        except KeyError:
+            gaze_on_surface = []
+        draw_gl_points_norm(gaze_on_surface,color=(0.,8.,.5,.8), size=80)
 
 
         glfwSwapBuffers(self._window)
