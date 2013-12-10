@@ -14,6 +14,22 @@ from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 from shader import Shader
 
+import numpy as np
+def cvmat_to_glmat(m):
+    mat = np.eye(4,dtype=np.float32)
+    mat = mat.flatten()
+    # convert to OpenGL matrix
+    mat[0]  = m[0,0]
+    mat[4]  = m[0,1]
+    mat[12] = m[0,2]
+    mat[1]  = m[1,0]
+    mat[5]  = m[1,1]
+    mat[13] = m[1,2]
+    mat[3]  = m[2,0]
+    mat[7]  = m[2,1]
+    mat[15] = m[2,2]
+    return mat
+
 
 def basic_gl_setup():
     glEnable( GL_POINT_SPRITE )
@@ -299,6 +315,8 @@ def redraw_gl_texture(quad=((0.,0.),(1.,0.),(1.,1.),(0.,1.)) ):
     glEnd()
 
     glDisable(GL_TEXTURE_2D)
+
+
 
 
 # def upload_named_gl_texture(image,texture_id, interpolation=True):

@@ -12,7 +12,7 @@ import os
 import cv2
 import numpy as np
 import shelve
-from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup, redraw_gl_texture
+from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, redraw_gl_texture
 from methods import normalize,denormalize
 import atb
 import audio
@@ -65,6 +65,7 @@ class Marker_Detector(Plugin):
 
         #debug vars
         self.draw_markers = c_bool(0)
+        self.show_surface_idx = c_int(0)
 
 
         self.img_shape = None
@@ -87,7 +88,7 @@ class Marker_Detector(Plugin):
         self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum,group="Window",)
         self._bar.add_var("fullscreen", self.fullscreen,group="Window")
         self._bar.add_button("  open Window   ", self.do_open, key='m',group="Window")
-        # self._bar.add_var("edge aperture",self.aperture, step=2,min=3,group="Detector")
+        self._bar.add_var("surface to show",self.show_surface_idx, step=1,min=0,group="Window")
         self._bar.add_var('robust_detection',self.robust_detection,group="Detector")
         self._bar.add_var("draw markers",self.draw_markers,group="Detector")
 
@@ -188,9 +189,8 @@ class Marker_Detector(Plugin):
 
         for s,i in zip (self.surfaces,range(len(self.surfaces))):
             self._bar_markers.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
-            self._bar_markers.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
             self._bar_markers.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
-
+            self._bar_markers.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
 
     def update(self,frame,recent_pupil_positions):
         img = frame.img
@@ -253,41 +253,33 @@ class Marker_Detector(Plugin):
 
 
         if self._window and self.surfaces:
-            if self.surfaces[0].m_to_screen is not None:
-                frame = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
-                surf_corners_in_img = cv2.perspectiveTransform(frame,self.surfaces[0].m_to_screen)
-                surf_corners_in_img.shape = (-1,2)
-                surf_corners_in_img_norm = np.array([normalize(pos,(self.img_shape[1],self.img_shape[0]),flip_y=True) for pos in surf_corners_in_img],dtype=np.float32)
-                draw_gl_points(surf_corners_in_img)
-                draw_gl_points_norm(surf_corners_in_img_norm,color=(1,0,1,1))
-                # surf_corners_in_img_norm.shape = (-1,1,2)
-                img_corners = np.array([[0,0],[0,1],[1,1],[1,0]],dtype=np.float32)
-                img_corners.shape = (-1,2)
-                surf_corners_in_img_norm.shape = (-1,2)
-                # return
-                m,mask = cv2.findHomography(surf_corners_in_img_norm,img_corners)
-                # print cv2.perspectiveTransform(img_corners,m)
-
-                self.gl_display_in_window(m)
+            try:
+                s = self.surfaces[self.show_surface_idx.value]
+            except IndexError:
+                s = None
+            if s and s.m_to_screen is not None:
+                self.gl_display_in_window(s)
 
 
-    def gl_display_in_window(self,M):
+
+    def gl_display_in_window(self,surface):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(self._window)
 
 
-        mat = np.eye(4,dtype=np.float32)
-        mat = mat.flatten()
-        # convert to OpenGL matrix
-        mat[0]        = M[0,0]
-        mat[4]        = M[0,1]
-        mat[12]       = M[0,2]
-        mat[1]        = M[1,0]
-        mat[5]        = M[1,1]
-        mat[13]       = M[1,2]
-        mat[3]        = M[2,0]
-        mat[7]        = M[2,1]
-        mat[15]       = M[2,2]
+        # calculate the perspective transformation to render just the detected surface inside a window
+        # quad is 4 corners in normalized coord space
+        quad = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
+        # if you treat this quad as the corners of the ref surf, you can infer the ref corners in img space by multiplying the quad with m_to_screen
+        surf_corners_in_img = cv2.perspectiveTransform(quad,surface.m_to_screen)
+        surf_corners_in_img.shape = (-1,2)
+        # this is the ref surf coriner in normalized screen coords
+        surf_corners_in_img_norm = np.array([normalize(pos,(self.img_shape[1],self.img_shape[0]),flip_y=True) for pos in surf_corners_in_img],dtype=np.float32)
+        # m will be the transform to strech the img rects such that the corners of the surface of the img are at the corners of the norm. coord system.
+        m = cv2.getPerspectiveTransform(surf_corners_in_img_norm,quad)
+
+        # cv uses 3x3 gl uses 4x4 tranformation matricies
+        m = cvmat_to_glmat(m)
 
 
         clear_gl_screen()
@@ -297,11 +289,10 @@ class Marker_Detector(Plugin):
         glLoadIdentity()
         gluOrtho2D(0, 1, 0, 1) # gl coord convention
 
-
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
-        glLoadIdentity()
-        glLoadMatrixf(mat)
+        #apply m  to our quad - this will screch the quad such that the ref suface will span the window extends
+        glLoadMatrixf(m)
 
         redraw_gl_texture(((0,0),(1,0),(1,1),(0,1)) )
 
@@ -309,7 +300,6 @@ class Marker_Detector(Plugin):
         glPopMatrix()
         glMatrixMode(GL_MODELVIEW)
         glPopMatrix()
-
 
 
         glfwSwapBuffers(self._window)
