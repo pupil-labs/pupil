@@ -28,7 +28,7 @@ class Display_Gaze(Plugin):
                 self.pupil_display_list.append(pt['norm_gaze'])
         self.pupil_display_list[:-3] = []
 
-    def gl_display(self,world_img_texture):
+    def gl_display(self):
         draw_gl_points_norm(self.pupil_display_list,size=35,color=(1.,.2,.4,.6))
 
 

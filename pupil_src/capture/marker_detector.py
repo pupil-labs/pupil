@@ -12,7 +12,7 @@ import os
 import cv2
 import numpy as np
 import shelve
-from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,draw_named_gl_texture
+from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup, redraw_gl_texture
 from methods import normalize,denormalize
 import atb
 import audio
@@ -234,7 +234,7 @@ class Marker_Detector(Plugin):
         if self.window_should_open:
             self.open_window()
 
-    def gl_display(self,world_img_texture):
+    def gl_display(self):
         """
         """
 
@@ -268,10 +268,10 @@ class Marker_Detector(Plugin):
                 m,mask = cv2.findHomography(surf_corners_in_img_norm,img_corners)
                 # print cv2.perspectiveTransform(img_corners,m)
 
-                self.gl_display_in_window(world_img_texture,m)
+                self.gl_display_in_window(m)
 
 
-    def gl_display_in_window(self,world_img_texture,M):
+    def gl_display_in_window(self,M):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(self._window)
 
@@ -303,7 +303,7 @@ class Marker_Detector(Plugin):
         glLoadIdentity()
         glLoadMatrixf(mat)
 
-        draw_named_gl_texture(world_img_texture,((0,0),(1,0),(1,1),(0,1)) )
+        redraw_gl_texture(((0,0),(1,0),(1,1),(0,1)) )
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()

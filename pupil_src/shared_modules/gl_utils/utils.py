@@ -14,6 +14,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 from shader import Shader
 
+
 def basic_gl_setup():
     glEnable( GL_POINT_SPRITE )
     glEnable(GL_VERTEX_PROGRAM_POINT_SIZE) # overwrite pointsize
@@ -198,10 +199,18 @@ def draw_gl_points_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
     glMatrixMode(GL_MODELVIEW)
     glPopMatrix()
 
+
+#global var to init text id once per process
+texture_id = None
+
 def draw_gl_texture(image,interpolation=True):
     """
     We draw the image as a texture on a quad from 0,0 to img.width,img.height.
     """
+    global texture_id
+    if texture_id is None:
+        texture_id = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, texture_id)
 
     height, width, channels = image.shape
     if  channels == 3:
@@ -266,61 +275,11 @@ def draw_gl_texture(image,interpolation=True):
     # glMatrixMode(GL_MODELVIEW)
     # glLoadIdentity()
 
-def make_named_gl_texture(image,interpolation=True):
-    """
-    We draw the image as a texture on a quad from 0,0 to img.width,img.height.
-    """
-
-    height, width, channels = image.shape
-    if  channels == 3:
-        gl_blend = GL_BGR
-        gl_blend_init = GL_RGB
-    else:
-        gl_blend = GL_BGRA
-        gl_blend_init = GL_RGBA
-
-    texture = glGenTextures(1)
-    glBindTexture(GL_TEXTURE_2D, texture)
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT,1)
-    # Create Texture
-    glTexImage2D(GL_TEXTURE_2D,
-                        0,
-                        gl_blend_init,
-                        width,
-                        height,
-                        0,
-                        gl_blend,
-                        GL_UNSIGNED_BYTE,
-                        image)
-
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) # interpolation here
-    if not interpolation:
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    return texture
-
-def make_coord_system_pixel_based(img_shape):
-    height,width,channels = img_shape
-    # Set Projection Matrix
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    gluOrtho2D(0, width, height, 0) # origin in the top left corner just like the img np-array
-    # Switch back to Model View Matrix
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
 
 
-def make_coord_system_01_based():
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    gluOrtho2D(0, 1, 0, 1) # gl coord convention
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
-
-def draw_named_gl_texture(texture, quad=((0.,0.),(1.,0.),(1.,1.),(0.,1.)) ):
+def redraw_gl_texture(quad=((0.,0.),(1.,0.),(1.,1.),(0.,1.)) ):
     glEnable(GL_TEXTURE_2D)
-    glBindTexture(GL_TEXTURE_2D, texture)
+    glBindTexture(GL_TEXTURE_2D, texture_id)
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE)
 
     glColor4f(1.0,1.0,1.0,1.0)
@@ -338,5 +297,59 @@ def draw_named_gl_texture(texture, quad=((0.,0.),(1.,0.),(1.,1.),(0.,1.)) ):
     glTexCoord2f(0.0, 1.0)
     glVertex2f(*quad[0])
     glEnd()
+
     glDisable(GL_TEXTURE_2D)
 
+
+# def upload_named_gl_texture(image,texture_id, interpolation=True):
+#     """
+#     We draw the image as a texture on a quad from 0,0 to img.width,img.height.
+#     """
+
+#     height, width, channels = image.shape
+#     if  channels == 3:
+#         gl_blend = GL_BGR
+#         gl_blend_init = GL_RGB
+#     else:
+#         gl_blend = GL_BGRA
+#         gl_blend_init = GL_RGBA
+
+#     if texture_id is None:
+#         texture_id = glGenTextures(1)
+#     glBindTexture(GL_TEXTURE_2D, texture_id)
+
+#     glPixelStorei(GL_UNPACK_ALIGNMENT,1)
+#     # Create Texture
+#     glTexImage2D(GL_TEXTURE_2D,
+#                         0,
+#                         gl_blend_init,
+#                         width,
+#                         height,
+#                         0,
+#                         gl_blend,
+#                         GL_UNSIGNED_BYTE,
+#                         image)
+
+#     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) # interpolation here
+#     if not interpolation:
+#         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+#     return texture_id
+
+# def make_coord_system_pixel_based(img_shape):
+#     height,width,channels = img_shape
+#     # Set Projection Matrix
+#     glMatrixMode(GL_PROJECTION)
+#     glLoadIdentity()
+#     gluOrtho2D(0, width, height, 0) # origin in the top left corner just like the img np-array
+#     # Switch back to Model View Matrix
+#     glMatrixMode(GL_MODELVIEW)
+#     glLoadIdentity()
+
+
+# def make_coord_system_01_based():
+#     glMatrixMode(GL_PROJECTION)
+#     glLoadIdentity()
+#     gluOrtho2D(0, 1, 0, 1) # gl coord convention
+#     glMatrixMode(GL_MODELVIEW)
+#     glLoadIdentity()

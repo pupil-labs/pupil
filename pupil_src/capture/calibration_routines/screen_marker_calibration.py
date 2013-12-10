@@ -301,7 +301,7 @@ class Screen_Marker_Calibration(Plugin):
 
 
 
-    def gl_display(self,world_img_texture):
+    def gl_display(self):
         """
         use gl calls to render
         at least:

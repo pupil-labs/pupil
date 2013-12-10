@@ -30,7 +30,7 @@ import atb
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
-from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,make_named_gl_texture,draw_named_gl_texture, make_coord_system_pixel_based,make_coord_system_01_based
+from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
 from uvc_capture import autoCreateCapture
 import calibrate
 # Plug-ins
@@ -293,14 +293,11 @@ def world(g_pool,cap_src,cap_size):
 
         # render camera image
         glfwMakeContextCurrent(world_window)
-        make_coord_system_01_based()
-        world_img_tex = make_named_gl_texture(frame.img)
-        draw_named_gl_texture(world_img_tex)
-        make_coord_system_pixel_based(frame.img.shape)
+        draw_gl_texture(frame.img)
 
         # render visual feedback from loaded plugins
         for p in g.plugins:
-            p.gl_display(world_img_tex)
+            p.gl_display()
 
         atb.draw()
         glfwSwapBuffers(world_window)

@@ -47,7 +47,7 @@ class Plugin(object):
         """
         pass
 
-    def gl_display(self,world_img_texture):
+    def gl_display(self):
         """
         gets called once every frame
         """
@@ -163,7 +163,7 @@ class Example_Plugin(Plugin):
         if self.window_should_open:
             self.open_window()
 
-    def gl_display(self,world_img_texture):
+    def gl_display(self):
         """
         use gl calls to render on world window
         """
