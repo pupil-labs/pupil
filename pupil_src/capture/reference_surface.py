@@ -104,6 +104,8 @@ class Reference_Surface(object):
         if visible_markers == []:
             self.m_to_screen = None
             self.m_from_screen = None
+            self.detected = False
+
             return
 
         all_verts = np.array([[m['verts'] for m in visible_markers]])
@@ -129,7 +131,7 @@ class Reference_Surface(object):
         #based on these 4 verts we calculate the transformations into a 0,0 1,1 square space
         self.m_to_screen = m_verts_to_screen(hull)
         self.m_from_screen = m_verts_from_screen(hull)
-
+        self.detected = True
         # map the markers vertices in to the surface space (one can think of these as texture coordinates u,v)
         marker_uv_coords =  cv2.perspectiveTransform(all_verts,self.m_from_screen)
         marker_uv_coords.shape = (-1,4,1,2) #[marker,marker...] marker = [ [[r,c]],[[r,c]] ]
@@ -247,7 +249,7 @@ class Reference_Surface(object):
         """
         draw surface and markers
         """
-        if self.m_to_screen is not None:
+        if self.detected:
             frame = np.array([[[0,0],[0,1],[1,1],[1,0],[0,0]]],dtype=np.float32)
             hat = np.array([[[.3,.7],[.5,.9],[.7,.7],[.3,.7]]],dtype=np.float32)
             hat = cv2.perspectiveTransform(hat,self.m_to_screen)
@@ -261,7 +263,7 @@ class Reference_Surface(object):
         """
         draw surface and markers
         """
-        if self.m_to_screen is not None:
+        if self.detected:
             frame = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
             frame = cv2.perspectiveTransform(frame,self.m_to_screen)
             draw_gl_points(frame.reshape((4,2)),15,(1.0,0.2,0.6,.5))

@@ -208,7 +208,7 @@ class Marker_Detector(Plugin):
 
         for s in self.surfaces:
             s.locate(self.markers)
-            if s.m_to_screen is not None:
+            if s.detected:
                 events.append({'type':'marker_ref_surface','name':s.name,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
         if self.surface_edit_mode:
@@ -218,8 +218,9 @@ class Marker_Detector(Plugin):
             pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
 
             for s,v_idx in self.edit_surfaces:
-                new_pos =  s.xy_to_uv(np.array(pos))
-                s.move_vertex(v_idx,new_pos)
+                if s.detected:
+                    new_pos =  s.xy_to_uv(np.array(pos))
+                    s.move_vertex(v_idx,new_pos)
 
         #map recent gaze onto detected surfaces used for pupil server
         for p in recent_pupil_positions:
