@@ -57,12 +57,12 @@ class Reference_Surface(object):
     """
     def __init__(self,name="unnamed",saved_definition=None):
         self.name = name
-        self.detected = 0
         self.markers = {}
-
+        self.detected_markers = 0
         self.defined = False
         self.build_up_status = 0
         self.required_build_up = 90.
+        self.detected = False
         self.m_to_screen = None
         self.m_from_screen = None
 
@@ -177,8 +177,9 @@ class Reference_Surface(object):
             visible_ids = set(marker_by_id.keys())
             requested_ids = set(self.markers.keys())
             overlap = visible_ids & requested_ids
-            self.detected = len(overlap)
+            self.detected_markers = len(overlap)
             if len(overlap)>=min(2,len(requested_ids)):
+                self.detected = True
                 yx = np.array( [marker_by_id[i]['verts'] for i in overlap] )
                 uv = np.array( [self.markers[i].uv_coords for i in overlap] )
                 yx.shape=(-1,1,2)
@@ -189,6 +190,7 @@ class Reference_Surface(object):
                 self.m_from_screen,mask = cv2.findHomography(yx,uv)
 
             else:
+                self.detected = False
                 self.m_from_screen = None
                 self.m_to_screen = None
 
@@ -233,7 +235,7 @@ class Reference_Surface(object):
             m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
 
     def atb_marker_status(self):
-        return create_string_buffer("%s / %s" %(self.detected,len(self.markers)),512)
+        return create_string_buffer("%s / %s" %(self.detected_markers,len(self.markers)),512)
 
     def atb_get_name(self):
         return create_string_buffer(self.name,512)

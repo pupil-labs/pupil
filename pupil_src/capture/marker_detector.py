@@ -118,7 +118,7 @@ class Marker_Detector(Plugin):
                     surf_verts = ((0.,0.),(1.,0.),(1.,1.),(0.,1.))
                     x,y = pos
                     for s in self.surfaces:
-                        if s.detected>1:
+                        if s.detected:
                             for (vx,vy),i in zip(s.uv_to_xy(np.array(surf_verts)),range(4)):
                                 if sqrt((x-vx)**2 + (y-vy)**2) <15: #img pixels
                                     self.edit_surfaces.append((s,i))
@@ -225,7 +225,7 @@ class Marker_Detector(Plugin):
         for p in recent_pupil_positions:
             if p['norm_pupil'] is not None:
                 for s in self.surfaces:
-                    if s.m_to_screen is not None:
+                    if s.detected:
                         p['realtime gaze on '+s.name] = tuple(s.xy_to_uv(np.array(p['screen_gaze'])))
 
 
@@ -263,7 +263,7 @@ class Marker_Detector(Plugin):
                 s = self.surfaces[self.show_surface_idx.value]
             except IndexError:
                 s = None
-            if s and s.m_to_screen is not None:
+            if s and s.detected:
                 self.gl_display_in_window(s)
 
 
