@@ -225,9 +225,10 @@ class Marker_Detector(Plugin):
         #map recent gaze onto detected surfaces used for pupil server
         for p in recent_pupil_positions:
             if p['norm_pupil'] is not None:
+                img_gaze = denormalize(p['norm_gaze'],(frame.img.shape[1],frame.img.shape[0]),flip_y=True)
                 for s in self.surfaces:
                     if s.detected:
-                        p['realtime gaze on '+s.name] = tuple(s.xy_to_uv(np.array(p['screen_gaze'])))
+                        p['realtime gaze on '+s.name] = tuple(s.xy_to_uv(np.array(img_gaze)))
 
 
         if self._window:
@@ -278,18 +279,9 @@ class Marker_Detector(Plugin):
         clear_gl_screen()
 
         # calculate the perspective transformation to render just the detected surface inside a window
-        # quad is 4 corners in normalized coord space
-        quad = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
-        # if you treat this quad as the corners of the ref surf, you can infer the ref corners in img space by multiplying the quad with m_to_screen
-        surf_corners_in_img = cv2.perspectiveTransform(quad,surface.m_to_screen)
-        surf_corners_in_img.shape = (-1,2)
-        # this is the ref surf container in normalized screen coords
-        surf_corners_in_img_norm = np.array([normalize(pos,(self.img_shape[1],self.img_shape[0]),flip_y=True) for pos in surf_corners_in_img],dtype=np.float32)
-        # m will be the transform to strech the img rects such that the corners of the surface of the img are at the corners of the norm. coord system.
-        m = cv2.getPerspectiveTransform(surf_corners_in_img_norm,quad)
+        m = surface.get_m_uv_to_img_norm(self.img_shape)
         # cv uses 3x3 gl uses 4x4 tranformation matricies
         m = cvmat_to_glmat(m)
-
 
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
@@ -298,9 +290,10 @@ class Marker_Detector(Plugin):
 
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
-        #apply m  to our quad - this will screch the quad such that the ref suface will span the window extends
+        #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
         glLoadMatrixf(m)
 
+        #redraw will use the most recent world img texture and use it again.
         redraw_gl_texture( ((0,0),(1,0),(1,1),(0,1)) )
 
         glMatrixMode(GL_PROJECTION)

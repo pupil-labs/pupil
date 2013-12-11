@@ -196,8 +196,40 @@ class Reference_Surface(object):
                 self.m_from_screen = None
                 self.m_to_screen = None
 
+    def get_m_uv_to_img_norm(self,img_shape):
+        """
+        calc the transfomration matrix from uv to normalized screen coords.
+        this requires m_uv_to_screen to be avaiable.
+        """
+        # calculate the perspective transformation to render just the detected surface inside a window
+        # quad is 4 corners in normalized coord space
+        quad = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
+        # if you treat this quad as the corners of the ref surf, you can infer the ref corners in img space by multiplying the quad with m_to_screen
+        surf_corners_in_img = cv2.perspectiveTransform(quad,self.m_to_screen)
+        surf_corners_in_img.shape = (-1,2)
+        # this is the ref surf container in normalized screen coords
+        surf_corners_in_img_norm = np.array([normalize(pos,(img_shape[1],img_shape[0]),flip_y=True) for pos in surf_corners_in_img],dtype=np.float32)
+        # m will be the transform to strech the img rects such that the corners of the surface of the img are at the corners of the norm. coord system.
+        m = cv2.getPerspectiveTransform(surf_corners_in_img_norm,quad)
+        return m
 
-
+    def get_m_uv_from_img_norm(self,img_shape):
+        """
+        calc the transfomration matrix from uv to normalized screen coords.
+        this requires m_uv_to_screen to be avaiable.
+        """
+        # calculate the perspective transformation to render just the detected surface inside a window
+        # quad is 4 corners in normalized coord space
+        quad = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
+        # if you treat this quad as the corners of the ref surf, you can infer the ref corners in img space by multiplying the quad with m_to_screen
+        surf_corners_in_img = cv2.perspectiveTransform(quad,self.m_to_screen)
+        surf_corners_in_img.shape = (-1,2)
+        # this is the ref surf container in normalized screen coords
+        surf_corners_in_img_norm = np.array([normalize(pos,(img_shape[1],img_shape[0]),flip_y=True) for pos in surf_corners_in_img],dtype=np.float32)
+        # m will be the transform to strech the img rects such that the corners of the surface of the img are at the corners of the norm. coord system.
+        m = cv2.getPerspectiveTransform(quad,surf_corners_in_img_norm)
+        # cv uses 3x3 gl uses 4x4 tranformation matricies
+        return m
 
     def xy_to_uv(self,pos):
         if self.m_from_screen is not None:
@@ -220,6 +252,7 @@ class Reference_Surface(object):
             return new_pos
         else:
             return None
+
 
     def move_vertex(self,vert_idx,new_pos):
         """
