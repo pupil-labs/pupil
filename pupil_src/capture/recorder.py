@@ -73,7 +73,7 @@ class Recorder(Plugin):
         rec_time = gmtime(time()-self.start_time)
         return strftime("%H:%M:%S", rec_time)
 
-    def update(self,frame,recent_pupil_positons):
+    def update(self,frame,recent_pupil_positons,events):
         self.frame_count += 1
         for p in recent_pupil_positons:
             if p['norm_pupil'] is not None:

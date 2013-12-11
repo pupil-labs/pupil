@@ -575,3 +575,4 @@ class Canny_Detector(Pupil_Detector):
         self.save('pupil_min',self.pupil_min.value)
         self.save('pupil_max',self.pupil_max.value)
         self.save('min_contour_size',self.min_contour_size.value)
+        self.session_settings.close()
