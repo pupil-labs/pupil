@@ -186,25 +186,13 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
                 # but using m_screen_to_marker() will get you the marker with proper rotation.
                 r = np.roll(r,angle+1,axis=0) #np.roll is not the fastest when using these tiny arrays...
 
-                marker = {'id':msg,'verts':r,'centroid':centroid,"frames_since_true_detection":0}
-                if visualize and angle is not None:
+                r_norm = r/np.float32((gray_img.shape[1],gray_img.shape[0]))
+                r_norm[:,:,1] = 1-r_norm[:,:,1]
+                marker = {'id':msg,'verts':r,'verts_norm':r_norm,'centroid':centroid,"frames_since_true_detection":0}
+                if visualize:
                     marker['img'] = np.rot90(otsu,-angle/90)
                 markers.append(marker)
 
-    if 0: #del double detected markers
-        min_distace = min_marker_perimeter/4
-        if len(markers)>1:
-                remove = set()
-                close_markers = get_close_markers(markers,min_distace=min_distace)
-                for f,s in close_markers.T:
-                    if cv2.arcLength(markers[f]['verts'],closed=True) < cv2.arcLength(markers[s]['verts'],closed=True):
-                        remove.add(f)
-                    else:
-                        remove.add(s)
-                remove = list(remove)
-                remove.sort(reverse=True)
-                for i in remove:
-                    del markers[i]
     return markers
 
 
@@ -285,6 +273,9 @@ def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,ape
             for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
                 if s: #ho do we ensure that this is a good move?
                     m['verts'] += pt-m['centroid'] #uniformly translate verts by optlical flow offset
+                    r_norm = m['verts']/np.float32((gray_img.shape[1],gray_img.shape[0]))
+                    r_norm[:,:,1] = 1-r_norm[:,:,1]
+                    m['verts_norm'] = r_norm
                     m["frames_since_true_detection"] +=1
                 else:
                     m["frames_since_true_detection"] =100
@@ -320,6 +311,8 @@ def bench():
     while status:
         markers = detect_markers_robust(img,5,markers,true_detect_every_frame=1)
         status,img = cap.read()
+        if markers:
+            return
 
 
 

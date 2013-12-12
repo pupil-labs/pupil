@@ -301,18 +301,29 @@ def redraw_gl_texture(quad=((0.,0.),(1.,0.),(1.,1.),(0.,1.)) ):
     glColor4f(1.0,1.0,1.0,1.0)
     # Draw textured Quad.
     glBegin(GL_QUADS)
-    glTexCoord2f(0.0, 0.0)
-    glVertex2f(*quad[3])
+    # glTexCoord2f(0.0, 0.0)
+    glTexCoord2f(0.0, 1.0)
 
-    glTexCoord2f(1.0, 0.0)
-    glVertex2f(*quad[2])
+    glVertex2f(*quad[0])
 
+    # glTexCoord2f(1.0, 0.0)
     glTexCoord2f(1.0, 1.0)
+
     glVertex2f(*quad[1])
 
-    glTexCoord2f(0.0, 1.0)
-    glVertex2f(*quad[0])
+    # glTexCoord2f(1.0, 1.0)
+    glTexCoord2f(1.0, 0.0)
+
+    glVertex2f(*quad[2])
+
+    # glTexCoord2f(0.0, 1.0)
+    glTexCoord2f(0.0, 0.0)
+
+    glVertex2f(*quad[3])
     glEnd()
+
+
+
 
     glDisable(GL_TEXTURE_2D)
 

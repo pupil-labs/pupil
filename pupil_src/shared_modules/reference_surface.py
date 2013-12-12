@@ -10,7 +10,7 @@
 
 import numpy as np
 import cv2
-from gl_utils import draw_gl_polyline,draw_gl_point,draw_gl_point_norm,draw_gl_points
+from gl_utils import draw_gl_polyline_norm,draw_gl_points_norm,draw_gl_point_norm
 from methods import GetAnglesPolyline,normalize
 
 #ctypes import for atb_vars:
@@ -108,9 +108,9 @@ class Reference_Surface(object):
 
             return
 
-        all_verts = np.array([[m['verts'] for m in visible_markers]])
+        all_verts = np.array([[m['verts_norm'] for m in visible_markers]])
         all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
-        hull = cv2.convexHull(all_verts,clockwise=True)
+        hull = cv2.convexHull(all_verts,clockwise=False)
 
         #simplyfy until we have excatly 4 verts
         if hull.shape[0]>4:
@@ -125,7 +125,7 @@ class Reference_Surface(object):
         #now we need to roll the hull verts until we have the right orientation:
         distance_to_origin = np.sqrt(hull[:,:,0]**2+hull[:,:,1]**2)
         top_left_idx = np.argmin(distance_to_origin)
-        hull = np.roll(hull,3-top_left_idx,axis=0)
+        hull = np.roll(hull,-top_left_idx,axis=0)
 
 
         #based on these 4 verts we calculate the transformations into a 0,0 1,1 square space
@@ -182,7 +182,7 @@ class Reference_Surface(object):
             self.detected_markers = len(overlap)
             if len(overlap)>=min(2,len(requested_ids)):
                 self.detected = True
-                yx = np.array( [marker_by_id[i]['verts'] for i in overlap] )
+                yx = np.array( [marker_by_id[i]['verts_norm'] for i in overlap] )
                 uv = np.array( [self.markers[i].uv_coords for i in overlap] )
                 yx.shape=(-1,1,2)
                 uv.shape=(-1,1,2)
@@ -196,42 +196,9 @@ class Reference_Surface(object):
                 self.m_from_screen = None
                 self.m_to_screen = None
 
-    def get_m_uv_to_img_norm(self,img_shape):
-        """
-        calc the transfomration matrix from uv to normalized screen coords.
-        this requires m_uv_to_screen to be avaiable.
-        """
-        # calculate the perspective transformation to render just the detected surface inside a window
-        # quad is 4 corners in normalized coord space
-        quad = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
-        # if you treat this quad as the corners of the ref surf, you can infer the ref corners in img space by multiplying the quad with m_to_screen
-        surf_corners_in_img = cv2.perspectiveTransform(quad,self.m_to_screen)
-        surf_corners_in_img.shape = (-1,2)
-        # this is the ref surf container in normalized screen coords
-        surf_corners_in_img_norm = np.array([normalize(pos,(img_shape[1],img_shape[0]),flip_y=True) for pos in surf_corners_in_img],dtype=np.float32)
-        # m will be the transform to strech the img rects such that the corners of the surface of the img are at the corners of the norm. coord system.
-        m = cv2.getPerspectiveTransform(surf_corners_in_img_norm,quad)
-        return m
 
-    def get_m_uv_from_img_norm(self,img_shape):
-        """
-        calc the transfomration matrix from uv to normalized screen coords.
-        this requires m_uv_to_screen to be avaiable.
-        """
-        # calculate the perspective transformation to render just the detected surface inside a window
-        # quad is 4 corners in normalized coord space
-        quad = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
-        # if you treat this quad as the corners of the ref surf, you can infer the ref corners in img space by multiplying the quad with m_to_screen
-        surf_corners_in_img = cv2.perspectiveTransform(quad,self.m_to_screen)
-        surf_corners_in_img.shape = (-1,2)
-        # this is the ref surf container in normalized screen coords
-        surf_corners_in_img_norm = np.array([normalize(pos,(img_shape[1],img_shape[0]),flip_y=True) for pos in surf_corners_in_img],dtype=np.float32)
-        # m will be the transform to strech the img rects such that the corners of the surface of the img are at the corners of the norm. coord system.
-        m = cv2.getPerspectiveTransform(quad,surf_corners_in_img_norm)
-        # cv uses 3x3 gl uses 4x4 tranformation matricies
-        return m
 
-    def xy_to_uv(self,pos):
+    def img_to_ref_surface(self,pos):
         if self.m_from_screen is not None:
             #convenience lines to allow 'simple' vectors (x,y) to be used
             shape = pos.shape
@@ -242,7 +209,7 @@ class Reference_Surface(object):
         else:
             return None
 
-    def uv_to_xy(self,pos):
+    def ref_surface_to_img(self,pos):
         if self.m_to_screen is not None:
             #convenience lines to allow 'simple' vectors (x,y) to be used
             shape = pos.shape
@@ -283,13 +250,13 @@ class Reference_Surface(object):
         draw surface and markers
         """
         if self.detected:
-            frame = np.array([[[0,0],[0,1],[1,1],[1,0],[0,0]]],dtype=np.float32)
-            hat = np.array([[[.3,.7],[.5,.9],[.7,.7],[.3,.7]]],dtype=np.float32)
+            frame = np.array([[[0,0],[1,0],[1,1],[0,1],[0,0]]],dtype=np.float32)
+            hat = np.array([[[.3,.7],[.7,.7],[.5,.9],[.3,.7]]],dtype=np.float32)
             hat = cv2.perspectiveTransform(hat,self.m_to_screen)
             frame = cv2.perspectiveTransform(frame,self.m_to_screen)
             alpha = min(1,self.build_up_status/self.required_build_up)
-            draw_gl_polyline(frame.reshape((5,2)),(1.0,0.2,0.6,alpha))
-            draw_gl_polyline(hat.reshape((4,2)),(1.0,0.2,0.6,alpha))
+            draw_gl_polyline_norm(frame.reshape((5,2)),(1.0,0.2,0.6,alpha))
+            draw_gl_polyline_norm(hat.reshape((4,2)),(1.0,0.2,0.6,alpha))
 
 
     def gl_draw_corners(self):
@@ -297,9 +264,9 @@ class Reference_Surface(object):
         draw surface and markers
         """
         if self.detected:
-            frame = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
+            frame = np.array([[[0,0],[1,0],[1,1],[0,1]]],dtype=np.float32)
             frame = cv2.perspectiveTransform(frame,self.m_to_screen)
-            draw_gl_points(frame.reshape((4,2)),15,(1.0,0.2,0.6,.5))
+            draw_gl_points_norm(frame.reshape((4,2)),15,(1.0,0.2,0.6,.5))
 
 
 class Support_Marker(object):

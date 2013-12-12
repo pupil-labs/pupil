@@ -12,7 +12,7 @@ import os
 import cv2
 import numpy as np
 import shelve
-from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, redraw_gl_texture
+from gl_utils import draw_gl_polyline,draw_gl_polyline_norm,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, redraw_gl_texture
 from methods import normalize,denormalize
 import atb
 import audio
@@ -119,7 +119,8 @@ class Marker_Detector(Plugin):
                     x,y = pos
                     for s in self.surfaces:
                         if s.detected:
-                            for (vx,vy),i in zip(s.uv_to_xy(np.array(surf_verts)),range(4)):
+                            for (vx,vy),i in zip(s.ref_surface_to_img(np.array(surf_verts)),range(4)):
+                                vx,vy = denormalize((vx,vy),(self.img_shape[1],self.img_shape[0]),flip_y=True)
                                 if sqrt((x-vx)**2 + (y-vy)**2) <15: #img pixels
                                     self.edit_surfaces.append((s,i))
 
@@ -206,6 +207,8 @@ class Marker_Detector(Plugin):
         if self.draw_markers.value:
             draw_markers(img,self.markers)
 
+        # print self.markers
+
         for s in self.surfaces:
             s.locate(self.markers)
             if s.detected:
@@ -219,16 +222,16 @@ class Marker_Detector(Plugin):
 
             for s,v_idx in self.edit_surfaces:
                 if s.detected:
-                    new_pos =  s.xy_to_uv(np.array(pos))
+                    pos = normalize(pos,(self.img_shape[1],self.img_shape[0]),flip_y=True)
+                    new_pos =  s.img_to_ref_surface(np.array(pos))
                     s.move_vertex(v_idx,new_pos)
 
         #map recent gaze onto detected surfaces used for pupil server
         for p in recent_pupil_positions:
             if p['norm_pupil'] is not None:
-                img_gaze = denormalize(p['norm_gaze'],(frame.img.shape[1],frame.img.shape[0]),flip_y=True)
                 for s in self.surfaces:
                     if s.detected:
-                        p['realtime gaze on '+s.name] = tuple(s.xy_to_uv(np.array(img_gaze)))
+                        p['realtime gaze on '+s.name] = tuple(s.img_to_ref_surface(np.array(p['norm_gaze'])))
 
 
         if self._window:
@@ -278,10 +281,8 @@ class Marker_Detector(Plugin):
         glfwMakeContextCurrent(self._window)
         clear_gl_screen()
 
-        # calculate the perspective transformation to render just the detected surface inside a window
-        m = surface.get_m_uv_to_img_norm(self.img_shape)
         # cv uses 3x3 gl uses 4x4 tranformation matricies
-        m = cvmat_to_glmat(m)
+        m = cvmat_to_glmat(surface.m_from_screen)
 
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
