@@ -15,6 +15,7 @@ from multiprocessing.sharedctypes import RawValue, Value, Array
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
+        # Specifiy user dirs.
         user_dir = os.path.expanduser('~/Desktop/pupil_settings')
         rec_dir = os.path.expanduser('~/Desktop/pupil_recordings')
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
@@ -96,7 +97,7 @@ def main():
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
     # eye_src = "/Users/mkassner/Pupil/datasets/eye2_fieldtest/eye 10.avi"
-    # world_src = "/Users/mkassner/Downloads/2013_10_22_M25/000/world.avi"
+    # world_src = "/Users/mkassner/Downloads/testdata/single/video.avi"
 
     # Camera video size in pixels (width,height)
     eye_size = (640,360)

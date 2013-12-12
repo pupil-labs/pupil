@@ -7,11 +7,4 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-from utils import adjust_gl_view, draw_gl_texture, clear_gl_screen,draw_gl_point, draw_gl_point_norm,draw_gl_points,draw_gl_points_norm, draw_gl_polyline_norm,draw_gl_polyline,basic_gl_setup
-from shader import Shader
-from vertex_buffer import VertexBuffer
-
-import numpy as np
-from OpenGL.GL import *
-
-
+from utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, redraw_gl_texture, clear_gl_screen, draw_gl_point, draw_gl_point_norm,draw_gl_points, draw_gl_points_norm, draw_gl_polyline_norm,draw_gl_polyline,cvmat_to_glmat

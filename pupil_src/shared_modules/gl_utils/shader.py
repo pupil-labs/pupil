@@ -32,6 +32,9 @@
     shader.unbind()
 '''
 import os
+import OpenGL
+# OpenGL.FULL_LOGGING = True
+OpenGL.ERROR_LOGGING = False
 import OpenGL.GL as gl
 import ctypes
 

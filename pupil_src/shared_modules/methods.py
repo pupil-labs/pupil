@@ -195,7 +195,7 @@ def curvature(c):
 
 
 
-def GetAnglesPolyline(polyline):
+def GetAnglesPolyline(polyline,closed=False):
     """
     see: http://stackoverflow.com/questions/3486172/angle-between-3-points
     ported to numpy
@@ -203,10 +203,15 @@ def GetAnglesPolyline(polyline):
     """
 
     points = polyline[:,0]
-    a = points[0:-2] # all "a" points
-    b = points[1:-1] # b
-    c = points[2:]  # c points
 
+    if closed:
+        a = np.roll(points,1,axis=0)
+        b = points
+        c = np.roll(points,-1,axis=0)
+    else:
+        a = points[0:-2] # all "a" points
+        b = points[1:-1] # b
+        c = points[2:]  # c points
     # ab =  b.x - a.x, b.y - a.y
     ab = b-a
     # cb =  b.x - c.x, b.y - c.y
@@ -448,10 +453,10 @@ def normalize(pos, (width, height),flip_y=False):
     """
     x = pos[0]
     y = pos[1]
-    x = (x-width/2.)/(width/2.)
-    y = (y-height/2.)/(height/2.)
+    x /=float(width)
+    y /=float(height)
     if flip_y:
-        return x,-y
+        return x,1-y
     return x,y
 
 def denormalize(pos, (width, height), flip_y=False):
@@ -460,10 +465,10 @@ def denormalize(pos, (width, height), flip_y=False):
     """
     x = pos[0]
     y = pos[1]
-    x = (x*width/2.)+(width/2.)
+    x *= width
     if flip_y:
-        y = -y
-    y = (y*height/2.)+(height/2.)
+        y = 1-y
+    y *= height
     return x,y
 
 
@@ -638,17 +643,18 @@ if __name__ == '__main__':
     #    |
     #  *-*
     pl = np.array([[[0, 0]],[[0, 1]],[[1, 1]],[[2, 1]],[[2, 2]],[[1, 3]],[[1, 4]],[[2,4]]], dtype=np.int32)
-    curvature = GetAnglesPolyline(pl)
+    curvature = GetAnglesPolyline(pl,closed=0)
     print curvature
+    curvature = GetAnglesPolyline(pl,closed=1)
     # print curvature
     # print find_curv_disc(curvature)
     # idx =  find_kink_and_dir_change(curvature,60)
     # print idx
     # print split_at_corner_index(pl,idx)
-    ellipse = ((0,0),(np.sqrt(2),np.sqrt(2)),0)
-    pts = np.array([(0,1),(.5,.5),(0,-1)])
-    # print pts.dtype
-    print dist_pts_ellipse(ellipse,pts)
+    # ellipse = ((0,0),(np.sqrt(2),np.sqrt(2)),0)
+    # pts = np.array([(0,1),(.5,.5),(0,-1)])
+    # # print pts.dtype
+    # print dist_pts_ellipse(ellipse,pts)
     # print pts
     # # print test()
 

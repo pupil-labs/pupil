@@ -6,6 +6,8 @@ import numpy as np
 from plugin import Plugin
 from time import strftime,localtime,time,gmtime
 from ctypes import create_string_buffer
+from shutil import copy2
+from glob import glob
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -63,8 +65,7 @@ class Recorder(Plugin):
         self._bar = atb.Bar(name = self.__class__.__name__, label='REC: '+session_str,
             help="capture recording control", color=(220, 0, 0), alpha=150,
             text='light', position=atb_pos,refresh=.3, size=(300, 80))
-        self._bar.rec_name = create_string_buffer(512)
-        self._bar.add_var("rec time",self._bar.rec_name, getter=lambda: create_string_buffer(self.get_rec_time_str(),512), readonly=True)
+        self._bar.add_var("rec time",create_string_buffer(512), getter=lambda: create_string_buffer(self.get_rec_time_str(),512), readonly=True)
         self._bar.add_button("stop",self.on_stop, key="s", help="stop recording")
         self._bar.define("contained=true")
 
@@ -72,7 +73,7 @@ class Recorder(Plugin):
         rec_time = gmtime(time()-self.start_time)
         return strftime("%H:%M:%S", rec_time)
 
-    def update(self, frame,recent_pupil_positons):
+    def update(self,frame,recent_pupil_positons,events):
         self.frame_count += 1
         for p in recent_pupil_positons:
             if p['norm_pupil'] is not None:
@@ -97,6 +98,11 @@ class Recorder(Plugin):
         timestamps_path = os.path.join(self.rec_path, "timestamps.npy")
         np.save(timestamps_path,np.array(self.timestamps))
 
+        try:
+            surface_definitions_file = glob(os.path.join(self.g_pool.user_dir,"surface_definitions*"))[0].rsplit(os.path.sep,1)[-1]
+            copy2(os.path.join(self.g_pool.user_dir,surface_definitions_file),os.path.join(self.rec_path,surface_definitions_file))
+        except:
+            logger.info("No surface_definitions data found. You may wnat this if you do marker tracking.")
 
         try:
             cal_pt_cloud = np.load(os.path.join(self.g_pool.user_dir,"cal_pt_cloud.npy"))
@@ -118,19 +124,19 @@ class Recorder(Plugin):
 
         try:
             with open(self.meta_info_path, 'a') as f:
-                f.write("Duration Time: \t"+ self.get_rec_time_str()+ "\n")
-                f.write("World Camera Frames: \t"+ str(self.frame_count)+ "\n")
-                f.write("World Camera Resolution: \t"+ str(self.width)+"x"+str(self.height)+"\n")
-                f.write("Capture Software Version: \t"+ self.g_pool.version + "\n")
-                f.write("user:\t"+os.getlogin()+"\n")
+                f.write("Duration Time\t"+ self.get_rec_time_str()+ "\n")
+                f.write("World Camera Frames\t"+ str(self.frame_count)+ "\n")
+                f.write("World Camera Resolution\t"+ str(self.width)+"x"+str(self.height)+"\n")
+                f.write("Capture Software Version\t"+ self.g_pool.version + "\n")
+                f.write("User\t"+os.getlogin()+"\n")
                 try:
                     sysname, nodename, release, version, machine = os.uname()
                 except:
                     sysname, nodename, release, version, machine = sys.platform,None,None,None,None
-                f.write("Platform:\t"+sysname+"\n")
-                f.write("Machine:\t"+nodename+"\n")
-                f.write("Release:\t"+release+"\n")
-                f.write("Version:\t"+version+"\n")
+                f.write("Platform\t"+sysname+"\n")
+                f.write("Machine\t"+nodename+"\n")
+                f.write("Release\t"+release+"\n")
+                f.write("Version\t"+version+"\n")
         except:
             logger.warning("Could not save metadata. Please report this bug!")
 

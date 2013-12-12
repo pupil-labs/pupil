@@ -38,6 +38,18 @@ def main():
     gaze_positions_path = data_folder + "/gaze_positions.npy"
     record_path = data_folder + "/world_viz.avi"
 
+    #deal with older recordings that use a different coodinate system.
+    with open(data_folder + "/info.csv") as info:
+        data = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
+    version = [v for k,v in data.iteritems() if "Capture Software Version" in k ][0]
+    version = int(filter(type(version).isdigit, version)[:3]) #(get major,minor,fix of version)
+    if version < 36:
+        denormalize = denormalize_legacy
+    else:
+        global denormalize
+
+
+
     cap = cv.VideoCapture(video_path)
     gaze_list = list(np.load(gaze_positions_path))
     timestamps = list(np.load(timestamps_path))
@@ -122,7 +134,7 @@ def main():
         for x in xrange(len(past_gaze)-vap):
             past_gaze.pop(0)
 
-        size = 20 
+        size = 20
 
         p_gaze = np.array(past_gaze)
         d = np.abs(p_gaze[:-1]-p_gaze[1:])
@@ -135,8 +147,8 @@ def main():
             man = x_dist + y_dist
             if man < manhattan_dist:
                 cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size, (60, 20, 220), 2, cv.cv.CV_AA)
-        
-    
+
+
         cv.imshow(window_string, img)
         if save_video:
             writer.write(img)
@@ -150,15 +162,28 @@ def main():
 
 def denormalize(pos, width, height, flip_y=True):
     """
+    denormalize
+    """
+    x = pos[0]
+    y = pos[1]
+    x *= width
+    if flip_y:
+        y = 1-y
+    y *= height
+    return int(x),int(y)
+
+
+def denormalize_legacy(pos, width, height, flip_y=True):
+    """
     denormalize and return as int
     """
     x = pos[0]
     y = pos[1]
     if flip_y:
-        y= -y
+        y=-y
     x = (x * width / 2.) + (width / 2.)
     y = (y * height / 2.) + (height / 2.)
-    return x,y
+    return int(x), int(y)
 
 
 if __name__ == '__main__':

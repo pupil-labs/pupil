@@ -30,7 +30,7 @@ import atb
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
-from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm
+from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
 from uvc_capture import autoCreateCapture
 import calibrate
 # Plug-ins
@@ -39,6 +39,7 @@ import recorder
 from show_calibration import Show_Calibration
 from display_gaze import Display_Gaze
 from pupil_server import Pupil_Server
+from marker_detector import Marker_Detector
 
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
@@ -73,12 +74,11 @@ def world(g_pool,cap_src,cap_size):
 
     def on_button(window,button, action, mods):
         if not atb.TwEventMouseButtonGLFW(button,action):
-            if action == GLFW_PRESS:
-                pos = glfwGetCursorPos(window)
-                pos = normalize(pos,glfwGetWindowSize(world_window))
-                pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
-                for p in g.plugins:
-                    p.on_click(pos)
+            pos = glfwGetCursorPos(window)
+            pos = normalize(pos,glfwGetWindowSize(world_window))
+            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
+            for p in g.plugins:
+                p.on_click(pos,button,action)
 
     def on_pos(window,x, y):
         if atb.TwMouseMotion(int(x),int(y)):
@@ -174,8 +174,19 @@ def world(g_pool,cap_src,cap_size):
                 p.alive = False
                 return
 
-        new_plugin = Pupil_Server(g_pool,(10,400))
+        new_plugin = Pupil_Server(g_pool,(10,300))
         g.plugins.append(new_plugin)
+
+
+    def toggle_ar():
+        for p in g.plugins:
+            if isinstance(p,Marker_Detector):
+                p.alive = False
+                return
+
+        new_plugin = Marker_Detector(g_pool,(10,400))
+        g.plugins.insert(0,new_plugin) #do this before the server or recorder
+
 
     atb.init()
     # add main controls ATB bar
@@ -200,6 +211,7 @@ def world(g_pool,cap_src,cap_size):
     bar.add_var("session name",bar.rec_name, group="Recording", help="creates folder Data_Name_XXX, where xxx is an increasing number")
     bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
     bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
+    bar.add_button("start/stop marker tracking",toggle_ar,key="x",help="find markers in scene to map gaze onto referace surfaces")
     bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
     bar.add_separator("Sep1")
     bar.add_var("version",bar.version, readonly=True)
@@ -251,18 +263,18 @@ def world(g_pool,cap_src,cap_size):
     open_calibration(bar.calibration_type.value,bar.calibration_type)
 
     #load gaze_display plugin
-    g.plugins.append(Display_Gaze(g_pool,None))
-
-    #load pupil server plugin
-    # toggle_server()
+    g.plugins.append(Display_Gaze(g_pool))
 
     # Event loop
-
     while not g_pool.quit.value:
 
         # Get an image from the grabber
         frame = cap.get_frame()
         update_fps()
+
+
+        #a container that allows plugins to post and read events
+        events = []
 
         #receive and map pupil positions
         recent_pupil_positions = []
@@ -277,7 +289,7 @@ def world(g_pool,cap_src,cap_size):
 
         # allow each Plugin to do its work.
         for p in g.plugins:
-            p.update(frame,recent_pupil_positions)
+            p.update(frame,recent_pupil_positions,events)
 
         #check if a plugin need to be destroyed
         g.plugins = [p for p in g.plugins if p.alive]

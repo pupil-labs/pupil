@@ -11,19 +11,18 @@
 from gl_utils import draw_gl_points_norm
 from plugin import Plugin
 import numpy as np
-import OpenGL.GL as gl
 
 from methods import denormalize
 
 class Display_Gaze(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool,atb_pos):
+    def __init__(self, g_pool,atb_pos=None):
         super(Display_Gaze, self).__init__()
         self.g_pool = g_pool
         self.atb_pos = atb_pos
         self.pupil_display_list = []
 
-    def update(self,frame,recent_pupil_positions):
+    def update(self,frame,recent_pupil_positions,events):
         for pt in recent_pupil_positions:
             if pt['norm_gaze'] is not None:
                 self.pupil_display_list.append(pt['norm_gaze'])
