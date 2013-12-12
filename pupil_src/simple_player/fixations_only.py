@@ -35,6 +35,18 @@ def main():
     gaze_positions_path = data_folder + "/gaze_positions.npy"
     record_path = data_folder + "/world_viz.avi"
 
+    #deal with older recordings that use a different coodinate system.
+    with open(data_folder + "/info.csv") as info:
+        data = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
+    version = [v for k,v in data.iteritems() if "Capture Software Version" in k ][0]
+    version = int(filter(type(version).isdigit, version)[:3]) #(get major,minor,fix of version)
+    if version < 36:
+        denormalize = denormalize_legacy
+    else:
+        global denormalize
+
+
+
     cap = cv.VideoCapture(video_path)
     gaze_list = list(np.load(gaze_positions_path))
     timestamps = list(np.load(timestamps_path))
@@ -111,7 +123,7 @@ def main():
                 past_gaze.append([x,y])
 
 
-        vap = 20 #Visual_Attention_Span
+        vap = 10 #Visual_Attention_Span
         window_string = "the last %i frames of visual attention" %vap
         overlay = np.zeros(img.shape,dtype=img.dtype)
 
@@ -122,8 +134,9 @@ def main():
 
         # draw recent gaze postions as white dots on an overlay image
 
-        string = []
-        size = vap - len(past_gaze) # the most recent point is always vap big regardless of actual point hist lengh.
+        fixations = []
+        size = 20
+        size -= len(past_gaze) # the most recent point is always vap big regardless of actual point hist lengh.
 
         p_gaze = np.array(past_gaze)
         d = np.abs(p_gaze[:-1]-p_gaze[1:])
@@ -135,18 +148,18 @@ def main():
             y_dist = abs(gaze_point[1] - next_point[1])
             man = x_dist + y_dist
             if man < 20:
-                string.append((int(gaze_point[0]),int(gaze_point[1])))
-                cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size*2, (255, 255, 255), 1, cv.cv.CV_AA)
+                fixations.append((int(gaze_point[0]),int(gaze_point[1])))
+                cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size, (95, 240, 0), 1, cv.cv.CV_AA)
             else:
                 cv.circle(img,(int(gaze_point[0]),int(gaze_point[1])), size, (255, 0, 0), 1, cv.cv.CV_AA)
                 pass
 
-            size +=1 # more recent gaze points are bigger
-        # print manhattan
-        if string:
+            size += 2 # more recent gaze points are bigger
+
+        if fixations:
             # print pts.shape
-            pts = np.array(string,dtype=np.int32)
-            cv.polylines(img, [pts], isClosed=False, color=(255,255,255),thickness= 5,lineType=cv.cv.CV_AA)
+            pts = np.array(fixations,dtype=np.int32)
+            cv.polylines(img, [pts], isClosed=False, color=(60,20,220),thickness= 2,lineType=cv.cv.CV_AA)
         if past_gaze:
             # print pts.shape
             pts = np.array(past_gaze,dtype=np.int32)
@@ -166,16 +179,28 @@ def main():
 
 def denormalize(pos, width, height, flip_y=True):
     """
+    denormalize
+    """
+    x = pos[0]
+    y = pos[1]
+    x *= width
+    if flip_y:
+        y = 1-y
+    y *= height
+    return int(x),int(y)
+
+
+def denormalize_legacy(pos, width, height, flip_y=True):
+    """
     denormalize and return as int
     """
     x = pos[0]
     y = pos[1]
     if flip_y:
-        y= -y
+        y=-y
     x = (x * width / 2.) + (width / 2.)
     y = (y * height / 2.) + (height / 2.)
-    return x,y
-
+    return int(x), int(y)
 
 if __name__ == '__main__':
     main()

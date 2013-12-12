@@ -186,6 +186,9 @@ class VideoCapture(object):
             self.prefered_format =  "MJPG"
         elif ["YUYV"] in self.formats:
             self.prefered_format =  "YUYV"
+        else:
+            logger.warning('Camera does not support the usual img transport formats.')
+            self.prefered_format = self.formats[0]
         logger.debug('Fromat choosen: %s'%self.prefered_format)
 
         #camera settings in v4l2 structures

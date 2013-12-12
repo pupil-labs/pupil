@@ -1,4 +1,8 @@
 
+
+import logging
+logger = logging.getLogger(__name__)
+
 class Plugin(object):
     """docstring for Plugin
 
@@ -23,11 +27,7 @@ class Plugin(object):
         """
         if not self._alive:
             if hasattr(self,"cleanup"):
-                try:
                     self.cleanup()
-                except:
-                    print "cleanup failed. This is a bug. Please report"
-
         return self._alive
 
     @alive.setter
@@ -35,13 +35,13 @@ class Plugin(object):
         if isinstance(value,bool):
             self._alive = value
 
-    def on_click(self,pos):
+    def on_click(self,pos,button,action):
         """
         gets called when the user clicks in the window screen
         """
         pass
 
-    def update(self,img,recent_pupil_posotions):
+    def update(self,frame,recent_pupil_positions,events):
         """
         gets called once every frame
         """
@@ -155,7 +155,7 @@ class Example_Plugin(Plugin):
             self.window_should_close = False
 
 
-    def update(self,frame,recent_pupil_positions):
+    def update(self,frame,recent_pupil_positions,events):
 
         if self.window_should_close:
             self.close_window()

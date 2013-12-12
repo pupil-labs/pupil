@@ -21,10 +21,12 @@ class Pupil_Server(Plugin):
 
         self._bar = atb.Bar(name = self.__class__.__name__, label='Server',
             help=help_str, color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
+            text='light', position=atb_pos,refresh=.3, size=(300,40))
         self._bar.define("valueswidth=170")
         self._bar.add_var("server address",self.address, getter=lambda:self.address, setter=self.set_server)
-        self._bar.add_button("close", self.close, key="x", help="close calibration results visualization")
+
+
+        self.exclude_list = ['ellipse','pos_in_roi','major','minor','axes','angle','center']
 
     def set_server(self,new_address):
         try:
@@ -33,15 +35,19 @@ class Pupil_Server(Plugin):
         except zmq.ZMQError:
             print "Could not set Socket."
 
-    def update(self,img,recent_pupil_positions):
+    def update(self,frame,recent_pupil_positions,events):
         for p in recent_pupil_positions:
-            msg = "Pupil"
-            msg +=" pupil_pos:"+str(p["norm_pupil"])
-            msg +=" gaze_pos:"+str(p["norm_gaze"])
-            msg +=" timestamp"+str(p["timestamp"])
-            # or send everything
-            # for key,value in p.iteritems():
-            #     msg +=" "+key+":"+str(value)
+            msg = "Pupil\n"
+            for key,value in p.iteritems():
+                if key not in self.exclude_list:
+                    msg +=key+":"+str(value)+'\n'
+            self.socket.send( msg )
+
+        for e in events:
+            msg = 'Event'+'\n'
+            for key,value in e.iteritems():
+                if key not in self.exclude_list:
+                    msg +=key+":"+str(value).replace('\n','')+'\n'
             self.socket.send( msg )
 
     def close(self):
