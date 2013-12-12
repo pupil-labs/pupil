@@ -322,7 +322,7 @@ class Marker_Detector(Plugin):
         if you have an atb bar or glfw window destroy it here.
         """
 
-        self.save("square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces])
+        self.save("square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
         self.surface_definitions.close()
 
         if self._window:
