@@ -77,6 +77,9 @@ quit = False
 
 
 def main():
+
+
+
         # Callback functions
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
@@ -114,6 +117,8 @@ def main():
     def on_close(window):
         quit = True
         logger.info('Process closing from window')
+
+
 
 
 
