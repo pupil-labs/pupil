@@ -291,13 +291,18 @@ def bench_cv():
     logging.basicConfig()
     logger.setLevel(logging.DEBUG)
     cap = cv2.VideoCapture("/Users/mkassner/Pupil/pupil_code/recordings/2013_12_11/000/world.avi")
-    for x in range(300):
+    for x in range(400):
+        print cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
         s,frame = cap.read()
-        print frame.shape
-        # cv2.imshow("Gstreamer test",frame.img)
+        # print frame.shape
+        # cv2.imshow("Gstreamer test",frame)
         # cv2.waitKey(1)
-        # if x == 100:
-            # cap.seek_frame(0)
+        # sleep(0.02)
+        if x == 200:
+            print "seeking to 100"
+            cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES,90)
+            while cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES) < 100:
+                s,_=cap.read()
 
     # cap.read() #flush out old frame
     cv2.destroyWindow("Gstreamer test")
