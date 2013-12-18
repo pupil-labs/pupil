@@ -289,8 +289,9 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
     if 1:
+        main()
+    else:
         import cProfile,subprocess,os
         cProfile.runctx("main()",{},locals(),"player.pstats")
         loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
