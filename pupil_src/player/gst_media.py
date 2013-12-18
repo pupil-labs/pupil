@@ -288,28 +288,33 @@ def bench():
 
 def bench_cv():
     import cv2
+    print cv2.__version__
     logging.basicConfig()
     logger.setLevel(logging.DEBUG)
-    cap = cv2.VideoCapture("/Users/mkassner/Pupil/pupil_code/recordings/2013_12_11/000/world.avi")
-    for x in range(400):
+    cap = cv2.VideoCapture("/Users/mkassner/Pupil/pupil_code/recordings/2013_12_18/005/world.avi")
+    width,heigth = cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH),cap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
+    print 'framerate',cap.get(cv2.cv.CV_CAP_PROP_FPS)
+    for x in range(100):
         print cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
         s,frame = cap.read()
         # print frame.shape
-        # cv2.imshow("Gstreamer test",frame)
-        # cv2.waitKey(1)
+        cv2.imshow("Gstreamer test",frame)
+        cv2.waitKey(1)
         # sleep(0.02)
-        if x == 200:
+        if x == 50:
             print "seeking to 100"
-            cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES,90)
-            while cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES) < 100:
-                s,_=cap.read()
+            seek_target = 20
+            print cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES,10)
+            # while cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES) < seek_target:
+                # print "seek:",cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
+                # s,_=cap.read()
 
     # cap.read() #flush out old frame
     cv2.destroyWindow("Gstreamer test")
 
 def bench_compare():
     bench_cv()
-    bench()
+    # bench()
 
 if __name__ == '__main__':
 
