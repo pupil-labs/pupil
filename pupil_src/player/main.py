@@ -35,8 +35,9 @@ from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_s
 # Plug-ins
 from display_gaze import Display_Gaze
 from seek_bar import Seek_Bar
+
+
 import logging
-# Set up root logger for the main process before doing imports of logged modules.
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
@@ -57,6 +58,7 @@ logger.addHandler(ch)
 logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 
+logger = logging.getLogger(__name__)
 
 
 version = "dev"
@@ -103,8 +105,12 @@ def main():
         logger.info('Process closing from window')
 
 
-
-    data_folder = "/Users/mkassner/Pupil/pupil_code/recordings/2013_12_11/000"
+    try:
+        data_folder = sys.argv[1]
+    except:
+        logger.warning("You did not supply a datafolder when you called this script. \
+               \nI will use the path hardcoded into the script instead.")
+        data_folder = "/Users/mkassner/Pupil/pupil_code/recordings/2013_12_11/000"
 
     #parse and load data folder info
     video_path = data_folder + "/world.avi"

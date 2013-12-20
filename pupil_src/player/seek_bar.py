@@ -53,7 +53,6 @@ class Seek_Bar(Plugin):
                 self.g_pool.new_seek = True
 
 
-
     def on_click(self,img_pos,button,action):
         """
         gets called when the user clicks in the window screen
@@ -70,6 +69,11 @@ class Seek_Bar(Plugin):
 
         elif action == GLFW_RELEASE:
             if self.drag_mode:
+                norm_seek_pos, _ = self.screen_to_seek_bar(pos)
+                norm_seek_pos = min(1,max(0,norm_seek_pos))
+                seek_pos = int(norm_seek_pos*self.frame_count)
+                self.cap.seek_to_frame(seek_pos)
+                self.g_pool.new_seek = True
                 self.drag_mode=False
                 self.g_pool.play = self.was_playing
 
@@ -103,8 +107,13 @@ class Seek_Bar(Plugin):
         glPushMatrix()
         glLoadIdentity()
 
-        draw_gl_point((self.norm_seek_pos,0))
-        draw_gl_polyline( [(0,0),(1,0)],color=(1,0,0,1))
+        if self.drag_mode:
+            color = (0.,.8,.5,1.)
+        else:
+            color = (.1,.8,.8,1.)
+
+        draw_gl_polyline( [(0,0),(1,0)],color=(.5,.5,.5,.5))
+        draw_gl_point((self.norm_seek_pos,0),color=color)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
