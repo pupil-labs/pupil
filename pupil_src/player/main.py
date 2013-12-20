@@ -34,7 +34,7 @@ from methods import normalize, denormalize,Temp
 from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
 # Plug-ins
 from display_gaze import Display_Gaze
-
+from seek_bar import Seek_Bar
 import logging
 # Set up root logger for the main process before doing imports of logged modules.
 logger = logging.getLogger()
@@ -184,6 +184,14 @@ def main():
     basic_gl_setup()
 
 
+    # create container for globally scoped vars (within world)
+    g = Temp()
+    g.plugins = []
+    g.play = False
+    g.new_seek = True
+    g.plugins.append(Display_Gaze(g))
+    g.plugins.append(Seek_Bar(g,capture=cap))
+
     # helpers called by the main atb bar
     def update_fps():
         old_time, bar.timestamp = bar.timestamp, time()
@@ -204,8 +212,11 @@ def main():
         """
         return data.value
 
-    def atb_seek(frame_pos):
-        cap.seek_to_frame(frame_pos)
+    def get_play():
+        return g.play
+
+    def set_play(value):
+        g.play = value
 
     atb.init()
     # add main controls ATB bar
@@ -223,8 +234,8 @@ def main():
     bar._fps = c_float(cap.get_fps())
     bar.add_var("recoding fps",bar._fps,readonly=True)
     bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
-    bar._frame = c_int(0)
-    bar.add_var("current frame",bar._frame, getter=cap.get_frame_index, setter=atb_seek)
+    bar.add_var("play",vtype=c_bool,getter=get_play,setter=set_play,key="space")
+    bar.add_var("current frame",getter=cap.get_frame_index)
     bar.add_var("version of recording",bar.recording_version, readonly=True, help="version of the capture software used to make this recording")
     bar.add_var("version of player",bar.version, readonly=True, help="version of the Pupil Player")
     bar.add_button("exit", on_close,data=main_window,key="esc")
@@ -234,23 +245,27 @@ def main():
     on_resize(main_window, *glfwGetFramebufferSize(main_window))
     glfwSetWindowPos(main_window,0,0)
 
-    # create container for globally scoped vars (within world)
-    g = Temp()
-    g.plugins = []
 
-    g.plugins.append(Display_Gaze(g))
 
     while not glfwWindowShouldClose(main_window):
 
-        frame = cap.get_frame()
+        #grab new frame
+        if g.play or g.new_seek:
+            new_frame = cap.get_frame()
+            g.new_seek = False
+            #end of video frame logic: pause at last frame.
+            if not new_frame:
+                g.play=False
+            else:
+                frame = new_frame
+
         update_fps()
 
-        # sleep(.3)
-        if not frame:
-            break
 
+        #new positons and events
         current_pupil_positions = positions_by_frame[frame.index]
         events = None
+
         # allow each Plugin to do its work.
         for p in g.plugins:
             p.update(frame,current_pupil_positions,events)
