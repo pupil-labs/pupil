@@ -241,7 +241,7 @@ def main():
     bar.add_var("recoding fps",bar._fps,readonly=True)
     bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
     bar.add_var("play",vtype=c_bool,getter=get_play,setter=set_play,key="space")
-    bar.add_var("current frame",getter=cap.get_frame_index)
+    bar.add_var("next frame",getter=cap.get_frame_index)
     bar.add_var("version of recording",bar.recording_version, readonly=True, help="version of the capture software used to make this recording")
     bar.add_var("version of player",bar.version, readonly=True, help="version of the Pupil Player")
     bar.add_button("exit", on_close,data=main_window,key="esc")
@@ -259,7 +259,7 @@ def main():
         if g.play or g.new_seek:
             new_frame = cap.get_frame()
             g.new_seek = False
-            #end of video frame logic: pause at last frame.
+            #end of video logic: pause at last frame.
             if not new_frame:
                 g.play=False
             else:
