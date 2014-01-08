@@ -16,7 +16,8 @@ if platform.system() == 'Darwin':
 else:
     from multiprocessing import Process, Pipe, Event, Queue
     forking_enable = lambda x: x #dummy fn
-    from multiprocessing.sharedctypes import RawValue, Value, Array,freeze_support
+    from multiprocessing import freeze_support
+    from multiprocessing.sharedctypes import RawValue, Value, Array
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
