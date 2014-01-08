@@ -126,7 +126,7 @@ def autoCreateCapture(src,size=(640,480),fps=30):
             logger.error('No device found that matched %s'%src)
             return
 
-        cap = Camera_Capture(matching_devices[0],size,fps)
+        cap = Camera_Capture(matching_devices[0],filter_resolutions(matching_devices[0],size),fps)
         logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
         return cap
 
@@ -134,7 +134,7 @@ def autoCreateCapture(src,size=(640,480),fps=30):
     elif src_type is int:
         for device in Camera_List():
             if device.src_id == src:
-                cap = Camera_Capture(device,size,fps)
+                cap = Camera_Capture(device,filter_resolutions(device,size),fps)
                 logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
                 return cap
 
@@ -153,6 +153,20 @@ def autoCreateCapture(src,size=(640,480),fps=30):
         return FileCapture(src)
     else:
         raise Exception("autoCreateCapture: Could not create capture, wrong src_type")
+
+
+def filter_resolutions(cam,size):
+    #here we can force some defaulit formats
+
+    if "Integrated Camera" in cam.name:
+        if size[0] == 640:
+            logger.info("Lenovo Integrated camera selected. Forceing format to 640,480")
+            return 640,480
+        elif size[0] == 320:
+            logger.info("Lenovo Integrated camera selected. Forceing format to 320,240")
+            return 320,240
+    else:
+        return size
 
 
 if __name__ == '__main__':
