@@ -126,7 +126,7 @@ def autoCreateCapture(src,size=(640,480),fps=30):
             logger.error('No device found that matched %s'%src)
             return
 
-        cap = Camera_Capture(matching_devices[0],filter_resolutions(matching_devices[0],size),fps)
+        cap = Camera_Capture(matching_devices[0],filter_sizes(matching_devices[0],size),fps)
         logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
         return cap
 
@@ -134,11 +134,11 @@ def autoCreateCapture(src,size=(640,480),fps=30):
     elif src_type is int:
         for device in Camera_List():
             if device.src_id == src:
-                cap = Camera_Capture(device,filter_resolutions(device,size),fps)
+                cap = Camera_Capture(device,filter_sizes(device,size),fps)
                 logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
                 return cap
 
-        #control not supported: trying capture without uvc controls
+        #control not supported for windows: init capture without uvc controls
         cap = Camera_Capture(src,size,fps)
         logger.warning('No UVC support: Using camera with id: %s'%src)
         return cap
@@ -155,7 +155,7 @@ def autoCreateCapture(src,size=(640,480),fps=30):
         raise Exception("autoCreateCapture: Could not create capture, wrong src_type")
 
 
-def filter_resolutions(cam,size):
+def filter_sizes(cam,size):
     #here we can force some defaulit formats
 
     if "Integrated Camera" in cam.name:
