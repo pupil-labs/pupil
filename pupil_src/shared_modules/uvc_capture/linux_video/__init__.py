@@ -30,7 +30,13 @@ class Camera_Capture(object):
 
         current_size = self.capture.get_size()
         current_fps = self.capture.get_rate()
+
+        self.capture.cleanup()
         self.capture = None
+        #recreate the bar with new values
+        bar_pos = self.bar._get_position()
+        self.bar.destroy()
+
 
         self.src_id = cam.src_id
         self.serial = cam.serial
@@ -42,15 +48,9 @@ class Camera_Capture(object):
         except KeyError:
             pass
 
-        #give camera some time to change settings.
-        sleep(0.3)
-        self.capture = VideoCapture(self.src_id,size,fps)
+
+        self.capture = VideoCapture(self.src_id,current_size,current_fps)
         self.get_frame = self.capture.read
-
-
-        #recreate the bar with new values
-        bar_pos = self.bar._get_position()
-        self.bar.destroy()
         self.create_atb_bar(bar_pos)
 
     def re_init_cam_by_src_id(self,src_id):
@@ -59,7 +59,7 @@ class Camera_Capture(object):
         except KeyError:
             logger.warning("could not reinit capture, src_id not valid anymore")
             return
-        self.re_init(cam,self.get_size())
+        self.re_init(cam)
 
 
     def create_atb_bar(self,pos):
@@ -69,7 +69,6 @@ class Camera_Capture(object):
         self.bar = atb.Bar(name="Camera", label=self.name,
             help="UVC Camera Controls", color=(50,50,50), alpha=100,
             text='light',position=pos,refresh=2., size=size)
-
         cameras_enum = atb.enum("Capture",dict([(c.name,c.src_id) for c in Camera_List()]) )
         self.bar.add_var("Capture",vtype=cameras_enum,getter=lambda:self.src_id, setter=self.re_init_cam_by_src_id)
 
