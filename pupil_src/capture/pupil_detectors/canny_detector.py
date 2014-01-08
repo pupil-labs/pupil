@@ -498,8 +498,8 @@ class Canny_Detector(Pupil_Detector):
             text='light', position=pos,refresh=.3, size=(200, 100))
         self._bar.add_button("open debug window", self.toggle_window)
         self._bar.add_var("pupil_intensity_range",self.intensity_range)
-        self._bar.add_var("pupil_min",self.pupil_min)
-        self._bar.add_var("pupil_max",self.pupil_max)
+        self._bar.add_var("pupil_min",self.pupil_min,min=1)
+        self._bar.add_var("pupil_max",self.pupil_max,min=1)
         self._bar.add_var("Pupil_Aparent_Size",self.target_size)
         self._bar.add_var("Contour min length",self.min_contour_size)
 

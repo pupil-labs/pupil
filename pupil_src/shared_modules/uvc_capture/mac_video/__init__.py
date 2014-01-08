@@ -155,16 +155,37 @@ class Camera_Capture(object):
         except KeyError:
             pass
 
-        if '6000' in self.name and False: #on mac we dont have enough controls to use this right.
-            logger.info("adjusting exposure for HD-6000 camera")
-            try:
-                self.controls['UVCC_REQ_EXPOSURE_AUTOMODE'].set_val(1)
-                self.controls['UVCC_REQ_EXPOSURE_ABS'].set_val(156)
-            except KeyError:
-                pass
 
         self.capture = VideoCapture(self.src_id)
         self.set_size(size)
+
+
+    def re_init(self,cam,size=(640,480),fps=30):
+        self.src_id = cam.src_id
+        self.uId = cam.uId
+        self.name = cam.name
+        self.controls = Controls(self.uId)
+
+        try:
+            self.controls['UVCC_REQ_FOCUS_AUTO'].set_val(0)
+        except KeyError:
+            pass
+
+        self.capture = VideoCapture(self.src_id)
+        self.set_size(size)
+
+        #recreate the bar with new values
+        bar_pos = self.bar._get_position()
+        self.bar.destroy()
+        self.create_atb_bar(bar_pos)
+
+    def re_init_cam_by_src_id(self,src_id):
+        try:
+            cam = Camera_List()[src_id]
+        except KeyError:
+            logger.warning("could not reinit capture, src_id not valid anymore")
+            return
+        self.re_init(cam,self.get_size())
 
     def get_frame(self):
         s, img = self.capture.read()
@@ -196,6 +217,9 @@ class Camera_Capture(object):
         sorted_controls = [c for c in self.controls.itervalues()]
         sorted_controls.sort(key=lambda c: c.order)
 
+        cameras_enum = atb.enum("Capture",dict([(c.name,c.src_id) for c in Camera_List()]) )
+
+        self.bar.add_var("Capture",vtype=cameras_enum,getter=lambda:self.src_id, setter=self.re_init_cam_by_src_id)
         for control in sorted_controls:
             name = control.atb_name
             if control.type=="bool":

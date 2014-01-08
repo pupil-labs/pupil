@@ -242,6 +242,12 @@ class VideoCapture(object):
         self._active_buffer = None
 
 
+    def get_size(self):
+        return self.sizes[self.current_size_idx]
+
+
+    def get_rate(self):
+        return self.rates[self.current_rate_idx]
 
 
     def set_rate_idx(self,rate_id):

@@ -133,6 +133,7 @@ def eye(g_pool,cap_src,cap_size):
 
     # Initialize capture
     cap = autoCreateCapture(cap_src, cap_size)
+
     if cap is None:
         logger.error("Did not receive valid Capture")
         return
