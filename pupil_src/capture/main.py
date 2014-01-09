@@ -126,9 +126,10 @@ def main():
 
     # Spawn subprocess:
     p_eye.start()
-    # On Linux, we need to give the camera driver some time before requesting another camera.
-    sleep(0.5)
-    # On MacOS cameras using MJPG compression (world camera) need to run in the main process.
+    if platform.system() == 'Linux':
+        # We need to give the camera driver some time before requesting another camera.
+        sleep(0.5)
+
     world(g_pool,world_src,world_size)
 
     # Exit / clean-up
