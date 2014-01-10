@@ -43,6 +43,7 @@ class Manual_Marker_Calibration(Plugin):
         self.area_threshold = c_int(30)
         self.world_size = None
 
+        self.auto_stop = 0
 
         atb_label = "calibrate using handheld marker"
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
@@ -100,7 +101,11 @@ class Manual_Marker_Calibration(Plugin):
         """
         if self.active:
             img  = frame.img
-            self.candidate_ellipses = get_canditate_ellipses(img,area_threshold=self.area_threshold.value,dist_threshold=self.dist_threshold.value,min_ring_count=3, visual_debug=self.show_edges.value)
+            self.candidate_ellipses = get_canditate_ellipses(img,
+                                                            area_threshold=self.area_threshold.value,
+                                                            dist_threshold=self.dist_threshold.value,
+                                                            min_ring_count=3,
+                                                            visual_debug=self.show_edges.value)
 
             if len(self.candidate_ellipses) > 0:
                 self.detected = True
@@ -113,6 +118,26 @@ class Manual_Marker_Calibration(Plugin):
                 self.pos = None #indicate that no reference is detected
 
 
+            # center dark or white?
+            if self.detected:
+                second_ellipse =  self.candidate_ellipses[1]
+                col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
+                row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
+                marker_roi = img[slice(*row_slice),slice(*col_slice)]
+                marker_gray =   cv2.cvtColor(marker_roi,cv2.COLOR_BGR2GRAY)
+                avg = cv2.mean(marker_gray)[0]
+                center = marker_gray[second_ellipse[1][1]/2,second_ellipse[1][0]/2]
+                rel_shade = center-avg
+
+                #auto_stop logic
+                if rel_shade > 30:
+                    #bright marker center found
+                    self.auto_stop +=1
+                else:
+                    self.auto_stop = 0
+
+
+            #tracking logic
             if self.detected:
                 # calculate smoothed manhattan velocity
                 smoother = 0.3
@@ -141,7 +166,7 @@ class Manual_Marker_Calibration(Plugin):
             if self.counter and self.detected:
                 if self.smooth_vel > 0.01:
                     audio.tink()
-                    logger.debug("Marker was move to quickly aborted sample. Sampled %s datapoints. Stopping to sample. Looking for steady marker again."%(self.counter_max-self.counter))
+                    logger.debug("Marker moved to quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
                     self.counter = 0
                 else:
                     self.counter -= 1
@@ -162,6 +187,13 @@ class Manual_Marker_Calibration(Plugin):
 
             if self.world_size is None:
                 self.world_size = img.shape[1],img.shape[0]
+
+
+            #stop if autostop condition is satisfied:
+            if self.auto_stop >=20:
+                self.auto_stop = 0
+                self.stop()
+
 
         else:
             pass
