@@ -4,6 +4,7 @@ Open source eye tracking hardware and software platform that started as a thesis
 Our vision is to create tools for a diverse group of people interested in learning about eye tracking and conducting their eye tracking projects.
 
 ## Setup
+<table>
 <tr>
 	<td><a href="https://github.com/pupil-labs/pupil/wiki/Getting-Pupil-Hardware">Getting Pupil Hardware</a></td>
 	<td><a href="https://github.com/pupil-labs/pupil/wiki/Community">Community</a></td>
