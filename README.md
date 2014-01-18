@@ -4,17 +4,36 @@ Open source eye tracking hardware and software platform that started as a thesis
 Our vision is to create tools for a diverse group of people interested in learning about eye tracking and conducting their eye tracking projects.
 
 ## Setup
-See our [wiki](https://code.google.com/p/pupil/wiki/Installation "wiki") for dependencies and installation instructions
+<tr>
+	<td><a href="https://github.com/pupil-labs/pupil/wiki/Getting-Pupil-Hardware">Getting Pupil Hardware</a></td>
+	<td><a href="https://github.com/pupil-labs/pupil/wiki/Community">Community</a></td>
+	<td><a href="https://github.com/pupil-labs/pupil/wiki/Setup">Setup</a></td>
+	<td><a href="https://github.com/pupil-labs/pupil/wiki/User-Guide">User Guide</a></td>
+	<td><a href="https://github.com/pupil-labs/pupil/wiki/Developer-Guide">Developer Guide</a></td>
+</tr>
+<tr>
+	<td align="center"><img width="100" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-01.png" /></td>
+	<td  align="center"><img width="100" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-02.png" /></td>
+	<td align="center"><img width="100" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-03.png" /></td>
+	<td align="center"><img width="100" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-04.png" /></td>
+	<td align="center"><img width="100" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-05.png" /></td>
+</tr>
+<tr>
+	<td>How and where to get Pupil mobile eye tracking headset</td>
+	<td>How to contribute & get in touch with users and devs</td>
+	<td>Links to download bundles and instructions to build from source</td>
+	<td>How to calibrate, make recordings, and visualize data</td>
+	<td>Resources for Pupil developers</td>		
+</tr>
+</table>
 
-## Getting Pupil Headset
-See [getting pupil](https://code.google.com/p/pupil/wiki/Getting_Pupil "getting pupil") on our wiki or contact us at <sales@pupil-labs.com>
 
 ## License
 All source code written by us is open source for noncommercial uses as specified the [CC BY-NC-SA license](http://creativecommons.org/licenses/by-nc-sa/3.0/ "CC BY-NC-SA license"). We want you to change and improve the code. Just make sure to credit us, and we hope that you will share your work with the Pupil community.  If you have questions or ideas about commercial use, send us an email!
 
 ## Links
  - [Pupil Labs](http://pupil-labs.com "Pupil Labs")
- - [Pupil Wiki](https://code.google.com/p/pupil/wiki/Headset_Intro?tm=6 "Pupil Wiki")
+ - [Pupil Wiki](https://github.com/pupil-labs/pupil/wiki "Pupil Wiki")
 ___
 
  [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/pupil-labs/pupil/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
