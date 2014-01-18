@@ -12,11 +12,11 @@ Our vision is to create tools for a diverse group of people interested in learni
 	<td><a href="https://github.com/pupil-labs/pupil/wiki/Developer-Guide">Developer Guide</a></td>
 </tr>
 <tr>
-	<td align="center"><img width="100" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-01.png" /></td>
-	<td  align="center"><img width="100" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-02.png" /></td>
-	<td align="center"><img width="100" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-03.png" /></td>
-	<td align="center"><img width="100" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-04.png" /></td>
-	<td align="center"><img width="100" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-05.png" /></td>
+	<td align="center"><img width="80" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-01.png" /></td>
+	<td  align="center"><img width="80" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-02.png" /></td>
+	<td align="center"><img width="80" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-03.png" /></td>
+	<td align="center"><img width="80" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-04.png" /></td>
+	<td align="center"><img width="80" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-05.png" /></td>
 </tr>
 <tr>
 	<td>How and where to get Pupil mobile eye tracking headset</td>
