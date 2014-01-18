@@ -1,9 +1,9 @@
 # Pupil
-Open source eye tracking hardware and software platform that started as a thesis project at MIT. Pupil is a project in active, community driven development. The hardware is accessible, hackable, and affordable. The software is open source and written in Python and C when speed is an issue.
+Open source eye tracking hardware and software platform that started as a thesis project at MIT. Pupil is a project in active, community driven development. The hardware is accessible, hackable, and affordable. The software is open source and written in `Python` and `C` when speed is an issue.
 
 Our vision is to create tools for a diverse group of people interested in learning about eye tracking and conducting their eye tracking projects.
 
-## Setup
+## Get Started
 <table>
 <tr>
 	<td><a href="https://github.com/pupil-labs/pupil/wiki/Getting-Pupil-Hardware">Getting Pupil Hardware</a></td>
@@ -30,7 +30,7 @@ Our vision is to create tools for a diverse group of people interested in learni
 
 
 ## License
-All source code written by us is open source for noncommercial uses as specified the [CC BY-NC-SA license](http://creativecommons.org/licenses/by-nc-sa/3.0/ "CC BY-NC-SA license"). We want you to change and improve the code. Just make sure to credit us, and we hope that you will share your work with the Pupil community.  If you have questions or ideas about commercial use, send us an email!
+All source code written by Pupil Labs is open source for noncommercial uses as specified the [CC BY-NC-SA license](http://creativecommons.org/licenses/by-nc-sa/3.0/ "CC BY-NC-SA license"). We want you to change and improve the code -- make a fork!  Just make sure to credit us and share your work with the Pupil community.  See the wiki for more info on the [license](https://github.com/pupil-labs/pupil/wiki/License "License").  If you have questions or ideas about commercial use, [contact us!](https://github.com/pupil-labs/pupil/wiki/Community#email "email us")
 
 ## Links
  - [Pupil Labs](http://pupil-labs.com "Pupil Labs")
