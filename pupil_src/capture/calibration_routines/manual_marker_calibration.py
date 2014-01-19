@@ -227,16 +227,22 @@ class Manual_Marker_Calibration(Plugin):
                 draw_gl_polyline(pts,(0.,1.,0,1.))
 
             if self.counter:
-                draw_gl_point_norm(self.pos,size=30.,color=(0.,1.,0.,.5))
+                # lets draw an indicator on the count
+                e = self.candidate_ellipses[2]
+                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                    (int(e[1][0]/2),int(e[1][1]/2)),
+                                    int(e[-1]),0,360,360/self.counter_max)
+                indicator = [e[0]] + pts[self.counter:].tolist()[::-1] + [e[0]]
+                draw_gl_polyline(indicator,(0.1,.5,.7,.8),type='Polygon')
 
             if self.auto_stop:
                 # lets draw an indicator on the autostop count
-                e = self.candidate_ellipses[-1]
+                e = self.candidate_ellipses[2]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360/self.auto_stop_max)
                 indicator = [e[0]] + pts[self.auto_stop:].tolist() + [e[0]]
-                draw_gl_polyline(indicator,(0.,7.,9.,5.),type='Polygon')
+                draw_gl_polyline(indicator,(8.,0.1,0.1,.8),type='Polygon')
         else:
             pass
 
