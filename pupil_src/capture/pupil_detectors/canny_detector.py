@@ -50,7 +50,7 @@ class Canny_Detector(Pupil_Detector):
         self.canny_aperture = 7
 
         # edge intensity filter params
-        self.intensity_range = c_int(self.load('intensity_range',30))
+        self.intensity_range = c_int(self.load('intensity_range',11))
         self.bin_thresh = c_int(0)
 
         # contour prefilter params
@@ -60,7 +60,7 @@ class Canny_Detector(Pupil_Detector):
         self.inital_ellipse_fit_threshhold = 1.8
         self.min_ratio = .3
         self.pupil_min = c_float(self.load('pupil_min',40.))
-        self.pupil_max = c_float(self.load('pupil_max',160.))
+        self.pupil_max = c_float(self.load('pupil_max',150.))
         self.target_size= c_float(100.)
         self.strong_perimeter_ratio_range = .8, 1.1
         self.strong_area_ratio_range = .6,1.1
