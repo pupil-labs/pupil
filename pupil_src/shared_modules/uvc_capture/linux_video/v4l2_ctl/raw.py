@@ -214,8 +214,16 @@ def list_devices():
             device["location"]=loc
             device["src_id"]=src
             devices.append(device)
+
+    # let make sure we dont have cames with the same name...
+    names = [d["name"] for d in devices]
+    for idx in range(len(devices))[::-1]:
+        dub_count = names[:idx].count(devices[idx]['name'])
+        if dub_count:
+            devices[idx]['name'] += "(%i)"%dub_count  
+
     return devices
 
 if __name__ == '__main__':
     print list_devices()
-    print extract_controls(0)
+    # print extract_controls(0)
