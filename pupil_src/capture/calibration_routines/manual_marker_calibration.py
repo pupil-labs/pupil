@@ -43,8 +43,9 @@ class Manual_Marker_Calibration(Plugin):
         self.area_threshold = c_int(30)
         self.world_size = None
 
+        self.stop_marker_found = False
         self.auto_stop = 0
-
+        self.auto_stop_max = 30
         atb_label = "calibrate using handheld marker"
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
@@ -100,7 +101,12 @@ class Manual_Marker_Calibration(Plugin):
         if no reference was found, publish 0,0
         """
         if self.active:
+
             img  = frame.img
+
+            if self.world_size is None:
+                self.world_size = img.shape[1],img.shape[0]
+
             self.candidate_ellipses = get_canditate_ellipses(img,
                                                             area_threshold=self.area_threshold.value,
                                                             dist_threshold=self.dist_threshold.value,
@@ -133,12 +139,15 @@ class Manual_Marker_Calibration(Plugin):
                 if rel_shade > 30:
                     #bright marker center found
                     self.auto_stop +=1
+                    self.stop_marker_found = True
+
                 else:
                     self.auto_stop = 0
+                    self.stop_marker_found = False
 
 
             #tracking logic
-            if self.detected:
+            if self.detected and not self.stop_marker_found:
                 # calculate smoothed manhattan velocity
                 smoother = 0.3
                 smooth_pos = np.array(self.smooth_pos)
@@ -163,21 +172,21 @@ class Manual_Marker_Calibration(Plugin):
                         logger.debug("Steady marker found. Starting to sample %s datapoints" %self.counter_max)
                         self.counter = self.counter_max
 
-            if self.counter and self.detected:
-                if self.smooth_vel > 0.01:
-                    audio.tink()
-                    logger.debug("Marker moved to quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
-                    self.counter = 0
-                else:
-                    self.counter -= 1
-                    ref = {}
-                    ref["norm_pos"] = self.pos
-                    ref["timestamp"] = frame.timestamp
-                    self.ref_list.append(ref)
-                    if self.counter == 0:
-                        #last sample before counter done and moving on
+                if self.counter:
+                    if self.smooth_vel > 0.01:
                         audio.tink()
-                        logger.debug("Sampled %s datapoints. Stopping to sample. Looking for steady marker again."%self.counter_max)
+                        logger.debug("Marker moved to quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
+                        self.counter = 0
+                    else:
+                        self.counter -= 1
+                        ref = {}
+                        ref["norm_pos"] = self.pos
+                        ref["timestamp"] = frame.timestamp
+                        self.ref_list.append(ref)
+                        if self.counter == 0:
+                            #last sample before counter done and moving on
+                            audio.tink()
+                            logger.debug("Sampled %s datapoints. Stopping to sample. Looking for steady marker again."%self.counter_max)
 
 
             #always save pupil positions
@@ -185,12 +194,10 @@ class Manual_Marker_Calibration(Plugin):
                 if p_pt['norm_pupil'] is not None:
                     self.pupil_list.append(p_pt)
 
-            if self.world_size is None:
-                self.world_size = img.shape[1],img.shape[0]
 
 
             #stop if autostop condition is satisfied:
-            if self.auto_stop >=20:
+            if self.auto_stop >=self.auto_stop_max:
                 self.auto_stop = 0
                 self.stop()
 
@@ -221,6 +228,15 @@ class Manual_Marker_Calibration(Plugin):
 
             if self.counter:
                 draw_gl_point_norm(self.pos,size=30.,color=(0.,1.,0.,.5))
+
+            if self.auto_stop:
+                # lets draw an indicator on the autostop count
+                e = self.candidate_ellipses[-1]
+                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                    (int(e[1][0]/2),int(e[1][1]/2)),
+                                    int(e[-1]),0,360,360/self.auto_stop_max)
+                indicator = [e[0]] + pts[self.auto_stop:].tolist() + [e[0]]
+                draw_gl_polyline(indicator,(0.,7.,9.,5.),type='Polygon')
         else:
             pass
 
