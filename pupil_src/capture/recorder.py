@@ -48,7 +48,7 @@ class Recorder(Plugin):
         self.meta_info_path = os.path.join(self.rec_path, "info.csv")
 
         with open(self.meta_info_path, 'w') as f:
-            f.write("Pupil Recording Name\t"+self.session_str+ "\n")
+            f.write("Recording Name\t"+self.session_str+ "\n")
             f.write("Start Date\t"+ strftime("%d.%m.%Y", localtime(self.start_time))+ "\n")
             f.write("Start Time\t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")
 
