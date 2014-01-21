@@ -174,7 +174,7 @@ def main():
 
     # Initialize glfw
     glfwInit()
-    main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Pupil Recording Name"], None, None)
+    main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"], None, None)
     glfwMakeContextCurrent(main_window)
 
     # Register callbacks main_window
