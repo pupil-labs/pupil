@@ -110,7 +110,7 @@ def main():
     except:
         logger.warning("You did not supply a datafolder when you called this script. \
                \nI will use the path hardcoded into the script instead.")
-        data_folder = "/Users/mkassner/Pupil/pupil_code/recordings/2013_12_11/000"
+        data_folder = "/Users/mkassner/Desktop/2014_01_21/000"
 
     #parse and load data folder info
     video_path = data_folder + "/world.avi"
@@ -122,9 +122,9 @@ def main():
     #parse info.csv file
     with open(data_folder + "/info.csv") as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
-    rec_version = [v for k,v in meta_info.iteritems() if "Capture Software Version" in k ][0]
+    rec_version = meta_info["Capture Software Version"]
     rec_version_int = int(filter(type(rec_version).isdigit, rec_version)[:3]) #(get major,minor,fix of version)
-    logger.debug("Recording version %s , %s"%(rec_version,rec_version_int))
+    logger.debug("Recording version: %s , %s"%(rec_version,rec_version_int))
 
 
     #load gaze information
@@ -203,7 +203,7 @@ def main():
         old_time, bar.timestamp = bar.timestamp, time()
         dt = bar.timestamp - old_time
         if dt:
-            bar.fps.value += .05 * (1. / dt - bar.fps.value)
+            bar.fps.value += .1 * (1. / dt - bar.fps.value)
 
     def set_window_size(mode,data):
         width,height = cap.get_size()
@@ -255,17 +255,20 @@ def main():
 
     while not glfwWindowShouldClose(main_window):
 
+        update_fps()
+
         #grab new frame
         if g.play or g.new_seek:
             new_frame = cap.get_frame()
-            g.new_seek = False
             #end of video logic: pause at last frame.
             if not new_frame:
                 g.play=False
             else:
                 frame = new_frame
 
-        update_fps()
+            if g.new_seek:
+                display_time = frame.timestamp
+                g.new_seek = False
 
 
         #new positons and events
@@ -286,6 +289,17 @@ def main():
         # render visual feedback from loaded plugins
         for p in g.plugins:
             p.gl_display()
+
+        #present frames at appropriate speed
+        wait_time = frame.timestamp - display_time
+        display_time = frame.timestamp
+        try:
+            spent_time = time()-timestamp
+            sleep(wait_time-spent_time)
+        except:
+            pass
+        timestamp = time()
+
 
         atb.draw()
         glfwSwapBuffers(main_window)
