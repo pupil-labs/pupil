@@ -122,12 +122,24 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
     cap.seek_to_frame(start_frame)
 
-    while frames_to_export.value - current_frame.value > 0 and not should_terminate.value:
+    while frames_to_export.value - current_frame.value > 0:
+
+        if should_terminate.value:
+            logger.warning("User aborted export. Exported %s frames to %s."%(current_frame.value,out_file_path))
+
+            #explicit release of VideoWriter
+            writer.release()
+            writer = None
+            return False
 
         new_frame = cap.get_frame()
         #end of video logic: pause at last frame.
         if not new_frame:
             logger.error("Could not read all frames.")
+            #explicit release of VideoWriter
+            writer.release()
+            writer = None
+
             return False
         else:
             frame = new_frame
@@ -148,7 +160,9 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
         current_frame.value +=1
 
     logger.debug("Export done: Exported %s frames to %s."%(current_frame.value,out_file_path))
-
+    #explicit release of VideoWriter
+    writer.release()
+    writer = None
 
 
 

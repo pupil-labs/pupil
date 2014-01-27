@@ -35,7 +35,7 @@ from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_s
 # Plug-ins
 from display_gaze import Display_Gaze
 from seek_bar import Seek_Bar
-
+from export_launcher import Export_Launcher
 
 import logging
 logger = logging.getLogger()
@@ -251,6 +251,8 @@ def main():
     on_resize(main_window, *glfwGetFramebufferSize(main_window))
     glfwSetWindowPos(main_window,0,0)
 
+
+    g.plugins.append(Export_Launcher(g,data_dir=data_folder))
 
 
     while not glfwWindowShouldClose(main_window):
