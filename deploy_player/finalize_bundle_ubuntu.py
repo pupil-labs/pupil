@@ -3,7 +3,7 @@ import write_version_file
 import shutil
 
 distribtution_dir = 'dist'
-pupil_capture_dir =  os.path.join(distribtution_dir, 'pupil_capture')
+pupil_capture_dir =  os.path.join(distribtution_dir, 'pupil_player')
 
 
 shutil.copy('make_shortcut.sh',os.path.join(distribtution_dir,'make_shortcut.sh'))
