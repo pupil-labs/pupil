@@ -31,4 +31,3 @@ class Display_Gaze(Plugin):
     def gl_display(self):
         draw_gl_points_norm(self.pupil_display_list,size=35,color=(1.,.2,.4,.6))
 
-

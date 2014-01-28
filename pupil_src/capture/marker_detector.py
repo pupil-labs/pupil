@@ -45,6 +45,7 @@ class Marker_Detector(Plugin):
     def __init__(self,g_pool,atb_pos=(0,0)):
         super(Marker_Detector, self).__init__()
 
+        self.order = .2
 
         # all markers that are detected in the most recent frame
         self.markers = []

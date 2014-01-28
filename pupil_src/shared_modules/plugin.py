@@ -20,6 +20,14 @@ class Plugin(object):
     def __init__(self):
         self._alive = True
 
+        self.order = .5
+        # between 0 and 1 this indicated where in the plugin excecution order you plugin lives:
+        # <.5  are things that add/mofify information that will be used by other plugins and rely on untouched data.
+        # You should not edit frame.img if you are here!
+        # == 5 is the default.
+        # >.5 are things that depend on other plugins work like display , saving and streaming
+
+
     @property
     def alive(self):
         """This field indicates of the instance should be detroyed
@@ -44,14 +52,17 @@ class Plugin(object):
     def update(self,frame,recent_pupil_positions,events):
         """
         gets called once every frame
+        if you plan to update the image data, note that this will affact all plugins axecuted after you.
+        Use self.order to deal with this appropriatly
         """
         pass
 
     def gl_display(self):
         """
-        gets called once every frame
+        gets called once every frame when its time to draw onto the gl canvas.
         """
         pass
+
 
     def cleanup(self):
         """gets called when the plugin get terminated.
@@ -59,6 +70,8 @@ class Plugin(object):
         if you have an atb bar or glfw window destroy it here.
         """
         pass
+
+
 
     def __del__(self):
         self._alive = False

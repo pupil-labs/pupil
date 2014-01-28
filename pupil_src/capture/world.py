@@ -144,6 +144,8 @@ def world(g_pool,cap_src,cap_size):
 
         new_ref_detector = calibration_routines.detector_by_index[selection](g_pool,atb_pos=bar.next_atb_pos)
         g.plugins.append(new_ref_detector)
+        g.plugins.sort(key=lambda p: p.order)
+
         # save the value for atb bar
         data.value=selection
 
@@ -158,6 +160,7 @@ def world(g_pool,cap_src,cap_size):
 
         new_plugin = recorder.Recorder(g_pool,bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx)
         g.plugins.append(new_plugin)
+        g.plugins.sort(key=lambda p: p.order)
 
     def toggle_show_calib_result():
         for p in g.plugins:
@@ -167,6 +170,7 @@ def world(g_pool,cap_src,cap_size):
 
         new_plugin = Show_Calibration(g_pool,frame.img.shape)
         g.plugins.append(new_plugin)
+        g.plugins.sort(key=lambda p: p.order)
 
     def toggle_server():
         for p in g.plugins:
@@ -176,6 +180,7 @@ def world(g_pool,cap_src,cap_size):
 
         new_plugin = Pupil_Server(g_pool,(10,300))
         g.plugins.append(new_plugin)
+        g.plugins.sort(key=lambda p: p.order)
 
 
     def toggle_ar():
@@ -185,8 +190,8 @@ def world(g_pool,cap_src,cap_size):
                 return
 
         new_plugin = Marker_Detector(g_pool,(10,400))
-        g.plugins.insert(0,new_plugin) #do this before the server or recorder
-
+        g.plugins.append(new_plugin)
+        g.plugins.sort(key=lambda p: p.order)
 
     atb.init()
     # add main controls ATB bar
