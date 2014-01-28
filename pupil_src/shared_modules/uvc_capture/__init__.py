@@ -64,15 +64,15 @@ class FileCapture():
         self.cap = cv2.VideoCapture(src)
         if timestamps is None:
             timestamps_loc = os.path.join(src.rsplit(os.path.sep,1)[0],'eye_timestamps.npy')
-            logger.info("trying to auto load eye_video timestamps with video at: %s"%timestamps_loc)
+            logger.debug("trying to auto load eye_video timestamps with video at: %s"%timestamps_loc)
         else:
             timestamps_loc = timestamps
-            logger.info("trying to load supplied timestamps with video at: %s"%timestamps_loc)
+            logger.debug("trying to load supplied timestamps with video at: %s"%timestamps_loc)
         try:
             self.timestamps = np.load(timestamps_loc).tolist()
-            logger.info("loaded %s timestamps"%len(self.timestamps))
+            logger.debug("loaded %s timestamps"%len(self.timestamps))
         except:
-            logger.info("did not find timestamps")
+            logger.debug("did not find timestamps")
             self.timestamps = None
 
 
