@@ -17,6 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from ctypes import c_bool, c_int,create_string_buffer
+
 from multiprocessing import Process
 from multiprocessing.sharedctypes import RawValue
 
@@ -108,6 +109,7 @@ class Export_Launcher(Plugin):
         return create_string_buffer(job.out_file_path,512)
 
     def add_export(self):
+
         logger.debug("Adding new export.")
         should_terminate = RawValue(c_bool,False)
         frames_to_export  = RawValue(c_int,0)
@@ -127,6 +129,7 @@ class Export_Launcher(Plugin):
         self.new_export = process
 
     def launch_export(self, new_export):
+
         logger.debug("Starting export as new process %s" %new_export)
         new_export.start()
         self.exports.append(new_export)
