@@ -8,16 +8,37 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-if __name__ == '__main__':
-    # make shared modules available across pupil_src
-    from sys import path as syspath
-    from os import path as ospath
-    loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
-    syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
-    del syspath, ospath
+import sys, os,platform
+from time import sleep
+from ctypes import c_bool, c_int
+from multiprocessing import Process, Pipe, Event, Queue
+from multiprocessing.sharedctypes import RawValue, Value, Array
+
+if getattr(sys, 'frozen', False):
+    if platform.system() == 'Darwin':
+        # Specifiy user dirs.
+        user_dir = os.path.expanduser('~/Desktop/pupil_player_settings')
+        version_file = os.path.join(sys._MEIPASS,'_version_string_')
+    else:
+        # Specifiy user dirs.
+        user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"player_settings")
+        version_file = os.path.join(sys._MEIPASS,'_version_string_')
+
+else:
+    # We are running in a normal Python environment.
+    # Make all pupil shared_modules available to this Python session.
+    pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
+    sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
+    # Specifiy user dirs.
+    user_dir = os.path.join(pupil_base_dir,'player_settings')
 
 
-import os, sys
+# create folder for user settings, tmp data
+if not os.path.isdir(user_dir):
+    os.mkdir(user_dir)
+
+
+
 import shelve
 from time import time,sleep
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
@@ -31,6 +52,7 @@ import atb
 from uvc_capture import autoCreateCapture
 # helpers/utils
 from methods import normalize, denormalize,Temp
+from player_methods import correlate_gaze,patch_meta_info
 from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
 # Plug-ins
 from display_gaze import Display_Gaze
@@ -41,7 +63,7 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
-fh = logging.FileHandler('player.log',mode='w')
+fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
@@ -61,7 +83,14 @@ logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
 
 
-version = "dev"
+#get the current software version
+if getattr(sys, 'frozen', False):
+    with open(version_file) as f:
+        version = f.read()
+else:
+    from git_version import get_tag_commit
+    version = get_tag_commit()
+
 
 def main():
 
@@ -118,46 +147,27 @@ def main():
     gaze_positions_path = data_folder + "/gaze_positions.npy"
     record_path = data_folder + "/world_viz.avi"
 
+    #backwards compatibility fn.
+    patch_meta_info(data_folder)
 
     #parse info.csv file
     with open(data_folder + "/info.csv") as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
     rec_version = meta_info["Capture Software Version"]
-    rec_version_int = int(filter(type(rec_version).isdigit, rec_version)[:3]) #(get major,minor,fix of version)
-    logger.debug("Recording version: %s , %s"%(rec_version,rec_version_int))
+    rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
+    logger.debug("Recording version: %s , %s"%(rec_version,rec_version_float))
 
 
     #load gaze information
-    gaze_list = list(np.load(gaze_positions_path))
-    timestamps = list(np.load(timestamps_path))
-    # gaze_list: gaze x | gaze y | pupil x | pupil y | timestamp
-    # timestamps timestamp
+    gaze_list = np.load(gaze_positions_path)
+    timestamps = np.load(timestamps_path)
 
-    # this takes the timestamps list and makes a list
-    # with the length of the number of recorded frames.
-    # Each slot conains a list that will have 0, 1 or more assosiated gaze postions.
-    positions_by_frame = [[] for i in timestamps]
-    frame_idx = 0
-    data_point = gaze_list.pop(0)
-    gaze_timestamp = data_point[4]
-
-    while gaze_list:
-        # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
-        try:
-            t_between_frames = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
-        except IndexError:
-            break
-        if gaze_timestamp <= t_between_frames:
-            positions_by_frame[frame_idx].append({'norm_gaze':(data_point[0],data_point[1]),'norm_pupil': (data_point[2],data_point[3]), 'timestamp':gaze_timestamp})
-            data_point = gaze_list.pop(0)
-            gaze_timestamp = data_point[4]
-        else:
-            frame_idx+=1
-
+    #correlate data
+    positions_by_frame = correlate_gaze(gaze_list,timestamps)
 
 
     # load session persistent settings
-    session_settings = shelve.open("user_settings",protocol=2)
+    session_settings = shelve.open(os.path.join(user_dir,"user_settings"),protocol=2)
     def load(var_name,default):
         return session_settings.get(var_name,default)
     def save(var_name,var):
@@ -174,7 +184,7 @@ def main():
 
     # Initialize glfw
     glfwInit()
-    main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"], None, None)
+    main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "+ data_folder.split(os.path.sep)[-1], None, None)
     glfwMakeContextCurrent(main_window)
 
     # Register callbacks main_window
@@ -252,7 +262,7 @@ def main():
     glfwSetWindowPos(main_window,0,0)
 
 
-    g.plugins.append(Export_Launcher(g,data_dir=data_folder))
+    g.plugins.append(Export_Launcher(g,data_dir=data_folder,frame_count=len(timestamps)))
 
 
     while not glfwWindowShouldClose(main_window):

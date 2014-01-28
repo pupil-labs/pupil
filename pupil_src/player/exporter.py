@@ -22,7 +22,7 @@ import os
 import cv2
 import numpy as np
 from uvc_capture import autoCreateCapture
-
+from player_methods import correlate_gaze
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -41,34 +41,15 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
     with open(data_dir + "/info.csv") as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
     rec_version = meta_info["Capture Software Version"]
-    rec_version_int = int(filter(type(rec_version).isdigit, rec_version)[:3]) #(get major,minor,fix of version)
-    logger.debug("Recording version: %s , %s"%(rec_version,rec_version_int))
+    rec_version_int = int(filter(type(rec_version).isdigit, rec_version)[:3])/100 #(get major,minor,fix of version)
+    logger.debug("Exporting a video from recording with version: %s , %s"%(rec_version,rec_version_int))
 
 
     #load gaze information
-    gaze_list = list(np.load(gaze_positions_path))
-    timestamps = list(np.load(timestamps_path))
-
-    # this takes the timestamps list and makes a list
-    # with the length of the number of recorded frames.
-    # Each slot conains a list that will have 0, 1 or more assosiated gaze postions.
-    positions_by_frame = [[] for i in timestamps]
-    frame_idx = 0
-    data_point = gaze_list.pop(0)
-    gaze_timestamp = data_point[4]
-
-    while gaze_list:
-        # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
-        try:
-            t_between_frames = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
-        except IndexError:
-            break
-        if gaze_timestamp <= t_between_frames:
-            positions_by_frame[frame_idx].append({'norm_gaze':(data_point[0],data_point[1]),'norm_pupil': (data_point[2],data_point[3]), 'timestamp':gaze_timestamp})
-            data_point = gaze_list.pop(0)
-            gaze_timestamp = data_point[4]
-        else:
-            frame_idx+=1
+    gaze_list = np.load(gaze_positions_path)
+    timestamps = np.load(timestamps_path)
+    #correlate data
+    positions_by_frame = correlate_gaze(gaze_list,timestamps)
 
 
     # Initialize capture, check if it works
@@ -78,29 +59,7 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
         return
     width,height = cap.get_size()
 
-
-
-    #Trim mark verification
-    #make sure the trim marks (start frame, endframe) make sense: We define them like python list slices,thus we can test them like such.
-    trimmed_timestamps = timestamps[start_frame:end_frame]
-    if len(trimmed_timestamps)==0:
-        logger.warn("Start and end frames are set such that no video will be exported.")
-        return False
-
-    if start_frame == None:
-        start_frame = 0
-
-    frames_to_export.value = len(trimmed_timestamps)
-    current_frame.value = 0
-    logger.debug("Will export from frame %s to frame %s. This means I will export %s frames."%(start_frame,start_frame+frames_to_export.value,frames_to_export.value))
-
-
-    #lets get the avg. framerate for our slice of video:
-    fps = float(len(trimmed_timestamps))/(trimmed_timestamps[-1] - trimmed_timestamps[0])
-    logger.debug("Framerate of export video is %s"%fps)
-
-
-    #Oout file path verification
+    #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
     if out_file_path is None:
         out_file_path = os.path.join(data_dir, "world_viz.avi")
     else:
@@ -117,10 +76,34 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
         os.remove(out_file_path)
     logger.debug("Saving Video to %s"%out_file_path)
 
+
+    #Trim mark verification
+    #make sure the trim marks (start frame, endframe) make sense: We define them like python list slices,thus we can test them like such.
+    trimmed_timestamps = timestamps[start_frame:end_frame]
+    if len(trimmed_timestamps)==0:
+        logger.warn("Start and end frames are set such that no video will be exported.")
+        return False
+
+    if start_frame == None:
+        start_frame = 0
+
+    #these two vars are shared with the lauching process and give an job lenght and progress report.
+    frames_to_export.value = len(trimmed_timestamps)
+    current_frame.value = 0
+    logger.debug("Will export from frame %s to frame %s. This means I will export %s frames."%(start_frame,start_frame+frames_to_export.value,frames_to_export.value))
+
+
+    #lets get the avg. framerate for our slice of video:
+    fps = float(len(trimmed_timestamps))/(trimmed_timestamps[-1] - trimmed_timestamps[0])
+    logger.debug("Framerate of export video is %s"%fps)
+
+
     #setup of writer
     writer = cv2.VideoWriter(out_file_path, cv2.cv.CV_FOURCC(*'DIVX'), fps, (width,height))
 
     cap.seek_to_frame(start_frame)
+
+
 
     while frames_to_export.value - current_frame.value > 0:
 
@@ -139,7 +122,6 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
             #explicit release of VideoWriter
             writer.release()
             writer = None
-
             return False
         else:
             frame = new_frame
@@ -154,15 +136,15 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
         # render visual feedback from loaded plugins
         for p in plugins:
-            p.img_display()
+            p.img_display(frame)
 
         writer.write(frame.img)
         current_frame.value +=1
 
-    logger.debug("Export done: Exported %s frames to %s."%(current_frame.value,out_file_path))
-    #explicit release of VideoWriter
+    logger.info("Export done: Exported %s frames to %s ."%(current_frame.value,out_file_path))
     writer.release()
     writer = None
+    return True
 
 
 
@@ -195,20 +177,4 @@ if __name__ == '__main__':
 
     export(should_terminate,frame_to_export,current_frame, data_dir,start_frame=start_frame,end_frame=end_frame,plugins=[],out_file_path=out_file_path)
     print current_frame.value
-
-'''
-exporter
-
-    - is like a small player
-    - launched with args:
-        data folder
-        start,end frame (trim marks)
-        plugins loaded and their config
-            - how to do this? 1) load the plugin instance as a whole?
-                              2) create a plugin contructor based on a string or something similar?
-
-    - can be used by batch or by player
-    - communicates with progress (shared int) and terminate (shared bool)
-    - can abort on demand leaving nothing behind
-'''
 
