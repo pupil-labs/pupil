@@ -103,7 +103,7 @@ def world(g_pool,cap_src,cap_size):
 
 
     # Initialize capture, check if it works
-    cap = autoCreateCapture(cap_src, cap_size,24)
+    cap = autoCreateCapture(cap_src, cap_size, 24)
     if cap is None:
         logger.error("Did not receive valid Capture")
         return

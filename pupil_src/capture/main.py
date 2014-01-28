@@ -10,12 +10,17 @@
 import sys, os,platform
 from time import sleep
 from ctypes import c_bool, c_int
-from multiprocessing import Process, Pipe, Event, Queue
-from multiprocessing.sharedctypes import RawValue, Value, Array
+if platform.system() == 'Darwin':
+    from billiard import Process, Pipe, Event,Queue,forking_enable,freeze_support
+    from billiard.sharedctypes import RawValue, Value, Array
+else:
+    from multiprocessing import Process, Pipe, Event, Queue
+    forking_enable = lambda x: x #dummy fn
+    from multiprocessing import freeze_support
+    from multiprocessing.sharedctypes import RawValue, Value, Array
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
-        # Specifiy user dirs.
         user_dir = os.path.expanduser('~/Desktop/pupil_settings')
         rec_dir = os.path.expanduser('~/Desktop/pupil_recordings')
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
@@ -97,12 +102,15 @@ def main():
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
     # eye_src = "/Users/mkassner/Pupil/datasets/eye2_fieldtest/eye 10.avi"
-    # world_src = "/Users/mkassner/Downloads/testdata/single/video.avi"
+    # world_src = "/Users/mkassner/Downloads/2014_01_08/000/world.avi"
 
     # Camera video size in pixels (width,height)
     eye_size = (640,360)
     world_size = (1280,720)
 
+
+    # on MacOS we will not use os.fork, elsewhere this does nothing.
+    forking_enable(0)
 
     # Create and initialize IPC
     g_pool = Temp()
@@ -118,13 +126,15 @@ def main():
 
     # Spawn subprocess:
     p_eye.start()
-    # On Linux, we need to give the camera driver some time before requesting another camera.
-    sleep(0.5)
-    # On MacOS cameras using MJPG compression (world camera) need to run in the main process.
+    if platform.system() == 'Linux':
+        # We need to give the camera driver some time before requesting another camera.
+        sleep(0.5)
+
     world(g_pool,world_src,world_size)
 
     # Exit / clean-up
     p_eye.join()
 
 if __name__ == '__main__':
+    freeze_support()
     main()

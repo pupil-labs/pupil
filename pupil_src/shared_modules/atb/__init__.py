@@ -225,10 +225,10 @@ class Bar(object):
 
     def _set_alpha(self, alpha):
         c = ctypes.c_int(alpha)
-        TwSetParam(self._bar, "", "alpha", PARAM_INT32, 1, ctypes.byref(c))
+        TwSetParam(self._bar, "", "alpha", TW_PARAM_INT32, 1, ctypes.byref(c))
     def _get_alpha(self):
         c = ctypes.c_int(0)
-        TwGetParam(self._bar, "", "alpha", PARAM_INT32, 1, ctypes.byref(c))
+        TwGetParam(self._bar, "", "alpha", TW_PARAM_INT32, 1, ctypes.byref(c))
         return c.value
     alpha = property(_get_alpha, _set_alpha,
                      doc='''Bar opacity.
@@ -243,10 +243,10 @@ class Bar(object):
 
     def _set_color(self, color):
         c = (ctypes.c_int*3)(color[0],color[1],color[2])
-        TwSetParam(self._bar, "", "color", PARAM_INT32, 3, ctypes.byref(c))
+        TwSetParam(self._bar, "", "color", TW_PARAM_INT32, 3, ctypes.byref(c))
     def _get_color(self):
         c = (ctypes.c_int*3)(0,0,0)
-        TwGetParam(self._bar, "", "color", PARAM_INT32, 3, ctypes.byref(c))
+        TwGetParam(self._bar, "", "color", TW_PARAM_INT32, 3, ctypes.byref(c))
         return c[0], c[1], c[2]
     color = property(_get_color, _set_color,
                      doc='''Bar color.
@@ -300,10 +300,10 @@ class Bar(object):
 
     def _set_position(self, position):
         c = (ctypes.c_int*2)(position[0],position[1])
-        TwSetParam(self._bar, "", "position", PARAM_INT32, 2, ctypes.byref(c))
+        TwSetParam(self._bar, "", "position", TW_PARAM_INT32, 2, ctypes.byref(c))
     def _get_position(self):
         c = (ctypes.c_int*2)(0,0)
-        TwGetParam(self._bar, "", "position", PARAM_INT32, 2, ctypes.byref(c))
+        TwGetParam(self._bar, "", "position", TW_PARAM_INT32, 2, ctypes.byref(c))
         return c[0], c[1]
     position = property(_get_position, _set_position,
                      doc='''Bar position (x,y).
@@ -318,10 +318,10 @@ class Bar(object):
 
     def _set_size(self, size):
         c = (ctypes.c_int*2)(size[0],size[1])
-        TwSetParam(self._bar, "", "size", PARAM_INT32, 2, ctypes.byref(c))
+        TwSetParam(self._bar, "", "size", TW_PARAM_INT32, 2, ctypes.byref(c))
     def _get_size(self):
         c = (ctypes.c_int*2)(0,0)
-        TwGetParam(self._bar, "", "size", PARAM_INT32, 2, ctypes.byref(c))
+        TwGetParam(self._bar, "", "size", TW_PARAM_INT32, 2, ctypes.byref(c))
         return c[0], c[1]
     size = property(_get_size, _set_size,
                      doc='''Bar size (sx,sy).
@@ -336,10 +336,10 @@ class Bar(object):
 
     def _set_valuewidth(self, valuewidth):
         c = ctypes.c_int(valuewidth)
-        TwSetParam(self._bar, "", "valuewidth", PARAM_INT32, 1, ctypes.byref(c))
+        TwSetParam(self._bar, "", "valuewidth", TW_PARAM_INT32, 1, ctypes.byref(c))
     def _get_valuewidth(self):
         c = ctypes.c_int(0)
-        TwGetParam(self._bar, "", "valuewidth", PARAM_INT32, 1, ctypes.byref(c))
+        TwGetParam(self._bar, "", "valuewidth", TW_PARAM_INT32, 1, ctypes.byref(c))
         return c.value
     valuewidth = property(_get_valuewidth, _set_valuewidth,
                      doc='''Value width.
@@ -353,10 +353,10 @@ class Bar(object):
 
     def _set_fontsize(self, fontsize):
         c = ctypes.c_int(fontsize)
-        TwSetParam(self._bar, "", "fontsize", PARAM_INT32, 1, ctypes.byref(c))
+        TwSetParam(self._bar, "", "fontsize", TW_PARAM_INT32, 1, ctypes.byref(c))
     def _get_fontsize(self):
         c = ctypes.c_int(0)
-        TwGetParam(self._bar, "", "fontsize", PARAM_INT32, 1, ctypes.byref(c))
+        TwGetParam(self._bar, "", "fontsize", TW_PARAM_INT32, 1, ctypes.byref(c))
         return c.value
     fontsize = property(_get_fontsize, _set_fontsize,
                      doc='''Font size s.
@@ -392,10 +392,10 @@ class Bar(object):
 
     def _set_visible(self, visible):
         c = ctypes.c_int(visible)
-        TwSetParam(self._bar, "", "visible", PARAM_INT32, 1, ctypes.byref(c))
+        TwSetParam(self._bar, "", "visible", TW_PARAM_INT32, 1, ctypes.byref(c))
     def _get_visible(self):
         c = ctypes.c_int(0)
-        TwGetParam(self._bar, "", "visible", PARAM_INT32, 1, ctypes.byref(c))
+        TwGetParam(self._bar, "", "visible", TW_PARAM_INT32, 1, ctypes.byref(c))
         return c.value
     visible = property(_get_visible, _set_visible,
                      doc='''Bar visibility.
@@ -409,10 +409,10 @@ class Bar(object):
 
     def _set_iconified(self, iconified):
         c = ctypes.c_int(iconified)
-        TwSetParam(self._bar, "", "iconified", PARAM_INT32, 1, ctypes.byref(c))
+        TwSetParam(self._bar, "", "iconified", TW_PARAM_INT32, 1, ctypes.byref(c))
     def _get_iconified(self):
         c = ctypes.c_int(0)
-        TwGetParam(self._bar, "", "iconified", PARAM_INT32, 1, ctypes.byref(c))
+        TwGetParam(self._bar, "", "iconified", TW_PARAM_INT32, 1, ctypes.byref(c))
         return c.value
     iconified = property(_get_iconified, _set_iconified,
                      doc='''Bar iconification.
@@ -470,10 +470,10 @@ class Bar(object):
 
     def _set_iconmargin(self, iconmargin):
         c = (ctypes.c_int*2)(iconmargin[0],iconmargin[1])
-        TwSetParam(self._bar, "", "iconmargin", PARAM_INT32, 2, ctypes.byref(c))
+        TwSetParam(self._bar, "", "iconmargin", TW_PARAM_INT32, 2, ctypes.byref(c))
     def _get_iconmargin(self):
         c = (ctypes.c_int*2)(0,0)
-        TwGetParam(self._bar, "", "iconmargin", PARAM_INT32, 2, ctypes.byref(c))
+        TwGetParam(self._bar, "", "iconmargin", TW_PARAM_INT32, 2, ctypes.byref(c))
         return c[0], c[1]
     iconmargin = property(_get_iconmargin, _set_iconmargin,
                      doc='''Bar icon margin (x,y).
@@ -491,10 +491,10 @@ class Bar(object):
 
     def _set_iconifiable(self, iconifiable):
         c = ctypes.c_int(iconifiable)
-        TwSetParam(self._bar, "", "iconifiable", PARAM_INT32, 1, ctypes.byref(c))
+        TwSetParam(self._bar, "", "iconifiable", TW_PARAM_INT32, 1, ctypes.byref(c))
     def _get_iconifiable(self):
         c = ctypes.c_int(0)
-        TwGetParam(self._bar, "", "iconifiable", PARAM_INT32, 1, ctypes.byref(c))
+        TwGetParam(self._bar, "", "iconifiable", TW_PARAM_INT32, 1, ctypes.byref(c))
         return c.value
     iconifiable = property(_get_iconifiable, _set_iconifiable,
                      doc='''Allow a bar to be iconified or not by the user.
@@ -506,10 +506,10 @@ class Bar(object):
 
     def _set_movable(self, movable):
         c = ctypes.c_int(movable)
-        TwSetParam(self._bar, "", "movable", PARAM_INT32, 1, ctypes.byref(c))
+        TwSetParam(self._bar, "", "movable", TW_PARAM_INT32, 1, ctypes.byref(c))
     def _get_movable(self):
         c = ctypes.c_int(0)
-        TwGetParam(self._bar, "", "movable", PARAM_INT32, 1, ctypes.byref(c))
+        TwGetParam(self._bar, "", "movable", TW_PARAM_INT32, 1, ctypes.byref(c))
         return c.value
     movable = property(_get_movable, _set_movable,
                      doc='''Allow a bar to be moved or not by the user.
@@ -521,10 +521,10 @@ class Bar(object):
 
     def _set_resizable(self, resizable):
         c = ctypes.c_int(resizable)
-        TwSetParam(self._bar, "", "resizable", PARAM_INT32, 1, ctypes.byref(c))
+        TwSetParam(self._bar, "", "resizable", TW_PARAM_INT32, 1, ctypes.byref(c))
     def _get_resizable(self):
         c = ctypes.c_int(0)
-        TwGetParam(self._bar, "", "resizable", PARAM_INT32, 1, ctypes.byref(c))
+        TwGetParam(self._bar, "", "resizable", TW_PARAM_INT32, 1, ctypes.byref(c))
         return c.value
     resizable = property(_get_resizable, _set_resizable,
                      doc='''Allow a bar to be resized or not by the user.
@@ -536,10 +536,10 @@ class Bar(object):
 
     def _set_fontresizable(self, fontresizable):
         c = ctypes.c_int(fontresizable)
-        TwSetParam(self._bar, "", "fontresizable", PARAM_INT32, 1, ctypes.byref(c))
+        TwSetParam(self._bar, "", "fontresizable", TW_PARAM_INT32, 1, ctypes.byref(c))
     def _get_fontresizable(self):
         c = ctypes.c_int(0)
-        TwGetParam(self._bar, "", "fontresizable", PARAM_INT32, 1, ctypes.byref(c))
+        TwGetParam(self._bar, "", "fontresizable", TW_PARAM_INT32, 1, ctypes.byref(c))
         return c.value
     fontresizable = property(_get_fontresizable, _set_fontresizable,
                      doc='''Allow a bar to have font resized or not by the user.
@@ -551,10 +551,10 @@ class Bar(object):
 
     def _set_alwaystop(self, alwaystop):
         c = ctypes.c_int(alwaystop)
-        TwSetParam(self._bar, "", "alwaystop", PARAM_INT32, 1, ctypes.byref(c))
+        TwSetParam(self._bar, "", "alwaystop", TW_PARAM_INT32, 1, ctypes.byref(c))
     def _get_alwaystop(self):
         c = ctypes.c_int(0)
-        TwGetParam(self._bar, "", "alwaystop", PARAM_INT32, 1, ctypes.byref(c))
+        TwGetParam(self._bar, "", "alwaystop", TW_PARAM_INT32, 1, ctypes.byref(c))
         return c.value
     alwaystop = property(_get_alwaystop, _set_alwaystop,
                      doc='''Set a bar to be always on top of the others.
@@ -566,10 +566,10 @@ class Bar(object):
 
     def _set_alwaybottom(self, alwaybottom):
         c = ctypes.c_int(alwaybottom)
-        TwSetParam(self._bar, "", "alwaybottom", PARAM_INT32, 1, ctypes.byref(c))
+        TwSetParam(self._bar, "", "alwaybottom", TW_PARAM_INT32, 1, ctypes.byref(c))
     def _get_alwaybottom(self):
         c = ctypes.c_int(0)
-        TwGetParam(self._bar, "", "alwaybottom", PARAM_INT32, 1, ctypes.byref(c))
+        TwGetParam(self._bar, "", "alwaybottom", TW_PARAM_INT32, 1, ctypes.byref(c))
         return c.value
     alwaybottom = property(_get_alwaybottom, _set_alwaybottom,
                      doc='''Set a bar to be always behind the others.

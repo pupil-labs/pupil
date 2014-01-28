@@ -7,6 +7,8 @@ import OpenGL.GL as gl
 from glfw import *
 from OpenGL.GLU import gluOrtho2D
 import calibrate
+from circle_detector import get_canditate_ellipses
+
 from ctypes import c_int,c_bool
 import atb
 import audio
@@ -60,7 +62,6 @@ class Screen_Marker_Calibration(Plugin):
         self.pos = None
 
         self.show_edges = c_bool(0)
-        self.aperture = c_int(7)
         self.dist_threshold = c_int(5)
         self.area_threshold = c_int(20)
 
@@ -89,7 +90,6 @@ class Screen_Marker_Calibration(Plugin):
 
         self._bar.add_separator("Sep1")
         self._bar.add_var("show edges",self.show_edges)
-        self._bar.add_var("aperture", self.aperture, min=3,step=2)
         self._bar.add_var("area threshold", self.area_threshold)
         self._bar.add_var("eccetricity threshold", self.dist_threshold)
 
@@ -193,61 +193,11 @@ class Screen_Marker_Calibration(Plugin):
                 self.world_size = img.shape[1],img.shape[0]
 
             #detect the marker
-            gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            # self.candidate_points = self.detector.detect(s_img)
-
-            # get threshold image used to get crisp-clean edges
-            edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.aperture.value, 7)
-            # cv2.flip(edges,1 ,dst = edges,)
-            # display the image for debugging purpuses
-            # img[:] = cv2.cvtColor(edges,cv2.COLOR_GRAY2BGR)
-            contours, hierarchy = cv2.findContours(edges,
-                                            mode=cv2.RETR_TREE,
-                                            method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
-
-            # remove extra encapsulation
-            hierarchy = hierarchy[0]
-            # turn outmost list into array
-            contours =  np.array(contours)
-            # keep only contours                        with parents     and      children
-            contained_contours = contours[np.logical_and(hierarchy[:,3]>=0, hierarchy[:,2]>=0)]
-            # turn on to debug contours
-            if self.show_edges.value:
-                cv2.drawContours(img, contained_contours,-1, (0,0,255))
-
-            # need at least 5 points to fit ellipse
-            contained_contours =  [c for c in contained_contours if len(c) >= 5]
-
-            ellipses = [cv2.fitEllipse(c) for c in contained_contours]
-            self.candidate_ellipses = []
-
-
-            # filter for ellipses that have similar area as the source contour
-            for e,c in zip(ellipses,contained_contours):
-                a,b = e[1][0]/2.,e[1][1]/2.
-                if abs(cv2.contourArea(c)-np.pi*a*b) <self.area_threshold.value:
-                    self.candidate_ellipses.append(e)
-
-
-            def man_dist(e,other):
-                return abs(e[0][0]-other[0][0])+abs(e[0][1]-other[0][1])
-
-            def get_cluster(ellipses):
-                # retrun the first cluser of at least 3 concetric ellipses
-                for e in ellipses:
-                    close_ones = []
-                    for other in ellipses:
-                        if man_dist(e,other)<self.dist_threshold.value:
-                            close_ones.append(other)
-                    if len(close_ones)>=4:
-                        # sort by major axis to return smallest ellipse first
-                        close_ones.sort(key=lambda e: max(e[1]))
-                        return close_ones
-                return []
-
-            self.candidate_ellipses = get_cluster(self.candidate_ellipses)
-
-
+            self.candidate_ellipses = get_canditate_ellipses(img,
+                                                            area_threshold=self.area_threshold.value,
+                                                            dist_threshold=self.dist_threshold.value,
+                                                            min_ring_count=4,
+                                                            visual_debug=self.show_edges.value)
 
             if len(self.candidate_ellipses) > 0:
                 self.detected= True

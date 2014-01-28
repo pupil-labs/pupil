@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from methods import normalize,denormalize
 from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
+from circle_detector import get_canditate_ellipses
 import calibrate
 
 from ctypes import c_int,c_bool
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class Manual_Marker_Calibration(Plugin):
     """Detector looks for a white ring on a black background.
-        Using 9 positions/points within the FOV
+        Using at least 9 positions/points within the FOV
         Ref detector will direct one to good positions with audio cues
         Calibration only collects data at the good positions
 
@@ -37,19 +38,21 @@ class Manual_Marker_Calibration(Plugin):
         self.counter_max = 30
         self.candidate_ellipses = []
         self.show_edges = c_bool(0)
-        self.aperture = c_int(7)
+        self.aperture = 7
         self.dist_threshold = c_int(10)
         self.area_threshold = c_int(30)
         self.world_size = None
 
-
+        self.stop_marker_found = False
+        self.auto_stop = 0
+        self.auto_stop_max = 30
         atb_label = "calibrate using handheld marker"
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
         self._bar.add_button("start/stop", self.start_stop, key='c')
-        # self._bar.add_var("show edges",self.show_edges, group="Advanced")
+        self._bar.add_var("show edges",self.show_edges, group="Advanced")
         # self._bar.add_var("counter", getter=self.get_count, group="Advanced")
         # self._bar.add_var("aperture", self.aperture, min=3,step=2, group="Advanced")
         # self._bar.add_var("area threshold", self.area_threshold, group="Advanced")
@@ -98,72 +101,53 @@ class Manual_Marker_Calibration(Plugin):
         if no reference was found, publish 0,0
         """
         if self.active:
-            img = frame.img
-            gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            # self.candidate_points = self.detector.detect(s_img)
 
-            # get threshold image used to get crisp-clean edges
-            edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.aperture.value, 7)
-            # cv2.flip(edges,1 ,dst = edges,)
-            # display the image for debugging purpuses
-            # img[:] = cv2.cvtColor(edges,cv2.COLOR_GRAY2BGR)
-             # from edges to contours to ellipses CV_RETR_CCsOMP ls fr hole
-            contours, hierarchy = cv2.findContours(edges,
-                                            mode=cv2.RETR_TREE,
-                                            method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
+            img  = frame.img
 
+            if self.world_size is None:
+                self.world_size = img.shape[1],img.shape[0]
 
-            # remove extra encapsulation
-            hierarchy = hierarchy[0]
-            # turn outmost list into array
-            contours =  np.array(contours)
-            # keep only contours                        with parents     and      children
-            contained_contours = contours[np.logical_and(hierarchy[:,3]>=0, hierarchy[:,2]>=0)]
-            # turn on to debug contours
-            if self.show_edges.value:
-                cv2.drawContours(img, contained_contours,-1, (0,0,255))
-
-            # need at least 5 points to fit ellipse
-            contained_contours =  [c for c in contained_contours if len(c) >= 5]
-
-            ellipses = [cv2.fitEllipse(c) for c in contained_contours]
-            self.candidate_ellipses = []
-            # filter for ellipses that have similar area as the source contour
-            for e,c in zip(ellipses,contained_contours):
-                a,b = e[1][0]/2.,e[1][1]/2.
-                if abs(cv2.contourArea(c)-np.pi*a*b) <self.area_threshold.value:
-                    self.candidate_ellipses.append(e)
-
-
-            def man_dist(e,other):
-                return abs(e[0][0]-other[0][0])+abs(e[0][1]-other[0][1])
-
-            def get_cluster(ellipses):
-                for e in ellipses:
-                    close_ones = []
-                    for other in ellipses:
-                        if man_dist(e,other)<self.dist_threshold.value:
-                            close_ones.append(other)
-                    if len(close_ones)>=3:
-                        # sort by major axis to return smallest ellipse first
-                        close_ones.sort(key=lambda e: max(e[1]))
-                        return close_ones
-                return []
-
-            self.candidate_ellipses = get_cluster(self.candidate_ellipses)
-
+            self.candidate_ellipses = get_canditate_ellipses(img,
+                                                            area_threshold=self.area_threshold.value,
+                                                            dist_threshold=self.dist_threshold.value,
+                                                            min_ring_count=3,
+                                                            visual_debug=self.show_edges.value)
 
             if len(self.candidate_ellipses) > 0:
-                self.detected= True
+                self.detected = True
                 marker_pos = self.candidate_ellipses[0][0]
                 self.pos = normalize(marker_pos,(img.shape[1],img.shape[0]),flip_y=True)
+
 
             else:
                 self.detected = False
                 self.pos = None #indicate that no reference is detected
 
 
+            # center dark or white?
             if self.detected:
+                second_ellipse =  self.candidate_ellipses[1]
+                col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
+                row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
+                marker_roi = img[slice(*row_slice),slice(*col_slice)]
+                marker_gray = cv2.cvtColor(marker_roi,cv2.COLOR_BGR2GRAY)
+                avg = cv2.mean(marker_gray)[0]
+                center = marker_gray[second_ellipse[1][1]/2,second_ellipse[1][0]/2]
+                rel_shade = center-avg
+
+                #auto_stop logic
+                if rel_shade > 30:
+                    #bright marker center found
+                    self.auto_stop +=1
+                    self.stop_marker_found = True
+
+                else:
+                    self.auto_stop = 0
+                    self.stop_marker_found = False
+
+
+            #tracking logic
+            if self.detected and not self.stop_marker_found:
                 # calculate smoothed manhattan velocity
                 smoother = 0.3
                 smooth_pos = np.array(self.smooth_pos)
@@ -182,30 +166,41 @@ class Manual_Marker_Calibration(Plugin):
 
                 # start counter if ref is resting in place and not at last sample site
                 if not self.counter:
-                    if self.smooth_vel < 0.01 and sample_ref_dist > 0.2:
+                    if self.smooth_vel < 0.01 and sample_ref_dist > 0.1:
                         self.sample_site = self.smooth_pos
                         audio.beep()
                         logger.debug("Steady marker found. Starting to sample %s datapoints" %self.counter_max)
                         self.counter = self.counter_max
 
-            if self.counter and self.detected:
-                self.counter -= 1
-                ref = {}
-                ref["norm_pos"] = self.pos
-                ref["timestamp"] = frame.timestamp
-                self.ref_list.append(ref)
-                if self.counter == 0:
-                    #last sample before counter done and moving on
-                    audio.tink()
-                    logger.debug("Sampled %s datapoints. Stopping to sample. Looking for steady marker again."%self.counter_max)
+                if self.counter:
+                    if self.smooth_vel > 0.01:
+                        audio.tink()
+                        logger.debug("Marker moved to quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
+                        self.counter = 0
+                    else:
+                        self.counter -= 1
+                        ref = {}
+                        ref["norm_pos"] = self.pos
+                        ref["timestamp"] = frame.timestamp
+                        self.ref_list.append(ref)
+                        if self.counter == 0:
+                            #last sample before counter done and moving on
+                            audio.tink()
+                            logger.debug("Sampled %s datapoints. Stopping to sample. Looking for steady marker again."%self.counter_max)
+
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
                 if p_pt['norm_pupil'] is not None:
                     self.pupil_list.append(p_pt)
 
-            if self.world_size is None:
-                self.world_size = img.shape[1],img.shape[0]
+
+
+            #stop if autostop condition is satisfied:
+            if self.auto_stop >=self.auto_stop_max:
+                self.auto_stop = 0
+                self.stop()
+
 
         else:
             pass
@@ -232,7 +227,22 @@ class Manual_Marker_Calibration(Plugin):
                 draw_gl_polyline(pts,(0.,1.,0,1.))
 
             if self.counter:
-                draw_gl_point_norm(self.pos,size=30.,color=(0.,1.,0.,.5))
+                # lets draw an indicator on the count
+                e = self.candidate_ellipses[2]
+                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                    (int(e[1][0]/2),int(e[1][1]/2)),
+                                    int(e[-1]),0,360,360/self.counter_max)
+                indicator = [e[0]] + pts[self.counter:].tolist()[::-1] + [e[0]]
+                draw_gl_polyline(indicator,(0.1,.5,.7,.8),type='Polygon')
+
+            if self.auto_stop:
+                # lets draw an indicator on the autostop count
+                e = self.candidate_ellipses[2]
+                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                    (int(e[1][0]/2),int(e[1][1]/2)),
+                                    int(e[-1]),0,360,360/self.auto_stop_max)
+                indicator = [e[0]] + pts[self.auto_stop:].tolist() + [e[0]]
+                draw_gl_polyline(indicator,(8.,0.1,0.1,.8),type='Polygon')
         else:
             pass
 

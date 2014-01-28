@@ -18,6 +18,9 @@ def main():
 
     save_video = False
 
+    # global denormalize for legacy support 
+    global denormalize
+
     try:
         data_folder = sys.argv[1]
     except:
@@ -42,9 +45,6 @@ def main():
     version = int(filter(type(version).isdigit, version)[:3]) #(get major,minor,fix of version)
     if version < 36:
         denormalize = denormalize_legacy
-    else:
-        global denormalize
-
 
 
     cap = cv.VideoCapture(video_path)

@@ -18,6 +18,9 @@ def main():
 
     save_video = False
 
+    # global denormalize for legacy support 
+    global denormalize
+
     try:
         data_folder = sys.argv[1]
     except:
@@ -39,12 +42,11 @@ def main():
     #deal with older recordings that use a different coodinate system.
     with open(data_folder + "/info.csv") as info:
         data = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
+
     version = [v for k,v in data.iteritems() if "Capture Software Version" in k ][0]
     version = int(filter(type(version).isdigit, version)[:3]) #(get major,minor,fix of version)
     if version < 36:
         denormalize = denormalize_legacy
-    else:
-        global denormalize
 
 
 

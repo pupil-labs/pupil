@@ -17,6 +17,9 @@ import time
 def main():
     save_video = False
 
+    # global denormalize for legacy support 
+    global denormalize
+
     # manhattan_dist variable used to check for false positives
     manhattan_dist = 20
 
@@ -43,8 +46,6 @@ def main():
     version = int(filter(type(version).isdigit, version)[:3]) #(get major,minor,fix of version)
     if version < 36:
         denormalize = denormalize_legacy
-    else:
-        global denormalize
 
 
 

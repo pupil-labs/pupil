@@ -549,7 +549,6 @@ def pruning_quick_combine(l,fn,seed_idx=None,max_evals=1e20,max_depth=5):
     l is a list of object to quick_combine.
     the evaluation fn should accept idecies to your list and the list
     it should return a binary result on wether this set is good
-    it should accept a list it can use as storage
 
     this search finds all combinations but assumes:
         that a bad subset can not be bettered by adding more nodes

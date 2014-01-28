@@ -209,7 +209,7 @@ class VideoCapture(object):
         self.v4l2_streamparm = v4l2_streamparm()
         self.v4l2_streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE
         self.v4l2_streamparm.parm.capture.timeperframe.numerator = 1
-        self.v4l2_streamparm.parm.capture.timeperframe.denominator = fps
+        self.v4l2_streamparm.parm.capture.timeperframe.denominator = int(fps)
         if (-1 == dll.xioctl(self.device, VIDIOC_S_PARM, byref(self.v4l2_streamparm))):
             self._close()
             raise Exception("Could not set v4l2 parameters")
@@ -242,6 +242,13 @@ class VideoCapture(object):
         self._active_buffer = None
 
 
+    def get_size(self):
+        return self.sizes[self.current_size_idx]
+
+
+    def get_rate(self):
+        n,d = self.rates[self.current_rate_idx]
+        return int(float(d)/n)
 
 
     def set_rate_idx(self,rate_id):
@@ -359,6 +366,11 @@ class VideoCapture(object):
             self.device = dll.close_device(self.device)
             self.open=False
             logger.info("Closed: %s" %self.src_str)
+
+    def cleanup(self):
+        self._stop()
+        self._uninit()
+        self._close()     
 
     def __del__(self):
         self._stop()

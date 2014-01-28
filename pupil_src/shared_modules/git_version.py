@@ -133,7 +133,7 @@ def get_tag_commit():
                   stdout=PIPE, stderr=PIPE)
         p.stderr.close()
         line = p.stdout.readlines()[0]
-        return line.strip()
+        return str(line.strip()) #make sure we have a proper version string.
     except:
         return "unknown"
 
