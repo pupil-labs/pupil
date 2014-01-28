@@ -9,6 +9,9 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+
+import os
+
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -56,6 +59,22 @@ def rec_version(data_dir):
     rec_version = meta_info["Capture Software Version"]
     rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
     return rec_version_float
+
+
+
+def is_pupil_rec_dir(data_dir):
+    if not os.path.isdir(data_dir):
+        logger.error("No valid dir supplied")
+        return False
+
+    required_files = data_dir + "/world.avi",data_dir + "/timestamps.npy",data_dir + "/gaze_positions.npy",data_dir + "/info.csv"
+    for f in required_files:
+        if not os.path.isfile(f):
+            logger.error("Could not find %s"%f)
+            return False
+    return True
+
+
 
 
 # backwards compatibility tools:

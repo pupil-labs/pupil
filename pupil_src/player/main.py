@@ -52,7 +52,7 @@ import atb
 from uvc_capture import autoCreateCapture
 # helpers/utils
 from methods import normalize, denormalize,Temp
-from player_methods import correlate_gaze,patch_meta_info
+from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
 from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
 # Plug-ins
 from display_gaze import Display_Gaze
@@ -137,21 +137,36 @@ def main():
     try:
         data_folder = sys.argv[1]
     except:
-        logger.warning("You did not supply a datafolder when you called this script. \
-               \nI will use the path hardcoded into the script instead.")
+        #for dev, supply hardcoded dir:
         data_folder = "/Users/mkassner/Desktop/2014_01_21/000"
+        if os.path.isdir(data_folder):
+            logger.debug("Dev option: Using hadcoded data dir.")
+        else:
+            if getattr(sys, 'frozen', False):
+                logger.warning("You did not supply a data directory when you called this script! \
+                   \nPlease drag a Pupil recoding directory onto the launch icon.")
+            else:
+                logger.warning("You did not supply a data directory when you called this script! \
+                       \nPlease supply a Pupil recoding directory as first arg when calling Pupil Player.")
+            return
+
+    if not is_pupil_rec_dir(data_folder):
+        logger.error("You did not supply a dir with the required files inside.")
+        return
+
+
+    #backwards compatibility fn.
+    patch_meta_info(data_folder)
 
     #parse and load data folder info
     video_path = data_folder + "/world.avi"
     timestamps_path = data_folder + "/timestamps.npy"
     gaze_positions_path = data_folder + "/gaze_positions.npy"
-    record_path = data_folder + "/world_viz.avi"
+    meta_info_path = data_folder + "/info.csv"
 
-    #backwards compatibility fn.
-    patch_meta_info(data_folder)
 
     #parse info.csv file
-    with open(data_folder + "/info.csv") as info:
+    with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
     rec_version = meta_info["Capture Software Version"]
     rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
