@@ -2,7 +2,7 @@
 # -*- mode: python -*-
 from git_version import get_tag_commit
 
-a = Analysis(['../pupil_src/capture/main.py'],
+a = Analysis(['../pupil_src/player/main.py'],
              pathex=['../pupil_src/shared_modules/'],
              hiddenimports=[],
              hookspath=None,
@@ -11,11 +11,11 @@ pyz = PYZ(a.pure)
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
-          name='pupil_capture',
+          name='pupil_player',
           debug=False,
           strip=None,
           upx=False,
-          console=True)
+          console=False)
 
 coll = COLLECT(exe,
                a.binaries,
@@ -27,9 +27,9 @@ coll = COLLECT(exe,
                [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.0.2/lib/libglfw3.dylib','BINARY')],
                strip=None,
                upx=True,
-               name='Pupil Capture')
+               name='Pupil Player')
 
 app = BUNDLE(coll,
-             name='Pupil Capture.app',
+             name='Pupil Player.app',
              icon='macos_icon.icns',
              version = str(get_tag_commit()))
