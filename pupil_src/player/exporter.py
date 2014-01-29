@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
 
 import os
-
+from time import time
 import cv2
 import numpy as np
 from uvc_capture import autoCreateCapture
@@ -104,7 +104,7 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
     cap.seek_to_frame(start_frame)
 
-
+    start_time = time()
 
     while frames_to_export.value - current_frame.value > 0:
 
@@ -149,9 +149,15 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
         writer.write(frame.img)
         current_frame.value +=1
 
-    logger.info("Export done: Exported %s frames to %s ."%(current_frame.value,out_file_path))
     writer.release()
     writer = None
+
+    duration = time()-start_time
+    effective_fps = float(current_frame.value)/duration
+
+    logger.info("Export done: Exported %s frames to %s. This took %s seconds. Exporter ran at %s frames per second"%(current_frame.value,out_file_path,duration,effective_fps))
+
+
     return True
 
 
