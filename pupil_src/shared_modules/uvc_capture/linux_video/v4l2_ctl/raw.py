@@ -149,10 +149,16 @@ def extract_controls(device_number):
     while lines:
         words = line.split(" ")
         words = [word for word in words if len(word)>0] #get rid of remaining spaces
-        control = dict()
-        control_name = words.pop(0) ###BUG this can fail if the line is empty...
+        control = {}
+        try:
+            control_name = words.pop(0)
+        except IndexError:
+            ###With some camera this can fail if the line is empty...
+            break
+
         if control_name == "error":
             break
+
         control["type"] =  words.pop(0)
         colon = words.pop(0) #throw away..
         while words:
@@ -220,7 +226,7 @@ def list_devices():
     for idx in range(len(devices))[::-1]:
         dub_count = names[:idx].count(devices[idx]['name'])
         if dub_count:
-            devices[idx]['name'] += "(%i)"%dub_count  
+            devices[idx]['name'] += "(%i)"%dub_count
 
     return devices
 
