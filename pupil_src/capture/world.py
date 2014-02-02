@@ -37,7 +37,7 @@ import calibrate
 import calibration_routines
 import recorder
 from show_calibration import Show_Calibration
-from display_gaze import Display_Gaze
+from display_recent_gaze import Display_Recent_Gaze
 from pupil_server import Pupil_Server
 from marker_detector import Marker_Detector
 
@@ -268,7 +268,7 @@ def world(g_pool,cap_src,cap_size):
     open_calibration(bar.calibration_type.value,bar.calibration_type)
 
     #load gaze_display plugin
-    g.plugins.append(Display_Gaze(g_pool))
+    g.plugins.append(Display_Recent_Gaze(g_pool))
 
     # Event loop
     while not g_pool.quit.value:

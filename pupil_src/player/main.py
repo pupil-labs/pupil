@@ -55,10 +55,13 @@ from methods import normalize, denormalize,Temp
 from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
 from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
 # Plug-ins
+from vis_circle import Vis_Circle
+from vis_polyline import Vis_Polyline
 from display_gaze import Display_Gaze
+from vis_light_points import Vis_Light_Points
 from seek_bar import Seek_Bar
 from export_launcher import Export_Launcher
-
+from scan_path import Scan_Path
 import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -67,7 +70,7 @@ fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.WARNING)
+ch.setLevel(logging.DEBUG)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('Player: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -220,8 +223,12 @@ def main():
     g.plugins = []
     g.play = False
     g.new_seek = True
-    g.plugins.append(Display_Gaze(g))
+    # g.plugins.append(Display_Gaze(g))
     g.plugins.append(Seek_Bar(g,capture=cap))
+    g.plugins.append(Scan_Path(g))
+    # g.plugins.append(Vis_Light_Points(g))
+    g.plugins.append(Vis_Polyline(g))
+    g.plugins.append(Vis_Circle(g))
 
     # helpers called by the main atb bar
     def update_fps():
@@ -279,6 +286,7 @@ def main():
 
     g.plugins.append(Export_Launcher(g,data_dir=data_folder,frame_count=len(timestamps)))
 
+    g.plugins.sort(key=lambda x: x.order)
 
     while not glfwWindowShouldClose(main_window):
 

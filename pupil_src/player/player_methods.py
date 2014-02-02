@@ -11,7 +11,7 @@
 
 
 import os
-
+import cv2
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -141,5 +141,20 @@ def convert_gaze_pos(gaze_list,capture_version):
         gaze_list[:,4:] /= 2. #broadcasting
     return gaze_list
 
+
+def transparent_cirlce(img,center,radius,color,thickness):
+    try:
+        center = tuple(map(int,center))
+        if thickness > 0:
+            pad = radius + 2 + thickness
+        else:
+            pad = radius + 3
+        roi = slice(center[1]-pad,center[1]+pad),slice(center[0]-pad,center[0]+pad)
+        overlay = img[roi].copy()
+        cv2.circle(overlay,(pad,pad), radius=radius, color=color[:3], thickness=thickness, lineType=cv2.cv.CV_AA)
+        opacity = color[-1]/255.
+        cv2.addWeighted(overlay, opacity, img[roi], 1. - opacity, 0, img[roi])
+    except:
+        logger.debug("transparent_cirlce would have been partially outise of img. Did not draw it.")
 
 

@@ -12,22 +12,27 @@ from gl_utils import draw_gl_points_norm
 from plugin import Plugin
 import numpy as np
 
+import cv2
+
 from methods import denormalize
 
-class Display_Gaze(Plugin):
+class Vis_Polyline(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool,atb_pos=None):
-        super(Display_Gaze, self).__init__()
+    def __init__(self, g_pool):
+        super(Vis_Polyline, self).__init__()
         self.g_pool = g_pool
-        self.atb_pos = atb_pos
-        self.pupil_display_list = []
+        self.order = .9
+        self.prev_frame_idx = -1
 
     def update(self,frame,recent_pupil_positions,events):
-        for pt in recent_pupil_positions:
-            if pt['norm_gaze'] is not None:
-                self.pupil_display_list.append(pt['norm_gaze'])
-        self.pupil_display_list[:-3] = []
+        if self.prev_frame_idx != frame.index:
+            pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y=True) for pt in recent_pupil_positions if pt['norm_gaze'] is not None]
+            if pts:
+                pts = np.array([pts],dtype=np.int32)
+                cv2.polylines(frame.img, pts, isClosed=False, color=(0,255,0), thickness=1, lineType=cv2.cv.CV_AA)
+
+            self.prev_frame_idx = frame.index
+
 
     def gl_display(self):
-        draw_gl_points_norm(self.pupil_display_list,size=35,color=(1.,.2,.4,.6))
-
+        pass
