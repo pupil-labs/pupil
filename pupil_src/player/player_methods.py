@@ -143,13 +143,14 @@ def convert_gaze_pos(gaze_list,capture_version):
 
 
 def transparent_cirlce(img,center,radius,color,thickness):
+    center = tuple(map(int,center))
+    if thickness > 0:
+        pad = radius + 2 + thickness
+    else:
+        pad = radius + 3
+    roi = slice(center[1]-pad,center[1]+pad),slice(center[0]-pad,center[0]+pad)
+
     try:
-        center = tuple(map(int,center))
-        if thickness > 0:
-            pad = radius + 2 + thickness
-        else:
-            pad = radius + 3
-        roi = slice(center[1]-pad,center[1]+pad),slice(center[0]-pad,center[0]+pad)
         overlay = img[roi].copy()
         cv2.circle(overlay,(pad,pad), radius=radius, color=color[:3], thickness=thickness, lineType=cv2.cv.CV_AA)
         opacity = color[-1]/255.

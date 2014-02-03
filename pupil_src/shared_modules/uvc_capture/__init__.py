@@ -52,6 +52,8 @@ class Frame(object):
         self.compressed_img = compressed_img
         self.compressed_pix_fmt = compressed_pix_fmt
 
+    def copy(self):
+        return Frame(self.timestamp,self.img.copy(),self.index)
 
 class FileCapture():
     """

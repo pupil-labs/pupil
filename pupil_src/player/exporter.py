@@ -135,16 +135,9 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
         for p in plugins:
             p.update(frame,current_pupil_positions,events)
 
-        # render visual feedback from loaded plugins
-        for p in plugins:
-            p.img_display(frame)
-
-
-        # right now we dont have plugins so let just hardcode a dot here:
-        for gp in current_pupil_positions:
-            x_screen, y_screen = denormalize(gp['norm_gaze'], (width, height),flip_y=True)
-            cv2.circle(frame.img, (int(x_screen),int(y_screen)), 30, (60, 20, 220), 2, cv2.cv.CV_AA)
-
+        # # render visual feedback from loaded plugins
+        # for p in plugins:
+        #     p.gl_display(frame)
 
         writer.write(frame.img)
         current_frame.value +=1

@@ -61,13 +61,16 @@ class Export_Launcher(Plugin):
         self.start_frame = c_int(0)
         self.end_frame = c_int(frame_count)
 
+
+    def init_gui(self):
+
         atb_label = "Export Recording"
-        atb_pos = 10,220
+        atb_pos = 320,10
 
 
         self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
             help="export vizualization video", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.1, size=(300, 300))
+            text='light', position=atb_pos,refresh=.1, size=(300, 100))
 
 
         self.update_bar()

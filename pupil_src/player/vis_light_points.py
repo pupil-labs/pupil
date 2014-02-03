@@ -12,6 +12,7 @@ import cv2
 from plugin import Plugin
 import numpy as np
 import atb
+from ctypes import c_int
 from methods import denormalize
 import logging
 logger = logging.getLogger(__name__)
@@ -34,37 +35,55 @@ class Vis_Light_Points(Plugin):
     def update(self,frame,recent_pupil_positions,events):
 
         #since we edit the img inplace we should not do it in pause mode...
-        if self.prev_frame_idx != frame.index:
-            img = frame.img
-            img_shape = img.shape[:-1][::-1]#width,height
-            norm_gaze = [ng['norm_gaze'] for ng in recent_pupil_positions if ng['norm_gaze'] is not None]
-            screen_gaze = [denormalize(ng,img_shape,flip_y=True) for ng in norm_gaze]
+        img = frame.img
+        img_shape = img.shape[:-1][::-1]#width,height
+        norm_gaze = [ng['norm_gaze'] for ng in recent_pupil_positions if ng['norm_gaze'] is not None]
+        screen_gaze = [denormalize(ng,img_shape,flip_y=True) for ng in norm_gaze]
 
 
-            overlay = np.ones(img.shape[:-1],dtype=img.dtype)
+        overlay = np.ones(img.shape[:-1],dtype=img.dtype)
 
-            # draw recent gaze postions as black dots on an overlay image.
-            for gaze_point in screen_gaze:
-                try:
-                    overlay[int(gaze_point[1]),int(gaze_point[0])] = 0
-                except:
-                    pass
+        # draw recent gaze postions as black dots on an overlay image.
+        for gaze_point in screen_gaze:
+            try:
+                overlay[int(gaze_point[1]),int(gaze_point[0])] = 0
+            except:
+                pass
 
-            out = cv2.distanceTransform(overlay,cv2.cv.CV_DIST_L2, 5)
+        out = cv2.distanceTransform(overlay,cv2.cv.CV_DIST_L2, 5)
 
-            # fix for opencv binding incositency
-            if type(out)==tuple:
-                out = out[0]
+        # fix for opencv binding incositency
+        if type(out)==tuple:
+            out = out[0]
 
-            overlay =  1/(out/20+1)
+        overlay =  1/(out/20+1)
 
-            img *= cv2.cvtColor(overlay,cv2.COLOR_GRAY2RGB)
-
-            self.prev_frame_idx = frame.index
+        img *= cv2.cvtColor(overlay,cv2.COLOR_GRAY2RGB)
 
 
+    def init_gui(self,pos=None):
+        pos = 10,450
+        import atb
+        from time import time
+
+        atb_label = "Light Points"
+        self._bar = atb.Bar(name =self.__class__.__name__+str(time()), label=atb_label,
+            help="circle", color=(50, 50, 50), alpha=100,
+            text='light', position=pos,refresh=.1, size=(300, 100))
+
+        self._bar.add_button('remove',self.unset_alive)
+
+    def unset_alive(self):
+        self.alive = False
 
     def gl_display(self):
         pass
 
 
+
+    def cleanup(self):
+        """ called when the plugin gets terminated.
+        This happends either voluntary or forced.
+        if you have an atb bar or glfw window destroy it here.
+        """
+        self._bar.destroy()

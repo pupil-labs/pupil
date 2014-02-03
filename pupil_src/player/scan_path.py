@@ -12,6 +12,7 @@ import cv2
 from plugin import Plugin
 import numpy as np
 import atb
+from ctypes import c_float
 from methods import denormalize,normalize
 import logging
 logger = logging.getLogger(__name__)
@@ -39,7 +40,12 @@ class Scan_Path(Plugin):
         self.prev_gray = None
 
 
+        #gui
+        self.time = c_float(3.)
+
     def update(self,frame,recent_pupil_positions,events):
+
+        self.scan_path_timeframe = self.time.value
         img = frame.img
         img_shape = img.shape[:-1][::-1] # width,height
 
@@ -49,7 +55,7 @@ class Scan_Path(Plugin):
 
         #vars for calcOpticalFlowPyrLK
         lk_params = dict( winSize  = (90, 90),
-                  maxLevel = 2,
+                  maxLevel = 3,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 20, 0.03))
 
 
@@ -58,7 +64,7 @@ class Scan_Path(Plugin):
         #lets update past gaze using optical flow: this is like sticking the gaze points onto the pixels of the img.
         if self.past_pupil_positions and succeeding_frame:
             past_screen_gaze = np.array([denormalize(ng['norm_gaze'] ,img_shape,flip_y=True) for ng in self.past_pupil_positions],dtype=np.float32)
-            new_pts, status, err = cv2.calcOpticalFlowPyrLK(self.prev_gray, gray_img,past_screen_gaze,minEigThreshold=0.01,**lk_params)
+            new_pts, status, err = cv2.calcOpticalFlowPyrLK(self.prev_gray, gray_img,past_screen_gaze,minEigThreshold=0.005,**lk_params)
 
             for gaze,new_gaze_pt,s,e in zip(self.past_pupil_positions,new_pts,status,err):
                 if s:
@@ -95,7 +101,33 @@ class Scan_Path(Plugin):
         self.past_pupil_positions = recent_pupil_positions
 
 
+    def init_gui(self,pos=None):
+        pos = 10,380
+        import atb
+        from time import time
+
+        atb_label = "Scan Path"
+        self._bar = atb.Bar(name =self.__class__.__name__+str(time()), label=atb_label,
+            help="polyline", color=(50, 50, 50), alpha=100,
+            text='light', position=pos,refresh=.1, size=(300, 70))
+
+        self._bar.add_var('duration,sec',self.time,min=0)
+
+
+        self._bar.add_button('remove',self.unset_alive)
+
+    def unset_alive(self):
+        self.alive = False
+
+
     def gl_display(self):
         pass
 
+
+    def cleanup(self):
+        """ called when the plugin gets terminated.
+        This happends either voluntary or forced.
+        if you have an atb bar or glfw window destroy it here.
+        """
+        self._bar.destroy()
 
