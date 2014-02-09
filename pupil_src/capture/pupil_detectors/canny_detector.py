@@ -542,6 +542,10 @@ class Canny_Detector(Pupil_Detector):
             # gl_state settings
             glfwMakeContextCurrent(self._window)
             basic_gl_setup()
+
+            # refresh speed settings
+            glfwSwapInterval(0)
+
             glfwMakeContextCurrent(active_window)
 
             self.window_should_open = False

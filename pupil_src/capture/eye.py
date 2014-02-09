@@ -194,6 +194,10 @@ def eye(g_pool,cap_src,cap_size):
     # gl_state settings
     basic_gl_setup()
 
+    # refresh speed settings
+    glfwSwapInterval(0)
+
+
     # event loop
     while not g_pool.quit.value:
         frame = cap.get_frame()

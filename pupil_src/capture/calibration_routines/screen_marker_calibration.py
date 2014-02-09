@@ -137,6 +137,9 @@ class Screen_Marker_Calibration(Plugin):
             active_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self._window)
             basic_gl_setup()
+            # refresh speed settings
+            glfwSwapInterval(0)
+
             glfwMakeContextCurrent(active_window)
             self.window_should_open = False
 

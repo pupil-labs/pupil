@@ -242,6 +242,9 @@ def world(g_pool,cap_src,cap_size):
     # gl_state settings
     basic_gl_setup()
 
+    # refresh speed settings
+    glfwSwapInterval(0)
+
     # load last calibration data
     try:
         pt_cloud = np.load(os.path.join(g_pool.user_dir,'cal_pt_cloud.npy'))
