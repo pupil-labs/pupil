@@ -21,9 +21,7 @@ class Vis_Polyline(Plugin):
     """docstring for DisplayGaze"""
     def __init__(self, g_pool):
         super(Vis_Polyline, self).__init__()
-        self.g_pool = g_pool
         self.order = .9
-        self.prev_frame_idx = -1
         self.color = (c_float*3)(1.,.2,.4)
         self.thickness = c_int(1)
 
@@ -38,7 +36,6 @@ class Vis_Polyline(Plugin):
             pts = np.array([pts],dtype=np.int32)
             cv2.polylines(frame.img, pts, isClosed=False, color=color, thickness=thickness, lineType=cv2.cv.CV_AA)
 
-        self.prev_frame_idx = frame.index
 
 
 

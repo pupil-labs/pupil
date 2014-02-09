@@ -25,11 +25,9 @@ class Scan_Path(Plugin):
 
     def __init__(self, g_pool):
         super(Scan_Path, self).__init__()
-        self.g_pool = g_pool
 
         #let the plugin work after most other plugins.
         self.order = .6
-
 
         #user settings
         self.scan_path_timeframe = 3.

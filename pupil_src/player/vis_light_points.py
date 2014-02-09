@@ -26,7 +26,6 @@ class Vis_Light_Points(Plugin):
 
     def __init__(self, g_pool):
         super(Vis_Light_Points, self).__init__()
-        self.g_pool = g_pool
 
         self.order = .8
 

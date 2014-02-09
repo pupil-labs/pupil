@@ -23,7 +23,6 @@ class Vis_Circle(Plugin):
         super(Vis_Circle, self).__init__()
         self.g_pool = g_pool
         self.order = .9
-        self.prev_frame_idx = -1
 
 
         self.radius = c_int(20)
@@ -33,7 +32,6 @@ class Vis_Circle(Plugin):
 
 
     def update(self,frame,recent_pupil_positions,events):
-
         color = map(lambda x:int(x*255),self.color)
         color = color[:3][::-1]+color[-1:]
         if self.full.value:
@@ -45,7 +43,6 @@ class Vis_Circle(Plugin):
         pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y=True) for pt in recent_pupil_positions if pt['norm_gaze'] is not None]
         for pt in pts:
             transparent_cirlce(frame.img, pt, radius=radius, color=color, thickness=thickness)
-        self.prev_frame_idx = frame.index
 
     def init_gui(self,pos=None):
         pos = 10,200
@@ -60,8 +57,6 @@ class Vis_Circle(Plugin):
         self._bar.add_var('thickness',self.thickness)
         self._bar.add_var('full',self.full)
         self._bar.add_var('color',self.color)
-
-
         self._bar.add_button('remove',self.unset_alive)
 
     def unset_alive(self):
@@ -69,8 +64,6 @@ class Vis_Circle(Plugin):
 
     def gl_display(self):
         pass
-
-
 
     def cleanup(self):
         """ called when the plugin gets terminated.

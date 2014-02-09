@@ -146,8 +146,8 @@ class Example_Plugin(Plugin):
             gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
             gl.glEnable(gl.GL_BLEND)
             gl.glClearColor(1.,1.,1.,0.)
+            glfwSwapInterval(0)
             glfwMakeContextCurrent(active_window)
-
             self.window_should_open = False
 
 

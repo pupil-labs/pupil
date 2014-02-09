@@ -23,6 +23,10 @@ from multiprocessing.sharedctypes import RawValue
 
 from exporter import export
 
+
+import copy
+
+
 def verify_out_file_path(out_file_path,data_dir):
     #Out file path verification
     if not out_file_path:
@@ -121,7 +125,8 @@ class Export_Launcher(Plugin):
         data_dir = self.data_dir
         start_frame= self.start_frame.value
         end_frame= self.end_frame.value
-        plugins=[]
+        plugins=self.g_pool.plugins
+        # plugins = []
 
         out_file_path=verify_out_file_path(self.rec_name.value,self.data_dir)
         process = Process(target=export, args=(should_terminate,frames_to_export,current_frame, data_dir,start_frame,end_frame,plugins,out_file_path))
