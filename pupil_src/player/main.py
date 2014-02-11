@@ -331,7 +331,7 @@ def main():
         name, args = initializer
         logger.debug("Loading plugin: %s with settings %s"%(name, args))
         try:
-            p = plugin_by_name[name](**args)
+            p = plugin_by_name[name](g,**args)
             g.plugins.append(p)
         except:
             logger.warning("Plugin '%s' failed to load from settings file." %name)
