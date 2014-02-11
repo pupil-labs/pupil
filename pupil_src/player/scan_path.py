@@ -23,14 +23,14 @@ class Scan_Path(Plugin):
     lock recent gaze points onto pixels.
     """
 
-    def __init__(self, g_pool):
+    def __init__(self, g_pool=None,timeframe=3.):
         super(Scan_Path, self).__init__()
 
         #let the plugin work after most other plugins.
         self.order = .6
 
         #user settings
-        self.scan_path_timeframe = 3.
+        self.timeframe = c_float(float(timeframe))
 
         #algorithm working data
         self.prev_frame_idx = -1
@@ -39,15 +39,14 @@ class Scan_Path(Plugin):
 
 
         #gui
-        self.time = c_float(3.)
+        self.timeframe = c_float(3.)
 
     def update(self,frame,recent_pupil_positions,events):
-
-        self.scan_path_timeframe = self.time.value
         img = frame.img
         img_shape = img.shape[:-1][::-1] # width,height
 
         succeeding_frame = frame.index-self.prev_frame_idx == 1
+        same_frame = frame.index == self.prev_frame_idx
         gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 
@@ -76,21 +75,23 @@ class Scan_Path(Plugin):
                     # Since we will replace self.past_pupil_positions later,
                     # not appedning tu updated_past_gaze is like deliting this data point.
                     pass
+        else:
+            # we must be seeking, do not try to do optical flow, or pausing: see below.
+            pass
 
+        if same_frame:
+            # re-use last result
+            recent_pupil_positions[:] = self.past_pupil_positions
+        else:
+            #inject the scan path gaze points into recent_pupil_positions
+            recent_pupil_positions[:] = updated_past_gaze + recent_pupil_positions
+            recent_pupil_positions.sort(key=lambda x: x['timestamp']) #this may be redundant...
 
-        # print "new_gaze", len(recent_pupil_positions)
-        # print "from before", len(updated_past_gaze)
-
-        # trim of gaze that is too old
-        if recent_pupil_positions:
-            now = recent_pupil_positions[0]['timestamp']
-            cutof = now-self.scan_path_timeframe
-            updated_past_gaze = [g for g in updated_past_gaze if g['timestamp']>cutof]
-
-
-        #inject the scan path gaze points into recent_pupil_positions
-        recent_pupil_positions[:] = updated_past_gaze + recent_pupil_positions
-        recent_pupil_positions.sort(key=lambda x: x['timestamp']) #this may be redundant...
+            # trim gaze that is too old
+            if recent_pupil_positions:
+                now = recent_pupil_positions[0]['timestamp']
+                cutof = now-self.timeframe.value
+                updated_past_gaze = [g for g in updated_past_gaze if g['timestamp']>cutof]
 
 
         #update info for next frame.
@@ -109,7 +110,7 @@ class Scan_Path(Plugin):
             help="polyline", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.1, size=(300, 70))
 
-        self._bar.add_var('duration,sec',self.time,min=0)
+        self._bar.add_var('duration in sec',self.timeframe,min=0)
 
 
         self._bar.add_button('remove',self.unset_alive)
@@ -118,8 +119,12 @@ class Scan_Path(Plugin):
         self.alive = False
 
 
-    def gl_display(self):
-        pass
+    def get_init_dict(self):
+        return {'timeframe':self.timeframe.value}
+
+
+    def clone(self):
+        return Scan_Path(**self.get_init_dict())
 
 
     def cleanup(self):

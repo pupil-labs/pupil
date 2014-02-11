@@ -19,16 +19,16 @@ from methods import denormalize
 
 class Vis_Circle(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool):
+    def __init__(self, g_pool=None,radius=20,color=(1.,.2,.4,.5),thickness=1,full=False):
         super(Vis_Circle, self).__init__()
         self.g_pool = g_pool
         self.order = .9
 
 
-        self.radius = c_int(20)
-        self.color = (c_float*4)(1.,.2,.4,.5)
-        self.thickness = c_int(1)
-        self.full = c_bool(0)
+        self.radius = c_int(int(radius))
+        self.color = (c_float*4)(*color)
+        self.thickness = c_int(int(thickness))
+        self.full = c_bool(bool(full))
 
 
     def update(self,frame,recent_pupil_positions,events):
@@ -65,9 +65,18 @@ class Vis_Circle(Plugin):
     def gl_display(self):
         pass
 
+    def get_init_dict(self):
+        return {'radius':self.radius.value,'color':self.color[:],'thickness':self.thickness.value,'full':self.full.value}
+
+    def clone(self):
+        return Vis_Circle(**self.get_init_dict())
+
+
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happends either voluntary or forced.
         if you have an atb bar or glfw window destroy it here.
         """
         self._bar.destroy()
+
+

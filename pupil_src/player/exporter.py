@@ -28,8 +28,25 @@ from methods import denormalize
 import logging
 logger = logging.getLogger(__name__)
 
+# Plug-ins
+from vis_circle import Vis_Circle
+from vis_polyline import Vis_Polyline
+from vis_light_points import Vis_Light_Points
+from scan_path import Scan_Path
 
-def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame=None,end_frame=None,plugins=None,out_file_path=None):
+plugin_by_index =  (  Vis_Circle,
+                        Vis_Polyline,
+                        Scan_Path,
+                        Vis_Light_Points)
+
+name_by_index = [p.__name__ for p in plugin_by_index]
+index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
+plugin_by_name = dict(zip(name_by_index,plugin_by_index))
+additive_plugins = (Vis_Circle,Vis_Polyline)
+
+
+
+def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
 
     #parse and load data dir info
     video_path = data_dir + "/world.avi"
@@ -106,6 +123,15 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
     start_time = time()
 
+
+    plugins = []
+    # load plugins from initializers:
+    for initializer in plugin_initializers:
+        name, args = initializer
+        logger.debug("Loding plugin: %s with settings %s"%(name, args))
+        p = plugin_by_name[name](**args)
+        plugins.append(p)
+
     while frames_to_export.value - current_frame.value > 0:
 
         if should_terminate.value:
@@ -135,7 +161,7 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
         for p in plugins:
             p.update(frame,current_pupil_positions,events)
 
-        # # render visual feedback from loaded plugins
+        # # render gl visual feedback from loaded plugins
         # for p in plugins:
         #     p.gl_display(frame)
 

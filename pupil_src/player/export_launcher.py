@@ -11,21 +11,22 @@
 from plugin import Plugin
 import numpy as np
 import atb
-import os
+import os,sys, platform
 
 import logging
 logger = logging.getLogger(__name__)
 
 from ctypes import c_bool, c_int,create_string_buffer
 
-from multiprocessing import Process
-from multiprocessing.sharedctypes import RawValue
+if platform.system() == 'Darwin':
+    from billiard import Process,forking_enable
+    from billiard.sharedctypes import RawValue
+else:
+    from multiprocessing import Process
+    forking_enable = lambda x: x #dummy fn
+    from multiprocessing.sharedctypes import RawValue
 
 from exporter import export
-
-
-import copy
-
 
 def verify_out_file_path(out_file_path,data_dir):
     #Out file path verification
@@ -116,6 +117,8 @@ class Export_Launcher(Plugin):
         return create_string_buffer(job.out_file_path,512)
 
     def add_export(self):
+        # on MacOS we will not use os.fork, elsewhere this does nothing.
+        forking_enable(0)
 
         logger.debug("Adding new export.")
         should_terminate = RawValue(c_bool,False)
@@ -125,8 +128,16 @@ class Export_Launcher(Plugin):
         data_dir = self.data_dir
         start_frame= self.start_frame.value
         end_frame= self.end_frame.value
-        plugins=self.g_pool.plugins
-        # plugins = []
+        plugins = []
+
+        # Here we make clones of every plugin that supports it.
+        # So it runs in the current config when we lauch the exporter.
+        for p in self.g_pool.plugins:
+            try:
+                p_initializer = p.get_class_name(),p.get_init_dict()
+                plugins.append(p_initializer)
+            except AttributeError:
+                pass
 
         out_file_path=verify_out_file_path(self.rec_name.value,self.data_dir)
         process = Process(target=export, args=(should_terminate,frames_to_export,current_frame, data_dir,start_frame,end_frame,plugins,out_file_path))
@@ -148,9 +159,6 @@ class Export_Launcher(Plugin):
             self.launch_export(self.new_export)
             self.new_export = None
 
-        # for j in self.exports:
-        #     if not j.is_alive():
-        #         print j.exitcode
 
     def gl_display(self):
         pass

@@ -71,6 +71,8 @@ class Plugin(object):
         """
         pass
 
+    def get_class_name(self):
+        return self.__class__.__name__
 
 
     def __del__(self):

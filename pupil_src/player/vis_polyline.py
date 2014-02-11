@@ -19,11 +19,11 @@ from methods import denormalize
 
 class Vis_Polyline(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool):
+    def __init__(self, g_pool=None,color =(1.,.2,.4),thickness=1):
         super(Vis_Polyline, self).__init__()
         self.order = .9
-        self.color = (c_float*3)(1.,.2,.4)
-        self.thickness = c_int(1)
+        self.color = (c_float*3)(*color)
+        self.thickness = c_int(int(thickness))
 
     def update(self,frame,recent_pupil_positions,events):
         color = map(lambda x:int(x*255),self.color)
@@ -57,9 +57,11 @@ class Vis_Polyline(Plugin):
     def unset_alive(self):
         self.alive = False
 
+    def get_init_dict(self):
+        return {'color':self.color[:],'thickness':self.thickness.value}
 
-    def gl_display(self):
-        pass
+    def clone(self):
+        return Vis_Polyline(**self.get_init_dict())
 
 
 

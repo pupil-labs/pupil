@@ -24,12 +24,9 @@ class Vis_Light_Points(Plugin):
     """
     #let the plugin work after most other plugins.
 
-    def __init__(self, g_pool):
+    def __init__(self, g_pool=None):
         super(Vis_Light_Points, self).__init__()
-
         self.order = .8
-
-        self.prev_frame_idx = -1
 
     def update(self,frame,recent_pupil_positions,events):
 
@@ -75,8 +72,14 @@ class Vis_Light_Points(Plugin):
     def unset_alive(self):
         self.alive = False
 
-    def gl_display(self):
-        pass
+
+    def get_init_dict(self):
+        return {}
+
+    def clone(self):
+        return Vis_Light_Points(**self.get_init_dict())
+
+
 
 
 

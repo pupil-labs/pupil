@@ -63,15 +63,13 @@ from seek_bar import Seek_Bar
 from export_launcher import Export_Launcher
 from scan_path import Scan_Path
 
-name_by_index = (   'Vis_Circle',
-                    'Vis_Polyline',
-                    'Scan_Path',
-                    'Vis_Light_Points')
-
 plugin_by_index =  (  Vis_Circle,
                         Vis_Polyline,
                         Scan_Path,
                         Vis_Light_Points)
+
+name_by_index = [p.__name__ for p in plugin_by_index]
+
 
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
@@ -172,7 +170,6 @@ def main():
     if not is_pupil_rec_dir(data_folder):
         logger.error("You did not supply a dir with the required files inside.")
         return
-
 
     #backwards compatibility fn.
     patch_meta_info(data_folder)
@@ -358,7 +355,7 @@ def main():
         frame = new_frame.copy()
 
         #new positons and events
-        current_pupil_positions = positions_by_frame[frame.index]
+        current_pupil_positions = positions_by_frame[frame.index][:]
         events = None
 
         # allow each Plugin to do its work.
