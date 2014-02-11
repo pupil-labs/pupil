@@ -236,12 +236,27 @@ def main():
     g.plugins = []
     g.play = False
     g.new_seek = True
-    # g.plugins.append(Display_Gaze(g))
     g.plugins.append(Seek_Bar(g,capture=cap))
-    g.plugins.append(Scan_Path(g))
-    # g.plugins.append(Vis_Light_Points(g))
-    g.plugins.append(Vis_Polyline(g))
-    g.plugins.append(Vis_Circle(g))
+
+    for initializer in load('plugins',[]):
+        name, args = initializer
+        logger.debug("Loading plugin: %s with settings %s"%(name, args))
+        try:
+            p = plugin_by_name[name](**args)
+            g.plugins.append(p)
+        except:
+            logger.warning("Plugin '%s' failed to load from settings file." %name)
+
+    if load('plugins',"_") == "_":
+        #lets load some default if we dont have presets
+        g.plugins.append(Scan_Path(g))
+        g.plugins.append(Vis_Polyline(g))
+        g.plugins.append(Vis_Circle(g))
+        # g.plugins.append(Vis_Light_Points(g))
+
+
+    g.plugins.sort(key=lambda p: p.order)
+
 
     # helpers called by the main atb bar
     def update_fps():
@@ -389,12 +404,22 @@ def main():
         glfwPollEvents()
 
 
+    plugin_save = []
+    for p in g.plugins:
+        try:
+            p_initializer = p.get_class_name(),p.get_init_dict()
+            plugin_save.append(p_initializer)
+        except AttributeError:
+            #not all plugins need to be savable, they will not have the init dict.
+            pass
+
     # de-init all running plugins
     for p in g.plugins:
         p.alive = False
         #reading p.alive actually runs plug-in cleanup
         _ = p.alive
 
+    save('plugins',plugin_save)
     save('window_size',bar.window_size.value)
     session_settings.close()
 

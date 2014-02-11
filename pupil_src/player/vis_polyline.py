@@ -44,7 +44,7 @@ class Vis_Polyline(Plugin):
         import atb
         atb_label = "Gaze Polyline"
         from time import time
-        self._bar = atb.Bar(name = self.__class__.__name__+str(time()), label=atb_label,
+        self._bar = atb.Bar(name = self.__class__.__name__+str(id(self)), label=atb_label,
             help="polyline", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.1, size=(300, 70))
 

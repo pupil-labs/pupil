@@ -49,7 +49,7 @@ class Vis_Circle(Plugin):
         import atb
         from time import time
         atb_label = "Gaze Circle"
-        self._bar = atb.Bar(name =self.__class__.__name__+str(time()), label=atb_label,
+        self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
             help="circle", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.1, size=(300, 100))
 

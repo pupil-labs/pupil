@@ -128,9 +128,13 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
     # load plugins from initializers:
     for initializer in plugin_initializers:
         name, args = initializer
-        logger.debug("Loding plugin: %s with settings %s"%(name, args))
-        p = plugin_by_name[name](**args)
-        plugins.append(p)
+        logger.debug("Loading plugin: %s with settings %s"%(name, args))
+        try:
+            p = plugin_by_name[name](**args)
+            plugins.append(p)
+        except:
+            logger.warning("Plugin '%s' failed to load." %name)
+
 
     while frames_to_export.value - current_frame.value > 0:
 
