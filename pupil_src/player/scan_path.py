@@ -83,15 +83,15 @@ class Scan_Path(Plugin):
             # re-use last result
             recent_pupil_positions[:] = self.past_pupil_positions
         else:
-            #inject the scan path gaze points into recent_pupil_positions
-            recent_pupil_positions[:] = updated_past_gaze + recent_pupil_positions
-            recent_pupil_positions.sort(key=lambda x: x['timestamp']) #this may be redundant...
-
             # trim gaze that is too old
             if recent_pupil_positions:
                 now = recent_pupil_positions[0]['timestamp']
                 cutof = now-self.timeframe.value
                 updated_past_gaze = [g for g in updated_past_gaze if g['timestamp']>cutof]
+
+            #inject the scan path gaze points into recent_pupil_positions
+            recent_pupil_positions[:] = updated_past_gaze + recent_pupil_positions
+            recent_pupil_positions.sort(key=lambda x: x['timestamp']) #this may be redundant...
 
 
         #update info for next frame.
