@@ -436,7 +436,7 @@ def main():
 
 
 if __name__ == '__main__':
-    if 0:
+    if 1:
         main()
     else:
         import cProfile,subprocess,os
