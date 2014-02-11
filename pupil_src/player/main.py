@@ -236,26 +236,7 @@ def main():
     g.plugins = []
     g.play = False
     g.new_seek = True
-    g.plugins.append(Seek_Bar(g,capture=cap))
 
-    for initializer in load('plugins',[]):
-        name, args = initializer
-        logger.debug("Loading plugin: %s with settings %s"%(name, args))
-        try:
-            p = plugin_by_name[name](**args)
-            g.plugins.append(p)
-        except:
-            logger.warning("Plugin '%s' failed to load from settings file." %name)
-
-    if load('plugins',"_") == "_":
-        #lets load some default if we dont have presets
-        g.plugins.append(Scan_Path(g))
-        g.plugins.append(Vis_Polyline(g))
-        g.plugins.append(Vis_Circle(g))
-        # g.plugins.append(Vis_Light_Points(g))
-
-
-    g.plugins.sort(key=lambda p: p.order)
 
 
     # helpers called by the main atb bar
@@ -341,13 +322,36 @@ def main():
     glfwSetWindowPos(main_window,0,0)
 
 
+    #we always load these plugins
     g.plugins.append(Export_Launcher(g,data_dir=data_folder,frame_count=len(timestamps)))
+    g.plugins.append(Seek_Bar(g,capture=cap))
 
-    g.plugins.sort(key=lambda x: x.order)
+    #these are loaded based on user settings
+    for initializer in load('plugins',[]):
+        name, args = initializer
+        logger.debug("Loading plugin: %s with settings %s"%(name, args))
+        try:
+            p = plugin_by_name[name](**args)
+            g.plugins.append(p)
+        except:
+            logger.warning("Plugin '%s' failed to load from settings file." %name)
 
+    if load('plugins',"_") == "_":
+        #lets load some default if we dont have presets
+        g.plugins.append(Scan_Path(g))
+        g.plugins.append(Vis_Polyline(g))
+        g.plugins.append(Vis_Circle(g))
+        # g.plugins.append(Vis_Light_Points(g))
+
+    #sort by exec order
+    g.plugins.sort(key=lambda p: p.order)
+
+    #init gui
     for p in g.plugins:
         if hasattr(p,'init_gui'):
             p.init_gui()
+
+
 
     while not glfwWindowShouldClose(main_window):
 
@@ -432,7 +436,7 @@ def main():
 
 
 if __name__ == '__main__':
-    if 1:
+    if 0:
         main()
     else:
         import cProfile,subprocess,os
