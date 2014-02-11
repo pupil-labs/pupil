@@ -18,9 +18,6 @@ def main():
 
     save_video = False
 
-    # global denormalize for legacy support 
-    global denormalize
-
     try:
         data_folder = sys.argv[1]
     except:
@@ -37,15 +34,6 @@ def main():
     timestamps_path = data_folder + "/timestamps.npy"
     gaze_positions_path = data_folder + "/gaze_positions.npy"
     record_path = data_folder + "/world_viz.avi"
-
-    #deal with older recordings that use a different coodinate system.
-    with open(data_folder + "/info.csv") as info:
-        data = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
-    version = [v for k,v in data.iteritems() if "Capture Software Version" in k ][0]
-    version = int(filter(type(version).isdigit, version)[:3]) #(get major,minor,fix of version)
-    if version < 36:
-        denormalize = denormalize_legacy
-
 
     cap = cv.VideoCapture(video_path)
     gaze_list = list(np.load(gaze_positions_path))
@@ -188,19 +176,6 @@ def denormalize(pos, width, height, flip_y=True):
         y = 1-y
     y *= height
     return int(x),int(y)
-
-
-def denormalize_legacy(pos, width, height, flip_y=True):
-    """
-    denormalize and return as int
-    """
-    x = pos[0]
-    y = pos[1]
-    if flip_y:
-        y=-y
-    x = (x * width / 2.) + (width / 2.)
-    y = (y * height / 2.) + (height / 2.)
-    return int(x), int(y)
 
 if __name__ == '__main__':
     main()

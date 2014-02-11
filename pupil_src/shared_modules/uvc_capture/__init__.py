@@ -20,7 +20,7 @@ it requires:
     - on MacOS: uvcc (binary is distributed with this module)
 """
 import os,sys
-from cv2 import VideoCapture
+import cv2
 import numpy as np
 from os.path import isfile
 from time import time
@@ -45,59 +45,105 @@ else:
 # non os specific defines
 class Frame(object):
     """docstring of Frame"""
-    def __init__(self, timestamp,img,compressed_img=None, compressed_pix_fmt=None):
+    def __init__(self, timestamp,img,index=None,compressed_img=None, compressed_pix_fmt=None):
         self.timestamp = timestamp
+        self.index = index
         self.img = img
         self.compressed_img = compressed_img
         self.compressed_pix_fmt = compressed_pix_fmt
 
+    def copy(self):
+        return Frame(self.timestamp,self.img.copy(),self.index)
 
 class FileCapture():
     """
-    simple file capture that can auto_rewind
+    simple file capture.
     """
-    def __init__(self,src):
+    def __init__(self,src,timestamps=None):
         self.auto_rewind = True
         self.controls = None #No UVC controls available with file capture
         # we initialize the actual capture based on cv2.VideoCapture
-        self.cap = VideoCapture(src)
-        timestamps_loc = os.path.join(src.rsplit(os.path.sep,1)[0],'eye_timestamps.npy')
-        logger.info("trying to load timestamps with video at: %s"%timestamps_loc)
+        self.cap = cv2.VideoCapture(src)
+        if timestamps is None:
+            timestamps_loc = os.path.join(src.rsplit(os.path.sep,1)[0],'eye_timestamps.npy')
+            logger.debug("trying to auto load eye_video timestamps with video at: %s"%timestamps_loc)
+        else:
+            timestamps_loc = timestamps
+            logger.debug("trying to load supplied timestamps with video at: %s"%timestamps_loc)
         try:
             self.timestamps = np.load(timestamps_loc).tolist()
-            logger.info("loaded %s timestamps"%len(self.timestamps))
+            logger.debug("loaded %s timestamps"%len(self.timestamps))
         except:
-            logger.info("did not find timestamps")
+            logger.debug("did not find timestamps")
             self.timestamps = None
-        self._get_frame_ = self.cap.read
 
 
     def get_size(self):
-        return self.cap.get(3),self.cap.get(4)
+        width,height = int(self.cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)),int(self.cap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
+        if width == 0:
+            logger.error("Could not load media size info.")
+        return width,height
 
     def set_fps(self):
-        pass
+        logger.warning("You cannot set the Framerate on this File Capture")
 
     def get_fps(self):
-        return None
+        fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)
+        if fps == 0:
+            logger.error("Could not load media framerate info.")
+        return fps
 
-    def read(self):
-        s, img =self._get_frame_()
-        if  self.auto_rewind and not s:
-            self.rewind()
-            s, img = self._get_frame_()
-        return s,img
+    def get_frame_index(self):
+        return int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
+
+    def get_frame_count(self):
+        if self.timestamps is None:
+            logger.warning("No timestamps file loaded with this recording cannot get framecount")
+            return None
+        return len(self.timestamps)
 
     def get_frame(self):
-        s, img = self.read()
+        idx = int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
+        s, img = self.cap.read()
+        if not s:
+            logger.warning("Reached end of video file.")
+            return None
         if self.timestamps:
-            timestamp = self.timestamps.pop(0)
+            try:
+                timestamp = self.timestamps[idx]
+            except IndexError:
+                logger.warning("Reached end of timestamps list.")
+                return None
         else:
             timestamp = time()
-        return Frame(timestamp,img)
+        return Frame(timestamp,img,index=idx)
 
-    def rewind(self):
-        self.cap.set(1,0) #seek to the beginning
+    def seek_to_frame(self, seek_pos):
+        logger.debug("seeking to frame: %s"%seek_pos)
+        if self.cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES,seek_pos):
+            return True
+        logger.error("Could not perform seek on cv2.VideoCapture. Command gave negative return.")
+        return False
+
+
+    def seek_to_frame_prefetch(self, seek_pos):
+        prefetch = 10
+        logger.debug("seeking to frame: %s"%seek_pos)
+        if self.cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES,int(seek_pos)-prefetch):
+            while self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES) < seek_pos:
+                print "seek:",self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
+                s,_=self.cap.read()
+                if not s:
+                    logger.error("Could not seek to position %s" %seek_pos)
+                    return
+                prefetch -=1
+                if prefetch < -10:
+                    logger.error("Could not seek to position %s stepped out of prefetch" %seek_pos)
+                    return
+            logger.debug("Sucsessful seek to %s" %self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
+            return True
+        logger.error("Could not perform seek on cv2.VideoCapture. Command gave negative return.")
+        return
 
     def create_atb_bar(self,pos):
         return 0,0
@@ -109,7 +155,7 @@ class FileCapture():
         pass
 
 
-def autoCreateCapture(src,size=(640,480),fps=30):
+def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None):
     # checking src and handling all cases:
     src_type = type(src)
 
@@ -150,7 +196,7 @@ def autoCreateCapture(src,size=(640,480),fps=30):
             logger.error('Could not locate VideoFile %s'%src)
             return
         logger.info("Using %s as video source"%src)
-        return FileCapture(src)
+        return FileCapture(src,timestamps=timestamps)
     else:
         raise Exception("autoCreateCapture: Could not create capture, wrong src_type")
 

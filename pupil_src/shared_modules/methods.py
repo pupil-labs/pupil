@@ -627,6 +627,7 @@ def filter_subsets(l):
     return [m for i, m in enumerate(l) if not any(set(m).issubset(set(n)) for n in (l[:i] + l[i+1:]))]
 
 
+
 if __name__ == '__main__':
     # tst = []
     # for x in range(10):
