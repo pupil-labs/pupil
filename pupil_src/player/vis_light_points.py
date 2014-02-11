@@ -58,14 +58,14 @@ class Vis_Light_Points(Plugin):
 
 
     def init_gui(self,pos=None):
-        pos = 10,450
+        pos = 10,470
         import atb
         from time import time
 
         atb_label = "Light Points"
         self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
             help="circle", color=(50, 50, 50), alpha=100,
-            text='light', position=pos,refresh=.1, size=(300, 100))
+            text='light', position=pos,refresh=.1, size=(300, 20))
 
         self._bar.add_button('remove',self.unset_alive)
 

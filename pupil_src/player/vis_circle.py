@@ -53,10 +53,10 @@ class Vis_Circle(Plugin):
             help="circle", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.1, size=(300, 100))
 
+        self._bar.add_var('color',self.color)
         self._bar.add_var('radius',self.radius)
         self._bar.add_var('thickness',self.thickness)
         self._bar.add_var('full',self.full)
-        self._bar.add_var('color',self.color)
         self._bar.add_button('remove',self.unset_alive)
 
     def unset_alive(self):

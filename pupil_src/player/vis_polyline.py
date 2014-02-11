@@ -48,10 +48,8 @@ class Vis_Polyline(Plugin):
             help="polyline", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.1, size=(300, 70))
 
-        self._bar.add_var('thickness',self.thickness,min=1)
         self._bar.add_var('color',self.color)
-
-
+        self._bar.add_var('thickness',self.thickness,min=1)
         self._bar.add_button('remove',self.unset_alive)
 
     def unset_alive(self):

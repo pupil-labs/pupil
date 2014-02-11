@@ -101,7 +101,7 @@ class Scan_Path(Plugin):
 
 
     def init_gui(self,pos=None):
-        pos = 10,380
+        pos = 10,390
         import atb
         from time import time
 
