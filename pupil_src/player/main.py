@@ -54,27 +54,6 @@ from uvc_capture import autoCreateCapture
 from methods import normalize, denormalize,Temp
 from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
 from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
-# Plug-ins
-from vis_circle import Vis_Circle
-from vis_polyline import Vis_Polyline
-from display_gaze import Display_Gaze
-from vis_light_points import Vis_Light_Points
-from seek_bar import Seek_Bar
-from export_launcher import Export_Launcher
-from scan_path import Scan_Path
-
-plugin_by_index =  (  Vis_Circle,
-                        Vis_Polyline,
-                        Scan_Path,
-                        Vis_Light_Points)
-
-name_by_index = [p.__name__ for p in plugin_by_index]
-
-
-index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
-plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-additive_plugins = (Vis_Circle,Vis_Polyline)
-
 
 import logging
 logger = logging.getLogger()
@@ -96,7 +75,6 @@ logger.addHandler(ch)
 # mute OpenGL logger
 logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
-
 logger = logging.getLogger(__name__)
 
 
@@ -107,6 +85,23 @@ if getattr(sys, 'frozen', False):
 else:
     from git_version import get_tag_commit
     version = get_tag_commit()
+
+
+# Plug-ins
+from vis_circle import Vis_Circle
+from vis_polyline import Vis_Polyline
+from display_gaze import Display_Gaze
+from vis_light_points import Vis_Light_Points
+from seek_bar import Seek_Bar
+from export_launcher import Export_Launcher
+from scan_path import Scan_Path
+
+plugin_by_index =  (Vis_Circle, Vis_Polyline, Scan_Path, Vis_Light_Points)
+
+name_by_index = [p.__name__ for p in plugin_by_index]
+index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
+plugin_by_name = dict(zip(name_by_index,plugin_by_index))
+additive_plugins = (Vis_Circle,Vis_Polyline)
 
 
 def main():
@@ -311,7 +306,6 @@ def main():
     bar.plugin_to_load = c_int(0)
     plugin_type_enum = atb.enum("Plug In",index_by_name)
     bar.add_var("plugin",setter=open_plugin,getter=get_from_data,data=bar.plugin_to_load, vtype=plugin_type_enum)
-
     bar.add_var("version of recording",bar.recording_version, readonly=True, help="version of the capture software used to make this recording")
     bar.add_var("version of player",bar.version, readonly=True, help="version of the Pupil Player")
     bar.add_button("exit", on_close,data=main_window,key="esc")
