@@ -96,7 +96,9 @@ from seek_bar import Seek_Bar
 from export_launcher import Export_Launcher
 from scan_path import Scan_Path
 
-plugin_by_index =  (Vis_Circle, Vis_Polyline, Scan_Path, Vis_Light_Points)
+from marker_detector import Marker_Detector
+
+plugin_by_index =  (Vis_Circle, Vis_Polyline, Scan_Path, Vis_Light_Points,Marker_Detector)
 
 name_by_index = [p.__name__ for p in plugin_by_index]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
@@ -147,11 +149,11 @@ def main():
 
 
     try:
-        data_folder = sys.argv[1]
+        rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        data_folder = "/Users/mkassner/Desktop/2014_01_21/000"
-        if os.path.isdir(data_folder):
+        rec_dir = "/Users/mkassner/Desktop/2014_01_21/000"
+        if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
             if getattr(sys, 'frozen', False):
@@ -162,18 +164,18 @@ def main():
                        \nPlease supply a Pupil recoding directory as first arg when calling Pupil Player.")
             return
 
-    if not is_pupil_rec_dir(data_folder):
+    if not is_pupil_rec_dir(rec_dir):
         logger.error("You did not supply a dir with the required files inside.")
         return
 
     #backwards compatibility fn.
-    patch_meta_info(data_folder)
+    patch_meta_info(rec_dir)
 
     #parse and load data folder info
-    video_path = data_folder + "/world.avi"
-    timestamps_path = data_folder + "/timestamps.npy"
-    gaze_positions_path = data_folder + "/gaze_positions.npy"
-    meta_info_path = data_folder + "/info.csv"
+    video_path = rec_dir + "/world.avi"
+    timestamps_path = rec_dir + "/timestamps.npy"
+    gaze_positions_path = rec_dir + "/gaze_positions.npy"
+    meta_info_path = rec_dir + "/info.csv"
 
 
     #parse info.csv file
@@ -210,7 +212,7 @@ def main():
 
     # Initialize glfw
     glfwInit()
-    main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "+ data_folder.split(os.path.sep)[-1], None, None)
+    main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "+ rec_dir.split(os.path.sep)[-1], None, None)
     glfwMakeContextCurrent(main_window)
 
     # Register callbacks main_window
@@ -231,7 +233,9 @@ def main():
     g.plugins = []
     g.play = False
     g.new_seek = True
-
+    g.user_dir = user_dir
+    g.rec_dir = rec_dir
+    g.app = 'player'
 
 
     # helpers called by the main atb bar
@@ -317,7 +321,7 @@ def main():
 
 
     #we always load these plugins
-    g.plugins.append(Export_Launcher(g,data_dir=data_folder,frame_count=len(timestamps)))
+    g.plugins.append(Export_Launcher(g,data_dir=rec_dir,frame_count=len(timestamps)))
     g.plugins.append(Seek_Bar(g,capture=cap))
 
     #these are loaded based on user settings

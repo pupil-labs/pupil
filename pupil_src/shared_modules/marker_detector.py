@@ -44,15 +44,28 @@ class Marker_Detector(Plugin):
     """
     def __init__(self,g_pool,atb_pos=(0,0)):
         super(Marker_Detector, self).__init__()
-
+        self.g_pool = g_pool
         self.order = .2
 
         # all markers that are detected in the most recent frame
         self.markers = []
         # all registered surfaces
-        self.surface_definitions = shelve.open(os.path.join(g_pool.user_dir,'surface_definitions'),protocol=2)
-        self.surfaces = [Reference_Surface(saved_definition=d) for d in self.load('square_marker_surfaces',[]) if isinstance(d,dict)]
 
+        if g_pool.app == 'capture':
+            self.surface_definitions = shelve.open(os.path.join(g_pool.user_dir,'surface_definitions'),protocol=2)
+            self.surfaces = [Reference_Surface(saved_definition=d) for d in self.load('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+        elif g_pool.app == 'player':
+            #in player we load from the rec_dir: but we have a couple options:
+            self.surface_definitions = shelve.open(os.path.join(g_pool.rec_dir,'surface_definitions'),protocol=2)
+            if self.load('offline_square_marker_surfaces',[]) != []:
+                logger.debug("Found ref surfaces defined or copied in previous session.")
+                self.surfaces = [Reference_Surface(saved_definition=d) for d in self.load('offline_square_marker_surfaces',[]) if isinstance(d,dict)]
+            elif self.load('offline_square_marker_surfaces',[]) != []:
+                logger.debug("Did not find ref surfaces def created or used by the user in player from earlier session. Loading surfaces defined during capture.")
+                self.surfaces = [Reference_Surface(saved_definition=d) for d in self.load('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+            else:
+                logger.debug("No surface defs found. Please define using GUI.")
+                self.surfaces = []
         # edit surfaces
         self.surface_edit_mode = c_bool(0)
         self.edit_surfaces = []
@@ -90,6 +103,8 @@ class Marker_Detector(Plugin):
         self._bar.add_var("surface to show",self.show_surface_idx, step=1,min=0,group="Window")
         self._bar.add_var('robust_detection',self.robust_detection,group="Detector")
         self._bar.add_var("draw markers",self.draw_markers,group="Detector")
+        self._bar.add_button('close',self.unset_alive)
+
 
         atb_pos = atb_pos[0],atb_pos[1]+110
         self._bar_markers = atb.Bar(name =self.__class__.__name__+'markers', label='registered surfaces',
@@ -97,6 +112,10 @@ class Marker_Detector(Plugin):
             text='light', position=atb_pos,refresh=.3, size=(300, 120))
         self.update_bar_markers()
 
+
+
+    def unset_alive(self):
+        self.alive = False
 
     def load(self, var_name, default):
         return self.surface_definitions.get(var_name,default)
@@ -322,13 +341,17 @@ class Marker_Detector(Plugin):
 
 
 
+
+
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happends either voluntary or forced.
         if you have an atb bar or glfw window destroy it here.
         """
-
-        self.save("square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
+        if self.g_pool.app == 'capture':
+            self.save("realtime_square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
+        elif self.g_pool.app == 'player':
+            self.save("offline_square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
         self.surface_definitions.close()
 
         if self._window:

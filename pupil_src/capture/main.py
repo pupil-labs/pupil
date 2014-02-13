@@ -121,6 +121,7 @@ def main():
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
     g_pool.version = version
+    g_pool.app = 'capture'
     # set up subprocesses
     p_eye = Process(target=eye, args=(g_pool,eye_src,eye_size))
 
