@@ -42,7 +42,7 @@ class Marker_Detector(Plugin):
     """docstring
 
     """
-    def __init__(self,g_pool,atb_pos=(0,0)):
+    def __init__(self,g_pool,atb_pos=(320,220)):
         super(Marker_Detector, self).__init__()
         self.g_pool = g_pool
         self.order = .2
@@ -338,9 +338,6 @@ class Marker_Detector(Plugin):
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
-
-
-
 
 
     def cleanup(self):

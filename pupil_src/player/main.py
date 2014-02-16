@@ -11,8 +11,6 @@
 import sys, os,platform
 from time import sleep
 from ctypes import c_bool, c_int
-from multiprocessing import Process, Pipe, Event, Queue
-from multiprocessing.sharedctypes import RawValue, Value, Array
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
@@ -48,8 +46,8 @@ import numpy as np
 from glfw import *
 import atb
 
-
 from uvc_capture import autoCreateCapture
+
 # helpers/utils
 from methods import normalize, denormalize,Temp
 from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
@@ -95,11 +93,9 @@ from vis_light_points import Vis_Light_Points
 from seek_bar import Seek_Bar
 from export_launcher import Export_Launcher
 from scan_path import Scan_Path
-
 from marker_detector import Marker_Detector
 
 plugin_by_index =  (Vis_Circle, Vis_Polyline, Scan_Path, Vis_Light_Points,Marker_Detector)
-
 name_by_index = [p.__name__ for p in plugin_by_index]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
@@ -227,7 +223,6 @@ def main():
     # gl_state settings
     basic_gl_setup()
 
-
     # create container for globally scoped vars (within world)
     g = Temp()
     g.plugins = []
@@ -236,7 +231,6 @@ def main():
     g.user_dir = user_dir
     g.rec_dir = rec_dir
     g.app = 'player'
-
 
     # helpers called by the main atb bar
     def update_fps():
@@ -373,7 +367,7 @@ def main():
 
         #new positons and events
         current_pupil_positions = positions_by_frame[frame.index][:]
-        events = None
+        events = []
 
         # allow each Plugin to do its work.
         for p in g.plugins:
@@ -405,7 +399,6 @@ def main():
         glfwSwapBuffers(main_window)
         glfwPollEvents()
 
-
     plugin_save = []
     for p in g.plugins:
         try:
@@ -413,6 +406,7 @@ def main():
             plugin_save.append(p_initializer)
         except AttributeError:
             #not all plugins need to be savable, they will not have the init dict.
+            # any object without a get_init_dict method will throw this exception.
             pass
 
     # de-init all running plugins
@@ -430,7 +424,6 @@ def main():
     glfwDestroyWindow(main_window)
     glfwTerminate()
     logger.debug("Process done")
-
 
 
 if __name__ == '__main__':
