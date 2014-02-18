@@ -54,7 +54,7 @@ def correlate_gaze(gaze_list,timestamps):
 
 
 def rec_version(data_dir):
-    with open(data_folder + "/info.csv") as info:
+    with open(data_dir + "/info.csv") as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
     rec_version = meta_info["Capture Software Version"]
     rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
@@ -66,16 +66,14 @@ def is_pupil_rec_dir(data_dir):
     if not os.path.isdir(data_dir):
         logger.error("No valid dir supplied")
         return False
-
-    required_files = data_dir + "/world.avi",data_dir + "/timestamps.npy",data_dir + "/gaze_positions.npy",data_dir + "/info.csv"
+    required_files = ["world.avi", "timestamps.npy", "gaze_positions.npy"]
     for f in required_files:
-        if not os.path.isfile(f):
-            logger.error("Could not find %s"%f)
+        if not os.path.isfile(os.path.join(data_dir,f)):
+            logger.debug("Did not find required file: %s in data folder %s" %(f, data_dir))
             return False
+
+    logger.debug("%s contains %s and is therefore considered a valid rec dir."%(data_dir,required_files))
     return True
-
-
-
 
 # backwards compatibility tools:
 
