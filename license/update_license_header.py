@@ -1,3 +1,12 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2014  Pupil Labs
+
+ Distributed under the terms of the CC BY-NC-SA License.
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
 import fnmatch
 import os
 import re
@@ -5,7 +14,7 @@ import re
 license_txt = """\
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2013  Moritz Kassner & William Patera
+ Copyright (C) 2012-2014  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -72,5 +81,5 @@ def update_header():
 		write_header(f, pattern, license_txt)
 
 if __name__ == '__main__':
-	# run update_header() to add headers to found files
+	# run update_header() to add headers to find files
 	update_header()

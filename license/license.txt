@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Pupil - open source eye tracking platform
-Copyright (C) 2012-2013  Moritz Kassner & William Patera
+Copyright (C) 2012-2014  Pupil Labs UG
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Motivation
@@ -18,16 +18,16 @@ All source code written by us is open source according to CC BY-NC-SA license < 
 ------------------------------------------------------------------------------------------
 Documentation
 
-All content of the documentation written by Moritz Kassner and William Patera is open source, according to CC BY-NC-SA license.  See < http://creativecommons.org/licenses/by-nc-sa/3.0/legalcode >
+All content of the documentation written by Pupil Labs UG is open source, according to CC BY-NC-SA license.  See < http://creativecommons.org/licenses/by-nc-sa/3.0/legalcode >
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Using PUPIL in your research and work
 
-You can use Pupil in your research, academic work, art projects and personal work. We only ask you to credit us appropriately. Pupil is developed and maintained by Moritz Kassner & William Patera.
+You can use Pupil in your research, academic work, art projects and personal work. We only ask you to credit us appropriately. Pupil is developed and maintained by Pupil Labs UG.
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Using PUPIL commercially
 
-If you plan to use Pupil in a comercial context please contact us so we can work out an appropriate licence with you.  Contact sales [at] pupil-labs [dot] com 
+If you plan to use Pupil in a commercial context please contact us so we can work out an appropriate license with you.  Contact sales [at] pupil-labs [dot] com 
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
