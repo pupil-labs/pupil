@@ -26,7 +26,6 @@ from player_methods import correlate_gaze
 from methods import denormalize
 #logging
 import logging
-logger = logging.getLogger(__name__)
 
 # Plug-ins
 from vis_circle import Vis_Circle
@@ -47,6 +46,9 @@ additive_plugins = (Vis_Circle,Vis_Polyline)
 
 
 def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
+
+
+    logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
     #parse and load data dir info
     video_path = data_dir + "/world.avi"
