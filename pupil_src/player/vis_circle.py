@@ -20,7 +20,7 @@ from methods import denormalize
 
 class Vis_Circle(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool=None,radius=20,color=(1.,.2,.4,.5),thickness=1,full=False):
+    def __init__(self, g_pool=None,radius=20,color=(1.,.2,.4,.5),thickness=1,fill=False):
         super(Vis_Circle, self).__init__()
         self.g_pool = g_pool
         self.order = .9
@@ -29,13 +29,13 @@ class Vis_Circle(Plugin):
         self.radius = c_int(int(radius))
         self.color = (c_float*4)(*color)
         self.thickness = c_int(int(thickness))
-        self.full = c_bool(bool(full))
+        self.fill = c_bool(bool(fill))
 
 
     def update(self,frame,recent_pupil_positions,events):
         color = map(lambda x:int(x*255),self.color)
         color = color[:3][::-1]+color[-1:]
-        if self.full.value:
+        if self.fill.value:
             thickness= -1
         else:
             thickness = self.thickness.value
@@ -57,7 +57,7 @@ class Vis_Circle(Plugin):
         self._bar.add_var('color',self.color)
         self._bar.add_var('radius',self.radius, min=1)
         self._bar.add_var('thickness',self.thickness,min=1)
-        self._bar.add_var('full',self.full)
+        self._bar.add_var('fill',self.fill)
         self._bar.add_button('remove',self.unset_alive)
 
     def unset_alive(self):
@@ -67,7 +67,7 @@ class Vis_Circle(Plugin):
         pass
 
     def get_init_dict(self):
-        return {'radius':self.radius.value,'color':self.color[:],'thickness':self.thickness.value,'full':self.full.value}
+        return {'radius':self.radius.value,'color':self.color[:],'thickness':self.thickness.value,'fill':self.fill.value}
 
     def clone(self):
         return Vis_Circle(**self.get_init_dict())
