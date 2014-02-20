@@ -54,8 +54,8 @@ class Vis_Circle(Plugin):
             text='light', position=pos,refresh=.1, size=(300, 100))
 
         self._bar.add_var('color',self.color)
-        self._bar.add_var('radius',self.radius)
-        self._bar.add_var('thickness',self.thickness)
+        self._bar.add_var('radius',self.radius, min=1)
+        self._bar.add_var('thickness',self.thickness,min=1)
         self._bar.add_var('full',self.full)
         self._bar.add_button('remove',self.unset_alive)
 
