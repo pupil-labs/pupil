@@ -38,9 +38,6 @@ class Scan_Path(Plugin):
         self.prev_gray = None
 
 
-        #gui
-        self.timeframe = c_float(3.)
-
     def update(self,frame,recent_pupil_positions,events):
         img = frame.img
         img_shape = img.shape[:-1][::-1] # width,height
