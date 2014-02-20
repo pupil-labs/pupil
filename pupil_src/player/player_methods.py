@@ -135,8 +135,8 @@ def convert_gaze_pos(gaze_list,capture_version):
     gaze_list = gaze_list.copy()
     if capture_version < .36:
         logger.info("Gaze list is from old Recoding, I will update the data to work with new coordinate system.")
-        gaze_list[:,4:] += 1. #broadcasting
-        gaze_list[:,4:] /= 2. #broadcasting
+        gaze_list[:,:4] += 1. #broadcasting
+        gaze_list[:,:4] /= 2. #broadcasting
     return gaze_list
 
 
