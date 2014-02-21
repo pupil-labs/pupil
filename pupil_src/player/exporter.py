@@ -24,7 +24,7 @@ import cv2
 import numpy as np
 from uvc_capture import autoCreateCapture
 from player_methods import correlate_gaze
-from methods import denormalize
+from methods import denormalize, Temp
 #logging
 import logging
 
@@ -128,12 +128,16 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
 
     plugins = []
+    g = Temp()
+    g.plugins = plugins
+    g.app = 'exporter'
+
     # load plugins from initializers:
     for initializer in plugin_initializers:
         name, args = initializer
         logger.debug("Loading plugin: %s with settings %s"%(name, args))
         try:
-            p = plugin_by_name[name](**args)
+            p = plugin_by_name[name](g,**args)
             plugins.append(p)
         except:
             logger.warning("Plugin '%s' failed to load." %name)
