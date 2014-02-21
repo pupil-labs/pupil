@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 """
 This file contains bindings to a webcam capture module that works with v4l2 and is written in c
 """
@@ -371,7 +370,7 @@ class VideoCapture(object):
     def cleanup(self):
         self._stop()
         self._uninit()
-        self._close()     
+        self._close()
 
     def __del__(self):
         self._stop()

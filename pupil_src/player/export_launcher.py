@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 from plugin import Plugin
 import numpy as np
 import atb

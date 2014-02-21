@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 import cv2
 import numpy as np
 from scipy.spatial.distance import pdist

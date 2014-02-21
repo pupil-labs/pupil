@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 import cv2
 from plugin import Plugin
 import numpy as np

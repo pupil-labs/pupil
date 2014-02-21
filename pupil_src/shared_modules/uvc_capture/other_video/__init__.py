@@ -7,6 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+
 from cv2 import VideoCapture
 from time import time
 

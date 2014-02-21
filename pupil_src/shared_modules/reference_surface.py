@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 import numpy as np
 import cv2
 from gl_utils import draw_gl_polyline_norm,draw_gl_points_norm,draw_gl_point_norm

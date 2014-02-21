@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 """
 This file contains bindings and interfaces to functions written in C for speed;
 All C source files, a makefile and binaries are in the same folder as this file.

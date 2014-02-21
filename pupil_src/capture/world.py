@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 if __name__ == '__main__':
     # make shared modules available across pupil_src
     from sys import path as syspath

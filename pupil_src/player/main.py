@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 import sys, os,platform
 from time import sleep
 from ctypes import c_bool, c_int

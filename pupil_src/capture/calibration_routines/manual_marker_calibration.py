@@ -7,6 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+
 import os
 import cv2
 import numpy as np

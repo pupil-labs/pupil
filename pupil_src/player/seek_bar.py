@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 from gl_utils import draw_gl_polyline,draw_gl_point
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D

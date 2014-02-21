@@ -7,6 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+
 import atb
 import numpy as np
 from gl_utils import draw_gl_polyline_norm

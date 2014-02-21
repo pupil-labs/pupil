@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 """
 uvc_capture is a module that extends opencv"s camera_capture for mac and windows
 on Linux it repleaces it completelty.

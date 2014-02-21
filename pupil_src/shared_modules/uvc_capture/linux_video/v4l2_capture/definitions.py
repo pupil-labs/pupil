@@ -7,6 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+
 # Python bindings for the v4l2 userspace api
 
 # Copyright (C) 1999-2009 the contributors
@@ -619,8 +620,8 @@ V4L2_BUF_FLAG_INPUT = 0x0200
 #added by mpk
 V4L2_BUF_FLAG_TIMESTAMP_MASK = 0xe000
 V4L2_BUF_FLAG_TIMESTAMP_UNKNOWN = 0x0000
-V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC =  0x2000  
-V4L2_BUF_FLAG_TIMESTAMP_COPY =   0x4000  
+V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC =  0x2000
+V4L2_BUF_FLAG_TIMESTAMP_COPY =   0x4000
 #
 # Overlay preview
 #
@@ -1341,7 +1342,7 @@ V4L2_CID_MPEG_CX2341X_VIDEO_LUMA_SPATIAL_FILTER_TYPE = V4L2_CID_MPEG_CX2341X_BAS
 
 v4l2_mpeg_cx2341x_video_luma_spatial_filter_type = enum
 (
-    V4L2_MPEG_CX2341X_VIDEO_LUMA_SPATIAL_FILTER_TYPE_OFF, 
+    V4L2_MPEG_CX2341X_VIDEO_LUMA_SPATIAL_FILTER_TYPE_OFF,
     V4L2_MPEG_CX2341X_VIDEO_LUMA_SPATIAL_FILTER_TYPE_1D_HOR,
     V4L2_MPEG_CX2341X_VIDEO_LUMA_SPATIAL_FILTER_TYPE_1D_VERT,
     V4L2_MPEG_CX2341X_VIDEO_LUMA_SPATIAL_FILTER_TYPE_2D_HV_SEPARABLE,

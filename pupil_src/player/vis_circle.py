@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 from gl_utils import draw_gl_points_norm
 from player_methods import transparent_cirlce
 from plugin import Plugin

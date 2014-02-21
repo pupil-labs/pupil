@@ -7,6 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+
 """
 v4l2-ctl is a shell ultity that comes with 4vl2-utils:
 it allows getting and setting controls of UVC-capture devices

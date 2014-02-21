@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 # Python string to/from CFString conversion helper functions:
 
 from ctypes import *

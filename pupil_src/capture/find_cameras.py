@@ -8,8 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
-
 def toggle_capture_devices():
 	"""
 	toggle though all attached camareas to find out
