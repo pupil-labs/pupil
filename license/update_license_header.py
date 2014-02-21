@@ -31,7 +31,7 @@ pattern = re.compile('(\'{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n(\'{3}|[*][/])', re
 # choose files types to include
 # choose directories to exclude from search
 includes = ['*.py', '*.c']
-excludes = ['.git', 'atb', 'glfw', 'src_video', 'v4l2_ctl', 'data', 'License', 'shader.py', 'vertex_buffer.py', 'gprof2dot.py','git_version.py']
+excludes = ['.git', 'atb', 'glfw', 'src_video', 'v4l2_ctl', 'data', 'License', 'shader.py', 'vertex_buffer.py', 'gprof2dot.py','git_version.py','libuvcc*' ]
 
 # transform glob patterns to regular expressions
 includes = r'|'.join([fnmatch.translate(x) for x in includes])
