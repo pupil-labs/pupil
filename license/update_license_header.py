@@ -47,7 +47,7 @@ def get_files(start_dir, includes, excludes):
 			match_files += files
 	return match_files
 
-def write_header(file_name, pattern, license_txt):
+def write_header(file_name, license_txt):
 	# find and replace license header
 	# or add new header if not existing
 	c_comment = ['/*\n', '\n*/\n']
@@ -64,8 +64,8 @@ def write_header(file_name, pattern, license_txt):
 
 	with file(file_name, 'w') as modified:
 		if re.findall(pattern, data):
-			# if header already exists, then update
-			modified.write(re.sub(pattern, license_txt, data))
+			# if header already exists, then update, but dont add the last newline.
+			modified.write(re.sub(pattern, license_txt[:-1], data))
 			modified.close()
 		else:
 			# else write the license header
@@ -78,7 +78,7 @@ def update_header():
 	print match_files
 
 	for f in match_files:
-		write_header(f, pattern, license_txt)
+		write_header(f, license_txt)
 
 if __name__ == '__main__':
 	# run update_header() to add headers to find files
