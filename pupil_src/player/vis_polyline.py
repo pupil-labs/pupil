@@ -19,8 +19,9 @@ from methods import denormalize
 
 class Vis_Polyline(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool=None,color =(1.,.2,.4),thickness=1):
+    def __init__(self, g_pool=None,color =(1.,.2,.4),thickness=1,gui_settings={'pos':(10,320),'size':(300,70),'iconified':False}):
         super(Vis_Polyline, self).__init__()
+        self.gui_settings = gui_settings
         self.order = .9
         self.color = (c_float*3)(*color)
         self.thickness = c_int(int(thickness))
@@ -40,13 +41,13 @@ class Vis_Polyline(Plugin):
 
 
     def init_gui(self,pos=None):
-        pos = 10,310
+        pos = self.gui_settings['pos']
         import atb
         atb_label = "Gaze Polyline"
         from time import time
         self._bar = atb.Bar(name = self.__class__.__name__+str(id(self)), label=atb_label,
             help="polyline", color=(50, 50, 50), alpha=100,
-            text='light', position=pos,refresh=.1, size=(300, 70))
+            text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
 
         self._bar.add_var('color',self.color)
         self._bar.add_var('thickness',self.thickness,min=1)
@@ -56,7 +57,12 @@ class Vis_Polyline(Plugin):
         self.alive = False
 
     def get_init_dict(self):
-        return {'color':self.color[:],'thickness':self.thickness.value}
+        d = {'color':self.color[:],'thickness':self.thickness.value}
+        if hasattr(self,'_bar'):
+            gui_settings = {'pos':self._bar.position,'size':self._bar.size,'iconified':self._bar.iconified}
+            d['gui_settings'] = gui_settings
+
+        return d
 
     def clone(self):
         return Vis_Polyline(**self.get_init_dict())

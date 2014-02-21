@@ -19,11 +19,12 @@ from methods import denormalize
 
 class Vis_Circle(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool=None,radius=20,color=(1.,.2,.4,.5),thickness=1,fill=False):
+    def __init__(self, g_pool=None,radius=20,color=(1.,.2,.4,.5),thickness=1,fill=False,gui_settings={'pos':(10,200),'size':(300,100),'iconified':False}):
         super(Vis_Circle, self).__init__()
         self.g_pool = g_pool
         self.order = .9
 
+        self.gui_settings = gui_settings
 
         self.radius = c_int(int(radius))
         self.color = (c_float*4)(*color)
@@ -45,13 +46,14 @@ class Vis_Circle(Plugin):
             transparent_cirlce(frame.img, pt, radius=radius, color=color, thickness=thickness)
 
     def init_gui(self,pos=None):
-        pos = 10,200
+        pos = self.gui_settings['pos']
         import atb
-        from time import time
         atb_label = "Gaze Circle"
         self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
             help="circle", color=(50, 50, 50), alpha=100,
-            text='light', position=pos,refresh=.1, size=(300, 100))
+            text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
+
+        self._bar.iconified = self.gui_settings['iconified']
 
         self._bar.add_var('color',self.color)
         self._bar.add_var('radius',self.radius, min=1)
@@ -66,7 +68,13 @@ class Vis_Circle(Plugin):
         pass
 
     def get_init_dict(self):
-        return {'radius':self.radius.value,'color':self.color[:],'thickness':self.thickness.value,'fill':self.fill.value}
+        d = {'radius':self.radius.value,'color':self.color[:],'thickness':self.thickness.value,'fill':self.fill.value}
+
+        if hasattr(self,'_bar'):
+            gui_settings = {'pos':self._bar.position,'size':self._bar.size,'iconified':self._bar.iconified}
+            d['gui_settings'] = gui_settings
+
+        return d
 
     def clone(self):
         return Vis_Circle(**self.get_init_dict())

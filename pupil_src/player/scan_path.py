@@ -23,7 +23,7 @@ class Scan_Path(Plugin):
     lock recent gaze points onto pixels.
     """
 
-    def __init__(self, g_pool=None,timeframe=1.):
+    def __init__(self, g_pool=None,timeframe=1.,gui_settings={'pos':(10,390),'size':(300,70),'iconified':False}):
         super(Scan_Path, self).__init__()
 
         #let the plugin work after most other plugins.
@@ -31,6 +31,7 @@ class Scan_Path(Plugin):
 
         #user settings
         self.timeframe = c_float(float(timeframe))
+        self.gui_settings = gui_settings
 
         #algorithm working data
         self.prev_frame_idx = -1
@@ -98,18 +99,15 @@ class Scan_Path(Plugin):
 
 
     def init_gui(self,pos=None):
-        pos = 10,390
+        pos = self.gui_settings['pos']
         import atb
-        from time import time
-
         atb_label = "Scan Path"
         self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
             help="polyline", color=(50, 50, 50), alpha=100,
-            text='light', position=pos,refresh=.1, size=(300, 70))
+            text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
+        self._bar.iconified = self.gui_settings['iconified']
 
         self._bar.add_var('duration in sec',self.timeframe,min=0,step=0.1)
-
-
         self._bar.add_button('remove',self.unset_alive)
 
     def unset_alive(self):
@@ -117,7 +115,13 @@ class Scan_Path(Plugin):
 
 
     def get_init_dict(self):
-        return {'timeframe':self.timeframe.value}
+        d = {'timeframe':self.timeframe.value}
+
+        if hasattr(self,'_bar'):
+            gui_settings = {'pos':self._bar.position,'size':self._bar.size,'iconified':self._bar.iconified}
+            d['gui_settings'] = gui_settings
+
+        return d
 
 
     def clone(self):

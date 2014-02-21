@@ -36,7 +36,6 @@ if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
 
-
 import shelve
 from time import time,sleep
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
@@ -402,13 +401,9 @@ def main():
 
     plugin_save = []
     for p in g.plugins:
-        try:
+        if hasattr(p,'get_init_dict'):
             p_initializer = p.get_class_name(),p.get_init_dict()
             plugin_save.append(p_initializer)
-        except AttributeError:
-            #not all plugins need to be savable, they will not have the init dict.
-            # any object without a get_init_dict method will throw this exception.
-            pass
 
     # de-init all running plugins
     for p in g.plugins:

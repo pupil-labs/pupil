@@ -24,9 +24,11 @@ class Vis_Light_Points(Plugin):
     """
     #let the plugin work after most other plugins.
 
-    def __init__(self, g_pool=None):
+    def __init__(self, g_pool=None,gui_settings={'pos':(10,470),'size':(300,100),'iconified':False}):
         super(Vis_Light_Points, self).__init__()
         self.order = .8
+        self.gui_settings = gui_settings
+
 
     def update(self,frame,recent_pupil_positions,events):
 
@@ -58,15 +60,13 @@ class Vis_Light_Points(Plugin):
 
 
     def init_gui(self,pos=None):
-        pos = 10,470
+        pos = self.gui_settings['pos']
         import atb
-        from time import time
-
         atb_label = "Light Points"
         self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
             help="circle", color=(50, 50, 50), alpha=100,
-            text='light', position=pos,refresh=.1, size=(300, 20))
-
+            text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
+        self._bar.iconified = self.gui_settings['iconified']
         self._bar.add_button('remove',self.unset_alive)
 
     def unset_alive(self):
@@ -74,7 +74,12 @@ class Vis_Light_Points(Plugin):
 
 
     def get_init_dict(self):
-        return {}
+        d = {}
+        if hasattr(self,'_bar'):
+            gui_settings = {'pos':self._bar.position,'size':self._bar.size,'iconified':self._bar.iconified}
+            d['gui_settings'] = gui_settings
+
+        return d
 
     def clone(self):
         return Vis_Light_Points(**self.get_init_dict())
