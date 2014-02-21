@@ -95,8 +95,9 @@ from seek_bar import Seek_Bar
 from export_launcher import Export_Launcher
 from scan_path import Scan_Path
 from marker_detector import Marker_Detector
+from filter_fixations import Filter_Fixations
 
-plugin_by_index =  (Vis_Circle, Vis_Polyline, Scan_Path, Vis_Light_Points,Marker_Detector)
+plugin_by_index =  (Vis_Circle, Vis_Polyline, Scan_Path, Vis_Light_Points,Marker_Detector, Filter_Fixations)
 name_by_index = [p.__name__ for p in plugin_by_index]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
@@ -267,7 +268,7 @@ def main():
                     return
 
         g.plugins = [p for p in g.plugins if p.alive]
-        logger.debug('Open Plungin: %s'%name_by_index[selection])
+        logger.debug('Open Plugin: %s'%name_by_index[selection])
         new_plugin = plugin_by_index[selection](g)
         g.plugins.append(new_plugin)
         g.plugins.sort(key=lambda p: p.order)
