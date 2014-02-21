@@ -84,8 +84,8 @@ class Scan_Path(Plugin):
             # trim gaze that is too old
             if recent_pupil_positions:
                 now = recent_pupil_positions[0]['timestamp']
-                cutof = now-self.timeframe.value
-                updated_past_gaze = [g for g in updated_past_gaze if g['timestamp']>cutof]
+                cutoff = now-self.timeframe.value
+                updated_past_gaze = [g for g in updated_past_gaze if g['timestamp']>cutoff]
 
             #inject the scan path gaze points into recent_pupil_positions
             recent_pupil_positions[:] = updated_past_gaze + recent_pupil_positions
