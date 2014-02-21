@@ -87,6 +87,7 @@ else:
 
 # Plug-ins
 from vis_circle import Vis_Circle
+from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
 from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
@@ -95,11 +96,11 @@ from export_launcher import Export_Launcher
 from scan_path import Scan_Path
 from marker_detector import Marker_Detector
 
-plugin_by_index =  (Vis_Circle, Vis_Polyline, Scan_Path, Vis_Light_Points,Marker_Detector)
+plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Scan_Path, Vis_Light_Points,Marker_Detector)
 name_by_index = [p.__name__ for p in plugin_by_index]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-additive_plugins = (Vis_Circle,Vis_Polyline)
+additive_plugins = (Vis_Circle,Vis_Cross,Vis_Polyline)
 
 
 def main():
