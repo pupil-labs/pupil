@@ -213,9 +213,9 @@ def main():
         for gaze_point in current_gaze:
             x_screen, y_screen = denormalize((gaze_point['x'], gaze_point['y']), width, height)
             for contour in contours:
-                IsInside = cv2.pointPolygonTest(contour, (x_screen, y_screen), False)
+                Inside = cv2.pointPolygonTest(contour, (x_screen, y_screen), False)
                 #for some reason circle a is being shown inside circle b
-                if not IsInside == -1:
+                if Inside > -1:
                     # circle a
                     cv2.circle(img, (x_screen, y_screen), 10, (60, 20, 220), 2, cv2.cv.CV_AA)
                 else:
