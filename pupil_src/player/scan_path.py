@@ -103,7 +103,7 @@ class Scan_Path(Plugin):
         import atb
         atb_label = "Scan Path"
         self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
-            help="polyline", color=(50, 50, 50), alpha=100,
+            help="polyline", color=(50, 50, 50), alpha=50,
             text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
         self._bar.iconified = self.gui_settings['iconified']
 

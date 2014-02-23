@@ -22,11 +22,11 @@ class Vis_Light_Points(Plugin):
     show gaze dots at light dots on numpy.
 
     """
-    #let the plugin work after most other plugins.
 
     def __init__(self, g_pool=None,gui_settings={'pos':(10,470),'size':(300,100),'iconified':False}):
         super(Vis_Light_Points, self).__init__()
         self.order = .8
+        #let the plugin work after most other plugins.
         self.gui_settings = gui_settings
 
 
@@ -64,7 +64,7 @@ class Vis_Light_Points(Plugin):
         import atb
         atb_label = "Light Points"
         self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
-            help="circle", color=(50, 50, 50), alpha=100,
+            help="circle", color=(50, 50, 50), alpha=50,
             text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
         self._bar.iconified = self.gui_settings['iconified']
         self._bar.add_button('remove',self.unset_alive)
@@ -83,9 +83,6 @@ class Vis_Light_Points(Plugin):
 
     def clone(self):
         return Vis_Light_Points(**self.get_init_dict())
-
-
-
 
 
     def cleanup(self):
