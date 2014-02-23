@@ -114,7 +114,8 @@ class Seek_Bar(Plugin):
             color1 = (.25,.8,.8,.5)
             color2 = (.25,.8,.8,1.)
 
-        draw_gl_polyline( [(0,0),(1,0)],color=(.5,.5,.5,.5))
+        draw_gl_polyline( [(0,0),(self.norm_seek_pos,0)],color=color1)
+        draw_gl_polyline( [(self.norm_seek_pos,0),(1,0)],color=(.5,.5,.5,.5))
         draw_gl_point((self.norm_seek_pos,0),color=color1,size=40)
         draw_gl_point((self.norm_seek_pos,0),color=color2,size=10)
 
