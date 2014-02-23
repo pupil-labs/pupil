@@ -178,8 +178,12 @@ def main():
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
     rec_version = meta_info["Capture Software Version"]
-    rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
-    logger.debug("Recording version: %s , %s"%(rec_version,rec_version_float))
+    try:
+        rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
+        logger.debug("Recording version: %s , %s"%(rec_version,rec_version_float))
+    except ValueError:
+        logger.warning("Recoding version not valid and unknown. Reported version: '%s'"%rec_version)
+        rec_version_float = 0
 
 
     #load gaze information
