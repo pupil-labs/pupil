@@ -84,7 +84,6 @@ dll.release_buffer.restype = c_int
 
 
 
-
 def enum_formats(device):
     fmt = v4l2_fmtdesc()
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE
@@ -226,15 +225,22 @@ class VideoCapture(object):
         self.rates = enum_rates(self.device,v4l2_fourcc(*self.prefered_format),size)
         logger.debug("Rates avaible on %s @ %s: %s"%(self.src_str,size,self.rates))
         self.sizes_menu = dict(zip([str(w)+"x"+str(h) for w,h in self.sizes], range(len(self.sizes))))
+        try:
+            self.current_size_idx = self.sizes.index(size)
+        except ValueError:
+            logger.warning("Buggy Video Camera: Not all available sizes are exposed.")
+            self.current_size_idx = 0
 
-        self.current_size_idx = self.sizes.index(size)
         #structure for atb menue
         self.rates = enum_rates(self.device,v4l2_fourcc(*self.prefered_format),size)
         self.rates_menu = dict(zip([str(float(d)/n) for n,d in self.rates], range(len(self.rates))))
         fps = self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
               self.v4l2_streamparm.parm.capture.timeperframe.denominator
-        self.current_rate_idx = self.rates.index(fps)
-
+        try:
+            self.current_rate_idx = self.rates.index(fps)
+        except ValueError:
+            logger.warning("Buggy Video Camera: Not all available rates are exposed.")
+            self.current_rate_idx = 0
 
         self._init()
         self._start()
@@ -254,8 +260,6 @@ class VideoCapture(object):
     def set_rate_idx(self,rate_id):
         new_rate = self.rates[rate_id]
         self.set_rate(new_rate)
-
-
 
     def set_rate(self,new_rate):
         self._stop()
