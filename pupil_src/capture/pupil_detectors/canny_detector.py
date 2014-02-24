@@ -32,6 +32,16 @@ from template import Pupil_Detector
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+try:
+    numpy_version =  int(np.__version__.replace(".",""))/100.
+    assert numpy_version >= 1.8
+except AssertionError as error:
+    logger.error("This module requires numpy 1.8 or greater. Please upgrade your version of numpy.")
+    raise error
+
+
 class Canny_Detector(Pupil_Detector):
     """a Pupil detector based on Canny_Edges"""
     def __init__(self,g_pool):
@@ -414,26 +424,22 @@ class Canny_Detector(Pupil_Detector):
 
 
         for s in solutions:
-            try:
-                e = cv2.fitEllipse(np.concatenate(sc[s]))
-                if self._window:
-                    cv2.ellipse(debug_img,e,(0,150,100))
-                support_pixels,ellipse_circumference = ellipse_true_support(e,raw_edges)
-                support_ratio =  support_pixels.shape[0]/ellipse_circumference
-                # TODO: refine the selection of final canditate
-                if support_ratio >=self.final_perimeter_ratio_range[0] and ellipse_filter(e):
-                    ratings.append(support_pixels.shape[0])
-                    if support_ratio >=self.strong_perimeter_ratio_range[0]:
-                        self.strong_prior = u_r.add_vector(p_r.add_vector(e[0])),e[1],e[2]
-                        if self._window:
-                            cv2.ellipse(debug_img,e,(0,255,255),thickness = 2)
-                else:
-                    #not a valid solution, bad rating
-                    ratings.append(-1)
-            except:
-                logger.warning('0-d arrays cant be concatenated. ignoring this result')
+            e = cv2.fitEllipse(np.concatenate(sc[s]))
+            if self._window:
+                cv2.ellipse(debug_img,e,(0,150,100))
+            support_pixels,ellipse_circumference = ellipse_true_support(e,raw_edges)
+            support_ratio =  support_pixels.shape[0]/ellipse_circumference
+            # TODO: refine the selection of final canditate
+            if support_ratio >=self.final_perimeter_ratio_range[0] and ellipse_filter(e):
+                ratings.append(support_pixels.shape[0])
+                if support_ratio >=self.strong_perimeter_ratio_range[0]:
+                    self.strong_prior = u_r.add_vector(p_r.add_vector(e[0])),e[1],e[2]
+                    if self._window:
+                        cv2.ellipse(debug_img,e,(0,255,255),thickness = 2)
+            else:
                 #not a valid solution, bad rating
                 ratings.append(-1)
+
 
         # selected ellipse
         if max(ratings) == -1:
