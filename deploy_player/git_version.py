@@ -139,5 +139,4 @@ def get_tag_commit():
         return None
 
 if __name__ == "__main__":
-    print get_git_version()
     print get_tag_commit()
