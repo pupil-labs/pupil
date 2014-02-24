@@ -86,7 +86,7 @@ class Export_Launcher(Plugin):
 
         self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
             help="export vizualization video", color=(50, 100, 100), alpha=100,
-            text='light', position=atb_pos,refresh=.1, size=(300, 100))
+            text='light', position=atb_pos,refresh=.1, size=(300, 150))
 
 
         self.update_bar()
@@ -102,7 +102,7 @@ class Export_Launcher(Plugin):
         self._bar.add_var('end frame',self.end_frame)
         self._bar.add_button('new export',self.add_export)
 
-        for job,i in zip(self.exports,range(len(self.exports))):
+        for job,i in zip(self.exports,range(len(self.exports)))[::-1]:
 
             self._bar.add_var("%s_out_file"%i,create_string_buffer(512),
                             getter= self.atb_out_file_path,

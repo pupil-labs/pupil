@@ -290,8 +290,7 @@ def main():
     # add main controls ATB bar
     bar = atb.Bar(name = "Controls", label="Controls",
             help="Scene controls", color=(50, 50, 50), alpha=100,valueswidth=150,
-            text='light', position=(10, 10),refresh=.1, size=(300, 160))
-    bar.next_atb_pos = (10,220)
+            text='light', position=(10, 10),refresh=.1, size=(300, 150))
     bar.fps = c_float(0.0)
     bar.timestamp = time()
     bar.window_size = c_int(load("window_size",0))
