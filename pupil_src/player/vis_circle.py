@@ -19,7 +19,7 @@ from methods import denormalize
 
 class Vis_Circle(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool=None,radius=20,color=(1.,.2,.4,.5),thickness=1,fill=False,gui_settings={'pos':(10,200),'size':(300,100),'iconified':False}):
+    def __init__(self, g_pool=None,radius=20,color=(1.,.2,.4,.2),thickness=2,fill=True,gui_settings={'pos':(10,200),'size':(300,100),'iconified':False}):
         super(Vis_Circle, self).__init__()
         self.g_pool = g_pool
         self.order = .9

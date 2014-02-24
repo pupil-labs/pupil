@@ -23,7 +23,7 @@ class Scan_Path(Plugin):
     lock recent gaze points onto pixels.
     """
 
-    def __init__(self, g_pool=None,timeframe=1.,gui_settings={'pos':(10,390),'size':(300,70),'iconified':False}):
+    def __init__(self, g_pool=None,timeframe=.5,gui_settings={'pos':(10,390),'size':(300,70),'iconified':False}):
         super(Scan_Path, self).__init__()
 
         #let the plugin work after most other plugins.

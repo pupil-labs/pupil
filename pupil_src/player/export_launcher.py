@@ -12,6 +12,7 @@ from plugin import Plugin
 import numpy as np
 import atb
 import os,sys, platform
+import time
 
 import logging
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ def verify_out_file_path(out_file_path,data_dir):
             file_name = 'world_viz.avi'
         out_file_path = os.path.expanduser(os.path.join(dir_name,file_name))
 
+    out_file_path = avoid_overwrite(out_file_path)
     if os.path.isfile(out_file_path):
         logger.warning("Video out file already exsists. I will overwrite!")
         os.remove(out_file_path)
@@ -48,6 +50,13 @@ def verify_out_file_path(out_file_path,data_dir):
 
     return out_file_path
 
+
+def avoid_overwrite(out_file_path):
+    if os.path.isfile(out_file_path):
+        # let append something unique
+        out_file_path,ext = os.path.splitext(out_file_path)
+        out_file_path += str(int(time.time())) + '.avi'
+    return out_file_path
 
 class Export_Launcher(Plugin):
     """docstring for Export_Launcher
@@ -61,8 +70,10 @@ class Export_Launcher(Plugin):
 
         self.new_export = None
         self.exports = []
+        # default_path = verify_out_file_path("world_viz.avi",data_dir)
+        default_path = "world_viz.avi"
 
-        self.rec_name = create_string_buffer("world_viz.avi",512)
+        self.rec_name = create_string_buffer(default_path,512)
         self.start_frame = c_int(0)
         self.end_frame = c_int(frame_count)
 
@@ -74,12 +85,11 @@ class Export_Launcher(Plugin):
 
 
         self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
-            help="export vizualization video", color=(50, 50, 50), alpha=100,
+            help="export vizualization video", color=(50, 100, 100), alpha=100,
             text='light', position=atb_pos,refresh=.1, size=(300, 100))
 
 
         self.update_bar()
-
 
 
     def update_bar(self):
