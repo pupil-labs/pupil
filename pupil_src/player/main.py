@@ -306,7 +306,7 @@ def main():
 
     bar.plugin_to_load = c_int(0)
     plugin_type_enum = atb.enum("Plug In",index_by_name)
-    bar.add_var("plugin",setter=open_plugin,getter=get_from_data,data=bar.plugin_to_load, vtype=plugin_type_enum)
+    bar.add_var("plugin",setter=open_plugin,getter=get_from_data,data=bar.plugin_to_load, vtype=plugin_type_enum,help="Select Plugin to open. Some plugins can be used more than once.")
     bar.add_var("version of recording",bar.recording_version, readonly=True, help="version of the capture software used to make this recording")
     bar.add_var("version of player",bar.version, readonly=True, help="version of the Pupil Player")
     bar.add_button("exit", on_close,data=main_window,key="esc")

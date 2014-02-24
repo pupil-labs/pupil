@@ -83,7 +83,6 @@ class Export_Launcher(Plugin):
         atb_label = "Export Recording"
         atb_pos = 320,10
 
-
         self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
             help="export vizualization video", color=(50, 100, 100), alpha=100,
             text='light', position=atb_pos,refresh=.1, size=(300, 150))
@@ -96,10 +95,9 @@ class Export_Launcher(Plugin):
         if self._bar:
             self._bar.clear()
 
-
-        self._bar.add_var('export name',self.rec_name)
-        self._bar.add_var('start frame',self.start_frame)
-        self._bar.add_var('end frame',self.end_frame)
+        self._bar.add_var('export name',self.rec_name, help="Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.")
+        self._bar.add_var('start frame',self.start_frame,help="Supply start frame no. Negative numbers will count from the end. The behaves like python list indexing")
+        self._bar.add_var('end frame',self.end_frame,help="Supply end frame no. Negative numbers will count from the end. The behaves like python list indexing")
         self._bar.add_button('new export',self.add_export)
 
         for job,i in zip(self.exports,range(len(self.exports)))[::-1]:
@@ -116,7 +114,7 @@ class Export_Launcher(Plugin):
                             label='progess',
                             group=str(i),
                             )
-            self._bar.add_var("%s_terminate"%i,job.should_terminate,group=str(i),label='cancel')
+            self._bar.add_var("%s_terminate"%i,job.should_terminate,group=str(i),label='cancel',help="Cancel export.")
 
     def atb_progress(self,job):
         if job.current_frame.value == job.frames_to_export.value:

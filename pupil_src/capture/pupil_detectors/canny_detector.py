@@ -240,7 +240,7 @@ class Canny_Detector(Pupil_Detector):
                         cv2.ellipse(debug_img,refit_e,(0,0,255),thickness=1)
                     e = refit_e
                     self.strong_prior = u_r.add_vector(p_r.add_vector(e[0])),e[1],e[2]
-                    goodness = support_ratio
+                    goodness = min(1.,support_ratio)
                     pupil_ellipse = {}
                     pupil_ellipse['confidence'] = goodness
                     pupil_ellipse['ellipse'] = e
@@ -507,16 +507,15 @@ class Canny_Detector(Pupil_Detector):
         self._bar = atb.Bar(name = "Canny_Pupil_Detector", label="Pupil_Detector",
             help="pupil detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.3, size=(200, 100))
-        self._bar.add_button("open debug window", self.toggle_window)
-        self._bar.add_var("pupil_intensity_range",self.intensity_range)
-        self._bar.add_var("pupil_min",self.pupil_min,min=1)
-        self._bar.add_var("pupil_max",self.pupil_max,min=1)
-        self._bar.add_var("Pupil_Aparent_Size",self.target_size)
-        self._bar.add_var("Contour min length",self.min_contour_size)
-
+        self._bar.add_button("open debug window", self.toggle_window,help="Open a debug window that shows geeky visual feedback from the algorithm.")
+        self._bar.add_var("pupil_intensity_range",self.intensity_range,help="Using alorithm view set this as low as possible but so that the pupil is always fully overlayed in blue.")
+        self._bar.add_var("pupil_min",self.pupil_min,min=1,help="Setting good bounds will increase detection robustness. Use alorithm view to see.")
+        self._bar.add_var("pupil_max",self.pupil_max,min=1,help="Setting good bounds will increase detection robustness. Use alorithm view to see.")
+        self._bar.add_var("Pupil_Aparent_Size",self.target_size,readonly=True)
+        self._bar.add_var("Contour min length",self.min_contour_size,help="Setting this low will make the alorithm try to connect even smaller arcs to find the pupil but cost you cpu time!")
 
         self._bar.add_var("Pupil_Shade",self.bin_thresh, readonly=True)
-        self._bar.add_var("confidence",self.confidence, readonly=True)
+        self._bar.add_var("confidence",self.confidence, readonly=True,help="The measure of confidence is a number between 0 and 1 of how sure the algorithm is about the detected pupil.")
         # self._bar.add_var("Image_Blur",self.blur, step=2,min=1,max=9)
         # self._bar.add_var("Canny_aparture",self.canny_aperture, step=2,min=3,max=7)
         # self._bar.add_var("canny_threshold",self.canny_thresh, step=1,min=0)
