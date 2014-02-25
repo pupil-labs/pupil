@@ -34,14 +34,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-try:
-    numpy_version =  int(np.__version__.replace(".",""))/100.
-    assert numpy_version >= 1.8
-except AssertionError as error:
-    logger.error("This module requires numpy 1.8 or greater. Please upgrade your version of numpy.")
-    raise error
-
-
 class Canny_Detector(Pupil_Detector):
     """a Pupil detector based on Canny_Edges"""
     def __init__(self,g_pool):
