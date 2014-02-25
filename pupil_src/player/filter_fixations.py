@@ -15,6 +15,8 @@ import atb
 from ctypes import c_float
 from methods import denormalize,normalize
 import logging
+from scan_path import Scan_Path
+
 logger = logging.getLogger(__name__)
 
 class Filter_Fixations(Plugin):
@@ -27,34 +29,50 @@ class Filter_Fixations(Plugin):
 
 
         # let the plugin work after most other plugins
-        self.order = .6
+        self.order = .7
 
         # user settings
         self.distance = c_float(float(distance))
 
-        # algorithm working data
-        self.prev_frame_idx = -1
-        self.past_pupil_positions = []
+        # initialize dependencies
+        # Scan_Path
+        # check first if scanpath already exists
+        # self.p_scan_path = Scan_Path(g_pool)
+        # self.p_scan_path.timeframe.value = 1.0 # initialize wihout history
+        # self.p_scan_path.init_gui()
+        # g_pool.plugins.append(self.p_scan_path)
+        # g_pool.plugins.sort(key=lambda p: p.order)
+
 
     def update(self,frame,recent_pupil_positions,events):
         img = frame.img
-        img_shape = img.shape[:-1][::-1] # width,height
+        img_shape = img.shape[:-1][::-1] # width,height  
 
-        succeeding_frame = frame.index-self.prev_frame_idx == 1
+        print "len recent: ", len(recent_pupil_positions)
+        # setup to fire after scanpath
+        # check if scan_path exists
+        # compare distances of recent_pupil_positions list
+        # check if scanpath is running -- if not then initialize it
+        filtered_gaze = []
 
-        if self.past_pupil_positions and succeeding_frame:
-            if recent_pupil_positions:
-                now = denormalize(recent_pupil_positions[0]['norm_gaze'],img_shape,flip_y=True)
-                previous = denormalize(self.past_pupil_positions[-1]['norm_gaze'],img_shape,flip_y=True)
-                x_dist = abs(previous[0]-now[0])
-                y_dist = abs(previous[1]-now[1])
-                man = x_dist + y_dist
-                if man < self.distance:
-                    recent_pupil_positions[:] = recent_pupil_positions
+        for gp1, gp2 in zip(recent_pupil_positions[:-1], recent_pupil_positions[1:]):
+            gp1_norm = denormalize(gp1['norm_gaze'], img_shape,flip_y=True)
+            gp2_norm = denormalize(gp2['norm_gaze'], img_shape,flip_y=True)
+            x_dist =  abs(gp1_norm[0] - gp2_norm[0])
+            y_dist = abs(gp1_norm[1] - gp2_norm[1])
+            man = x_dist + y_dist 
+            # print "man: %s\tdist: %s" %(man,self.distance.value)
+            if man < self.distance.value:
+                filtered_gaze.append(gp1)
+            else:
+                print "filtered"
 
-        self.prev_frame_idx = frame.index
-        self.past_pupil_positions = recent_pupil_positions
+        print "filtered: ", len(filtered_gaze)
+        recent_pupil_positions[:] = filtered_gaze
+        recent_pupil_positions.sort(key=lambda x: x['timestamp']) #this may be redundant...            
 
+
+        
     def init_gui(self,pos=None):
         pos = 10,470
         import atb
@@ -86,6 +104,7 @@ class Filter_Fixations(Plugin):
         This happends either voluntary or forced.
         if you have an atb bar or glfw window destroy it here.
         """
+        # self.p_scan_path.unset_alive()
         self._bar.destroy()
 
 
