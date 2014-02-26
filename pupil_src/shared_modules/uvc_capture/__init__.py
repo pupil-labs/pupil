@@ -107,13 +107,13 @@ class FileCapture():
         s, img = self.cap.read()
         if not s:
             logger.warning("Reached end of video file.")
-            return None
+            return Frame(None,None)
         if self.timestamps:
             try:
                 timestamp = self.timestamps[idx]
             except IndexError:
                 logger.warning("Reached end of timestamps list.")
-                return None
+                return Frame(None,None)
         else:
             timestamp = time()
         return Frame(timestamp,img,index=idx)

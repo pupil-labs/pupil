@@ -50,6 +50,7 @@ class Canny_Detector(Pupil_Detector):
         self.session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_detector'),protocol=2)
 
         # coase pupil filter params
+        self.coarse_detection = c_bool(self.load('coarse_detection',True))
         self.coarse_filter_min = 100
         self.coarse_filter_max = 400
 
@@ -117,15 +118,21 @@ class Canny_Detector(Pupil_Detector):
 
 
         # coarse pupil detection
-        integral = cv2.integral(gray_img)
-        integral =  np.array(integral,dtype=c_float)
-        x,y,w,response = eye_filter(integral,self.coarse_filter_min,self.coarse_filter_max)
-        p_r = Roi(gray_img.shape)
-        if w>0:
-            p_r.set((y,x,y+w,x+w))
+
+        if self.coarse_detection.value:
+            integral = cv2.integral(gray_img)
+            integral =  np.array(integral,dtype=c_float)
+            x,y,w,response = eye_filter(integral,self.coarse_filter_min,self.coarse_filter_max)
+            p_r = Roi(gray_img.shape)
+            if w>0:
+                p_r.set((y,x,y+w,x+w))
+            else:
+                p_r.set((0,0,-1,-1))
         else:
+            p_r = Roi(gray_img.shape)
             p_r.set((0,0,-1,-1))
-        coarse_pupil_center = x+w/2.,y+w/2.
+            w = img.shape[0]/2
+
         coarse_pupil_width = w/2.
         padding = coarse_pupil_width/4.
         pupil_img = gray_img[p_r.view]
@@ -506,6 +513,7 @@ class Canny_Detector(Pupil_Detector):
         self._bar = atb.Bar(name = "Canny_Pupil_Detector", label="Pupil_Detector",
             help="pupil detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.3, size=(200, 100))
+        self._bar.add_var("use coarse detection",self.coarse_detection,help="Disbale when you have trouble with detection when using Mascara.")
         self._bar.add_button("open debug window", self.toggle_window,help="Open a debug window that shows geeky visual feedback from the algorithm.")
         self._bar.add_var("pupil_intensity_range",self.intensity_range,help="Using alorithm view set this as low as possible but so that the pupil is always fully overlayed in blue.")
         self._bar.add_var("pupil_min",self.pupil_min,min=1,help="Setting good bounds will increase detection robustness. Use alorithm view to see.")
