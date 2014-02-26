@@ -35,20 +35,26 @@ class Filter_Fixations(Plugin):
         self.distance = c_float(float(distance))
 
         # initialize dependencies
-        # Scan_Path
-        # check first if scanpath already exists
-        # self.p_scan_path = Scan_Path(g_pool)
-        # self.p_scan_path.timeframe.value = 1.0 # initialize wihout history
-        # self.p_scan_path.init_gui()
-        # g_pool.plugins.append(self.p_scan_path)
-        # g_pool.plugins.sort(key=lambda p: p.order)
+        # init Scan_Path if not already initialized
+        self.sp_user = False
+
+        for p in g_pool.plugins:
+            if isinstance(p,Scan_Path):
+                self.sp_user = True
+
+        if not self.sp_user:
+            # add scanpath
+            self.p_scan_path = Scan_Path(g_pool)
+            self.p_scan_path.timeframe.value = 1.0 # initialize wihout history
+            self.p_scan_path.init_gui()
+            g_pool.plugins.append(self.p_scan_path)
+            g_pool.plugins.sort(key=lambda p: p.order)
 
 
     def update(self,frame,recent_pupil_positions,events):
         img = frame.img
         img_shape = img.shape[:-1][::-1] # width,height  
 
-        print "len recent: ", len(recent_pupil_positions)
         # setup to fire after scanpath
         # check if scan_path exists
         # compare distances of recent_pupil_positions list
@@ -65,9 +71,9 @@ class Filter_Fixations(Plugin):
             if man < self.distance.value:
                 filtered_gaze.append(gp1)
             else:
-                print "filtered"
+                # print "filtered"
+                pass
 
-        print "filtered: ", len(filtered_gaze)
         recent_pupil_positions[:] = filtered_gaze
         recent_pupil_positions.sort(key=lambda x: x['timestamp']) #this may be redundant...            
 
@@ -104,7 +110,8 @@ class Filter_Fixations(Plugin):
         This happends either voluntary or forced.
         if you have an atb bar or glfw window destroy it here.
         """
-        # self.p_scan_path.unset_alive()
+        if not self.sp_user:
+            self.p_scan_path.unset_alive()
         self._bar.destroy()
 
 
