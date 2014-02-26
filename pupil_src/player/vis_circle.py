@@ -9,7 +9,7 @@
 '''
 
 from gl_utils import draw_gl_points_norm
-from player_methods import transparent_cirlce
+from player_methods import transparent_circle
 from plugin import Plugin
 import numpy as np
 from ctypes import c_int,c_float,c_bool
@@ -43,7 +43,7 @@ class Vis_Circle(Plugin):
         radius = self.radius.value
         pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y=True) for pt in recent_pupil_positions if pt['norm_gaze'] is not None]
         for pt in pts:
-            transparent_cirlce(frame.img, pt, radius=radius, color=color, thickness=thickness)
+            transparent_circle(frame.img, pt, radius=radius, color=color, thickness=thickness)
 
     def init_gui(self,pos=None):
         pos = self.gui_settings['pos']

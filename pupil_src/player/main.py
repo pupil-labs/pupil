@@ -8,6 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+
 import sys, os,platform
 from time import sleep
 from ctypes import c_bool, c_int
@@ -34,6 +35,7 @@ else:
 # create folder for user settings, tmp data
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
+
 
 
 import shelve
@@ -86,7 +88,6 @@ else:
 
 # Plug-ins
 from vis_circle import Vis_Circle
-from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
 from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
@@ -94,12 +95,13 @@ from seek_bar import Seek_Bar
 from export_launcher import Export_Launcher
 from scan_path import Scan_Path
 from marker_detector import Marker_Detector
+from filter_fixations import Filter_Fixations
 
-plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Scan_Path, Vis_Light_Points,Marker_Detector)
+plugin_by_index =  (Vis_Circle, Vis_Polyline, Scan_Path, Vis_Light_Points,Marker_Detector, Filter_Fixations)
 name_by_index = [p.__name__ for p in plugin_by_index]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-additive_plugins = (Vis_Circle,Vis_Cross,Vis_Polyline)
+additive_plugins = (Vis_Circle,Vis_Polyline)
 
 
 def main():
@@ -178,12 +180,8 @@ def main():
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
     rec_version = meta_info["Capture Software Version"]
-    try:
-        rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
-        logger.debug("Recording version: %s , %s"%(rec_version,rec_version_float))
-    except ValueError:
-        logger.warning("Recoding version not valid and unknown. Reported version: '%s'"%rec_version)
-        rec_version_float = 0
+    rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
+    logger.debug("Recording version: %s , %s"%(rec_version,rec_version_float))
 
 
     #load gaze information
@@ -270,7 +268,7 @@ def main():
                     return
 
         g.plugins = [p for p in g.plugins if p.alive]
-        logger.debug('Open Plungin: %s'%name_by_index[selection])
+        logger.debug('Open Plugin: %s'%name_by_index[selection])
         new_plugin = plugin_by_index[selection](g)
         g.plugins.append(new_plugin)
         g.plugins.sort(key=lambda p: p.order)
@@ -290,7 +288,8 @@ def main():
     # add main controls ATB bar
     bar = atb.Bar(name = "Controls", label="Controls",
             help="Scene controls", color=(50, 50, 50), alpha=100,valueswidth=150,
-            text='light', position=(10, 10),refresh=.1, size=(300, 150))
+            text='light', position=(10, 10),refresh=.1, size=(300, 160))
+    bar.next_atb_pos = (10,220)
     bar.fps = c_float(0.0)
     bar.timestamp = time()
     bar.window_size = c_int(load("window_size",0))
@@ -306,7 +305,7 @@ def main():
 
     bar.plugin_to_load = c_int(0)
     plugin_type_enum = atb.enum("Plug In",index_by_name)
-    bar.add_var("plugin",setter=open_plugin,getter=get_from_data,data=bar.plugin_to_load, vtype=plugin_type_enum,help="Select Plugin to open. Some plugins can be used more than once.")
+    bar.add_var("plugin",setter=open_plugin,getter=get_from_data,data=bar.plugin_to_load, vtype=plugin_type_enum)
     bar.add_var("version of recording",bar.recording_version, readonly=True, help="version of the capture software used to make this recording")
     bar.add_var("version of player",bar.version, readonly=True, help="version of the Pupil Player")
     bar.add_button("exit", on_close,data=main_window,key="esc")
@@ -404,9 +403,13 @@ def main():
 
     plugin_save = []
     for p in g.plugins:
-        if hasattr(p,'get_init_dict'):
+        try:
             p_initializer = p.get_class_name(),p.get_init_dict()
             plugin_save.append(p_initializer)
+        except AttributeError:
+            #not all plugins need to be savable, they will not have the init dict.
+            # any object without a get_init_dict method will throw this exception.
+            pass
 
     # de-init all running plugins
     for p in g.plugins:

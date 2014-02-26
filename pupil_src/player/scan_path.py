@@ -78,14 +78,15 @@ class Scan_Path(Plugin):
             pass
 
         if same_frame:
+            # paused
             # re-use last result
-            recent_pupil_positions[:] = self.past_pupil_positions
+            recent_pupil_positions[:] = self.past_pupil_positions[:]
         else:
             # trim gaze that is too old
             if recent_pupil_positions:
                 now = recent_pupil_positions[0]['timestamp']
-                cutof = now-self.timeframe.value
-                updated_past_gaze = [g for g in updated_past_gaze if g['timestamp']>cutof]
+                cutoff = now-self.timeframe.value
+                updated_past_gaze = [g for g in updated_past_gaze if g['timestamp']>cutoff]
 
             #inject the scan path gaze points into recent_pupil_positions
             recent_pupil_positions[:] = updated_past_gaze + recent_pupil_positions
@@ -95,7 +96,8 @@ class Scan_Path(Plugin):
         #update info for next frame.
         self.prev_gray = gray_img
         self.prev_frame_idx = frame.index
-        self.past_pupil_positions = recent_pupil_positions
+        # copy the data/contents of recent_pupil_positions don't make a reference
+        self.past_pupil_positions = recent_pupil_positions[:]
 
 
     def init_gui(self,pos=None):
