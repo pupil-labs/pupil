@@ -24,7 +24,7 @@ class Filter_Fixations(Plugin):
     using this plugin will filter the recent_pupil_positions by manhattan distance from previous frame
     only recent_pupil_positions within distance tolerance will be shown
     """
-    def __init__(self, g_pool=None,distance=25.0):
+    def __init__(self, g_pool=None,distance=25.0,gui_settings={'pos':(10,470),'size':(300,100),'iconified':False}):
         super(Filter_Fixations, self).__init__()
 
 
@@ -33,6 +33,7 @@ class Filter_Fixations(Plugin):
 
         # user settings
         self.distance = c_float(float(distance))
+        self.gui_settings = gui_settings
 
         # initialize dependencies
         # init Scan_Path if not already initialized
@@ -76,15 +77,14 @@ class Filter_Fixations(Plugin):
 
 
     def init_gui(self,pos=None):
-        pos = 10,470
         import atb
-        from time import time
-
+        pos = self.gui_settings['pos']
         atb_label = "Filter Fixations"
         self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
-            help="polyline", color=(50, 50, 50), alpha=100,
-            text='light', position=pos,refresh=.1, size=(300, 70))
+            help="polyline", color=(50, 50, 50), alpha=50,
+            text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
 
+        self._bar.iconified = self.gui_settings['iconified']
         self._bar.add_var('distance in pixels',self.distance,min=0,step=0.1)
         self._bar.add_button('remove',self.unset_alive)
 
@@ -93,7 +93,11 @@ class Filter_Fixations(Plugin):
 
 
     def get_init_dict(self):
-        return {'distance':self.distance.value}
+        d = {'distance':self.distance.value}
+        if hasattr(self,'_bar'):
+            gui_settings = {'pos':self._bar.position,'size':self._bar.size,'iconified':self._bar.iconified}
+            d['gui_settings'] = gui_settings
+        return d
 
 
     def clone(self):
