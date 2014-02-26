@@ -32,6 +32,15 @@ from template import Pupil_Detector
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+# try:
+#     np.euler_gamma #constant introduced with 1.8, numpy.__version__ will give you strings with non int chars...
+# except AttributeError as error:
+#     logger.error("This module requires numpy 1.8 or greater. Please upgrade your version of numpy.")
+#     raise error
+
+
 class Canny_Detector(Pupil_Detector):
     """a Pupil detector based on Canny_Edges"""
     def __init__(self,g_pool):
@@ -41,6 +50,7 @@ class Canny_Detector(Pupil_Detector):
         self.session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_detector'),protocol=2)
 
         # coase pupil filter params
+        self.coarse_detection = c_bool(self.load('coarse_detection',True))
         self.coarse_filter_min = 100
         self.coarse_filter_max = 400
 
@@ -108,15 +118,21 @@ class Canny_Detector(Pupil_Detector):
 
 
         # coarse pupil detection
-        integral = cv2.integral(gray_img)
-        integral =  np.array(integral,dtype=c_float)
-        x,y,w,response = eye_filter(integral,self.coarse_filter_min,self.coarse_filter_max)
-        p_r = Roi(gray_img.shape)
-        if w>0:
-            p_r.set((y,x,y+w,x+w))
+
+        if self.coarse_detection.value:
+            integral = cv2.integral(gray_img)
+            integral =  np.array(integral,dtype=c_float)
+            x,y,w,response = eye_filter(integral,self.coarse_filter_min,self.coarse_filter_max)
+            p_r = Roi(gray_img.shape)
+            if w>0:
+                p_r.set((y,x,y+w,x+w))
+            else:
+                p_r.set((0,0,-1,-1))
         else:
+            p_r = Roi(gray_img.shape)
             p_r.set((0,0,-1,-1))
-        coarse_pupil_center = x+w/2.,y+w/2.
+            w = img.shape[0]/2
+
         coarse_pupil_width = w/2.
         padding = coarse_pupil_width/4.
         pupil_img = gray_img[p_r.view]
@@ -230,7 +246,7 @@ class Canny_Detector(Pupil_Detector):
                         cv2.ellipse(debug_img,refit_e,(0,0,255),thickness=1)
                     e = refit_e
                     self.strong_prior = u_r.add_vector(p_r.add_vector(e[0])),e[1],e[2]
-                    goodness = support_ratio
+                    goodness = min(1.,support_ratio)
                     pupil_ellipse = {}
                     pupil_ellipse['confidence'] = goodness
                     pupil_ellipse['ellipse'] = e
@@ -497,16 +513,16 @@ class Canny_Detector(Pupil_Detector):
         self._bar = atb.Bar(name = "Canny_Pupil_Detector", label="Pupil_Detector",
             help="pupil detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=pos,refresh=.3, size=(200, 100))
-        self._bar.add_button("open debug window", self.toggle_window)
-        self._bar.add_var("pupil_intensity_range",self.intensity_range)
-        self._bar.add_var("pupil_min",self.pupil_min,min=1)
-        self._bar.add_var("pupil_max",self.pupil_max,min=1)
-        self._bar.add_var("Pupil_Aparent_Size",self.target_size)
-        self._bar.add_var("Contour min length",self.min_contour_size)
-
+        self._bar.add_var("use coarse detection",self.coarse_detection,help="Disbale when you have trouble with detection when using Mascara.")
+        self._bar.add_button("open debug window", self.toggle_window,help="Open a debug window that shows geeky visual feedback from the algorithm.")
+        self._bar.add_var("pupil_intensity_range",self.intensity_range,help="Using alorithm view set this as low as possible but so that the pupil is always fully overlayed in blue.")
+        self._bar.add_var("pupil_min",self.pupil_min,min=1,help="Setting good bounds will increase detection robustness. Use alorithm view to see.")
+        self._bar.add_var("pupil_max",self.pupil_max,min=1,help="Setting good bounds will increase detection robustness. Use alorithm view to see.")
+        self._bar.add_var("Pupil_Aparent_Size",self.target_size,readonly=True)
+        self._bar.add_var("Contour min length",self.min_contour_size,help="Setting this low will make the alorithm try to connect even smaller arcs to find the pupil but cost you cpu time!")
 
         self._bar.add_var("Pupil_Shade",self.bin_thresh, readonly=True)
-        self._bar.add_var("confidence",self.confidence, readonly=True)
+        self._bar.add_var("confidence",self.confidence, readonly=True,help="The measure of confidence is a number between 0 and 1 of how sure the algorithm is about the detected pupil.")
         # self._bar.add_var("Image_Blur",self.blur, step=2,min=1,max=9)
         # self._bar.add_var("Canny_aparture",self.canny_aperture, step=2,min=3,max=7)
         # self._bar.add_var("canny_threshold",self.canny_thresh, step=1,min=0)

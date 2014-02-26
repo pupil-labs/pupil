@@ -8,6 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+
 import sys, os,platform
 from time import sleep
 from ctypes import c_bool, c_int
@@ -34,6 +35,7 @@ else:
 # create folder for user settings, tmp data
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
+
 
 
 import shelve
@@ -94,8 +96,9 @@ from seek_bar import Seek_Bar
 from export_launcher import Export_Launcher
 from scan_path import Scan_Path
 from marker_detector import Marker_Detector
+from filter_fixations import Filter_Fixations
 
-plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Scan_Path, Vis_Light_Points,Marker_Detector)
+plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Marker_Detector)
 name_by_index = [p.__name__ for p in plugin_by_index]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
@@ -269,7 +272,7 @@ def main():
                     return
 
         g.plugins = [p for p in g.plugins if p.alive]
-        logger.debug('Open Plungin: %s'%name_by_index[selection])
+        logger.debug('Open Plugin: %s'%name_by_index[selection])
         new_plugin = plugin_by_index[selection](g)
         g.plugins.append(new_plugin)
         g.plugins.sort(key=lambda p: p.order)
@@ -404,9 +407,13 @@ def main():
 
     plugin_save = []
     for p in g.plugins:
-        if hasattr(p,'get_init_dict'):
+        try:
             p_initializer = p.get_class_name(),p.get_init_dict()
             plugin_save.append(p_initializer)
+        except AttributeError:
+            #not all plugins need to be savable, they will not have the init dict.
+            # any object without a get_init_dict method will throw this exception.
+            pass
 
     # de-init all running plugins
     for p in g.plugins:

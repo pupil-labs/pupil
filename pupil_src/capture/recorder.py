@@ -111,7 +111,7 @@ class Recorder(Plugin):
             surface_definitions_file = glob(os.path.join(self.g_pool.user_dir,"surface_definitions*"))[0].rsplit(os.path.sep,1)[-1]
             copy2(os.path.join(self.g_pool.user_dir,surface_definitions_file),os.path.join(self.rec_path,surface_definitions_file))
         except:
-            logger.info("No surface_definitions data found. You may wnat this if you do marker tracking.")
+            logger.info("No surface_definitions data found. You may want this if you do marker tracking.")
 
         try:
             cal_pt_cloud = np.load(os.path.join(self.g_pool.user_dir,"cal_pt_cloud.npy"))
@@ -128,7 +128,7 @@ class Recorder(Plugin):
             np.save(cam_path, camera_matrix)
             np.save(dist_path, dist_coefs)
         except:
-            logger.info("No camera intrinsics found, will not copy them into recordings folder.")
+            logger.info("No camera intrinsics found.")
 
 
         try:
@@ -146,8 +146,8 @@ class Recorder(Plugin):
                 f.write("Machine\t"+nodename+"\n")
                 f.write("Release\t"+release+"\n")
                 f.write("Version\t"+version+"\n")
-        except:
-            logger.warning("Could not save metadata. Please report this bug!")
+        except Exception:
+            logger.Exception("Could not save metadata. Please report this bug!")
 
         self.alive = False
 

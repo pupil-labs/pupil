@@ -9,7 +9,7 @@
 '''
 
 from gl_utils import draw_gl_points_norm
-from player_methods import transparent_cirlce
+from player_methods import transparent_circle
 from plugin import Plugin
 import numpy as np
 from ctypes import c_int,c_float,c_bool
@@ -19,7 +19,7 @@ from methods import denormalize
 
 class Vis_Circle(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool=None,radius=20,color=(1.,.2,.4,.5),thickness=1,fill=False,gui_settings={'pos':(10,200),'size':(300,100),'iconified':False}):
+    def __init__(self, g_pool=None,radius=20,color=(1.,.2,.4,.2),thickness=2,fill=True,gui_settings={'pos':(10,200),'size':(300,100),'iconified':False}):
         super(Vis_Circle, self).__init__()
         self.g_pool = g_pool
         self.order = .9
@@ -43,14 +43,14 @@ class Vis_Circle(Plugin):
         radius = self.radius.value
         pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y=True) for pt in recent_pupil_positions if pt['norm_gaze'] is not None]
         for pt in pts:
-            transparent_cirlce(frame.img, pt, radius=radius, color=color, thickness=thickness)
+            transparent_circle(frame.img, pt, radius=radius, color=color, thickness=thickness)
 
     def init_gui(self,pos=None):
         pos = self.gui_settings['pos']
         import atb
         atb_label = "Gaze Circle"
         self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
-            help="circle", color=(50, 50, 50), alpha=100,
+            help="circle", color=(50, 50, 50), alpha=50,
             text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
 
         self._bar.iconified = self.gui_settings['iconified']

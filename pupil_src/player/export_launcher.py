@@ -12,6 +12,7 @@ from plugin import Plugin
 import numpy as np
 import atb
 import os,sys, platform
+import time
 
 import logging
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ def verify_out_file_path(out_file_path,data_dir):
             file_name = 'world_viz.avi'
         out_file_path = os.path.expanduser(os.path.join(dir_name,file_name))
 
+    out_file_path = avoid_overwrite(out_file_path)
     if os.path.isfile(out_file_path):
         logger.warning("Video out file already exsists. I will overwrite!")
         os.remove(out_file_path)
@@ -48,6 +50,13 @@ def verify_out_file_path(out_file_path,data_dir):
 
     return out_file_path
 
+
+def avoid_overwrite(out_file_path):
+    if os.path.isfile(out_file_path):
+        # let append something unique
+        out_file_path,ext = os.path.splitext(out_file_path)
+        out_file_path += str(int(time.time())) + '.avi'
+    return out_file_path
 
 class Export_Launcher(Plugin):
     """docstring for Export_Launcher
@@ -61,8 +70,10 @@ class Export_Launcher(Plugin):
 
         self.new_export = None
         self.exports = []
+        # default_path = verify_out_file_path("world_viz.avi",data_dir)
+        default_path = "world_viz.avi"
 
-        self.rec_name = create_string_buffer("world_viz.avi",512)
+        self.rec_name = create_string_buffer(default_path,512)
         self.start_frame = c_int(0)
         self.end_frame = c_int(frame_count)
 
@@ -72,27 +83,24 @@ class Export_Launcher(Plugin):
         atb_label = "Export Recording"
         atb_pos = 320,10
 
-
         self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
-            help="export vizualization video", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.1, size=(300, 100))
+            help="export vizualization video", color=(50, 100, 100), alpha=100,
+            text='light', position=atb_pos,refresh=.1, size=(300, 150))
 
 
         self.update_bar()
-
 
 
     def update_bar(self):
         if self._bar:
             self._bar.clear()
 
-
-        self._bar.add_var('export name',self.rec_name)
-        self._bar.add_var('start frame',self.start_frame)
-        self._bar.add_var('end frame',self.end_frame)
+        self._bar.add_var('export name',self.rec_name, help="Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.")
+        self._bar.add_var('start frame',self.start_frame,help="Supply start frame no. Negative numbers will count from the end. The behaves like python list indexing")
+        self._bar.add_var('end frame',self.end_frame,help="Supply end frame no. Negative numbers will count from the end. The behaves like python list indexing")
         self._bar.add_button('new export',self.add_export)
 
-        for job,i in zip(self.exports,range(len(self.exports))):
+        for job,i in zip(self.exports,range(len(self.exports)))[::-1]:
 
             self._bar.add_var("%s_out_file"%i,create_string_buffer(512),
                             getter= self.atb_out_file_path,
@@ -106,7 +114,7 @@ class Export_Launcher(Plugin):
                             label='progess',
                             group=str(i),
                             )
-            self._bar.add_var("%s_terminate"%i,job.should_terminate,group=str(i),label='cancel')
+            self._bar.add_var("%s_terminate"%i,job.should_terminate,group=str(i),label='cancel',help="Cancel export.")
 
     def atb_progress(self,job):
         if job.current_frame.value == job.frames_to_export.value:

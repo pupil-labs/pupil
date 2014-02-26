@@ -19,7 +19,7 @@ from methods import denormalize
 
 class Vis_Polyline(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool=None,color =(1.,.2,.4),thickness=1,gui_settings={'pos':(10,320),'size':(300,70),'iconified':False}):
+    def __init__(self, g_pool=None,color =(1.,.2,.4),thickness=2,gui_settings={'pos':(10,320),'size':(300,70),'iconified':False}):
         super(Vis_Polyline, self).__init__()
         self.gui_settings = gui_settings
         self.order = .9

@@ -19,11 +19,6 @@ class Plugin(object):
     instances of this class ususally get added to a plugins list
     this list will have its members called with all methods invoked.
 
-    Creating an ATB Bar in __init__ is required in the class that is based on this class
-    Show at least some info about the Ref_Detector
-    self._bar = atb.Bar(name = self.__class__.__name__, label='your_label',
-                help="ref detection parameters", color=(50, 50, 50), alpha=100,
-                text='light', position=atb_pos,refresh=.3, size=(300, 150))
     """
     def __init__(self):
         self._alive = True
@@ -38,7 +33,8 @@ class Plugin(object):
 
     @property
     def alive(self):
-        """This field indicates of the instance should be detroyed
+        """
+        This field indicates of the instance should be detroyed
         Writing False to this will schedule the instance for deletion
         """
         if not self._alive:
@@ -60,8 +56,8 @@ class Plugin(object):
     def update(self,frame,recent_pupil_positions,events):
         """
         gets called once every frame
-        if you plan to update the image data, note that this will affact all plugins axecuted after you.
-        Use self.order to deal with this appropriatly
+        if you plan to update the image data, note that this will affect all plugins axecuted after you.
+        Use self.order to deal with this appropriately
         """
         pass
 
@@ -73,8 +69,9 @@ class Plugin(object):
 
 
     def cleanup(self):
-        """gets called when the plugin get terminated.
-        This happends either volunatily or forced.
+        """
+        gets called when the plugin get terminated.
+        This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
         pass

@@ -1,12 +1,13 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2014  Pupil Labs UG
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+
 
 from v4l2_capture import VideoCapture
 from v4l2_ctl import Controls, Camera_List, Cam
@@ -63,13 +64,13 @@ class Camera_Capture(object):
         self.get_frame = self.capture.read
         self.create_atb_bar(bar_pos)
 
-    def re_init_cam_by_src_id(self,src_id):
-        try:
-            cam = Camera_List()[src_id]
-        except KeyError:
-            logger.warning("could not reinit capture, src_id not valid anymore")
-            return
-        self.re_init(cam)
+    def re_init_cam_by_src_id(self,requested_id):
+        for cam in Camera_List():
+            if cam.src_id == requested_id:
+                self.re_init(cam)
+                return
+        logger.warning("could not reinit capture, src_id not valid anymore")
+        return
 
 
     def create_atb_bar(self,pos):
