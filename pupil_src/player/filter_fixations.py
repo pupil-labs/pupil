@@ -45,7 +45,7 @@ class Filter_Fixations(Plugin):
         if not self.sp_user:
             # add scanpath
             self.p_scan_path = Scan_Path(g_pool)
-            self.p_scan_path.timeframe.value = 1.0 # initialize wihout history
+            self.p_scan_path.timeframe.value = 1.0
             self.p_scan_path.init_gui()
             g_pool.plugins.append(self.p_scan_path)
             g_pool.plugins.sort(key=lambda p: p.order)
@@ -53,12 +53,8 @@ class Filter_Fixations(Plugin):
 
     def update(self,frame,recent_pupil_positions,events):
         img = frame.img
-        img_shape = img.shape[:-1][::-1] # width,height  
+        img_shape = img.shape[:-1][::-1] # width,height
 
-        # setup to fire after scanpath
-        # check if scan_path exists
-        # compare distances of recent_pupil_positions list
-        # check if scanpath is running -- if not then initialize it
         filtered_gaze = []
 
         for gp1, gp2 in zip(recent_pupil_positions[:-1], recent_pupil_positions[1:]):
@@ -66,7 +62,7 @@ class Filter_Fixations(Plugin):
             gp2_norm = denormalize(gp2['norm_gaze'], img_shape,flip_y=True)
             x_dist =  abs(gp1_norm[0] - gp2_norm[0])
             y_dist = abs(gp1_norm[1] - gp2_norm[1])
-            man = x_dist + y_dist 
+            man = x_dist + y_dist
             # print "man: %s\tdist: %s" %(man,self.distance.value)
             if man < self.distance.value:
                 filtered_gaze.append(gp1)
@@ -74,11 +70,11 @@ class Filter_Fixations(Plugin):
                 # print "filtered"
                 pass
 
-        recent_pupil_positions[:] = filtered_gaze
-        recent_pupil_positions.sort(key=lambda x: x['timestamp']) #this may be redundant...            
+        recent_pupil_positions[:] = filtered_gaze[:]
+        recent_pupil_positions.sort(key=lambda x: x['timestamp']) #this may be redundant...
 
 
-        
+
     def init_gui(self,pos=None):
         pos = 10,470
         import atb
@@ -90,7 +86,6 @@ class Filter_Fixations(Plugin):
             text='light', position=pos,refresh=.1, size=(300, 70))
 
         self._bar.add_var('distance in pixels',self.distance,min=0,step=0.1)
-
         self._bar.add_button('remove',self.unset_alive)
 
     def unset_alive(self):
