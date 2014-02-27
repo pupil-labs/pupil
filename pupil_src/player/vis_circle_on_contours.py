@@ -340,6 +340,8 @@ class Circle_on_Contours(Plugin):
             radius = self.radius.value
             pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y = True) for pt in recent_pupil_positions if pt['norm_gaze'] is not None]
 
+            # need to filter contours to avoid redraw of gaze points
+            # now its drawing gapoints duplicates...
             for contour in contours:
                 for pt in pts:
                     Inside = cv2.pointPolygonTest(contour, pt, False)
