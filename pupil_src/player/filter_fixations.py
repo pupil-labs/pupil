@@ -27,7 +27,7 @@ class Filter_Fixations(Plugin):
     def __init__(self, g_pool=None,distance=25.0,gui_settings={'pos':(10,470),'size':(300,100),'iconified':False}):
         super(Filter_Fixations, self).__init__()
 
-
+        self.g_pool = g_pool
         # let the plugin work after most other plugins
         self.order = .7
 
@@ -35,24 +35,25 @@ class Filter_Fixations(Plugin):
         self.distance = c_float(float(distance))
         self.gui_settings = gui_settings
 
-        # initialize dependencies
-        # init Scan_Path if not already initialized
-        self.sp_user = False
-
-        for p in g_pool.plugins:
-            if isinstance(p,Scan_Path):
-                self.sp_user = True
-
-        if not self.sp_user:
-            # add scanpath
-            self.p_scan_path = Scan_Path(g_pool)
-            self.p_scan_path.timeframe.value = 1.0
-            self.p_scan_path.init_gui()
-            g_pool.plugins.append(self.p_scan_path)
-            g_pool.plugins.sort(key=lambda p: p.order)
-
+        self.sp_active = True
 
     def update(self,frame,recent_pupil_positions,events):
+
+        if any(isinstance(p,Scan_Path) for p in self.g_pool.plugins):
+            if self.sp_active:
+                pass
+            else:
+                self.set_bar_ok(True)
+                self.sp_active = True
+        else:
+            if self.sp_active:
+                self.set_bar_ok(False)
+                self.sp_active = False
+
+            else:
+                pass
+
+
         img = frame.img
         img_shape = img.shape[:-1][::-1] # width,height
 
@@ -88,6 +89,16 @@ class Filter_Fixations(Plugin):
         self._bar.add_var('distance in pixels',self.distance,min=0,step=0.1)
         self._bar.add_button('remove',self.unset_alive)
 
+
+
+    def set_bar_ok(self,ok):
+        if ok:
+            self._bar.color = (50, 50, 50)
+            self._bar.label = "Filter Fixations"
+        else:
+            self._bar.color = (250, 50, 50)
+            self._bar.label = "Filter Fixations: Turn on Scan_Path!"
+
     def unset_alive(self):
         self.alive = False
 
@@ -109,8 +120,6 @@ class Filter_Fixations(Plugin):
         This happends either voluntary or forced.
         if you have an atb bar or glfw window destroy it here.
         """
-        if not self.sp_user:
-            self.p_scan_path.unset_alive()
         self._bar.destroy()
 
 

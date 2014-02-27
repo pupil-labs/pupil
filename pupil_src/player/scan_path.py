@@ -108,7 +108,6 @@ class Scan_Path(Plugin):
             help="polyline", color=(50, 50, 50), alpha=50,
             text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
         self._bar.iconified = self.gui_settings['iconified']
-
         self._bar.add_var('duration in sec',self.timeframe,min=0,step=0.1)
         self._bar.add_button('remove',self.unset_alive)
 
