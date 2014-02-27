@@ -120,6 +120,10 @@ def main():
             if action == GLFW_PRESS:
                 if key == GLFW_KEY_ESCAPE:
                     pass
+                else:
+                    for p in g.plugins:
+                        if hasattr(p,'on_key') and callable(getattr(p,'on_key')):
+                            p.on_key(window, key, scancode, action, mods)
 
 
     def on_char(window,char):
