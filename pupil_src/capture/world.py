@@ -193,6 +193,8 @@ def world(g_pool,cap_src,cap_size):
         g.plugins.append(new_plugin)
         g.plugins.sort(key=lambda p: p.order)
 
+
+
     atb.init()
     # add main controls ATB bar
     bar = atb.Bar(name = "World", label="Controls",
