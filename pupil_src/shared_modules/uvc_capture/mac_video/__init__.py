@@ -254,6 +254,8 @@ class Camera_Capture(object):
         pass
 
     def close(self):
+        self.control = None
+        logger.info("Capture released")
         pass
 
 
