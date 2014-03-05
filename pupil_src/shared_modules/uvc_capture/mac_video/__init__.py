@@ -128,7 +128,6 @@ class Controls(dict):
                 c.set_val(c.default)
 
     def __del__(self):
-        logger.info("Capture control released")
         uvccReleaseCam(self.handle)
         uvccExit()
 
