@@ -143,7 +143,6 @@ class Accuracy_Test(Plugin):
                         (1., 0),(.5, 0),(0,0.),
                         (.5,.5),(.5,.5)]
         self.sites = np.random.random((10,2)).tolist() + self.sites
-        print self.sites
         self.active_site = 0
         self.active = True
         self.ref_list = []
@@ -253,7 +252,8 @@ class Accuracy_Test(Plugin):
 
 
         #lets calculate percision:  (RMS of distance of succesive samples.)
-        # This is a little rough as we do not compensate headmovements for this one.
+        # This is a little rough as we do not compensate headmovements in this test.
+
         # Precision is calculated as the Root Mean Square (RMS)
         # of the angular distance (in degrees of visual angle)
         # between successive samples during a fixation
