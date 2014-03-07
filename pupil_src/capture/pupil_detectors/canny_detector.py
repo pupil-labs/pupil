@@ -253,6 +253,7 @@ class Canny_Detector(Pupil_Detector):
                     pupil_ellipse['roi_center'] = e[0]
                     pupil_ellipse['major'] = max(e[1])
                     pupil_ellipse['minor'] = min(e[1])
+                    pupil_ellipse['apparent_pupil_size'] = max(e[1])
                     pupil_ellipse['axes'] = e[1]
                     pupil_ellipse['angle'] = e[2]
                     e_img_center =u_r.add_vector(p_r.add_vector(e[0]))
