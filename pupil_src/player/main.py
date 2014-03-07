@@ -357,7 +357,7 @@ def main():
         if g.play or g.new_seek:
             test_frame = cap.get_frame()
             #end of video logic: pause at last frame.
-            if not test_frame:
+            if test_frame.img == None:
                 g.play=False
             else:
                 new_frame = test_frame
