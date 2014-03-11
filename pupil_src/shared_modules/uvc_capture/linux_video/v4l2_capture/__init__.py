@@ -335,7 +335,8 @@ class VideoCapture(object):
             #is the frame ok?
             if not buf.flags & V4L2_BUF_FLAG_ERROR:
                 if buf.flags & V4L2_BUF_FLAG_TIMESTAMP_MASK:
-                    logger.debug("buffer timestamp monotonic")
+                    pass
+                    # logger.debug("buffer timestamp monotonic")
                 buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
                 img = np.frombuffer(buf_ptr.contents,c_uint8)
                 img.shape = (self.v4l2_format.fmt.pix.height,self.v4l2_format.fmt.pix.width,3)
