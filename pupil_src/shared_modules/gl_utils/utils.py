@@ -225,10 +225,7 @@ def draw_gl_texture(image,interpolation=True):
     """
     We draw the image as a texture on a quad from 0,0 to img.width,img.height.
     """
-    global texture_id
-    if texture_id is None:
-        texture_id = glGenTextures(1)
-    glBindTexture(GL_TEXTURE_2D, texture_id)
+   
 
     height, width, channels = image.shape
     if  channels == 3:
@@ -239,17 +236,36 @@ def draw_gl_texture(image,interpolation=True):
         gl_blend_init = GL_RGBA
 
     glPixelStorei(GL_UNPACK_ALIGNMENT,1)
-    # Create Texture
-    glTexImage2D(GL_TEXTURE_2D,
+
+
+    global texture_id
+    if texture_id is None:
+        texture_id = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, texture_id)
+        # Create Texture
+        glTexImage2D(GL_TEXTURE_2D,
+                            0,
+                            gl_blend_init,
+                            width,
+                            height,
+                            0,
+                            gl_blend,
+                            GL_UNSIGNED_BYTE,
+                            None)
+
+    glBindTexture(GL_TEXTURE_2D, texture_id)
+    # update texture
+    glTexSubImage2D(GL_TEXTURE_2D,
                         0,
-                        gl_blend_init,
+                        0,
+                        0,
                         width,
                         height,
-                        0,
                         gl_blend,
                         GL_UNSIGNED_BYTE,
                         image)
     glEnable(GL_TEXTURE_2D)
+
 
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) # interpolation here
     if not interpolation:
