@@ -9,13 +9,15 @@
 '''
 
 
-from v4l2_capture import VideoCapture
+from v4l2_capture import VideoCapture,CaptureError
 from v4l2_ctl import Controls, Camera_List, Cam
 import atb
 from time import sleep
 #logging
 import logging
 logger = logging.getLogger(__name__)
+
+
 
 
 class Camera_Capture(object):

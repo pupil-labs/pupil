@@ -35,11 +35,19 @@ logger = logging.getLogger(__name__)
 
 ###OS specific imports and defs
 if os_name == "Linux":
-    from linux_video import Camera_Capture,Camera_List
+    from linux_video import Camera_Capture,Camera_List,CaptureError
 elif os_name == "Darwin":
-    from mac_video import Camera_Capture,Camera_List
+    from mac_video import Camera_Capture,Camera_List,CaptureError
 else:
-    from other_video import Camera_Capture,Camera_List
+    from other_video import Camera_Capture,Camera_List,CaptureError
+
+
+
+class EndofVideoFileError(Exception):
+    """docstring for EndofVideoFileError"""
+    def __init__(self, arg):
+        super(EndofVideoFileError, self).__init__()
+        self.arg = arg
 
 
 # non os specific defines
@@ -107,13 +115,13 @@ class FileCapture():
         s, img = self.cap.read()
         if not s:
             logger.warning("Reached end of video file.")
-            return Frame(None,None)
+            raise EndofVideoFileError("Reached end of video file.")
         if self.timestamps:
             try:
                 timestamp = self.timestamps[idx]
             except IndexError:
                 logger.warning("Reached end of timestamps list.")
-                return Frame(None,None)
+                raise EndofVideoFileError("Reached end of timestamps list.")
         else:
             timestamp = time()
         return Frame(timestamp,img,index=idx)
@@ -198,7 +206,7 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None):
         logger.info("Using %s as video source"%src)
         return FileCapture(src,timestamps=timestamps)
     else:
-        raise Exception("autoCreateCapture: Could not create capture, wrong src_type")
+        raise CaptureError("autoCreateCapture: Could not create capture, wrong src_type")
 
 
 def filter_sizes(cam,size):
