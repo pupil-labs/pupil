@@ -20,6 +20,14 @@ import os,sys
 import logging
 logger = logging.getLogger(__name__)
 
+class CameraCaptureError(Exception):
+    """General Exception for this module"""
+    def __init__(self, arg):
+        super(CameraCaptureError, self).__init__()
+        self.arg = arg
+
+
+
 if getattr(sys, 'frozen', False):
     # we are running in a |PyInstaller| bundle
     basedir = sys._MEIPASS
@@ -199,10 +207,10 @@ class VideoCapture(object):
         self.v4l2_format.fmt.pix.field       = V4L2_FIELD_ANY
         if (-1 == dll.xioctl(self.device, VIDIOC_S_FMT, byref(self.v4l2_format))):
             self._close()
-            raise Exception("Could not set v4l2 format")
+            raise CameraCaptureError("Could not set v4l2 format")
         if (-1 == dll.xioctl(self.device, VIDIOC_G_FMT, byref(self.v4l2_format))):
             self._close()
-            raise Exception("Could not get v4l2 format")
+            raise CameraCaptureError("Could not get v4l2 format")
         logger.info("Size on %s: %ix%i" %(self.src_str,self.v4l2_format.fmt.pix.width,self.v4l2_format.fmt.pix.height))
 
         self.v4l2_streamparm = v4l2_streamparm()
@@ -211,10 +219,10 @@ class VideoCapture(object):
         self.v4l2_streamparm.parm.capture.timeperframe.denominator = int(fps)
         if (-1 == dll.xioctl(self.device, VIDIOC_S_PARM, byref(self.v4l2_streamparm))):
             self._close()
-            raise Exception("Could not set v4l2 parameters")
+            raise CameraCaptureError("Could not set v4l2 parameters")
         if (-1 == dll.xioctl(self.device, VIDIOC_G_PARM, byref(self.v4l2_streamparm))):
             self._close()
-            raise Exception("Could not get v4l2 parameters")
+            raise CameraCaptureError("Could not get v4l2 parameters")
         logger.info("Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
                                                       self.v4l2_streamparm.parm.capture.timeperframe.denominator))
 
@@ -271,10 +279,10 @@ class VideoCapture(object):
         self.v4l2_streamparm.parm.capture.timeperframe.denominator =  new_rate[1]
         if (-1 == dll.xioctl(self.device, VIDIOC_S_PARM, byref(self.v4l2_streamparm))):
             self._close()
-            raise Exception("Could not set v4l2 parameters")
+            raise CameraCaptureError("Could not set v4l2 parameters")
         if (-1 == dll.xioctl(self.device, VIDIOC_G_PARM, byref(self.v4l2_streamparm))):
             self._close()
-            raise Exception("Could not get v4l2 parameters")
+            raise CameraCaptureError("Could not get v4l2 parameters")
         logger.info("Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator, \
                                                       self.v4l2_streamparm.parm.capture.timeperframe.denominator))
 
@@ -293,7 +301,7 @@ class VideoCapture(object):
         if self.device is not -1:
             self.open = True
         else:
-            raise Exception("Capture Error: Could not open device at %s" %self.src_str)
+            raise CameraCaptureError("Capture Error: Could not open device at %s" %self.src_str)
 
     def _verify(self):
         if self.open:
@@ -304,7 +312,7 @@ class VideoCapture(object):
             dll.init_mmap(self.device)
             self.initialized = True
         else:
-            raise Exception("Capture Error: You need to open the device first")
+            raise CameraCaptureError("Capture Error: You need to open the device first")
 
     def _start(self):
         if self.initialized:
@@ -312,7 +320,7 @@ class VideoCapture(object):
             self.streaming = True
         else:
             self._close()
-            raise Exception("Capture Error: device is not initialized %s" %self.src_str)
+            raise CameraCaptureError("Capture Error: device is not initialized %s" %self.src_str)
 
 
     def read(self,retry=3):
@@ -320,11 +328,11 @@ class VideoCapture(object):
             self._stop()
             self._uninit()
             self._close()
-            raise Exception("Capture Error: Could not communicate with camera at: %s\
-            Attach each camera to a single USB Controller, this may solve the problem."%self.src_str)
+            raise CameraCaptureError("Capture Error: Could not communicate with camera at: %s. Attach each camera to a single USB Controller, this may solve the problem." %self.src_str)
 
         if self._active_buffer:
-            dll.release_buffer(self.device,byref(self._active_buffer))
+            if not dll.release_buffer(self.device,byref(self._active_buffer)):
+                logger.error("Could not release buffer VIDEOC_QBUF_ERROR")
 
         buf  = v4l2_buffer()
         buf_ptr =  dll.get_buffer(self.device,byref(buf))
@@ -354,10 +362,12 @@ class VideoCapture(object):
     def _stop(self):
         if self.streaming:
             if self._active_buffer:
-                dll.release_buffer(self.device,byref(self._active_buffer))
+                if not dll.release_buffer(self.device,byref(self._active_buffer)):
+                    logger.Error("Could not release buffer")
                 self._active_buffer = None
 
-            dll.stop_capturing(self.device)
+            if not dll.stop_capturing(self.device):
+                logger.error("Device not found. Could not stop it.")
             self.streaming = False
 
     def _uninit(self):
@@ -369,8 +379,11 @@ class VideoCapture(object):
     def _close(self):
         if self.open:
             self.device = dll.close_device(self.device)
-            self.open=False
-            logger.info("Closed: %s" %self.src_str)
+            if self.device == 0:
+                logger.error("Could not close device: %s" %self.src_str)
+            else:
+                self.open=False
+                logger.info("Closed: %s" %self.src_str)
 
     def cleanup(self):
         self._stop()

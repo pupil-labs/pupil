@@ -28,6 +28,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class CameraCaptureError(Exception):
+    """General Exception for this module"""
+    def __init__(self, arg):
+        super(CameraCaptureError, self).__init__()
+        self.arg = arg
+
+
+
 class Control(object):
     """docstring for uvcc_Control"""
     def __init__(self,name,i,handle):
@@ -188,6 +196,8 @@ class Camera_Capture(object):
 
     def get_frame(self):
         s, img = self.capture.read()
+        if not s:
+            raise CameraCaptureError("Could not get frame")
         timestamp = time()
         return Frame(timestamp,img)
 

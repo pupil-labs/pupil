@@ -9,13 +9,15 @@
 '''
 
 
-from v4l2_capture import VideoCapture
+from v4l2_capture import VideoCapture,CameraCaptureError
 from v4l2_ctl import Controls, Camera_List, Cam
 import atb
 from time import sleep
 #logging
 import logging
 logger = logging.getLogger(__name__)
+
+
 
 
 class Camera_Capture(object):
@@ -124,5 +126,6 @@ class Camera_Capture(object):
         logger.info("Capture released")
 
     def kill_atb_bar(self):
-        self.bar.destroy()
-        del self.bar
+        if hasattr(self,'bar'):
+            self.bar.destroy()
+            del self.bar

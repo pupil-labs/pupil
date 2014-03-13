@@ -31,7 +31,7 @@ import atb
 # helpers/utils
 from methods import normalize, denormalize,Temp
 from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
-from uvc_capture import autoCreateCapture
+from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 import calibrate
 # Plug-ins
 import calibration_routines
@@ -107,11 +107,15 @@ def world(g_pool,cap_src,cap_size):
     if cap is None:
         logger.error("Did not receive valid Capture")
         return
-    frame = cap.get_frame()
-    if frame.img is None:
+
+     # Get an image from the grabber
+    try:
+        frame = cap.get_frame()
+    except CameraCaptureError:
         logger.error("Could not retrieve image from capture")
         cap.close()
         return
+
     height,width = frame.img.shape[:2]
 
 
@@ -279,7 +283,15 @@ def world(g_pool,cap_src,cap_size):
     while not g_pool.quit.value:
 
         # Get an image from the grabber
-        frame = cap.get_frame()
+        try:
+            frame = cap.get_frame()
+        except CameraCaptureError:
+            logger.error("Capture from Camera Failed. Stopping.")
+            break
+        except EndofVideoFileError:
+            logger.warning("Video File is done. Stopping")
+            break
+
         update_fps()
 
 

@@ -47,7 +47,7 @@ import numpy as np
 from glfw import *
 import atb
 
-from uvc_capture import autoCreateCapture
+from uvc_capture import autoCreateCapture,EndofVideoFileError
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
@@ -355,17 +355,15 @@ def main():
 
         #grab new frame
         if g.play or g.new_seek:
-            test_frame = cap.get_frame()
-            #end of video logic: pause at last frame.
-            if test_frame.img == None:
+            try:
+                new_frame = cap.get_frame()
+            except EndofVideoFileError:
+                #end of video logic: pause at last frame.
                 g.play=False
-            else:
-                new_frame = test_frame
 
             if g.new_seek:
                 display_time = new_frame.timestamp
                 g.new_seek = False
-
 
         frame = new_frame.copy()
 

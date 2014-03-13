@@ -89,7 +89,8 @@ void *get_buffer(int fd,struct v4l2_buffer *buf){
 		if (-1 == r) {
 			if (EINTR == errno)
 				continue;
-			errno_exit("select");
+			return 0;
+			// errno_exit("select");
 		}
 
 		if (0 == r) {
@@ -113,7 +114,8 @@ void *get_buffer(int fd,struct v4l2_buffer *buf){
 			/* fall through */
 
 			default:
-				errno_exit("VIDIOC_DQBUF");
+				return 0;
+				// errno_exit("VIDIOC_DQBUF");
 			}
 		}
 		// printf("flags %u \n", buf->flags);
@@ -134,20 +136,23 @@ void *get_buffer(int fd,struct v4l2_buffer *buf){
 
 int release_buffer(int fd, struct v4l2_buffer *buf){
 	if (-1 == xioctl(fd, VIDIOC_QBUF, buf))
-			errno_exit("VIDIOC_QBUF");
+			// errno_exit("VIDIOC_QBUF");
+			return 0;
 	return 1;
 }
 
 
-void stop_capturing(int fd)
+int stop_capturing(int fd)
 {
 	enum v4l2_buf_type type;
 	type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if (-1 == xioctl(fd, VIDIOC_STREAMOFF, &type))
-		errno_exit("VIDIOC_STREAMOFF");
+		// errno_exit("VIDIOC_STREAMOFF");
+		return 0;
+	return 1;
 }
 
-void start_capturing(int fd)
+int start_capturing(int fd)
 {
 	unsigned int i;
 	enum v4l2_buf_type type;
@@ -160,11 +165,13 @@ void start_capturing(int fd)
 		buf.index = i;
 
 		if (-1 == xioctl(fd, VIDIOC_QBUF, &buf))
-			errno_exit("VIDIOC_QBUF");
+			// errno_exit("VIDIOC_QBUF");
+			return -1;
 	}
 	type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if (-1 == xioctl(fd, VIDIOC_STREAMON, &type))
 		errno_exit("VIDIOC_STREAMON");
+	return 1;
 }
 
 void uninit_device(int vd)
@@ -172,7 +179,7 @@ void uninit_device(int vd)
 	unsigned int i;
 	for (i = 0; i < n_buffers; ++i)
 		if (-1 == v4l2_munmap(buffers[i].start, buffers[i].length))
-			errno_exit("munmap");
+			// errno_exit("munmap");
 	free(buffers);
 }
 
@@ -380,7 +387,8 @@ int verify_device(int fd)
 int close_device(int fd)
 {
 	if (-1 == close(fd))
-		errno_exit("close");
+		return 0;
+		// errno_exit("close");
 
 	fd = -1;
 	return fd;
