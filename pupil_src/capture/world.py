@@ -31,7 +31,7 @@ import atb
 # helpers/utils
 from methods import normalize, denormalize,Temp
 from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
-from uvc_capture import autoCreateCapture,EndofVideoFileError,CaptureError
+from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 import calibrate
 # Plug-ins
 import calibration_routines
@@ -281,7 +281,7 @@ def world(g_pool,cap_src,cap_size):
         # Get an image from the grabber
         try:
             frame = cap.get_frame()
-        except CaptureError:
+        except CameraCaptureError:
             logger.error("Capture from Camera Failed. Stopping.")
             break
         except EndofVideoFileError:

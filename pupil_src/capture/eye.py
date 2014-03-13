@@ -18,7 +18,7 @@ import atb
 from glfw import *
 from gl_utils import basic_gl_setup,adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline
 from methods import *
-from uvc_capture import autoCreateCapture, CaptureError, EndofVideoFileError
+from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 from calibrate import get_map_from_cloud
 from pupil_detectors import Canny_Detector,MSER_Detector,Blob_Detector
 
@@ -203,7 +203,7 @@ def eye(g_pool,cap_src,cap_size):
         # Get an image from the grabber
         try:
             frame = cap.get_frame()
-        except CaptureError:
+        except CameraCaptureError:
             logger.error("Capture from Camera Failed. Stopping.")
             break
         except EndofVideoFileError:

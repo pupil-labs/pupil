@@ -134,7 +134,8 @@ void *get_buffer(int fd,struct v4l2_buffer *buf){
 
 int release_buffer(int fd, struct v4l2_buffer *buf){
 	if (-1 == xioctl(fd, VIDIOC_QBUF, buf))
-			errno_exit("VIDIOC_QBUF");
+			// errno_exit("VIDIOC_QBUF");
+			return -1;
 	return 1;
 }
 
@@ -160,7 +161,8 @@ void start_capturing(int fd)
 		buf.index = i;
 
 		if (-1 == xioctl(fd, VIDIOC_QBUF, &buf))
-			errno_exit("VIDIOC_QBUF");
+			// errno_exit("VIDIOC_QBUF");
+			return -1:
 	}
 	type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if (-1 == xioctl(fd, VIDIOC_STREAMON, &type))

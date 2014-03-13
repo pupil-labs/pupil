@@ -15,6 +15,15 @@ from time import time
 import logging
 logger = logging.getLogger(__name__)
 
+
+class CameraCaptureError(Exception):
+    """General Exception for this module"""
+    def __init__(self, arg):
+        super(CameraCaptureError, self).__init__()
+        self.arg = arg
+
+
+
 class Frame(object):
     """docstring of Frame"""
     def __init__(self, timestamp,img,compressed_img=None, compressed_pix_fmt=None):

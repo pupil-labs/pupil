@@ -28,10 +28,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class CaptureError(Exception):
+class CameraCaptureError(Exception):
     """General Exception for this module"""
     def __init__(self, arg):
-        super(CaptureError, self).__init__()
+        super(CameraCaptureError, self).__init__()
         self.arg = arg
 
 
@@ -197,7 +197,7 @@ class Camera_Capture(object):
     def get_frame(self):
         s, img = self.capture.read()
         if not s:
-            raise CaptureError("Could not get frame")
+            raise CameraCaptureError("Could not get frame")
         timestamp = time()
         return Frame(timestamp,img)
 

@@ -35,13 +35,19 @@ logger = logging.getLogger(__name__)
 
 ###OS specific imports and defs
 if os_name == "Linux":
-    from linux_video import Camera_Capture,Camera_List,CaptureError
+    from linux_video import Camera_Capture,Camera_List,CameraCaptureError
 elif os_name == "Darwin":
-    from mac_video import Camera_Capture,Camera_List,CaptureError
+    from mac_video import Camera_Capture,Camera_List,CameraCaptureError
 else:
-    from other_video import Camera_Capture,Camera_List,CaptureError
+    from other_video import Camera_Capture,Camera_List,CameraCaptureError
 
 
+
+class FileCaptureError(Exception):
+    """General Exception for this module"""
+    def __init__(self, arg):
+        super(FileCaptureError, self).__init__()
+        self.arg = arg
 
 class EndofVideoFileError(Exception):
     """docstring for EndofVideoFileError"""
@@ -133,26 +139,6 @@ class FileCapture():
         logger.error("Could not perform seek on cv2.VideoCapture. Command gave negative return.")
         return False
 
-
-    def seek_to_frame_prefetch(self, seek_pos):
-        prefetch = 10
-        logger.debug("seeking to frame: %s"%seek_pos)
-        if self.cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES,int(seek_pos)-prefetch):
-            while self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES) < seek_pos:
-                print "seek:",self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
-                s,_=self.cap.read()
-                if not s:
-                    logger.error("Could not seek to position %s" %seek_pos)
-                    return
-                prefetch -=1
-                if prefetch < -10:
-                    logger.error("Could not seek to position %s stepped out of prefetch" %seek_pos)
-                    return
-            logger.debug("Sucsessful seek to %s" %self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
-            return True
-        logger.error("Could not perform seek on cv2.VideoCapture. Command gave negative return.")
-        return
-
     def create_atb_bar(self,pos):
         return 0,0
 
@@ -202,7 +188,7 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None):
     elif src_type is str:
         if not isfile(src):
             logger.error('Could not locate VideoFile %s'%src)
-            return
+            raise FileCaptureError('Could not locate VideoFile %s'%src)
         logger.info("Using %s as video source"%src)
         return FileCapture(src,timestamps=timestamps)
     else:

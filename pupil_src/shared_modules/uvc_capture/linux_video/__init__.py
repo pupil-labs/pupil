@@ -9,7 +9,7 @@
 '''
 
 
-from v4l2_capture import VideoCapture,CaptureError
+from v4l2_capture import VideoCapture,CameraCaptureError
 from v4l2_ctl import Controls, Camera_List, Cam
 import atb
 from time import sleep
