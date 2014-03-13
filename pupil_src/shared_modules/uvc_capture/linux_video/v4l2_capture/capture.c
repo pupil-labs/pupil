@@ -89,7 +89,8 @@ void *get_buffer(int fd,struct v4l2_buffer *buf){
 		if (-1 == r) {
 			if (EINTR == errno)
 				continue;
-			errno_exit("select");
+			return 0;
+			// errno_exit("select");
 		}
 
 		if (0 == r) {
