@@ -107,11 +107,15 @@ def world(g_pool,cap_src,cap_size):
     if cap is None:
         logger.error("Did not receive valid Capture")
         return
-    frame = cap.get_frame()
-    if frame.img is None:
+
+     # Get an image from the grabber
+    try:
+        frame = cap.get_frame()
+    except CameraCaptureError:
         logger.error("Could not retrieve image from capture")
         cap.close()
         return
+
     height,width = frame.img.shape[:2]
 
 

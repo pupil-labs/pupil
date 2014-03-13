@@ -126,5 +126,6 @@ class Camera_Capture(object):
         logger.info("Capture released")
 
     def kill_atb_bar(self):
-        self.bar.destroy()
-        del self.bar
+        if hasattr(self,'bar'):
+            self.bar.destroy()
+            del self.bar

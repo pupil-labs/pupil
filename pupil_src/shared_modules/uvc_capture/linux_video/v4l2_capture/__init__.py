@@ -328,8 +328,7 @@ class VideoCapture(object):
             self._stop()
             self._uninit()
             self._close()
-            raise CameraCaptureError("Capture Error: Could not communicate with camera at: %s\
-            Attach each camera to a single USB Controller, this may solve the problem."%self.src_str)
+            raise CameraCaptureError("Capture Error: Could not communicate with camera at: %s. Attach each camera to a single USB Controller, this may solve the problem." %self.src_str)
 
         if self._active_buffer:
             if not dll.release_buffer(self.device,byref(self._active_buffer)):
@@ -363,10 +362,12 @@ class VideoCapture(object):
     def _stop(self):
         if self.streaming:
             if self._active_buffer:
-                dll.release_buffer(self.device,byref(self._active_buffer))
+                if not dll.release_buffer(self.device,byref(self._active_buffer)):
+                    logger.Error("Could not release buffer")
                 self._active_buffer = None
 
-            dll.stop_capturing(self.device)
+            if not dll.stop_capturing(self.device):
+                logger.error("Device not found. Could not stop it.")
             self.streaming = False
 
     def _uninit(self):
@@ -378,8 +379,11 @@ class VideoCapture(object):
     def _close(self):
         if self.open:
             self.device = dll.close_device(self.device)
-            self.open=False
-            logger.info("Closed: %s" %self.src_str)
+            if self.device == 0:
+                logger.error("Could not close device: %s" %self.src_str)
+            else:
+                self.open=False
+                logger.info("Closed: %s" %self.src_str)
 
     def cleanup(self):
         self._stop()
