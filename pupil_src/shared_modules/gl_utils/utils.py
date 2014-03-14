@@ -117,7 +117,7 @@ def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
         varying vec4 f_color;
         void main () {
                gl_Position = gl_ModelViewProjectionMatrix*vec4(gl_Vertex.xy,1.,1.);
-               gl_PointSize = gl_Vertex.z; //this needs to be used on some hardware we cheat ande use the z coord
+               gl_PointSize = gl_Vertex.z; //this needs to be used on some hardware we cheat and use the z coord
                f_color = gl_Color;
                }
         """
@@ -221,11 +221,11 @@ def draw_gl_points_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
 #global var to init text id once per process
 texture_id = None
 
-def draw_gl_texture(image,interpolation=True):
+def draw_gl_texture(image,interpolation=True,update=True):
     """
     We draw the image as a texture on a quad from 0,0 to img.width,img.height.
     """
-   
+
 
     height, width, channels = image.shape
     if  channels == 3:
@@ -251,19 +251,20 @@ def draw_gl_texture(image,interpolation=True):
                             0,
                             gl_blend,
                             GL_UNSIGNED_BYTE,
-                            None)
+                            image)
 
     glBindTexture(GL_TEXTURE_2D, texture_id)
     # update texture
-    glTexSubImage2D(GL_TEXTURE_2D,
-                        0,
-                        0,
-                        0,
-                        width,
-                        height,
-                        gl_blend,
-                        GL_UNSIGNED_BYTE,
-                        image)
+    if update:
+        glTexSubImage2D(GL_TEXTURE_2D,
+                            0,
+                            0,
+                            0,
+                            width,
+                            height,
+                            gl_blend,
+                            GL_UNSIGNED_BYTE,
+                            image)
     glEnable(GL_TEXTURE_2D)
 
 
@@ -339,9 +340,6 @@ def redraw_gl_texture(quad=((0.,0.),(1.,0.),(1.,1.),(0.,1.)) ):
 
     glVertex2f(*quad[3])
     glEnd()
-
-
-
 
     glDisable(GL_TEXTURE_2D)
 

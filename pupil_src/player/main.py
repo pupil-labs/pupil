@@ -120,7 +120,7 @@ def main():
         if not atb.TwEventKeyboardGLFW(key,action):
             if action == GLFW_PRESS:
                 if key == GLFW_KEY_ESCAPE:
-                    pass
+                    on_close(window)
 
 
     def on_char(window,char):
@@ -152,7 +152,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = "/Users/mkassner/Pupil/pupil_code/recordings/2014_02_24/005"
+        rec_dir = "/Users/mkassner/Downloads/1-4/000/"
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:

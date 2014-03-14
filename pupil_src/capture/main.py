@@ -73,7 +73,7 @@ logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 
 
 #if you pass any additional argument when calling this script. The profiler will be used.
-if len(sys.argv) >=2:
+if len(sys.argv) >=2 or 1:
     from eye import eye_profiled as eye
     from world import world_profiled as world
 else:
@@ -102,7 +102,7 @@ def main():
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    # eye_src = "/Users/mkassner/Pupil/datasets/eye2_fieldtest/eye 10.avi"
+    # eye_src = "/Users/mkassner/Downloads/1-4/000/eye.avi"
     # world_src = "/Users/mkassner/Desktop/2014_01_21/000/world.avi"
 
     # Camera video size in pixels (width,height)

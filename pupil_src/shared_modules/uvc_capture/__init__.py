@@ -33,6 +33,7 @@ del platform
 import logging
 logger = logging.getLogger(__name__)
 
+
 ###OS specific imports and defs
 if os_name == "Linux":
     from linux_video import Camera_Capture,Camera_List,CameraCaptureError
@@ -41,7 +42,7 @@ elif os_name == "Darwin":
 else:
     from other_video import Camera_Capture,Camera_List,CameraCaptureError
 
-
+from fake_capture import FakeCapture
 
 class FileCaptureError(Exception):
     """General Exception for this module"""
@@ -164,7 +165,8 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None):
             logger.warning('Found %s as devices that match the src string pattern Using the first one.'%[d.name for d in matching_devices] )
         if len(matching_devices) ==0:
             logger.error('No device found that matched %s'%src)
-            return
+            return FakeCapture(size,fps)
+
 
         cap = Camera_Capture(matching_devices[0],filter_sizes(matching_devices[0],size),fps)
         logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
@@ -192,7 +194,9 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None):
         logger.info("Using %s as video source"%src)
         return FileCapture(src,timestamps=timestamps)
     else:
-        raise CaptureError("autoCreateCapture: Could not create capture, wrong src_type")
+        logger.error("autoCreateCapture: Could not create capture, wrong src_type")
+        return FakeCapture(size,fps)
+        # raise CaptureError("autoCreateCapture: Could not create capture, wrong src_type")
 
 
 def filter_sizes(cam,size):
