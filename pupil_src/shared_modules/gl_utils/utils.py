@@ -224,6 +224,8 @@ texture_id = None
 def draw_gl_texture(image,interpolation=True,update=True):
     """
     We draw the image as a texture on a quad from 0,0 to img.width,img.height.
+
+    to save cpu power, update can be false and we will reuse the old img instead of uploading the new.
     """
 
 

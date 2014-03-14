@@ -159,7 +159,8 @@ def eye(g_pool,cap_src,cap_size):
 
     dispay_mode_enum = atb.enum("Mode",{"Camera Image":0,
                                         "Region of Interest":1,
-                                        "Algorithm":2})
+                                        "Algorithm":2,
+                                        "CPU Save": 3})
 
     bar.add_var("FPS",bar.fps, step=1.,readonly=True)
     bar.add_var("Mode", bar.display,vtype=dispay_mode_enum, help="select the view-mode")
@@ -258,7 +259,7 @@ def eye(g_pool,cap_src,cap_size):
 
         # GL-drawing
         clear_gl_screen()
-        draw_gl_texture(frame.img)
+        draw_gl_texture(frame.img,update=bar.display.value != 3)
 
         if result['norm_pupil'] is not None and bar.draw_pupil.value:
             if result.has_key('axes'):
