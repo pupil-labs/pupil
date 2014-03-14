@@ -11,6 +11,7 @@
 
 import sys, os,platform
 from time import sleep
+from copy import deepcopy
 from ctypes import c_bool, c_int
 
 if getattr(sys, 'frozen', False):
@@ -98,8 +99,9 @@ from scan_path import Scan_Path
 from marker_detector import Marker_Detector
 from pupil_server import Pupil_Server
 from filter_fixations import Filter_Fixations
+from manual_gaze_correction import Manual_Gaze_Correction
 
-plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Marker_Detector,Pupil_Server)
+plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Marker_Detector,Pupil_Server)
 name_by_index = [p.__name__ for p in plugin_by_index]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
@@ -120,7 +122,7 @@ def main():
         if not atb.TwEventKeyboardGLFW(key,action):
             if action == GLFW_PRESS:
                 if key == GLFW_KEY_ESCAPE:
-                    pass
+                    on_close(window)
 
 
     def on_char(window,char):
@@ -262,6 +264,15 @@ def main():
     def set_play(value):
         g.play = value
 
+    def next_frame():
+        cap.seek_to_frame(cap.get_frame_index())
+        g.new_seek = True
+
+    def prev_frame():
+        cap.seek_to_frame(cap.get_frame_index()-2)
+        g.new_seek = True
+
+
 
     def open_plugin(selection,data):
         if plugin_by_index[selection] not in additive_plugins:
@@ -303,7 +314,9 @@ def main():
     bar.add_var("recoding fps",bar._fps,readonly=True)
     bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
     bar.add_var("play",vtype=c_bool,getter=get_play,setter=set_play,key="space")
-    bar.add_var("next frame",getter=cap.get_frame_index)
+    bar.add_button('step next',next_frame,key='right')
+    bar.add_button('step prev',prev_frame,key='left')
+    bar.add_var("frame index",getter=lambda:cap.get_frame_index()-1 )
 
     bar.plugin_to_load = c_int(0)
     plugin_type_enum = atb.enum("Plug In",index_by_name)
@@ -367,8 +380,8 @@ def main():
 
         frame = new_frame.copy()
 
-        #new positons and events
-        current_pupil_positions = positions_by_frame[frame.index][:]
+        #new positons and events we make a deepcopy just like the image should be a copy.
+        current_pupil_positions = deepcopy(positions_by_frame[frame.index])
         events = []
 
         # allow each Plugin to do its work.

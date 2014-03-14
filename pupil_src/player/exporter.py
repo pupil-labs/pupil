@@ -34,13 +34,15 @@ from vis_polyline import Vis_Polyline
 from vis_light_points import Vis_Light_Points
 from scan_path import Scan_Path
 from filter_fixations import Filter_Fixations
+from manual_gaze_correction import Manual_Gaze_Correction
 
 plugin_by_index =  (  Vis_Circle,
                         Vis_Cross,
                         Vis_Polyline,
                         Scan_Path,
                         Vis_Light_Points,
-                        Filter_Fixations
+                        Filter_Fixations,
+                        Manual_Gaze_Correction
                         )
 
 name_by_index = [p.__name__ for p in plugin_by_index]
