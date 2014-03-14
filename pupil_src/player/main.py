@@ -47,7 +47,7 @@ import numpy as np
 from glfw import *
 import atb
 
-from uvc_capture import autoCreateCapture,EndofVideoFileError
+from uvc_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
@@ -204,6 +204,10 @@ def main():
 
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
+
+    if isinstance(cap,FakeCapture):
+        logger.error("could not start capture.")
+        return
 
     width,height = cap.get_size()
 
