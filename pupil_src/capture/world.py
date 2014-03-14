@@ -244,7 +244,7 @@ def world(g_pool,cap_src,cap_size):
     bar.add_button("show calibration result",toggle_show_calib_result, group="Calibration", help="Click to show calibration result.")
     bar.add_var("session name",bar.rec_name, group="Recording", help="Give your recording session a custom name.")
     bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
-    # bar.add_var("update screen", g_pool.update_textures,help="if you dont need to see the camera image updated, you can turn this of to reduce CPU load.")
+    bar.add_var("update screen", g_pool.update_textures,help="if you dont need to see the camera image updated, you can turn this of to reduce CPU load.")
     bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
     bar.add_button("start/stop marker tracking",toggle_ar,key="x",help="find markers in scene to map gaze onto referace surfaces")
     bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
