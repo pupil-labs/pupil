@@ -152,6 +152,7 @@ class Frame(object):
 class Camera_Capture(object):
     """docstring for uvcc_camera"""
     def __init__(self, cam,size=(640,480),fps=30):
+        self.fps = 30
         self.src_id = cam.src_id
         self.uId = cam.uId
         self.name = cam.name
@@ -213,7 +214,11 @@ class Camera_Capture(object):
         self.capture.set(5,fps)
 
     def get_fps(self):
-        return self.capture.get(5)
+        fps = self.capture.get(5)
+        if fps != 0:
+            return fps
+        else:
+            return self.fps
 
     def create_atb_bar(self,pos):
         # add uvc camera controls to a separate ATB bar

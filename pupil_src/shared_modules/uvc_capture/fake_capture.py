@@ -64,7 +64,11 @@ class FakeCapture(object):
         self.presentation_time = time()
         return Frame(time(),self.img.copy())
 
+    def get_size(self):
+        return self.size
 
+    def get_fps(self):
+        return self.fps.value
 
     def create_atb_bar(self,pos):
         # add uvc camera controls to a separate ATB bar
