@@ -62,9 +62,9 @@ def world(g_pool,cap_src,cap_size):
         atb.TwWindowSize(w, h)
         glfwMakeContextCurrent(active_window)
 
-    # def on_iconify(window,iconfied):
-    #     if not isinstance(cap,FakeCapture):
-    #         g_pool.update_textures.value = not iconfied
+    def on_iconify(window,iconfied):
+        if not isinstance(cap,FakeCapture):
+            g_pool.update_textures.value = not iconfied
 
     def on_key(window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,action):
@@ -263,7 +263,7 @@ def world(g_pool,cap_src,cap_size):
     # Register callbacks world_window
     glfwSetWindowSizeCallback(world_window,on_resize)
     glfwSetWindowCloseCallback(world_window,on_close)
-    # glfwSetWindowIconifyCallback(world_window,on_iconify)
+    glfwSetWindowIconifyCallback(world_window,on_iconify)
     glfwSetKeyCallback(world_window,on_key)
     glfwSetCharCallback(world_window,on_char)
     glfwSetMouseButtonCallback(world_window,on_button)

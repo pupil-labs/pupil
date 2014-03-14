@@ -202,11 +202,9 @@ def main():
         session_settings[var_name] = var
 
 
-    # Initialize capture, check if it works
+    # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-    if cap is None:
-        logger.error("Did not receive valid Capture")
-        return
+
     width,height = cap.get_size()
 
 
