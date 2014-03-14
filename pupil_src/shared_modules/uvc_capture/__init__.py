@@ -196,7 +196,6 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None):
     else:
         logger.error("autoCreateCapture: Could not create capture, wrong src_type")
         return FakeCapture(size,fps)
-        # raise CaptureError("autoCreateCapture: Could not create capture, wrong src_type")
 
 
 def filter_sizes(cam,size):
