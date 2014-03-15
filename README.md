@@ -34,7 +34,3 @@ For an intro to the Pupil mobile eye tracking platform have a look at the [Pupil
 
 ## License
 All source code written by Pupil Labs is open source for noncommercial uses as specified the [CC BY-NC-SA license](http://creativecommons.org/licenses/by-nc-sa/3.0/ "CC BY-NC-SA license"). We want you to change and improve the code -- make a fork!  Just make sure to credit us and share your work with the Pupil community.  See the wiki for more info on the [license](https://github.com/pupil-labs/pupil/wiki/License "License").  For commercial use and licencing [contact us!](https://github.com/pupil-labs/pupil/wiki/Community#email "email us")
-
-___
-
- [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/pupil-labs/pupil/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
