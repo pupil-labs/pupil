@@ -540,7 +540,7 @@ class Canny_Detector(Pupil_Detector):
     def open_window(self,size):
         if not self._window:
             if 0: #we are not fullscreening
-                monitor = self.monitor_handles[self.monitor_idx.value]
+                monitor = glfwGetMonitors()[self.monitor_idx.value]
                 mode = glfwGetVideoMode(monitor)
                 height,width= mode[0],mode[1]
             else:

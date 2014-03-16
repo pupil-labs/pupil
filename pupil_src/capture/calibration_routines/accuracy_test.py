@@ -103,8 +103,8 @@ class Accuracy_Test(Plugin):
         self.window_should_open = False
         self.fullscreen = c_bool(1)
         self.monitor_idx = c_int(0)
-        self.monitor_handles = glfwGetMonitors()
-        self.monitor_names = [glfwGetMonitorName(m) for m in self.monitor_handles]
+        monitor_handles = glfwGetMonitors()
+        self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
         monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
         #primary_monitor = glfwGetPrimaryMonitor()
 
@@ -152,7 +152,7 @@ class Accuracy_Test(Plugin):
     def open_window(self):
         if not self._window:
             if self.fullscreen.value:
-                monitor = self.monitor_handles[self.monitor_idx.value]
+                monitor = glfwGetMonitors()[self.monitor_idx.value]
                 mode = glfwGetVideoMode(monitor)
                 height,width= mode[0],mode[1]
             else:
