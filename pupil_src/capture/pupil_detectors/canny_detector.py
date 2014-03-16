@@ -574,7 +574,6 @@ class Canny_Detector(Pupil_Detector):
     def on_resize(self,window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
-        adjust_gl_view(w,h)
         glfwMakeContextCurrent(active_window)
 
     def on_close(self,window):
