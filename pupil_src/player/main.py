@@ -52,7 +52,7 @@ from uvc_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
 # helpers/utils
 from methods import normalize, denormalize,Temp
 from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
-from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
+from gl_utils import basic_gl_setup, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
 
 import logging
 logger = logging.getLogger()
@@ -112,8 +112,9 @@ def main():
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
-        adjust_gl_view(w,h)
-        atb.TwWindowSize(w, h)
+        norm_size = normalize((w,h),glfwGetWindowSize(window))
+        fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
+        atb.TwWindowSize(*map(int,fb_size))
         glfwMakeContextCurrent(active_window)
 
     def on_key(window, key, scancode, action, mods):
@@ -136,7 +137,9 @@ def main():
                 p.on_click(pos,button,action)
 
     def on_pos(window,x, y):
-        if atb.TwMouseMotion(int(x),int(y)):
+        norm_pos = normalize((x,y),glfwGetWindowSize(window))
+        fb_x,fb_y = denormalize(norm_pos,glfwGetFramebufferSize(window))
+        if atb.TwMouseMotion(int(fb_x),int(fb_y)):
             pass
 
     def on_scroll(window,x,y):
@@ -316,7 +319,7 @@ def main():
 
     #set the last saved window size
     set_window_size(bar.window_size.value,bar.window_size)
-    on_resize(main_window, *glfwGetFramebufferSize(main_window))
+    on_resize(main_window, *glfwGetWindowSize(main_window))
     glfwSetWindowPos(main_window,0,0)
 
 

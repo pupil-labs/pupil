@@ -16,7 +16,7 @@ from ctypes import c_int,c_bool,c_float
 import numpy as np
 import atb
 from glfw import *
-from gl_utils import basic_gl_setup,adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline
+from gl_utils import basic_gl_setup, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline
 from methods import *
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 from calibrate import get_map_from_cloud
@@ -53,8 +53,9 @@ def eye(g_pool,cap_src,cap_size):
 
     # Callback functions
     def on_resize(window,w, h):
-        adjust_gl_view(w,h)
-        atb.TwWindowSize(w, h)
+        norm_size = normalize((w,h),glfwGetWindowSize(window))
+        fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
+        atb.TwWindowSize(*map(int,fb_size))
 
 
     def on_key(window, key, scancode, action, mods):
@@ -79,12 +80,13 @@ def eye(g_pool,cap_src,cap_size):
                 bar.draw_roi.value = 0
 
     def on_pos(window,x, y):
-        if atb.TwMouseMotion(int(x),int(y)):
+        norm_pos = normalize((x,y),glfwGetWindowSize(window))
+        fb_x,fb_y = denormalize(norm_pos,glfwGetFramebufferSize(window))
+        if atb.TwMouseMotion(int(fb_x),int(fb_y)):
             pass
+
         if bar.draw_roi.value == 1:
-            pos = x,y
-            pos = normalize(pos,glfwGetWindowSize(window))
-            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
+            pos = denormalize(norm_pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
             u_r.setEnd(pos)
 
     def on_scroll(window,x,y):

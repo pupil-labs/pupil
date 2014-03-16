@@ -11,7 +11,7 @@
 import os
 import cv2
 import numpy as np
-from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_point_norm,basic_gl_setup
+from gl_utils import draw_gl_polyline,clear_gl_screen,draw_gl_point,draw_gl_point_norm,basic_gl_setup
 from methods import normalize
 import atb
 import audio
@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
-    adjust_gl_view(w,h)
     glfwMakeContextCurrent(active_window)
 
 class Camera_Intrinsics_Estimation(Plugin):

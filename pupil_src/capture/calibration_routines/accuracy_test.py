@@ -16,7 +16,7 @@ import numpy as np
 import scipy.spatial as sp
 
 from methods import normalize,denormalize
-from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_points_norm,draw_gl_polyline,draw_gl_polyline_norm, adjust_gl_view,clear_gl_screen,basic_gl_setup
+from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_points_norm,draw_gl_polyline,draw_gl_polyline_norm,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
 from OpenGL.GLU import gluOrtho2D

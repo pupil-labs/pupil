@@ -26,7 +26,7 @@ import atb
 from ctypes import c_int,c_bool,c_float
 from c_methods import eye_filter
 from glfw import *
-from gl_utils import adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline,basic_gl_setup
+from gl_utils import  draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline,basic_gl_setup
 from template import Pupil_Detector
 
 
