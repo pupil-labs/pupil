@@ -122,9 +122,7 @@ def main():
     def on_key(window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,action):
             if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
-                    on_close(window)
-
+                pass
 
     def on_char(window,char):
         if not atb.TwEventCharGLFW(char,1):
@@ -149,7 +147,7 @@ def main():
             pass
 
     def on_close(window):
-        glfwSetWindowShouldClose(window)
+        glfwSetWindowShouldClose(main_window,True)
         logger.info('Process closing from window')
 
 
