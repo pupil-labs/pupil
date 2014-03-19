@@ -165,7 +165,7 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None)
             logger.warning('Found %s as devices that match the src string pattern Using the first one.'%[d.name for d in matching_devices] )
         if len(matching_devices) ==0:
             logger.error('No device found that matched %s'%src)
-            return FakeCapture(size,fps)
+            return FakeCapture(size,fps,timebase=timebase)
 
 
         cap = Camera_Capture(matching_devices[0],filter_sizes(matching_devices[0],size),fps,timebase)
@@ -195,7 +195,7 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None)
         return FileCapture(src,timestamps=timestamps)
     else:
         logger.error("autoCreateCapture: Could not create capture, wrong src_type")
-        return FakeCapture(size,fps)
+        return FakeCapture(size,fps,timebase=timebase)
 
 
 def filter_sizes(cam,size):

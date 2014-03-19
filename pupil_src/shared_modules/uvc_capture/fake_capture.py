@@ -35,7 +35,7 @@ class Frame(object):
 
 class FakeCapture(object):
     """docstring for FakeCapture"""
-    def __init__(self, size=(640,480),fps=30,timestamps=None):
+    def __init__(self, size=(640,480),fps=30,timestamps=None,timebase=None):
         super(FakeCapture, self).__init__()
         self.size = size
         self.fps = c_float(fps)
@@ -43,6 +43,17 @@ class FakeCapture(object):
         self.presentation_time = time()
 
         self.make_img()
+
+
+        if timebase == None:
+            logger.debug("Capture will run with default system timebase")
+            self.timebase = c_float(0)
+        elif isinstance(timebase,c_float):
+            logger.debug("Capture will run with app wide adjustable timebase")
+            self.timebase = timebase
+        else:
+            logger.error("Invalid timebase variable type. Will use default system timebase")
+            self.timebase = c_float(0)
 
 
     def make_img(self):
@@ -62,7 +73,7 @@ class FakeCapture(object):
         wait = max(0,1./self.fps.value - spent)
         sleep(wait)
         self.presentation_time = time()
-        return Frame(time(),self.img.copy())
+        return Frame(time()-self.timebase.value,self.img.copy())
 
     def get_size(self):
         return self.size
