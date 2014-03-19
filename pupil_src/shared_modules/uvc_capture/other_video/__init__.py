@@ -15,6 +15,7 @@ from time import time
 import logging
 logger = logging.getLogger(__name__)
 
+from ctypes import c_float
 
 class CameraCaptureError(Exception):
     """General Exception for this module"""
@@ -44,7 +45,7 @@ class Camera_Capture():
     """
     VideoCapture without uvc control using cv2.VideoCapture
     """
-    def __init__(self,src_id,size=(640,480),fps=None):
+    def __init__(self,src_id,size=(640,480),fps=None,timebase=None):
         self.controls = None
         self.cvId = src_id
         self.name = "VideoCapture"
@@ -52,6 +53,17 @@ class Camera_Capture():
         ###add cv videocapture capabilities
         self.capture = VideoCapture(src_id)
         self.set_size(size)
+
+        if timebase == None:
+            logger.debug("Capture will run with default system timebase")
+            self.timebase = c_float(0)
+        elif isinstance(timebase,c_float):
+            logger.debug("Capture will run with app wide adjustable timebase")
+            self.timebase = timebase
+        else:
+            logger.error("Invalid timebase variable type. Will use default system timebase")
+            self.timebase = c_float(0)
+
 
     def get_frame(self):
         s, img = self.capture.read()

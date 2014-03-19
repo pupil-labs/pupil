@@ -150,7 +150,7 @@ class FileCapture():
         pass
 
 
-def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None):
+def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None):
     # checking src and handling all cases:
     src_type = type(src)
 
@@ -168,7 +168,7 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None):
             return FakeCapture(size,fps)
 
 
-        cap = Camera_Capture(matching_devices[0],filter_sizes(matching_devices[0],size),fps)
+        cap = Camera_Capture(matching_devices[0],filter_sizes(matching_devices[0],size),fps,timebase)
         logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
         return cap
 
@@ -176,12 +176,12 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None):
     elif src_type is int:
         for device in Camera_List():
             if device.src_id == src:
-                cap = Camera_Capture(device,filter_sizes(device,size),fps)
+                cap = Camera_Capture(device,filter_sizes(device,size),fps,timebase)
                 logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
                 return cap
 
         #control not supported for windows: init capture without uvc controls
-        cap = Camera_Capture(src,size,fps)
+        cap = Camera_Capture(src,size,fps,timebase)
         logger.warning('No UVC support: Using camera with id: %s'%src)
         return cap
 

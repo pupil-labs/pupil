@@ -123,7 +123,7 @@ def eye(g_pool,cap_src,cap_size):
         session_settings[var_name] = var
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, cap_size)
+    cap = autoCreateCapture(cap_src, cap_size,timebase=g_pool.timebase)
 
     if cap is None:
         logger.error("Did not receive valid Capture")

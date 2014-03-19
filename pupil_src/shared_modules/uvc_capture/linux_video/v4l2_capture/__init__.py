@@ -175,7 +175,7 @@ class Frame(object):
 
 class VideoCapture(object):
     """docstring for v4l2_capture"""
-    def __init__(self, src_id,size=(1280,720),fps=30):
+    def __init__(self, src_id,size=(1280,720),fps=30,timebase=None):
         if src_id not in range(100):
             raise Exception("V4L2 Capture src_id not a number in 0-99")
         self.src_str = "/dev/video"+str(int(src_id))
@@ -183,6 +183,18 @@ class VideoCapture(object):
         self.initialized = False
         self.streaming = False
         self.device = -1
+
+
+        if timebase == None:
+            logger.debug("Capture will run with default system timebase")
+            self.timebase = c_float(0)
+        elif isinstance(timebase,c_float):
+            logger.debug("Capture will run with app wide adjustable timebase")
+            self.timebase = timebase
+        else:
+            logger.error("Invalid timebase variable type. Will use default system timebase")
+            self.timebase = c_float(0)
+
 
         self._open()
         self._verify()
@@ -349,6 +361,7 @@ class VideoCapture(object):
                 img = np.frombuffer(buf_ptr.contents,c_uint8)
                 img.shape = (self.v4l2_format.fmt.pix.height,self.v4l2_format.fmt.pix.width,3)
                 timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000000.
+                timestamp -= self.timebase.value
                 # logger.debug("%s %s" %(timestamp,buf.index))
                 return Frame(timestamp, img)
             else:

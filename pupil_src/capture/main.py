@@ -10,7 +10,7 @@
 
 import sys, os,platform
 from time import sleep
-from ctypes import c_bool, c_int
+from ctypes import c_bool, c_int,c_float
 if platform.system() == 'Darwin':
     from billiard import Process, Pipe, Event,Queue,forking_enable,freeze_support
     from billiard.sharedctypes import RawValue, Value, Array
@@ -118,6 +118,8 @@ def main():
     g_pool.pupil_queue = Queue()
     g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
     g_pool.quit = RawValue(c_bool,0)
+    # this value will be substractied form the capture timestamp
+    g_pool.timebase = RawValue(c_float,0)
     # make some constants avaiable
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir

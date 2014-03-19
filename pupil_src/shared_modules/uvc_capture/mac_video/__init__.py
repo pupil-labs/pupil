@@ -151,18 +151,27 @@ class Frame(object):
 
 class Camera_Capture(object):
     """docstring for uvcc_camera"""
-    def __init__(self, cam,size=(640,480),fps=30):
+    def __init__(self, cam,size=(640,480),fps=30,timebase=None):
         self.fps = 30
         self.src_id = cam.src_id
         self.uId = cam.uId
         self.name = cam.name
         self.controls = Controls(self.uId)
 
+        if timebase == None:
+            logger.debug("Capture will run with default system timebase")
+            self.timebase = c_float(0)
+        elif isinstance(timebase,c_float):
+            logger.debug("Capture will run with app wide adjustable timebase")
+            self.timebase = timebase
+        else:
+            logger.error("Invalid timebase variable type. Will use default system timebase")
+            self.timebase = c_float(0)
+
         try:
             self.controls['UVCC_REQ_FOCUS_AUTO'].set_val(0)
         except KeyError:
             pass
-
 
         self.capture = VideoCapture(self.src_id)
         self.set_size(size)
@@ -199,7 +208,7 @@ class Camera_Capture(object):
         s, img = self.capture.read()
         if not s:
             raise CameraCaptureError("Could not get frame")
-        timestamp = time()
+        timestamp = time()-self.timebase.value
         return Frame(timestamp,img)
 
     def set_size(self,size):
