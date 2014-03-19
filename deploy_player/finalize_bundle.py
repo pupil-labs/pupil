@@ -9,12 +9,52 @@
 '''
 import platform
 
+mac_plit_document_type_str = '''
+<key>CFBundleDocumentTypes</key>
+        <array>
+            <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+            <string>*</string>
+            </array>
+            <key>CFBundleTypeMIMETypes</key>
+            <array>
+            <string>*/*</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>folder</string>
+            <key>CFBundleTypeOSTypes</key>
+            <array>
+            <string>****</string>
+            </array>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            </dict>
+        </array>
+
+'''
+
+split_str = """
+</dict>
+</plist>
+"""
+
 if platform.system() == 'Darwin':
     import shutil
     import write_version_file
     print "starting version stript:"
     write_version_file.main('dist/Pupil Player.app/Contents/MacOS')
-    print "created version file in dist folder"
+    print "created version file in app dir"
+    shutil.rmtree('dist/Pupil Player')
+    print 'removed the non-app dist bundle'
+
+    print "hack injecting file type info in to info.plist"
+    with open("dist/Pupil Player.app/Contents/Info.plist", "r+") as f:
+        txt = f.read() # read everything in the file
+        txt.replace(split_str,mac_plit_document_type_str + split_str)
+        f.seek(0) # rewind
+        f.write(txt) # write the new line before
+
 
 elif platform.system() == 'Linux':
     import sys,os
