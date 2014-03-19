@@ -12,7 +12,7 @@ import os
 import cv2
 import numpy as np
 from methods import normalize,denormalize
-from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline, adjust_gl_view,clear_gl_screen,basic_gl_setup
+from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
 from OpenGL.GLU import gluOrtho2D
@@ -46,7 +46,6 @@ def draw_marker(pos):
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
-    adjust_gl_view(w,h)
     glfwMakeContextCurrent(active_window)
 
 
@@ -82,8 +81,8 @@ class Screen_Marker_Calibration(Plugin):
         self.window_should_open = False
         self.fullscreen = c_bool(1)
         self.monitor_idx = c_int(0)
-        self.monitor_handles = glfwGetMonitors()
-        self.monitor_names = [glfwGetMonitorName(m) for m in self.monitor_handles]
+        monitor_handles = glfwGetMonitors()
+        self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
         monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
         #primary_monitor = glfwGetPrimaryMonitor()
 
@@ -125,7 +124,7 @@ class Screen_Marker_Calibration(Plugin):
     def open_window(self):
         if not self._window:
             if self.fullscreen.value:
-                monitor = self.monitor_handles[self.monitor_idx.value]
+                monitor = glfwGetMonitors()[self.monitor_idx.value]
                 mode = glfwGetVideoMode(monitor)
                 height,width= mode[0],mode[1]
             else:

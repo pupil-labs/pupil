@@ -12,7 +12,7 @@ import os
 import cv2
 import numpy as np
 import shelve
-from gl_utils import draw_gl_polyline,draw_gl_polyline_norm,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, redraw_gl_texture
+from gl_utils import draw_gl_polyline,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, redraw_gl_texture
 from methods import normalize,denormalize
 import atb
 import audio
@@ -35,7 +35,6 @@ from math import sqrt
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
-    adjust_gl_view(w,h)
     glfwMakeContextCurrent(active_window)
 
 class Marker_Detector(Plugin):
@@ -88,8 +87,8 @@ class Marker_Detector(Plugin):
         self._window = None
         self.fullscreen = c_bool(0)
         self.monitor_idx = c_int(0)
-        self.monitor_handles = glfwGetMonitors()
-        self.monitor_names = [glfwGetMonitorName(m) for m in self.monitor_handles]
+        monitor_handles = glfwGetMonitors()
+        self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
         monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
         #primary_monitor = glfwGetPrimaryMonitor()
 
@@ -150,7 +149,7 @@ class Marker_Detector(Plugin):
     def open_window(self):
         if not self._window:
             if self.fullscreen.value:
-                monitor = self.monitor_handles[self.monitor_idx.value]
+                monitor = glfwGetMonitors()[self.monitor_idx.value]
                 mode = glfwGetVideoMode(monitor)
                 height,width= mode[0],mode[1]
             else:
