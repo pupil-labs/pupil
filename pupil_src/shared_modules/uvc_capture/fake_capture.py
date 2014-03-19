@@ -21,7 +21,6 @@ class CameraCaptureError(Exception):
         super(FileCaptureError, self).__init__()
         self.arg = arg
 
-# non os specific defines
 class Frame(object):
     """docstring of Frame"""
     def __init__(self, timestamp,img,index=None,compressed_img=None, compressed_pix_fmt=None):
@@ -30,7 +29,6 @@ class Frame(object):
         self.img = img
         self.compressed_img = compressed_img
         self.compressed_pix_fmt = compressed_pix_fmt
-
 
 
 class FakeCapture(object):
@@ -55,17 +53,14 @@ class FakeCapture(object):
             logger.error("Invalid timebase variable type. Will use default system timebase")
             self.timebase = c_float(0)
 
-
     def make_img(self):
         c_w ,c_h = max(1,self.size[0]/20),max(1,self.size[1]/20)
         coarse = np.random.randint(0,255,size=(c_h,c_w,3)).astype(np.uint8)
         # self.img = np.ones((size[1],size[0],3),dtype=np.uint8)
         self.img = cv2.resize(coarse,self.size,interpolation=cv2.INTER_NEAREST)
 
-
     def fastmode(self):
         self.fps.value = 2000
-
 
     def get_frame(self):
         now =  time()
@@ -98,6 +93,7 @@ class FakeCapture(object):
         return size
 
     def kill_atb_bar(self):
+        #since we never replace this plugin during runtime. Just let the app handle it.
         pass
 
     def close(self):
