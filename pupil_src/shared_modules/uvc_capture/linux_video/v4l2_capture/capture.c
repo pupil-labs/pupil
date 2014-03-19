@@ -125,7 +125,24 @@ void *get_buffer(int fd,struct v4l2_buffer *buf){
 		// process_image(buffers[buf.index].start, buf.bytesused);
 
 		struct timespec raw_tv;
-		clock_gettime(CLOCK_MONOTONIC_RAW, &raw_tv);
+		clock_gettime(CLOCK_MONOTONIC, &raw_tv);
+
+		// CLOCK_REALTIME
+		// - can jump
+		// - can slew
+		// - if ntp is running this clock is always kept close to GMT. even if hardware is not 100% correct, ntp will correct everything over time.
+
+		// CLOCK_MONOTONIC
+		// - cannot jump
+		// - can slew !!! (because of ntp)
+		// - it is not kept in sync with GMT. but the "speed" of seconds is kept in sync with GMT by varying it constantly by ntp.
+
+		// CLOCK_MONOTONIC_RAW
+		// - cannot jump
+		// - cannot slew !
+		// - the speed of seconds is not the same as the speed of GMT seconds since the hardware timer is never 100% exact and ntp daemon does NOT have influence here
+
+
 		// printf("current time %ld, %ld\n", raw_tv.tv_sec, raw_tv.tv_nsec);
 		buf->timestamp.tv_sec = (long) raw_tv.tv_sec;
 		buf->timestamp.tv_usec = raw_tv.tv_nsec/1000;

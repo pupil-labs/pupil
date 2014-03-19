@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class Camera_Capture(object):
     """docstring for uvcc_camera"""
-    def __init__(self,cam,size=(640,480),fps=None):
+    def __init__(self,cam,size=(640,480),fps=None,timebase=None):
         self.src_id = cam.src_id
         self.serial = cam.serial
         self.name = cam.name
@@ -34,7 +34,7 @@ class Camera_Capture(object):
 
         #give camera some time to change settings.
         sleep(0.3)
-        self.capture = VideoCapture(self.src_id,size,fps)
+        self.capture = VideoCapture(self.src_id,size,fps,timebase)
         self.get_frame = self.capture.read
 
 

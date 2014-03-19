@@ -48,7 +48,7 @@ import numpy as np
 from glfw import *
 import atb
 
-from uvc_capture import autoCreateCapture,EndofVideoFileError
+from uvc_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
@@ -154,7 +154,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = "/Users/mkassner/Pupil/pupil_code/recordings/2014_02_24/005"
+        rec_dir = "/Users/mkassner/Downloads/1-4/000/"
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
@@ -204,11 +204,13 @@ def main():
         session_settings[var_name] = var
 
 
-    # Initialize capture, check if it works
+    # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-    if cap is None:
-        logger.error("Did not receive valid Capture")
+
+    if isinstance(cap,FakeCapture):
+        logger.error("could not start capture.")
         return
+
     width,height = cap.get_size()
 
 
