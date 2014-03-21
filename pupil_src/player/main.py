@@ -13,7 +13,12 @@ import sys, os,platform
 from time import sleep
 from copy import deepcopy
 from ctypes import c_bool, c_int
-from billiard import freeze_support
+
+#bundle relevant imports
+try:
+    from billiard import freeze_support
+except:
+    from multiprocessing import freeze_support
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
@@ -60,7 +65,15 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
-fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
+if platform.system() == 'Darwin':
+    #since we are not using OS.fork on MacOS we need to do a few extra things to log our export correctly.
+    if __name__ == '__main__':
+        fh = logging.FileHandler(os.path.join(user_dir,'exports.log'),mode='w') #clear the old exports log
+        fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
+    else:
+        fh = logging.FileHandler(os.path.join(user_dir,'exports.log'),mode='a')
+else:
+    fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
@@ -77,7 +90,6 @@ logger.addHandler(ch)
 logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
-
 
 #get the current software version
 if getattr(sys, 'frozen', False):

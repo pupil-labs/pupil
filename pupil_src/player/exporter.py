@@ -17,6 +17,8 @@ if __name__ == '__main__':
     del syspath, ospath
 
 
+
+
 import os
 from time import time
 import cv2
@@ -52,7 +54,6 @@ plugin_by_name = dict(zip(name_by_index,plugin_by_index))
 
 
 def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
-
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
