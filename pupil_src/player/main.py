@@ -13,6 +13,7 @@ import sys, os,platform
 from time import sleep
 from copy import deepcopy
 from ctypes import c_bool, c_int
+from billiard import freeze_support
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
@@ -445,6 +446,7 @@ def main():
 
 
 if __name__ == '__main__':
+    freeze_support()
     if 1:
         main()
     else:

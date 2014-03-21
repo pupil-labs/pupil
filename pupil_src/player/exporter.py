@@ -15,7 +15,6 @@ if __name__ == '__main__':
     loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
     syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
     del syspath, ospath
-    from billiard import freeze_support
 
 
 import os
@@ -197,5 +196,3 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
     return True
 
 
-if __name__ == '__main__':
-    freeze_support()
