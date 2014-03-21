@@ -71,7 +71,6 @@ logger.addHandler(ch)
 logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 
-
 #if you pass any additional argument when calling this script. The profiler will be used.
 if len(sys.argv) >=2:
     from eye import eye_profiled as eye

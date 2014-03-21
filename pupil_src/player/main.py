@@ -43,32 +43,15 @@ else:
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
-
-
-import shelve
-from time import time,sleep
-from ctypes import  c_int,c_bool,c_float,create_string_buffer
-import numpy as np
-
-#display
-from glfw import *
-import atb
-
-from uvc_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
-
-# helpers/utils
-from methods import normalize, denormalize,Temp
-from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
-from gl_utils import basic_gl_setup, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
-
 import logging
+#set up root logger before other imports
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-# create file handler which logs even debug messages
+#since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
-    #since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
-    if __name__ == '__main__':
-        fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w') #clear log
+    if __name__ == '__main__': #clear log if main
+        fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
+    #we will use append mode since the exporter will stream into the same file when using os.span processes
     fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='a')
 else:
     fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
@@ -88,6 +71,23 @@ logger.addHandler(ch)
 logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
+
+import shelve
+from time import time,sleep
+from ctypes import  c_int,c_bool,c_float,create_string_buffer
+import numpy as np
+
+#display
+from glfw import *
+import atb
+
+from uvc_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
+
+# helpers/utils
+from methods import normalize, denormalize,Temp
+from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
+from gl_utils import basic_gl_setup, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
+
 
 #get the current software version
 if getattr(sys, 'frozen', False):
