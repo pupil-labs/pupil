@@ -15,6 +15,7 @@ if __name__ == '__main__':
     loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
     syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
     del syspath, ospath
+    from billiard import freeze_support
 
 
 import os
@@ -196,34 +197,5 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
     return True
 
 
-
-
 if __name__ == '__main__':
-
-    # make shared modules available across pupil_src
-    from sys import path as syspath
-    from os import path as ospath
-    loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
-    syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
-    del syspath, ospath
-
-
-    from ctypes import  c_int,c_bool
-
-
-    logging.basicConfig(level=logging.DEBUG)
-
-
-    should_terminate = c_bool(False)
-    frame_to_export  = c_int(0)
-    current_frame = c_int(0)
-    data_dir = '/Users/mkassner/Desktop/2014_01_21/000/'
-    start_frame=200
-    end_frame=300
-    plugins=[]
-    out_file_path="test.avi"
-
-
-    export(should_terminate,frame_to_export,current_frame, data_dir,start_frame=start_frame,end_frame=end_frame,plugins=[],out_file_path=out_file_path)
-    print current_frame.value
-
+    freeze_support()
