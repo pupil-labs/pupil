@@ -66,12 +66,10 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
 if platform.system() == 'Darwin':
-    #since we are not using OS.fork on MacOS we need to do a few extra things to log our export correctly.
+    #since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
     if __name__ == '__main__':
-        fh = logging.FileHandler(os.path.join(user_dir,'exports.log'),mode='w') #clear the old exports log
-        fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
-    else:
-        fh = logging.FileHandler(os.path.join(user_dir,'exports.log'),mode='a')
+        fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w') #clear log
+    fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='a')
 else:
     fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
 fh.setLevel(logging.DEBUG)
