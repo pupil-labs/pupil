@@ -16,7 +16,7 @@ from ctypes import c_int,c_bool,c_float
 import numpy as np
 import atb
 from glfw import *
-from gl_utils import basic_gl_setup, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline
+from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline
 from methods import *
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 from calibrate import get_map_from_cloud
@@ -53,6 +53,7 @@ def eye(g_pool,cap_src,cap_size):
 
     # Callback functions
     def on_resize(window,w, h):
+        adjust_gl_view(w,h)
         norm_size = normalize((w,h),glfwGetWindowSize(window))
         fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
         atb.TwWindowSize(*map(int,fb_size))

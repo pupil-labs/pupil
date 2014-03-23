@@ -12,7 +12,7 @@ import os
 import cv2
 import numpy as np
 from methods import normalize,denormalize
-from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline,clear_gl_screen,basic_gl_setup
+from gl_utils import draw_gl_point,adjust_gl_view,draw_gl_point_norm,draw_gl_polyline,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
 from OpenGL.GLU import gluOrtho2D
@@ -46,6 +46,7 @@ def draw_marker(pos):
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
+    adjust_gl_view(w,h)
     glfwMakeContextCurrent(active_window)
 
 

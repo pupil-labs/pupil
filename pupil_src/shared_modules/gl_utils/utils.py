@@ -42,28 +42,27 @@ def basic_gl_setup():
 def clear_gl_screen():
     glClear(GL_COLOR_BUFFER_BIT)
 
-# def adjust_gl_view(w,h):
-#     """
-#     adjust view onto our scene so
-#     that a quad from 0,0 to w,h fits into it perfecly
-#     """
-#     if h == 0:
-#         h = 1
+def adjust_gl_view(w,h):
+    """
+    adjust view onto our scene.
+    """
+    if h == 0:
+        h = 1
 
-#     if w == 0:
-#         w = 1
+    if w == 0:
+        w = 1
 
-#     glViewport(0, 0, w, h)
-#     glMatrixMode(GL_PROJECTION)
-#     glLoadIdentity()
-#     nRange = 1.0
-#     if w <= h:
-#         glOrtho(-nRange, nRange, -nRange*h/w, nRange*h/w, -nRange, nRange)
-#     else:
-#         glOrtho(-nRange*w/h, nRange*w/h, -nRange, nRange, -nRange, nRange)
-#     # switch back to Modelview
-#     glMatrixMode(GL_MODELVIEW)
-#     glLoadIdentity()
+    glViewport(0, 0, w, h)
+    # glMatrixMode(GL_PROJECTION)
+    # glLoadIdentity()
+    # nRange = 1.0
+    # if w <= h:
+    #     glOrtho(-nRange, nRange, -nRange*h/w, nRange*h/w, -nRange, nRange)
+    # else:
+    #     glOrtho(-nRange*w/h, nRange*w/h, -nRange, nRange, -nRange, nRange)
+    # # switch back to Modelview
+    # glMatrixMode(GL_MODELVIEW)
+    # glLoadIdentity()
 
 def draw_gl_polyline((positions),color,type='Loop'):
     glColor4f(*color)

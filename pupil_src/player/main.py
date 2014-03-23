@@ -86,7 +86,7 @@ from uvc_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
 # helpers/utils
 from methods import normalize, denormalize,Temp
 from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
-from gl_utils import basic_gl_setup, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
+from gl_utils import basic_gl_setup,adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
 
 
 #get the current software version
@@ -125,6 +125,7 @@ def main():
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
+        adjust_gl_view(w,h)
         norm_size = normalize((w,h),glfwGetWindowSize(window))
         fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
         atb.TwWindowSize(*map(int,fb_size))

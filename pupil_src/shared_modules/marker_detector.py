@@ -12,7 +12,7 @@ import os
 import cv2
 import numpy as np
 import shelve
-from gl_utils import draw_gl_polyline,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, redraw_gl_texture
+from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, redraw_gl_texture
 from methods import normalize,denormalize
 import atb
 import audio
@@ -35,6 +35,7 @@ from math import sqrt
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
+    adjust_gl_view(w,h)
     glfwMakeContextCurrent(active_window)
 
 class Marker_Detector(Plugin):
