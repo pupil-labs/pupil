@@ -58,10 +58,10 @@ def world(g_pool,cap_src,cap_size):
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
+        norm_size = normalize((w,h),glfwGetWindowSize(window))
+        fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
+        atb.TwWindowSize(*map(int,fb_size))
         adjust_gl_view(w,h,window)
-        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-        fb_size = w*hdpi_factor,h*hdpi_factor
-        atb.TwWindowSize(*fb_size)
         glfwMakeContextCurrent(active_window)
 
     def on_iconify(window,iconfied):
