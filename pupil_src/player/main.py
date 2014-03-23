@@ -125,7 +125,7 @@ def main():
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
-        adjust_gl_view(w,h)
+        adjust_gl_view(w,h,window)
         norm_size = normalize((w,h),glfwGetWindowSize(window))
         fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
         atb.TwWindowSize(*map(int,fb_size))

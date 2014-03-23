@@ -9,6 +9,7 @@
 '''
 
 import OpenGL
+from glfw import glfwGetFramebufferSize,glfwGetWindowSize
 # OpenGL.FULL_LOGGING = True
 OpenGL.ERROR_LOGGING = False
 from OpenGL.GL import *
@@ -42,16 +43,15 @@ def basic_gl_setup():
 def clear_gl_screen():
     glClear(GL_COLOR_BUFFER_BIT)
 
-def adjust_gl_view(w,h):
+def adjust_gl_view(w,h,window):
     """
     adjust view onto our scene.
     """
-    if h == 0:
-        h = 1
+    h = max(h,1)
+    w = max(w,1)
 
-    if w == 0:
-        w = 1
-
+    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
+    w,h = w*hdpi_factor,h*hdpi_factor
     glViewport(0, 0, w, h)
     # glMatrixMode(GL_PROJECTION)
     # glLoadIdentity()

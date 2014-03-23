@@ -50,7 +50,7 @@ def draw_marker(pos):
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
-    adjust_gl_view(w,h)
+    adjust_gl_view(w,h,window)
     glfwMakeContextCurrent(active_window)
 
 

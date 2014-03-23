@@ -53,7 +53,7 @@ def eye(g_pool,cap_src,cap_size):
 
     # Callback functions
     def on_resize(window,w, h):
-        adjust_gl_view(w,h)
+        adjust_gl_view(w,h,window)
         norm_size = normalize((w,h),glfwGetWindowSize(window))
         fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
         atb.TwWindowSize(*map(int,fb_size))

@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
-    adjust_gl_view(w,h)
+    adjust_gl_view(w,h,window)
     glfwMakeContextCurrent(active_window)
 
 class Camera_Intrinsics_Estimation(Plugin):
