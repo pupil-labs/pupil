@@ -189,13 +189,13 @@ class VideoCapture(object):
 
         if timebase == None:
             logger.debug("Capture will run with default system timebase")
-            self.timebase = c_float(0)
-        elif isinstance(timebase,c_float):
+            self.timebase = c_double(0)
+        elif isinstance(timebase,c_double):
             logger.debug("Capture will run with app wide adjustable timebase")
             self.timebase = timebase
         else:
             logger.error("Invalid timebase variable type. Will use default system timebase")
-            self.timebase = c_float(0)
+            self.timebase = c_double(0)
 
 
         self._open()

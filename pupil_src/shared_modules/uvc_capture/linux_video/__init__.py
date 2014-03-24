@@ -36,6 +36,8 @@ class Camera_Capture(object):
         sleep(0.3)
         self.capture = VideoCapture(self.src_id,size,fps,timebase)
         self.get_frame = self.capture.read
+        self.get_now = self.capture.get_time_monotonic
+
 
 
 
