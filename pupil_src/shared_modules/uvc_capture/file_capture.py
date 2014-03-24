@@ -126,6 +126,21 @@ class File_Capture():
         logger.error("Could not perform seek on cv2.VideoCapture. Command gave negative return.")
         return False
 
+    def get_now(self):
+        idx = int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
+        if self.timestamps:
+
+            try:
+                timestamp = self.timestamps[idx]
+                logger.warning("Filecapture is not a realtime source. -NOW- will be the current timestamp")
+            except IndexError:
+                logger.warning("timestamps not found.")
+                timestamp = 0
+        else:
+            logger.warning("Filecapture is not a realtime source. -NOW- will be the current time.")
+            timestamp = time()
+        return timestamp
+
     def create_atb_bar(self,pos):
         return 0,0
 

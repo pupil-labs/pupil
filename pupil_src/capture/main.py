@@ -10,7 +10,7 @@
 
 import sys, os,platform
 from time import sleep
-from ctypes import c_bool, c_int,c_float
+from ctypes import c_bool, c_int,c_double
 if platform.system() == 'Darwin':
     from billiard import Process, Pipe, Event,Queue,forking_enable,freeze_support
     from billiard.sharedctypes import RawValue, Value, Array
@@ -71,6 +71,7 @@ logger.addHandler(ch)
 logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 
+
 #if you pass any additional argument when calling this script. The profiler will be used.
 if len(sys.argv) >=2:
     from eye import eye_profiled as eye
@@ -118,7 +119,7 @@ def main():
     g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
     g_pool.quit = RawValue(c_bool,0)
     # this value will be substractied form the capture timestamp
-    g_pool.timebase = RawValue(c_float,0)
+    g_pool.timebase = RawValue(c_double,0)
     # make some constants avaiable
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir

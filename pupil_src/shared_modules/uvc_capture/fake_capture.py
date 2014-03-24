@@ -4,7 +4,7 @@ import numpy as np
 from time import time,sleep
 
 import atb
-from ctypes import c_int, c_float
+from ctypes import c_int, c_double,c_float
 
 import platform
 os_name = platform.system()
@@ -45,13 +45,13 @@ class FakeCapture(object):
 
         if timebase == None:
             logger.debug("Capture will run with default system timebase")
-            self.timebase = c_float(0)
-        elif isinstance(timebase,c_float):
+            self.timebase = c_double(0)
+        elif isinstance(timebase,c_double):
             logger.debug("Capture will run with app wide adjustable timebase")
             self.timebase = timebase
         else:
             logger.error("Invalid timebase variable type. Will use default system timebase")
-            self.timebase = c_float(0)
+            self.timebase = c_double(0)
 
     def make_img(self):
         c_w ,c_h = max(1,self.size[0]/20),max(1,self.size[1]/20)
@@ -75,6 +75,9 @@ class FakeCapture(object):
 
     def get_fps(self):
         return self.fps.value
+
+    def get_now(self):
+        return time()
 
     def create_atb_bar(self,pos):
         # add uvc camera controls to a separate ATB bar

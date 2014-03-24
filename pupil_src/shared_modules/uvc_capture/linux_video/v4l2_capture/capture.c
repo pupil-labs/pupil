@@ -295,6 +295,12 @@ int verify_device(int fd)
 	return 0;
 }
 
+double get_time_monotonic(void){
+	struct timespec raw_tv;
+	clock_gettime(CLOCK_MONOTONIC, &raw_tv);
+	return raw_tv.tv_sec + raw_tv.tv_nsec * 1e-9;
+}
+
 // void init_device(int fd,struct v4l2_format *fmt, struct v4l2_streamparm *params)
 // {
 // 	struct v4l2_capability cap;

@@ -78,6 +78,8 @@ dll.xioctl.restype = c_int
 dll.get_buffer.argtypes = [c_int,POINTER(v4l2_buffer)]
 dll.get_buffer.restype = c_void_p
 dll.release_buffer.restype = c_int
+dll.get_time_monotonic.argtypes=[]
+dll.get_time_monotonic.restype = c_double
 # dll.init_device.argtypes = [c_int,POINTER(c_uint32),POINTER(c_uint32),POINTER(c_uint32),POINTER(c_uint32)]
 
 
@@ -382,6 +384,9 @@ class VideoCapture(object):
             if not dll.stop_capturing(self.device):
                 logger.error("Device not found. Could not stop it.")
             self.streaming = False
+
+    def get_time_monotonic(self):
+        return dll.get_time_monotonic()
 
     def _uninit(self):
         if self.initialized:

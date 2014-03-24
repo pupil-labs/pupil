@@ -64,6 +64,7 @@ class Camera_Capture(object):
 
         self.capture = VideoCapture(self.src_id,current_size,current_fps)
         self.get_frame = self.capture.read
+        self.get_now = self.capture.get_time_monotonic
         self.create_atb_bar(bar_pos)
 
     def re_init_cam_by_src_id(self,requested_id):

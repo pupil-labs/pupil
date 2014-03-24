@@ -15,7 +15,7 @@ from time import time
 import logging
 logger = logging.getLogger(__name__)
 
-from ctypes import c_float
+from ctypes import c_double
 
 class CameraCaptureError(Exception):
     """General Exception for this module"""
@@ -56,13 +56,13 @@ class Camera_Capture():
 
         if timebase == None:
             logger.debug("Capture will run with default system timebase")
-            self.timebase = c_float(0)
-        elif isinstance(timebase,c_float):
+            self.timebase = c_double(0)
+        elif isinstance(timebase,c_double):
             logger.debug("Capture will run with app wide adjustable timebase")
             self.timebase = timebase
         else:
             logger.error("Invalid timebase variable type. Will use default system timebase")
-            self.timebase = c_float(0)
+            self.timebase = c_double(0)
 
 
     def get_frame(self):
@@ -83,6 +83,9 @@ class Camera_Capture():
 
     def get_fps(self):
         return self.capture.get(5)
+
+    def get_now(self):
+        return time()
 
     def create_atb_bar(self,pos):
         size = 0,0

@@ -160,13 +160,13 @@ class Camera_Capture(object):
 
         if timebase == None:
             logger.debug("Capture will run with default system timebase")
-            self.timebase = c_float(0)
-        elif isinstance(timebase,c_float):
+            self.timebase = c_double(0)
+        elif isinstance(timebase,c_double):
             logger.debug("Capture will run with app wide adjustable timebase")
             self.timebase = timebase
         else:
             logger.error("Invalid timebase variable type. Will use default system timebase")
-            self.timebase = c_float(0)
+            self.timebase = c_double(0)
 
         try:
             self.controls['UVCC_REQ_FOCUS_AUTO'].set_val(0)
@@ -228,6 +228,9 @@ class Camera_Capture(object):
             return fps
         else:
             return self.fps
+
+    def get_now(self):
+        return time()
 
     def create_atb_bar(self,pos):
         # add uvc camera controls to a separate ATB bar
