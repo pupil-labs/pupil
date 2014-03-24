@@ -138,7 +138,6 @@ def eye(g_pool,cap_src,cap_size):
         cap.close()
         return
     height,width = frame.img.shape[:2]
-    cap.auto_rewind = False
 
     u_r = Roi(frame.img.shape)
     u_r.set(load('roi',default=None))
@@ -216,10 +215,6 @@ def eye(g_pool,cap_src,cap_size):
 
         update_fps()
         sleep(bar.sleep.value) # for debugging only
-
-        if pupil_detector.should_sleep:
-            sleep(16)
-            pupil_detector.should_sleep=False
 
 
         ###  RECORDING of Eye Video (on demand) ###

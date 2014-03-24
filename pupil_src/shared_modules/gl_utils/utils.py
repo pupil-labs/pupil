@@ -217,7 +217,7 @@ def draw_gl_points_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
     glPopMatrix()
 
 
-#global var to init text id once per process
+#global var to init one texture id once per process
 texture_id = None
 
 def draw_gl_texture(image,interpolation=True,update=True):

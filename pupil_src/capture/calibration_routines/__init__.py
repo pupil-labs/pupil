@@ -23,8 +23,8 @@ from accuracy_test import Accuracy_Test
 detector_by_index =  (   Screen_Marker_Calibration,
                         Manual_Marker_Calibration,
                         Natural_Features_Calibration,
-                        Camera_Intrinsics_Estimation)#,
-                        # Accuracy_Test )
+                        Camera_Intrinsics_Estimation,
+                        Accuracy_Test )
 
 name_by_index = [p.__name__ for p in detector_by_index]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))

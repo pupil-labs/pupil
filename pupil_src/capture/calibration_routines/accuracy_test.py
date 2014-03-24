@@ -76,8 +76,9 @@ class Accuracy_Test(Plugin):
         self.pos = None
 
         #result calculation variables:
-        self.fow = c_float(90.) #taken from c930e specsheet, confirmed though mesurement within ~10deg.
-        self.res =  c_float(np.sqrt(1280**2 + 720**2))
+        self.world_size = None
+        self.fov = c_float(90.) #taken from c930e specsheet, confirmed though mesurement within ~10deg.
+        self.res =  c_float(1.)
         self.outlier_thresh = c_float(5.)
         self.accuray = c_float(0)
         self.percision = c_float(0)
@@ -96,7 +97,6 @@ class Accuracy_Test(Plugin):
         self.dist_threshold = c_int(5)
         self.area_threshold = c_int(20)
 
-        self.world_size = None
 
         self._window = None
         self.window_should_close = False
@@ -114,21 +114,20 @@ class Accuracy_Test(Plugin):
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
+            text='light', position=atb_pos,refresh=.3, size=(300, 200))
         self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
         self._bar.add_var("fullscreen", self.fullscreen)
         self._bar.add_button("  start test  ", self.start, key='c')
 
-        self._bar.add_var('diagonal FOV',self.fow)
-        self._bar.add_var('diagonal resolution',self.res,readonly= True)
-        self._bar.add_var('outlier threshold deg',self.outlier_thresh)
-        self._bar.add_var('angular accuray',self.accuray,readonly=True)
-        self._bar.add_var('angular percision',self.percision,readonly=True)
-        self._bar.add_button('calculate result',self.calc_result)
-        self._bar.add_separator("Sep1")
-        self._bar.add_var("show edges",self.show_edges)
-        self._bar.add_var("area threshold", self.area_threshold)
-        self._bar.add_var("eccetricity threshold", self.dist_threshold)
+        self._bar.add_var('diagonal FOV',self.fov,help="set the camera FOV here.",group='Error Calculation')
+        self._bar.add_var('diagonal resolution',self.res,readonly= True ,group='Error Calculation')
+        self._bar.add_var('outlier threshold deg',self.outlier_thresh ,group='Error Calculation')
+        self._bar.add_var('angular accuray',self.accuray,readonly=True ,group='Error Calculation')
+        self._bar.add_var('angular percision',self.percision,readonly=True ,group='Error Calculation')
+        self._bar.add_button('calculate result',self.calc_result ,group='Error Calculation')
+        self._bar.add_var("show edges",self.show_edges, group="Detector Variables")
+        self._bar.add_var("area threshold", self.area_threshold ,group="Detector Variables")
+        self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Detector Variables" )
 
 
     def start(self):
@@ -229,7 +228,7 @@ class Accuracy_Test(Plugin):
         pt_cloud[:,0:3:2] *= res[0]
         pt_cloud[:,1:4:2] *= res[1]
 
-        field_of_view = self.fow.value
+        field_of_view = self.fov.value
         px_per_degree = self.res.value/field_of_view
 
         # Accuracy is calculated as the average angular
@@ -280,6 +279,7 @@ class Accuracy_Test(Plugin):
         #get world image size for error fitting later.
         if self.world_size is None:
             self.world_size = frame.img.shape[1],frame.img.shape[0]
+            self.res.value = np.sqrt(self.world_size[0]**2+self.world_size[1]**2)
 
         if self.window_should_close:
             self.close_window()

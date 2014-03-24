@@ -93,15 +93,14 @@ class Screen_Marker_Calibration(Plugin):
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
+            text='light', position=atb_pos,refresh=.3, size=(300, 90))
         self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
         self._bar.add_var("fullscreen", self.fullscreen)
         self._bar.add_button("  start calibrating  ", self.start, key='c')
 
-        self._bar.add_separator("Sep1")
-        self._bar.add_var("show edges",self.show_edges)
-        self._bar.add_var("area threshold", self.area_threshold)
-        self._bar.add_var("eccetricity threshold", self.dist_threshold)
+        self._bar.add_var("show edges",self.show_edges, group="Detector Variables")
+        self._bar.add_var("area threshold", self.area_threshold ,group="Detector Variables")
+        self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Detector Variables" )
 
 
     def start(self):
