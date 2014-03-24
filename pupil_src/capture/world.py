@@ -226,9 +226,8 @@ def world(g_pool,cap_src,cap_size):
 
     def reset_timebase():
         #the last frame from worldcam will be t0
-        print "new timebase",cap.get_now()
         g_pool.timebase.value = cap.get_now()
-        print "new timebase",g_pool.timebase.value
+        logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
 
     atb.init()
     # add main controls ATB bar
@@ -255,7 +254,7 @@ def world(g_pool,cap_src,cap_size):
     bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
     bar.add_button("start/stop marker tracking",toggle_ar,key="x",help="find markers in scene to map gaze onto referace surfaces")
     bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
-    bar.add_button("set timebase to now",reset_timebase,help="this button allows the timestamps to count from now on.")
+    bar.add_button("set timebase to now",reset_timebase,help="this button allows the timestamps to count from now on.",key="t")
     bar.add_var("update screen", g_pool.update_textures,help="if you dont need to see the camera image updated, you can turn this of to reduce CPU load.")
     bar.add_separator("Sep1")
     bar.add_var("version",bar.version, readonly=True)
@@ -304,7 +303,6 @@ def world(g_pool,cap_src,cap_size):
         # Get an image from the grabber
         try:
             frame = cap.get_frame()
-            print frame.timestamp
         except CameraCaptureError:
             logger.error("Capture from Camera Failed. Stopping.")
             break
