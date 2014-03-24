@@ -128,7 +128,6 @@ def world(g_pool,cap_src,cap_size):
     g_pool.map_pupil = map_pupil
     g_pool.update_textures = c_bool(1)
 
-
     # Initialize capture
     cap = autoCreateCapture(cap_src, cap_size, 24, timebase=g_pool.timebase)
 
@@ -144,7 +143,7 @@ def world(g_pool,cap_src,cap_size):
         return
 
     height,width = frame.img.shape[:2]
-
+    g_pool.capture = cap
 
     # helpers called by the main atb bar
     def update_fps():

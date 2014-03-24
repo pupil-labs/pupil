@@ -223,7 +223,7 @@ def eye(g_pool,cap_src,cap_size):
             command = g_pool.eye_rx.recv()
             if command is not None:
                 record_path = command
-                logger.info("Will save eye video to: %(record_path)s")
+                logger.info("Will save eye video to: %s"%record_path)
                 video_path = os.path.join(record_path, "eye.avi")
                 timestamps_path = os.path.join(record_path, "eye_timestamps.npy")
                 writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (frame.img.shape[1], frame.img.shape[0]))

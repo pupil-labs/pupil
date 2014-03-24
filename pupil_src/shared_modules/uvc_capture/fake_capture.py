@@ -81,9 +81,9 @@ class FakeCapture(object):
 
     def create_atb_bar(self,pos):
         # add uvc camera controls to a separate ATB bar
-        size = (350,100)
+        size = (250,100)
 
-        self.bar = atb.Bar(name="Capture_Controls", label='FakeCapture: Could not start real capture.',
+        self.bar = atb.Bar(name="Capture_Controls", label='Could not start real capture.',
             help="Fake Capture Controls", color=(250,50,50), alpha=100,
             text='light',position=pos,refresh=2., size=size)
 
