@@ -8,8 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
-
 import os
 import cv2
 import numpy as np
@@ -119,11 +117,20 @@ class Accuracy_Test(Plugin):
         self._bar.add_var("fullscreen", self.fullscreen)
         self._bar.add_button("  start test  ", self.start, key='c')
 
+        accuray_help ='''Accuracy is calculated as the average angular
+                        offset (distance) (in degrees of visual angle)
+                        between fixations locations and the corresponding
+                        locations of the fixation targets.'''.replace("\n"," ").replace("    ",'')
+
+        percision_help = '''Precision is calculated as the Root Mean Square (RMS)
+                            of the angular distance (in degrees of visual angle)
+                            between successive samples during a fixation.'''.replace("\n"," ").replace("    ",'')
+
         self._bar.add_var('diagonal FOV',self.fov,help="set the camera FOV here.",group='Error Calculation')
         self._bar.add_var('diagonal resolution',self.res,readonly= True ,group='Error Calculation')
         self._bar.add_var('outlier threshold deg',self.outlier_thresh ,group='Error Calculation')
-        self._bar.add_var('angular accuray',self.accuray,readonly=True ,group='Error Calculation')
-        self._bar.add_var('angular percision',self.percision,readonly=True ,group='Error Calculation')
+        self._bar.add_var('angular accuray',self.accuray,readonly=True ,group='Error Calculation',help=accuray_help)
+        self._bar.add_var('angular percision',self.percision,readonly=True ,group='Error Calculation',help=percision_help)
         self._bar.add_button('calculate result',self.calc_result ,group='Error Calculation')
         self._bar.add_var("show edges",self.show_edges, group="Detector Variables")
         self._bar.add_var("area threshold", self.area_threshold ,group="Detector Variables")
