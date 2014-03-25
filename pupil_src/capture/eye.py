@@ -35,7 +35,7 @@ def eye(g_pool,cap_src,cap_size):
     logger.handlers = []
     # create file handler which logs even debug messages
     fh = logging.FileHandler(os.path.join(g_pool.user_dir,'eye.log'),mode='w')
-    fh.setLevel(logging.INFO)
+    fh.setLevel(logging.DEBUG)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
     ch.setLevel(logging.WARNING)
