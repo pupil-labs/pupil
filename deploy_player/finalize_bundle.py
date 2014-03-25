@@ -31,13 +31,11 @@ mac_plit_document_type_str = '''
             <string>Viewer</string>
             </dict>
         </array>
-
 '''
 
 split_str = """
 </dict>
-</plist>
-"""
+</plist>"""
 
 if platform.system() == 'Darwin':
     import shutil
@@ -49,11 +47,12 @@ if platform.system() == 'Darwin':
     print 'removed the non-app dist bundle'
 
     print "hack injecting file type info in to info.plist"
-    with open("dist/Pupil Player.app/Contents/Info.plist", "r+") as f:
+    with open("dist/Pupil Player.app/Contents/Info.plist", "r") as f:
         txt = f.read() # read everything in the file
-        txt.replace(split_str,mac_plit_document_type_str + split_str)
-        f.seek(0) # rewind
-        f.write(txt) # write the new line before
+    txt = txt.replace(split_str,mac_plit_document_type_str + split_str)
+    print txt
+    with open("dist/Pupil Player.app/Contents/Info.plist", "w") as f:
+        f.write(txt)
 
 
 elif platform.system() == 'Linux':
