@@ -43,6 +43,7 @@ if platform.system() == 'Darwin':
     print "starting version stript:"
     write_version_file.main('dist/Pupil Player.app/Contents/MacOS')
     print "created version file in app dir"
+
     shutil.rmtree('dist/Pupil Player')
     print 'removed the non-app dist bundle'
 
@@ -50,7 +51,6 @@ if platform.system() == 'Darwin':
     with open("dist/Pupil Player.app/Contents/Info.plist", "r") as f:
         txt = f.read() # read everything in the file
     txt = txt.replace(split_str,mac_plit_document_type_str + split_str)
-    print txt
     with open("dist/Pupil Player.app/Contents/Info.plist", "w") as f:
         f.write(txt)
 

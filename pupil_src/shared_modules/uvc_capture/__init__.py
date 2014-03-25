@@ -99,10 +99,10 @@ def filter_sizes(cam,size):
 
     if "Integrated Camera" in cam.name:
         if size[0] == 640:
-            logger.info("Lenovo Integrated camera selected. Forceing format to 640,480")
+            logger.info("Lenovo Integrated camera selected. Forcing format to 640,480")
             return 640,480
         elif size[0] == 320:
-            logger.info("Lenovo Integrated camera selected. Forceing format to 320,240")
+            logger.info("Lenovo Integrated camera selected. Forcing format to 320,240")
             return 320,240
     else:
         return size
