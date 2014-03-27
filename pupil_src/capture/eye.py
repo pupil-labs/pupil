@@ -257,7 +257,7 @@ def eye(g_pool,cap_src,cap_size):
 
         # GL-drawing
         clear_gl_screen()
-        draw_gl_texture(frame.img,update=bar.display.value != 3)
+        # draw_gl_texture(frame.img,update=bar.display.value != 3)
 
         if result['norm_pupil'] is not None and bar.draw_pupil.value:
             if result.has_key('axes'):

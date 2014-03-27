@@ -12,7 +12,7 @@ import os
 import cv2
 import numpy as np
 import shelve
-from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, redraw_gl_texture
+from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture
 from methods import normalize,denormalize
 import atb
 import audio
@@ -319,8 +319,7 @@ class Marker_Detector(Plugin):
         #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
         glLoadMatrixf(m)
 
-        #redraw will use the most recent world img texture and use it again.
-        redraw_gl_texture( ((0,0),(1,0),(1,1),(0,1)) )
+        draw_named_texture(self.g_pool.world_tex)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()

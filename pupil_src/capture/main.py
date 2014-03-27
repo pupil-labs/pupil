@@ -73,7 +73,7 @@ logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 
 
 #if you pass any additional argument when calling this script. The profiler will be used.
-if len(sys.argv) >=2:
+if len(sys.argv) >=2 or 1:
     from eye import eye_profiled as eye
     from world import world_profiled as world
 else:

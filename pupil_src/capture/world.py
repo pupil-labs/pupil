@@ -30,7 +30,7 @@ import atb
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
-from gl_utils import basic_gl_setup,adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
+from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 import calibrate
 # Plug-ins
@@ -284,7 +284,7 @@ def world(g_pool,cap_src,cap_size):
 
     # gl_state settings
     basic_gl_setup()
-
+    g_pool.world_tex = create_named_texture(frame.img.shape)
     # refresh speed settings
     glfwSwapInterval(0)
 
@@ -333,9 +333,18 @@ def world(g_pool,cap_src,cap_size):
         #check if a plugin need to be destroyed
         g_pool.plugins = [p for p in g_pool.plugins if p.alive]
 
+
         # render camera image
         glfwMakeContextCurrent(world_window)
-        draw_gl_texture(frame.img,update=g_pool.update_textures)
+
+        make_coord_system_norm_based()
+
+        if g_pool.update_textures.value:
+            draw_named_texture(g_pool.world_tex,frame.img)
+        else:
+            draw_named_texture(g_pool.world_tex)
+
+        make_coord_system_pixel_based(frame.img.shape)
 
         # render visual feedback from loaded plugins
         for p in g_pool.plugins:
