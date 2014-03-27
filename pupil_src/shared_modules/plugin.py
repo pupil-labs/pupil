@@ -90,6 +90,11 @@ class Plugin(object):
 from glfw import *
 from plugin import Plugin
 
+from ctypes import c_int,c_bool
+import atb
+from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
+
+
 # window calbacks
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
@@ -149,10 +154,7 @@ class Example_Plugin(Plugin):
             # gl_state settings
             active_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self._window)
-            gl.glEnable(gl.GL_POINT_SMOOTH)
-            gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-            gl.glEnable(gl.GL_BLEND)
-            gl.glClearColor(1.,1.,1.,0.)
+            basic_gl_setup()
 
             # refresh speed settings
             glfwSwapInterval(0)
