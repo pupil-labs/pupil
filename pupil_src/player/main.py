@@ -86,7 +86,7 @@ from uvc_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
 # helpers/utils
 from methods import normalize, denormalize,Temp
 from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
-from gl_utils import basic_gl_setup,adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
+from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture
 
 
 #get the current software version
@@ -241,8 +241,6 @@ def main():
     glfwSetCursorPosCallback(main_window,on_pos)
     glfwSetScrollCallback(main_window,on_scroll)
 
-    # gl_state settings
-    basic_gl_setup()
 
     # create container for globally scoped vars (within world)
     g = Temp()
@@ -252,6 +250,8 @@ def main():
     g.user_dir = user_dir
     g.rec_dir = rec_dir
     g.app = 'player'
+
+
 
     # helpers called by the main atb bar
     def update_fps():
@@ -375,6 +375,9 @@ def main():
         if hasattr(p,'init_gui'):
             p.init_gui()
 
+    # gl_state settings
+    basic_gl_setup()
+    g.image_tex = create_named_texture((height,width,3))
 
 
     while not glfwWindowShouldClose(main_window):
@@ -408,8 +411,9 @@ def main():
 
         # render camera image
         glfwMakeContextCurrent(main_window)
-        draw_gl_texture(frame.img)
-
+        make_coord_system_norm_based()
+        draw_named_texture(g.image_tex,frame.img)
+        make_coord_system_pixel_based(frame.img.shape)
         # render visual feedback from loaded plugins
         for p in g.plugins:
             p.gl_display()

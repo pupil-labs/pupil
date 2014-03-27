@@ -319,7 +319,7 @@ class Marker_Detector(Plugin):
         #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
         glLoadMatrixf(m)
 
-        draw_named_texture(self.g_pool.camera_tex)
+        draw_named_texture(self.g_pool.image_tex)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()

@@ -240,7 +240,12 @@ def draw_gl_points_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
 
 def create_named_texture(image):
 
-    height, width, channels = image.shape
+    if type(image) == tuple:
+        height, width, channels = image
+        image=None
+    else:
+        height, width, channels = image.shape
+
     if  channels == 3:
         gl_blend = GL_BGR
         gl_blend_init = GL_RGB
