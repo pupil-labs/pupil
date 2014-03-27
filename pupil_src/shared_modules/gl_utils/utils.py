@@ -238,9 +238,9 @@ def draw_gl_points_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
     glPopMatrix()
 
 
-def create_named_texture(img_shape):
+def create_named_texture(image):
 
-    height, width, channels = img_shape
+    height, width, channels = image.shape
     if  channels == 3:
         gl_blend = GL_BGR
         gl_blend_init = GL_RGB
@@ -260,7 +260,7 @@ def create_named_texture(img_shape):
                         0,
                         gl_blend,
                         GL_UNSIGNED_BYTE,
-                        None)
+                        image)
 
     return texture_id
 
@@ -311,13 +311,10 @@ def draw_named_texture(texture_id, image=None, interpolation=True, quad=((0.,0.)
     # glTexCoord2f(0.0, 0.0)
     glTexCoord2f(0.0, 1.0)
     glVertex2f(*quad[0])
-    # glTexCoord2f(1.0, 0.0)
     glTexCoord2f(1.0, 1.0)
     glVertex2f(*quad[1])
-    # glTexCoord2f(1.0, 1.0)
     glTexCoord2f(1.0, 0.0)
     glVertex2f(*quad[2])
-    # glTexCoord2f(0.0, 1.0)
     glTexCoord2f(0.0, 0.0)
     glVertex2f(*quad[3])
     glEnd()
@@ -344,6 +341,8 @@ def draw_gl_texture(image,interpolation=True):
 
     glPixelStorei(GL_UNPACK_ALIGNMENT,1)
 
+    glEnable(GL_TEXTURE_2D)
+
     # Create Texture and upload data
     glTexImage2D(GL_TEXTURE_2D,
                         0,
@@ -355,20 +354,10 @@ def draw_gl_texture(image,interpolation=True):
                         GL_UNSIGNED_BYTE,
                         image)
 
-    glEnable(GL_TEXTURE_2D)
-
-
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) # interpolation here
     if not interpolation:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    glMatrixMode(GL_PROJECTION)
-    glPushMatrix()
-    glLoadIdentity()
-    gluOrtho2D(0, 1, 0, 1) # gl coord convention
-    glMatrixMode(GL_MODELVIEW)
-    glPushMatrix()
-    glLoadIdentity()
 
     # someday replace with this:
     # glEnableClientState(GL_VERTEX_ARRAY)
@@ -381,27 +370,17 @@ def draw_gl_texture(image,interpolation=True):
     glColor4f(1.0,1.0,1.0,1.0)
     # Draw textured Quad.
     glBegin(GL_QUADS)
-    # glTexCoord2f(0.0, 0.0)
     glTexCoord2f(0.0, 1.0)
-    glVertex2f(*quad[0])
-    # glTexCoord2f(1.0, 0.0)
+    glVertex2f(0,0)
     glTexCoord2f(1.0, 1.0)
-    glVertex2f(*quad[1])
-    # glTexCoord2f(1.0, 1.0)
+    glVertex2f(1,0)
     glTexCoord2f(1.0, 0.0)
-    glVertex2f(*quad[2])
-    # glTexCoord2f(0.0, 1.0)
+    glVertex2f(1,1)
     glTexCoord2f(0.0, 0.0)
-    glVertex2f(*quad[3])
+    glVertex2f(0,1)
     glEnd()
 
-    glBindTexture(GL_TEXTURE_2D, 0)
     glDisable(GL_TEXTURE_2D)
-
-    glMatrixMode(GL_PROJECTION)
-    glPopMatrix()
-    glMatrixMode(GL_MODELVIEW)
-    glPopMatrix()
 
 
 def make_coord_system_pixel_based(img_shape):

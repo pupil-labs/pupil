@@ -284,7 +284,7 @@ def world(g_pool,cap_src,cap_size):
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.world_tex = create_named_texture(frame.img.shape)
+    g_pool.camera_tex = create_named_texture(frame.img)
     # refresh speed settings
     glfwSwapInterval(0)
 
@@ -338,12 +338,10 @@ def world(g_pool,cap_src,cap_size):
         glfwMakeContextCurrent(world_window)
 
         make_coord_system_norm_based()
-
         if g_pool.update_textures.value:
-            draw_named_texture(g_pool.world_tex,frame.img)
+            draw_named_texture(g_pool.camera_tex,frame.img)
         else:
-            draw_named_texture(g_pool.world_tex)
-
+            draw_named_texture(g_pool.camera_tex)
         make_coord_system_pixel_based(frame.img.shape)
 
         # render visual feedback from loaded plugins

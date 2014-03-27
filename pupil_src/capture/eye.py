@@ -16,7 +16,7 @@ from ctypes import c_int,c_bool,c_float
 import numpy as np
 import atb
 from glfw import *
-from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline
+from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture
 from methods import *
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 from calibrate import get_map_from_cloud
@@ -196,6 +196,7 @@ def eye(g_pool,cap_src,cap_size):
 
     # gl_state settings
     basic_gl_setup()
+    g_pool.camera_tex = create_named_texture(frame.img)
 
     # refresh speed settings
     glfwSwapInterval(0)
@@ -257,7 +258,13 @@ def eye(g_pool,cap_src,cap_size):
 
         # GL-drawing
         clear_gl_screen()
-        # draw_gl_texture(frame.img,update=bar.display.value != 3)
+        make_coord_system_norm_based()
+        if bar.display.value != 3:
+            draw_named_texture(g_pool.camera_tex,frame.img)
+        else:
+            draw_named_texture(g_pool.camera_tex)
+        make_coord_system_pixel_based(frame.img.shape)
+
 
         if result['norm_pupil'] is not None and bar.draw_pupil.value:
             if result.has_key('axes'):
