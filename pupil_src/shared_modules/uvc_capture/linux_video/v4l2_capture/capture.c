@@ -144,8 +144,8 @@ void *get_buffer(int fd,struct v4l2_buffer *buf){
 
 
 		// printf("current time %ld, %ld\n", raw_tv.tv_sec, raw_tv.tv_nsec);
-		buf->timestamp.tv_sec = (long) raw_tv.tv_sec;
-		buf->timestamp.tv_usec = raw_tv.tv_nsec/1000;
+		// buf->timestamp.tv_sec = (long) raw_tv.tv_sec;
+		// buf->timestamp.tv_usec = raw_tv.tv_nsec/1000;
 		return buffers[buf->index].start;
 	}
 }

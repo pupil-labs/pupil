@@ -177,7 +177,7 @@ class Frame(object):
 
 class VideoCapture(object):
     """docstring for v4l2_capture"""
-    def __init__(self, src_id,size=(1280,720),fps=30,timebase=None):
+    def __init__(self, src_id,size=(1280,720),fps=30,timebase=None,use_hw_timestamps=False):
         if src_id not in range(100):
             raise Exception("V4L2 Capture src_id not a number in 0-99")
         self.src_str = "/dev/video"+str(int(src_id))
@@ -185,8 +185,7 @@ class VideoCapture(object):
         self.initialized = False
         self.streaming = False
         self.device = -1
-
-
+        self.use_hw_timestamps = use_hw_timestamps
         if timebase == None:
             logger.debug("Capture will run with default system timebase")
             self.timebase = c_double(0)
@@ -336,7 +335,6 @@ class VideoCapture(object):
             self._close()
             raise CameraCaptureError("Capture Error: device is not initialized %s" %self.src_str)
 
-
     def read(self,retry=3):
         if not retry:
             self._stop()
@@ -356,15 +354,23 @@ class VideoCapture(object):
             self._active_buffer = buf
             #is the frame ok?
             if not buf.flags & V4L2_BUF_FLAG_ERROR:
-                if buf.flags & V4L2_BUF_FLAG_TIMESTAMP_MASK:
-                    pass
-                    # logger.debug("buffer timestamp monotonic")
+
+                # if buf.flags & V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC & V4L2_BUF_FLAG_TIMESTAMP_MASK:
+                #     print "monotonic timebase"
+                # if buf.flags & V4L2_BUF_FLAG_TSTAMP_SRC_MASK & V4L2_BUF_FLAG_TSTAMP_SRC_SOE:
+                #     print "hardware timestamp"
+                # logger.debug("buffer timestamp monotonic")
+                if self.use_hw_timestamps:
+                    timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000000.
+                else:
+                    timestamp = self.get_time_monotonic()
+                    
+                timestamp -= self.timebase.value
+                # if ( self.ts > timestamp) or 1:
+                #     print "%s %s" %(self.src_str, self.get_time_monotonic()-timestamp)
                 buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
                 img = np.frombuffer(buf_ptr.contents,c_uint8)
                 img.shape = (self.v4l2_format.fmt.pix.height,self.v4l2_format.fmt.pix.width,3)
-                timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000000.
-                timestamp -= self.timebase.value
-                # logger.debug("%s %s" %(timestamp,buf.index))
                 return Frame(timestamp, img)
             else:
                 logger.warning("Frame corrupted skipping it")
@@ -461,9 +467,9 @@ if __name__ == '__main__' :
     # dll.uninit_device(device)
     # dll.close_device(device)
     # dll.fprintf(stderr, "\n")
-    cap = VideoCapture(0,(1280,720),30)
+    cap = VideoCapture(2,(320,240),30)
 
-    for x in range(40):
+    for x in range(100):
         frame = cap.read()
         # print frame.img.shape
         # prin?t frame.timestamp

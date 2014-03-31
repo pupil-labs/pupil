@@ -618,10 +618,23 @@ V4L2_BUF_FLAG_TIMECODE = 0x0100
 V4L2_BUF_FLAG_INPUT = 0x0200
 
 #added by mpk
+
 V4L2_BUF_FLAG_TIMESTAMP_MASK = 0xe000
 V4L2_BUF_FLAG_TIMESTAMP_UNKNOWN = 0x0000
 V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC =  0x2000
 V4L2_BUF_FLAG_TIMESTAMP_COPY =   0x4000
+
+# Mask for timestamp sources below. The timestamp source defines the point of time the timestamp is taken in relation to the frame. 
+# Logical 'and' operation between the flags field and V4L2_BUF_FLAG_TSTAMP_SRC_MASK produces the value of the timestamp source. 
+# Applications must set the timestamp source when type refers to an output stream and V4L2_BUF_FLAG_TIMESTAMP_COPY is set.
+V4L2_BUF_FLAG_TSTAMP_SRC_MASK  = 0x00070000 
+# End Of Frame. The buffer timestamp has been taken when the last pixel of the frame has been received or the last pixel 
+# of the frame has been transmitted. In practice, software generated timestamps will typically be read from the clock a small 
+# amount of time after the last pixel has been received or transmitten, depending on the system and other activity in it.
+V4L2_BUF_FLAG_TSTAMP_SRC_EOF  =  0x00000000 
+# Start Of Exposure. The buffer timestamp has been taken when the exposure of the frame has begun. 
+# This is only valid for the V4L2_BUF_TYPE_VIDEO_CAPTURE buffer type.
+V4L2_BUF_FLAG_TSTAMP_SRC_SOE  =  0x00010000 
 #
 # Overlay preview
 #

@@ -31,15 +31,42 @@ class Camera_Capture(object):
             self.controls['focus_auto'].set_val(0)
         except KeyError:
             pass
+        self.timebase = timebase
+        use_hw_ts = self.check_hw_ts_support()
 
         #give camera some time to change settings.
         sleep(0.3)
-        self.capture = VideoCapture(self.src_id,size,fps,timebase)
+        self.capture = VideoCapture(self.src_id,size,fps,timebase = self.timebase, use_hw_timestamps = use_hw_ts)
         self.get_frame = self.capture.read
         self.get_now = self.capture.get_time_monotonic
 
 
 
+    def check_hw_ts_support(self):
+        # hw timestamping:
+        # v4l2 supports Sart of Exposure hardware timestamping ofr UVC Capture devices
+        # these HW timestamps are excellent referece times and 
+        # prefferec over softwaretimestamp denoting the avaibleilt of frames to the user.
+        # however not all uvc cameras report valid hw timestamps, notably microsoft hd-6000
+        # becasue all used devices need to properly implement hw timestamping for it to be usefull
+        # but we cannot now what device the other process is using  + the user may select a differet capture device during runtime
+        # we use some fuzzy logic to determine if hw timestamping should be employed.
+
+        blacklist = ["Microsoft"]
+        qualifying_devices = ["c930e","Integrated Camera"]
+        attached_devices = [c.name for c in Camera_List()]
+
+        if self.name in qualifying_devices:
+            use_hw_ts = True
+            logger.info("Capture device: %s supports HW timestamping. Using hardware timestamps.")
+        else:
+            use_hw_ts = False
+            logger.info("Capture device: %s is not known to support HW timestamping. Using software timestamps.")
+
+        if any( (b in ad for b in blacklist for ad in attached_devices) ):
+            logger.info("Microsoft camera:  detected as attached device. Falling back to software timestamps")
+            use_hw_ts = False
+        return use_hw_ts
 
     def re_init(self,cam,size=(640,480),fps=30):
 
@@ -63,8 +90,9 @@ class Camera_Capture(object):
         except KeyError:
             pass
 
+        use_hw_ts = self.check_hw_ts_support()
 
-        self.capture = VideoCapture(self.src_id,current_size,current_fps)
+        self.capture = VideoCapture(self.src_id,current_size,current_fps,self.timebase,use_hw_ts)
         self.get_frame = self.capture.read
         self.get_now = self.capture.get_time_monotonic
         self.create_atb_bar(bar_pos)
