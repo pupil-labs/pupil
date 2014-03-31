@@ -299,18 +299,6 @@ def world(g_pool,cap_src,cap_size):
     # Event loop
     while not g_pool.quit.value:
 
-        # Get an image from the grabber
-        try:
-            frame = cap.get_frame()
-        except CameraCaptureError:
-            logger.error("Capture from Camera Failed. Stopping.")
-            break
-        except EndofVideoFileError:
-            logger.warning("Video File is done. Stopping")
-            break
-
-        update_fps()
-
 
         #a container that allows plugins to post and read events
         events = []
@@ -324,6 +312,19 @@ def world(g_pool,cap_src,cap_size):
             else:
                 p['norm_gaze'] = g_pool.map_pupil(p['norm_pupil'])
             recent_pupil_positions.append(p)
+
+        # Get an image from the grabber
+        try:
+            frame = cap.get_frame()
+        except CameraCaptureError:
+            logger.error("Capture from Camera Failed. Stopping.")
+            break
+        except EndofVideoFileError:
+            logger.warning("Video File is done. Stopping")
+            break
+
+        update_fps()
+
 
 
         # allow each Plugin to do its work.
