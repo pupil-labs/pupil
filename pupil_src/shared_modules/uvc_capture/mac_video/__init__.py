@@ -246,6 +246,7 @@ class Camera_Capture(object):
         cameras_enum = atb.enum("Capture",dict([(c.name,c.src_id) for c in Camera_List()]) )
 
         self.bar.add_var("Capture",vtype=cameras_enum,getter=lambda:self.src_id, setter=self.re_init_cam_by_src_id)
+        self.bar.add_var('hardware timestamps',vtype=atb.TW_TYPE_BOOL8,getter=lambda:False)
         for control in sorted_controls:
             name = control.atb_name
             if control.type=="bool":
