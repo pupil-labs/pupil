@@ -12,6 +12,7 @@
 from v4l2_capture import VideoCapture,CameraCaptureError
 from v4l2_ctl import Controls, Camera_List, Cam
 import atb
+from ctypes import c_bool
 from time import sleep
 #logging
 import logging
@@ -32,11 +33,11 @@ class Camera_Capture(object):
         except KeyError:
             pass
         self.timebase = timebase
-        use_hw_ts = self.check_hw_ts_support()
+        self.use_hw_ts = self.check_hw_ts_support()
 
         #give camera some time to change settings.
         sleep(0.3)
-        self.capture = VideoCapture(self.src_id,size,fps,timebase = self.timebase, use_hw_timestamps = use_hw_ts)
+        self.capture = VideoCapture(self.src_id,size,fps,timebase = self.timebase, use_hw_timestamps = self.use_hw_ts)
         self.get_frame = self.capture.read
         self.get_now = self.capture.get_time_monotonic
 
@@ -52,20 +53,20 @@ class Camera_Capture(object):
         # but we cannot now what device the other process is using  + the user may select a differet capture device during runtime
         # we use some fuzzy logic to determine if hw timestamping should be employed.
 
-        blacklist = ["Microsoft"]
-        qualifying_devices = ["c930e","Integrated Camera"]
+        blacklist = ["Microsoft","HD-6000"]
+        qualifying_devices = ["C930e","Integrated Camera"]
         attached_devices = [c.name for c in Camera_List()]
-
-        if self.name in qualifying_devices:
+        if any(qd in self.name for qd in qualifying_devices):
             use_hw_ts = True
-            logger.info("Capture device: %s supports HW timestamping. Using hardware timestamps.")
+            logger.info("Capture device: '%s' supports HW timestamping. Using hardware timestamps." %self.name)
         else:
             use_hw_ts = False
-            logger.info("Capture device: %s is not known to support HW timestamping. Using software timestamps.")
+            logger.info("Capture device: '%s' is not known to support HW timestamping. Using software timestamps." %self.name)
 
-        if any( (b in ad for b in blacklist for ad in attached_devices) ):
-            logger.info("Microsoft camera:  detected as attached device. Falling back to software timestamps")
-            use_hw_ts = False
+        for d in attached_devices:
+            if any(bd in d for bd in blacklist):
+                logger.info("Capture device: '%s' detected as attached device. Falling back to software timestamps"%d)
+                use_hw_ts = False
         return use_hw_ts
 
     def re_init(self,cam,size=(640,480),fps=30):
@@ -90,9 +91,9 @@ class Camera_Capture(object):
         except KeyError:
             pass
 
-        use_hw_ts = self.check_hw_ts_support()
+        self.use_hw_ts = self.check_hw_ts_support()
 
-        self.capture = VideoCapture(self.src_id,current_size,current_fps,self.timebase,use_hw_ts)
+        self.capture = VideoCapture(self.src_id,current_size,current_fps,self.timebase,self.use_hw_ts)
         self.get_frame = self.capture.read
         self.get_now = self.capture.get_time_monotonic
         self.create_atb_bar(bar_pos)
@@ -117,7 +118,7 @@ class Camera_Capture(object):
         self.bar.add_var("Capture",vtype=cameras_enum,getter=lambda:self.src_id, setter=self.re_init_cam_by_src_id)
 
         self.bar.add_var('framerate', vtype = atb.enum('framerate',self.capture.rates_menu), getter = lambda:self.capture.current_rate_idx, setter=self.capture.set_rate_idx )
-
+        self.bar.add_var('hardware timestamps',vtype=atb.TW_TYPE_BOOL8,getter=lambda:self.use_hw_ts)
         sorted_controls = [c for c in self.controls.itervalues()]
         sorted_controls.sort(key=lambda c: c.order)
 
