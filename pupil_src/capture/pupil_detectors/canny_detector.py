@@ -130,7 +130,7 @@ class Canny_Detector(Pupil_Detector):
                 p_r.set((0,0,-1,-1))
         else:
             p_r = Roi(gray_img.shape)
-            p_r.set((0,0,-1,-1))
+            p_r.set((0,0,None,None))
             w = img.shape[0]/2
 
         coarse_pupil_width = w/2.
