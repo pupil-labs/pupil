@@ -64,7 +64,7 @@ class Recorder(Plugin):
 
 
         if record_audio:
-            audio_path = os.path.join(self.rec_path, "world.mp3")
+            audio_path = os.path.join(self.rec_path, "world.ogg")
             self.audio_writer = Audio_Capture(audio_path)
         else:
             self.audio_writer = None
