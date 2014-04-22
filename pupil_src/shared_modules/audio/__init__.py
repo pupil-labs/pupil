@@ -27,12 +27,12 @@ logger = logging.getLogger(__name__)
 # OS specific audio players via terminal
 if os_name == "Linux":
 
-    if getattr(sys, 'frozen', False):
-        # we are running in a |PyInstaller| bundle
-        ffmpeg_bin = os.path.join(sys._MEIPASS,'avconv')
-    else:
-        # we are running in a normal Python environment
-        ffmpeg_bin = "avconv"
+    # if getattr(sys, 'frozen', False):
+    #     # we are running in a |PyInstaller| bundle
+    #     ffmpeg_bin = os.path.join(sys._MEIPASS,'avconv')
+    # else:
+    #     # we are running in a normal Python environment
+    ffmpeg_bin = "avconv"
 
 
 
@@ -58,7 +58,7 @@ if os_name == "Linux":
             try:
                 self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE)
             except OSError:
-                logger.debug("Audio module for recording not found. Not recording audio.")
+                logger.debug("Audio module for recording not found. Not recording audio. please do 'sudo apt-get install libav-tools'.")
                 self.process = None
                 return
             logger.debug("stared recording mic to %s with avconv process, pid: %s"%(out_file,self.process.pid))
@@ -77,12 +77,12 @@ if os_name == "Linux":
 elif os_name == "Darwin":
 
 
-    if getattr(sys, 'frozen', False):
-        # we are running in a |PyInstaller| bundle
-        sox_bin = os.path.join(sys._MEIPASS,'sox')
-    else:
-        # we are running in a normal Python environment
-        sox_bin = "sox"
+    # if getattr(sys, 'frozen', False):
+    #     # we are running in a |PyInstaller| bundle
+    #     sox_bin = os.path.join(sys._MEIPASS,'sox')
+    # else:
+    #     # we are running in a normal Python environment
+    sox_bin = "sox"
 
 
     class Audio_Capture(object):
@@ -94,7 +94,7 @@ elif os_name == "Darwin":
             try:
                 self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE)
             except OSError:
-                logger.debug("Audio module for recording not found. Not recording audio.")
+                logger.debug("Audio module for recording not found. Not recording audio. Please do 'brew install sox' ")
                 self.process = None
                 return
             logger.debug("stared recording mic to %s with SOX process, pid: %s"%(out_file,self.process.pid))

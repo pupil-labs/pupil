@@ -56,7 +56,7 @@ elif platform.system() == 'Linux':
               console=True)
 
     coll = COLLECT(exe,
-                   [b for b in a.binaries if not "libX" in b and not "libxcb" in b], # any libX file should be taken from distro else not protable between Ubuntu 12.04 and 14.04
+                   [b for b in a.binaries if not "libX" in b[0] and not "libxcb" in b[0]], # any libX file should be taken from distro else not protable between Ubuntu 12.04 and 14.04
                    a.zipfiles,
                    a.datas,
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
@@ -64,7 +64,7 @@ elif platform.system() == 'Linux':
                    [('libAntTweakBar.so', '/usr/lib/libAntTweakBar.so','BINARY')],
                    [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
                    [('v4l2-ctl', '/usr/bin/v4l2-ctl','BINARY')],
-                   [('avconv', '/usr/bin/avconv','BINARY')],
+                   #[('avconv', '/usr/bin/avconv','BINARY')],
                    [('icon.ico', 'linux_icon.ico','DATA')],
                    strip=None,
                    upx=True,
