@@ -51,8 +51,9 @@ if os_name == "Linux":
         def __init__(self, out_file):
             super(Audio_Capture, self).__init__()
             command = [ ffmpeg_bin,
-                    '-i', 'hw:0,0',
                     '-f', 'alsa',
+                    '-i', 'hw:0,0',
+                    '-v', 'error',
                     out_file]
             try:
                 self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE)
