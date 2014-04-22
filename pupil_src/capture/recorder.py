@@ -17,13 +17,14 @@ from time import strftime,localtime,time,gmtime
 from ctypes import create_string_buffer
 from shutil import copy2
 from glob import glob
+from audio import Audio_Capture
 #logging
 import logging
 logger = logging.getLogger(__name__)
 
 class Recorder(Plugin):
     """Capture Recorder"""
-    def __init__(self,g_pool, session_str, fps, img_shape, record_eye, eye_tx):
+    def __init__(self,g_pool, session_str, fps, img_shape, record_eye, eye_tx,record_audio = False):
         Plugin.__init__(self)
         self.g_pool = g_pool
         self.session_str = session_str
@@ -61,6 +62,12 @@ class Recorder(Plugin):
             f.write("Start Date\t"+ strftime("%d.%m.%Y", localtime(self.start_time))+ "\n")
             f.write("Start Time\t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")
 
+
+        if record_audio:
+            audio_path = os.path.join(self.rec_path, "world.mp3")
+            self.audio_writer = Audio_Capture(audio_path)
+        else:
+            self.audio_writer = None
 
         video_path = os.path.join(self.rec_path, "world.avi")
         self.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), fps, (img_shape[1], img_shape[0]))
@@ -148,6 +155,9 @@ class Recorder(Plugin):
                 f.write("Version\t"+version+"\n")
         except Exception:
             logger.Exception("Could not save metadata. Please report this bug!")
+
+        if self.audio_writer:
+            self.audio_writer = None
 
         self.alive = False
 

@@ -188,7 +188,7 @@ def world(g_pool,cap_src,cap_size):
         if not bar.rec_name.value:
             bar.rec_name.value = recorder.get_auto_name()
 
-        new_plugin = recorder.Recorder(g_pool,bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx)
+        new_plugin = recorder.Recorder(g_pool,bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx,bar.record_audio.value)
         g_pool.plugins.append(new_plugin)
         g_pool.plugins.sort(key=lambda p: p.order)
 
@@ -238,6 +238,7 @@ def world(g_pool,cap_src,cap_size):
     bar.timestamp = time()
     bar.calibration_type = c_int(load("calibration_type",0))
     bar.record_eye = c_bool(load("record_eye",0))
+    bar.record_audio = c_bool(load("record_audio",0))
     bar.window_size = c_int(load("window_size",0))
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
     calibrate_type_enum = atb.enum("Calibration Method",calibration_routines.index_by_name)
@@ -251,6 +252,7 @@ def world(g_pool,cap_src,cap_size):
     bar.add_var("session name",bar.rec_name, group="Recording", help="Give your recording session a custom name.")
     bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
     bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
+    bar.add_var("record audio", bar.record_audio, group="Recording", help="check to save audio. This does not work on Windows yet.")
     bar.add_button("start/stop marker tracking",toggle_ar,key="x",help="find markers in scene to map gaze onto referace surfaces")
     bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
     bar.add_button("set timebase to now",reset_timebase,help="this button allows the timestamps to count from now on.",key="t")
