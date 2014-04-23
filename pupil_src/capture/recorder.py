@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 class Recorder(Plugin):
     """Capture Recorder"""
-    def __init__(self,g_pool, session_str, fps, img_shape, record_eye, eye_tx,record_audio = False):
+    def __init__(self,g_pool, session_str, fps, img_shape, record_eye, eye_tx,audio = -1):
         Plugin.__init__(self)
         self.g_pool = g_pool
         self.session_str = session_str
@@ -63,9 +63,10 @@ class Recorder(Plugin):
             f.write("Start Time\t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")
 
 
-        if record_audio:
-            audio_path = os.path.join(self.rec_path, "world.ogg")
-            self.audio_writer = Audio_Capture(audio_path)
+        if audio >=0:
+            audio_src = audio
+            audio_path = os.path.join(self.rec_path, "world.wav")
+            self.audio_writer = Audio_Capture(audio_src,audio_path)
         else:
             self.audio_writer = None
 

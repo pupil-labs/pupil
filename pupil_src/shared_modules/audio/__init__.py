@@ -33,7 +33,7 @@ if os_name == "Linux":
     # else:
     #     # we are running in a normal Python environment
     ffmpeg_bin = "avconv"
-
+    arecord_bin = 'arecord'
 
 
     def beep():
@@ -46,15 +46,45 @@ if os_name == "Linux":
         sp.Popen(["spd-say", message])
 
 
+    class Audio_Input_List(list):
+        """docstring for Audio_Input_List"""
+        def __init__(self):
+            super(Audio_Input_List, self).__init__()
+            self.append(('No Audio',-1))
+            try:
+                ret = sp.check_output([arecord_bin,"-l"])
+            except OSError:
+                logger.warning("Could not enumerate audio input devices. Calling arecord failed.")
+                return
+            # logger.debug(ret)
+
+            lines = ret.split("\n")
+            # logger.debug(lines)
+            devices = [l.split(',')[0] for l in lines[1:] if l.startswith("card")]
+            
+            device_names = [w.split(":")[-1] for w in devices]
+            device_names = [w[1:] for w in device_names]
+            for d,idx in zip(device_names,range(len(device_names))):
+                self.append((d,idx))
+
+
     class Audio_Capture(object):
         """docstring for audio_capture"""
-        def __init__(self, out_file):
+        def __init__(self,audio_src_idx, out_file):
             super(Audio_Capture, self).__init__()
-            command = [ ffmpeg_bin,
-                    '-f', 'alsa',
-                    '-i', 'hw:0,0',
-                    '-v', 'error',
-                    out_file]
+            # command = [ ffmpeg_bin,
+            #         '-f', 'alsa',
+            #         '-i', 'hw:0,0',
+            #         '-v', 'error',
+            #         out_file]
+            logger.debug("Recording audio  using 'arecord' device %s to %s"%(audio_src_idx,out_file))
+            command = [ arecord_bin,
+                        '-D', 'plughw:'+str(audio_src_idx)+',0',
+                        '-r', '16000',
+                        '-f', 'S16_LE',
+                        '-c', '2',
+                        '-q', #we use quite because signint will write into stderr and we sue this to check for real errors.
+                        out_file]
             try:
                 self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE)
             except OSError:
@@ -74,7 +104,18 @@ if os_name == "Linux":
                 logger.debug("Finished recording mic with avconv process, pid: %s"%(self.process.pid))
 
 
+
 elif os_name == "Darwin":
+
+
+
+    class Audio_Input_List(list):
+        """docstring for Audio_Input_List"""
+        def __init__(self):
+            super(Audio_Input_List, self).__init__()
+            self.append(('No Audio',-1))
+            self.append(('Default Mic'),0)
+
 
 
     # if getattr(sys, 'frozen', False):
@@ -87,8 +128,10 @@ elif os_name == "Darwin":
 
     class Audio_Capture(object):
         """docstring for audio_capture"""
-        def __init__(self, out_file):
+        def __init__(self,audio_src_idx=0, out_file='out.wav'):
             super(Audio_Capture, self).__init__()
+            logger.debug("Recording audio  using 'sox' device %s to %s"%(audio_src_idx,out_file))
+
             command = [ sox_bin,
                     '-d','-q', out_file]
             try:
@@ -131,19 +174,30 @@ else:
         print '\a'
         print message
 
+
+    class Audio_Input_List(list):
+        """docstring for Audio_Input_List"""
+        def __init__(self):
+            super(Audio_Input_List, self).__init__()
+            self.append(('No Audio Available',-1))
+
+
     class Audio_Capture(object):
         """docstring for audio_capture"""
-        def __init__(self, out_file):
+        def __init__(self, audio_src_idx=0, out_file='out.wav'):
             super(Audio_Capture, self).__init__()
             logger.debug("Audio Capture not implemented on this OS")
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    beep()
-    sleep(1)
-    tink()
-    cap = Audio_Capture('test.mp3')
-    say("Hello, I am Pupil's audio module.")
-    sleep(3)
-    cap = None
+
+
+    # beep()
+    # sleep(1)
+    # tink()
+    # cap = Audio_Capture('test.mp3')
+    # say("Hello, I am Pupil's audio module.")
+    # sleep(3)
+    # cap = None
+    print Audio_Input_List()

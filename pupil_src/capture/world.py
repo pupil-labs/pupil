@@ -32,6 +32,7 @@ import atb
 from methods import normalize, denormalize,Temp
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
+from audio import Audio_Input_List
 import calibrate
 # Plug-ins
 import calibration_routines
@@ -129,7 +130,7 @@ def world(g_pool,cap_src,cap_size):
     g_pool.update_textures = c_bool(1)
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, cap_size, 24, timebase=g_pool.timebase)
+    cap = autoCreateCapture(cap_src, cap_size, 10, timebase=g_pool.timebase)
 
     if isinstance(cap,FakeCapture):
         g_pool.update_textures.value = False
@@ -188,7 +189,7 @@ def world(g_pool,cap_src,cap_size):
         if not bar.rec_name.value:
             bar.rec_name.value = recorder.get_auto_name()
 
-        new_plugin = recorder.Recorder(g_pool,bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx,bar.record_audio.value)
+        new_plugin = recorder.Recorder(g_pool,bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx,bar.audio.value)
         g_pool.plugins.append(new_plugin)
         g_pool.plugins.sort(key=lambda p: p.order)
 
@@ -238,10 +239,11 @@ def world(g_pool,cap_src,cap_size):
     bar.timestamp = time()
     bar.calibration_type = c_int(load("calibration_type",0))
     bar.record_eye = c_bool(load("record_eye",0))
-    bar.record_audio = c_bool(load("record_audio",0))
+    bar.audio = c_int(load("audio",-1))
     bar.window_size = c_int(load("window_size",0))
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
     calibrate_type_enum = atb.enum("Calibration Method",calibration_routines.index_by_name)
+    audio_enum = atb.enum("Audio Input",dict(Audio_Input_List()))
     bar.rec_name = create_string_buffer(512)
     bar.version = create_string_buffer(g_pool.version,512)
     bar.rec_name.value = recorder.get_auto_name()
@@ -252,7 +254,7 @@ def world(g_pool,cap_src,cap_size):
     bar.add_var("session name",bar.rec_name, group="Recording", help="Give your recording session a custom name.")
     bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
     bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
-    bar.add_var("record audio", bar.record_audio, group="Recording", help="check to save audio. This does not work on Windows yet.")
+    bar.add_var("record audio", bar.audio, vtype=audio_enum, group="Recording", help="Select from audio recording options.")
     bar.add_button("start/stop marker tracking",toggle_ar,key="x",help="find markers in scene to map gaze onto referace surfaces")
     bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
     bar.add_button("set timebase to now",reset_timebase,help="this button allows the timestamps to count from now on.",key="t")
@@ -363,6 +365,7 @@ def world(g_pool,cap_src,cap_size):
     save('window_size',bar.window_size.value)
     save('calibration_type',bar.calibration_type.value)
     save('record_eye',bar.record_eye.value)
+    save('audio',bar.audio.value)
     session_settings.close()
 
     cap.close()
