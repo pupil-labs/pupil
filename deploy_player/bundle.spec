@@ -55,7 +55,7 @@ elif platform.system() == 'Linux':
               console=True)
 
     coll = COLLECT(exe,
-                   a.binaries,
+                   [b for b in a.binaries if not "libX" in b[0] and not "libxcb" in b[0]], # any libX file should be taken from distro else not protable between Ubuntu 12.04 and 14.04
                    a.zipfiles,
                    a.datas,
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
