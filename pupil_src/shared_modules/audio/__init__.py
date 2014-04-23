@@ -61,7 +61,7 @@ if os_name == "Linux":
             lines = ret.split("\n")
             # logger.debug(lines)
             devices = [l.split(',')[0] for l in lines[1:] if l.startswith("card")]
-            
+
             device_names = [w.split(":")[-1] for w in devices]
             device_names = [w[1:] for w in device_names]
             for d,idx in zip(device_names,range(len(device_names))):
@@ -114,7 +114,7 @@ elif os_name == "Darwin":
         def __init__(self):
             super(Audio_Input_List, self).__init__()
             self.append(('No Audio',-1))
-            self.append(('Default Mic'),0)
+            self.append(('Default Mic',0))
 
 
 
