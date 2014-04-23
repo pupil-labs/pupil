@@ -130,7 +130,7 @@ def world(g_pool,cap_src,cap_size):
     g_pool.update_textures = c_bool(1)
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, cap_size, 10, timebase=g_pool.timebase)
+    cap = autoCreateCapture(cap_src, cap_size, 24, timebase=g_pool.timebase)
 
     if isinstance(cap,FakeCapture):
         g_pool.update_textures.value = False
