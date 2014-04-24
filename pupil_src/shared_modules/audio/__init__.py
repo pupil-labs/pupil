@@ -56,11 +56,21 @@ if os_name == "Linux":
             except OSError:
                 logger.warning("Could not enumerate audio input devices. Calling arecord failed.")
                 return
+            '''
+            **** List of CAPTURE Hardware Devices ****
+            card 0: AudioPCI [Ensoniq AudioPCI], device 0: ES1371/1 [ES1371 DAC2/ADC]
+              Subdevices: 1/1
+              Subdevice #0: subdevice #0
+            card 1: C930e [Logitech Webcam C930e], device 0: USB Audio [USB Audio]
+              Subdevices: 1/1
+              Subdevice #0: subdevice #0
+
+            '''
             # logger.debug(ret)
 
             lines = ret.split("\n")
             # logger.debug(lines)
-            devices = [l.split(',')[0] for l in lines[1:] if l.startswith("card")]
+            devices = [l.split(',')[0] for l in lines[1:] if not l.startswith("  ") and l]
 
             device_names = [w.split(":")[-1] for w in devices]
             device_names = [w[1:] for w in device_names]
