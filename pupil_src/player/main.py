@@ -167,7 +167,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = "/Users/mkassner/Downloads/1-4/000/"
+        rec_dir = "/Users/mkassner/Downloads/ET-lottery-ticket/4055/000"
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
@@ -250,6 +250,7 @@ def main():
     g.user_dir = user_dir
     g.rec_dir = rec_dir
     g.app = 'player'
+    g.timestamps = timestamps
 
 
 
@@ -388,6 +389,8 @@ def main():
         if g.play or g.new_seek:
             try:
                 new_frame = cap.get_frame()
+                print new_frame.index
+
             except EndofVideoFileError:
                 #end of video logic: pause at last frame.
                 g.play=False
@@ -397,7 +400,6 @@ def main():
                 g.new_seek = False
 
         frame = new_frame.copy()
-
         #new positons and events we make a deepcopy just like the image should be a copy.
         current_pupil_positions = deepcopy(positions_by_frame[frame.index])
         events = []

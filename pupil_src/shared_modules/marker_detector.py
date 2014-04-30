@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os
+import sys, os,platform
 import cv2
 import numpy as np
 import shelve
@@ -18,10 +18,6 @@ import atb
 import audio
 from ctypes import c_int,c_bool,create_string_buffer
 
-from OpenGL.GL import *
-from OpenGL.GLU import gluOrtho2D
-
-from glfw import *
 from plugin import Plugin
 #logging
 import logging
@@ -31,12 +27,14 @@ from square_marker_detect import detect_markers_robust,detect_markers_simple, dr
 from reference_surface import Reference_Surface
 from math import sqrt
 
-# window calbacks
-def on_resize(window,w, h):
-    active_window = glfwGetCurrentContext()
-    glfwMakeContextCurrent(window)
-    adjust_gl_view(w,h,window)
-    glfwMakeContextCurrent(active_window)
+if platform.system() == 'Darwin':
+    from billiard import Process,Queue,forking_enable
+    from billiard.sharedctypes import Value
+else:
+    from multiprocessing import Process, Pipe, Event, Queue
+    forking_enable = lambda x: x #dummy fn
+    from multiprocessing.sharedctypes import Value
+
 
 class Marker_Detector(Plugin):
     """docstring
@@ -75,6 +73,17 @@ class Marker_Detector(Plugin):
         self.aperture = c_int(11)
         self.min_marker_perimeter = 80
 
+        # caching vars when working with video file src
+        if g_pool.app == "player":
+            #check if marker cache is available from last session
+            self.persistent_cache = shelve.open(os.path.join(g_pool.rec_dir,'square_marker_cache'),protocol=2)
+            self.marker_cache = self.persistent_cache.get('marker_cache',[False for _ in g_pool.timestamps])
+            logger.debug("Loaded marker cache %s / %s frames had been searched before"%(len(self.marker_cache)-self.marker_cache.count(False),len(self.marker_cache)) )
+            self.init_marker_cacher()
+        else:
+            self.persistent_cache = None
+            self.marker_cache = None
+
         #debug vars
         self.draw_markers = c_bool(0)
         self.show_surface_idx = c_int(0)
@@ -82,25 +91,10 @@ class Marker_Detector(Plugin):
 
         self.img_shape = None
 
-        #multi monitor setup
-        self.window_should_open = False
-        self.window_should_close = False
-        self._window = None
-        self.fullscreen = c_bool(0)
-        self.monitor_idx = c_int(0)
-        monitor_handles = glfwGetMonitors()
-        self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
-        monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
-        #primary_monitor = glfwGetPrimaryMonitor()
-
         atb_label = "marker detection"
         self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
             help="marker detection parameters", color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum,group="Window",)
-        self._bar.add_var("fullscreen", self.fullscreen,group="Window")
-        self._bar.add_button("  open Window   ", self.do_open, key='m',group="Window")
-        self._bar.add_var("surface to show",self.show_surface_idx, step=1,min=0,group="Window")
         self._bar.add_var('robust_detection',self.robust_detection,group="Detector")
         self._bar.add_var("draw markers",self.draw_markers,group="Detector")
         self._bar.add_button('close',self.unset_alive)
@@ -147,61 +141,12 @@ class Marker_Detector(Plugin):
     def advance(self):
         pass
 
-    def open_window(self):
-        if not self._window:
-            if self.fullscreen.value:
-                monitor = glfwGetMonitors()[self.monitor_idx.value]
-                mode = glfwGetVideoMode(monitor)
-                height,width= mode[0],mode[1]
-            else:
-                monitor = None
-                height,width= 1280,720
-
-            self._window = glfwCreateWindow(height, width, "Reference Surface", monitor=monitor, share=glfwGetCurrentContext())
-            if not self.fullscreen.value:
-                glfwSetWindowPos(self._window,200,0)
-
-            on_resize(self._window,height,width)
-
-            #Register callbacks
-            glfwSetWindowSizeCallback(self._window,on_resize)
-            glfwSetKeyCallback(self._window,self.on_key)
-            glfwSetWindowCloseCallback(self._window,self.on_close)
-
-            # gl_state settings
-            active_window = glfwGetCurrentContext()
-            glfwMakeContextCurrent(self._window)
-            basic_gl_setup()
-
-            # refresh speed settings
-            glfwSwapInterval(0)
-
-
-            glfwMakeContextCurrent(active_window)
-
-            self.window_should_open = False
-
-
-    def on_key(self,window, key, scancode, action, mods):
-        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
-            if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
-                    self.on_close()
-
-    def on_close(self,window=None):
-        self.window_should_close = True
-
-    def close_window(self):
-        if self._window:
-            glfwDestroyWindow(self._window)
-            self._window = None
-            self.window_should_close = False
-
     def add_surface(self):
         self.surfaces.append(Reference_Surface())
         self.update_bar_markers()
 
     def remove_surface(self,i):
+        self.surfaces[i].cleanup()
         del self.surfaces[i]
         self.update_bar_markers()
 
@@ -210,8 +155,8 @@ class Marker_Detector(Plugin):
         self._bar_markers.clear()
         self._bar_markers.add_button("  add surface   ", self.add_surface, key='a')
         self._bar_markers.add_var("  edit mode   ", self.surface_edit_mode )
-
-        for s,i in zip (self.surfaces,range(len(self.surfaces))):
+        for s,i in zip(self.surfaces,range(len(self.surfaces)))[::-1]:
+            self._bar_markers.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
             self._bar_markers.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
             self._bar_markers.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             self._bar_markers.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
@@ -219,26 +164,48 @@ class Marker_Detector(Plugin):
     def update(self,frame,recent_pupil_positions,events):
         img = frame.img
         self.img_shape = frame.img.shape
-        if self.robust_detection.value:
-            self.markers = detect_markers_robust(img,grid_size = 5,
-                                                    prev_markers=self.markers,
-                                                    min_marker_perimeter=self.min_marker_perimeter,
-                                                    aperture=self.aperture.value,
-                                                    visualize=0,
-                                                    true_detect_every_frame=3)
+
+        if self.marker_cache is not None:
+            self.update_marker_cache()
+            self.markers = self.marker_cache[frame.index]
+            if self.markers == False:
+                # locate markers because precacher has not anayzed this frame yet. Most likely a seek event
+                self.markers = detect_markers_simple(img,
+                                                        grid_size = 5,
+                                                        min_marker_perimeter=self.min_marker_perimeter,
+                                                        aperture=self.aperture.value,
+                                                        visualize=0)
+
+                self.seek_marker_cacher(frame.index+1) # tell precacher that it better have the next frame analyzed
+
         else:
-            self.markers = detect_markers_simple(img,grid_size = 5,min_marker_perimeter=self.min_marker_perimeter,aperture=self.aperture.value,visualize=0)
+            # locate markers during realtime, dont use robust detection for video file when seeks can throw thigs off.
+            if self.robust_detection.value:
+                self.markers = detect_markers_robust(img,
+                                                        grid_size = 5,
+                                                        prev_markers=self.markers,
+                                                        min_marker_perimeter=self.min_marker_perimeter,
+                                                        aperture=self.aperture.value,
+                                                        visualize=0,
+                                                        true_detect_every_frame=3)
+            else:
+                self.markers = detect_markers_simple(img,
+                                                        grid_size = 5,
+                                                        min_marker_perimeter=self.min_marker_perimeter,
+                                                        aperture=self.aperture.value,
+                                                        visualize=0)
 
         if self.draw_markers.value:
             draw_markers(img,self.markers)
 
-        # print self.markers
 
+        # locate surfaces
         for s in self.surfaces:
             s.locate(self.markers)
             if s.detected:
-                events.append({'type':'marker_ref_surface','name':s.name,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
+                events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
+        # edit surfaces by user
         if self.surface_edit_mode:
             window = glfwGetCurrentContext()
             pos = glfwGetCursorPos(window)
@@ -252,23 +219,49 @@ class Marker_Detector(Plugin):
                     s.move_vertex(v_idx,new_pos)
 
         #map recent gaze onto detected surfaces used for pupil server
-        for p in recent_pupil_positions:
-            if p['norm_pupil'] is not None:
-                for s in self.surfaces:
-                    if s.detected:
-                        p['realtime gaze on '+s.name] = tuple(s.img_to_ref_surface(np.array(p['norm_gaze'])))
+        for s in self.surfaces:
+            if s.detected:
+                s.recent_gaze = []
+                for p in recent_pupil_positions:
+                    if p['norm_pupil'] is not None:
+                        gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_gaze'])))
+                        p['realtime gaze on '+s.name] = gp_on_s
+                        s.recent_gaze.append(gp_on_s)
 
 
-        if self._window:
-            # save a local copy for when we display gaze for debugging on ref surface
-            self.recent_pupil_positions = recent_pupil_positions
+        #allow surfaces to open/close windows
+        for s in self.surfaces:
+            if s.window_should_close:
+                s.close_window()
+            if s.window_should_open:
+                s.open_window()
 
 
-        if self.window_should_close:
-            self.close_window()
+    def init_marker_cacher(self):
+        forking_enable(0) #for MacOs only
 
-        if self.window_should_open:
-            self.open_window()
+        from marker_detector_cacher import fill_cache
+        visited_list = [False if x == False else True for x in self.marker_cache]
+        video_file_path =  os.path.join(self.g_pool.rec_dir,'world.avi')
+        self.marker_cache_queue = Queue()
+        self.marker_cacher_seek_idx = Value(c_int,0)
+        self.marker_cacher_run = Value(c_bool,True)
+        self.marker_cacher = Process(target=fill_cache, args=(visited_list,video_file_path,self.marker_cache_queue,self.marker_cacher_seek_idx,self.marker_cacher_run))
+        self.marker_cacher.start()
+
+
+    def update_marker_cache(self):
+        while not self.marker_cache_queue.empty():
+            idx,c_m = self.marker_cache_queue.get()
+            self.marker_cache[idx] = c_m
+
+    def seek_marker_cacher(self,idx):
+        self.marker_cacher_seek_idx.value = idx
+
+    def close_marker_cacher(self):
+        self.update_marker_cache()
+        self.marker_cacher_run.value = False
+        self.marker_cacher.join()
 
     def gl_display(self):
         """
@@ -282,61 +275,12 @@ class Marker_Detector(Plugin):
 
         for s in  self.surfaces:
             s.gl_draw_frame()
+            s.gl_display_in_window(self.g_pool.image_tex)
 
         if self.surface_edit_mode.value:
             for s in  self.surfaces:
                 s.gl_draw_corners()
 
-
-        if self._window and self.surfaces:
-            try:
-                s = self.surfaces[self.show_surface_idx.value]
-            except IndexError:
-                s = None
-            if s and s.detected:
-                self.gl_display_in_window(s)
-
-
-
-    def gl_display_in_window(self,surface):
-        """
-        here we map a selected surface onto a seperate window.
-        """
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(self._window)
-        clear_gl_screen()
-
-        # cv uses 3x3 gl uses 4x4 tranformation matricies
-        m = cvmat_to_glmat(surface.m_from_screen)
-
-        glMatrixMode(GL_PROJECTION)
-        glPushMatrix()
-        glLoadIdentity()
-        gluOrtho2D(0, 1, 0, 1) # gl coord convention
-
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
-        #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
-        glLoadMatrixf(m)
-
-        draw_named_texture(self.g_pool.image_tex)
-
-        glMatrixMode(GL_PROJECTION)
-        glPopMatrix()
-        glMatrixMode(GL_MODELVIEW)
-        glPopMatrix()
-
-
-        #now lets get recent pupil positions on this surface:
-        try:
-            gaze_on_surface = [p['realtime gaze on '+surface.name] for p in self.recent_pupil_positions]
-        except KeyError:
-            gaze_on_surface = []
-        draw_gl_points_norm(gaze_on_surface,color=(0.,8.,.5,.8), size=80)
-
-
-        glfwSwapBuffers(self._window)
-        glfwMakeContextCurrent(active_window)
 
 
     def cleanup(self):
@@ -348,10 +292,13 @@ class Marker_Detector(Plugin):
             self.save("realtime_square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
         elif self.g_pool.app == 'player':
             self.save("offline_square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
+            self.close_marker_cacher()
+            self.persistent_cache["marker_cache"] = self.marker_cache
+            self.persistent_cache.close()
+
         self.surface_definitions.close()
 
-        if self._window:
-            self.close_window()
+        for s in self.surfaces:
+            s.close_window()
         self._bar.destroy()
         self._bar_markers.destroy()
-

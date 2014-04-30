@@ -10,12 +10,16 @@
 
 import numpy as np
 import cv2
-from gl_utils import draw_gl_polyline_norm,draw_gl_points_norm,draw_gl_point_norm
+from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture
+from glfw import *
+from OpenGL.GL import *
+from OpenGL.GLU import gluOrtho2D
+
 from methods import GetAnglesPolyline,normalize
 
 #ctypes import for atb_vars:
-from ctypes import create_string_buffer
-
+from ctypes import c_int,c_bool,create_string_buffer
+from time import time
 
 def m_verts_to_screen(verts):
     #verts need to be sorted counterclockwise stating at bottom left
@@ -65,18 +69,38 @@ class Reference_Surface(object):
         self.detected = False
         self.m_to_screen = None
         self.m_from_screen = None
+        self.cache = None
 
         if saved_definition is not None:
             self.load_from_dict(saved_definition)
+        else:
+            self.uid = str(time())
 
+        ###window and gui vars
+        self._window = None
+        self.fullscreen = False
+        self.window_should_open = False
+        self.window_should_close = False
 
+        #multi monitor setup
+        self.window_should_open = False
+        self.window_should_close = False
+        self._window = None
+        self.fullscreen = c_bool(0)
+        self.monitor_idx = c_int(0)
+        monitor_handles = glfwGetMonitors()
+        self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
+        # monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
+        #primary_monitor = glfwGetPrimaryMonitor()
+
+        self.recent_gaze = [] # points on surface for realtime feedback display
 
     def save_to_dict(self):
         """
         save all markers and name of this surface to a dict.
         """
         markers = dict([(m_id,m.uv_coords) for m_id,m in self.markers.iteritems()])
-        return {'name':self.name,'markers':markers}
+        return {'name':self.name,'uid':self.uid,'markers':markers}
 
 
     def load_from_dict(self,d):
@@ -84,6 +108,7 @@ class Reference_Surface(object):
         load all markers of this surface to a dict.
         """
         self.name = d['name']
+        self.uid = d['uid']
         marker_dict = d['markers']
         for m_id,uv_coords in marker_dict.iteritems():
             self.markers[m_id] = Support_Marker(m_id)
@@ -196,7 +221,25 @@ class Reference_Surface(object):
                 self.m_from_screen = None
                 self.m_to_screen = None
 
+    def answer_caching_request(self,visible_markers):
+        marker_by_id = dict([(m['id'],m) for m in visible_markers])
+        visible_ids = set(marker_by_id.keys())
+        requested_ids = set(self.markers.keys())
+        overlap = visible_ids & requested_ids
+        detected_markers = len(overlap)
+        if len(overlap)>=min(2,len(requested_ids)):
+            yx = np.array( [marker_by_id[i]['verts_norm'] for i in overlap] )
+            uv = np.array( [self.markers[i].uv_coords for i in overlap] )
+            yx.shape=(-1,1,2)
+            uv.shape=(-1,1,2)
+            # print 'uv',uv
+            # print 'yx',yx
+            m_to_screen,mask = cv2.findHomography(uv,yx)
+            m_from_screen,mask = cv2.findHomography(yx,uv)
 
+            return {'m_to_screen':m_to_screen,'m_from_screen':m_from_screen,'detected_markers':len(overlap)}
+        else:
+            return None
 
     def img_to_ref_surface(self,pos):
         if self.m_from_screen is not None:
@@ -267,6 +310,114 @@ class Reference_Surface(object):
             frame = np.array([[[0,0],[1,0],[1,1],[0,1]]],dtype=np.float32)
             frame = cv2.perspectiveTransform(frame,self.m_to_screen)
             draw_gl_points_norm(frame.reshape((4,2)),15,(1.0,0.2,0.6,.5))
+
+
+
+    #### fns to draw surface in seperate window
+    def gl_display_in_window(self,world_tex_id):
+        """
+        here we map a selected surface onto a seperate window.
+        """
+        if self._window and self.detected:
+            active_window = glfwGetCurrentContext()
+            glfwMakeContextCurrent(self._window)
+            clear_gl_screen()
+
+            # cv uses 3x3 gl uses 4x4 tranformation matricies
+            m = cvmat_to_glmat(self.m_from_screen)
+
+            glMatrixMode(GL_PROJECTION)
+            glPushMatrix()
+            glLoadIdentity()
+            gluOrtho2D(0, 1, 0, 1) # gl coord convention
+
+            glMatrixMode(GL_MODELVIEW)
+            glPushMatrix()
+            #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
+            glLoadMatrixf(m)
+
+            draw_named_texture(world_tex_id)
+
+            glMatrixMode(GL_PROJECTION)
+            glPopMatrix()
+            glMatrixMode(GL_MODELVIEW)
+            glPopMatrix()
+
+
+            #now lets get recent pupil positions on this surface:
+            draw_gl_points_norm(self.recent_gaze,color=(0.,8.,.5,.8), size=80)
+
+            glfwSwapBuffers(self._window)
+            glfwMakeContextCurrent(active_window)
+
+    def toggle_window(self,_):
+        if self._window:
+            self.window_should_close = True
+        else:
+            self.window_should_open = True
+
+    def window_open(self):
+        return bool(self._window)
+
+
+    def open_window(self):
+        if not self._window:
+            if self.fullscreen:
+                monitor = glfwGetMonitors()[self.monitor_idx.value]
+                mode = glfwGetVideoMode(monitor)
+                height,width= mode[0],mode[1]
+            else:
+                monitor = None
+                height,width= 640,640
+
+            self._window = glfwCreateWindow(height, width, "Reference Surface: " + self.name, monitor=monitor, share=glfwGetCurrentContext())
+            if not self.fullscreen.value:
+                glfwSetWindowPos(self._window,200,0)
+
+            self.on_resize(self._window,height,width)
+
+            #Register callbacks
+            glfwSetWindowSizeCallback(self._window,self.on_resize)
+            glfwSetKeyCallback(self._window,self.on_key)
+            glfwSetWindowCloseCallback(self._window,self.on_close)
+
+            # gl_state settings
+            active_window = glfwGetCurrentContext()
+            glfwMakeContextCurrent(self._window)
+            basic_gl_setup()
+
+            # refresh speed settings
+            glfwSwapInterval(0)
+
+            glfwMakeContextCurrent(active_window)
+
+            self.window_should_open = False
+
+    # window calbacks
+    def on_resize(self,window,w, h):
+        active_window = glfwGetCurrentContext()
+        glfwMakeContextCurrent(window)
+        adjust_gl_view(w,h,window)
+        glfwMakeContextCurrent(active_window)
+
+    def on_key(self,window, key, scancode, action, mods):
+        if action == GLFW_PRESS:
+            if key == GLFW_KEY_ESCAPE:
+                self.on_close()
+
+    def on_close(self,window=None):
+        self.window_should_close = True
+
+    def close_window(self):
+        if self._window:
+            glfwDestroyWindow(self._window)
+            self._window = None
+            self.window_should_close = False
+
+
+    def cleanup(self):
+        if self._window:
+            self.close_window()
 
 
 class Support_Marker(object):
