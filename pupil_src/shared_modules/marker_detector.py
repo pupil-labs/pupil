@@ -176,7 +176,7 @@ class Marker_Detector(Plugin):
                                                         aperture=self.aperture.value,
                                                         visualize=0)
 
-                self.seek_marker_cacher(frame.index+1) # tell precacher that it better have the next frame analyzed
+                self.seek_marker_cacher(frame.index) # tell precacher that it better have every thing from here analyzed
 
         else:
             # locate markers during realtime, dont use robust detection for video file when seeks can throw thigs off.

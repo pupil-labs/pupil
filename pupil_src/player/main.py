@@ -58,7 +58,7 @@ else:
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.WARNING)
+ch.setLevel(logging.DEBUG)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('Player: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -167,7 +167,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = "/Users/mkassner/Downloads/ET-lottery-ticket/4055/000"
+        rec_dir = '/home/mkassner/Desktop/000'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
@@ -389,7 +389,6 @@ def main():
         if g.play or g.new_seek:
             try:
                 new_frame = cap.get_frame()
-                print new_frame.index
 
             except EndofVideoFileError:
                 #end of video logic: pause at last frame.

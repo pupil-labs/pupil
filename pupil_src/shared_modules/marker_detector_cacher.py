@@ -12,7 +12,6 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
     markers = []
 
     cap = autoCreateCapture(video_file_path)
-    frame_idx = 0
 
     def next_unvisited_idx(frame_idx):
         try:
@@ -26,11 +25,11 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
             # find next unvisited site in the future
             try:
                 next_unvisited = visited_list.index(False,frame_idx)
-            except IndexError:
+            except ValueError:
                 # any thing in the past?
                 try:
                     next_unvisited = visited_list.index(False,0,frame_idx)
-                except IndexError:
+                except ValueError:
                     #no unvisited sites left. Done!
                     logger.debug("Caching Completed")
                     next_unvisited = None
@@ -38,25 +37,25 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
 
 
     while run.value:
-
+        next = cap.get_frame_index()
         if seek_idx.value != -1:
-            frame_idx = seek_idx.value
+            next = seek_idx.value
             seek_idx.value = -1
+            logger.debug("User seek require marker caching at %s"%next)
+
 
         #check the visited list
-        next = next_unvisited_idx(frame_idx)
+        next = next_unvisited_idx(next)
         if next == None:
             #we are done here:
             break
-        elif next != frame_idx:
+        elif next != cap.get_frame_index():
             #we need to seek:
             logger.debug("seeking to Frame %s" %next)
             cap.seek_to_frame(next)
-            frame_idx = next
         else:
             #next frame is unvisited
             pass
-
 
         try:
             frame = cap.get_frame()
@@ -64,7 +63,6 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
             logger.debug('Reached end of video. Rewinding.')
             frame = None
             cap.seek_to_frame(0)
-            frame_idx = 0
         else:
             markers = detect_markers_robust(frame.img,
                                             grid_size = 5,
@@ -74,9 +72,9 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
                                             visualize=0,
                                             true_detect_every_frame=1)
             visited_list[frame.index] = True
-            logger.debug("adding Frame %s"%frame.index)
+            # logger.debug("adding Frame %s"%frame.index)
             q.put((frame.index,markers))
-            frame_idx +=1
+
     logger.debug("Closing Cacher Process")
     cap.close()
     q.close()
