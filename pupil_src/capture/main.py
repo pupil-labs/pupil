@@ -37,7 +37,6 @@ else:
     # Make all pupil shared_modules available to this Python session.
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
-    print sys.path
 	# Specifiy user dirs.
     rec_dir = os.path.join(pupil_base_dir,'recordings')
     user_dir = os.path.join(pupil_base_dir,'settings')
