@@ -88,7 +88,90 @@ class Roi(object):
     def get(self):
         return self.lX,self.lY,self.uX,self.uY,self.array_shape
 
+import itertools
 
+class Cache_List(list):
+    """Cache list is a list of False
+        [False,False,False]
+        with update() 'False' can be overwritten with a result (anything not 'False')
+        self.complete_ranges show ranges where the cache does not evaluate as 'False' using eval_fn
+        this allows to use ranges a a way of showing where no caching has happed (default) or whatever you do with eval_fn
+        Warning: a positve result cannot be overwritten by a negative one in this implementation
+        self.complete indicated that the cache list has no unknowns (False)
+
+
+    """
+
+    def __init__(self, init_list,eval_fn=lambda x: not x==False):
+        super(Cache_List, self).__init__(init_list)
+        self.eval_fn = eval_fn
+        self.complete_ranges = self.init_complete_ranges()
+        self._togo = self.count(False)
+
+
+    @property
+    def complete(self):
+        return self._togo == 0
+
+    @complete.setter
+    def complete(self, value):
+        raise ValueError("Read only")
+
+
+    def update(self,key,item):
+        if self[key] != False:
+            logger.waring("You are overwriting a precached result. Please report this BUG")
+            self[key] = item
+            self.complete_ranges = self.init_complete_ranges()
+        else:
+            #unvisited need to update ranges
+            self[key] = item
+            self.update_complete_ranges(key)
+            self._togo -= 1
+
+
+    def init_complete_ranges(self):
+        l = self
+        i = -1
+        ranges = []
+        for t,g in itertools.groupby(l,self.eval_fn):
+            l = i + 1
+            i += len(list(g))
+            if t:
+                ranges.append([l,i])
+        return ranges
+
+    def merge_ranges(self):
+        l = self.complete_ranges
+        for i in range(len(l)-1):
+            if l[i][1] == l[i+1][0]-1:
+                #merge touching fields
+                l.append([l[i][0],l[i+1][1]])
+                del l[i],l[i]
+                l.sort(key=lambda x: x[0])
+                self.merge_ranges()
+                return
+        return
+
+    def update_complete_ranges(self,i):
+        l = self.complete_ranges
+        for _range in l:
+            #most usual case extend a range
+            if i == _range[0]-1:
+                _range[0] = i
+                self.merge_ranges()
+                return
+            elif i == _range[1]+1:
+                _range[1] = i
+                self.merge_ranges()
+                return
+        #somewhere outside of range proximity
+        l.append([i,i])
+        l.sort(key=lambda x: x[0])
+        self.merge_ranges()
+
+    def to_list(self):
+        return list(self)
 
 def bin_thresholding(image, image_lower=0, image_upper=256):
     binary_img = cv2.inRange(image, np.asarray(image_lower),

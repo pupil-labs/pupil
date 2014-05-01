@@ -65,7 +65,7 @@ class File_Capture():
         self.controls = None #No UVC controls available with file capture
         # we initialize the actual capture based on cv2.VideoCapture
         self.cap = cv2.VideoCapture(src)
-        if timestamps is None and  src.endswith("eye.avi"):
+        if timestamps is None and src.endswith("eye.avi"):
             timestamps_loc = os.path.join(src.rsplit(os.path.sep,1)[0],'eye_timestamps.npy')
             logger.debug("trying to auto load eye_video timestamps with video at: %s"%timestamps_loc)
         else:

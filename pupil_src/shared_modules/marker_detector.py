@@ -12,10 +12,11 @@ import sys, os,platform
 import cv2
 import numpy as np
 import shelve
+
 from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture
-from methods import normalize,denormalize
+from methods import normalize,denormalize,Cache_List
+from glfw import *
 import atb
-import audio
 from ctypes import c_int,c_bool,create_string_buffer
 
 from plugin import Plugin
@@ -77,7 +78,7 @@ class Marker_Detector(Plugin):
         if g_pool.app == "player":
             #check if marker cache is available from last session
             self.persistent_cache = shelve.open(os.path.join(g_pool.rec_dir,'square_marker_cache'),protocol=2)
-            self.marker_cache = self.persistent_cache.get('marker_cache',[False for _ in g_pool.timestamps])
+            self.marker_cache = Cache_List(self.persistent_cache.get('marker_cache',[False for _ in g_pool.timestamps]))
             logger.debug("Loaded marker cache %s / %s frames had been searched before"%(len(self.marker_cache)-self.marker_cache.count(False),len(self.marker_cache)) )
             self.init_marker_cacher()
         else:
@@ -116,10 +117,6 @@ class Marker_Detector(Plugin):
     def save(self, var_name, var):
             self.surface_definitions[var_name] = var
 
-
-    def do_open(self):
-        if not self._window:
-            self.window_should_open = True
 
     def on_click(self,pos,button,action):
         if self.surface_edit_mode.value:
@@ -160,6 +157,7 @@ class Marker_Detector(Plugin):
             self._bar_markers.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
             self._bar_markers.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             self._bar_markers.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
+            self._bar_markers.add_button("%s_update_cache"%i, s.update_cache,label='update cache',group=str(i),data=self.marker_cache)
 
     def update(self,frame,recent_pupil_positions,events):
         img = frame.img
@@ -252,7 +250,7 @@ class Marker_Detector(Plugin):
     def update_marker_cache(self):
         while not self.marker_cache_queue.empty():
             idx,c_m = self.marker_cache_queue.get()
-            self.marker_cache[idx] = c_m
+            self.marker_cache.update(idx,c_m)
         # status = ['o' if x!=False else 'x' for x in self.marker_cache[::1000]]
         # print "".join(status)
 
@@ -274,7 +272,7 @@ class Marker_Detector(Plugin):
             hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
             draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
 
-        for s in  self.surfaces:
+        for s in self.surfaces:
             s.gl_draw_frame()
             s.gl_display_in_window(self.g_pool.image_tex)
 
@@ -294,7 +292,7 @@ class Marker_Detector(Plugin):
         elif self.g_pool.app == 'player':
             self.save("offline_square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
             self.close_marker_cacher()
-            self.persistent_cache["marker_cache"] = self.marker_cache
+            self.persistent_cache["marker_cache"] = self.marker_cache.to_list()
             self.persistent_cache.close()
 
         self.surface_definitions.close()
@@ -303,3 +301,6 @@ class Marker_Detector(Plugin):
             s.close_window()
         self._bar.destroy()
         self._bar_markers.destroy()
+
+
+

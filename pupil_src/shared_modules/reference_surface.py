@@ -15,11 +15,14 @@ from glfw import *
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 
-from methods import GetAnglesPolyline,normalize
+from methods import GetAnglesPolyline,normalize,Cache_List
 
 #ctypes import for atb_vars:
 from ctypes import c_int,c_bool,create_string_buffer
 from time import time
+
+import logging
+logger = logging.getLogger(__name__)
 
 def m_verts_to_screen(verts):
     #verts need to be sorted counterclockwise stating at bottom left
@@ -69,7 +72,7 @@ class Reference_Surface(object):
         self.detected = False
         self.m_to_screen = None
         self.m_from_screen = None
-        self.cache = None
+        self.cache = None 
 
         if saved_definition is not None:
             self.load_from_dict(saved_definition)
@@ -222,6 +225,10 @@ class Reference_Surface(object):
                 self.m_to_screen = None
 
     def answer_caching_request(self,visible_markers):
+        # cache point had not been visited 
+        if visible_markers == False:
+            return False
+        # cache point had been visited
         marker_by_id = dict([(m['id'],m) for m in visible_markers])
         visible_ids = set(marker_by_id.keys())
         requested_ids = set(self.markers.keys())
@@ -239,7 +246,35 @@ class Reference_Surface(object):
 
             return {'m_to_screen':m_to_screen,'m_from_screen':m_from_screen,'detected_markers':len(overlap)}
         else:
+            #surface not found
             return None
+
+
+    def update_cache(self,marker_cache):
+        '''
+        compute surface m's and gaze points from cached marker data
+        entries are:
+            - False: when marker cache entry was False (not yet searched)
+            - None: when surface was not found
+            - {'m_to_screen':,'m_from_screen':,'detected_markers':} 
+        '''
+
+        # iterations = 0
+        if not self.defined:
+            return 
+        if self.cache == None:
+            logger.debug("Full update of surface '%s' positons cache"%self.name)
+            self.cache = Cache_List([self.answer_caching_request(c_m) for c_m in marker_cache],eval_fn=lambda x: not (x==False or x==None)) 
+            # iterations = len(self.cache)
+        else:
+            # update if markercache is not False but surface cache is still false 
+            # this happens when the markercache was incomplete when this fn was run before
+            for i in range(len(marker_cache)):
+                if self.cache[i] == False and marker_cache[i] != False:
+                    self.cache.update(i,self.answer_caching_request(marker_cache[i]))
+                    # iterations +=1
+        # return iterations
+        print self.cache.complete_ranges
 
     def img_to_ref_surface(self,pos):
         if self.m_from_screen is not None:
@@ -278,6 +313,8 @@ class Reference_Surface(object):
         transform = cv2.getPerspectiveTransform(after,before)
         for m in self.markers.values():
             m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
+
+        self.cache = None #purge cache as it is not valid anymore 
 
     def atb_marker_status(self):
         return create_string_buffer("%s / %s" %(self.detected_markers,len(self.markers)),512)
