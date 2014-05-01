@@ -239,7 +239,6 @@ class Marker_Detector(Plugin):
 
     def init_marker_cacher(self):
         forking_enable(0) #for MacOs only
-
         from marker_detector_cacher import fill_cache
         visited_list = [False if x == False else True for x in self.marker_cache]
         video_file_path =  os.path.join(self.g_pool.rec_dir,'world.avi')
@@ -254,6 +253,8 @@ class Marker_Detector(Plugin):
         while not self.marker_cache_queue.empty():
             idx,c_m = self.marker_cache_queue.get()
             self.marker_cache[idx] = c_m
+        # status = ['o' if x!=False else 'x' for x in self.marker_cache[::1000]]
+        # print "".join(status)
 
     def seek_marker_cacher(self,idx):
         self.marker_cacher_seek_idx.value = idx

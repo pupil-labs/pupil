@@ -58,7 +58,7 @@ else:
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.WARNING)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('Player: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -389,7 +389,6 @@ def main():
         if g.play or g.new_seek:
             try:
                 new_frame = cap.get_frame()
-
             except EndofVideoFileError:
                 #end of video logic: pause at last frame.
                 g.play=False

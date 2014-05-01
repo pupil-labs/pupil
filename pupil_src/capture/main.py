@@ -87,7 +87,7 @@ if getattr(sys, 'frozen', False):
     with open(version_file) as f:
         version = f.read()
 else:
-    from git_version import get_tag_commit
+    from gitversion import get_tag_commit
     version = get_tag_commit()
 
 
@@ -103,7 +103,7 @@ def main():
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
     # eye_src = '/Users/mkassner/Pupil/datasets/p1-left/frames/test.avi'
-    # world_src = "/Users/mkassner/Desktop/2014_01_21/000/world.avi"
+    # world_src = "~/Desktop/000"
 
     # Camera video size in pixels (width,height)
     eye_size = (640,360)

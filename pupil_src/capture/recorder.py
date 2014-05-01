@@ -91,13 +91,15 @@ class Recorder(Plugin):
         return strftime("%H:%M:%S", rec_time)
 
     def update(self,frame,recent_pupil_positons,events):
-        self.frame_count += 1
+        # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
         for p in recent_pupil_positons:
             if p['norm_pupil'] is not None:
                 gaze_pt = p['norm_gaze'][0],p['norm_gaze'][1],p['norm_pupil'][0],p['norm_pupil'][1],p['timestamp'],p['confidence']
                 self.gaze_list.append(gaze_pt)
         self.timestamps.append(frame.timestamp)
         self.writer.write(frame.img)
+        self.frame_count += 1
+
 
     def stop_and_destruct(self):
         #explicit release of VideoWriter

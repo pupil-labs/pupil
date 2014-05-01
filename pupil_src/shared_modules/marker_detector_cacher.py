@@ -1,9 +1,25 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2014  Pupil Labs
+
+ Distributed under the terms of the CC BY-NC-SA License.
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
 
 
-def fill_cache(visited_list,video_file_path,q,seek_idx,run):
-    import logging,os
+
+
+def fill_cache(visited_list,video_file_path,q,seek_idx,run): 
+    '''
+    this function is part of marker_detector it is run as a seperate process.
+    it must be kept in a seperate file for namespace sanatisation
+    '''
+    import os
+    import logging
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
-    logger.debug('Started Cacher Process for Marker Detector')
+    logger.debug('Started cacher process for Marker Detector')
     import cv2
     from uvc_capture import autoCreateCapture, EndofVideoFileError
     from square_marker_detect import detect_markers_robust
@@ -31,7 +47,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
                     next_unvisited = visited_list.index(False,0,frame_idx)
                 except ValueError:
                     #no unvisited sites left. Done!
-                    logger.debug("Caching Completed")
+                    logger.debug("Caching completed.")
                     next_unvisited = None
         return next_unvisited
 
@@ -51,8 +67,9 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
             break
         elif next != cap.get_frame_index():
             #we need to seek:
-            logger.debug("seeking to Frame %s" %next)
+            logger.debug("Seeking to Frame %s" %next)
             cap.seek_to_frame(next)
+            markers = []
         else:
             #next frame is unvisited
             pass
@@ -63,6 +80,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
             logger.debug('Reached end of video. Rewinding.')
             frame = None
             cap.seek_to_frame(0)
+            markers = []
         else:
             markers = detect_markers_robust(frame.img,
                                             grid_size = 5,

@@ -245,7 +245,7 @@ lk_params = dict( winSize  = (45, 45),
                   maxLevel = 1,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 prev_img = None
-tick = 4
+tick = 0
 
 def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False,true_detect_every_frame = 1):
     global prev_img

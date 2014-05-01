@@ -48,7 +48,7 @@ class Seek_Bar(Plugin):
             norm_seek_pos, _ = self.screen_to_seek_bar(pos)
             norm_seek_pos = min(1,max(0,norm_seek_pos))
             if abs(norm_seek_pos-self.norm_seek_pos) >=.01:
-                seek_pos = int(norm_seek_pos*self.frame_count)
+                seek_pos = min(int(norm_seek_pos*self.frame_count),self.frame_count-1)
                 self.cap.seek_to_frame(seek_pos)
                 self.g_pool.new_seek = True
 
