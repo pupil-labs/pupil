@@ -167,7 +167,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/home/mkassner/Desktop/000'
+        rec_dir = '/home/mkassner/Desktop/001'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
@@ -332,7 +332,7 @@ def main():
     bar.add_var("play",vtype=c_bool,getter=get_play,setter=set_play,key="space")
     bar.add_button('step next',next_frame,key='right')
     bar.add_button('step prev',prev_frame,key='left')
-    bar.add_var("frame index",getter=lambda:cap.get_frame_index()-1 )
+    bar.add_var("frame index",vtype=c_int,getter=lambda:cap.get_frame_index()-1 )
 
     bar.plugin_to_load = c_int(0)
     plugin_type_enum = atb.enum("Plug In",index_by_name)
