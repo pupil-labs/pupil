@@ -94,7 +94,7 @@ class Cache_List(list):
     """Cache list is a list of False
         [False,False,False]
         with update() 'False' can be overwritten with a result (anything not 'False')
-        self.complete_ranges show ranges where the cache does not evaluate as 'False' using eval_fn
+        self.ranges show ranges where the cache does not evaluate as 'False' using eval_fn
         this allows to use ranges a a way of showing where no caching has happed (default) or whatever you do with eval_fn
         Warning: a positve result cannot be overwritten by a negative one in this implementation
         self.complete indicated that the cache list has no unknowns (False)
@@ -105,7 +105,7 @@ class Cache_List(list):
     def __init__(self, init_list,eval_fn=lambda x: not x==False):
         super(Cache_List, self).__init__(init_list)
         self.eval_fn = eval_fn
-        self.complete_ranges = self.init_complete_ranges()
+        self.ranges = self.init_ranges()
         self._togo = self.count(False)
 
 
@@ -122,15 +122,15 @@ class Cache_List(list):
         if self[key] != False:
             logger.waring("You are overwriting a precached result. Please report this BUG")
             self[key] = item
-            self.complete_ranges = self.init_complete_ranges()
+            self.ranges = self.init_ranges()
         else:
             #unvisited need to update ranges
             self[key] = item
-            self.update_complete_ranges(key)
+            self.update_ranges(key)
             self._togo -= 1
 
 
-    def init_complete_ranges(self):
+    def init_ranges(self):
         l = self
         i = -1
         ranges = []
@@ -142,7 +142,7 @@ class Cache_List(list):
         return ranges
 
     def merge_ranges(self):
-        l = self.complete_ranges
+        l = self.ranges
         for i in range(len(l)-1):
             if l[i][1] == l[i+1][0]-1:
                 #merge touching fields
@@ -153,8 +153,8 @@ class Cache_List(list):
                 return
         return
 
-    def update_complete_ranges(self,i):
-        l = self.complete_ranges
+    def update_ranges(self,i):
+        l = self.ranges
         for _range in l:
             #most usual case extend a range
             if i == _range[0]-1:

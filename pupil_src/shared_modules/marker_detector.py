@@ -78,12 +78,16 @@ class Marker_Detector(Plugin):
         if g_pool.app == "player":
             #check if marker cache is available from last session
             self.persistent_cache = shelve.open(os.path.join(g_pool.rec_dir,'square_marker_cache'),protocol=2)
-            self.marker_cache = Cache_List(self.persistent_cache.get('marker_cache',[False for _ in g_pool.timestamps]))
-            logger.debug("Loaded marker cache %s / %s frames had been searched before"%(len(self.marker_cache)-self.marker_cache.count(False),len(self.marker_cache)) )
+            self.cache = Cache_List(self.persistent_cache.get('marker_cache',[False for _ in g_pool.timestamps]))
+            logger.debug("Loaded marker cache %s / %s frames had been searched before"%(len(self.cache)-self.cache.count(False),len(self.cache)) )
             self.init_marker_cacher()
         else:
             self.persistent_cache = None
-            self.marker_cache = None
+            self.cache = None
+
+        if g_pool.app == 'player':
+            from surface_display import Surface_Display
+            self.g_pool.plugins.append(Surface_Display(self.g_pool,running_detector_plugin=self))
 
         #debug vars
         self.draw_markers = c_bool(0)
@@ -157,15 +161,15 @@ class Marker_Detector(Plugin):
             self._bar_markers.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
             self._bar_markers.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             self._bar_markers.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
-            self._bar_markers.add_button("%s_update_cache"%i, s.update_cache,label='update cache',group=str(i),data=self.marker_cache)
+            self._bar_markers.add_button("%s_update_cache"%i, s.update_cache,label='update cache',group=str(i),data=self.cache)
 
     def update(self,frame,recent_pupil_positions,events):
         img = frame.img
         self.img_shape = frame.img.shape
 
-        if self.marker_cache is not None:
+        if self.cache is not None:
             self.update_marker_cache()
-            self.markers = self.marker_cache[frame.index]
+            self.markers = self.cache[frame.index]
             if self.markers == False:
                 # locate markers because precacher has not anayzed this frame yet. Most likely a seek event
                 self.markers = detect_markers_simple(img,
@@ -238,29 +242,29 @@ class Marker_Detector(Plugin):
     def init_marker_cacher(self):
         forking_enable(0) #for MacOs only
         from marker_detector_cacher import fill_cache
-        visited_list = [False if x == False else True for x in self.marker_cache]
+        visited_list = [False if x == False else True for x in self.cache]
         video_file_path =  os.path.join(self.g_pool.rec_dir,'world.avi')
-        self.marker_cache_queue = Queue()
-        self.marker_cacher_seek_idx = Value(c_int,0)
-        self.marker_cacher_run = Value(c_bool,True)
-        self.marker_cacher = Process(target=fill_cache, args=(visited_list,video_file_path,self.marker_cache_queue,self.marker_cacher_seek_idx,self.marker_cacher_run))
-        self.marker_cacher.start()
+        self.cache_queue = Queue()
+        self.cacher_seek_idx = Value(c_int,0)
+        self.cacher_run = Value(c_bool,True)
+        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,self.cache_queue,self.cacher_seek_idx,self.cacher_run))
+        self.cacher.start()
 
 
     def update_marker_cache(self):
-        while not self.marker_cache_queue.empty():
-            idx,c_m = self.marker_cache_queue.get()
-            self.marker_cache.update(idx,c_m)
-        # status = ['o' if x!=False else 'x' for x in self.marker_cache[::1000]]
+        while not self.cache_queue.empty():
+            idx,c_m = self.cache_queue.get()
+            self.cache.update(idx,c_m)
+        # status = ['o' if x!=False else 'x' for x in self.cache[::1000]]
         # print "".join(status)
 
     def seek_marker_cacher(self,idx):
-        self.marker_cacher_seek_idx.value = idx
+        self.cacher_seek_idx.value = idx
 
     def close_marker_cacher(self):
         self.update_marker_cache()
-        self.marker_cacher_run.value = False
-        self.marker_cacher.join()
+        self.cacher_run.value = False
+        self.cacher.join()
 
     def gl_display(self):
         """
@@ -292,7 +296,7 @@ class Marker_Detector(Plugin):
         elif self.g_pool.app == 'player':
             self.save("offline_square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
             self.close_marker_cacher()
-            self.persistent_cache["marker_cache"] = self.marker_cache.to_list()
+            self.persistent_cache["marker_cache"] = self.cache.to_list()
             self.persistent_cache.close()
 
         self.surface_definitions.close()

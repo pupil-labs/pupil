@@ -274,7 +274,6 @@ class Reference_Surface(object):
                     self.cache.update(i,self.answer_caching_request(marker_cache[i]))
                     # iterations +=1
         # return iterations
-        print self.cache.complete_ranges
 
     def img_to_ref_surface(self,pos):
         if self.m_from_screen is not None:

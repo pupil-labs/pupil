@@ -462,7 +462,7 @@ def main():
 
 if __name__ == '__main__':
     freeze_support()
-    if 1:
+    if 0:
         main()
     else:
         import cProfile,subprocess,os
