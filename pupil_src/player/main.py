@@ -107,12 +107,12 @@ from vis_light_points import Vis_Light_Points
 from seek_bar import Seek_Bar
 from export_launcher import Export_Launcher
 from scan_path import Scan_Path
-from marker_detector import Marker_Detector
+from offline_marker_detector import Offline_Marker_Detector
 from pupil_server import Pupil_Server
 from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
 
-plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Marker_Detector,Pupil_Server)
+plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Pupil_Server)
 name_by_index = [p.__name__ for p in plugin_by_index]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
@@ -167,7 +167,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/home/mkassner/Desktop/002'
+        rec_dir = '/home/mkassner/Desktop/000'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:

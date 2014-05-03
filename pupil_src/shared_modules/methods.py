@@ -97,17 +97,24 @@ class Cache_List(list):
         self.ranges show ranges where the cache does not evaluate as 'False' using eval_fn
         this allows to use ranges a a way of showing where no caching has happed (default) or whatever you do with eval_fn
         Warning: a positve result cannot be overwritten by a negative one in this implementation
-        self.complete indicated that the cache list has no unknowns (False)
-
-
+        self.complete indicated that the cache list has no unknowns eval_fn(n) == False
     """
 
-    def __init__(self, init_list,eval_fn=lambda x: not x==False):
+    def __init__(self, init_list,eval_fn=lambda x: x!=False):
         super(Cache_List, self).__init__(init_list)
         self.eval_fn = eval_fn
-        self.ranges = self.init_ranges()
+        self._ranges = self.init_ranges()
         self._togo = self.count(False)
+        self.length = len(self)
 
+
+    @property
+    def ranges(self):
+        return self._ranges
+
+    @ranges.setter
+    def ranges(self, value):
+        raise Exception("Read only")
 
     @property
     def complete(self):
@@ -115,18 +122,20 @@ class Cache_List(list):
 
     @complete.setter
     def complete(self, value):
-        raise ValueError("Read only")
+        raise Exception("Read only")
+
 
 
     def update(self,key,item):
         if self[key] != False:
-            logger.waring("You are overwriting a precached result. Please report this BUG")
+            logger.waring("You are overwriting a precached result.")
             self[key] = item
             self.ranges = self.init_ranges()
         else:
-            #unvisited need to update ranges
+            #unvisited 
             self[key] = item
-            self.update_ranges(key)
+            if self.eval_fn(item): #need to update ranges
+                self.update_ranges(key)
             self._togo -= 1
 
 
@@ -142,21 +151,20 @@ class Cache_List(list):
         return ranges
 
     def merge_ranges(self):
-        l = self.ranges
+        l = self._ranges
         for i in range(len(l)-1):
             if l[i][1] == l[i+1][0]-1:
                 #merge touching fields
-                l.append([l[i][0],l[i+1][1]])
-                del l[i],l[i]
-                l.sort(key=lambda x: x[0])
-                self.merge_ranges()
+                l[i] = ([l[i][0],l[i+1][1]])
+                #del second field
+                del l[i+1]
                 return
         return
 
     def update_ranges(self,i):
-        l = self.ranges
+        l = self._ranges
         for _range in l:
-            #most usual case extend a range
+            #most common case: extend a range
             if i == _range[0]-1:
                 _range[0] = i
                 self.merge_ranges()
@@ -168,7 +176,6 @@ class Cache_List(list):
         #somewhere outside of range proximity
         l.append([i,i])
         l.sort(key=lambda x: x[0])
-        self.merge_ranges()
 
     def to_list(self):
         return list(self)

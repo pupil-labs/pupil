@@ -172,12 +172,7 @@ class Marker_Detector(Plugin):
             self.markers = self.cache[frame.index]
             if self.markers == False:
                 # locate markers because precacher has not anayzed this frame yet. Most likely a seek event
-                self.markers = detect_markers_simple(img,
-                                                        grid_size = 5,
-                                                        min_marker_perimeter=self.min_marker_perimeter,
-                                                        aperture=self.aperture.value,
-                                                        visualize=0)
-
+                self.markers = []
                 self.seek_marker_cacher(frame.index) # tell precacher that it better have every thing from here analyzed
 
         else:
@@ -197,15 +192,16 @@ class Marker_Detector(Plugin):
                                                         aperture=self.aperture.value,
                                                         visualize=0)
 
-        if self.draw_markers.value:
-            draw_markers(img,self.markers)
-
+      
 
         # locate surfaces
         for s in self.surfaces:
             s.locate(self.markers)
             if s.detected:
                 events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
+
+        if self.draw_markers.value:
+            draw_markers(img,self.markers)
 
         # edit surfaces by user
         if self.surface_edit_mode:
@@ -255,8 +251,14 @@ class Marker_Detector(Plugin):
         while not self.cache_queue.empty():
             idx,c_m = self.cache_queue.get()
             self.cache.update(idx,c_m)
-        # status = ['o' if x!=False else 'x' for x in self.cache[::1000]]
-        # print "".join(status)
+            for s in self.surfaces:
+                s.update_cache(self.cache,idx=idx)
+
+        # update srf with no or invald cache:
+        for s in self.surfaces:
+            if s.cache == None:
+                s.init_cache(self.cache)
+
 
     def seek_marker_cacher(self,idx):
         self.cacher_seek_idx.value = idx
