@@ -167,7 +167,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/home/mkassner/Desktop/000'
+        rec_dir = '/Users/mkassner/Downloads/ET-lottery-ticket/4044/001'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:

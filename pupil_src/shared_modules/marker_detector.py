@@ -14,7 +14,7 @@ import numpy as np
 import shelve
 
 from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture
-from methods import normalize,denormalize,Cache_List
+from methods import normalize,denormalize
 from glfw import *
 import atb
 from ctypes import c_int,c_bool,create_string_buffer
@@ -125,13 +125,12 @@ class Marker_Detector(Plugin):
             self._bar_markers.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
             self._bar_markers.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             self._bar_markers.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
-            self._bar_markers.add_button("%s_update_cache"%i, s.update_cache,label='update cache',group=str(i),data=self.cache)
 
     def update(self,frame,recent_pupil_positions,events):
         img = frame.img
         self.img_shape = frame.img.shape
 
-    
+
         if self.robust_detection.value:
             self.markers = detect_markers_robust(img,
                                                     grid_size = 5,
@@ -147,7 +146,7 @@ class Marker_Detector(Plugin):
                                                     aperture=self.aperture.value,
                                                     visualize=0)
 
-      
+
         # locate surfaces
         for s in self.surfaces:
             s.locate(self.markers)
@@ -217,7 +216,7 @@ class Marker_Detector(Plugin):
         """
         if self.g_pool.app == 'capture':
             self.save("realtime_square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
-      
+
         self.surface_definitions.close()
 
         for s in self.surfaces:
