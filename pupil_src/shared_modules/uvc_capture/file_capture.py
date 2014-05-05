@@ -127,7 +127,7 @@ class File_Capture():
                 return True
             elif 0 < offset < 100:
                 offset +=10
-                if not self.seek_to_frame(offset):
+                if not self.seek_to_frame(seek_pos-offset):
                     logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
                     return False
                 logger.warning("Seek was not precice need to do manual seek for %s frames"%offset)
