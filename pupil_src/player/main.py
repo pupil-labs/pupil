@@ -81,7 +81,7 @@ import numpy as np
 from glfw import *
 import atb
 
-from uvc_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
+from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
@@ -167,7 +167,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/Users/mkassner/Downloads/ET-lottery-ticket/4044/001'
+        rec_dir = '/home/mkassner/Desktop/002'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
@@ -281,11 +281,17 @@ def main():
         g.play = value
 
     def next_frame():
-        cap.seek_to_frame(cap.get_frame_index())
+        try:
+            cap.seek_to_frame(cap.get_frame_index())
+        except FileSeekError:
+            pass
         g.new_seek = True
 
     def prev_frame():
-        cap.seek_to_frame(cap.get_frame_index()-2)
+        try:
+            cap.seek_to_frame(cap.get_frame_index()-2)
+        except FileSeekError:
+            pass
         g.new_seek = True
 
 

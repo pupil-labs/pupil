@@ -284,19 +284,21 @@ class Offline_Marker_Detector(Plugin):
         glPushMatrix()
         glLoadIdentity()
         width,height = glfwGetWindowSize(glfwGetCurrentContext())
-        h_pad = padding/width * self.cache.length
-        v_pad = padding/height
-        gluOrtho2D(-h_pad, self.cache.length+h_pad, -v_pad, 1+v_pad) # ranging from 0 to cache_len (horizontal) and 0 to 1 (vertical)
+        h_pad = padding * (self.cache.length-2)/float(width)
+        v_pad = padding* 1./(height-2)
+        gluOrtho2D(-h_pad,  (self.cache.length-1)+h_pad, -v_pad, 1+v_pad) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
         glLoadIdentity()
 
-        color = (1.,.4,.5,8.)
-        draw_gl_polyline(cached_ranges,color=color,type='Lines')
+        color = (8.,.6,.2,8.)
+        draw_gl_polyline(cached_ranges,color=color,type='Lines',thickness=4)
+
+        color = (0.,.7,.3,8.)
 
         for s in cached_surfaces:
             glTranslatef(0,.02,0)
-            draw_gl_polyline(s,color=color,type='Lines')
+            draw_gl_polyline(s,color=color,type='Lines',thickness=2)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()

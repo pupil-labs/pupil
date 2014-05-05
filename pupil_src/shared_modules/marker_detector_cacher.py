@@ -52,7 +52,6 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
         return next_unvisited
 
     def handle_frame(next):
-        global markers
         if next != cap.get_frame_index():
             #we need to seek:
             logger.debug("Seeking to Frame %s" %next)
@@ -65,7 +64,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
                 q.put((next,[])) # we cannot look at the frame, report no detection
                 return
             #seeking invalidates prev markers for the detector
-            markers = []
+            markers[:] = []
 
         try:
             frame = cap.get_frame()
@@ -77,7 +76,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
             q.put((next,[])) # we cannot look at the frame, report no detection
             return
 
-        markers = detect_markers_robust(frame.img,
+        markers[:] = detect_markers_robust(frame.img,
                                         grid_size = 5,
                                         prev_markers=markers,
                                         min_marker_perimeter=min_marker_perimeter,
