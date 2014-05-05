@@ -52,6 +52,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
         return next_unvisited
 
     def handle_frame(next):
+        global markers
         if next != cap.get_frame_index():
             #we need to seek:
             logger.debug("Seeking to Frame %s" %next)
