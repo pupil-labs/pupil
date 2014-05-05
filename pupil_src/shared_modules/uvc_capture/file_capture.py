@@ -122,15 +122,21 @@ class File_Capture():
     def seek_to_frame(self, seek_pos):
         if self.cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES,seek_pos):
             offset = seek_pos - self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
-            if offset == 0: 
-                logger.debug("seeking to frame: %s"%self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
+            if offset == 0:
+                logger.debug("Seeked to frame: %s"%self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
                 return True
-            # elif 0 < offset < 100:
-            #     logger("Seek was not precice need to do manual seek for %s frames"%offset)
-            #     while seek_pos != self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES):
-            #         self.read()
-            #     logger.debug("seeking to frame: %s"%self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
-            #     return True
+            elif 0 < offset < 100:
+                offset +=10
+                if not self.seek_to_frame(offset):
+                    logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
+                    return False
+                logger.warning("Seek was not precice need to do manual seek for %s frames"%offset)
+                while seek_pos != self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES):
+                    try:
+                        self.read()
+                    except EndofVideoFileError:
+                        logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
+                return True
             else:
                 logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
                 return False
