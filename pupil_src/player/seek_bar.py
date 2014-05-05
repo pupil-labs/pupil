@@ -48,8 +48,11 @@ class Seek_Bar(Plugin):
             norm_seek_pos, _ = self.screen_to_seek_bar(pos)
             norm_seek_pos = min(1,max(0,norm_seek_pos))
             if abs(norm_seek_pos-self.norm_seek_pos) >=.01:
-                seek_pos = min(int(norm_seek_pos*self.frame_count),self.frame_count-1)
-                self.cap.seek_to_frame(seek_pos)
+                seek_pos = min(int(norm_seek_pos*self.frame_count),self.frame_count-5) #the last frames can be problematic to seek to
+                try:
+                    self.cap.seek_to_frame(seek_pos)
+                except:
+                    pass
                 self.g_pool.new_seek = True
 
 
@@ -71,8 +74,11 @@ class Seek_Bar(Plugin):
             if self.drag_mode:
                 norm_seek_pos, _ = self.screen_to_seek_bar(pos)
                 norm_seek_pos = min(1,max(0,norm_seek_pos))
-                seek_pos = int(norm_seek_pos*self.frame_count)
-                self.cap.seek_to_frame(seek_pos)
+                seek_pos = min(int(norm_seek_pos*self.frame_count),self.frame_count-5)
+                try:
+                    self.cap.seek_to_frame(seek_pos)
+                except:
+                    pass
                 self.g_pool.new_seek = True
                 self.drag_mode=False
                 self.g_pool.play = self.was_playing
