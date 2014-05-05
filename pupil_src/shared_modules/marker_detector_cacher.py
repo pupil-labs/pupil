@@ -21,7 +21,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
     logger.debug('Started cacher process for Marker Detector')
     import cv2
-    from uvc_capture import autoCreateCapture, EndofVideoFileError
+    from uvc_capture import autoCreateCapture, EndofVideoFileError,FileSeekError
     from square_marker_detect import detect_markers_robust
     min_marker_perimeter = 80
     aperture = 11
@@ -58,7 +58,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
             logger.debug("Seeking to Frame %s" %next)
             try:
                 cap.seek_to_frame(next)
-            except:
+            except FileSeekError:
                 #could not seek to requested position
                 logger.warning("Could not evaluate frame: %s."%next)
                 visited_list[next] = True # this frame is now visited.
@@ -70,11 +70,11 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
         try:
             frame = cap.get_frame()
         except EndofVideoFileError:
-            logger.debug('Reached end of video. Rewinding.')
-            try:
-                cap.seek_to_frame(0)
-            except:
-                pass
+            logger.debug("Video File's last frame(s) not accesible")
+             #could not read frame
+            logger.warning("Could not evaluate frame: %s."%next)
+            visited_list[next] = True # this frame is now visited.
+            q.put((next,[])) # we cannot look at the frame, report no detection
             return
 
         markers = detect_markers_robust(frame.img,
@@ -85,7 +85,6 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
                                         visualize=0,
                                         true_detect_every_frame=1)
         visited_list[frame.index] = True
-        # logger.debug("adding Frame %s"%frame.index)
         q.put((frame.index,markers))
 
     while run.value:
