@@ -167,13 +167,10 @@ class Offline_Marker_Detector(Plugin):
             # locate markers because precacher has not anayzed this frame yet. Most likely a seek event
             self.markers = []
             self.seek_marker_cacher(frame.index) # tell precacher that it better have every thing from here analyzed
-            return
        
-
         # locate surfaces
         for s in self.surfaces:
             if not s.locate_from_cache(frame.index):
-                # logger.debug("location not from cache")
                 s.locate(self.markers)
             if s.detected:
                 events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})

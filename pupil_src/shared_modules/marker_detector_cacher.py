@@ -22,9 +22,9 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
     logger.debug('Started cacher process for Marker Detector')
     import cv2
     from uvc_capture import autoCreateCapture, EndofVideoFileError,FileSeekError
-    from square_marker_detect import detect_markers_robust
+    from square_marker_detect import detect_markers_robust,detect_markers_simple
     min_marker_perimeter = 80
-    aperture = 11
+    aperture = 9
     markers = []
 
     cap = autoCreateCapture(video_file_path)
@@ -83,8 +83,14 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
                                         aperture=aperture,
                                         visualize=0,
                                         true_detect_every_frame=1)
+
+        # markers[:] = detect_markers_simple(frame.img,
+        #                         grid_size = 5,
+        #                         min_marker_perimeter=min_marker_perimeter,
+        #                         aperture=aperture,
+        #                         visualize=0)
         visited_list[frame.index] = True
-        q.put((frame.index,markers))
+        q.put((frame.index,markers[:])) #object passed will only be pickeld when collected from other process! need to make a copy ot avoid overwrite!!!
 
     while run.value:
         next = cap.get_frame_index()
