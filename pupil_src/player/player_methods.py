@@ -32,6 +32,9 @@ def correlate_gaze(gaze_list,timestamps):
 
 
     positions_by_frame = [[] for i in timestamps]
+    if len(gaze_list)==0:
+        logger.warning("No gaze positons in this recording.")
+        return positions_by_frame
     frame_idx = 0
     data_point = gaze_list.pop(0)
     gaze_timestamp = data_point[4]
