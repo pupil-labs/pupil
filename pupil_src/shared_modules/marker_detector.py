@@ -62,17 +62,9 @@ class Marker_Detector(Plugin):
 
         atb_label = "marker detection"
         self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
-            help="marker detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_var('robust_detection',self.robust_detection,group="Detector")
-        self._bar.add_var("draw markers",self.draw_markers,group="Detector")
-        self._bar.add_button('close',self.unset_alive)
+            help="marker detection parameters", color=(50, 150, 50), alpha=100,
+            text='light', position=atb_pos,refresh=.3, size=(300, 300))
 
-
-        atb_pos = atb_pos[0],atb_pos[1]+110
-        self._bar_markers = atb.Bar(name =self.__class__.__name__+'markers', label='registered surfaces',
-            help="list of registered ref surfaces", color=(50, 100, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 120))
         self.update_bar_markers()
 
 
@@ -115,16 +107,18 @@ class Marker_Detector(Plugin):
         del self.surfaces[i]
         self.update_bar_markers()
 
-
     def update_bar_markers(self):
-        self._bar_markers.clear()
-        self._bar_markers.add_button("  add surface   ", self.add_surface, key='a')
-        self._bar_markers.add_var("  edit mode   ", self.surface_edit_mode )
+        self._bar.clear()
+        self._bar.add_button('close',self.unset_alive)
+        self._bar.add_var('robust_detection',self.robust_detection)
+        self._bar.add_var("draw markers",self.draw_markers)
+        self._bar.add_button("  add surface   ", self.add_surface, key='a')
+        self._bar.add_var("  edit mode   ", self.surface_edit_mode )
         for s,i in zip(self.surfaces,range(len(self.surfaces)))[::-1]:
-            self._bar_markers.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
-            self._bar_markers.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
-            self._bar_markers.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
-            self._bar_markers.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
+            self._bar.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
+            self._bar.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
+            self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
+            self._bar.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
 
     def update(self,frame,recent_pupil_positions,events):
         img = frame.img
@@ -133,18 +127,18 @@ class Marker_Detector(Plugin):
 
         if self.robust_detection.value:
             self.markers = detect_markers_robust(img,
-                                                    grid_size = 5,
-                                                    prev_markers=self.markers,
-                                                    min_marker_perimeter=self.min_marker_perimeter,
-                                                    aperture=self.aperture.value,
-                                                    visualize=0,
-                                                    true_detect_every_frame=3)
+                                                grid_size = 5,
+                                                prev_markers=self.markers,
+                                                min_marker_perimeter=self.min_marker_perimeter,
+                                                aperture=self.aperture.value,
+                                                visualize=0,
+                                                true_detect_every_frame=3)
         else:
             self.markers = detect_markers_simple(img,
-                                                    grid_size = 5,
-                                                    min_marker_perimeter=self.min_marker_perimeter,
-                                                    aperture=self.aperture.value,
-                                                    visualize=0)
+                                                grid_size = 5,
+                                                min_marker_perimeter=self.min_marker_perimeter,
+                                                aperture=self.aperture.value,
+                                                visualize=0)
 
 
         # locate surfaces
@@ -188,7 +182,6 @@ class Marker_Detector(Plugin):
                 s.open_window()
 
 
-
     def gl_display(self):
         """
         Display marker and surface info inside world screen
@@ -208,7 +201,6 @@ class Marker_Detector(Plugin):
                 s.gl_draw_corners()
 
 
-
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happends either voluntary or forced.
@@ -222,7 +214,3 @@ class Marker_Detector(Plugin):
         for s in self.surfaces:
             s.close_window()
         self._bar.destroy()
-        self._bar_markers.destroy()
-
-
-
