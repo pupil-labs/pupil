@@ -23,7 +23,6 @@ else:
     from multiprocessing.sharedctypes import Value
 
 
-
 from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
@@ -43,12 +42,19 @@ from math import sqrt
 
 
 class Offline_Marker_Detector(Plugin):
-    """docstring
-
     """
-    def __init__(self,g_pool,atb_pos=(320,220)):
+    Special version of marker detector for use with videofile source.
+    It uses a seperate process to search all frames in the world.avi file for markers.
+     - self.cache is a list containing marker positions for each frame.
+     - self.surfaces[i].cache is a list containing surface positions for each frame
+    Both caches are build up over time. The marker cache is also session persistent.
+    See marker_tracker.py for more info on this marker tracker.
+    """
+
+    def __init__(self,g_pool,gui_settings={'pos':(220,200),'size':(300,300),'iconified':False}):
         super(Offline_Marker_Detector, self).__init__()
         self.g_pool = g_pool
+        self.gui_settings = gui_settings
         self.order = .2
 
         # all markers that are detected in the most recent frame
@@ -78,7 +84,6 @@ class Offline_Marker_Detector(Plugin):
         self.aperture = c_int(11)
         self.min_marker_perimeter = 80
 
-      
         #check if marker cache is available from last session
         self.persistent_cache = shelve.open(os.path.join(g_pool.rec_dir,'square_marker_cache'),protocol=2)
         self.cache = Cache_List(self.persistent_cache.get('marker_cache',[False for _ in g_pool.timestamps]))
@@ -92,20 +97,16 @@ class Offline_Marker_Detector(Plugin):
 
         self.img_shape = None
 
-        atb_label = "marker detection"
-        self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
-            help="marker detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 80))
-        self._bar.add_var("draw markers",self.draw_markers)
-        self._bar.add_button('close',self.unset_alive)
 
-
-        atb_pos = atb_pos[0],atb_pos[1]+90
-        self._bar_markers = atb.Bar(name =self.__class__.__name__+'markers', label='registered surfaces',
-            help="list of registered ref surfaces", color=(50, 100, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 120))
+    def init_gui(self):
+        import atb
+        pos = self.gui_settings['pos']
+        atb_label = "Marker Detector"
+        self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
+            help="circle", color=(150, 150, 50), alpha=50,
+            text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
+        self._bar.iconified = self.gui_settings['iconified']
         self.update_bar_markers()
-
 
 
     def unset_alive(self):
@@ -146,16 +147,17 @@ class Offline_Marker_Detector(Plugin):
         del self.surfaces[i]
         self.update_bar_markers()
 
-
     def update_bar_markers(self):
-        self._bar_markers.clear()
-        self._bar_markers.add_button("  add surface   ", self.add_surface, key='a')
-        self._bar_markers.add_var("  edit mode   ", self.surface_edit_mode )
+        self._bar.clear()
+        self._bar.add_button('close',self.unset_alive)
+        self._bar.add_var("draw markers",self.draw_markers)
+        self._bar.add_button("  add surface   ", self.add_surface, key='a')
+        self._bar.add_var("  edit mode   ", self.surface_edit_mode )
         for s,i in zip(self.surfaces,range(len(self.surfaces)))[::-1]:
-            self._bar_markers.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
-            self._bar_markers.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
-            self._bar_markers.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
-            self._bar_markers.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
+            self._bar.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
+            self._bar.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
+            self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
+            self._bar.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
 
     def update(self,frame,recent_pupil_positions,events):
         self.img_shape = frame.img.shape
@@ -307,6 +309,13 @@ class Offline_Marker_Detector(Plugin):
 
 
 
+    def get_init_dict(self):
+        d = {}
+        if hasattr(self,'_bar'):
+            gui_settings = {'pos':self._bar.position,'size':self._bar.size,'iconified':self._bar.iconified}
+            d['gui_settings'] = gui_settings
+
+        return d
 
 
     def cleanup(self):
@@ -325,7 +334,4 @@ class Offline_Marker_Detector(Plugin):
         for s in self.surfaces:
             s.close_window()
         self._bar.destroy()
-        self._bar_markers.destroy()
-
-
-
+        self._bar.destroy()
