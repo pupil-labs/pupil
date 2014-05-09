@@ -58,7 +58,7 @@ else:
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('Player: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -167,7 +167,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/home/mkassner/Desktop/002'
+        rec_dir = '/home/mkassner/Desktop/003'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
@@ -251,6 +251,7 @@ def main():
     g.rec_dir = rec_dir
     g.app = 'player'
     g.timestamps = timestamps
+    g.positions_by_frame = positions_by_frame
 
 
 
