@@ -72,7 +72,7 @@ logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
 
-import shelve
+from file_methods import Persistent_Dict
 from time import time,sleep
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
@@ -210,7 +210,7 @@ def main():
 
 
     # load session persistent settings
-    session_settings = shelve.open(os.path.join(user_dir,"user_settings"),protocol=2)
+    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
     def load(var_name,default):
         return session_settings.get(var_name,default)
     def save(var_name,var):

@@ -11,7 +11,6 @@
 import sys, os,platform
 import cv2
 import numpy as np
-import shelve
 
 
 if platform.system() == 'Darwin':
@@ -27,6 +26,8 @@ from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 from methods import normalize,denormalize,Cache_List
+from file_methods import Persistent_Dict
+
 from glfw import *
 import atb
 from ctypes import c_int,c_bool,create_string_buffer
@@ -64,7 +65,7 @@ class Offline_Marker_Detector(Plugin):
         if g_pool.app == 'capture':
            raise Exception('For Player only.')
         #in player we load from the rec_dir: but we have a couple options:
-        self.surface_definitions = shelve.open(os.path.join(g_pool.rec_dir,'surface_definitions'),protocol=2)
+        self.surface_definitions = Persistent_Dict(os.path.join(g_pool.rec_dir,'surface_definitions'))
         if self.load('offline_square_marker_surfaces',[]) != []:
             logger.debug("Found ref surfaces defined or copied in previous session.")
             self.surfaces = [Reference_Surface(saved_definition=d) for d in self.load('offline_square_marker_surfaces',[]) if isinstance(d,dict)]
@@ -85,7 +86,7 @@ class Offline_Marker_Detector(Plugin):
         self.min_marker_perimeter = 80
 
         #check if marker cache is available from last session
-        self.persistent_cache = shelve.open(os.path.join(g_pool.rec_dir,'square_marker_cache'),protocol=2)
+        self.persistent_cache = Persistent_Dict(os.path.join(g_pool.rec_dir,'square_marker_cache'))
         self.cache = Cache_List(self.persistent_cache.get('marker_cache',[False for _ in g_pool.timestamps]))
         logger.debug("Loaded marker cache %s / %s frames had been searched before"%(len(self.cache)-self.cache.count(False),len(self.cache)) )
         self.init_marker_cacher()

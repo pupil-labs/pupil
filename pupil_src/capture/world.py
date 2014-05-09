@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
 import os, sys
 from time import time
-import shelve
+from file_methods import Persistent_Dict
 import logging
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
@@ -104,7 +104,7 @@ def world(g_pool,cap_src,cap_size):
 
 
     # load session persistent settings
-    session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_world'),protocol=2)
+    session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
     def load(var_name,default):
         return session_settings.get(var_name,default)
     def save(var_name,var):

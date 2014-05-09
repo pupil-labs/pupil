@@ -11,8 +11,7 @@
 import sys, os,platform
 import cv2
 import numpy as np
-import shelve
-
+from file_methods import Persistent_Dict
 from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture
 from methods import normalize,denormalize
 from glfw import *
@@ -41,7 +40,7 @@ class Marker_Detector(Plugin):
         self.markers = []
         # all registered surfaces
 
-        self.surface_definitions = shelve.open(os.path.join(g_pool.user_dir,'surface_definitions'),protocol=2)
+        self.surface_definitions = Persistent_Dict(os.path.join(g_pool.user_dir,'surface_definitions') )
         self.surfaces = [Reference_Surface(saved_definition=d) for d in self.load('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
 
         # edit surfaces
