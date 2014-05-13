@@ -29,7 +29,6 @@ from math import sqrt
 
 class Marker_Detector(Plugin):
     """docstring
-
     """
     def __init__(self,g_pool,atb_pos=(320,220)):
         super(Marker_Detector, self).__init__()
@@ -123,7 +122,6 @@ class Marker_Detector(Plugin):
         img = frame.img
         self.img_shape = frame.img.shape
 
-
         if self.robust_detection.value:
             self.markers = detect_markers_robust(img,
                                                 grid_size = 5,
@@ -138,7 +136,6 @@ class Marker_Detector(Plugin):
                                                 min_marker_perimeter=self.min_marker_perimeter,
                                                 aperture=self.aperture.value,
                                                 visualize=0)
-
 
         # locate surfaces
         for s in self.surfaces:
@@ -165,12 +162,12 @@ class Marker_Detector(Plugin):
         #map recent gaze onto detected surfaces used for pupil server
         for s in self.surfaces:
             if s.detected:
-                s.recent_gaze = []
+                s.gaze_on_srf = []
                 for p in recent_pupil_positions:
                     if p['norm_pupil'] is not None:
                         gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_gaze'])))
                         p['realtime gaze on '+s.name] = gp_on_s
-                        s.recent_gaze.append(gp_on_s)
+                        s.gaze_on_srf.append(gp_on_s)
 
 
         #allow surfaces to open/close windows
@@ -185,7 +182,6 @@ class Marker_Detector(Plugin):
         """
         Display marker and surface info inside world screen
         """
-
         for m in self.markers:
             hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
             hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))

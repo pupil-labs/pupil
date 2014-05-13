@@ -111,6 +111,7 @@ class Recorder(Plugin):
                 self.eye_tx.send(None)
             except:
                 logger.warning("Could not stop eye-recording. Please report this bug!")
+                
         gaze_list_path = os.path.join(self.rec_path, "gaze_positions.npy")
         np.save(gaze_list_path,np.asarray(self.gaze_list))
 
@@ -118,25 +119,18 @@ class Recorder(Plugin):
         np.save(timestamps_path,np.array(self.timestamps))
 
         try:
-            surface_definitions_file = glob(os.path.join(self.g_pool.user_dir,"surface_definitions*"))[0].rsplit(os.path.sep,1)[-1]
-            copy2(os.path.join(self.g_pool.user_dir,surface_definitions_file),os.path.join(self.rec_path,surface_definitions_file))
+            copy2(os.path.join(self.g_pool.user_dir,"surface_definitions"),os.path.join(self.rec_path,"surface_definitions"))
         except:
             logger.info("No surface_definitions data found. You may want this if you do marker tracking.")
 
         try:
-            cal_pt_cloud = np.load(os.path.join(self.g_pool.user_dir,"cal_pt_cloud.npy"))
-            cal_pt_cloud_path = os.path.join(self.rec_path, "cal_pt_cloud.npy")
-            np.save(cal_pt_cloud_path, cal_pt_cloud)
+            copy2(os.path.join(self.g_pool.user_dir,"cal_pt_cloud.npy"),os.path.join(self.rec_path,"cal_pt_cloud.npy"))
         except:
             logger.warning("No calibration data found. Please calibrate first.")
 
         try:
-            camera_matrix = np.load(os.path.join(self.g_pool.user_dir,"camera_matrix.npy"))
-            dist_coefs = np.load(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"))
-            cam_path = os.path.join(self.rec_path, "camera_matrix.npy")
-            dist_path = os.path.join(self.rec_path, "dist_coefs.npy")
-            np.save(cam_path, camera_matrix)
-            np.save(dist_path, dist_coefs)
+            copy2(os.path.join(self.g_pool.user_dir,"camera_matrix.npy"),os.path.join(self.rec_path,"camera_matrix.npy"))
+            copy2(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"),os.path.join(self.rec_path,"dist_coefs.npy"))
         except:
             logger.info("No camera intrinsics found.")
 

@@ -19,7 +19,7 @@ class Persistent_Dict(dict):
 			logger.debug("Session settings file '%s' not found. Will make new one on exit."%self.file_path)
 		
 
-	def close(self):
+	def save(self):
 		d = {}
 		d.update(self)
 		try:
@@ -27,6 +27,11 @@ class Persistent_Dict(dict):
 				pickle.dump(d,fh,-1)
 		except IOError:
 			logger.warning("Could not save session settings to '%s'"%self.file_path)
+
+	
+
+	def close(self):
+		self.save()
 
 	
 

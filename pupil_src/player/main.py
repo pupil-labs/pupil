@@ -167,7 +167,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/home/mkassner/Desktop/003'
+        rec_dir = '/home/mkassner/Desktop/002'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
@@ -242,7 +242,7 @@ def main():
     glfwSetScrollCallback(main_window,on_scroll)
 
 
-    # create container for globally scoped vars (within world)
+    # create container for globally scoped varfs (within world)
     g = Temp()
     g.plugins = []
     g.play = False
@@ -405,7 +405,7 @@ def main():
                 g.new_seek = False
 
         frame = new_frame.copy()
-        #new positons and events we make a deepcopy just like the image should be a copy.
+        #new positons and events we make a deepcopy just like the image is a copy.
         current_pupil_positions = deepcopy(positions_by_frame[frame.index])
         events = []
 

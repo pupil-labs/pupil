@@ -15,7 +15,7 @@ from glfw import *
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 
-from methods import GetAnglesPolyline,normalize,Cache_List
+from methods import GetAnglesPolyline,normalize
 
 #ctypes import for atb_vars:
 from ctypes import c_int,c_bool,create_string_buffer
@@ -33,7 +33,6 @@ def m_verts_from_screen(verts):
     #verts need to be sorted counterclockwise stating at bottom left
     mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
     return cv2.getPerspectiveTransform(verts,mapped_space_one)
-
 
 
 class Reference_Surface(object):
@@ -72,12 +71,12 @@ class Reference_Surface(object):
         self.detected = False
         self.m_to_screen = None
         self.m_from_screen = None
-        self.cache = None 
+        self.uid = str(time())
+        self.scale_factor = [1.,1.]
+
 
         if saved_definition is not None:
             self.load_from_dict(saved_definition)
-        else:
-            self.uid = str(time())
 
         ###window and gui vars
         self._window = None
@@ -96,14 +95,14 @@ class Reference_Surface(object):
         # monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
         #primary_monitor = glfwGetPrimaryMonitor()
 
-        self.recent_gaze = [] # points on surface for realtime feedback display
+        self.gaze_on_srf = [] # points on surface for realtime feedback display
 
     def save_to_dict(self):
         """
         save all markers and name of this surface to a dict.
         """
         markers = dict([(m_id,m.uv_coords) for m_id,m in self.markers.iteritems()])
-        return {'name':self.name,'uid':self.uid,'markers':markers}
+        return {'name':self.name,'uid':self.uid,'markers':markers,'scale_factor':self.scale_factor}
 
 
     def load_from_dict(self,d):
@@ -112,6 +111,8 @@ class Reference_Surface(object):
         """
         self.name = d['name']
         self.uid = d['uid']
+        self.scale_factor = d['scale_factor']
+
         marker_dict = d['markers']
         for m_id,uv_coords in marker_dict.iteritems():
             self.markers[m_id] = Support_Marker(m_id)
@@ -248,6 +249,17 @@ class Reference_Surface(object):
         else:
             return None
 
+    def gaze_on_srf(self,gaze_positions,m_from_screen):
+        if self.m_from_screen is None:
+            return None
+        gaze_on_src = []
+        for g_p in gaze_positions:
+            gaze_points = np.array([g_p['norm_gaze']]).reshape(1,1,2) 
+            gaze_points_on_srf = cv2.perspectiveTransform(gaze_points , m_from_screen )
+            gaze_points_on_srf.shape = (2) 
+            gaze_on_src.append( {'norm_gaze_on_srf':(gaze_points_on_srf[0],gaze_points_on_srf[1]),'timestamp':g_p['timestamp'] } )
+        return gaze_on_src
+
 
     def move_vertex(self,vert_idx,new_pos):
         """
@@ -264,7 +276,6 @@ class Reference_Surface(object):
         for m in self.markers.values():
             m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
 
-        self.cache = None #purge cache as it is not valid anymore 
 
     def atb_marker_status(self):
         return create_string_buffer("%s / %s" %(self.detected_markers,len(self.markers)),512)
@@ -274,6 +285,16 @@ class Reference_Surface(object):
 
     def atb_set_name(self,name):
         self.name = name.value
+
+    def atb_set_scale_x(self,val):
+        self.scale_factor[0]=val
+    def atb_set_scale_y(self,val):
+        self.scale_factor[1]=val
+    def atb_get_scale_x(self):
+        return self.scale_factor[0]
+    def atb_get_scale_y(self):
+        return self.scale_factor[1]
+
 
     def gl_draw_frame(self):
         """
@@ -330,10 +351,9 @@ class Reference_Surface(object):
             glMatrixMode(GL_MODELVIEW)
             glPopMatrix()
 
-
-            #now lets get recent pupil positions on this surface:
-            draw_gl_points_norm(self.recent_gaze,color=(0.,8.,.5,.8), size=80)
-
+            # now lets get recent pupil positions on this surface:
+            draw_gl_points_norm(self.gaze_on_srf,color=(0.,8.,.5,.8), size=80)
+           
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
 
@@ -355,7 +375,7 @@ class Reference_Surface(object):
                 height,width= mode[0],mode[1]
             else:
                 monitor = None
-                height,width= 640,640
+                height,width= 640,int(640./(self.scale_factor[0]/self.scale_factor[1])) #open with same aspect ratio as surface 
 
             self._window = glfwCreateWindow(height, width, "Reference Surface: " + self.name, monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen.value:
@@ -406,86 +426,6 @@ class Reference_Surface(object):
         if self._window:
             self.close_window()
 
-
-    #cache fn for offline marker
-    def locate_from_cache(self,frame_idx):
-        if self.cache == None:
-            #no cache available cannot update from cache
-            return False
-        cache_result = self.cache[frame_idx]
-        if cache_result == False:
-            #cached data not avaible for this frame
-            return False
-        elif cache_result == None:
-            #cached data shows surface not found:
-            self.detected = False
-            self.m_from_screen = None
-            self.m_to_screen = None
-            return True
-        else:
-            self.detected = True
-            self.m_from_screen = cache_result['m_from_screen']
-            self.m_to_screen =  cache_result['m_to_screen']       
-            self.detected_markers = cache_result['detected_markers']
-            return True
-        raise Exception("Invalid cache entry. Please report Bug.")
-
-
-    def update_cache(self,marker_cache,idx=None):
-        '''
-        compute surface m's and gaze points from cached marker data
-        entries are:
-            - False: when marker cache entry was False (not yet searched)
-            - None: when surface was not found
-            - {'m_to_screen':,'m_from_screen':,'detected_markers':} 
-        '''
-
-        # iterations = 0
- 
-        if self.cache == None:
-            self.init_cache(marker_cache)       
-        elif idx != None:
-            #update single data pt
-            self.cache.update(idx,self.answer_caching_request(marker_cache[idx]))
-        else:
-            # update where markercache is not False but surface cache is still false 
-            # this happens when the markercache was incomplete when this fn was run before
-            for i in range(len(marker_cache)):
-                if self.cache[i] == False and marker_cache[i] != False:
-                    self.cache.update(i,self.answer_caching_request(marker_cache[i]))
-                    # iterations +=1
-        # return iterations
-
-    def init_cache(self,marker_cache):
-        if self.defined:
-            logger.debug("Full update of surface '%s' positons cache"%self.name)
-            self.cache = Cache_List([self.answer_caching_request(c_m) for c_m in marker_cache],eval_fn=lambda x:  (x!=False) and (x!=None)) 
-
-
-    def answer_caching_request(self,visible_markers):
-        # cache point had not been visited 
-        if visible_markers == False:
-            return False
-        # cache point had been visited
-        marker_by_id = dict([(m['id'],m) for m in visible_markers])
-        visible_ids = set(marker_by_id.keys())
-        requested_ids = set(self.markers.keys())
-        overlap = visible_ids & requested_ids
-        detected_markers = len(overlap)
-        if len(overlap)>=min(2,len(requested_ids)):
-            yx = np.array( [marker_by_id[i]['verts_norm'] for i in overlap] )
-            uv = np.array( [self.markers[i].uv_coords for i in overlap] )
-            yx.shape=(-1,1,2)
-            uv.shape=(-1,1,2)
-            # print 'uv',uv
-            # print 'yx',yx
-            m_to_screen,mask = cv2.findHomography(uv,yx)
-            m_from_screen,mask = cv2.findHomography(yx,uv)
-
-            return {'m_to_screen':m_to_screen,'m_from_screen':m_from_screen,'detected_markers':len(overlap)}
-        else:
-            #surface not found
-            return None
 
 
 class Support_Marker(object):

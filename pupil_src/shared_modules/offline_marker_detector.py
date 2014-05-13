@@ -25,12 +25,12 @@ else:
 from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
-from methods import normalize,denormalize,Cache_List
+from methods import normalize,denormalize
 from file_methods import Persistent_Dict
-
+from cache_list import Cache_List
 from glfw import *
 import atb
-from ctypes import c_int,c_bool,create_string_buffer
+from ctypes import c_int,c_bool,c_float,create_string_buffer
 
 from plugin import Plugin
 #logging
@@ -38,7 +38,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from square_marker_detect import detect_markers_robust,detect_markers_simple, draw_markers,m_marker_to_screen
-from reference_surface import Reference_Surface
+from offline_reference_surface import Offline_Reference_Surface
 from math import sqrt
 
 
@@ -57,6 +57,7 @@ class Offline_Marker_Detector(Plugin):
         self.g_pool = g_pool
         self.gui_settings = gui_settings
         self.order = .2
+        
 
         # all markers that are detected in the most recent frame
         self.markers = []
@@ -68,10 +69,10 @@ class Offline_Marker_Detector(Plugin):
         self.surface_definitions = Persistent_Dict(os.path.join(g_pool.rec_dir,'surface_definitions'))
         if self.load('offline_square_marker_surfaces',[]) != []:
             logger.debug("Found ref surfaces defined or copied in previous session.")
-            self.surfaces = [Reference_Surface(saved_definition=d) for d in self.load('offline_square_marker_surfaces',[]) if isinstance(d,dict)]
+            self.surfaces = [Offline_Reference_Surface(saved_definition=d,gaze_positions_by_frame=self.g_pool.positions_by_frame) for d in self.load('offline_square_marker_surfaces',[]) if isinstance(d,dict)]
         elif self.load('offline_square_marker_surfaces',[]) != []:
             logger.debug("Did not find ref surfaces def created or used by the user in player from earlier session. Loading surfaces defined during capture.")
-            self.surfaces = [Reference_Surface(saved_definition=d) for d in self.load('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+            self.surfaces = [Offline_Reference_Surface(saved_definition=d,gaze_positions_by_frame=self.g_pool.positions_by_frame) for d in self.load('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
         else:
             logger.debug("No surface defs found. Please define using GUI.")
             self.surfaces = []
@@ -140,7 +141,7 @@ class Offline_Marker_Detector(Plugin):
         pass
 
     def add_surface(self):
-        self.surfaces.append(Reference_Surface())
+        self.surfaces.append(Offline_Reference_Surface(gaze_positions_by_frame=self.g_pool.positions_by_frame))
         self.update_bar_markers()
 
     def remove_surface(self,i):
@@ -158,6 +159,9 @@ class Offline_Marker_Detector(Plugin):
             self._bar.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
             self._bar.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
             self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
+            self._bar.add_var("%s_x_scale"%i,vtype=c_float, getter=s.atb_get_scale_x, min=1,setter=s.atb_set_scale_x,group=str(i),label='scale factor x', help='the scale factor is used to adjust the coordinate space for your needs (think photo pixels or mm or whatever)' )
+            self._bar.add_var("%s_y_scale"%i,vtype=c_float, getter=s.atb_get_scale_y,min=1,setter=s.atb_set_scale_y,group=str(i),label='scale factor y',help='defining x and y scale factor you atumatically set the correct aspect ratio.' )
+            self._bar.add_button("%s_export"%i, s.save_surface_positions_to_file,label='export surface data',group=str(i))
             self._bar.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
 
     def update(self,frame,recent_pupil_positions,events):
@@ -174,7 +178,7 @@ class Offline_Marker_Detector(Plugin):
             if not s.locate_from_cache(frame.index):
                 s.locate(self.markers)
             if s.detected:
-                events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
+                events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp,'gaze_on_srf':s.gaze_on_srf})
 
         if self.draw_markers.value:
             draw_markers(frame.img,self.markers)
@@ -191,21 +195,13 @@ class Offline_Marker_Detector(Plugin):
                     pos = normalize(pos,(self.img_shape[1],self.img_shape[0]),flip_y=True)
                     new_pos =  s.img_to_ref_surface(np.array(pos))
                     s.move_vertex(v_idx,new_pos)
+                    s.cache = None
+                    s.gaze_cache = None
         else:
             # update srf with no or invald cache:
             for s in self.surfaces:
                 if s.cache == None:
                     s.init_cache(self.cache)
-
-        #map recent gaze onto detected surfaces used for pupil server
-        for s in self.surfaces:
-            if s.detected:
-                s.recent_gaze = []
-                for p in recent_pupil_positions:
-                    if p['norm_pupil'] is not None:
-                        gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_gaze'])))
-                        p['realtime gaze on '+s.name] = gp_on_s
-                        s.recent_gaze.append(gp_on_s)
 
 
         #allow surfaces to open/close windows
@@ -214,6 +210,9 @@ class Offline_Marker_Detector(Plugin):
                 s.close_window()
             if s.window_should_open:
                 s.open_window()
+
+
+
 
     def init_marker_cacher(self):
         forking_enable(0) #for MacOs only
@@ -268,7 +267,7 @@ class Offline_Marker_Detector(Plugin):
 
        # Lines for areas that have be cached
         cached_ranges = []
-        for r in self.cache.ranges: # [[0,1],[3,4]]
+        for r in self.cache.visited_ranges: # [[0,1],[3,4]]
             cached_ranges += (r[0],0),(r[1],0) #[(0,0),(1,0),(3,0),(4,0)]
 
         # Lines where surfaces have been found in video
@@ -276,7 +275,7 @@ class Offline_Marker_Detector(Plugin):
         for s in self.surfaces:
             found_at = []
             if s.cache is not None:
-                for r in s.cache.ranges: # [[0,1],[3,4]]
+                for r in s.cache.positive_ranges: # [[0,1],[3,4]]
                     found_at += (r[0],0),(r[1],0) #[(0,0),(1,0),(3,0),(4,0)]
                 cached_surfaces.append(found_at)
 
