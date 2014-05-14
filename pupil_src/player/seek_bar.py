@@ -37,7 +37,16 @@ class Seek_Bar(Plugin):
         self.drag_mode = False
         self.was_playing = True
         #display layout
-        self.padding = 20.
+        self.padding = 20. #in sceen pixel
+
+
+    def init_gui(self):
+        self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
+
+    def on_window_resize(self,window,w,h):
+        width,height = w,h
+        self.h_pad = self.padding/width
+        self.v_pad = self.padding/height
 
     def update(self,frame,recent_pupil_positions,events):
         self.current_frame_index = frame.index
@@ -105,10 +114,7 @@ class Seek_Bar(Plugin):
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
-        width,height = glfwGetWindowSize(glfwGetCurrentContext())
-        h_pad = self.padding/width
-        v_pad = self.padding/height
-        gluOrtho2D(-h_pad, 1+h_pad, -v_pad, 1+v_pad) # gl coord convention
+        gluOrtho2D(-self.h_pad, 1+self.h_pad, -self.v_pad, 1+self.v_pad) # gl coord convention
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
         glLoadIdentity()

@@ -10,7 +10,7 @@
 
 import numpy as np
 import cv2
-from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture
+from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture,create_named_texture
 from glfw import *
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
@@ -33,8 +33,11 @@ class Offline_Reference_Surface(Reference_Surface):
         super(Offline_Reference_Surface, self).__init__(name,saved_definition)
         self.gaze_positions_by_frame = gaze_positions_by_frame
         self.cache = None
+        self.gaze_on_srf = [] # points on surface for realtime feedback display
 
-
+        self.heatmap_detail = .1 
+        self.heatmap = None
+        self.heatmap_texture = None
     #cache fn for offline marker
     def locate_from_cache(self,frame_idx):
         if self.cache == None:
@@ -56,7 +59,7 @@ class Offline_Reference_Surface(Reference_Surface):
             self.m_from_screen = cache_result['m_from_screen']
             self.m_to_screen =  cache_result['m_to_screen']       
             self.detected_markers = cache_result['detected_markers']
-            self.gaze_on_srf = [gp['norm_gaze_on_srf'] for gp in cache_result['gaze_on_srf'] ]
+            self.gaze_on_srf = cache_result['gaze_on_srf']
             return True
         raise Exception("Invalid cache entry. Please report Bug.")
 
@@ -133,56 +136,81 @@ class Offline_Reference_Surface(Reference_Surface):
         return gaze_on_src
 
 
-    # def map_gaze_by_frame_onto_srf(self,gaze_by_frame):
-    #     '''
-    #     this fn is not cached and can be slow, dont call every frame...
-    #     '''
 
-    #     gaze_on_srf_by_frame = [[] for i in gaze_by_frame]
+    #### fns to draw surface in seperate window
+    def gl_display_in_window(self,world_tex_id):
+        """
+        here we map a selected surface onto a seperate window.
+        """
+        if self._window and self.detected:
+            active_window = glfwGetCurrentContext()
+            glfwMakeContextCurrent(self._window)
+            clear_gl_screen()
 
-    #     if self.cache:
-    #         for surface_data,gaze_points,result in zip(self.cache,gaze_by_frame,gaze_on_srf_by_frame):
-    #             if surface_data and gaze_points:
-    #                 gaze_points = np.array([d['norm_gaze'] for d in gaze_points if d is not None])
-    #                 gaze_points.shape = (-1,1,2) 
-    #                 gaze_points_on_srf = cv2.perspectiveTransform(gaze_points , surface_data['m_from_screen'] )
-    #                 gaze_points_on_srf.shape = (-1,2) 
-    #                 result.extend(gaze_points_on_srf.tolist())
-    #     return gaze_on_srf_by_frame
+            # cv uses 3x3 gl uses 4x4 tranformation matricies
+            m = cvmat_to_glmat(self.m_from_screen)
+
+            glMatrixMode(GL_PROJECTION)
+            glPushMatrix()
+            glLoadIdentity()
+            gluOrtho2D(0, 1, 0, 1) # gl coord convention
+
+            glMatrixMode(GL_MODELVIEW)
+            glPushMatrix()
+            #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
+            glLoadMatrixf(m)
+
+            draw_named_texture(world_tex_id)
+
+            glMatrixMode(GL_PROJECTION)
+            glPopMatrix()
+            glMatrixMode(GL_MODELVIEW)
+            glPopMatrix()
 
 
-    def save_surface_positions_to_file(self,s):
-        if s.cache == None:
-            logger.warning("The surface is not cached. Please wait for the cacher to collect data.")
-            return
+            if self.heatmap_texture:
+                draw_named_texture(self.heatmap_texture)
 
-        srf_dir = os.path.join(self.g_pool.rec_dir,'surface_data',s.name.replace('/',''),s.uid)
-        logger.info("exporting surface gaze data to %s"%srf_dir)
-        if os.path.isdir(srf_dir):
-            logger.info("Will overwrite previous export for this referece surface")
-        else:
-            try:
-                os.mkdir(srf_dir)
-            except:
-                logger.warning("Could name make export dir %s"%srf_dir)
-                return
+            # now lets get recent pupil positions on this surface:
+            for gp in self.gaze_on_srf:
+                draw_gl_points_norm([gp['norm_gaze_on_srf']],color=(0.,8.,.5,.8), size=80)
+           
+            glfwSwapBuffers(self._window)
+            glfwMakeContextCurrent(active_window)
 
-        # logger.info("Saving surface positon data and gaze on surface data for '%s' with uid:'%'"%(s.name,s.uid))
-        # #save surface_positions as pickle file
-        # save_object(s.cache,os.path.join(srf_dir,'srf_positons_by_frame'))
-        # #save surface_positions as csv
-        # with open(os.path.join(srf_dir,'srf_positons_by_frame.csv','wb')) as csvfile:
-        #     csw_writer =csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        #     csw_writer.writerow(('frame_idx','timestamp','m_to_screen','m_from_screen','detected_markers'))
-        #     for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache)
-        #         if ref_srf_data is not None:
-        #             csw_writer.writerow( (idx,ts,ref_srf_data['m_to_screen'],ref_srf_data['m_from_screen'],ref_srf_data['detected_markers']) )
-        # #save gaze on srf as csv and pickle file
-        # gaze_on_ref
-        # with open(os.path.join(srf_dir,'gaze_positions_on_surface','wb')) as csvfile:
-        #     csw_writer = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        #     csw_writer.writerow(('world_frame_idx','world_timestamp','eye_timestamp','x_norm','y_norm','x_scaled','y_scaled'))
-        #     for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache)
-        #         if ref_srf_data is not None:
-        #             csw_writer.writerow((idx,ts,ref_srf_data['m_to_screen'],ref_srf_data['m_from_screen'],ref_srf_data['detected_markers'])
-        # #save gaze on srf as csv and pickle file
+
+    def generate_heatmap(self):
+
+        x,y = self.scale_factor
+        x = max(1,int(x))
+        y = max(1,int(y))
+
+        filter_size = (int(self.heatmap_detail * x)/2)*2 +1 
+        std_dev = filter_size /6.
+        self.heatmap = np.ones((y,x,4),dtype=np.uint8)
+        all_gaze = []
+        for c_e in self.cache:
+            if c_e:
+                for gp in c_e['gaze_on_srf']:
+                    all_gaze.append(gp['norm_gaze_on_srf'])
+        all_gaze = np.array(all_gaze)
+        all_gaze *= self.scale_factor
+        hist,xedge,yedge = np.histogram2d(all_gaze[:,0], all_gaze[:,1], 
+                                            bins=[x,y], 
+                                            range=[[0, self.scale_factor[0]], [0,self.scale_factor[1]]], 
+                                            normed=False, 
+                                            weights=None)
+
+
+        hist = np.rot90(hist)
+
+        #smoothing..
+        hist = cv2.GaussianBlur(hist, (filter_size,filter_size),std_dev)
+        hist = np.uint8( hist*(255./np.amax(hist) ) )
+
+        #colormapping
+        c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
+
+        self.heatmap[:,:,:3] = c_map
+        self.heatmap[:,:,3] = 125 
+        self.heatmap_texture = create_named_texture(self.heatmap)

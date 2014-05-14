@@ -11,6 +11,7 @@
 import sys, os,platform
 import cv2
 import numpy as np
+import csv
 
 
 if platform.system() == 'Darwin':
@@ -26,7 +27,7 @@ from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 from methods import normalize,denormalize
-from file_methods import Persistent_Dict
+from file_methods import Persistent_Dict,save_object
 from cache_list import Cache_List
 from glfw import *
 import atb
@@ -105,10 +106,13 @@ class Offline_Marker_Detector(Plugin):
         pos = self.gui_settings['pos']
         atb_label = "Marker Detector"
         self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
-            help="circle", color=(150, 150, 50), alpha=50,
+            help="circle", color=(50, 150, 50), alpha=50,
             text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
         self._bar.iconified = self.gui_settings['iconified']
         self.update_bar_markers()
+
+        #set up bar display padding
+        self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 
 
     def unset_alive(self):
@@ -118,6 +122,9 @@ class Offline_Marker_Detector(Plugin):
         return self.surface_definitions.get(var_name,default)
     def save(self, var_name, var):
             self.surface_definitions[var_name] = var
+
+    def on_window_resize(self,window,w,h):
+        self.win_size = w,h
 
 
     def on_click(self,pos,button,action):
@@ -156,12 +163,13 @@ class Offline_Marker_Detector(Plugin):
         self._bar.add_button("  add surface   ", self.add_surface, key='a')
         self._bar.add_var("  edit mode   ", self.surface_edit_mode )
         for s,i in zip(self.surfaces,range(len(self.surfaces)))[::-1]:
-            self._bar.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
             self._bar.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
             self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             self._bar.add_var("%s_x_scale"%i,vtype=c_float, getter=s.atb_get_scale_x, min=1,setter=s.atb_set_scale_x,group=str(i),label='scale factor x', help='the scale factor is used to adjust the coordinate space for your needs (think photo pixels or mm or whatever)' )
             self._bar.add_var("%s_y_scale"%i,vtype=c_float, getter=s.atb_get_scale_y,min=1,setter=s.atb_set_scale_y,group=str(i),label='scale factor y',help='defining x and y scale factor you atumatically set the correct aspect ratio.' )
-            self._bar.add_button("%s_export"%i, s.save_surface_positions_to_file,label='export surface data',group=str(i))
+            self._bar.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
+            self._bar.add_button("%s_hm"%i, s.generate_heatmap, label='generate_heatmap',group=str(i))
+            self._bar.add_button("%s_export"%i, self.save_surface_positions_to_file,data=i, label='export surface data',group=str(i))
             self._bar.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
 
     def update(self,frame,recent_pupil_positions,events):
@@ -196,7 +204,6 @@ class Offline_Marker_Detector(Plugin):
                     new_pos =  s.img_to_ref_surface(np.array(pos))
                     s.move_vertex(v_idx,new_pos)
                     s.cache = None
-                    s.gaze_cache = None
         else:
             # update srf with no or invald cache:
             for s in self.surfaces:
@@ -282,10 +289,12 @@ class Offline_Marker_Detector(Plugin):
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
-        width,height = glfwGetWindowSize(glfwGetCurrentContext())
+        width,height = self.win_size
         h_pad = padding * (self.cache.length-2)/float(width)
         v_pad = padding* 1./(height-2)
         gluOrtho2D(-h_pad,  (self.cache.length-1)+h_pad, -v_pad, 1+v_pad) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
+
+
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
         glLoadIdentity()
@@ -305,6 +314,56 @@ class Offline_Marker_Detector(Plugin):
         glPopMatrix()
 
 
+    def save_surface_positions_to_file(self,i):
+        s = self.surfaces[i]
+
+        if s.cache == None:
+            logger.warning("The surface is not cached. Please wait for the cacher to collect data.")
+            return
+
+        srf_dir = os.path.join(self.g_pool.rec_dir,'surface_data'+'_'+s.name.replace('/','')+'_'+s.uid)
+        logger.info("exporting surface gaze data to %s"%srf_dir)
+        if os.path.isdir(srf_dir):
+            logger.info("Will overwrite previous export for this referece surface")
+        else:
+            try:
+                os.mkdir(srf_dir)
+            except:
+                logger.warning("Could name make export dir %s"%srf_dir)
+                return
+
+        #save surface_positions as pickle file
+        save_object(s.cache.to_list(),os.path.join(srf_dir,'srf_positons'))
+
+
+        #save surface_positions as csv
+        with open(os.path.join(srf_dir,'srf_positons.csv'),'wb') as csvfile:
+            csw_writer =csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            csw_writer.writerow(('frame_idx','timestamp','m_to_screen','m_from_screen','detected_markers'))
+            for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
+                if ref_srf_data is not None and ref_srf_data is not False:
+                    csw_writer.writerow( (idx,ts,ref_srf_data['m_to_screen'],ref_srf_data['m_from_screen'],ref_srf_data['detected_markers']) )
+
+
+        #save gaze on srf as csv.
+        with open(os.path.join(srf_dir,'gaze_positions_on_surface.csv'),'wb') as csvfile:
+            csw_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            csw_writer.writerow(('world_frame_idx','world_timestamp','eye_timestamp','x_norm','y_norm','x_scaled','y_scaled','on_srf'))
+            for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
+                if ref_srf_data is not None and ref_srf_data is not False:
+                    for gp in ref_srf_data['gaze_on_srf']:
+                        gp_x,gp_y = gp['norm_gaze_on_srf']
+                        on_srf = (0 <= gp_x <= 1) and (0 <= gp_y <= 1)
+                        csw_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.scale_factor[0],gp_x*s.scale_factor[1],on_srf) )
+
+        logger.info("Saved surface positon data and gaze on surface data for '%s' with uid:'%s'"%(s.name,s.uid))
+
+        if s.heatmap is not None:
+            logger.info("Saved Heatmap as .png file.")
+            cv2.imwrite(os.path.join(srf_dir,'heatmap.png'),s.heatmap)
+
+
+
 
     def get_init_dict(self):
         d = {}
@@ -313,7 +372,6 @@ class Offline_Marker_Detector(Plugin):
             d['gui_settings'] = gui_settings
 
         return d
-
 
     def cleanup(self):
         """ called when the plugin gets terminated.
@@ -330,5 +388,4 @@ class Offline_Marker_Detector(Plugin):
 
         for s in self.surfaces:
             s.close_window()
-        self._bar.destroy()
         self._bar.destroy()

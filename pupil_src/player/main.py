@@ -130,6 +130,8 @@ def main():
         fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
         atb.TwWindowSize(*map(int,fb_size))
         glfwMakeContextCurrent(active_window)
+        for p in g.plugins:
+            p.on_window_resize(window,w,h)
 
     def on_key(window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,action):
@@ -160,14 +162,14 @@ def main():
 
     def on_close(window):
         glfwSetWindowShouldClose(main_window,True)
-        logger.info('Process closing from window')
+        logger.debug('Process closing from window')
 
 
     try:
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/home/mkassner/Desktop/002'
+        rec_dir = '/home/mkassner/Desktop/007'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:

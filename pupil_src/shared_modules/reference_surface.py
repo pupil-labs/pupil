@@ -10,7 +10,7 @@
 
 import numpy as np
 import cv2
-from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture
+from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture,make_coord_system_norm_based
 from glfw import *
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
@@ -249,17 +249,6 @@ class Reference_Surface(object):
         else:
             return None
 
-    def gaze_on_srf(self,gaze_positions,m_from_screen):
-        if self.m_from_screen is None:
-            return None
-        gaze_on_src = []
-        for g_p in gaze_positions:
-            gaze_points = np.array([g_p['norm_gaze']]).reshape(1,1,2) 
-            gaze_points_on_srf = cv2.perspectiveTransform(gaze_points , m_from_screen )
-            gaze_points_on_srf.shape = (2) 
-            gaze_on_src.append( {'norm_gaze_on_srf':(gaze_points_on_srf[0],gaze_points_on_srf[1]),'timestamp':g_p['timestamp'] } )
-        return gaze_on_src
-
 
     def move_vertex(self,vert_idx,new_pos):
         """
@@ -321,7 +310,7 @@ class Reference_Surface(object):
 
 
 
-    #### fns to draw surface in seperate window
+    #### fns to draw surface in separate window
     def gl_display_in_window(self,world_tex_id):
         """
         here we map a selected surface onto a seperate window.
@@ -392,6 +381,8 @@ class Reference_Surface(object):
             active_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self._window)
             basic_gl_setup()
+            make_coord_system_norm_based()
+
 
             # refresh speed settings
             glfwSwapInterval(0)

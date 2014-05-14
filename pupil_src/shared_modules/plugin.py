@@ -53,6 +53,13 @@ class Plugin(object):
         """
         pass
 
+    def on_window_resize(self,window,w,h):
+        '''
+        gets called when user resizes window. 
+        window is the glfw window handle of the resized window.
+        '''
+        pass
+        
     def update(self,frame,recent_pupil_positions,events):
         """
         gets called once every frame
@@ -60,6 +67,8 @@ class Plugin(object):
         Use self.order to deal with this appropriately
         """
         pass
+
+
 
     def gl_display(self):
         """
