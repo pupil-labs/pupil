@@ -35,6 +35,7 @@ def m_verts_from_screen(verts):
     return cv2.getPerspectiveTransform(verts,mapped_space_one)
 
 
+
 class Reference_Surface(object):
     """docstring for Reference Surface
 
@@ -96,6 +97,7 @@ class Reference_Surface(object):
         #primary_monitor = glfwGetPrimaryMonitor()
 
         self.gaze_on_srf = [] # points on surface for realtime feedback display
+
 
     def save_to_dict(self):
         """
@@ -226,7 +228,6 @@ class Reference_Surface(object):
                 self.m_to_screen = None
 
 
-
     def img_to_ref_surface(self,pos):
         if self.m_from_screen is not None:
             #convenience lines to allow 'simple' vectors (x,y) to be used
@@ -248,6 +249,7 @@ class Reference_Surface(object):
             return new_pos
         else:
             return None
+
 
 
     def move_vertex(self,vert_idx,new_pos):
