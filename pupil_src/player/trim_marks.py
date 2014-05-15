@@ -18,22 +18,36 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-class Seek_Bar(Plugin):
-    """docstring for Seek_Bar
-    seek bar displays a bar at the bottom of the screen when you hover close to it.
-    it will show the current positon and allow you to drag to any postion in the video file.
+class Trim_Marks(Plugin):
+    """docstring for Trim_Mark
     """
     def __init__(self, g_pool,capture):
-        super(Seek_Bar, self).__init__()
+        super(Trim_Marks, self).__init__()
+        self.order = .8
         self.g_pool = g_pool
-        self.cap = capture
-        self.current_frame_index = self.cap.get_frame_index()
-        self.frame_count = self.cap.get_frame_count()
-
-        self.drag_mode = False
-        self.was_playing = True
+        self.frame_count = capture.get_frame_count()
+        self._in_mark = 0
+        self._out_mark = self.frame_count
+        self.drag_in = False
+        self.drag_out = False
         #display layout
         self.padding = 20. #in sceen pixel
+
+    @property
+    def in_mark(self):
+        return self._in_mark
+
+    @in_mark.setter
+    def in_mark(self, value):
+        self._in_mark = int(min(self._out_mark,max(0,value)))
+
+    @property
+    def out_mark(self):
+        return self._out_mark
+
+    @out_mark.setter
+    def out_mark(self, value):
+        self._out_mark = int(min(self.frame_count,max(self.in_mark,value)))
 
 
     def init_gui(self):
@@ -45,20 +59,19 @@ class Seek_Bar(Plugin):
         self.v_pad = self.padding * 1./h
 
     def update(self,frame,recent_pupil_positions,events):
-        self.current_frame_index = frame.index
 
-        if self.drag_mode:
+        if frame.index == self.out_mark or frame.index == self.in_mark:
+            self.g_pool.play=False
+
+        if self.drag_in:
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
-            x,_ = self.screen_to_seek_bar((x,y))
-            seek_pos = min(self.frame_count,max(0,x))
-            if abs(seek_pos-self.current_frame_index) >=.002*self.frame_count:
-                seek_pos = int(min(seek_pos,self.frame_count-5)) #the last frames can be problematic to seek to
-                try:
-                    self.cap.seek_to_frame(seek_pos)
-                    self.current_frame_index = seek_pos
-                except:
-                    pass
-                self.g_pool.new_seek = True
+            x,_ = self.screen_to_bar_space((x,y))
+            self.in_mark = x
+
+        elif self.drag_out:
+            x,y = glfwGetCursorPos(glfwGetCurrentContext())
+            x,_ = self.screen_to_bar_space((x,y))
+            self.out_mark = x
 
 
     def on_click(self,img_pos,button,action):
@@ -68,27 +81,33 @@ class Seek_Bar(Plugin):
         pos = glfwGetCursorPos(glfwGetCurrentContext())
         #drag the seek point
         if action == GLFW_PRESS:
-            screen_seek_pos = self.seek_bar_to_screen((self.current_frame_index,0))
-            dist = abs(pos[0]-screen_seek_pos[0])+abs(pos[1]-screen_seek_pos[1])
-            if dist < 20:
-                self.drag_mode=True
-                self.was_playing = self.g_pool.play
-                self.g_pool.play = False
+            screen_in_mark_pos = self.bar_space_to_screen((self.in_mark,0))
+            screen_out_mark_pos = self.bar_space_to_screen((self.out_mark,0))
+
+            #in mark
+            dist = abs(pos[0]-screen_in_mark_pos[0])+abs(pos[1]-screen_in_mark_pos[1])
+            if dist < 10:
+                self.drag_in=True
+                return
+            #out mark
+            dist = abs(pos[0]-screen_out_mark_pos[0])+abs(pos[1]-screen_out_mark_pos[1])
+            if dist < 10:
+                self.drag_out=True
 
         elif action == GLFW_RELEASE:
-            if self.drag_mode:
-                x, _ = self.screen_to_seek_bar(pos)
-                x = int(min(self.frame_count-5,max(0,x)))
-                try:
-                    self.cap.seek_to_frame(x)
-                except:
-                    pass
-                self.g_pool.new_seek = True
-                self.drag_mode=False
-                self.g_pool.play = self.was_playing
+            self.drag_out = False
+            self.drag_in = False
 
+    def atb_get_in_mark(self):
+        return self.in_mark
+    def atb_get_out_mark(self):
+        return self.out_mark
+    def atb_set_in_mark(self,val):
+        self.in_mark = val
+    def atb_set_out_mark(self,val):
+        self.out_mark = val
 
-    def seek_bar_to_screen(self,pos):
+    def bar_space_to_screen(self,pos):
         width,height = self.window_size
         x,y=pos
         y = 1-y
@@ -97,7 +116,7 @@ class Seek_Bar(Plugin):
         return x,y
 
 
-    def screen_to_seek_bar(self,pos):
+    def screen_to_bar_space(self,pos):
         width,height = glfwGetWindowSize(glfwGetCurrentContext())
         x,y=pos
         x  = (x-self.padding)/(width-2*self.padding)*self.frame_count
@@ -114,17 +133,13 @@ class Seek_Bar(Plugin):
         glPushMatrix()
         glLoadIdentity()
 
-        if self.drag_mode:
-            color1 = (0.,.8,.5,.5)
-            color2 = (0.,.8,.5,1.)
-        else:
-            color1 = (.25,.8,.8,.5)
-            color2 = (.25,.8,.8,1.)
+        color1 = (.1,.9,.2,.5)
+        color2 = (.1,.9,.2,.5)
 
-        draw_gl_polyline( [(0,0),(self.current_frame_index,0)],color=color1)
-        draw_gl_polyline( [(self.current_frame_index,0),(self.frame_count,0)],color=(.5,.5,.5,.5))
-        draw_gl_point((self.current_frame_index,0),color=color1,size=40)
-        draw_gl_point((self.current_frame_index,0),color=color2,size=10)
+        if self.in_mark != 0 or self.out_mark != self.frame_count:
+            draw_gl_polyline( [(self.in_mark,0),(self.out_mark,0)],color=(.1,.9,.2,.5),thickness=2)
+        draw_gl_point((self.in_mark,0),color=color2,size=10)
+        draw_gl_point((self.out_mark,0),color=color2,size=10)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()

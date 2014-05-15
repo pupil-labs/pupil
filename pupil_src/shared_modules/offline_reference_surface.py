@@ -29,8 +29,9 @@ from reference_surface import Reference_Surface
 
 class Offline_Reference_Surface(Reference_Surface):
     """docstring for Offline_Reference_Surface"""
-    def __init__(self,name="unnamed",saved_definition=None, gaze_positions_by_frame = None):
+    def __init__(self,g_pool,name="unnamed",saved_definition=None, gaze_positions_by_frame = None):
         super(Offline_Reference_Surface, self).__init__(name,saved_definition)
+        self.g_pool = g_pool
         self.gaze_positions_by_frame = gaze_positions_by_frame
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
@@ -181,6 +182,9 @@ class Offline_Reference_Surface(Reference_Surface):
 
     def generate_heatmap(self):
 
+        in_mark = self.g_pool.trim_marks.in_mark
+        out_mark = self.g_pool.trim_marks.out_mark
+
         x,y = self.scale_factor
         x = max(1,int(x))
         y = max(1,int(y))
@@ -189,10 +193,15 @@ class Offline_Reference_Surface(Reference_Surface):
         std_dev = filter_size /6.
         self.heatmap = np.ones((y,x,4),dtype=np.uint8)
         all_gaze = []
-        for c_e in self.cache:
-            if c_e:
-                for gp in c_e['gaze_on_srf']:
-                    all_gaze.append(gp['norm_gaze_on_srf'])
+        for idx,c_e in enumerate(self.cache):
+            if in_mark <= idx <= out_mark:
+                if c_e:
+                    for gp in c_e['gaze_on_srf']:
+                        all_gaze.append(gp['norm_gaze_on_srf'])
+
+        if not all_gaze:
+            logger.warning("No gaze data on surface for heatmap found.")
+            all_gaze.append((-1.,-1.))
         all_gaze = np.array(all_gaze)
         all_gaze *= self.scale_factor
         hist,xedge,yedge = np.histogram2d(all_gaze[:,0], all_gaze[:,1], 
@@ -206,7 +215,13 @@ class Offline_Reference_Surface(Reference_Surface):
 
         #smoothing..
         hist = cv2.GaussianBlur(hist, (filter_size,filter_size),std_dev)
-        hist = np.uint8( hist*(255./np.amax(hist) ) )
+        maxval = np.amax(hist)
+        if maxval:
+            scale = 255./maxval
+        else:
+            scale = 0
+        
+        hist = np.uint8( hist*(scale) )
 
         #colormapping
         c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)

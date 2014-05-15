@@ -105,6 +105,7 @@ from vis_polyline import Vis_Polyline
 from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
 from seek_bar import Seek_Bar
+from trim_marks import Trim_Marks
 from export_launcher import Export_Launcher
 from scan_path import Scan_Path
 from offline_marker_detector import Offline_Marker_Detector
@@ -249,6 +250,7 @@ def main():
     g.plugins = []
     g.play = False
     g.new_seek = True
+    g.trim_marks = [0,cap.get_frame_count()]
     g.user_dir = user_dir
     g.rec_dir = rec_dir
     g.app = 'player'
@@ -275,7 +277,7 @@ def main():
         """
         helper for atb getter and setter use
         """
-        return data.value
+        return data.valuescale
 
     def get_play():
         return g.play
@@ -359,6 +361,8 @@ def main():
     #we always load these plugins
     g.plugins.append(Export_Launcher(g,data_dir=rec_dir,frame_count=len(timestamps)))
     g.plugins.append(Seek_Bar(g,capture=cap))
+    g.trim_marks = Trim_Marks(g,capture=cap)
+    g.plugins.append(g.trim_marks)
 
     #these are loaded based on user settings
     for initializer in load('plugins',[]):

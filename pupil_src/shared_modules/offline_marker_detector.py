@@ -70,10 +70,10 @@ class Offline_Marker_Detector(Plugin):
         self.surface_definitions = Persistent_Dict(os.path.join(g_pool.rec_dir,'surface_definitions'))
         if self.load('offline_square_marker_surfaces',[]) != []:
             logger.debug("Found ref surfaces defined or copied in previous session.")
-            self.surfaces = [Offline_Reference_Surface(saved_definition=d,gaze_positions_by_frame=self.g_pool.positions_by_frame) for d in self.load('offline_square_marker_surfaces',[]) if isinstance(d,dict)]
+            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d,gaze_positions_by_frame=self.g_pool.positions_by_frame) for d in self.load('offline_square_marker_surfaces',[]) if isinstance(d,dict)]
         elif self.load('offline_square_marker_surfaces',[]) != []:
             logger.debug("Did not find ref surfaces def created or used by the user in player from earlier session. Loading surfaces defined during capture.")
-            self.surfaces = [Offline_Reference_Surface(saved_definition=d,gaze_positions_by_frame=self.g_pool.positions_by_frame) for d in self.load('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d,gaze_positions_by_frame=self.g_pool.positions_by_frame) for d in self.load('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
         else:
             logger.debug("No surface defs found. Please define using GUI.")
             self.surfaces = []
@@ -149,7 +149,7 @@ class Offline_Marker_Detector(Plugin):
         pass
 
     def add_surface(self):
-        self.surfaces.append(Offline_Reference_Surface(gaze_positions_by_frame=self.g_pool.positions_by_frame))
+        self.surfaces.append(Offline_Reference_Surface(self.g_pool,gaze_positions_by_frame=self.g_pool.positions_by_frame))
         self.update_bar_markers()
 
     def remove_surface(self,i):
@@ -319,6 +319,9 @@ class Offline_Marker_Detector(Plugin):
     def save_surface_positions_to_file(self,i):
         s = self.surfaces[i]
 
+        in_mark = self.g_pool.trim_marks.in_mark
+        out_mark = self.g_pool.trim_marks.out_mark
+
         if s.cache == None:
             logger.warning("The surface is not cached. Please wait for the cacher to collect data.")
             return
@@ -337,14 +340,14 @@ class Offline_Marker_Detector(Plugin):
         #save surface_positions as pickle file
         save_object(s.cache.to_list(),os.path.join(srf_dir,'srf_positons'))
 
-
         #save surface_positions as csv
         with open(os.path.join(srf_dir,'srf_positons.csv'),'wb') as csvfile:
             csw_writer =csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
             csw_writer.writerow(('frame_idx','timestamp','m_to_screen','m_from_screen','detected_markers'))
             for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
-                if ref_srf_data is not None and ref_srf_data is not False:
-                    csw_writer.writerow( (idx,ts,ref_srf_data['m_to_screen'],ref_srf_data['m_from_screen'],ref_srf_data['detected_markers']) )
+                if in_mark <= idx <= out_mark:
+                    if ref_srf_data is not None and ref_srf_data is not False:
+                        csw_writer.writerow( (idx,ts,ref_srf_data['m_to_screen'],ref_srf_data['m_from_screen'],ref_srf_data['detected_markers']) )
 
 
         #save gaze on srf as csv.
@@ -352,11 +355,12 @@ class Offline_Marker_Detector(Plugin):
             csw_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
             csw_writer.writerow(('world_frame_idx','world_timestamp','eye_timestamp','x_norm','y_norm','x_scaled','y_scaled','on_srf'))
             for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
-                if ref_srf_data is not None and ref_srf_data is not False:
-                    for gp in ref_srf_data['gaze_on_srf']:
-                        gp_x,gp_y = gp['norm_gaze_on_srf']
-                        on_srf = (0 <= gp_x <= 1) and (0 <= gp_y <= 1)
-                        csw_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.scale_factor[0],gp_x*s.scale_factor[1],on_srf) )
+                if in_mark <= idx <= out_mark:
+                    if ref_srf_data is not None and ref_srf_data is not False:
+                        for gp in ref_srf_data['gaze_on_srf']:
+                            gp_x,gp_y = gp['norm_gaze_on_srf']
+                            on_srf = (0 <= gp_x <= 1) and (0 <= gp_y <= 1)
+                            csw_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.scale_factor[0],gp_x*s.scale_factor[1],on_srf) )
 
         logger.info("Saved surface positon data and gaze on surface data for '%s' with uid:'%s'"%(s.name,s.uid))
 
