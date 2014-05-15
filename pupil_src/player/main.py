@@ -250,7 +250,6 @@ def main():
     g.plugins = []
     g.play = False
     g.new_seek = True
-    g.trim_marks = [0,cap.get_frame_count()]
     g.user_dir = user_dir
     g.rec_dir = rec_dir
     g.app = 'player'
@@ -277,7 +276,7 @@ def main():
         """
         helper for atb getter and setter use
         """
-        return data.valuescale
+        return data.value
 
     def get_play():
         return g.play
