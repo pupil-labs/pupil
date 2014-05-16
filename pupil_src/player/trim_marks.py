@@ -25,6 +25,7 @@ class Trim_Marks(Plugin):
         super(Trim_Marks, self).__init__()
         self.order = .8
         self.g_pool = g_pool
+        self.capture = capture
         self.frame_count = capture.get_frame_count()
         self._in_mark = 0
         self._out_mark = self.frame_count
@@ -87,12 +88,14 @@ class Trim_Marks(Plugin):
             #in mark
             dist = abs(pos[0]-screen_in_mark_pos[0])+abs(pos[1]-screen_in_mark_pos[1])
             if dist < 10:
-                self.drag_in=True
-                return
+                if self.distance_in_pix(self.in_mark,self.capture.get_frame_index()) > 20:
+                    self.drag_in=True
+                    return
             #out mark
             dist = abs(pos[0]-screen_out_mark_pos[0])+abs(pos[1]-screen_out_mark_pos[1])
             if dist < 10:
-                self.drag_out=True
+                if self.distance_in_pix(self.out_mark,self.capture.get_frame_index()) > 20:
+                    self.drag_out=True
 
         elif action == GLFW_RELEASE:
             self.drag_out = False
@@ -106,6 +109,12 @@ class Trim_Marks(Plugin):
         self.in_mark = val
     def atb_set_out_mark(self,val):
         self.out_mark = val
+
+    def distance_in_pix(self,frame_pos_0,frame_pos_1):
+        fr0_screen_x,_ = self.bar_space_to_screen((frame_pos_0,0))
+        fr1_screen_x,_ = self.bar_space_to_screen((frame_pos_1,0))
+        return abs(fr0_screen_x-fr1_screen_x)
+
 
     def bar_space_to_screen(self,pos):
         width,height = self.window_size
