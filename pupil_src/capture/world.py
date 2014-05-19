@@ -64,7 +64,7 @@ def world(g_pool,cap_src,cap_size):
         atb.TwWindowSize(*map(int,fb_size))
         adjust_gl_view(w,h,window)
         glfwMakeContextCurrent(active_window)
-        for p in g.plugins:
+        for p in g_pool.plugins:
             p.on_window_resize(window,w,h)
 
     def on_iconify(window,iconfied):
