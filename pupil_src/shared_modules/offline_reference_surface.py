@@ -36,7 +36,7 @@ class Offline_Reference_Surface(Reference_Surface):
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
 
-        self.heatmap_detail = .1 
+        self.heatmap_detail = .2 
         self.heatmap = None
         self.heatmap_texture = None
     #cache fn for offline marker
@@ -77,7 +77,8 @@ class Offline_Reference_Surface(Reference_Surface):
         # iterations = 0
  
         if self.cache == None:
-            self.init_cache(marker_cache)       
+            pass
+            # self.init_cache(marker_cache)       
         elif idx != None:
             #update single data pt
             self.cache.update(idx,self.answer_caching_request(marker_cache,idx))
