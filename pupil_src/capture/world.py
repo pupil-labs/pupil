@@ -113,29 +113,10 @@ def world(g_pool,cap_src,cap_size):
         session_settings[var_name] = var
 
 
-    # load last calibration data
-    try:
-        pt_cloud = np.load(os.path.join(g_pool.user_dir,'cal_pt_cloud.npy'))
-        logger.info("Using calibration found in %s" %g_pool.user_dir)
-        map_pupil = calibrate.get_map_from_cloud(pt_cloud,(width,height))
-    except:
-        logger.info("No calibration found.")
-        def map_pupil(vector):
-            """ 1 to 1 mapping
-            """
-            return vector
 
-    # any object we attach to the g_pool object *from now on* will only be visible to this process!
-    # vars should be declared here to make them visible to the code reader.
-    g_pool.plugins = []
-    g_pool.map_pupil = map_pupil
-    g_pool.update_textures = c_bool(1)
 
     # Initialize capture
     cap = autoCreateCapture(cap_src, cap_size, 24, timebase=g_pool.timebase)
-
-    if isinstance(cap,FakeCapture):
-        g_pool.update_textures.value = False
 
      # Get an image from the grabber
     try:
@@ -144,9 +125,29 @@ def world(g_pool,cap_src,cap_size):
         logger.error("Could not retrieve image from capture")
         cap.close()
         return
-
     height,width = frame.img.shape[:2]
+
+    # load last calibration data
+    try:
+        pt_cloud = np.load(os.path.join(g_pool.user_dir,'cal_pt_cloud.npy'))
+        logger.debug("Using calibration found in %s" %g_pool.user_dir)
+        map_pupil = calibrate.get_map_from_cloud(pt_cloud,(width,height))
+    except :
+        logger.debug("No calibration found.")
+        def map_pupil(vector):
+            """ 1 to 1 mapping """
+            return vector
+
+       
+    # any object we attach to the g_pool object *from now on* will only be visible to this process!
+    # vars should be declared here to make them visible to the code reader.
+    g_pool.plugins = []
+    g_pool.map_pupil = map_pupil
+    g_pool.update_textures = c_bool(1)
+    if isinstance(cap,FakeCapture):
+        g_pool.update_textures.value = False
     g_pool.capture = cap
+
 
     # helpers called by the main atb bar
     def update_fps():
@@ -337,7 +338,6 @@ def world(g_pool,cap_src,cap_size):
 
         #check if a plugin need to be destroyed
         g_pool.plugins = [p for p in g_pool.plugins if p.alive]
-
 
         # render camera image
         glfwMakeContextCurrent(world_window)
