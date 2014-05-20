@@ -71,7 +71,7 @@ class Offline_Marker_Detector(Plugin):
         if self.load('offline_square_marker_surfaces',[]) != []:
             logger.debug("Found ref surfaces defined or copied in previous session.")
             self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d,gaze_positions_by_frame=self.g_pool.positions_by_frame) for d in self.load('offline_square_marker_surfaces',[]) if isinstance(d,dict)]
-        elif self.load('offline_square_marker_surfaces',[]) != []:
+        elif self.load('realtime_square_marker_surfaces',[]) != []:
             logger.debug("Did not find ref surfaces def created or used by the user in player from earlier session. Loading surfaces defined during capture.")
             self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d,gaze_positions_by_frame=self.g_pool.positions_by_frame) for d in self.load('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
         else:

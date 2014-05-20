@@ -201,8 +201,7 @@ class Marker_Detector(Plugin):
         This happends either voluntary or forced.
         if you have an atb bar or glfw window destroy it here.
         """
-        if self.g_pool.app == 'capture':
-            self.save("realtime_square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
+        self.save("realtime_square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
 
         self.surface_definitions.close()
 
