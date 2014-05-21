@@ -54,6 +54,7 @@ class Offline_Reference_Surface(Reference_Surface):
             self.m_from_screen = None
             self.m_to_screen = None
             self.gaze_on_srf = []
+            self.detected_markers = 0
             return True
         else:
             self.detected = True

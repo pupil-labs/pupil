@@ -166,8 +166,8 @@ class Offline_Marker_Detector(Plugin):
         for s,i in zip(self.surfaces,range(len(self.surfaces)))[::-1]:
             self._bar.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
             self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
-            self._bar.add_var("%s_x_scale"%i,vtype=c_float, getter=s.atb_get_scale_x, min=1,setter=s.atb_set_scale_x,group=str(i),label='scale factor x', help='the scale factor is used to adjust the coordinate space for your needs (think photo pixels or mm or whatever)' )
-            self._bar.add_var("%s_y_scale"%i,vtype=c_float, getter=s.atb_get_scale_y,min=1,setter=s.atb_set_scale_y,group=str(i),label='scale factor y',help='defining x and y scale factor you atumatically set the correct aspect ratio.' )
+            self._bar.add_var("%s_x_scale"%i,vtype=c_float, getter=s.atb_get_scale_x, min=1,setter=s.atb_set_scale_x,group=str(i),label='real width', help='this scale factor is used to adjust the coordinate space for your needs (think photo pixels or mm or whatever)' )
+            self._bar.add_var("%s_y_scale"%i,vtype=c_float, getter=s.atb_get_scale_y,min=1,setter=s.atb_set_scale_y,group=str(i),label='real height',help='defining x and y scale factor you atumatically set the correct aspect ratio.' )
             self._bar.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
             self._bar.add_button("%s_hm"%i, s.generate_heatmap, label='generate_heatmap',group=str(i))
             self._bar.add_button("%s_export"%i, self.save_surface_positions_to_file,data=i, label='export surface data',group=str(i))
