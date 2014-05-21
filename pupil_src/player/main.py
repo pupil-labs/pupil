@@ -1,4 +1,5 @@
 '''
+
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
  Copyright (C) 2012-2014  Pupil Labs
@@ -474,7 +475,7 @@ def main():
 
 if __name__ == '__main__':
     freeze_support()
-    if 0:
+    if 1:
         main()
     else:
         import cProfile,subprocess,os
