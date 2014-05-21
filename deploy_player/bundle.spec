@@ -28,7 +28,7 @@ if platform.system() == 'Darwin':
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
                    [('uvcc.so', '../pupil_src/shared_modules/uvc_capture/mac_video/uvcc.so','BINARY')],
                    [('libAntTweakBar.dylib', '/usr/local/Cellar/anttweakbar/1.16/lib/libAntTweakBar.dylib','BINARY')],
-                   [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.0.4/lib/libglfw3.dylib','BINARY')],
+                   [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.0.2/lib/libglfw3.dylib','BINARY')],
                    strip=None,
                    upx=True,
                    name='Pupil Player')
