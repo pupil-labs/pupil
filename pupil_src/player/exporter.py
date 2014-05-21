@@ -146,7 +146,7 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
             p = plugin_by_name[name](g,**args)
             plugins.append(p)
         except:
-            logger.warning("Plugin '%s' failed to load." %name)
+            logger.warning("Plugin '%s' could not be loaded in exporter." %name)
 
 
     while frames_to_export.value - current_frame.value > 0:

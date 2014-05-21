@@ -10,7 +10,7 @@
 
 import os
 from time import time, sleep
-import shelve
+from file_methods import Persistent_Dict
 import logging
 from ctypes import c_int,c_bool,c_float
 import numpy as np
@@ -119,7 +119,7 @@ def eye(g_pool,cap_src,cap_size):
 
 
     # load session persistent settings
-    session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_eye'),protocol=2)
+    session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye') )
     def load(var_name,default):
         return session_settings.get(var_name,default)
     def save(var_name,var):

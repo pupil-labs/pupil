@@ -43,7 +43,7 @@ else:
     from other_video import Camera_Capture,Camera_List,CameraCaptureError
 
 from fake_capture import FakeCapture
-from file_capture import File_Capture, FileCaptureError, EndofVideoFileError
+from file_capture import File_Capture, FileCaptureError, EndofVideoFileError,FileSeekError
 
 
 def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None):

@@ -44,6 +44,12 @@ class EndofVideoFileError(Exception):
         self.arg = arg
 
 
+class FileSeekError(Exception):
+    """docstring for EndofVideoFileError"""
+    def __init__(self):
+        super(FileSeekError, self).__init__()
+
+
 class Frame(object):
     """docstring of Frame"""
     def __init__(self, timestamp,img,index=None,compressed_img=None, compressed_pix_fmt=None):
@@ -65,7 +71,7 @@ class File_Capture():
         self.controls = None #No UVC controls available with file capture
         # we initialize the actual capture based on cv2.VideoCapture
         self.cap = cv2.VideoCapture(src)
-        if timestamps is None:
+        if timestamps is None and src.endswith("eye.avi"):
             timestamps_loc = os.path.join(src.rsplit(os.path.sep,1)[0],'eye_timestamps.npy')
             logger.debug("trying to auto load eye_video timestamps with video at: %s"%timestamps_loc)
         else:
@@ -120,11 +126,29 @@ class File_Capture():
         return Frame(timestamp,img,index=idx)
 
     def seek_to_frame(self, seek_pos):
-        logger.debug("seeking to frame: %s"%seek_pos)
         if self.cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES,seek_pos):
-            return True
+            offset = seek_pos - self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
+            if offset == 0:
+                logger.debug("Seeked to frame: %s"%self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
+                return
+            # elif 0 < offset < 100:
+            #     offset +=10
+            #     if not self.seek_to_frame(seek_pos-offset):
+            #         logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
+            #         return False
+            #     logger.warning("Seek was not precice need to do manual seek for %s frames"%offset)
+            #     while seek_pos != self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES):
+            #         try:
+            #             self.read()
+            #         except EndofVideoFileError:
+            #             logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
+            #     return True
+            else:
+                logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
+                raise FileSeekError()
         logger.error("Could not perform seek on cv2.VideoCapture. Command gave negative return.")
-        return False
+        raise FileSeekError()
+
 
     def get_now(self):
         idx = int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))

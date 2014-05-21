@@ -46,7 +46,7 @@ if not os.path.isdir(user_dir):
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARNING)
 #since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
     if __name__ == '__main__': #clear log if main
@@ -72,7 +72,7 @@ logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
 
-import shelve
+from file_methods import Persistent_Dict
 from time import time,sleep
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
@@ -81,7 +81,7 @@ import numpy as np
 from glfw import *
 import atb
 
-from uvc_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
+from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
@@ -105,14 +105,15 @@ from vis_polyline import Vis_Polyline
 from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
 from seek_bar import Seek_Bar
+from trim_marks import Trim_Marks
 from export_launcher import Export_Launcher
 from scan_path import Scan_Path
-from marker_detector import Marker_Detector
+from offline_marker_detector import Offline_Marker_Detector
 from pupil_server import Pupil_Server
 from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
 
-plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Marker_Detector,Pupil_Server)
+plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Pupil_Server)
 name_by_index = [p.__name__ for p in plugin_by_index]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
@@ -130,6 +131,8 @@ def main():
         fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
         atb.TwWindowSize(*map(int,fb_size))
         glfwMakeContextCurrent(active_window)
+        for p in g.plugins:
+            p.on_window_resize(window,w,h)
 
     def on_key(window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,action):
@@ -160,14 +163,14 @@ def main():
 
     def on_close(window):
         glfwSetWindowShouldClose(main_window,True)
-        logger.info('Process closing from window')
+        logger.debug('Process closing from window')
 
 
     try:
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = "/Users/mkassner/Downloads/1-4/000/"
+        rec_dir = '/home/mkassner/Desktop/003'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
@@ -210,7 +213,7 @@ def main():
 
 
     # load session persistent settings
-    session_settings = shelve.open(os.path.join(user_dir,"user_settings"),protocol=2)
+    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
     def load(var_name,default):
         return session_settings.get(var_name,default)
     def save(var_name,var):
@@ -242,7 +245,7 @@ def main():
     glfwSetScrollCallback(main_window,on_scroll)
 
 
-    # create container for globally scoped vars (within world)
+    # create container for globally scoped varfs (within world)
     g = Temp()
     g.plugins = []
     g.play = False
@@ -250,6 +253,8 @@ def main():
     g.user_dir = user_dir
     g.rec_dir = rec_dir
     g.app = 'player'
+    g.timestamps = timestamps
+    g.positions_by_frame = positions_by_frame
 
 
 
@@ -280,11 +285,17 @@ def main():
         g.play = value
 
     def next_frame():
-        cap.seek_to_frame(cap.get_frame_index())
+        try:
+            cap.seek_to_frame(cap.get_frame_index())
+        except FileSeekError:
+            pass
         g.new_seek = True
 
     def prev_frame():
-        cap.seek_to_frame(cap.get_frame_index()-2)
+        try:
+            cap.seek_to_frame(cap.get_frame_index()-2)
+        except FileSeekError:
+            pass
         g.new_seek = True
 
 
@@ -331,7 +342,7 @@ def main():
     bar.add_var("play",vtype=c_bool,getter=get_play,setter=set_play,key="space")
     bar.add_button('step next',next_frame,key='right')
     bar.add_button('step prev',prev_frame,key='left')
-    bar.add_var("frame index",getter=lambda:cap.get_frame_index()-1 )
+    bar.add_var("frame index",vtype=c_int,getter=lambda:cap.get_frame_index()-1 )
 
     bar.plugin_to_load = c_int(0)
     plugin_type_enum = atb.enum("Plug In",index_by_name)
@@ -349,6 +360,8 @@ def main():
     #we always load these plugins
     g.plugins.append(Export_Launcher(g,data_dir=rec_dir,frame_count=len(timestamps)))
     g.plugins.append(Seek_Bar(g,capture=cap))
+    g.trim_marks = Trim_Marks(g,capture=cap)
+    g.plugins.append(g.trim_marks)
 
     #these are loaded based on user settings
     for initializer in load('plugins',[]):
@@ -397,8 +410,7 @@ def main():
                 g.new_seek = False
 
         frame = new_frame.copy()
-
-        #new positons and events we make a deepcopy just like the image should be a copy.
+        #new positons and events we make a deepcopy just like the image is a copy.
         current_pupil_positions = deepcopy(positions_by_frame[frame.index])
         events = []
 
@@ -462,7 +474,7 @@ def main():
 
 if __name__ == '__main__':
     freeze_support()
-    if 1:
+    if 0:
         main()
     else:
         import cProfile,subprocess,os

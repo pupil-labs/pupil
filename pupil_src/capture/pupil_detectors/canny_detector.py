@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
 import cv2
 from time import sleep
-import shelve
+from file_methods import Persistent_Dict
 import numpy as np
 from methods import *
 import atb
@@ -47,7 +47,7 @@ class Canny_Detector(Pupil_Detector):
         super(Canny_Detector, self).__init__()
 
         # load session persistent settings
-        self.session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_detector'),protocol=2)
+        self.session_settings =Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_detector') )
 
         # coase pupil filter params
         self.coarse_detection = c_bool(self.load('coarse_detection',True))

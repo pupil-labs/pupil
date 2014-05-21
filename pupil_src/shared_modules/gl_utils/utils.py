@@ -85,7 +85,8 @@ def adjust_gl_view(w,h,window):
     # glMatrixMode(GL_MODELVIEW)
     # glLoadIdentity()
 
-def draw_gl_polyline((positions),color,type='Loop'):
+def draw_gl_polyline((positions),color,type='Loop',thickness=1):
+    glLineWidth(thickness)
     glColor4f(*color)
     if type=='Loop':
         glBegin(GL_LINE_LOOP)
@@ -99,7 +100,7 @@ def draw_gl_polyline((positions),color,type='Loop'):
         glVertex3f(x,y,0.0)
     glEnd()
 
-def draw_gl_polyline_norm((positions),color,type='Loop'):
+def draw_gl_polyline_norm((positions),color,type='Loop',thickness=1):
 
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
@@ -108,7 +109,7 @@ def draw_gl_polyline_norm((positions),color,type='Loop'):
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()
-    draw_gl_polyline(positions,color,type)
+    draw_gl_polyline(positions,color,type,thickness)
     glMatrixMode(GL_PROJECTION)
     glPopMatrix()
     glMatrixMode(GL_MODELVIEW)

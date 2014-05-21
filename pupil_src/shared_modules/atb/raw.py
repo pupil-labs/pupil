@@ -65,6 +65,7 @@ TwMouseButton  = __dll__.TwMouseButton
 TwMouseMotion  = __dll__.TwMouseMotion
 TwWindowSize   = __dll__.TwWindowSize
 TwMouseWheel   = __dll__.TwMouseWheel
+TwSetCurrentWindow = __dll__.TwSetCurrentWindow
 
 TwEventMouseButtonGLFW = __dll__.TwEventMouseButtonGLFW
 # TwEventMouseMotionGLUT = __dll__.TwEventMousePosGLFW
