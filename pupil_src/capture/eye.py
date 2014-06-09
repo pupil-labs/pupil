@@ -72,11 +72,12 @@ def eye(g_pool,cap_src,cap_size):
     def on_button(window,button, action, mods):
         if not atb.TwEventMouseButtonGLFW(button,int(action == GLFW_PRESS)):
             if action == GLFW_PRESS:
-                pos = glfwGetCursorPos(window)
-                pos = normalize(pos,glfwGetWindowSize(window))
-                pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
-                u_r.setStart(pos)
-                bar.draw_roi.value = 1
+                if bar.display.value ==1:
+                    pos = glfwGetCursorPos(window)
+                    pos = normalize(pos,glfwGetWindowSize(window))
+                    pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
+                    u_r.setStart(pos)
+                    bar.draw_roi.value = 1
             else:
                 bar.draw_roi.value = 0
 
