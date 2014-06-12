@@ -10,7 +10,6 @@
 
 import platform,sys,os
 os_name = platform.system()
-del platform
 from time import sleep
 
 import subprocess as sp
@@ -35,15 +34,30 @@ if os_name == "Linux":
     ffmpeg_bin = "avconv"
     arecord_bin = 'arecord'
 
+    if 'Ubuntu' in platform.linux_distribution():
+        def beep():
+            sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
 
-    def beep():
-        sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
+        def tink():
+            try:
+                sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
+            except OSError:
 
-    def tink():
-        sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
+        def say(message):
+            try:
+                sp.Popen(["spd-say", message])
+            except OSError:
+                logger.warning("could not say: '%s'. Please install spd-say if you want Pupil capture to speek to you.")
+    else:
+        def beep():
+            print '\a'
 
-    def say(message):
-        sp.Popen(["spd-say", message])
+        def tink():
+            print '\a'
+
+        def say(message):
+            print '\a'
+            print message
 
 
     class Audio_Input_List(list):

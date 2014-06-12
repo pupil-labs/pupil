@@ -111,7 +111,7 @@ class Recorder(Plugin):
                 self.eye_tx.send(None)
             except:
                 logger.warning("Could not stop eye-recording. Please report this bug!")
-                
+
         gaze_list_path = os.path.join(self.rec_path, "gaze_positions.npy")
         np.save(gaze_list_path,np.asarray(self.gaze_list))
 
@@ -151,7 +151,7 @@ class Recorder(Plugin):
                 f.write("Release\t"+release+"\n")
                 f.write("Version\t"+version+"\n")
         except Exception:
-            logger.Exception("Could not save metadata. Please report this bug!")
+            logger.exception("Could not save metadata. Please report this bug!")
 
         if self.audio_writer:
             self.audio_writer = None
