@@ -39,9 +39,7 @@ if os_name == "Linux":
             sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
 
         def tink():
-            try:
-                sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
-            except OSError:
+            sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/button-pressed.ogg"])
 
         def say(message):
             try:
@@ -94,7 +92,7 @@ if os_name == "Linux":
 
     class Audio_Capture(object):
         """docstring for audio_capture"""
-        def __init__(self,audio_src_idx, out_file):
+        def __init__(self,audio_src_idx=0, out_file='out.wav'):
             super(Audio_Capture, self).__init__()
             # command = [ ffmpeg_bin,
             #         '-f', 'alsa',
@@ -217,11 +215,11 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
 
 
-    # beep()
-    # sleep(1)
-    # tink()
-    # cap = Audio_Capture('test.mp3')
-    # say("Hello, I am Pupil's audio module.")
-    # sleep(3)
-    # cap = None
+    beep()
+    sleep(1)
+    tink()
+    cap = Audio_Capture('test.mp3')
+    say("Hello, I am Pupil's audio module.")
+    sleep(3)
+    cap = None
     print Audio_Input_List()
