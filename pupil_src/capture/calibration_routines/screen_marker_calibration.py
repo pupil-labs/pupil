@@ -109,11 +109,11 @@ class Screen_Marker_Calibration(Plugin):
 
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
-        self.sites = [  (.25, .5), (0,.5),
+        self.sites = [  (.25, .5),(.25, .5), (0,.5),
                         (0.,1),(.5,1),(1.,1.),
                         (1,.5),
                         (1., 0),(.5, 0),(0,0.),
-                        (.75,.5),(.75,.5)]
+                        (.75,.5)]
 
         self.active_site = 0
         self.active = True
@@ -222,7 +222,7 @@ class Screen_Marker_Calibration(Plugin):
 
 
             #only save a valid ref position if within sample window of calibraiton routine
-            on_position = 0 < self.screen_marker_state < self.screen_marker_max-50
+            on_position = 40 < self.screen_marker_state < self.screen_marker_max-5
             if on_position and self.detected:
                 ref = {}
                 ref["norm_pos"] = self.pos
@@ -249,7 +249,7 @@ class Screen_Marker_Calibration(Plugin):
             # function to smoothly interpolate between points input:(0-screen_marker_max) output: (0-1)
             m, s = self.screen_marker_max, self.screen_marker_state
 
-            interpolation_weight = np.tanh(((s-2/3.*m)*4.)/(1/3.*m))*(-.5)+.5
+            interpolation_weight = np.tanh(((s-1/6.*m)*10.)/(5/6.*m))*(-.5)+.5
 
             #use np.arrays for per element wise math
             current = np.array(self.sites[self.active_site])
