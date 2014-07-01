@@ -58,7 +58,7 @@ class Offline_Marker_Detector(Plugin):
         self.g_pool = g_pool
         self.gui_settings = gui_settings
         self.order = .2
-        
+
 
         # all markers that are detected in the most recent frame
         self.markers = []
@@ -78,8 +78,10 @@ class Offline_Marker_Detector(Plugin):
             logger.debug("No surface defs found. Please define using GUI.")
             self.surfaces = []
 
+
+        # ui mode settings
+        self.mode = c_int(0)
         # edit surfaces
-        self.surface_edit_mode = c_bool(0)
         self.edit_surfaces = []
 
         #detector vars
@@ -94,7 +96,6 @@ class Offline_Marker_Detector(Plugin):
         self.init_marker_cacher()
 
         #debug vars
-        self.draw_markers = c_bool(0)
         self.show_surface_idx = c_int(0)
         self.recent_pupil_positions = []
 
@@ -129,7 +130,7 @@ class Offline_Marker_Detector(Plugin):
 
 
     def on_click(self,pos,button,action):
-        if self.surface_edit_mode.value:
+        if self.mode.value == 1:
             if self.edit_surfaces:
                 if action == GLFW_RELEASE:
                     self.edit_surfaces = []
@@ -160,18 +161,29 @@ class Offline_Marker_Detector(Plugin):
     def update_bar_markers(self):
         self._bar.clear()
         self._bar.add_button('close',self.unset_alive)
-        self._bar.add_var("draw markers",self.draw_markers)
         self._bar.add_button("  add surface   ", self.add_surface, key='a')
-        self._bar.add_var("  edit mode   ", self.surface_edit_mode )
+        # when cache is updated, when surface is edited, when trimmarks are changed.
+        # dropdown menue: markers and surface, surface edit mode, heatmaps, metrics
+        self._bar.mode_enum = atb.enum("Mode",{"Show Markers and Frames":0,"Show Marker Id's":4, "Surface edit mode":1,"Show Heatmaps":2,"Show Metrics":3})
+        self._bar.add_var("Mode",self.mode,vtype=self._bar.mode_enum)
+        self._bar.add_button("  (re)-calculate gaze distributions   ", self.recalculate)
+        self._bar.add_button("   Export Gaze and Surface Data   ", self.save_surface_statsics_to_file)
+
         for s,i in zip(self.surfaces,range(len(self.surfaces)))[::-1]:
             self._bar.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
             self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             self._bar.add_var("%s_x_scale"%i,vtype=c_float, getter=s.atb_get_scale_x, min=1,setter=s.atb_set_scale_x,group=str(i),label='real width', help='this scale factor is used to adjust the coordinate space for your needs (think photo pixels or mm or whatever)' )
             self._bar.add_var("%s_y_scale"%i,vtype=c_float, getter=s.atb_get_scale_y,min=1,setter=s.atb_set_scale_y,group=str(i),label='real height',help='defining x and y scale factor you atumatically set the correct aspect ratio.' )
             self._bar.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
-            self._bar.add_button("%s_hm"%i, s.generate_heatmap, label='generate_heatmap',group=str(i))
-            self._bar.add_button("%s_export"%i, self.save_surface_positions_to_file,data=i, label='export surface data',group=str(i))
+            # self._bar.add_button("%s_hm"%i, s.generate_heatmap, label='generate_heatmap',group=str(i))
+            # self._bar.add_button("%s_export"%i, self.save_surface_positions_to_file,data=i, label='export surface data',group=str(i))
             self._bar.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
+
+
+    def recalculate(self):
+        for s in self.surfaces:
+            if s.defined:
+                s.generate_heatmap()
 
     def update(self,frame,recent_pupil_positions,events):
         self.img = frame.img
@@ -179,10 +191,9 @@ class Offline_Marker_Detector(Plugin):
         self.update_marker_cache()
         self.markers = self.cache[frame.index]
         if self.markers == False:
-            # locate markers because precacher has not anayzed this frame yet. Most likely a seek event
             self.markers = []
-            self.seek_marker_cacher(frame.index) # tell precacher that it better have every thing from here analyzed
-       
+            self.seek_marker_cacher(frame.index) # tell precacher that it better have every thing from here on analyzed
+
         # locate surfaces
         for s in self.surfaces:
             if not s.locate_from_cache(frame.index):
@@ -190,11 +201,11 @@ class Offline_Marker_Detector(Plugin):
             if s.detected:
                 events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp,'gaze_on_srf':s.gaze_on_srf})
 
-        if self.draw_markers.value:
+        if self.mode.value == 4:
             draw_markers(frame.img,self.markers)
 
         # edit surfaces by user
-        if self.surface_edit_mode:
+        if self.mode.value == 1:
             window = glfwGetCurrentContext()
             pos = glfwGetCursorPos(window)
             pos = normalize(pos,glfwGetWindowSize(window))
@@ -206,6 +217,7 @@ class Offline_Marker_Detector(Plugin):
                     new_pos =  s.img_to_ref_surface(np.array(pos))
                     s.move_vertex(v_idx,new_pos)
                     s.cache = None
+                    self.heatmap = None
         else:
             # update srf with no or invald cache:
             for s in self.surfaces:
@@ -219,8 +231,6 @@ class Offline_Marker_Detector(Plugin):
                 s.close_window()
             if s.window_should_open:
                 s.open_window()
-
-
 
 
     def init_marker_cacher(self):
@@ -254,19 +264,30 @@ class Offline_Marker_Detector(Plugin):
         Display marker and surface info inside world screen
         """
         self.gl_display_cache_bars()
-
-        for m in self.markers:
-            hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
-            hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-            draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
-
         for s in self.surfaces:
-            s.gl_draw_frame()
             s.gl_display_in_window(self.g_pool.image_tex)
 
-        if self.surface_edit_mode.value:
+        if self.mode.value in (0,1):
+            for m in self.markers:
+                hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
+                hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
+                draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
+
+            for s in self.surfaces:
+                s.gl_draw_frame()
+
+        if self.mode.value == 1:
             for s in  self.surfaces:
                 s.gl_draw_corners()
+        if self.mode.value == 2:
+            for s in  self.surfaces:
+                s.gl_display_heatmap()
+        if self.mode.value == 3:
+            pass
+            #draw a backdrop to represent the gaze that is not on any surface
+            for s in self.surfaces:
+                pass
+                #draw a quad on surface with false color of value.
 
 
     def gl_display_cache_bars(self):
@@ -274,7 +295,7 @@ class Offline_Marker_Detector(Plugin):
         """
         padding = 20.
 
-       # Lines for areas that have be cached
+       # Lines for areas that have been cached
         cached_ranges = []
         for r in self.cache.visited_ranges: # [[0,1],[3,4]]
             cached_ranges += (r[0],0),(r[1],0) #[(0,0),(1,0),(3,0),(4,0)]
@@ -316,11 +337,26 @@ class Offline_Marker_Detector(Plugin):
         glPopMatrix()
 
 
-    def save_surface_positions_to_file(self,i):
-        s = self.surfaces[i]
+    def save_surface_statsics_to_file(self,s):
 
         in_mark = self.g_pool.trim_marks.in_mark
         out_mark = self.g_pool.trim_marks.out_mark
+
+
+        """
+        report:
+        between in and out mark
+            - total gazepoints
+            - gaze points on surface x
+            - gaze points not on any surface
+
+            - total frames
+            - surface x visible framecount
+
+        events:
+            frame_no, ts surface "name", "id" enter/exit
+
+        """
 
         if s.cache == None:
             logger.warning("The surface is not cached. Please wait for the cacher to collect data.")
@@ -337,8 +373,8 @@ class Offline_Marker_Detector(Plugin):
                 logger.warning("Could name make export dir %s"%srf_dir)
                 return
 
-        #save surface_positions as pickle file
-        save_object(s.cache.to_list(),os.path.join(srf_dir,'srf_positons'))
+        # #save surface_positions as pickle file
+        # save_object(s.cache.to_list(),os.path.join(srf_dir,'srf_positons'))
 
         #save surface_positions as csv
         with open(os.path.join(srf_dir,'srf_positons.csv'),'wb') as csvfile:
@@ -380,13 +416,12 @@ class Offline_Marker_Detector(Plugin):
             screen_space[:,0] *= self.img.shape[1]
             s_0,s_1 = s.scale_factor
             #no we need to flip vertically again by setting the mapped_space verts accordingly.
-            mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32) 
+            mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
             M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
             #here we do the actual perspactive transform of the image.
-            srf_in_video = cv2.warpPerspective(self.img,M, (int(s.scale_factor[0]),int(s.scale_factor[1])) ) 
+            srf_in_video = cv2.warpPerspective(self.img,M, (int(s.scale_factor[0]),int(s.scale_factor[1])) )
             cv2.imwrite(os.path.join(srf_dir,'surface.png'),srf_in_video)
             logger.info("Saved current image as .png file.")
-
 
 
     def get_init_dict(self):
@@ -402,7 +437,7 @@ class Offline_Marker_Detector(Plugin):
         This happends either voluntary or forced.
         if you have an atb bar or glfw window destroy it here.
         """
- 
+
         self.save("offline_square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
         self.close_marker_cacher()
         self.persistent_cache["marker_cache"] = self.cache.to_list()
@@ -413,3 +448,4 @@ class Offline_Marker_Detector(Plugin):
         for s in self.surfaces:
             s.close_window()
         self._bar.destroy()
+

@@ -36,7 +36,7 @@ class Offline_Reference_Surface(Reference_Surface):
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
 
-        self.heatmap_detail = .2 
+        self.heatmap_detail = .2
         self.heatmap = None
         self.heatmap_texture = None
     #cache fn for offline marker
@@ -59,7 +59,7 @@ class Offline_Reference_Surface(Reference_Surface):
         else:
             self.detected = True
             self.m_from_screen = cache_result['m_from_screen']
-            self.m_to_screen =  cache_result['m_to_screen']       
+            self.m_to_screen =  cache_result['m_to_screen']
             self.detected_markers = cache_result['detected_markers']
             self.gaze_on_srf = cache_result['gaze_on_srf']
             return True
@@ -72,19 +72,19 @@ class Offline_Reference_Surface(Reference_Surface):
         entries are:
             - False: when marker cache entry was False (not yet searched)
             - None: when surface was not found
-            - {'m_to_screen':,'m_from_screen':,'detected_markers':,gaze_on_srf} 
+            - {'m_to_screen':,'m_from_screen':,'detected_markers':,gaze_on_srf}
         '''
 
         # iterations = 0
- 
+
         if self.cache == None:
             pass
-            # self.init_cache(marker_cache)       
+            # self.init_cache(marker_cache)
         elif idx != None:
             #update single data pt
             self.cache.update(idx,self.answer_caching_request(marker_cache,idx))
         else:
-            # update where markercache is not False but surface cache is still false 
+            # update where markercache is not False but surface cache is still false
             # this happens when the markercache was incomplete when this fn was run before
             for i in range(len(marker_cache)):
                 if self.cache[i] == False and marker_cache[i] != False:
@@ -97,12 +97,12 @@ class Offline_Reference_Surface(Reference_Surface):
     def init_cache(self,marker_cache):
         if self.defined:
             logger.debug("Full update of surface '%s' positons cache"%self.name)
-            self.cache = Cache_List([self.answer_caching_request(marker_cache,i) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None)) 
+            self.cache = Cache_List([self.answer_caching_request(marker_cache,i) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
 
 
     def answer_caching_request(self,marker_cache,frame_index):
         visible_markers = marker_cache[frame_index]
-        # cache point had not been visited 
+        # cache point had not been visited
         if visible_markers == False:
             return False
         # cache point had been visited
@@ -132,11 +132,37 @@ class Offline_Reference_Surface(Reference_Surface):
         gaze_positions = self.gaze_positions_by_frame[frame_index]
         gaze_on_src = []
         for g_p in gaze_positions:
-            gaze_points = np.array([g_p['norm_gaze']]).reshape(1,1,2) 
+            gaze_points = np.array([g_p['norm_gaze']]).reshape(1,1,2)
             gaze_points_on_srf = cv2.perspectiveTransform(gaze_points , m_from_screen )
-            gaze_points_on_srf.shape = (2) 
+            gaze_points_on_srf.shape = (2)
             gaze_on_src.append( {'norm_gaze_on_srf':(gaze_points_on_srf[0],gaze_points_on_srf[1]),'timestamp':g_p['timestamp'] } )
         return gaze_on_src
+
+
+
+    def gl_display_heatmap(self):
+        if self.heatmap_texture and self.detected:
+
+
+            # cv uses 3x3 gl uses 4x4 tranformation matricies
+            m = cvmat_to_glmat(self.m_to_screen)
+
+            glMatrixMode(GL_PROJECTION)
+            glPushMatrix()
+            glLoadIdentity()
+            gluOrtho2D(0, 1, 0, 1) # gl coord convention
+
+            glMatrixMode(GL_MODELVIEW)
+            glPushMatrix()
+            #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
+            glLoadMatrixf(m)
+
+            draw_named_texture(self.heatmap_texture)
+
+            glMatrixMode(GL_PROJECTION)
+            glPopMatrix()
+            glMatrixMode(GL_MODELVIEW)
+            glPopMatrix()
 
 
 
@@ -177,7 +203,7 @@ class Offline_Reference_Surface(Reference_Surface):
             # now lets get recent pupil positions on this surface:
             for gp in self.gaze_on_srf:
                 draw_gl_points_norm([gp['norm_gaze_on_srf']],color=(0.,8.,.5,.8), size=80)
-           
+
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
 
@@ -191,7 +217,7 @@ class Offline_Reference_Surface(Reference_Surface):
         x = max(1,int(x))
         y = max(1,int(y))
 
-        filter_size = (int(self.heatmap_detail * x)/2)*2 +1 
+        filter_size = (int(self.heatmap_detail * x)/2)*2 +1
         std_dev = filter_size /6.
         self.heatmap = np.ones((y,x,4),dtype=np.uint8)
         all_gaze = []
@@ -206,10 +232,10 @@ class Offline_Reference_Surface(Reference_Surface):
             all_gaze.append((-1.,-1.))
         all_gaze = np.array(all_gaze)
         all_gaze *= self.scale_factor
-        hist,xedge,yedge = np.histogram2d(all_gaze[:,0], all_gaze[:,1], 
-                                            bins=[x,y], 
-                                            range=[[0, self.scale_factor[0]], [0,self.scale_factor[1]]], 
-                                            normed=False, 
+        hist,xedge,yedge = np.histogram2d(all_gaze[:,0], all_gaze[:,1],
+                                            bins=[x,y],
+                                            range=[[0, self.scale_factor[0]], [0,self.scale_factor[1]]],
+                                            normed=False,
                                             weights=None)
 
 
@@ -222,12 +248,12 @@ class Offline_Reference_Surface(Reference_Surface):
             scale = 255./maxval
         else:
             scale = 0
-        
+
         hist = np.uint8( hist*(scale) )
 
         #colormapping
         c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
 
         self.heatmap[:,:,:3] = c_map
-        self.heatmap[:,:,3] = 125 
+        self.heatmap[:,:,3] = 125
         self.heatmap_texture = create_named_texture(self.heatmap)
