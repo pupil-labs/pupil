@@ -50,6 +50,8 @@ class Trim_Marks(Plugin):
     def out_mark(self, value):
         self._out_mark = int(min(self.frame_count,max(self.in_mark,value)))
 
+    def set(self,mark_range):
+        self._in_mark,self._out_mark = mark_range
 
     def init_gui(self):
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
