@@ -337,91 +337,116 @@ class Offline_Marker_Detector(Plugin):
         glPopMatrix()
 
 
-    def save_surface_statsics_to_file(self,s):
+    def save_surface_statsics_to_file(self):
 
         in_mark = self.g_pool.trim_marks.in_mark
         out_mark = self.g_pool.trim_marks.out_mark
 
 
         """
-        report:
         between in and out mark
-            - total gazepoints
-            - gaze points on surface x
-            - gaze points not on any surface
 
-            - total frames
-            - surface x visible framecount
+            report: gaze distribution:
+                    - total gazepoints
+                    - gaze points on surface x
+                    - gaze points not on any surface
 
-        events:
-            frame_no, ts surface "name", "id" enter/exit
+            report: surface visisbility
+
+                - total frames
+                - surface x visible framecount
+
+            surface events:
+                frame_no, ts, surface "name", "id" enter/exit
+
+            for each surface:
+                gaze_on_name_id.csv
+                positions_of_name_id.csv
 
         """
+        section = slice(in_mark,out_mark)
 
-        if s.cache == None:
-            logger.warning("The surface is not cached. Please wait for the cacher to collect data.")
-            return
-
-        srf_dir = os.path.join(self.g_pool.rec_dir,'surface_data'+'_'+s.name.replace('/','')+'_'+s.uid)
-        logger.info("exporting surface gaze data to %s"%srf_dir)
-        if os.path.isdir(srf_dir):
-            logger.info("Will overwrite previous export for this referece surface")
-        else:
-            try:
-                os.mkdir(srf_dir)
-            except:
-                logger.warning("Could name make export dir %s"%srf_dir)
+        # surface visibility report
+        frame_count = len(self.g_pool.timestamps[section])
+        for s in self.surfaces:
+            if s.cache == None:
+                logger.warning("The surface is not cached. Please wait for the cacher to collect data.")
                 return
-
-        # #save surface_positions as pickle file
-        # save_object(s.cache.to_list(),os.path.join(srf_dir,'srf_positons'))
-
-        #save surface_positions as csv
-        with open(os.path.join(srf_dir,'srf_positons.csv'),'wb') as csvfile:
-            csw_writer =csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            csw_writer.writerow(('frame_idx','timestamp','m_to_screen','m_from_screen','detected_markers'))
-            for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
-                if in_mark <= idx <= out_mark:
-                    if ref_srf_data is not None and ref_srf_data is not False:
-                        csw_writer.writerow( (idx,ts,ref_srf_data['m_to_screen'],ref_srf_data['m_from_screen'],ref_srf_data['detected_markers']) )
+            visible_count  = s.visible_count_in_section(section)
+            print 'vis_count for ', s.name,visible_count
 
 
-        #save gaze on srf as csv.
-        with open(os.path.join(srf_dir,'gaze_positions_on_surface.csv'),'wb') as csvfile:
-            csw_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            csw_writer.writerow(('world_frame_idx','world_timestamp','eye_timestamp','x_norm','y_norm','x_scaled','y_scaled','on_srf'))
-            for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
-                if in_mark <= idx <= out_mark:
-                    if ref_srf_data is not None and ref_srf_data is not False:
-                        for gp in ref_srf_data['gaze_on_srf']:
-                            gp_x,gp_y = gp['norm_gaze_on_srf']
-                            on_srf = (0 <= gp_x <= 1) and (0 <= gp_y <= 1)
-                            csw_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.scale_factor[0],gp_x*s.scale_factor[1],on_srf) )
+        # gaze distribution report
+        gaze_in_section = self.g_pool.positions_by_frame[section]
+        # count gaze points of each frame in section and sum them:
+        gp_count_in_section = sum([len(gp_in_frame) for gp_in_frame in gaze_in_section])
+        for s in self.surfaces:
+            gaze_count  = s.gaze_count_on_srf_in_section(section)
+            print 'gaze_count for ', s.name,gaze_count
 
-        logger.info("Saved surface positon data and gaze on surface data for '%s' with uid:'%s'"%(s.name,s.uid))
 
-        if s.heatmap is not None:
-            logger.info("Saved Heatmap as .png file.")
-            cv2.imwrite(os.path.join(srf_dir,'heatmap.png'),s.heatmap)
 
-        if s.detected and self.img is not None:
-            #let save out the current surface image found in video
 
-            #here we get the verts of the surface quad in norm_coords
-            mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32).reshape(-1,1,2)
-            screen_space = cv2.perspectiveTransform(mapped_space_one,s.m_to_screen).reshape(-1,2)
-            #now we convert to image pixel coods
-            screen_space[:,1] = 1-screen_space[:,1]
-            screen_space[:,1] *= self.img.shape[0]
-            screen_space[:,0] *= self.img.shape[1]
-            s_0,s_1 = s.scale_factor
-            #no we need to flip vertically again by setting the mapped_space verts accordingly.
-            mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
-            M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
-            #here we do the actual perspactive transform of the image.
-            srf_in_video = cv2.warpPerspective(self.img,M, (int(s.scale_factor[0]),int(s.scale_factor[1])) )
-            cv2.imwrite(os.path.join(srf_dir,'surface.png'),srf_in_video)
-            logger.info("Saved current image as .png file.")
+        # srf_dir = os.path.join(self.g_pool.rec_dir,'surface_data'+'_'+s.name.replace('/','')+'_'+s.uid)
+        # logger.info("exporting surface gaze data to %s"%srf_dir)
+        # if os.path.isdir(srf_dir):
+        #     logger.info("Will overwrite previous export for this referece surface")
+        # else:
+        #     try:
+        #         os.mkdir(srf_dir)
+        #     except:
+        #         logger.warning("Could name make export dir %s"%srf_dir)
+        #         return
+
+        # # #save surface_positions as pickle file
+        # # save_object(s.cache.to_list(),os.path.join(srf_dir,'srf_positons'))
+
+        # #save surface_positions as csv
+        # with open(os.path.join(srf_dir,'srf_positons.csv'),'wb') as csvfile:
+        #     csw_writer =csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        #     csw_writer.writerow(('frame_idx','timestamp','m_to_screen','m_from_screen','detected_markers'))
+        #     for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
+        #         if in_mark <= idx <= out_mark:
+        #             if ref_srf_data is not None and ref_srf_data is not False:
+        #                 csw_writer.writerow( (idx,ts,ref_srf_data['m_to_screen'],ref_srf_data['m_from_screen'],ref_srf_data['detected_markers']) )
+
+
+        # #save gaze on srf as csv.
+        # with open(os.path.join(srf_dir,'gaze_positions_on_surface.csv'),'wb') as csvfile:
+        #     csw_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        #     csw_writer.writerow(('world_frame_idx','world_timestamp','eye_timestamp','x_norm','y_norm','x_scaled','y_scaled','on_srf'))
+        #     for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
+        #         if in_mark <= idx <= out_mark:
+        #             if ref_srf_data is not None and ref_srf_data is not False:
+        #                 for gp in ref_srf_data['gaze_on_srf']:
+        #                     gp_x,gp_y = gp['norm_gaze_on_srf']
+        #                     on_srf = (0 <= gp_x <= 1) and (0 <= gp_y <= 1)
+        #                     csw_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.scale_factor[0],gp_x*s.scale_factor[1],on_srf) )
+
+        # logger.info("Saved surface positon data and gaze on surface data for '%s' with uid:'%s'"%(s.name,s.uid))
+
+        # if s.heatmap is not None:
+        #     logger.info("Saved Heatmap as .png file.")
+        #     cv2.imwrite(os.path.join(srf_dir,'heatmap.png'),s.heatmap)
+
+        # if s.detected and self.img is not None:
+        #     #let save out the current surface image found in video
+
+        #     #here we get the verts of the surface quad in norm_coords
+        #     mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32).reshape(-1,1,2)
+        #     screen_space = cv2.perspectiveTransform(mapped_space_one,s.m_to_screen).reshape(-1,2)
+        #     #now we convert to image pixel coods
+        #     screen_space[:,1] = 1-screen_space[:,1]
+        #     screen_space[:,1] *= self.img.shape[0]
+        #     screen_space[:,0] *= self.img.shape[1]
+        #     s_0,s_1 = s.scale_factor
+        #     #no we need to flip vertically again by setting the mapped_space verts accordingly.
+        #     mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
+        #     M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
+        #     #here we do the actual perspactive transform of the image.
+        #     srf_in_video = cv2.warpPerspective(self.img,M, (int(s.scale_factor[0]),int(s.scale_factor[1])) )
+        #     cv2.imwrite(os.path.join(srf_dir,'surface.png'),srf_in_video)
+        #     logger.info("Saved current image as .png file.")
 
 
     def get_init_dict(self):

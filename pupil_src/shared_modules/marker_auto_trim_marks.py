@@ -227,7 +227,6 @@ class Marker_Auto_Trim_Marks(Plugin):
                 self._bar.add_var('OUT marker id',vtype = c_int, max=63,min=0,step=1, setter = self.set_out_marker,getter = lambda : self.out_marker_id.value)
                 self._bar.sections_enum = self.atb_enum("section",dict([(str(r),idx) for idx,r in enumerate(self.sections) ] ))
                 self._bar.add_var("set section",vtype=self._bar.sections_enum, getter= lambda: self.active_section.value, setter= self.activate_section)
-                self._bar.add_button("  activate section  ",self.activate_section)
                 self._bar.add_button("  video export all sections   ",self.enqueue_video_export)
                 self._bar.add_button("   surface export all sections   ",self.enqueue_surface_export)
 
