@@ -268,18 +268,19 @@ class Offline_Reference_Surface(Reference_Surface):
         section_cache = self.cache[section]
         return sum(map(bool,section_cache))
 
-    def gaze_count_on_srf_in_section(self,section=slice(0,None)):
+    def gaze_on_srf_in_section(self,section=slice(0,None)):
         #section is a slice
         #return number of gazepoints that are on surface in section
         #If cache is not avaible on frames it is reported as not visible
         if self.cache is None:
-            return 0
-        count = 0
+            return []
+        gaze_on_srf = []
         for c_e in self.cache[section]:
             if c_e:
                 #c_e['gaze_on_srf'] is list of gaze points
                 # each defined as {'norm_gaze_on_srf':(gaze_points_on_srf[0],gaze_points_on_srf[1]),'timestamp':g_p['timestamp'] }
                 # and sum of gazepoints that are on srf meaning 0<= x,y <=1
-                count += len([gp for gp in c_e['gaze_on_srf'] if (0<= gp['norm_gaze_on_srf'][0] <=1 and 0<= gp['norm_gaze_on_srf'][1] <=1) ])
-        return count
+                gaze_on_srf += [gp for gp in c_e['gaze_on_srf'] if (0<= gp['norm_gaze_on_srf'][0] <=1 and 0<= gp['norm_gaze_on_srf'][1] <=1) ]
+
+        return gaze_on_srf
 
