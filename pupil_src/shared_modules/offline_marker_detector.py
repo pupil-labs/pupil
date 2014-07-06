@@ -473,26 +473,26 @@ class Offline_Marker_Detector(Plugin):
                 logger.info("Saved Heatmap as .png file.")
                 cv2.imwrite(os.path.join(metrics_dir,'heatmap'+surface_name+'.png'),s.heatmap)
 
-            if s.detected and self.img is not None:
-                #let save out the current surface image found in video
+            # if s.detected and self.img is not None:
+            #     #let save out the current surface image found in video
 
-                #here we get the verts of the surface quad in norm_coords
-                mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32).reshape(-1,1,2)
-                screen_space = cv2.perspectiveTransform(mapped_space_one,s.m_to_screen).reshape(-1,2)
-                #now we convert to image pixel coods
-                screen_space[:,1] = 1-screen_space[:,1]
-                screen_space[:,1] *= self.img.shape[0]
-                screen_space[:,0] *= self.img.shape[1]
-                s_0,s_1 = s.scale_factor
-                #no we need to flip vertically again by setting the mapped_space verts accordingly.
-                mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
-                M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
-                #here we do the actual perspactive transform of the image.
-                srf_in_video = cv2.warpPerspective(self.img,M, (int(s.scale_factor[0]),int(s.scale_factor[1])) )
-                cv2.imwrite(os.path.join(metrics_dir,'surface'+surface_name+'.png'),srf_in_video)
-                logger.info("Saved current image as .png file.")
-            else:
-                logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
+            #     #here we get the verts of the surface quad in norm_coords
+            #     mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32).reshape(-1,1,2)
+            #     screen_space = cv2.perspectiveTransform(mapped_space_one,s.m_to_screen).reshape(-1,2)
+            #     #now we convert to image pixel coods
+            #     screen_space[:,1] = 1-screen_space[:,1]
+            #     screen_space[:,1] *= self.img.shape[0]
+            #     screen_space[:,0] *= self.img.shape[1]
+            #     s_0,s_1 = s.scale_factor
+            #     #no we need to flip vertically again by setting the mapped_space verts accordingly.
+            #     mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
+            #     M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
+            #     #here we do the actual perspactive transform of the image.
+            #     srf_in_video = cv2.warpPerspective(self.img,M, (int(s.scale_factor[0]),int(s.scale_factor[1])) )
+            #     cv2.imwrite(os.path.join(metrics_dir,'surface'+surface_name+'.png'),srf_in_video)
+            #     logger.info("Saved current image as .png file.")
+            # else:
+            #     logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
 
 
     def get_init_dict(self):
