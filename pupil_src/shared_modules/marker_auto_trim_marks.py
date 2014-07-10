@@ -40,7 +40,7 @@ class Marker_Auto_Trim_Marks(Plugin):
     This plugin depends on the offline marker tracker plugin to be loaded.
 
     """
-    def __init__(self, g_pool,gui_settings={'pos':(220,400),'size':(300,100),'iconified':False}):
+    def __init__(self, g_pool,gui_settings={'pos':(220,400),'size':(300,100),'iconified':False},man_in_marks=[],man_out_marks=[]):
         super(Marker_Auto_Trim_Marks, self).__init__()
         self.g_pool = g_pool
         self.gui_settings = gui_settings
@@ -51,10 +51,12 @@ class Marker_Auto_Trim_Marks(Plugin):
         self.sections = None
         self.gl_display_ranges = []
 
+        self.man_in_marks = man_in_marks
+        self.man_out_marks = man_out_marks
 
         self.video_export_queue = []
         self.surface_export_queue = []
-
+        self.current_frame_idx = 0
 
     def init_gui(self):
         import atb
@@ -79,6 +81,22 @@ class Marker_Auto_Trim_Marks(Plugin):
     def unset_alive(self):
         self.alive = False
 
+    def add_manual_in_mark(self):
+        self.man_in_marks.append(self.current_frame_idx)
+        self.sections = None
+
+    def del_man_in_mark(self, mark_index):
+        del self.man_in_marks[mark_index]
+        self.sections = None
+
+    def add_manual_out_mark(self):
+        self.man_out_marks.append(self.current_frame_idx)
+        self.sections = None
+
+    def del_man_out_mark(self, mark_index):
+        del self.man_out_marks[mark_index]
+        self.sections = None
+
     def enqueue_video_export(self):
         self.video_export_queue = self.sections[:]
 
@@ -90,14 +108,22 @@ class Marker_Auto_Trim_Marks(Plugin):
         plugins = [p for p in self.g_pool.plugins if isinstance(p,Export_Launcher)]
         if plugins:
             launcher = plugins[0]
-            logger.warning("exporting %s" %str(section))
+            logger.info("exporting %s" %str(section))
             self.g_pool.trim_marks.set(section)
             launcher.rec_name.value = "world_viz_section_%s-%s"%section
             launcher.add_export()
 
 
     def surface_export(self,section):
-        pass
+        plugins = [p for p in self.g_pool.plugins if isinstance(p,Offline_Marker_Detector)]
+        if plugins:
+            tracker = plugins[0]
+            logger.info("exporting %s" %str(section))
+            self.g_pool.trim_marks.set(section)
+            tracker.recalculate()
+            tracker.save_surface_statsics_to_file()
+        else:
+            logger.warning("Please start Offline_Marker_Detector Plugin for surface export.")
 
     def activate_section(self,section_idx):
         self.active_section.value = section_idx
@@ -115,7 +141,7 @@ class Marker_Auto_Trim_Marks(Plugin):
 
 
     def get_init_dict(self):
-        d = {}
+        d = {'man_out_marks':self.man_out_marks,'man_in_marks':self.man_in_marks}
         if hasattr(self,'_bar'):
             gui_settings = {'pos':self._bar.position,'size':self._bar.size,'iconified':self._bar.iconified}
             d['gui_settings'] = gui_settings
@@ -132,6 +158,8 @@ class Marker_Auto_Trim_Marks(Plugin):
 
 
     def update(self,frame,recent_pupil_positions,events):
+
+        self.current_frame_idx = frame.index
         if self.video_export_queue:
             self.video_export(self.video_export_queue.pop(0))
         if self.surface_export_queue:
@@ -157,7 +185,7 @@ class Marker_Auto_Trim_Marks(Plugin):
                 #make a marker signal 0 = none, 1 = in, -1=out
                 in_id = self.in_marker_id.value
                 out_id = self.out_marker_id.value
-                logger.warning("Looking for trim mark markers: %s,%s"%(in_id,out_id))
+                logger.debug("Looking for trim mark markers: %s,%s"%(in_id,out_id))
 
                 in_out_signal = [0]*len(marker_tracker_plugin.cache)
                 for idx,frame in enumerate(marker_tracker_plugin.cache):
@@ -193,6 +221,8 @@ class Marker_Auto_Trim_Marks(Plugin):
 
 
                 events = [('out',idx)for idx in out_rising_edge_idx]+[('in',idx)for idx in in_falling_edge_idx]
+                manual_markers = [('in',idx) for idx in self.man_in_marks] + [('out',idx) for idx in self.man_out_marks]
+                events += manual_markers
                 events.sort(key=lambda x: x[1])
 
                 events = [('in',0)]+ events + [('out',len(marker_tracker_plugin.cache))]
@@ -227,9 +257,16 @@ class Marker_Auto_Trim_Marks(Plugin):
                 self._bar.add_var('OUT marker id',vtype = c_int, max=63,min=0,step=1, setter = self.set_out_marker,getter = lambda : self.out_marker_id.value)
                 self._bar.sections_enum = self.atb_enum("section",dict([(str(r),idx) for idx,r in enumerate(self.sections) ] ))
                 self._bar.add_var("set section",vtype=self._bar.sections_enum, getter= lambda: self.active_section.value, setter= self.activate_section)
-                self._bar.add_button("  video export all sections   ",self.enqueue_video_export)
-                self._bar.add_button("   surface export all sections   ",self.enqueue_surface_export)
+                self._bar.add_button("video export all sections",self.enqueue_video_export)
+                self._bar.add_button("surface export all sections",self.enqueue_surface_export)
 
+                self._bar.add_button("add in_mark here",self.add_manual_in_mark)
+                self._bar._del_in_enum = self.atb_enum("del manualin marker",dict([(str(r),idx) for idx,r in enumerate(self.man_in_marks) ] ))
+                self._bar.add_var("del manual in mark",vtype=self._bar._del_in_enum, getter= lambda: 0, setter= self.del_man_in_mark)
+
+                self._bar.add_button("add out_mark here",self.add_manual_out_mark)
+                self._bar._del_out_enum = self.atb_enum("del manual out marker",dict([(str(r),idx) for idx,r in enumerate(self.man_out_marks) ] ))
+                self._bar.add_var("del manual out mark",vtype=self._bar._del_out_enum, getter= lambda: 0, setter= self.del_man_out_mark)
 
             else:
                 self._bar.label = "Marker Auto Trim Marks: Waiting for Cacher to finish"
