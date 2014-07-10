@@ -10,7 +10,7 @@
 
 import numpy as np
 import cv2
-from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture,create_named_texture
+from gl_utils import *
 from glfw import *
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
@@ -39,6 +39,9 @@ class Offline_Reference_Surface(Reference_Surface):
         self.heatmap_detail = .2
         self.heatmap = None
         self.heatmap_texture = None
+        self.metrics_gazecount = None
+        self.metrics_texture = None
+
     #cache fn for offline marker
     def locate_from_cache(self,frame_idx):
         if self.cache == None:
@@ -165,6 +168,30 @@ class Offline_Reference_Surface(Reference_Surface):
             glPopMatrix()
 
 
+    def gl_display_metrics(self):
+        if self.metrics_texture and self.detected:
+
+
+            # cv uses 3x3 gl uses 4x4 tranformation matricies
+            m = cvmat_to_glmat(self.m_to_screen)
+
+            glMatrixMode(GL_PROJECTION)
+            glPushMatrix()
+            glLoadIdentity()
+            gluOrtho2D(0, 1, 0, 1) # gl coord convention
+
+            glMatrixMode(GL_MODELVIEW)
+            glPushMatrix()
+            #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
+            glLoadMatrixf(m)
+
+            draw_named_texture(self.metrics_texture)
+
+            glMatrixMode(GL_PROJECTION)
+            glPopMatrix()
+            glMatrixMode(GL_MODELVIEW)
+            glPopMatrix()
+
 
     #### fns to draw surface in seperate window
     def gl_display_in_window(self,world_tex_id):
@@ -208,10 +235,7 @@ class Offline_Reference_Surface(Reference_Surface):
             glfwMakeContextCurrent(active_window)
 
 
-    def generate_heatmap(self):
-
-        in_mark = self.g_pool.trim_marks.in_mark
-        out_mark = self.g_pool.trim_marks.out_mark
+    def generate_heatmap(self,section):
 
         x,y = self.scale_factor
         x = max(1,int(x))
@@ -221,11 +245,10 @@ class Offline_Reference_Surface(Reference_Surface):
         std_dev = filter_size /6.
         self.heatmap = np.ones((y,x,4),dtype=np.uint8)
         all_gaze = []
-        for idx,c_e in enumerate(self.cache):
-            if in_mark <= idx <= out_mark:
-                if c_e:
-                    for gp in c_e['gaze_on_srf']:
-                        all_gaze.append(gp['norm_gaze_on_srf'])
+        for c_e in self.cache[section]:
+            if c_e:
+                for gp in c_e['gaze_on_srf']:
+                    all_gaze.append(gp['norm_gaze_on_srf'])
 
         if not all_gaze:
             logger.warning("No gaze data on surface for heatmap found.")
