@@ -66,11 +66,13 @@ class AV_Writer(object):
 
     We are creating a
     """
-    def __init__(self, file_loc, video_stream={'codec':'mpeg4', 'format': 'yuv420p', 'bit_rate': 5500*10e3}, audio_stream=None):
+
+# time  = 0
+    def __init__(self, file_loc, video_stream={'codec':'mjpeg', 'format': 'yuvj422p', 'bit_rate': 5*10e3}, audio_stream=None):
         super(AV_Writer, self).__init__()
         self.file_loc = file_loc
 
-        time_resolution = 1000  # time_base in milliseconds
+        time_resolution = 30  # time_base in milliseconds
         self.time_base = Fraction(1,time_resolution)
 
         self.container = av.open(file_loc, 'w')
@@ -87,11 +89,12 @@ class AV_Writer(object):
             self.configured = True
             self.start_time = input_frame.timestamp
 
+        print 'time',input_frame.timestamp-self.start_time
         frame = av.VideoFrame.from_ndarray(input_frame.img, format='bgr24')
         frame.pts = int((input_frame.timestamp-self.start_time)/self.time_base)
+        frame.pts = None
         frame.time_base = self.time_base
-        print frame.pts
-        print 'frame',frame.pts/self.video_stream.time_base*self.time_base
+        print 'frame',frame.pts
         packet = self.video_stream.encode(frame)
         if packet:
             print 'paket',packet.pts
@@ -115,11 +118,13 @@ if __name__ == '__main__':
     from uvc_capture import autoCreateCapture
     logging.basicConfig(level=logging.DEBUG)
 
-    writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out.mp4"))
+    writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out.mov"))
     cap = autoCreateCapture(0,(1280,720))
     frame = cap.get_frame()
+    print writer.video_stream.time_base
+    # print writer.
 
-    for x in xrange(900):
+    for x in xrange(300):
         frame = cap.get_frame()
         writer.write_video_frame(frame)
         # print writer.video_stream

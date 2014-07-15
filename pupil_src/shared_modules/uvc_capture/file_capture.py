@@ -23,7 +23,7 @@ import os,sys
 import av
 import numpy as np
 from time import time
-
+from fractions import Fraction
 
 #logging
 import logging
@@ -146,7 +146,8 @@ class File_Capture():
     def get_frame(self):
 
         frame = self.next_frame.next()
-        # print frame
+        # print frame.time_base
+        # print frame.ptr.coded_picture_number
         if self.timestamps:
             try:
                 timestamp = self.timestamps[idx]
@@ -154,7 +155,7 @@ class File_Capture():
                 logger.warning("Reached end of timestamps list.")
                 raise EndofVideoFileError("Reached end of timestamps list.")
         else:
-            timestamp = frame.pts
+            timestamp = float(frame.pts)*Fraction(frame.time_base['num'],frame.time_base['den'])
         return Frame(timestamp,frame.to_nd_array('bgr24'),index=frame.index)
 
     def seek_to_frame(self, seek_pos):
@@ -196,7 +197,7 @@ if __name__ == '__main__':
     cap = File_Capture(os.path.expanduser("~/Desktop/av_writer_out.mp4"))
     print cap.container.duration/float(av.time_base)
     print 'frame_count', cap.get_frame_count()
-    print "container timebase",av.time_base
+    # print "container timebase",av.
     print cap.video_stream.time_base
     # exit()
     # print cap.video_stream.time_base
@@ -204,13 +205,13 @@ if __name__ == '__main__':
         while 1:
 
             frame = cap.get_frame()
-            print frame.timestamp,float(frame.timestamp)*cap.video_stream.time_base
+            print frame.timestamp
             cv2.imshow("test",frame.img)
             if cv2.waitKey(30)==27:
-                print "seeking to ",25712
-                cap.seek_to_frame(25712 )
+                print "seeking to ",int(5/cap.video_stream.time_base)
+                cap.seek_to_frame(int(5/cap.video_stream.time_base) )
                 print cap.get_frame().timestamp
-                break
+                # break
             # if x==50 or x==80:
                 # cv2.waitKey(100)
             # print frame.index, frame.timestamp
