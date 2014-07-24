@@ -363,16 +363,14 @@ class VideoCapture(object):
                 if self.use_hw_timestamps:
                     timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000000.
                     # lets make sure this timestamps is sane:
-                    if abs(timestamp-self.get_time_monotonic()) > 2: #hw_timestamp more than 2secs away from now?
+                    if abs(timestamp-self.get_time_monotonic()) > 5: #hw_timestamp more than 5secs away from now?
                         logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s and last timestamp was %s"%(self.src_str,timestamp,self.get_time_monotonic(),self._last_timestamp))
-                        logger.warning("Correcting timestamp by extrapolation from last known timestamp using set rate: %s"%self.get_rate())
                         timestamp = self._last_timestamp + 1./self.get_rate()
-                        self._last_timestamp = timestamp
-
+                        logger.warning("Correcting timestamp by extrapolation from last known timestamp using set rate: %s. TS now at %s"%(self.get_rate(),timestamp) )
+                    self._last_timestamp = timestamp
 
                 else:
                     timestamp = self.get_time_monotonic()
-
 
                 timestamp -= self.timebase.value
                 # if ( self.ts > timestamp) or 1:
