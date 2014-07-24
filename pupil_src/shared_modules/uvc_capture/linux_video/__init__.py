@@ -157,9 +157,9 @@ class Camera_Capture(object):
                 pass
             if control.flags == "inactive":
                 pass
-            # if control.name == 'exposure_auto_priority':
-            #     # the controll should always be off. we set it to 0 on init (see above)
-            #     self.bar.define(definition='readonly=1',varname=control.name)
+            if control.name == 'exposure_auto_priority':
+                # the controll should always be off. we set it to 0 on init (see above)
+                self.bar.define(definition='readonly=1',varname=control.name)
 
         self.bar.add_button("refresh",self.controls.update_from_device)
         self.bar.add_button("load defaults",self.controls.load_defaults)
