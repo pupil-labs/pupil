@@ -62,7 +62,6 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
     video_path = data_dir + "/world.avi"
     timestamps_path = data_dir + "/timestamps.npy"
     gaze_positions_path = data_dir + "/gaze_positions.npy"
-    record_path = data_dir + "/world_viz"
 
 
     #parse info.csv file
@@ -89,14 +88,14 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
     #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
     if out_file_path is None:
-        out_file_path = os.path.join(data_dir, "world_viz")
+        out_file_path = os.path.join(data_dir, "world_viz.mp4")
     else:
         file_name =  os.path.basename(out_file_path)
         dir_name = os.path.dirname(out_file_path)
         if not dir_name:
             dir_name = data_dir
         if not file_name:
-            file_name = 'world_viz'
+            file_name = 'world_viz.mp4'
         out_file_path = os.path.expanduser(os.path.join(dir_name,file_name))
 
     if os.path.isfile(out_file_path):

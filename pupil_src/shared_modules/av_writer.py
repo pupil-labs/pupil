@@ -69,13 +69,22 @@ class AV_Writer(object):
     We are creating a
     """
 
-    def __init__(self, file_loc, video_stream={'codec':'mpeg4', 'format': 'yuv420p', 'bit_rate': 5500*10e3}, audio_stream=None):
+    def __init__(self, file_loc, video_stream={'codec':'mpeg4', 'format': 'yuv420p', 'bit_rate': 5000*10e3}, audio_stream=None):
         super(AV_Writer, self).__init__()
 
-        self._extension = '.mp4'
+        try:
+            file_path,ext = file_loc.rsplit('.', 1)
+        except:
+            logger.error("'%s' is not a valid media file name."%file_loc)
+            raise Exception("Error")
+
+        if ext not in ('mp4,mov'):
+            logger.warning("media file container should be mp4 or mov. Using a different container is risky.")
+
+        self.ts_file_loc = file_path+'timestamps.npy'
         self.file_loc = file_loc
-        self.container = av.open(self.file_loc+self._extension,'w')
-        logger.debug("Opended %s for writing"%self.file_loc+self._extension)
+        self.container = av.open(self.file_loc,'w')
+        logger.debug("Opended '%s' for writing."%self.file_loc)
 
         self.time_resolution = 1000  # time_base in milliseconds
         self.time_base = Fraction(1,self.time_resolution)
@@ -128,7 +137,7 @@ class AV_Writer(object):
         logger.debug("Closed media container")
 
         ts_array = np.array(self.timestamps_list)
-        np.save(self.file_loc+"_timestamps.npy",ts_array)
+        np.save(self.ts_file_loc,ts_array)
         logger.debug("Saved %s frames"%ts_array.shape[0])
 
 
@@ -139,7 +148,7 @@ def test():
     from uvc_capture import autoCreateCapture
     logging.basicConfig(level=logging.DEBUG)
 
-    writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out"))
+    writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out.mp4"))
     # writer = cv2.VideoWriter(os.path.expanduser("~/Desktop/av_writer_out.avi"),cv2.cv.CV_FOURCC(*"DIVX"),30,(1280,720))
     cap = autoCreateCapture(0,(1280,720))
     frame = cap.get_frame()
