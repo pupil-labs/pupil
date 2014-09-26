@@ -69,7 +69,7 @@ class AV_Writer(object):
     We are creating a
     """
 
-    def __init__(self, file_loc, video_stream={'codec':'mpeg4', 'format': 'yuv420p', 'bit_rate': 5000*10e3}, audio_stream=None):
+    def __init__(self, file_loc, video_stream={'codec':'h264','bit_rate': 8000*10e3}, audio_stream=None):
         super(AV_Writer, self).__init__()
 
         try:
@@ -92,7 +92,7 @@ class AV_Writer(object):
 
         self.video_stream = self.container.add_stream(video_stream['codec'],self.time_resolution)
         self.video_stream.bit_rate = video_stream['bit_rate']
-        self.video_stream.pix_fmt = video_stream['format']
+        # self.video_stream.pix_fmt = video_stream['format']
         self.configured = False
         self.start_time = None
 
