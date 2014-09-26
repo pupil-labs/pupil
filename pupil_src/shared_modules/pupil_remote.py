@@ -25,7 +25,14 @@ logger = logging.getLogger(__name__)
 
 
 class Pupil_Remote(Plugin):
-    """pupil server plugin"""
+    """pupil server plugin
+    send messages to control Pupil Capture functions:
+
+    'R' toggle recording
+    'R rec_name' toggle recording and name new recording rec_name
+    'T' set timebase to 0
+    'C' start currently selected calibration
+    """
     def __init__(self, g_pool, atb_pos=(10,400),on_char_fn = None):
         Plugin.__init__(self)
         self.g_pool = g_pool
@@ -36,7 +43,7 @@ class Pupil_Remote(Plugin):
         self.address = create_string_buffer('',512)
         self.set_server(create_string_buffer("tcp://*:50020",512))
 
-        help_str = "Pupil Remote using REQ RREP scheme."
+        help_str = "Pupil Remote using REQ RREP schema. "
 
         self._bar = atb.Bar(name = self.__class__.__name__, label='Remote',
             help=help_str, color=(50, 50, 50), alpha=100,
