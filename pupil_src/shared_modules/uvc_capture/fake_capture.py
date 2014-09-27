@@ -23,13 +23,21 @@ class CameraCaptureError(Exception):
 
 class Frame(object):
     """docstring of Frame"""
-    def __init__(self, timestamp,img,index=None,compressed_img=None, compressed_pix_fmt=None):
+    def __init__(self, timestamp,img):
         self.timestamp = timestamp
-        self.index = index
         self.img = img
-        self.compressed_img = compressed_img
-        self.compressed_pix_fmt = compressed_pix_fmt
+        self.height,self.width,_ = img.shape
+        self._gray = None
+        self._yuv = None
 
+    @property
+    def gray(self):
+        if self._gray == None:
+            self._gray = cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
+        return self._gray
+    @gray.setter
+    def gray(self, value):
+        raise Exception('Read only.')
 
 class FakeCapture(object):
     """docstring for FakeCapture"""

@@ -366,6 +366,7 @@ def world(g_pool,cap_src,cap_size):
             draw_named_texture(g_pool.image_tex,frame.img)
         else:
             draw_named_texture(g_pool.image_tex)
+
         make_coord_system_pixel_based((frame.height,frame.width,3))
 
         # render visual feedback from loaded plugins
