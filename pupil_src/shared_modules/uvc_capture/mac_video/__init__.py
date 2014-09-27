@@ -139,14 +139,23 @@ class Controls(dict):
         uvccReleaseCam(self.handle)
         uvccExit()
 
-
 class Frame(object):
     """docstring of Frame"""
-    def __init__(self, timestamp,img,compressed_img=None, compressed_pix_fmt=None):
+    def __init__(self, timestamp,img):
         self.timestamp = timestamp
         self.img = img
-        self.compressed_img = compressed_img
-        self.compressed_pix_fmt = compressed_pix_fmt
+        self.height,self.height,_ = img.shape
+        self.gray = None
+        self.yuv = None
+        property
+        def gray(self):
+            if self.gray == None:
+                self.gray = cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
+            return self.gray
+        @gray.setter
+        def gray(self, value):
+            raise Exception('Read only.')
+        
 
 
 class Camera_Capture(object):

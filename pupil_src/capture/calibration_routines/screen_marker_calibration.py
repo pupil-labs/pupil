@@ -198,14 +198,14 @@ class Screen_Marker_Calibration(Plugin):
             self.open_window()
 
         if self.active:
-            img = frame.img
+            gray_img = frame.gray
 
             #get world image size for error fitting later.
             if self.world_size is None:
-                self.world_size = img.shape[1],img.shape[0]
+                self.world_size = frame.width,frame.height
 
             #detect the marker
-            self.candidate_ellipses = get_canditate_ellipses(img,
+            self.candidate_ellipses = get_canditate_ellipses(gray_img,
                                                             area_threshold=self.area_threshold.value,
                                                             dist_threshold=self.dist_threshold.value,
                                                             min_ring_count=4,
@@ -214,7 +214,7 @@ class Screen_Marker_Calibration(Plugin):
             if len(self.candidate_ellipses) > 0:
                 self.detected= True
                 marker_pos = self.candidate_ellipses[0][0]
-                self.pos = normalize(marker_pos,(img.shape[1],img.shape[0]),flip_y=True)
+                self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
             else:
                 self.detected = False

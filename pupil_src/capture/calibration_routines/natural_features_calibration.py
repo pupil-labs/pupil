@@ -81,19 +81,19 @@ class Natural_Features_Calibration(Plugin):
         if self.active:
             img = frame.img
             if self.first_img is None:
-                self.first_img = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
+                self.first_img = frame.gray.copy()
 
             self.detected = False
 
             if self.count:
-                gray = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
+                gray = frame.gray
                 # in cv2.3 nextPts is falsy required as an argument.
                 nextPts_dummy = self.point.copy()
                 nextPts,status, err = cv2.calcOpticalFlowPyrLK(self.first_img,gray,self.point,nextPts_dummy,winSize=(100,100))
                 if status[0]:
                     self.detected = True
                     self.point = nextPts
-                    self.first_img = gray
+                    self.first_img = gray.copy()
                     nextPts = nextPts[0]
                     self.pos = normalize(nextPts,(img.shape[1],img.shape[0]),flip_y=True)
                     self.count -=1

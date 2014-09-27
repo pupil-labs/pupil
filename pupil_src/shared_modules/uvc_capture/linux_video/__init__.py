@@ -59,6 +59,8 @@ class Camera_Capture(object):
         self.capture.frame_rate = (1,fps or 30)
         self.controls = self.capture.enum_controls()
         self.controls_dict = dict([(c['name'],c) for c in self.controls])
+        self._frame_rates = self.capture.frame_rates
+        self._atb_frame_rates_dict = dict( [(str(r),idx) for idx,r in enumerate(self._frame_rates)] ) 
         try:
             self.capture.set_control(self.controls_dict['Focus, Auto']['id'], 0)
         except KeyError:
@@ -99,8 +101,8 @@ class Camera_Capture(object):
 
     def re_init(self,cam,size=(640,480),fps=30):
 
-        current_size = self.capture.get_size()
-        current_fps = self.capture.get_rate()
+        current_size = self.capture.frame_size
+        current_fps = self.capture.frame_rate[-1]
 
         self.capture.close()
         self.capture = None
@@ -115,8 +117,8 @@ class Camera_Capture(object):
 
         self.use_hw_ts = self.check_hw_ts_support()
         self.capture = v4l2.Capture('/dev/video'+str(self.src_id))
-        self.capture.frame_size = size
-        self.capture.frame_rate = (1,fps or 30)
+        self.capture.frame_size = current_size
+        self.capture.frame_rate = (1,current_fps or 30)
         self.controls = self.capture.enum_controls()
         self.controls_dict = dict([(c['name'],c) for c in self.controls])
         try:
@@ -130,6 +132,7 @@ class Camera_Capture(object):
         except KeyError:
             pass
 
+        self.create_atb_bar(bar_pos)
 
     def re_init_cam_by_src_id(self,requested_id):
         for cam in Camera_List():
@@ -163,6 +166,32 @@ class Camera_Capture(object):
         frame.timestamp = timestamp
         return frame
 
+    def atb_set_ctl(self,val,ctl):
+        ctl_id = self.controls_dict[ctl]['id']
+        self.capture.set_control(ctl_id,val)
+        val = self.capture.get_control(ctl_id)
+        self.controls_dict[ctl]['value'] = val
+
+    def atb_get_ctl(self,ctl):
+        # ctl_id = self.controls_dict[ctl]['id']
+        # return self.capture.get_control(ctl_id)
+        return self.controls_dict[ctl]['value']
+
+    def atb_load_defaults(self):
+        for c in self.controls:
+            if not c['disabled']:
+                self.capture.set_control(c['id'],c['default'])
+                c['value'] = self.capture.get_control(c['id'])
+
+
+    def atb_get_frame_rate(self):
+        return self.capture.frame_rates.index(self.capture.frame_rate)
+
+    def atb_set_frame_rate(self,rate_idx):
+        rate = self.capture.frame_rates[rate_idx]
+        print rate,rate_idx
+        self.capture.frame_rate = rate
+
 
     def create_atb_bar(self,pos):
         # add uvc camera controls to a separate ATB bar
@@ -174,41 +203,41 @@ class Camera_Capture(object):
         cameras_enum = atb.enum("Capture",dict([(c.name,c.src_id) for c in Camera_List()]) )
         self.bar.add_var("Capture",vtype=cameras_enum,getter=lambda:self.src_id, setter=self.re_init_cam_by_src_id)
 
-        # self.bar.add_var('framerate', vtype = atb.enum('framerate',self.capture.framerates), getter = lambda:self.capture.current_rate_idx, setter=self.capture.set_rate_idx )
-        # self.bar.add_var('hardware timestamps',vtype=atb.TW_TYPE_BOOL8,getter=lambda:self.use_hw_ts)
+        self.bar.add_var('framerate', vtype = atb.enum('framerate',self._atb_frame_rates_dict), getter = self.atb_get_frame_rate, setter=self.atb_set_frame_rate )
+        self.bar.add_var('hardware timestamps',vtype=atb.TW_TYPE_BOOL8,getter=lambda:self.use_hw_ts)
 
-        # u_name = 0
-        # for control in self.controls:
-        #     name = str(u_name)
-        #     u_name +=1
-        #     label =  control['name']
-        #     if control['type']=="bool":
-        #         self.bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=control.get_val,setter=control.set_val,label = label)
-        #     elif control.type=='int':
-        #         self.bar.add_var(name,vtype=atb.TW_TYPE_INT32,getter=control.get_val,setter=control.set_val,label = label)
-        #         self.bar.define(definition='min='+str(control.min),   varname=name)
-        #         self.bar.define(definition='max='+str(control.max),   varname=name)
-        #         self.bar.define(definition='step='+str(control.step), varname=name)
-        #     elif control.type=="menu":
-        #         if control.menu is None:
-        #             vtype = None
-        #         else:
-        #             vtype= atb.enum(name,control.menu)
-        #         self.bar.add_var(name,vtype=vtype,getter=control.get_val,setter=control.set_val)
-        #         if control.menu is None:
-        #             self.bar.define(definition='min='+str(control.min),   varname=name)
-        #             self.bar.define(definition='max='+str(control.max),   varname=name)
-        #             self.bar.define(definition='step='+str(control.step), varname=name)
-        #     else:
-        #         pass
-        #     if control.flags == "inactive":
-        #         pass
-        #     if control.name == 'exposure_auto_priority':
-        #         # the controll should always be off. we set it to 0 on init (see above)
-        #         self.bar.define(definition='readonly=1',varname=control.name)
+        u_name = 0
+        for control in self.controls:
+            name = str(u_name)
+            u_name +=1
+            label =  control['name']
+            if control['type']=="bool":
+                self.bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=self.atb_get_ctl,setter=self.atb_set_ctl,label = label, data=label)
+            elif control['type']=='int':
+                self.bar.add_var(name,vtype=atb.TW_TYPE_INT32,getter=self.atb_get_ctl,setter=self.atb_set_ctl,label = label, data=label)
+                self.bar.define(definition='min='+str(control['min']),   varname=name)
+                self.bar.define(definition='max='+str(control['max']),   varname=name)
+                self.bar.define(definition='step='+str(control['step']), varname=name)
+            elif control['type']=="menu":
+                if control['menu'] == {}:
+                    vtype = None
+                else:
+                    vtype= atb.enum(name,control['menu'])
+                self.bar.add_var(name,vtype=vtype,getter=self.atb_get_ctl,setter=self.atb_set_ctl,label = label, data=label)
+                if control['menu'] == {}:
+                    self.bar.define(definition='min='+str(control['min']),   varname=name)
+                    self.bar.define(definition='max='+str(control['max']),   varname=name)
+                    self.bar.define(definition='step='+str(control['step']), varname=name)
+            else:
+                pass
+            if control['disabled']:
+                self.bar.define(definition='readonly=1',varname=name)
+            if label == 'Exposure, Auto Priority':
+                # the controll should always be off. we set it to 0 on init (see above)
+                self.bar.define(definition='readonly=1',varname=name)
 
         # self.bar.add_button("refresh",self.controls.update_from_device)
-        # self.bar.add_button("load defaults",self.controls.load_defaults)
+        self.bar.add_button("load defaults",self.atb_load_defaults)
 
         return size
 

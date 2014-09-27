@@ -119,11 +119,11 @@ class Marker_Detector(Plugin):
             self._bar.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
 
     def update(self,frame,recent_pupil_positions,events):
-        img = frame.img
-        self.img_shape = frame.img.shape
+        gray = frame.gray
+        self.img_shape = frame.height,frame.width,3
 
         if self.robust_detection.value:
-            self.markers = detect_markers_robust(img,
+            self.markers = detect_markers_robust(gray,
                                                 grid_size = 5,
                                                 prev_markers=self.markers,
                                                 min_marker_perimeter=self.min_marker_perimeter,
@@ -131,7 +131,7 @@ class Marker_Detector(Plugin):
                                                 visualize=0,
                                                 true_detect_every_frame=3)
         else:
-            self.markers = detect_markers_simple(img,
+            self.markers = detect_markers_simple(gray,
                                                 grid_size = 5,
                                                 min_marker_perimeter=self.min_marker_perimeter,
                                                 aperture=self.aperture.value,
@@ -144,14 +144,14 @@ class Marker_Detector(Plugin):
                 events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
         if self.draw_markers.value:
-            draw_markers(img,self.markers)
+            draw_markers(frame.img,self.markers)
 
         # edit surfaces by user
         if self.surface_edit_mode:
             window = glfwGetCurrentContext()
             pos = glfwGetCursorPos(window)
             pos = normalize(pos,glfwGetWindowSize(window))
-            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
+            pos = denormalize(pos,(self.img_shape[1],self.img_shape[0]) ) # Position in img pixels
 
             for s,v_idx in self.edit_surfaces:
                 if s.detected:

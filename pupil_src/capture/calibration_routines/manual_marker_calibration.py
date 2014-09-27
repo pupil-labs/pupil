@@ -112,12 +112,12 @@ class Manual_Marker_Calibration(Plugin):
         """
         if self.active:
 
-            img  = frame.img
+            gray_img  = frame.gray
 
             if self.world_size is None:
-                self.world_size = img.shape[1],img.shape[0]
+                self.world_size = frame.width,frame.height
 
-            self.candidate_ellipses = get_canditate_ellipses(img,
+            self.candidate_ellipses = get_canditate_ellipses(gray_img,
                                                             area_threshold=self.area_threshold.value,
                                                             dist_threshold=self.dist_threshold.value,
                                                             min_ring_count=5,
@@ -126,7 +126,7 @@ class Manual_Marker_Calibration(Plugin):
             if len(self.candidate_ellipses) > 0:
                 self.detected = True
                 marker_pos = self.candidate_ellipses[0][0]
-                self.pos = normalize(marker_pos,(img.shape[1],img.shape[0]),flip_y=True)
+                self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
 
             else:
@@ -139,9 +139,8 @@ class Manual_Marker_Calibration(Plugin):
                 second_ellipse =  self.candidate_ellipses[1]
                 col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
                 row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
-                marker_roi = img[slice(*row_slice),slice(*col_slice)]
-                marker_gray = cv2.cvtColor(marker_roi,cv2.COLOR_BGR2GRAY)
-                avg = cv2.mean(marker_gray)[0]
+                marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
+                avg = cv2.mean(marker_gray)
                 center = marker_gray[second_ellipse[1][1]/2,second_ellipse[1][0]/2]
                 rel_shade = center-avg
 
