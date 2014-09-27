@@ -21,7 +21,7 @@ import sys
 import atb
 from time import time
 from raw import *
-from cv2 import VideoCapture
+import cv2
 
 #logging
 import logging
@@ -144,18 +144,19 @@ class Frame(object):
     def __init__(self, timestamp,img):
         self.timestamp = timestamp
         self.img = img
-        self.height,self.height,_ = img.shape
-        self.gray = None
-        self.yuv = None
-        property
-        def gray(self):
-            if self.gray == None:
-                self.gray = cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
-            return self.gray
-        @gray.setter
-        def gray(self, value):
-            raise Exception('Read only.')
-        
+        self.height,self.width,_ = img.shape
+        self._gray = None
+        self._yuv = None
+
+    @property
+    def gray(self):
+        if self._gray == None:
+            self._gray = cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
+        return self._gray
+    @gray.setter
+    def gray(self, value):
+        raise Exception('Read only.')
+
 
 
 class Camera_Capture(object):
@@ -182,7 +183,7 @@ class Camera_Capture(object):
         except KeyError:
             pass
 
-        self.capture = VideoCapture(self.src_id)
+        self.capture = cv2.VideoCapture(self.src_id)
         self.set_size(size)
 
 
@@ -197,7 +198,7 @@ class Camera_Capture(object):
         except KeyError:
             pass
 
-        self.capture = VideoCapture(self.src_id)
+        self.capture = cv2.VideoCapture(self.src_id)
         self.set_size(size)
 
         #recreate the bar with new values
@@ -319,7 +320,7 @@ class Camera_List(list):
 
 if __name__ == '__main__':
     # import cv2
-    # _ = cv2.VideoCapture(-1) # we can to wake the isight camera up if we want to query more information....
+    # _ = cv2.cv2.VideoCapture(-1) # we can to wake the isight camera up if we want to query more information....
     uvc_cameras = Camera_List()
     for cam in uvc_cameras:
         print cam.name

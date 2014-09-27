@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from cv2 import VideoCapture
+import cv2
 from time import time
 
 #logging
@@ -31,18 +31,19 @@ class Frame(object):
     def __init__(self, timestamp,img):
         self.timestamp = timestamp
         self.img = img
-        self.height,self.height,_ = img.shape
-        self.gray = None
-        self.yuv = None
-        property
-        def gray(self):
-            if self.gray == None:
-                self.gray = cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
-            return self.gray
-        @gray.setter
-        def gray(self, value):
-            raise Exception('Read only.')
-        
+        self.height,self.width,_ = img.shape
+        self._gray = None
+        self._yuv = None
+
+    @property
+    def gray(self):
+        if self._gray == None:
+            self._gray = cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
+        return self._gray
+    @gray.setter
+    def gray(self, value):
+        raise Exception('Read only.')
+
 
 
 
@@ -63,7 +64,7 @@ class Camera_Capture():
         self.name = "VideoCapture"
         self.controls = None
         ###add cv videocapture capabilities
-        self.capture = VideoCapture(src_id)
+        self.capture = cv2.VideoCapture(src_id)
         self.set_size(size)
 
         if timebase == None:
