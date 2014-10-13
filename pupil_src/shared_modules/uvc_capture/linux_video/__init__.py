@@ -145,7 +145,7 @@ class Camera_Capture(object):
 
     def get_frame(self): 
         try:
-            frame = self.capture.get_frame()
+            frame = self.capture.get_frame_robust()
         except:
             raise CameraCaptureError("Could not get frame from %s"%self.src_id)
 
@@ -154,8 +154,8 @@ class Camera_Capture(object):
                     
             # lets make sure this timestamps is sane:
             if abs(timestamp-v4l2.get_sys_time_monotonic()) > 5: #hw_timestamp more than 5secs away from now?
-                logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s and last timestamp was %s"%(self.src_str,timestamp,v4l2.get_sys_time_monotonic(),self._last_timestamp))
-                timestamp = self._last_timestamp + 1./self.get_rate()
+                logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s and last timestamp was %s"%('/dev/video'+str(self.src_id),timestamp,v4l2.get_sys_time_monotonic(),self._last_timestamp))
+                timestamp = self._last_timestamp + self.capture.framerate[0]/float(self.capture.framerate[1])
                 logger.warning("Correcting timestamp by extrapolation from last known timestamp using set rate: %s. TS now at %s"%(str(self.capture.framerate),timestamp) )
                 self._last_timestamp = timestamp
 
