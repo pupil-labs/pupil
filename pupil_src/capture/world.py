@@ -172,6 +172,23 @@ def world(g_pool,cap_src,cap_size):
         """
         return data.value
 
+    def set_rec_dir(val):
+        try:
+            n_path = os.path.expanduser(val.value)
+            logger.debug("Expanded user path.")
+        except:
+            n_path = val.value
+
+        if not n_path:
+            logger.warning("Please specify a path.")
+        elif not os.path.isdir(n_path):
+            logger.warning("This is not a valid path.")
+        else:
+            g_pool.rec_dir = n_path
+
+    def get_rec_dir():
+        return create_string_buffer(g_pool.rec_dir,512)
+
     def set_rec_name(val):
         if not val.value:
             g_pool.rec_name = recorder.get_auto_name()
@@ -272,6 +289,7 @@ def world(g_pool,cap_src,cap_size):
     bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size,help="Resize the world window. This has no effect on the actual image.")
     bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
     bar.add_button("show calibration result",toggle_show_calib_result, group="Calibration", help="Click to show calibration result.")
+    bar.add_var("rec dir",create_string_buffer(512),getter = get_rec_dir,setter= set_rec_dir, group="Recording", help="Specify the recording path")
     bar.add_var("session name",create_string_buffer(512),getter = get_rec_name,setter= set_rec_name, group="Recording", help="Give your recording session a custom name.")
     bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
     bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
