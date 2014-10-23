@@ -13,7 +13,7 @@ import cv2
 from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture,make_coord_system_norm_based
 from glfw import *
 from OpenGL.GL import *
-from OpenGL.GLU import gluOrtho2D
+from OpenGL.GLU import *
 
 from methods import GetAnglesPolyline,normalize
 
@@ -375,6 +375,98 @@ class Reference_Surface(object):
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
 
+    #### fns to draw surface in separate window
+    def gl_display_in_window_3d(self,world_tex_id):
+        """
+        here we map a selected surface onto a seperate window.
+        """
+        if self._window and self.detected:
+            active_window = glfwGetCurrentContext()
+            glfwMakeContextCurrent(self._window)
+            #glClearColor(0,0,0,1)
+            clear_gl_screen()
+            
+            glMatrixMode( GL_PROJECTION )
+            glLoadIdentity( )
+            gluPerspective( 60.0, 4.0/3.0, 0.1, 1000.0 )
+            
+            glMatrixMode( GL_MODELVIEW )
+            glLoadIdentity( )
+            gluLookAt( 3, -3, 3, 0.5, 0.5, 0, 0, 0, 1 )
+            
+            # cv uses 3x3 gl uses 4x4 tranformation matricies
+            m = cvmat_to_glmat(self.m_from_screen)
+            #m_inv = cvmat_to_glmat(self.m_to_screen)
+            
+            glMatrixMode(GL_MODELVIEW)
+            glPushMatrix()
+            #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
+            glMultMatrixf(m)
+            draw_named_texture(world_tex_id)
+            
+            glPopMatrix()
+            glPushMatrix()
+            glMultMatrixf(self.transform3d.T.flatten())
+            #glMultMatrixf(self.transform3d.flatten())
+            
+            glColor3f( 0, 0, 0 )
+            glBegin( GL_LINE_LOOP )
+            glVertex3f( 0, 0, 0 )
+            glVertex3f( 0, 1, 0 )
+            glVertex3f( 1, 1, 0 )
+            glVertex3f( 1, 0, 0 )
+            glEnd( )
+            glBegin( GL_LINE_LOOP )
+            glVertex3f( 0, 0, 1 )
+            glVertex3f( 0, 1, 1 )
+            glVertex3f( 1, 1, 1 )
+            glVertex3f( 1, 0, 1 )
+            glEnd( )
+            glColor3f( 1, 0.5, 0 )
+            glBegin( GL_LINES )
+            glVertex3f( 0, 1, 0 )
+            glVertex3f( 0, 1, 1 )
+            glEnd( )
+            glBegin( GL_LINES )
+            glVertex3f( 1, 1, 0 )
+            glVertex3f( 1, 1, 1 )
+            glEnd( )
+            glBegin( GL_LINES )
+            glVertex3f( 0, 0, 0 )
+            glVertex3f( 0, 0, 1 )
+            glEnd( )
+            glBegin( GL_LINES )
+            glVertex3f( 1, 0, 0 )
+            glVertex3f( 1, 0, 1 )
+            glEnd( )
+            
+            glPopMatrix()
+            
+            # Draw x-axis line.
+            glColor3f( 1, 0, 0 )
+            glBegin( GL_LINES )
+            glVertex3f( 0, 0, 0 )
+            glVertex3f( 1, 0, 0 )
+            glEnd( )
+            
+            # Draw y-axis line.
+            glColor3f( 0, 1, 0 )
+            glBegin( GL_LINES )
+            glVertex3f( 0, 0, 0 )
+            glVertex3f( 0, 1, 0 )
+            glEnd( )
+     
+            # Draw z-axis line.
+            glColor3f( 0, 0, 1 )
+     
+            glBegin( GL_LINES )
+            glVertex3f( 0, 0, 0 )
+            glVertex3f( 0, 0, 1 )
+            glEnd( )
+            
+            glfwSwapBuffers(self._window)
+            glfwMakeContextCurrent(active_window)
+            
     def toggle_window(self,_):
         if self._window:
             self.window_should_close = True

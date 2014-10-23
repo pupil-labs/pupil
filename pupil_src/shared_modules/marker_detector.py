@@ -193,7 +193,11 @@ class Marker_Detector(Plugin):
 
         for s in self.surfaces:
             s.gl_draw_frame()
-            s.gl_display_in_window(self.g_pool.image_tex)
+            
+            if self.locate_3d.value:
+                s.gl_display_in_window_3d(self.g_pool.image_tex)
+            else:
+                s.gl_display_in_window(self.g_pool.image_tex)
             
 
         if self.surface_edit_mode.value:
