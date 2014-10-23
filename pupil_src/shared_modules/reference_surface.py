@@ -22,6 +22,7 @@ from ctypes import c_int,c_bool,create_string_buffer
 from time import time
 
 import logging
+from pickle import FALSE
 logger = logging.getLogger(__name__)
 
 def m_verts_to_screen(verts):
@@ -74,7 +75,15 @@ class Reference_Surface(object):
         self.m_from_screen = None
         self.uid = str(time())
         self.scale_factor = [1.,1.]
-
+        
+        # TODO: hardcoded camera intrinsics
+        self.K = np.array([[776.65250589, 0, 645.53907335],
+                    [0, 770.65916345, 374.76352079],
+                    [0.0,0.0, 1.0]], dtype = np.float64)
+        self.dist_coef = np.array([6.47285370e-02, -1.55334472e-01, -1.29510733e-03, 1.95433144e-05, 4.63095096e-02], dtype = np.float32)
+        self.img_size = [1280, 720]
+        self.is3dPoseAvailable = False
+        self.transform3d = None
 
         if saved_definition is not None:
             self.load_from_dict(saved_definition)
@@ -197,7 +206,7 @@ class Reference_Surface(object):
             m.compute_robust_mean()
 
 
-    def locate(self, visible_markers):
+    def locate(self, visible_markers, locate_3d=False):
         """
         - find overlapping set of surface markers and visible_markers
         - compute homography (and inverse) based on this subset
@@ -211,7 +220,7 @@ class Reference_Surface(object):
             requested_ids = set(self.markers.keys())
             overlap = visible_ids & requested_ids
             self.detected_markers = len(overlap)
-            if len(overlap)>=min(2,len(requested_ids)):
+            if len(overlap)>=min(1,len(requested_ids)):
                 self.detected = True
                 yx = np.array( [marker_by_id[i]['verts_norm'] for i in overlap] )
                 uv = np.array( [self.markers[i].uv_coords for i in overlap] )
@@ -220,7 +229,23 @@ class Reference_Surface(object):
                 # print 'uv',uv
                 # print 'yx',yx
                 self.m_to_screen,mask = cv2.findHomography(uv,yx)
-                self.m_from_screen,mask = cv2.findHomography(yx,uv)
+                self.m_from_screen = np.linalg.inv(self.m_to_screen)
+                #self.m_from_screen,mask = cv2.findHomography(yx,uv)
+                
+                if locate_3d:
+                    yx.shape = -1,2
+                    yx *= self.img_size
+                    yx.shape = -1, 1, 2
+                    uv.shape = -1,2
+                    uv *= self.scale_factor
+                    uv3d = np.zeros((uv.shape[0], uv.shape[1]+1))
+                    uv3d[:,:-1] = uv
+                    self.is3dPoseAvailable, rotation3d, translation3d = cv2.solvePnP(uv3d, yx, self.K, self.dist_coef)
+                    print translation3d
+                    rMat, _ = cv2.Rodrigues(rotation3d)
+                    self.transform3d = np.eye(4, dtype=np.float32)
+                    self.transform3d[:-1,:-1] = rMat
+                    self.transform3d[:-1, -1] = translation3d.reshape(3) 
 
             else:
                 self.detected = False
@@ -299,6 +324,8 @@ class Reference_Surface(object):
             alpha = min(1,self.build_up_status/self.required_build_up)
             draw_gl_polyline_norm(frame.reshape((5,2)),(1.0,0.2,0.6,alpha))
             draw_gl_polyline_norm(hat.reshape((4,2)),(1.0,0.2,0.6,alpha))
+            
+            draw_gl_point_norm(frame.reshape(5,2)[0])
 
 
     def gl_draw_corners(self):

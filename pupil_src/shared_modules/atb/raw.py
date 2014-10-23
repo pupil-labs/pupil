@@ -29,6 +29,9 @@ if getattr(sys, 'frozen', False):
     else:
         filename = 'libAntTweakBar.dll'
     dll_path = os.path.join(sys._MEIPASS,filename)
+    
+elif os_name == "Windows":
+    dll_path = os.path.join(os.path.dirname(os.path.abspath(os.path.curdir)), 'shared_modules', 'external', 'AntTweakBar64')
 
 else:
     # we are running in a normal Python environment

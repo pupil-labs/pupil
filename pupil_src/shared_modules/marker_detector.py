@@ -16,7 +16,7 @@ from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear
 from methods import normalize,denormalize
 from glfw import *
 import atb
-from ctypes import c_int,c_bool,create_string_buffer
+from ctypes import c_int,c_bool,create_string_buffer,c_float
 
 from plugin import Plugin
 #logging
@@ -50,6 +50,7 @@ class Marker_Detector(Plugin):
         self.robust_detection = c_bool(1)
         self.aperture = c_int(11)
         self.min_marker_perimeter = 80
+        self.locate_3d = c_bool(0)
 
         #debug vars
         self.draw_markers = c_bool(0)
@@ -109,6 +110,7 @@ class Marker_Detector(Plugin):
         self._bar.clear()
         self._bar.add_button('close',self.unset_alive)
         self._bar.add_var('robust_detection',self.robust_detection)
+        self._bar.add_var("3D location", self.locate_3d)
         self._bar.add_var("draw markers",self.draw_markers)
         self._bar.add_button("  add surface   ", self.add_surface, key='a')
         self._bar.add_var("  edit mode   ", self.surface_edit_mode )
@@ -116,6 +118,8 @@ class Marker_Detector(Plugin):
             self._bar.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
             self._bar.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
             self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
+            self._bar.add_var("%s_x_scale"%i,vtype=c_float, getter=s.atb_get_scale_x, min=1,setter=s.atb_set_scale_x,group=str(i),label='real width', help='this scale factor is used to adjust the coordinate space for your needs (think photo pixels or mm or whatever)' )
+            self._bar.add_var("%s_y_scale"%i,vtype=c_float, getter=s.atb_get_scale_y,min=1,setter=s.atb_set_scale_y,group=str(i),label='real height',help='defining x and y scale factor you atumatically set the correct aspect ratio.' )
             self._bar.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
 
     def update(self,frame,recent_pupil_positions,events):
@@ -139,7 +143,7 @@ class Marker_Detector(Plugin):
 
         # locate surfaces
         for s in self.surfaces:
-            s.locate(self.markers)
+            s.locate(self.markers, self.locate_3d.value)
             if s.detected:
                 events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
@@ -190,6 +194,7 @@ class Marker_Detector(Plugin):
         for s in self.surfaces:
             s.gl_draw_frame()
             s.gl_display_in_window(self.g_pool.image_tex)
+            
 
         if self.surface_edit_mode.value:
             for s in  self.surfaces:
