@@ -10,8 +10,7 @@
 
 
 import v4l2
-import atb
-from ctypes import c_bool
+from pyglui import ui
 from time import sleep
 #logging
 import logging
@@ -170,7 +169,7 @@ class Camera_Capture(object):
     def frame_rate(self):
         return self.capture.frame_rate
 
-    property
+    @property
     def frame_size(self):
         return self.capture.frame_size
     @frame_size.setter
@@ -196,11 +195,6 @@ class Camera_Capture(object):
 
 
     def init_gui(self,sidebar):
-
-
-        sorted_controls = [c for c in self.controls.itervalues()]
-        sorted_controls.sort(key=lambda c: c.order)
-
         self.menu = ui.Growing_Menu(label='Camera Settings')
 
         cameras = Camera_List()
@@ -213,32 +207,37 @@ class Camera_Capture(object):
         self.menu.append(hardware_ts_switch)
 
 
-        for control in sorted_controls:
+        for control in self.controls:
             c = None
             ctl_name = control['name']
 
             # we use closures as setters for each control element
-            def make_closure(ctl_id):
-                def fn(self,val):
+            def make_setter(ctl_id,ctl_name):
+                def fn(val):
                     self.capture.set_control(ctl_id,val)
-                    self.controls_dict[ctl]['value'] = self.capture.get_control(ctl_id)
+                    self.controls_dict[ctl_name]['value'] = self.capture.get_control(ctl_id)
                 return fn
-            set_ctl = make_closure(control['id'])
+            def make_getter(ctl_name):
+                def fn():
+                    return self.controls_dict[ctl_name]['value'] 
+                return fn
+            set_ctl = make_setter(control['id'],control['name'])
+            get_ctl = make_getter(control['name'])
 
             if control['type']=='bool':
-                c = ui.Switch(ctl_name,self.controls_dict,setter=set_ctl)
+                c = ui.Switch(ctl_name,getter=get_ctl,setter=set_ctl)
             elif control['type']=='int':
-                c = ui.Slider(ctl_name,self.controls_dict,min=control['min'],max=control['max'],
+                c = ui.Slider(ctl_name,getter=get_ctl,min=control['min'],max=control['max'],
                                 step=control['step'], setter=set_ctl)
 
             elif control['type']=="menu":
-                if control.menu is None:
+                if control['menu'] is None:
                     selection = range(control['min'],control['max']+1,control['step'])
                     labels = selection
                 else:
-                    selection = [value for name,value in control.menu.iteritems()]
-                    labels = [name for name,value in control.menu.iteritems()]
-                c = ui.Selector(ctl_name,self.controls_dict,selection=selection,labels = labels,setter=set_ctl)
+                    selection = [value for name,value in control['menu'].iteritems()]
+                    labels = [name for name,value in control['menu'].iteritems()]
+                c = ui.Selector(ctl_name,getter=get_ctl,selection=selection,labels = labels,setter=set_ctl)
             else:
                 pass
             if control['disabled']:
@@ -250,7 +249,7 @@ class Camera_Capture(object):
             if c is not None:
                 self.menu.append(c)
 
-        self.menu.append(ui.Button("refresh",self.controls.update_from_device))
+        # self.menu.append(ui.Button("refresh",self.controls.update_from_device))
         self.menu.append(ui.Button("load defaults",self.gui_load_defaults))
         self.sidebar = sidebar
         self.sidebar.append(self.menu)
