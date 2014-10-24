@@ -23,6 +23,7 @@ from time import time
 
 import logging
 from pickle import FALSE
+from imageop import scale
 logger = logging.getLogger(__name__)
 
 def m_verts_to_screen(verts):
@@ -63,7 +64,7 @@ class Reference_Surface(object):
     The more markers we find the more accurate the homography.
 
     """
-    def __init__(self,name="unnamed",saved_definition=None):
+    def __init__(self,name="unnamed",saved_definition=None, camera_intrinsics=None):
         self.name = name
         self.markers = {}
         self.detected_markers = 0
@@ -76,14 +77,9 @@ class Reference_Surface(object):
         self.uid = str(time())
         self.scale_factor = [1.,1.]
         
-        # TODO: hardcoded camera intrinsics
-        self.K = np.array([[776.65250589, 0, 645.53907335],
-                    [0, 770.65916345, 374.76352079],
-                    [0.0,0.0, 1.0]], dtype = np.float64)
-        self.dist_coef = np.array([6.47285370e-02, -1.55334472e-01, -1.29510733e-03, 1.95433144e-05, 4.63095096e-02], dtype = np.float32)
-        self.img_size = [1280, 720]
+        self.K, self.dist_coef, self.img_size = camera_intrinsics
         self.is3dPoseAvailable = False
-        self.transform3d = None
+        self.camera_pose_3d = None
 
         if saved_definition is not None:
             self.load_from_dict(saved_definition)
@@ -233,19 +229,27 @@ class Reference_Surface(object):
                 #self.m_from_screen,mask = cv2.findHomography(yx,uv)
                 
                 if locate_3d:
+                    # denormalize image reference points to pixel space
                     yx.shape = -1,2
                     yx *= self.img_size
                     yx.shape = -1, 1, 2
+                    # scale object points to [cm] units
                     uv.shape = -1,2
                     uv *= self.scale_factor
+                    # convert object points to 3D space
                     uv3d = np.zeros((uv.shape[0], uv.shape[1]+1))
                     uv3d[:,:-1] = uv
+                    # compute camera pose
                     self.is3dPoseAvailable, rotation3d, translation3d = cv2.solvePnP(uv3d, yx, self.K, self.dist_coef)
-                    print translation3d
                     rMat, _ = cv2.Rodrigues(rotation3d)
-                    self.transform3d = np.eye(4, dtype=np.float32)
-                    self.transform3d[:-1,:-1] = rMat
-                    self.transform3d[:-1, -1] = translation3d.reshape(3) 
+                    self.camera_pose_3d = np.eye(4, dtype=np.float32)
+                    self.camera_pose_3d[:-1,:-1] = rMat
+                    self.camera_pose_3d[:-1, -1] = translation3d.reshape(3) 
+                    self.camera_pose_3d = np.linalg.inv(self.camera_pose_3d)
+                    # flip z-axis for openGl (attention: use transpose for openGl drawing)
+                    cvToGl = np.eye(4, dtype=np.float32)
+                    cvToGl[2,2] = -1.0
+                    self.camera_pose_3d = np.dot(cvToGl, self.camera_pose_3d)
 
             else:
                 self.detected = False
@@ -388,11 +392,11 @@ class Reference_Surface(object):
             
             glMatrixMode( GL_PROJECTION )
             glLoadIdentity( )
-            gluPerspective( 60.0, 4.0/3.0, 0.1, 1000.0 )
+            gluPerspective( 60.0, 1, 0.1, 1000.0 )
             
             glMatrixMode( GL_MODELVIEW )
             glLoadIdentity( )
-            gluLookAt( 3, -3, 3, 0.5, 0.5, 0, 0, 0, 1 )
+            gluLookAt( 50, -50, 50, 10, 10, 0, 0, 0, 1 )
             
             # cv uses 3x3 gl uses 4x4 tranformation matricies
             m = cvmat_to_glmat(self.m_from_screen)
@@ -400,69 +404,19 @@ class Reference_Surface(object):
             
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
-            #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
+            glScalef(self.scale_factor[0], self.scale_factor[1], 1)
             glMultMatrixf(m)
             draw_named_texture(world_tex_id)
-            
             glPopMatrix()
+            
             glPushMatrix()
-            glMultMatrixf(self.transform3d.T.flatten())
-            #glMultMatrixf(self.transform3d.flatten())
+            glMultMatrixf(self.camera_pose_3d.T.flatten())
             
-            glColor3f( 0, 0, 0 )
-            glBegin( GL_LINE_LOOP )
-            glVertex3f( 0, 0, 0 )
-            glVertex3f( 0, 1, 0 )
-            glVertex3f( 1, 1, 0 )
-            glVertex3f( 1, 0, 0 )
-            glEnd( )
-            glBegin( GL_LINE_LOOP )
-            glVertex3f( 0, 0, 1 )
-            glVertex3f( 0, 1, 1 )
-            glVertex3f( 1, 1, 1 )
-            glVertex3f( 1, 0, 1 )
-            glEnd( )
-            glColor3f( 1, 0.5, 0 )
-            glBegin( GL_LINES )
-            glVertex3f( 0, 1, 0 )
-            glVertex3f( 0, 1, 1 )
-            glEnd( )
-            glBegin( GL_LINES )
-            glVertex3f( 1, 1, 0 )
-            glVertex3f( 1, 1, 1 )
-            glEnd( )
-            glBegin( GL_LINES )
-            glVertex3f( 0, 0, 0 )
-            glVertex3f( 0, 0, 1 )
-            glEnd( )
-            glBegin( GL_LINES )
-            glVertex3f( 1, 0, 0 )
-            glVertex3f( 1, 0, 1 )
-            glEnd( )
-            
+            self.draw_camera_box(self.img_size, self.K, 100)
+            self.draw_coordinate_system(l=5)
             glPopMatrix()
             
-            # Draw x-axis line.
-            glColor3f( 1, 0, 0 )
-            glBegin( GL_LINES )
-            glVertex3f( 0, 0, 0 )
-            glVertex3f( 1, 0, 0 )
-            glEnd( )
-            
-            # Draw y-axis line.
-            glColor3f( 0, 1, 0 )
-            glBegin( GL_LINES )
-            glVertex3f( 0, 0, 0 )
-            glVertex3f( 0, 1, 0 )
-            glEnd( )
-     
-            # Draw z-axis line.
-            glColor3f( 0, 0, 1 )
-     
-            glBegin( GL_LINES )
-            glVertex3f( 0, 0, 0 )
-            glVertex3f( 0, 0, 1 )
-            glEnd( )
+            self.draw_coordinate_system(l=self.scale_factor[0])
             
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
@@ -537,6 +491,57 @@ class Reference_Surface(object):
     def cleanup(self):
         if self._window:
             self.close_window()
+            
+    def draw_camera_box(self, img_size, K, scale=1):
+        # average focal length
+        f = (K[0, 0] + K[1, 1]) / 2
+        # compute distances for setting up the camera pyramid
+        W = 0.5*(img_size[0])
+        H = 0.5*(img_size[1])
+        Z = f
+        # scale the pyramid
+        W /= scale
+        H /= scale
+        Z /= scale
+        # draw it
+        glColor4f( 1, 0.5, 0, 0.5 )
+        glBegin( GL_LINE_LOOP )
+        glVertex3f( 0, 0, 0 )
+        glVertex3f( -W, H, Z )
+        glVertex3f( W, H, Z )
+        glVertex3f( 0, 0, 0 )
+        glVertex3f( W, H, Z )
+        glVertex3f( W, -H, Z )
+        glVertex3f( 0, 0, 0 )
+        glVertex3f( W, -H, Z )
+        glVertex3f( -W, -H, Z )
+        glVertex3f( 0, 0, 0 )
+        glVertex3f( -W, -H, Z )
+        glVertex3f( -W, H, Z )
+        glEnd( )
+
+    def draw_coordinate_system(self, l=1):
+        # Draw x-axis line.
+        glColor3f( l, 0, 0 )
+        glBegin( GL_LINES )
+        glVertex3f( 0, 0, 0 )
+        glVertex3f( l, 0, 0 )
+        glEnd( )
+        
+        # Draw y-axis line.
+        glColor3f( 0, l, 0 )
+        glBegin( GL_LINES )
+        glVertex3f( 0, 0, 0 )
+        glVertex3f( 0, l, 0 )
+        glEnd( )
+        
+        # Draw z-axis line.
+        glColor3f( 0, 0, l )
+        
+        glBegin( GL_LINES )
+        glVertex3f( 0, 0, 0 )
+        glVertex3f( 0, 0, l )
+        glEnd( )
 
 
 
@@ -575,6 +580,5 @@ class Support_Marker(object):
         #right now we take the mean of the last 30 datapoints
         uv_mean = np.mean(uv[-30:],axis=0)
         self.uv_coords = uv_mean
-
-
-
+        
+  

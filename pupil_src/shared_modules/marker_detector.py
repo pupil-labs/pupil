@@ -38,9 +38,13 @@ class Marker_Detector(Plugin):
         # all markers that are detected in the most recent frame
         self.markers = []
         # all registered surfaces
+        
+        self.K = np.load(os.path.join(self.g_pool.user_dir,'camera_matrix.npy'))
+        self.dist_coef = np.load(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"))
+        self.img_size = np.load(os.path.join(self.g_pool.user_dir,"camera_resolution.npy"))
 
         self.surface_definitions = Persistent_Dict(os.path.join(g_pool.user_dir,'surface_definitions') )
-        self.surfaces = [Reference_Surface(saved_definition=d) for d in self.load('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+        self.surfaces = [Reference_Surface(saved_definition=d, camera_intrinsics=(self.K, self.dist_coef, self.img_size)) for d in self.load('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
 
         # edit surfaces
         self.surface_edit_mode = c_bool(0)
@@ -98,7 +102,7 @@ class Marker_Detector(Plugin):
         pass
 
     def add_surface(self):
-        self.surfaces.append(Reference_Surface())
+        self.surfaces.append(Reference_Surface(camera_intrinsics=(self.K, self.dist_coef, self.img_size)))
         self.update_bar_markers()
 
     def remove_surface(self,i):

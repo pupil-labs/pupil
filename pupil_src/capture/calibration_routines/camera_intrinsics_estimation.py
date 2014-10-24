@@ -40,6 +40,7 @@ class Camera_Intrinsics_Estimation(Plugin):
     def __init__(self,g_pool,atb_pos=(0,0)):
         Plugin.__init__(self)
         self.collect_new = False
+        self.g_pool = g_pool
         self.calculated = False
         self.obj_grid = _gen_pattern_grid((4, 11))
         self.img_points = []
@@ -138,6 +139,7 @@ class Camera_Intrinsics_Estimation(Plugin):
                                                     (self.img_shape[1], self.img_shape[0]))
         np.save(os.path.join(self.g_pool.user_dir,'camera_matrix.npy'), camera_matrix)
         np.save(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"), dist_coefs)
+        np.save(os.path.join(self.g_pool.user_dir,"camera_resolution.npy"), np.array([self.img_shape[1], self.img_shape[0]]))
         audio.say("Camera calibrated. Calibration saved to user folder")
         logger.info("Camera calibrated. Calibration saved to user folder")
 
