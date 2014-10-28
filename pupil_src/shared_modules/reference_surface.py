@@ -11,6 +11,7 @@
 import numpy as np
 import cv2
 from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture,make_coord_system_norm_based
+from gl_utils.trackball import Trackball
 from glfw import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -23,7 +24,6 @@ from time import time
 
 import logging
 from pickle import FALSE
-from imageop import scale
 logger = logging.getLogger(__name__)
 
 def m_verts_to_screen(verts):
@@ -76,7 +76,7 @@ class Reference_Surface(object):
         self.m_from_screen = None
         self.uid = str(time())
         self.scale_factor = [1.,1.]
-        
+
         self.K, self.dist_coef, self.img_size = camera_intrinsics
         self.is3dPoseAvailable = False
         self.camera_pose_3d = None
@@ -227,29 +227,66 @@ class Reference_Surface(object):
                 self.m_to_screen,mask = cv2.findHomography(uv,yx)
                 self.m_from_screen = np.linalg.inv(self.m_to_screen)
                 #self.m_from_screen,mask = cv2.findHomography(yx,uv)
-                
+
                 if locate_3d:
+
+
+                    ###marker support pose estiamtion:
                     # denormalize image reference points to pixel space
                     yx.shape = -1,2
                     yx *= self.img_size
                     yx.shape = -1, 1, 2
-                    # scale object points to [cm] units
+                    # scale object points to world space units (think m,cm,mm)
                     uv.shape = -1,2
                     uv *= self.scale_factor
-                    # convert object points to 3D space
+                    # convert object points to lie on z==0 plane in 3d space
                     uv3d = np.zeros((uv.shape[0], uv.shape[1]+1))
                     uv3d[:,:-1] = uv
-                    # compute camera pose
-                    self.is3dPoseAvailable, rotation3d, translation3d = cv2.solvePnP(uv3d, yx, self.K, self.dist_coef)
-                    rMat, _ = cv2.Rodrigues(rotation3d)
-                    self.camera_pose_3d = np.eye(4, dtype=np.float32)
-                    self.camera_pose_3d[:-1,:-1] = rMat
-                    self.camera_pose_3d[:-1, -1] = translation3d.reshape(3) 
-                    self.camera_pose_3d = np.linalg.inv(self.camera_pose_3d)
-                    # flip z-axis for openGl (attention: use transpose for openGl drawing)
-                    cvToGl = np.eye(4, dtype=np.float32)
-                    cvToGl[2,2] = -1.0
-                    self.camera_pose_3d = np.dot(cvToGl, self.camera_pose_3d)
+                    # compute pose of object relative to camera center
+                    self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, yx, self.K, self.dist_coef,flags=cv2.CV_EPNP)
+
+
+
+                    ###marker posed estimation from virtually projected points.
+                    # object_pts = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
+                    # projected_pts = cv2.perspectiveTransform(object_pts,self.m_to_screen)
+                    # projected_pts.shape = -1,2
+                    # projected_pts *= self.img_size
+                    # projected_pts.shape = -1, 1, 2
+                    # # scale object points to world space units (think m,cm,mm)
+                    # object_pts.shape = -1,2
+                    # object_pts *= self.scale_factor
+                    # # convert object points to lie on z==0 plane in 3d space
+                    # object_pts_3d = np.zeros((4,3))
+                    # object_pts_3d[:,:-1] = object_pts
+                    # self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(object_pts_3d, projected_pts, self.K, self.dist_coef,flags=cv2.CV_EPNP)
+
+
+                    # transformation from Camera Optical Center:
+                    #   first: translate from Camera center to object origin.
+                    #   second: rotate x,y,z
+                    #   coordinate system is x,y,z where z goes out from the camera into the viewed volume.
+                    # print rot3d_cam_to_object[0],rot3d_cam_to_object[1],rot3d_cam_to_object[2], translate3d_cam_to_object[0],translate3d_cam_to_object[1],translate3d_cam_to_object[2]
+
+                    #turn translation vectors into 3x3 rot mat.
+                    rot3d_cam_to_object_mat, _ = cv2.Rodrigues(rot3d_cam_to_object)
+
+                    #to get the transformation from object to camera we need to reverse rotation and translation
+                    translate3d_object_to_cam = - translate3d_cam_to_object
+                    # rotation matrix inverse == transpose
+                    rot3d_object_to_cam_mat = rot3d_cam_to_object_mat.T
+
+
+                    # tranform3d_object_to_cam = np.eye(4, dtype=np.float32)
+                    flip_z_axix_hm = np.eye(4, dtype=np.float32)
+                    flip_z_axix_hm[2,2] = -1
+                    rot3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
+                    rot3d_object_to_cam_hm[:-1,:-1] = rot3d_object_to_cam_mat
+                    translate3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
+                    translate3d_object_to_cam_hm[:-1, -1] = translate3d_object_to_cam.reshape(3)
+                    tranform3d_object_to_cam =  np.matrix(flip_z_axix_hm) * np.matrix(rot3d_object_to_cam_hm) * np.matrix(translate3d_object_to_cam_hm)
+                    self.camera_pose_3d = tranform3d_object_to_cam
+
 
             else:
                 self.detected = False
@@ -328,7 +365,7 @@ class Reference_Surface(object):
             alpha = min(1,self.build_up_status/self.required_build_up)
             draw_gl_polyline_norm(frame.reshape((5,2)),(1.0,0.2,0.6,alpha))
             draw_gl_polyline_norm(hat.reshape((4,2)),(1.0,0.2,0.6,alpha))
-            
+
             draw_gl_point_norm(frame.reshape(5,2)[0])
 
 
@@ -367,7 +404,6 @@ class Reference_Surface(object):
             glLoadMatrixf(m)
 
             draw_named_texture(world_tex_id)
-
             glMatrixMode(GL_PROJECTION)
             glPopMatrix()
             glMatrixMode(GL_MODELVIEW)
@@ -375,7 +411,7 @@ class Reference_Surface(object):
 
             # now lets get recent pupil positions on this surface:
             draw_gl_points_norm(self.gaze_on_srf,color=(0.,8.,.5,.8), size=80)
-           
+
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
 
@@ -387,40 +423,47 @@ class Reference_Surface(object):
         if self._window and self.detected:
             active_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self._window)
-            #glClearColor(0,0,0,1)
-            clear_gl_screen()
-            
-            glMatrixMode( GL_PROJECTION )
-            glLoadIdentity( )
-            gluPerspective( 60.0, 1, 0.1, 1000.0 )
-            
-            glMatrixMode( GL_MODELVIEW )
-            glLoadIdentity( )
-            gluLookAt( 50, -50, 50, 10, 10, 0, 0, 0, 1 )
-            
-            # cv uses 3x3 gl uses 4x4 tranformation matricies
-            m = cvmat_to_glmat(self.m_from_screen)
-            #m_inv = cvmat_to_glmat(self.m_to_screen)
-            
+            glClearColor(.5,.5,.5,1.)
+
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+            glClearDepth(1.0)
+            glDepthFunc(GL_LESS)
+            glEnable(GL_DEPTH_TEST)
+            self.trackball.push()
+
             glMatrixMode(GL_MODELVIEW)
+
+            draw_coordinate_system(l=self.scale_factor[0])
+            glPushMatrix()
+            glScalef(self.scale_factor[0],self.scale_factor[1],1)
+            draw_gl_polyline([[0,0],[0,1],[1,1],[1,0],[0,0]],color = (.5,.3,.1,.5),thickness=3)
+            glPopMatrix()
+            # Draw the world window as projected onto the plane using the homography mapping
             glPushMatrix()
             glScalef(self.scale_factor[0], self.scale_factor[1], 1)
+            # cv uses 3x3 gl uses 4x4 tranformation matricies
+            m = cvmat_to_glmat(self.m_from_screen)
             glMultMatrixf(m)
+            glTranslatef(0,0,-.01)
             draw_named_texture(world_tex_id)
+            draw_gl_polyline([[0,0],[0,1],[1,1],[1,0],[0,0]],color = (.5,.3,.6,.5),thickness=3)
             glPopMatrix()
-            
+
+            # Draw the camera frustum and origin using the 3d tranformation obtained from solvepnp
             glPushMatrix()
             glMultMatrixf(self.camera_pose_3d.T.flatten())
-            
-            self.draw_camera_box(self.img_size, self.K, 100)
-            self.draw_coordinate_system(l=5)
+            draw_frustum(self.img_size, self.K, 150)
+            glLineWidth(1)
+            draw_frustum(self.img_size, self.K, .1)
+            draw_coordinate_system(l=5)
             glPopMatrix()
-            
-            self.draw_coordinate_system(l=self.scale_factor[0])
-            
+
+
+            self.trackball.pop()
+
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
-            
+
     def toggle_window(self,_):
         if self._window:
             self.window_should_close = True
@@ -431,6 +474,7 @@ class Reference_Surface(object):
         return bool(self._window)
 
 
+
     def open_window(self):
         if not self._window:
             if self.fullscreen:
@@ -439,7 +483,7 @@ class Reference_Surface(object):
                 height,width= mode[0],mode[1]
             else:
                 monitor = None
-                height,width= 640,int(640./(self.scale_factor[0]/self.scale_factor[1])) #open with same aspect ratio as surface 
+                height,width= 640,int(640./(self.scale_factor[0]/self.scale_factor[1])) #open with same aspect ratio as surface
 
             self._window = glfwCreateWindow(height, width, "Reference Surface: " + self.name, monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen.value:
@@ -451,6 +495,9 @@ class Reference_Surface(object):
             glfwSetWindowSizeCallback(self._window,self.on_resize)
             glfwSetKeyCallback(self._window,self.on_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
+            glfwSetMouseButtonCallback(self._window,self.on_button)
+            glfwSetCursorPosCallback(self._window,self.on_pos)
+            glfwSetScrollCallback(self._window,self.on_scroll)
 
             # gl_state settings
             active_window = glfwGetCurrentContext()
@@ -458,7 +505,8 @@ class Reference_Surface(object):
             basic_gl_setup()
             make_coord_system_norm_based()
 
-
+            self.trackball = Trackball(theta=0, phi=0, zoom=.1, distance=100)
+            self.input = {'down':False, 'mouse':(0,0)}
             # refresh speed settings
             glfwSwapInterval(0)
 
@@ -481,6 +529,25 @@ class Reference_Surface(object):
     def on_close(self,window=None):
         self.window_should_close = True
 
+
+    def on_button(self,window,button, action, mods):
+        if action == GLFW_PRESS:
+            self.input['down'] = True
+            self.input['mouse'] = glfwGetCursorPos(window)
+        if action == GLFW_RELEASE:
+            self.input['down'] = False
+
+
+    def on_pos(self,window,x, y):
+        if self.input['down']:
+            old_x,old_y = self.input['mouse']
+            self.trackball.drag_to(old_x,old_y,x-old_x,y-old_y)
+            self.input['mouse'] = x,y
+
+
+    def on_scroll(self,window,x,y):
+        self.trackball.zoom_to(0,0,0,y)
+
     def close_window(self):
         if self._window:
             glfwDestroyWindow(self._window)
@@ -491,57 +558,7 @@ class Reference_Surface(object):
     def cleanup(self):
         if self._window:
             self.close_window()
-            
-    def draw_camera_box(self, img_size, K, scale=1):
-        # average focal length
-        f = (K[0, 0] + K[1, 1]) / 2
-        # compute distances for setting up the camera pyramid
-        W = 0.5*(img_size[0])
-        H = 0.5*(img_size[1])
-        Z = f
-        # scale the pyramid
-        W /= scale
-        H /= scale
-        Z /= scale
-        # draw it
-        glColor4f( 1, 0.5, 0, 0.5 )
-        glBegin( GL_LINE_LOOP )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( -W, H, Z )
-        glVertex3f( W, H, Z )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( W, H, Z )
-        glVertex3f( W, -H, Z )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( W, -H, Z )
-        glVertex3f( -W, -H, Z )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( -W, -H, Z )
-        glVertex3f( -W, H, Z )
-        glEnd( )
 
-    def draw_coordinate_system(self, l=1):
-        # Draw x-axis line.
-        glColor3f( l, 0, 0 )
-        glBegin( GL_LINES )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( l, 0, 0 )
-        glEnd( )
-        
-        # Draw y-axis line.
-        glColor3f( 0, l, 0 )
-        glBegin( GL_LINES )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( 0, l, 0 )
-        glEnd( )
-        
-        # Draw z-axis line.
-        glColor3f( 0, 0, l )
-        
-        glBegin( GL_LINES )
-        glVertex3f( 0, 0, 0 )
-        glVertex3f( 0, 0, l )
-        glEnd( )
 
 
 
@@ -580,5 +597,92 @@ class Support_Marker(object):
         #right now we take the mean of the last 30 datapoints
         uv_mean = np.mean(uv[-30:],axis=0)
         self.uv_coords = uv_mean
-        
-  
+
+
+def draw_frustum(img_size, K, scale=1):
+    # average focal length
+    f = (K[0, 0] + K[1, 1]) / 2
+    # compute distances for setting up the camera pyramid
+    W = 0.5*(img_size[0])
+    H = 0.5*(img_size[1])
+    Z = f
+    # scale the pyramid
+    W /= scale
+    H /= scale
+    Z /= scale
+    # draw it
+    glColor4f( 1, 0.5, 0, 0.5 )
+    glBegin( GL_LINE_LOOP )
+    glVertex3f( 0, 0, 0 )
+    glVertex3f( -W, H, Z )
+    glVertex3f( W, H, Z )
+    glVertex3f( 0, 0, 0 )
+    glVertex3f( W, H, Z )
+    glVertex3f( W, -H, Z )
+    glVertex3f( 0, 0, 0 )
+    glVertex3f( W, -H, Z )
+    glVertex3f( -W, -H, Z )
+    glVertex3f( 0, 0, 0 )
+    glVertex3f( -W, -H, Z )
+    glVertex3f( -W, H, Z )
+    glEnd( )
+
+def draw_coordinate_system(l=1):
+    # Draw x-axis line.
+    glColor3f( 1, 0, 0 )
+    glBegin( GL_LINES )
+    glVertex3f( 0, 0, 0 )
+    glVertex3f( l, 0, 0 )
+    glEnd( )
+
+    # Draw y-axis line.
+    glColor3f( 0, 1, 0 )
+    glBegin( GL_LINES )
+    glVertex3f( 0, 0, 0 )
+    glVertex3f( 0, l, 0 )
+    glEnd( )
+
+    # Draw z-axis line.
+    glColor3f( 0, 0, 1 )
+    glBegin( GL_LINES )
+    glVertex3f( 0, 0, 0 )
+    glVertex3f( 0, 0, l )
+    glEnd( )
+
+
+if __name__ == '__main__':
+
+    rotation3d = np.array([1,2,3],dtype=np.float32)
+    translation3d = np.array([50,60,70],dtype=np.float32)
+
+    # transformation from Camera Optical Center:
+    #   first: translate from Camera center to object origin.
+    #   second: rotate x,y,z
+    #   coordinate system is x,y,z positive (not like opengl, where the z-axis is flipped.)
+    # print rotation3d[0],rotation3d[1],rotation3d[2], translation3d[0],translation3d[1],translation3d[2]
+
+    #turn translation vectors into 3x3 rot mat.
+    rotation3dMat, _ = cv2.Rodrigues(rotation3d)
+
+
+    #to get the transformation from object to camera we need to reverse rotation and translation
+    #
+    tranform3d_to_camera_translation = np.eye(4, dtype=np.float32)
+    tranform3d_to_camera_translation[:-1, -1] = - translation3d
+
+    #rotation matrix inverse == transpose
+    tranform3d_to_camera_rotation = np.eye(4, dtype=np.float32)
+    tranform3d_to_camera_rotation[:-1,:-1] = rotation3dMat.T
+
+    print tranform3d_to_camera_translation
+    print tranform3d_to_camera_rotation
+    print np.matrix(tranform3d_to_camera_rotation) * np.matrix(tranform3d_to_camera_translation)
+
+
+
+
+    rMat, _ = cv2.Rodrigues(rotation3d)
+    self.from_camera_to_referece = np.eye(4, dtype=np.float32)
+    self.from_camera_to_referece[:-1,:-1] = rMat
+    self.from_camera_to_referece[:-1, -1] = translation3d.reshape(3)
+    # self.camera_pose_3d = np.linalg.inv(self.camera_pose_3d)
