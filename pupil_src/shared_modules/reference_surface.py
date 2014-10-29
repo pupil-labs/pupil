@@ -245,6 +245,7 @@ class Reference_Surface(object):
                     # compute pose of object relative to camera center
                     self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, yx, self.K, self.dist_coef,flags=cv2.CV_EPNP)
 
+                    # not verifed but usefull info: http://stackoverflow.com/questions/17423302/opencv-solvepnp-tvec-units-and-axes-directions
 
 
                     ###marker posed estimation from virtually projected points.
@@ -489,8 +490,13 @@ class Reference_Surface(object):
             if not self.fullscreen.value:
                 glfwSetWindowPos(self._window,200,0)
 
-            self.on_resize(self._window,height,width)
 
+
+            self.trackball = Trackball()
+            self.input = {'down':False, 'mouse':(0,0)}
+
+
+            self.on_resize(self._window,height,width)
             #Register callbacks
             glfwSetWindowSizeCallback(self._window,self.on_resize)
             glfwSetKeyCallback(self._window,self.on_key)
@@ -505,8 +511,6 @@ class Reference_Surface(object):
             basic_gl_setup()
             make_coord_system_norm_based()
 
-            self.trackball = Trackball(theta=0, phi=0, zoom=.1, distance=100)
-            self.input = {'down':False, 'mouse':(0,0)}
             # refresh speed settings
             glfwSwapInterval(0)
 
@@ -516,6 +520,8 @@ class Reference_Surface(object):
 
     # window calbacks
     def on_resize(self,window,w, h):
+        self.trackball.set_window_size(w,h)
+
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
         adjust_gl_view(w,h,window)
@@ -541,12 +547,12 @@ class Reference_Surface(object):
     def on_pos(self,window,x, y):
         if self.input['down']:
             old_x,old_y = self.input['mouse']
-            self.trackball.drag_to(old_x,old_y,x-old_x,y-old_y)
+            self.trackball.drag_to(x-old_x,y-old_y)
             self.input['mouse'] = x,y
 
 
     def on_scroll(self,window,x,y):
-        self.trackball.zoom_to(0,0,0,y)
+        self.trackball.zoom_to(y)
 
     def close_window(self):
         if self._window:
