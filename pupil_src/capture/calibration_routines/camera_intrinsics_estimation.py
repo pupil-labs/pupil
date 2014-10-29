@@ -37,7 +37,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         this method is used to calculate camera intrinsics.
 
     """
-    def __init__(self,g_pool,atb_pos=(0,0)):
+    def __init__(self,g_pool):
         Plugin.__init__(self,g_pool)
         self.collect_new = False
         self.g_pool = g_pool
@@ -61,6 +61,8 @@ class Camera_Intrinsics_Estimation(Plugin):
         monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
         #primary_monitor = glfwGetPrimaryMonitor()
 
+
+    def init_gui(self):
         atb_label = "estimate camera instrinsics"
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
@@ -230,7 +232,8 @@ class Camera_Intrinsics_Estimation(Plugin):
         """
         if self._window:
             self.close_window()
-        self._bar.destroy()
+        if self._bar:
+            self._bar.destroy()
 
 
 # shared helper functions for detectors private to the module
