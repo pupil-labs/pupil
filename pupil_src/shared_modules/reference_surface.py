@@ -230,7 +230,6 @@ class Reference_Surface(object):
 
                 if locate_3d:
 
-
                     ###marker support pose estiamtion:
                     # denormalize image reference points to pixel space
                     yx.shape = -1,2
@@ -424,7 +423,7 @@ class Reference_Surface(object):
         if self._window and self.detected:
             active_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self._window)
-            glClearColor(.5,.5,.5,1.)
+            glClearColor(.8,.8,.8,1.)
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
             glClearDepth(1.0)
@@ -437,7 +436,7 @@ class Reference_Surface(object):
             draw_coordinate_system(l=self.scale_factor[0])
             glPushMatrix()
             glScalef(self.scale_factor[0],self.scale_factor[1],1)
-            draw_gl_polyline([[0,0],[0,1],[1,1],[1,0],[0,0]],color = (.5,.3,.1,.5),thickness=3)
+            draw_gl_polyline([[0,0],[0,1],[1,1],[1,0]],color = (.5,.3,.1,.5),thickness=3)
             glPopMatrix()
             # Draw the world window as projected onto the plane using the homography mapping
             glPushMatrix()
@@ -447,7 +446,7 @@ class Reference_Surface(object):
             glMultMatrixf(m)
             glTranslatef(0,0,-.01)
             draw_named_texture(world_tex_id)
-            draw_gl_polyline([[0,0],[0,1],[1,1],[1,0],[0,0]],color = (.5,.3,.6,.5),thickness=3)
+            draw_gl_polyline([[0,0],[0,1],[1,1],[1,0]],color = (.5,.3,.6,.5),thickness=3)
             glPopMatrix()
 
             # Draw the camera frustum and origin using the 3d tranformation obtained from solvepnp
