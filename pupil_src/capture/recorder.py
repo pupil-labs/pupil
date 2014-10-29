@@ -93,9 +93,17 @@ class Recorder(Plugin):
     def update(self,frame,recent_pupil_positons,events):
         # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
         for p in recent_pupil_positons:
-            if p['norm_pupil'] is not None:
-                gaze_pt = p['norm_gaze'][0],p['norm_gaze'][1],p['norm_pupil'][0],p['norm_pupil'][1],p['timestamp'],p['confidence']
-                self.gaze_list.append(gaze_pt)
+            if p['confidece'] > g_pool.pupil_confidece_threshold:
+                pupil_pos = p['norm_pupil'][0],p['norm_pupil'][1],p['timestamp'],p['confidence'],p['id']
+            else:
+                # add dummy data
+                pass
+            self.pupil_list.append(pupil_pos)
+
+        for g in events.get('gaze',[]):
+            gaze_pos = g['norm_gaze'][0],g['norm_gaze'][1],g['confidence'],g['timestamp']
+            self.gaze_list.append(gaze_pos)
+
         self.timestamps.append(frame.timestamp)
         self.writer.write(frame.img)
         self.frame_count += 1

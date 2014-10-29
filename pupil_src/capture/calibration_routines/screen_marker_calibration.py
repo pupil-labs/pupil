@@ -57,8 +57,7 @@ class Screen_Marker_Calibration(Plugin):
 
     """
     def __init__(self, g_pool, atb_pos=(0,0)):
-        Plugin.__init__(self)
-        self.g_pool = g_pool
+        Plugin.__init__(self,g_pool)
         self.active = False
         self.detected = False
         self.screen_marker_state = 0
@@ -77,16 +76,20 @@ class Screen_Marker_Calibration(Plugin):
 
         self.world_size = None
 
+        self._bar = None
+        self.atb_pos =
         self._window = None
         self.window_should_close = False
         self.window_should_open = False
+
+
+    def init_gui(self):
         self.fullscreen = c_bool(1)
         self.monitor_idx = c_int(0)
         monitor_handles = glfwGetMonitors()
         self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
         monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
         #primary_monitor = glfwGetPrimaryMonitor()
-
 
 
         atb_label = "calibrate on screen"
@@ -180,7 +183,6 @@ class Screen_Marker_Calibration(Plugin):
 
         cal_pt_cloud = np.array(cal_pt_cloud)
         map_fn = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size)
-        self.g_pool.map_pupil = map_fn
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
     def close_window(self):
@@ -327,6 +329,14 @@ class Screen_Marker_Calibration(Plugin):
         glfwMakeContextCurrent(active_window)
 
 
+    def get_init_dict(self):
+        d = {}
+        # add all aguments of your plugin init fn with paramter names as name field
+        # do not include g_pool here.
+        return d
+
+
+
     def cleanup(self):
         """gets called when the plugin get terminated.
            either volunatily or forced.
@@ -335,4 +345,5 @@ class Screen_Marker_Calibration(Plugin):
             self.stop()
         if self._window:
             self.close_window()
-        self._bar.destroy()
+        if self._bar:
+            self._bar.destroy()

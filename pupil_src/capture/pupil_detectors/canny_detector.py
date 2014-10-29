@@ -497,7 +497,6 @@ class Canny_Detector(Pupil_Detector):
         if self._window:
             #draw a little animation of confidence
             cv2.putText(debug_img, 'good',(410,debug_img.shape[0]-100), cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,100,100))
-            cv2.putText(debug_img, 'threshold',(410,debug_img.shape[0]-int(self.final_perimeter_ratio_range[0]*100)), cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,100,100))
             cv2.putText(debug_img, 'no detection',(410,debug_img.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,100,100))
             lines = np.array([[[2*x,debug_img.shape[0]-int(100*y)],[2*x,debug_img.shape[0]]] for x,y in enumerate(self.confidence_hist)])
             cv2.polylines(debug_img,lines,isClosed=False,color=(255,100,100))
@@ -522,8 +521,7 @@ class Canny_Detector(Pupil_Detector):
         self._bar.add_var("pupil_max",self.pupil_max,min=1,help="Setting good bounds will increase detection robustness. Use alorithm view to see.")
         self._bar.add_var("Pupil_Aparent_Size",self.target_size,readonly=True)
         self._bar.add_var("Contour min length",self.min_contour_size,help="Setting this low will make the alorithm try to connect even smaller arcs to find the pupil but cost you cpu time!")
-        self._bar.add_var("confidece threshold",c_float(0),getter= lambda: self.final_perimeter_ratio_range[0], setter=self.set_final_perimeter_ratio_range,step=.05,min=0.,max=1. ,
-                            help="Fraction of pupil boundry that has to be visible and detected for the resukt to be declared valid.")
+
         # self._bar.add_var("Pupil_Shade",self.bin_thresh, readonly=True)
         self._bar.add_var("confidence",self.confidence, readonly=True,help="The measure of confidence is a number between 0 and 1 of how sure the algorithm is about the detected pupil. We currenlty use the fraction of pupil boundry edge that is used as support for the ellipse result.")
         # self._bar.add_var("Image_Blur",self.blur, step=2,min=1,max=9)

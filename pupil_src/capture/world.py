@@ -128,28 +128,21 @@ def world(g_pool,cap_src,cap_size):
         return
     height,width = frame.img.shape[:2]
 
-    # load last calibration data
-    try:
-        pt_cloud = np.load(os.path.join(g_pool.user_dir,'cal_pt_cloud.npy'))
-        logger.debug("Using calibration found in %s" %g_pool.user_dir)
-        map_pupil = calibrate.get_map_from_cloud(pt_cloud,(width,height))
-    except :
-        logger.debug("No calibration found.")
-        def map_pupil(vector):
-            """ 1 to 1 mapping """
-            return vector
+
 
 
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
     g_pool.plugins = []
-    g_pool.map_pupil = map_pupil
     g_pool.update_textures = c_bool(1)
+
     if isinstance(cap,FakeCapture):
         g_pool.update_textures.value = False
     g_pool.capture = cap
 
     g_pool.rec_name = recorder.get_auto_name()
+
+    g_pool.pupil_confidece_threshold = c_float(load('pupil_confidece_threshold',.6) )
 
 
     # helpers called by the main atb bar
@@ -299,6 +292,7 @@ def world(g_pool,cap_src,cap_size):
     bar.add_button("start/stop remote",toggle_remote,key="w",help="remote allows seding commad to pupil via network")
     bar.add_button("set timebase to now",reset_timebase,help="this button allows the timestamps to count from now on.",key="t")
     bar.add_var("update screen", g_pool.update_textures,help="if you dont need to see the camera image updated, you can turn this of to reduce CPU load.")
+    bar.add_var("pupil confidece threshold",g_pool.pupil_confidece_threshold, step=.05,min=0.,max=1. , help="Fraction of pupil boundry that has to be visible and detected for the resukt to be declared valid.")
     bar.add_separator("Sep1")
     bar.add_var("version",bar.version, readonly=True)
     bar.add_var("exit", g_pool.quit)
@@ -333,11 +327,17 @@ def world(g_pool,cap_src,cap_size):
     glfwSwapInterval(0)
 
 
-    #load calibration plugin
-    open_calibration(bar.calibration_type.value,bar.calibration_type)
 
-    #load gaze_display plugin
-    g_pool.plugins.append(Display_Recent_Gaze(g_pool))
+    default_plugins = [('Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}) ]
+    #plugins that are loaded based on user settings
+    for initializer in load('plugins',default_plugins):
+        name, args = initializer
+        logger.debug("Loading plugin: %s with settings %s"%(name, args))
+        try:
+            p = plugin_by_name[name](g,**args)
+            g.plugins.append(p)
+        except:
+            logger.warning("Plugin '%s' failed to load from settings file." %name)
 
 
     # Event loop
@@ -355,17 +355,13 @@ def world(g_pool,cap_src,cap_size):
 
         update_fps()
 
-        #a container that allows plugins to post and read events
-        events = []
+        #a dictionary that allows plugins to post and read events
+        events = {}
 
         #receive and map pupil positions
         recent_pupil_positions = []
         while not g_pool.pupil_queue.empty():
             p = g_pool.pupil_queue.get()
-            if p['norm_pupil'] is None:
-                p['norm_gaze'] = None
-            else:
-                p['norm_gaze'] = g_pool.map_pupil(p['norm_pupil'])
             recent_pupil_positions.append(p)
 
 
@@ -395,16 +391,29 @@ def world(g_pool,cap_src,cap_size):
         glfwPollEvents()
 
 
+    plugin_save = []
+    for p in g.plugins:
+        try:
+            p_initializer = p.get_class_name(),p.get_init_dict()
+            plugin_save.append(p_initializer)
+        except AttributeError:
+            #not all plugins need to be savable, they will not have the init dict.
+            # any object without a get_init_dict method will throw this exception.
+            pass
+
+
     # de-init all running plugins
     for p in g_pool.plugins:
         p.alive = False
         #reading p.alive actually runs plug-in cleanup
         _ = p.alive
 
+    save('plugins',plugin_save)
     save('window_size',bar.window_size.value)
     save('calibration_type',bar.calibration_type.value)
     save('record_eye',bar.record_eye.value)
     save('audio',bar.audio.value)
+    save('pupil_confidece_threshold',g_pool.pupil_confidece_threshold.value)
     session_settings.close()
 
     cap.close()

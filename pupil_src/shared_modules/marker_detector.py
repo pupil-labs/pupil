@@ -31,14 +31,14 @@ class Marker_Detector(Plugin):
     """docstring
     """
     def __init__(self,g_pool,atb_pos=(320,220)):
-        super(Marker_Detector, self).__init__()
+        super(Marker_Detector, self).__init__(g_pool)
         self.g_pool = g_pool
         self.order = .2
 
         # all markers that are detected in the most recent frame
         self.markers = []
         # all registered surfaces
-        
+
         self.K = np.load(os.path.join(self.g_pool.user_dir,'camera_matrix.npy'))
         self.dist_coef = np.load(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"))
         self.img_size = np.load(os.path.join(self.g_pool.user_dir,"camera_resolution.npy"))
@@ -148,8 +148,8 @@ class Marker_Detector(Plugin):
         # locate surfaces
         for s in self.surfaces:
             s.locate(self.markers, self.locate_3d.value)
-            if s.detected:
-                events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
+            # if s.detected:
+                # events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
         if self.draw_markers.value:
             draw_markers(img,self.markers)
@@ -197,12 +197,12 @@ class Marker_Detector(Plugin):
 
         for s in self.surfaces:
             s.gl_draw_frame()
-            
+
             if self.locate_3d.value:
                 s.gl_display_in_window_3d(self.g_pool.image_tex)
             else:
                 s.gl_display_in_window(self.g_pool.image_tex)
-            
+
 
         if self.surface_edit_mode.value:
             for s in  self.surfaces:

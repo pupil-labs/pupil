@@ -38,7 +38,7 @@ class Camera_Intrinsics_Estimation(Plugin):
 
     """
     def __init__(self,g_pool,atb_pos=(0,0)):
-        Plugin.__init__(self)
+        Plugin.__init__(self,g_pool)
         self.collect_new = False
         self.g_pool = g_pool
         self.calculated = False
