@@ -10,8 +10,7 @@
 import numpy as np
 import cv2
 
-def get_canditate_ellipses(img,area_threshold,dist_threshold,min_ring_count, visual_debug):
-    gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+def get_canditate_ellipses(gray_img,area_threshold,dist_threshold,min_ring_count, visual_debug):
 
     # get threshold image used to get crisp-clean edges
     edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 7, 7)
@@ -31,8 +30,8 @@ def get_canditate_ellipses(img,area_threshold,dist_threshold,min_ring_count, vis
     # keep only contours                        with parents     and      children
     contained_contours = contours[np.logical_and(hierarchy[:,3]>=0, hierarchy[:,2]>=0)]
     # turn on to debug contours
-    if visual_debug:
-        cv2.drawContours(img, contained_contours,-1, (0,0,255))
+    # if visual_debug:
+    #     cv2.drawContours(gray_img, contained_contours,-1, (0,0,255))
 
     # need at least 5 points to fit ellipse
     contained_contours =  [c for c in contained_contours if len(c) >= 5]

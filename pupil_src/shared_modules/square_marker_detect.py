@@ -247,9 +247,8 @@ lk_params = dict( winSize  = (45, 45),
 prev_img = None
 tick = 0
 
-def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False,true_detect_every_frame = 1):
+def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False,true_detect_every_frame = 1):
     global prev_img
-    gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
     global tick
     if not tick:
@@ -299,7 +298,7 @@ def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,ape
         markers = new_markers
 
 
-    prev_img = gray_img
+    prev_img = gray_img.copy()
     return markers
 
 

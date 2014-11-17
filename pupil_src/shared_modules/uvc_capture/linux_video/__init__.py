@@ -9,8 +9,7 @@
 '''
 
 
-from v4l2_capture import VideoCapture,CameraCaptureError
-from v4l2_ctl import Controls, Camera_List, Cam
+import v4l2
 import atb
 from ctypes import c_bool
 from time import sleep
@@ -18,35 +17,60 @@ from time import sleep
 import logging
 logger = logging.getLogger(__name__)
 
+class CameraCaptureError(Exception):
+    """General Exception for this module"""
+    def __init__(self, arg):
+        super(CameraCaptureError, self).__init__()
+        self.arg = arg
 
+def Camera_List():
+    '''
+    Thin wrapper around list_devices to improve formatting.
+    '''
+    class Cam(object):
+        pass
+
+    cam_list = []
+    for c in v4l2.list_devices():
+        cam = Cam()
+        cam.name = c['dev_name']
+        cam.src_id = int(c['dev_path'][-1])
+        cam.bus_info = c['bus_info']
+        cam_list.append(cam)
+    return cam_list
 
 
 class Camera_Capture(object):
-    """docstring for uvcc_camera"""
+    """
+    Camera Capture is a class that encapsualtes v4l2.Capture: 
+     - adds UI elements 
+     - adds timestamping sanitization fns.
+    """
     def __init__(self,cam,size=(640,480),fps=None,timebase=None):
         self.src_id = cam.src_id
-        self.serial = cam.serial
         self.name = cam.name
-        self.controls = Controls(self.src_id)
+
+        self.timebase = timebase
+        self.use_hw_ts = self.check_hw_ts_support()
+        self._last_timestamp = v4l2.get_sys_time_monotonic()
+
+        self.capture = v4l2.Capture('/dev/video'+str(self.src_id))
+        self.capture.frame_size = size
+        self.capture.frame_rate = (1,fps or 30)
+        self.controls = self.capture.enum_controls()
+        self.controls_dict = dict([(c['name'],c) for c in self.controls])
+        self._frame_rates = self.capture.frame_rates
+        self._atb_frame_rates_dict = dict( [(str(r),idx) for idx,r in enumerate(self._frame_rates)] ) 
         try:
-            self.controls['focus_auto'].set_val(0)
+            self.capture.set_control(self.controls_dict['Focus, Auto']['id'], 0)
         except KeyError:
             pass
         try:
             # exposure_auto_priority == 1
             # leads to reduced framerates under low light and corrupt timestamps.
-            self.controls['exposure_auto_priority'].set_val(0)
+            self.capture.set_control(self.controls_dict['Exposure, Auto Priority']['id'], 0)
         except KeyError:
             pass
-        self.timebase = timebase
-        self.use_hw_ts = self.check_hw_ts_support()
-
-        #give camera some time to change settings.
-        sleep(0.3)
-        self.capture = VideoCapture(self.src_id,size,fps,timebase = self.timebase, use_hw_timestamps = self.use_hw_ts)
-        self.get_frame = self.capture.read
-        self.get_now = self.capture.get_time_monotonic
-
 
 
     def check_hw_ts_support(self):
@@ -77,10 +101,10 @@ class Camera_Capture(object):
 
     def re_init(self,cam,size=(640,480),fps=30):
 
-        current_size = self.capture.get_size()
-        current_fps = self.capture.get_rate()
+        current_size = self.capture.frame_size
+        current_fps = self.capture.frame_rate[-1]
 
-        self.capture.cleanup()
+        self.capture.close()
         self.capture = None
         #recreate the bar with new values
         bar_pos = self.bar._get_position()
@@ -88,24 +112,26 @@ class Camera_Capture(object):
 
 
         self.src_id = cam.src_id
-        self.serial = cam.serial
         self.name = cam.name
-        self.controls = Controls(self.src_id)
 
-        try:
-            self.controls['focus_auto'].set_val(0)
-        except KeyError:
-            pass
-        try:
-            self.controls['exposure_auto_priority'].set_val(0)
-        except KeyError:
-            pass
 
         self.use_hw_ts = self.check_hw_ts_support()
+        self.capture = v4l2.Capture('/dev/video'+str(self.src_id))
+        self.capture.frame_size = current_size
+        self.capture.frame_rate = (1,current_fps or 30)
+        self.controls = self.capture.enum_controls()
+        self.controls_dict = dict([(c['name'],c) for c in self.controls])
+        try:
+            self.capture.set_control(self.controls_dict['Focus, Auto']['id'], 0)
+        except KeyError:
+            pass
+        try:
+            # exposure_auto_priority == 1
+            # leads to reduced framerates under low light and corrupt timestamps.
+            self.capture.set_control(self.controls_dict['Exposure, Auto Priority']['id'], 0)
+        except KeyError:
+            pass
 
-        self.capture = VideoCapture(self.src_id,current_size,current_fps,self.timebase,self.use_hw_ts)
-        self.get_frame = self.capture.read
-        self.get_now = self.capture.get_time_monotonic
         self.create_atb_bar(bar_pos)
 
     def re_init_cam_by_src_id(self,requested_id):
@@ -115,6 +141,56 @@ class Camera_Capture(object):
                 return
         logger.warning("could not reinit capture, src_id not valid anymore")
         return
+
+
+    def get_frame(self): 
+        try:
+            frame = self.capture.get_frame()
+        except:
+            raise CameraCaptureError("Could not get frame from %s"%self.src_id)
+
+        timestamp = frame.timestamp
+        if self.use_hw_ts:
+                    
+            # lets make sure this timestamps is sane:
+            if abs(timestamp-v4l2.get_sys_time_monotonic()) > 5: #hw_timestamp more than 5secs away from now?
+                logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s and last timestamp was %s"%(self.src_str,timestamp,v4l2.get_sys_time_monotonic(),self._last_timestamp))
+                timestamp = self._last_timestamp + 1./self.get_rate()
+                logger.warning("Correcting timestamp by extrapolation from last known timestamp using set rate: %s. TS now at %s"%(str(self.capture.framerate),timestamp) )
+                self._last_timestamp = timestamp
+
+        else:
+            timestamp = v4l2.get_sys_time_monotonic()
+
+            timestamp -= self.timebase.value
+        frame.timestamp = timestamp
+        return frame
+
+    def atb_set_ctl(self,val,ctl):
+        ctl_id = self.controls_dict[ctl]['id']
+        self.capture.set_control(ctl_id,val)
+        val = self.capture.get_control(ctl_id)
+        self.controls_dict[ctl]['value'] = val
+
+    def atb_get_ctl(self,ctl):
+        # ctl_id = self.controls_dict[ctl]['id']
+        # return self.capture.get_control(ctl_id)
+        return self.controls_dict[ctl]['value']
+
+    def atb_load_defaults(self):
+        for c in self.controls:
+            if not c['disabled']:
+                self.capture.set_control(c['id'],c['default'])
+                c['value'] = self.capture.get_control(c['id'])
+
+
+    def atb_get_frame_rate(self):
+        return self.capture.frame_rates.index(self.capture.frame_rate)
+
+    def atb_set_frame_rate(self,rate_idx):
+        rate = self.capture.frame_rates[rate_idx]
+        print rate,rate_idx
+        self.capture.frame_rate = rate
 
 
     def create_atb_bar(self,pos):
@@ -127,47 +203,47 @@ class Camera_Capture(object):
         cameras_enum = atb.enum("Capture",dict([(c.name,c.src_id) for c in Camera_List()]) )
         self.bar.add_var("Capture",vtype=cameras_enum,getter=lambda:self.src_id, setter=self.re_init_cam_by_src_id)
 
-        self.bar.add_var('framerate', vtype = atb.enum('framerate',self.capture.rates_menu), getter = lambda:self.capture.current_rate_idx, setter=self.capture.set_rate_idx )
+        self.bar.add_var('framerate', vtype = atb.enum('framerate',self._atb_frame_rates_dict), getter = self.atb_get_frame_rate, setter=self.atb_set_frame_rate )
         self.bar.add_var('hardware timestamps',vtype=atb.TW_TYPE_BOOL8,getter=lambda:self.use_hw_ts)
 
-        sorted_controls = [c for c in self.controls.itervalues()]
-        sorted_controls.sort(key=lambda c: c.order)
-
-
-        for control in sorted_controls:
-            name = control.atb_name
-            if control.type=="bool":
-                self.bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=control.get_val,setter=control.set_val)
-            elif control.type=='int':
-                self.bar.add_var(name,vtype=atb.TW_TYPE_INT32,getter=control.get_val,setter=control.set_val)
-                self.bar.define(definition='min='+str(control.min),   varname=name)
-                self.bar.define(definition='max='+str(control.max),   varname=name)
-                self.bar.define(definition='step='+str(control.step), varname=name)
-            elif control.type=="menu":
-                if control.menu is None:
+        u_name = 0
+        for control in self.controls:
+            name = str(u_name)
+            u_name +=1
+            label =  control['name']
+            if control['type']=="bool":
+                self.bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=self.atb_get_ctl,setter=self.atb_set_ctl,label = label, data=label)
+            elif control['type']=='int':
+                self.bar.add_var(name,vtype=atb.TW_TYPE_INT32,getter=self.atb_get_ctl,setter=self.atb_set_ctl,label = label, data=label)
+                self.bar.define(definition='min='+str(control['min']),   varname=name)
+                self.bar.define(definition='max='+str(control['max']),   varname=name)
+                self.bar.define(definition='step='+str(control['step']), varname=name)
+            elif control['type']=="menu":
+                if control['menu'] == {}:
                     vtype = None
                 else:
-                    vtype= atb.enum(name,control.menu)
-                self.bar.add_var(name,vtype=vtype,getter=control.get_val,setter=control.set_val)
-                if control.menu is None:
-                    self.bar.define(definition='min='+str(control.min),   varname=name)
-                    self.bar.define(definition='max='+str(control.max),   varname=name)
-                    self.bar.define(definition='step='+str(control.step), varname=name)
+                    vtype= atb.enum(name,control['menu'])
+                self.bar.add_var(name,vtype=vtype,getter=self.atb_get_ctl,setter=self.atb_set_ctl,label = label, data=label)
+                if control['menu'] == {}:
+                    self.bar.define(definition='min='+str(control['min']),   varname=name)
+                    self.bar.define(definition='max='+str(control['max']),   varname=name)
+                    self.bar.define(definition='step='+str(control['step']), varname=name)
             else:
                 pass
-            if control.flags == "inactive":
-                pass
-            if control.name == 'exposure_auto_priority':
+            if control['disabled']:
+                self.bar.define(definition='readonly=1',varname=name)
+            if label == 'Exposure, Auto Priority':
                 # the controll should always be off. we set it to 0 on init (see above)
-                self.bar.define(definition='readonly=1',varname=control.name)
+                self.bar.define(definition='readonly=1',varname=name)
 
-        self.bar.add_button("refresh",self.controls.update_from_device)
-        self.bar.add_button("load defaults",self.controls.load_defaults)
+        # self.bar.add_button("refresh",self.controls.update_from_device)
+        self.bar.add_button("load defaults",self.atb_load_defaults)
 
         return size
 
     def close(self):
         self.kill_atb_bar()
+        self.capture.close()
         del self.capture
         logger.info("Capture released")
 
@@ -175,3 +251,4 @@ class Camera_Capture(object):
         if hasattr(self,'bar'):
             self.bar.destroy()
             del self.bar
+
