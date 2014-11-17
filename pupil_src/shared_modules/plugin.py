@@ -21,7 +21,7 @@ class Plugin(object):
 
     """
     # if you have a plugin that can exsist multiple times make this false in your derived class
-    self.is_unique = True
+    is_unique = True
 
     def __init__(self,g_pool):
         self._alive = True

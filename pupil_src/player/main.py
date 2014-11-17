@@ -303,7 +303,7 @@ def main():
 
 
     def open_plugin(selection,data):
-        if plugin_by_index[selection] not in additive_plugins:
+        if plugin_by_index[selection].is_unique:
             for p in g.plugins:
                 if isinstance(p,plugin_by_index[selection]):
                     return
@@ -314,8 +314,7 @@ def main():
         g.plugins.append(new_plugin)
         g.plugins.sort(key=lambda p: p.order)
 
-        if hasattr(new_plugin,'init_gui'):
-            new_plugin.init_gui()
+        new_plugin.init_gui()
         # save the value for atb bar
         data.value=selection
 
