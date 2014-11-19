@@ -21,6 +21,7 @@ from circle_detector import get_canditate_ellipses
 
 import audio
 
+from pyglui import ui
 from plugin import Calibration_Plugin
 from gaze_mappers import Simple_Gaze_Mapper
 
@@ -49,14 +50,14 @@ def on_resize(window,w, h):
     glfwMakeContextCurrent(active_window)
 
 
-class Screen_Marker_Calibration(Plugin):
+class Screen_Marker_Calibration(Calibration_Plugin):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites
     Points are collected at sites not between
 
     """
     def __init__(self, g_pool, atb_pos=(0,0)):
-        Plugin.__init__(self,g_pool)
+        super(Recorder, self).__init__(g_pool)
         self.active = False
         self.detected = False
         self.screen_marker_state = 0

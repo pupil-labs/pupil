@@ -20,6 +20,7 @@ from natural_features_calibration import Natural_Features_Calibration
 from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
 from accuracy_test import Accuracy_Test
 
+
 calibration_plugins =  (  Screen_Marker_Calibration,
                         Manual_Marker_Calibration,
                         Natural_Features_Calibration,

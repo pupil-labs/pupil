@@ -34,7 +34,6 @@ from methods import normalize, denormalize,Temp
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 from audio import Audio_Input_List
-import calibrate
 # Plug-ins
 import calibration_routines
 import recorder
@@ -145,6 +144,22 @@ def world(g_pool,cap_src,cap_size):
         g_pool.timebase.value = g_pool.capure.get_now()
         logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
 
+    def set_calibration_plugin(new_calibration):
+        g_pool.active_calibration_plugin = new_calibration
+        # prepare destruction of current calibration plugin... and remove it
+        for p in self.g_pool.plugins:
+            if p.base_class_name == 'Calibration_Plugin':
+                p.alive = False
+        self.g_pool.plugins = [p for p in g_pool.plugins if p.alive]
+
+        #add new plugin
+        self.g_pool.plugins.append(new_calibration(self.g_pool))
+        self.g_pool.plugins.sort(key=lambda p: p.order)
+
+
+
+
+
 
     # Initialize glfw
     glfwInit()
@@ -176,6 +191,10 @@ def world(g_pool,cap_src,cap_size):
     general_settings = ui.Growing_Menu('General')
     general_settings.append(ui.Slider('scale', g_pool.ui,step = .1,min=.5,max=2,label='Interface Size'))
     general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
+    general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
+    general_settings.append(ui.Selector('active_calibration_plugin',None, selection = calibration_plugins,
+                                        selection_labels = [p.name for p in calibration_plugins],
+                                        setter=set_calibration_plugin,label='Calibration Type'))
 
     g_pool.sidebar.append(general_settings)
 
@@ -202,6 +221,11 @@ def world(g_pool,cap_src,cap_size):
         except:
             logger.warning("Plugin '%s' failed to load from settings file." %name)
 
+
+    #only need for the gui to show the loaded calibration type
+    for p in g_pool.plugins:
+        if p.base_class_name == 'Calibration_Plugin':
+            g_pool.active_calibration_plugin =  p.__class__
 
     # Event loop
     while not g_pool.quit.value:

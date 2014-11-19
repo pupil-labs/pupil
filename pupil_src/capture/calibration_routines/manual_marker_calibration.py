@@ -18,6 +18,7 @@ import calibrate
 
 import audio
 
+from pyglui import ui
 from plugin import Calibration_Plugin
 from gaze_mappers import Simple_Gaze_Mapper
 #logging
@@ -241,6 +242,9 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         else:
             pass
 
+
+    def get_init_dict(self):
+        return {}
 
 
     def gl_display(self):

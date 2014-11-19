@@ -14,23 +14,24 @@ import numpy as np
 from methods import normalize
 import calibrate
 from gl_utils import draw_gl_point_norm
-from ctypes import c_int,c_bool
 from glfw import GLFW_PRESS
-import atb
 import audio
 
-from plugin import Plugin
+
+from pyglui import ui
+from plugin import Calibration_Plugin
+from gaze_mappers import Simple_Gaze_Mapper
+
 #logging
 import logging
 logger = logging.getLogger(__name__)
 
-class Natural_Features_Calibration(Plugin):
+class Natural_Features_Calibration(Calibration_Plugin):
     """Calibrate using natural features in a scene.
         Features are selected by a user by clicking on
     """
-    def __init__(self, g_pool,atb_pos=(0,0)):
-        Plugin.__init__(self)
-        self.g_pool = g_pool
+    def __init__(self, g_pool):
+        super(Natural_Features_Calibration, self).__init__(g_pool)
         self.first_img = None
         self.point = None
         self.count = 0
@@ -41,18 +42,35 @@ class Natural_Features_Calibration(Plugin):
         self.ref_list = []
         self.pupil_list = []
 
-        atb_label = "calibrate using natural features"
-        self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
-            help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_button("start/stop", self.start_stop, key='c')
+
+        self.menu = None
+        self.button = None
 
 
-    def start_stop(self):
+    def init_gui(self):
+
+        self.menu = ui.Growing_Menu('Feature Based Calibration')
+        self.g_pool.sidebar.append(self.menu)
+
+        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate')
+        self.g_pool.quickbar.append(self.button)
+
+
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
+        if self.button:
+            self.g_pool.quickbar.remove(self.button)
+            self.button = None
+
+
+    def toggle(self,new_var):
         if self.active:
             self.stop()
         else:
             self.start()
+
 
 
     def start(self):
@@ -74,8 +92,20 @@ class Natural_Features_Calibration(Plugin):
         cal_pt_cloud = np.array(cal_pt_cloud)
 
         img_size = self.first_img.shape[1],self.first_img.shape[0]
-        self.g_pool.map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,img_size)
+        map_fn = calibrate.get_map_from_cloud(cal_pt_cloud,img_size)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
+
+        # prepare destruction of current gaze_mapper... and remove it
+        for p in self.g_pool.plugins:
+            if p.base_class_name == 'Gaze_Mapping_Plugin':
+                p.alive = False
+        self.g_pool.plugins = [p for p in g_pool.plugins if p.alive]
+
+        #add new gaze mapper
+        self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,map_fn))
+        self.g_pool.plugins.sort(key=lambda p: p.order)
+
+
 
     def update(self,frame,recent_pupil_positions,events):
         if self.active:
@@ -113,11 +143,16 @@ class Natural_Features_Calibration(Plugin):
             draw_gl_point_norm(self.pos,size=self.r,color=(0.,1.,0.,.5))
 
 
+
     def on_click(self,pos,button,action):
         if action == GLFW_PRESS:
             self.first_img = None
             self.point = np.array([pos,],dtype=np.float32)
             self.count = 30
+
+    def get_init_dict(self):
+        return {}
+
 
     def cleanup(self):
         """gets called when the plugin get terminated.
@@ -126,4 +161,4 @@ class Natural_Features_Calibration(Plugin):
         """
         if self.active:
             self.stop()
-        self._bar.destroy()
+        self.deinit_gui()

@@ -12,10 +12,8 @@ import os
 import cv2
 import numpy as np
 from gl_utils import draw_gl_polyline_norm
-from ctypes import c_float,c_int
-import atb
 from plugin import Plugin
-from calibrate import get_map_from_cloud
+from calibration_routines.calibrate import get_map_from_cloud
 
 #logging
 import logging
@@ -23,10 +21,10 @@ logger = logging.getLogger(__name__)
 
 class Show_Calibration(Plugin):
     """Calibration results visualization plugin"""
-    def __init__(self,g_pool,img_shape, atb_pos=(500,300)):
-        Plugin.__init__(self)
+    def __init__(self,g_pool):
+        super(Show_Calibration, self).__init__(g_pool)
 
-        height,width = img_shape[:2]
+        height,width = frame.height, frame.width
 
         if g_pool.app == 'capture':
             cal_pt_path =  os.path.join(g_pool.user_dir,"cal_pt_cloud.npy")
@@ -60,22 +58,27 @@ class Show_Calibration(Plugin):
         self.inliers = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1).reshape(-1,2)
 
 
-        self.inlier_ratio = c_float(cal_pt_cloud[inlier_map].shape[0]/float(cal_pt_cloud.shape[0]))
-        self.inlier_count = c_int(cal_pt_cloud[inlier_map].shape[0])
+        self.inlier_ratio = cal_pt_cloud[inlier_map].shape[0]/float(cal_pt_cloud.shape[0])
+        self.inlier_count = cal_pt_cloud[inlier_map].shape[0]
         # hull = cv2.approxPolyDP(self.calib_bounds, 0.001,closed=True)
-        full_screen_area = 2.* 2.
+        full_screen_area = 1.
         logger.debug("calibration bounds %s"%self.calib_bounds)
-        self.calib_area_ratio = c_float(cv2.contourArea(self.calib_bounds)/full_screen_area)
+        self.calib_area_ratio = cv2.contourArea(self.calib_bounds)/full_screen_area
 
+
+
+    def init_gui(self):
         help_str = "yellow: indicates calibration error, red:discarded outliners, outline shows the calibrated area."
+        self.menu = ui.Scrolling_Menu('Calibration Results',pos=(300,500),size=(300,300))
+        self.menu.append(ui.TextInput('inlier_count',self,getter=lambda: str(self.inlier_count), label='Number of used samples'))
+        self.menu.append(ui.TextInput('inlier_ratio',self,getter=lambda: str(self.inlier_ratio)), label='Fraction of used data points')
+        self.menu.append(ui.TextInput('calib_area_ratio',self,getter=lambda: str(self.calib_area_ratio)), label='Fraction of calibrated screen area')
+        self.menu.append(ui.Button("Close Plugin", self.close))
 
-        self._bar = atb.Bar(name = self.__class__.__name__, label='calibration results',
-            help=help_str, color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 140))
-        self._bar.add_var("number of used samples", self.inlier_count, readonly=True)
-        self._bar.add_var("fraction of used data points", self.inlier_ratio, readonly=True,precision=2)
-        self._bar.add_var("fraction of calibrated screen area", self.calib_area_ratio, readonly=True,precision=2)
-        self._bar.add_button("close", self.close, key="x", help="close calibration results visualization")
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.gui.remove(self.menu)
+
 
     def gl_display(self):
         if self.inliers is not None:
@@ -87,11 +90,7 @@ class Show_Calibration(Plugin):
         self.alive = False
 
     def cleanup(self):
-        """gets called when the plugin get terminated.
-           either volunatily or forced.
-        """
-        if hasattr(self,"_bar"):
-            self._bar.destroy()
+        self.deinit_gui()
 
 
 
