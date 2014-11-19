@@ -19,11 +19,10 @@ from OpenGL.GLU import gluOrtho2D
 import calibrate
 from circle_detector import get_canditate_ellipses
 
-from ctypes import c_int,c_bool
-import atb
 import audio
 
-from plugin import Plugin
+from plugin import Calibration_Plugin
+from gaze_mappers import Simple_Gaze_Mapper
 
 #logging
 import logging
@@ -70,46 +69,62 @@ class Screen_Marker_Calibration(Plugin):
         self.candidate_ellipses = []
         self.pos = None
 
-        self.show_edges = c_bool(0)
-        self.dist_threshold = c_int(5)
-        self.area_threshold = c_int(20)
+        self.show_edges = 0
+        self.dist_threshold = 5
+        self.area_threshold = 20
 
         self.world_size = None
 
-        self._bar = None
-        self.atb_pos =
         self._window = None
         self.window_should_close = False
         self.window_should_open = False
 
+        self.menu = None
+        self.button = None
+
 
     def init_gui(self):
-        self.fullscreen = c_bool(1)
-        self.monitor_idx = c_int(0)
-        monitor_handles = glfwGetMonitors()
-        self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
-        monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
+        self.fullscreen = True
+        self.monitor_idx = 0
+        self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+
         #primary_monitor = glfwGetPrimaryMonitor()
 
+        self.menu = ui.Growing_Menu('Screen Based Calibration')
+        self.g_pool.sidebar.append(self.menu)
 
-        atb_label = "calibrate on screen"
-        # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-        self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
-            help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 90))
-        self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
-        self._bar.add_var("fullscreen", self.fullscreen)
-        self._bar.add_button("  start calibrating  ", self.start, key='c')
+        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),selection_labels=self.monitor_names),label='Monitor')
+        self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
 
-        self._bar.add_var("show edges",self.show_edges, group="Detector Variables")
-        self._bar.add_var("area threshold", self.area_threshold ,group="Detector Variables")
-        self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Detector Variables" )
+        submenu = ui.Growing_Menu('Advanced')
+        submenu.collapsed = True
+        self.menu.append(submenu)
+        submenu.append(ui.Switch('show_edges',self,label='show edges'))
+        submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area Threshold'))
+        submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity Threshold'))
+
+        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate')
+        self.g_pool.quickbar.append(self.button)
+
+
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
+        if self.button:
+            self.g_pool.quickbar.remove(self.button)
+            self.button = None
+
+
+    def toggle(self,new_var):
+        if self.active:
+            self.stop()
+        else:
+            self.start()
+
 
 
     def start(self):
-        if self.active:
-            return
-
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
         self.sites = [  (.25, .5),(.25, .5), (0,.5),
@@ -126,8 +141,8 @@ class Screen_Marker_Calibration(Plugin):
 
     def open_window(self):
         if not self._window:
-            if self.fullscreen.value:
-                monitor = glfwGetMonitors()[self.monitor_idx.value]
+            if self.fullscreen:
+                monitor = glfwGetMonitors()[self.monitor_idx]
                 mode = glfwGetVideoMode(monitor)
                 height,width= mode[0],mode[1]
             else:
@@ -135,7 +150,7 @@ class Screen_Marker_Calibration(Plugin):
                 height,width= 640,360
 
             self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
-            if not self.fullscreen.value:
+            if not self.fullscreen:
                 glfwSetWindowPos(self._window,200,0)
 
             on_resize(self._window,height,width)
@@ -185,6 +200,18 @@ class Screen_Marker_Calibration(Plugin):
         map_fn = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
+        # prepare destruction of current gaze_mapper... and remove it
+        for p in self.g_pool.plugins:
+            if p.base_class_name == 'Gaze_Mapping_Plugin':
+                p.alive = False
+        self.g_pool.plugins = [p for p in g_pool.plugins if p.alive]
+
+        #add new gaze mapper
+        self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,map_fn))
+        self.g_pool.plugins.sort(key=lambda p: p.order)
+
+
+
     def close_window(self):
         if self._window:
             glfwDestroyWindow(self._window)
@@ -208,10 +235,10 @@ class Screen_Marker_Calibration(Plugin):
 
             #detect the marker
             self.candidate_ellipses = get_canditate_ellipses(gray_img,
-                                                            area_threshold=self.area_threshold.value,
-                                                            dist_threshold=self.dist_threshold.value,
+                                                            area_threshold=self.area_threshold,
+                                                            dist_threshold=self.dist_threshold,
                                                             min_ring_count=4,
-                                                            visual_debug=self.show_edges.value)
+                                                            visual_debug=self.show_edges)
 
             if len(self.candidate_ellipses) > 0:
                 self.detected= True
@@ -330,10 +357,7 @@ class Screen_Marker_Calibration(Plugin):
 
 
     def get_init_dict(self):
-        d = {}
-        # add all aguments of your plugin init fn with paramter names as name field
-        # do not include g_pool here.
-        return d
+        return {}
 
 
 

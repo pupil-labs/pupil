@@ -16,15 +16,15 @@ from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
 from circle_detector import get_canditate_ellipses
 import calibrate
 
-from ctypes import c_int,c_bool
-import atb
 import audio
-from plugin import Plugin
+
+from plugin import Calibration_Plugin
+from gaze_mappers import Simple_Gaze_Mapper
 #logging
 import logging
 logger = logging.getLogger(__name__)
 
-class Manual_Marker_Calibration(Plugin):
+class Manual_Marker_Calibration(Calibration_Plugin):
     """Detector looks for a white ring on a black background.
         Using at least 9 positions/points within the FOV
         Ref detector will direct one to good positions with audio cues
@@ -35,11 +35,10 @@ class Manual_Marker_Calibration(Plugin):
             Find contours and filter into 2 level list using RETR_CCOMP
             Fit ellipses
     """
-    def __init__(self, g_pool,atb_pos=(0,0)):
-        Plugin.__init__(self)
+    def __init__(self, g_pool):
+        super(Recorder, self).__init__(g_pool)
         self.active = False
         self.detected = False
-        self.g_pool = g_pool
         self.pos = None
         self.smooth_pos = 0.,0.
         self.smooth_vel = 0.
@@ -47,28 +46,47 @@ class Manual_Marker_Calibration(Plugin):
         self.counter = 0
         self.counter_max = 30
         self.candidate_ellipses = []
-        self.show_edges = c_bool(0)
+        self.show_edges = 0
         self.aperture = 7
-        self.dist_threshold = c_int(10)
-        self.area_threshold = c_int(30)
+        self.dist_threshold = 10
+        self.area_threshold = 30
         self.world_size = None
 
         self.stop_marker_found = False
         self.auto_stop = 0
         self.auto_stop_max = 30
-        atb_label = "calibrate using handheld marker"
-        # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-        self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
-            help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_button("start/stop", self.start_stop, key='c')
-        self._bar.add_var("show edges",self.show_edges, group="Advanced")
+
+        self.menu = None
+        self.button = None
+
+
+    def init_gui(self):
+        # atb_label = "calibrate using handheld marker"
         # self._bar.add_var("counter", getter=self.get_count, group="Advanced")
-        # self._bar.add_var("aperture", self.aperture, min=3,step=2, group="Advanced")
         # self._bar.add_var("area threshold", self.area_threshold, group="Advanced")
         # self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Advanced")
+        self.menu = ui.Growing_Menu('Hand Held Calibration')
+        self.g_pool.sidebar.append(self.menu)
 
-    def start_stop(self):
+        submenu = ui.Growing_Menu('Advanced')
+        submenu.collapsed = True
+        self.menu.append(submenu)
+        submenu.append(ui.Slider('aperture',self,min=3,step=2,max=11,label='filter aperture'))
+        submenu.append(ui.Switch('show_edges',self,label='show edges'))
+
+        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate')
+        self.g_pool.quickbar.append(self.button)
+
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
+        if self.button:
+            self.g_pool.quickbar.remove(self.button)
+            self.button = None
+
+
+    def toggle(self,new_var):
         if self.active:
             self.stop()
         else:
@@ -96,9 +114,18 @@ class Manual_Marker_Calibration(Plugin):
             logger.warning("Did not collect enough data.")
             return
         cal_pt_cloud = np.array(cal_pt_cloud)
-        self.g_pool.map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size)
+        map_fn = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
+        # prepare destruction of current gaze_mapper... and remove it
+        for p in self.g_pool.plugins:
+            if p.base_class_name == 'Gaze_Mapping_Plugin':
+                p.alive = False
+        self.g_pool.plugins = [p for p in g_pool.plugins if p.alive]
+
+        #add new gaze mapper
+        self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,map_fn))
+        self.g_pool.plugins.sort(key=lambda p: p.order)
 
 
     def get_count(self):
@@ -118,10 +145,10 @@ class Manual_Marker_Calibration(Plugin):
                 self.world_size = frame.width,frame.height
 
             self.candidate_ellipses = get_canditate_ellipses(gray_img,
-                                                            area_threshold=self.area_threshold.value,
-                                                            dist_threshold=self.dist_threshold.value,
+                                                            area_threshold=self.area_threshold,
+                                                            dist_threshold=self.dist_threshold,
                                                             min_ring_count=5,
-                                                            visual_debug=self.show_edges.value)
+                                                            visual_debug=self.show_edges)
 
             if len(self.candidate_ellipses) > 0:
                 self.detected = True
@@ -262,4 +289,4 @@ class Manual_Marker_Calibration(Plugin):
         """
         if self.active:
             self.stop()
-        self._bar.destroy()
+        self.deinit_gui()

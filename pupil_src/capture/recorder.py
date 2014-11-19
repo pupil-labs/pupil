@@ -10,11 +10,10 @@
 
 import os, sys
 import cv2
-import atb
+from pyglui import ui
 import numpy as np
 from plugin import Plugin
 from time import strftime,localtime,time,gmtime
-from ctypes import create_string_buffer
 from shutil import copy2
 from glob import glob
 from audio import Audio_Capture
@@ -22,20 +21,68 @@ from audio import Audio_Capture
 import logging
 logger = logging.getLogger(__name__)
 
+
+def get_auto_name():
+    return strftime("%Y_%m_%d", localtime())
+
+
 class Recorder(Plugin):
     """Capture Recorder"""
-    def __init__(self,g_pool, session_str, fps, img_shape, record_eye, eye_tx,audio = -1):
-        Plugin.__init__(self)
-        self.g_pool = g_pool
-        self.session_str = session_str
+    def __init__(self,g_pool,session_name = get_auto_name(), record_eye = False, audio_src = -1):
+        super(Recorder, self).__init__(g_pool)
         self.record_eye = record_eye
-        self.frame_count = 0
-        self.timestamps = []
-        self.gaze_list = []
-        self.eye_tx = eye_tx
-        self.start_time = time()
+        self.session_name = session_name
+        self.audio_src = audio_src
+        self.running = False
+        self.menu = None
+        self.button = None
 
-        session = os.path.join(self.g_pool.rec_dir, self.session_str)
+
+    def get_init_dict(self):
+        d = {}
+        d['record_eye'] = self.record_eye
+        d['audio_src'] = self.audio_src
+        return d
+
+
+    def init_gui(self):
+        self.menu = ui.Growing_Menu('Recorder')
+        self.g_pool.sidebar.append(self.menu)
+
+        self.menu.append(ui.TextInput('rec_dir',self.g_pool,setter=self.set_rec_dir,label='Recording Path'))
+        self.menu.append(ui.TextInput('session_name',self,setter=self.set_session_name,label='Session'))
+
+        self.button = ui.Thumb('running',self,setter=self.toggle,label='Record')
+        self.g_pool.quickbar.append(self.button)
+
+
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
+        if self.button:
+            self.g_pool.quickbar.remove(self.button)
+            self.button = None
+
+    def toggle(self,val):
+        if val:
+            self.start()
+        else:
+            self.stop()
+
+    def get_rec_time_str(self):
+        rec_time = gmtime(time()-self.start_time)
+        return strftime("%H:%M:%S", rec_time)
+
+    def start(self):
+        self.timestamps = []
+        self.pupil_list = []
+        self.gaze_list = []
+        self.frame_count = 0
+        self.running = True
+        self.menu.read_only = True
+
+        session = os.path.join(self.g_pool.rec_dir, self.session_name)
         try:
             os.mkdir(session)
             logger.debug("Created new recordings session dir %s"%session)
@@ -63,10 +110,9 @@ class Recorder(Plugin):
             f.write("Start Time\t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")
 
 
-        if audio >=0:
-            audio_src = audio
+        if self.audio_src >=0:
             audio_path = os.path.join(self.rec_path, "world.wav")
-            self.audio_writer = Audio_Capture(audio_src,audio_path)
+            self.audio_writer = Audio_Capture(self.audio_src,audio_path)
         else:
             self.audio_writer = None
 
@@ -76,47 +122,35 @@ class Recorder(Plugin):
         self.width = img_shape[1]
         # positions path to eye process
         if self.record_eye:
-            self.eye_tx.send(self.rec_path)
-
-        atb_pos = (10, 540)
-        self._bar = atb.Bar(name = self.__class__.__name__, label='REC: '+session_str,
-            help="capture recording control", color=(220, 0, 0), alpha=150,
-            text='light', position=atb_pos,refresh=.3, size=(300, 80))
-        self._bar.add_var("rec time",create_string_buffer(512), getter=lambda: create_string_buffer(self.get_rec_time_str(),512), readonly=True)
-        self._bar.add_button("stop",self.on_stop, key="s", help="stop recording")
-        self._bar.define("contained=true")
-
-    def get_rec_time_str(self):
-        rec_time = gmtime(time()-self.start_time)
-        return strftime("%H:%M:%S", rec_time)
+            self.g_pool.eye_tx.send(self.rec_path)
 
     def update(self,frame,recent_pupil_positons,events):
-        # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
-        for p in recent_pupil_positons:
-            if p['confidece'] > g_pool.pupil_confidece_threshold:
-                pupil_pos = p['norm_pupil'][0],p['norm_pupil'][1],p['timestamp'],p['confidence'],p['id']
-            else:
-                # add dummy data
-                pass
-            self.pupil_list.append(pupil_pos)
+        if self.running:
+            # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
+            for p in recent_pupil_positons:
+                if p['confidece'] > self.g_pool.pupil_confidence_threshold:
+                    pupil_pos = p['norm_pupil'][0],p['norm_pupil'][1],p['size'],p['timestamp'],p['confidence'],p['id']
+                else:
+                    pupil_pos = 0,0,0,p['timestamp'],p['confidence'],p['id']
 
-        for g in events.get('gaze',[]):
-            gaze_pos = g['norm_gaze'][0],g['norm_gaze'][1],g['confidence'],g['timestamp']
-            self.gaze_list.append(gaze_pos)
+                self.pupil_list.append(pupil_pos)
 
-        self.timestamps.append(frame.timestamp)
-        self.writer.write(frame.img)
-        self.frame_count += 1
+            for g in events.get('gaze',[]):
+                gaze_pos = g['norm_gaze'][0],g['norm_gaze'][1],g['confidence'],g['timestamp']
+                self.gaze_list.append(gaze_pos)
 
+            self.timestamps.append(frame.timestamp)
+            self.writer.write(frame.img)
+            self.frame_count += 1
 
-    def stop_and_destruct(self):
+    def stop(self):
         #explicit release of VideoWriter
         self.writer.release()
         self.writer = None
 
         if self.record_eye:
             try:
-                self.eye_tx.send(None)
+                self.g_pool.eye_tx.send(None)
             except:
                 logger.warning("Could not stop eye-recording. Please report this bug!")
 
@@ -164,24 +198,41 @@ class Recorder(Plugin):
         if self.audio_writer:
             self.audio_writer = None
 
-        self.alive = False
+        self.running = False
+        self.menu.read_only = False
 
-
-    def on_stop(self):
-        """
-        get called from _bar to init termination.
-        """
-        self.alive= False
 
 
     def cleanup(self):
         """gets called when the plugin get terminated.
            either volunatily or forced.
         """
-        self.stop_and_destruct()
-        self._bar.destroy()
+        if self.running:
+            self.stop()
+        self.deinit_gui()
+
+
+    def set_rec_dir(self,val):
+        try:
+            n_path = os.path.expanduser(val.value)
+            logger.debug("Expanded user path.")
+        except:
+            n_path = val
+
+        if not n_path:
+            logger.warning("Please specify a path.")
+        elif not os.path.isdir(n_path):
+            logger.warning("This is not a valid path.")
+        else:
+            self.g_pool.rec_dir = n_path
+
+    def set_session_name(self, val):
+        if not val:
+            self.session_name = get_auto_name()
+        else:
+            self.session_name = val
 
 
 
-def get_auto_name():
-    return strftime("%Y_%m_%d", localtime())
+
+

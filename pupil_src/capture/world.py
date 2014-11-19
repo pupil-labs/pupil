@@ -108,12 +108,6 @@ def world(g_pool,cap_src,cap_size):
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
-    def load(var_name,default):
-        return session_settings.get(var_name,default)
-    def save(var_name,var):
-        session_settings[var_name] = var
-
-
 
 
     # Initialize capture
@@ -126,9 +120,6 @@ def world(g_pool,cap_src,cap_size):
         logger.error("Could not retrieve image from capture")
         cap.close()
         return
-    height,width = frame.img.shape[:2]
-
-
 
 
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
@@ -140,126 +131,14 @@ def world(g_pool,cap_src,cap_size):
         g_pool.update_textures = False
     g_pool.capture = cap
 
-    g_pool.rec_name = recorder.get_auto_name()
+    g_pool.pupil_confidece_threshold = session_settings.get('pupil_confidece_threshold',.6)
+    g_pool.window_size = session_settings.get('window_size',1.)
 
-    g_pool.pupil_confidece_threshold = load('pupil_confidece_threshold',.6)
-
-
-    g_pool.recording = False
-    g_pool.streaming = False
-    g_pool.testing = False
-    g_pool.calibrating = False
-
-    # helpers called by the main atb bar
-    def update_fps():
-        pass
-        # old_time, bar.timestamp = bar.timestamp, time()
-        # dt = bar.timestamp - old_time
-        # if dt:
-        #     bar.fps.value += .05 * (1. / dt - bar.fps.value)
-
-    def set_window_size(mode,data):
-        height,width = frame.img.shape[:2]
-        ratio = (1,.75,.5,.25)[mode]
-        w,h = int(width*ratio),int(height*ratio)
+    #UI and other callback functions
+    def set_window_size(size):
+        w,h = int(frame.width*size),int(frame.height*size)
         glfwSetWindowSize(world_window,w,h)
-        data.value=mode # update the bar.value
 
-    def get_from_data(data):
-        """
-        helper for atb getter and setter use
-        """
-        return data.value
-
-    def set_rec_dir(val):
-        try:
-            n_path = os.path.expanduser(val.value)
-            logger.debug("Expanded user path.")
-        except:
-            n_path = val.value
-
-        if not n_path:
-            logger.warning("Please specify a path.")
-        elif not os.path.isdir(n_path):
-            logger.warning("This is not a valid path.")
-        else:
-            g_pool.rec_dir = n_path
-
-    def get_rec_dir():
-        return create_string_buffer(g_pool.rec_dir,512)
-
-    def set_rec_name(val):
-        if not val.value:
-            g_pool.rec_name = recorder.get_auto_name()
-        else:
-            g_pool.rec_name = val.value
-
-    def get_rec_name():
-        return create_string_buffer(g_pool.rec_name,512)
-
-    def open_calibration(selection,data):
-        # prepare destruction of current ref_detector... and remove it
-        for p in g_pool.plugins:
-            if isinstance(p,calibration_routines.detector_by_index):
-                p.alive = False
-        g_pool.plugins = [p for p in g_pool.plugins if p.alive]
-
-        new_ref_detector = calibration_routines.detector_by_index[selection](g_pool,atb_pos=bar.next_atb_pos)
-        g_pool.plugins.append(new_ref_detector)
-        g_pool.plugins.sort(key=lambda p: p.order)
-
-        # save the value for atb bar
-        data.value=selection
-
-    def toggle_record_video():
-        for p in g_pool.plugins:
-            if isinstance(p,recorder.Recorder):
-                p.alive = False
-                return
-
-        new_plugin = recorder.Recorder(g_pool,g_pool.rec_name, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx,bar.audio.value)
-        g_pool.plugins.append(new_plugin)
-        g_pool.plugins.sort(key=lambda p: p.order)
-
-    def toggle_show_calib_result():
-        for p in g_pool.plugins:
-            if isinstance(p,Show_Calibration):
-                p.alive = False
-                return
-
-        new_plugin = Show_Calibration(g_pool,frame.img.shape)
-        g_pool.plugins.append(new_plugin)
-        g_pool.plugins.sort(key=lambda p: p.order)
-
-    def toggle_server():
-        for p in g_pool.plugins:
-            if isinstance(p,Pupil_Server):
-                p.alive = False
-                return
-
-        new_plugin = Pupil_Server(g_pool,(10,300))
-        g_pool.plugins.append(new_plugin)
-        g_pool.plugins.sort(key=lambda p: p.order)
-
-    def toggle_remote():
-        for p in g_pool.plugins:
-            if isinstance(p,Pupil_Remote):
-                p.alive = False
-                return
-
-        new_plugin = Pupil_Remote(g_pool,(10,360),on_char)
-        g_pool.plugins.append(new_plugin)
-        g_pool.plugins.sort(key=lambda p: p.order)
-
-    def toggle_ar():
-        for p in g_pool.plugins:
-            if isinstance(p,Marker_Detector):
-                p.alive = False
-                return
-
-        new_plugin = Marker_Detector(g_pool,(10,400))
-        g_pool.plugins.append(new_plugin)
-        g_pool.plugins.sort(key=lambda p: p.order)
 
     def reset_timebase():
         #the last frame from worldcam will be t0
@@ -267,48 +146,9 @@ def world(g_pool,cap_src,cap_size):
         logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
 
 
-
-    # atb.init()
-    # # add main controls ATB bar
-    # bar = atb.Bar(name = "World", label="Controls",
-    #         help="Scene controls", color=(50, 50, 50), alpha=100,valueswidth=150,
-    #         text='light', position=(10, 10),refresh=.3, size=(300, 200))
-    # bar.next_atb_pos = (10,220)
-    # bar.fps = c_float(0.0)
-    # bar.timestamp = time()
-    # bar.calibration_type = c_int(load("calibration_type",0))
-    # bar.record_eye = c_bool(load("record_eye",0))
-    # bar.audio = c_int(load("audio",-1))
-    # bar.window_size = c_int(load("window_size",0))
-    # window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
-    # calibrate_type_enum = atb.enum("Calibration Method",calibration_routines.index_by_name)
-    # audio_enum = atb.enum("Audio Input",dict(Audio_Input_List()))
-    # bar.version = create_string_buffer(g_pool.version,512)
-    # bar.add_var("fps", bar.fps, step=1., readonly=True, help="Refresh speed of this process. Especially during recording it should not drop below the camera set frame rate.")
-    # bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size,help="Resize the world window. This has no effect on the actual image.")
-    # bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
-    # bar.add_button("show calibration result",toggle_show_calib_result, group="Calibration", help="Click to show calibration result.")
-    # bar.add_var("rec dir",create_string_buffer(512),getter = get_rec_dir,setter= set_rec_dir, group="Recording", help="Specify the recording path")
-    # bar.add_var("session name",create_string_buffer(512),getter = get_rec_name,setter= set_rec_name, group="Recording", help="Give your recording session a custom name.")
-    # bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
-    # bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
-    # bar.add_var("record audio", bar.audio, vtype=audio_enum, group="Recording", help="Select from audio recording options.")
-    # bar.add_button("start/stop marker tracking",toggle_ar,key="x",help="find markers in scene to map gaze onto referace surfaces")
-    # bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
-    # bar.add_button("start/stop remote",toggle_remote,key="w",help="remote allows seding commad to pupil via network")
-    # bar.add_button("set timebase to now",reset_timebase,help="this button allows the timestamps to count from now on.",key="t")
-    # bar.add_var("update screen", g_pool.update_textures,help="if you dont need to see the camera image updated, you can turn this of to reduce CPU load.")
-    # bar.add_var("pupil confidece threshold",g_pool.pupil_confidece_threshold, step=.05,min=0.,max=1. , help="Fraction of pupil boundry that has to be visible and detected for the resukt to be declared valid.")
-    # bar.add_separator("Sep1")
-    # bar.add_var("version",bar.version, readonly=True)
-    # bar.add_var("exit", g_pool.quit)
-
-    # add uvc camera controls ATB bar
-    # cap.create_atb_bar(pos=(320,10))
-
     # Initialize glfw
     glfwInit()
-    world_window = glfwCreateWindow(width, height, "World", None, None)
+    world_window = glfwCreateWindow(frame.width, frame.height, "World", None, None)
     glfwMakeContextCurrent(world_window)
 
     # Register callbacks world_window
@@ -330,60 +170,30 @@ def world(g_pool,cap_src,cap_size):
 
 
     g_pool.gui = ui.UI()
+    g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-250,0),size=(0,0),header_pos='left')
-    g_pool.gui.scale = 1
-    g_pool.sidebar.append(ui.Switch('update_textures',g_pool))
+
+    general_settings = ui.Growing_Menu('General')
+    general_settings.append(ui.Slider('scale', g_pool.ui,step = .1,min=.5,max=2,label='Interface Size'))
+    general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
+
+    g_pool.sidebar.append(general_settings)
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
-    t = ui.Thumb("recording",g_pool,label="Record")
-    t.on_color.r = 0
-    g_pool.quickbar.append(t)
-    g_pool.quickbar.append(ui.Thumb("calibrating",g_pool,label="Calibrate") )
-    g_pool.quickbar.append(ui.Thumb("streaming",g_pool,label="Stream") )
-    g_pool.quickbar.append(ui.Thumb("testing",g_pool,label="Test") )
-    g_pool.gui.append(g_pool.quickbar)
 
+    g_pool.gui.append(g_pool.quickbar)
     g_pool.gui.append(g_pool.sidebar)
 
- # bar.next_atb_pos = (10,220)
-    # bar.fps = c_float(0.0)
-    # bar.timestamp = time()
-    # bar.calibration_type = c_int(load("calibration_type",0))
-    # bar.record_eye = c_bool(load("record_eye",0))
-    # bar.audio = c_int(load("audio",-1))
-    # bar.window_size = c_int(load("window_size",0))
-    # window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
-    # calibrate_type_enum = atb.enum("Calibration Method",calibration_routines.index_by_name)
-    # audio_enum = atb.enum("Audio Input",dict(Audio_Input_List()))
-    # bar.version = create_string_buffer(g_pool.version,512)
-    # bar.add_var("fps", bar.fps, step=1., readonly=True, help="Refresh speed of this process. Especially during recording it should not drop below the camera set frame rate.")
-    # bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size,help="Resize the world window. This has no effect on the actual image.")
-    # bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
-    # bar.add_button("show calibration result",toggle_show_calib_result, group="Calibration", help="Click to show calibration result.")
-    # bar.add_var("rec dir",create_string_buffer(512),getter = get_rec_dir,setter= set_rec_dir, group="Recording", help="Specify the recording path")
-    # bar.add_var("session name",create_string_buffer(512),getter = get_rec_name,setter= set_rec_name, group="Recording", help="Give your recording session a custom name.")
-    # bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
-    # bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
-    # bar.add_var("record audio", bar.audio, vtype=audio_enum, group="Recording", help="Select from audio recording options.")
-    # bar.add_button("start/stop marker tracking",toggle_ar,key="x",help="find markers in scene to map gaze onto referace surfaces")
-    # bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
-    # bar.add_button("start/stop remote",toggle_remote,key="w",help="remote allows seding commad to pupil via network")
-    # bar.add_button("set timebase to now",reset_timebase,help="this button allows the timestamps to count from now on.",key="t")
-    # bar.add_var("update screen", g_pool.update_textures,help="if you dont need to see the camera image updated, you can turn this of to reduce CPU load.")
-    # bar.add_var("pupil confidece threshold",g_pool.pupil_confidece_threshold, step=.05,min=0.,max=1. , help="Fraction of pupil boundry that has to be visible and detected for the resukt to be declared valid.")
-    # bar.add_separator("Sep1")
-    # bar.add_var("version",bar.version, readonly=True)
-    # bar.add_var("exit", g_pool.quit)
 
     #set the last saved window size
-    # set_window_size(bar.window_size.value,bar.window_size)
+    set_window_size(g_pool.window_size)
     on_resize(world_window, *glfwGetWindowSize(world_window))
     glfwSetWindowPos(world_window,0,0)
 
 
-    default_plugins = [('Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}) ]
+    default_plugins = [('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Server',{})]
     #plugins that are loaded based on user settings
-    for initializer in load('plugins',default_plugins):
+    for initializer in session_settings.get('loaded_plugins',default_plugins):
         name, args = initializer
         logger.debug("Loading plugin: %s with settings %s"%(name, args))
         try:
@@ -445,11 +255,11 @@ def world(g_pool,cap_src,cap_size):
         glfwPollEvents()
 
 
-    plugin_save = []
+    loaded_plugins = []
     for p in g_pool.plugins:
         try:
             p_initializer = p.get_class_name(),p.get_init_dict()
-            plugin_save.append(p_initializer)
+            loaded_plugins.append(p_initializer)
         except AttributeError:
             #not all plugins need to be savable, they will not have the init dict.
             # any object without a get_init_dict method will throw this exception.
@@ -462,12 +272,11 @@ def world(g_pool,cap_src,cap_size):
         #reading p.alive actually runs plug-in cleanup
         _ = p.alive
 
-    save('plugins',plugin_save)
-    # save('window_size',bar.window_size.value)
-    # save('calibration_type',bar.calibration_type.value)
-    # save('record_eye',bar.record_eye.value)
-    # save('audio',bar.audio.value)
-    save('pupil_confidece_threshold',g_pool.pupil_confidece_threshold)
+    session_settings['loaded_plugins'] = loaded_plugins
+    session_settings['window_size'] = g_pool.window_size
+    session_settings['record_eye'] = g_pool.record_eye
+    session_settings['pupil_confidece_threshold'] = g_pool.pupil_confidece_threshold
+    session_settings['audio_src'] = g_pool.audio_src
     session_settings.close()
 
     cap.close()

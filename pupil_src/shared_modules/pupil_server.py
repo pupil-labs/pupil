@@ -8,15 +8,11 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import atb
-import numpy as np
-from gl_utils import draw_gl_polyline_norm
-from ctypes import c_float,c_int,create_string_buffer
-
-import cv2
-import zmq
 from plugin import Plugin
 
+import numpy as np
+from pyglui import ui
+import zmq
 
 
 
@@ -27,31 +23,31 @@ logger = logging.getLogger(__name__)
 
 class Pupil_Server(Plugin):
     """pupil server plugin"""
-    def __init__(self, g_pool, atb_pos=(10,400)):
-        Plugin.__init__(self)
-
+    def __init__(self, g_pool,address="tcp://127.0.0.1:5000"):
+        super(Pupil_Server, self).__init__(g_pool)
+        self.order = .9
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
-        self.address = create_string_buffer("tcp://127.0.0.1:5000",512)
-        self.set_server(self.address)
-
-        help_str = "Pupil Message server: Using ZMQ and the *Publish-Subscribe* scheme"
-
-        self._bar = atb.Bar(name = self.__class__.__name__, label='Server',
-            help=help_str, color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300,40))
-        self._bar.define("valueswidth=170")
-        self._bar.add_var("server address",self.address, getter=lambda:self.address, setter=self.set_server)
-        self._bar.add_button("close", self.close)
+        self.address = ''
+        self.set_server(address)
+        self.menu = None
 
         self.exclude_list = ['ellipse','pos_in_roi','major','minor','axes','angle','center']
 
+    def init_gui(self):
+        help_str = "Pupil Message server: Using ZMQ and the *Publish-Subscribe* scheme"
+        self.menu = ui.Growing_Menu("Pupil Broadcast Server")
+        self.menu.append(ui.TextInput('Address',self.address,setter=self.set_server))
+        self.g_pool.sidebar.append(self.menu)
+        self.menu.collapsed = True
+
+
     def set_server(self,new_address):
         try:
-            self.socket.bind(new_address.value)
-            self.address.value = new_address.value
+            self.socket.bind(new_address)
+            self.address = new_address
         except zmq.ZMQError:
-            logger.error("Could not set Socket.")
+            logger.error("Could not set Socket: %s"%new_address)
 
     def update(self,frame,recent_pupil_positions,events):
         for p in recent_pupil_positions:
@@ -71,10 +67,19 @@ class Pupil_Server(Plugin):
     def close(self):
         self.alive = False
 
+
+    def get_init_dict(self):
+        d = {}
+        d['address'] = self.address
+        return d
+
+
     def cleanup(self):
         """gets called when the plugin get terminated.
            either volunatily or forced.
         """
-        self._bar.destroy()
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
         self.context.destroy()
 
