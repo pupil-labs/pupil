@@ -46,6 +46,7 @@ from marker_detector import Marker_Detector
 plugin_by_index =  [Recorder,Show_Calibration, Display_Recent_Gaze,Pupil_Server,Pupil_Remote,Marker_Detector]+calibration_plugins+gaze_mapping_plugins
 name_by_index = [p.__name__ for p in plugin_by_index]
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
+default_plugins = [('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Server',{})]
 
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
@@ -140,7 +141,6 @@ def world(g_pool,cap_src,cap_size):
 
 
     #load Plugins
-    default_plugins = [('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Server',{})]
     #plugins that are loaded based on user settings
     for initializer in session_settings.get('loaded_plugins',default_plugins):
         name, args = initializer
@@ -216,6 +216,7 @@ def world(g_pool,cap_src,cap_size):
     glfwSwapInterval(0)
 
 
+    #setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-250,0),size=(0,0),header_pos='left')
@@ -242,9 +243,9 @@ def world(g_pool,cap_src,cap_size):
 
 
 
+    # setup GUI for plugins.
     for p in g_pool.plugins:
         p.init_gui()
-
 
     # Event loop
     while not g_pool.quit.value:
@@ -303,7 +304,7 @@ def world(g_pool,cap_src,cap_size):
             p_initializer = p.class_name,p.get_init_dict()
             loaded_plugins.append(p_initializer)
         except AttributeError:
-            #not all plugins need to be savable, they will not have the init dict.
+            #not all plugins want to be savable, they will not have the init dict.
             # any object without a get_init_dict method will throw this exception.
             pass
 

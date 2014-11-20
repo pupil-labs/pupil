@@ -117,7 +117,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
             if self.count:
                 gray = frame.gray
-                # in cv2.3 nextPts is falsy required as an argument.
+                # in cv2.3 nextPts is falsly required as an argument.
                 nextPts_dummy = self.point.copy()
                 nextPts,status, err = cv2.calcOpticalFlowPyrLK(self.first_img,gray,self.point,nextPts_dummy,winSize=(100,100))
                 if status[0]:
@@ -135,7 +135,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['norm_pupil'] is not None:
+                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
     def gl_display(self):

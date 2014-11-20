@@ -123,7 +123,6 @@ class Canny_Detector(Pupil_Detector):
 
 
         # coarse pupil detection
-
         if self.coarse_detection.value:
             integral = cv2.integral(gray_img)
             integral =  np.array(integral,dtype=c_float)
