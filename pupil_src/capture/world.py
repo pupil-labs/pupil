@@ -72,10 +72,12 @@ def world(g_pool,cap_src,cap_size):
         w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
         graph.adjust_view(w,h)
-        adjust_gl_view(w,h,window)
-        glfwMakeContextCurrent(active_window)
+        adjust_gl_view(w,h)
         for p in g_pool.plugins:
             p.on_window_resize(window,w,h)
+
+        glfwMakeContextCurrent(active_window)
+
 
     def on_iconify(window,iconfied):
         if not isinstance(cap,FakeCapture):
@@ -166,7 +168,8 @@ def world(g_pool,cap_src,cap_size):
 
     #UI and other callback functions
     def set_window_size(size):
-        w,h = int(frame.width*size),int(frame.height*size)
+        hdpi_factor = glfwGetFramebufferSize(world_window)[0]/glfwGetWindowSize(world_window)[0]
+        w,h = int(frame.width*size*hdpi_factor),int(frame.height*size*hdpi_factor)
         glfwSetWindowSize(world_window,w,h)
 
 
@@ -218,6 +221,9 @@ def world(g_pool,cap_src,cap_size):
     # refresh speed settings
     glfwSwapInterval(0)
 
+    glfwSetWindowPos(world_window,0,0)
+
+
 
     #setup GUI
     g_pool.gui = ui.UI()
@@ -242,7 +248,6 @@ def world(g_pool,cap_src,cap_size):
     #set the last saved window size
     set_window_size(g_pool.window_size)
     on_resize(world_window, *glfwGetWindowSize(world_window))
-    glfwSetWindowPos(world_window,0,0)
 
 
 

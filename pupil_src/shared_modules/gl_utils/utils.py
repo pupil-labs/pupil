@@ -64,26 +64,19 @@ def basic_gl_setup():
 def clear_gl_screen():
     glClear(GL_COLOR_BUFFER_BIT)
 
-def adjust_gl_view(w,h,window):
+def adjust_gl_view(w,h):
     """
     adjust view onto our scene.
     """
     h = max(h,1)
     w = max(w,1)
-
-    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-    w,h = w*hdpi_factor,h*hdpi_factor
     glViewport(0, 0, w, h)
-    # glMatrixMode(GL_PROJECTION)
-    # glLoadIdentity()
-    # nRange = 1.0
-    # if w <= h:
-    #     glOrtho(-nRange, nRange, -nRange*h/w, nRange*h/w, -nRange, nRange)
-    # else:
-    #     glOrtho(-nRange*w/h, nRange*w/h, -nRange, nRange, -nRange, nRange)
-    # # switch back to Modelview
-    # glMatrixMode(GL_MODELVIEW)
-    # glLoadIdentity()
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    glOrtho(0, w, h, 0, -1, 1)
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
+
 
 def draw_gl_polyline((positions),color,type='Loop',thickness=1):
     glLineWidth(thickness)

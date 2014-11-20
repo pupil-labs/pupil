@@ -52,11 +52,18 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     # Callback functions
     def on_resize(window,w, h):
-        adjust_gl_view(w,h,window)
-        norm_size = normalize((w,h),glfwGetWindowSize(window))
-        fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
-        atb.TwWindowSize(*map(int,fb_size))
+        active_window = glfwGetCurrentContext()
+        glfwMakeContextCurrent(window)
+        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
+        w,h = w*hdpi_factor, h*hdpi_factor
+        # g_pool.gui.update_window(w,h)
+        # graph.adjust_view(w,h)
+        adjust_gl_view(w,h)
+        atb.TwWindowSize(*map(int,(w,h)))
 
+        # for p in g_pool.plugins:
+            # p.on_window_resize(window,w,h)
+        glfwMakeContextCurrent(active_window)
 
     def on_key(window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
