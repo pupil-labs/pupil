@@ -26,8 +26,10 @@ import numpy as np
 
 #display
 from glfw import *
-from pyglui import ui
+from pyglui import ui,graph
 
+#monitoring
+import psutil
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
@@ -69,6 +71,7 @@ def world(g_pool,cap_src,cap_size):
         hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
         w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
+        graph.adjust_view(w,h)
         adjust_gl_view(w,h,window)
         glfwMakeContextCurrent(active_window)
         for p in g_pool.plugins:
@@ -247,6 +250,28 @@ def world(g_pool,cap_src,cap_size):
     for p in g_pool.plugins:
         p.init_gui()
 
+
+    #set up performace graphs:
+    pid = os.getpid()
+    ps = psutil.Process(pid)
+    ts = time()
+
+    cpu_g = graph.Graph()
+    cpu_g.pos = (20,100)
+    cpu_g.update_fn = ps.get_cpu_percent
+    cpu_g.update_rate = 5
+    cpu_g.label = 'CPU %0.1f'
+
+    fps_g = graph.Graph()
+    fps_g.pos = (140,100)
+    fps_g.update_rate = 5
+    fps_g.label = "%0.0f FPS"
+
+    pupil_g = graph.Graph(max_val=1.2)
+    pupil_g.pos = (260,100)
+    pupil_g.update_rate = 5
+    pupil_g.label = "Confidence: %0.2f"
+
     # Event loop
     while not g_pool.quit.value:
 
@@ -260,6 +285,12 @@ def world(g_pool,cap_src,cap_size):
             logger.warning("Video File is done. Stopping")
             break
 
+        #update performace graphs
+        t = time()
+        dt,ts = t-ts,t
+        fps_g.add(1./dt)
+        cpu_g.update()
+
 
         #a dictionary that allows plugins to post and read events
         events = {}
@@ -269,7 +300,7 @@ def world(g_pool,cap_src,cap_size):
         while not g_pool.pupil_queue.empty():
             p = g_pool.pupil_queue.get()
             recent_pupil_positions.append(p)
-
+            pupil_g.add(p['confidence'])
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
@@ -293,6 +324,9 @@ def world(g_pool,cap_src,cap_size):
         for p in g_pool.plugins:
             p.gl_display()
 
+        fps_g.draw()
+        cpu_g.draw()
+        pupil_g.draw()
         g_pool.gui.update()
         glfwSwapBuffers(world_window)
         glfwPollEvents()

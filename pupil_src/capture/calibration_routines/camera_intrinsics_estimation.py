@@ -13,12 +13,14 @@ import cv2
 import numpy as np
 from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_point_norm,basic_gl_setup
 from methods import normalize
-import atb
 import audio
-from ctypes import c_int,c_bool
+
+
+from pyglui import ui
+from plugin import Calibration_Plugin
+
 
 from glfw import *
-from plugin import Plugin
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -31,14 +33,14 @@ def on_resize(window,w, h):
     adjust_gl_view(w,h,window)
     glfwMakeContextCurrent(active_window)
 
-class Camera_Intrinsics_Estimation(Plugin):
+class Camera_Intrinsics_Estimation(Calibration_Plugin):
     """Camera_Intrinsics_Calibration
         not being an actual calibration,
         this method is used to calculate camera intrinsics.
 
     """
     def __init__(self,g_pool):
-        Plugin.__init__(self,g_pool)
+        super(Camera_Intrinsics_Estimation, self).__init__(g_pool)
         self.collect_new = False
         self.g_pool = g_pool
         self.calculated = False
@@ -54,25 +56,34 @@ class Camera_Intrinsics_Estimation(Plugin):
         self.window_should_open = False
         self.window_should_close = False
         self._window = None
-        self.fullscreen = c_bool(0)
-        self.monitor_idx = c_int(0)
-        monitor_handles = glfwGetMonitors()
-        self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
-        monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
-        #primary_monitor = glfwGetPrimaryMonitor()
+        self.menu = None
+        self.button = None
 
 
     def init_gui(self):
-        atb_label = "estimate camera instrinsics"
-        # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-        self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
-            help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
-        self._bar.add_var("fullscreen", self.fullscreen)
-        self._bar.add_button("  show pattern   ", self.do_open, key='c')
-        self._bar.add_button("  Capture Pattern", self.advance, key="SPACE")
-        self._bar.add_var("patterns to capture", getter=self.get_count)
+        self.fullscreen = True
+        self.monitor_idx = 0
+        self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+
+        #primary_monitor = glfwGetPrimaryMonitor()
+
+        self.menu = ui.Growing_Menu('Screen Based Calibration')
+        self.g_pool.sidebar.append(self.menu)
+
+        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
+        self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
+        self.menu.append(ui.Button('show Pattern',self.do_open))
+
+        self.button = ui.Thumb('collect_new',self,setter=self.advance,label='Capture')
+        self.g_pool.quickbar.append(self.button)
+
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
+        if self.button:
+            self.g_pool.quickbar.remove(self.button)
+            self.button = None
 
     def do_open(self):
         if not self._window:
@@ -81,7 +92,7 @@ class Camera_Intrinsics_Estimation(Plugin):
     def get_count(self):
         return self.count
 
-    def advance(self):
+    def advance(self,_):
         if self.count ==10:
             audio.say("Capture 10 calibration patterns.")
         self.collect_new = True
@@ -223,6 +234,8 @@ class Camera_Intrinsics_Estimation(Plugin):
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
 
+    def get_init_dict(self):
+        return {}
 
 
     def cleanup(self):
@@ -232,8 +245,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         """
         if self._window:
             self.close_window()
-        if self._bar:
-            self._bar.destroy()
+        self.deinit_gui()
 
 
 # shared helper functions for detectors private to the module
