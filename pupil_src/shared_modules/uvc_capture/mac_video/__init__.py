@@ -232,7 +232,8 @@ class Camera_Capture(object):
     def set_fps(self,fps):
         self.capture.set(5,fps)
 
-    def get_fps(self):
+    @property
+    def frame_rate(self):
         fps = self.capture.get(5)
         if fps != 0:
             return fps

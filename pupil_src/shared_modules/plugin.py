@@ -101,7 +101,7 @@ class Plugin(object):
         pass
 
     @property
-    def name(self):
+    def class_name(self):
         '''
         name of this instance's class
         '''
@@ -119,7 +119,7 @@ class Plugin(object):
         '''
         base class name of this instance's class
         '''
-        return self.type.__name__
+        return self.base_class.__name__
 
 
     ### if you want a session persistent plugin implement this function:

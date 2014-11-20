@@ -35,16 +35,21 @@ from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_poi
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 from audio import Audio_Input_List
 # Plug-ins
-import calibration_routines
-import recorder
+from calibration_routines import calibration_plugins, gaze_mapping_plugins
+from recorder import Recorder
 from show_calibration import Show_Calibration
 from display_recent_gaze import Display_Recent_Gaze
 from pupil_server import Pupil_Server
 from pupil_remote import Pupil_Remote
 from marker_detector import Marker_Detector
 
+plugin_by_index =  [Recorder,Show_Calibration, Display_Recent_Gaze,Pupil_Server,Pupil_Remote,Marker_Detector]+calibration_plugins+gaze_mapping_plugins
+name_by_index = [p.__name__ for p in plugin_by_index]
+plugin_by_name = dict(zip(name_by_index,plugin_by_index))
+
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
+
 
 
 def world(g_pool,cap_src,cap_size):
@@ -129,9 +134,32 @@ def world(g_pool,cap_src,cap_size):
     if isinstance(cap,FakeCapture):
         g_pool.update_textures = False
     g_pool.capture = cap
-
-    g_pool.pupil_confidece_threshold = session_settings.get('pupil_confidece_threshold',.6)
+    g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
     g_pool.window_size = session_settings.get('window_size',1.)
+
+
+
+    #load Plugins
+    default_plugins = [('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Server',{})]
+    #plugins that are loaded based on user settings
+    for initializer in session_settings.get('loaded_plugins',default_plugins):
+        name, args = initializer
+        logger.debug("Loading plugin: %s with settings %s"%(name, args))
+        try:
+            p = plugin_by_name[name](g_pool,**args)
+            g_pool.plugins.append(p)
+        except IOError:
+            logger.warning("Plugin '%s' failed to load from settings file." %name)
+
+
+    #only need for the gui to show the loaded calibration type
+    for p in g_pool.plugins:
+        if p.base_class_name == 'Calibration_Plugin':
+            g_pool.active_calibration_plugin =  p.__class__
+            break
+
+
+
 
     #UI and other callback functions
     def set_window_size(size):
@@ -147,17 +175,22 @@ def world(g_pool,cap_src,cap_size):
     def set_calibration_plugin(new_calibration):
         g_pool.active_calibration_plugin = new_calibration
         # prepare destruction of current calibration plugin... and remove it
-        for p in self.g_pool.plugins:
+        for p in g_pool.plugins:
             if p.base_class_name == 'Calibration_Plugin':
                 p.alive = False
-        self.g_pool.plugins = [p for p in g_pool.plugins if p.alive]
+        g_pool.plugins = [p for p in g_pool.plugins if p.alive]
 
         #add new plugin
-        self.g_pool.plugins.append(new_calibration(self.g_pool))
-        self.g_pool.plugins.sort(key=lambda p: p.order)
+        new = new_calibration(g_pool)
+        new.init_gui()
+        g_pool.plugins.append(new)
+        g_pool.plugins.sort(key=lambda p: p.order)
 
+    def set_scale(new_scale):
+        g_pool.gui.scale = new_scale
 
-
+    def get_scale():
+        return g_pool.gui.scale
 
 
 
@@ -176,7 +209,6 @@ def world(g_pool,cap_src,cap_size):
     glfwSetCursorPosCallback(world_window,on_pos)
     glfwSetScrollCallback(world_window,on_scroll)
 
-
     # gl_state settings
     basic_gl_setup()
     g_pool.image_tex = create_named_texture(frame.img)
@@ -189,11 +221,10 @@ def world(g_pool,cap_src,cap_size):
     g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-250,0),size=(0,0),header_pos='left')
 
     general_settings = ui.Growing_Menu('General')
-    general_settings.append(ui.Slider('scale', g_pool.ui,step = .1,min=.5,max=2,label='Interface Size'))
+    general_settings.append(ui.Slider('scale', setter= set_scale,getter=get_scale,step = .1,min=.5,max=2,label='Interface Size'))
     general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
-    general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
-    general_settings.append(ui.Selector('active_calibration_plugin',None, selection = calibration_plugins,
-                                        selection_labels = [p.name for p in calibration_plugins],
+    general_settings.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
+                                        labels = [p.__name__ for p in calibration_plugins],
                                         setter=set_calibration_plugin,label='Calibration Type'))
 
     g_pool.sidebar.append(general_settings)
@@ -210,22 +241,10 @@ def world(g_pool,cap_src,cap_size):
     glfwSetWindowPos(world_window,0,0)
 
 
-    default_plugins = [('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Server',{})]
-    #plugins that are loaded based on user settings
-    for initializer in session_settings.get('loaded_plugins',default_plugins):
-        name, args = initializer
-        logger.debug("Loading plugin: %s with settings %s"%(name, args))
-        try:
-            p = plugin_by_name[name](g,**args)
-            g.plugins.append(p)
-        except:
-            logger.warning("Plugin '%s' failed to load from settings file." %name)
 
-
-    #only need for the gui to show the loaded calibration type
     for p in g_pool.plugins:
-        if p.base_class_name == 'Calibration_Plugin':
-            g_pool.active_calibration_plugin =  p.__class__
+        p.init_gui()
+
 
     # Event loop
     while not g_pool.quit.value:
@@ -240,7 +259,6 @@ def world(g_pool,cap_src,cap_size):
             logger.warning("Video File is done. Stopping")
             break
 
-        update_fps()
 
         #a dictionary that allows plugins to post and read events
         events = {}
@@ -282,7 +300,7 @@ def world(g_pool,cap_src,cap_size):
     loaded_plugins = []
     for p in g_pool.plugins:
         try:
-            p_initializer = p.get_class_name(),p.get_init_dict()
+            p_initializer = p.class_name,p.get_init_dict()
             loaded_plugins.append(p_initializer)
         except AttributeError:
             #not all plugins need to be savable, they will not have the init dict.
@@ -298,9 +316,7 @@ def world(g_pool,cap_src,cap_size):
 
     session_settings['loaded_plugins'] = loaded_plugins
     session_settings['window_size'] = g_pool.window_size
-    session_settings['record_eye'] = g_pool.record_eye
-    session_settings['pupil_confidece_threshold'] = g_pool.pupil_confidece_threshold
-    session_settings['audio_src'] = g_pool.audio_src
+    session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings.close()
 
     cap.close()

@@ -81,6 +81,7 @@ class Recorder(Plugin):
         self.frame_count = 0
         self.running = True
         self.menu.read_only = True
+        self.start_time = time()
 
         session = os.path.join(self.g_pool.rec_dir, self.session_name)
         try:
@@ -105,7 +106,7 @@ class Recorder(Plugin):
         self.meta_info_path = os.path.join(self.rec_path, "info.csv")
 
         with open(self.meta_info_path, 'w') as f:
-            f.write("Recording Name\t"+self.session_str+ "\n")
+            f.write("Recording Name\t"+self.session_name+ "\n")
             f.write("Start Date\t"+ strftime("%d.%m.%Y", localtime(self.start_time))+ "\n")
             f.write("Start Time\t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")
 
@@ -116,22 +117,23 @@ class Recorder(Plugin):
         else:
             self.audio_writer = None
 
-        video_path = os.path.join(self.rec_path, "world.avi")
-        self.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), fps, (img_shape[1], img_shape[0]))
-        self.height = img_shape[0]
-        self.width = img_shape[1]
+        self.video_path = os.path.join(self.rec_path, "world.avi")
+        self.writer = None
         # positions path to eye process
         if self.record_eye:
             self.g_pool.eye_tx.send(self.rec_path)
 
     def update(self,frame,recent_pupil_positons,events):
         if self.running:
+
+            if not self.writer:
+                print self.g_pool.capture.frame_rate
+                self.writer = cv2.VideoWriter(self.video_path, cv2.cv.CV_FOURCC(*'DIVX'), float(self.g_pool.capture.frame_rate), (frame.width,frame.height))
+                self.height, self.width = frame.height,frame.width
+
             # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
             for p in recent_pupil_positons:
-                if p['confidece'] > self.g_pool.pupil_confidence_threshold:
-                    pupil_pos = p['norm_pupil'][0],p['norm_pupil'][1],p['size'],p['timestamp'],p['confidence'],p['id']
-                else:
-                    pupil_pos = 0,0,0,p['timestamp'],p['confidence'],p['id']
+                pupil_pos = p['norm_pos'][0],p['norm_pos'][1],p['size'],p['timestamp'],p['confidence'],p['id']
 
                 self.pupil_list.append(pupil_pos)
 

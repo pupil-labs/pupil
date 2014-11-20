@@ -37,7 +37,7 @@ class Pupil_Server(Plugin):
     def init_gui(self):
         help_str = "Pupil Message server: Using ZMQ and the *Publish-Subscribe* scheme"
         self.menu = ui.Growing_Menu("Pupil Broadcast Server")
-        self.menu.append(ui.TextInput('Address',self.address,setter=self.set_server))
+        self.menu.append(ui.TextInput('address',self,setter=self.set_server,label='Address'))
         self.g_pool.sidebar.append(self.menu)
         self.menu.collapsed = True
 
@@ -57,12 +57,12 @@ class Pupil_Server(Plugin):
                     msg +=key+":"+str(value)+'\n'
             self.socket.send( msg )
 
-        for e in events:
-            msg = 'Event'+'\n'
-            for key,value in e.iteritems():
-                if key not in self.exclude_list:
-                    msg +=key+":"+str(value).replace('\n','')+'\n'
-            self.socket.send( msg )
+        # for e in events:
+        #     msg = 'Event'+'\n'
+        #     for key,value in e.iteritems():
+        #         if key not in self.exclude_list:
+        #             msg +=key+":"+str(value).replace('\n','')+'\n'
+        #     self.socket.send( msg )
 
     def close(self):
         self.alive = False

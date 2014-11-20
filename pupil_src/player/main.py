@@ -449,7 +449,7 @@ def main():
     plugin_save = []
     for p in g.plugins:
         try:
-            p_initializer = p.get_class_name(),p.get_init_dict()
+            p_initializer = p.class_name,p.get_init_dict()
             plugin_save.append(p_initializer)
         except AttributeError:
             #not all plugins need to be savable, they will not have the init dict.

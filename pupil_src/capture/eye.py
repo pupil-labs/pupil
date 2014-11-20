@@ -21,7 +21,7 @@ from methods import *
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 from pupil_detectors import Canny_Detector,MSER_Detector,Blob_Detector
 
-def eye(g_pool,cap_src,cap_size):
+def eye(g_pool,cap_src,cap_size,eye_id=0):
     """
     Creates a window, gl context.
     Grabs images from a capture.
@@ -242,6 +242,7 @@ def eye(g_pool,cap_src,cap_size):
 
         # pupil ellipse detection
         result = pupil_detector.detect(frame,user_roi=u_r,visualize=bar.display.value == 2)
+        result['id'] = eye_id
         # stream the result
         g_pool.pupil_queue.put(result)
 
@@ -266,13 +267,13 @@ def eye(g_pool,cap_src,cap_size):
         make_coord_system_pixel_based(frame.img.shape)
 
 
-        if result['norm_pupil'] is not None and bar.draw_pupil.value:
+        if result['confidence'] >0 and bar.draw_pupil.value:
             if result.has_key('axes'):
                 pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
                                         (int(result["axes"][0]/2),int(result["axes"][1]/2)),
                                         int(result["angle"]),0,360,15)
                 draw_gl_polyline(pts,(1.,0,0,.5))
-            draw_gl_point_norm(result['norm_pupil'],color=(1.,0.,0.,0.5))
+            draw_gl_point_norm(result['norm_pos'],color=(1.,0.,0.,0.5))
 
         atb.draw()
         glfwSwapBuffers(window)

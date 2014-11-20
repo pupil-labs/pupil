@@ -37,7 +37,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             Fit ellipses
     """
     def __init__(self, g_pool):
-        super(Recorder, self).__init__(g_pool)
+        super(Manual_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
         self.pos = None
@@ -228,7 +228,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['norm_pupil'] is not None:
+                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
 

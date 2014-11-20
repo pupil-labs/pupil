@@ -57,7 +57,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
     """
     def __init__(self, g_pool, atb_pos=(0,0)):
-        super(Recorder, self).__init__(g_pool)
+        super(Screen_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
         self.screen_marker_state = 0
@@ -94,7 +94,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.menu = ui.Growing_Menu('Screen Based Calibration')
         self.g_pool.sidebar.append(self.menu)
 
-        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),selection_labels=self.monitor_names),label='Monitor')
+        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
 
         submenu = ui.Growing_Menu('Advanced')
@@ -173,10 +173,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
     def on_key(self,window, key, scancode, action, mods):
-        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
-            if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
-                    self.stop()
+        if action == GLFW_PRESS:
+            if key == GLFW_KEY_ESCAPE:
+                self.stop()
 
     def on_close(self,window=None):
         if self.active:
@@ -261,7 +260,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['norm_pupil'] is not None:
+                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
             # Animate the screen marker
@@ -360,8 +359,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def get_init_dict(self):
         return {}
 
-
-
     def cleanup(self):
         """gets called when the plugin get terminated.
            either volunatily or forced.
@@ -370,5 +367,4 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self.stop()
         if self._window:
             self.close_window()
-        if self._bar:
-            self._bar.destroy()
+        self.deinit_gui()

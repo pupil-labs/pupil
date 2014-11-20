@@ -10,6 +10,8 @@
 
 from plugin import Gaze_Mapping_Plugin
 
+
+
 class Dummy_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Dummy_Gaze_Mapper"""
     def __init__(self, g_pool):
@@ -19,7 +21,7 @@ class Dummy_Gaze_Mapper(Gaze_Mapping_Plugin):
         gaze_pts = []
 
         for p in recent_pupil_positions:
-            if p['confidence'] > self.g_pool.pupil_confidece_threshold:
+            if p['confidence'] > self.g_pool.pupil_confidence_threshold:
                 gaze_pts.append({'norm_pos':p['norm_pos'][:],'confidence':p['confidence'],'timestamp':p['timestamp']})
 
         events['gaze'] = gaze_pts

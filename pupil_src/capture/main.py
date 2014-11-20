@@ -27,7 +27,7 @@ if getattr(sys, 'frozen', False):
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
     else:
         # Specifiy user dirs.
-        user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"settings")
+        user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"capture_settings")
         rec_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"recordings")
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
 
@@ -39,7 +39,7 @@ else:
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
 	# Specifiy user dirs.
     rec_dir = os.path.join(pupil_base_dir,'recordings')
-    user_dir = os.path.join(pupil_base_dir,'settings')
+    user_dir = os.path.join(pupil_base_dir,'capture_settings')
 
 
 # create folder for user settings, tmp data and a recordings folder
@@ -93,12 +93,12 @@ else:
 
 def main():
     # To assign camera by name: put string(s) in list
-    eye_src = ["Microsoft", "6000","Integrated Camera",'USB 2.0 Camera']
+    eye_src = ["Microsoft", "6000","Integrated Camera","USB 2.0 Camera"]
     world_src = ["Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
 
     # to assign cameras directly, using integers as demonstrated below
-    eye_src = 5
-    world_src = 1
+    # eye_src = 5
+    # world_src = 1
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below

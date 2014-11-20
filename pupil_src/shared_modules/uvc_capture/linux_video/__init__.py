@@ -42,8 +42,8 @@ def Camera_List():
 
 class Camera_Capture(object):
     """
-    Camera Capture is a class that encapsualtes v4l2.Capture: 
-     - adds UI elements 
+    Camera Capture is a class that encapsualtes v4l2.Capture:
+     - adds UI elements
      - adds timestamping sanitization fns.
     """
     def __init__(self,cam,size=(640,480),fps=None,timebase=None):
@@ -60,7 +60,7 @@ class Camera_Capture(object):
         self.controls = self.capture.enum_controls()
         self.controls_dict = dict([(c['name'],c) for c in self.controls])
         self._frame_rates = self.capture.frame_rates
-        self._atb_frame_rates_dict = dict( [(str(r),idx) for idx,r in enumerate(self._frame_rates)] ) 
+        self._atb_frame_rates_dict = dict( [(str(r),idx) for idx,r in enumerate(self._frame_rates)] )
         try:
             self.capture.set_control(self.controls_dict['Focus, Auto']['id'], 0)
         except KeyError:
@@ -143,7 +143,7 @@ class Camera_Capture(object):
         return
 
 
-    def get_frame(self): 
+    def get_frame(self):
         try:
             frame = self.capture.get_frame_robust()
         except:
@@ -151,7 +151,7 @@ class Camera_Capture(object):
 
         timestamp = frame.timestamp
         if self.use_hw_ts:
-                    
+
             # lets make sure this timestamps is sane:
             if abs(timestamp-v4l2.get_sys_time_monotonic()) > 5: #hw_timestamp more than 5secs away from now?
                 logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s and last timestamp was %s"%('/dev/video'+str(self.src_id),timestamp,v4l2.get_sys_time_monotonic(),self._last_timestamp))
@@ -165,6 +165,10 @@ class Camera_Capture(object):
             timestamp -= self.timebase.value
         frame.timestamp = timestamp
         return frame
+
+    @property
+    def frame_rate(self):
+        return self.capture.frame_rate
 
     def atb_set_ctl(self,val,ctl):
         ctl_id = self.controls_dict[ctl]['id']

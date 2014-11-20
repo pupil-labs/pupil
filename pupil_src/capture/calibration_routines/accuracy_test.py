@@ -60,7 +60,7 @@ class Accuracy_Test(Calibration_Plugin):
 
     """
     def __init__(self, g_pool):
-        super(Recorder, self).__init__(g_pool)
+        super(Accuracy_Test, self).__init__(g_pool)
         self.active = False
         self.detected = False
         self.screen_marker_state = 0
@@ -107,36 +107,37 @@ class Accuracy_Test(Calibration_Plugin):
 
 
     def init_gui(self):
-        self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
-        #primary_monitor = glfwGetPrimaryMonitor()
+        pass
+        # self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+        # #primary_monitor = glfwGetPrimaryMonitor()
 
 
 
-        atb_label = "screen marker based accuracy test"
-        # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
+        # atb_label = "screen marker based accuracy test"
+        # # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
 
-        self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
-        self._bar.add_var("fullscreen", self.fullscreen)
-        self._bar.add_button("  start test  ", self.start, key='c')
+        # self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
+        # self._bar.add_var("fullscreen", self.fullscreen)
+        # self._bar.add_button("  start test  ", self.start, key='c')
 
-        accuray_help ='''Accuracy is calculated as the average angular
-                        offset (distance) (in degrees of visual angle)
-                        between fixations locations and the corresponding
-                        locations of the fixation targets.'''.replace("\n"," ").replace("    ",'')
+        # accuray_help ='''Accuracy is calculated as the average angular
+        #                 offset (distance) (in degrees of visual angle)
+        #                 between fixations locations and the corresponding
+        #                 locations of the fixation targets.'''.replace("\n"," ").replace("    ",'')
 
-        percision_help = '''Precision is calculated as the Root Mean Square (RMS)
-                            of the angular distance (in degrees of visual angle)
-                            between successive samples during a fixation.'''.replace("\n"," ").replace("    ",'')
+        # percision_help = '''Precision is calculated as the Root Mean Square (RMS)
+        #                     of the angular distance (in degrees of visual angle)
+        #                     between successive samples during a fixation.'''.replace("\n"," ").replace("    ",'')
 
-        self._bar.add_var('diagonal FOV',self.fov,help="set the camera FOV here.",group='Error Calculation')
-        self._bar.add_var('diagonal resolution',self.res,readonly= True ,group='Error Calculation')
-        self._bar.add_var('outlier threshold deg',self.outlier_thresh ,group='Error Calculation')
-        self._bar.add_var('angular accuray',self.accuray,readonly=True ,group='Error Calculation',help=accuray_help)
-        self._bar.add_var('angular percision',self.percision,readonly=True ,group='Error Calculation',help=percision_help)
-        self._bar.add_button('calculate result',self.calc_result ,group='Error Calculation')
-        self._bar.add_var("show edges",self.show_edges, group="Detector Variables")
-        self._bar.add_var("area threshold", self.area_threshold ,group="Detector Variables")
-        self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Detector Variables" )
+        # self._bar.add_var('diagonal FOV',self.fov,help="set the camera FOV here.",group='Error Calculation')
+        # self._bar.add_var('diagonal resolution',self.res,readonly= True ,group='Error Calculation')
+        # self._bar.add_var('outlier threshold deg',self.outlier_thresh ,group='Error Calculation')
+        # self._bar.add_var('angular accuray',self.accuray,readonly=True ,group='Error Calculation',help=accuray_help)
+        # self._bar.add_var('angular percision',self.percision,readonly=True ,group='Error Calculation',help=percision_help)
+        # self._bar.add_button('calculate result',self.calc_result ,group='Error Calculation')
+        # self._bar.add_var("show edges",self.show_edges, group="Detector Variables")
+        # self._bar.add_var("area threshold", self.area_threshold ,group="Detector Variables")
+        # self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Detector Variables" )
 
 
     def deinit_gui(self):

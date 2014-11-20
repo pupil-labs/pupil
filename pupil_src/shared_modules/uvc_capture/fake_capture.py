@@ -81,7 +81,8 @@ class FakeCapture(object):
     def get_size(self):
         return self.size
 
-    def get_fps(self):
+    @property
+    def frame_rate(self):
         return self.fps.value
 
     def get_now(self):

@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 #     raise error
 
 
+
 class Canny_Detector(Pupil_Detector):
     """a Pupil detector based on Canny_Edges"""
     def __init__(self,g_pool):
@@ -101,6 +102,10 @@ class Canny_Detector(Pupil_Detector):
             self.session_settings[var_name] = var
 
     def detect(self,frame,user_roi,visualize=False):
+
+        def early_exit():
+            return {'norm_pos':(0,0),'size':0,'timestamp':frame.timestamp,'confidence':0}
+
         u_r = user_roi
         if self.window_should_open:
             self.open_window((frame.img.shape[1],frame.img.shape[0]))
@@ -258,7 +263,7 @@ class Canny_Detector(Pupil_Detector):
                     pupil_ellipse['angle'] = e[2]
                     e_img_center =u_r.add_vector(p_r.add_vector(e[0]))
                     norm_center = normalize(e_img_center,(frame.img.shape[1], frame.img.shape[0]),flip_y=True)
-                    pupil_ellipse['norm_pupil'] = norm_center
+                    pupil_ellipse['norm_pos'] = norm_center
                     pupil_ellipse['center'] = e_img_center
                     pupil_ellipse['timestamp'] = frame.timestamp
 
@@ -325,7 +330,7 @@ class Canny_Detector(Pupil_Detector):
             self.confidence_hist.append(0)
             if self._window:
                 self.gl_display_in_window(debug_img)
-            return {'timestamp':frame.timestamp,'norm_pupil':None}
+            return early_exit()
 
 
         # removing stubs makes combinatorial search feasable
@@ -412,7 +417,7 @@ class Canny_Detector(Pupil_Detector):
                 self.gl_display_in_window(debug_img)
             self.confidence.value = 0
             self.confidence_hist.append(0)
-            return {'timestamp':frame.timestamp,'norm_pupil':None}
+            return early_exit()
 
         # if self._window:
         #     cv2.polylines(debug_img,[split_contours[i] for i in seed_idx],isClosed=False,color=(255,255,100),thickness=3)
@@ -455,7 +460,7 @@ class Canny_Detector(Pupil_Detector):
                 self.gl_display_in_window(debug_img)
             self.confidence.value = 0
             self.confidence_hist.append(0)
-            return {'timestamp':frame.timestamp,'norm_pupil':None}
+            return early_exit()
 
         best = solutions[ratings.index(max(ratings))]
         e = cv2.fitEllipse(np.concatenate(sc[best]))
@@ -485,7 +490,7 @@ class Canny_Detector(Pupil_Detector):
         pupil_ellipse['angle'] = e[2]
         e_img_center =u_r.add_vector(p_r.add_vector(e[0]))
         norm_center = normalize(e_img_center,(frame.img.shape[1], frame.img.shape[0]),flip_y=True)
-        pupil_ellipse['norm_pupil'] = norm_center
+        pupil_ellipse['norm_pos'] = norm_center
         pupil_ellipse['center'] = e_img_center
         pupil_ellipse['timestamp'] = frame.timestamp
 
