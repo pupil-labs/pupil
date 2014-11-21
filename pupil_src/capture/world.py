@@ -45,6 +45,7 @@ from pupil_server import Pupil_Server
 from pupil_remote import Pupil_Remote
 from marker_detector import Marker_Detector
 
+#manage plugins
 plugin_by_index =  [Recorder,Show_Calibration, Display_Recent_Gaze,Pupil_Server,Pupil_Remote,Marker_Detector]+calibration_plugins+gaze_mapping_plugins
 name_by_index = [p.__name__ for p in plugin_by_index]
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
@@ -71,7 +72,7 @@ def world(g_pool,cap_src,cap_size):
         hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
         w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
-        graph.adjust_view(w,h)
+        graph.adjust_size(w,h)
         adjust_gl_view(w,h)
         for p in g_pool.plugins:
             p.on_window_resize(window,w,h)
@@ -251,7 +252,7 @@ def world(g_pool,cap_src,cap_size):
 
 
 
-    # setup GUI for plugins.
+    # let plugins add their GUI
     for p in g_pool.plugins:
         p.init_gui()
 
@@ -261,21 +262,21 @@ def world(g_pool,cap_src,cap_size):
     ps = psutil.Process(pid)
     ts = time()
 
-    cpu_g = graph.Graph()
-    cpu_g.pos = (20,100)
-    cpu_g.update_fn = ps.get_cpu_percent
-    cpu_g.update_rate = 5
-    cpu_g.label = 'CPU %0.1f'
+    cpu_graph = graph.Graph()
+    cpu_graph.pos = (20,100)
+    cpu_graph.update_fn = ps.get_cpu_percent
+    cpu_graph.update_rate = 5
+    cpu_graph.label = 'CPU %0.1f'
 
-    fps_g = graph.Graph()
-    fps_g.pos = (140,100)
-    fps_g.update_rate = 5
-    fps_g.label = "%0.0f FPS"
+    fps_graph = graph.Graph()
+    fps_graph.pos = (140,100)
+    fps_graph.update_rate = 5
+    fps_graph.label = "%0.0f FPS"
 
-    pupil_g = graph.Graph(max_val=1.2)
-    pupil_g.pos = (260,100)
-    pupil_g.update_rate = 5
-    pupil_g.label = "Confidence: %0.2f"
+    pupil_graph = graph.Graph(max_val=1.2)
+    pupil_graph.pos = (260,100)
+    pupil_graph.update_rate = 5
+    pupil_graph.label = "Confidence: %0.2f"
 
     # Event loop
     while not g_pool.quit.value:
@@ -293,8 +294,8 @@ def world(g_pool,cap_src,cap_size):
         #update performace graphs
         t = time()
         dt,ts = t-ts,t
-        fps_g.add(1./dt)
-        cpu_g.update()
+        fps_graph.add(1./dt)
+        cpu_graph.update()
 
 
         #a dictionary that allows plugins to post and read events
@@ -305,7 +306,7 @@ def world(g_pool,cap_src,cap_size):
         while not g_pool.pupil_queue.empty():
             p = g_pool.pupil_queue.get()
             recent_pupil_positions.append(p)
-            pupil_g.add(p['confidence'])
+            pupil_graph.add(p['confidence'])
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
@@ -329,9 +330,11 @@ def world(g_pool,cap_src,cap_size):
         for p in g_pool.plugins:
             p.gl_display()
 
-        fps_g.draw()
-        cpu_g.draw()
-        pupil_g.draw()
+        graph.push_view()
+        fps_graph.draw()
+        cpu_graph.draw()
+        pupil_graph.draw()
+        graph.pop_view()
         g_pool.gui.update()
         glfwSwapBuffers(world_window)
         glfwPollEvents()
