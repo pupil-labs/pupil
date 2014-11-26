@@ -49,7 +49,9 @@ def draw_marker(pos):
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
-    adjust_gl_view(w,h,window)
+    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
+    w,h = w*hdpi_factor, h*hdpi_factor
+    adjust_gl_view(w,h)
     glfwMakeContextCurrent(active_window)
 
 

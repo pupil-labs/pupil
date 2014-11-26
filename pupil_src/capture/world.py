@@ -180,7 +180,7 @@ def world(g_pool,cap_src,cap_size):
 
     def reset_timebase():
         #the last frame from worldcam will be t0
-        g_pool.timebase.value = g_pool.capure.get_now()
+        g_pool.timebase.value = g_pool.capture.get_now()
         logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
 
     def set_calibration_plugin(new_calibration):
@@ -233,21 +233,23 @@ def world(g_pool,cap_src,cap_size):
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-250,0),size=(0,0),header_pos='left')
-
+    try:
+        g_pool.sidebar.configuration = session_settings['side_bar_config']
+    except KeyError:
+        pass
     general_settings = ui.Growing_Menu('General')
-    general_settings.append(ui.Slider('scale', setter= set_scale,getter=get_scale,step = .1,min=.5,max=2,label='Interface Size'))
+    general_settings.append(ui.Slider('scale', setter= set_scale,getter=get_scale,step = .05,min=.5,max=2,label='Interface Size'))
     general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
     general_settings.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
                                         labels = [p.__name__ for p in calibration_plugins],
                                         setter=set_calibration_plugin,label='Calibration Type'))
-
+    general_settings.append(ui.Button('set timebase to 0',reset_timebase))
     g_pool.sidebar.append(general_settings)
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
 
     g_pool.gui.append(g_pool.quickbar)
     g_pool.gui.append(g_pool.sidebar)
-
 
     #set the last saved window size
     set_window_size(g_pool.window_size)
@@ -363,6 +365,8 @@ def world(g_pool,cap_src,cap_size):
     session_settings['loaded_plugins'] = loaded_plugins
     session_settings['window_size'] = g_pool.window_size
     session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
+    session_settings['gui_scale'] = g_pool.gui.scale
+    session_settings['side_bar_config'] = g_pool.sidebar.configuration
     session_settings.close()
 
     cap.close()
