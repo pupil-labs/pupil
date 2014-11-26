@@ -22,7 +22,7 @@ else:
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
-        user_dir = os.path.expanduser('~/Desktop/pupil_settings')
+        user_dir = os.path.expanduser('~/Desktop/pupil_capture_settings')
         rec_dir = os.path.expanduser('~/Desktop/pupil_recordings')
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
     else:

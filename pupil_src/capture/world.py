@@ -64,7 +64,6 @@ def world(g_pool,cap_src,cap_size):
     Can run various plug-ins.
     """
 
-
     # Callback functions
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
@@ -157,17 +156,22 @@ def world(g_pool,cap_src,cap_size):
         except IOError:
             logger.warning("Plugin '%s' failed to load from settings file." %name)
 
+    g_pool.plugins.sort(key=lambda p: p.order)
 
+
+    g_pool.active_calibration_plugin = None
     #only need for the gui to show the loaded calibration type
     for p in g_pool.plugins:
         if p.base_class_name == 'Calibration_Plugin':
             g_pool.active_calibration_plugin =  p.__class__
             break
+    if g_pool.active_calibration_plugin == None:
+        logger.error("Calibration Plugin not found.")
+        return
 
 
 
-
-    #UI and other callback functions
+    #UI callback functions
     def set_window_size(size):
         hdpi_factor = glfwGetFramebufferSize(world_window)[0]/glfwGetWindowSize(world_window)[0]
         w,h = int(frame.width*size*hdpi_factor),int(frame.height*size*hdpi_factor)
@@ -223,7 +227,6 @@ def world(g_pool,cap_src,cap_size):
     glfwSwapInterval(0)
 
     glfwSetWindowPos(world_window,0,0)
-
 
 
     #setup GUI
