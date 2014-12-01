@@ -216,7 +216,7 @@ class Recorder(Plugin):
 
     def set_rec_dir(self,val):
         try:
-            n_path = os.path.expanduser(val.value)
+            n_path = os.path.expanduser(val)
             logger.debug("Expanded user path.")
         except:
             n_path = val

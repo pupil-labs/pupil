@@ -58,7 +58,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     Points are collected at sites not between
 
     """
-    def __init__(self, g_pool, atb_pos=(0,0)):
+    def __init__(self, g_pool):
         super(Screen_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
@@ -79,8 +79,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.world_size = None
 
         self._window = None
-        self.window_should_close = False
-        self.window_should_open = False
 
         self.menu = None
         self.button = None
@@ -140,7 +138,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.active = True
         self.ref_list = []
         self.pupil_list = []
-        self.window_should_open = True
+        self.open_window()
 
     def open_window(self):
         if not self._window:
@@ -171,7 +169,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             glfwSwapInterval(0)
 
             glfwMakeContextCurrent(active_window)
-            self.window_should_open = False
 
 
     def on_key(self,window, key, scancode, action, mods):
@@ -188,7 +185,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         logger.info('Stopping Calibration')
         self.screen_marker_state = 0
         self.active = False
-        self.window_should_close = True
+        self.close_window()
 
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
 
@@ -218,16 +215,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         if self._window:
             glfwDestroyWindow(self._window)
             self._window = None
-            self.window_should_close = False
 
 
     def update(self,frame,recent_pupil_positions,events):
-        if self.window_should_close:
-            self.close_window()
-
-        if self.window_should_open:
-            self.open_window()
-
         if self.active:
             gray_img = frame.gray
 

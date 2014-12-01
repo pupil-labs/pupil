@@ -172,7 +172,7 @@ class Accuracy_Test(Calibration_Plugin):
         self.active = True
         self.ref_list = []
         self.gaze_list = []
-        self.window_should_open = True
+        self.open_window()
 
     def open_window(self):
         if not self._window:
@@ -203,7 +203,6 @@ class Accuracy_Test(Calibration_Plugin):
             glfwSwapInterval(0)
 
             glfwMakeContextCurrent(active_window)
-            self.window_should_open = False
 
 
     def on_key(self,window, key, scancode, action, mods):
@@ -221,7 +220,7 @@ class Accuracy_Test(Calibration_Plugin):
         logger.info('Stopping Accuracy_Test')
         self.screen_marker_state = 0
         self.active = False
-        self.window_should_close = True
+        self.close_window()
 
         pt_cloud = preprocess_data_gaze(self.gaze_list,self.ref_list)
 
@@ -297,7 +296,6 @@ class Accuracy_Test(Calibration_Plugin):
         if self._window:
             glfwDestroyWindow(self._window)
             self._window = None
-            self.window_should_close = False
 
 
     def update(self,frame,recent_pupil_positions,events):
@@ -306,12 +304,6 @@ class Accuracy_Test(Calibration_Plugin):
         if self.world_size is None:
             self.world_size = frame.width,frame.height
             self.res = np.sqrt(self.world_size[0]**2+self.world_size[1]**2)
-
-        if self.window_should_close:
-            self.close_window()
-
-        if self.window_should_open:
-            self.open_window()
 
         if self.active:
             gray_img = frame.gray
