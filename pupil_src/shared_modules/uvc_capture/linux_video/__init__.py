@@ -72,6 +72,9 @@ class Camera_Capture(object):
         except KeyError:
             pass
 
+        self.sidebar = None
+        self.menu = None
+
 
     def check_hw_ts_support(self):
         # hw timestamping:
@@ -107,13 +110,10 @@ class Camera_Capture(object):
         self.capture.close()
         self.capture = None
         #recreate the bar with new values
-        bar_pos = self.bar._get_position()
-        self.bar.destroy()
-
+        self.deinit_gui()
 
         self.src_id = cam.src_id
         self.name = cam.name
-
 
         self.use_hw_ts = self.check_hw_ts_support()
         self.capture = v4l2.Capture('/dev/video'+str(self.src_id))
@@ -132,7 +132,7 @@ class Camera_Capture(object):
         except KeyError:
             pass
 
-        self.create_atb_bar(bar_pos)
+        self.init_gui(self.sidebar)
 
     def re_init_cam_by_src_id(self,requested_id):
         for cam in Camera_List():
@@ -151,18 +151,18 @@ class Camera_Capture(object):
 
         timestamp = frame.timestamp
         if self.use_hw_ts:
-
+            pass
             # lets make sure this timestamps is sane:
-            if abs(timestamp-v4l2.get_sys_time_monotonic()) > 5: #hw_timestamp more than 5secs away from now?
-                logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s and last timestamp was %s"%('/dev/video'+str(self.src_id),timestamp,v4l2.get_sys_time_monotonic(),self._last_timestamp))
-                timestamp = self._last_timestamp + self.capture.framerate[0]/float(self.capture.framerate[1])
-                logger.warning("Correcting timestamp by extrapolation from last known timestamp using set rate: %s. TS now at %s"%(str(self.capture.framerate),timestamp) )
-                self._last_timestamp = timestamp
+            # if abs(timestamp-v4l2.get_sys_time_monotonic()) > 5: #hw_timestamp more than 5secs away from now?
+            #     logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s and last timestamp was %s"%('/dev/video'+str(self.src_id),timestamp,v4l2.get_sys_time_monotonic(),self._last_timestamp))
+            #     timestamp = self._last_timestamp + self.capture.framerate[0]/float(self.capture.framerate[1])
+            #     logger.warning("Correcting timestamp by extrapolation from last known timestamp using set rate: %s. TS now at %s"%(str(self.capture.framerate),timestamp) )
+            #     self._last_timestamp = timestamp
 
         else:
             timestamp = v4l2.get_sys_time_monotonic()
 
-            timestamp -= self.timebase.value
+        timestamp -= self.timebase.value
         frame.timestamp = timestamp
         return frame
 
@@ -170,89 +170,103 @@ class Camera_Capture(object):
     def frame_rate(self):
         return self.capture.frame_rate
 
-    def atb_set_ctl(self,val,ctl):
-        ctl_id = self.controls_dict[ctl]['id']
-        self.capture.set_control(ctl_id,val)
-        val = self.capture.get_control(ctl_id)
-        self.controls_dict[ctl]['value'] = val
+    property
+    def frame_size(self):
+        return self.capture.frame_size
+    @frame_size.setter
+    def frame_size(self, value):
+        self.capture.frame_size = value
 
-    def atb_get_ctl(self,ctl):
-        # ctl_id = self.controls_dict[ctl]['id']
-        # return self.capture.get_control(ctl_id)
-        return self.controls_dict[ctl]['value']
 
-    def atb_load_defaults(self):
+
+    def gui_load_defaults(self):
         for c in self.controls:
             if not c['disabled']:
                 self.capture.set_control(c['id'],c['default'])
                 c['value'] = self.capture.get_control(c['id'])
 
 
-    def atb_get_frame_rate(self):
-        return self.capture.frame_rates.index(self.capture.frame_rate)
+    # def atb_get_frame_rate(self):
+    #     return self.capture.frame_rates.index(self.capture.frame_rate)
 
-    def atb_set_frame_rate(self,rate_idx):
-        rate = self.capture.frame_rates[rate_idx]
-        print rate,rate_idx
-        self.capture.frame_rate = rate
+    # def atb_set_frame_rate(self,rate_idx):
+    #     rate = self.capture.frame_rates[rate_idx]
+    #     self.capture.frame_rate = rate
 
 
-    def create_atb_bar(self,pos):
-        # add uvc camera controls to a separate ATB bar
-        size = (200,200)
 
-        self.bar = atb.Bar(name="Camera", label=self.name,
-            help="UVC Camera Controls", color=(50,50,50), alpha=100,
-            text='light',position=pos,refresh=2., size=size)
-        cameras_enum = atb.enum("Capture",dict([(c.name,c.src_id) for c in Camera_List()]) )
-        self.bar.add_var("Capture",vtype=cameras_enum,getter=lambda:self.src_id, setter=self.re_init_cam_by_src_id)
+    def init_gui(self,sidebar):
 
-        self.bar.add_var('framerate', vtype = atb.enum('framerate',self._atb_frame_rates_dict), getter = self.atb_get_frame_rate, setter=self.atb_set_frame_rate )
-        self.bar.add_var('hardware timestamps',vtype=atb.TW_TYPE_BOOL8,getter=lambda:self.use_hw_ts)
 
-        u_name = 0
-        for control in self.controls:
-            name = str(u_name)
-            u_name +=1
-            label =  control['name']
-            if control['type']=="bool":
-                self.bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=self.atb_get_ctl,setter=self.atb_set_ctl,label = label, data=label)
+        sorted_controls = [c for c in self.controls.itervalues()]
+        sorted_controls.sort(key=lambda c: c.order)
+
+        self.menu = ui.Growing_Menu(label='Camera Settings')
+
+        cameras = Camera_List()
+        camera_names = [c.name for c in cameras]
+        camera_ids = [c.src_id for c in cameras]
+        self.menu.append(ui.Selector('src_id',self,selection=camera_ids,labels=camera_names,label='Capture Device', setter=self.re_init_cam_by_src_id) )
+
+        hardware_ts_switch = ui.Switch('use_hw_ts',self,label='use hardware timestamps')
+        hardware_ts_switch.read_only=True
+        self.menu.append(hardware_ts_switch)
+
+
+        for control in sorted_controls:
+            c = None
+            ctl_name = control['name']
+
+            # we use closures as setters for each control element
+            def make_closure(ctl_id):
+                def fn(self,val):
+                    self.capture.set_control(ctl_id,val)
+                    self.controls_dict[ctl]['value'] = self.capture.get_control(ctl_id)
+                return fn
+            set_ctl = make_closure(control['id'])
+
+            if control['type']=='bool':
+                c = ui.Switch(ctl_name,self.controls_dict,setter=set_ctl)
             elif control['type']=='int':
-                self.bar.add_var(name,vtype=atb.TW_TYPE_INT32,getter=self.atb_get_ctl,setter=self.atb_set_ctl,label = label, data=label)
-                self.bar.define(definition='min='+str(control['min']),   varname=name)
-                self.bar.define(definition='max='+str(control['max']),   varname=name)
-                self.bar.define(definition='step='+str(control['step']), varname=name)
+                c = ui.Slider(ctl_name,self.controls_dict,min=control['min'],max=control['max'],
+                                step=control['step'], setter=set_ctl)
+
             elif control['type']=="menu":
-                if control['menu'] == {}:
-                    vtype = None
+                if control.menu is None:
+                    selection = range(control['min'],control['max']+1,control['step'])
+                    labels = selection
                 else:
-                    vtype= atb.enum(name,control['menu'])
-                self.bar.add_var(name,vtype=vtype,getter=self.atb_get_ctl,setter=self.atb_set_ctl,label = label, data=label)
-                if control['menu'] == {}:
-                    self.bar.define(definition='min='+str(control['min']),   varname=name)
-                    self.bar.define(definition='max='+str(control['max']),   varname=name)
-                    self.bar.define(definition='step='+str(control['step']), varname=name)
+                    selection = [value for name,value in control.menu.iteritems()]
+                    labels = [name for name,value in control.menu.iteritems()]
+                c = ui.Selector(ctl_name,self.controls_dict,selection=selection,labels = labels,setter=set_ctl)
             else:
                 pass
             if control['disabled']:
-                self.bar.define(definition='readonly=1',varname=name)
-            if label == 'Exposure, Auto Priority':
+                c.read_only = True
+            if ctl_name == 'Exposure, Auto Priority':
                 # the controll should always be off. we set it to 0 on init (see above)
-                self.bar.define(definition='readonly=1',varname=name)
+                c.read_only = True
 
-        # self.bar.add_button("refresh",self.controls.update_from_device)
-        self.bar.add_button("load defaults",self.atb_load_defaults)
+            if c is not None:
+                self.menu.append(c)
 
-        return size
+        self.menu.append(ui.Button("refresh",self.controls.update_from_device))
+        self.menu.append(ui.Button("load defaults",self.gui_load_defaults))
+        self.sidebar = sidebar
+        self.sidebar.append(self.menu)
+
+    def deinit_gui(self):
+        if self.menu:
+            self.sidebar.remove(self.menu)
+            self.menu = None
+
+
 
     def close(self):
-        self.kill_atb_bar()
+        self.deinit_gui()
         self.capture.close()
         del self.capture
         logger.info("Capture released")
 
-    def kill_atb_bar(self):
-        if hasattr(self,'bar'):
-            self.bar.destroy()
-            del self.bar
+
 
