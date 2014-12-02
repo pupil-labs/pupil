@@ -9,7 +9,7 @@
 '''
 
 """
-OOP style interface for uvcc c_types binding
+OOP style interface for uvcc c_types binding and wrapper for cv2 videocapture
 
 Three classes:
     Camera_List holds Cam's instances,
@@ -18,7 +18,7 @@ Three classes:
     Control is the actual Control with methods for getting and setting them.
 """
 import sys
-import atb
+from pyglui import ui
 from time import time
 from raw import *
 import cv2
@@ -30,10 +30,179 @@ logger = logging.getLogger(__name__)
 
 class CameraCaptureError(Exception):
     """General Exception for this module"""
-    def __init__(self, arg):
-        super(CameraCaptureError, self).__init__()
-        self.arg = arg
+    pass
 
+
+
+class Frame(object):
+    """docstring of Frame"""
+    def __init__(self, timestamp,img):
+        self.timestamp = timestamp
+        self.img = img
+        self.height,self.width,_ = img.shape
+        self._gray = None
+        self._yuv = None
+
+    @property
+    def gray(self):
+        if self._gray == None:
+            self._gray = cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
+        return self._gray
+    @gray.setter
+    def gray(self, value):
+        raise Exception('Read only.')
+
+
+
+class Camera_Capture(object):
+    """docstring for uvcc_camera"""
+    def __init__(self, cam,size=(640,480),fps=30,timebase=None):
+        self.fps = 30
+        self.src_id = cam.src_id
+        self.uId = cam.uId
+        self.name = cam.name
+        self.controls = Controls(self.uId)
+
+        self.sidebar = None # this holds a pointer to the app gui used in init_gui
+        self.menu = None
+
+        if timebase == None:
+            logger.debug("Capture will run with default system timebase")
+            self.timebase = c_double(0)
+        elif isinstance(timebase,c_double):
+            logger.debug("Capture will run with app wide adjustable timebase")
+            self.timebase = timebase
+        else:
+            logger.error("Invalid timebase variable type. Will use default system timebase")
+            self.timebase = c_double(0)
+
+        try:
+            self.controls['UVCC_REQ_FOCUS_AUTO'].set_val(0)
+        except KeyError:
+            pass
+
+        self.capture = cv2.VideoCapture(self.src_id)
+        self.frame_size = size
+        self.frame_rate = fps
+
+
+    def re_init(self,cam,size=(640,480),fps=30):
+        self.src_id = cam.src_id
+        self.uId = cam.uId
+        self.name = cam.name
+        self.controls = Controls(self.uId)
+
+        try:
+            self.controls['UVCC_REQ_FOCUS_AUTO'].set_val(0)
+        except KeyError:
+            pass
+
+        self.capture = cv2.VideoCapture(self.src_id)
+        self.frame_size = size
+        self.frame_rate = fps
+
+        #recreate the gui with new values
+        self.deinit_gui()
+        self.init_gui(self.sidebar)
+
+    def re_init_cam_by_src_id(self,src_id):
+        try:
+            cam = Camera_List()[src_id]
+        except KeyError:
+            logger.warning("could not reinit capture, src_id not valid anymore")
+            return
+        self.re_init(cam,self.frame_size)
+
+    def get_frame(self):
+        s, img = self.capture.read()
+        if not s:
+            raise CameraCaptureError("Could not get frame")
+        timestamp = time()-self.timebase.value
+        return Frame(timestamp,img)
+
+
+    @property
+    def frame_size(self):
+        return self.capture.get(3), self.capture.get(4)
+    @frame_size.setter
+    def frame_size(self,size):
+        width,height = size
+        self.capture.set(3, width)
+        self.capture.set(4, height)
+
+    @property
+    def frame_rate(self):
+        fps = self.capture.get(5)
+        if fps != 0:
+            return fps
+        else:
+            return self.fps
+    @frame_rate.setter
+    def frame_rate(self,fps):
+        self.capture.set(5,fps)
+
+
+    def get_now(self):
+        return time()
+
+    def init_gui(self,sidebar):
+
+
+        sorted_controls = [c for c in self.controls.itervalues()]
+        sorted_controls.sort(key=lambda c: c.order)
+
+
+        self.menu = ui.Growing_Menu(label='Camera Settings')
+
+
+        cameras = Camera_List()
+        camera_names = [c.name for c in cameras]
+        camera_ids = [c.src_id for c in cameras]
+        self.menu.append(ui.Selector('src_id',self,selection=camera_ids,labels=camera_names,label='Capture Device', setter=self.re_init_cam_by_src_id) )
+
+        hardware_ts_switch = ui.Switch('hardware_timestamps',None,getter=lambda:False,label='use hardware timestamps')
+        hardware_ts_switch.read_only=True
+        self.menu.append(hardware_ts_switch)
+
+        for control in sorted_controls:
+            name = control.pretty_name
+            c = None
+            if control.type=="bool":
+                c = ui.Switch('value',control,setter=control.set_val,label=name)
+            elif control.type=='int':
+                c = ui.Slider('value',control,min=control.min,max=control.max,
+                                step=control.step, setter=control.set_val,label=name)
+
+            elif control.type=="menu":
+                if control.menu is None:
+                    selection = range(control.min,control.max+1,control.step)
+                    labels = selection
+                else:
+                    #this is currenlty not implemented
+                    selection = [c.val for c in control.menu]
+                    labels = [c.name for c in control.menu]
+                c = ui.Selector('value',control,selection=selection,labels = labels,label=name,setter=control.set_val)
+            else:
+                print control.type
+            # if control.flags == "inactive":
+                # c.read_only = True
+            if c is not None:
+                self.menu.append(c)
+
+        self.menu.append(ui.Button("refresh",self.controls.update_from_device))
+        self.menu.append(ui.Button("load defaults",self.controls.load_defaults))
+        self.sidebar = sidebar
+        self.sidebar.append(self.menu)
+
+    def deinit_gui(self):
+        if self.menu:
+            self.sidebar.remove(self.menu)
+            self.menu = None
+
+    def close(self):
+        self.control = None
+        logger.info("Capture released")
+        pass
 
 
 class Control(object):
@@ -41,7 +210,7 @@ class Control(object):
     def __init__(self,name,i,handle):
         self.handle = handle
         self.name = name
-        self.atb_name = name[9:].capitalize() #pretify the name
+        self.pretty_name = name[9:].capitalize() #pretify the name
         self.order = i
         self.value = None
         self.assess_type()
@@ -103,8 +272,8 @@ class Control(object):
         return self.value
 
     def set_val(self,val):
-        self.value = val
-        return uvccSetVal(val,self.name,self.handle)
+        uvccSetVal(val,self.name,self.handle)
+        self.value = uvccGetVal(self.name,self.handle)
 
     def get_info(self):
         return uvccRequestInfo(self.name,self.handle)
@@ -138,163 +307,6 @@ class Controls(dict):
     def __del__(self):
         uvccReleaseCam(self.handle)
         uvccExit()
-
-class Frame(object):
-    """docstring of Frame"""
-    def __init__(self, timestamp,img):
-        self.timestamp = timestamp
-        self.img = img
-        self.height,self.width,_ = img.shape
-        self._gray = None
-        self._yuv = None
-
-    @property
-    def gray(self):
-        if self._gray == None:
-            self._gray = cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
-        return self._gray
-    @gray.setter
-    def gray(self, value):
-        raise Exception('Read only.')
-
-
-
-class Camera_Capture(object):
-    """docstring for uvcc_camera"""
-    def __init__(self, cam,size=(640,480),fps=30,timebase=None):
-        self.fps = 30
-        self.src_id = cam.src_id
-        self.uId = cam.uId
-        self.name = cam.name
-        self.controls = Controls(self.uId)
-
-        if timebase == None:
-            logger.debug("Capture will run with default system timebase")
-            self.timebase = c_double(0)
-        elif isinstance(timebase,c_double):
-            logger.debug("Capture will run with app wide adjustable timebase")
-            self.timebase = timebase
-        else:
-            logger.error("Invalid timebase variable type. Will use default system timebase")
-            self.timebase = c_double(0)
-
-        try:
-            self.controls['UVCC_REQ_FOCUS_AUTO'].set_val(0)
-        except KeyError:
-            pass
-
-        self.capture = cv2.VideoCapture(self.src_id)
-        self.set_size(size)
-
-
-    def re_init(self,cam,size=(640,480),fps=30):
-        self.src_id = cam.src_id
-        self.uId = cam.uId
-        self.name = cam.name
-        self.controls = Controls(self.uId)
-
-        try:
-            self.controls['UVCC_REQ_FOCUS_AUTO'].set_val(0)
-        except KeyError:
-            pass
-
-        self.capture = cv2.VideoCapture(self.src_id)
-        self.set_size(size)
-
-        #recreate the bar with new values
-        bar_pos = self.bar._get_position()
-        self.bar.destroy()
-        self.create_atb_bar(bar_pos)
-
-    def re_init_cam_by_src_id(self,src_id):
-        try:
-            cam = Camera_List()[src_id]
-        except KeyError:
-            logger.warning("could not reinit capture, src_id not valid anymore")
-            return
-        self.re_init(cam,self.get_size())
-
-    def get_frame(self):
-        s, img = self.capture.read()
-        if not s:
-            raise CameraCaptureError("Could not get frame")
-        timestamp = time()-self.timebase.value
-        return Frame(timestamp,img)
-
-    def set_size(self,size):
-        width,height = size
-        self.capture.set(3, width)
-        self.capture.set(4, height)
-
-    def get_size(self):
-        return self.capture.get(3), self.capture.get(4)
-
-    def set_fps(self,fps):
-        self.capture.set(5,fps)
-
-    @property
-    def frame_rate(self):
-        fps = self.capture.get(5)
-        if fps != 0:
-            return fps
-        else:
-            return self.fps
-
-    def get_now(self):
-        return time()
-
-    def create_atb_bar(self,pos):
-        # add uvc camera controls to a separate ATB bar
-        size = (200,200)
-
-        self.bar = atb.Bar(name="Camera_Controls", label=self.name,
-            help="UVC Camera Controls", color=(50,50,50), alpha=100,
-            text='light',position=pos,refresh=2., size=size)
-
-        sorted_controls = [c for c in self.controls.itervalues()]
-        sorted_controls.sort(key=lambda c: c.order)
-
-        cameras_enum = atb.enum("Capture",dict([(c.name,c.src_id) for c in Camera_List()]) )
-
-        self.bar.add_var("Capture",vtype=cameras_enum,getter=lambda:self.src_id, setter=self.re_init_cam_by_src_id)
-        self.bar.add_var('hardware timestamps',vtype=atb.TW_TYPE_BOOL8,getter=lambda:False)
-        for control in sorted_controls:
-            name = control.atb_name
-            if control.type=="bool":
-                self.bar.add_var(name,vtype=atb.TW_TYPE_BOOL8,getter=control.get_val,setter=control.set_val)
-            elif control.type=='int':
-                self.bar.add_var(name,vtype=atb.TW_TYPE_INT32,getter=control.get_val,setter=control.set_val)
-                self.bar.define(definition='min='+str(control.min),   varname=name)
-                self.bar.define(definition='max='+str(control.max),   varname=name)
-                self.bar.define(definition='step='+str(control.step), varname=name)
-            elif control.type=="menu":
-                if control.menu is None:
-                    vtype = None
-                else:
-                    vtype= atb.enum(name,control.menu)
-                self.bar.add_var(name,vtype=vtype,getter=control.get_val,setter=control.set_val)
-                if control.menu is None:
-                    self.bar.define(definition='min='+str(control.min),   varname=name)
-                    self.bar.define(definition='max='+str(control.max),   varname=name)
-                    self.bar.define(definition='step='+str(control.step), varname=name)
-            else:
-                pass
-            if control.flags == "inactive":
-                pass
-                # self.bar.define(definition='readonly=1',varname=control.name)
-
-        self.bar.add_button("refresh",self.controls.update_from_device)
-        self.bar.add_button("load defaults",self.controls.load_defaults)
-
-        return size
-
-    def kill_atb_bar(self):
-        pass
-
-    def close(self):
-        self.control = None
-        logger.info("Capture released")
-        pass
 
 
 class Cam():

@@ -251,6 +251,8 @@ def world(g_pool,cap_src,cap_size):
     g_pool.gui.append(g_pool.quickbar)
     g_pool.gui.append(g_pool.sidebar)
 
+    g_pool.capture.init_gui(g_pool.sidebar)
+
     #set the last saved window size
     set_window_size(g_pool.window_size)
     on_resize(world_window, *glfwGetWindowSize(world_window))
