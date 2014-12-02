@@ -127,7 +127,6 @@ class Recorder(Plugin):
         if self.running:
 
             if not self.writer:
-                print self.g_pool.capture.frame_rate
                 self.writer = cv2.VideoWriter(self.video_path, cv2.cv.CV_FOURCC(*'DIVX'), float(self.g_pool.capture.frame_rate), (frame.width,frame.height))
                 self.height, self.width = frame.height,frame.width
 
