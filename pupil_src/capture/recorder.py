@@ -117,7 +117,7 @@ class Recorder(Plugin):
         else:
             self.audio_writer = None
 
-        self.video_path = os.path.join(self.rec_path, "world.avi")
+        self.video_path = os.path.join(self.rec_path, "world.mkv")
         self.writer = None
         # positions path to eye process
         if self.record_eye:

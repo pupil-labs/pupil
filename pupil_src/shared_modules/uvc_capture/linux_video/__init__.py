@@ -51,23 +51,21 @@ class Camera_Capture(object):
 
         self.timebase = timebase
         self.use_hw_ts = self.check_hw_ts_support()
-        self._last_timestamp = v4l2.get_sys_time_monotonic()
+        self._last_timestamp = self.get_now()
 
         self.capture = v4l2.Capture('/dev/video'+str(self.src_id))
         self.capture.frame_size = size
         self.capture.frame_rate = (1,fps or 30)
         self.controls = self.capture.enum_controls()
-        self.controls_dict = dict([(c['name'],c) for c in self.controls])
-        self._frame_rates = self.capture.frame_rates
-        self._atb_frame_rates_dict = dict( [(str(r),idx) for idx,r in enumerate(self._frame_rates)] )
+        controls_dict = dict([(c['name'],c) for c in self.controls])
         try:
-            self.capture.set_control(self.controls_dict['Focus, Auto']['id'], 0)
+            self.capture.set_control(controls_dict['Focus, Auto']['id'], 0)
         except KeyError:
             pass
         try:
             # exposure_auto_priority == 1
             # leads to reduced framerates under low light and corrupt timestamps.
-            self.capture.set_control(self.controls_dict['Exposure, Auto Priority']['id'], 0)
+            self.capture.set_control(controls_dict['Exposure, Auto Priority']['id'], 0)
         except KeyError:
             pass
 
@@ -119,27 +117,20 @@ class Camera_Capture(object):
         self.capture.frame_size = current_size
         self.capture.frame_rate = (1,current_fps or 30)
         self.controls = self.capture.enum_controls()
-        self.controls_dict = dict([(c['name'],c) for c in self.controls])
+        controls_dict = dict([(c['name'],c) for c in self.controls])
         try:
-            self.capture.set_control(self.controls_dict['Focus, Auto']['id'], 0)
+            self.capture.set_control(controls_dict['Focus, Auto']['id'], 0)
         except KeyError:
             pass
         try:
             # exposure_auto_priority == 1
             # leads to reduced framerates under low light and corrupt timestamps.
-            self.capture.set_control(self.controls_dict['Exposure, Auto Priority']['id'], 0)
+            self.capture.set_control(controls_dict['Exposure, Auto Priority']['id'], 0)
         except KeyError:
             pass
 
         self.init_gui(self.sidebar)
 
-    def re_init_cam_by_src_id(self,requested_id):
-        for cam in Camera_List():
-            if cam.src_id == requested_id:
-                self.re_init(cam)
-                return
-        logger.warning("could not reinit capture, src_id not valid anymore")
-        return
 
 
     def get_frame(self):
@@ -165,9 +156,21 @@ class Camera_Capture(object):
         frame.timestamp = timestamp
         return frame
 
+    def get_now(self):
+        return v4l2.get_sys_time_monotonic()
+
     @property
     def frame_rate(self):
-        return self.capture.frame_rate
+        #return rate as denominator only
+        return float(self.capture.frame_rate[1])/self.capture.frame_rate[0]
+    @frame_rate.setter
+    def frame_rate(self, rate):
+        if isinstance(rate,(tuple,list)):
+            self.capture.frame_rate = rate
+        elif isinstance(rate,(int,float)):
+            self.capture.frame_rate = 1. , rate
+        else:
+            raise Exception("Please set rate as '(num,den)' or as 'den' assuming num is 1")
 
     @property
     def frame_size(self):
@@ -178,52 +181,68 @@ class Camera_Capture(object):
 
 
 
-    def gui_load_defaults(self):
-        for c in self.controls:
-            if not c['disabled']:
-                self.capture.set_control(c['id'],c['default'])
-                c['value'] = self.capture.get_control(c['id'])
-
-
-    # def atb_get_frame_rate(self):
-    #     return self.capture.frame_rates.index(self.capture.frame_rate)
-
-    # def atb_set_frame_rate(self,rate_idx):
-    #     rate = self.capture.frame_rates[rate_idx]
-    #     self.capture.frame_rate = rate
-
-
-
     def init_gui(self,sidebar):
-        self.menu = ui.Growing_Menu(label='Camera Settings')
 
+        #lets define some  helper functions:
+        def gui_load_defaults():
+            for c in self.controls:
+                if not c['disabled']:
+                    self.capture.set_control(c['id'],c['default'])
+                    c['value'] = self.capture.get_control(c['id'])
+
+        def gui_update_from_device():
+            for c in self.controls:
+                if not c['disabled']:
+                    c['value'] = self.capture.get_control(c['id'])
+
+
+        def gui_get_frame_rate():
+            return self.capture.frame_rate
+
+        def gui_set_frame_rate(rate):
+            self.capture.frame_rate = rate
+
+        def gui_init_cam_by_src_id(requested_id):
+            for cam in Camera_List():
+                if cam.src_id == requested_id:
+                    self.re_init(cam)
+                    return
+            logger.warning("could not reinit capture, src_id not valid anymore")
+            return
+
+        #create the menu entry
+        self.menu = ui.Growing_Menu(label='Camera Settings')
         cameras = Camera_List()
         camera_names = [c.name for c in cameras]
         camera_ids = [c.src_id for c in cameras]
-        self.menu.append(ui.Selector('src_id',self,selection=camera_ids,labels=camera_names,label='Capture Device', setter=self.re_init_cam_by_src_id) )
+        self.menu.append(ui.Selector('src_id',self,selection=camera_ids,labels=camera_names,label='Capture Device', setter=gui_init_cam_by_src_id) )
 
         hardware_ts_switch = ui.Switch('use_hw_ts',self,label='use hardware timestamps')
-        hardware_ts_switch.read_only=True
+        hardware_ts_switch.read_only = True
         self.menu.append(hardware_ts_switch)
+
+        self.menu.append(ui.Selector('frame_rate', selection=self.capture.frame_rates,labels=[str(d/float(n)) for n,d in self.capture.frame_rates],
+                                        label='Frame Rate', getter=gui_get_frame_rate, setter=gui_set_frame_rate) )
 
 
         for control in self.controls:
             c = None
             ctl_name = control['name']
 
-            # we use closures as setters for each control element
-            def make_setter(ctl_id,ctl_name):
+            # we use closures as setters and getters for each control element
+            def make_setter(control):
                 def fn(val):
-                    self.capture.set_control(ctl_id,val)
-                    self.controls_dict[ctl_name]['value'] = self.capture.get_control(ctl_id)
+                    self.capture.set_control(control['id'],val)
+                    control['value'] = self.capture.get_control(control['id'])
                 return fn
-            def make_getter(ctl_name):
+            def make_getter(control):
                 def fn():
-                    return self.controls_dict[ctl_name]['value'] 
+                    return control['value'] 
                 return fn
-            set_ctl = make_setter(control['id'],control['name'])
-            get_ctl = make_getter(control['name'])
+            set_ctl = make_setter(control)
+            get_ctl = make_getter(control)
 
+            #now we add controls 
             if control['type']=='bool':
                 c = ui.Switch(ctl_name,getter=get_ctl,setter=set_ctl)
             elif control['type']=='int':
@@ -249,8 +268,9 @@ class Camera_Capture(object):
             if c is not None:
                 self.menu.append(c)
 
-        # self.menu.append(ui.Button("refresh",self.controls.update_from_device))
-        self.menu.append(ui.Button("load defaults",self.gui_load_defaults))
+        self.menu.append(ui.Button("refresh",gui_update_from_device))
+        self.menu.append(ui.Button("load defaults",gui_load_defaults))
+        self.menu.collapsed = True
         self.sidebar = sidebar
         self.sidebar.append(self.menu)
 

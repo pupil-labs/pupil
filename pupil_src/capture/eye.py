@@ -232,9 +232,9 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
             if command is not None:
                 record_path = command
                 logger.info("Will save eye video to: %s"%record_path)
-                video_path = os.path.join(record_path, "eye.avi")
+                video_path = os.path.join(record_path, "eye.mkv")
                 timestamps_path = os.path.join(record_path, "eye_timestamps.npy")
-                writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (frame.img.shape[1], frame.img.shape[0]))
+                writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), float(cap.frame_rate), (frame.img.shape[1], frame.img.shape[0]))
                 timestamps = []
             else:
                 logger.info("Done recording eye.")
