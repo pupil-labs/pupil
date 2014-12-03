@@ -94,7 +94,7 @@ class FakeCapture(object):
    
         #create the menu entry
         self.menu = ui.Growing_Menu(label='Camera Settings')
-        self.menu.append(ui.Slider('fps',self,min=1,max=2000,step=1))
+        self.menu.append(ui.Slider('fps',self,min=5,max=2000,step=1))
         self.menu.collapsed = True
         self.sidebar = sidebar
         self.sidebar.append(self.menu)

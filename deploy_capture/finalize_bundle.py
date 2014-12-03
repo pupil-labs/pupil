@@ -30,12 +30,6 @@ elif platform.system() == 'Linux':
     distribtution_dir = 'dist'
     pupil_capture_dir =  os.path.join(distribtution_dir, 'pupil_capture')
 
-
-    shutil.copy('patch_uvc_driver.sh',os.path.join(distribtution_dir,'patch_uvc_driver.sh'))
-    print "Copied a small script to patch uvc driver into the distribution dir"
-    os.chmod(os.path.join(distribtution_dir,'patch_uvc_driver.sh'),0775)
-    print "Gave that file excetion rights"
-
     shutil.copy('make_shortcut.sh',os.path.join(distribtution_dir,'make_shortcut.sh'))
     print "Copied a small script that creates a shortcut for the user into distribtution_dir"
     os.chmod(os.path.join(distribtution_dir,'make_shortcut.sh'),0775)

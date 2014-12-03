@@ -42,7 +42,7 @@ if platform.system() == 'Darwin':
 elif platform.system() == 'Linux':
     a = Analysis(['../pupil_src/capture/main.py'],
                  pathex=['../pupil_src/shared_modules/'],
-                 hiddenimports=[],
+                 hiddenimports=['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils'],
                  hookspath=None,
                  runtime_hooks=None)
     pyz = PYZ(a.pure)
@@ -63,6 +63,8 @@ elif platform.system() == 'Linux':
                    [('libAntTweakBar.so', '/usr/lib/libAntTweakBar.so','BINARY')],
                    [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
                    [('icon.ico', 'linux_icon.ico','DATA')],
+                   [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/OpenSans-Regular.ttf','DATA')],
+                   [('Roboto-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/Roboto-Regular.ttf','DATA')],
                    strip=None,
                    upx=True,
                    name='pupil_capture')
