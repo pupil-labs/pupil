@@ -26,7 +26,7 @@ if getattr(sys, 'frozen', False):
         rec_dir = os.path.expanduser('~/Desktop/pupil_recordings')
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
     else:
-        # Specifiy user dirs.
+        # Specifiy user irs.
         user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"capture_settings")
         rec_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"recordings")
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
