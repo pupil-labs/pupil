@@ -75,7 +75,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         submenu.append(ui.Slider('aperture',self,min=3,step=2,max=11,label='filter aperture'))
         submenu.append(ui.Switch('show_edges',self,label='show edges'))
 
-        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate')
+        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
         self.g_pool.quickbar.append(self.button)
 
     def deinit_gui(self):

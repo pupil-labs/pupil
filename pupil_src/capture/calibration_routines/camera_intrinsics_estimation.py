@@ -74,7 +74,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
         self.menu.append(ui.Button('show Pattern',self.open_window))
 
-        self.button = ui.Thumb('collect_new',self,setter=self.advance,label='Capture')
+        self.button = ui.Thumb('collect_new',self,setter=self.advance,label='Capture',hotkey='c')
         self.g_pool.quickbar.append(self.button)
 
     def deinit_gui(self):

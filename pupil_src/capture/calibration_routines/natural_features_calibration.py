@@ -52,7 +52,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
         self.menu = ui.Growing_Menu('Feature Based Calibration')
         self.g_pool.sidebar.append(self.menu)
 
-        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate')
+        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
         self.g_pool.quickbar.append(self.button)
 
 
