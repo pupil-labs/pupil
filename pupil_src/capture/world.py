@@ -238,7 +238,7 @@ def world(g_pool,cap_src,cap_size):
     except KeyError:
         pass
     general_settings = ui.Growing_Menu('General')
-    general_settings.append(ui.Slider('scale', setter= set_scale,getter=get_scale,step = .05,min=.5,max=2,label='Interface Size'))
+    general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=.5,max=2,label='Interface Size'))
     general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
     general_settings.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
                                         labels = [p.__name__ for p in calibration_plugins],

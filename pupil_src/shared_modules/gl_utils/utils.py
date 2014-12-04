@@ -60,6 +60,12 @@ def basic_gl_setup():
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     glEnable(GL_BLEND)
     glClearColor(1.,1.,1.,0.)
+    glEnable(GL_LINE_SMOOTH)
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+    glEnable(GL_LINE_SMOOTH)
+    glEnable(GL_POLYGON_SMOOTH)
+    glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
+
 
 def clear_gl_screen():
     glClear(GL_COLOR_BUFFER_BIT)
