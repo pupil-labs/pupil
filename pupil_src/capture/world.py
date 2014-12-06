@@ -34,6 +34,7 @@ import psutil
 # helpers/utils
 from methods import normalize, denormalize,Temp
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture
+from OpenGL.GL import glGetString, GL_VERSION
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 from audio import Audio_Input_List
 # Plug-ins
@@ -207,9 +208,12 @@ def world(g_pool,cap_src,cap_size):
 
     # Initialize glfw
     glfwInit()
+    version = 2,1
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, version[0])
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, version[1])
     world_window = glfwCreateWindow(frame.width, frame.height, "World", None, None)
     glfwMakeContextCurrent(world_window)
-
+    print('GL:',glGetString(GL_VERSION))
     # Register callbacks world_window
     glfwSetWindowSizeCallback(world_window,on_resize)
     glfwSetWindowCloseCallback(world_window,on_close)

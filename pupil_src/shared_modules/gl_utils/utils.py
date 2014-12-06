@@ -56,6 +56,7 @@ def cvmat_to_glmat(m):
 
 def basic_gl_setup():
     glEnable( GL_POINT_SPRITE )
+    # glEnable(GL_POINT_SMOOTH)
     glEnable(GL_VERTEX_PROGRAM_POINT_SIZE) # overwrite pointsize
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     glEnable(GL_BLEND)
