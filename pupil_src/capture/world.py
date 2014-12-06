@@ -26,7 +26,7 @@ import numpy as np
 
 #display
 from glfw import *
-from pyglui import ui,graph
+from pyglui import ui,graph,cygl
 
 #monitoring
 import psutil
@@ -212,8 +212,9 @@ def world(g_pool,cap_src,cap_size):
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, version[0])
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, version[1])
     world_window = glfwCreateWindow(frame.width, frame.height, "World", None, None)
-    glfwMakeContextCurrent(world_window)
-    print('GL:',glGetString(GL_VERSION))
+    glfwMakeContextCurrent(world_window)    
+    cygl.utils.init()
+    # print('GL:',glGetString(GL_VERSION))
     # Register callbacks world_window
     glfwSetWindowSizeCallback(world_window,on_resize)
     glfwSetWindowCloseCallback(world_window,on_close)

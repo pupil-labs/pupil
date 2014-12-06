@@ -62,6 +62,7 @@ elif platform.system() == 'Linux':
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
                    [('libAntTweakBar.so', '/usr/lib/libAntTweakBar.so','BINARY')],
                    [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
+                   [('libGLEW.so', '/usr/lib/x86_64-linux-gnu/libGLEW.so','BINARY')],
                    [('icon.ico', 'linux_icon.ico','DATA')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/Roboto-Regular.ttf','DATA')],
