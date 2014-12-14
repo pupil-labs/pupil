@@ -51,6 +51,7 @@ class Recorder(Plugin):
 
         self.menu.append(ui.TextInput('rec_dir',self.g_pool,setter=self.set_rec_dir,label='Recording Path'))
         self.menu.append(ui.TextInput('session_name',self,setter=self.set_session_name,label='Session'))
+        self.menu.append(ui.Switch('record_eye',self,on_val=True,off_val=False,setter=self.set_record_eye,label='Record Eye'))
 
         self.button = ui.Thumb('running',self,setter=self.toggle,label='Record',hotkey='r')
         self.g_pool.quickbar.append(self.button)
@@ -233,7 +234,8 @@ class Recorder(Plugin):
         else:
             self.session_name = val
 
-
+    def set_record_eye(self, val):
+        self.record_eye = val
 
 
 
