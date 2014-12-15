@@ -236,6 +236,7 @@ class Recorder(Plugin):
 
     def set_record_eye(self, val):
         self.record_eye = val
+        logger.debug("Record Eye Video: %s" %(bool(self.record_eye)))
 
 
 
