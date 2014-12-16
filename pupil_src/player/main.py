@@ -47,7 +47,7 @@ if not os.path.isdir(user_dir):
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
-logger.setLevel(logging.INFO) # <-- use this to set verbosity
+logger.setLevel(logging.WARNING) # <-- use this to set verbosity
 #since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
     if __name__ == '__main__': #clear log if main
