@@ -380,7 +380,7 @@ def split_at_corner_index(contour,index):
     segments = []
     index = [i+1 for i in index]
     for s,e in zip([0]+index,index+[10000000]): # list of slice indecies 0,i0,i1,i2,
-        segments.append(contour[s:e+1])# +1 is for not loosing line segments
+        segments.append(contour[s:e+1])# +1 is for not losing line segments
     return segments
 
 
@@ -417,7 +417,7 @@ def size_deviation(ellipse,target_size):
 
 
 def circle_grid(image, pattern_size=(4,11)):
-    """Circle grid: finds an assymetric circle pattern
+    """Circle grid: finds an asymmetric circle pattern
     - circle_id: sorted from bottom left to top right (column first)
     - If no circle_id is given, then the mean of circle positions is returned approx. center
     - If no pattern is detected, function returns None
@@ -578,7 +578,7 @@ def pruning_quick_combine(l,fn,seed_idx=None,max_evals=1e20,max_depth=5):
         if not len(path) > max_depth:
             # is this combination even viable, or did a subset fail already?
             if not any(m.issubset(set(path)) for m in prune):
-                #we have not tested this and a subset of this was sucessfull before
+                #we have not tested this and a subset of this was successful before
                 if fn([l[mapping[i]] for i in path]):
                     # yes this was good, keep as solution
                     results.append([mapping[i] for i in path])

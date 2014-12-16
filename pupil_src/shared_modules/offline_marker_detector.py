@@ -46,7 +46,7 @@ from math import sqrt
 class Offline_Marker_Detector(Plugin):
     """
     Special version of marker detector for use with videofile source.
-    It uses a seperate process to search all frames in the world.avi file for markers.
+    It uses a separate process to search all frames in the world.avi file for markers.
      - self.cache is a list containing marker positions for each frame.
      - self.surfaces[i].cache is a list containing surface positions for each frame
     Both caches are build up over time. The marker cache is also session persistent.
@@ -329,7 +329,7 @@ class Offline_Marker_Detector(Plugin):
         srf_dir = os.path.join(self.g_pool.rec_dir,'surface_data'+'_'+s.name.replace('/','')+'_'+s.uid)
         logger.info("exporting surface gaze data to %s"%srf_dir)
         if os.path.isdir(srf_dir):
-            logger.info("Will overwrite previous export for this referece surface")
+            logger.info("Will overwrite previous export for this reference surface")
         else:
             try:
                 os.mkdir(srf_dir)
@@ -362,7 +362,7 @@ class Offline_Marker_Detector(Plugin):
                             on_srf = (0 <= gp_x <= 1) and (0 <= gp_y <= 1)
                             csw_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.scale_factor[0],gp_x*s.scale_factor[1],on_srf) )
 
-        logger.info("Saved surface positon data and gaze on surface data for '%s' with uid:'%s'"%(s.name,s.uid))
+        logger.info("Saved surface position data and gaze on surface data for '%s' with uid:'%s'"%(s.name,s.uid))
 
         if s.heatmap is not None:
             logger.info("Saved Heatmap as .png file.")

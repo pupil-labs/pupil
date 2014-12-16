@@ -36,13 +36,13 @@
 #define USB_RT_TY_CLASS		(0x01 << 5)	/**< 00100000b */
 #define USB_RT_TY_VENDOR	(0x02 << 5)	/**< 01000000b */
 #define USB_RT_TY_RESERVED	(0x03 << 5)	/**< 01100000n */
-#define USB_RT_RE_DEVICE	0x00		/**< bit 4-0, reciever device */
-#define USB_RT_RE_IFACE		0x01		/**< reciever interface */
-#define USB_RT_RE_ENDPOINT	0x02		/**< reciever endpoint */
-#define USB_RT_RE_OTHER		0x03		/**< reciever other, reserved */
+#define USB_RT_RE_DEVICE	0x00		/**< bit 4-0, receiver device */
+#define USB_RT_RE_IFACE		0x01		/**< receiver interface */
+#define USB_RT_RE_ENDPOINT	0x02		/**< receiver endpoint */
+#define USB_RT_RE_OTHER		0x03		/**< receiver other, reserved */
 /** @} */
 /** \defgroup usbstdreq USB standard requests
- * Standars requests, see usb2 spec table 9-4, p.251 (279). Values 0x02 and 0x04 are reserved for future use.
+ * Standards requests, see usb2 spec table 9-4, p.251 (279). Values 0x02 and 0x04 are reserved for future use.
  * @{ */
 #define USB_REQ_GET_STATUS	0x00
 #define USB_REQ_CLEAR_FEAT	0x01
@@ -231,7 +231,7 @@ enum uvccWarning
  * Requests to send as argument to \ref uvccSendRequest() and \ref uvccSendInfoRequest().
  */
 enum uvccRequest
-{	/* note that these are just indicies in predef_reqs so don't change the order ! */
+{	/* note that these are just indices in predef_reqs so don't change the order ! */
     UVCC_REQ_SCANNING_MODE,
     UVCC_REQ_EXPOSURE_AUTOMODE,
 	UVCC_REQ_EXPOSURE_AUTOPRIO,
@@ -282,7 +282,7 @@ struct uvccDevDesc
 	uint16_t	hwIdProduct;
 	uint16_t	hwRelNo;
 	uint8_t		bNumConfs;
-	/* string indicies */
+	/* string indices */
 	uint8_t		bIManufacturer;
 	uint8_t		bIProduct;
 	uint8_t		bISerialNumber;

@@ -86,7 +86,7 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
         return
     width,height = cap.get_size()
 
-    #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
+    #Out file path verification, we do this before but if one uses a separate tool, this will kick in.
     if out_file_path is None:
         out_file_path = os.path.join(data_dir, "world_viz.avi")
     else:
@@ -114,7 +114,7 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
     if start_frame == None:
         start_frame = 0
 
-    #these two vars are shared with the lauching process and give an job lenght and progress report.
+    #these two vars are shared with the lauching process and give an job length and progress report.
     frames_to_export.value = len(trimmed_timestamps)
     current_frame.value = 0
     logger.debug("Will export from frame %s to frame %s. This means I will export %s frames."%(start_frame,start_frame+frames_to_export.value,frames_to_export.value))

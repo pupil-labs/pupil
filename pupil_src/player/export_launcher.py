@@ -60,7 +60,7 @@ def avoid_overwrite(out_file_path):
 
 class Export_Launcher(Plugin):
     """docstring for Export_Launcher
-    this plugin can export the video in a seperate process using exporter
+    this plugin can export the video in a separate process using exporter
 
     """
     def __init__(self, g_pool,data_dir,frame_count):

@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class Seek_Bar(Plugin):
     """docstring for Seek_Bar
     seek bar displays a bar at the bottom of the screen when you hover close to it.
-    it will show the current positon and allow you to drag to any postion in the video file.
+    it will show the current position and allow you to drag to any position in the video file.
     """
     def __init__(self, g_pool,capture):
         super(Seek_Bar, self).__init__()

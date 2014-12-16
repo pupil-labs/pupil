@@ -209,7 +209,7 @@ class VideoCapture(object):
         else:
             logger.warning('Camera does not support the usual img transport formats.')
             self.prefered_format = self.formats[0]
-        logger.debug('Fromat choosen: %s'%self.prefered_format)
+        logger.debug('Format chosen: %s'%self.prefered_format)
 
         #camera settings in v4l2 structures
         self.v4l2_format = v4l2_format()

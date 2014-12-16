@@ -118,7 +118,7 @@ def main():
     g_pool.pupil_queue = Queue()
     g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
     g_pool.quit = RawValue(c_bool,0)
-    # this value will be substracted form the capture timestamp
+    # this value will be subtracted form the capture timestamp
     g_pool.timebase = RawValue(c_double,0)
     # make some constants avaiable
     g_pool.user_dir = user_dir

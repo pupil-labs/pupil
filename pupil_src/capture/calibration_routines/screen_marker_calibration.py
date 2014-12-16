@@ -256,7 +256,7 @@ class Screen_Marker_Calibration(Plugin):
             next = np.array(self.sites[self.active_site+1])
             # weighted sum to interpolate between current and next
             new_pos =  current * interpolation_weight + next * (1-interpolation_weight)
-            #broadcast next commanded marker postion of screen
+            #broadcast next commanded marker position of screen
             self.display_pos = list(new_pos)
             self.on_position = on_position
 
@@ -269,7 +269,7 @@ class Screen_Marker_Calibration(Plugin):
         at least:
             the published position of the reference
         better:
-            show the detected postion even if not published
+            show the detected position even if not published
         """
 
         if self.active and self.detected:

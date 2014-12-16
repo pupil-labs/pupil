@@ -16,7 +16,7 @@ class Plugin(object):
 
     plugin is a base class
     it has all interfaces that will be called
-    instances of this class ususally get added to a plugins list
+    instances of this class usually get added to a plugins list
     this list will have its members called with all methods invoked.
 
     """
@@ -24,7 +24,7 @@ class Plugin(object):
         self._alive = True
 
         self.order = .5
-        # between 0 and 1 this indicated where in the plugin excecution order you plugin lives:
+        # between 0 and 1 this indicated where in the plugin execution order you plugin lives:
         # <.5  are things that add/mofify information that will be used by other plugins and rely on untouched data.
         # You should not edit frame.img if you are here!
         # == 5 is the default.

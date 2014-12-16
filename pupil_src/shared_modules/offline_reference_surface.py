@@ -140,10 +140,10 @@ class Offline_Reference_Surface(Reference_Surface):
 
 
 
-    #### fns to draw surface in seperate window
+    #### fns to draw surface in separate window
     def gl_display_in_window(self,world_tex_id):
         """
-        here we map a selected surface onto a seperate window.
+        here we map a selected surface onto a separate window.
         """
         if self._window and self.detected:
             active_window = glfwGetCurrentContext()

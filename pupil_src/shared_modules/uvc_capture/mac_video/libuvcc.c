@@ -768,7 +768,7 @@ static IOUSBInterfaceInterface197 **get_ctrl_if(IOUSBDeviceInterface197 **devIf)
 		return NULL;
 	}
 	/* TODO:
-	 * write a function that manually gets the device descriptor, loops through the configs and their settings looking for an interface with class and subclass that might work if either of theese fail (see MIDI/Shared/USBDevice.cpp, libusb/os/darwin_usb.c > process_new_device and darwin_get_config_descriptor and uvcc0.14b/uvc-controller.c -> open_uvi_index)
+	 * write a function that manually gets the device descriptor, loops through the configs and their settings looking for an interface with class and subclass that might work if either of these fail (see MIDI/Shared/USBDevice.cpp, libusb/os/darwin_usb.c > process_new_device and darwin_get_config_descriptor and uvcc0.14b/uvc-controller.c -> open_uvi_index)
 	 */
 	//while
 	if((camDevSrv = IOIteratorNext(ifIter)) != IO_OBJECT_NULL)

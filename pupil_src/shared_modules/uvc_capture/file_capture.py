@@ -13,7 +13,7 @@ uvc_capture is a module that extends opencv"s camera_capture for mac and windows
 on Linux it repleaces it completelty.
 it adds some fuctionalty like:
     - access to all uvc controls
-    - assosication by name patterns instead of id's (0,1,2..)
+    - assassination by name patterns instead of id's (0,1,2..)
 it requires:
     - opencv 2.3+
     - on Linux: v4l2-ctl (via apt-get install v4l2-util)
@@ -129,22 +129,22 @@ class File_Capture():
         if self.cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES,seek_pos):
             offset = seek_pos - self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
             if offset == 0:
-                logger.debug("Seeked to frame: %s"%self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
+                logger.debug("Sought to frame: %s"%self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
                 return
             # elif 0 < offset < 100:
             #     offset +=10
             #     if not self.seek_to_frame(seek_pos-offset):
-            #         logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
+            #         logger.warning('Could not seek to %s. Sought to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
             #         return False
-            #     logger.warning("Seek was not precice need to do manual seek for %s frames"%offset)
+            #     logger.warning("Seek was not precise need to do manual seek for %s frames"%offset)
             #     while seek_pos != self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES):
             #         try:
             #             self.read()
             #         except EndofVideoFileError:
-            #             logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
+            #             logger.warning('Could not seek to %s. Sought to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
             #     return True
             else:
-                logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
+                logger.warning('Could not seek to %s. Sought to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
                 raise FileSeekError()
         logger.error("Could not perform seek on cv2.VideoCapture. Command gave negative return.")
         raise FileSeekError()

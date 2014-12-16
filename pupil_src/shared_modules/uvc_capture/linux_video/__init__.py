@@ -52,10 +52,10 @@ class Camera_Capture(object):
     def check_hw_ts_support(self):
         # hw timestamping:
         # v4l2 supports Sart of Exposure hardware timestamping ofr UVC Capture devices
-        # these HW timestamps are excellent referece times and 
+        # these HW timestamps are excellent reference times and
         # prefferec over softwaretimestamp denoting the avaibleilt of frames to the user.
         # however not all uvc cameras report valid hw timestamps, notably microsoft hd-6000
-        # becasue all used devices need to properly implement hw timestamping for it to be usefull
+        # because all used devices need to properly implement hw timestamping for it to be useful
         # but we cannot now what device the other process is using  + the user may select a differet capture device during runtime
         # we use some fuzzy logic to determine if hw timestamping should be employed.
 
@@ -158,7 +158,7 @@ class Camera_Capture(object):
             if control.flags == "inactive":
                 pass
             if control.name == 'exposure_auto_priority':
-                # the controll should always be off. we set it to 0 on init (see above)
+                # the control should always be off. we set it to 0 on init (see above)
                 self.bar.define(definition='readonly=1',varname=control.name)
 
         self.bar.add_button("refresh",self.controls.update_from_device)

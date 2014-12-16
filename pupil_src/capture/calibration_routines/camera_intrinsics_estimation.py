@@ -169,7 +169,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         at least:
             the published position of the reference
         better:
-            show the detected postion even if not published
+            show the detected position even if not published
         """
         for grid_points in self.img_points:
             calib_bounds =  cv2.convexHull(grid_points)[:,0] #we dont need that extra encapsulation that opencv likes so much
@@ -250,7 +250,7 @@ def _gen_pattern_grid(size=(4,11)):
 
 def _make_grid(dim=(11,4)):
     """
-    this function generates the structure for an assymetrical circle grid
+    this function generates the structure for an asymmetrical circle grid
     centerd around 0 width=1, height scaled accordingly
     """
     x,y = range(dim[0]),range(dim[1])

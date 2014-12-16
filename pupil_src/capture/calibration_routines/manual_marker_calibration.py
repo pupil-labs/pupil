@@ -107,7 +107,7 @@ class Manual_Marker_Calibration(Plugin):
     def update(self,frame,recent_pupil_positions,events):
         """
         gets called once every frame.
-        reference positon need to be published to shared_pos
+        reference position need to be published to shared_pos
         if no reference was found, publish 0,0
         """
         if self.active:
@@ -223,7 +223,7 @@ class Manual_Marker_Calibration(Plugin):
         at least:
             the published position of the reference
         better:
-            show the detected postion even if not published
+            show the detected position even if not published
         """
 
         if self.active:

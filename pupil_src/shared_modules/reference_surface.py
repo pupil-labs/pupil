@@ -315,7 +315,7 @@ class Reference_Surface(object):
     #### fns to draw surface in separate window
     def gl_display_in_window(self,world_tex_id):
         """
-        here we map a selected surface onto a seperate window.
+        here we map a selected surface onto a separate window.
         """
         if self._window and self.detected:
             active_window = glfwGetCurrentContext()
@@ -424,7 +424,7 @@ class Reference_Surface(object):
 class Support_Marker(object):
     '''
     This is a class only to be used by Reference_Surface
-    it decribes the used markers with the uv coords of its verts.
+    it describes the used markers with the uv coords of its verts.
     '''
     def __init__(self,uid):
         self.uid = uid
@@ -437,7 +437,7 @@ class Support_Marker(object):
     def add_uv_coords(self,uv_coords):
         self.collected_uv_coords.append(uv_coords)
 
-    def compute_robust_mean(self,threshhold=.1):
+    def compute_robust_mean(self,threshold=.1):
         """
         right now its just the mean. Not so good...
         """
@@ -450,7 +450,7 @@ class Support_Marker(object):
         # # now we treat the four uv scalars as a vector in 8-d space and compute the euclidian distace to the mean
         # distance =  np.linalg.norm(deviation,axis=(1,3))
         # # we now have 1 distance measure per recorded apprearace of the marker
-        # uv_subset = uv[distance<threshhold]
+        # uv_subset = uv[distance<threshold]
         # ratio = uv_subset.shape[0]/float(uv.shape[0])
         # #todo: find a good way to get some meaningfull and accurate numbers to use
         #right now we take the mean of the last 30 datapoints

@@ -14,7 +14,7 @@ OOP style interface for uvcc c_types binding
 Three classes:
     Camera_List holds Cam's instances,
     Cam is a class that contains infos about attached cameras
-    Camera  get initialized with a Cam instance it holds each device handle, names, controls ect.
+    Camera  get initialized with a Cam instance it holds each device handle, names, controls etc.
     Control is the actual Control with methods for getting and setting them.
 """
 import sys

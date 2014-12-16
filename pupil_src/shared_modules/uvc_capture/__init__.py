@@ -13,7 +13,7 @@ uvc_capture is a module that extends opencv"s camera_capture for mac and windows
 on Linux it repleaces it completelty.
 it adds some fuctionalty like:
     - access to all uvc controls
-    - assosication by name patterns instead of id's (0,1,2..)
+    - assassination by name patterns instead of id's (0,1,2..)
 it requires:
     - opencv 2.3+
     - on Linux: v4l2-ctl (via apt-get install v4l2-util)

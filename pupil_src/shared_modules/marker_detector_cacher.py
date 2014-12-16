@@ -13,8 +13,8 @@
 
 def fill_cache(visited_list,video_file_path,q,seek_idx,run):
     '''
-    this function is part of marker_detector it is run as a seperate process.
-    it must be kept in a seperate file for namespace sanatisation
+    this function is part of marker_detector it is run as a separate process.
+    it must be kept in a separate file for namespace sanitisation.
     '''
     import os
     import logging

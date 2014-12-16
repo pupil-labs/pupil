@@ -320,7 +320,7 @@ class Canny_Detector(Pupil_Detector):
         split_contours.sort(key=lambda x:-x.shape[0])
         # print [x.shape[0]for x in split_contours]
         if len(split_contours) == 0:
-            # not a single usefull segment found -> no pupil found
+            # not a single useful segment found -> no pupil found
             self.confidence.value = 0
             self.confidence_hist.append(0)
             if self._window:
@@ -328,7 +328,7 @@ class Canny_Detector(Pupil_Detector):
             return {'timestamp':frame.timestamp,'norm_pupil':None}
 
 
-        # removing stubs makes combinatorial search feasable
+        # removing stubs makes combinatorial search feasible
         split_contours = [c for c in split_contours if c.shape[0]>3]
 
         def ellipse_filter(e):
@@ -523,9 +523,9 @@ class Canny_Detector(Pupil_Detector):
         self._bar.add_var("Pupil_Aparent_Size",self.target_size,readonly=True)
         self._bar.add_var("Contour min length",self.min_contour_size,help="Setting this low will make the alorithm try to connect even smaller arcs to find the pupil but cost you cpu time!")
         self._bar.add_var("confidece threshold",c_float(0),getter= lambda: self.final_perimeter_ratio_range[0], setter=self.set_final_perimeter_ratio_range,step=.05,min=0.,max=1. ,
-                            help="Fraction of pupil boundry that has to be visible and detected for the resukt to be declared valid.")
+                            help="Fraction of pupil boundary that has to be visible and detected for the resukt to be declared valid.")
         # self._bar.add_var("Pupil_Shade",self.bin_thresh, readonly=True)
-        self._bar.add_var("confidence",self.confidence, readonly=True,help="The measure of confidence is a number between 0 and 1 of how sure the algorithm is about the detected pupil. We currenlty use the fraction of pupil boundry edge that is used as support for the ellipse result.")
+        self._bar.add_var("confidence",self.confidence, readonly=True,help="The measure of confidence is a number between 0 and 1 of how sure the algorithm is about the detected pupil. We currenlty use the fraction of pupil boundary edge that is used as support for the ellipse result.")
         # self._bar.add_var("Image_Blur",self.blur, step=2,min=1,max=9)
         # self._bar.add_var("Canny_aparture",self.canny_aperture, step=2,min=3,max=7)
         # self._bar.add_var("canny_threshold",self.canny_thresh, step=1,min=0)
