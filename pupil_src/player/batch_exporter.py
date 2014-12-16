@@ -168,7 +168,7 @@ class Batch_Exporter(Plugin):
 
             #make a unique name created from rec_session and dir name
             rec_session, rec_dir = data_dir.rsplit(os.path.sep,2)[1:]
-            out_name = rec_session+"_"+rec_dir+".avi"
+            out_name = rec_session+"_"+rec_dir+".mp4"
             out_file_path = os.path.join(self.destination_dir.value,out_name)
             if out_file_path in outfiles:
                 logger.error("This export setting would try to save %s at least twice please rename dirs to prevent this. Skipping File"%out_file_path)

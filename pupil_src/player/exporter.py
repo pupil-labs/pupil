@@ -155,7 +155,7 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
             logger.warning("User aborted export. Exported %s frames to %s."%(current_frame.value,out_file_path))
 
             #explicit release of VideoWriter
-            writer.release()
+            writer.close()
             writer = None
             return False
 

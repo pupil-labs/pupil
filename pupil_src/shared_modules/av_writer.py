@@ -69,7 +69,7 @@ class AV_Writer(object):
     We are creating a
     """
 
-    def __init__(self, file_loc, video_stream={'codec':'h264','bit_rate': 8000*10e3}, audio_stream=None):
+    def __init__(self, file_loc, video_stream={'codec':'mpeg4','bit_rate': 8000*10e3}, audio_stream=None):
         super(AV_Writer, self).__init__()
 
         try:
