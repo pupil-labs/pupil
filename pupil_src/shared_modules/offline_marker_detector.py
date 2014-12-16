@@ -23,7 +23,7 @@ else:
     from multiprocessing.sharedctypes import Value
 
 from itertools import chain
-from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture
+from gl_utils import *
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 from methods import normalize,denormalize
@@ -181,9 +181,40 @@ class Offline_Marker_Detector(Plugin):
 
 
     def recalculate(self):
+
+        in_mark = self.g_pool.trim_marks.in_mark
+        out_mark = self.g_pool.trim_marks.out_mark
+        section = slice(in_mark,out_mark)
+
+        # calc heatmaps
         for s in self.surfaces:
             if s.defined:
-                s.generate_heatmap()
+                s.generate_heatmap(section)
+
+        # calc metrics:
+        gaze_in_section = list(chain(*self.g_pool.positions_by_frame[section]))
+        results = []
+        for s in self.surfaces:
+            gaze_on_srf  = s.gaze_on_srf_in_section(section)
+            results.append(len(gaze_on_srf))
+            self.metrics_gazecount = len(gaze_on_srf)
+
+        max_res = max(results)
+        results = np.array(results,dtype=np.float32)
+        if not max_res:
+            logger.warning("No gaze on any surface for this section!")
+        else:
+            results *= 255./max_res
+        results = np.uint8(results)
+        results_c_maps = cv2.applyColorMap(results, cv2.COLORMAP_JET)
+
+        for s,c_map in zip(self.surfaces,results_c_maps):
+            heatmap = np.ones((1,1,4),dtype=np.uint8)*125
+            heatmap[:,:,:3] = c_map
+            s.metrics_texture = create_named_texture(heatmap)
+
+
+
 
     def update(self,frame,recent_pupil_positions,events):
         self.img = frame.img
@@ -269,9 +300,10 @@ class Offline_Marker_Detector(Plugin):
 
         if self.mode.value in (0,1):
             for m in self.markers:
-                hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
+                hat = np.array([[[0,0],[0,1],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-                draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
+                draw_gl_polyline(hat.reshape((5,2)),(0.1,1.,1.,.3),type='Polygon')
+                draw_gl_polyline(hat.reshape((5,2)),(0.1,1.,1.,.6))
 
             for s in self.surfaces:
                 s.gl_draw_frame()
@@ -283,12 +315,10 @@ class Offline_Marker_Detector(Plugin):
             for s in  self.surfaces:
                 s.gl_display_heatmap()
         if self.mode.value == 3:
-            pass
             #draw a backdrop to represent the gaze that is not on any surface
             for s in self.surfaces:
-                pass
                 #draw a quad on surface with false color of value.
-
+                s.gl_display_metrics()
 
     def gl_display_cache_bars(self):
         """

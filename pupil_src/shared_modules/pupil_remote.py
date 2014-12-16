@@ -17,27 +17,35 @@ import cv2
 import zmq
 from plugin import Plugin
 
-
-
+from recorder import Recorder
 
 import logging
 logger = logging.getLogger(__name__)
 
 
 
-class Pupil_Server(Plugin):
-    """pupil server plugin"""
-    def __init__(self, g_pool, atb_pos=(10,400)):
+class Pupil_Remote(Plugin):
+    """pupil server plugin
+    send messages to control Pupil Capture functions:
+
+    'R' toggle recording
+    'R rec_name' toggle recording and name new recording rec_name
+    'T' set timebase to 0
+    'C' start currently selected calibration
+    """
+    def __init__(self, g_pool, atb_pos=(10,400),on_char_fn = None):
         Plugin.__init__(self)
-
+        self.g_pool = g_pool
+        self.on_char_fn = on_char_fn
+        self.order = .9 #excecute late in the plugin list.
         self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.PUB)
-        self.address = create_string_buffer("tcp://127.0.0.1:5000",512)
-        self.set_server(self.address)
+        self.socket = self.context.socket(zmq.REP)
+        self.address = create_string_buffer('',512)
+        self.set_server(create_string_buffer("tcp://*:50020",512))
 
-        help_str = "Pupil Message server: Using ZMQ and the *Publish-Subscribe* scheme"
+        help_str = "Pupil Remote using REQ RREP schema. "
 
-        self._bar = atb.Bar(name = self.__class__.__name__, label='Server',
+        self._bar = atb.Bar(name = self.__class__.__name__, label='Remote',
             help=help_str, color=(50, 50, 50), alpha=100,
             text='light', position=atb_pos,refresh=.3, size=(300,40))
         self._bar.define("valueswidth=170")
@@ -54,19 +62,24 @@ class Pupil_Server(Plugin):
             logger.error("Could not set Socket.")
 
     def update(self,frame,recent_pupil_positions,events):
-        for p in recent_pupil_positions:
-            msg = "Pupil\n"
-            for key,value in p.iteritems():
-                if key not in self.exclude_list:
-                    msg +=key+":"+str(value)+'\n'
-            self.socket.send( msg )
+        try:
+            msg = self.socket.recv(flags=zmq.NOBLOCK)
+        except zmq.ZMQError :
+            msg = None
+        if msg:
+            if msg[0] == 'R':
+                rec_name = msg[2:]
+                if rec_name:
+                    self.g_pool.rec_name = rec_name
+                self.on_char_fn(None,ord('r') ) #emulate the user hitting 'r'
+            elif msg == 'T':
+                self.g_pool.timebase.value = self.g_pool.capure.get_now()
+                logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
+            elif msg == 'C':
+                self.on_char_fn(None,ord('c') ) #emulate the user hitting 'c'
 
-        for e in events:
-            msg = 'Event'+'\n'
-            for key,value in e.iteritems():
-                if key not in self.exclude_list:
-                    msg +=key+":"+str(value).replace('\n','')+'\n'
-            self.socket.send( msg )
+            self.socket.send("%s - confirmed"%msg)
+
 
     def close(self):
         self.alive = False

@@ -40,6 +40,7 @@ import recorder
 from show_calibration import Show_Calibration
 from display_recent_gaze import Display_Recent_Gaze
 from pupil_server import Pupil_Server
+from pupil_remote import Pupil_Remote
 from marker_detector import Marker_Detector
 
 # create logger for the context of this function
@@ -138,7 +139,7 @@ def world(g_pool,cap_src,cap_size):
             """ 1 to 1 mapping """
             return vector
 
-       
+
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
     g_pool.plugins = []
@@ -147,6 +148,8 @@ def world(g_pool,cap_src,cap_size):
     if isinstance(cap,FakeCapture):
         g_pool.update_textures.value = False
     g_pool.capture = cap
+
+    g_pool.rec_name = recorder.get_auto_name()
 
 
     # helpers called by the main atb bar
@@ -169,6 +172,32 @@ def world(g_pool,cap_src,cap_size):
         """
         return data.value
 
+    def set_rec_dir(val):
+        try:
+            n_path = os.path.expanduser(val.value)
+            logger.debug("Expanded user path.")
+        except:
+            n_path = val.value
+
+        if not n_path:
+            logger.warning("Please specify a path.")
+        elif not os.path.isdir(n_path):
+            logger.warning("This is not a valid path.")
+        else:
+            g_pool.rec_dir = n_path
+
+    def get_rec_dir():
+        return create_string_buffer(g_pool.rec_dir,512)
+
+    def set_rec_name(val):
+        if not val.value:
+            g_pool.rec_name = recorder.get_auto_name()
+        else:
+            g_pool.rec_name = val.value
+
+    def get_rec_name():
+        return create_string_buffer(g_pool.rec_name,512)
+
     def open_calibration(selection,data):
         # prepare destruction of current ref_detector... and remove it
         for p in g_pool.plugins:
@@ -188,11 +217,8 @@ def world(g_pool,cap_src,cap_size):
             if isinstance(p,recorder.Recorder):
                 p.alive = False
                 return
-        # set up folder within recordings named by user input in atb
-        if not bar.rec_name.value:
-            bar.rec_name.value = recorder.get_auto_name()
 
-        new_plugin = recorder.Recorder(g_pool,bar.rec_name.value, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx,bar.audio.value)
+        new_plugin = recorder.Recorder(g_pool,g_pool.rec_name, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx,bar.audio.value)
         g_pool.plugins.append(new_plugin)
         g_pool.plugins.sort(key=lambda p: p.order)
 
@@ -216,6 +242,15 @@ def world(g_pool,cap_src,cap_size):
         g_pool.plugins.append(new_plugin)
         g_pool.plugins.sort(key=lambda p: p.order)
 
+    def toggle_remote():
+        for p in g_pool.plugins:
+            if isinstance(p,Pupil_Remote):
+                p.alive = False
+                return
+
+        new_plugin = Pupil_Remote(g_pool,(10,360),on_char)
+        g_pool.plugins.append(new_plugin)
+        g_pool.plugins.sort(key=lambda p: p.order)
 
     def toggle_ar():
         for p in g_pool.plugins:
@@ -229,8 +264,10 @@ def world(g_pool,cap_src,cap_size):
 
     def reset_timebase():
         #the last frame from worldcam will be t0
-        g_pool.timebase.value = cap.get_now()
+        g_pool.timebase.value = g_pool.capure.get_now()
         logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
+
+
 
     atb.init()
     # add main controls ATB bar
@@ -247,19 +284,19 @@ def world(g_pool,cap_src,cap_size):
     window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
     calibrate_type_enum = atb.enum("Calibration Method",calibration_routines.index_by_name)
     audio_enum = atb.enum("Audio Input",dict(Audio_Input_List()))
-    bar.rec_name = create_string_buffer(512)
     bar.version = create_string_buffer(g_pool.version,512)
-    bar.rec_name.value = recorder.get_auto_name()
     bar.add_var("fps", bar.fps, step=1., readonly=True, help="Refresh speed of this process. Especially during recording it should not drop below the camera set frame rate.")
     bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size,help="Resize the world window. This has no effect on the actual image.")
     bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
     bar.add_button("show calibration result",toggle_show_calib_result, group="Calibration", help="Click to show calibration result.")
-    bar.add_var("session name",bar.rec_name, group="Recording", help="Give your recording session a custom name.")
+    bar.add_var("rec dir",create_string_buffer(512),getter = get_rec_dir,setter= set_rec_dir, group="Recording", help="Specify the recording path")
+    bar.add_var("session name",create_string_buffer(512),getter = get_rec_name,setter= set_rec_name, group="Recording", help="Give your recording session a custom name.")
     bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
     bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
     bar.add_var("record audio", bar.audio, vtype=audio_enum, group="Recording", help="Select from audio recording options.")
     bar.add_button("start/stop marker tracking",toggle_ar,key="x",help="find markers in scene to map gaze onto referace surfaces")
     bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
+    bar.add_button("start/stop remote",toggle_remote,key="w",help="remote allows seding commad to pupil via network")
     bar.add_button("set timebase to now",reset_timebase,help="this button allows the timestamps to count from now on.",key="t")
     bar.add_var("update screen", g_pool.update_textures,help="if you dont need to see the camera image updated, you can turn this of to reduce CPU load.")
     bar.add_separator("Sep1")
