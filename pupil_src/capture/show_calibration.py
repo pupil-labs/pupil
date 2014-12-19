@@ -27,8 +27,17 @@ class Show_Calibration(Plugin):
         Plugin.__init__(self)
 
         height,width = img_shape[:2]
+
+        if g_pool.app == 'capture':
+            cal_pt_path =  os.path.join(g_pool.user_dir,"cal_pt_cloud.npy")
+        else:
+            # cal_pt_path =  os.path.join(g_pool.rec_dir,"cal_pt_cloud.npy")
+            logger.error('Plugin does only work in capture so far.')
+            self.close()
+            return
+
         try:
-            cal_pt_cloud = np.load(os.path.join(g_pool.user_dir,"cal_pt_cloud.npy"))
+            cal_pt_cloud = np.load(cal_pt_path)
         except:
             logger.warning("Please calibrate first")
             self.close()

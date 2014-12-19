@@ -9,6 +9,7 @@
 '''
 
 import OpenGL
+from glfw import glfwGetFramebufferSize,glfwGetWindowSize
 # OpenGL.FULL_LOGGING = True
 OpenGL.ERROR_LOGGING = False
 from OpenGL.GL import *
@@ -16,6 +17,27 @@ from OpenGL.GLU import gluOrtho2D
 from shader import Shader
 
 import numpy as np
+
+
+
+__all__ =  ['make_coord_system_norm_based',
+            'make_coord_system_pixel_based',
+            'draw_gl_texture',
+            'create_named_texture',
+            'draw_named_texture',
+            'draw_gl_points_norm',
+            'draw_gl_point',
+            'draw_gl_point_norm',
+            'draw_gl_checkerboards',
+            'draw_gl_points',
+            'draw_gl_polyline',
+            'draw_gl_polyline_norm',
+            'adjust_gl_view',
+            'clear_gl_screen',
+            'basic_gl_setup',
+            'cvmat_to_glmat']
+
+
 def cvmat_to_glmat(m):
     mat = np.eye(4,dtype=np.float32)
     mat = mat.flatten()
@@ -42,30 +64,29 @@ def basic_gl_setup():
 def clear_gl_screen():
     glClear(GL_COLOR_BUFFER_BIT)
 
-def adjust_gl_view(w,h):
+def adjust_gl_view(w,h,window):
     """
-    adjust view onto our scene so
-    that a quad from 0,0 to w,h fits into it perfecly
+    adjust view onto our scene.
     """
-    if h == 0:
-        h = 1
+    h = max(h,1)
+    w = max(w,1)
 
-    if w == 0:
-        w = 1
-
+    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
+    w,h = w*hdpi_factor,h*hdpi_factor
     glViewport(0, 0, w, h)
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    nRange = 1.0
-    if w <= h:
-        glOrtho(-nRange, nRange, -nRange*h/w, nRange*h/w, -nRange, nRange)
-    else:
-        glOrtho(-nRange*w/h, nRange*w/h, -nRange, nRange, -nRange, nRange)
-    # switch back to Modelview
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
+    # glMatrixMode(GL_PROJECTION)
+    # glLoadIdentity()
+    # nRange = 1.0
+    # if w <= h:
+    #     glOrtho(-nRange, nRange, -nRange*h/w, nRange*h/w, -nRange, nRange)
+    # else:
+    #     glOrtho(-nRange*w/h, nRange*w/h, -nRange, nRange, -nRange, nRange)
+    # # switch back to Modelview
+    # glMatrixMode(GL_MODELVIEW)
+    # glLoadIdentity()
 
-def draw_gl_polyline((positions),color,type='Loop'):
+def draw_gl_polyline((positions),color,type='Loop',thickness=1):
+    glLineWidth(thickness)
     glColor4f(*color)
     if type=='Loop':
         glBegin(GL_LINE_LOOP)
@@ -79,7 +100,7 @@ def draw_gl_polyline((positions),color,type='Loop'):
         glVertex3f(x,y,0.0)
     glEnd()
 
-def draw_gl_polyline_norm((positions),color,type='Loop'):
+def draw_gl_polyline_norm((positions),color,type='Loop',thickness=1):
 
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
@@ -88,7 +109,7 @@ def draw_gl_polyline_norm((positions),color,type='Loop'):
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()
-    draw_gl_polyline(positions,color,type)
+    draw_gl_polyline(positions,color,type,thickness)
     glMatrixMode(GL_PROJECTION)
     glPopMatrix()
     glMatrixMode(GL_MODELVIEW)
@@ -117,7 +138,7 @@ def draw_gl_points(points,size=20,color=(1.,0.5,0.5,.5)):
         varying vec4 f_color;
         void main () {
                gl_Position = gl_ModelViewProjectionMatrix*vec4(gl_Vertex.xy,1.,1.);
-               gl_PointSize = gl_Vertex.z; //this needs to be used on some hardware we cheat ande use the z coord
+               gl_PointSize = gl_Vertex.z; //this needs to be used on some hardware we cheat and use the z coord
                f_color = gl_Color;
                }
         """
@@ -218,19 +239,14 @@ def draw_gl_points_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
     glPopMatrix()
 
 
-#global var to init text id once per process
-texture_id = None
+def create_named_texture(image):
 
-def draw_gl_texture(image,interpolation=True):
-    """
-    We draw the image as a texture on a quad from 0,0 to img.width,img.height.
-    """
-    global texture_id
-    if texture_id is None:
-        texture_id = glGenTextures(1)
-    glBindTexture(GL_TEXTURE_2D, texture_id)
+    if type(image) == tuple:
+        height, width, channels = image
+        image=None
+    else:
+        height, width, channels = image.shape
 
-    height, width, channels = image.shape
     if  channels == 3:
         gl_blend = GL_BGR
         gl_blend_init = GL_RGB
@@ -239,6 +255,8 @@ def draw_gl_texture(image,interpolation=True):
         gl_blend_init = GL_RGBA
 
     glPixelStorei(GL_UNPACK_ALIGNMENT,1)
+    texture_id = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, texture_id)
     # Create Texture
     glTexImage2D(GL_TEXTURE_2D,
                         0,
@@ -249,19 +267,41 @@ def draw_gl_texture(image,interpolation=True):
                         gl_blend,
                         GL_UNSIGNED_BYTE,
                         image)
+
+    return texture_id
+
+def draw_named_texture(texture_id, image=None, interpolation=True, quad=((0.,0.),(1.,0.),(1.,1.),(0.,1.))):
+    """
+    We draw the image as a texture on a quad from 0,0 to img.width,img.height.
+    We set the coord system to pixel dimensions.
+    to save cpu power, update can be false and we will reuse the old img instead of uploading the new.
+    """
+
+    glBindTexture(GL_TEXTURE_2D, texture_id)
     glEnable(GL_TEXTURE_2D)
+
+    # update texture
+    if image is not None:
+        height, width, channels = image.shape
+        if  channels == 3:
+            gl_blend = GL_BGR
+        else:
+            gl_blend = GL_BGRA
+
+        glPixelStorei(GL_UNPACK_ALIGNMENT,1)
+        glTexSubImage2D(GL_TEXTURE_2D,
+                            0,
+                            0,
+                            0,
+                            width,
+                            height,
+                            gl_blend,
+                            GL_UNSIGNED_BYTE,
+                            image)
 
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) # interpolation here
     if not interpolation:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    # Set Projection Matrix
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    gluOrtho2D(0, width, height, 0) # origin in the top left corner just like the img np-array
-    # Switch back to Model View Matrix
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
 
     # someday replace with this:
     # glEnableClientState(GL_VERTEX_ARRAY)
@@ -274,113 +314,97 @@ def draw_gl_texture(image,interpolation=True):
     glColor4f(1.0,1.0,1.0,1.0)
     # Draw textured Quad.
     glBegin(GL_QUADS)
-    glTexCoord2f(0.0, 0.0)
-    glVertex2f(0.0, 0.0)
-    glTexCoord2f(1.0, 0.0)
-    glVertex2f(width, 0.0)
-    glTexCoord2f(1.0, 1.0)
-    glVertex2f(width, height)
-    glTexCoord2f(0.0, 1.0)
-    glVertex2f(0.0, height)
-    glEnd()
-    glDisable(GL_TEXTURE_2D)
-
-    # # Set Projection Matrix
-    # glMatrixMode(GL_PROJECTION)
-    # glLoadIdentity()
-    # gluOrtho2D(0, width, height, 0) # origin in the top left corner just like the img np-array
-    # # Switch back to Model View Matrix
-    # glMatrixMode(GL_MODELVIEW)
-    # glLoadIdentity()
-
-
-
-def redraw_gl_texture(quad=((0.,0.),(1.,0.),(1.,1.),(0.,1.)) ):
-    glEnable(GL_TEXTURE_2D)
-    glBindTexture(GL_TEXTURE_2D, texture_id)
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE)
-
-    glColor4f(1.0,1.0,1.0,1.0)
-    # Draw textured Quad.
-    glBegin(GL_QUADS)
     # glTexCoord2f(0.0, 0.0)
     glTexCoord2f(0.0, 1.0)
-
     glVertex2f(*quad[0])
-
-    # glTexCoord2f(1.0, 0.0)
     glTexCoord2f(1.0, 1.0)
-
     glVertex2f(*quad[1])
-
-    # glTexCoord2f(1.0, 1.0)
     glTexCoord2f(1.0, 0.0)
-
     glVertex2f(*quad[2])
-
-    # glTexCoord2f(0.0, 1.0)
     glTexCoord2f(0.0, 0.0)
-
     glVertex2f(*quad[3])
     glEnd()
 
-
-
-
+    glBindTexture(GL_TEXTURE_2D, 0)
     glDisable(GL_TEXTURE_2D)
 
 
 
-
-# def upload_named_gl_texture(image,texture_id, interpolation=True):
-#     """
-#     We draw the image as a texture on a quad from 0,0 to img.width,img.height.
-#     """
-
-#     height, width, channels = image.shape
-#     if  channels == 3:
-#         gl_blend = GL_BGR
-#         gl_blend_init = GL_RGB
-#     else:
-#         gl_blend = GL_BGRA
-#         gl_blend_init = GL_RGBA
-
-#     if texture_id is None:
-#         texture_id = glGenTextures(1)
-#     glBindTexture(GL_TEXTURE_2D, texture_id)
-
-#     glPixelStorei(GL_UNPACK_ALIGNMENT,1)
-#     # Create Texture
-#     glTexImage2D(GL_TEXTURE_2D,
-#                         0,
-#                         gl_blend_init,
-#                         width,
-#                         height,
-#                         0,
-#                         gl_blend,
-#                         GL_UNSIGNED_BYTE,
-#                         image)
-
-#     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) # interpolation here
-#     if not interpolation:
-#         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-#     return texture_id
-
-# def make_coord_system_pixel_based(img_shape):
-#     height,width,channels = img_shape
-#     # Set Projection Matrix
-#     glMatrixMode(GL_PROJECTION)
-#     glLoadIdentity()
-#     gluOrtho2D(0, width, height, 0) # origin in the top left corner just like the img np-array
-#     # Switch back to Model View Matrix
-#     glMatrixMode(GL_MODELVIEW)
-#     glLoadIdentity()
+def draw_gl_texture(image,interpolation=True):
+    """
+    We draw the image as a texture on a quad from 0,0 to img.width,img.height.
+    Simple anaymos texture one time use. Look at named texture fn's for better perfomance
+    """
 
 
-# def make_coord_system_01_based():
-#     glMatrixMode(GL_PROJECTION)
-#     glLoadIdentity()
-#     gluOrtho2D(0, 1, 0, 1) # gl coord convention
-#     glMatrixMode(GL_MODELVIEW)
-#     glLoadIdentity()
+    height, width, channels = image.shape
+    if  channels == 3:
+        gl_blend = GL_BGR
+        gl_blend_init = GL_RGB
+    else:
+        gl_blend = GL_BGRA
+        gl_blend_init = GL_RGBA
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT,1)
+
+    glEnable(GL_TEXTURE_2D)
+
+    # Create Texture and upload data
+    glTexImage2D(GL_TEXTURE_2D,
+                        0,
+                        gl_blend_init,
+                        width,
+                        height,
+                        0,
+                        gl_blend,
+                        GL_UNSIGNED_BYTE,
+                        image)
+
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) # interpolation here
+    if not interpolation:
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+
+    # someday replace with this:
+    # glEnableClientState(GL_VERTEX_ARRAY)
+    # glEnableClientState(GL_TEXTURE_COORD_ARRAY)
+    # Varray = numpy.array([[0,0],[0,1],[1,1],[1,0]],numpy.float)
+    # glVertexPointer(2,GL_FLOAT,0,Varray)
+    # glTexCoordPointer(2,GL_FLOAT,0,Varray)
+    # indices = [0,1,2,3]
+    # glDrawElements(GL_QUADS,1,GL_UNSIGNED_SHORT,indices)
+    glColor4f(1.0,1.0,1.0,1.0)
+    # Draw textured Quad.
+    glBegin(GL_QUADS)
+    glTexCoord2f(0.0, 1.0)
+    glVertex2f(0,0)
+    glTexCoord2f(1.0, 1.0)
+    glVertex2f(1,0)
+    glTexCoord2f(1.0, 0.0)
+    glVertex2f(1,1)
+    glTexCoord2f(0.0, 0.0)
+    glVertex2f(0,1)
+    glEnd()
+
+    glDisable(GL_TEXTURE_2D)
+
+
+def make_coord_system_pixel_based(img_shape):
+    height,width,channels = img_shape
+    # Set Projection Matrix
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    gluOrtho2D(0, width, height, 0) # origin in the top left corner just like the img np-array
+    # Switch back to Model View Matrix
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
+
+
+def make_coord_system_norm_based():
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    gluOrtho2D(0, 1, 0, 1) # gl coord convention
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
+
+

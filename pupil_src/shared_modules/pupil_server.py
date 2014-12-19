@@ -17,9 +17,17 @@ import cv2
 import zmq
 from plugin import Plugin
 
+
+
+
+import logging
+logger = logging.getLogger(__name__)
+
+
+
 class Pupil_Server(Plugin):
-    """Calibration results visualization plugin"""
-    def __init__(self, g_pool, atb_pos=(500,300)):
+    """pupil server plugin"""
+    def __init__(self, g_pool, atb_pos=(10,400)):
         Plugin.__init__(self)
 
         self.context = zmq.Context()
@@ -34,7 +42,7 @@ class Pupil_Server(Plugin):
             text='light', position=atb_pos,refresh=.3, size=(300,40))
         self._bar.define("valueswidth=170")
         self._bar.add_var("server address",self.address, getter=lambda:self.address, setter=self.set_server)
-
+        self._bar.add_button("close", self.close)
 
         self.exclude_list = ['ellipse','pos_in_roi','major','minor','axes','angle','center']
 
@@ -43,7 +51,7 @@ class Pupil_Server(Plugin):
             self.socket.bind(new_address.value)
             self.address.value = new_address.value
         except zmq.ZMQError:
-            print "Could not set Socket."
+            logger.error("Could not set Socket.")
 
     def update(self,frame,recent_pupil_positions,events):
         for p in recent_pupil_positions:

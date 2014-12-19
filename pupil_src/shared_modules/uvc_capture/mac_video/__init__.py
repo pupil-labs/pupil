@@ -28,6 +28,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class CameraCaptureError(Exception):
+    """General Exception for this module"""
+    def __init__(self, arg):
+        super(CameraCaptureError, self).__init__()
+        self.arg = arg
+
+
+
 class Control(object):
     """docstring for uvcc_Control"""
     def __init__(self,name,i,handle):
@@ -128,7 +136,6 @@ class Controls(dict):
                 c.set_val(c.default)
 
     def __del__(self):
-        logger.info("Capture control released")
         uvccReleaseCam(self.handle)
         uvccExit()
 
@@ -144,17 +151,27 @@ class Frame(object):
 
 class Camera_Capture(object):
     """docstring for uvcc_camera"""
-    def __init__(self, cam,size=(640,480),fps=30):
+    def __init__(self, cam,size=(640,480),fps=30,timebase=None):
+        self.fps = 30
         self.src_id = cam.src_id
         self.uId = cam.uId
         self.name = cam.name
         self.controls = Controls(self.uId)
 
+        if timebase == None:
+            logger.debug("Capture will run with default system timebase")
+            self.timebase = c_double(0)
+        elif isinstance(timebase,c_double):
+            logger.debug("Capture will run with app wide adjustable timebase")
+            self.timebase = timebase
+        else:
+            logger.error("Invalid timebase variable type. Will use default system timebase")
+            self.timebase = c_double(0)
+
         try:
             self.controls['UVCC_REQ_FOCUS_AUTO'].set_val(0)
         except KeyError:
             pass
-
 
         self.capture = VideoCapture(self.src_id)
         self.set_size(size)
@@ -189,7 +206,9 @@ class Camera_Capture(object):
 
     def get_frame(self):
         s, img = self.capture.read()
-        timestamp = time()
+        if not s:
+            raise CameraCaptureError("Could not get frame")
+        timestamp = time()-self.timebase.value
         return Frame(timestamp,img)
 
     def set_size(self,size):
@@ -204,7 +223,14 @@ class Camera_Capture(object):
         self.capture.set(5,fps)
 
     def get_fps(self):
-        return self.capture.get(5)
+        fps = self.capture.get(5)
+        if fps != 0:
+            return fps
+        else:
+            return self.fps
+
+    def get_now(self):
+        return time()
 
     def create_atb_bar(self,pos):
         # add uvc camera controls to a separate ATB bar
@@ -220,6 +246,7 @@ class Camera_Capture(object):
         cameras_enum = atb.enum("Capture",dict([(c.name,c.src_id) for c in Camera_List()]) )
 
         self.bar.add_var("Capture",vtype=cameras_enum,getter=lambda:self.src_id, setter=self.re_init_cam_by_src_id)
+        self.bar.add_var('hardware timestamps',vtype=atb.TW_TYPE_BOOL8,getter=lambda:False)
         for control in sorted_controls:
             name = control.atb_name
             if control.type=="bool":
@@ -254,6 +281,8 @@ class Camera_Capture(object):
         pass
 
     def close(self):
+        self.control = None
+        logger.info("Capture released")
         pass
 
 

@@ -207,10 +207,10 @@ class Bar(object):
 
     def _set_label(self, label):
         c = ctypes.c_char_p(label)
-        TwSetParam(self._bar, "", "label", PARAM_CSTRING, 1, c)
+        TwSetParam(self._bar, "", "label", TW_PARAM_CSTRING, 1, c)
     def _get_label(self):
         c = ctypes.create_string_buffer(4096)
-        TwGetParam(self._bar, "", "label", PARAM_CSTRING, 4095, c)
+        TwGetParam(self._bar, "", "label", TW_PARAM_CSTRING, 4095, c)
         return c.value
     label = property(_get_label, _set_label,
                      doc='''Bar label.
@@ -262,10 +262,10 @@ class Bar(object):
 
     def _set_help(self, help):
         c = ctypes.c_char_p(help)
-        TwSetParam(self._bar, "", "help", PARAM_CSTRING, 1, c)
+        TwSetParam(self._bar, "", "help", TW_PARAM_CSTRING, 1, c)
     def _get_help(self):
         c = ctypes.create_string_buffer(4096)
-        TwGetParam(self._bar, "", "help", PARAM_CSTRING, 4095, c)
+        TwGetParam(self._bar, "", "help", TW_PARAM_CSTRING, 4095, c)
         return c.value
     help = property(_get_help, _set_help,
                      doc='''Help message.
@@ -280,10 +280,10 @@ class Bar(object):
 
     def _set_text(self, text):
         c = ctypes.c_char_p(text)
-        TwSetParam(self._bar, "", "text", PARAM_CSTRING, 1, c)
+        TwSetParam(self._bar, "", "text", TW_PARAM_CSTRING, 1, c)
     def _get_text(self):
         c = ctypes.create_string_buffer(16)
-        TwGetParam(self._bar, "", "text", PARAM_CSTRING, 15, c)
+        TwGetParam(self._bar, "", "text", TW_PARAM_CSTRING, 15, c)
         return c.value
     text = property(_get_text, _set_text,
                      doc='''Text color.
@@ -426,10 +426,10 @@ class Bar(object):
 
     def _set_iconpos(self, iconpos):
         c = ctypes.c_char_p(iconpos)
-        TwSetParam(self._bar, "", "iconpos", PARAM_CSTRING, 1, c)
+        TwSetParam(self._bar, "", "iconpos", TW_PARAM_CSTRING, 1, c)
     def _get_iconpos(self):
         c = ctypes.create_string_buffer(32)
-        TwGetParam(self._bar, "", "iconpos", PARAM_CSTRING, 31, c)
+        TwGetParam(self._bar, "", "iconpos", TW_PARAM_CSTRING, 31, c)
         return c.value
     iconpos = property(_get_iconpos, _set_iconpos,
                      doc='''Bar icon position p.
@@ -450,10 +450,10 @@ class Bar(object):
 
     def _set_iconalign(self, iconalign):
         c = ctypes.c_char_p(iconalign)
-        TwSetParam(self._bar, "", "iconalign", PARAM_CSTRING, 1, c)
+        TwSetParam(self._bar, "", "iconalign", TW_PARAM_CSTRING, 1, c)
     def _get_iconalign(self):
         c = ctypes.create_string_buffer(32)
-        TwGetParam(self._bar, "", "iconalign", PARAM_CSTRING, 31, c)
+        TwGetParam(self._bar, "", "iconalign", TW_PARAM_CSTRING, 31, c)
         return c.value
     iconalign = property(_get_iconalign, _set_iconalign,
                      doc='''Bar icon alignment p.

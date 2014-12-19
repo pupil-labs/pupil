@@ -17,6 +17,8 @@ if __name__ == '__main__':
     del syspath, ospath
 
 
+
+
 import os
 from time import time
 import cv2
@@ -34,13 +36,15 @@ from vis_polyline import Vis_Polyline
 from vis_light_points import Vis_Light_Points
 from scan_path import Scan_Path
 from filter_fixations import Filter_Fixations
+from manual_gaze_correction import Manual_Gaze_Correction
 
 plugin_by_index =  (  Vis_Circle,
                         Vis_Cross,
                         Vis_Polyline,
                         Scan_Path,
                         Vis_Light_Points,
-                        Filter_Fixations
+                        Filter_Fixations,
+                        Manual_Gaze_Correction
                         )
 
 name_by_index = [p.__name__ for p in plugin_by_index]
@@ -50,7 +54,6 @@ plugin_by_name = dict(zip(name_by_index,plugin_by_index))
 
 
 def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
-
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
@@ -143,7 +146,7 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
             p = plugin_by_name[name](g,**args)
             plugins.append(p)
         except:
-            logger.warning("Plugin '%s' failed to load." %name)
+            logger.warning("Plugin '%s' could not be loaded in exporter." %name)
 
 
     while frames_to_export.value - current_frame.value > 0:
@@ -193,35 +196,4 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
     return True
 
-
-
-
-if __name__ == '__main__':
-
-    # make shared modules available across pupil_src
-    from sys import path as syspath
-    from os import path as ospath
-    loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
-    syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
-    del syspath, ospath
-
-
-    from ctypes import  c_int,c_bool
-
-
-    logging.basicConfig(level=logging.DEBUG)
-
-
-    should_terminate = c_bool(False)
-    frame_to_export  = c_int(0)
-    current_frame = c_int(0)
-    data_dir = '/Users/mkassner/Desktop/2014_01_21/000/'
-    start_frame=200
-    end_frame=300
-    plugins=[]
-    out_file_path="test.avi"
-
-
-    export(should_terminate,frame_to_export,current_frame, data_dir,start_frame=start_frame,end_frame=end_frame,plugins=[],out_file_path=out_file_path)
-    print current_frame.value
 

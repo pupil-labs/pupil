@@ -30,10 +30,15 @@ def correlate_gaze(gaze_list,timestamps):
     gaze_list = list(gaze_list)
     timestamps = list(timestamps)
 
-
     positions_by_frame = [[] for i in timestamps]
+
     frame_idx = 0
-    data_point = gaze_list.pop(0)
+    try:
+        data_point = gaze_list.pop(0)
+    except:
+        logger.warning("No gaze positons in this recording.")
+        return positions_by_frame
+
     gaze_timestamp = data_point[4]
 
     while gaze_list:
@@ -43,7 +48,7 @@ def correlate_gaze(gaze_list,timestamps):
         except IndexError:
             break
         if gaze_timestamp <= t_between_frames:
-            positions_by_frame[frame_idx].append({'norm_gaze':(data_point[0],data_point[1]),'norm_pupil': (data_point[2],data_point[3]), 'timestamp':gaze_timestamp})
+            positions_by_frame[frame_idx].append({'norm_gaze':(data_point[0],data_point[1]),'norm_pupil': (data_point[2],data_point[3]), 'timestamp':data_point[4],'confidence':data_point[5]})
             data_point = gaze_list.pop(0)
             gaze_timestamp = data_point[4]
         else:

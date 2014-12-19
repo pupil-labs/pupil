@@ -53,6 +53,13 @@ class Plugin(object):
         """
         pass
 
+    def on_window_resize(self,window,w,h):
+        '''
+        gets called when user resizes window. 
+        window is the glfw window handle of the resized window.
+        '''
+        pass
+        
     def update(self,frame,recent_pupil_positions,events):
         """
         gets called once every frame
@@ -60,6 +67,8 @@ class Plugin(object):
         Use self.order to deal with this appropriately
         """
         pass
+
+
 
     def gl_display(self):
         """
@@ -90,11 +99,16 @@ class Plugin(object):
 from glfw import *
 from plugin import Plugin
 
+from ctypes import c_int,c_bool
+import atb
+from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
+
+
 # window calbacks
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
-    adjust_gl_view(w,h)
+    adjust_gl_view(w,h,window)
     glfwMakeContextCurrent(active_window)
 
 class Example_Plugin(Plugin):
@@ -107,9 +121,9 @@ class Example_Plugin(Plugin):
         self._window = None
         self.fullscreen = c_bool(0)
         self.monitor_idx = c_int(0)
-        self.monitor_handles = glfwGetMonitors()
-        self.monitor_names = [glfwGetMonitorName(m) for m in self.monitor_handles]
-        monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
+        monitor_handles = glfwGetMonitors()
+        self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
+        monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(monitor_names))))
         #primary_monitor = glfwGetPrimaryMonitor()
 
         atb_label = "example plugin"
@@ -128,7 +142,7 @@ class Example_Plugin(Plugin):
     def open_window(self):
         if not self._window:
             if self.fullscreen.value:
-                monitor = self.monitor_handles[self.monitor_idx.value]
+                monitor = glfwGetMonitors()[self.monitor_idx.value]
                 mode = glfwGetVideoMode(monitor)
                 height,width= mode[0],mode[1]
             else:
@@ -149,10 +163,7 @@ class Example_Plugin(Plugin):
             # gl_state settings
             active_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self._window)
-            gl.glEnable(gl.GL_POINT_SMOOTH)
-            gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-            gl.glEnable(gl.GL_BLEND)
-            gl.glClearColor(1.,1.,1.,0.)
+            basic_gl_setup()
 
             # refresh speed settings
             glfwSwapInterval(0)

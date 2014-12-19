@@ -1,4 +1,5 @@
 '''
+
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
  Copyright (C) 2012-2014  Pupil Labs
@@ -11,7 +12,14 @@
 
 import sys, os,platform
 from time import sleep
+from copy import deepcopy
 from ctypes import c_bool, c_int
+
+#bundle relevant imports
+try:
+    from billiard import freeze_support
+except:
+    from multiprocessing import freeze_support
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
@@ -36,29 +44,18 @@ else:
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
-
-
-import shelve
-from time import time,sleep
-from ctypes import  c_int,c_bool,c_float,create_string_buffer
-import numpy as np
-
-#display
-from glfw import *
-import atb
-
-from uvc_capture import autoCreateCapture
-
-# helpers/utils
-from methods import normalize, denormalize,Temp
-from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
-from gl_utils import basic_gl_setup, adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm,draw_gl_texture
-
 import logging
+#set up root logger before other imports
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-# create file handler which logs even debug messages
-fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
+logger.setLevel(logging.INFO) # <-- use this to set verbosity
+#since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
+if platform.system() == 'Darwin':
+    if __name__ == '__main__': #clear log if main
+        fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
+    #we will use append mode since the exporter will stream into the same file when using os.span processes
+    fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='a')
+else:
+    fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
@@ -75,6 +72,22 @@ logger.addHandler(ch)
 logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
+
+from file_methods import Persistent_Dict
+from time import time,sleep
+from ctypes import  c_int,c_bool,c_float,create_string_buffer
+import numpy as np
+
+#display
+from glfw import *
+import atb
+
+from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
+
+# helpers/utils
+from methods import normalize, denormalize,Temp
+from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
+from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture
 
 
 #get the current software version
@@ -93,12 +106,17 @@ from vis_polyline import Vis_Polyline
 from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
 from seek_bar import Seek_Bar
+from trim_marks import Trim_Marks
 from export_launcher import Export_Launcher
 from scan_path import Scan_Path
-from marker_detector import Marker_Detector
+from offline_marker_detector import Offline_Marker_Detector
+from marker_auto_trim_marks import Marker_Auto_Trim_Marks
+from pupil_server import Pupil_Server
 from filter_fixations import Filter_Fixations
+from manual_gaze_correction import Manual_Gaze_Correction
+from batch_exporter import Batch_Exporter
 
-plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Marker_Detector)
+plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Marker_Auto_Trim_Marks,Pupil_Server,Batch_Exporter)
 name_by_index = [p.__name__ for p in plugin_by_index]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
@@ -111,16 +129,18 @@ def main():
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
-        adjust_gl_view(w,h)
-        atb.TwWindowSize(w, h)
+        adjust_gl_view(w,h,window)
+        norm_size = normalize((w,h),glfwGetWindowSize(window))
+        fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
+        atb.TwWindowSize(*map(int,fb_size))
         glfwMakeContextCurrent(active_window)
+        for p in g.plugins:
+            p.on_window_resize(window,w,h)
 
     def on_key(window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,action):
             if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
-                    pass
-
+                pass
 
     def on_char(window,char):
         if not atb.TwEventCharGLFW(char,1):
@@ -135,7 +155,9 @@ def main():
                 p.on_click(pos,button,action)
 
     def on_pos(window,x, y):
-        if atb.TwMouseMotion(int(x),int(y)):
+        norm_pos = normalize((x,y),glfwGetWindowSize(window))
+        fb_x,fb_y = denormalize(norm_pos,glfwGetFramebufferSize(window))
+        if atb.TwMouseMotion(int(fb_x),int(fb_y)):
             pass
 
     def on_scroll(window,x,y):
@@ -143,15 +165,15 @@ def main():
             pass
 
     def on_close(window):
-        glfwSetWindowShouldClose(window)
-        logger.info('Process closing from window')
+        glfwSetWindowShouldClose(main_window,True)
+        logger.debug('Process closing from window')
 
 
     try:
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = "/Users/mkassner/Desktop/2014_01_21/000"
+        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording/'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
@@ -197,18 +219,20 @@ def main():
 
 
     # load session persistent settings
-    session_settings = shelve.open(os.path.join(user_dir,"user_settings"),protocol=2)
+    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
     def load(var_name,default):
         return session_settings.get(var_name,default)
     def save(var_name,var):
         session_settings[var_name] = var
 
 
-    # Initialize capture, check if it works
+    # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-    if cap is None:
-        logger.error("Did not receive valid Capture")
+
+    if isinstance(cap,FakeCapture):
+        logger.error("could not start capture.")
         return
+
     width,height = cap.get_size()
 
 
@@ -226,10 +250,8 @@ def main():
     glfwSetCursorPosCallback(main_window,on_pos)
     glfwSetScrollCallback(main_window,on_scroll)
 
-    # gl_state settings
-    basic_gl_setup()
 
-    # create container for globally scoped vars (within world)
+    # create container for globally scoped varfs (within world)
     g = Temp()
     g.plugins = []
     g.play = False
@@ -237,6 +259,10 @@ def main():
     g.user_dir = user_dir
     g.rec_dir = rec_dir
     g.app = 'player'
+    g.timestamps = timestamps
+    g.positions_by_frame = positions_by_frame
+
+
 
     # helpers called by the main atb bar
     def update_fps():
@@ -263,6 +289,21 @@ def main():
 
     def set_play(value):
         g.play = value
+
+    def next_frame():
+        try:
+            cap.seek_to_frame(cap.get_frame_index())
+        except FileSeekError:
+            pass
+        g.new_seek = True
+
+    def prev_frame():
+        try:
+            cap.seek_to_frame(cap.get_frame_index()-2)
+        except FileSeekError:
+            pass
+        g.new_seek = True
+
 
 
     def open_plugin(selection,data):
@@ -305,7 +346,9 @@ def main():
     bar.add_var("recoding fps",bar._fps,readonly=True)
     bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
     bar.add_var("play",vtype=c_bool,getter=get_play,setter=set_play,key="space")
-    bar.add_var("next frame",getter=cap.get_frame_index)
+    bar.add_button('step next',next_frame,key='right')
+    bar.add_button('step prev',prev_frame,key='left')
+    bar.add_var("frame index",vtype=c_int,getter=lambda:cap.get_frame_index()-1 )
 
     bar.plugin_to_load = c_int(0)
     plugin_type_enum = atb.enum("Plug In",index_by_name)
@@ -316,13 +359,15 @@ def main():
 
     #set the last saved window size
     set_window_size(bar.window_size.value,bar.window_size)
-    on_resize(main_window, *glfwGetFramebufferSize(main_window))
+    on_resize(main_window, *glfwGetWindowSize(main_window))
     glfwSetWindowPos(main_window,0,0)
 
 
     #we always load these plugins
     g.plugins.append(Export_Launcher(g,data_dir=rec_dir,frame_count=len(timestamps)))
     g.plugins.append(Seek_Bar(g,capture=cap))
+    g.trim_marks = Trim_Marks(g,capture=cap)
+    g.plugins.append(g.trim_marks)
 
     #these are loaded based on user settings
     for initializer in load('plugins',[]):
@@ -349,6 +394,9 @@ def main():
         if hasattr(p,'init_gui'):
             p.init_gui()
 
+    # gl_state settings
+    basic_gl_setup()
+    g.image_tex = create_named_texture((height,width,3))
 
 
     while not glfwWindowShouldClose(main_window):
@@ -357,22 +405,19 @@ def main():
 
         #grab new frame
         if g.play or g.new_seek:
-            test_frame = cap.get_frame()
-            #end of video logic: pause at last frame.
-            if not test_frame:
+            try:
+                new_frame = cap.get_frame()
+            except EndofVideoFileError:
+                #end of video logic: pause at last frame.
                 g.play=False
-            else:
-                new_frame = test_frame
 
             if g.new_seek:
                 display_time = new_frame.timestamp
                 g.new_seek = False
 
-
         frame = new_frame.copy()
-
-        #new positons and events
-        current_pupil_positions = positions_by_frame[frame.index][:]
+        #new positons and events we make a deepcopy just like the image is a copy.
+        current_pupil_positions = deepcopy(positions_by_frame[frame.index])
         events = []
 
         # allow each Plugin to do its work.
@@ -384,8 +429,9 @@ def main():
 
         # render camera image
         glfwMakeContextCurrent(main_window)
-        draw_gl_texture(frame.img)
-
+        make_coord_system_norm_based()
+        draw_named_texture(g.image_tex,frame.img)
+        make_coord_system_pixel_based(frame.img.shape)
         # render visual feedback from loaded plugins
         for p in g.plugins:
             p.gl_display()
@@ -433,6 +479,7 @@ def main():
 
 
 if __name__ == '__main__':
+    freeze_support()
     if 1:
         main()
     else:

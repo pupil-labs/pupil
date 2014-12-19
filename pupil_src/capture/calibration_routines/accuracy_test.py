@@ -11,15 +11,17 @@
 import os
 import cv2
 import numpy as np
+import scipy.spatial as sp
+
 from methods import normalize,denormalize
-from gl_utils import draw_gl_point,adjust_gl_view,draw_gl_point_norm,draw_gl_polyline,clear_gl_screen,basic_gl_setup
+from gl_utils import draw_gl_point,adjust_gl_view, draw_gl_point_norm,draw_gl_points_norm,draw_gl_polyline,draw_gl_polyline_norm,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
 from OpenGL.GLU import gluOrtho2D
 import calibrate
 from circle_detector import get_canditate_ellipses
 
-from ctypes import c_int,c_bool
+from ctypes import c_int,c_bool,c_float
 import atb
 import audio
 
@@ -50,7 +52,7 @@ def on_resize(window,w, h):
     glfwMakeContextCurrent(active_window)
 
 
-class Screen_Marker_Calibration(Plugin):
+class Accuracy_Test(Plugin):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites
     Points are collected at sites not between
@@ -71,11 +73,28 @@ class Screen_Marker_Calibration(Plugin):
         self.candidate_ellipses = []
         self.pos = None
 
+        #result calculation variables:
+        self.world_size = None
+        self.fov = c_float(90.) #taken from c930e specsheet, confirmed though mesurement within ~10deg.
+        self.res =  c_float(1.)
+        self.outlier_thresh = c_float(5.)
+        self.accuray = c_float(0)
+        self.percision = c_float(0)
+
+        try:
+            self.pt_cloud = np.load(os.path.join(self.g_pool.user_dir,'accuray_test_pt_cloud.npy'))
+            gaze,ref = self.pt_cloud[:,0:2],self.pt_cloud[:,2:4]
+            error_lines = np.array([[g,r] for g,r in zip(gaze,ref)])
+            self.error_lines = error_lines.reshape(-1,2)
+        except Exception:
+            self.error_lines = None
+            self.pt_cloud = None
+
+
         self.show_edges = c_bool(0)
         self.dist_threshold = c_int(5)
         self.area_threshold = c_int(20)
 
-        self.world_size = None
 
         self._window = None
         self.window_should_close = False
@@ -89,15 +108,30 @@ class Screen_Marker_Calibration(Plugin):
 
 
 
-        atb_label = "calibrate on screen"
+        atb_label = "screen marker based accuracy test"
         # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
         self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
             help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 90))
+            text='light', position=atb_pos,refresh=.3, size=(300, 200))
         self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
         self._bar.add_var("fullscreen", self.fullscreen)
-        self._bar.add_button("  start calibrating  ", self.start, key='c')
+        self._bar.add_button("  start test  ", self.start, key='c')
 
+        accuray_help ='''Accuracy is calculated as the average angular
+                        offset (distance) (in degrees of visual angle)
+                        between fixations locations and the corresponding
+                        locations of the fixation targets.'''.replace("\n"," ").replace("    ",'')
+
+        percision_help = '''Precision is calculated as the Root Mean Square (RMS)
+                            of the angular distance (in degrees of visual angle)
+                            between successive samples during a fixation.'''.replace("\n"," ").replace("    ",'')
+
+        self._bar.add_var('diagonal FOV',self.fov,help="set the camera FOV here.",group='Error Calculation')
+        self._bar.add_var('diagonal resolution',self.res,readonly= True ,group='Error Calculation')
+        self._bar.add_var('outlier threshold deg',self.outlier_thresh ,group='Error Calculation')
+        self._bar.add_var('angular accuray',self.accuray,readonly=True ,group='Error Calculation',help=accuray_help)
+        self._bar.add_var('angular percision',self.percision,readonly=True ,group='Error Calculation',help=percision_help)
+        self._bar.add_button('calculate result',self.calc_result ,group='Error Calculation')
         self._bar.add_var("show edges",self.show_edges, group="Detector Variables")
         self._bar.add_var("area threshold", self.area_threshold ,group="Detector Variables")
         self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Detector Variables" )
@@ -107,18 +141,18 @@ class Screen_Marker_Calibration(Plugin):
         if self.active:
             return
 
-        audio.say("Starting Calibration")
-        logger.info("Starting Calibration")
-        self.sites = [  (.25, .5),(.25, .5), (0,.5),
+        audio.say("Starting Accuracy_Test")
+        logger.info("Starting Accuracy_Test")
+        self.sites = [  (.5, .5), (0,.5),
                         (0.,1),(.5,1),(1.,1.),
                         (1,.5),
                         (1., 0),(.5, 0),(0,0.),
-                        (.75,.5)]
-
+                        (.5,.5),(.5,.5)]
+        self.sites = np.random.random((10,2)).tolist() + self.sites
         self.active_site = 0
         self.active = True
         self.ref_list = []
-        self.pupil_list = []
+        self.gaze_list = []
         self.window_should_open = True
 
     def open_window(self):
@@ -131,7 +165,7 @@ class Screen_Marker_Calibration(Plugin):
                 monitor = None
                 height,width= 640,360
 
-            self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
+            self._window = glfwCreateWindow(height, width, "Accuracy_Test", monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen.value:
                 glfwSetWindowPos(self._window,200,0)
 
@@ -164,24 +198,81 @@ class Screen_Marker_Calibration(Plugin):
             self.stop()
 
     def stop(self):
-        audio.say("Stopping Calibration")
-        logger.info('Stopping Calibration')
+        audio.say("Stopping Accuracy_Test")
+        logger.info('Stopping Accuracy_Test')
         self.screen_marker_state = 0
         self.active = False
         self.window_should_close = True
 
-        cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
+        pt_cloud = preprocess_data_gaze(self.gaze_list,self.ref_list)
 
-        logger.info("Collected %s data points." %len(cal_pt_cloud))
+        logger.info("Collected %s data points." %len(pt_cloud))
 
-        if len(cal_pt_cloud) < 20:
+        if len(pt_cloud) < 20:
             logger.warning("Did not collect enough data.")
             return
 
-        cal_pt_cloud = np.array(cal_pt_cloud)
-        map_fn = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size)
-        self.g_pool.map_pupil = map_fn
-        np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
+        pt_cloud = np.array(pt_cloud)
+        np.save(os.path.join(self.g_pool.user_dir,'accuray_test_pt_cloud.npy'),pt_cloud)
+        gaze,ref = pt_cloud[:,0:2],pt_cloud[:,2:4]
+        error_lines = np.array([[g,r] for g,r in zip(gaze,ref)])
+        self.error_lines = error_lines.reshape(-1,2)
+        self.pt_cloud = pt_cloud
+
+
+    def calc_result(self):
+        #lets denormalize:
+        # test world cam resolution
+        if self.pt_cloud == None:
+            logger.warning("Please run test first!")
+            return
+
+        if self.world_size == None:
+            return
+
+        pt_cloud = self.pt_cloud.copy()
+        res = self.world_size
+        pt_cloud[:,0:3:2] *= res[0]
+        pt_cloud[:,1:4:2] *= res[1]
+
+        field_of_view = self.fov.value
+        px_per_degree = self.res.value/field_of_view
+
+        # Accuracy is calculated as the average angular
+        # offset (distance) (in degrees of visual angle)
+        # between fixations locations and the corresponding
+        # locations of the fixation targets.
+
+        gaze,ref = pt_cloud[:,0:2],pt_cloud[:,2:4]
+        # site = pt_cloud[:,4]
+        error_lines = np.array([[g,r] for g,r in zip(gaze,ref)])
+        error_lines = error_lines.reshape(-1,2)
+        error_mag = sp.distance.cdist(gaze,ref).diagonal().copy()
+        accuray_pix = np.mean(error_mag)
+        logger.info("Gaze error mean in world camera pixel: %f"%accuray_pix)
+        error_mag /= px_per_degree
+        logger.info('Error in degrees: %s'%error_mag)
+        logger.info('Outliers: %s'%np.where(error_mag>=self.outlier_thresh.value))
+        self.accuray.value = np.mean(error_mag[error_mag<self.outlier_thresh.value])
+        logger.info('Angular accuray: %s'%self.accuray.value)
+
+
+        #lets calculate percision:  (RMS of distance of succesive samples.)
+        # This is a little rough as we do not compensate headmovements in this test.
+
+        # Precision is calculated as the Root Mean Square (RMS)
+        # of the angular distance (in degrees of visual angle)
+        # between successive samples during a fixation
+        succesive_distances_gaze = sp.distance.cdist(gaze[:-1],gaze[1:]).diagonal().copy()
+        succesive_distances_ref = sp.distance.cdist(ref[:-1],ref[1:]).diagonal().copy()
+        succesive_distances_gaze /=px_per_degree
+        succesive_distances_ref /=px_per_degree
+        # if the ref distance is to big we must have moved to a new fixation or there is headmovement,
+        # if the gaze dis is to big we can assume human error
+        # both times gaze data is not valid for this mesurement
+        succesive_distances =  succesive_distances_gaze[np.logical_and(succesive_distances_gaze< 1., succesive_distances_ref< .1)]
+        self.percision.value = np.sqrt(np.mean(succesive_distances**2))
+        logger.info("Angular percision: %s"%self.percision.value)
 
     def close_window(self):
         if self._window:
@@ -191,6 +282,12 @@ class Screen_Marker_Calibration(Plugin):
 
 
     def update(self,frame,recent_pupil_positions,events):
+
+        #get world image size for error fitting later.
+        if self.world_size is None:
+            self.world_size = frame.img.shape[1],frame.img.shape[0]
+            self.res.value = np.sqrt(self.world_size[0]**2+self.world_size[1]**2)
+
         if self.window_should_close:
             self.close_window()
 
@@ -199,10 +296,6 @@ class Screen_Marker_Calibration(Plugin):
 
         if self.active:
             img = frame.img
-
-            #get world image size for error fitting later.
-            if self.world_size is None:
-                self.world_size = img.shape[1],img.shape[0]
 
             #detect the marker
             self.candidate_ellipses = get_canditate_ellipses(img,
@@ -222,17 +315,18 @@ class Screen_Marker_Calibration(Plugin):
 
 
             #only save a valid ref position if within sample window of calibraiton routine
-            on_position = 40 < self.screen_marker_state < self.screen_marker_max-5
+            on_position = 0 < self.screen_marker_state < self.screen_marker_max-50
             if on_position and self.detected:
                 ref = {}
                 ref["norm_pos"] = self.pos
                 ref["timestamp"] = frame.timestamp
+                ref['site'] = self.active_site
                 self.ref_list.append(ref)
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['norm_pupil'] is not None:
-                    self.pupil_list.append(p_pt)
+                if p_pt['norm_gaze'] is not None:
+                    self.gaze_list.append(p_pt)
 
             # Animate the screen marker
             if self.screen_marker_state < self.screen_marker_max:
@@ -242,14 +336,14 @@ class Screen_Marker_Calibration(Plugin):
                 self.screen_marker_state = 0
                 self.active_site += 1
                 logger.debug("Moving screen marker to site no %s"%self.active_site)
-                if self.active_site == 10:
+                if self.active_site == len(self.sites)-2:
                     self.stop()
                     return
 
             # function to smoothly interpolate between points input:(0-screen_marker_max) output: (0-1)
             m, s = self.screen_marker_max, self.screen_marker_state
 
-            interpolation_weight = np.tanh(((s-1/6.*m)*10.)/(5/6.*m))*(-.5)+.5
+            interpolation_weight = np.tanh(((s-2/3.*m)*4.)/(1/3.*m))*(-.5)+.5
 
             #use np.arrays for per element wise math
             current = np.array(self.sites[self.active_site])
@@ -282,6 +376,13 @@ class Screen_Marker_Calibration(Plugin):
             pass
         if self._window:
             self.gl_display_in_window()
+
+
+        if not self.active and self.error_lines is not None:
+            draw_gl_polyline_norm(self.error_lines,(1.,0.5,0.,.5),type='Lines')
+            draw_gl_points_norm(self.error_lines[1::2],color=(.0,0.5,0.5,.5),size=3)
+            draw_gl_points_norm(self.error_lines[0::2],color=(.5,0.0,0.0,.5),size=3)
+
 
 
     def gl_display_in_window(self):
@@ -336,3 +437,35 @@ class Screen_Marker_Calibration(Plugin):
         if self._window:
             self.close_window()
         self._bar.destroy()
+
+
+def preprocess_data_gaze(gaze_pts,ref_pts):
+    '''small utility function to deal with timestamped but uncorrelated data
+    input must be lists that contain dicts with at least "timestamp",'norm_pos' and "norm_gaze""
+    '''
+    correlated_data = []
+
+    if len(ref_pts)<=2:
+        return correlated_data
+
+    cur_ref_pt = ref_pts.pop(0)
+    next_ref_pt = ref_pts.pop(0)
+    while True:
+        matched = []
+        while gaze_pts:
+            #select all points past the half-way point between current and next ref data sample
+            if gaze_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
+                matched.append(gaze_pts.pop(0))
+            else:
+                for p_pt in matched:
+                    #only use close points
+                    if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
+                        data_pt = p_pt["norm_gaze"][0], p_pt["norm_gaze"][1],cur_ref_pt['norm_pos'][0],cur_ref_pt['norm_pos'][1],cur_ref_pt['site']
+                        correlated_data.append(data_pt)
+                break
+        if ref_pts:
+            cur_ref_pt = next_ref_pt
+            next_ref_pt = ref_pts.pop(0)
+        else:
+            break
+    return correlated_data

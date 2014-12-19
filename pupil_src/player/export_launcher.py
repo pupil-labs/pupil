@@ -74,8 +74,6 @@ class Export_Launcher(Plugin):
         default_path = "world_viz.avi"
 
         self.rec_name = create_string_buffer(default_path,512)
-        self.start_frame = c_int(0)
-        self.end_frame = c_int(frame_count)
 
 
     def init_gui(self):
@@ -96,8 +94,8 @@ class Export_Launcher(Plugin):
             self._bar.clear()
 
         self._bar.add_var('export name',self.rec_name, help="Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.")
-        self._bar.add_var('start frame',self.start_frame,help="Supply start frame no. Negative numbers will count from the end. The behaves like python list indexing")
-        self._bar.add_var('end frame',self.end_frame,help="Supply end frame no. Negative numbers will count from the end. The behaves like python list indexing")
+        self._bar.add_var('start frame',vtype=c_int,getter=self.g_pool.trim_marks.atb_get_in_mark,setter= self.g_pool.trim_marks.atb_set_in_mark, help="Supply start frame no. Negative numbers will count from the end. The behaves like python list indexing")
+        self._bar.add_var('end frame',vtype=c_int,getter=self.g_pool.trim_marks.atb_get_out_mark,setter= self.g_pool.trim_marks.atb_set_out_mark,help="Supply end frame no. Negative numbers will count from the end. The behaves like python list indexing")
         self._bar.add_button('new export',self.add_export)
 
         for job,i in zip(self.exports,range(len(self.exports)))[::-1]:
@@ -134,8 +132,8 @@ class Export_Launcher(Plugin):
         current_frame = RawValue(c_int,0)
 
         data_dir = self.data_dir
-        start_frame= self.start_frame.value
-        end_frame= self.end_frame.value
+        start_frame= self.g_pool.trim_marks.in_mark
+        end_frame= self.g_pool.trim_marks.out_mark+1 #end_frame is exclusive
         plugins = []
 
         # Here we make clones of every plugin that supports it.

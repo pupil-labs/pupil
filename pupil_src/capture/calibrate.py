@@ -139,7 +139,7 @@ def make_map_function(cx,cy,n):
 
 def preprocess_data(pupil_pts,ref_pts):
     '''small utility function to deal with timestamped but uncorrelated data
-    input must be lists that contain dicts with at least "timestamp" and "norm_pos"
+    input must be lists that contain dicts with at least "timestamp" and "norm_pos"/'norm_pupil"
     '''
     cal_data = []
 
@@ -167,6 +167,8 @@ def preprocess_data(pupil_pts,ref_pts):
         else:
             break
     return cal_data
+
+
 
 # if __name__ == '__main__':
 #     import matplotlib.pyplot as plt

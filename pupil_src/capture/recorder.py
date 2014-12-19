@@ -17,13 +17,14 @@ from time import strftime,localtime,time,gmtime
 from ctypes import create_string_buffer
 from shutil import copy2
 from glob import glob
+from audio import Audio_Capture
 #logging
 import logging
 logger = logging.getLogger(__name__)
 
 class Recorder(Plugin):
     """Capture Recorder"""
-    def __init__(self,g_pool, session_str, fps, img_shape, record_eye, eye_tx):
+    def __init__(self,g_pool, session_str, fps, img_shape, record_eye, eye_tx,audio = -1):
         Plugin.__init__(self)
         self.g_pool = g_pool
         self.session_str = session_str
@@ -62,6 +63,13 @@ class Recorder(Plugin):
             f.write("Start Time\t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")
 
 
+        if audio >=0:
+            audio_src = audio
+            audio_path = os.path.join(self.rec_path, "world.wav")
+            self.audio_writer = Audio_Capture(audio_src,audio_path)
+        else:
+            self.audio_writer = None
+
         video_path = os.path.join(self.rec_path, "world.avi")
         self.writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), fps, (img_shape[1], img_shape[0]))
         self.height = img_shape[0]
@@ -83,13 +91,15 @@ class Recorder(Plugin):
         return strftime("%H:%M:%S", rec_time)
 
     def update(self,frame,recent_pupil_positons,events):
-        self.frame_count += 1
+        # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
         for p in recent_pupil_positons:
             if p['norm_pupil'] is not None:
                 gaze_pt = p['norm_gaze'][0],p['norm_gaze'][1],p['norm_pupil'][0],p['norm_pupil'][1],p['timestamp'],p['confidence']
                 self.gaze_list.append(gaze_pt)
         self.timestamps.append(frame.timestamp)
         self.writer.write(frame.img)
+        self.frame_count += 1
+
 
     def stop_and_destruct(self):
         #explicit release of VideoWriter
@@ -101,6 +111,7 @@ class Recorder(Plugin):
                 self.eye_tx.send(None)
             except:
                 logger.warning("Could not stop eye-recording. Please report this bug!")
+
         gaze_list_path = os.path.join(self.rec_path, "gaze_positions.npy")
         np.save(gaze_list_path,np.asarray(self.gaze_list))
 
@@ -108,25 +119,18 @@ class Recorder(Plugin):
         np.save(timestamps_path,np.array(self.timestamps))
 
         try:
-            surface_definitions_file = glob(os.path.join(self.g_pool.user_dir,"surface_definitions*"))[0].rsplit(os.path.sep,1)[-1]
-            copy2(os.path.join(self.g_pool.user_dir,surface_definitions_file),os.path.join(self.rec_path,surface_definitions_file))
+            copy2(os.path.join(self.g_pool.user_dir,"surface_definitions"),os.path.join(self.rec_path,"surface_definitions"))
         except:
             logger.info("No surface_definitions data found. You may want this if you do marker tracking.")
 
         try:
-            cal_pt_cloud = np.load(os.path.join(self.g_pool.user_dir,"cal_pt_cloud.npy"))
-            cal_pt_cloud_path = os.path.join(self.rec_path, "cal_pt_cloud.npy")
-            np.save(cal_pt_cloud_path, cal_pt_cloud)
+            copy2(os.path.join(self.g_pool.user_dir,"cal_pt_cloud.npy"),os.path.join(self.rec_path,"cal_pt_cloud.npy"))
         except:
             logger.warning("No calibration data found. Please calibrate first.")
 
         try:
-            camera_matrix = np.load(os.path.join(self.g_pool.user_dir,"camera_matrix.npy"))
-            dist_coefs = np.load(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"))
-            cam_path = os.path.join(self.rec_path, "camera_matrix.npy")
-            dist_path = os.path.join(self.rec_path, "dist_coefs.npy")
-            np.save(cam_path, camera_matrix)
-            np.save(dist_path, dist_coefs)
+            copy2(os.path.join(self.g_pool.user_dir,"camera_matrix.npy"),os.path.join(self.rec_path,"camera_matrix.npy"))
+            copy2(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"),os.path.join(self.rec_path,"dist_coefs.npy"))
         except:
             logger.info("No camera intrinsics found.")
 
@@ -147,7 +151,10 @@ class Recorder(Plugin):
                 f.write("Release\t"+release+"\n")
                 f.write("Version\t"+version+"\n")
         except Exception:
-            logger.Exception("Could not save metadata. Please report this bug!")
+            logger.exception("Could not save metadata. Please report this bug!")
+
+        if self.audio_writer:
+            self.audio_writer = None
 
         self.alive = False
 

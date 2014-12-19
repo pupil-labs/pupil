@@ -20,6 +20,14 @@ import os,sys
 import logging
 logger = logging.getLogger(__name__)
 
+class CameraCaptureError(Exception):
+    """General Exception for this module"""
+    def __init__(self, arg):
+        super(CameraCaptureError, self).__init__()
+        self.arg = arg
+
+
+
 if getattr(sys, 'frozen', False):
     # we are running in a |PyInstaller| bundle
     basedir = sys._MEIPASS
@@ -70,6 +78,8 @@ dll.xioctl.restype = c_int
 dll.get_buffer.argtypes = [c_int,POINTER(v4l2_buffer)]
 dll.get_buffer.restype = c_void_p
 dll.release_buffer.restype = c_int
+dll.get_time_monotonic.argtypes=[]
+dll.get_time_monotonic.restype = c_double
 # dll.init_device.argtypes = [c_int,POINTER(c_uint32),POINTER(c_uint32),POINTER(c_uint32),POINTER(c_uint32)]
 
 
@@ -167,7 +177,7 @@ class Frame(object):
 
 class VideoCapture(object):
     """docstring for v4l2_capture"""
-    def __init__(self, src_id,size=(1280,720),fps=30):
+    def __init__(self, src_id,size=(1280,720),fps=30,timebase=None,use_hw_timestamps=False):
         if src_id not in range(100):
             raise Exception("V4L2 Capture src_id not a number in 0-99")
         self.src_str = "/dev/video"+str(int(src_id))
@@ -175,6 +185,17 @@ class VideoCapture(object):
         self.initialized = False
         self.streaming = False
         self.device = -1
+        self.use_hw_timestamps = use_hw_timestamps
+        if timebase == None:
+            logger.debug("Capture will run with default system timebase")
+            self.timebase = c_double(0)
+        elif isinstance(timebase,c_double):
+            logger.debug("Capture will run with app wide adjustable timebase")
+            self.timebase = timebase
+        else:
+            logger.error("Invalid timebase variable type. Will use default system timebase")
+            self.timebase = c_double(0)
+
 
         self._open()
         self._verify()
@@ -199,10 +220,10 @@ class VideoCapture(object):
         self.v4l2_format.fmt.pix.field       = V4L2_FIELD_ANY
         if (-1 == dll.xioctl(self.device, VIDIOC_S_FMT, byref(self.v4l2_format))):
             self._close()
-            raise Exception("Could not set v4l2 format")
+            raise CameraCaptureError("Could not set v4l2 format")
         if (-1 == dll.xioctl(self.device, VIDIOC_G_FMT, byref(self.v4l2_format))):
             self._close()
-            raise Exception("Could not get v4l2 format")
+            raise CameraCaptureError("Could not get v4l2 format")
         logger.info("Size on %s: %ix%i" %(self.src_str,self.v4l2_format.fmt.pix.width,self.v4l2_format.fmt.pix.height))
 
         self.v4l2_streamparm = v4l2_streamparm()
@@ -211,10 +232,10 @@ class VideoCapture(object):
         self.v4l2_streamparm.parm.capture.timeperframe.denominator = int(fps)
         if (-1 == dll.xioctl(self.device, VIDIOC_S_PARM, byref(self.v4l2_streamparm))):
             self._close()
-            raise Exception("Could not set v4l2 parameters")
+            raise CameraCaptureError("Could not set v4l2 parameters")
         if (-1 == dll.xioctl(self.device, VIDIOC_G_PARM, byref(self.v4l2_streamparm))):
             self._close()
-            raise Exception("Could not get v4l2 parameters")
+            raise CameraCaptureError("Could not get v4l2 parameters")
         logger.info("Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator,\
                                                       self.v4l2_streamparm.parm.capture.timeperframe.denominator))
 
@@ -246,7 +267,7 @@ class VideoCapture(object):
         self._start()
 
         self._active_buffer = None
-
+        self._last_timestamp = self.get_time_monotonic()
 
     def get_size(self):
         return self.sizes[self.current_size_idx]
@@ -271,10 +292,10 @@ class VideoCapture(object):
         self.v4l2_streamparm.parm.capture.timeperframe.denominator =  new_rate[1]
         if (-1 == dll.xioctl(self.device, VIDIOC_S_PARM, byref(self.v4l2_streamparm))):
             self._close()
-            raise Exception("Could not set v4l2 parameters")
+            raise CameraCaptureError("Could not set v4l2 parameters")
         if (-1 == dll.xioctl(self.device, VIDIOC_G_PARM, byref(self.v4l2_streamparm))):
             self._close()
-            raise Exception("Could not get v4l2 parameters")
+            raise CameraCaptureError("Could not get v4l2 parameters")
         logger.info("Framerate on %s: %i/%i" %(self.src_str,self.v4l2_streamparm.parm.capture.timeperframe.numerator, \
                                                       self.v4l2_streamparm.parm.capture.timeperframe.denominator))
 
@@ -293,7 +314,7 @@ class VideoCapture(object):
         if self.device is not -1:
             self.open = True
         else:
-            raise Exception("Capture Error: Could not open device at %s" %self.src_str)
+            raise CameraCaptureError("Capture Error: Could not open device at %s" %self.src_str)
 
     def _verify(self):
         if self.open:
@@ -304,7 +325,7 @@ class VideoCapture(object):
             dll.init_mmap(self.device)
             self.initialized = True
         else:
-            raise Exception("Capture Error: You need to open the device first")
+            raise CameraCaptureError("Capture Error: You need to open the device first")
 
     def _start(self):
         if self.initialized:
@@ -312,19 +333,18 @@ class VideoCapture(object):
             self.streaming = True
         else:
             self._close()
-            raise Exception("Capture Error: device is not initialized %s" %self.src_str)
-
+            raise CameraCaptureError("Capture Error: device is not initialized %s" %self.src_str)
 
     def read(self,retry=3):
         if not retry:
             self._stop()
             self._uninit()
             self._close()
-            raise Exception("Capture Error: Could not communicate with camera at: %s\
-            Attach each camera to a single USB Controller, this may solve the problem."%self.src_str)
+            raise CameraCaptureError("Capture Error: Could not communicate with camera at: %s. Attach each camera to a single USB Controller, this may solve the problem." %self.src_str)
 
         if self._active_buffer:
-            dll.release_buffer(self.device,byref(self._active_buffer))
+            if not dll.release_buffer(self.device,byref(self._active_buffer)):
+                logger.error("Could not release buffer VIDEOC_QBUF_ERROR")
 
         buf  = v4l2_buffer()
         buf_ptr =  dll.get_buffer(self.device,byref(buf))
@@ -334,13 +354,30 @@ class VideoCapture(object):
             self._active_buffer = buf
             #is the frame ok?
             if not buf.flags & V4L2_BUF_FLAG_ERROR:
-                if buf.flags & V4L2_BUF_FLAG_TIMESTAMP_MASK:
-                    logger.debug("buffer timestamp monotonic")
+
+                # if buf.flags & V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC & V4L2_BUF_FLAG_TIMESTAMP_MASK:
+                #     print "monotonic timebase"
+                # if buf.flags & V4L2_BUF_FLAG_TSTAMP_SRC_MASK & V4L2_BUF_FLAG_TSTAMP_SRC_SOE:
+                #     print "hardware timestamp"
+                # logger.debug("buffer timestamp monotonic")
+                if self.use_hw_timestamps:
+                    timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000000.
+                    # lets make sure this timestamps is sane:
+                    if abs(timestamp-self.get_time_monotonic()) > 5: #hw_timestamp more than 5secs away from now?
+                        logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s and last timestamp was %s"%(self.src_str,timestamp,self.get_time_monotonic(),self._last_timestamp))
+                        timestamp = self._last_timestamp + 1./self.get_rate()
+                        logger.warning("Correcting timestamp by extrapolation from last known timestamp using set rate: %s. TS now at %s"%(self.get_rate(),timestamp) )
+                    self._last_timestamp = timestamp
+
+                else:
+                    timestamp = self.get_time_monotonic()
+
+                timestamp -= self.timebase.value
+                # if ( self.ts > timestamp) or 1:
+                #     print "%s %s" %(self.src_str, self.get_time_monotonic()-timestamp)
                 buf_ptr = cast(buf_ptr,POINTER(c_uint8*buf.bytesused))
                 img = np.frombuffer(buf_ptr.contents,c_uint8)
                 img.shape = (self.v4l2_format.fmt.pix.height,self.v4l2_format.fmt.pix.width,3)
-                timestamp = buf.timestamp.secs+buf.timestamp.usecs/1000000.
-                # logger.debug("%s %s" %(timestamp,buf.index))
                 return Frame(timestamp, img)
             else:
                 logger.warning("Frame corrupted skipping it")
@@ -353,11 +390,16 @@ class VideoCapture(object):
     def _stop(self):
         if self.streaming:
             if self._active_buffer:
-                dll.release_buffer(self.device,byref(self._active_buffer))
+                if not dll.release_buffer(self.device,byref(self._active_buffer)):
+                    logger.Error("Could not release buffer")
                 self._active_buffer = None
 
-            dll.stop_capturing(self.device)
+            if not dll.stop_capturing(self.device):
+                logger.error("Device not found. Could not stop it.")
             self.streaming = False
+
+    def get_time_monotonic(self):
+        return dll.get_time_monotonic()
 
     def _uninit(self):
         if self.initialized:
@@ -368,8 +410,11 @@ class VideoCapture(object):
     def _close(self):
         if self.open:
             self.device = dll.close_device(self.device)
-            self.open=False
-            logger.info("Closed: %s" %self.src_str)
+            if self.device == 0:
+                logger.error("Could not close device: %s" %self.src_str)
+            else:
+                self.open=False
+                logger.info("Closed: %s" %self.src_str)
 
     def cleanup(self):
         self._stop()
@@ -429,9 +474,9 @@ if __name__ == '__main__' :
     # dll.uninit_device(device)
     # dll.close_device(device)
     # dll.fprintf(stderr, "\n")
-    cap = VideoCapture(0,(1280,720),30)
+    cap = VideoCapture(2,(320,240),30)
 
-    for x in range(40):
+    for x in range(100):
         frame = cap.read()
         # print frame.img.shape
         # prin?t frame.timestamp

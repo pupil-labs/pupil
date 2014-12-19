@@ -10,15 +10,15 @@
 
 import os
 from time import time, sleep
-import shelve
+from file_methods import Persistent_Dict
 import logging
 from ctypes import c_int,c_bool,c_float
 import numpy as np
 import atb
 from glfw import *
-from gl_utils import basic_gl_setup,adjust_gl_view, draw_gl_texture, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline
+from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture,draw_gl_polyline
 from methods import *
-from uvc_capture import autoCreateCapture
+from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 from calibrate import get_map_from_cloud
 from pupil_detectors import Canny_Detector,MSER_Detector,Blob_Detector
 
@@ -35,7 +35,7 @@ def eye(g_pool,cap_src,cap_size):
     logger.handlers = []
     # create file handler which logs even debug messages
     fh = logging.FileHandler(os.path.join(g_pool.user_dir,'eye.log'),mode='w')
-    fh.setLevel(logging.INFO)
+    fh.setLevel(logging.DEBUG)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
     ch.setLevel(logging.WARNING)
@@ -53,8 +53,10 @@ def eye(g_pool,cap_src,cap_size):
 
     # Callback functions
     def on_resize(window,w, h):
-        adjust_gl_view(w,h)
-        atb.TwWindowSize(w, h)
+        adjust_gl_view(w,h,window)
+        norm_size = normalize((w,h),glfwGetWindowSize(window))
+        fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
+        atb.TwWindowSize(*map(int,fb_size))
 
 
     def on_key(window, key, scancode, action, mods):
@@ -70,21 +72,23 @@ def eye(g_pool,cap_src,cap_size):
     def on_button(window,button, action, mods):
         if not atb.TwEventMouseButtonGLFW(button,int(action == GLFW_PRESS)):
             if action == GLFW_PRESS:
-                pos = glfwGetCursorPos(window)
-                pos = normalize(pos,glfwGetWindowSize(window))
-                pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
-                u_r.setStart(pos)
-                bar.draw_roi.value = 1
+                if bar.display.value ==1:
+                    pos = glfwGetCursorPos(window)
+                    pos = normalize(pos,glfwGetWindowSize(window))
+                    pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
+                    u_r.setStart(pos)
+                    bar.draw_roi.value = 1
             else:
                 bar.draw_roi.value = 0
 
     def on_pos(window,x, y):
-        if atb.TwMouseMotion(int(x),int(y)):
+        norm_pos = normalize((x,y),glfwGetWindowSize(window))
+        fb_x,fb_y = denormalize(norm_pos,glfwGetFramebufferSize(window))
+        if atb.TwMouseMotion(int(fb_x),int(fb_y)):
             pass
+
         if bar.draw_roi.value == 1:
-            pos = x,y
-            pos = normalize(pos,glfwGetWindowSize(window))
-            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
+            pos = denormalize(norm_pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
             u_r.setEnd(pos)
 
     def on_scroll(window,x,y):
@@ -116,14 +120,14 @@ def eye(g_pool,cap_src,cap_size):
 
 
     # load session persistent settings
-    session_settings = shelve.open(os.path.join(g_pool.user_dir,'user_settings_eye'),protocol=2)
+    session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye') )
     def load(var_name,default):
         return session_settings.get(var_name,default)
     def save(var_name,var):
         session_settings[var_name] = var
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, cap_size)
+    cap = autoCreateCapture(cap_src, cap_size,timebase=g_pool.timebase)
 
     if cap is None:
         logger.error("Did not receive valid Capture")
@@ -135,7 +139,6 @@ def eye(g_pool,cap_src,cap_size):
         cap.close()
         return
     height,width = frame.img.shape[:2]
-    cap.auto_rewind = False
 
     u_r = Roi(frame.img.shape)
     u_r.set(load('roi',default=None))
@@ -159,7 +162,8 @@ def eye(g_pool,cap_src,cap_size):
 
     dispay_mode_enum = atb.enum("Mode",{"Camera Image":0,
                                         "Region of Interest":1,
-                                        "Algorithm":2})
+                                        "Algorithm":2,
+                                        "CPU Save": 3})
 
     bar.add_var("FPS",bar.fps, step=1.,readonly=True)
     bar.add_var("Mode", bar.display,vtype=dispay_mode_enum, help="select the view-mode")
@@ -193,6 +197,7 @@ def eye(g_pool,cap_src,cap_size):
 
     # gl_state settings
     basic_gl_setup()
+    g_pool.image_tex = create_named_texture(frame.img)
 
     # refresh speed settings
     glfwSwapInterval(0)
@@ -200,15 +205,18 @@ def eye(g_pool,cap_src,cap_size):
 
     # event loop
     while not g_pool.quit.value:
-        frame = cap.get_frame()
-        if frame.img is None:
+        # Get an image from the grabber
+        try:
+            frame = cap.get_frame()
+        except CameraCaptureError:
+            logger.error("Capture from Camera Failed. Stopping.")
             break
+        except EndofVideoFileError:
+            logger.warning("Video File is done. Stopping")
+            break
+
         update_fps()
         sleep(bar.sleep.value) # for debugging only
-
-        if pupil_detector.should_sleep:
-            sleep(16)
-            pupil_detector.should_sleep=False
 
 
         ###  RECORDING of Eye Video (on demand) ###
@@ -217,7 +225,7 @@ def eye(g_pool,cap_src,cap_size):
             command = g_pool.eye_rx.recv()
             if command is not None:
                 record_path = command
-                logger.info("Will save eye video to: %(record_path)s")
+                logger.info("Will save eye video to: %s"%record_path)
                 video_path = os.path.join(record_path, "eye.avi")
                 timestamps_path = os.path.join(record_path, "eye_timestamps.npy")
                 writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), bar.fps.value, (frame.img.shape[1], frame.img.shape[0]))
@@ -251,7 +259,13 @@ def eye(g_pool,cap_src,cap_size):
 
         # GL-drawing
         clear_gl_screen()
-        draw_gl_texture(frame.img)
+        make_coord_system_norm_based()
+        if bar.display.value != 3:
+            draw_named_texture(g_pool.image_tex,frame.img)
+        else:
+            draw_named_texture(g_pool.image_tex)
+        make_coord_system_pixel_based(frame.img.shape)
+
 
         if result['norm_pupil'] is not None and bar.draw_pupil.value:
             if result.has_key('axes'):
