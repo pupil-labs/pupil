@@ -12,7 +12,8 @@ from gl_utils import draw_gl_polyline,draw_gl_point
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 
-from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS
+from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos
+from glfw import GLFW_RELEASE,GLFW_PRESS,GLFW_KEY_HOME, GLFW_KEY_END, GLFW_KEY_LEFT, GLFW_KEY_RIGHT
 from plugin import Plugin
 
 import logging
@@ -87,7 +88,32 @@ class Seek_Bar(Plugin):
                 self.drag_mode=False
                 self.g_pool.play = self.was_playing
 
-
+    def on_key(self,window, key, scancode, action, mods):
+        if key == GLFW_KEY_HOME:
+            if self.current_frame_index > 0.0: 
+                self.cap.seek_to_frame( 0 )
+                self.g_pool.new_seek = True
+            else:
+                pass
+        elif key == GLFW_KEY_END:
+            if self.current_frame_index < self.frame_count: 
+                self.cap.seek_to_frame( self.frame_count -1 )
+                self.g_pool.new_seek = True
+            else:
+                pass
+        elif key == GLFW_KEY_LEFT:
+            if self.current_frame_index > 0.0: 
+                self.cap.seek_to_frame( self.current_frame_index -1 )
+                self.g_pool.new_seek = True
+            else:
+                pass
+        elif key == GLFW_KEY_RIGHT:
+            if self.current_frame_index < self.frame_count - 1: 
+                self.cap.seek_to_frame( self.current_frame_index +1 )
+                self.g_pool.new_seek = True
+            else:
+                pass
+               
     def seek_bar_to_screen(self,pos):
         width,height = self.window_size
         x,y=pos

@@ -140,7 +140,12 @@ def main():
     def on_key(window, key, scancode, action, mods):
         if not atb.TwEventKeyboardGLFW(key,action):
             if action == GLFW_PRESS:
-                pass
+                if key == GLFW_KEY_ESCAPE:
+                    pass
+                else:
+                    for p in g.plugins:
+                        if hasattr(p,'on_key') and callable(getattr(p,'on_key')):
+                            p.on_key(window, key, scancode, action, mods)
 
     def on_char(window,char):
         if not atb.TwEventCharGLFW(char,1):
