@@ -12,6 +12,7 @@ import os, sys
 import cv2
 from pyglui import ui
 import numpy as np
+from scipy.interpolate import UnivariateSpline
 from plugin import Plugin
 from time import strftime,localtime,time,gmtime
 from shutil import copy2
@@ -24,6 +25,54 @@ logger = logging.getLogger(__name__)
 
 def get_auto_name():
     return strftime("%Y_%m_%d", localtime())
+
+def sanitize_timestamps(ts):
+    logger.debug("Checking %s timestamps for monotony in direction and smoothness"%ts.shape[0])
+    avg_frame_time = (ts[-1] - ts[0])/ts.shape[0]
+    logger.debug('average_frame_time: %s'%(1./avg_frame_time))
+
+    raw_ts = ts #only needed for visualization
+    runs = 0
+    while True:
+        #forward check for non monotonic increasing behaviour
+        clean = np.ones((ts.shape[0]),dtype=np.bool)
+        damper  = 0
+        for idx in range(ts.shape[0]-1):
+            if ts[idx] >= ts[idx+1]: #not monotonically increasing timestamp
+                damper = 50
+            clean[idx] = damper <= 0
+            damper -=1
+
+        #backward check to smooth timejumps forward
+        damper  = 0
+        for idx in range(ts.shape[0]-1)[::-1]:
+            if ts[idx+1]-ts[idx]>1: #more than one second forward jump
+                damper = 50
+            clean[idx] &= damper <= 0
+            damper -=1
+
+        if clean.all() == True:
+            if runs >0:
+                logger.debug("Timestamps were bad but are ok now. Correction runs: %s"%runs)
+                # from matplotlib import pyplot as plt
+                # plt.plot(frames,raw_ts)
+                # plt.plot(frames,ts)
+                # # plt.scatter(frames[~clean],ts[~clean])
+                # plt.show()
+            else:
+                logger.debug("Timestamps are clean.")
+            return ts
+
+        runs +=1
+        if runs > 4:
+            logger.error("Timestamps could not be fixed!")
+            return ts
+
+        logger.warning("Timestamps are not sane. We detected non monotitc or jumpy timestamps. Fixing them now")
+        frames = np.arange(len(ts))
+        s = UnivariateSpline(frames[clean],ts[clean],s=0)
+        ts = s(frames)
+
 
 
 class Recorder(Plugin):
@@ -51,7 +100,7 @@ class Recorder(Plugin):
 
         self.menu.append(ui.TextInput('rec_dir',self.g_pool,setter=self.set_rec_dir,label='Recording Path'))
         self.menu.append(ui.TextInput('session_name',self,setter=self.set_session_name,label='Session'))
-        self.menu.append(ui.Switch('record_eye',self,on_val=True,off_val=False,setter=self.set_record_eye,label='Record Eye'))
+        self.menu.append(ui.Switch('record_eye',self,on_val=True,off_val=False,label='Record Eye'))
 
         self.button = ui.Thumb('running',self,setter=self.toggle,label='Record',hotkey='r')
         self.g_pool.quickbar.append(self.button)
@@ -160,7 +209,8 @@ class Recorder(Plugin):
         np.save(gaze_list_path,np.asarray(self.gaze_list))
 
         timestamps_path = os.path.join(self.rec_path, "timestamps.npy")
-        np.save(timestamps_path,np.array(self.timestamps))
+        ts = sanitize_timestamps(np.array(self.timestamps))
+        np.save(timestamps_path,ts)
 
         try:
             copy2(os.path.join(self.g_pool.user_dir,"surface_definitions"),os.path.join(self.rec_path,"surface_definitions"))
@@ -234,9 +284,6 @@ class Recorder(Plugin):
         else:
             self.session_name = val
 
-    def set_record_eye(self, val):
-        self.record_eye = val
-        logger.debug("Record Eye Video: %s" %(bool(self.record_eye)))
 
 
 
