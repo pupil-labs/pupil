@@ -89,12 +89,12 @@ class FakeCapture(object):
     def get_now(self):
         return time()
 
-    
+
     def init_gui(self,sidebar):
-   
+
         #create the menu entry
         self.menu = ui.Growing_Menu(label='Camera Settings')
-        self.menu.append(ui.Slider('fps',self,min=5,max=2000,step=1))
+        self.menu.append(ui.Slider('fps',self,min=5,max=500,step=1))
         self.menu.collapsed = True
         self.sidebar = sidebar
         self.sidebar.append(self.menu)
