@@ -16,7 +16,7 @@ if platform.system() == 'Darwin':
     from billiard.sharedctypes import RawValue, Value, Array
 else:
     from multiprocessing import Process, Pipe, Event, Queue
-    forking_enable = lambda x: x #dummy fn
+    forking_enable = lambda _: _ #dummy fn
     from multiprocessing import freeze_support
     from multiprocessing.sharedctypes import RawValue, Value, Array
 
@@ -73,7 +73,7 @@ logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 
 
 #if you pass any additional argument when calling this script. The profiler will be used.
-if len(sys.argv) >=2:
+if len(sys.argv) >= 2:
     from eye import eye_profiled as eye
     from world import world_profiled as world
 else:
