@@ -10,6 +10,8 @@
 
 
 import v4l2
+#check versions for our own depedencies as they are fast-changing
+assert v4l2.__version__ >= '0.1'
 from pyglui import ui
 from time import sleep
 #logging
@@ -237,12 +239,12 @@ class Camera_Capture(object):
                 return fn
             def make_getter(control):
                 def fn():
-                    return control['value'] 
+                    return control['value']
                 return fn
             set_ctl = make_setter(control)
             get_ctl = make_getter(control)
 
-            #now we add controls 
+            #now we add controls
             if control['type']=='bool':
                 c = ui.Switch(ctl_name,getter=get_ctl,setter=set_ctl)
             elif control['type']=='int':
