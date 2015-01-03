@@ -90,9 +90,6 @@ else:
     from git_version import get_tag_commit
     version = get_tag_commit()
 
-#check
-from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.1'
 
 def main():
     # To assign camera by name: put string(s) in list

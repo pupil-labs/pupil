@@ -28,6 +28,10 @@ import numpy as np
 from glfw import *
 from pyglui import ui,graph,cygl
 
+#check versions for our own depedencies as they are fast-changing
+from pyglui import __version__ as pyglui_version
+assert pyglui_version >= '0.1'
+
 #monitoring
 import psutil
 
@@ -212,7 +216,7 @@ def world(g_pool,cap_src,cap_size):
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, version[0])
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, version[1])
     world_window = glfwCreateWindow(frame.width, frame.height, "World", None, None)
-    glfwMakeContextCurrent(world_window)    
+    glfwMakeContextCurrent(world_window)
     cygl.utils.init()
     # print('GL:',glGetString(GL_VERSION))
     # Register callbacks world_window
