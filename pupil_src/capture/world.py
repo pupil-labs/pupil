@@ -124,11 +124,10 @@ def world(g_pool,cap_src,cap_size):
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
 
-
     # Initialize capture
     cap = autoCreateCapture(cap_src, cap_size, 24, timebase=g_pool.timebase)
 
-     # Get an image from the grabber
+    # Test capture
     try:
         frame = cap.get_frame()
     except CameraCaptureError:
@@ -242,36 +241,31 @@ def world(g_pool,cap_src,cap_size):
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-250,0),size=(0,0),header_pos='left')
-    try:
-        g_pool.sidebar.configuration = session_settings['side_bar_config']
-    except KeyError:
-        pass
+    g_pool.sidebar.configuration = session_settings.get('side_bar_config',{})
     general_settings = ui.Growing_Menu('General')
+    general_settings.configuration = session_settings.get('general_menu_config',{})
     general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=.5,max=2,label='Interface Size'))
     general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
+    general_settings.append(ui.Button('set timebase to 0',reset_timebase))
     general_settings.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
                                         labels = [p.__name__ for p in calibration_plugins],
                                         setter=set_calibration_plugin,label='Calibration Type'))
-    general_settings.append(ui.Button('set timebase to 0',reset_timebase))
     g_pool.sidebar.append(general_settings)
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
-
     g_pool.gui.append(g_pool.quickbar)
     g_pool.gui.append(g_pool.sidebar)
 
     g_pool.capture.init_gui(g_pool.sidebar)
-
-    #set the last saved window size
-    set_window_size(g_pool.window_size)
-    on_resize(world_window, *glfwGetWindowSize(world_window))
-
-
+    g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{})
 
     # let plugins add their GUI
     for p in g_pool.plugins:
         p.init_gui()
 
+    #set the last saved window size
+    set_window_size(g_pool.window_size)
+    on_resize(world_window, *glfwGetWindowSize(world_window))
 
     #set up performace graphs:
     pid = os.getpid()
@@ -279,18 +273,18 @@ def world(g_pool,cap_src,cap_size):
     ts = time()
 
     cpu_graph = graph.Graph()
-    cpu_graph.pos = (20,100)
+    cpu_graph.pos = (20,110)
     cpu_graph.update_fn = ps.get_cpu_percent
     cpu_graph.update_rate = 5
     cpu_graph.label = 'CPU %0.1f'
 
     fps_graph = graph.Graph()
-    fps_graph.pos = (140,100)
+    fps_graph.pos = (140,110)
     fps_graph.update_rate = 5
     fps_graph.label = "%0.0f FPS"
 
-    pupil_graph = graph.Graph(max_val=1.2)
-    pupil_graph.pos = (260,100)
+    pupil_graph = graph.Graph(max_val=1.0)
+    pupil_graph.pos = (260,110)
     pupil_graph.update_rate = 5
     pupil_graph.label = "Confidence: %0.2f"
 
@@ -378,6 +372,8 @@ def world(g_pool,cap_src,cap_size):
     session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
+    session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
+    session_settings['general_menu_config'] = general_settings.configuration
     session_settings.close()
 
     cap.close()
