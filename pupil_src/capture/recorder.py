@@ -77,7 +77,7 @@ def sanitize_timestamps(ts):
 
 class Recorder(Plugin):
     """Capture Recorder"""
-    def __init__(self,g_pool,session_name = get_auto_name(), record_eye = False, audio_src = -1):
+    def __init__(self,g_pool,session_name = get_auto_name(), record_eye = False, audio_src = -1, menu_conf = {}):
         super(Recorder, self).__init__(g_pool)
         self.record_eye = record_eye
         self.session_name = session_name
@@ -85,17 +85,23 @@ class Recorder(Plugin):
         self.running = False
         self.menu = None
         self.button = None
+        self.menu_conf = menu_conf
 
 
     def get_init_dict(self):
         d = {}
         d['record_eye'] = self.record_eye
         d['audio_src'] = self.audio_src
+        if self.menu:
+            d['menu_conf'] = self.menu.configuration
+        else:
+            d['menu_conf'] = self.menu_conf
         return d
 
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Recorder')
+        self.menu.configuration = self.menu_conf
         self.g_pool.sidebar.append(self.menu)
 
         self.menu.append(ui.TextInput('rec_dir',self.g_pool,setter=self.set_rec_dir,label='Recording Path'))
@@ -108,6 +114,7 @@ class Recorder(Plugin):
 
     def deinit_gui(self):
         if self.menu:
+            self.menu_conf = self.menu.configuration
             self.g_pool.sidebar.remove(self.menu)
             self.menu = None
         if self.button:

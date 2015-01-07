@@ -41,7 +41,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         this method is used to calculate camera intrinsics.
 
     """
-    def __init__(self,g_pool):
+    def __init__(self,g_pool, menu_conf = {}):
         super(Camera_Intrinsics_Estimation, self).__init__(g_pool)
         self.collect_new = False
         self.g_pool = g_pool
@@ -57,6 +57,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self._window = None
 
         self.menu = None
+        self.menu_conf = menu_conf
         self.button = None
 
 
@@ -67,8 +68,9 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
         #primary_monitor = glfwGetPrimaryMonitor()
 
-        self.menu = ui.Growing_Menu('Screen Based Calibration')
-        self.g_pool.sidebar.append(self.menu)
+        self.menu = ui.Growing_Menu(self.pretty_class_name)
+        self.menu.configuration = self.menu_conf
+        self.g_pool.calibration_menu.append(self.menu)
 
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
@@ -79,7 +81,8 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
     def deinit_gui(self):
         if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
+            self.menu_conf = self.menu.configuration
+            self.g_pool.calibration_menu.remove(self.menu)
             self.menu = None
         if self.button:
             self.g_pool.quickbar.remove(self.button)
@@ -228,7 +231,10 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         glfwMakeContextCurrent(active_window)
 
     def get_init_dict(self):
-        return {}
+        if self.menu:
+            return {'menu_conf':self.menu.configuration}
+        else:
+            return {'menu_conf':self.menu_conf}
 
 
     def cleanup(self):

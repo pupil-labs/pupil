@@ -38,7 +38,6 @@ import psutil
 # helpers/utils
 from methods import normalize, denormalize,Temp
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture
-from OpenGL.GL import glGetString, GL_VERSION
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 from audio import Audio_Input_List
 # Plug-ins
@@ -211,13 +210,10 @@ def world(g_pool,cap_src,cap_size):
 
     # Initialize glfw
     glfwInit()
-    version = 2,1
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, version[0])
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, version[1])
     world_window = glfwCreateWindow(frame.width, frame.height, "World", None, None)
     glfwMakeContextCurrent(world_window)
     cygl.utils.init()
-    # print('GL:',glGetString(GL_VERSION))
+
     # Register callbacks world_window
     glfwSetWindowSizeCallback(world_window,on_resize)
     glfwSetWindowCloseCallback(world_window,on_close)
@@ -247,10 +243,14 @@ def world(g_pool,cap_src,cap_size):
     general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=.5,max=2,label='Interface Size'))
     general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
     general_settings.append(ui.Button('set timebase to 0',reset_timebase))
-    general_settings.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
-                                        labels = [p.__name__ for p in calibration_plugins],
-                                        setter=set_calibration_plugin,label='Calibration Type'))
     g_pool.sidebar.append(general_settings)
+    g_pool.calibration_menu = ui.Growing_Menu('Calibration')
+    g_pool.calibration_menu.configuration = session_settings.get('calibration_menu_config',{})
+    g_pool.calibration_menu.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
+                                        labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
+                                        setter= set_calibration_plugin,label='Method'))
+    g_pool.sidebar.append(g_pool.calibration_menu)
+
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
     g_pool.gui.append(g_pool.quickbar)

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class Pupil_Server(Plugin):
     """pupil server plugin"""
-    def __init__(self, g_pool,address="tcp://127.0.0.1:5000"):
+    def __init__(self, g_pool,address="tcp://127.0.0.1:5000",menu_conf = {'collapsed':True}):
         super(Pupil_Server, self).__init__(g_pool)
         self.order = .9
         self.context = zmq.Context()
@@ -31,15 +31,22 @@ class Pupil_Server(Plugin):
         self.address = ''
         self.set_server(address)
         self.menu = None
+        self.menu_conf = menu_conf
 
         self.exclude_list = ['ellipse','pos_in_roi','major','minor','axes','angle','center']
 
     def init_gui(self):
         help_str = "Pupil Message server: Using ZMQ and the *Publish-Subscribe* scheme"
         self.menu = ui.Growing_Menu("Pupil Broadcast Server")
+        self.menu.configuration = self.menu_conf
         self.menu.append(ui.TextInput('address',self,setter=self.set_server,label='Address'))
         self.g_pool.sidebar.append(self.menu)
-        self.menu.collapsed = True
+
+    def deinit_gui(self):
+        if self.menu:
+            self.menu_conf = self.menu.configuration
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
 
 
     def set_server(self,new_address):
@@ -71,6 +78,10 @@ class Pupil_Server(Plugin):
     def get_init_dict(self):
         d = {}
         d['address'] = self.address
+        if self.menu:
+            d['menu_conf'] = self.menu.configuration
+        else:
+            d['menu_conf'] = self.menu_conf
         return d
 
 

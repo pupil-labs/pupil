@@ -58,7 +58,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     Points are collected at sites not between
 
     """
-    def __init__(self, g_pool):
+    def __init__(self, g_pool,menu_conf = {},fullscreen = True):
         super(Screen_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
@@ -81,18 +81,21 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self._window = None
 
         self.menu = None
+        self.menu_conf = menu_conf
         self.button = None
+
+        self.fullscreen = fullscreen
 
 
     def init_gui(self):
-        self.fullscreen = True
         self.monitor_idx = 0
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
 
         #primary_monitor = glfwGetPrimaryMonitor()
 
-        self.menu = ui.Growing_Menu('Screen Based Calibration')
-        self.g_pool.sidebar.append(self.menu)
+        self.menu = ui.Growing_Menu(self.pretty_class_name)
+        self.menu.configuration = self.menu_conf
+        self.g_pool.calibration_menu.append(self.menu)
 
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
@@ -110,7 +113,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
     def deinit_gui(self):
         if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
+            self.menu_conf = self.menu.configuration
+            self.g_pool.calibration_menu.remove(self.menu)
             self.menu = None
         if self.button:
             self.g_pool.quickbar.remove(self.button)
@@ -349,7 +353,13 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
     def get_init_dict(self):
-        return {}
+        d = {}
+        d['fullscreen'] = self.fullscreen
+        if self.menu:
+            d['menu_conf'] = self.menu.configuration
+        else:
+            d['menu_conf'] = self.menu_conf
+        return d
 
     def cleanup(self):
         """gets called when the plugin get terminated.

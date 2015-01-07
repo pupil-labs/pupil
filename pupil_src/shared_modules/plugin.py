@@ -38,6 +38,7 @@ class Plugin(object):
         '''
         pass
 
+
     @property
     def alive(self):
         """
@@ -120,6 +121,10 @@ class Plugin(object):
         base class name of this instance's class
         '''
         return self.base_class.__name__
+
+    @property
+    def pretty_class_name(self):
+        return self.class_name.replace('_',' ')
 
 
     ### if you want a session persistent plugin implement this function:

@@ -183,7 +183,8 @@ class Camera_Capture(object):
                     labels = [c.name for c in control.menu]
                 c = ui.Selector('value',control,selection=selection,labels = labels,label=name,setter=control.set_val)
             else:
-                print control.type
+                pass
+                # print control.type
             # if control.flags == "inactive":
                 # c.read_only = True
             if c is not None:
@@ -192,7 +193,8 @@ class Camera_Capture(object):
         self.menu.append(ui.Button("refresh",self.controls.update_from_device))
         self.menu.append(ui.Button("load defaults",self.controls.load_defaults))
         self.sidebar = sidebar
-        self.sidebar.append(self.menu)
+        #add below geneal settings
+        self.sidebar.insert(1,self.menu)
 
     def deinit_gui(self):
         if self.menu:

@@ -274,7 +274,8 @@ class Camera_Capture(object):
         self.menu.append(ui.Button("load defaults",gui_load_defaults))
         self.menu.collapsed = True
         self.sidebar = sidebar
-        self.sidebar.append(self.menu)
+        #add below geneal settings
+        self.sidebar.insert(1,self.menu)
 
     def deinit_gui(self):
         if self.menu:
