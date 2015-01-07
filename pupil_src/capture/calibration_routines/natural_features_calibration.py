@@ -50,7 +50,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
     def init_gui(self):
 
-        self.info = ui.Info_Text("Calibrate using feature in your evirnment. Ask the subject to look at objects in the scene and click on them in the world window.")
+        self.info = ui.Info_Text("Calibrate using feature in your environment. Ask the subject to look at objects in the scene and click on them in the world window.")
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
