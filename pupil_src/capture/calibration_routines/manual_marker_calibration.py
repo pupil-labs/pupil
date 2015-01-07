@@ -36,7 +36,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             Find contours and filter into 2 level list using RETR_CCOMP
             Fit ellipses
     """
-    def __init__(self, g_pool,menu_conf = {}):
+    def __init__(self, g_pool,menu_conf = {'collapsed':True}):
         super(Manual_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
@@ -67,9 +67,14 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         # self._bar.add_var("counter", getter=self.get_count, group="Advanced")
         # self._bar.add_var("area threshold", self.area_threshold, group="Advanced")
         # self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Advanced")
-        self.menu = ui.Growing_Menu(self.pretty_class_name)
+
+        self.info = ui.Info_Text("Calibrate gaze parameters using a handheld marker.")
+        self.g_pool.calibration_menu.append(self.info)
+
+        self.menu = ui.Growing_Menu('Controls')
         self.menu.configuration = self.menu_conf
         self.g_pool.calibration_menu.append(self.menu)
+
 
         submenu = ui.Growing_Menu('Advanced')
         submenu.collapsed = True
@@ -83,6 +88,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
     def deinit_gui(self):
         if self.menu:
             self.g_pool.calibration_menu.remove(self.menu)
+            self.g_pool.calibration_menu.remove(self.info)
             self.menu = None
         if self.button:
             self.g_pool.quickbar.remove(self.button)

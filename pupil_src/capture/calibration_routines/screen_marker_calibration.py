@@ -58,7 +58,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     Points are collected at sites not between
 
     """
-    def __init__(self, g_pool,menu_conf = {},fullscreen = True):
+    def __init__(self, g_pool,menu_conf = {'collapsed':True},fullscreen = True):
         super(Screen_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
@@ -92,11 +92,12 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
 
         #primary_monitor = glfwGetPrimaryMonitor()
+        self.info = ui.Info_Text("Calibrate using a screen based animation.")
+        self.g_pool.calibration_menu.append(self.info)
 
-        self.menu = ui.Growing_Menu(self.pretty_class_name)
+        self.menu = ui.Growing_Menu('Controls')
         self.menu.configuration = self.menu_conf
         self.g_pool.calibration_menu.append(self.menu)
-
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
 
@@ -107,7 +108,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area Threshold'))
         submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity Threshold'))
 
-        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate')
+        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
         self.g_pool.quickbar.append(self.button)
 
 
@@ -115,6 +116,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         if self.menu:
             self.menu_conf = self.menu.configuration
             self.g_pool.calibration_menu.remove(self.menu)
+            self.g_pool.calibration_menu.remove(self.info)
             self.menu = None
         if self.button:
             self.g_pool.quickbar.remove(self.button)

@@ -41,7 +41,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         this method is used to calculate camera intrinsics.
 
     """
-    def __init__(self,g_pool, menu_conf = {}):
+    def __init__(self,g_pool, menu_conf = {'collapsed':True}):
         super(Camera_Intrinsics_Estimation, self).__init__(g_pool)
         self.collect_new = False
         self.g_pool = g_pool
@@ -67,9 +67,12 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
 
         #primary_monitor = glfwGetPrimaryMonitor()
+        self.info = ui.Info_Text("Estimate Camera intrinsics of the world cam. Using a 11*9 assymetrical circle grid.")
+        self.g_pool.calibration_menu.append(self.info)
 
-        self.menu = ui.Growing_Menu(self.pretty_class_name)
+        self.menu = ui.Growing_Menu('Controls')
         self.menu.configuration = self.menu_conf
+
         self.g_pool.calibration_menu.append(self.menu)
 
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
@@ -83,6 +86,8 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         if self.menu:
             self.menu_conf = self.menu.configuration
             self.g_pool.calibration_menu.remove(self.menu)
+            self.g_pool.calibration_menu.remove(self.info)
+
             self.menu = None
         if self.button:
             self.g_pool.quickbar.remove(self.button)
@@ -102,8 +107,8 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
     def open_window(self):
         if not self._window:
-            if self.fullscreen.value:
-                monitor = glfwGetMonitors()[self.monitor_idx.value]
+            if self.fullscreen:
+                monitor = glfwGetMonitors()[self.monitor_idx]
                 mode = glfwGetVideoMode(monitor)
                 height,width= mode[0],mode[1]
             else:
@@ -111,7 +116,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
                 height,width = 640,360
 
             self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
-            if not self.fullscreen.value:
+            if not self.fullscreen:
                 glfwSetWindowPos(self._window,200,0)
 
             on_resize(self._window,height,width)
@@ -131,10 +136,9 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
 
     def on_key(self,window, key, scancode, action, mods):
-        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
-            if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
-                    self.on_close()
+        if action == GLFW_PRESS:
+            if key == GLFW_KEY_ESCAPE:
+                self.on_close()
 
 
     def on_close(self,window=None):
@@ -240,7 +244,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
     def cleanup(self):
         """gets called when the plugin get terminated.
         This happends either volunatily or forced.
-        if you have an atb bar or glfw window destroy it here.
+        if you have an gui or glfw window destroy it here.
         """
         if self._window:
             self.close_window()
