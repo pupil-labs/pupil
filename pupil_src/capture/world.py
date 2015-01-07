@@ -244,7 +244,7 @@ def world(g_pool,cap_src,cap_size):
     general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
     general_settings.append(ui.Button('set timebase to 0',reset_timebase))
     g_pool.sidebar.append(general_settings)
-    g_pool.calibration_menu = ui.Growing_Menu('Calibration Method')
+    g_pool.calibration_menu = ui.Growing_Menu('Calibration')
     g_pool.calibration_menu.configuration = session_settings.get('calibration_menu_config',{})
     g_pool.calibration_menu.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
