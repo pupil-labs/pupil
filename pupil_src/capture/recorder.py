@@ -109,6 +109,7 @@ class Recorder(Plugin):
         self.menu.append(ui.Switch('record_eye',self,on_val=True,off_val=False,label='Record Eye'))
 
         self.button = ui.Thumb('running',self,setter=self.toggle,label='Record',hotkey='r')
+        self.button.on_color[:] = (1,0,0,.5)
         self.g_pool.quickbar.append(self.button)
 
 
@@ -116,7 +117,6 @@ class Recorder(Plugin):
         if self.menu:
             self.menu_conf = self.menu.configuration
             self.g_pool.sidebar.remove(self.menu)
-            self.g_pool.sidebar.remove(self.info)
 
             self.menu = None
         if self.button:
@@ -203,6 +203,8 @@ class Recorder(Plugin):
             self.writer.write(frame.img)
             self.frame_count += 1
 
+            self.button.status_text = self.get_rec_time_str()
+
     def stop(self):
         #explicit release of VideoWriter
         self.writer.release()
@@ -261,6 +263,7 @@ class Recorder(Plugin):
 
         self.running = False
         self.menu.read_only = False
+        self.button.status_text = ''
 
 
 

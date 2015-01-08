@@ -115,7 +115,8 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.smooth_pos = 0,0
         self.counter = 0
         self.active = False
-
+        self.button.status_text = ''
+        print 'button:', self.button.status_text
 
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
         logger.info("Collected %s data points." %len(cal_pt_cloud))
@@ -136,9 +137,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,map_fn))
         self.g_pool.plugins.sort(key=lambda p: p.order)
 
-
-    def get_count(self):
-        return self.counter
 
     def update(self,frame,recent_pupil_positions,events):
         """
@@ -176,7 +174,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
                 row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
                 marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
-                avg = cv2.mean(marker_gray)
+                avg = cv2.mean(marker_gray)[0] #CV2 fn return has changed!
                 center = marker_gray[second_ellipse[1][1]/2,second_ellipse[1][0]/2]
                 rel_shade = center-avg
 
@@ -211,6 +209,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
                 # start counter if ref is resting in place and not at last sample site
                 if not self.counter:
+
                     if self.smooth_vel < 0.01 and sample_ref_dist > 0.1:
                         self.sample_site = self.smooth_pos
                         audio.beep()
@@ -238,6 +237,14 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             for p_pt in recent_pupil_positions:
                 if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
+
+            if self.counter:
+                if self.detected:
+                    self.button.status_text = 'Sampling Gaze Data'
+                else:
+                    self.button.status_text = 'Marker Lost'
+            else:
+                self.button.status_text = 'Looking for Marker'
 
 
 

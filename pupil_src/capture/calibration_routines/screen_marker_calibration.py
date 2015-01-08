@@ -192,6 +192,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.screen_marker_state = 0
         self.active = False
         self.close_window()
+        self.button.status_text = ''
 
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
 
@@ -286,6 +287,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             #broadcast next commanded marker postion of screen
             self.display_pos = list(new_pos)
             self.on_position = on_position
+            self.button.status_text = '%s / %s'%(self.active_site,9)
 
 
 

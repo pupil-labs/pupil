@@ -101,6 +101,8 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
     def advance(self,_):
         if self.count ==10:
             audio.say("Capture 10 calibration patterns.")
+            self.button.status_text = "%i to go" %(self.count)
+
         self.collect_new = True
 
     def open_window(self):
@@ -171,9 +173,12 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
                 if self.count in range(1,10):
                     audio.say("%i" %(self.count))
                 self.img_shape = img.shape
+                self.button.status_text = "%i to go"%(self.count)
+
 
         if not self.count and not self.calculated:
             self.calculate()
+            self.button.status_text = ''
 
 
     def gl_display(self):

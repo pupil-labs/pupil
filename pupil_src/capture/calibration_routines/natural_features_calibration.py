@@ -91,6 +91,8 @@ class Natural_Features_Calibration(Calibration_Plugin):
         audio.say("Stopping Calibration")
         logger.info("Stopping Calibration")
         self.active = False
+        self.button.status_text = ''
+
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
         logger.info("Collected %s data points." %len(cal_pt_cloud))
         if len(cal_pt_cloud) < 20:
@@ -144,6 +146,14 @@ class Natural_Features_Calibration(Calibration_Plugin):
             for p_pt in recent_pupil_positions:
                 if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
+
+            if self.count:
+                self.button.status_text = 'Sampling Gaze Data'
+            else:
+                self.button.status_text = 'Click to Sample at Location'
+
+
+
 
     def gl_display(self):
         if self.detected:
