@@ -67,17 +67,15 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
 
         #primary_monitor = glfwGetPrimaryMonitor()
-        self.info = ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid.")
+        self.info = ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid. Click 'C' to capture a pattern.")
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
-        self.menu.configuration = self.menu_conf
-
-        self.g_pool.calibration_menu.append(self.menu)
-
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
         self.menu.append(ui.Button('show Pattern',self.open_window))
+        self.menu.configuration = self.menu_conf
+        self.g_pool.calibration_menu.append(self.menu)
 
         self.button = ui.Thumb('collect_new',self,setter=self.advance,label='Capture',hotkey='c')
         self.g_pool.quickbar.append(self.button)

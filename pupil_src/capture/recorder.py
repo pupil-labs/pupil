@@ -68,7 +68,7 @@ def sanitize_timestamps(ts):
             logger.error("Timestamps could not be fixed!")
             return ts
 
-        logger.warning("Timestamps are not sane. We detected non-monotonic or jumpy timestamps. Fixing them now.")
+        logger.warning("Timestamps are not sane. We detected non monotitc or jumpy timestamps. Fixing them now")
         frames = np.arange(len(ts))
         s = UnivariateSpline(frames[clean],ts[clean],s=0)
         ts = s(frames)
@@ -103,7 +103,7 @@ class Recorder(Plugin):
         self.menu = ui.Growing_Menu('Recorder')
         self.menu.configuration = self.menu_conf
         self.g_pool.sidebar.append(self.menu)
-
+        self.menu.append(ui.Info_Text('This is the recorder info text. It should explain some non obvious settings.'))
         self.menu.append(ui.TextInput('rec_dir',self.g_pool,setter=self.set_rec_dir,label='Recording Path'))
         self.menu.append(ui.TextInput('session_name',self,setter=self.set_session_name,label='Session'))
         self.menu.append(ui.Switch('record_eye',self,on_val=True,off_val=False,label='Record Eye'))
@@ -116,6 +116,8 @@ class Recorder(Plugin):
         if self.menu:
             self.menu_conf = self.menu.configuration
             self.g_pool.sidebar.remove(self.menu)
+            self.g_pool.sidebar.remove(self.info)
+
             self.menu = None
         if self.button:
             self.g_pool.quickbar.remove(self.button)
@@ -157,7 +159,7 @@ class Recorder(Plugin):
                 logger.debug("Created new recording dir %s"%self.rec_path)
                 break
             except:
-                logger.debug("We don't want to overwrite data, incrementing counter & trying to make new data folder")
+                logger.debug("We dont want to overwrite data, incrementing counter & trying to make new data folder")
                 counter += 1
 
         self.meta_info_path = os.path.join(self.rec_path, "info.csv")
@@ -264,7 +266,7 @@ class Recorder(Plugin):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-           either voluntarily or forced.
+           either volunatily or forced.
         """
         if self.running:
             self.stop()
