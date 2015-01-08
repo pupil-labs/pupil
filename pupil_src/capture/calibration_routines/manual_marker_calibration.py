@@ -83,6 +83,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         submenu.append(ui.Switch('show_edges',self,label='show edges'))
 
         self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.append(self.button)
 
     def deinit_gui(self):

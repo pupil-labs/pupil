@@ -109,7 +109,7 @@ class Recorder(Plugin):
         self.menu.append(ui.Switch('record_eye',self,on_val=True,off_val=False,label='Record Eye'))
 
         self.button = ui.Thumb('running',self,setter=self.toggle,label='Record',hotkey='r')
-        self.button.on_color[:] = (1,0,0,.5)
+        self.button.on_color[:] = (1,.0,.0,.8)
         self.g_pool.quickbar.append(self.button)
 
 
@@ -219,7 +219,10 @@ class Recorder(Plugin):
         gaze_list_path = os.path.join(self.rec_path, "gaze_positions.npy")
         np.save(gaze_list_path,np.asarray(self.gaze_list))
 
-        timestamps_path = os.path.join(self.rec_path, "timestamps.npy")
+        pupil_list_path = os.path.join(self.rec_path, "pupil_positions.npy")
+        np.save(pupil_list_path,np.asarray(self.pupil_list))
+
+        timestamps_path = os.path.join(self.rec_path, "world_timestamps.npy")
         ts = sanitize_timestamps(np.array(self.timestamps))
         np.save(timestamps_path,ts)
 

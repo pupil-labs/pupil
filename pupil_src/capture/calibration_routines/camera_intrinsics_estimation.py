@@ -78,6 +78,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.g_pool.calibration_menu.append(self.menu)
 
         self.button = ui.Thumb('collect_new',self,setter=self.advance,label='Capture',hotkey='c')
+        self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.append(self.button)
 
     def deinit_gui(self):

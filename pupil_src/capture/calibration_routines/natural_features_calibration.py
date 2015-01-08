@@ -58,6 +58,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
         self.g_pool.calibration_menu.append(self.menu)
 
         self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.append(self.button)
 
 
