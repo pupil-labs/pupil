@@ -327,7 +327,6 @@ def world(g_pool,cap_src,cap_size):
 
         # render camera image
         glfwMakeContextCurrent(world_window)
-
         make_coord_system_norm_based()
         if g_pool.update_textures:
             draw_named_texture(g_pool.image_tex,frame.img)
