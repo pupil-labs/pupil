@@ -68,7 +68,7 @@ def sanitize_timestamps(ts):
             logger.error("Timestamps could not be fixed!")
             return ts
 
-        logger.warning("Timestamps are not sane. We detected non monotitc or jumpy timestamps. Fixing them now")
+        logger.warning("Timestamps are not sane. We detected non-monotonic or jumpy timestamps. Fixing them now.")
         frames = np.arange(len(ts))
         s = UnivariateSpline(frames[clean],ts[clean],s=0)
         ts = s(frames)
@@ -157,7 +157,7 @@ class Recorder(Plugin):
                 logger.debug("Created new recording dir %s"%self.rec_path)
                 break
             except:
-                logger.debug("We dont want to overwrite data, incrementing counter & trying to make new data folder")
+                logger.debug("We don't want to overwrite data, incrementing counter & trying to make new data folder")
                 counter += 1
 
         self.meta_info_path = os.path.join(self.rec_path, "info.csv")
@@ -264,7 +264,7 @@ class Recorder(Plugin):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-           either volunatily or forced.
+           either voluntarily or forced.
         """
         if self.running:
             self.stop()

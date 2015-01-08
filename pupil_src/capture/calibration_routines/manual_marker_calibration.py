@@ -298,7 +298,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-        This happends either volunatily or forced.
+        This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
         if self.active:

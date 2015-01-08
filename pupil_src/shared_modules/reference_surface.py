@@ -27,12 +27,12 @@ from pickle import FALSE
 logger = logging.getLogger(__name__)
 
 def m_verts_to_screen(verts):
-    #verts need to be sorted counterclockwise stating at bottom left
+    #verts need to be sorted counter-clockwise stating at bottom left
     mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
     return cv2.getPerspectiveTransform(mapped_space_one,verts)
 
 def m_verts_from_screen(verts):
-    #verts need to be sorted counterclockwise stating at bottom left
+    #verts need to be sorted counter-clockwise stating at bottom left
     mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
     return cv2.getPerspectiveTransform(verts,mapped_space_one)
 
@@ -148,7 +148,7 @@ class Reference_Surface(object):
         all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
         hull = cv2.convexHull(all_verts,clockwise=False)
 
-        #simplyfy until we have excatly 4 verts
+        #simplify until we have excatly 4 verts
         if hull.shape[0]>4:
             new_hull = cv2.approxPolyDP(hull,epsilon=1,closed=True)
             if new_hull.shape[0]>=4:

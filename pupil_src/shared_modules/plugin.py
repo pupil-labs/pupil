@@ -19,7 +19,7 @@ class Plugin(object):
     this list will have its members called with all methods invoked.
 
     """
-    # if you have a plugin that can exsist multiple times make this false in your derived class
+    # if you have a plugin that can exist multiple times make this false in your derived class
     is_unique = True
 
     def __init__(self,g_pool):

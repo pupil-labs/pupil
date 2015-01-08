@@ -55,7 +55,7 @@ def on_resize(window,w, h):
 class Screen_Marker_Calibration(Calibration_Plugin):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites
-    Points are collected at sites not between
+    Points are collected at sites - not between
 
     """
     def __init__(self, g_pool,menu_conf = {'collapsed':True},fullscreen = True):
@@ -92,7 +92,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
 
         #primary_monitor = glfwGetPrimaryMonitor()
-        self.info = ui.Info_Text("Calibrate using a screen based animation.")
+        self.info = ui.Info_Text("Calibrate gaze parameters using a screen based animation.")
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
@@ -365,7 +365,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-           either volunatily or forced.
+           either voluntarily or forced.
         """
         if self.active:
             self.stop()

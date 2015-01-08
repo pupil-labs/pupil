@@ -90,7 +90,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
         #                         aperture=aperture,
         #                         visualize=0)
         visited_list[frame.index] = True
-        q.put((frame.index,markers[:])) #object passed will only be pickeld when collected from other process! need to make a copy ot avoid overwrite!!!
+        q.put((frame.index,markers[:])) #object passed will only be pickeled when collected from other process! need to make a copy ot avoid overwrite!!!
 
     while run.value:
         next = cap.get_frame_index()

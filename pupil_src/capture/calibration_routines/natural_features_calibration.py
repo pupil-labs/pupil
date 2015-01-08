@@ -50,7 +50,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
     def init_gui(self):
 
-        self.info = ui.Info_Text("Calibrate using feature in your environment. Ask the subject to look at objects in the scene and click on them in the world window.")
+        self.info = ui.Info_Text("Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window.")
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
@@ -166,7 +166,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-        This happends either volunatily or forced.
+        This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
         if self.active:

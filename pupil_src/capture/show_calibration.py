@@ -30,7 +30,7 @@ class Show_Calibration(Plugin):
             cal_pt_path =  os.path.join(g_pool.user_dir,"cal_pt_cloud.npy")
         else:
             # cal_pt_path =  os.path.join(g_pool.rec_dir,"cal_pt_cloud.npy")
-            logger.error('Plugin does only work in capture so far.')
+            logger.error('Plugin only works in capture.')
             self.close()
             return
 
@@ -68,7 +68,7 @@ class Show_Calibration(Plugin):
 
 
     def init_gui(self):
-        help_str = "yellow: indicates calibration error, red:discarded outliners, outline shows the calibrated area."
+        help_str = "yellow: indicates calibration error; red:discarded outliers; outline shows the calibrated area."
         self.menu = ui.Scrolling_Menu('Calibration Results',pos=(300,500),size=(300,300))
         self.menu.append(ui.TextInput('inlier_count',self,getter=lambda: str(self.inlier_count), label='Number of used samples'))
         self.menu.append(ui.TextInput('inlier_ratio',self,getter=lambda: str(self.inlier_ratio)), label='Fraction of used data points')

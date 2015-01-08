@@ -82,7 +82,7 @@ class Vis_Circle(Plugin):
 
     def cleanup(self):
         """ called when the plugin gets terminated.
-        This happends either voluntary or forced.
+        This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
         self._bar.destroy()

@@ -87,7 +87,7 @@ class Pupil_Server(Plugin):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-           either volunatily or forced.
+        This happens either voluntarily or forced.
         """
         if self.menu:
             self.g_pool.sidebar.remove(self.menu)

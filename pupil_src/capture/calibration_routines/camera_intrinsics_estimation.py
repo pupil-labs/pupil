@@ -37,8 +37,8 @@ def on_resize(window,w, h):
 
 class Camera_Intrinsics_Estimation(Calibration_Plugin):
     """Camera_Intrinsics_Calibration
-        not being an actual calibration,
-        this method is used to calculate camera intrinsics.
+        This method is not a gaze calibration.
+        This method is used to calculate camera intrinsics.
 
     """
     def __init__(self,g_pool, menu_conf = {'collapsed':True}):
@@ -67,7 +67,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
 
         #primary_monitor = glfwGetPrimaryMonitor()
-        self.info = ui.Info_Text("Estimate Camera intrinsics of the world cam. Using a 11*9 assymetrical circle grid.")
+        self.info = ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid.")
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
@@ -243,8 +243,8 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-        This happends either volunatily or forced.
-        if you have an gui or glfw window destroy it here.
+        This happens either voluntarily or forced.
+        if you have a gui or glfw window destroy it here.
         """
         if self._window:
             self.close_window()
@@ -270,8 +270,8 @@ def _gen_pattern_grid(size=(4,11)):
 
 def _make_grid(dim=(11,4)):
     """
-    this function generates the structure for an assymetrical circle grid
-    centerd around 0 width=1, height scaled accordingly
+    this function generates the structure for an asymmetrical circle grid
+    centered around 0 width=1, height scaled accordingly
     """
     x,y = range(dim[0]),range(dim[1])
     p = np.array([[[s,i] for s in x] for i in y], dtype=np.float32)

@@ -245,7 +245,7 @@ def main():
     glfwSetScrollCallback(main_window,on_scroll)
 
 
-    # create container for globally scoped varfs (within world)
+    # create container for globally scoped vars (within world)
     g = Temp()
     g.plugins = []
     g.play = False

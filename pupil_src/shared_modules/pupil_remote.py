@@ -86,7 +86,7 @@ class Pupil_Remote(Plugin):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-           either volunatily or forced.
+           This happens either volunatily or forced.
         """
         self._bar.destroy()
         self.context.destroy()

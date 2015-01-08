@@ -53,7 +53,7 @@ def verify_out_file_path(out_file_path,data_dir):
 
 def avoid_overwrite(out_file_path):
     if os.path.isfile(out_file_path):
-        # let append something unique
+        # append something unique to avoid overwriting
         out_file_path,ext = os.path.splitext(out_file_path)
         out_file_path += str(int(time.time())) + '.avi'
     return out_file_path
@@ -172,7 +172,7 @@ class Export_Launcher(Plugin):
 
     def cleanup(self):
         """ called when the plugin gets terminated.
-        This happends either voluntary or forced.
+        This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
         self._bar.destroy()

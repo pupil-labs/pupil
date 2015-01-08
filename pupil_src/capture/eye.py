@@ -287,7 +287,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     # END while running
 
-    # in case eye reconding was still runnnig: Save&close
+    # in case eye recording was still runnnig: Save&close
     if writer:
         logger.info("Done recording eye.")
         writer = None
@@ -306,7 +306,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     glfwDestroyWindow(window)
     glfwTerminate()
 
-    #flushing queue incase world process did not exit gracefully
+    #flushing queue in case world process did not exit gracefully
     while not g_pool.pupil_queue.empty():
         g_pool.pupil_queue.get()
     g_pool.pupil_queue.close()

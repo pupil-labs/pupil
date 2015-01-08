@@ -32,14 +32,14 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inli
         logger.info('first iteration. root-mean-square residuals: %s, in pixel' %err_rms)
         logger.info('second iteration: ignoring outliers. root-mean-square residuals: %s in pixel',new_err_rms)
 
-        logger.info('used %i datapoints out of the full dataset %i: subset is %i percent' \
+        logger.info('used %i data points out of the full dataset %i: subset is %i percent' \
             %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
             100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0]))
 
         if return_inlier_map:
             return map_fn,err_dist<=threshold
         return map_fn
-    else: # did disregard all pints. The data cannot be represented by the model in a meaningfull way:
+    else: # did disregard all points. The data cannot be represented by the model in a meaningfull way:
         map_fn = make_map_function(cx,cy,model_n)
         logger.info('First iteration. root-mean-square residuals: %s in pixel, this is bad!'%err_rms)
         logger.warning('The data cannot be represented by the model in a meaningfull way.')

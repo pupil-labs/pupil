@@ -163,7 +163,7 @@ def world(g_pool,cap_src,cap_size):
 
 
     g_pool.active_calibration_plugin = None
-    #only need for the gui to show the loaded calibration type
+    #only needed for the gui to show the loaded calibration type
     for p in g_pool.plugins:
         if p.base_class_name == 'Calibration_Plugin':
             g_pool.active_calibration_plugin =  p.__class__
@@ -295,10 +295,10 @@ def world(g_pool,cap_src,cap_size):
         try:
             frame = cap.get_frame()
         except CameraCaptureError:
-            logger.error("Capture from Camera Failed. Stopping.")
+            logger.error("Capture from camera failed. Stopping.")
             break
         except EndofVideoFileError:
-            logger.warning("Video File is done. Stopping")
+            logger.warning("Video file is done. Stopping")
             break
 
         #update performace graphs

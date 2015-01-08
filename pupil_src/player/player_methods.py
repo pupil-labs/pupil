@@ -134,7 +134,7 @@ def convert_gaze_pos(gaze_list,capture_version):
     '''
     util fn to update old gaze pos files to new coordsystem. UNTESTED!
     '''
-    #let make a copy here so that we are not making inplace edits of the passed array
+    #lets make a copy here so that we are not making inplace edits of the passed array
     gaze_list = gaze_list.copy()
     if capture_version < .36:
         logger.info("Gaze list is from old Recoding, I will update the data to work with new coordinate system.")

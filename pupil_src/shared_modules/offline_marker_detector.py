@@ -162,8 +162,8 @@ class Offline_Marker_Detector(Plugin):
         self._bar.clear()
         self._bar.add_button('close',self.unset_alive)
         self._bar.add_button("  add surface   ", self.add_surface, key='a')
-        # when cache is updated, when surface is edited, when trimmarks are changed.
-        # dropdown menue: markers and surface, surface edit mode, heatmaps, metrics
+        # when cache is updated, when surface is edited, when trim marks are changed.
+        # dropdown menu: markers and surface, surface edit mode, heatmaps, metrics
         self._bar.mode_enum = atb.enum("Mode",{"Show Markers and Frames":0,"Show Marker Id's":4, "Surface edit mode":1,"Show Heatmaps":2,"Show Metrics":3})
         self._bar.add_var("Mode",self.mode,vtype=self._bar.mode_enum)
         self._bar.add_button("  (re)-calculate gaze distributions   ", self.recalculate)
@@ -535,7 +535,7 @@ class Offline_Marker_Detector(Plugin):
 
     def cleanup(self):
         """ called when the plugin gets terminated.
-        This happends either voluntary or forced.
+        This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
 

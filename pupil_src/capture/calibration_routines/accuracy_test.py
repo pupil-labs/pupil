@@ -59,7 +59,6 @@ class Accuracy_Test(Calibration_Plugin):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites
     Points are collected at sites not between
-
     """
     def __init__(self, g_pool):
         super(Accuracy_Test, self).__init__(g_pool)
@@ -84,7 +83,7 @@ class Accuracy_Test(Calibration_Plugin):
         self.percision = 0
 
         try:
-            self.pt_cloud = np.load(os.path.join(self.g_pool.user_dir,'accuray_test_pt_cloud.npy'))
+            self.pt_cloud = np.load(os.path.join(self.g_pool.user_dir,'accuracy_test_pt_cloud.npy'))
             gaze,ref = self.pt_cloud[:,0:2],self.pt_cloud[:,2:4]
             error_lines = np.array([[g,r] for g,r in zip(gaze,ref)])
             self.error_lines = error_lines.reshape(-1,2)
@@ -160,7 +159,7 @@ class Accuracy_Test(Calibration_Plugin):
 
 
     def start(self):
-        audio.say("Starting Accuracy_Test")
+        audio.say("Starting Accuracy Test")
         logger.info("Starting Accuracy_Test")
         self.sites = [  (.5, .5), (0,.5),
                         (0.,1),(.5,1),(1.,1.),
@@ -216,7 +215,7 @@ class Accuracy_Test(Calibration_Plugin):
             self.stop()
 
     def stop(self):
-        audio.say("Stopping Accuracy_Test")
+        audio.say("Stopping Accuracy Test")
         logger.info('Stopping Accuracy_Test')
         self.screen_marker_state = 0
         self.active = False
@@ -231,7 +230,7 @@ class Accuracy_Test(Calibration_Plugin):
             return
 
         pt_cloud = np.array(pt_cloud)
-        np.save(os.path.join(self.g_pool.user_dir,'accuray_test_pt_cloud.npy'),pt_cloud)
+        np.save(os.path.join(self.g_pool.user_dir,'accuracy_test_pt_cloud.npy'),pt_cloud)
         gaze,ref = pt_cloud[:,0:2],pt_cloud[:,2:4]
         error_lines = np.array([[g,r] for g,r in zip(gaze,ref)])
         self.error_lines = error_lines.reshape(-1,2)
