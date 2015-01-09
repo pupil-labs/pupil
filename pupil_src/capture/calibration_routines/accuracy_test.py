@@ -60,7 +60,7 @@ class Accuracy_Test(Calibration_Plugin):
     We use a ring detector that moves across the screen to 9 sites
     Points are collected at sites not between
     """
-    def __init__(self, g_pool):
+    def __init__(self, g_pool,menu_conf = {}):
         super(Accuracy_Test, self).__init__(g_pool)
         self.active = False
         self.detected = False
@@ -98,6 +98,7 @@ class Accuracy_Test(Calibration_Plugin):
 
 
         self.menu = None
+        self.menu_conf = menu_conf
         self.button = None
 
         self._window = None
@@ -108,42 +109,69 @@ class Accuracy_Test(Calibration_Plugin):
 
 
     def init_gui(self):
-        pass
-        # self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
-        # #primary_monitor = glfwGetPrimaryMonitor()
+        self.monitor_idx = 0
+        self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+
+        #primary_monitor = glfwGetPrimaryMonitor()
+        self.info = ui.Info_Text("Measure gaze mapping accuracy and percision using a screen based animation: After having calibrated on the screen run this test. To compute results set your world cam FOV and click 'calculate results'.")
+        self.g_pool.calibration_menu.append(self.info)
+
+        self.menu = ui.Growing_Menu('Controls')
+        self.menu.configuration = self.menu_conf
+        self.g_pool.calibration_menu.append(self.menu)
+        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
+        self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
 
 
+        submenu = ui.Growing_Menu('Error Calculation')
 
-        # atb_label = "screen marker based accuracy test"
-        # # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
+        def set_fov(val):
+            try:
+                self.fov = float(val)
+            except:
+                pass
+        submenu.append(ui.TextInput('diagonal camera FV',setter=set_fov,getter=lambda:str(self.fov) ) )
+        submenu.append(ui.TextInput('diagonal resolution',getter=lambda:str(self.res) ) )
+        submenu[-1].read_only = True
+        submenu.append(ui.Slider('outlier_thresh',self,label='outlier threshold deg',min=0,max=10))
+        submenu.append(ui.Button('calculate result',self.calc_result))
 
-        # self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
-        # self._bar.add_var("fullscreen", self.fullscreen)
-        # self._bar.add_button("  start test  ", self.start, key='c')
+        accuray_help ='''Accuracy is calculated as the average angular
+                        offset (distance) (in degrees of visual angle)
+                        between fixations locations and the corresponding
+                        locations of the fixation targets.'''.replace("\n"," ").replace("    ",'')
 
-        # accuray_help ='''Accuracy is calculated as the average angular
-        #                 offset (distance) (in degrees of visual angle)
-        #                 between fixations locations and the corresponding
-        #                 locations of the fixation targets.'''.replace("\n"," ").replace("    ",'')
+        percision_help = '''Precision is calculated as the Root Mean Square (RMS)
+                            of the angular distance (in degrees of visual angle)
+                            between successive samples during a fixation.'''.replace("\n"," ").replace("    ",'')
 
-        # percision_help = '''Precision is calculated as the Root Mean Square (RMS)
-        #                     of the angular distance (in degrees of visual angle)
-        #                     between successive samples during a fixation.'''.replace("\n"," ").replace("    ",'')
+        submenu.append(ui.Info_Text(accuray_help))
+        submenu.append(ui.TextInput('angular accuray',getter=lambda:str(self.accuray) ) )
+        submenu[-1].read_only = True
+        submenu.append(ui.Info_Text(percision_help))
+        submenu.append(ui.TextInput('diagonal resolution',getter=lambda:str(self.percision) ) )
+        submenu[-1].read_only = True
+        self.menu.append(submenu)
 
-        # self._bar.add_var('diagonal FOV',self.fov,help="set the camera FOV here.",group='Error Calculation')
-        # self._bar.add_var('diagonal resolution',self.res,readonly= True ,group='Error Calculation')
-        # self._bar.add_var('outlier threshold deg',self.outlier_thresh ,group='Error Calculation')
-        # self._bar.add_var('angular accuray',self.accuray,readonly=True ,group='Error Calculation',help=accuray_help)
-        # self._bar.add_var('angular percision',self.percision,readonly=True ,group='Error Calculation',help=percision_help)
-        # self._bar.add_button('calculate result',self.calc_result ,group='Error Calculation')
-        # self._bar.add_var("show edges",self.show_edges, group="Detector Variables")
-        # self._bar.add_var("area threshold", self.area_threshold ,group="Detector Variables")
-        # self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Detector Variables" )
+
+        submenu = ui.Growing_Menu('Advanced Detector Settings')
+        submenu.collapsed = True
+        submenu.append(ui.Switch('show_edges',self,label='show edges'))
+        submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area Threshold'))
+        submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity Threshold'))
+        self.menu.append(submenu)
+
+
+        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button.on_color[:] = (.3,.2,1.,.9)
+        self.g_pool.quickbar.append(self.button)
 
 
     def deinit_gui(self):
         if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
+            self.menu_conf = self.menu.configuration
+            self.g_pool.calibration_menu.remove(self.menu)
+            self.g_pool.calibration_menu.remove(self.info)
             self.menu = None
         if self.button:
             self.g_pool.quickbar.remove(self.button)
