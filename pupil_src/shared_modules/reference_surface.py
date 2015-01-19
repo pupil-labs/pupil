@@ -64,7 +64,7 @@ class Reference_Surface(object):
     The more markers we find the more accurate the homography.
 
     """
-    def __init__(self,name="unnamed",saved_definition=None, camera_intrinsics=None):
+    def __init__(self,name="unnamed",saved_definition=None):
         self.name = name
         self.markers = {}
         self.detected_markers = 0
@@ -74,15 +74,10 @@ class Reference_Surface(object):
         self.detected = False
         self.m_to_screen = None
         self.m_from_screen = None
-        self.uid = str(time())
-        self.scale_factor = [1.,1.]
-
-        self.K, self.dist_coef, self.img_size = camera_intrinsics
-        self.is3dPoseAvailable = False
         self.camera_pose_3d = None
 
-        if saved_definition is not None:
-            self.load_from_dict(saved_definition)
+        self.uid = str(time())
+        self.real_world_size = [1.,1.]
 
         ###window and gui vars
         self._window = None
@@ -90,18 +85,10 @@ class Reference_Surface(object):
         self.window_should_open = False
         self.window_should_close = False
 
-        #multi monitor setup
-        self.window_should_open = False
-        self.window_should_close = False
-        self._window = None
-        self.fullscreen = c_bool(0)
-        self.monitor_idx = c_int(0)
-        monitor_handles = glfwGetMonitors()
-        self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
-        # monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
-        #primary_monitor = glfwGetPrimaryMonitor()
-
         self.gaze_on_srf = [] # points on surface for realtime feedback display
+
+        if saved_definition is not None:
+            self.load_from_dict(saved_definition)
 
 
     def save_to_dict(self):
@@ -109,7 +96,7 @@ class Reference_Surface(object):
         save all markers and name of this surface to a dict.
         """
         markers = dict([(m_id,m.uv_coords) for m_id,m in self.markers.iteritems()])
-        return {'name':self.name,'uid':self.uid,'markers':markers,'scale_factor':self.scale_factor}
+        return {'name':self.name,'uid':self.uid,'markers':markers,'real_world_size':self.real_world_size}
 
 
     def load_from_dict(self,d):
@@ -118,7 +105,7 @@ class Reference_Surface(object):
         """
         self.name = d['name']
         self.uid = d['uid']
-        self.scale_factor = d['scale_factor']
+        self.real_world_size = d['real_world_size']
 
         marker_dict = d['markers']
         for m_id,uv_coords in marker_dict.iteritems():
@@ -202,7 +189,7 @@ class Reference_Surface(object):
             m.compute_robust_mean()
 
 
-    def locate(self, visible_markers, locate_3d=False):
+    def locate(self, visible_markers, locate_3d=False, camera_intrinsics = None):
         """
         - find overlapping set of surface markers and visible_markers
         - compute homography (and inverse) based on this subset
@@ -230,36 +217,37 @@ class Reference_Surface(object):
 
                 if locate_3d:
 
+                    K,dist_coef,img_size = camera_intrinsics
+
                     ###marker support pose estiamtion:
                     # denormalize image reference points to pixel space
                     yx.shape = -1,2
-                    yx *= self.img_size
+                    yx *= img_size
                     yx.shape = -1, 1, 2
-                    # scale object points to world space units (think m,cm,mm)
+                    # scale normalized object points to world space units (think m,cm,mm)
                     uv.shape = -1,2
-                    uv *= self.scale_factor
+                    uv *= self.real_world_size
                     # convert object points to lie on z==0 plane in 3d space
                     uv3d = np.zeros((uv.shape[0], uv.shape[1]+1))
                     uv3d[:,:-1] = uv
                     # compute pose of object relative to camera center
-                    self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, yx, self.K, self.dist_coef,flags=cv2.CV_EPNP)
+                    self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, yx, K, dist_coef,flags=cv2.CV_EPNP)
 
-                    # not verifed but usefull info: http://stackoverflow.com/questions/17423302/opencv-solvepnp-tvec-units-and-axes-directions
-
+                    # not verifed, potentially usefull info: http://stackoverflow.com/questions/17423302/opencv-solvepnp-tvec-units-and-axes-directions
 
                     ###marker posed estimation from virtually projected points.
                     # object_pts = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
                     # projected_pts = cv2.perspectiveTransform(object_pts,self.m_to_screen)
                     # projected_pts.shape = -1,2
-                    # projected_pts *= self.img_size
+                    # projected_pts *= img_size
                     # projected_pts.shape = -1, 1, 2
                     # # scale object points to world space units (think m,cm,mm)
                     # object_pts.shape = -1,2
-                    # object_pts *= self.scale_factor
+                    # object_pts *= self.real_world_size
                     # # convert object points to lie on z==0 plane in 3d space
                     # object_pts_3d = np.zeros((4,3))
                     # object_pts_3d[:,:-1] = object_pts
-                    # self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(object_pts_3d, projected_pts, self.K, self.dist_coef,flags=cv2.CV_EPNP)
+                    # self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(object_pts_3d, projected_pts, K, dist_coef,flags=cv2.CV_EPNP)
 
 
                     # transformation from Camera Optical Center:
@@ -286,10 +274,13 @@ class Reference_Surface(object):
                     translate3d_object_to_cam_hm[:-1, -1] = translate3d_object_to_cam.reshape(3)
                     tranform3d_object_to_cam =  np.matrix(flip_z_axix_hm) * np.matrix(rot3d_object_to_cam_hm) * np.matrix(translate3d_object_to_cam_hm)
                     self.camera_pose_3d = tranform3d_object_to_cam
-
+                else:
+                    self.is3dPoseAvailable = False
 
             else:
                 self.detected = False
+                self.is3dPoseAvailable = False
+
                 self.m_from_screen = None
                 self.m_to_screen = None
 
@@ -337,20 +328,15 @@ class Reference_Surface(object):
     def atb_marker_status(self):
         return create_string_buffer("%s / %s" %(self.detected_markers,len(self.markers)),512)
 
-    def atb_get_name(self):
-        return create_string_buffer(self.name,512)
 
-    def atb_set_name(self,name):
-        self.name = name.value
-
-    def atb_set_scale_x(self,val):
-        self.scale_factor[0]=val
-    def atb_set_scale_y(self,val):
-        self.scale_factor[1]=val
-    def atb_get_scale_x(self):
-        return self.scale_factor[0]
-    def atb_get_scale_y(self):
-        return self.scale_factor[1]
+    def gui_set_scale_x(self,val):
+        self.real_world_size[0]=val
+    def gui_set_scale_y(self,val):
+        self.real_world_size[1]=val
+    def gui_get_scale_x(self):
+        return self.real_world_size[0]
+    def gui_get_scale_y(self):
+        return self.real_world_size[1]
 
 
     def gl_draw_frame(self):
@@ -416,10 +402,12 @@ class Reference_Surface(object):
             glfwMakeContextCurrent(active_window)
 
     #### fns to draw surface in separate window
-    def gl_display_in_window_3d(self,world_tex_id):
+    def gl_display_in_window_3d(self,world_tex_id,camera_intrinsics):
         """
         here we map a selected surface onto a seperate window.
         """
+        K,dist_coef,img_size = camera_intrinsics
+
         if self._window and self.detected:
             active_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self._window)
@@ -433,14 +421,14 @@ class Reference_Surface(object):
 
             glMatrixMode(GL_MODELVIEW)
 
-            draw_coordinate_system(l=self.scale_factor[0])
+            draw_coordinate_system(l=self.real_world_size[0])
             glPushMatrix()
-            glScalef(self.scale_factor[0],self.scale_factor[1],1)
+            glScalef(self.real_world_size[0],self.real_world_size[1],1)
             draw_gl_polyline([[0,0],[0,1],[1,1],[1,0]],color = (.5,.3,.1,.5),thickness=3)
             glPopMatrix()
             # Draw the world window as projected onto the plane using the homography mapping
             glPushMatrix()
-            glScalef(self.scale_factor[0], self.scale_factor[1], 1)
+            glScalef(self.real_world_size[0], self.real_world_size[1], 1)
             # cv uses 3x3 gl uses 4x4 tranformation matricies
             m = cvmat_to_glmat(self.m_from_screen)
             glMultMatrixf(m)
@@ -452,9 +440,9 @@ class Reference_Surface(object):
             # Draw the camera frustum and origin using the 3d tranformation obtained from solvepnp
             glPushMatrix()
             glMultMatrixf(self.camera_pose_3d.T.flatten())
-            draw_frustum(self.img_size, self.K, 150)
+            draw_frustum(self.img_size, K, 150)
             glLineWidth(1)
-            draw_frustum(self.img_size, self.K, .1)
+            draw_frustum(self.img_size, K, .1)
             draw_coordinate_system(l=5)
             glPopMatrix()
 
@@ -463,16 +451,6 @@ class Reference_Surface(object):
 
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
-
-    def toggle_window(self,_):
-        if self._window:
-            self.window_should_close = True
-        else:
-            self.window_should_open = True
-
-    def window_open(self):
-        return bool(self._window)
-
 
 
     def open_window(self):
@@ -483,7 +461,7 @@ class Reference_Surface(object):
                 height,width= mode[0],mode[1]
             else:
                 monitor = None
-                height,width= 640,int(640./(self.scale_factor[0]/self.scale_factor[1])) #open with same aspect ratio as surface
+                height,width= 640,int(640./(self.real_world_size[0]/self.real_world_size[1])) #open with same aspect ratio as surface
 
             self._window = glfwCreateWindow(height, width, "Reference Surface: " + self.name, monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen.value:
@@ -515,7 +493,6 @@ class Reference_Surface(object):
 
             glfwMakeContextCurrent(active_window)
 
-            self.window_should_open = False
 
     # window calbacks
     def on_resize(self,window,w, h):
