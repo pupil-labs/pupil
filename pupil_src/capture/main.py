@@ -113,7 +113,7 @@ def main():
     # on MacOS we will not use os.fork, elsewhere this does nothing.
     forking_enable(0)
 
-    #g_pool holds variables. Only ff added here they are shared across processes.
+    #g_pool holds variables. Only if added here they are shared across processes.
 
     g_pool = Global_Container()
 
