@@ -64,7 +64,7 @@ def world(g_pool,cap_src,cap_size):
     """world
     Creates a window, gl context.
     Grabs images from a capture.
-    Receives Pupil coordinates from g_pool.pupil_queue
+    Receives Pupil coordinates from eye process[es]
     Can run various plug-ins.
     """
 
