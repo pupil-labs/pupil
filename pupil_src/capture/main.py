@@ -13,12 +13,11 @@ from time import sleep
 from ctypes import c_bool, c_int,c_double
 if platform.system() == 'Darwin':
     from billiard import Process, Pipe, Event,Queue,forking_enable,freeze_support
-    from billiard.sharedctypes import RawValue, Value, Array
+    from billiard.sharedctypes import Value
 else:
-    from multiprocessing import Process, Pipe, Event, Queue
+    from multiprocessing import Process, Pipe, Event, Queue,freeze_support
     forking_enable = lambda _: _ #dummy fn
-    from multiprocessing import freeze_support
-    from multiprocessing.sharedctypes import RawValue, Value, Array
+    from multiprocessing.sharedctypes import Value
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
@@ -80,7 +79,6 @@ else:
     from eye import eye
     from world import world
 
-from methods import Temp
 
 #get the current software version
 if getattr(sys, 'frozen', False):
@@ -113,13 +111,16 @@ def main():
     # on MacOS we will not use os.fork, elsewhere this does nothing.
     forking_enable(0)
 
+    class Global_Container(Object):
+        pass
+
     # Create and initialize IPC
-    g_pool = Temp()
+    g_pool = Global_Container()
     g_pool.pupil_queue = Queue()
     g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
-    g_pool.quit = RawValue(c_bool,0)
+    g_pool.quit = Value(c_bool,0)
     # this value will be substracted form the capture timestamp
-    g_pool.timebase = RawValue(c_double,0)
+    g_pool.timebase = Value(c_double,0)
     # make some constants avaiable
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
