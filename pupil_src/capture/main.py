@@ -88,6 +88,8 @@ else:
     from git_version import get_tag_commit
     version = get_tag_commit()
 
+class Global_Container(object):
+    pass
 
 def main():
     # To assign camera by name: put string(s) in list
@@ -111,15 +113,14 @@ def main():
     # on MacOS we will not use os.fork, elsewhere this does nothing.
     forking_enable(0)
 
-    class Global_Container(Object):
-        pass
+    #g_pool holds variables. Only ff added here they are shared across processes.
+
+    g_pool = Global_Container()
 
     # Create and initialize IPC
-    g_pool = Global_Container()
     g_pool.pupil_queue = Queue()
     g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
     g_pool.quit = Value(c_bool,0)
-    # this value will be substracted form the capture timestamp
     g_pool.timebase = Value(c_double,0)
     # make some constants avaiable
     g_pool.user_dir = user_dir
