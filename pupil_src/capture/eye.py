@@ -22,6 +22,9 @@ from pyglui import ui,graph,cygl
 from pyglui import __version__ as pyglui_version
 assert pyglui_version >= '0.1'
 
+#monitoring
+import psutil
+
 # helpers/utils
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture,draw_gl_polyline
 from methods import *
@@ -178,9 +181,9 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     # gl_state settings
     basic_gl_setup()
     g_pool.image_tex = create_named_texture(frame.img)
+    
     # refresh speed settings
     glfwSwapInterval(0)
-
     glfwSetWindowPos(eye_window,800,0)
 
 
@@ -210,6 +213,21 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     set_window_size(g_pool.window_size)
     on_resize(eye_window, *glfwGetWindowSize(eye_window))
 
+    #set up performance graphs
+    pid = os.getpid()
+    ps = psutil.Process(pid)
+    ts = time()
+
+    cpu_graph = graph.Bar_Graph()
+    cpu_graph.pos = (20,110)
+    cpu_graph.update_fn = ps.get_cpu_percent
+    cpu_graph.update_rate = 5
+    cpu_graph.label = 'CPU %0.1f'
+
+    fps_graph = graph.Bar_Graph()
+    fps_graph.pos = (140,110)
+    fps_graph.update_rate = 5
+    fps_graph.label = "%0.0f FPS"
 
     # Event loop
     while not g_pool.quit.value:
@@ -223,8 +241,11 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
             logger.warning("Video File is done. Stopping")
             break
 
-        # update_fps()
-        # sleep(bar.sleep.value) # for debugging only
+        #update performace graphs
+        t = time()
+        dt,ts = t-ts,t
+        fps_graph.add(1./dt)
+        cpu_graph.update()
 
 
         ###  RECORDING of Eye Video (on demand) ###
@@ -286,7 +307,13 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                 draw_gl_polyline(pts,(1.,0,0,.5))
             draw_gl_point_norm(result['norm_pos'],color=(1.,0.,0.,0.5))
 
-        # atb.draw()
+        # render graphs
+        graph.push_view()
+        fps_graph.draw()
+        cpu_graph.draw()
+        graph.pop_view()
+
+        # render GUI 
         g_pool.gui.update()
         glfwSwapBuffers(eye_window)
         glfwPollEvents()
