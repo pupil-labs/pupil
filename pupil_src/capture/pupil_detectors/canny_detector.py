@@ -529,7 +529,7 @@ class Canny_Detector(Pupil_Detector):
         self.menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
         self.menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=20,step=1))
         self.menu.append(ui.Slider('pupil_min',self,label='Pupil min',min=1,max=50,step=1))
-        self.menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=1,max=100,step=1))
+        self.menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=1,max=200,step=1))
 
 
     def create_atb_bar(self,pos):

@@ -243,13 +243,14 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
 
         # pupil ellipse detection
-        result = pupil_detector.detect(frame,user_roi=u_r)
+        result = pupil_detector.detect(frame,user_roi=u_r,visualize=g_pool.display_mode == 'algorithm')
         result['id'] = eye_id
         # stream the result
         g_pool.pupil_queue.put(result)
 
         # VISUALIZATION direct visualizations on the frame.img data
         if g_pool.display_mode == 'roi':
+            logger.debug("i'm in ROI mode")
             # and a solid (white) frame around the user defined ROI
             r_img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX]
             r_img[:,0] = 255,255,255
