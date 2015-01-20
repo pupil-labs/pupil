@@ -45,8 +45,8 @@ logger = logging.getLogger(__name__)
 
 class Canny_Detector(Pupil_Detector):
     """a Pupil detector based on Canny_Edges"""
-    def __init__(self, g_pool):
-        super(Canny_Detector, self).__init__()
+    def __init__(self, g_pool,menu_conf = {'collapsed':True}):
+        super(Canny_Detector, self).__init__(g_pool)
 
         # load session persistent settings
         self.session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_detector') )
@@ -86,6 +86,10 @@ class Canny_Detector(Pupil_Detector):
         # in this case we take the support ratio capped at 1. (uncapped if the pupil comes from prior)
         self.confidence = 0.0
         self.confidence_hist = []
+
+        # GUI settings
+        self.menu = None
+        self.menu_conf = menu_conf
 
 
         #debug window
@@ -519,7 +523,7 @@ class Canny_Detector(Pupil_Detector):
         # self.info = ui.Info_Text("Pupil detection using Canny Edges.")
         # self.g_pool.pupil_detector_menu.append(self.info)
 
-        self.menu = ui.Growing_Menu('Pupil Detector Controls')
+        self.menu = ui.Growing_Menu('Controls')
         self.menu.configuration = self.menu_conf
         self.g_pool.pupil_detector_menu.append(self.menu)
         self.menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))

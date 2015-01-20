@@ -21,9 +21,10 @@ from pyglui import ui
 
 class Pupil_Detector(object):
     """base class for pupil detector"""
-    def __init__(self):
+    def __init__(self,g_pool):
         super(Pupil_Detector, self).__init__()
-
+        self.g_pool = g_pool
+        
     def detect(self,frame,u_roi,visualize=False):
         img = frame.img
         # hint: create a view into the img with the bounds of user set region of interest
