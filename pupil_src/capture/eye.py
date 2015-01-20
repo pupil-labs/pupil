@@ -278,7 +278,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
         # VISUALIZATION direct visualizations on the frame.img data
         if g_pool.display_mode == 'roi':
-            logger.debug("i'm in ROI mode")
             # and a solid (white) frame around the user defined ROI
             r_img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX]
             r_img[:,0] = 255,255,255
@@ -288,7 +287,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
 
 
-        # GL-drawing
+        # GL drawing
         glfwMakeContextCurrent(eye_window)
         clear_gl_screen()
         make_coord_system_norm_based()
