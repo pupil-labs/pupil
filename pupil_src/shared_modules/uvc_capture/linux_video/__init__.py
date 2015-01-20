@@ -11,6 +11,8 @@
 import v4l2
 #check versions for our own depedencies as they are fast-changing
 assert v4l2.__version__ >= '0.1'
+
+from ctypes import c_double
 from pyglui import ui
 from time import sleep
 #logging
@@ -50,7 +52,16 @@ class Camera_Capture(object):
         self.src_id = cam.src_id
         self.name = cam.name
 
-        self.timebase = timebase
+        if timebase == None:
+            logger.debug("Capture will run with default system timebase")
+            self.timebase = c_double(0)
+        elif hasattr(timebase,'value'):
+            logger.debug("Capture will run with app wide adjustable timebase")
+            self.timebase = timebase
+        else:
+            logger.error("Invalid timebase variable type. Will use default system timebase")
+            self.timebase = c_double(0)
+
         self.use_hw_ts = self.check_hw_ts_support()
         self._last_timestamp = self.get_now()
 

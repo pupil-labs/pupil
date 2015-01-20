@@ -65,7 +65,7 @@ class FakeCapture(object):
         if timebase == None:
             logger.debug("Capture will run with default system timebase")
             self.timebase = c_double(0)
-        elif isinstance(timebase,c_double):
+        elif hasattr(timebase,'value'):
             logger.debug("Capture will run with app wide adjustable timebase")
             self.timebase = timebase
         else:
