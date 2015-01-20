@@ -100,6 +100,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         #     else:
         #         bar.draw_roi.value = 0
 
+
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
         x,y = x*hdpi_factor,y*hdpi_factor
@@ -136,6 +137,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         cap.close()
         return
 
+    g_pool.capture = cap
 
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
@@ -192,9 +194,14 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     general_settings.append(ui.Selector('display_mode',g_pool,selection=['camera_image','roi','algorithm','cpu_save'], labels=['Camera Image', 'ROI', 'Algorithm', 'CPU Save'], label="Mode") )
     g_pool.sidebar.append(general_settings)
     g_pool.pupil_detector_menu = ui.Growing_Menu('Pupil Detector')
+    g_pool.pupil_detector_menu.configuration = session_settings.get('pupil_detector_menu_config',{'collapsed':True})    
     g_pool.sidebar.append(g_pool.pupil_detector_menu)
 
     g_pool.gui.append(g_pool.sidebar)
+
+    # let the camera add its GUI
+    g_pool.capture.init_gui(g_pool.sidebar)
+    g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{'collapsed':True})
 
     # let detectors add their GUI
     pupil_detector.init_gui()
@@ -294,12 +301,11 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
 
     # save session persistent settings
-    # save('roi',u_r.get())
-    # save('mode',g_pool.display_mode)
-    # save('draw_pupil',bar.draw_pupil.value)
     session_settings['window_size'] = g_pool.window_size
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
+    session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
     session_settings['general_menu_config'] = general_settings.configuration
+    session_settings['pupil_detector_menu_config'] = g_pool.pupil_detector_menu.configuration
     session_settings.close()
 
     pupil_detector.cleanup()
