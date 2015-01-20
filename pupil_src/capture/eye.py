@@ -12,13 +12,22 @@ import os
 from time import time, sleep
 from file_methods import Persistent_Dict
 import logging
-from ctypes import c_int,c_bool,c_float
 import numpy as np
-import atb
+
+#display
 from glfw import *
+from pyglui import ui,graph,cygl
+
+# check versions for our own depedencies as they are fast-changing
+from pyglui import __version__ as pyglui_version
+assert pyglui_version >= '0.1'
+
+# helpers/utils
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture,draw_gl_polyline
 from methods import *
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
+
+# Pupil detectors
 from pupil_detectors import Canny_Detector,MSER_Detector,Blob_Detector
 
 def eye(g_pool,cap_src,cap_size,eye_id=0):
@@ -56,159 +65,141 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         glfwMakeContextCurrent(window)
         hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
         w,h = w*hdpi_factor, h*hdpi_factor
-        # g_pool.gui.update_window(w,h)
-        # graph.adjust_view(w,h)
+        g_pool.gui.update_window(w,h)
+        graph.adjust_size(w,h)
         adjust_gl_view(w,h)
-        atb.TwWindowSize(*map(int,(w,h)))
-
         # for p in g_pool.plugins:
             # p.on_window_resize(window,w,h)
         glfwMakeContextCurrent(active_window)
 
     def on_key(window, key, scancode, action, mods):
-        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
-            if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
-                    on_close(window)
+        g_pool.gui.update_key(key,scancode,action,mods)
+        if action == GLFW_PRESS:
+            if key == GLFW_KEY_ESCAPE:
+                on_close(window)
 
     def on_char(window,char):
-        if not atb.TwEventCharGLFW(char,1):
-            pass
+        g_pool.gui.update_char(char)
+
 
     def on_button(window,button, action, mods):
-        if not atb.TwEventMouseButtonGLFW(button,int(action == GLFW_PRESS)):
-            if action == GLFW_PRESS:
-                if bar.display.value ==1:
-                    pos = glfwGetCursorPos(window)
-                    pos = normalize(pos,glfwGetWindowSize(window))
-                    pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
-                    u_r.setStart(pos)
-                    bar.draw_roi.value = 1
-            else:
-                bar.draw_roi.value = 0
+        g_pool.gui.update_button(button,action,mods)
+        pos = glfwGetCursorPos(window)
+        pos = normalize(pos,glfwGetWindowSize(eye_window))
+        pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
+        
+        # handle roi        
+        # if not atb.TwEventMouseButtonGLFW(button,int(action == GLFW_PRESS)):
+        #     if action == GLFW_PRESS:
+        #         if bar.display.value ==1:
+        #             pos = glfwGetCursorPos(window)
+        #             pos = normalize(pos,glfwGetWindowSize(window))
+        #             pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
+        #             u_r.setStart(pos)
+        #             bar.draw_roi.value = 1
+        #     else:
+        #         bar.draw_roi.value = 0
 
     def on_pos(window,x, y):
-        norm_pos = normalize((x,y),glfwGetWindowSize(window))
-        fb_x,fb_y = denormalize(norm_pos,glfwGetFramebufferSize(window))
-        if atb.TwMouseMotion(int(fb_x),int(fb_y)):
-            pass
+        hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
+        x,y = x*hdpi_factor,y*hdpi_factor
+        g_pool.gui.update_mouse(x,y)
 
-        if bar.draw_roi.value == 1:
-            pos = denormalize(norm_pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
-            u_r.setEnd(pos)
+        # norm_pos = normalize((x,y),glfwGetWindowSize(window))
+        # fb_x,fb_y = denormalize(norm_pos,glfwGetFramebufferSize(window))
+        # if atb.TwMouseMotion(int(fb_x),int(fb_y)):
+        #     pass
+
+        # if bar.draw_roi.value == 1:
+        #     pos = denormalize(norm_pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
+        #     u_r.setEnd(pos)
 
     def on_scroll(window,x,y):
-        if not atb.TwMouseWheel(int(x)):
-            pass
+        g_pool.gui.update_scroll(x,y)
 
     def on_close(window):
         g_pool.quit.value = True
         logger.info('Process closing from window')
 
 
-    # Helper functions called by the main atb bar
-    def start_roi():
-        bar.display.value = 1
-        bar.draw_roi.value = 2
-
-    def update_fps():
-        old_time, bar.timestamp = bar.timestamp, time()
-        dt = bar.timestamp - old_time
-        if dt:
-            bar.fps.value += .05 * (1. / dt - bar.fps.value)
-            bar.dt.value = dt
-
-    def get_from_data(data):
-        """
-        helper for atb getter and setter use
-        """
-        return data.value
-
-
     # load session persistent settings
-    session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye') )
-    def load(var_name,default):
-        return session_settings.get(var_name,default)
-    def save(var_name,var):
-        session_settings[var_name] = var
+    session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye'))
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, cap_size,timebase=g_pool.timebase)
+    cap = autoCreateCapture(cap_src, cap_size, 24, timebase=g_pool.timebase)
 
-    if cap is None:
-        logger.error("Did not receive valid Capture")
-        return
-    # check if it works
-    frame = cap.get_frame()
-    if frame.img is None:
+    # Test capture
+    try:
+        frame = cap.get_frame()
+    except CameraCaptureError:
         logger.error("Could not retrieve image from capture")
         cap.close()
         return
-    height,width = frame.img.shape[:2]
+
+
+    # any object we attach to the g_pool object *from now on* will only be visible to this process!
+    # vars should be declared here to make them visible to the code reader.
+    g_pool.window_size = session_settings.get('window_size',1.)
+    g_pool.display_mode = session_settings.get('display_mode','camera_image')
+    g_pool.draw_pupil = session_settings.get('draw_pupil',True)
+
 
     u_r = Roi(frame.img.shape)
-    u_r.set(load('roi',default=None))
+    g_pool.roi = session_settings.get('roi',u_r)
 
     writer = None
 
     pupil_detector = Canny_Detector(g_pool)
 
-    atb.init()
-    # Create main ATB Controls
-    bar = atb.Bar(name = "Eye", label="Display",
-            help="Scene controls", color=(50, 50, 50), alpha=100,
-            text='light', position=(10, 10),refresh=.3, size=(200, 100))
-    bar.fps = c_float(0.0)
-    bar.timestamp = time()
-    bar.dt = c_float(0.0)
-    bar.sleep = c_float(0.0)
-    bar.display = c_int(load('bar.display',0))
-    bar.draw_pupil = c_bool(load('bar.draw_pupil',True))
-    bar.draw_roi = c_int(0)
 
-    dispay_mode_enum = atb.enum("Mode",{"Camera Image":0,
-                                        "Region of Interest":1,
-                                        "Algorithm":2,
-                                        "CPU Save": 3})
+    # UI callback functions
+    def set_window_size(size):
+        hdpi_factor = glfwGetFramebufferSize(eye_window)[0]/glfwGetWindowSize(eye_window)[0]
+        w,h = int(frame.width*size*hdpi_factor),int(frame.height*size*hdpi_factor)
+        glfwSetWindowSize(eye_window,w,h)
 
-    bar.add_var("FPS",bar.fps, step=1.,readonly=True)
-    bar.add_var("Mode", bar.display,vtype=dispay_mode_enum, help="select the view-mode")
-    bar.add_var("Show_Pupil_Point", bar.draw_pupil)
-    bar.add_button("Draw_ROI", start_roi, help="drag on screen to select a region of interest")
-
-    bar.add_var("SlowDown",bar.sleep, step=0.01,min=0.0)
-    bar.add_var("SaveSettings&Exit", g_pool.quit)
-
-
-    # create a bar for the detector
-    pupil_detector.create_atb_bar(pos=(10,120))
-
-
+    # Initialize glfw
     glfwInit()
-    window = glfwCreateWindow(width, height, "Eye", None, None)
-    glfwMakeContextCurrent(window)
+    eye_window = glfwCreateWindow(frame.width, frame.height, "Eye", None, None)
+    glfwMakeContextCurrent(eye_window)
+    cygl.utils.init()
 
-    # Register callbacks window
-    glfwSetWindowSizeCallback(window,on_resize)
-    glfwSetWindowCloseCallback(window,on_close)
-    glfwSetKeyCallback(window,on_key)
-    glfwSetCharCallback(window,on_char)
-    glfwSetMouseButtonCallback(window,on_button)
-    glfwSetCursorPosCallback(window,on_pos)
-    glfwSetScrollCallback(window,on_scroll)
-
-    glfwSetWindowPos(window,800,0)
-    on_resize(window,width,height)
+    # Register callbacks eye_window
+    glfwSetWindowSizeCallback(eye_window,on_resize)
+    glfwSetWindowCloseCallback(eye_window,on_close)
+    glfwSetKeyCallback(eye_window,on_key)
+    glfwSetCharCallback(eye_window,on_char)
+    glfwSetMouseButtonCallback(eye_window,on_button)
+    glfwSetCursorPosCallback(eye_window,on_pos)
+    glfwSetScrollCallback(eye_window,on_scroll)
 
     # gl_state settings
     basic_gl_setup()
     g_pool.image_tex = create_named_texture(frame.img)
-
     # refresh speed settings
     glfwSwapInterval(0)
 
+    glfwSetWindowPos(eye_window,800,0)
 
-    # event loop
+
+    #setup GUI
+    g_pool.gui = ui.UI()
+    # g_pool.gui.scale = session_settings.get('gui_scale',1)
+    g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-200,0),size=(0,0),header_pos='left')
+    g_pool.sidebar.configuration = session_settings.get('side_bar_config',{'collapsed':True})
+    general_settings = ui.Growing_Menu('General')
+    general_settings.configuration = session_settings.get('general_menu_config',{})
+    general_settings.append(ui.Selector('display_mode',g_pool,selection=['camera_image','roi','algorithm','cpu_save'], labels=['Camera Image', 'ROI', 'Algorithm', 'CPU Save'], label="Mode") )
+
+    g_pool.sidebar.append(general_settings)
+    g_pool.gui.append(g_pool.sidebar)
+
+    #set the last saved window size
+    set_window_size(g_pool.window_size)
+    on_resize(eye_window, *glfwGetWindowSize(eye_window))
+
+
+    # Event loop
     while not g_pool.quit.value:
         # Get an image from the grabber
         try:
@@ -220,8 +211,8 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
             logger.warning("Video File is done. Stopping")
             break
 
-        update_fps()
-        sleep(bar.sleep.value) # for debugging only
+        # update_fps()
+        # sleep(bar.sleep.value) # for debugging only
 
 
         ###  RECORDING of Eye Video (on demand) ###
@@ -247,13 +238,13 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
 
         # pupil ellipse detection
-        result = pupil_detector.detect(frame,user_roi=u_r,visualize=bar.display.value == 2)
+        result = pupil_detector.detect(frame,user_roi=u_r)
         result['id'] = eye_id
         # stream the result
         g_pool.pupil_queue.put(result)
 
         # VISUALIZATION direct visualizations on the frame.img data
-        if bar.display.value == 1:
+        if g_pool.display_mode == 'roi':
             # and a solid (white) frame around the user defined ROI
             r_img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX]
             r_img[:,0] = 255,255,255
@@ -264,16 +255,17 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
 
         # GL-drawing
+        glfwMakeContextCurrent(eye_window)
         clear_gl_screen()
         make_coord_system_norm_based()
-        if bar.display.value != 3:
+        if g_pool.display_mode != 'cpu_save':
             draw_named_texture(g_pool.image_tex,frame.img)
         else:
             draw_named_texture(g_pool.image_tex)
         make_coord_system_pixel_based(frame.img.shape)
 
 
-        if result['confidence'] >0 and bar.draw_pupil.value:
+        if result['confidence'] >0 and g_pool.draw_pupil:
             if result.has_key('axes'):
                 pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
                                         (int(result["axes"][0]/2),int(result["axes"][1]/2)),
@@ -281,8 +273,9 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                 draw_gl_polyline(pts,(1.,0,0,.5))
             draw_gl_point_norm(result['norm_pos'],color=(1.,0.,0.,0.5))
 
-        atb.draw()
-        glfwSwapBuffers(window)
+        # atb.draw()
+        g_pool.gui.update()
+        glfwSwapBuffers(eye_window)
         glfwPollEvents()
 
     # END while running
@@ -295,15 +288,18 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
 
     # save session persistent settings
-    save('roi',u_r.get())
-    save('bar.display',bar.display.value)
-    save('bar.draw_pupil',bar.draw_pupil.value)
+    # save('roi',u_r.get())
+    # save('mode',g_pool.display_mode)
+    # save('draw_pupil',bar.draw_pupil.value)
+    session_settings['window_size'] = g_pool.window_size
+    session_settings['side_bar_config'] = g_pool.sidebar.configuration
+    session_settings['general_menu_config'] = general_settings.configuration
     session_settings.close()
 
     pupil_detector.cleanup()
     cap.close()
-    atb.terminate()
-    glfwDestroyWindow(window)
+    # atb.terminate()
+    glfwDestroyWindow(eye_window)
     glfwTerminate()
 
     #flushing queue in case world process did not exit gracefully

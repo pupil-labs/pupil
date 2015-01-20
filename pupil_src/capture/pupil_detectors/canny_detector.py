@@ -21,14 +21,16 @@ from time import sleep
 from file_methods import Persistent_Dict
 import numpy as np
 from methods import *
-import atb
-from ctypes import c_int,c_bool,c_float
+
 from c_methods import eye_filter
 from glfw import *
 from gl_utils import  draw_gl_texture,adjust_gl_view, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
 from template import Pupil_Detector
 
+# gui
+from pyglui import ui
 
+# logging
 import logging
 logger = logging.getLogger(__name__)
 
@@ -43,14 +45,14 @@ logger = logging.getLogger(__name__)
 
 class Canny_Detector(Pupil_Detector):
     """a Pupil detector based on Canny_Edges"""
-    def __init__(self,g_pool):
+    def __init__(self, g_pool):
         super(Canny_Detector, self).__init__()
 
         # load session persistent settings
-        self.session_settings =Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_detector') )
+        self.session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_detector') )
 
-        # coase pupil filter params
-        self.coarse_detection = c_bool(self.load('coarse_detection',True))
+        # coarse pupil filter params
+        self.coarse_detection = self.load('coarse_detection',True)
         self.coarse_filter_min = 100
         self.coarse_filter_max = 400
 
@@ -61,18 +63,18 @@ class Canny_Detector(Pupil_Detector):
         self.canny_aperture = 5
 
         # edge intensity filter params
-        self.intensity_range = c_int(self.load('intensity_range',11))
-        self.bin_thresh = c_int(0)
+        self.intensity_range = self.load('intensity_range',11)
+        self.bin_thresh = 0
 
         # contour prefilter params
-        self.min_contour_size = c_int(self.load('min_contour_size',80))
+        self.min_contour_size = self.load('min_contour_size',80)
 
         #ellipse filter params
         self.inital_ellipse_fit_threshhold = 1.8
         self.min_ratio = .3
-        self.pupil_min = c_float(self.load('pupil_min',40.))
-        self.pupil_max = c_float(self.load('pupil_max',150.))
-        self.target_size= c_float(100.)
+        self.pupil_min = self.load('pupil_min',40.)
+        self.pupil_max = self.load('pupil_max',150.)
+        self.target_size= 100.0
         self.strong_perimeter_ratio_range = .8, 1.1
         self.strong_area_ratio_range = .6,1.1
         self.final_perimeter_ratio_range = self.load("final_perimeter_ratio_range",[.6, 1.2])
@@ -82,7 +84,7 @@ class Canny_Detector(Pupil_Detector):
         #detector dignostics
         #confidance in the mesurement 0(bad) to 1 (perfect)
         # in this case we take the support ratio capped at 1. (uncapped if the pupil comes from prior)
-        self.confidence = c_float(0)
+        self.confidence = 0.0
         self.confidence_hist = []
 
 
@@ -122,9 +124,9 @@ class Canny_Detector(Pupil_Detector):
 
 
         # coarse pupil detection
-        if self.coarse_detection.value:
+        if self.coarse_detection:
             integral = cv2.integral(gray_img)
-            integral =  np.array(integral,dtype=c_float)
+            integral =  np.array(integral,dtype=np.float32)
             x,y,w,response = eye_filter(integral,self.coarse_filter_min,self.coarse_filter_max)
             p_r = Roi(gray_img.shape)
             if w>0:
@@ -153,7 +155,7 @@ class Canny_Detector(Pupil_Detector):
             lowest_spike = 200
             highest_spike = 255
 
-        offset = self.intensity_range.value
+        offset = self.intensity_range
         spectral_offset = 5
         if visualize:
             # display the histogram
@@ -171,7 +173,7 @@ class Canny_Detector(Pupil_Detector):
             cv2.line(img,(w,int((highest_spike- spectral_offset )*sy)),(int(w-.5*sx),int((highest_spike - spectral_offset)*sy)),colors[3])
 
         # create dark and spectral glint masks
-        self.bin_thresh.value = lowest_spike
+        self.bin_thresh = lowest_spike
         binary_img = bin_thresholding(pupil_img,image_upper=lowest_spike + offset)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7,7))
         cv2.dilate(binary_img, kernel,binary_img, iterations=2)
@@ -184,7 +186,7 @@ class Canny_Detector(Pupil_Detector):
         pupil_img = cv2.morphologyEx(pupil_img, cv2.MORPH_OPEN, kernel)
 
         if self.blur > 1:
-            pupil_img = cv2.medianBlur(pupil_img,self.blur.value)
+            pupil_img = cv2.medianBlur(pupil_img,self.blur)
 
         edges = cv2.Canny(pupil_img,
                             self.canny_thresh,
@@ -216,9 +218,9 @@ class Canny_Detector(Pupil_Detector):
 
         if visualize:
             c = (100.,frame.img.shape[0]-100.)
-            e_max = ((c),(self.pupil_max.value,self.pupil_max.value),0)
-            e_recent = ((c),(self.target_size.value,self.target_size.value),0)
-            e_min = ((c),(self.pupil_min.value,self.pupil_min.value),0)
+            e_max = ((c),(self.pupil_max,self.pupil_max),0)
+            e_recent = ((c),(self.target_size,self.target_size),0)
+            e_min = ((c),(self.pupil_min,self.pupil_min),0)
             cv2.ellipse(frame.img,e_min,(0,0,255),1)
             cv2.ellipse(frame.img,e_recent,(0,255,0),1)
             cv2.ellipse(frame.img,e_max,(0,0,255),1)
@@ -265,9 +267,9 @@ class Canny_Detector(Pupil_Detector):
                     pupil_ellipse['center'] = e_img_center
                     pupil_ellipse['timestamp'] = frame.timestamp
 
-                    self.target_size.value = max(e[1])
+                    self.target_size = max(e[1])
 
-                    self.confidence.value = goodness
+                    self.confidence = goodness
                     self.confidence_hist.append(goodness)
                     self.confidence_hist[:-200]=[]
                     if self._window:
@@ -292,7 +294,7 @@ class Canny_Detector(Pupil_Detector):
 
         ### first we want to filter out the bad stuff
         # to short
-        good_contours = [c for c in contours if c.shape[0]>self.min_contour_size.value]
+        good_contours = [c for c in contours if c.shape[0]>self.min_contour_size]
         # now we learn things about each contour through looking at the curvature.
         # For this we need to simplyfy the contour so that pt to pt angles become more meaningfull
         aprox_contours = [cv2.approxPolyDP(c,epsilon=1.5,closed=False) for c in good_contours]
@@ -324,7 +326,7 @@ class Canny_Detector(Pupil_Detector):
         # print [x.shape[0]for x in split_contours]
         if len(split_contours) == 0:
             # not a single usefull segment found -> no pupil found
-            self.confidence.value = 0
+            self.confidence = 0
             self.confidence_hist.append(0)
             if self._window:
                 self.gl_display_in_window(debug_img)
@@ -339,7 +341,7 @@ class Canny_Detector(Pupil_Detector):
             if in_center:
                 is_round = min(e[1])/max(e[1]) >= self.min_ratio
                 if is_round:
-                    right_size = self.pupil_min.value <= max(e[1]) <= self.pupil_max.value
+                    right_size = self.pupil_min <= max(e[1]) <= self.pupil_max
                     if right_size:
                         return True
             return False
@@ -413,7 +415,7 @@ class Canny_Detector(Pupil_Detector):
         if not (strong_seed_contours or weak_seed_contours):
             if self._window:
                 self.gl_display_in_window(debug_img)
-            self.confidence.value = 0
+            self.confidence = 0
             self.confidence_hist.append(0)
             return early_exit()
 
@@ -456,7 +458,7 @@ class Canny_Detector(Pupil_Detector):
             #no good final ellipse found
             if self._window:
                 self.gl_display_in_window(debug_img)
-            self.confidence.value = 0
+            self.confidence = 0
             self.confidence_hist.append(0)
             return early_exit()
 
@@ -492,9 +494,9 @@ class Canny_Detector(Pupil_Detector):
         pupil_ellipse['center'] = e_img_center
         pupil_ellipse['timestamp'] = frame.timestamp
 
-        self.target_size.value = max(e[1])
+        self.target_size = max(e[1])
 
-        self.confidence.value = goodness
+        self.confidence = goodness
         self.confidence_hist.append(goodness)
         self.confidence_hist[:-200]=[]
         if self._window:
@@ -512,6 +514,19 @@ class Canny_Detector(Pupil_Detector):
     # Display and interface methods
     def set_final_perimeter_ratio_range(self,val):
         self.final_perimeter_ratio_range[0] = val
+
+    def init_gui(self):
+        # self.info = ui.Info_Text("Pupil detection using Canny Edges.")
+        # self.g_pool.pupil_detector_menu.append(self.info)
+
+        self.menu = ui.Growing_Menu('Pupil Detector Controls')
+        self.menu.configuration = self.menu_conf
+        self.g_pool.pupil_detector_menu.append(self.menu)
+        self.menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
+        self.menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=20,step=1))
+        self.menu.append(ui.Slider('pupil_min',self,label='Pupil min',min=1,max=50,step=1))
+        self.menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=1,max=100,step=1))
+
 
     def create_atb_bar(self,pos):
         self._bar = atb.Bar(name = "Canny_Pupil_Detector", label="Pupil_Detector",
@@ -541,7 +556,7 @@ class Canny_Detector(Pupil_Detector):
     def open_window(self,size):
         if not self._window:
             if 0: #we are not fullscreening
-                monitor = glfwGetMonitors()[self.monitor_idx.value]
+                monitor = glfwGetMonitors()[self.monitor_idx]
                 mode = glfwGetVideoMode(monitor)
                 height,width= mode[0],mode[1]
             else:
@@ -598,9 +613,9 @@ class Canny_Detector(Pupil_Detector):
         glfwMakeContextCurrent(active_window)
 
     def cleanup(self):
-        self.save('intensity_range',self.intensity_range.value)
-        self.save('pupil_min',self.pupil_min.value)
-        self.save('pupil_max',self.pupil_max.value)
-        self.save('min_contour_size',self.min_contour_size.value)
+        self.save('intensity_range',self.intensity_range)
+        self.save('pupil_min',self.pupil_min)
+        self.save('pupil_max',self.pupil_max)
+        self.save('min_contour_size',self.min_contour_size)
         self.save('final_perimeter_ratio_range',self.final_perimeter_ratio_range)
         self.session_settings.close()
