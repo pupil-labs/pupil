@@ -109,5 +109,6 @@ if __name__ == '__main__':
     img[50:80,100:130] = 0
     # print img
     integral = cv2.integral(img)
-    integral =  np.array(integral,dtype=c_float)
+    integral =  np.array(integral,dtype=np.float32)
     print ring_filter(integral)
+    print eye_filter(integral)

@@ -56,10 +56,12 @@ def save_object(object,file_path):
 
 if __name__ == '__main__':
 	logging.basicConfig(level=logging.DEBUG)
-	settings = Persistent_Dict("~/Desktop/test")
-	settings['f'] = "this is a test"
-	settings['list'] = ["list 1","list2"]
-	settings.close()
+	# settings = Persistent_Dict("~/Desktop/test")
+	# settings['f'] = "this is a test"
+	# settings['list'] = ["list 1","list2"]
+	# settings.close()
 
-	save_object("string",'test')
-	print load_object('test')
+	# save_object("string",'test')
+	# print load_object('test')
+	settings = Persistent_Dict('~/Desktop/pupil_settings/user_settings_eye')
+	print settings['roi']

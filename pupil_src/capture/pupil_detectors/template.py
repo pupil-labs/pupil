@@ -12,17 +12,17 @@ import cv2
 from time import sleep
 import numpy as np
 from methods import *
-import atb
-from ctypes import c_int,c_bool,c_float
+
 import logging
 logger = logging.getLogger(__name__)
 
+# gui
+from pyglui import ui
 
 class Pupil_Detector(object):
     """base class for pupil detector"""
     def __init__(self):
         super(Pupil_Detector, self).__init__()
-        var1 = c_int(0)
 
     def detect(self,frame,u_roi,visualize=False):
         img = frame.img
@@ -57,6 +57,9 @@ class Pupil_Detector(object):
             no_result['timestamp'] = frame.timestamp
             no_result['norm_pupil'] = None
             return no_result
+
+    def init_gui(self):
+        pass
 
 
     def create_atb_bar(self,pos):
