@@ -190,7 +190,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     #setup GUI
     g_pool.gui = ui.UI()
     # g_pool.gui.scale = session_settings.get('gui_scale',1)
-    g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-200,0),size=(0,0),header_pos='left')
+    g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-300,0),size=(0,0),header_pos='left')
     g_pool.sidebar.configuration = session_settings.get('side_bar_config',{'collapsed':True})
     general_settings = ui.Growing_Menu('General')
     general_settings.configuration = session_settings.get('general_menu_config',{})

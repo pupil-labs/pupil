@@ -523,10 +523,10 @@ class Canny_Detector(Pupil_Detector):
         
         self.advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
         self.advanced_controls_menu.configuration = self.session_settings.get('advanced_controls_menu_config',{'collapsed':True})
-        self.g_pool.pupil_detector_menu.append(self.advanced_controls_menu)
         self.advanced_controls_menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
         self.advanced_controls_menu.append(ui.Slider('min_contour_size',self,label='Contour min length',min=1,max=200,step=1))
         self.advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
+        self.g_pool.pupil_detector_menu.append(self.advanced_controls_menu)
 
 
     def toggle_window(self):
