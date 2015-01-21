@@ -545,7 +545,7 @@ class Canny_Detector(Pupil_Detector):
                 height,width= size
 
             active_window = glfwGetCurrentContext()
-            self._window = glfwCreateWindow(height, width, "Algorithm Debug Window", monitor=monitor, share=active_window)
+            self._window = glfwCreateWindow(height, width, "Pupil Detector Debug Window", monitor=monitor, share=active_window)
             if not 0:
                 glfwSetWindowPos(self._window,200,0)
 
