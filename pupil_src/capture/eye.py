@@ -306,11 +306,11 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         if g_pool.display_mode == 'roi':
             # todo: we should be able to get the pts frame from the ROI object 
             # along with the edit pts
-            pts = ((u_r.lX,u_r.lY),(u_r.uX,u_r.lY),(u_r.uX,u_r.uY),(u_r.lX,u_r.uY))
-            edit_pts = ((u_r.lX,u_r.lY),(u_r.uX,u_r.uY))
-            draw_gl_polyline(pts,(.8,.8,.8,0.5),thickness=3)
-            cygl_draw_points(edit_pts,size=36,color=cygl_rgba(.0,.0,.0,.5),sharpness=0.3)
-            cygl_draw_points(edit_pts,size=20,color=cygl_rgba(.5,.5,.9,.9),sharpness=0.9)
+            # pts = ((u_r.lX,u_r.lY),(u_r.uX,u_r.lY),(u_r.uX,u_r.uY),(u_r.lX,u_r.uY))
+            # edit_pts = ((u_r.lX,u_r.lY),(u_r.uX,u_r.uY))
+            draw_gl_polyline(u_r.rect,(.8,.8,.8,0.5),thickness=3)
+            cygl_draw_points(u_r.edit_pts,size=36,color=cygl_rgba(.0,.0,.0,.5),sharpness=0.3)
+            cygl_draw_points(u_r.edit_pts,size=20,color=cygl_rgba(.5,.5,.9,.9),sharpness=0.9)
 
         if result['confidence'] >0 and g_pool.draw_pupil:
             if result.has_key('axes'):
