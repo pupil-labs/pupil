@@ -41,7 +41,7 @@ class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
         gaze_pts = []
 
         for p in events['pupil_positions']:
-            if p['confidence'] > self.g_pool.pupil_confidece_threshold:
+            if p['confidence'] > self.g_pool.pupil_confidence_threshold:
                 gaze_point = self.map_fn(p['norm_pos'])
                 gaze_pts.append({'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp']})
 
