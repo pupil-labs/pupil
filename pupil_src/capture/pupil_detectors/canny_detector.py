@@ -88,8 +88,8 @@ class Canny_Detector(Pupil_Detector):
         self.confidence_hist = []
 
         # GUI settings
-        self.menu = None
-        self.menu_conf = menu_conf
+        self.advanced_controls_menu = None
+        self.advanced_controls_menu_conf = menu_conf
 
 
         #debug window
@@ -523,13 +523,15 @@ class Canny_Detector(Pupil_Detector):
         # self.info = ui.Info_Text("Pupil detection using Canny Edges.")
         # self.g_pool.pupil_detector_menu.append(self.info)
 
-        self.menu = ui.Growing_Menu('Controls')
-        self.menu.configuration = self.menu_conf
-        self.g_pool.pupil_detector_menu.append(self.menu)
-        self.menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
-        self.menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=20,step=1))
-        self.menu.append(ui.Slider('pupil_min',self,label='Pupil min',min=1,max=50,step=1))
-        self.menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=1,max=200,step=1))
+        self.g_pool.pupil_detector_menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=20,step=1))
+        self.g_pool.pupil_detector_menu.append(ui.Slider('pupil_min',self,label='Pupil min',min=1,max=250,step=1))
+        self.g_pool.pupil_detector_menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=1,max=250,step=1))
+        
+        self.advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
+        self.advanced_controls_menu.configuration = self.advanced_controls_menu_conf
+        self.g_pool.pupil_detector_menu.append(self.advanced_controls_menu)
+        self.advanced_controls_menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
+        self.advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
 
 
     def create_atb_bar(self,pos):
@@ -568,7 +570,7 @@ class Canny_Detector(Pupil_Detector):
                 height,width= size
 
             active_window = glfwGetCurrentContext()
-            self._window = glfwCreateWindow(height, width, "Plugin Window", monitor=monitor, share=active_window)
+            self._window = glfwCreateWindow(height, width, "Algorithm Debug Window", monitor=monitor, share=active_window)
             if not 0:
                 glfwSetWindowPos(self._window,200,0)
 
@@ -591,10 +593,10 @@ class Canny_Detector(Pupil_Detector):
             self.window_should_open = False
 
     # window calbacks
-    def on_resize(self,window,w, h):
+    def on_resize(self,window,w,h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
-        adjust_gl_view(w,h,window)
+        adjust_gl_view(w,h)
         glfwMakeContextCurrent(active_window)
 
     def on_close(self,window):
