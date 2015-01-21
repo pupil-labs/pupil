@@ -317,7 +317,6 @@ def world(g_pool,cap_src,cap_size):
             p = g_pool.pupil_queue.get()
             recent_pupil_positions.append(p)
             pupil_graph.add(p['confidence'])
-
         events['pupil_positions'] = recent_pupil_positions
 
         # allow each Plugin to do its work.
