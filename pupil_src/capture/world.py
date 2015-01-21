@@ -18,7 +18,6 @@ if __name__ == '__main__':
 
 
 import os, sys
-from time import time
 from file_methods import Persistent_Dict
 import logging
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
@@ -270,7 +269,7 @@ def world(g_pool,cap_src,cap_size):
     #set up performace graphs:
     pid = os.getpid()
     ps = psutil.Process(pid)
-    ts = time()
+    ts = frame.timestamp
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,110)
@@ -302,7 +301,7 @@ def world(g_pool,cap_src,cap_size):
             break
 
         #update performace graphs
-        t = time()
+        t = frame.timestamp
         dt,ts = t-ts,t
         fps_graph.add(1./dt)
         cpu_graph.update()
