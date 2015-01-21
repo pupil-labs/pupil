@@ -513,9 +513,9 @@ class Canny_Detector(Pupil_Detector):
         self.final_perimeter_ratio_range[0] = val
 
     def init_gui(self):
-        self.info = ui.Info_Text("Switch to algorithm view to see a visualization of pupil detection parameters overlaid on the eye video. "\
+        self.info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
-                                +"Adjust the pupil min and pupil max ranges (red circles) so that the apparent pupil (green circle) is within the bounds.")
+                                +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
         self.g_pool.pupil_detector_menu.append(self.info)
         self.g_pool.pupil_detector_menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=20,step=1))
         self.g_pool.pupil_detector_menu.append(ui.Slider('pupil_min',self,label='Pupil min',min=1,max=250,step=1))
