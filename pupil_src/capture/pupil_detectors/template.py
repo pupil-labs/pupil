@@ -63,11 +63,7 @@ class Pupil_Detector(object):
         pass
 
 
-    def create_atb_bar(self,pos):
-        self.bar = atb.Bar(name = "Pupil_Detector", label="Pupil Detector Controls",
-            help="pupil detection params", color=(50, 50, 50), alpha=100,
-            text='light', position=pos,refresh=.3, size=(200, 200))
-        self.bar.add_var("VAR1",self.var1, step=1.,readonly=False)
+
 
 
 
