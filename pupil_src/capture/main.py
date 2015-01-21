@@ -8,9 +8,9 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import sys, os,platform
+import sys, os, platform
 from time import sleep
-from ctypes import c_bool, c_int,c_double
+from ctypes import c_bool, c_double
 if platform.system() == 'Darwin':
     from billiard import Process, Pipe, Queue, Value, freeze_support, forking_enable
 else:
