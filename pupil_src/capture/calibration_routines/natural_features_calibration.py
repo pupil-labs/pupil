@@ -117,9 +117,10 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
 
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
         if self.active:
-            img = frame.img
+            recent_pupil_positions = events['pupil_positions']
+
             if self.first_img is None:
                 self.first_img = frame.gray.copy()
 
@@ -135,7 +136,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
                     self.point = nextPts
                     self.first_img = gray.copy()
                     nextPts = nextPts[0]
-                    self.pos = normalize(nextPts,(img.shape[1],img.shape[0]),flip_y=True)
+                    self.pos = normalize(nextPts,(gray.shape[1],gray.shape[0]),flip_y=True)
                     self.count -=1
 
                     ref = {}

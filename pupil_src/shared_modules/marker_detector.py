@@ -137,7 +137,7 @@ class Marker_Detector(Plugin):
         #     self._bar.add_var("%s_y_scale"%i,vtype=c_float getter=s.atb_get_scale_y,min=1,setter=s.atb_set_scale_y,group=str(i),label='real height',help='defining x and y scale factor you atumatically set the correct aspect ratio.' )
         #     self._bar.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
         gray = frame.gray
         self.img_shape = frame.height,frame.width,3
 
@@ -185,11 +185,9 @@ class Marker_Detector(Plugin):
         for s in self.surfaces:
             if s.detected:
                 s.gaze_on_srf = []
-                for p in recent_pupil_positions:
-                    if p['norm_pupil'] is not None:
-                        gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_gaze'])))
-                        p['realtime gaze on '+s.name] = gp_on_s
-                        s.gaze_on_srf.append(gp_on_s)
+                for p in events.get('gaze',[]):
+                    pass #todo: implement
+
 
 
 

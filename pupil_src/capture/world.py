@@ -318,9 +318,11 @@ def world(g_pool,cap_src,cap_size):
             recent_pupil_positions.append(p)
             pupil_graph.add(p['confidence'])
 
+        events['pupil_positions'] = recent_pupil_positions
+
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
-            p.update(frame,recent_pupil_positions,events)
+            p.update(frame,events)
 
         #check if a plugin need to be destroyed
         g_pool.plugins = [p for p in g_pool.plugins if p.alive]

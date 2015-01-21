@@ -520,7 +520,7 @@ class Canny_Detector(Pupil_Detector):
         self.g_pool.pupil_detector_menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=20,step=1))
         self.g_pool.pupil_detector_menu.append(ui.Slider('pupil_min',self,label='Pupil min',min=1,max=250,step=1))
         self.g_pool.pupil_detector_menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=1,max=250,step=1))
-        
+
         self.advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
         self.advanced_controls_menu.configuration = self.session_settings.get('advanced_controls_menu_config',{'collapsed':True})
         self.advanced_controls_menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))

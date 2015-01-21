@@ -225,8 +225,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self._window = None
 
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
         if self.active:
+            recent_pupil_positions = events['pupil_positions']
             gray_img = frame.gray
 
             #get world image size for error fitting later.

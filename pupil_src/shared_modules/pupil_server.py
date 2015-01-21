@@ -56,8 +56,8 @@ class Pupil_Server(Plugin):
         except zmq.ZMQError:
             logger.error("Could not set Socket: %s"%new_address)
 
-    def update(self,frame,recent_pupil_positions,events):
-        for p in recent_pupil_positions:
+    def update(self,frame,events):
+        for p in events['pupil_positions']:
             msg = "Pupil\n"
             for key,value in p.iteritems():
                 if key not in self.exclude_list:
