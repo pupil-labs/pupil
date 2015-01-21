@@ -16,7 +16,9 @@ import numpy as np
 
 #display
 from glfw import *
-from pyglui import ui,graph,cygl
+from pyglui import ui,graph
+from pyglui.cygl.utils import init as cygl_init
+from pyglui.cygl.utils import draw_points as cygl_draw_points
 
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
@@ -167,7 +169,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     glfwInit()
     eye_window = glfwCreateWindow(frame.width, frame.height, "Eye", None, None)
     glfwMakeContextCurrent(eye_window)
-    cygl.utils.init()
+    cygl_init()
 
     # Register callbacks eye_window
     glfwSetWindowSizeCallback(eye_window,on_resize)
