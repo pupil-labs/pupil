@@ -87,6 +87,20 @@ class Roi(object):
     def get(self):
         return self.lX,self.lY,self.uX,self.uY,self.array_shape
 
+    @property
+    def rect(self):
+        return ((self.lX,self.lY),(self.uX,self.lY),(self.uX,self.uY),(self.lX,self.uY))
+    @rect.setter
+    def rect(self, value):
+        raise Exception('The view field is read-only. Use the set methods instead')
+    
+    @property
+    def edit_pts(self):
+        return ((self.lX,self.lY),(self.uX,self.uY))
+    @edit_pts.setter
+    def edit_pts(self, value):
+        raise Exception('The view field is read-only. Use the set methods instead')
+    
 
 def bin_thresholding(image, image_lower=0, image_upper=256):
     binary_img = cv2.inRange(image, np.asarray(image_lower),
