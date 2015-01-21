@@ -132,7 +132,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         for p in self.g_pool.plugins:
             if p.base_class_name == 'Gaze_Mapping_Plugin':
                 p.alive = False
-        self.g_pool.plugins = [p for p in g_pool.plugins if p.alive]
+        self.g_pool.plugins = [p for p in self.g_pool.plugins if p.alive]
 
         #add new gaze mapper
         self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,map_fn))
