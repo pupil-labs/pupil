@@ -337,7 +337,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     pupil_detector.cleanup()
     cap.close()
-    # atb.terminate()
     glfwDestroyWindow(eye_window)
     glfwTerminate()
 

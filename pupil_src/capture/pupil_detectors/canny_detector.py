@@ -52,7 +52,7 @@ class Canny_Detector(Pupil_Detector):
         self.session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_detector') )
 
         # coarse pupil filter params
-        self.coarse_detection = self.load('coarse_detection',True)
+        self.coarse_detection = self.session_settings.get('coarse_detection',True)
         self.coarse_filter_min = 100
         self.coarse_filter_max = 400
 
@@ -63,21 +63,21 @@ class Canny_Detector(Pupil_Detector):
         self.canny_aperture = 5
 
         # edge intensity filter params
-        self.intensity_range = self.load('intensity_range',11)
+        self.intensity_range = self.session_settings.get('intensity_range',11)
         self.bin_thresh = 0
 
         # contour prefilter params
-        self.min_contour_size = self.load('min_contour_size',80)
+        self.min_contour_size = self.session_settings.get('min_contour_size',80)
 
         #ellipse filter params
         self.inital_ellipse_fit_threshhold = 1.8
         self.min_ratio = .3
-        self.pupil_min = self.load('pupil_min',40.)
-        self.pupil_max = self.load('pupil_max',150.)
+        self.pupil_min = self.session_settings.get('pupil_min',40.)
+        self.pupil_max = self.session_settings.get('pupil_max',150.)
         self.target_size= 100.0
         self.strong_perimeter_ratio_range = .8, 1.1
         self.strong_area_ratio_range = .6,1.1
-        self.final_perimeter_ratio_range = self.load("final_perimeter_ratio_range",[.6, 1.2])
+        self.final_perimeter_ratio_range = self.session_settings.get("final_perimeter_ratio_range",[.6, 1.2])
         self.strong_prior = None
 
 
@@ -100,11 +100,6 @@ class Canny_Detector(Pupil_Detector):
 
         #debug settings
         self.should_sleep = False
-
-    def load(self, var_name, default):
-        return self.session_settings.get(var_name,default)
-    def save(self, var_name, var):
-            self.session_settings[var_name] = var
 
     def detect(self,frame,user_roi,visualize=False):
 
@@ -531,27 +526,9 @@ class Canny_Detector(Pupil_Detector):
         self.advanced_controls_menu.configuration = self.advanced_controls_menu_conf
         self.g_pool.pupil_detector_menu.append(self.advanced_controls_menu)
         self.advanced_controls_menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
+        self.advanced_controls_menu.append(ui.Slider('min_contour_size',self,label='Contour min length',min=1,max=200,step=1))
         self.advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
 
-
-    def create_atb_bar(self,pos):
-        self._bar = atb.Bar(name = "Canny_Pupil_Detector", label="Pupil_Detector",
-            help="pupil detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=pos,refresh=.3, size=(200, 100))
-        self._bar.add_var("use coarse detection",self.coarse_detection,help="Disbale when you have trouble with detection when using Mascara.")
-        self._bar.add_button("open debug window", self.toggle_window,help="Open a debug window that shows geeky visual feedback from the algorithm.")
-        self._bar.add_var("pupil_intensity_range",self.intensity_range,help="Using alorithm view set this as low as possible but so that the pupil is always fully overlayed in blue.")
-        self._bar.add_var("pupil_min",self.pupil_min,min=1,help="Setting good bounds will increase detection robustness. Use alorithm view to see.")
-        self._bar.add_var("pupil_max",self.pupil_max,min=1,help="Setting good bounds will increase detection robustness. Use alorithm view to see.")
-        self._bar.add_var("Pupil_Aparent_Size",self.target_size,readonly=True)
-        self._bar.add_var("Contour min length",self.min_contour_size,help="Setting this low will make the alorithm try to connect even smaller arcs to find the pupil but cost you cpu time!")
-
-        # self._bar.add_var("Pupil_Shade",self.bin_thresh, readonly=True)
-        self._bar.add_var("confidence",self.confidence, readonly=True,help="The measure of confidence is a number between 0 and 1 of how sure the algorithm is about the detected pupil. We currenlty use the fraction of pupil boundry edge that is used as support for the ellipse result.")
-        # self._bar.add_var("Image_Blur",self.blur, step=2,min=1,max=9)
-        # self._bar.add_var("Canny_aparture",self.canny_aperture, step=2,min=3,max=7)
-        # self._bar.add_var("canny_threshold",self.canny_thresh, step=1,min=0)
-        # self._bar.add_var("Canny_ratio",self.canny_ratio, step=1,min=1)
 
     def toggle_window(self):
         if self._window:
@@ -619,9 +596,10 @@ class Canny_Detector(Pupil_Detector):
         glfwMakeContextCurrent(active_window)
 
     def cleanup(self):
-        self.save('intensity_range',self.intensity_range)
-        self.save('pupil_min',self.pupil_min)
-        self.save('pupil_max',self.pupil_max)
-        self.save('min_contour_size',self.min_contour_size)
-        self.save('final_perimeter_ratio_range',self.final_perimeter_ratio_range)
+        self.session_settings['intensity_range'] = self.intensity_range
+        self.session_settings['coarse_detection'] = self.coarse_detection
+        self.session_settings['pupil_min'] = self.pupil_min
+        self.session_settings['pupil_max'] = self.pupil_max
+        self.session_settings['min_contour_size'] = self.min_contour_size
+        self.session_settings['final_perimeter_ratio_range'] = self.final_perimeter_ratio_range
         self.session_settings.close()
