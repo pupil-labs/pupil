@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 class Canny_Detector(Pupil_Detector):
     """a Pupil detector based on Canny_Edges"""
-    def __init__(self, g_pool,menu_conf = {'collapsed':True}):
+    def __init__(self, g_pool):
         super(Canny_Detector, self).__init__(g_pool)
 
         # load session persistent settings
@@ -89,8 +89,6 @@ class Canny_Detector(Pupil_Detector):
 
         # GUI settings
         self.advanced_controls_menu = None
-        self.advanced_controls_menu_conf = menu_conf
-
 
         #debug window
         self.suggested_size = 640,480
@@ -523,7 +521,7 @@ class Canny_Detector(Pupil_Detector):
         self.g_pool.pupil_detector_menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=1,max=250,step=1))
         
         self.advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
-        self.advanced_controls_menu.configuration = self.advanced_controls_menu_conf
+        self.advanced_controls_menu.configuration = self.session_settings.get('advanced_controls_menu_config',{'collapsed':True})
         self.g_pool.pupil_detector_menu.append(self.advanced_controls_menu)
         self.advanced_controls_menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
         self.advanced_controls_menu.append(ui.Slider('min_contour_size',self,label='Contour min length',min=1,max=200,step=1))
@@ -602,4 +600,5 @@ class Canny_Detector(Pupil_Detector):
         self.session_settings['pupil_max'] = self.pupil_max
         self.session_settings['min_contour_size'] = self.min_contour_size
         self.session_settings['final_perimeter_ratio_range'] = self.final_perimeter_ratio_range
+        self.session_settings['advanced_controls_menu_config'] = self.advanced_controls_menu.configuration
         self.session_settings.close()
