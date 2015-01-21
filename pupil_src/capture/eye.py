@@ -19,6 +19,7 @@ from glfw import *
 from pyglui import ui,graph
 from pyglui.cygl.utils import init as cygl_init
 from pyglui.cygl.utils import draw_points as cygl_draw_points
+from pyglui.cygl.utils import RGBA as cygl_rgba
 
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
@@ -51,11 +52,11 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     fh.setLevel(logging.DEBUG)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
-    ch.setLevel(logging.WARNING)
+    ch.setLevel(logging.DEBUG)
     # create formatter and add it to the handlers
-    formatter = logging.Formatter('EYE Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('Eye Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
-    formatter = logging.Formatter('E Y E Process [%(levelname)s] %(name)s : %(message)s')
+    formatter = logging.Formatter('EYE Process [%(levelname)s] %(name)s : %(message)s')
     ch.setFormatter(formatter)
     # add the handlers to the logger
     logger.addHandler(fh)
@@ -105,7 +106,16 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         #     else:
         #         bar.draw_roi.value = 0
 
-
+        # if ROI mode - hide and disable the GUI
+        # if action == GLFW_PRESS:
+        #     if g_pool.display_mode == 'roi':                
+        #         pos = glfwGetCursorPos(window)
+        #         pos = normalize(pos,glfwGetWindowSize(window))
+        #         pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
+        #         u_r.setStart(pos)
+        #         bar.draw_roi.value = 1
+        # else:
+        #     g_pool.display_mode ==                
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
         x,y = x*hdpi_factor,y*hdpi_factor
@@ -278,27 +288,29 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         # stream the result
         g_pool.pupil_queue.put(result)
 
-        # VISUALIZATION direct visualizations on the frame.img data
-        if g_pool.display_mode == 'roi':
-            # and a solid (white) frame around the user defined ROI
-            r_img = frame.img[u_r.lY:u_r.uY,u_r.lX:u_r.uX]
-            r_img[:,0] = 255,255,255
-            r_img[:,-1]= 255,255,255
-            r_img[0,:] = 255,255,255
-            r_img[-1,:]= 255,255,255
-
-
 
         # GL drawing
         glfwMakeContextCurrent(eye_window)
         clear_gl_screen()
+
+        # switch to work in normalized coordinate space
         make_coord_system_norm_based()
         if g_pool.display_mode != 'cpu_save':
             draw_named_texture(g_pool.image_tex,frame.img)
         else:
             draw_named_texture(g_pool.image_tex)
-        make_coord_system_pixel_based(frame.img.shape)
 
+        # switch to work in pixel space 
+        make_coord_system_pixel_based(frame.img.shape)
+        
+        if g_pool.display_mode == 'roi':
+            # todo: we should be able to get the pts frame from the ROI object 
+            # along with the edit pts
+            pts = ((u_r.lX,u_r.lY),(u_r.uX,u_r.lY),(u_r.uX,u_r.uY),(u_r.lX,u_r.uY))
+            edit_pts = ((u_r.lX,u_r.lY),(u_r.uX,u_r.uY))
+            draw_gl_polyline(pts,(.8,.8,.8,0.5),thickness=3)
+            cygl_draw_points(edit_pts,size=36,color=cygl_rgba(.0,.0,.0,.5),sharpness=0.3)
+            cygl_draw_points(edit_pts,size=20,color=cygl_rgba(.5,.5,.9,.9),sharpness=0.9)
 
         if result['confidence'] >0 and g_pool.draw_pupil:
             if result.has_key('axes'):
