@@ -132,20 +132,21 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         for p in self.g_pool.plugins:
             if p.base_class_name == 'Gaze_Mapping_Plugin':
                 p.alive = False
-        self.g_pool.plugins = [p for p in g_pool.plugins if p.alive]
+        self.g_pool.plugins = [p for p in self.g_pool.plugins if p.alive]
 
         #add new gaze mapper
         self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,map_fn))
         self.g_pool.plugins.sort(key=lambda p: p.order)
 
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
         """
         gets called once every frame.
         reference positon need to be published to shared_pos
         if no reference was found, publish 0,0
         """
         if self.active:
+            recent_pupil_positions = events['pupil_positions']
 
             gray_img  = frame.gray
 

@@ -68,7 +68,7 @@ class Plugin(object):
         '''
         pass
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
         """
         gets called once every frame
         if you plan to update the image data, note that this will affect all plugins axecuted after you.

@@ -17,10 +17,9 @@ class Dummy_Gaze_Mapper(Gaze_Mapping_Plugin):
     def __init__(self, g_pool):
         super(Dummy_Gaze_Mapper, self).__init__(g_pool)
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
         gaze_pts = []
-
-        for p in recent_pupil_positions:
+        for p in events['pupil_positions']:
             if p['confidence'] > self.g_pool.pupil_confidence_threshold:
                 gaze_pts.append({'norm_pos':p['norm_pos'][:],'confidence':p['confidence'],'timestamp':p['timestamp']})
 
@@ -38,13 +37,13 @@ class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.map_fn = map_fn
 
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
         gaze_pts = []
 
-        for p in recent_pupil_positions:
-            if p['confidence'] > self.g_pool.pupil_confidece_threshold:
+        for p in events['pupil_positions']:
+            if p['confidence'] > self.g_pool.pupil_confidence_threshold:
                 gaze_point = self.map_fn(p['norm_pos'])
-                gaze_pts.append({'norm_pos':p['norm_pos'][:],'confidence':p['confidence'],'timestamp':p['timestamp']})
+                gaze_pts.append({'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp']})
 
         events['gaze'] = gaze_pts
 
@@ -53,12 +52,12 @@ class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
 
 
 class Volumetric_Gaze_Mapper(Gaze_Mapping_Plugin):
-    def __init__(self, g_pool,params):
+    def __init__(self,g_pool,params):
         super(Volumetric_Gaze_Mapper, self).__init__(g_pool)
         self.params = params
 
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
         gaze_pts = []
         raise NotImplementedError
         events['gaze'] = gaze_pts
@@ -71,7 +70,7 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
         super(Volumetric_Gaze_Mapper, self).__init__(g_pool)
         self.params = params
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
         gaze_pts = []
         raise NotImplementedError
         events['gaze'] = gaze_pts

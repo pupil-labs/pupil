@@ -325,7 +325,9 @@ class Accuracy_Test(Calibration_Plugin):
             self._window = None
 
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
+
+        recent_pupil_positions = events['pupil_positions']
 
         #get world image size for error fitting later.
         if self.world_size is None:

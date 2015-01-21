@@ -8,16 +8,14 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import sys, os,platform
+import sys, os, platform
 from time import sleep
-from ctypes import c_bool, c_int,c_double
+from ctypes import c_bool, c_double
 if platform.system() == 'Darwin':
-    from billiard import Process, Pipe, Event,Queue,forking_enable,freeze_support
-    from billiard.sharedctypes import Value
+    from billiard import Process, Pipe, Queue, Value, freeze_support, forking_enable
 else:
-    from multiprocessing import Process, Pipe, Event, Queue,freeze_support
+    from multiprocessing import Process, Pipe, Queue, Value, freeze_support
     forking_enable = lambda _: _ #dummy fn
-    from multiprocessing.sharedctypes import Value
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':

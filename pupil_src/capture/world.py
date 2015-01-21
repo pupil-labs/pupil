@@ -18,7 +18,6 @@ if __name__ == '__main__':
 
 
 import os, sys
-from time import time
 from file_methods import Persistent_Dict
 import logging
 from ctypes import  c_int,c_bool,c_float,create_string_buffer
@@ -270,7 +269,7 @@ def world(g_pool,cap_src,cap_size):
     #set up performace graphs:
     pid = os.getpid()
     ps = psutil.Process(pid)
-    ts = time()
+    ts = frame.timestamp
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,110)
@@ -302,7 +301,7 @@ def world(g_pool,cap_src,cap_size):
             break
 
         #update performace graphs
-        t = time()
+        t = frame.timestamp
         dt,ts = t-ts,t
         fps_graph.add(1./dt)
         cpu_graph.update()
@@ -317,10 +316,11 @@ def world(g_pool,cap_src,cap_size):
             p = g_pool.pupil_queue.get()
             recent_pupil_positions.append(p)
             pupil_graph.add(p['confidence'])
+        events['pupil_positions'] = recent_pupil_positions
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
-            p.update(frame,recent_pupil_positions,events)
+            p.update(frame,events)
 
         #check if a plugin need to be destroyed
         g_pool.plugins = [p for p in g_pool.plugins if p.alive]

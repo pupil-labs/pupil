@@ -182,15 +182,14 @@ class Recorder(Plugin):
         if self.record_eye:
             self.g_pool.eye_tx.send(self.rec_path)
 
-    def update(self,frame,recent_pupil_positons,events):
+    def update(self,frame,events):
         if self.running:
-
             if not self.writer:
                 self.writer = cv2.VideoWriter(self.video_path, cv2.cv.CV_FOURCC(*'DIVX'), float(self.g_pool.capture.frame_rate), (frame.width,frame.height))
                 self.height, self.width = frame.height,frame.width
 
             # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
-            for p in recent_pupil_positons:
+            for p in events['pupil_positions']:
                 pupil_pos = p['norm_pos'][0],p['norm_pos'][1],p['diameter'],p['timestamp'],p['confidence'],p['id']
 
                 self.pupil_list.append(pupil_pos)

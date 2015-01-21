@@ -61,7 +61,7 @@ class Pupil_Remote(Plugin):
         except zmq.ZMQError:
             logger.error("Could not set Socket.")
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
         try:
             msg = self.socket.recv(flags=zmq.NOBLOCK)
         except zmq.ZMQError :

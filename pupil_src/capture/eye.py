@@ -9,7 +9,7 @@
 '''
 
 import os
-from time import time, sleep
+from time import sleep
 from file_methods import Persistent_Dict
 import logging
 import numpy as np
@@ -93,8 +93,8 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         pos = glfwGetCursorPos(window)
         pos = normalize(pos,glfwGetWindowSize(eye_window))
         pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
-        
-        # handle roi        
+
+        # handle roi
         # if not atb.TwEventMouseButtonGLFW(button,int(action == GLFW_PRESS)):
         #     if action == GLFW_PRESS:
         #         if bar.display.value ==1:
@@ -193,7 +193,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     # gl_state settings
     basic_gl_setup()
     g_pool.image_tex = create_named_texture(frame.img)
-    
+
     # refresh speed settings
     glfwSwapInterval(0)
     glfwSetWindowPos(eye_window,800,0)
@@ -209,7 +209,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     general_settings.append(ui.Selector('display_mode',g_pool,selection=['camera_image','roi','algorithm','cpu_save'], labels=['Camera Image', 'ROI', 'Algorithm', 'CPU Save'], label="Mode") )
     g_pool.sidebar.append(general_settings)
     g_pool.pupil_detector_menu = ui.Growing_Menu('Pupil Detector')
-    g_pool.pupil_detector_menu.configuration = session_settings.get('pupil_detector_menu_config',{'collapsed':True})    
+    g_pool.pupil_detector_menu.configuration = session_settings.get('pupil_detector_menu_config',{'collapsed':True})
     g_pool.sidebar.append(g_pool.pupil_detector_menu)
 
     g_pool.gui.append(g_pool.sidebar)
@@ -228,7 +228,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     #set up performance graphs
     pid = os.getpid()
     ps = psutil.Process(pid)
-    ts = time()
+    ts = frame.timestamp
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,110)
@@ -254,7 +254,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
             break
 
         #update performace graphs
-        t = time()
+        t = frame.timestamp
         dt,ts = t-ts,t
         fps_graph.add(1./dt)
         cpu_graph.update()
@@ -326,7 +326,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         cpu_graph.draw()
         graph.pop_view()
 
-        # render GUI 
+        # render GUI
         g_pool.gui.update()
         glfwSwapBuffers(eye_window)
         glfwPollEvents()

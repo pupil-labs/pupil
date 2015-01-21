@@ -139,7 +139,7 @@ def make_map_function(cx,cy,n):
 
 def preprocess_data(pupil_pts,ref_pts):
     '''small utility function to deal with timestamped but uncorrelated data
-    input must be lists that contain dicts with at least "timestamp" and "norm_pos"/'norm_pupil"
+    input must be lists that contain dicts with at least "timestamp" and "norm_pos"
     '''
     cal_data = []
 
@@ -158,7 +158,7 @@ def preprocess_data(pupil_pts,ref_pts):
                 for p_pt in matched:
                     #only use close points
                     if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                        data_pt = p_pt["norm_pupil"][0], p_pt["norm_pupil"][1],cur_ref_pt['norm_pos'][0],cur_ref_pt['norm_pos'][1]
+                        data_pt = p_pt["norm_pos"][0], p_pt["norm_pos"][1],cur_ref_pt['norm_pos'][0],cur_ref_pt['norm_pos'][1]
                         cal_data.append(data_pt)
                 break
         if ref_pts:
