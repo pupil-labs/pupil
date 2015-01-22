@@ -35,12 +35,10 @@ class Roi(object):
         self.array_shape = array_shape
         self.lX = 0
         self.lY = 0
-        self.uX = array_shape[1]-20
-        self.uY = array_shape[0]-20
+        self.uX = array_shape[1]-0
+        self.uY = array_shape[0]-0
         self.nX = 0
         self.nY = 0
-        self.active_edit_pt = None
-        self.epts = np.array([[self.lX,self.lY],[self.uX,self.uY]])
 
     @property
     def view(self):
@@ -50,20 +48,20 @@ class Roi(object):
     def view(self, value):
         raise Exception('The view field is read-only. Use the set methods instead')
 
-    # def setStart(self,(x,y)):
-    #     x,y = int(x),int(y)
-    #     x,y = max(0,x),max(0,y)
-    #     self.nX,self.nY = x,y
+    def setStart(self,(x,y)):
+        x,y = int(x),int(y)
+        x,y = max(0,x),max(0,y)
+        self.nX,self.nY = x,y
 
-    # def setEnd(self,(x,y)):
-    #         x,y = int(x),int(y)
-    #         x,y = max(0,x),max(0,y)
-    #         # make sure the ROI actually contains enough pixels
-    #         if abs(self.nX - x) > 25 and abs(self.nY - y)>25:
-    #             self.lX = min(x,self.nX)
-    #             self.lY = min(y,self.nY)
-    #             self.uX = max(x,self.nX)
-    #             self.uY = max(y,self.nY)
+    def setEnd(self,(x,y)):
+            x,y = int(x),int(y)
+            x,y = max(0,x),max(0,y)
+            # make sure the ROI actually contains enough pixels
+            if abs(self.nX - x) > 25 and abs(self.nY - y)>25:
+                self.lX = min(x,self.nX)
+                self.lY = min(y,self.nY)
+                self.uX = max(x,self.nX)
+                self.uY = max(y,self.nY)
 
     def add_vector(self,(x,y)):
         """
@@ -81,55 +79,62 @@ class Roi(object):
         if vals is not None and len(vals) is 5:
             if vals[-1] == self.array_shape:
                 self.lX,self.lY,self.uX,self.uY,_ = vals
-                self.epts[0] = self.lX,self.lY
-                self.epts[1] = self.uX,self.uY                
             else:
                 logger.info('Image size has changed: Region of Interest has been reset')
         elif vals is not None and len(vals) is 4:
             self.lX,self.lY,self.uX,self.uY= vals
-            self.epts[0] = self.lX,self.lY
-            self.epts[1] = self.uX,self.uY
 
     def get(self):
         return self.lX,self.lY,self.uX,self.uY,self.array_shape
+                
+
+class UIRoi(Roi):
+    """
+    this object inherits from ROI and adds some UI helper functions
+    """
+    def __init__(self,array_shape):
+        super(UIRoi, self).__init__(array_shape)
+        pad = 20
+        self.lX += pad
+        self.lY += pad
+        self.uX -= pad
+        self.uY -= pad      
+        self.active_edit_pt = None
+        # self.setStart((self.lX,self.lY))
 
     @property
     def rect(self):
-        return np.array([[self.lX,self.lY],
-                        [self.uX,self.lY],
-                        [self.uX,self.uY],
-                        [self.lX,self.uY]])
+        return [[self.lX,self.lY],
+                [self.uX,self.lY],
+                [self.uX,self.uY],
+                [self.lX,self.uY]]
     @rect.setter
     def rect(self, value):
         raise Exception('The view field is read-only. Use the set methods instead')
     
     @property
     def edit_pts(self):
-        return self.epts
+        return [[self.lX,self.lY],[self.uX,self.uY]]
     @edit_pts.setter
     def edit_pts(self, value):
-        self.epts[0] = value[0]
-        self.epts[1] = value[1]
+        raise Exception('The view field is read-only. Use the set methods instead')
 
     def set_active_edit_pt_pos(self,pos):
-        if self.active_edit_pt == 0:
-            self.epts[0] = pos
-            self.lX = pos[0]
-            self.lY = pos[1]
-        if self.active_edit_pt == 1:
-            self.epts[1] = pos
-            self.uX = pos[0]
-            self.uY = pos[1]
+        if self.active_edit_pt == 'ep0':
+            self.setStart(pos)
+            self.setEnd(self.edit_pts[1])
+        if self.active_edit_pt == 'ep1':
+            self.setEnd(pos)
 
     def mouse_over_center(self,edit_pt,mouse_pos,w,h):
         return edit_pt[0]-w/2 <= mouse_pos[0] <=edit_pt[0]+w/2 and edit_pt[1]-h/2 <= mouse_pos[1] <=edit_pt[1]+h/2
     
     def mouse_over_edit_pt(self,mouse_pos,w,h):
-        if self.mouse_over_center(self.epts[0],mouse_pos,w,h):
-            self.active_edit_pt = 0
+        if self.mouse_over_center(self.edit_pts[0],mouse_pos,w,h):
+            self.active_edit_pt = "ep0"
             return True
-        if self.mouse_over_center(self.epts[1],mouse_pos,w,h):
-            self.active_edit_pt = 1
+        if self.mouse_over_center(self.edit_pts[1],mouse_pos,w,h):
+            self.active_edit_pt = 'ep1'
             return True
         else:
             self.active_edit_pt = None

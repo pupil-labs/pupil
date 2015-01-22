@@ -105,7 +105,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
         x,y = x*hdpi_factor,y*hdpi_factor
-        g_pool.gui.update_mouse(x,y)
+        g_pool.gui.update_mouse(x*hdpi_factor,y*hdpi_factor)
 
         if u_r.active_edit_pt is not None:
             pos = normalize((x,y),glfwGetWindowSize(eye_window))    
@@ -143,8 +143,8 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     # g_pool.draw_pupil = session_settings.get('draw_pupil',True)
     g_pool.roi_edit_mode = False
 
-    u_r = Roi(frame.img.shape)
-    u_r.set(session_settings.get('roi',u_r))
+    u_r = UIRoi(frame.img.shape)
+    u_r.set(session_settings.get('roi',u_r.get()))
 
     writer = None
 
@@ -294,7 +294,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
         if g_pool.display_mode == 'roi':
             g_pool.roi_edit_mode = True
-            draw_gl_polyline(u_r.rect,(.8,.8,.8,0.9),thickness=3)
+            draw_gl_polyline(u_r.rect,(.8,.8,.8,0.9),thickness=2)
             cygl_draw_points(u_r.edit_pts,size=36,color=cygl_rgba(.0,.0,.0,.5),sharpness=0.3)
             cygl_draw_points(u_r.edit_pts,size=20,color=cygl_rgba(.5,.5,.9,.9),sharpness=0.9)
         else:
