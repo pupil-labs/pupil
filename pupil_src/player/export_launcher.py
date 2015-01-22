@@ -139,7 +139,7 @@ class Export_Launcher(Plugin):
         # So it runs in the current config when we lauch the exporter.
         for p in self.g_pool.plugins:
             try:
-                p_initializer = p.get_class_name(),p.get_init_dict()
+                p_initializer = p.class_name,p.get_init_dict()
                 plugins.append(p_initializer)
             except AttributeError:
                 pass
