@@ -108,14 +108,14 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
         # if ROI mode - hide and disable the GUI
         # if action == GLFW_PRESS:
-        #     if g_pool.display_mode == 'roi':                
+        #     if g_pool.display_mode == 'roi':
         #         pos = glfwGetCursorPos(window)
         #         pos = normalize(pos,glfwGetWindowSize(window))
         #         pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
         #         u_r.setStart(pos)
         #         bar.draw_roi.value = 1
         # else:
-        #     g_pool.display_mode ==                
+        #     g_pool.display_mode ==
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
         x,y = x*hdpi_factor,y*hdpi_factor
@@ -171,8 +171,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     # UI callback functions
     def set_window_size(size):
-        hdpi_factor = glfwGetFramebufferSize(eye_window)[0]/glfwGetWindowSize(eye_window)[0]
-        w,h = int(frame.width*size*hdpi_factor),int(frame.height*size*hdpi_factor)
+        w,h = int(frame.width*size),int(frame.height*size)
         glfwSetWindowSize(eye_window,w,h)
 
     # Initialize glfw
@@ -300,9 +299,9 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         else:
             draw_named_texture(g_pool.image_tex)
 
-        # switch to work in pixel space 
+        # switch to work in pixel space
         make_coord_system_pixel_based(frame.img.shape)
-        
+
         if g_pool.display_mode == 'roi':
             draw_gl_polyline(u_r.rect,(.8,.8,.8,0.5),thickness=3)
             cygl_draw_points(u_r.edit_pts,size=36,color=cygl_rgba(.0,.0,.0,.5),sharpness=0.3)
@@ -316,7 +315,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                 draw_gl_polyline(pts,(1.,0,0,.5))
             # draw_gl_point_norm(result['norm_pos'],color=(1.,0.,0.,0.5))
             cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
-        
+
         # render graphs
         graph.push_view()
         fps_graph.draw()

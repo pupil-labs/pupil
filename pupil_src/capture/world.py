@@ -175,8 +175,7 @@ def world(g_pool,cap_src,cap_size):
 
     #UI callback functions
     def set_window_size(size):
-        hdpi_factor = glfwGetFramebufferSize(world_window)[0]/glfwGetWindowSize(world_window)[0]
-        w,h = int(frame.width*size*hdpi_factor),int(frame.height*size*hdpi_factor)
+        w,h = int(frame.width*size),int(frame.height*size)
         glfwSetWindowSize(world_window,w,h)
 
 
@@ -239,7 +238,7 @@ def world(g_pool,cap_src,cap_size):
     g_pool.sidebar.configuration = session_settings.get('side_bar_config',{})
     general_settings = ui.Growing_Menu('General')
     general_settings.configuration = session_settings.get('general_menu_config',{})
-    general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=.5,max=2,label='Interface Size'))
+    general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .01,min=1.,max=2.5,label='Interface Size'))
     general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
     general_settings.append(ui.Button('set timebase to 0',reset_timebase))
     g_pool.sidebar.append(general_settings)
