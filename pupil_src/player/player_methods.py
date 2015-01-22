@@ -13,9 +13,48 @@ import cv2
 #logging
 import logging
 logger = logging.getLogger(__name__)
-
-
 def correlate_gaze(gaze_list,timestamps):
+    '''
+    gaze_list: gaze x | gaze y | confidence | timestamp
+    timestamps timestamps to correlate gaze data to
+
+
+    this takes a gaze positions list and a timestamps list and makes a new list
+    with the length of the number of recorded frames.
+    Each slot conains a list that will have 0, 1 or more assosiated gaze postions.
+    '''
+    gaze_list = list(gaze_list)
+    timestamps = list(timestamps)
+
+    positions_by_frame = [[] for i in timestamps]
+
+    frame_idx = 0
+    try:
+        data_point = gaze_list.pop(0)
+    except:
+        logger.warning("No gaze positons in this recording.")
+        return positions_by_frame
+
+    gaze_timestamp = data_point[3]
+
+    while gaze_list:
+        # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
+        try:
+            t_between_frames = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
+        except IndexError:
+            break
+        if gaze_timestamp <= t_between_frames:
+            x,y,confidence,ts = data_point
+            positions_by_frame[frame_idx].append({'norm_gaze':(x,y), 'confidence':confidence, 'timestamp':ts})
+            data_point = gaze_list.pop(0)
+            gaze_timestamp = data_point[3]
+        else:
+            frame_idx+=1
+
+    return positions_by_frame
+
+
+def correlate_gaze_legacy(gaze_list,timestamps):
     '''
     gaze_list: gaze x | gaze y | pupil x | pupil y | timestamp
     timestamps timestamps to correlate gaze data to
@@ -56,20 +95,12 @@ def correlate_gaze(gaze_list,timestamps):
     return positions_by_frame
 
 
-def rec_version(data_dir):
-    with open(data_dir + "/info.csv") as info:
-        meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
-    rec_version = meta_info["Capture Software Version"]
-    rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
-    return rec_version_float
-
-
 
 def is_pupil_rec_dir(data_dir):
     if not os.path.isdir(data_dir):
         logger.error("No valid dir supplied")
         return False
-    required_files = ["world.avi", "timestamps.npy", "gaze_positions.npy"]
+    required_files = ["info.csv", "gaze_positions.npy"]
     for f in required_files:
         if not os.path.isfile(os.path.join(data_dir,f)):
             logger.debug("Did not find required file: %s in data folder %s" %(f, data_dir))
@@ -157,6 +188,6 @@ def transparent_circle(img,center,radius,color,thickness):
         opacity = color[-1]/255.
         cv2.addWeighted(overlay, opacity, img[roi], 1. - opacity, 0, img[roi])
     except:
-        logger.debug("transparent_circle would have been partially outise of img. Did not draw it.")
+        logger.debug("transparent_circle would have been partially outsize of img. Did not draw it.")
 
 

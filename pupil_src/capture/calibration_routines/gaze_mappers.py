@@ -25,7 +25,6 @@ class Dummy_Gaze_Mapper(Gaze_Mapping_Plugin):
 
         events['gaze'] = gaze_pts
 
-
     def get_init_dict(self):
         return {}
 
@@ -55,7 +54,6 @@ class Volumetric_Gaze_Mapper(Gaze_Mapping_Plugin):
     def __init__(self,g_pool,params):
         super(Volumetric_Gaze_Mapper, self).__init__(g_pool)
         self.params = params
-
 
     def update(self,frame,events):
         gaze_pts = []

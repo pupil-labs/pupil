@@ -45,7 +45,7 @@ if not os.path.isdir(user_dir):
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
-logger.setLevel(logging.INFO) # <-- use this to set verbosity
+logger.setLevel(logging.WARNING) # <-- use this to set verbosity
 #since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
     if __name__ == '__main__': #clear log if main
@@ -84,7 +84,7 @@ from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,Fake
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
-from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
+from player_methods import correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture
 
 
@@ -112,8 +112,9 @@ from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from pupil_server import Pupil_Server
 from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
+from batch_exporter import Batch_Exporter
 
-plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Marker_Auto_Trim_Marks,Pupil_Server)
+plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Marker_Auto_Trim_Marks,Pupil_Server,Batch_Exporter)
 name_by_index = [p.__name__ for p in plugin_by_index]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
@@ -126,10 +127,10 @@ def main():
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
-        adjust_gl_view(w,h,window)
-        norm_size = normalize((w,h),glfwGetWindowSize(window))
-        fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
-        atb.TwWindowSize(*map(int,fb_size))
+        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
+        w,h = w*hdpi_factor, h*hdpi_factor
+        adjust_gl_view(w,h)
+        atb.TwWindowSize(int(w),int(h))
         glfwMakeContextCurrent(active_window)
         for p in g.plugins:
             p.on_window_resize(window,w,h)
@@ -189,12 +190,7 @@ def main():
     #backwards compatibility fn.
     patch_meta_info(rec_dir)
 
-    #parse and load data folder info
-    video_path = rec_dir + "/world.avi"
-    timestamps_path = rec_dir + "/timestamps.npy"
-    gaze_positions_path = rec_dir + "/gaze_positions.npy"
     meta_info_path = rec_dir + "/info.csv"
-
 
     #parse info.csv file
     with open(meta_info_path) as info:
@@ -202,14 +198,25 @@ def main():
     rec_version = meta_info["Capture Software Version"]
     rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
     logger.debug("Recording version: %s , %s"%(rec_version,rec_version_float))
+    print rec_version_float
 
+    if rec_version_float < 0.4:
+        video_path = rec_dir + "/world.avi"
+        timestamps_path = rec_dir + "/timestamps.npy"
+    else:
+        video_path = rec_dir + "/world.mkv"
+        timestamps_path = rec_dir + "/world_timestamps.npy"
 
+    gaze_positions_path = rec_dir + "/gaze_positions.npy"
     #load gaze information
     gaze_list = np.load(gaze_positions_path)
     timestamps = np.load(timestamps_path)
 
     #correlate data
-    positions_by_frame = correlate_gaze(gaze_list,timestamps)
+    if rec_version_float < 0.4:
+        positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
+    else:
+        positions_by_frame = correlate_gaze(gaze_list,timestamps)
 
 
     # load session persistent settings

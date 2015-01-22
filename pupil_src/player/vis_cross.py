@@ -18,9 +18,8 @@ from methods import denormalize
 
 class Vis_Cross(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool=None,inner=20,outer=100,color=(1.,.2,.4,.5),thickness=1,gui_settings={'pos':(10,420),'size':(300,100),'iconified':False}):
-        super(Vis_Cross, self).__init__()
-        self.g_pool = g_pool
+    def __init__(self, g_pool,inner=20,outer=100,color=(1.,.2,.4,.5),thickness=1,gui_settings={'pos':(10,420),'size':(300,100),'iconified':False}):
+        super(Vis_Cross, self).__init__(g_pool)
         self.order = .9
 
         self.gui_settings = gui_settings

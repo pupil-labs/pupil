@@ -22,9 +22,8 @@ class Trim_Marks(Plugin):
     """docstring for Trim_Mark
     """
     def __init__(self, g_pool,capture):
-        super(Trim_Marks, self).__init__()
+        super(Trim_Marks, self).__init__(g_pool)
         self.order = .8
-        self.g_pool = g_pool
         self.capture = capture
         self.frame_count = capture.get_frame_count()
         self._in_mark = 0

@@ -155,9 +155,14 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     # UI callback functions
     def set_window_size(size):
-        hdpi_factor = glfwGetFramebufferSize(eye_window)[0]/glfwGetWindowSize(eye_window)[0]
-        w,h = int(frame.width*size*hdpi_factor),int(frame.height*size*hdpi_factor)
+        w,h = int(frame.width*size),int(frame.height*size)
         glfwSetWindowSize(eye_window,w,h)
+
+    def set_scale(new_scale):
+        g_pool.gui.scale = new_scale
+
+    def get_scale():
+        return g_pool.gui.scale
 
     # Initialize glfw
     glfwInit()
@@ -185,11 +190,12 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     #setup GUI
     g_pool.gui = ui.UI()
-    # g_pool.gui.scale = session_settings.get('gui_scale',1)
+    g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-300,0),size=(0,0),header_pos='left')
     g_pool.sidebar.configuration = session_settings.get('side_bar_config',{'collapsed':True})
     general_settings = ui.Growing_Menu('General')
     general_settings.configuration = session_settings.get('general_menu_config',{})
+    general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
     general_settings.append(ui.Selector('display_mode',g_pool,selection=['camera_image','roi','algorithm','cpu_save'], labels=['Camera Image', 'ROI', 'Algorithm', 'CPU Save'], label="Mode") )
     g_pool.sidebar.append(general_settings)
     g_pool.pupil_detector_menu = ui.Growing_Menu('Pupil Detector')
@@ -285,9 +291,9 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         else:
             draw_named_texture(g_pool.image_tex)
 
-        # switch to work in pixel space 
+        # switch to work in pixel space
         make_coord_system_pixel_based(frame.img.shape)
-        
+
         if g_pool.display_mode == 'roi':
             g_pool.roi_edit_mode = True
             draw_gl_polyline(u_r.rect,(.8,.8,.8,0.5),thickness=3)
@@ -304,7 +310,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                 draw_gl_polyline(pts,(1.,0,0,.5))
             # draw_gl_point_norm(result['norm_pos'],color=(1.,0.,0.,0.5))
             cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
-        
+
         # render graphs
         graph.push_view()
         fps_graph.draw()
@@ -326,6 +332,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
 
     # save session persistent settings
+    session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['window_size'] = g_pool.window_size
     session_settings['display_mode'] = g_pool.display_mode
     session_settings['side_bar_config'] = g_pool.sidebar.configuration

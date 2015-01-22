@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2015  Pupil Labs
+ Copyright (C) 2012-2014  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -20,10 +20,10 @@ it requires:
     - on MacOS: uvcc (binary is distributed with this module)
 """
 import os,sys
-import cv2
+import av
 import numpy as np
 from time import time
-
+from fractions import Fraction
 
 #logging
 import logging
@@ -62,11 +62,6 @@ class Frame(object):
     def copy(self):
         return Frame(self.timestamp,self.img.copy(),self.index)
 
-    @property
-    def gray(self):
-        return cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
-
-
 class File_Capture():
     """
     simple file capture.
@@ -75,7 +70,31 @@ class File_Capture():
         self.auto_rewind = True
         self.controls = None #No UVC controls available with file capture
         # we initialize the actual capture based on cv2.VideoCapture
-        self.cap = cv2.VideoCapture(src)
+
+        self.container = av.open(src)
+
+        try:
+            self.video_stream = next(s for s in self.container.streams if s.type=="video")# looking for the first videostream
+            logger.debug("loaded videostream: %s"%self.video_stream)
+            self.v_packet_iterator = self.container.demux(self.video_stream)
+        except StopIteration:
+            self.video_stream = None
+            self.v_packet_iterator = None
+            logger.error("No videostream found in media container")
+
+        try:
+            self.audio_stream = next(s for s in self.container.streams if s.type=='audio')# looking for the first audiostream
+            logger.debug("loaded audiostream: %s"%self.audio_stream)
+            self.a_packet_iterator = self.container.demux(self.audio_stream)
+        except StopIteration:
+            self.audio_stream = None
+            self.a_packet_iterator = None
+            logger.debug("No audiostream found in media container")
+
+        self.selected_streams = [s for s in (self.video_stream,self.audio_stream) if s]
+        self.av_packet_iterator = self.container.demux(self.selected_streams)
+
+
         if timestamps is None and src.endswith("eye.avi"):
             timestamps_loc = os.path.join(src.rsplit(os.path.sep,1)[0],'eye_timestamps.npy')
             logger.debug("trying to auto load eye_video timestamps with video at: %s"%timestamps_loc)
@@ -89,37 +108,47 @@ class File_Capture():
             logger.debug("did not find timestamps")
             self.timestamps = None
 
+        self.next_frame = self._next_frame()
+
 
     def get_size(self):
-        width,height = int(self.cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)),int(self.cap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
-        if width == 0:
-            logger.error("Could not load media size info.")
-        return width,height
+        if self.video_stream:
+            return int(self.videostream.format.width),int(self.videostream.format.height)
+        else:
+            logger.error("No videostream.")
 
     def set_fps(self):
         logger.warning("You cannot set the Framerate on this File Capture")
 
     def get_fps(self):
-        fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)
-        if fps == 0:
-            logger.error("Could not load media framerate info.")
-        return fps
+        if self.video_stream:
+            return float(self.videostream.average_rate)
+        else:
+            logger.error("No videostream.")
 
     def get_frame_index(self):
-        return int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
+        pass
+        # return int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
 
     def get_frame_count(self):
         if self.timestamps is None:
-            logger.warning("No timestamps file loaded with this recording cannot get framecount")
-            return None
+            return cap.video_stream.frames
         return len(self.timestamps)
 
+    def _next_frame(self):
+        for packet in self.v_packet_iterator:
+            # print packet
+            for frame in packet.decode():
+                if frame:
+                    yield frame
+        raise EndofVideoFileError("end of file.")
+
     def get_frame(self):
-        idx = int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
-        s, img = self.cap.read()
-        if not s:
-            logger.warning("Reached end of video file.")
-            raise EndofVideoFileError("Reached end of video file.")
+
+        frame = self.next_frame.next()
+        # print
+        print frame.pts/float(frame.time_base['den'])
+        # print frame.ptr.coded_picture_number
         if self.timestamps:
             try:
                 timestamp = self.timestamps[idx]
@@ -127,32 +156,14 @@ class File_Capture():
                 logger.warning("Reached end of timestamps list.")
                 raise EndofVideoFileError("Reached end of timestamps list.")
         else:
-            timestamp = time()
-        return Frame(timestamp,img,index=idx)
+            timestamp = float(frame.pts)*Fraction(frame.time_base['num'],frame.time_base['den'])
+        return Frame(timestamp,frame.to_nd_array('bgr24'),index=frame.index)
 
     def seek_to_frame(self, seek_pos):
-        if self.cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES,seek_pos):
-            offset = seek_pos - self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
-            if offset == 0:
-                logger.debug("Seeked to frame: %s"%self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
-                return
-            # elif 0 < offset < 100:
-            #     offset +=10
-            #     if not self.seek_to_frame(seek_pos-offset):
-            #         logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
-            #         return False
-            #     logger.warning("Seek was not precice need to do manual seek for %s frames"%offset)
-            #     while seek_pos != self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES):
-            #         try:
-            #             self.read()
-            #         except EndofVideoFileError:
-            #             logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
-            #     return True
-            else:
-                logger.warning('Could not seek to %s. Seeked to %s'%(seek_pos,self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
-                raise FileSeekError()
-        logger.error("Could not perform seek on cv2.VideoCapture. Command gave negative return.")
-        raise FileSeekError()
+        self.video_stream.seek(int(seek_pos),mode='backward')
+        self.next_frame = self._next_frame()
+
+        # frame.index = seek_pos
 
 
     def get_now(self):
@@ -177,4 +188,32 @@ class File_Capture():
         pass
 
     def close(self):
+        pass
+
+
+if __name__ == '__main__':
+    import os
+    import cv2
+    logging.basicConfig(level=logging.DEBUG)
+    cap = File_Capture(os.path.expanduser("~/Desktop/av_writer_out.mp4"))
+    print cap.container.duration/float(av.time_base)
+    print 'frame_count', cap.get_frame_count()
+    # print "container timebase",av.
+    print cap.video_stream.time_base
+    # exit()
+    # print cap.video_stream.time_base
+    try:
+        while 1:
+            frame = cap.get_frame()
+            # print frame.timestamp
+            cv2.imshow("test",frame.img)
+            if cv2.waitKey(30)==27:
+                print "seeking to ",int(5/cap.video_stream.time_base)
+                cap.seek_to_frame(int(5/cap.video_stream.time_base) )
+                print cap.get_frame().timestamp
+                # break
+            # if x==50 or x==80:
+                # cv2.waitKey(100)
+            # print frame.index, frame.timestamp
+    except EndofVideoFileError:
         pass

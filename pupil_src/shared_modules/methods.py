@@ -35,8 +35,8 @@ class Roi(object):
         self.array_shape = array_shape
         self.lX = 0
         self.lY = 0
-        self.uX = array_shape[1]-0
-        self.uY = array_shape[0]-0
+        self.uX = array_shape[1]-20
+        self.uY = array_shape[0]-20
         self.nX = 0
         self.nY = 0
         self.active_edit_pt = None
@@ -91,7 +91,10 @@ class Roi(object):
 
     @property
     def rect(self):
-        return ((self.lX,self.lY),(self.uX,self.lY),(self.uX,self.uY),(self.lX,self.uY))
+        return ( self._epts['ep1'],
+                (self._epts['ep2'][0],self._epts['ep1'][1]),
+                self._epts['ep2'],
+                (self._epts['ep1'][0],self._epts['ep2'][1]))
     @rect.setter
     def rect(self, value):
         raise Exception('The view field is read-only. Use the set methods instead')
