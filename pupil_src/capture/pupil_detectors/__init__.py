@@ -25,5 +25,4 @@ import logging
 logger = logging.getLogger(__name__)
 
 from canny_detector import Canny_Detector
-from blob_detector import Blob_Detector
-from mser_detector import MSER_Detector
+

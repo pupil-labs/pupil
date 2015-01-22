@@ -34,7 +34,7 @@ from methods import *
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
 # Pupil detectors
-from pupil_detectors import Canny_Detector,MSER_Detector,Blob_Detector
+from pupil_detectors import Canny_Detector
 
 def eye(g_pool,cap_src,cap_size,eye_id=0):
     """
