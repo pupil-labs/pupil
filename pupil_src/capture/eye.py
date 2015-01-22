@@ -94,41 +94,25 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         pos = normalize(pos,glfwGetWindowSize(eye_window))
         pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
 
-        # handle roi
-        # if not atb.TwEventMouseButtonGLFW(button,int(action == GLFW_PRESS)):
-        #     if action == GLFW_PRESS:
-        #         if bar.display.value ==1:
-        #             pos = glfwGetCursorPos(window)
-        #             pos = normalize(pos,glfwGetWindowSize(window))
-        #             pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
-        #             u_r.setStart(pos)
-        #             bar.draw_roi.value = 1
-        #     else:
-        #         bar.draw_roi.value = 0
-
-        # if ROI mode - hide and disable the GUI
-        # if action == GLFW_PRESS:
-        #     if g_pool.display_mode == 'roi':
-        #         pos = glfwGetCursorPos(window)
-        #         pos = normalize(pos,glfwGetWindowSize(window))
-        #         pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
-        #         u_r.setStart(pos)
-        #         bar.draw_roi.value = 1
-        # else:
-        #     g_pool.display_mode ==
+        if g_pool.roi_edit_mode:
+            if action == GLFW_RELEASE:
+                u_r.active_edit_pt = None
+            elif action == GLFW_PRESS:
+                if u_r.mouse_over_edit_pt(tuple(pos),20,20):
+                    logger.debug("Mouse over roi ep: %s pos: %s" %(u_r.active_edit_pt,u_r.get_active_edit_pt_pos(u_r.active_edit_pt)))            
+            else:
+                pass
+           
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
         x,y = x*hdpi_factor,y*hdpi_factor
         g_pool.gui.update_mouse(x,y)
 
-        # norm_pos = normalize((x,y),glfwGetWindowSize(window))
-        # fb_x,fb_y = denormalize(norm_pos,glfwGetFramebufferSize(window))
-        # if atb.TwMouseMotion(int(fb_x),int(fb_y)):
-        #     pass
-
-        # if bar.draw_roi.value == 1:
-        #     pos = denormalize(norm_pos,(frame.img.shape[1],frame.img.shape[0]) ) # pos in frame.img pixels
-        #     u_r.setEnd(pos)
+                
+        if u_r.active_edit_pt:
+            pos = normalize((x,y),glfwGetWindowSize(eye_window))    
+            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) 
+            u_r.set_active_edit_pt_pos(pos)
 
     def on_scroll(window,x,y):
         g_pool.gui.update_scroll(x,y)
@@ -158,8 +142,8 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     # vars should be declared here to make them visible to the code reader.
     g_pool.window_size = session_settings.get('window_size',1.)
     g_pool.display_mode = session_settings.get('display_mode','camera_image')
-    g_pool.draw_pupil = session_settings.get('draw_pupil',True)
-
+    # g_pool.draw_pupil = session_settings.get('draw_pupil',True)
+    g_pool.roi_edit_mode = False
 
     u_r = Roi(frame.img.shape)
     g_pool.roi = session_settings.get('roi',u_r)
@@ -224,8 +208,9 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     g_pool.capture.init_gui(g_pool.sidebar)
     g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{'collapsed':True})
 
-    # let detectors add their GUI
+    # let detector add its GUI
     pupil_detector.init_gui()
+
 
     #set the last saved window size
     set_window_size(g_pool.window_size)
@@ -310,11 +295,14 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         make_coord_system_pixel_based(frame.img.shape)
 
         if g_pool.display_mode == 'roi':
+            g_pool.roi_edit_mode = True
             draw_gl_polyline(u_r.rect,(.8,.8,.8,0.5),thickness=3)
             cygl_draw_points(u_r.edit_pts,size=36,color=cygl_rgba(.0,.0,.0,.5),sharpness=0.3)
             cygl_draw_points(u_r.edit_pts,size=20,color=cygl_rgba(.5,.5,.9,.9),sharpness=0.9)
+        else:
+            g_pool.roi_edit_mode = False
 
-        if result['confidence'] >0 and g_pool.draw_pupil:
+        if result['confidence'] >0:
             if result.has_key('axes'):
                 pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
                                         (int(result["axes"][0]/2),int(result["axes"][1]/2)),

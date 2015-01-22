@@ -35,10 +35,12 @@ class Roi(object):
         self.array_shape = array_shape
         self.lX = 0
         self.lY = 0
-        self.uX = array_shape[1]-0
-        self.uY = array_shape[0]-0
+        self.uX = array_shape[1]-20
+        self.uY = array_shape[0]-20
         self.nX = 0
         self.nY = 0
+        self.active_edit_pt = None
+        self._epts = {'ep1':(self.lX,self.lY),'ep2':(self.uX,self.uY)}
 
     @property
     def view(self):
@@ -89,18 +91,49 @@ class Roi(object):
 
     @property
     def rect(self):
-        return ((self.lX,self.lY),(self.uX,self.lY),(self.uX,self.uY),(self.lX,self.uY))
+        return ( self._epts['ep1'],
+                (self._epts['ep2'][0],self._epts['ep1'][1]),
+                self._epts['ep2'],
+                (self._epts['ep1'][0],self._epts['ep2'][1]))
     @rect.setter
     def rect(self, value):
         raise Exception('The view field is read-only. Use the set methods instead')
     
     @property
     def edit_pts(self):
-        return ((self.lX,self.lY),(self.uX,self.uY))
+        return self._epts.values()
     @edit_pts.setter
     def edit_pts(self, value):
-        raise Exception('The view field is read-only. Use the set methods instead')
+        if not isinstance(value, tuple):
+            raise TypeError("Supply a tuple or list with two points - ((x,y),(x,y))")
+        if not len(value) == 2:
+            raise ValueError("The tuple or list must contain two points - ((x,y),(x,y))")
+        self._epts['ep1'] = value[0]
+        self._epts['ep2'] = value[1]
+
+    def get_active_edit_pt_pos(self,ep_name):
+        if not isinstance(ep_name,str):
+            raise TypeError("Supply a string for the edit point dict key.")
+        return self._epts[ep_name]
+    def set_active_edit_pt_pos(self,pos):
+        if not isinstance(pos,tuple):
+            raise TypeError("Supply a tuple or list with two points (x,y)")
+        self._epts[self.active_edit_pt] = pos
+
+    def mouse_over_center(self,edit_pt,mouse_pos,w,h):
+        return edit_pt[0]-w/2 <= mouse_pos[0] <=edit_pt[0]+w/2 and edit_pt[1]-h/2 <= mouse_pos[1] <=edit_pt[1]+h/2
     
+    def mouse_over_edit_pt(self,mouse_pos,w,h):
+        if self.mouse_over_center(self._epts['ep1'],mouse_pos,w,h):
+            self.active_edit_pt = 'ep1'
+            return True
+        if self.mouse_over_center(self._epts['ep2'],mouse_pos,w,h):
+            self.active_edit_pt = 'ep2'
+            return True
+        else:
+            self.active_edit_pt = None
+            return False
+
 
 def bin_thresholding(image, image_lower=0, image_upper=256):
     binary_img = cv2.inRange(image, np.asarray(image_lower),
