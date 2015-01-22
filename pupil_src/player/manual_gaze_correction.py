@@ -23,8 +23,8 @@ class Manual_Gaze_Correction(Plugin):
 
     """
 
-    def __init__(self, g_pool=None,x_offset=0,y_offset=0,gui_settings={'pos':(10,390),'size':(300,100),'iconified':False}):
-        super(Manual_Gaze_Correction, self).__init__()
+    def __init__(self, g_pool,x_offset=0,y_offset=0,gui_settings={'pos':(10,390),'size':(300,100),'iconified':False}):
+        super(Manual_Gaze_Correction, self).__init__(g_pool)
 
         #let the plugin work before most other plugins.
         self.order = .3

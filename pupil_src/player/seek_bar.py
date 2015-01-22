@@ -24,8 +24,7 @@ class Seek_Bar(Plugin):
     it will show the current positon and allow you to drag to any postion in the video file.
     """
     def __init__(self, g_pool,capture):
-        super(Seek_Bar, self).__init__()
-        self.g_pool = g_pool
+        super(Seek_Bar, self).__init__(g_pool)
         self.cap = capture
         self.current_frame_index = self.cap.get_frame_index()
         self.frame_count = self.cap.get_frame_count()

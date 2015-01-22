@@ -34,8 +34,7 @@ class Pupil_Remote(Plugin):
     'C' start currently selected calibration
     """
     def __init__(self, g_pool, atb_pos=(10,400),on_char_fn = None):
-        Plugin.__init__(self)
-        self.g_pool = g_pool
+        super(Pupil_Remote, self).__init__(g_pool)
         self.on_char_fn = on_char_fn
         self.order = .9 #excecute late in the plugin list.
         self.context = zmq.Context()

@@ -24,7 +24,7 @@ from time import time
 import cv2
 import numpy as np
 from uvc_capture import autoCreateCapture
-from player_methods import correlate_gaze
+from player_methods import correlate_gaze,correlate_gaze_legacy
 from methods import denormalize, Temp
 from av_writer import AV_Writer
 #logging
@@ -58,25 +58,34 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
-    #parse and load data dir info
-    video_path = data_dir + "/world.avi"
-    timestamps_path = data_dir + "/timestamps.npy"
-    gaze_positions_path = data_dir + "/gaze_positions.npy"
 
 
     #parse info.csv file
     with open(data_dir + "/info.csv") as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
     rec_version = meta_info["Capture Software Version"]
-    rec_version_int = int(filter(type(rec_version).isdigit, rec_version)[:3])/100 #(get major,minor,fix of version)
-    logger.debug("Exporting a video from recording with version: %s , %s"%(rec_version,rec_version_int))
+    rec_version_float = float(filter(type(rec_version).isdigit, rec_version)[:3])/100 #(get major,minor,fix of version)
+    logger.debug("Exporting a video from recording with version: %s , %s"%(rec_version,rec_version_float))
 
+    if rec_version_float < 0.4:
+        video_path = data_dir + "/world.avi"
+        timestamps_path = data_dir + "/timestamps.npy"
+    else:
+        video_path = data_dir + "/world.mkv"
+        timestamps_path = data_dir + "/world_timestamps.npy"
 
+    gaze_positions_path = data_dir + "/gaze_positions.npy"
     #load gaze information
     gaze_list = np.load(gaze_positions_path)
     timestamps = np.load(timestamps_path)
+
     #correlate data
-    positions_by_frame = correlate_gaze(gaze_list,timestamps)
+    if rec_version_float < 0.4:
+        positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
+    else:
+        positions_by_frame = correlate_gaze(gaze_list,timestamps)
+
+
 
 
     # Initialize capture, check if it works

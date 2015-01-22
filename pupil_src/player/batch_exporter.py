@@ -50,8 +50,7 @@ class Batch_Exporter(Plugin):
     this plugin can export videos in a seperate process using exporter
     """
     def __init__(self, g_pool):
-        super(Batch_Exporter, self).__init__()
-        self.g_pool = g_pool
+        super(Batch_Exporter, self).__init__(g_pool)
 
         self.exports = []
         self.new_exports = []

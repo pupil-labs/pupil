@@ -64,8 +64,7 @@ class Export_Launcher(Plugin):
 
     """
     def __init__(self, g_pool,data_dir,frame_count):
-        super(Export_Launcher, self).__init__()
-        self.g_pool = g_pool
+        super(Export_Launcher, self).__init__(g_pool)
         self.data_dir = data_dir
 
         self.new_export = None

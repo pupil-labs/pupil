@@ -105,7 +105,7 @@ class Reference_Surface(object):
         """
         self.name = d['name']
         self.uid = d['uid']
-        self.real_world_size = d['real_world_size']
+        self.real_world_size = d.get('real_world_size',[1.,1.])
 
         marker_dict = d['markers']
         for m_id,uv_coords in marker_dict.iteritems():
@@ -324,18 +324,19 @@ class Reference_Surface(object):
         for m in self.markers.values():
             m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
 
-
+    def atb_get_name(self):
+        return create_string_buffer(self.name,512)
+    def atb_set_name(self,name):
+        self.name = name.value
     def atb_marker_status(self):
         return create_string_buffer("%s / %s" %(self.detected_markers,len(self.markers)),512)
-
-
-    def gui_set_scale_x(self,val):
+    def atb_set_scale_x(self,val):
         self.real_world_size[0]=val
-    def gui_set_scale_y(self,val):
+    def atb_set_scale_y(self,val):
         self.real_world_size[1]=val
-    def gui_get_scale_x(self):
+    def atb_get_scale_x(self):
         return self.real_world_size[0]
-    def gui_get_scale_y(self):
+    def atb_get_scale_y(self):
         return self.real_world_size[1]
 
 
