@@ -35,8 +35,8 @@ class Roi(object):
         self.array_shape = array_shape
         self.lX = 0
         self.lY = 0
-        self.uX = array_shape[1]-0
-        self.uY = array_shape[0]-0
+        self.uX = array_shape[1]
+        self.uY = array_shape[0]
         self.nX = 0
         self.nY = 0
 
@@ -86,7 +86,7 @@ class Roi(object):
 
     def get(self):
         return self.lX,self.lY,self.uX,self.uY,self.array_shape
-                
+
 
 class UIRoi(Roi):
     """
@@ -98,7 +98,7 @@ class UIRoi(Roi):
         self.lX += pad
         self.lY += pad
         self.uX -= pad
-        self.uY -= pad      
+        self.uY -= pad
         self.active_edit_pt = None
         # self.setStart((self.lX,self.lY))
 
@@ -111,7 +111,7 @@ class UIRoi(Roi):
     @rect.setter
     def rect(self, value):
         raise Exception('The view field is read-only. Use the set methods instead')
-    
+
     @property
     def edit_pts(self):
         return [[self.lX,self.lY],[self.uX,self.uY]]
@@ -128,7 +128,7 @@ class UIRoi(Roi):
 
     def mouse_over_center(self,edit_pt,mouse_pos,w,h):
         return edit_pt[0]-w/2 <= mouse_pos[0] <=edit_pt[0]+w/2 and edit_pt[1]-h/2 <= mouse_pos[1] <=edit_pt[1]+h/2
-    
+
     def mouse_over_edit_pt(self,mouse_pos,w,h):
         if self.mouse_over_center(self.edit_pts[0],mouse_pos,w,h):
             self.active_edit_pt = "ep0"
