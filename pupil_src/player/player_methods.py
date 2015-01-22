@@ -157,6 +157,6 @@ def transparent_circle(img,center,radius,color,thickness):
         opacity = color[-1]/255.
         cv2.addWeighted(overlay, opacity, img[roi], 1. - opacity, 0, img[roi])
     except:
-        logger.debug("transparent_circle would have been partially outise of img. Did not draw it.")
+        logger.debug("transparent_circle would have been partially outsize of img. Did not draw it.")
 
 
