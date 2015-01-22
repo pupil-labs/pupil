@@ -16,6 +16,7 @@ class Dummy_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Dummy_Gaze_Mapper"""
     def __init__(self, g_pool):
         super(Dummy_Gaze_Mapper, self).__init__(g_pool)
+        self.order = .1
 
     def update(self,frame,events):
         gaze_pts = []
@@ -33,6 +34,7 @@ class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Simple_Gaze_Mapper"""
     def __init__(self, g_pool,map_fn):
         super(Simple_Gaze_Mapper, self).__init__(g_pool)
+        self.order = .1
         self.map_fn = map_fn
 
 
@@ -53,6 +55,7 @@ class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
 class Volumetric_Gaze_Mapper(Gaze_Mapping_Plugin):
     def __init__(self,g_pool,params):
         super(Volumetric_Gaze_Mapper, self).__init__(g_pool)
+        self.order = .1
         self.params = params
 
     def update(self,frame,events):
@@ -66,6 +69,7 @@ class Volumetric_Gaze_Mapper(Gaze_Mapping_Plugin):
 class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
     def __init__(self, g_pool,params):
         super(Volumetric_Gaze_Mapper, self).__init__(g_pool)
+        self.order = .1
         self.params = params
 
     def update(self,frame,events):

@@ -79,6 +79,7 @@ class Recorder(Plugin):
     """Capture Recorder"""
     def __init__(self,g_pool,session_name = get_auto_name(), record_eye = False, audio_src = -1, menu_conf = {}):
         super(Recorder, self).__init__(g_pool)
+        self.order = .9
         self.record_eye = record_eye
         self.session_name = session_name
         self.audio_src = audio_src
