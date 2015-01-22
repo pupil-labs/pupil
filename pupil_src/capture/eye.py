@@ -98,8 +98,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
             if action == GLFW_RELEASE:
                 u_r.active_edit_pt = None
             elif action == GLFW_PRESS:
-                if u_r.mouse_over_edit_pt(tuple(pos),20,20):
-                    logger.debug("Mouse over roi ep: %s pos: %s" %(u_r.active_edit_pt,u_r.get_active_edit_pt_pos(u_r.active_edit_pt)))            
+                u_r.mouse_over_edit_pt(pos,20,20)
             else:
                 pass
            
@@ -108,8 +107,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         x,y = x*hdpi_factor,y*hdpi_factor
         g_pool.gui.update_mouse(x,y)
 
-                
-        if u_r.active_edit_pt:
+        if u_r.active_edit_pt is not None:
             pos = normalize((x,y),glfwGetWindowSize(eye_window))    
             pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) 
             u_r.set_active_edit_pt_pos(pos)
@@ -146,7 +144,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     g_pool.roi_edit_mode = False
 
     u_r = Roi(frame.img.shape)
-    g_pool.roi = session_settings.get('roi',u_r)
+    u_r.set(session_settings.get('roi',u_r))
 
     writer = None
 
@@ -296,7 +294,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
         if g_pool.display_mode == 'roi':
             g_pool.roi_edit_mode = True
-            draw_gl_polyline(u_r.rect,(.8,.8,.8,0.5),thickness=3)
+            draw_gl_polyline(u_r.rect,(.8,.8,.8,0.9),thickness=3)
             cygl_draw_points(u_r.edit_pts,size=36,color=cygl_rgba(.0,.0,.0,.5),sharpness=0.3)
             cygl_draw_points(u_r.edit_pts,size=20,color=cygl_rgba(.5,.5,.9,.9),sharpness=0.9)
         else:
@@ -333,6 +331,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     # save session persistent settings
     session_settings['gui_scale'] = g_pool.gui.scale
+    session_settings['roi'] = u_r.get()
     session_settings['window_size'] = g_pool.window_size
     session_settings['display_mode'] = g_pool.display_mode
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
