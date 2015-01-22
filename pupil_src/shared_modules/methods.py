@@ -21,6 +21,9 @@ class Temp(object):
     def __init__(self):
         pass
 
+
+
+
 class Roi(object):
     """this is a simple 2D Region of Interest class
     it is applied on numpy arrays for convenient slicing
@@ -87,58 +90,6 @@ class Roi(object):
     def get(self):
         return self.lX,self.lY,self.uX,self.uY,self.array_shape
 
-
-class UIRoi(Roi):
-    """
-    this object inherits from ROI and adds some UI helper functions
-    """
-    def __init__(self,array_shape):
-        super(UIRoi, self).__init__(array_shape)
-        pad = 20
-        self.lX += pad
-        self.lY += pad
-        self.uX -= pad
-        self.uY -= pad
-        self.active_edit_pt = None
-        # self.setStart((self.lX,self.lY))
-
-    @property
-    def rect(self):
-        return [[self.lX,self.lY],
-                [self.uX,self.lY],
-                [self.uX,self.uY],
-                [self.lX,self.uY]]
-    @rect.setter
-    def rect(self, value):
-        raise Exception('The view field is read-only. Use the set methods instead')
-
-    @property
-    def edit_pts(self):
-        return [[self.lX,self.lY],[self.uX,self.uY]]
-    @edit_pts.setter
-    def edit_pts(self, value):
-        raise Exception('The view field is read-only. Use the set methods instead')
-
-    def set_active_edit_pt_pos(self,pos):
-        if self.active_edit_pt == 'ep0':
-            self.setStart(pos)
-            self.setEnd(self.edit_pts[1])
-        if self.active_edit_pt == 'ep1':
-            self.setEnd(pos)
-
-    def mouse_over_center(self,edit_pt,mouse_pos,w,h):
-        return edit_pt[0]-w/2 <= mouse_pos[0] <=edit_pt[0]+w/2 and edit_pt[1]-h/2 <= mouse_pos[1] <=edit_pt[1]+h/2
-
-    def mouse_over_edit_pt(self,mouse_pos,w,h):
-        if self.mouse_over_center(self.edit_pts[0],mouse_pos,w,h):
-            self.active_edit_pt = "ep0"
-            return True
-        if self.mouse_over_center(self.edit_pts[1],mouse_pos,w,h):
-            self.active_edit_pt = 'ep1'
-            return True
-        else:
-            self.active_edit_pt = None
-            return False
 
 
 def bin_thresholding(image, image_lower=0, image_upper=256):

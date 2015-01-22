@@ -89,28 +89,29 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
 
     def on_button(window,button, action, mods):
-        g_pool.gui.update_button(button,action,mods)
-        pos = glfwGetCursorPos(window)
-        pos = normalize(pos,glfwGetWindowSize(eye_window))
-        pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
-
-        if g_pool.roi_edit_mode:
-            if action == GLFW_RELEASE:
-                u_r.active_edit_pt = None
+        if g_pool.display_mode == 'roi':
+            if action == GLFW_RELEASE and u_r.active_edit_pt:
+                u_r.active_edit_pt = False
+                return # if the roi interacts we dont what the gui to interact as well
             elif action == GLFW_PRESS:
-                u_r.mouse_over_edit_pt(pos,20,20)
-            else:
-                pass
-           
+                pos = glfwGetCursorPos(window)
+                pos = normalize(pos,glfwGetWindowSize(eye_window))
+                pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
+                if u_r.mouse_over_edit_pt(pos,u_r.handle_size,u_r.handle_size):
+                    return # if the roi interacts we dont what the gui to interact as well
+
+        g_pool.gui.update_button(button,action,mods)
+
+
+
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
-        x,y = x*hdpi_factor,y*hdpi_factor
         g_pool.gui.update_mouse(x*hdpi_factor,y*hdpi_factor)
 
-        if u_r.active_edit_pt is not None:
-            pos = normalize((x,y),glfwGetWindowSize(eye_window))    
-            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) 
-            u_r.set_active_edit_pt_pos(pos)
+        if u_r.active_edit_pt:
+            pos = normalize((x,y),glfwGetWindowSize(eye_window))
+            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) )
+            u_r.move_vertex(u_r.active_pt_idx,pos)
 
     def on_scroll(window,x,y):
         g_pool.gui.update_scroll(x,y)
@@ -141,7 +142,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     g_pool.window_size = session_settings.get('window_size',1.)
     g_pool.display_mode = session_settings.get('display_mode','camera_image')
     # g_pool.draw_pupil = session_settings.get('draw_pupil',True)
-    g_pool.roi_edit_mode = False
 
     u_r = UIRoi(frame.img.shape)
     u_r.set(session_settings.get('roi',u_r.get()))
@@ -292,14 +292,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         # switch to work in pixel space
         make_coord_system_pixel_based(frame.img.shape)
 
-        if g_pool.display_mode == 'roi':
-            g_pool.roi_edit_mode = True
-            draw_gl_polyline(u_r.rect,(.8,.8,.8,0.9),thickness=2)
-            cygl_draw_points(u_r.edit_pts,size=36,color=cygl_rgba(.0,.0,.0,.5),sharpness=0.3)
-            cygl_draw_points(u_r.edit_pts,size=20,color=cygl_rgba(.5,.5,.9,.9),sharpness=0.9)
-        else:
-            g_pool.roi_edit_mode = False
-
         if result['confidence'] >0:
             if result.has_key('axes'):
                 pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
@@ -317,8 +309,15 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
         # render GUI
         g_pool.gui.update()
+
+        #render the ROI
+        if g_pool.display_mode == 'roi':
+            u_r.draw()
+
+        #update screen
         glfwSwapBuffers(eye_window)
         glfwPollEvents()
+
 
     # END while running
 
@@ -360,4 +359,68 @@ def eye_profiled(g_pool,cap_src,cap_size):
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye.pstats | dot -Tpng -o eye_cpu_time.png", shell=True)
     print "created cpu time graph for eye process. Please check out the png next to the eye.py file"
+
+
+
+class UIRoi(Roi):
+    """
+    this object inherits from ROI and adds some UI helper functions
+    """
+    def __init__(self,array_shape):
+        super(UIRoi, self).__init__(array_shape)
+        self.max_x = array_shape[1]
+        self.max_y = array_shape[0]
+
+        self.handle_size = 20
+        self.active_edit_pt = False
+        self.active_pt_idx = None
+        self.handle_color = cygl_rgba(.5,.5,.9,.9)
+        self.handle_color_selected = cygl_rgba(.5,.9,.9,.9)
+        self.handle_color_shadow = cygl_rgba(.0,.0,.0,.5)
+
+    @property
+    def rect(self):
+        return [[self.lX,self.lY],
+                [self.uX,self.lY],
+                [self.uX,self.uY],
+                [self.lX,self.uY]]
+
+    def move_vertex(self,vert_idx,(x,y)):
+        nx,ny = min(self.max_x,int(x)),min(self.max_y,int(y))
+        thresh = 25
+        if vert_idx == 0:
+            if self.uX-nx > thresh and self.uY-ny > thresh:
+                self.lX,self.lY = max(0,nx),max(0,ny)
+        if vert_idx == 1:
+            if nx-self.lX > thresh and self.uY-ny > thresh:
+                self.uX,self.lY = min(self.max_x,nx),max(0,ny)
+        if vert_idx == 2:
+            if nx-self.lX > thresh and ny-self.lY > thresh:
+                self.uX,self.uY = min(self.max_x,nx),min(self.max_y,ny)
+        if vert_idx == 3:
+            if self.uX-nx > thresh and ny-self.lY > thresh:
+                self.lX,self.uY = max(0,nx),min(self.max_y,ny)
+
+    def mouse_over_center(self,edit_pt,mouse_pos,w,h):
+        return edit_pt[0]-w/2 <= mouse_pos[0] <=edit_pt[0]+w/2 and edit_pt[1]-h/2 <= mouse_pos[1] <=edit_pt[1]+h/2
+
+    def mouse_over_edit_pt(self,mouse_pos,w,h):
+        for p,i in zip(self.rect,range(4)):
+            if self.mouse_over_center(p,mouse_pos,w,h):
+                self.active_pt_idx = i
+                self.active_edit_pt = True
+                return True
+
+    def draw(self):
+        draw_gl_polyline(self.rect,(.8,.8,.8,0.9),thickness=2)
+        if self.active_edit_pt:
+            inactive_pts = self.rect[:self.active_pt_idx]+self.rect[self.active_pt_idx+1:]
+            active_pt = [self.rect[self.active_pt_idx]]
+            cygl_draw_points(inactive_pts,size=self.handle_size+10,color=self.handle_color_shadow,sharpness=0.3)
+            cygl_draw_points(inactive_pts,size=self.handle_size,color=self.handle_color,sharpness=0.9)
+            cygl_draw_points(active_pt,size=self.handle_size+30,color=self.handle_color_shadow,sharpness=0.3)                        
+            cygl_draw_points(active_pt,size=self.handle_size+10,color=self.handle_color_selected,sharpness=0.9)
+        else:
+            cygl_draw_points(self.rect,size=self.handle_size+10,color=self.handle_color_shadow,sharpness=0.3)
+            cygl_draw_points(self.rect,size=self.handle_size,color=self.handle_color,sharpness=0.9)
 
