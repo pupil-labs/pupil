@@ -300,7 +300,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                 pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
                                         (int(result["axes"][0]/2),int(result["axes"][1]/2)),
                                         int(result["angle"]),0,360,15)
-                cygl_draw_polyline(pts,1,(1.,0,0,.5))
+                cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
             # draw_gl_point_norm(result['norm_pos'],color=(1.,0.,0.,0.5))
             cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
 
