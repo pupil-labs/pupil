@@ -101,15 +101,14 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                 u_r.mouse_over_edit_pt(pos,20,20)
             else:
                 pass
-           
+
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
-        x,y = x*hdpi_factor,y*hdpi_factor
-        g_pool.gui.update_mouse(x,y)
+        g_pool.gui.update_mouse(x*hdpi_factor,y*hdpi_factor)
 
         if u_r.active_edit_pt is not None:
-            pos = normalize((x,y),glfwGetWindowSize(eye_window))    
-            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) 
+            pos = normalize((x,y),glfwGetWindowSize(eye_window))
+            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) )
             u_r.set_active_edit_pt_pos(pos)
 
     def on_scroll(window,x,y):
@@ -144,7 +143,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     g_pool.roi_edit_mode = False
 
     u_r = Roi(frame.img.shape)
-    u_r.set(session_settings.get('roi',u_r))
+    u_r.set(session_settings.get('roi',u_r.get()))
 
     writer = None
 
