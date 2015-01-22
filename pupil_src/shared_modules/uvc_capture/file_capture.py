@@ -62,6 +62,11 @@ class Frame(object):
     def copy(self):
         return Frame(self.timestamp,self.img.copy(),self.index)
 
+    @property
+    def gray(self):
+        return cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
+
+
 class File_Capture():
     """
     simple file capture.
