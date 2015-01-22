@@ -8,7 +8,7 @@ if platform.system() == 'Darwin':
 
     a = Analysis(['../pupil_src/capture/main.py'],
                  pathex=['../pupil_src/shared_modules/'],
-                 hiddenimports=[],
+                 hiddenimports=['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils'],
                  hookspath=None,
                  runtime_hooks=None)
     pyz = PYZ(a.pure)
