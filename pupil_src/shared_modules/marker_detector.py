@@ -78,7 +78,7 @@ class Marker_Detector(Plugin):
             if self.edit_surfaces:
                 if action == GLFW_RELEASE:
                     self.edit_surfaces = []
-            # no surfaces verts in edit mode, lets see if the curser is close to one:
+            # no surfaces verts in edit mode, lets see if the cursor is close to one:
             else:
                 if action == GLFW_PRESS:
                     surf_verts = ((0.,0.),(1.,0.),(1.,1.),(0.,1.))
