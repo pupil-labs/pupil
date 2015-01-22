@@ -76,7 +76,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
             q.put((next,[])) # we cannot look at the frame, report no detection
             return
 
-        markers[:] = detect_markers_robust(frame.img,
+        markers[:] = detect_markers_robust(frame.gray,
                                         grid_size = 5,
                                         prev_markers=markers,
                                         min_marker_perimeter=min_marker_perimeter,

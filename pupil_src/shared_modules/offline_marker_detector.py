@@ -54,8 +54,7 @@ class Offline_Marker_Detector(Plugin):
     """
 
     def __init__(self,g_pool,gui_settings={'pos':(220,200),'size':(300,300),'iconified':False}):
-        super(Offline_Marker_Detector, self).__init__()
-        self.g_pool = g_pool
+        super(Offline_Marker_Detector, self).__init__(g_pool)
         self.gui_settings = gui_settings
         self.order = .2
 
@@ -174,7 +173,7 @@ class Offline_Marker_Detector(Plugin):
             self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             self._bar.add_var("%s_x_scale"%i,vtype=c_float, getter=s.atb_get_scale_x, min=1,setter=s.atb_set_scale_x,group=str(i),label='real width', help='this scale factor is used to adjust the coordinate space for your needs (think photo pixels or mm or whatever)' )
             self._bar.add_var("%s_y_scale"%i,vtype=c_float, getter=s.atb_get_scale_y,min=1,setter=s.atb_set_scale_y,group=str(i),label='real height',help='defining x and y scale factor you atumatically set the correct aspect ratio.' )
-            self._bar.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
+            # self._bar.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
             # self._bar.add_button("%s_hm"%i, s.generate_heatmap, label='generate_heatmap',group=str(i))
             # self._bar.add_button("%s_export"%i, self.save_surface_positions_to_file,data=i, label='export surface data',group=str(i))
             self._bar.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
@@ -268,7 +267,9 @@ class Offline_Marker_Detector(Plugin):
         forking_enable(0) #for MacOs only
         from marker_detector_cacher import fill_cache
         visited_list = [False if x == False else True for x in self.cache]
-        video_file_path =  os.path.join(self.g_pool.rec_dir,'world.avi')
+        video_file_path =  os.path.join(self.g_pool.rec_dir,'world.mkv')
+        if not os.path.isfile(video_file_path):
+            video_file_path =  os.path.join(self.g_pool.rec_dir,'world.avi')
         self.cache_queue = Queue()
         self.cacher_seek_idx = Value(c_int,0)
         self.cacher_run = Value(c_bool,True)
@@ -495,7 +496,7 @@ class Offline_Marker_Detector(Plugin):
                             for gp in ref_srf_data['gaze_on_srf']:
                                 gp_x,gp_y = gp['norm_gaze_on_srf']
                                 on_srf = (0 <= gp_x <= 1) and (0 <= gp_y <= 1)
-                                csv_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.scale_factor[0],gp_x*s.scale_factor[1],on_srf) )
+                                csv_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.real_world_size[0],gp_x*s.real_world_size[1],on_srf) )
 
             logger.info("Saved surface positon data and gaze on surface data for '%s' with uid:'%s'"%(s.name,s.uid))
 
@@ -513,12 +514,12 @@ class Offline_Marker_Detector(Plugin):
             #     screen_space[:,1] = 1-screen_space[:,1]
             #     screen_space[:,1] *= self.img.shape[0]
             #     screen_space[:,0] *= self.img.shape[1]
-            #     s_0,s_1 = s.scale_factor
+            #     s_0,s_1 = s.real_world_size
             #     #no we need to flip vertically again by setting the mapped_space verts accordingly.
             #     mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
             #     M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
             #     #here we do the actual perspactive transform of the image.
-            #     srf_in_video = cv2.warpPerspective(self.img,M, (int(s.scale_factor[0]),int(s.scale_factor[1])) )
+            #     srf_in_video = cv2.warpPerspective(self.img,M, (int(s.real_world_size[0]),int(s.real_world_size[1])) )
             #     cv2.imwrite(os.path.join(metrics_dir,'surface'+surface_name+'.png'),srf_in_video)
             #     logger.info("Saved current image as .png file.")
             # else:
