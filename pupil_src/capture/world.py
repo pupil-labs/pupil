@@ -26,6 +26,7 @@ import numpy as np
 #display
 from glfw import *
 from pyglui import ui,graph,cygl
+from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
 
 #check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
@@ -36,7 +37,7 @@ import psutil
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
-from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture
+from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 from audio import Audio_Input_List
 # Plug-ins
@@ -224,7 +225,9 @@ def world(g_pool,cap_src,cap_size):
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.image_tex = create_named_texture(frame.img)
+    g_pool.image_tex = create_named_texture(frame.img.shape)
+    update_named_texture(g_pool.image_tex,frame.img)
+
     # refresh speed settings
     glfwSwapInterval(0)
 
@@ -327,12 +330,11 @@ def world(g_pool,cap_src,cap_size):
 
         # render camera image
         glfwMakeContextCurrent(world_window)
-        make_coord_system_norm_based()
         if g_pool.update_textures:
-            draw_named_texture(g_pool.image_tex,frame.img)
-        else:
-            draw_named_texture(g_pool.image_tex)
+            update_named_texture(g_pool.image_tex,frame.img)
 
+        make_coord_system_norm_based()
+        draw_named_texture(g_pool.image_tex)
         make_coord_system_pixel_based((frame.height,frame.width,3))
 
         # render visual feedback from loaded plugins
