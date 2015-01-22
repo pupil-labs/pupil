@@ -62,7 +62,6 @@ elif platform.system() == 'Linux':
                    [('capture.so', '../pupil_src/shared_modules/uvc_capture/linux_video/v4l2_capture/capture.so','BINARY')],
                    [('libAntTweakBar.so', '/usr/lib/libAntTweakBar.so','BINARY')],
                    [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
-                   [('v4l2-ctl', '/usr/bin/v4l2-ctl','BINARY')],
                    [('icon.ico', 'linux_icon.ico','DATA')],
                    strip=None,
                    upx=True,

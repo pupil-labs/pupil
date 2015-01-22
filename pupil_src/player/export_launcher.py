@@ -32,14 +32,14 @@ from exporter import export
 def verify_out_file_path(out_file_path,data_dir):
     #Out file path verification
     if not out_file_path:
-        out_file_path = os.path.join(data_dir, "world_viz.avi")
+        out_file_path = os.path.join(data_dir, "world_viz.mp4")
     else:
         file_name =  os.path.basename(out_file_path)
         dir_name = os.path.dirname(out_file_path)
         if not dir_name:
             dir_name = data_dir
         if not file_name:
-            file_name = 'world_viz.avi'
+            file_name = 'world_viz.mp4'
         out_file_path = os.path.expanduser(os.path.join(dir_name,file_name))
 
     out_file_path = avoid_overwrite(out_file_path)
@@ -55,7 +55,7 @@ def avoid_overwrite(out_file_path):
     if os.path.isfile(out_file_path):
         # append something unique to avoid overwriting
         out_file_path,ext = os.path.splitext(out_file_path)
-        out_file_path += str(int(time.time())) + '.avi'
+        out_file_path += str(int(time.time())) + '.mp4'
     return out_file_path
 
 class Export_Launcher(Plugin):
@@ -70,8 +70,8 @@ class Export_Launcher(Plugin):
 
         self.new_export = None
         self.exports = []
-        # default_path = verify_out_file_path("world_viz.avi",data_dir)
-        default_path = "world_viz.avi"
+        # default_path = verify_out_file_path("world_viz.mp4",data_dir)
+        default_path = "world_viz.mp4"
 
         self.rec_name = create_string_buffer(default_path,512)
 
