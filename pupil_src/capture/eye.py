@@ -94,7 +94,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         pos = normalize(pos,glfwGetWindowSize(eye_window))
         pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
 
-        if g_pool.roi_edit_mode:
+        if g_pool.display_mode == 'roi':
             if action == GLFW_RELEASE:
                 u_r.active_edit_pt = False
             elif action == GLFW_PRESS:
@@ -141,7 +141,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     g_pool.window_size = session_settings.get('window_size',1.)
     g_pool.display_mode = session_settings.get('display_mode','camera_image')
     # g_pool.draw_pupil = session_settings.get('draw_pupil',True)
-    g_pool.roi_edit_mode = False
 
     u_r = UIRoi(frame.img.shape)
     u_r.set(session_settings.get('roi',u_r.get()))
@@ -293,12 +292,10 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         make_coord_system_pixel_based(frame.img.shape)
 
         if g_pool.display_mode == 'roi':
-            g_pool.roi_edit_mode = True
             draw_gl_polyline(u_r.rect,(.8,.8,.8,0.9),thickness=2)
             cygl_draw_points(u_r.rect,size=u_r.handle_size*1.8,color=cygl_rgba(.0,.0,.0,.5),sharpness=0.3)
             cygl_draw_points(u_r.rect,size=u_r.handle_size,color=cygl_rgba(*u_r.handle_color),sharpness=0.9)
-        else:
-            g_pool.roi_edit_mode = False
+
 
         if result['confidence'] >0:
             if result.has_key('axes'):
