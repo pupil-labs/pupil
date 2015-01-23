@@ -99,8 +99,14 @@ class UIRoi(Roi):
         self.lY += pad
         self.uX -= pad
         self.uY -= pad
-        self.active_edit_pt = None
-        # self.setStart((self.lX,self.lY))
+
+        self.max_x = array_shape[1] 
+        self.max_y = array_shape[0]
+
+        self.handle_size = 20
+        self.active_edit_pt = False
+        self.active_pt_idx = None
+        self.handle_color = (.5,.5,.9,.9)
 
     @property
     def rect(self):
@@ -112,33 +118,30 @@ class UIRoi(Roi):
     def rect(self, value):
         raise Exception('The view field is read-only. Use the set methods instead')
 
-    @property
-    def edit_pts(self):
-        return [[self.lX,self.lY],[self.uX,self.uY]]
-    @edit_pts.setter
-    def edit_pts(self, value):
-        raise Exception('The view field is read-only. Use the set methods instead')
-
-    def set_active_edit_pt_pos(self,pos):
-        if self.active_edit_pt == 'ep0':
-            self.setStart(pos)
-            self.setEnd(self.edit_pts[1])
-        if self.active_edit_pt == 'ep1':
-            self.setEnd(pos)
+    def move_vertex(self,vert_idx,(x,y)):
+        nx,ny = int(x),int(y)
+        thresh = 25
+        if vert_idx == 0:
+            if abs(nx - self.uX) > thresh and abs(ny - self.uY) > thresh:
+                self.lX,self.lY = max(0,nx),max(0,ny)
+        if vert_idx == 1:
+            if abs(nx - self.lX) > thresh and abs(ny - self.uY) > thresh:
+                self.uX,self.lY = min(self.max_x,nx),max(0,ny)
+        if vert_idx == 2:
+            if abs(nx - self.lX) > thresh and abs(ny - self.lY) > thresh:
+                self.uX,self.uY = min(self.max_x,nx),min(self.max_y,ny)
+        if vert_idx == 3:
+            if abs(nx - self.uX) > thresh and abs(ny - self.lY) > thresh:
+                self.lX,self.uY = max(0,nx),min(self.max_y,ny)
 
     def mouse_over_center(self,edit_pt,mouse_pos,w,h):
         return edit_pt[0]-w/2 <= mouse_pos[0] <=edit_pt[0]+w/2 and edit_pt[1]-h/2 <= mouse_pos[1] <=edit_pt[1]+h/2
 
     def mouse_over_edit_pt(self,mouse_pos,w,h):
-        if self.mouse_over_center(self.edit_pts[0],mouse_pos,w,h):
-            self.active_edit_pt = "ep0"
-            return True
-        if self.mouse_over_center(self.edit_pts[1],mouse_pos,w,h):
-            self.active_edit_pt = 'ep1'
-            return True
-        else:
-            self.active_edit_pt = None
-            return False
+        for p,i in zip(self.rect,range(4)):
+            if self.mouse_over_center(p,mouse_pos,w,h):
+                self.active_pt_idx = i
+                return True
 
 
 def bin_thresholding(image, image_lower=0, image_upper=256):

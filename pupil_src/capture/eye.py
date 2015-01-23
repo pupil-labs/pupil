@@ -96,9 +96,10 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
         if g_pool.roi_edit_mode:
             if action == GLFW_RELEASE:
-                u_r.active_edit_pt = None
+                u_r.active_edit_pt = False
             elif action == GLFW_PRESS:
-                u_r.mouse_over_edit_pt(pos,20,20)
+                if u_r.mouse_over_edit_pt(pos,u_r.handle_size,u_r.handle_size):
+                    u_r.active_edit_pt = True
             else:
                 pass
            
@@ -107,10 +108,10 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         x,y = x*hdpi_factor,y*hdpi_factor
         g_pool.gui.update_mouse(x*hdpi_factor,y*hdpi_factor)
 
-        if u_r.active_edit_pt is not None:
+        if u_r.active_edit_pt:
             pos = normalize((x,y),glfwGetWindowSize(eye_window))    
             pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) 
-            u_r.set_active_edit_pt_pos(pos)
+            u_r.move_vertex(u_r.active_pt_idx,pos)
 
     def on_scroll(window,x,y):
         g_pool.gui.update_scroll(x,y)
@@ -295,8 +296,8 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         if g_pool.display_mode == 'roi':
             g_pool.roi_edit_mode = True
             draw_gl_polyline(u_r.rect,(.8,.8,.8,0.9),thickness=2)
-            cygl_draw_points(u_r.edit_pts,size=36,color=cygl_rgba(.0,.0,.0,.5),sharpness=0.3)
-            cygl_draw_points(u_r.edit_pts,size=20,color=cygl_rgba(.5,.5,.9,.9),sharpness=0.9)
+            cygl_draw_points(u_r.rect,size=u_r.handle_size*1.8,color=cygl_rgba(.0,.0,.0,.5),sharpness=0.3)
+            cygl_draw_points(u_r.rect,size=u_r.handle_size,color=cygl_rgba(*u_r.handle_color),sharpness=0.9)
         else:
             g_pool.roi_edit_mode = False
 
