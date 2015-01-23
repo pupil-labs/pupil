@@ -89,19 +89,20 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
 
     def on_button(window,button, action, mods):
-        g_pool.gui.update_button(button,action,mods)
-        pos = glfwGetCursorPos(window)
-        pos = normalize(pos,glfwGetWindowSize(eye_window))
-        pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
-
         if g_pool.display_mode == 'roi':
-            if action == GLFW_RELEASE:
+            if action == GLFW_RELEASE and u_r.active_edit_pt:
                 u_r.active_edit_pt = False
+                return # if the roi interacts we dont what the gui to interact as well
             elif action == GLFW_PRESS:
+                pos = glfwGetCursorPos(window)
+                pos = normalize(pos,glfwGetWindowSize(eye_window))
+                pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
                 if u_r.mouse_over_edit_pt(pos,u_r.handle_size,u_r.handle_size):
-                    u_r.active_edit_pt = True
-            else:
-                pass
+                    return # if the roi interacts we dont what the gui to interact as well
+
+        g_pool.gui.update_button(button,action,mods)
+
+
 
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
@@ -291,12 +292,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         # switch to work in pixel space
         make_coord_system_pixel_based(frame.img.shape)
 
-        if g_pool.display_mode == 'roi':
-            draw_gl_polyline(u_r.rect,(.8,.8,.8,0.9),thickness=2)
-            cygl_draw_points(u_r.rect,size=u_r.handle_size*1.8,color=cygl_rgba(.0,.0,.0,.5),sharpness=0.3)
-            cygl_draw_points(u_r.rect,size=u_r.handle_size,color=cygl_rgba(*u_r.handle_color),sharpness=0.9)
-
-
         if result['confidence'] >0:
             if result.has_key('axes'):
                 pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
@@ -314,8 +309,15 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
         # render GUI
         g_pool.gui.update()
+
+        #render the ROI
+        if g_pool.display_mode == 'roi':
+            u_r.draw()
+
+        #update screen
         glfwSwapBuffers(eye_window)
         glfwPollEvents()
+
 
     # END while running
 
