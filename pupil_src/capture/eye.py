@@ -20,6 +20,8 @@ from pyglui import ui,graph
 from pyglui.cygl.utils import init as cygl_init
 from pyglui.cygl.utils import draw_points as cygl_draw_points
 from pyglui.cygl.utils import RGBA as cygl_rgba
+from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
+from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
 
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
@@ -29,7 +31,7 @@ assert pyglui_version >= '0.1'
 import psutil
 
 # helpers/utils
-from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture,draw_gl_polyline
+from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based
 from methods import *
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
@@ -179,7 +181,8 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.image_tex = create_named_texture(frame.img)
+    g_pool.image_tex = create_named_texture(frame.img.shape)
+    update_named_texture(g_pool.image_tex,frame.img)
 
     # refresh speed settings
     glfwSwapInterval(0)
@@ -283,12 +286,11 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         clear_gl_screen()
 
         # switch to work in normalized coordinate space
-        make_coord_system_norm_based()
         if g_pool.display_mode != 'cpu_save':
-            draw_named_texture(g_pool.image_tex,frame.img)
-        else:
-            draw_named_texture(g_pool.image_tex)
+            update_named_texture(g_pool.image_tex,frame.img)
 
+        make_coord_system_norm_based()
+        draw_named_texture(g_pool.image_tex)
         # switch to work in pixel space
         make_coord_system_pixel_based(frame.img.shape)
 
@@ -297,7 +299,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                 pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
                                         (int(result["axes"][0]/2),int(result["axes"][1]/2)),
                                         int(result["angle"]),0,360,15)
-                draw_gl_polyline(pts,(1.,0,0,.5))
+                cygl_draw_polyline(pts,1,(1.,0,0,.5))
             # draw_gl_point_norm(result['norm_pos'],color=(1.,0.,0.,0.5))
             cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
 
@@ -412,13 +414,13 @@ class UIRoi(Roi):
                 return True
 
     def draw(self):
-        draw_gl_polyline(self.rect,(.8,.8,.8,0.9),thickness=2)
+        cygl_draw_polyline(self.rect,color=cygl_rgba(.8,.8,.8,0.9),thickness=2)
         if self.active_edit_pt:
             inactive_pts = self.rect[:self.active_pt_idx]+self.rect[self.active_pt_idx+1:]
             active_pt = [self.rect[self.active_pt_idx]]
             cygl_draw_points(inactive_pts,size=self.handle_size+10,color=self.handle_color_shadow,sharpness=0.3)
             cygl_draw_points(inactive_pts,size=self.handle_size,color=self.handle_color,sharpness=0.9)
-            cygl_draw_points(active_pt,size=self.handle_size+30,color=self.handle_color_shadow,sharpness=0.3)                        
+            cygl_draw_points(active_pt,size=self.handle_size+30,color=self.handle_color_shadow,sharpness=0.3)
             cygl_draw_points(active_pt,size=self.handle_size+10,color=self.handle_color_selected,sharpness=0.9)
         else:
             cygl_draw_points(self.rect,size=self.handle_size+10,color=self.handle_color_shadow,sharpness=0.3)
