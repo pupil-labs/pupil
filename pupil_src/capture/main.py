@@ -112,7 +112,6 @@ def main():
     forking_enable(0)
 
     #g_pool holds variables. Only if added here they are shared across processes.
-
     g_pool = Global_Container()
 
     # Create and initialize IPC
