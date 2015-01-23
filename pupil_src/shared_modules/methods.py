@@ -119,19 +119,19 @@ class UIRoi(Roi):
         raise Exception('The view field is read-only. Use the set methods instead')
 
     def move_vertex(self,vert_idx,(x,y)):
-        nx,ny = int(x),int(y)
+        nx,ny = min(self.max_x,int(x)),min(self.max_y,int(y))
         thresh = 25
         if vert_idx == 0:
-            if abs(nx - self.uX) > thresh and abs(ny - self.uY) > thresh:
+            if self.uX-nx > thresh and self.uY-ny > thresh:
                 self.lX,self.lY = max(0,nx),max(0,ny)
         if vert_idx == 1:
-            if abs(nx - self.lX) > thresh and abs(ny - self.uY) > thresh:
+            if nx-self.lX > thresh and self.uY-ny > thresh:
                 self.uX,self.lY = min(self.max_x,nx),max(0,ny)
         if vert_idx == 2:
-            if abs(nx - self.lX) > thresh and abs(ny - self.lY) > thresh:
+            if nx-self.lX > thresh and ny-self.lY > thresh:
                 self.uX,self.uY = min(self.max_x,nx),min(self.max_y,ny)
         if vert_idx == 3:
-            if abs(nx - self.uX) > thresh and abs(ny - self.lY) > thresh:
+            if self.uX-nx > thresh and ny-self.lY > thresh:
                 self.lX,self.uY = max(0,nx),min(self.max_y,ny)
 
     def mouse_over_center(self,edit_pt,mouse_pos,w,h):
