@@ -102,15 +102,14 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                     u_r.active_edit_pt = True
             else:
                 pass
-           
+
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
-        x,y = x*hdpi_factor,y*hdpi_factor
         g_pool.gui.update_mouse(x*hdpi_factor,y*hdpi_factor)
 
         if u_r.active_edit_pt:
-            pos = normalize((x,y),glfwGetWindowSize(eye_window))    
-            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) 
+            pos = normalize((x,y),glfwGetWindowSize(eye_window))
+            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) )
             u_r.move_vertex(u_r.active_pt_idx,pos)
 
     def on_scroll(window,x,y):
