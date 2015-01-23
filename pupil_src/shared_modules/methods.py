@@ -21,6 +21,9 @@ class Temp(object):
     def __init__(self):
         pass
 
+
+
+
 class Roi(object):
     """this is a simple 2D Region of Interest class
     it is applied on numpy arrays for convenient slicing
@@ -87,61 +90,6 @@ class Roi(object):
     def get(self):
         return self.lX,self.lY,self.uX,self.uY,self.array_shape
 
-
-class UIRoi(Roi):
-    """
-    this object inherits from ROI and adds some UI helper functions
-    """
-    def __init__(self,array_shape):
-        super(UIRoi, self).__init__(array_shape)
-        pad = 20
-        self.lX += pad
-        self.lY += pad
-        self.uX -= pad
-        self.uY -= pad
-
-        self.max_x = array_shape[1] 
-        self.max_y = array_shape[0]
-
-        self.handle_size = 20
-        self.active_edit_pt = False
-        self.active_pt_idx = None
-        self.handle_color = (.5,.5,.9,.9)
-
-    @property
-    def rect(self):
-        return [[self.lX,self.lY],
-                [self.uX,self.lY],
-                [self.uX,self.uY],
-                [self.lX,self.uY]]
-    @rect.setter
-    def rect(self, value):
-        raise Exception('The view field is read-only. Use the set methods instead')
-
-    def move_vertex(self,vert_idx,(x,y)):
-        nx,ny = min(self.max_x,int(x)),min(self.max_y,int(y))
-        thresh = 25
-        if vert_idx == 0:
-            if self.uX-nx > thresh and self.uY-ny > thresh:
-                self.lX,self.lY = max(0,nx),max(0,ny)
-        if vert_idx == 1:
-            if nx-self.lX > thresh and self.uY-ny > thresh:
-                self.uX,self.lY = min(self.max_x,nx),max(0,ny)
-        if vert_idx == 2:
-            if nx-self.lX > thresh and ny-self.lY > thresh:
-                self.uX,self.uY = min(self.max_x,nx),min(self.max_y,ny)
-        if vert_idx == 3:
-            if self.uX-nx > thresh and ny-self.lY > thresh:
-                self.lX,self.uY = max(0,nx),min(self.max_y,ny)
-
-    def mouse_over_center(self,edit_pt,mouse_pos,w,h):
-        return edit_pt[0]-w/2 <= mouse_pos[0] <=edit_pt[0]+w/2 and edit_pt[1]-h/2 <= mouse_pos[1] <=edit_pt[1]+h/2
-
-    def mouse_over_edit_pt(self,mouse_pos,w,h):
-        for p,i in zip(self.rect,range(4)):
-            if self.mouse_over_center(p,mouse_pos,w,h):
-                self.active_pt_idx = i
-                return True
 
 
 def bin_thresholding(image, image_lower=0, image_upper=256):
