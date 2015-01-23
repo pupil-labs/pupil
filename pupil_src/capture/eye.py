@@ -368,12 +368,6 @@ class UIRoi(Roi):
     """
     def __init__(self,array_shape):
         super(UIRoi, self).__init__(array_shape)
-        pad = 20
-        self.lX += pad
-        self.lY += pad
-        self.uX -= pad
-        self.uY -= pad
-
         self.max_x = array_shape[1]
         self.max_y = array_shape[0]
 
