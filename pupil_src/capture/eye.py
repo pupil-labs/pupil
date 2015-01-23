@@ -414,7 +414,7 @@ class UIRoi(Roi):
     def draw(self):
         draw_gl_polyline(self.rect,(.8,.8,.8,0.9),thickness=2)
         if self.active_edit_pt:
-            inactive_pts = [p for p in self.rect if p is not self.rect[self.active_pt_idx]]
+            inactive_pts = self.rect[:self.active_pt_idx]+self.rect[self.active_pt_idx+1:]
             active_pt = [self.rect[self.active_pt_idx]]
             cygl_draw_points(inactive_pts,size=self.handle_size+10,color=self.handle_color_shadow,sharpness=0.3)
             cygl_draw_points(inactive_pts,size=self.handle_size,color=self.handle_color,sharpness=0.9)
