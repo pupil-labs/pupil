@@ -148,4 +148,6 @@ class Calibration_Plugin(Plugin):
 
 class Gaze_Mapping_Plugin(Plugin):
     '''base class for all calibration routines'''
-    pass
+    def __init__(self,g_pool):
+        super(Gaze_Mapping_Plugin, self).__init__(g_pool)
+        self.order = 0.1
