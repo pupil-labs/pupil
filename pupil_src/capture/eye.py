@@ -375,8 +375,8 @@ class UIRoi(Roi):
         self.active_edit_pt = False
         self.active_pt_idx = None
         self.handle_color = cygl_rgba(.5,.5,.9,.9)
+        self.handle_color_selected = cygl_rgba(.5,.9,.9,.9)
         self.handle_color_shadow = cygl_rgba(.0,.0,.0,.5)
-
 
     @property
     def rect(self):
@@ -413,6 +413,14 @@ class UIRoi(Roi):
 
     def draw(self):
         draw_gl_polyline(self.rect,(.8,.8,.8,0.9),thickness=2)
-        cygl_draw_points(self.rect,size=self.handle_size*1.8,color=self.handle_color_shadow,sharpness=0.3)
-        cygl_draw_points(self.rect,size=self.handle_size,color=self.handle_color,sharpness=0.9)
+        if self.active_edit_pt:
+            inactive_pts = [p for p in self.rect if p is not self.rect[self.active_pt_idx]]
+            active_pt = [self.rect[self.active_pt_idx]]
+            cygl_draw_points(inactive_pts,size=self.handle_size+10,color=self.handle_color_shadow,sharpness=0.3)
+            cygl_draw_points(inactive_pts,size=self.handle_size,color=self.handle_color,sharpness=0.9)
+            cygl_draw_points(active_pt,size=self.handle_size+30,color=self.handle_color_shadow,sharpness=0.3)                        
+            cygl_draw_points(active_pt,size=self.handle_size+10,color=self.handle_color_selected,sharpness=0.9)
+        else:
+            cygl_draw_points(self.rect,size=self.handle_size+10,color=self.handle_color_shadow,sharpness=0.3)
+            cygl_draw_points(self.rect,size=self.handle_size,color=self.handle_color,sharpness=0.9)
 
