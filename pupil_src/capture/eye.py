@@ -31,7 +31,7 @@ assert pyglui_version >= '0.1'
 import psutil
 
 # helpers/utils
-from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based
+from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based,get_gl_line_type
 from methods import *
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
@@ -414,7 +414,7 @@ class UIRoi(Roi):
                 return True
 
     def draw(self):
-        cygl_draw_polyline(self.rect,color=cygl_rgba(.8,.8,.8,0.9),thickness=2)
+        cygl_draw_polyline(self.rect,color=cygl_rgba(.8,.8,.8,0.9),thickness=2,line_type=get_gl_line_type('Loop'))
         if self.active_edit_pt:
             inactive_pts = self.rect[:self.active_pt_idx]+self.rect[self.active_pt_idx+1:]
             active_pt = [self.rect[self.active_pt_idx]]

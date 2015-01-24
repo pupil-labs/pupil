@@ -35,7 +35,8 @@ __all__ =  ['make_coord_system_norm_based',
             'adjust_gl_view',
             'clear_gl_screen',
             'basic_gl_setup',
-            'cvmat_to_glmat']
+            'cvmat_to_glmat',
+            'get_gl_line_type']
 
 
 def cvmat_to_glmat(m):
@@ -406,4 +407,13 @@ def make_coord_system_norm_based():
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
+def get_gl_line_type(type):
+    if type=='Loop':
+        return GL_LINE_LOOP
+    elif type=='Strip':
+        return GL_LINE_STRIP
+    elif type=='Polygon':
+        return GL_POLYGON
+    else:
+        return GL_LINES 
 
