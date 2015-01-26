@@ -16,11 +16,11 @@ For an intro to the Pupil mobile eye tracking platform have a look at the [Pupil
 	<td><a href="https://github.com/pupil-labs/pupil/wiki/Developer-Guide">Developer Guide</a></td>
 </tr>
 <tr>
-	<td align="center"><img width="80" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-01.png" /></td>
-	<td  align="center"><img width="80" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-02.png" /></td>
-	<td align="center"><img width="80" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-03.png" /></td>
-	<td align="center"><img width="80" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-04.png" /></td>
-	<td align="center"><img width="80" src="https://raw.github.com/wiki/pupil-labs/pupil/media/icons/Pupil_Logo_wiki-05.png" /></td>
+	<td align="center"><a href="https://github.com/pupil-labs/pupil/wiki/Getting-Pupil-Hardware"><img width="80" src="https://github.com/pupil-labs/pupil/wiki/media/icons/Pupil_Logo_wiki-01.png" /></a></td>
+	<td  align="center"><a href="https://github.com/pupil-labs/pupil/wiki/Community"><img width="80" src="https://github.com/pupil-labs/pupil/wiki/media/icons/Pupil_Logo_wiki-02.png" /></a></td>
+	<td align="center"><a href="https://github.com/pupil-labs/pupil/wiki/Setup"><img width="80" src="https://github.com/pupil-labs/pupil/wiki/media/icons/Pupil_Logo_wiki-03.png" /></a></td>
+	<td align="center"><a href="https://github.com/pupil-labs/pupil/wiki/User-Guide"><img width="80" src="https://github.com/pupil-labs/pupil/wiki/media/icons/Pupil_Logo_wiki-04.png" /></a></td>
+	<td align="center"><a href="https://github.com/pupil-labs/pupil/wiki/Developer-Guide"><img width="80" src="https://github.com/pupil-labs/pupil/wiki/media/icons/Pupil_Logo_wiki-05.png" /></a></td>
 </tr>
 <tr>
 	<td>How and where to get Pupil mobile eye tracking headset</td>
