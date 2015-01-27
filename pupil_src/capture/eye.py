@@ -144,6 +144,10 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     # vars should be declared here to make them visible to the code reader.
     g_pool.window_size = session_settings.get('window_size',1.)
     g_pool.display_mode = session_settings.get('display_mode','camera_image')
+    g_pool.display_mode_info_text = {'camera_image': "Raw eye camera image. If the pupil is detected, a red ellipse and circle at the pupil center will be overlaid on the image.",
+                                'roi': "Click and drag on the blue circles to adjust the region of interest.",
+                                'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters with in the Pupil Detection menu below.",
+                                'cpu_save': "Reduce CPU load by stopping the texture update of the eye video in the eye window."}
     # g_pool.draw_pupil = session_settings.get('draw_pupil',True)
 
     u_r = UIRoi(frame.img.shape)
@@ -164,6 +168,13 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     def get_scale():
         return g_pool.gui.scale
+
+    def set_display_mode_info(val):
+        # set info text here and append to the general settings menu
+        # 'camera_image','roi','algorithm','cpu_save'
+        g_pool.display_mode = val
+        g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
+                
 
     # Initialize glfw
     glfwInit()
@@ -198,7 +209,9 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     general_settings = ui.Growing_Menu('General')
     general_settings.configuration = session_settings.get('general_menu_config',{})
     general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
-    general_settings.append(ui.Selector('display_mode',g_pool,selection=['camera_image','roi','algorithm','cpu_save'], labels=['Camera Image', 'ROI', 'Algorithm', 'CPU Save'], label="Mode") )
+    general_settings.append(ui.Selector('display_mode',g_pool,setter=set_display_mode_info,selection=['camera_image','roi','algorithm','cpu_save'], labels=['Camera Image', 'ROI', 'Algorithm', 'CPU Save'], label="Mode") )
+    g_pool.display_mode_info = ui.Info_Text(g_pool.display_mode_info_text[g_pool.display_mode])
+    general_settings.append(g_pool.display_mode_info)
     g_pool.sidebar.append(general_settings)
     g_pool.pupil_detector_menu = ui.Growing_Menu('Pupil Detector')
     g_pool.pupil_detector_menu.configuration = session_settings.get('pupil_detector_menu_config',{'collapsed':True})
