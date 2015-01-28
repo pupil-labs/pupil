@@ -512,21 +512,26 @@ class Canny_Detector(Pupil_Detector):
     def set_final_perimeter_ratio_range(self,val):
         self.final_perimeter_ratio_range[0] = val
 
-    def init_gui(self):
+    def init_gui(self,sidebar):
+        self.menu = ui.Growing_Menu('Pupil Detector')
+        self.menu.configuration = self.session_settings.get('menu_config',{'collapsed':True})
         self.info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
-        self.g_pool.pupil_detector_menu.append(self.info)
-        self.g_pool.pupil_detector_menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=20,step=1))
-        self.g_pool.pupil_detector_menu.append(ui.Slider('pupil_min',self,label='Pupil min',min=1,max=250,step=1))
-        self.g_pool.pupil_detector_menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=50,max=400,step=1))
+        self.menu.append(self.info)
+        self.menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=20,step=1))
+        self.menu.append(ui.Slider('pupil_min',self,label='Pupil min',min=1,max=250,step=1))
+        self.menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=50,max=400,step=1))
 
         self.advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
         self.advanced_controls_menu.configuration = self.session_settings.get('advanced_controls_menu_config',{'collapsed':True})
         self.advanced_controls_menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
         self.advanced_controls_menu.append(ui.Slider('min_contour_size',self,label='Contour min length',min=1,max=200,step=1))
         self.advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
-        self.g_pool.pupil_detector_menu.append(self.advanced_controls_menu)
+        self.menu.append(self.advanced_controls_menu)
+        sidebar.append(self.menu)
+
+
 
 
     def toggle_window(self):

@@ -213,10 +213,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     g_pool.display_mode_info = ui.Info_Text(g_pool.display_mode_info_text[g_pool.display_mode])
     general_settings.append(g_pool.display_mode_info)
     g_pool.sidebar.append(general_settings)
-    g_pool.pupil_detector_menu = ui.Growing_Menu('Pupil Detector')
-    g_pool.pupil_detector_menu.configuration = session_settings.get('pupil_detector_menu_config',{'collapsed':True})
-    g_pool.sidebar.append(g_pool.pupil_detector_menu)
-
     g_pool.gui.append(g_pool.sidebar)
 
     # let the camera add its GUI
@@ -224,7 +220,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{'collapsed':True})
 
     # let detector add its GUI
-    pupil_detector.init_gui()
+    pupil_detector.init_gui(g_pool.sidebar)
 
 
     #set the last saved window size
