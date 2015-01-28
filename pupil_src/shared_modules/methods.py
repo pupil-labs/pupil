@@ -51,21 +51,6 @@ class Roi(object):
     def view(self, value):
         raise Exception('The view field is read-only. Use the set methods instead')
 
-    def setStart(self,(x,y)):
-        x,y = int(x),int(y)
-        x,y = max(0,x),max(0,y)
-        self.nX,self.nY = x,y
-
-    def setEnd(self,(x,y)):
-            x,y = int(x),int(y)
-            x,y = max(0,x),max(0,y)
-            # make sure the ROI actually contains enough pixels
-            if abs(self.nX - x) > 25 and abs(self.nY - y)>25:
-                self.lX = min(x,self.nX)
-                self.lY = min(y,self.nY)
-                self.uX = max(x,self.nX)
-                self.uY = max(y,self.nY)
-
     def add_vector(self,(x,y)):
         """
         adds the roi offset to a len2 vector

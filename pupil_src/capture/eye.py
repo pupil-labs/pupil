@@ -174,7 +174,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         # 'camera_image','roi','algorithm','cpu_save'
         g_pool.display_mode = val
         g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
-                
+
 
     # Initialize glfw
     glfwInit()
@@ -314,7 +314,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                                         (int(result["axes"][0]/2),int(result["axes"][1]/2)),
                                         int(result["angle"]),0,360,15)
                 cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
-            # draw_gl_point_norm(result['norm_pos'],color=(1.,0.,0.,0.5))
             cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
 
         # render graphs
@@ -328,7 +327,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
         #render the ROI
         if g_pool.display_mode == 'roi':
-            u_r.draw()
+            u_r.draw(g_pool.gui.scale)
 
         #update screen
         glfwSwapBuffers(eye_window)
@@ -384,8 +383,17 @@ class UIRoi(Roi):
     """
     def __init__(self,array_shape):
         super(UIRoi, self).__init__(array_shape)
-        self.max_x = array_shape[1]
-        self.max_y = array_shape[0]
+        self.max_x = array_shape[1]-20
+        self.min_x = 20
+        self.max_y = array_shape[0]-20
+        self.min_y = 20
+
+        #enforce contraints
+        self.lX = max(self.min_x,self.lX)
+        self.uX = min(self.max_x,self.uX)
+        self.lY = max(self.min_y,self.lY)
+        self.uY = min(self.max_y,self.uY)
+
 
         self.handle_size = 20
         self.active_edit_pt = False
@@ -402,20 +410,26 @@ class UIRoi(Roi):
                 [self.lX,self.uY]]
 
     def move_vertex(self,vert_idx,(x,y)):
-        nx,ny = min(self.max_x,int(x)),min(self.max_y,int(y))
-        thresh = 25
+        x,y = int(x),int(y)
+        x,y = min(self.max_x,x),min(self.max_y,y)
+        x,y = max(self.min_x,x),max(self.min_y,y)
+        thresh = 45
         if vert_idx == 0:
-            if self.uX-nx > thresh and self.uY-ny > thresh:
-                self.lX,self.lY = max(0,nx),max(0,ny)
+            x = min(x,self.uX-thresh)
+            y = min(y,self.uY-thresh)
+            self.lX,self.lY = x,y
         if vert_idx == 1:
-            if nx-self.lX > thresh and self.uY-ny > thresh:
-                self.uX,self.lY = min(self.max_x,nx),max(0,ny)
+            x = max(x,self.lX+thresh)
+            y = min(y,self.uY-thresh)
+            self.uX,self.lY = x,y
         if vert_idx == 2:
-            if nx-self.lX > thresh and ny-self.lY > thresh:
-                self.uX,self.uY = min(self.max_x,nx),min(self.max_y,ny)
+            x = max(x,self.lX+thresh)
+            y = max(y,self.lY+thresh)
+            self.uX,self.uY = x,y
         if vert_idx == 3:
-            if self.uX-nx > thresh and ny-self.lY > thresh:
-                self.lX,self.uY = max(0,nx),min(self.max_y,ny)
+            x = min(x,self.uX-thresh)
+            y = max(y,self.lY+thresh)
+            self.lX,self.uY = x,y
 
     def mouse_over_center(self,edit_pt,mouse_pos,w,h):
         return edit_pt[0]-w/2 <= mouse_pos[0] <=edit_pt[0]+w/2 and edit_pt[1]-h/2 <= mouse_pos[1] <=edit_pt[1]+h/2
@@ -427,16 +441,16 @@ class UIRoi(Roi):
                 self.active_edit_pt = True
                 return True
 
-    def draw(self):
+    def draw(self,ui_scale=1):
         cygl_draw_polyline(self.rect,color=cygl_rgba(.8,.8,.8,0.9),thickness=2,line_type=GL_LINE_LOOP)
         if self.active_edit_pt:
             inactive_pts = self.rect[:self.active_pt_idx]+self.rect[self.active_pt_idx+1:]
             active_pt = [self.rect[self.active_pt_idx]]
-            cygl_draw_points(inactive_pts,size=self.handle_size+10,color=self.handle_color_shadow,sharpness=0.3)
-            cygl_draw_points(inactive_pts,size=self.handle_size,color=self.handle_color,sharpness=0.9)
-            cygl_draw_points(active_pt,size=self.handle_size+30,color=self.handle_color_shadow,sharpness=0.3)
-            cygl_draw_points(active_pt,size=self.handle_size+10,color=self.handle_color_selected,sharpness=0.9)
+            cygl_draw_points(inactive_pts,size=(self.handle_size+10)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
+            cygl_draw_points(inactive_pts,size=self.handle_size*ui_scale,color=self.handle_color,sharpness=0.9)
+            cygl_draw_points(active_pt,size=(self.handle_size+30)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
+            cygl_draw_points(active_pt,size=(self.handle_size+10)*ui_scale,color=self.handle_color_selected,sharpness=0.9)
         else:
-            cygl_draw_points(self.rect,size=self.handle_size+10,color=self.handle_color_shadow,sharpness=0.3)
-            cygl_draw_points(self.rect,size=self.handle_size,color=self.handle_color,sharpness=0.9)
+            cygl_draw_points(self.rect,size=(self.handle_size+10)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
+            cygl_draw_points(self.rect,size=self.handle_size*ui_scale,color=self.handle_color,sharpness=0.9)
 
