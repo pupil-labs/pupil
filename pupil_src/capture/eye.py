@@ -300,8 +300,12 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         clear_gl_screen()
 
         # switch to work in normalized coordinate space
-        if g_pool.display_mode != 'cpu_save':
+        if g_pool.display_mode == 'algorithm':
             update_named_texture(g_pool.image_tex,frame.img)
+        elif g_pool.display_mode in ('camera_image','roi'):
+            update_named_texture(g_pool.image_tex,frame.gray)
+        else:
+            pass
 
         make_coord_system_norm_based()
         draw_named_texture(g_pool.image_tex)
