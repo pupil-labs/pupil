@@ -351,7 +351,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
     session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
     session_settings['general_menu_config'] = general_settings.configuration
-    session_settings['pupil_detector_menu_config'] = g_pool.pupil_detector_menu.configuration
     session_settings.close()
 
     pupil_detector.cleanup()

@@ -607,4 +607,5 @@ class Canny_Detector(Pupil_Detector):
         self.session_settings['min_contour_size'] = self.min_contour_size
         self.session_settings['final_perimeter_ratio_range'] = self.final_perimeter_ratio_range
         self.session_settings['advanced_controls_menu_config'] = self.advanced_controls_menu.configuration
+        self.session_settings['menu_config'] = self.menu.configuration
         self.session_settings.close()
