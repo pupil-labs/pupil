@@ -155,7 +155,7 @@ class Camera_Capture(object):
         if self.use_hw_ts:
             # lets make sure this timestamps is sane:
             if abs(timestamp-v4l2.get_sys_time_monotonic()) > 2: #hw_timestamp more than 2secs away from now?
-                logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s and last timestamp was %s"%('/dev/video'+str(self.src_id),timestamp,v4l2.get_sys_time_monotonic(),self._last_timestamp))
+                logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s"%('/dev/video'+str(self.src_id),timestamp,v4l2.get_sys_time_monotonic()))
                 timestamp = v4l2.get_sys_time_monotonic()
         else:
             timestamp = v4l2.get_sys_time_monotonic()
