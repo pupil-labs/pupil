@@ -59,7 +59,6 @@ elif platform.system() == 'Linux':
                    a.zipfiles,
                    a.datas,
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
-                   [('capture.so', '../pupil_src/shared_modules/uvc_capture/linux_video/v4l2_capture/capture.so','BINARY')],
                    [('libAntTweakBar.so', '/usr/lib/libAntTweakBar.so','BINARY')],
                    [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
                    [('icon.ico', 'linux_icon.ico','DATA')],
