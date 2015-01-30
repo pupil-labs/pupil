@@ -73,7 +73,7 @@ class Pupil_Remote(Plugin):
                     self.g_pool.rec_name = rec_name
                 self.on_char_fn(None,ord('r') ) #emulate the user hitting 'r'
             elif msg == 'T':
-                self.g_pool.timebase.value = self.g_pool.capure.get_now()
+                self.g_pool.timebase.value = self.g_pool.capture.get_now()
                 logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
             elif msg == 'C':
                 self.on_char_fn(None,ord('c') ) #emulate the user hitting 'c'

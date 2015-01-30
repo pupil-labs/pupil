@@ -264,7 +264,7 @@ def world(g_pool,cap_src,cap_size):
 
     def reset_timebase():
         #the last frame from worldcam will be t0
-        g_pool.timebase.value = g_pool.capure.get_now()
+        g_pool.timebase.value = g_pool.capture.get_now()
         logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
 
 
