@@ -17,7 +17,7 @@ if __name__ == '__main__':
     del syspath, ospath
 
 
-import os, sys
+import os, sys,platform
 from file_methods import Persistent_Dict
 import logging
 import numpy as np
@@ -63,6 +63,12 @@ default_plugins = [('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
 
+
+#UI Platform tweaks
+if platform.system() == 'Linux':
+     scroll_factor = 10.0
+else:   
+    scroll_factor = 1.0
 
 
 def world(g_pool,cap_src,cap_size):
@@ -114,7 +120,7 @@ def world(g_pool,cap_src,cap_size):
         g_pool.gui.update_mouse(x,y)
 
     def on_scroll(window,x,y):
-        g_pool.gui.update_scroll(x,y)
+        g_pool.gui.update_scroll(x,y*scroll_factor)
 
 
     def on_close(window):

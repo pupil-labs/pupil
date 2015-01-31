@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os
+import os,platform
 from time import sleep
 from file_methods import Persistent_Dict
 import logging
@@ -38,6 +38,14 @@ from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError
 
 # Pupil detectors
 from pupil_detectors import Canny_Detector
+
+#UI Platform tweaks
+if platform.system() == 'Linux':
+     scroll_factor = 10.0
+else:   
+    scroll_factor = 1.0
+
+
 
 def eye(g_pool,cap_src,cap_size,eye_id=0):
     """
@@ -115,7 +123,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
             u_r.move_vertex(u_r.active_pt_idx,pos)
 
     def on_scroll(window,x,y):
-        g_pool.gui.update_scroll(x,y)
+        g_pool.gui.update_scroll(x,y*scroll_factor)
 
     def on_close(window):
         g_pool.quit.value = True
