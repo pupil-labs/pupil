@@ -11,7 +11,7 @@
 import numpy as np
 import cv2
 
-def get_canditate_ellipses(gray_img,area_threshold,dist_threshold,min_ring_count, visual_debug):
+def get_candidate_ellipses(gray_img,area_threshold,dist_threshold,min_ring_count, visual_debug):
 
     # get threshold image used to get crisp-clean edges
     edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 5, -3)

@@ -19,7 +19,7 @@ import OpenGL.GL as gl
 from glfw import *
 from OpenGL.GLU import gluOrtho2D
 import calibrate
-from circle_detector import get_canditate_ellipses
+from circle_detector import get_candidate_ellipses
 
 from pyglui import ui
 from plugin import Calibration_Plugin
@@ -338,7 +338,7 @@ class Accuracy_Test(Calibration_Plugin):
             gray_img = frame.gray
 
             #detect the marker
-            self.candidate_ellipses = get_canditate_ellipses(gray_img,
+            self.candidate_ellipses = get_candidate_ellipses(gray_img,
                                                             area_threshold=self.area_threshold,
                                                             dist_threshold=self.dist_threshold,
                                                             min_ring_count=4,

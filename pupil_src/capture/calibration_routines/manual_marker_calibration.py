@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 from methods import normalize,denormalize
 from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
-from circle_detector import get_canditate_ellipses
+from circle_detector import get_candidate_ellipses
 import calibrate
 
 import audio
@@ -153,7 +153,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             if self.world_size is None:
                 self.world_size = frame.width,frame.height
 
-            self.candidate_ellipses = get_canditate_ellipses(gray_img,
+            self.candidate_ellipses = get_candidate_ellipses(gray_img,
                                                             area_threshold=self.area_threshold,
                                                             dist_threshold=self.dist_threshold,
                                                             min_ring_count=5,

@@ -380,7 +380,7 @@ class Canny_Detector(Pupil_Detector):
         for idx, c in enumerate(split_contours):
             if c.shape[0] >=5:
                 e = cv2.fitEllipse(c)
-                # is this ellipse a plausible canditate for a pupil?
+                # is this ellipse a plausible candidate for a pupil?
                 if ellipse_filter(e):
                     distances = dist_pts_ellipse(e,c)
                     fit_variance = np.sum(distances**2)/float(distances.shape[0])
@@ -438,7 +438,7 @@ class Canny_Detector(Pupil_Detector):
                 cv2.ellipse(debug_img,e,(0,150,100))
             support_pixels,ellipse_circumference = ellipse_true_support(e,raw_edges)
             support_ratio =  support_pixels.shape[0]/ellipse_circumference
-            # TODO: refine the selection of final canditate
+            # TODO: refine the selection of final candidate
             if support_ratio >=self.final_perimeter_ratio_range[0] and ellipse_filter(e):
                 ratings.append(support_pixels.shape[0])
                 if support_ratio >=self.strong_perimeter_ratio_range[0]:
