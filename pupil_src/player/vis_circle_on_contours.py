@@ -1,124 +1,69 @@
 '''
 (*)~----------------------------------------------------------------------------------
 
-Find approximated contours
-Draw convex parent contours of inner most contours 
-if  gaze_point  is inside contour:
+if gaze_point  is outside all contours:
+    draw "outside"  
+elif gaze_point  is inside contour_a:
     draw circle a
-else
+elif gaze_point  is inside contour_b:
     draw circle b
+elif gaze_point  is (inside contour_a) and (inside contour_b):
+    draw circle c
+elif ...:
+    draw circle ...
 
-tested on black concentric circles on white background,
-enviroment iluminated by fluorecent (127v 30watt) unclosed lamp on 4m high ceiling
+Author: Carlos Picanco, Universidade Federal do Para.
+Hack from Pupil - eye tracking platform (v0.3.7.4):
 
-Author: Carlos Picanco.
-Hack of plugin.py and vis_circle.py from Pupil - eye tracking platform (v0.3.7.4)
+plugin.py
+vis_circle.py
+
+Distributed under the terms of the CC BY-NC-SA License.
+License details are in the file license.txt, distributed as part of this software.
     
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 from glfw import *
 from plugin import Plugin
 from ctypes import c_int,c_float,c_bool
-from gl_utils import adjust_gl_view, clear_gl_screen, draw_gl_texture, draw_gl_polyline
+from gl_utils import adjust_gl_view
+
 
 from methods import denormalize
 from player_methods import transparent_circle
+from vcc_methods import get_canditate_ellipses, ellipses_from_findContours, get_cluster_hierarchy, ellipse_to_contour
+from vcc_methods import PolygonTestEx, PolygonTestRC, get_codes
+from vcc_methods import find_edges, draw_contours
+
 
 import numpy as np
-import OpenGL.GL as gl
-import cv2, logging, platform 
+# import OpenGL.GL as gl
+import cv2
+import logging
+import platform 
 logger = logging.getLogger(__name__)
 
+# pt_codes references
+_POINT = 0
+_CODE = 1
 
-# Each frame has an index (ID) hierarchy tree defined by the cv2.RETR_TREE from cv2.findContours
-# this is just to remember that its a tree
-_RETR_TREE = 0
-
-# Constants for the hierarchy[_RETR_TREE][contour][{next,back,child,parent}]
-_ID_NEXT = 0
-_ID_BACK = 1
-_ID_CHILD = 2
-_ID_PARENT = 3
-
-# Channel constants
+# channel constants
 _CH_B = 0  
 _CH_G = 1
 _CH_R = 2
 _CH_0 = 3
 
-def find_edges(img, threshold, cv2_thresh_mode):
-    blur = cv2.GaussianBlur(img,(5,5),0)
-    edges = []
-    for gray in (blur[:,:,_CH_B], blur[:,:,_CH_G], blur[:,:,_CH_R]):
-        if threshold == 0: # its not finished...
-            edg = cv2.Canny(gray, 0, 50, apertureSize = 5)
-            edg = cv2.dilate(edg, None)
-            edges.append(edg)
-        else:
-            retval, edg = cv2.threshold(gray, threshold, 255, cv2_thresh_mode)
-            edges.append(edg)
-    return edges
-
-def is_circle(cnt):
-    area = cv2.contourArea(cnt)
-    x, y, w, h = cv2.boundingRect(cnt)
-    radius = w / 2
-    isc = abs(1 - (w / h)) <= 1 and abs(1 - (area / (np.pi * pow(radius, 2)))) <= 20 #20, adjusted by experimentation
-    return isc
-
-def idx(depth, prime, hierarchy): #get_contour_id_from_depth
-    if not depth == 0:
-        next_level = hierarchy[_RETR_TREE][prime][_ID_PARENT]
-        return idx(depth -1, next_level, hierarchy)
-    else:
-        return hierarchy[_RETR_TREE][prime][_ID_PARENT]  
-
-#approximate and draw contour by its index
-def draw_approx(img, index, contours, y, detection_color):
-    cnt = contours[index]
-    epsilon = y * cv2.arcLength(cnt,True)
-    approx = cv2.approxPolyDP(cnt,epsilon,True)
-    if cv2.isContourConvex(approx):
-        cv2.drawContours(img,[approx],0 ,detection_color[:3],1) 
-        return approx
-    else:
-        approx = []
-        return approx
-
-#get and draw contours
-def draw_contours(img, contours, hierarchy, y, detection_color):    
-    form_contours = []
-    for i, cnt in enumerate(contours):
-        epsilon = y * cv2.arcLength(cnt,True)
-        approx = cv2.approxPolyDP(cnt,epsilon,True)
-
-        if hierarchy[_RETR_TREE][i][_ID_CHILD] == -1: # if the contour has no child
-            if cv2.isContourConvex(approx): 
-                if len(approx) > 5:
-                    if is_circle(approx) and cv2.contourArea(approx) > 1000:
-                        approx = draw_approx(img, idx(2, i, hierarchy), contours, y, detection_color)
-                        if len(approx) > 0: 
-                            form_contours.append(approx)
-    return form_contours
-    
-# window calbacks
-def on_resize(window,w, h):
-    active_window = glfwGetCurrentContext()
-    glfwMakeContextCurrent(window)
-    adjust_gl_view(w,h)
-    glfwMakeContextCurrent(active_window)
-
-
 class Circle_on_Contours(Plugin):
     def __init__(
-        self, g_pool = None,
+        self,
+        g_pool = None,
         radius = 20,
-        color1 = (1.,.2,.4,.5), color2 = (1.,.2,.1,.5), color3 = (0.1,.2,.1,.5),
+        color3 = (0.1,.2,.1,.5),
         thickness = 1,
         full = False,
         epsilon = 0.007,
+        detection_method_idx = 1,
         blackbkgnd = False):
         super(Circle_on_Contours, self).__init__()
         # pupil standards
@@ -127,8 +72,7 @@ class Circle_on_Contours(Plugin):
 
         # circle
         self.radius = c_int(int(radius))
-        self.color1 = (c_float * 4)(*color1)
-        self.color2 = (c_float * 4)(*color2)
+        self.color3 = (c_float * 4)(*color3)
         self.thickness = c_int(int(thickness))
         self.full = c_bool(bool(full))
 
@@ -147,123 +91,52 @@ class Circle_on_Contours(Plugin):
         # detector
         self.candraw = False
         self.detection_color = (c_float*4)(*color3)
-        self.detection_method_idx = c_int(0)
-        self.detection_method_names = ['Method 1', 'Method 2']
+        self.detection_method_idx = c_int(2)
+        self.expected_contours = c_int(2)
+        self.detection_method_names = ['Method 1', 'Method 2', 'Method 3']
         self.threshold = c_int(255)
+        self.ellipse_size = c_float(2.000)
         self.channelidx = c_int(6)
         self.channel_names = ['B', 'G', 'R', 'GR', 'BR', 'BG', 'BGR']
         self.epsilon = c_float(epsilon)
 
+        #Method 2 uses screen_marker_calibration/circle_detector functions
+        self.candidate_ellipses = []
+        self.current_path = 'none'
+        self.timestamps = []
+        self.current_frame = []
+
+        # hardcoded colors, but they should be assigned at runtime
+        self.colors = [  (0, 0, 255, 150),      # red
+                    (255, 0, 0, 150),       # blue
+                    (0, 255, 0, 150),       # green
+                    (255, 255, 0, 150),     # blue marine
+                    (0, 255, 255, 150)      # yellow
+                    #(230, 50, 230, 150),     # purple
+                    #(0, 0, 255, 200),      # red
+                    #(255, 255, 255, 200),  # white
+                    #(0, 0, 0, 200)         # black
+                ]
+        self.codes = list(get_codes('-+', self.expected_contours.value))
+        # find a way to choose colors for larger numbers   ]
+
+        self.ColorDictionary = dict(zip(self.codes, self.colors))
+        #self.ColorDictionary['+1'] = (230, 50, 230, 150)
+        #self.ColorDictionary['-1'] = (0, 0, 0, 255) 
+
         logger.info('Circle_on_Contours plugin initialization on ' + platform.system())
         #primary_monitor = glfwGetPrimaryMonitor()
-
-    def init_gui(self,atb_pos=(630, 10)):
-        import atb
-
-        # creating an AntTweakBar.
-        atb_label = "Circle on Contours"
-        self._bar = atb.Bar(
-            name = self.__class__.__name__,
-            label = atb_label,
-            help = "ref detection parameters",
-            color = (50, 50, 50),
-            alpha = 100,
-            text = 'light',
-            position = atb_pos,
-            refresh = .3,
-            size = (300, 300))
-
-        # circle parameters
-        self._bar.add_var('circle in color',self.color1)
-        self._bar.add_var('circle out color',self.color2)
-        self._bar.add_var('circle radius',self.radius)
-        self._bar.add_var('circle thickness',self.thickness, min = 0)
-        self._bar.add_var('circle filled',self.full)
-        self._bar.add_separator('sep1')
-
-        # detector
-        self._bar.add_var('contour color',self.detection_color)
-        self._bar.add_var('black background', self.blackbkgnd)
-        self._bar.add_var('threshold', self.threshold, min = 0, max = 255, step = 1)
-        self._bar.add_var('Epsilon',self.epsilon, min = 0, max = 5, step = 0.0001)
-
-        detection_method = atb.enum("Method",dict(((key,val) for val,key in enumerate(self.detection_method_names)))) 
-        self._bar.add_var("Detection Method",self.detection_method_idx, vtype = detection_method)
-        
-        edges_channel = atb.enum("Channel",dict(((key,val) for val,key in enumerate(self.channel_names)))) 
-        self._bar.add_var("Channels",self.channelidx, vtype = edges_channel)
-
-        self._bar.add_separator('sep2')
-
-        # window parameters
-        monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
-        self._bar.add_var("wnd monitor",self.monitor_idx, vtype = monitor_enum)
-        self._bar.add_var("wnd fullscreen", self.fullscreen)
-        self._bar.add_button('remove plugin',self.unset_alive)
-        self._bar.add_button("  show window", self.do_open, key = 's')
-        self._bar.add_button("  close window", self.close_window, key = 'c')
-
-    def unset_alive(self):
-        self.alive = False
-
-    def do_open(self):
-        if not self._window:
-            self.window_should_open = True
-
-    def open_window(self):
-        if not self._window:
-            if self.fullscreen.value:
-                monitor = self.monitor_handles[self.monitor_idx.value]
-                mode = glfwGetVideoMode(monitor)
-                height,width= mode[0],mode[1]
-            else:
-                monitor = None
-                height,width= 1280,720
-
-            self._window = glfwCreateWindow(height, width, "Plugin Window", monitor=monitor, share=None)
-            if not self.fullscreen.value:
-                glfwSetWindowPos(self._window,200,0)
-
-            on_resize(self._window,height,width)
-
-            #Register callbacks
-            glfwSetWindowSizeCallback(self._window,on_resize)
-            glfwSetKeyCallback(self._window,self.on_plugin_window_key)
-            glfwSetWindowCloseCallback(self._window,self.on_close)
-
-            # gl_state settings
-            active_window = glfwGetCurrentContext()
-            glfwMakeContextCurrent(self._window)
-            gl.glEnable(gl.GL_POINT_SMOOTH)
-            gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-            gl.glEnable(gl.GL_BLEND)
-            gl.glClearColor(1.,1.,1.,0.)
-
-            # refresh speed settings
-            glfwSwapInterval(0)
-
-            glfwMakeContextCurrent(active_window)
-            self.window_should_open = False
-
-
-    def on_plugin_window_key(self,window, key, scancode, action, mods):
-        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
-            if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
-                    self.on_close()
-
-    def on_close(self,window = None):
-        self.window_should_close = True
-
-    def close_window(self):
-        if self._window:
-            glfwDestroyWindow(self._window)
-            self._window = None
-            self.window_should_close = False
+    def get_variables(self):
+        # contours, cntcount, cntellps, elpcount, pupilsxy, pxycount, pxytests, elp_alfa
+        pass
 
     def update(self,frame,recent_pupil_positions,events):
         #logger.debug(len(frame.img))
+        self.current_frame = frame.index
 
+        ############################################################################################
+        #"""METHOD 1"""#############################################################################    
+        ############################################################################################
         if self.detection_method_idx.value == 0:
             '''
 
@@ -275,13 +148,18 @@ class Circle_on_Contours(Plugin):
 
 
             '''
-
             img = frame.img
             height = img.shape[0] 
             width = img.shape[1]
 
-            edges = find_edges(img, self.threshold.value,cv2.THRESH_OTSU)
-            edges.append(np.zeros((height, width,1), np.uint8))
+            # cv2.THRESH_BINARY | cv2.THRESH_OTSU
+            # cv2.THRESH_BINARY_INV
+            # cv2.THRESH_TRUNC
+            # cv2.THRESH_TOZERO
+            # cv2.THRESH_TOZERO_INV    
+            edges = find_edges(img, self.threshold.value,cv2.THRESH_TOZERO)
+            #edges = find_edges2(img, self.threshold.value)
+            edges.append(np.zeros((height, width, 1), np.uint8))
 
             # logger.debug(str(cv2.cv.GetImage(cv2.cv.fromarray(frame.img)).depth)) # 8
             #logger.debug(str(frame.img.))
@@ -292,6 +170,20 @@ class Circle_on_Contours(Plugin):
                 edges_edt = cv2.max(edges_edt, edges[_CH_R])
                 
                 frame.img = cv2.merge([edges_edt, edges_edt, edges_edt])
+                #, edges[_CH_R]]
+                #edgs = cv2.max(edges[_CH_B], edges[_CH_G])
+
+            #    in_put = [edges[_CH_B], edges[_CH_G], edges[_CH_R]]
+            #    out_put = [edges[_CH_B], edges[_CH_G], edges[_CH_R]]
+
+                #from_to = [ _CH_R,_CH_B,  _CH_B,_CH_G,  _CH_G,_CH_B ]  
+            #    from_to = [2,0, 0,1, 1,0]
+                #edges = cv2.merge(in_put)
+            #    cv2.mixChannels(in_put, out_put, from_to)
+            #    edges = cv2.merge(out_put)
+            #    frame.img = edges
+                #self.frame = edges
+            #    edgs = cv2.cvtColor(edges, cv2.COLOR_RGB2GRAY)
 
             elif self.channelidx.value == 5:
                 edges_edt = cv2.max(edges[_CH_B], edges[_CH_G]) 
@@ -318,20 +210,21 @@ class Circle_on_Contours(Plugin):
                 frame.img = cv2.merge([ edges_edt, edges[_CH_0], edges[_CH_0] ]) 
 
             # error: (-210) [Start]FindContours support only 8uC1 and 32sC1 images in function cvStartFindContours
-            contours,hierarchy = cv2.findContours(edges_edt, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+            contours,hierarchy = cv2.findContours(edges_edt, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE,offset=(0,0))
 
-            self.contours = contours
+            #self.contours = contours
 
             color1 = map(lambda x: int(x * 255),self.detection_color)
             color1 = color1[:3][::-1] + color1[-1:]
             
             contours = draw_contours(frame.img, contours, hierarchy, self.epsilon.value, color1)
 
-            color1 = map(lambda x: int(x * 255),self.color1)
+            #logger.info(str(len(contours)) + ' contours found.')
+            
+            color1 = map(lambda x: int(x * 255),self.detection_color)
             color1 = color1[:3][::-1] + color1[-1:]
-            color2 = map(lambda x: int(x * 255),self.color2)
-            color2 = color2[:3][::-1] + color2[-1:]
-
+            color2 = (255, 0, 0, 255)
+            
             if self.full.value:
                 thickness= -1
             else:
@@ -339,55 +232,333 @@ class Circle_on_Contours(Plugin):
 
             radius = self.radius.value
             pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y = True) for pt in recent_pupil_positions if pt['norm_gaze'] is not None]
-
-            # need to filter contours to avoid redraw of gaze points
-            # now its drawing gapoints duplicates...
-            for contour in contours:
-                for pt in pts:
+            #logger.info(str(len(pts)) + ' gaze points found.')
+            # logger.debug(str(pt))
+            PolygonTests = []
+            for pt in pts:
+                for contour in contours:
                     Inside = cv2.pointPolygonTest(contour, pt, False)
                     if Inside > -1:
-                        transparent_circle(frame.img, pt, radius = 10, color = color1, thickness = thickness)
+                        PolygonTests.append(True)
                     else:
-                        transparent_circle(frame.img, pt, radius = radius, color = color2, thickness = thickness)
-            
+                        PolygonTests.append(False)
+                if True in PolygonTests:
+                    transparent_circle(frame.img, pt, radius = 10, color = color1, thickness = thickness)
+                else:
+                    transparent_circle(frame.img, pt, radius = radius, color = color2, thickness = thickness)
+        
+        ############################################################################################
+        #"""METHOD 2"""#############################################################################    
+        ############################################################################################       
+        if self.detection_method_idx.value == 1:
+            # Get image from frame       
+            img = frame.img
+            #height = img.shape[0] 
+            #width = img.shape[1]
 
-        elif self.detection_method_idx == 1:
-            pass      
-        
-        
+            # Ctypes for Gui compatibility
+            show_edges = c_bool(0)
+            dist_threshold = c_int(20)
+            area_threshold = c_int(100)
+
+            # color3    
+            color3 = map(lambda x: int(x * 255),self.detection_color)
+            color3 = color3[:3][::-1] + color3[-1:]
+            
+            # cv2.THRESH_BINARY
+            # cv2.THRESH_BINARY_INV
+            # cv2.THRESH_TRUNC
+            candidate_ellipses = []
+            remainders = []
+
+            candidate_ellipses, remainders = get_canditate_ellipses(img,
+                                                            img_threshold=self.threshold.value,
+                                                            cv2_thresh_mode=cv2.THRESH_BINARY,    
+                                                            area_threshold=area_threshold.value,
+                                                            dist_threshold=dist_threshold.value,
+                                                            min_ring_count=3,
+                                                            visual_debug=show_edges.value)
+            contours_target = []
+
+            if len(candidate_ellipses) > 0:
+                ellipse = candidate_ellipses[-1]
+                # norm_pos = normalize(orig_pos,(img.shape[1],img.shape[0]),flip_y=True)
+                center = (int(round(ellipse[0][0])),int(round(ellipse[0][1]))) 
+                axes = (int(round(ellipse[1][0]/self.ellipse_size.value)),int(round(ellipse[1][1]/self.ellipse_size.value)))
+                angle = int(round(ellipse[2]))
+
+                contour = cv2.ellipse2Poly(center, axes, angle,
+                                                               arcStart=0,
+                                                               arcEnd=360,
+                                                               delta=1) # precision angle
+                contours_target.append(contour)
+                cv2.drawContours(frame.img, contours_target, -1, color3, thickness=1,lineType=cv2.CV_AA)
+
+            contours_remainders = []
+
+            if len(remainders) > 0:
+                ellipse = remainders[-1]
+                # norm_pos = normalize(orig_pos,(img.shape[1],img.shape[0]),flip_y=True)
+                center = (int(round(ellipse[0][0])),int(round(ellipse[0][1]))) 
+                axes = (int(round(ellipse[1][0]/self.ellipse_size.value)),int(round(ellipse[1][1]/self.ellipse_size.value)))
+                angle = int(round(ellipse[2]))
+                # logger.debug(str(len(axis)))
+
+                contour = cv2.ellipse2Poly(center, axes, angle,
+                                                               arcStart=0,
+                                                               arcEnd=360,
+                                                               delta=1)    # precision angle
+                
+                contours_remainders.append(contour)
+                cv2.drawContours(frame.img, contours_remainders, -1, (255, 0, 0), thickness=1,lineType=cv2.CV_AA)
+            
+            pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y = True) for pt in recent_pupil_positions if pt['norm_gaze'] is not None]
+            pt_codes = []
+            contours_counter = 0
+            for pt in pts:
+                contours_counter, counter_code = PolygonTestEx(contours_target, pt)
+                contours_counter, counter_code = PolygonTestEx(contours_remainders, pt, contours_counter, counter_code)
+                pt_codes.append((pt, counter_code))
+
+            # transparent circle parameters
+            if self.full.value:
+                thickness= -1
+            else:
+                thickness = self.thickness.value
+            radius = self.radius.value
+
+            # need to draw contours in the same order 
+            if contours_counter > 0:
+                for pt_code in pt_codes:
+                    try:
+                        color = self.ColorDictionary[pt_code[_CODE]]
+                    except KeyError, e:
+                        #print e
+                        color = (0, 0, 0, 255)
+
+                    transparent_circle(
+                                frame.img,
+                                pt_code[_POINT],
+                                radius = int(radius/2),
+                                color = color,
+                                thickness = thickness    )
+            else:
+                for pt in pts:
+                    transparent_circle(
+                        frame.img,
+                        pt,
+                        radius = radius,
+                        color = self.colors[-1],
+                        thickness = thickness    )
+                    cv2.putText(frame.img, '?', (int(pt[0] -10),int(pt[1]) +10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 1, lineType = cv2.CV_AA )
+       
+        ############################################################################################
+        #"""METHOD 3"""#############################################################################    
+        ############################################################################################
+        if self.detection_method_idx.value == 2:
+            # get image from frame       
+            img = frame.img
+
+            # set color3    
+            color3 = map(lambda x: int(x * 255),self.detection_color)
+            color3 = color3[:3][::-1] + color3[-1:]
+
+            # cv2.THRESH_BINARY
+            # cv2.THRESH_BINARY_INV
+            # cv2.THRESH_TRUNC
+
+            # find raw ellipses from cv2.findContours
+            show_edges = c_bool(0)
+
+            # the less the difference between ellipse area and source contour area are,
+            # the better a fit between ellipse and source contour will be
+            # delta_area_threshold gives the maximum allowed difference
+            delta_area_threshold = c_int(20)
+            ellipses = []
+            ellipses = ellipses_from_findContours(img,
+                                    cv2_thresh_mode=cv2.THRESH_BINARY,    
+                                    delta_area_threshold=delta_area_threshold.value,
+                                    visual_debug=show_edges.value)
+
+            # we need denormalized points for point polygon tests    
+            pts = [denormalize(pt['norm_gaze'], img.shape[:-1][::-1], flip_y = True) for pt in recent_pupil_positions if pt['norm_gaze'] is not None]
+               
+            if ellipses:
+                # get area of all ellipses
+                ellipses_temp = [e[1][0]/2. * e[1][1]/2. * np.pi for e in ellipses]
+                ellipses_temp.sort()
+
+                # take the highest area as reference
+                area_threshold = ellipses_temp[-1]
+            
+                # filtering by proportional area
+                ellipses_temp = []
+                for e in ellipses:
+                    a,b = e[1][0] / 2., e[1][1] / 2.
+                    ellipse_area = np.pi * a * b
+                    if (ellipse_area/area_threshold) < .10:
+                        pass  
+                    else:
+                        ellipses_temp.append(e)
+
+                # cluster_hierarchy is ordenated by appearence order, from top left screen
+                # it is a list of clustered ellipses
+                dist_threshold = c_int(20)
+                cluster_hierarchy = []
+                cluster_hierarchy = get_cluster_hierarchy(
+                                        ellipses=ellipses_temp,
+                                        dist_threshold=dist_threshold.value)
+                # total_stm is expected to be the number of stimuli on screen
+                # total_stm = len(cluster_hierarchy)
+
+                # we need contours for point polygon tests, not ellipses
+                stm_contours = []
+
+                # cluster_set is the ellipse set associated with each stimulus on screen
+                alfa = self.ellipse_size.value
+
+                temp = list(cluster_hierarchy)
+                for cluster_set in temp:
+                    print len(cluster_set)
+                    if len(cluster_set) > 2:
+                        cluster_hierarchy.append(cluster_hierarchy.pop(cluster_hierarchy.index(cluster_set)))
+
+                for cluster_set in cluster_hierarchy:
+                    if len(cluster_set) > 0:
+                        if True:
+                            for ellipse in cluster_set:
+                                center = ( int(round( ellipse[0][0] )), int( round( ellipse[0][1] ))) 
+                                axes = ( int( round( ellipse[1][0]/alfa )), int( round( ellipse[1][1]/alfa )))
+                                angle = int( round(ellipse[2] ))
+                                cv2.ellipse(img, center, axes, angle, startAngle=0, endAngle=359, color=color3, thickness=1, lineType=8, shift= 0)
+
+                        # use only the biggest (last) ellipse for reference
+                        stm_contours.append(ellipse_to_contour(cluster_set[-1], alfa))
+
+                #print stm_contours
+                # pt_codes is a list tuples:
+                # tuple((denormalized point as a float x, y coordenate), 'string code given by the PointPolygonTextEx function')
+                # ex.: tuple([x, y], '+1-2')
+                contour_count = 0
+                pt_codes = []
+                for pt in pts:
+                    contour_count = 0
+                    counter_code = ''
+                    for contour in stm_contours:
+                        contour_count, counter_code = PolygonTestRC(contour, pt, contour_count, counter_code)
+                    # a single code for a single point
+                    pt_codes.append((pt, counter_code))
+                print pt_codes
+
+            else:
+                print 'else'
+                contour_count = 0
+               
+            # transparent circle parameters
+            radius = self.radius.value
+            if self.full.value:
+                thickness= -1
+            else:
+                thickness = self.thickness.value 
+
+            # each code specifies the color of each point
+            # in accordance with the self.ColorDictionary
+            if contour_count > 0:
+                for x in xrange(len(pt_codes)):
+                    try:
+                        color = self.ColorDictionary[pt_codes[x][_CODE]]
+                    except KeyError, e:
+                        #print e
+                        color = (0, 0, 0, 255)
+
+                    transparent_circle(
+                                img,
+                                pt_codes[x][_POINT],
+                                radius = int(radius/2),
+                                color = color,
+                                thickness = thickness    )
+            else:
+                for pt in pts:
+                    transparent_circle(
+                        frame.img,
+                        pt,
+                        radius = radius,
+                        color = self.colors[-1],
+                        thickness = thickness    )
+                    cv2.putText(img, '?', (int(pt[0] -10),int(pt[1]) +10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 1, lineType = cv2.CV_AA )
+
         if self.window_should_close:
-            self.close_window()
+            pass # self.close_window()
 
         if self.window_should_open:
-            self.open_window()
+            pass # self.open_window()
+
+    def init_gui(self):
+        import atb
+
+        atb_pos = 630, 10
+        # creating an AntTweakBar.
+        atb_label = "Circle on Contours"
+        self._bar = atb.Bar(
+            name = self.__class__.__name__,
+            label = atb_label,
+            help = "ref detection parameters",
+            color = (50, 50, 50),
+            alpha = 100,
+            text = 'light',
+            position = atb_pos,
+            refresh = .3,
+            size = (300, 300))
+
+        # circle parameters
+        self._bar.add_var('circle radius',self.radius)
+        self._bar.add_var('circle thickness',self.thickness, min = 0)
+        self._bar.add_var('circle filled',self.full)
+        self._bar.add_separator('sep0')
+
+        # detector
+        self._bar.add_var('target color',self.detection_color)
+        self._bar.add_var('black background', self.blackbkgnd)
+        self._bar.add_var('threshold', self.threshold, min = 0, max = 255, step = 1)
+        self._bar.add_var('Epsilon',self.epsilon, min = 0, max = 5, step = 0.0001)
+        detection_method = atb.enum("Method",dict(((key,val) for val,key in enumerate(self.detection_method_names)))) 
+        self._bar.add_var("Detection Method",self.detection_method_idx, vtype = detection_method)
+        edges_channel = atb.enum("Channel",dict(((key,val) for val,key in enumerate(self.channel_names)))) 
+        self._bar.add_var("Channels",self.channelidx, vtype = edges_channel)
+
+        self._bar.add_separator('sep1')
+        self._bar.add_var('Expected Contours', self.expected_contours, min = 2, max = 32, step= 1)
+        self._bar.add_var('Ellipse', self.ellipse_size, min = 0, max = 4, step = 0.001)
         
+        self._bar.add_separator('sep2')
 
-    def gl_display(self):
-        """
-        use gl calls to render on world window
-        """
+        # window parameters
+        self._bar.add_button('remove',self.unset_alive)
+        self._bar.add_button('debug button', self.debug_button)
 
-        # gl stuff that will show on the world window goes here:
+    def unset_alive(self):
+        self.alive = False
 
-        if self._window:
-            self.gl_display_in_window()
+    def debug_button(self):
+        print self.debug
 
-    def gl_display_in_window(self):
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(self._window)
+    def on_plugin_window_key(self,window, key, scancode, action, mods):
+        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
+            if action == GLFW_PRESS:
+                if key == GLFW_KEY_ESCAPE:
+                    self.on_close()
 
-        # draw_gl_texture(self.frame)
-
-        glfwSwapBuffers(self._window)
-        glfwMakeContextCurrent(active_window)
-
+    def on_close(self,window = None):
+        self.window_should_close = True
+       
     def get_init_dict(self):
         return {
             'radius':self.radius.value,
-            'color1':self.color1[:],'color2':self.color2[:],'color3':self.detection_color[:],
+            'color3':self.detection_color[:],
             'thickness':self.thickness.value,
             'full':self.full.value,
             'epsilon': self.epsilon.value,
+            'detection_method_idx':self.detection_method_idx.value,
             'blackbkgnd': self.blackbkgnd.value}
 
     def clone(self):
@@ -399,5 +570,5 @@ class Circle_on_Contours(Plugin):
         if you have an atb bar or glfw window destroy it here.
         """
         if self._window:
-            self.close_window()
+            pass # self.close_window()
         self._bar.destroy()
