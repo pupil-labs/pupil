@@ -22,6 +22,11 @@ from circle_detector import get_candidate_ellipses
 import audio
 
 from pyglui import ui
+from pyglui.cygl.utils import init as cygl_init
+from pyglui.cygl.utils import draw_points as cygl_draw_points
+from pyglui.cygl.utils import RGBA as cygl_rgba
+
+
 from plugin import Calibration_Plugin
 from gaze_mappers import Simple_Gaze_Mapper
 
@@ -30,17 +35,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def draw_circle(pos,r,c):
-    pts = cv2.ellipse2Poly(tuple(pos),(r,r),0,0,360,10)
-    draw_gl_polyline(pts,c,'Polygon')
-
 def draw_marker(pos):
     pos = int(pos[0]),int(pos[1])
-    black = (0.,0.,0.,1.)
-    white = (1.,1.,1.,1.)
+    black = cygl_rgba(0.,0.,0.,1.)
+    white = cygl_rgba(1.,1.,1.,1.)
     for r,c in zip((50,40,30,20,10),(black,white,black,white,black)):
-        draw_circle(pos,r,c)
-
+        cygl_draw_points([pos],size=r,color=c,sharpness=0.9)
 
 # window calbacks
 def on_resize(window,w, h):
@@ -176,7 +176,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             glfwSwapInterval(0)
 
             glfwMakeContextCurrent(active_window)
-
+            
+            # initalize cygl
+            cygl_init()
+            
 
     def on_key(self,window, key, scancode, action, mods):
         if action == GLFW_PRESS:
@@ -308,7 +311,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
-                draw_gl_polyline(pts,(0.,1.,0,1.))
+                # draw_gl_polyline(pts,(0.,1.,0,1.))
         else:
             pass
         if self._window:
@@ -350,9 +353,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         #some feedback on the detection state
 
         if self.detected and self.on_position:
-            draw_gl_point(screen_pos, 5, (0.,1.,0.,1.))
+            cygl_draw_points([screen_pos],size=5,color=cygl_rgba(0.,1.,0.,1.),sharpness=0.95)
         else:
-            draw_gl_point(screen_pos, 5, (1.,0.,0.,1.))
+            cygl_draw_points([screen_pos],size=5,color=cygl_rgba(1.,0.,0.,1.),sharpness=0.95)
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
