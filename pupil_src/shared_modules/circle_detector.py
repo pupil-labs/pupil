@@ -18,13 +18,15 @@ def get_candidate_ellipses(gray_img,area_threshold,dist_threshold,min_ring_count
     # cv2.flip(edges,1 ,dst = edges,)
     # display the image for debugging purpuses
     # img[:] = cv2.cvtColor(edges,cv2.COLOR_GRAY2BGR)
-     # from edges to contours to ellipses CV_RETR_CCsOMP ls fr hole
+    # from edges to contours to ellipses CV_RETR_CCsOMP ls fr hole
     contours, hierarchy = cv2.findContours(edges,
                                     mode=cv2.RETR_TREE,
                                     method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
 
-
     # remove extra encapsulation
+    if contours is None or hierarchy is None:
+        return []
+        
     hierarchy = hierarchy[0]
     # turn outmost list into array
     contours =  np.array(contours)
