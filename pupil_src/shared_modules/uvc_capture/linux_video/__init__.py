@@ -153,14 +153,10 @@ class Camera_Capture(object):
 
         timestamp = frame.timestamp
         if self.use_hw_ts:
-            pass
             # lets make sure this timestamps is sane:
-            # if abs(timestamp-v4l2.get_sys_time_monotonic()) > 5: #hw_timestamp more than 5secs away from now?
-            #     logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s and last timestamp was %s"%('/dev/video'+str(self.src_id),timestamp,v4l2.get_sys_time_monotonic(),self._last_timestamp))
-            #     timestamp = self._last_timestamp + self.capture.framerate[0]/float(self.capture.framerate[1])
-            #     logger.warning("Correcting timestamp by extrapolation from last known timestamp using set rate: %s. TS now at %s"%(str(self.capture.framerate),timestamp) )
-            #     self._last_timestamp = timestamp
-
+            if abs(timestamp-v4l2.get_sys_time_monotonic()) > 2: #hw_timestamp more than 2secs away from now?
+                logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s"%('/dev/video'+str(self.src_id),timestamp,v4l2.get_sys_time_monotonic()))
+                timestamp = v4l2.get_sys_time_monotonic()
         else:
             timestamp = v4l2.get_sys_time_monotonic()
 
