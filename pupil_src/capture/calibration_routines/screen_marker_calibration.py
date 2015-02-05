@@ -58,7 +58,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     Points are collected at sites - not between
 
     """
-    def __init__(self, g_pool,menu_conf = {'collapsed':True},fullscreen = True):
+    def __init__(self, g_pool,menu_conf = {'collapsed':True},fullscreen=True,pattern_scale=1.0):
         super(Screen_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
@@ -75,7 +75,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.show_edges = 0
         self.dist_threshold = 5
         self.area_threshold = 20
-        self.pattern_scale = 1.0
+        self.pattern_scale = pattern_scale
+        self.pattern_alpha = 1.0
 
         self.world_size = None
 
@@ -368,6 +369,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def get_init_dict(self):
         d = {}
         d['fullscreen'] = self.fullscreen
+        d['pattern_scale'] = self.pattern_scale
         if self.menu:
             d['menu_conf'] = self.menu.configuration
         else:
