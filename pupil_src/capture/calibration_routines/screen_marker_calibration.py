@@ -35,12 +35,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def draw_marker(pos):
+def draw_marker(pos,scale):
     pos = int(pos[0]),int(pos[1])
     black = cygl_rgba(0.,0.,0.,1.)
     white = cygl_rgba(1.,1.,1.,1.)
-    for r,c in zip((50,40,30,20,10),(black,white,black,white,black)):
-        cygl_draw_points([pos],size=r,color=c,sharpness=0.9)
+    for r,c in zip((scale*50,scale*40,scale*30,scale*20,scale*10),(black,white,black,white,black)):
+        cygl_draw_points([pos],size=r,color=c,sharpness=0.95)
 
 # window calbacks
 def on_resize(window,w, h):
@@ -75,6 +75,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.show_edges = 0
         self.dist_threshold = 5
         self.area_threshold = 20
+        self.pattern_scale = 1.0
 
         self.world_size = None
 
@@ -100,6 +101,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.g_pool.calibration_menu.append(self.menu)
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
+        self.menu.append(ui.Slider('pattern_scale',self,step=0.05,min=0.5,max=5.0,label='Pattern Scale'))
 
         submenu = ui.Growing_Menu('Advanced')
         submenu.collapsed = True
@@ -339,7 +341,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         # 0,h##################w,h #
         #            r             #
         ############################
-        r = 60
+        r = 60*self.pattern_scale
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         p_window_size = glfwGetWindowSize(self._window)
@@ -351,7 +353,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
 
-        draw_marker(screen_pos)
+        draw_marker(screen_pos,self.pattern_scale)
         #some feedback on the detection state
 
         if self.detected and self.on_position:
