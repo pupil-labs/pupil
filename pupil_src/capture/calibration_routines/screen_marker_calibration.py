@@ -25,7 +25,7 @@ from pyglui import ui
 from pyglui.cygl.utils import init as cygl_init
 from pyglui.cygl.utils import draw_points as cygl_draw_points
 from pyglui.cygl.utils import RGBA as cygl_rgba
-
+from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
 
 from plugin import Calibration_Plugin
 from gaze_mappers import Simple_Gaze_Mapper
@@ -306,12 +306,14 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             show the detected postion even if not published
         """
 
+        # debug mode within world will show green ellipses around detected ellipses
         if self.active and self.detected:
             for e in self.candidate_ellipses:
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
-                # draw_gl_polyline(pts,(0.,1.,0,1.))
+                cygl_draw_polyline(pts,1,cygl_rgba(0.,1.,0.,1.))
+
         else:
             pass
         if self._window:
