@@ -135,7 +135,9 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.g_pool.plugins = [p for p in self.g_pool.plugins if p.alive]
 
         #add new gaze mapper
-        self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,map_fn))
+        model_n = 7
+        cx,cy,err_x,err_y = calibrate.fit_poly_surface(cal_pt_cloud,n=model_n) 
+        self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,(cx,cy,model_n)))        
         self.g_pool.plugins.sort(key=lambda p: p.order)
 
 
