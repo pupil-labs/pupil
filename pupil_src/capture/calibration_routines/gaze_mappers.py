@@ -9,7 +9,7 @@
 '''
 
 from plugin import Gaze_Mapping_Plugin
-
+from calibrate import make_map_function
 
 class Dummy_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Dummy_Gaze_Mapper"""
@@ -30,10 +30,11 @@ class Dummy_Gaze_Mapper(Gaze_Mapping_Plugin):
 
 class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Simple_Gaze_Mapper"""
-    def __init__(self, g_pool,map_fn):
+    def __init__(self, g_pool,params):
         super(Simple_Gaze_Mapper, self).__init__(g_pool)
-        self.map_fn = map_fn
-
+        self.params = params
+        self.map_fn = make_map_function(*self.params)
+    
     def update(self,frame,events):
         gaze_pts = []
 
@@ -45,7 +46,7 @@ class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
         events['gaze'] = gaze_pts
 
     def get_init_dict(self):
-        return {'map_fn':self.map_fn}
+        return {'params':self.params}
 
 
 class Volumetric_Gaze_Mapper(Gaze_Mapping_Plugin):
