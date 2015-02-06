@@ -9,7 +9,6 @@
 '''
 
 from plugin import Gaze_Mapping_Plugin
-import dill
 
 
 class Dummy_Gaze_Mapper(Gaze_Mapping_Plugin):
