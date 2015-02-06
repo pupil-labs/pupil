@@ -125,7 +125,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             logger.warning("Did not collect enough data.")
             return
         cal_pt_cloud = np.array(cal_pt_cloud)
-        map_fn = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size)
+        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,return_params=True)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
         # prepare destruction of current gaze_mapper... and remove it
@@ -135,9 +135,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.g_pool.plugins = [p for p in self.g_pool.plugins if p.alive]
 
         #add new gaze mapper
-        model_n = 7
-        cx,cy,err_x,err_y = calibrate.fit_poly_surface(cal_pt_cloud,n=model_n) 
-        self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,(cx,cy,model_n)))        
+        self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,params))        
         self.g_pool.plugins.sort(key=lambda p: p.order)
 
 

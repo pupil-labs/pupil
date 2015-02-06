@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inlier_map=False):
+def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inlier_map=False,return_params=False):
     """
     we do a simple two pass fitting to a pair of bi-variate polynomials
     return the function to map vector
@@ -36,16 +36,24 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inli
             %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
             100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0]))
 
-        if return_inlier_map:
+        if return_inlier_map and return_params:
+            return map_fn,err_dist<=threshold,(cx,cy,model_n)
+        if return_inlier_map and not return_params:
             return map_fn,err_dist<=threshold
+        if return_params and not return_inlier_map:
+            return map_fn,(cx,cy,model_n)
         return map_fn
     else: # did disregard all points. The data cannot be represented by the model in a meaningful way:
         map_fn = make_map_function(cx,cy,model_n)
         logger.info('First iteration. root-mean-square residuals: %s in pixel, this is bad!'%err_rms)
         logger.warning('The data cannot be represented by the model in a meaningfull way.')
 
-        if return_inlier_map:
+        if return_inlier_map and return_params:
+            return map_fn,err_dist<=threshold,(cx,cy,model_n)
+        if return_inlier_map and not return_params:
             return map_fn,err_dist<=threshold
+        if return_params and not return_inlier_map:
+            return map_fn,(cx,cy,model_n)
         return map_fn
 
 
