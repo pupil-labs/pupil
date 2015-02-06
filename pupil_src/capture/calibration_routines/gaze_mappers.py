@@ -33,14 +33,7 @@ class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Simple_Gaze_Mapper"""
     def __init__(self, g_pool,map_fn):
         super(Simple_Gaze_Mapper, self).__init__(g_pool)
-        # check if we are loading a pickled function or creating for the first time.
         self.map_fn = map_fn
-        if isinstance(self.map_fn,str):
-            self.map_fn = dill.loads(self.map_fn)
-        else:
-            # otherwise we know we are init the first time
-            pass
-
 
     def update(self,frame,events):
         gaze_pts = []
@@ -53,9 +46,7 @@ class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
         events['gaze'] = gaze_pts
 
     def get_init_dict(self):
-        # serialize the function
-        map_fn_str = dill.dumps(self.map_fn)
-        return {'map_fn':map_fn_str}
+        return {'map_fn':self.map_fn}
 
 
 class Volumetric_Gaze_Mapper(Gaze_Mapping_Plugin):
