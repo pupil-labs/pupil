@@ -39,6 +39,7 @@ class Filter_Fixations(Plugin):
         self.sp_active = True
 
     def update(self,frame,events):
+        # TODO: leave this to a dependency plugin loader
         if any(isinstance(p,Scan_Path) for p in self.g_pool.plugins):
             if self.sp_active:
                 pass
@@ -49,7 +50,6 @@ class Filter_Fixations(Plugin):
             if self.sp_active:
                 self.set_bar_ok(False)
                 self.sp_active = False
-
             else:
                 pass
 
@@ -84,35 +84,35 @@ class Filter_Fixations(Plugin):
         
         self.menu.append(ui.Slider('distance',self,min=0,step=1,max=100,label='distance in pixels'))
         self.menu.append(ui.Button('remove',self.unset_alive))
+        
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.gui.remove(self.menu)
+            self.menu = None
 
     def set_bar_ok(self,ok):
         if ok:
-            self._bar.color = (50, 50, 50)
-            self._bar.label = "Filter Fixations"
+            #TODO: self._bar.color = (50, 50, 50)
+            self.menu.label = "Filter Fixations"
         else:
-            self._bar.color = (250, 50, 50)
-            self._bar.label = "Filter Fixations: Turn on Scan_Path!"
+            #TODO: .color = (250, 50, 50)
+            self.menu.label = "Filter Fixations: Turn on Scan_Path!"
 
     def unset_alive(self):
         self.alive = False
 
     def get_init_dict(self):
-        d = {'distance':self.distance}
-        if hasattr(self,'_bar'):
-            gui_settings = {'pos':self._bar.position,'size':self._bar.size,'iconified':self._bar.iconified}
-            d['gui_settings'] = gui_settings
-        return d
+        return {'distance':self.distance, 'menu_conf':self.menu.configuration}
 
     def clone(self):
         return Filter_Fixations(**self.get_init_dict())
-
 
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
-        self._bar.destroy()
+        self.deinit_gui()
 
 
 
