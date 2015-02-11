@@ -21,6 +21,7 @@ class Vis_Cross(Plugin):
     def __init__(self, g_pool,inner=20,outer=100,color=(1.,.2,.4,.5),thickness=1,menu_conf={'pos':(10,420),'size':(300,100),'collapsed':False}):
         super(Vis_Cross, self).__init__(g_pool)
         self.order = .9
+        self.uniqueness = "not_unique"
 
         # initialize empty menu
         # and load menu configuration of last session

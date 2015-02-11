@@ -24,6 +24,7 @@ class Vis_Circle(Plugin):
     def __init__(self, g_pool,radius=20,color=(1.,.2,.4,.2),thickness=2,fill=True,menu_conf={'pos':(300,300),'size':(300,300),'collapsed':False}):
         super(Vis_Circle, self).__init__(g_pool)
         self.order = .9
+        self.uniqueness = "not_unique"
 
         # initialize empty menu
         # and load menu configuration of last session

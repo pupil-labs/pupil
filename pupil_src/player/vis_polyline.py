@@ -22,6 +22,7 @@ class Vis_Polyline(Plugin):
     def __init__(self, g_pool,color =(1.,.2,.4),thickness=2,menu_conf={'pos':(10,320),'size':(300,70),'collapsed':False}):
         super(Vis_Polyline, self).__init__(g_pool)
         self.order = .9
+        self.uniqueness = "not_unique"
         
         # initialize empty menu
         # and load menu configuration of last session

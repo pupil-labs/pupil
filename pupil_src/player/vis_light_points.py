@@ -26,6 +26,7 @@ class Vis_Light_Points(Plugin):
     def __init__(self, g_pool,falloff = 20, menu_conf={'pos':(10,470),'size':(300,100),'collapsed':False}):
         super(Vis_Light_Points, self).__init__(g_pool)
         self.order = .8
+        self.uniqueness = "not_unique"
         #let the plugin work after most other plugins.
         
         # initialize empty menu
