@@ -34,7 +34,6 @@ class Seek_Bar(Plugin):
         #display layout
         self.padding = 20. #in sceen pixel
 
-
     def init_gui(self):
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 
@@ -43,7 +42,7 @@ class Seek_Bar(Plugin):
         self.h_pad = self.padding * self.frame_count/float(w)
         self.v_pad = self.padding * 1./h
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
         self.current_frame_index = frame.index
 
         if self.drag_mode:
@@ -58,7 +57,6 @@ class Seek_Bar(Plugin):
                 except:
                     pass
                 self.g_pool.new_seek = True
-
 
     def on_click(self,img_pos,button,action):
         """
@@ -86,7 +84,6 @@ class Seek_Bar(Plugin):
                 self.drag_mode=False
                 self.g_pool.play = self.was_playing
 
-
     def seek_bar_to_screen(self,pos):
         width,height = self.window_size
         x,y=pos
@@ -94,7 +91,6 @@ class Seek_Bar(Plugin):
         x = (x/float(self.frame_count))*(width-self.padding*2) +self.padding
         y  = y*(height-2*self.padding)+self.padding
         return x,y
-
 
     def screen_to_seek_bar(self,pos):
         width,height = glfwGetWindowSize(glfwGetCurrentContext())
@@ -104,7 +100,6 @@ class Seek_Bar(Plugin):
         return x,1-y
 
     def gl_display(self):
-
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()

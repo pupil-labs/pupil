@@ -11,8 +11,7 @@
 import cv2
 from plugin import Plugin
 import numpy as np
-import atb
-from ctypes import c_float
+from pyglui import ui
 from methods import denormalize,normalize
 import logging
 from scan_path import Scan_Path
@@ -24,21 +23,22 @@ class Filter_Fixations(Plugin):
     using this plugin will filter the recent_pupil_positions by manhattan distance from previous frame
     only recent_pupil_positions within distance tolerance will be shown
     """
-    def __init__(self, g_pool=None,distance=25.0,gui_settings={'pos':(10,470),'size':(300,100),'iconified':False}):
+    def __init__(self, g_pool=None,distance=25.0,menu_conf={'pos':(10,470),'size':(300,100),'collapsed':False}):
         super(Filter_Fixations, self).__init__()
-
         self.g_pool = g_pool
         # let the plugin work after most other plugins
         self.order = .7
+        
+        # initialize empty menu
+        # and load menu configuration of last session
+        self.menu = None
+        self.menu_conf = menu_conf
 
         # user settings
-        self.distance = c_float(float(distance))
-        self.gui_settings = gui_settings
-
+        self.distance = distance
         self.sp_active = True
 
-    def update(self,frame,recent_pupil_positions,events):
-
+    def update(self,frame,events):
         if any(isinstance(p,Scan_Path) for p in self.g_pool.plugins):
             if self.sp_active:
                 pass
@@ -53,43 +53,37 @@ class Filter_Fixations(Plugin):
             else:
                 pass
 
-
         img = frame.img
         img_shape = img.shape[:-1][::-1] # width,height
 
         filtered_gaze = []
 
-        for gp1, gp2 in zip(recent_pupil_positions[:-1], recent_pupil_positions[1:]):
+        for gp1, gp2 in zip(events['pupil_positions'][:-1], events['pupil_positions'][1:]):
             gp1_norm = denormalize(gp1['norm_gaze'], img_shape,flip_y=True)
             gp2_norm = denormalize(gp2['norm_gaze'], img_shape,flip_y=True)
             x_dist =  abs(gp1_norm[0] - gp2_norm[0])
             y_dist = abs(gp1_norm[1] - gp2_norm[1])
             man = x_dist + y_dist
-            # print "man: %s\tdist: %s" %(man,self.distance.value)
-            if man < self.distance.value:
+            # print "man: %s\tdist: %s" %(man,self.distance)
+            if man < self.distance:
                 filtered_gaze.append(gp1)
             else:
                 # print "filtered"
                 pass
 
-        recent_pupil_positions[:] = filtered_gaze[:]
-        recent_pupil_positions.sort(key=lambda x: x['timestamp']) #this may be redundant...
+        events['pupil_positions'][:] = filtered_gaze[:]
+        events['pupil_positions'].sort(key=lambda x: x['timestamp']) #this may be redundant...
 
-
-
-    def init_gui(self,pos=None):
-        import atb
-        pos = self.gui_settings['pos']
-        atb_label = "Filter Fixations"
-        self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
-            help="polyline", color=(50, 50, 50), alpha=50,
-            text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
-
-        self._bar.iconified = self.gui_settings['iconified']
-        self._bar.add_var('distance in pixels',self.distance,min=0,step=0.1)
-        self._bar.add_button('remove',self.unset_alive)
-
-
+    def init_gui(self):
+        # initialize the menu
+        self.menu = ui.Growing_Menu('Filter Fixations')
+        # load the configuration of last session
+        self.menu.configuration = self.menu_conf
+        # add menu to the window
+        self.g_pool.gui.append(self.menu)
+        
+        self.menu.append(ui.Slider('distance',self,min=0,step=1,max=100,label='distance in pixels'))
+        self.menu.append(ui.Button('remove',self.unset_alive))
 
     def set_bar_ok(self,ok):
         if ok:
@@ -102,14 +96,12 @@ class Filter_Fixations(Plugin):
     def unset_alive(self):
         self.alive = False
 
-
     def get_init_dict(self):
-        d = {'distance':self.distance.value}
+        d = {'distance':self.distance}
         if hasattr(self,'_bar'):
             gui_settings = {'pos':self._bar.position,'size':self._bar.size,'iconified':self._bar.iconified}
             d['gui_settings'] = gui_settings
         return d
-
 
     def clone(self):
         return Filter_Fixations(**self.get_init_dict())
