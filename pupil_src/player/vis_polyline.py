@@ -19,16 +19,16 @@ from methods import denormalize
 
 class Vis_Polyline(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool,color =(1.,.2,.4),thickness=2,menu_conf={'pos':(10,320),'size':(300,70),'collapsed':False}):
+    def __init__(self, g_pool,color = (1.,.2,.4,.8),thickness=2,menu_conf={'pos':(10,320),'size':(300,70),'collapsed':False}):
         super(Vis_Polyline, self).__init__(g_pool)
         self.order = .9
         self.uniqueness = "not_unique"
-        
+
         # initialize empty menu
         # and load menu configuration of last session
         self.menu = None
         self.menu_conf = menu_conf
-        
+
         self.r = color[0]
         self.g = color[1]
         self.b = color[2]
@@ -48,7 +48,7 @@ class Vis_Polyline(Plugin):
         self.menu.configuration = self.menu_conf
         # add menu to the window
         self.g_pool.gui.append(self.menu)
-        
+
         color_menu = ui.Growing_Menu('Color')
         self.menu.append(ui.Info_Text('Set RGB color components and alpha value.'))
         color_menu.append(ui.Slider('r',self,min=1,step=1,max=255))
@@ -56,14 +56,14 @@ class Vis_Polyline(Plugin):
         color_menu.append(ui.Slider('b',self,min=1,step=1,max=255))
         color_menu.append(ui.Slider('a',self,min=1,step=1,max=255))
         self.menu.append(color_menu)
-        
+
         self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15))
-        self.menu.append(ui.Button('remove',self.unset_alive))   
-        
+        self.menu.append(ui.Button('remove',self.unset_alive))
+
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
-            self.menu = None 
+            self.menu = None
 
     def unset_alive(self):
         self.alive = False
