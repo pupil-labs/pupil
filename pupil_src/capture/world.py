@@ -229,8 +229,7 @@ def world(g_pool,cap_src,cap_size):
     g_pool.capture.init_gui(g_pool.sidebar)
     g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{})
 
-    #load Plugins
-    #plugins that are loaded based on user settings
+    #plugins that are loaded based on user settings from previous session
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
 
     #only needed for the gui to show the loaded calibration type
@@ -239,9 +238,6 @@ def world(g_pool,cap_src,cap_size):
             g_pool.active_calibration_plugin =  p.__class__
             break
 
-    if g_pool.active_calibration_plugin == None:
-        logger.error("Calibration Plugin not found.")
-        return
 
     #set the last saved window size
     set_window_size(g_pool.window_size)

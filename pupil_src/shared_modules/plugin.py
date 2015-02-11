@@ -168,7 +168,7 @@ class Plugin_List(list):
 
         for initializer in plugin_initializers:
             name, args = initializer
-            logger.debug("Loading plugin: %s with settings %s"%(name, args))
+            logger.info("Loading plugin: %s with settings %s"%(name, args))
             try:
                 p = plugin_by_name[name](g_pool,**args)
                 self.add(p)
@@ -194,6 +194,7 @@ class Plugin_List(list):
                     logger.warning("Plugin %s is already loaded and flagged as unique. Did not add it."%plugin)
                     return
 
+        logger.debug("Loaded Plugin: %s"%new_plugin)
         self.append(new_plugin)
         self.sort(key=lambda p: p.order)
         if self.g_pool.app in ("capture","player"):
@@ -207,6 +208,7 @@ class Plugin_List(list):
         '''
         for p in self:
             if not p.alive: # reading p.alive will trigger the plug-in cleanup fn.
+                logger.debug("Unloaded Plugin: %s"%p)
                 self.remove(p)
 
     def get_initializers(self):
