@@ -198,7 +198,6 @@ class Plugin_List(list):
         self.append(new_plugin)
         self.sort(key=lambda p: p.order)
         if self.g_pool.app in ("capture","player"):
-            print "init"
             new_plugin.init_gui()
 
 

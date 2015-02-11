@@ -62,8 +62,8 @@ class Export_Launcher(Plugin):
     """
     def __init__(self, g_pool,menu_conf={'pos':(320,10),'size':(300,150),'collapsed':False}):
         super(Export_Launcher, self).__init__(g_pool)
-        self.data_dir = data_dir
-        
+        self.data_dir = g_pool.rec_dir
+
         # initialize empty menu
         # and load menu configuration of last session
         self.menu = None
@@ -85,31 +85,28 @@ class Export_Launcher(Plugin):
 
     def _update_gui(self):
         self.menu.elements[:] = []
-        
+
         self.menu.append(ui.Info_Text('Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.'))
         self.menu.append(ui.TextInput('rec_name',self,label='export name'))
-        self.menu.append(ui.Info_Text('Supply start frame no. Negative numbers will count from the end. The behaves like python list indexing'))
-        start_frame = ui.TextInput('value',self.g_pool.trim_marks.atb_get_in_mark,label='start frame')
-        start_frame.read_only = True
-        self.menu.append(start_frame)
-        self.menu.append(ui.Info_Text('Supply end frame no. Negative numbers will count from the end. The behaves like python list indexing'))
-        end_frame = ui.TextInput('value',self.g_pool.trim_marks.atb_get_out_mark,label='end frame')
-        end_frame.read_only = True
-        self.menu.append(end_frame)
-        self.menu.append(ui.Button('new export',self.add_export))  
+        self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar.'))
+        clip_range = ui.TextInput('in_mark',getter=self.g_pool.trim_marks.get_string,label='frame range to export')
+        clip_range.read_only = True
+        self.menu.append(clip_range)
+        self.menu.append(ui.Button('new export',self.add_export))
 
         for job in self.exports[::-1]:
             submenu = ui.Growing_Menu(job.out_file_path)
+            print  job.current_frame
             progress_bar = ui.Slider('value', job.current_frame, label="progress", min=0, max=job.frames_to_export.value)
             progress_bar.read_only = True
             submenu.append(progress_bar)
-            submenu.append(ui.Switch('value',job.should_terminate,label='cancel'))   
+            submenu.append(ui.Switch('value',job.should_terminate,label='cancel'))
             self.menu.append(submenu)
-        
+
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
-            self.menu = None  
+            self.menu = None
 
     def add_export(self):
         # on MacOS we will not use os.fork, elsewhere this does nothing.
@@ -134,7 +131,7 @@ class Export_Launcher(Plugin):
             except AttributeError:
                 pass
 
-        out_file_path=verify_out_file_path(self.rec_name.value,self.data_dir)
+        out_file_path=verify_out_file_path(self.rec_name,self.data_dir)
         process = Process(target=export, args=(should_terminate,frames_to_export,current_frame, data_dir,start_frame,end_frame,plugins,out_file_path))
         process.should_terminate = should_terminate
         process.frames_to_export = frames_to_export

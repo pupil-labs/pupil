@@ -40,8 +40,7 @@ class Marker_Auto_Trim_Marks(Plugin):
 
     """
     def __init__(self, g_pool,gui_settings={'pos':(220,400),'size':(300,100),'iconified':False},man_in_marks=[],man_out_marks=[]):
-        super(Marker_Auto_Trim_Marks, self).__init__()
-        self.g_pool = g_pool
+        super(Marker_Auto_Trim_Marks, self).__init__(g_pool)
         self.gui_settings = gui_settings
 
         self.in_marker_id = c_int(18)
