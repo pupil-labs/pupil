@@ -43,7 +43,7 @@ class Vis_Cross(Plugin):
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Growing_Menu('Gaze Cross')
+        self.menu = ui.Scrolling_Menu('Gaze Cross')
         # load the configuration of last session
         self.menu.configuration = self.menu_conf
         # add menu to the window

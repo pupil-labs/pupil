@@ -42,7 +42,7 @@ class Vis_Polyline(Plugin):
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Growing_Menu('Gaze Polyline')
+        self.menu = ui.Scrolling_Menu('Gaze Polyline')
         # load the configuration of last session
         self.menu.configuration = self.menu_conf
         # add menu to the window

@@ -76,7 +76,7 @@ class Filter_Fixations(Plugin):
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Growing_Menu('Filter Fixations')
+        self.menu = ui.Scrolling_Menu('Filter Fixations')
         # load the configuration of last session
         self.menu.configuration = self.menu_conf
         # add menu to the window

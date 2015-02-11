@@ -41,7 +41,7 @@ class Manual_Gaze_Correction(Plugin):
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Growing_Menu('Manual Gaze Correction')
+        self.menu = ui.Scrolling_Menu('Manual Gaze Correction')
         # load the configuration of last session
         self.menu.configuration = self.menu_conf
         # add menu to the window

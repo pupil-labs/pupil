@@ -64,7 +64,7 @@ class Vis_Light_Points(Plugin):
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Growing_Menu('Light Points')
+        self.menu = ui.Scrolling_Menu('Light Points')
         # load the configuration of last session
         self.menu.configuration = self.menu_conf
         # add menu to the window
