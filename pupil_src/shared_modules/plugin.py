@@ -20,7 +20,9 @@ class Plugin(object):
 
     """
     # if you have a plugin that can exist multiple times make this false in your derived class
-    is_unique = True
+    uniqueness = 'by_class'
+    # uniqueness = 'not_unique'
+    # uniqueness = 'by_base_class'
 
     def __init__(self,g_pool):
         self._alive = True
@@ -144,10 +146,85 @@ class Plugin(object):
 # This is good because we can categorize plugins.
 class Calibration_Plugin(Plugin):
     '''base class for all calibration routines'''
-    pass
+    uniqueness = 'by_base_class'
+
 
 class Gaze_Mapping_Plugin(Plugin):
     '''base class for all calibration routines'''
+    uniqueness = 'by_base_class'
     def __init__(self,g_pool):
         super(Gaze_Mapping_Plugin, self).__init__(g_pool)
         self.order = 0.1
+
+
+
+class Plugin_List(list):
+    """This is the Plugin Manger
+        It is a self sorting list with a few functions to manage adding and removing Plugins.
+    """
+    def __init__(self,g_pool,plugin_by_name,plugin_initializers):
+        super(Plugin_List, self).__init__()
+        self.g_pool = g_pool
+
+        for initializer in plugin_initializers:
+            name, args = initializer
+            logger.debug("Loading plugin: %s with settings %s"%(name, args))
+            try:
+                p = plugin_by_name[name](g_pool,**args)
+                self.add(p)
+            except:
+                logger.warning("Plugin '%s' failed to load from settings file." %name)
+
+    def add(self,new_plugin):
+        '''
+        add a plugin instance to the list.
+
+        '''
+
+        if new_plugin.uniqueness == 'by_base_class':
+            for p in self:
+                if p.base_class_name == new_plugin.base_class_name:
+                    logger.debug("Plugin %s of base class %s will be repleced by %s."%(p,p.base_class_name,new_plugin))
+                    p.alive = False
+                    self.clean()
+
+        elif new_plugin.uniqueness == 'by_class':
+            for p in self:
+                if p.class_name == new_plugin.class_name:
+                    logger.warning("Plugin %s is already loaded and flagged as unique. Did not add it."%plugin)
+                    return
+
+        self.append(new_plugin)
+        self.sort(key=lambda p: p.order)
+        if self.g_pool.app in ("capture","player"):
+            print "init"
+            new_plugin.init_gui()
+
+
+    def clean(self):
+        '''
+        plugins may flag themselvse as dead or are flagged as dead. We need to remove them.
+        '''
+        for p in self:
+            if not p.alive: # reading p.alive will trigger the plug-in cleanup fn.
+                self.remove(p)
+
+    def get_initializers(self):
+        initializers = []
+        for p in self:
+            try:
+                p_initializer = p.class_name,p.get_init_dict()
+                initializers.append(p_initializer)
+            except AttributeError:
+                #not all plugins want to be savable, they will not have the init dict.
+                # any object without a get_init_dict method will throw this exception.
+                pass
+        return initializers
+
+
+
+
+
+
+
+

@@ -47,6 +47,8 @@ class Natural_Features_Calibration(Calibration_Plugin):
         self.menu_conf = menu_conf
         self.button = None
 
+        self.order = .5
+
 
     def init_gui(self):
 
@@ -105,15 +107,8 @@ class Natural_Features_Calibration(Calibration_Plugin):
         map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,img_size,return_params=True)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
-        # prepare destruction of current gaze_mapper... and remove it
-        for p in self.g_pool.plugins:
-            if p.base_class_name == 'Gaze_Mapping_Plugin':
-                p.alive = False
-        self.g_pool.plugins = [p for p in self.g_pool.plugins if p.alive]
-
-        #add new gaze mapper
-        self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,params))
-        self.g_pool.plugins.sort(key=lambda p: p.order)
+        #replace gaze mapper
+        self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
 
 
 

@@ -40,7 +40,10 @@ from methods import normalize, denormalize,Temp
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 from audio import Audio_Input_List
+
+
 # Plug-ins
+from plugin import Plugin_List
 from calibration_routines import calibration_plugins, gaze_mapping_plugins
 from recorder import Recorder
 from show_calibration import Show_Calibration
@@ -137,7 +140,6 @@ def world(g_pool,cap_src,cap_size):
 
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
-    g_pool.plugins = []
     g_pool.update_textures = True
 
     if isinstance(cap,FakeCapture):
@@ -145,33 +147,7 @@ def world(g_pool,cap_src,cap_size):
     g_pool.capture = cap
     g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
     g_pool.window_size = session_settings.get('window_size',1.)
-
-
-
-    #load Plugins
-    #plugins that are loaded based on user settings
-    for initializer in session_settings.get('loaded_plugins',default_plugins):
-        name, args = initializer
-        logger.debug("Loading plugin: %s with settings %s"%(name, args))
-        try:
-            p = plugin_by_name[name](g_pool,**args)
-            g_pool.plugins.append(p)
-        except IOError:
-            logger.warning("Plugin '%s' failed to load from settings file." %name)
-
-    g_pool.plugins.sort(key=lambda p: p.order)
-
-
     g_pool.active_calibration_plugin = None
-    #only needed for the gui to show the loaded calibration type
-    for p in g_pool.plugins:
-        if p.base_class_name == 'Calibration_Plugin':
-            g_pool.active_calibration_plugin =  p.__class__
-            break
-    if g_pool.active_calibration_plugin == None:
-        logger.error("Calibration Plugin not found.")
-        return
-
 
 
     #UI callback functions
@@ -187,17 +163,9 @@ def world(g_pool,cap_src,cap_size):
 
     def set_calibration_plugin(new_calibration):
         g_pool.active_calibration_plugin = new_calibration
-        # prepare destruction of current calibration plugin... and remove it
-        for p in g_pool.plugins:
-            if p.base_class_name == 'Calibration_Plugin':
-                p.alive = False
-        g_pool.plugins = [p for p in g_pool.plugins if p.alive]
+        new_plugin = new_calibration(g_pool)
+        g_pool.plugins.add(new_plugin)
 
-        #add new plugin
-        new = new_calibration(g_pool)
-        new.init_gui()
-        g_pool.plugins.append(new)
-        g_pool.plugins.sort(key=lambda p: p.order)
 
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
@@ -261,9 +229,19 @@ def world(g_pool,cap_src,cap_size):
     g_pool.capture.init_gui(g_pool.sidebar)
     g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{})
 
-    # let plugins add their GUI
+    #load Plugins
+    #plugins that are loaded based on user settings
+    g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
+
+    #only needed for the gui to show the loaded calibration type
     for p in g_pool.plugins:
-        p.init_gui()
+        if p.base_class_name == 'Calibration_Plugin':
+            g_pool.active_calibration_plugin =  p.__class__
+            break
+
+    if g_pool.active_calibration_plugin == None:
+        logger.error("Calibration Plugin not found.")
+        return
 
     #set the last saved window size
     set_window_size(g_pool.window_size)
@@ -326,7 +304,7 @@ def world(g_pool,cap_src,cap_size):
             p.update(frame,events)
 
         #check if a plugin need to be destroyed
-        g_pool.plugins = [p for p in g_pool.plugins if p.alive]
+        g_pool.plugins.clean()
 
         # render camera image
         glfwMakeContextCurrent(world_window)
@@ -351,24 +329,7 @@ def world(g_pool,cap_src,cap_size):
         glfwPollEvents()
 
 
-    loaded_plugins = []
-    for p in g_pool.plugins:
-        try:
-            p_initializer = p.class_name,p.get_init_dict()
-            loaded_plugins.append(p_initializer)
-        except AttributeError:
-            #not all plugins want to be savable, they will not have the init dict.
-            # any object without a get_init_dict method will throw this exception.
-            pass
-
-
-    # de-init all running plugins
-    for p in g_pool.plugins:
-        p.alive = False
-        #reading p.alive actually runs plug-in cleanup
-        _ = p.alive
-
-    session_settings['loaded_plugins'] = loaded_plugins
+    session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['window_size'] = g_pool.window_size
     session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['gui_scale'] = g_pool.gui.scale
@@ -376,6 +337,11 @@ def world(g_pool,cap_src,cap_size):
     session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
     session_settings['general_menu_config'] = general_settings.configuration
     session_settings.close()
+
+    # de-init all running plugins
+    for p in g_pool.plugins:
+        p.alive = False
+    g_pool.plugins.clean()
 
     cap.close()
     glfwDestroyWindow(world_window)

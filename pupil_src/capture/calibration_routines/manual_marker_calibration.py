@@ -63,10 +63,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
 
     def init_gui(self):
-        # atb_label = "calibrate using handheld marker"
-        # self._bar.add_var("counter", getter=self.get_count, group="Advanced")
-        # self._bar.add_var("area threshold", self.area_threshold, group="Advanced")
-        # self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Advanced")
 
         self.info = ui.Info_Text("Calibrate gaze parameters using a handheld marker.")
         self.g_pool.calibration_menu.append(self.info)
@@ -128,15 +124,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,return_params=True)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
-        # prepare destruction of current gaze_mapper... and remove it
-        for p in self.g_pool.plugins:
-            if p.base_class_name == 'Gaze_Mapping_Plugin':
-                p.alive = False
-        self.g_pool.plugins = [p for p in self.g_pool.plugins if p.alive]
-
-        #add new gaze mapper
-        self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,params))        
-        self.g_pool.plugins.sort(key=lambda p: p.order)
+        self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
 
 
     def update(self,frame,events):

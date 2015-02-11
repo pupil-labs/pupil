@@ -179,10 +179,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             glfwSwapInterval(0)
 
             glfwMakeContextCurrent(active_window)
-            
+
             # initalize cygl
             cygl_init()
-            
+
 
     def on_key(self,window, key, scancode, action, mods):
         if action == GLFW_PRESS:
@@ -213,16 +213,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,return_params=True)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
-        # prepare destruction of current gaze_mapper... and remove it
-        for p in self.g_pool.plugins:
-            if p.base_class_name == 'Gaze_Mapping_Plugin':
-                p.alive = False
-        self.g_pool.plugins = [p for p in self.g_pool.plugins if p.alive]
-
-        #add new gaze mapper
-        self.g_pool.plugins.append(Simple_Gaze_Mapper(self.g_pool,params))
-        self.g_pool.plugins.sort(key=lambda p: p.order)
-
+        #replace current gaze mapper with new
+        self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
 
 
     def close_window(self):
