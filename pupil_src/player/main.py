@@ -132,6 +132,7 @@ def main():
         hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
         w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
+        graph.adjust_size(w,h)
         adjust_gl_view(w,h)
         glfwMakeContextCurrent(active_window)
         for p in g_pool.plugins:
@@ -275,6 +276,11 @@ def main():
         g_pool.new_seek = True
 
 
+    def set_scale(new_scale):
+        g_pool.gui.scale = new_scale
+
+    def get_scale():
+        return g_pool.gui.scale
 
     def open_plugin(plugin):
         logger.debug('Open Plugin: %s'%plugin)
@@ -290,8 +296,9 @@ def main():
 
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
-    g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-250,0),size=(300,500))
+    g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,500))
     g_pool.main_menu.configuration = session_settings.get('main_menu_config',{})
+    g_pool.main_menu.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
 
     g_pool.main_menu.append(ui.Info_Text('Player Software Version: %s'%version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
@@ -301,10 +308,10 @@ def main():
                                         setter= open_plugin,getter = lambda: "Select to load"))
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
-    g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey='space')
+    g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey=GLFW_KEY_SPACE)
     g_pool.play_button.on_color[:] = (0,1.,.0,.8)
-    g_pool.forward_button = ui.Thumb('forward',getter = lambda: False,setter= next_frame, hotkey='right')
-    g_pool.backward_button = ui.Thumb('backward',getter = lambda: False, setter = prev_frame, hotkey='left')
+    g_pool.forward_button = ui.Thumb('forward',getter = lambda: False,setter= next_frame, hotkey=GLFW_KEY_RIGHT)
+    g_pool.backward_button = ui.Thumb('backward',getter = lambda: False, setter = prev_frame, hotkey=GLFW_KEY_LEFT)
     g_pool.quickbar.extend([g_pool.play_button,g_pool.forward_button,g_pool.backward_button])
 
     g_pool.gui.append(g_pool.quickbar)
@@ -375,7 +382,9 @@ def main():
         for p in  events['pupil_positions']:
             pupil_graph.add(p['confidence'])
         t = frame.timestamp
-        dt,ts = t-ts,t
+        if ts != t:
+            dt,ts = t-ts,t
+
         fps_graph.add(1./dt)
         cpu_graph.update()
 
@@ -387,7 +396,6 @@ def main():
         #check if a plugin need to be destroyed
         g_pool.plugins.clean()
 
-
         # render camera image
         glfwMakeContextCurrent(main_window)
         make_coord_system_norm_based()
@@ -397,8 +405,6 @@ def main():
         # render visual feedback from loaded plugins
         for p in g_pool.plugins:
             p.gl_display()
-
-
 
         graph.push_view()
         fps_graph.draw()
@@ -418,7 +424,7 @@ def main():
         timestamp = time()
 
 
-        glfwSwapBuffers(world_window)
+        glfwSwapBuffers(main_window)
         glfwPollEvents()
 
     plugin_save = []
@@ -434,15 +440,11 @@ def main():
     # de-init all running plugins
     for p in g_pool.plugins:
         p.alive = False
-        #reading p.alive actually runs plug-in cleanup
-        _ = p.alive
+    g_pool.plugin_save.clean()
 
-    save('plugins',plugin_save)
-    save('window_size',bar.window_size.value)
     session_settings.close()
 
     cap.close()
-    bar.destroy()
     glfwDestroyWindow(main_window)
     glfwTerminate()
     logger.debug("Process done")

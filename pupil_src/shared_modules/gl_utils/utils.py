@@ -13,7 +13,6 @@ from glfw import glfwGetFramebufferSize,glfwGetWindowSize
 # OpenGL.FULL_LOGGING = True
 OpenGL.ERROR_LOGGING = False
 from OpenGL.GL import *
-from OpenGL.GLU import gluOrtho2D
 from shader import Shader
 
 import numpy as np
@@ -105,7 +104,7 @@ def draw_gl_polyline_norm((positions),color,type='Loop',thickness=1):
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
-    gluOrtho2D(0, 1, 0, 1) # gl coord convention
+    glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()
@@ -226,7 +225,7 @@ def draw_gl_points_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
-    gluOrtho2D(0, 1, 0, 1) # gl coord convention
+    glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()
@@ -394,7 +393,7 @@ def make_coord_system_pixel_based(img_shape):
     # Set Projection Matrix
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluOrtho2D(0, width, height, 0) # origin in the top left corner just like the img np-array
+    glOrtho(0, width, height, 0,-1,1) # origin in the top left corner just like the img np-array
     # Switch back to Model View Matrix
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
@@ -403,7 +402,7 @@ def make_coord_system_pixel_based(img_shape):
 def make_coord_system_norm_based():
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluOrtho2D(0, 1, 0, 1) # gl coord convention
+    glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
