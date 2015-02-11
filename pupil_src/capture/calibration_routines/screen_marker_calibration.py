@@ -35,10 +35,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def draw_marker(pos,scale):
+def draw_marker(pos,scale,alpha):
     pos = int(pos[0]),int(pos[1])
-    black = cygl_rgba(0.,0.,0.,1.)
-    white = cygl_rgba(1.,1.,1.,1.)
+    black = cygl_rgba(0.,0.,0.,alpha)
+    white = cygl_rgba(1.,1.,1.,alpha)
     for r,c in zip((scale*50,scale*40,scale*30,scale*20,scale*10),(black,white,black,white,black)):
         cygl_draw_points([pos],size=r,color=c,sharpness=0.95)
 
@@ -138,7 +138,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def start(self):
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
-        self.sites = [  (.25, .5),(.25, .5), (0,.5),
+        self.sites = [  (.25, .5), (0,.5),
                         (0.,1),(.5,1),(1.,1.),
                         (1,.5),
                         (1., 0),(.5, 0),(0,0.),
@@ -280,12 +280,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             interpolation_weight = np.tanh(((s-1/6.*m)*10.)/(5/6.*m))*(-.5)+.5
 
             #use np.arrays for per element wise math
-            current = np.array(self.sites[self.active_site])
-            next = np.array(self.sites[self.active_site+1])
-            # weighted sum to interpolate between current and next
-            new_pos =  current * interpolation_weight + next * (1-interpolation_weight)
-            #broadcast next commanded marker postion of screen
-            self.display_pos = list(new_pos)
+            self.pattern_alpha = 1-interpolation_weight
+            self.display_pos = np.array(self.sites[self.active_site])
             self.on_position = on_position
             self.button.status_text = '%s / %s'%(self.active_site,9)
 
@@ -346,13 +342,13 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
 
-        draw_marker(screen_pos,self.pattern_scale)
+        draw_marker(screen_pos,self.pattern_scale,self.pattern_alpha)
         #some feedback on the detection state
 
         if self.detected and self.on_position:
-            cygl_draw_points([screen_pos],size=5,color=cygl_rgba(0.,1.,0.,1.),sharpness=0.95)
+            cygl_draw_points([screen_pos],size=5,color=cygl_rgba(0.,1.,0.,self.pattern_alpha),sharpness=0.95)
         else:
-            cygl_draw_points([screen_pos],size=5,color=cygl_rgba(1.,0.,0.,1.),sharpness=0.95)
+            cygl_draw_points([screen_pos],size=5,color=cygl_rgba(1.,0.,0.,self.pattern_alpha),sharpness=0.95)
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
