@@ -40,7 +40,7 @@ class Vis_Cross(Plugin):
         pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events['pupil_positions'] if pt['norm_gaze'] is not None]
         for pt in pts:
             lines =  np.array( [((pt[0]-self.inner,pt[1]),(pt[0]-self.outer,pt[1])),((pt[0]+self.inner,pt[1]),(pt[0]+self.outer,pt[1])) , ((pt[0],pt[1]-self.inner),(pt[0],pt[1]-self.outer)) , ((pt[0],pt[1]+self.inner),(pt[0],pt[1]+self.outer))],dtype=np.int32 )
-            cv2.polylines(frame.img, lines, isClosed=False, color=(self.r, self.g, self.b, self.a), thickness=self.thickness, lineType=cv2.cv.CV_AA)
+            cv2.polylines(frame.img, lines, isClosed=False, color=(self.b, self.g, self.r, self.a), thickness=self.thickness, lineType=cv2.cv.CV_AA)
 
     def init_gui(self):
         # initialize the menu

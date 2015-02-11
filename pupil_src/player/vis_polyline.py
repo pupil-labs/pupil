@@ -39,7 +39,7 @@ class Vis_Polyline(Plugin):
         pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events['pupil_positions'] if pt['norm_gaze'] is not None]
         if pts:
             pts = np.array([pts],dtype=np.int32)
-            cv2.polylines(frame.img, pts, isClosed=False, color=(self.r, self.g, self.b, self.a), thickness=self.thickness, lineType=cv2.cv.CV_AA)
+            cv2.polylines(frame.img, pts, isClosed=False, color=(self.b, self.g, self.r, self.a), thickness=self.thickness, lineType=cv2.cv.CV_AA)
 
     def init_gui(self):
         # initialize the menu
