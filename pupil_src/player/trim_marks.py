@@ -21,10 +21,10 @@ logger = logging.getLogger(__name__)
 class Trim_Marks(Plugin):
     """docstring for Trim_Mark
     """
-    def __init__(self, g_pool,capture):
+    def __init__(self, g_pool):
         super(Trim_Marks, self).__init__(g_pool)
         self.order = .8
-        self.capture = capture
+        self.capture = g_pool.capture
         self.frame_count = capture.get_frame_count()
         self._in_mark = 0
         self._out_mark = self.frame_count

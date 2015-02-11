@@ -60,7 +60,7 @@ class Export_Launcher(Plugin):
     """docstring for Export_Launcher
     this plugin can export the video in a seperate process using exporter
     """
-    def __init__(self, g_pool,data_dir,frame_count,menu_conf={'pos':(320,10),'size':(300,150),'collapsed':False}):
+    def __init__(self, g_pool,menu_conf={'pos':(320,10),'size':(300,150),'collapsed':False}):
         super(Export_Launcher, self).__init__(g_pool)
         self.data_dir = data_dir
         

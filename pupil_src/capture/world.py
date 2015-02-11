@@ -20,13 +20,14 @@ if __name__ == '__main__':
 import os, sys
 from file_methods import Persistent_Dict
 import logging
-from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
 
 #display
 from glfw import *
 from pyglui import ui,graph,cygl
 from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
+from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
+
 
 #check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
@@ -37,7 +38,6 @@ import psutil
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
-from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 from audio import Audio_Input_List
 
@@ -220,11 +220,6 @@ def world(g_pool,cap_src,cap_size):
                                         labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
                                         setter= set_calibration_plugin,label='Method'))
     g_pool.sidebar.append(g_pool.calibration_menu)
-
-
-    g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
-    g_pool.gui.append(g_pool.quickbar)
-    g_pool.gui.append(g_pool.sidebar)
 
     g_pool.capture.init_gui(g_pool.sidebar)
     g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{})
