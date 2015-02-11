@@ -63,9 +63,9 @@ class Export_Launcher(Plugin):
     this plugin can export the video in a seperate process using exporter
 
     """
-    def __init__(self, g_pool,data_dir,frame_count):
+    def __init__(self, g_pool):
         super(Export_Launcher, self).__init__(g_pool)
-        self.data_dir = data_dir
+        self.data_dir = self.g_pool.data_dir
 
         self.new_export = None
         self.exports = []
