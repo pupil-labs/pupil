@@ -69,7 +69,7 @@ class Batch_Exporter(Plugin):
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Growing_Menu('Batch Export Recordings')
+        self.menu = ui.Scrolling_Menu('Batch Export Recordings')
         # load the configuration of last session
         self.menu.configuration = self.menu_conf
         # add menu to the window
@@ -78,8 +78,8 @@ class Batch_Exporter(Plugin):
 
     def _update_gui(self):
         self.menu.elements[:] = []
-        self.menu.append(ui.TextInput('src_dir',self,label='Recording Source Directory'))
-        self.menu.append(ui.TextInput('dest_dir',self,label='Recording Destination Directory'))
+        self.menu.append(ui.TextInput('source_dir',self,label='Recording Source Directory'))
+        self.menu.append(ui.TextInput('destination_dir',self,label='Recording Destination Directory'))
         self.menu.append(ui.Button('start',self.start,label='start export'))    
 
         for job in self.exports[::-1]:

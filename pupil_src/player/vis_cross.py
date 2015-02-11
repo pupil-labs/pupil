@@ -21,6 +21,7 @@ class Vis_Cross(Plugin):
     def __init__(self, g_pool,inner=20,outer=100,color=(1.,.2,.4,.5),thickness=1,menu_conf={'pos':(10,420),'size':(300,100),'collapsed':False}):
         super(Vis_Cross, self).__init__(g_pool)
         self.order = .9
+        self.uniqueness = "not_unique"
 
         # initialize empty menu
         # and load menu configuration of last session
@@ -39,11 +40,11 @@ class Vis_Cross(Plugin):
         pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events['pupil_positions'] if pt['norm_gaze'] is not None]
         for pt in pts:
             lines =  np.array( [((pt[0]-self.inner,pt[1]),(pt[0]-self.outer,pt[1])),((pt[0]+self.inner,pt[1]),(pt[0]+self.outer,pt[1])) , ((pt[0],pt[1]-self.inner),(pt[0],pt[1]-self.outer)) , ((pt[0],pt[1]+self.inner),(pt[0],pt[1]+self.outer))],dtype=np.int32 )
-            cv2.polylines(frame.img, lines, isClosed=False, color=(self.r, self.g, self.b, self.a), thickness=self.thickness, lineType=cv2.cv.CV_AA)
+            cv2.polylines(frame.img, lines, isClosed=False, color=(self.b, self.g, self.r, self.a), thickness=self.thickness, lineType=cv2.cv.CV_AA)
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Growing_Menu('Gaze Cross')
+        self.menu = ui.Scrolling_Menu('Gaze Cross')
         # load the configuration of last session
         self.menu.configuration = self.menu_conf
         # add menu to the window

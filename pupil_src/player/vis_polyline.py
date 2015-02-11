@@ -19,15 +19,16 @@ from methods import denormalize
 
 class Vis_Polyline(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool,color =(1.,.2,.4,.7),thickness=2,menu_conf={'pos':(10,320),'size':(300,70),'collapsed':False}):
+    def __init__(self, g_pool,color =(1.,.2,.4),thickness=2,menu_conf={'pos':(10,320),'size':(300,70),'collapsed':False}):
         super(Vis_Polyline, self).__init__(g_pool)
         self.order = .9
-
+        self.uniqueness = "not_unique"
+        
         # initialize empty menu
         # and load menu configuration of last session
         self.menu = None
         self.menu_conf = menu_conf
-
+        
         self.r = color[0]
         self.g = color[1]
         self.b = color[2]
@@ -38,16 +39,16 @@ class Vis_Polyline(Plugin):
         pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events['pupil_positions'] if pt['norm_gaze'] is not None]
         if pts:
             pts = np.array([pts],dtype=np.int32)
-            cv2.polylines(frame.img, pts, isClosed=False, color=(self.r, self.g, self.b, self.a), thickness=self.thickness, lineType=cv2.cv.CV_AA)
+            cv2.polylines(frame.img, pts, isClosed=False, color=(self.b, self.g, self.r, self.a), thickness=self.thickness, lineType=cv2.cv.CV_AA)
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Growing_Menu('Gaze Polyline')
+        self.menu = ui.Scrolling_Menu('Gaze Polyline')
         # load the configuration of last session
         self.menu.configuration = self.menu_conf
         # add menu to the window
         self.g_pool.gui.append(self.menu)
-
+        
         color_menu = ui.Growing_Menu('Color')
         self.menu.append(ui.Info_Text('Set RGB color components and alpha value.'))
         color_menu.append(ui.Slider('r',self,min=1,step=1,max=255))
@@ -55,14 +56,14 @@ class Vis_Polyline(Plugin):
         color_menu.append(ui.Slider('b',self,min=1,step=1,max=255))
         color_menu.append(ui.Slider('a',self,min=1,step=1,max=255))
         self.menu.append(color_menu)
-
+        
         self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15))
-        self.menu.append(ui.Button('remove',self.unset_alive))
-
+        self.menu.append(ui.Button('remove',self.unset_alive))   
+        
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
-            self.menu = None
+            self.menu = None 
 
     def unset_alive(self):
         self.alive = False

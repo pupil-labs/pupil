@@ -60,7 +60,7 @@ class Trim_Marks(Plugin):
         self.h_pad = self.padding * self.frame_count/float(w)
         self.v_pad = self.padding * 1./h
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
 
         if frame.index == self.out_mark or frame.index == self.in_mark:
             self.g_pool.play=False

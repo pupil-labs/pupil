@@ -76,7 +76,7 @@ class Export_Launcher(Plugin):
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Growing_Menu('Export Recording')
+        self.menu = ui.Scrolling_Menu('Export Recording')
         # load the configuration of last session
         self.menu.configuration = self.menu_conf
         # add menu to the window
