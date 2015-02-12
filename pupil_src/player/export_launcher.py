@@ -19,14 +19,27 @@ logger = logging.getLogger(__name__)
 from ctypes import c_bool, c_int,create_string_buffer
 
 if platform.system() == 'Darwin':
-    from billiard import Process,forking_enable
+    from billiard import Process,forking_enable,cpu_count
     from billiard.sharedctypes import Value
 else:
-    from multiprocessing import Process
+    from multiprocessing import Process,cpu_count
     forking_enable = lambda x: x #dummy fn
     from multiprocessing.sharedctypes import Value
 
 from exporter import export
+
+class Export_Process(Process):
+    """small aditions to the process class"""
+    def __init__(self, target,args):
+        super(Export_Process, self).__init__(target=target,args=args)
+        self.should_terminate,self.frames_to_export,self.current_frame,_,_,_,_,self.out_file_path = args
+
+    def status(self):
+        return self.current_frame.value
+    def cancel(self):
+        self.should_terminate.value = True
+
+
 
 def verify_out_file_path(out_file_path,data_dir):
     #Out file path verification
@@ -96,11 +109,10 @@ class Export_Launcher(Plugin):
 
         for job in self.exports[::-1]:
             submenu = ui.Growing_Menu(job.out_file_path)
-            print  job.current_frame
-            progress_bar = ui.Slider('value', job.current_frame, label="progress", min=0, max=job.frames_to_export.value)
+            progress_bar = ui.Slider('progress', getter=job.status, min=0, max=job.frames_to_export.value)
             progress_bar.read_only = True
             submenu.append(progress_bar)
-            submenu.append(ui.Switch('value',job.should_terminate,label='cancel'))
+            submenu.append(ui.Button('cancel',job.cancel))
             self.menu.append(submenu)
 
     def deinit_gui(self):
@@ -120,23 +132,14 @@ class Export_Launcher(Plugin):
         data_dir = self.data_dir
         start_frame= self.g_pool.trim_marks.in_mark
         end_frame= self.g_pool.trim_marks.out_mark+1 #end_frame is exclusive
-        plugins = []
+        frames_to_export.value = end_frame-start_frame
 
         # Here we make clones of every plugin that supports it.
         # So it runs in the current config when we lauch the exporter.
-        for p in self.g_pool.plugins:
-            try:
-                p_initializer = p.class_name,p.get_init_dict()
-                plugins.append(p_initializer)
-            except AttributeError:
-                pass
+        plugins = self.g_pool.plugins.get_initializers()
 
         out_file_path=verify_out_file_path(self.rec_name,self.data_dir)
-        process = Process(target=export, args=(should_terminate,frames_to_export,current_frame, data_dir,start_frame,end_frame,plugins,out_file_path))
-        process.should_terminate = should_terminate
-        process.frames_to_export = frames_to_export
-        process.current_frame = current_frame
-        process.out_file_path = out_file_path
+        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, data_dir,start_frame,end_frame,plugins,out_file_path))
         self.new_export = process
 
     def launch_export(self, new_export):
@@ -149,6 +152,8 @@ class Export_Launcher(Plugin):
         if self.new_export:
             self.launch_export(self.new_export)
             self.new_export = None
+        for e in self.exports:
+            print e.status()
 
     def gl_display(self):
         pass
@@ -159,3 +164,5 @@ class Export_Launcher(Plugin):
         if you have an atb bar or glfw window destroy it here.
         """
         self.deinit_gui()
+
+
