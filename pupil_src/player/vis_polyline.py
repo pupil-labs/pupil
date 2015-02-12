@@ -19,7 +19,7 @@ from methods import denormalize
 
 class Vis_Polyline(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool,color = (1.,.2,.4,.8),thickness=2,menu_conf={'pos':(10,320),'size':(300,70),'collapsed':False}):
+    def __init__(self, g_pool,color = (0,255,0,40),thickness=2,menu_conf={'pos':(10,320),'size':(300,70),'collapsed':False}):
         super(Vis_Polyline, self).__init__(g_pool)
         self.order = .9
         self.uniqueness = "not_unique"
@@ -51,10 +51,10 @@ class Vis_Polyline(Plugin):
 
         color_menu = ui.Growing_Menu('Color')
         self.menu.append(ui.Info_Text('Set RGB color components and alpha value.'))
-        color_menu.append(ui.Slider('r',self,min=1,step=1,max=255))
-        color_menu.append(ui.Slider('g',self,min=1,step=1,max=255))
-        color_menu.append(ui.Slider('b',self,min=1,step=1,max=255))
-        color_menu.append(ui.Slider('a',self,min=1,step=1,max=255))
+        color_menu.append(ui.Slider('r',self,min=0,step=1,max=255))
+        color_menu.append(ui.Slider('g',self,min=0,step=1,max=255))
+        color_menu.append(ui.Slider('b',self,min=0,step=1,max=255))
+        color_menu.append(ui.Slider('a',self,min=0,step=1,max=255))
         self.menu.append(color_menu)
 
         self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15))
