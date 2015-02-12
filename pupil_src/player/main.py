@@ -298,7 +298,7 @@ def main():
 
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
-    g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,500))
+    g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,300))
     g_pool.main_menu.configuration = session_settings.get('main_menu_config',{})
     g_pool.main_menu.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
 

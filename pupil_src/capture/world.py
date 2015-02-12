@@ -222,8 +222,9 @@ def world(g_pool,cap_src,cap_size):
     g_pool.sidebar.append(g_pool.calibration_menu)
     g_pool.gui.append(g_pool.sidebar)
 
-    g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))        
+    g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
     g_pool.gui.append(g_pool.quickbar)
+
     g_pool.capture.init_gui(g_pool.sidebar)
     g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{})
 
