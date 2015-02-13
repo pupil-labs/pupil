@@ -19,8 +19,6 @@ if __name__ == '__main__':
 import cv2
 import numpy as np
 from methods import *
-import atb
-from ctypes import c_int,c_bool,c_float
 import logging
 logger = logging.getLogger(__name__)
 

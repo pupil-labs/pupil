@@ -8,10 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import atb
 import numpy as np
 from gl_utils import draw_gl_polyline_norm
-from ctypes import c_float,c_int,create_string_buffer
 
 import cv2
 import zmq
@@ -39,26 +37,31 @@ class Pupil_Remote(Plugin):
         self.order = .9 #excecute late in the plugin list.
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
-        self.address = create_string_buffer('',512)
-        self.set_server(create_string_buffer("tcp://*:50020",512))
-
-        help_str = "Pupil Remote using REQ RREP schema. "
-
-        self._bar = atb.Bar(name = self.__class__.__name__, label='Remote',
-            help=help_str, color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300,40))
-        self._bar.define("valueswidth=170")
-        self._bar.add_var("server address",self.address, getter=lambda:self.address, setter=self.set_server)
-        self._bar.add_button("close", self.close)
+        self.address = ''
+        self.set_server("tcp://*:50020",512)
 
         self.exclude_list = ['ellipse','pos_in_roi','major','minor','axes','angle','center']
 
+
     def set_server(self,new_address):
         try:
-            self.socket.bind(new_address.value)
-            self.address.value = new_address.value
+            self.socket.bind(new_address)
+            self.address = new_address
         except zmq.ZMQError:
             logger.error("Could not set Socket.")
+
+
+    def init_gui(self):
+        pass
+        # help_str = "Pupil Remote using REQ RREP schema. "
+
+        # self._bar = atb.Bar(name = self.__class__.__name__, label='Remote',
+        #     help=help_str, color=(50, 50, 50), alpha=100,
+        #     text='light', position=atb_pos,refresh=.3, size=(300,40))
+        # self._bar.add_var("server address",self.address, getter=lambda:self.address, setter=self.set_server)
+        # self._bar.add_button("close", self.close)
+
+
 
     def update(self,frame,events):
         try:
@@ -87,6 +90,5 @@ class Pupil_Remote(Plugin):
         """gets called when the plugin get terminated.
            This happens either volunatily or forced.
         """
-        self._bar.destroy()
         self.context.destroy()
 
