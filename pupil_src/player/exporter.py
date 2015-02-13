@@ -31,26 +31,20 @@ from av_writer import AV_Writer
 import logging
 
 # Plug-ins
+from plugin import Plugin_List
 from vis_circle import Vis_Circle
 from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
+from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
 from scan_path import Scan_Path
 from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
 
-plugin_by_index =  (  Vis_Circle,
-                        Vis_Cross,
-                        Vis_Polyline,
-                        Scan_Path,
-                        Vis_Light_Points,
-                        Filter_Fixations,
-                        Manual_Gaze_Correction
-                        )
-
-name_by_index = [p.__name__ for p in plugin_by_index]
+available_plugins =  Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction
+name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
-plugin_by_name = dict(zip(name_by_index,plugin_by_index))
+plugin_by_name = dict(zip(name_by_index,available_plugins))
 
 
 
@@ -142,21 +136,9 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
     start_time = time()
 
 
-    plugins = []
     g = Temp()
-    g.plugins = plugins
     g.app = 'exporter'
-
-    # load plugins from initializers:
-    for initializer in plugin_initializers:
-        name, args = initializer
-        logger.debug("Loading plugin: %s with settings %s"%(name, args))
-        try:
-            p = plugin_by_name[name](g,**args)
-            plugins.append(p)
-        except:
-            logger.warning("Plugin '%s' could not be loaded in exporter." %name)
-
+    g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
 
     while frames_to_export.value - current_frame.value > 0:
 
@@ -179,17 +161,14 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
         else:
             frame = new_frame
 
+
+        events = {}
         #new positons and events
-        current_pupil_positions = positions_by_frame[frame.index]
-        events = None
-
+        events['pupil_positions'] = positions_by_frame[frame.index]
         # allow each Plugin to do its work.
-        for p in plugins:
-            p.update(frame,current_pupil_positions,events)
+        for p in g.plugins:
+            p.update(frame,events)
 
-        # # render gl visual feedback from loaded plugins
-        # for p in plugins:
-        #     p.gl_display(frame)
 
         writer.write_video_frame(frame)
         current_frame.value +=1

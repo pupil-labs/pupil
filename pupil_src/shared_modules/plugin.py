@@ -191,14 +191,13 @@ class Plugin_List(list):
         elif new_plugin.uniqueness == 'by_class':
             for p in self:
                 if p.class_name == new_plugin.class_name:
-                    logger.warning("Plugin %s is already loaded and flagged as unique. Did not add it."%plugin)
+                    logger.warning("Plugin %s is already loaded and flagged as unique. Did not add it."%new_plugin)
                     return
 
         logger.debug("Loaded Plugin: %s"%new_plugin)
         self.append(new_plugin)
         self.sort(key=lambda p: p.order)
         if self.g_pool.app in ("capture","player"):
-            print "init"
             new_plugin.init_gui()
 
 

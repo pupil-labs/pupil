@@ -39,6 +39,8 @@ if os_name == "Linux":
     from linux_video import Camera_Capture,Camera_List,CameraCaptureError
 elif os_name == "Darwin":
     from mac_video import Camera_Capture,Camera_List,CameraCaptureError
+elif os_name == "Windows":
+    from win_video import Camera_Capture,Camera_List,CameraCaptureError
 else:
     from other_video import Camera_Capture,Camera_List,CameraCaptureError
 

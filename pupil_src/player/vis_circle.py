@@ -21,7 +21,7 @@ from methods import denormalize
 
 class Vis_Circle(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool,radius=20,color=(1.,.2,.4,.2),thickness=2,fill=True,menu_conf={'pos':(300,300),'size':(300,300),'collapsed':False}):
+    def __init__(self, g_pool,radius=20,color=(255,1,1,20),thickness=2,fill=True,menu_conf={'pos':(300,300),'size':(300,300),'collapsed':False}):
         super(Vis_Circle, self).__init__(g_pool)
         self.order = .9
         self.uniqueness = "not_unique"
@@ -60,10 +60,10 @@ class Vis_Circle(Plugin):
         color_menu = ui.Growing_Menu('Color')
         color_menu.collapsed = True
         self.menu.append(ui.Info_Text('Set RGB color components and alpha value.'))
-        color_menu.append(ui.Slider('r',self,min=1,step=1,max=255))
-        color_menu.append(ui.Slider('g',self,min=1,step=1,max=255))
-        color_menu.append(ui.Slider('b',self,min=1,step=1,max=255))
-        color_menu.append(ui.Slider('a',self,min=1,step=1,max=255))
+        color_menu.append(ui.Slider('r',self,min=0,step=1,max=255))
+        color_menu.append(ui.Slider('g',self,min=0,step=1,max=255))
+        color_menu.append(ui.Slider('b',self,min=0,step=1,max=255))
+        color_menu.append(ui.Slider('a',self,min=0,step=1,max=255))
         self.menu.append(color_menu)
         
         self.menu.append(ui.Slider('radius',self,min=1,step=10,max=200))

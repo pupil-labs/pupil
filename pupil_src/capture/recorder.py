@@ -120,7 +120,6 @@ class Recorder(Plugin):
         if self.menu:
             self.menu_conf = self.menu.configuration
             self.g_pool.sidebar.remove(self.menu)
-
             self.menu = None
         if self.button:
             self.g_pool.quickbar.remove(self.button)

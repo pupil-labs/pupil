@@ -117,7 +117,9 @@ from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
 from batch_exporter import Batch_Exporter
 
-available_plugins =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Marker_Auto_Trim_Marks,Pupil_Server,Batch_Exporter)
+system_plugins = Seek_Bar,Trim_Marks
+user_lauchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Marker_Auto_Trim_Marks,Pupil_Server,Batch_Exporter
+available_plugins = system_plugins + user_lauchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
@@ -132,6 +134,7 @@ def main():
         hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
         w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
+        graph.adjust_size(w,h)
         adjust_gl_view(w,h)
         glfwMakeContextCurrent(active_window)
         for p in g_pool.plugins:
@@ -139,6 +142,10 @@ def main():
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key,scancode,action,mods)
+        if action == GLFW_PRESS:
+            if key == GLFW_KEY_ESCAPE:
+                on_close(window)
+
 
 
     def on_char(window,char):
@@ -256,6 +263,7 @@ def main():
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
     g_pool.app = 'player'
+    g_pool.capture = cap
     g_pool.timestamps = timestamps
     g_pool.positions_by_frame = positions_by_frame
 
@@ -274,37 +282,45 @@ def main():
             pass
         g_pool.new_seek = True
 
+    def set_scale(new_scale):
+        g_pool.gui.scale = new_scale
 
+    def get_scale():
+        return g_pool.gui.scale
 
     def open_plugin(plugin):
+        if plugin ==  "Select to load":
+            return
         logger.debug('Open Plugin: %s'%plugin)
         new_plugin = plugin(g_pool)
         g_pool.plugins.add(new_plugin)
 
+    def purge_plugins():
+        for p in g_pool.plugins:
+            if p.__class__ in user_lauchable_plugins:
+                p.alive=False
+        g_pool.plugins.clean()
 
-    def get_from_data(data):
-        """
-        helper for atb getter and setter use
-        """
-        return data.value
 
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
-    g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-250,0),size=(300,500))
+    g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,300))
     g_pool.main_menu.configuration = session_settings.get('main_menu_config',{})
+    g_pool.main_menu.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
 
-    g_pool.main_menu.append(ui.Info_Text('Player Software Version: %s'%version))
+    g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
 
-    g_pool.main_menu.append(ui.Selector('open plugin', selection = available_plugins,
-                                        labels = [p.__name__.replace('_',' ') for p in available_plugins],
-                                        setter= open_plugin,getter = lambda: "Select to load"))
+    g_pool.main_menu.append(ui.Selector('open plugin', selection = user_lauchable_plugins,
+                                        labels = [p.__name__.replace('_',' ') for p in user_lauchable_plugins],
+                                        setter= open_plugin, getter = lambda: "Select to load"))
+    g_pool.main_menu.append(ui.Button('close all plugins',purge_plugins))
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
-    g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey='space')
+    g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey=GLFW_KEY_SPACE)
     g_pool.play_button.on_color[:] = (0,1.,.0,.8)
-    g_pool.forward_button = ui.Thumb('forward',getter = lambda: False,setter= next_frame, hotkey='right')
-    g_pool.backward_button = ui.Thumb('backward',getter = lambda: False, setter = prev_frame, hotkey='left')
+    g_pool.forward_button = ui.Thumb('forward',getter = lambda: False,setter= next_frame, hotkey=GLFW_KEY_RIGHT)
+    g_pool.backward_button = ui.Thumb('backward',getter = lambda: False, setter = prev_frame, hotkey=GLFW_KEY_LEFT)
     g_pool.quickbar.extend([g_pool.play_button,g_pool.forward_button,g_pool.backward_button])
 
     g_pool.gui.append(g_pool.quickbar)
@@ -312,10 +328,10 @@ def main():
 
 
     #we always load these plugins
-    system_plugins = [('Export_Launcher',{}),('Trim_Marks',{}),('Seek_Bar',{})]
-    default_plugins = [('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{})]
+    system_plugins = [('Trim_Marks',{}),('Seek_Bar',{})]
+    default_plugins = [('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Export_Launcher',{})]
     previous_plugins = session_settings.get('loaded_plugins',default_plugins)
-    g_pool.plugins = Plugin_List(g_pool,plugin_by_name,previous_plugins+system_plugins)
+    g_pool.plugins = Plugin_List(g_pool,plugin_by_name,system_plugins+previous_plugins)
 
     for p in g_pool.plugins:
         if p.class_name == 'Trim_Marks':
@@ -375,7 +391,9 @@ def main():
         for p in  events['pupil_positions']:
             pupil_graph.add(p['confidence'])
         t = frame.timestamp
-        dt,ts = t-ts,t
+        if ts != t:
+            dt,ts = t-ts,t
+
         fps_graph.add(1./dt)
         cpu_graph.update()
 
@@ -387,7 +405,6 @@ def main():
         #check if a plugin need to be destroyed
         g_pool.plugins.clean()
 
-
         # render camera image
         glfwMakeContextCurrent(main_window)
         make_coord_system_norm_based()
@@ -397,8 +414,6 @@ def main():
         # render visual feedback from loaded plugins
         for p in g_pool.plugins:
             p.gl_display()
-
-
 
         graph.push_view()
         fps_graph.draw()
@@ -418,31 +433,19 @@ def main():
         timestamp = time()
 
 
-        glfwSwapBuffers(world_window)
+        glfwSwapBuffers(main_window)
         glfwPollEvents()
 
-    plugin_save = []
-    for p in g_pool.plugins:
-        try:
-            p_initializer = p.class_name,p.get_init_dict()
-            plugin_save.append(p_initializer)
-        except AttributeError:
-            #not all plugins need to be savable, they will not have the init dict.
-            # any object without a get_init_dict method will throw this exception.
-            pass
-
+    session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
+    session_settings['gui_scale'] = g_pool.gui.scale
+    session_settings['main_menu_config'] = g_pool.main_menu.configuration
+    session_settings.close()
     # de-init all running plugins
     for p in g_pool.plugins:
         p.alive = False
-        #reading p.alive actually runs plug-in cleanup
-        _ = p.alive
-
-    save('plugins',plugin_save)
-    save('window_size',bar.window_size.value)
-    session_settings.close()
+    g_pool.plugins.clean()
 
     cap.close()
-    bar.destroy()
     glfwDestroyWindow(main_window)
     glfwTerminate()
     logger.debug("Process done")

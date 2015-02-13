@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class Pupil_Server(Plugin):
     """pupil server plugin"""
-    def __init__(self, g_pool,address="tcp://127.0.0.1:5000",menu_conf = {'collapsed':True}):
+    def __init__(self, g_pool,address="tcp://127.0.0.1:5000",menu_conf = {'collapsed':True,'pos':(300,300),'size':(300,300)}):
         super(Pupil_Server, self).__init__(g_pool)
         self.order = .9
         self.context = zmq.Context()
@@ -40,12 +40,19 @@ class Pupil_Server(Plugin):
         self.menu = ui.Growing_Menu("Pupil Broadcast Server")
         self.menu.configuration = self.menu_conf
         self.menu.append(ui.TextInput('address',self,setter=self.set_server,label='Address'))
-        self.g_pool.sidebar.append(self.menu)
+        if self.g_pool.app == 'capture':
+            self.g_pool.sidebar.append(self.menu)
+        elif self.g_pool.app == 'player':
+            self.g_pool.gui.append(self.menu)
 
     def deinit_gui(self):
         if self.menu:
             self.menu_conf = self.menu.configuration
-            self.g_pool.sidebar.remove(self.menu)
+            self.menu_conf = self.menu.configuration
+            if self.g_pool.app == 'capture':
+                self.g_pool.sidebar.remove(self.menu)
+            elif self.g_pool.app == 'player':
+                self.g_pool.gui.remove(self.menu)
             self.menu = None
 
 
@@ -90,7 +97,7 @@ class Pupil_Server(Plugin):
         This happens either voluntarily or forced.
         """
         if self.menu:
-            self.g_pool.sidebar.remove(self.menu)
-            self.menu = None
+            self.deinit_gui()
+
         self.context.destroy()
 

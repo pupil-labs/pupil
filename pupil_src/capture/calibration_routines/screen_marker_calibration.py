@@ -51,6 +51,31 @@ def on_resize(window,w, h):
     adjust_gl_view(w,h)
     glfwMakeContextCurrent(active_window)
 
+# easing functions for animation of the marker fade in/out
+def easeInOutQuad(t, b, c, d):
+    """Robert Penner easing function examples at: http://gizma.com/easing/
+    t = current time in frames or whatever unit
+    b = beginning/start value
+    c = change in value
+    d = duration
+    
+    """
+    t /= d/2
+    if t < 1:
+        return c/2*t*t + b
+    t-=1
+    return -c/2 * (t*(t-2) - 1) + b
+
+def interp_fn(t,b,c,d,start_sample=15.,stop_sample=55.):
+    # ease in, sample, ease out
+    if t < start_sample:
+        return easeInOutQuad(t,b,c,start_sample)
+    elif t > stop_sample:
+        return 1-easeInOutQuad(t-stop_sample,b,c,d-stop_sample)
+    else:
+        return 1.0
+
+
 
 class Screen_Marker_Calibration(Calibration_Plugin):
     """Calibrate using a marker on your screen
@@ -62,8 +87,12 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         super(Screen_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
-        self.screen_marker_state = 0
-        self.screen_marker_max = 70 # maximum bound for state
+        self.screen_marker_state = 0.
+        self.screen_marker_max = 70. # maximum bound for state
+        self.sample_duration = 40.
+        self.start_sample = (self.screen_marker_max-self.sample_duration)*0.5 # 15. with above params
+        self.stop_sample = self.screen_marker_max-self.start_sample # 55. with above params
+
         self.active_site = 0
         self.sites = []
         self.display_pos = None
@@ -250,7 +279,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
             #only save a valid ref position if within sample window of calibraiton routine
-            on_position = 40 < self.screen_marker_state < self.screen_marker_max-5
+            # on_position = 40 < self.screen_marker_state < self.screen_marker_max-5
+            on_position = self.start_sample < self.screen_marker_state < self.stop_sample
+
             if on_position and self.detected:
                 ref = {}
                 ref["norm_pos"] = self.pos
@@ -274,13 +305,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.stop()
                     return
 
-            # function to smoothly interpolate between points input:(0-screen_marker_max) output: (0-1)
-            m, s = self.screen_marker_max, self.screen_marker_state
-
-            interpolation_weight = np.tanh(((s-1/6.*m)*10.)/(5/6.*m))*(-.5)+.5
+            # interpolation_weight = np.tanh(((s-1/6.*m)*10.)/(5/6.*m))*(-.5)+.5
+            self.pattern_alpha = interp_fn(self.screen_marker_state,0.,1.,self.screen_marker_max,self.start_sample,self.stop_sample)
 
             #use np.arrays for per element wise math
-            self.pattern_alpha = 1-interpolation_weight
             self.display_pos = np.array(self.sites[self.active_site])
             self.on_position = on_position
             self.button.status_text = '%s / %s'%(self.active_site,9)

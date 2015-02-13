@@ -39,6 +39,7 @@ class Marker_Auto_Trim_Marks(Plugin):
     This plugin depends on the offline marker tracker plugin to be loaded.
 
     """
+<<<<<<< HEAD
     def __init__(self, g_pool,menu_conf={'pos':(400,200),'size':(300,100),'collapsed':False},man_in_marks=[],man_out_marks=[]):
         super(Marker_Auto_Trim_Marks, self).__init__()
         self.g_pool = g_pool
@@ -47,6 +48,11 @@ class Marker_Auto_Trim_Marks(Plugin):
         # and load menu configuration of last session
         self.menu = None
         self.menu_conf = menu_conf
+=======
+    def __init__(self, g_pool,gui_settings={'pos':(220,400),'size':(300,100),'iconified':False},man_in_marks=[],man_out_marks=[]):
+        super(Marker_Auto_Trim_Marks, self).__init__(g_pool)
+        self.gui_settings = gui_settings
+>>>>>>> branch 'v0.4_restruct' of https://github.com/pupil-labs/pupil.git
 
         self.in_marker_id = 18
         self.out_marker_id = 25
