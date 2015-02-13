@@ -51,6 +51,7 @@ class Vis_Cross(Plugin):
         self.g_pool.gui.append(self.menu)
         
         color_menu = ui.Growing_Menu('Color')
+        color_menu.collapsed = True
         self.menu.append(ui.Info_Text('Set RGB color components and alpha value.'))
         color_menu.append(ui.Slider('r',self,min=0,step=1,max=255))
         color_menu.append(ui.Slider('g',self,min=0,step=1,max=255))
