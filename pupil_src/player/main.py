@@ -295,6 +295,12 @@ def main():
         new_plugin = plugin(g_pool)
         g_pool.plugins.add(new_plugin)
 
+    def purge_plugins():
+        for p in g_pool.plugins:
+            if p.__class__ in user_lauchable_plugins:
+                p.alive=False
+        g_pool.plugins.clean()
+
 
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
@@ -308,6 +314,7 @@ def main():
     g_pool.main_menu.append(ui.Selector('open plugin', selection = user_lauchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_lauchable_plugins],
                                         setter= open_plugin, getter = lambda: "Select to load"))
+    g_pool.main_menu.append(ui.Button('close all plugins',purge_plugins))
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
     g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey=GLFW_KEY_SPACE)

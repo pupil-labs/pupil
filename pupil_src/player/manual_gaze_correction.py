@@ -21,7 +21,7 @@ class Manual_Gaze_Correction(Plugin):
     correct gaze with manually set x and y offset
     """
 
-    def __init__(self, g_pool,x_offset=0,y_offset=0,menu_conf={'pos':(10,390),'size':(300,100),'collapsed':False}):
+    def __init__(self, g_pool,x_offset=0.,y_offset=0.,menu_conf={'pos':(10,390),'size':(300,100),'collapsed':False}):
         super(Manual_Gaze_Correction, self).__init__(g_pool)
         #let the plugin work before most other plugins.
         self.order = .3
@@ -31,8 +31,8 @@ class Manual_Gaze_Correction(Plugin):
         self.menu = None
         self.menu_conf = menu_conf
         #user settings
-        self.x_offset = x_offset
-        self.y_offset = y_offset
+        self.x_offset = float(x_offset)
+        self.y_offset = float(y_offset)
 
     def update(self,frame,events):
         for p in events['pupil_positions']:
@@ -48,14 +48,14 @@ class Manual_Gaze_Correction(Plugin):
         self.g_pool.gui.append(self.menu)
 
         self.menu.append(ui.Info_Text('Move gaze horizontally and vertically. Screen width and height are one unit respectively.'))
-        self.menu.append(ui.Slider('x_offset',self,min=0,step=0.002,max=100))
-        self.menu.append(ui.Slider('y_offset',self,min=0,step=0.002,max=100))
-        self.menu.append(ui.Button('remove',self.unset_alive))     
-        
+        self.menu.append(ui.Slider('x_offset',self,min=-1,step=0.01,max=1))
+        self.menu.append(ui.Slider('y_offset',self,min=-1,step=0.01,max=1))
+        self.menu.append(ui.Button('remove',self.unset_alive))
+
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
-            self.menu = None   
+            self.menu = None
 
     def unset_alive(self):
         self.alive = False
