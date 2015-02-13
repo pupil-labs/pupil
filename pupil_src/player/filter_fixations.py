@@ -24,11 +24,11 @@ class Filter_Fixations(Plugin):
     only recent_pupil_positions within distance tolerance will be shown
     """
     def __init__(self, g_pool=None,distance=25.0,menu_conf={'pos':(10,470),'size':(300,100),'collapsed':False}):
-        super(Filter_Fixations, self).__init__()
+        super(Filter_Fixations, self).__init__(g_pool)
         self.g_pool = g_pool
         # let the plugin work after most other plugins
         self.order = .7
-        
+
         # initialize empty menu
         # and load menu configuration of last session
         self.menu = None
@@ -81,10 +81,10 @@ class Filter_Fixations(Plugin):
         self.menu.configuration = self.menu_conf
         # add menu to the window
         self.g_pool.gui.append(self.menu)
-        
+        self.menu.append(ui.Info_Text("Filter Fixations uses Scan_Path to understand past gaze"))
         self.menu.append(ui.Slider('distance',self,min=0,step=1,max=100,label='distance in pixels'))
         self.menu.append(ui.Button('remove',self.unset_alive))
-        
+
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
@@ -92,11 +92,9 @@ class Filter_Fixations(Plugin):
 
     def set_bar_ok(self,ok):
         if ok:
-            #TODO: self._bar.color = (50, 50, 50)
-            self.menu.label = "Filter Fixations"
+            self.menu[0].text = "Filter Fixations uses Scan_Path to understand past gaze"
         else:
-            #TODO: .color = (250, 50, 50)
-            self.menu.label = "Filter Fixations: Turn on Scan_Path!"
+            self.menu[0].text  = "Filter Fixations: Turn on Scan_Path!"
 
     def unset_alive(self):
         self.alive = False
