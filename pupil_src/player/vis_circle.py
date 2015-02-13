@@ -30,7 +30,7 @@ class Vis_Circle(Plugin):
         # and load menu configuration of last session
         self.menu = None
         self.menu_conf = menu_conf
-        
+
         self.r = color[0]
         self.g = color[1]
         self.b = color[2]
@@ -56,7 +56,7 @@ class Vis_Circle(Plugin):
         self.menu.configuration = self.menu_conf
         # add menu to the window
         self.g_pool.gui.append(self.menu)
-        
+
         color_menu = ui.Growing_Menu('Color')
         self.menu.append(ui.Info_Text('Set RGB color components and alpha value.'))
         color_menu.append(ui.Slider('r',self,min=0,step=1,max=255))
@@ -64,12 +64,12 @@ class Vis_Circle(Plugin):
         color_menu.append(ui.Slider('b',self,min=0,step=1,max=255))
         color_menu.append(ui.Slider('a',self,min=0,step=1,max=255))
         self.menu.append(color_menu)
-        
-        self.menu.append(ui.Slider('radius',self,min=1,step=10,max=200))
+
+        self.menu.append(ui.Slider('radius',self,min=1,step=1,max=100))
         self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15))
         self.menu.append(ui.Switch('fill',self))
         self.menu.append(ui.Button('remove',self.unset_alive))
-        
+
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)

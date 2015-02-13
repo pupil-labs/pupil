@@ -30,8 +30,6 @@ from methods import normalize,denormalize
 from file_methods import Persistent_Dict,save_object
 from cache_list import Cache_List
 from glfw import *
-import atb
-from ctypes import c_int,c_bool,c_float,create_string_buffer
 
 from plugin import Plugin
 #logging
