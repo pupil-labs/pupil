@@ -39,20 +39,12 @@ class Marker_Auto_Trim_Marks(Plugin):
     This plugin depends on the offline marker tracker plugin to be loaded.
 
     """
-<<<<<<< HEAD
-    def __init__(self, g_pool,menu_conf={'pos':(400,200),'size':(300,100),'collapsed':False},man_in_marks=[],man_out_marks=[]):
-        super(Marker_Auto_Trim_Marks, self).__init__()
-        self.g_pool = g_pool
-        
-        # initialize empty menu
-        # and load menu configuration of last session
+
+    def __init__(self, g_pool,menu_conf={'pos':(220,400),'size':(300,100),'collapsed':False},man_in_marks=[],man_out_marks=[]):
+        super(Marker_Auto_Trim_Marks, self).__init__(g_pool)
+
         self.menu = None
         self.menu_conf = menu_conf
-=======
-    def __init__(self, g_pool,gui_settings={'pos':(220,400),'size':(300,100),'iconified':False},man_in_marks=[],man_out_marks=[]):
-        super(Marker_Auto_Trim_Marks, self).__init__(g_pool)
-        self.gui_settings = gui_settings
->>>>>>> branch 'v0.4_restruct' of https://github.com/pupil-labs/pupil.git
 
         self.in_marker_id = 18
         self.out_marker_id = 25
@@ -79,7 +71,7 @@ class Marker_Auto_Trim_Marks(Plugin):
 
         #set up bar display padding
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
-        
+
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
@@ -245,7 +237,7 @@ class Marker_Auto_Trim_Marks(Plugin):
                 self.menu.append(ui.Selector('active_section',self,selection=self.sections,setter=self.activate_section,label='set section'))
                 self.menu.append(ui.Button('video export all sections',self.enqueue_video_export))
                 self.menu.append(ui.Button('surface export all sections',self.enqueue_surface_export))
-                
+
                 self.menu.append(ui.Button('add in_mark here',self.add_manual_in_mark))
                 self.menu.append(ui.Selector('man_in_mark',selection=self.man_in_marks,setter=self.del_man_in_mark,getter=lambda:"select one",label='del manual in marker'))
 
