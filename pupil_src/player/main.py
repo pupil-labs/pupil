@@ -206,7 +206,6 @@ def main():
     rec_version = meta_info["Capture Software Version"]
     rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
     logger.debug("Recording version: %s , %s"%(rec_version,rec_version_float))
-    print rec_version_float
 
     if rec_version_float < 0.4:
         video_path = rec_dir + "/world.avi"
@@ -362,7 +361,7 @@ def main():
     fps_graph = graph.Bar_Graph()
     fps_graph.pos = (140,110)
     fps_graph.update_rate = 5
-    fps_graph.label = "%0.0f FPS"
+    fps_graph.label = "%0.0f REC FPS"
 
     pupil_graph = graph.Bar_Graph(max_val=1.0)
     pupil_graph.pos = (260,110)
@@ -383,19 +382,29 @@ def main():
                 display_time = new_frame.timestamp
                 g_pool.new_seek = False
 
+
+            update_graph = True
+        else:
+            update_graph = False
+
+
         frame = new_frame.copy()
         events = {}
         #new positons and events we make a deepcopy just like the image is a copy.
         events['pupil_positions'] = deepcopy(positions_by_frame[frame.index])
 
-        #update performace graphs
-        for p in  events['pupil_positions']:
-            pupil_graph.add(p['confidence'])
-        t = frame.timestamp
-        if ts != t:
-            dt,ts = t-ts,t
+        if update_graph:
+            #update performace graphs
+            for p in  events['pupil_positions']:
+                pupil_graph.add(p['confidence'])
 
-        fps_graph.add(1./dt)
+            t = new_frame.timestamp
+            if ts != t:
+                dt,ts = t-ts,t
+            fps_graph.add(1./dt)
+
+            # g_pool.play_button.status_text = str(frame.index)
+        #always update the CPU graph
         cpu_graph.update()
 
 
