@@ -158,15 +158,14 @@ class File_Capture():
     def get_now(self):
         idx = int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
         if self.timestamps:
-
             try:
                 timestamp = self.timestamps[idx]
-                logger.warning("Filecapture is not a realtime source. -NOW- will be the current timestamp")
+                logger.info("Filecapture is not a realtime source. -NOW- will be the current timestamp")
             except IndexError:
                 logger.warning("timestamps not found.")
                 timestamp = 0
         else:
-            logger.warning("Filecapture is not a realtime source. -NOW- will be the current time.")
+            logger.info("Filecapture is not a realtime source. -NOW- will be the current time.")
             timestamp = time()
         return timestamp
 
