@@ -180,7 +180,7 @@ class Marker_Auto_Trim_Marks(Plugin):
                         if marker['id'] == out_id:
                             in_out_signal[idx] -=1
 
-                # make a smooth singal
+                # make a smooth signal
                 in_out_smooth = np.convolve(in_out_signal,[2./30]*30,mode='same') #mean filter with sum 2 and len 60,
                 #Mode 'same' returns output of length max(signal, filter).
 
