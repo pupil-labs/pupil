@@ -62,6 +62,9 @@ class Batch_Exporter(Plugin):
         self.workers = [None for x in range(cpu_count())]
         logger.info("Using a maximum of %s CPUs to process visualizations in parallel..." %cpu_count())
 
+    def unset_alive(self):
+        self.alive = False
+
     def init_gui(self):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Batch Export Recordings')
@@ -85,10 +88,20 @@ class Batch_Exporter(Plugin):
             submenu.append(ui.Button('cancel',job.cancel))
             self.menu.append(submenu)
 
+        self.menu.append(ui.Button('close',self.unset_alive))
+
+
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
+            self.menu_conf = self.menu.configuration
             self.menu = None
+
+    def get_init_dict(self):
+        if self.menu:
+            return {'menu_conf':self.menu.configuration}
+        else:
+            return {'menu_conf':self.menu_conf}
 
     def set_src_dir(self,new_dir):
         new_dir = new_dir

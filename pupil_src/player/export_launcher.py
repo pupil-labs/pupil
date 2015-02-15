@@ -96,6 +96,9 @@ class Export_Launcher(Plugin):
         self.g_pool.gui.append(self.menu)
         self._update_gui()
 
+    def unset_alive(self):
+        self.alive = False
+
     def _update_gui(self):
         self.menu.elements[:] = []
 
@@ -115,10 +118,20 @@ class Export_Launcher(Plugin):
             submenu.append(ui.Button('cancel',job.cancel))
             self.menu.append(submenu)
 
+        self.menu.append(ui.Button('close',self.unset_alive))
+
     def deinit_gui(self):
         if self.menu:
+            self.menu_conf = self.menu.configuration
             self.g_pool.gui.remove(self.menu)
             self.menu = None
+
+
+    def get_init_dict(self):
+        if self.menu:
+            return {'menu_conf':self.menu.configuration}
+        else:
+            return {'menu_conf':self.menu_conf}
 
     def add_export(self):
         # on MacOS we will not use os.fork, elsewhere this does nothing.
