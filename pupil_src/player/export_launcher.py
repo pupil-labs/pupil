@@ -152,8 +152,7 @@ class Export_Launcher(Plugin):
         if self.new_export:
             self.launch_export(self.new_export)
             self.new_export = None
-        for e in self.exports:
-            print e.status()
+
 
     def gl_display(self):
         pass
