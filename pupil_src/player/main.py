@@ -134,6 +134,7 @@ def main():
         hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
         w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
+        g_pool.gui.collect_menus()
         graph.adjust_size(w,h)
         adjust_gl_view(w,h)
         glfwMakeContextCurrent(active_window)
@@ -306,7 +307,7 @@ def main():
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,300))
     g_pool.main_menu.configuration = session_settings.get('main_menu_config',{})
-    g_pool.main_menu.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
+    g_pool.main_menu.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
 
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))

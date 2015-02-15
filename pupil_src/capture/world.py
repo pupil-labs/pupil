@@ -78,6 +78,7 @@ def world(g_pool,cap_src,cap_size):
         hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
         w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
+        g_pool.gui.collect_menus()
         graph.adjust_size(w,h)
         adjust_gl_view(w,h)
         for p in g_pool.plugins:
