@@ -58,7 +58,7 @@ def easeInOutQuad(t, b, c, d):
     b = beginning/start value
     c = change in value
     d = duration
-    
+
     """
     t /= d/2
     if t < 1:
@@ -83,7 +83,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     Points are collected at sites - not between
 
     """
-    def __init__(self, g_pool,menu_conf = {'collapsed':True},fullscreen=True,pattern_scale=1.0):
+    def __init__(self, g_pool,menu_conf = {'collapsed':True},fullscreen=True,marker_scale=1.0):
         super(Screen_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
@@ -104,7 +104,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.show_edges = 0
         self.dist_threshold = 5
         self.area_threshold = 20
-        self.pattern_scale = pattern_scale
+        self.marker_scale = marker_scale
         self.pattern_alpha = 1.0
 
         self.world_size = None
@@ -131,7 +131,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.g_pool.calibration_menu.append(self.menu)
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
-        self.menu.append(ui.Slider('pattern_scale',self,step=0.05,min=0.5,max=5.0,label='Pattern Scale'))
+        self.menu.append(ui.Slider('marker_scale',self,step=0.05,min=0.5,max=5.0,label='Pattern Scale'))
 
         submenu = ui.Growing_Menu('Advanced')
         submenu.collapsed = True
@@ -358,7 +358,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         # 0,h##################w,h #
         #            r             #
         ############################
-        r = 60*self.pattern_scale
+        r = 60*self.marker_scale
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         p_window_size = glfwGetWindowSize(self._window)
@@ -370,7 +370,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
 
-        draw_marker(screen_pos,self.pattern_scale,self.pattern_alpha)
+        draw_marker(screen_pos,self.marker_scale,self.pattern_alpha)
         #some feedback on the detection state
 
         if self.detected and self.on_position:
@@ -385,7 +385,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def get_init_dict(self):
         d = {}
         d['fullscreen'] = self.fullscreen
-        d['pattern_scale'] = self.pattern_scale
+        d['marker_scale'] = self.marker_scale
         if self.menu:
             d['menu_conf'] = self.menu.configuration
         else:
