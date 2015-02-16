@@ -320,7 +320,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                                         (int(result['axes'][0]/2),int(result['axes'][1]/2)),
                                         int(result['angle']),0,360,15)
                 cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
-                if pupil_detector.diameter_graph:
+                if g_pool.diameter_graph:
                     pupil_diameter_graph.add(result['diameter'])
             cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
 
