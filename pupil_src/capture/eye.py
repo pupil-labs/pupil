@@ -148,6 +148,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                                 'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be a small as possible but big enough to capture to pupil in its movements",
                                 'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters with in the Pupil Detection menu below."}
     # g_pool.draw_pupil = session_settings.get('draw_pupil',True)
+    g_pool.temp_pupil_diameter = 0.0
 
     u_r = UIRoi(frame.img.shape)
     u_r.set(session_settings.get('roi',u_r.get()))
@@ -174,6 +175,8 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         g_pool.display_mode = val
         g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
 
+    def get_pupil_diameter():
+        return g_pool.temp_pupil_diameter
 
     # Initialize glfw
     glfwInit()
@@ -241,6 +244,13 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     fps_graph.pos = (140,110)
     fps_graph.update_rate = 5
     fps_graph.label = "%0.0f FPS"
+
+    # pupil diameter graph 
+    pupil_diameter_graph = graph.Bar_Graph(min_val=1,max_val=400)
+    pupil_diameter_graph.pos = (260,110) 
+    pupil_diameter_graph.update_fn = get_pupil_diameter
+    pupil_diameter_graph.update_rate = 5
+    pupil_diameter_graph.label = "Diameter %0.1f"
 
     # Event loop
     while not g_pool.quit.value:
@@ -310,15 +320,20 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
         if result['confidence'] >0:
             if result.has_key('axes'):
                 pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
-                                        (int(result["axes"][0]/2),int(result["axes"][1]/2)),
-                                        int(result["angle"]),0,360,15)
+                                        (int(result['axes'][0]/2),int(result['axes'][1]/2)),
+                                        int(result['angle']),0,360,15)
                 cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
+                if pupil_detector.diameter_graph:
+                    g_pool.temp_pupil_diameter = result['diameter']
+                    pupil_diameter_graph.update()
             cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
 
         # render graphs
         graph.push_view()
         fps_graph.draw()
         cpu_graph.draw()
+        if pupil_detector.diameter_graph:
+            pupil_diameter_graph.draw()
         graph.pop_view()
 
         # render GUI
