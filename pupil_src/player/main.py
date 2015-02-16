@@ -143,11 +143,6 @@ def main():
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key,scancode,action,mods)
-        if action == GLFW_PRESS:
-            if key == GLFW_KEY_ESCAPE:
-                on_close(window)
-
-
 
     def on_char(window,char):
         g_pool.gui.update_char(char)
@@ -303,6 +298,7 @@ def main():
 
 
     g_pool.gui = ui.UI()
+    g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,300))
     g_pool.main_menu.configuration = session_settings.get('main_menu_config',{})

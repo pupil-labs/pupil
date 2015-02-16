@@ -83,9 +83,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key,scancode,action,mods)
-        if action == GLFW_PRESS:
-            if key == GLFW_KEY_ESCAPE:
-                on_close(window)
+
 
     def on_char(window,char):
         g_pool.gui.update_char(char)
@@ -214,6 +212,8 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     general_settings.append(ui.Switch('diameter_graph',g_pool,label='Show pupil diameter graph'))
     g_pool.sidebar.append(general_settings)
     g_pool.gui.append(g_pool.sidebar)
+    g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
+
 
     # let the camera add its GUI
     g_pool.capture.init_gui(g_pool.sidebar)

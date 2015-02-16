@@ -93,9 +93,6 @@ def world(g_pool,cap_src,cap_size):
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key,scancode,action,mods)
-        if action == GLFW_PRESS:
-            if key == GLFW_KEY_ESCAPE:
-                on_close(window)
 
     def on_char(window,char):
         g_pool.gui.update_char(char)
@@ -225,6 +222,7 @@ def world(g_pool,cap_src,cap_size):
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
     g_pool.gui.append(g_pool.quickbar)
+    g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
 
     g_pool.capture.init_gui(g_pool.sidebar)
     g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{})
