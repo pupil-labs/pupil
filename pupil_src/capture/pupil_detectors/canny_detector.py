@@ -80,9 +80,6 @@ class Canny_Detector(Pupil_Detector):
         self.final_perimeter_ratio_range = self.session_settings.get("final_perimeter_ratio_range",[.6, 1.2])
         self.strong_prior = None
 
-        # visual feedback
-        self.diameter_graph = self.session_settings.get('diameter_graph',False)
-
         #detector dignostics
         #confidance in the mesurement 0(bad) to 1 (perfect)
         # in this case we take the support ratio capped at 1. (uncapped if the pupil comes from prior)
@@ -524,13 +521,11 @@ class Canny_Detector(Pupil_Detector):
         self.menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=20,step=1))
         self.menu.append(ui.Slider('pupil_min',self,label='Pupil min',min=1,max=250,step=1))
         self.menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=50,max=400,step=1))
-        self.menu.append(ui.Switch('diameter_graph',self,label='Show pupil diameter graph'))
 
         self.advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
         self.advanced_controls_menu.configuration = self.session_settings.get('advanced_controls_menu_config',{'collapsed':True})
         self.advanced_controls_menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
         self.advanced_controls_menu.append(ui.Slider('min_contour_size',self,label='Contour min length',min=1,max=200,step=1))
-        self.advanced_controls_menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
 
         self.advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
         self.menu.append(self.advanced_controls_menu)
@@ -606,7 +601,6 @@ class Canny_Detector(Pupil_Detector):
         self.session_settings['coarse_detection'] = self.coarse_detection
         self.session_settings['pupil_min'] = self.pupil_min
         self.session_settings['pupil_max'] = self.pupil_max
-        self.session_settings['diameter_graph'] = self.diameter_graph
         self.session_settings['min_contour_size'] = self.min_contour_size
         self.session_settings['final_perimeter_ratio_range'] = self.final_perimeter_ratio_range
         self.session_settings['advanced_controls_menu_config'] = self.advanced_controls_menu.configuration
