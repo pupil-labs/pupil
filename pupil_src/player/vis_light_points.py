@@ -28,7 +28,7 @@ class Vis_Light_Points(Plugin):
         self.order = .8
         self.uniqueness = "not_unique"
         #let the plugin work after most other plugins.
-        
+
         # initialize empty menu
         # and load menu configuration of last session
         self.menu = None
@@ -70,10 +70,10 @@ class Vis_Light_Points(Plugin):
         self.menu.configuration = self.menu_conf
         # add menu to the window
         self.g_pool.gui.append(self.menu)
-        
+
         self.menu.append(ui.Slider('falloff',self,min=1,step=1,max=1000))
         self.menu.append(ui.Button('remove',self.unset_alive))
-        
+
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
@@ -91,6 +91,6 @@ class Vis_Light_Points(Plugin):
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happens either voluntarily or forced.
-        if you have an atb bar or glfw window destroy it here.
+        if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()

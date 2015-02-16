@@ -535,7 +535,7 @@ class Offline_Marker_Detector(Plugin):
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happens either voluntarily or forced.
-        if you have an atb bar or glfw window destroy it here.
+        if you have a GUI or glfw window destroy it here.
         """
 
         self.save("offline_square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])

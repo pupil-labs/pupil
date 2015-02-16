@@ -103,14 +103,14 @@ class Scan_Path(Plugin):
         self.menu.configuration = self.menu_conf
         # add menu to the window
         self.g_pool.gui.append(self.menu)
-        
+
         self.menu.append(ui.Slider('timeframe',self,min=0,step=0.1,max=5,label="duration in sec"))
         self.menu.append(ui.Button('remove',self.unset_alive))
-        
+
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
-            self.menu = None 
+            self.menu = None
 
     def unset_alive(self):
         self.alive = False
@@ -124,7 +124,7 @@ class Scan_Path(Plugin):
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happens either voluntarily or forced.
-        if you have an atb bar or glfw window destroy it here.
+        if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
 
