@@ -90,7 +90,7 @@ class Show_Calibration(Plugin):
 
     def gl_display(self):
         if self.inliers is not None:
-            cygl_draw_polyline_norm(self.inliers,1,cygl_rgba(1.,.5.,0.,.5),line_type=GL_LINES)
+            cygl_draw_polyline_norm(self.inliers,1,cygl_rgba(1.,.5,0.,.5),line_type=GL_LINES)
             cygl_draw_gl_polyline_norm(self.outliers,1,cygl_rgba(1.,0.,0.,.5),line_type=GL_LINES)
             cygl_draw_gl_polyline_norm(self.calib_bounds[:,0],cygl_rgba(.0,1.,0,.5))
 
