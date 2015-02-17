@@ -88,10 +88,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.active = False
         self.detected = False
         self.screen_marker_state = 0.
-        self.screen_marker_max = 70. # maximum bound for state
-        self.sample_duration = 40.
-        self.start_sample = (self.screen_marker_max-self.sample_duration)*0.5 # 15. with above params
-        self.stop_sample = self.screen_marker_max-self.start_sample # 55. with above params
+        self.sample_duration = 40 # number of frames
+        self.screen_marker_max = 70 # number of frames, maximum bound for state
+        self.start_sample = 15 # (screen_marker_max - sample_duration) / 2
+        self.stop_sample = 55
 
         self.active_site = 0
         self.sites = []
@@ -136,6 +136,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         submenu = ui.Growing_Menu('Advanced')
         submenu.collapsed = True
         self.menu.append(submenu)
+        submenu.append(ui.Slider('sample_duration',self,step=1,min=30,max=200,label='Sample duration',setter=self.update_sample_duration))
         submenu.append(ui.Switch('show_edges',self,label='show edges'))
         submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area Threshold'))
         submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity Threshold'))
@@ -144,6 +145,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.append(self.button)
 
+    def update_sample_duration(self,val):
+        self.sample_duration = val
+        self.screen_marker_max = self.sample_duration+30
+        self.stop_sample = self.screen_marker_max-self.start_sample # 55. with above params
 
     def deinit_gui(self):
         if self.menu:
@@ -306,7 +311,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     return
 
             # interpolation_weight = np.tanh(((s-1/6.*m)*10.)/(5/6.*m))*(-.5)+.5
-            self.pattern_alpha = interp_fn(self.screen_marker_state,0.,1.,self.screen_marker_max,self.start_sample,self.stop_sample)
+            self.pattern_alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.screen_marker_max),float(self.start_sample),float(self.stop_sample))
 
             #use np.arrays for per element wise math
             self.display_pos = np.array(self.sites[self.active_site])
