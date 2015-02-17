@@ -15,6 +15,12 @@ from gl_utils import draw_gl_polyline_norm
 from plugin import Plugin
 from calibration_routines.calibrate import get_map_from_cloud
 
+from pyglui import ui
+from pyglui.cygl.utils import init as cygl_init
+from pyglui.cygl.utils import RGBA as cygl_rgba
+from pyglui.cygl.utils import draw_polyline_norm as cygl_draw_polyline_norm
+from OpenGL.GL import GL_LINES
+
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -65,11 +71,13 @@ class Show_Calibration(Plugin):
         logger.debug("calibration bounds %s"%self.calib_bounds)
         self.calib_area_ratio = cv2.contourArea(self.calib_bounds)/full_screen_area
 
-
+        # initalize cygl
+        cygl_init()
 
     def init_gui(self):
-        help_str = "yellow: indicates calibration error; red:discarded outliers; outline shows the calibrated area."
         self.menu = ui.Scrolling_Menu('Calibration Results',pos=(300,500),size=(300,300))
+        self.info = ui.Info_Text("Yellow: calibration error; Red: discarded outliers; Outline: calibrated area.")
+        self.menu.append(self.info)
         self.menu.append(ui.TextInput('inlier_count',self,getter=lambda: str(self.inlier_count), label='Number of used samples'))
         self.menu.append(ui.TextInput('inlier_ratio',self,getter=lambda: str(self.inlier_ratio)), label='Fraction of used data points')
         self.menu.append(ui.TextInput('calib_area_ratio',self,getter=lambda: str(self.calib_area_ratio)), label='Fraction of calibrated screen area')
@@ -82,9 +90,9 @@ class Show_Calibration(Plugin):
 
     def gl_display(self):
         if self.inliers is not None:
-            draw_gl_polyline_norm(self.inliers,(1.,0.5,0.,.5),type='Lines')
-            draw_gl_polyline_norm(self.outliers,(1.,0.,0.,.5),type='Lines')
-            draw_gl_polyline_norm(self.calib_bounds[:,0],(.0,1.,0,.5),type='Loop')
+            cygl_draw_polyline_norm(self.inliers,1,cygl_rgba(1.,.5.,0.,.5),line_type=GL_LINES)
+            cygl_draw_gl_polyline_norm(self.outliers,1,cygl_rgba(1.,0.,0.,.5),line_type=GL_LINES)
+            cygl_draw_gl_polyline_norm(self.calib_bounds[:,0],cygl_rgba(.0,1.,0,.5))
 
     def close(self):
         self.alive = False
