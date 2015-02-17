@@ -56,19 +56,19 @@ class Vis_Circle(Plugin):
         self.menu.configuration = self.menu_conf
         # add menu to the window
         self.g_pool.gui.append(self.menu)
+        self.menu.append(ui.Slider('radius',self,min=1,step=1,max=100,label='Radius'))
+        self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15,label='Stroke width'))
+        self.menu.append(ui.Switch('fill',self,label='Fill'))
 
         color_menu = ui.Growing_Menu('Color')
         color_menu.collapsed = True
-        self.menu.append(ui.Info_Text('Set RGB color components and alpha value.'))
-        color_menu.append(ui.Slider('r',self,min=0.0,step=0.05,max=1.0))
-        color_menu.append(ui.Slider('g',self,min=0.0,step=0.05,max=1.0))
-        color_menu.append(ui.Slider('b',self,min=0.0,step=0.05,max=1.0))
-        color_menu.append(ui.Slider('a',self,min=0.0,step=0.05,max=1.0))
+        color_menu.append(ui.Info_Text('Set RGB color components and alpha (opacity) values.'))
+        color_menu.append(ui.Slider('r',self,min=0.0,step=0.05,max=1.0,label='Red'))
+        color_menu.append(ui.Slider('g',self,min=0.0,step=0.05,max=1.0,label='Green'))
+        color_menu.append(ui.Slider('b',self,min=0.0,step=0.05,max=1.0,label='Blue'))
+        color_menu.append(ui.Slider('a',self,min=0.0,step=0.05,max=1.0,label='Alpha'))
         self.menu.append(color_menu)
 
-        self.menu.append(ui.Slider('radius',self,min=1,step=1,max=100))
-        self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15))
-        self.menu.append(ui.Switch('fill',self))
         self.menu.append(ui.Button('remove',self.unset_alive))
 
     def deinit_gui(self):
