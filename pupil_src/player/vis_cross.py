@@ -18,7 +18,7 @@ from methods import denormalize
 
 class Vis_Cross(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool,inner=20,outer=100,color=(255,0,0,20),thickness=1,menu_conf={'pos':(10,420),'size':(300,100),'collapsed':False}):
+    def __init__(self, g_pool,inner=20,outer=100,color=(1.,0.0,0.0,0.4),thickness=1,menu_conf={'pos':(10,420),'size':(300,100),'collapsed':False}):
         super(Vis_Cross, self).__init__(g_pool)
         self.order = .9
         self.uniqueness = "not_unique"
@@ -38,9 +38,10 @@ class Vis_Cross(Plugin):
 
     def update(self,frame,events):
         pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events['pupil_positions'] if pt['norm_gaze'] is not None]
+        bgra = (self.b*255,self.g*255,self.r*255,self.a*255)
         for pt in pts:
             lines =  np.array( [((pt[0]-self.inner,pt[1]),(pt[0]-self.outer,pt[1])),((pt[0]+self.inner,pt[1]),(pt[0]+self.outer,pt[1])) , ((pt[0],pt[1]-self.inner),(pt[0],pt[1]-self.outer)) , ((pt[0],pt[1]+self.inner),(pt[0],pt[1]+self.outer))],dtype=np.int32 )
-            cv2.polylines(frame.img, lines, isClosed=False, color=(self.b, self.g, self.r, self.a), thickness=self.thickness, lineType=cv2.cv.CV_AA)
+            cv2.polylines(frame.img, lines, isClosed=False, color=bgra, thickness=self.thickness, lineType=cv2.cv.CV_AA)
 
     def init_gui(self):
         # initialize the menu
@@ -53,10 +54,10 @@ class Vis_Cross(Plugin):
         color_menu = ui.Growing_Menu('Color')
         color_menu.collapsed = True
         self.menu.append(ui.Info_Text('Set RGB color components and alpha value.'))
-        color_menu.append(ui.Slider('r',self,min=0,step=1,max=255))
-        color_menu.append(ui.Slider('g',self,min=0,step=1,max=255))
-        color_menu.append(ui.Slider('b',self,min=0,step=1,max=255))
-        color_menu.append(ui.Slider('a',self,min=0,step=1,max=255))
+        color_menu.append(ui.Slider('r',self,min=0.0,step=0.05,max=1.0))
+        color_menu.append(ui.Slider('g',self,min=0.0,step=0.05,max=1.0))
+        color_menu.append(ui.Slider('b',self,min=0.0,step=0.05,max=1.0))
+        color_menu.append(ui.Slider('a',self,min=0.0,step=0.05,max=1.0))
         self.menu.append(color_menu)
 
         self.menu.append(ui.Slider('inner',self,min=0,step=10,max=200))

@@ -13,6 +13,8 @@ import cv2
 #logging
 import logging
 logger = logging.getLogger(__name__)
+
+
 def correlate_gaze(gaze_list,timestamps):
     '''
     gaze_list: gaze x | gaze y | confidence | timestamp
@@ -176,6 +178,8 @@ def convert_gaze_pos(gaze_list,capture_version):
 
 def transparent_circle(img,center,radius,color,thickness):
     center = tuple(map(int,center))
+    rgb = [255*c for c in color[:3]] # convert to 0-255 scale for OpenCV
+    alpha = color[-1]
     if thickness > 0:
         pad = radius + 2 + thickness
     else:
@@ -184,8 +188,8 @@ def transparent_circle(img,center,radius,color,thickness):
 
     try:
         overlay = img[roi].copy()
-        cv2.circle(overlay,(pad,pad), radius=radius, color=color[:3], thickness=thickness, lineType=cv2.cv.CV_AA)
-        opacity = color[-1]/255.
+        cv2.circle(overlay,(pad,pad), radius=radius, color=rgb, thickness=thickness, lineType=cv2.cv.CV_AA)
+        opacity = alpha
         cv2.addWeighted(overlay, opacity, img[roi], 1. - opacity, 0, img[roi])
     except:
         logger.debug("transparent_circle would have been partially outsize of img. Did not draw it.")
