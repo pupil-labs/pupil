@@ -146,7 +146,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                                 'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be a small as possible but big enough to capture to pupil in its movements",
                                 'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters with in the Pupil Detection menu below."}
     # g_pool.draw_pupil = session_settings.get('draw_pupil',True)
-    g_pool.diameter_graph = session_settings.get('show_diameter_graph',False)
 
     u_r = UIRoi(frame.img.shape)
     u_r.set(session_settings.get('roi',u_r.get()))
@@ -209,7 +208,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     general_settings.append(ui.Selector('display_mode',g_pool,setter=set_display_mode_info,selection=['camera_image','roi','algorithm'], labels=['Camera Image', 'ROI', 'Algorithm'], label="Mode") )
     g_pool.display_mode_info = ui.Info_Text(g_pool.display_mode_info_text[g_pool.display_mode])
     general_settings.append(g_pool.display_mode_info)
-    general_settings.append(ui.Switch('diameter_graph',g_pool,label='Show pupil diameter graph'))
     g_pool.sidebar.append(general_settings)
     g_pool.gui.append(g_pool.sidebar)
     g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
@@ -244,11 +242,11 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     fps_graph.label = "%0.0f FPS"
 
     # pupil diameter graph
-    pupil_diameter_graph = graph.Bar_Graph(min_val=1,max_val=400)
-    pupil_diameter_graph.pos = (260,110)
-    pupil_diameter_graph.update_rate = 5
-    pupil_diameter_graph.label = "Diameter %0.1f"
-
+    pupil_diameter_label = graph.Averaged_Value()
+    pupil_diameter_label.pos = (100.,frame.height-100.)
+    pupil_diameter_label.update_rate = 1
+    pupil_diameter_label.label = "%0.0f"
+    pupil_diameter_label.set_text_align(v_align='center',h_align='middle')
     # Event loop
     while not g_pool.quit.value:
         # Get an image from the grabber
@@ -320,16 +318,16 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                                         (int(result['axes'][0]/2),int(result['axes'][1]/2)),
                                         int(result['angle']),0,360,15)
                 cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
-                if g_pool.diameter_graph:
-                    pupil_diameter_graph.add(result['diameter'])
+                if g_pool.display_mode == 'algorithm':
+                    pupil_diameter_label.add(result['diameter'])
             cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
 
         # render graphs
         graph.push_view()
         fps_graph.draw()
         cpu_graph.draw()
-        if g_pool.diameter_graph:
-            pupil_diameter_graph.draw()
+        if g_pool.display_mode == 'algorithm':
+            pupil_diameter_label.draw()
         graph.pop_view()
 
         # render GUI
@@ -361,8 +359,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
     session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
     session_settings['general_menu_config'] = general_settings.configuration
-    session_settings['show_diameter_graph'] = g_pool.diameter_graph
-
     session_settings.close()
 
     pupil_detector.cleanup()
