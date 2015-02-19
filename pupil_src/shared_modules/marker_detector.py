@@ -172,18 +172,19 @@ class Marker_Detector(Plugin):
                                                     prev_markers=self.markers,
                                                     min_marker_perimeter=self.min_marker_perimeter,
                                                     aperture=self.aperture,
-                                                    visualize=self.mode=="Show Marker Id's",
+                                                    visualize=0,
                                                     true_detect_every_frame=3)
             else:
                 self.markers = detect_markers_simple(gray,
                                                     grid_size = 5,
                                                     min_marker_perimeter=self.min_marker_perimeter,
                                                     aperture=self.aperture,
-                                                    visualize=self.mode=="Show Marker Id's")
+                                                    visualize=0)
 
 
-            if self.draw_markers:
-                draw_markers(frame.img,self.markers)
+                if self.mode == "Show Marker Id's":
+                    draw_markers(frame.img,self.markers)
+
 
         # locate surfaces
         for s in self.surfaces:
