@@ -26,7 +26,8 @@ from pyglui.cygl.utils import init as cygl_init
 from pyglui.cygl.utils import draw_points as cygl_draw_points
 from pyglui.cygl.utils import RGBA as cygl_rgba
 from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
-
+from pyglui.pyfontstash import fontstash
+from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
 from gaze_mappers import Simple_Gaze_Mapper
 
@@ -116,6 +117,16 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.button = None
 
         self.fullscreen = fullscreen
+        self.clicks_to_close = 5
+
+        self.glfont = fontstash.Context()
+        self.glfont.add_font('opensans',get_opensans_font_path())
+        self.glfont.set_size(22)
+        self.glfont.set_color_float((0.2,0.5,0.9,1.0))
+        self.glfont.set_align_string(v_align='center')
+
+
+
 
 
     def init_gui(self):
@@ -182,6 +193,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.active = True
         self.ref_list = []
         self.pupil_list = []
+        self.clicks_to_close = 5
         self.open_window()
 
     def open_window(self):
@@ -204,6 +216,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             glfwSetWindowSizeCallback(self._window,on_resize)
             glfwSetKeyCallback(self._window,self.on_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
+            glfwSetMouseButtonCallback(self._window,self.on_button)
 
             # gl_state settings
             active_window = glfwGetCurrentContext()
@@ -222,6 +235,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         if action == GLFW_PRESS:
             if key == GLFW_KEY_ESCAPE:
                 self.stop()
+
+    def on_button(self,window,button, action, mods):
+        if action ==GLFW_PRESS:
+            self.clicks_to_close -=1
 
     def on_close(self,window=None):
         if self.active:
@@ -261,6 +278,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         if self.active:
             recent_pupil_positions = events['pupil_positions']
             gray_img = frame.gray
+
+            if self.clicks_to_close <=0:
+                self.stop()
+                return
 
             #get world image size for error fitting later.
             if self.world_size is None:
@@ -382,6 +403,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             cygl_draw_points([screen_pos],size=5,color=cygl_rgba(0.,1.,0.,self.pattern_alpha),sharpness=0.95)
         else:
             cygl_draw_points([screen_pos],size=5,color=cygl_rgba(1.,0.,0.,self.pattern_alpha),sharpness=0.95)
+
+        if self.clicks_to_close <5:
+            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4,'Touch %s more times to cancel calibrating.'%self.clicks_to_close)
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
