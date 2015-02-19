@@ -38,16 +38,19 @@ class Pupil_Server(Plugin):
     def init_gui(self):
         help_str = "Pupil Message server: Using ZMQ and the *Publish-Subscribe* scheme"
         self.menu = ui.Growing_Menu("Pupil Broadcast Server")
-        self.menu.configuration = self.menu_conf
-        self.menu.append(ui.TextInput('address',self,setter=self.set_server,label='Address'))
+        self.menu.append(ui.Info_Text(help_str))
+        self.menu.append(ui.Text_Input('address',self,setter=self.set_server,label='Address'))
+        self.menu.append(ui.Button('close',self.close))
         if self.g_pool.app == 'capture':
+            self.menu.configuration = {'collapsed':self.menu_conf['collapsed']}
             self.g_pool.sidebar.append(self.menu)
         elif self.g_pool.app == 'player':
+            self.menu.configuration = self.menu_conf
+
             self.g_pool.gui.append(self.menu)
 
     def deinit_gui(self):
         if self.menu:
-            self.menu_conf = self.menu.configuration
             self.menu_conf = self.menu.configuration
             if self.g_pool.app == 'capture':
                 self.g_pool.sidebar.remove(self.menu)
