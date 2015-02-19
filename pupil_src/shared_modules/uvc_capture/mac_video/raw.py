@@ -100,6 +100,8 @@ uvcc_controls = ('UVCC_REQ_SCANNING_MODE',
                 'UVCC_REQ_GAMMA_ABS',
                 'UVCC_REQ_WB_TEMP_AUTO',
                 'UVCC_REQ_WB_TEMP_ABS',
+                'UVCC_REQ_WB_COMPONENT_AUTO',
+                'UVCC_REQ_WB_COMPONENT_ABS',
                 '__UVCC_REQ_OUT_OF_RANGE')
 control_dict = dict(zip(uvcc_controls,range(len(uvcc_controls))))
 
