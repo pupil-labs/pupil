@@ -10,16 +10,17 @@
 
 import numpy as np
 import cv2
-from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture,make_coord_system_norm_based
+from gl_utils import adjust_gl_view,clear_gl_screen,draw_gl_point,basic_gl_setup,cvmat_to_glmat,make_coord_system_norm_based
 from gl_utils.trackball import Trackball
 from glfw import *
 from OpenGL.GL import *
-from OpenGL.GLU import *
 
+from pyglui.cygl.utils import RGBA
+from pyglui.cygl.utils import draw_polyline_norm,draw_polyline,draw_points_norm,draw_points,draw_named_texture
+from OpenGL.GL import GL_LINES
 from methods import GetAnglesPolyline,normalize
 
 #ctypes import for atb_vars:
-from ctypes import c_int,c_bool,create_string_buffer
 from time import time
 
 import logging
@@ -77,7 +78,7 @@ class Reference_Surface(object):
         self.camera_pose_3d = None
 
         self.uid = str(time())
-        self.real_world_size = [1.,1.]
+        self.real_world_size = {'x':1.,'y':1.}
 
         ###window and gui vars
         self._window = None
@@ -105,7 +106,7 @@ class Reference_Surface(object):
         """
         self.name = d['name']
         self.uid = d['uid']
-        self.real_world_size = d.get('real_world_size',[1.,1.])
+        self.real_world_size = d.get('real_world_size',{'x':1.,'y':1.})
 
         marker_dict = d['markers']
         for m_id,uv_coords in marker_dict.iteritems():
@@ -226,7 +227,7 @@ class Reference_Surface(object):
                     yx.shape = -1, 1, 2
                     # scale normalized object points to world space units (think m,cm,mm)
                     uv.shape = -1,2
-                    uv *= self.real_world_size
+                    uv *= [self.real_world_size['x'], self.real_world_size['y']]
                     # convert object points to lie on z==0 plane in 3d space
                     uv3d = np.zeros((uv.shape[0], uv.shape[1]+1))
                     uv3d[:,:-1] = uv
@@ -324,20 +325,10 @@ class Reference_Surface(object):
         for m in self.markers.values():
             m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
 
-    def atb_get_name(self):
-        return create_string_buffer(self.name,512)
-    def atb_set_name(self,name):
-        self.name = name.value
-    def atb_marker_status(self):
-        return create_string_buffer("%s / %s" %(self.detected_markers,len(self.markers)),512)
-    def atb_set_scale_x(self,val):
-        self.real_world_size[0]=val
-    def atb_set_scale_y(self,val):
-        self.real_world_size[1]=val
-    def atb_get_scale_x(self):
-        return self.real_world_size[0]
-    def atb_get_scale_y(self):
-        return self.real_world_size[1]
+
+    def marker_status(self):
+        return "%s   %s/%s" %(self.name,self.detected_markers,len(self.markers))
+
 
 
     def gl_draw_frame(self):
@@ -350,10 +341,10 @@ class Reference_Surface(object):
             hat = cv2.perspectiveTransform(hat,self.m_to_screen)
             frame = cv2.perspectiveTransform(frame,self.m_to_screen)
             alpha = min(1,self.build_up_status/self.required_build_up)
-            draw_gl_polyline_norm(frame.reshape((5,2)),(1.0,0.2,0.6,alpha))
-            draw_gl_polyline_norm(hat.reshape((4,2)),(1.0,0.2,0.6,alpha))
+            draw_polyline_norm(frame.reshape((5,2)),1,RGBA(1.0,0.2,0.6,alpha))
+            draw_polyline_norm(hat.reshape((4,2)),1,RGBA(1.0,0.2,0.6,alpha))
 
-            draw_gl_point_norm(frame.reshape(5,2)[0])
+            draw_points_norm(frame.reshape(5,2)[0:1])
 
 
     def gl_draw_corners(self):
@@ -363,7 +354,7 @@ class Reference_Surface(object):
         if self.detected:
             frame = np.array([[[0,0],[1,0],[1,1],[0,1]]],dtype=np.float32)
             frame = cv2.perspectiveTransform(frame,self.m_to_screen)
-            draw_gl_points_norm(frame.reshape((4,2)),15,(1.0,0.2,0.6,.5))
+            draw_points_norm(frame.reshape((4,2)),15,RGBA(1.0,0.2,0.6,.5))
 
 
 
@@ -383,7 +374,7 @@ class Reference_Surface(object):
             glMatrixMode(GL_PROJECTION)
             glPushMatrix()
             glLoadIdentity()
-            gluOrtho2D(0, 1, 0, 1) # gl coord convention
+            glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
 
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
@@ -397,10 +388,12 @@ class Reference_Surface(object):
             glPopMatrix()
 
             # now lets get recent pupil positions on this surface:
-            draw_gl_points_norm(self.gaze_on_srf,color=(0.,8.,.5,.8), size=80)
+            draw_points_norm(self.gaze_on_srf,color=RGBA(0.,8.,.5,.8), size=80)
 
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
+        if self.window_should_close:
+            self.close_window()
 
     #### fns to draw surface in separate window
     def gl_display_in_window_3d(self,world_tex_id,camera_intrinsics):
@@ -422,20 +415,20 @@ class Reference_Surface(object):
 
             glMatrixMode(GL_MODELVIEW)
 
-            draw_coordinate_system(l=self.real_world_size[0])
+            draw_coordinate_system(l=self.real_world_size['x'])
             glPushMatrix()
-            glScalef(self.real_world_size[0],self.real_world_size[1],1)
-            draw_gl_polyline([[0,0],[0,1],[1,1],[1,0]],color = (.5,.3,.1,.5),thickness=3)
+            glScalef(self.real_world_size['x'],self.real_world_size['y'],1)
+            draw_gl_polyline([[0,0],[0,1],[1,1],[1,0]],color = RGBA(.5,.3,.1,.5),thickness=3)
             glPopMatrix()
             # Draw the world window as projected onto the plane using the homography mapping
             glPushMatrix()
-            glScalef(self.real_world_size[0], self.real_world_size[1], 1)
+            glScalef(self.real_world_size['x'], self.real_world_size['y'], 1)
             # cv uses 3x3 gl uses 4x4 tranformation matricies
             m = cvmat_to_glmat(self.m_from_screen)
             glMultMatrixf(m)
             glTranslatef(0,0,-.01)
             draw_named_texture(world_tex_id)
-            draw_gl_polyline([[0,0],[0,1],[1,1],[1,0]],color = (.5,.3,.6,.5),thickness=3)
+            draw_gl_polyline([[0,0],[0,1],[1,1],[1,0]],color = RGBA(.5,.3,.6,.5),thickness=3)
             glPopMatrix()
 
             # Draw the camera frustum and origin using the 3d tranformation obtained from solvepnp
@@ -457,15 +450,15 @@ class Reference_Surface(object):
     def open_window(self):
         if not self._window:
             if self.fullscreen:
-                monitor = glfwGetMonitors()[self.monitor_idx.value]
+                monitor = glfwGetMonitors()[self.monitor_idx]
                 mode = glfwGetVideoMode(monitor)
                 height,width= mode[0],mode[1]
             else:
                 monitor = None
-                height,width= 640,int(640./(self.real_world_size[0]/self.real_world_size[1])) #open with same aspect ratio as surface
+                height,width= 640,int(640./(self.real_world_size['x']/self.real_world_size['y'])) #open with same aspect ratio as surface
 
             self._window = glfwCreateWindow(height, width, "Reference Surface: " + self.name, monitor=monitor, share=glfwGetCurrentContext())
-            if not self.fullscreen.value:
+            if not self.fullscreen:
                 glfwSetWindowPos(self._window,200,0)
 
 
@@ -494,6 +487,18 @@ class Reference_Surface(object):
 
             glfwMakeContextCurrent(active_window)
 
+    def close_window(self):
+        if self._window:
+            glfwDestroyWindow(self._window)
+            self._window = None
+            self.window_should_close = False
+
+    def open_close_window(self):
+        if self._window:
+            self.close_window()
+        else:
+            self.open_window()
+
 
     # window calbacks
     def on_resize(self,window,w, h):
@@ -501,7 +506,7 @@ class Reference_Surface(object):
 
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
-        adjust_gl_view(w,h,window)
+        adjust_gl_view(w,h)
         glfwMakeContextCurrent(active_window)
 
     def on_key(self,window, key, scancode, action, mods):
@@ -530,12 +535,6 @@ class Reference_Surface(object):
 
     def on_scroll(self,window,x,y):
         self.trackball.zoom_to(y)
-
-    def close_window(self):
-        if self._window:
-            glfwDestroyWindow(self._window)
-            self._window = None
-            self.window_should_close = False
 
 
     def cleanup(self):

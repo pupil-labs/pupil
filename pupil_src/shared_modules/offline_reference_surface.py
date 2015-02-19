@@ -237,7 +237,7 @@ class Offline_Reference_Surface(Reference_Surface):
 
     def generate_heatmap(self,section):
 
-        x,y = self.real_world_size
+        x,y = self.real_world_size['x'],self.real_world_size['y']
         x = max(1,int(x))
         y = max(1,int(y))
 
@@ -254,10 +254,10 @@ class Offline_Reference_Surface(Reference_Surface):
             logger.warning("No gaze data on surface for heatmap found.")
             all_gaze.append((-1.,-1.))
         all_gaze = np.array(all_gaze)
-        all_gaze *= self.real_world_size
+        all_gaze *= [self.real_world_size['x'],self.real_world_size['y']]
         hist,xedge,yedge = np.histogram2d(all_gaze[:,0], all_gaze[:,1],
                                             bins=[x,y],
-                                            range=[[0, self.real_world_size[0]], [0,self.real_world_size[1]]],
+                                            range=[[0, self.real_world_size['x']], [0,self.real_world_size['y']]],
                                             normed=False,
                                             weights=None)
 
