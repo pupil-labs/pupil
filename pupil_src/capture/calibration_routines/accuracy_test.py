@@ -130,8 +130,8 @@ class Accuracy_Test(Calibration_Plugin):
                 self.fov = float(val)
             except:
                 pass
-        submenu.append(ui.TextInput('diagonal camera FV',setter=set_fov,getter=lambda:str(self.fov) ) )
-        submenu.append(ui.TextInput('diagonal resolution',getter=lambda:str(self.res) ) )
+        submenu.append(ui.Text_Input('diagonal camera FV',setter=set_fov,getter=lambda:str(self.fov) ) )
+        submenu.append(ui.Text_Input('diagonal resolution',getter=lambda:str(self.res) ) )
         submenu[-1].read_only = True
         submenu.append(ui.Slider('outlier_thresh',self,label='outlier threshold deg',min=0,max=10))
         submenu.append(ui.Button('calculate result',self.calc_result))
@@ -146,10 +146,10 @@ class Accuracy_Test(Calibration_Plugin):
                             between successive samples during a fixation.'''.replace("\n"," ").replace("    ",'')
 
         submenu.append(ui.Info_Text(accuray_help))
-        submenu.append(ui.TextInput('angular accuray',getter=lambda:str(self.accuray) ) )
+        submenu.append(ui.Text_Input('angular accuray',getter=lambda:str(self.accuray) ) )
         submenu[-1].read_only = True
         submenu.append(ui.Info_Text(percision_help))
-        submenu.append(ui.TextInput('diagonal resolution',getter=lambda:str(self.percision) ) )
+        submenu.append(ui.Text_Input('diagonal resolution',getter=lambda:str(self.percision) ) )
         submenu[-1].read_only = True
         self.menu.append(submenu)
 

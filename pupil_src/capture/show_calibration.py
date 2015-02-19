@@ -16,7 +16,6 @@ from plugin import Plugin
 from calibration_routines.calibrate import get_map_from_cloud
 
 from pyglui import ui
-from pyglui.cygl.utils import init as cygl_init
 from pyglui.cygl.utils import RGBA as cygl_rgba
 from pyglui.cygl.utils import draw_polyline_norm as cygl_draw_polyline_norm
 from OpenGL.GL import GL_LINES
@@ -72,15 +71,14 @@ class Show_Calibration(Plugin):
         self.calib_area_ratio = cv2.contourArea(self.calib_bounds)/full_screen_area
 
         # initalize cygl
-        cygl_init()
 
     def init_gui(self):
         self.menu = ui.Scrolling_Menu('Calibration Results',pos=(300,500),size=(300,300))
         self.info = ui.Info_Text("Yellow: calibration error; Red: discarded outliers; Outline: calibrated area.")
         self.menu.append(self.info)
-        self.menu.append(ui.TextInput('inlier_count',self,getter=lambda: str(self.inlier_count), label='Number of used samples'))
-        self.menu.append(ui.TextInput('inlier_ratio',self,getter=lambda: str(self.inlier_ratio)), label='Fraction of used data points')
-        self.menu.append(ui.TextInput('calib_area_ratio',self,getter=lambda: str(self.calib_area_ratio)), label='Fraction of calibrated screen area')
+        self.menu.append(ui.Text_Input('inlier_count',self,getter=lambda: str(self.inlier_count), label='Number of used samples'))
+        self.menu.append(ui.Text_Input('inlier_ratio',self,getter=lambda: str(self.inlier_ratio)), label='Fraction of used data points')
+        self.menu.append(ui.Text_Input('calib_area_ratio',self,getter=lambda: str(self.calib_area_ratio)), label='Fraction of calibrated screen area')
         self.menu.append(ui.Button("Close Plugin", self.close))
 
     def deinit_gui(self):

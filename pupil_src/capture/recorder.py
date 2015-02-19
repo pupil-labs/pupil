@@ -103,17 +103,17 @@ class Recorder(Plugin):
     def init_gui(self):
         self.menu = ui.Growing_Menu('Recorder')
         self.menu.configuration = self.menu_conf
-        self.g_pool.sidebar.append(self.menu)
+        self.g_pool.sidebar.insert(3,self.menu)
         self.menu.append(ui.Info_Text('Pupil recordings are saved like this: "path_to_recordings/recording_session_name/nnn" where "nnn" is an increasing number to avoid overwrites.'))
         self.menu.append(ui.Info_Text('On Mac OS recordings are saved to "pupil_recordings" on the Desktop. On Linux they are inside the "Pupil_Capture" directory. You can change the path here but note that invalid input will be ignored.'))
-        self.menu.append(ui.TextInput('rec_dir',self.g_pool,setter=self.set_rec_dir,label='Path to Recordings'))
-        self.menu.append(ui.TextInput('session_name',self,setter=self.set_session_name,label='Recording Session Name'))
+        self.menu.append(ui.Text_Input('rec_dir',self.g_pool,setter=self.set_rec_dir,label='Path to Recordings'))
+        self.menu.append(ui.Text_Input('session_name',self,setter=self.set_session_name,label='Recording Session Name'))
         self.menu.append(ui.Info_Text('Recording the raw eye video is optional. We use it for debugging.'))
         self.menu.append(ui.Switch('record_eye',self,on_val=True,off_val=False,label='Record Eye'))
 
         self.button = ui.Thumb('running',self,setter=self.toggle,label='Record',hotkey='r')
         self.button.on_color[:] = (1,.0,.0,.8)
-        self.g_pool.quickbar.append(self.button)
+        self.g_pool.quickbar.insert(1,self.button)
 
 
     def deinit_gui(self):

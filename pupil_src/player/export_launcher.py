@@ -103,9 +103,9 @@ class Export_Launcher(Plugin):
         self.menu.elements[:] = []
 
         self.menu.append(ui.Info_Text('Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.'))
-        self.menu.append(ui.TextInput('rec_name',self,label='export name'))
+        self.menu.append(ui.Text_Input('rec_name',self,label='export name'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar.'))
-        clip_range = ui.TextInput('in_mark',getter=self.g_pool.trim_marks.get_string,label='frame range to export')
+        clip_range = ui.Text_Input('in_mark',getter=self.g_pool.trim_marks.get_string,label='frame range to export')
         clip_range.read_only = True
         self.menu.append(clip_range)
         self.menu.append(ui.Button('new export',self.add_export))

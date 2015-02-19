@@ -76,8 +76,8 @@ class Batch_Exporter(Plugin):
 
     def _update_gui(self):
         self.menu.elements[:] = []
-        self.menu.append(ui.TextInput('source_dir',self,label='Recording Source Directory',setter=self.set_src_dir))
-        self.menu.append(ui.TextInput('destination_dir',self,label='Recording Destination Directory',setter=self.set_src_dir))
+        self.menu.append(ui.Text_Input('source_dir',self,label='Recording Source Directory',setter=self.set_src_dir))
+        self.menu.append(ui.Text_Input('destination_dir',self,label='Recording Destination Directory',setter=self.set_src_dir))
         self.menu.append(ui.Button('start export',self.start))
 
         for job in self.exports[::-1]:

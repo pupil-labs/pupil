@@ -53,10 +53,12 @@ from pupil_remote import Pupil_Remote
 from marker_detector import Marker_Detector
 
 #manage plugins
-plugin_by_index =  [Recorder,Show_Calibration, Display_Recent_Gaze,Pupil_Server,Pupil_Remote,Marker_Detector]+calibration_plugins+gaze_mapping_plugins
+user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Remote,Marker_Detector]
+system_plugins  = [Display_Recent_Gaze,Recorder]
+plugin_by_index =  user_launchable_plugins+system_plugins+calibration_plugins+gaze_mapping_plugins
 name_by_index = [p.__name__ for p in plugin_by_index]
 plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-default_plugins = [('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Server',{})]
+default_plugins = [('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{})]
 
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
@@ -164,6 +166,12 @@ def world(g_pool,cap_src,cap_size):
         new_plugin = new_calibration(g_pool)
         g_pool.plugins.add(new_plugin)
 
+    def open_plugin(plugin):
+        if plugin ==  "Select to load":
+            return
+        logger.debug('Open Plugin: %s'%plugin)
+        new_plugin = plugin(g_pool)
+        g_pool.plugins.add(new_plugin)
 
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
@@ -211,6 +219,9 @@ def world(g_pool,cap_src,cap_size):
     general_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum Pupil Confidence'))
     general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
     general_settings.append(ui.Button('set timebase to 0',reset_timebase))
+    general_settings.append(ui.Selector('open plugin', selection = user_launchable_plugins,
+                                        labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
+                                        setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.sidebar.append(general_settings)
     g_pool.calibration_menu = ui.Growing_Menu('Calibration')
     g_pool.calibration_menu.configuration = session_settings.get('calibration_menu_config',{})
@@ -235,6 +246,7 @@ def world(g_pool,cap_src,cap_size):
         if p.base_class_name == 'Calibration_Plugin':
             g_pool.active_calibration_plugin =  p.__class__
             break
+
 
 
     #set the last saved window size
@@ -330,6 +342,7 @@ def world(g_pool,cap_src,cap_size):
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
     session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
     session_settings['general_menu_config'] = general_settings.configuration
+    session_settings['calibration_menu_config']=g_pool.calibration_menu.configuration
     session_settings.close()
 
     # de-init all running plugins
