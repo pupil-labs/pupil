@@ -54,7 +54,7 @@ class Marker_Detector(Plugin):
 
         #plugin state
         self.mode = mode
-        self.running = False
+        self.running = True
 
 
         self.robust_detection = 1
@@ -115,7 +115,7 @@ class Marker_Detector(Plugin):
         self.g_pool.sidebar.append(self.menu)
 
         self.button = ui.Thumb('running',self,label='Track',hotkey='t')
-        self.button.on_color[:] = (1,.0,.0,.8)
+        self.button.on_color[:] = (.1,.2,1.,.8)
         self.g_pool.quickbar.append(self.button)
         self.add_button = ui.Thumb('add_surface',setter=self.add_surface,getter=lambda:False,label='Add Surface',hotkey='a')
         self.g_pool.quickbar.append(self.add_button)
@@ -185,13 +185,16 @@ class Marker_Detector(Plugin):
             if self.draw_markers:
                 draw_markers(frame.img,self.markers)
 
-
         # locate surfaces
         for s in self.surfaces:
             s.locate(self.markers, self.locate_3d,self.camera_intrinsics)
             # if s.detected:
                 # events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
+        if self.running:
+            self.button.status_text = '%s/%s'%(len([s for s in self.surfaces if s.detected]),len(self.surfaces))
+        else:
+            self.button.status_text = 'tracking paused'
 
         # edit surfaces by user
         if self.mode == "Surface edit mode":
