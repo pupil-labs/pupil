@@ -172,8 +172,8 @@ class Plugin_List(list):
             try:
                 p = plugin_by_name[name](g_pool,**args)
                 self.add(p)
-            except:
-                logger.warning("Plugin '%s' failed to load from settings file." %name)
+            except AttributeError, e:
+                logger.warning("Plugin '%s' failed to load from settings file. Becasue of Error:%s" %(name,e))
 
     def add(self,new_plugin):
         '''
