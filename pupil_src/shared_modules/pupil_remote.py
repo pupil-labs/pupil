@@ -8,14 +8,11 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import numpy as np
-from gl_utils import draw_gl_polyline_norm
 
-import cv2
-import zmq
 from plugin import Plugin
 
-from recorder import Recorder
+from pyglui import ui
+import zmq
 
 import logging
 logger = logging.getLogger(__name__)
@@ -31,16 +28,14 @@ class Pupil_Remote(Plugin):
     'T' set timebase to 0
     'C' start currently selected calibration
     """
-    def __init__(self, g_pool, atb_pos=(10,400),on_char_fn = None):
+    def __init__(self, g_pool,address="tcp://*:50020",menu_conf = {'collapsed':True,}):
         super(Pupil_Remote, self).__init__(g_pool)
-        self.on_char_fn = on_char_fn
+        self.menu_conf = menu_conf
         self.order = .9 #excecute late in the plugin list.
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
-        self.address = ''
-        self.set_server("tcp://*:50020",512)
-
-        self.exclude_list = ['ellipse','pos_in_roi','major','minor','axes','angle','center']
+        self.address = address
+        self.set_server(self.address)
 
 
     def set_server(self,new_address):
@@ -52,15 +47,19 @@ class Pupil_Remote(Plugin):
 
 
     def init_gui(self):
-        pass
-        # help_str = "Pupil Remote using REQ RREP schema. "
+        help_str = "Pupil Remote using REQ RREP schemme"
+        self.menu = ui.Growing_Menu("Pupil Remote")
+        self.menu.append(ui.Info_Text(help_str))
+        self.menu.append(ui.Text_Input('address',self,setter=self.set_server,label='Address'))
+        self.menu.append(ui.Button('close',self.close))
+        self.menu.configuration = self.menu_conf
+        self.g_pool.sidebar.append(self.menu)
 
-        # self._bar = atb.Bar(name = self.__class__.__name__, label='Remote',
-        #     help=help_str, color=(50, 50, 50), alpha=100,
-        #     text='light', position=atb_pos,refresh=.3, size=(300,40))
-        # self._bar.add_var("server address",self.address, getter=lambda:self.address, setter=self.set_server)
-        # self._bar.add_button("close", self.close)
-
+    def deinit_gui(self):
+        if self.menu:
+            self.menu_conf = self.menu.configuration
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
 
 
     def update(self,frame,events):
@@ -73,14 +72,28 @@ class Pupil_Remote(Plugin):
                 rec_name = msg[2:]
                 if rec_name:
                     self.g_pool.rec_name = rec_name
-                self.on_char_fn(None,ord('r') ) #emulate the user hitting 'r'
+                for p in g_pool.plugins:
+                    if p.class_name == 'Recorder':
+                        p.toggle()
+                        break
             elif msg == 'T':
                 self.g_pool.timebase.value = self.g_pool.capture.get_now()
                 logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
             elif msg == 'C':
-                self.on_char_fn(None,ord('c') ) #emulate the user hitting 'c'
+                for p in g_pool.plugins:
+                    if p.base_class_name == 'Calibration_Plugin':
+                        p.toggle()
+                        break
 
-            self.socket.send("%s - confirmed"%msg)
+
+    def get_init_dict(self):
+        d = {}
+        d['address'] = self.address
+        if self.menu:
+            d['menu_conf'] = self.menu.configuration
+        else:
+            d['menu_conf'] = self.menu_conf
+        return d
 
 
     def close(self):
@@ -90,5 +103,6 @@ class Pupil_Remote(Plugin):
         """gets called when the plugin get terminated.
            This happens either volunatily or forced.
         """
+        self.deinit_gui()
         self.context.destroy()
 

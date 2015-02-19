@@ -16,9 +16,9 @@ from plugin import Plugin
 from calibration_routines.calibrate import get_map_from_cloud
 
 from pyglui import ui
-from pyglui.cygl.utils import RGBA as cygl_rgba
-from pyglui.cygl.utils import draw_polyline_norm as cygl_draw_polyline_norm
-from OpenGL.GL import GL_LINES
+from pyglui.cygl.utils import RGBA
+from pyglui.cygl.utils import draw_polyline_norm
+from OpenGL.GL import GL_LINES,GL_LINE_LOOP
 
 #logging
 import logging
@@ -28,9 +28,15 @@ class Show_Calibration(Plugin):
     """Calibration results visualization plugin"""
     def __init__(self,g_pool):
         super(Show_Calibration, self).__init__(g_pool)
+        self.menu=None
 
-        height,width = frame.height, frame.width
 
+        try:
+            width,height = self.g_pool.capture.frame_size
+        except AttributeError:
+            logger.warning("Works only with real capture")
+            self.close()
+            return
         if g_pool.app == 'capture':
             cal_pt_path =  os.path.join(g_pool.user_dir,"cal_pt_cloud.npy")
         else:
@@ -70,16 +76,20 @@ class Show_Calibration(Plugin):
         logger.debug("calibration bounds %s"%self.calib_bounds)
         self.calib_area_ratio = cv2.contourArea(self.calib_bounds)/full_screen_area
 
-        # initalize cygl
 
     def init_gui(self):
-        self.menu = ui.Scrolling_Menu('Calibration Results',pos=(300,500),size=(300,300))
+        self.menu = ui.Scrolling_Menu('Calibration Results',pos=(300,300),size=(300,300))
         self.info = ui.Info_Text("Yellow: calibration error; Red: discarded outliers; Outline: calibrated area.")
         self.menu.append(self.info)
-        self.menu.append(ui.Text_Input('inlier_count',self,getter=lambda: str(self.inlier_count), label='Number of used samples'))
-        self.menu.append(ui.Text_Input('inlier_ratio',self,getter=lambda: str(self.inlier_ratio)), label='Fraction of used data points')
-        self.menu.append(ui.Text_Input('calib_area_ratio',self,getter=lambda: str(self.calib_area_ratio)), label='Fraction of calibrated screen area')
+        self.menu.append(ui.Text_Input('inlier_count',self, label='Number of used samples'))
+        self.menu.elements[-1].read_only=True
+        self.menu.append(ui.Text_Input('inlier_ratio',self, label='Fraction of used data points'))
+        self.menu.elements[-1].read_only=True
+        self.menu.append(ui.Text_Input('calib_area_ratio',self, label='Fraction of calibrated screen area'))
+        self.menu.elements[-1].read_only=True
+
         self.menu.append(ui.Button("Close Plugin", self.close))
+        self.g_pool.gui.append(self.menu)
 
     def deinit_gui(self):
         if self.menu:
@@ -88,9 +98,9 @@ class Show_Calibration(Plugin):
 
     def gl_display(self):
         if self.inliers is not None:
-            cygl_draw_polyline_norm(self.inliers,1,cygl_rgba(1.,.5,0.,.5),line_type=GL_LINES)
-            cygl_draw_gl_polyline_norm(self.outliers,1,cygl_rgba(1.,0.,0.,.5),line_type=GL_LINES)
-            cygl_draw_gl_polyline_norm(self.calib_bounds[:,0],cygl_rgba(.0,1.,0,.5))
+            draw_polyline_norm(self.inliers,1,RGBA(1.,.5,0.,.5),line_type=GL_LINES)
+            draw_polyline_norm(self.outliers,1,RGBA(1.,0.,0.,.5),line_type=GL_LINES)
+            draw_polyline_norm(self.calib_bounds[:,0],1,RGBA(.0,1.,0,.5),line_type=GL_LINE_LOOP)
 
     def close(self):
         self.alive = False

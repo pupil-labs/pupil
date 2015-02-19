@@ -99,8 +99,6 @@ class Pupil_Server(Plugin):
         """gets called when the plugin get terminated.
         This happens either voluntarily or forced.
         """
-        if self.menu:
-            self.deinit_gui()
-
+        self.deinit_gui()
         self.context.destroy()
 
