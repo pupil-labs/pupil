@@ -118,8 +118,8 @@ from manual_gaze_correction import Manual_Gaze_Correction
 from batch_exporter import Batch_Exporter
 
 system_plugins = Seek_Bar,Trim_Marks
-user_lauchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Marker_Auto_Trim_Marks,Pupil_Server,Batch_Exporter
-available_plugins = system_plugins + user_lauchable_plugins
+user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Marker_Auto_Trim_Marks,Pupil_Server,Batch_Exporter
+available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
@@ -292,7 +292,7 @@ def main():
 
     def purge_plugins():
         for p in g_pool.plugins:
-            if p.__class__ in user_lauchable_plugins:
+            if p.__class__ in user_launchable_plugins:
                 p.alive=False
         g_pool.plugins.clean()
 
@@ -307,8 +307,8 @@ def main():
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
 
-    g_pool.main_menu.append(ui.Selector('open plugin', selection = user_lauchable_plugins,
-                                        labels = [p.__name__.replace('_',' ') for p in user_lauchable_plugins],
+    g_pool.main_menu.append(ui.Selector('open plugin', selection = user_launchable_plugins,
+                                        labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.main_menu.append(ui.Button('close all plugins',purge_plugins))
 
@@ -399,7 +399,7 @@ def main():
                 dt,ts = t-ts,t
             fps_graph.add(1./dt)
 
-            # g_pool.play_button.status_text = str(frame.index)
+            g_pool.play_button.status_text = str(frame.index)
         #always update the CPU graph
         cpu_graph.update()
 
