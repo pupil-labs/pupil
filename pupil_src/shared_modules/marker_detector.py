@@ -235,7 +235,7 @@ class Marker_Detector(Plugin):
                 draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
 
             for s in self.surfaces:
-                s.gl_draw_frame()
+                s.gl_draw_frame(self.img_shape)
 
 
         for s in self.surfaces:
@@ -247,7 +247,7 @@ class Marker_Detector(Plugin):
 
         if self.mode == "Surface edit mode":
             for s in self.surfaces:
-                s.gl_draw_frame()
+                s.gl_draw_frame(self.img_shape)
                 s.gl_draw_corners()
 
 

@@ -20,6 +20,8 @@ from pyglui.cygl.utils import draw_polyline_norm,draw_polyline,draw_points_norm,
 from OpenGL.GL import GL_LINES
 from methods import GetAnglesPolyline,normalize
 
+from pyglui.pyfontstash import fontstash
+from pyglui.ui import get_opensans_font_path
 #ctypes import for atb_vars:
 from time import time
 
@@ -88,8 +90,15 @@ class Reference_Surface(object):
 
         self.gaze_on_srf = [] # points on surface for realtime feedback display
 
+        self.glfont = fontstash.Context()
+        self.glfont.add_font('opensans',get_opensans_font_path())
+        self.glfont.set_size(22)
+        self.glfont.set_color_float((0.2,0.5,0.9,1.0))
+
+
         if saved_definition is not None:
             self.load_from_dict(saved_definition)
+
 
 
     def save_to_dict(self):
@@ -331,7 +340,7 @@ class Reference_Surface(object):
 
 
 
-    def gl_draw_frame(self):
+    def gl_draw_frame(self,img_size):
         """
         draw surface and markers
         """
@@ -344,8 +353,11 @@ class Reference_Surface(object):
             draw_polyline_norm(frame.reshape((5,2)),1,RGBA(1.0,0.2,0.6,alpha))
             draw_polyline_norm(hat.reshape((4,2)),1,RGBA(1.0,0.2,0.6,alpha))
 
-            draw_points_norm(frame.reshape(5,2)[0:1])
-
+            draw_points_norm(frame.reshape((5,-1))[0:1])
+            text_anchor = frame.reshape((5,-1))[2]
+            text_anchor[1] = 1-text_anchor[1]
+            text_anchor *=img_size[1],img_size[0]
+            self.glfont.draw_text(text_anchor[0],text_anchor[1],self.marker_status())
 
     def gl_draw_corners(self):
         """
