@@ -199,12 +199,12 @@ class Recorder(Plugin):
 
             # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
             for p in events['pupil_positions']:
-                pupil_pos = p['norm_pos'][0],p['norm_pos'][1],p['diameter'],p['timestamp'],p['confidence'],p['id']
+                pupil_pos = p['timestamp'],p['confidence'],p['id'],p['norm_pos'][0],p['norm_pos'][1],p['diameter']
 
                 self.pupil_list.append(pupil_pos)
 
             for g in events.get('gaze',[]):
-                gaze_pos = g['norm_pos'][0],g['norm_pos'][1],g['confidence'],g['timestamp']
+                gaze_pos = g['timestamp'],g['confidence'],g['norm_pos'][0],g['norm_pos'][1]
                 self.gaze_list.append(gaze_pos)
 
             self.timestamps.append(frame.timestamp)

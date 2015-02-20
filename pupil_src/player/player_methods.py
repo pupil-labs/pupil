@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def correlate_gaze(gaze_list,timestamps):
     '''
-    gaze_list: gaze x | gaze y | confidence | timestamp
+    gaze_list: timestamp | confidence | gaze x | gaze y |
     timestamps timestamps to correlate gaze data to
 
 
@@ -37,7 +37,7 @@ def correlate_gaze(gaze_list,timestamps):
         logger.warning("No gaze positons in this recording.")
         return positions_by_frame
 
-    gaze_timestamp = data_point[3]
+    gaze_timestamp = data_point[0]
 
     while gaze_list:
         # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
@@ -46,10 +46,10 @@ def correlate_gaze(gaze_list,timestamps):
         except IndexError:
             break
         if gaze_timestamp <= t_between_frames:
-            x,y,confidence,ts = data_point
+            ts,confidence,x,y, = data_point
             positions_by_frame[frame_idx].append({'norm_gaze':(x,y), 'confidence':confidence, 'timestamp':ts})
             data_point = gaze_list.pop(0)
-            gaze_timestamp = data_point[3]
+            gaze_timestamp = data_point[0]
         else:
             frame_idx+=1
 
