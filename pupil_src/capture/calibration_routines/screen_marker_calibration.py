@@ -405,7 +405,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             cygl_draw_points([screen_pos],size=5,color=cygl_rgba(1.,0.,0.,self.pattern_alpha),sharpness=0.95)
 
         if self.clicks_to_close <5:
-            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4,'Touch %s more times to cancel calibrating.'%self.clicks_to_close)
+            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4,'Touch %s more times to cancel calibration.'%self.clicks_to_close)
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
