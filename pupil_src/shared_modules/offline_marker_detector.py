@@ -125,12 +125,12 @@ class Offline_Marker_Detector(Plugin):
         pass
         # self._bar.clear()
         self.menu.elements[:] = []
-        self.menu.append(ui.Info_Text('This is the info text. It should explain some non obvious things.'))
-        self.menu.append(ui.Button('close',self.close))
-        self.menu.append(ui.Selector('mode',self,selection=["Show Markers and Frames","Show Marker Id's", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
-        self.menu.append(ui.Button("(re)-calculate gaze distributions", self.recalculate))
-        self.menu.append(ui.Button("Export Gaze and Surface Data", self.save_surface_statsics_to_file))
-        self.menu.append(ui.Button("add surface", lambda:self.add_surface('_')))
+        self.menu.append(ui.Info_Text('The offline marker Tracker will look for markers in the entire video. It be default uses surface definitions defined in capture. You can change and add more surfaces here.'))
+        self.menu.append(ui.Button('Close',self.close))
+        self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
+        self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
+        self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statsics_to_file))
+        self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
         for s in self.surfaces:
             idx = self.surfaces.index(s)
             s_menu = ui.Growing_Menu("Surface %s"%idx)
@@ -239,7 +239,7 @@ class Offline_Marker_Detector(Plugin):
                 pass
                 # events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp,'gaze_on_srf':s.gaze_on_srf})
 
-        if self.mode == "Show Marker Id's":
+        if self.mode == "Show marker IDs":
             draw_markers(frame.img,self.markers)
 
         # edit surfaces by user
