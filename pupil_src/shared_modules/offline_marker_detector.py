@@ -39,7 +39,7 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-from square_marker_detect import detect_markers_robust,detect_markers_simple, draw_markers,m_marker_to_screen
+from square_marker_detect import detect_markers_robust, draw_markers,m_marker_to_screen
 from offline_reference_surface import Offline_Reference_Surface
 from math import sqrt
 

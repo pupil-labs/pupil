@@ -233,10 +233,6 @@ def m_screen_to_marker(marker):
     return cv2.getPerspectiveTransform(marker['verts'],mapped_space_one)
 
 
-def detect_markers_simple(img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False):
-    gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    return detect_markers(gray_img,grid_size,min_marker_perimeter,aperture,visualize)
-
 
 
 

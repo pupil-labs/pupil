@@ -21,7 +21,7 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-from square_marker_detect import detect_markers_robust,detect_markers_simple, draw_markers,m_marker_to_screen
+from square_marker_detect import detect_markers_robust,detect_markers, draw_markers,m_marker_to_screen
 from reference_surface import Reference_Surface
 from math import sqrt
 
@@ -175,11 +175,11 @@ class Marker_Detector(Plugin):
                                                     visualize=0,
                                                     true_detect_every_frame=3)
             else:
-                self.markers = detect_markers_simple(gray,
-                                                    grid_size = 5,
-                                                    min_marker_perimeter=self.min_marker_perimeter,
-                                                    aperture=self.aperture,
-                                                    visualize=0)
+                self.markers = detect_markers(gray,
+                                                grid_size = 5,
+                                                min_marker_perimeter=self.min_marker_perimeter,
+                                                aperture=self.aperture,
+                                                visualize=0)
 
 
                 if self.mode == "Show marker IDs":
