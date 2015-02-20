@@ -106,7 +106,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                 pos = glfwGetCursorPos(window)
                 pos = normalize(pos,glfwGetWindowSize(eye_window))
                 pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
-                if u_r.mouse_over_edit_pt(pos,u_r.handle_size,u_r.handle_size):
+                if u_r.mouse_over_edit_pt(pos,u_r.handle_size+20,u_r.handle_size+20):
                     return # if the roi interacts we dont what the gui to interact as well
 
         g_pool.gui.update_button(button,action,mods)
@@ -398,10 +398,10 @@ class UIRoi(Roi):
     """
     def __init__(self,array_shape):
         super(UIRoi, self).__init__(array_shape)
-        self.max_x = array_shape[1]-20
-        self.min_x = 20
-        self.max_y = array_shape[0]-20
-        self.min_y = 20
+        self.max_x = array_shape[1]-1
+        self.min_x = 1
+        self.max_y = array_shape[0]+1
+        self.min_y = 1
 
         #enforce contraints
         self.lX = max(self.min_x,self.lX)
@@ -410,7 +410,7 @@ class UIRoi(Roi):
         self.uY = min(self.max_y,self.uY)
 
 
-        self.handle_size = 20
+        self.handle_size = 45
         self.active_edit_pt = False
         self.active_pt_idx = None
         self.handle_color = cygl_rgba(.5,.5,.9,.9)
