@@ -213,12 +213,14 @@ class Canny_Detector(Pupil_Detector):
             overlay[-padding,padding:-padding:4]= 255
 
         if visualize:
-            c = (100.,frame.img.shape[0]-100.)
+            c = (100,frame.img.shape[0]-100)
             e_max = ((c),(self.pupil_max,self.pupil_max),0)
             e_recent = ((c),(self.target_size,self.target_size),0)
             e_min = ((c),(self.pupil_min,self.pupil_min),0)
             cv2.ellipse(frame.img,e_min,(0,0,255),1)
             cv2.ellipse(frame.img,e_recent,(0,255,0),1)
+            p,_ = cv2.getTextSize('%0.0f'%self.target_size, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
+            cv2.putText(frame.img,'%0.0f'%self.target_size, (c[0]-p[0]/2,c[1]+p[1]/2), cv2.FONT_HERSHEY_SIMPLEX,0.4,(255,100,100))
             cv2.ellipse(frame.img,e_max,(0,0,255),1)
 
         #get raw edge pix for later

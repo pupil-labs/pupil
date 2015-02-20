@@ -42,7 +42,7 @@ from pupil_detectors import Canny_Detector
 #UI Platform tweaks
 if platform.system() == 'Linux':
      scroll_factor = 10.0
-else:   
+else:
     scroll_factor = 1.0
 
 
@@ -249,12 +249,6 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     fps_graph.update_rate = 5
     fps_graph.label = "%0.0f FPS"
 
-    # pupil diameter graph
-    pupil_diameter_label = graph.Averaged_Value()
-    pupil_diameter_label.pos = (100.,frame.height-100.)
-    pupil_diameter_label.update_rate = 1
-    pupil_diameter_label.label = "%0.0f"
-    pupil_diameter_label.set_text_align(v_align='center',h_align='middle')
     # Event loop
     while not g_pool.quit.value:
         # Get an image from the grabber
@@ -326,16 +320,12 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
                                         (int(result['axes'][0]/2),int(result['axes'][1]/2)),
                                         int(result['angle']),0,360,15)
                 cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
-                if g_pool.display_mode == 'algorithm':
-                    pupil_diameter_label.add(result['diameter'])
             cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
 
         # render graphs
         graph.push_view()
         fps_graph.draw()
         cpu_graph.draw()
-        if g_pool.display_mode == 'algorithm':
-            pupil_diameter_label.draw()
         graph.pop_view()
 
         # render GUI
