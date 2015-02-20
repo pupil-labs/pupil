@@ -221,11 +221,11 @@ def world(g_pool,cap_src,cap_size):
     g_pool.sidebar.configuration = session_settings.get('side_bar_config',{})
     general_settings = ui.Growing_Menu('General')
     general_settings.configuration = session_settings.get('general_menu_config',{})
-    general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
-    general_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum Pupil Confidence'))
-    general_settings.append(ui.Switch('update_textures',g_pool,label="Update Display"))
-    general_settings.append(ui.Button('set timebase to 0',reset_timebase))
-    general_settings.append(ui.Selector('open plugin', selection = user_launchable_plugins,
+    general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface size'))
+    general_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
+    general_settings.append(ui.Switch('update_textures',g_pool,label="Update display"))
+    general_settings.append(ui.Button('Set timebase to 0',reset_timebase))
+    general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.sidebar.append(general_settings)

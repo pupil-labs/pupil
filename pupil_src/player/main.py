@@ -307,10 +307,10 @@ def main():
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
 
-    g_pool.main_menu.append(ui.Selector('open plugin', selection = user_launchable_plugins,
+    g_pool.main_menu.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter = lambda: "Select to load"))
-    g_pool.main_menu.append(ui.Button('close all plugins',purge_plugins))
+    g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
     g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey=GLFW_KEY_SPACE)
