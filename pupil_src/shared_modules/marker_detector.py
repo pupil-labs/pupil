@@ -140,7 +140,7 @@ class Marker_Detector(Plugin):
         self.menu.append(ui.Info_Text('This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*.'))
         self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Switch('robust_detection',self,label='Robust detection'))
-        self.menu.append(ui.Switch('locate_3d',self,label='3d localization'))
+        self.menu.append(ui.Switch('locate_3d',self,label='3D localization'))
         self.menu.append(ui.Selector('mode',self,label="Mode",selection=['Show markers and frames','Show marker IDs', 'Surface edit mode'] ))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_'),))
         for s in self.surfaces:
@@ -148,7 +148,7 @@ class Marker_Detector(Plugin):
 
             s_menu = ui.Growing_Menu("Surface %s"%idx)
             s_menu.collapsed=True
-            s_menu.append(ui.Text_Input('Name',s))
+            s_menu.append(ui.Text_Input('name',s,label='Name'))
             #     self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             s_menu.append(ui.Text_Input('x',s.real_world_size,'x_scale'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,'y_scale'))
