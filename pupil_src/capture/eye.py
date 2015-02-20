@@ -400,7 +400,7 @@ class UIRoi(Roi):
         super(UIRoi, self).__init__(array_shape)
         self.max_x = array_shape[1]-1
         self.min_x = 1
-        self.max_y = array_shape[0]+1
+        self.max_y = array_shape[0]-1
         self.min_y = 1
 
         #enforce contraints
