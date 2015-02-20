@@ -88,7 +88,7 @@ class Show_Calibration(Plugin):
         self.menu.append(ui.Text_Input('calib_area_ratio',self, label='Fraction of calibrated screen area'))
         self.menu.elements[-1].read_only=True
 
-        self.menu.append(ui.Button("Close Plugin", self.close))
+        self.menu.append(ui.Button('Close', self.close))
         self.g_pool.gui.append(self.menu)
 
     def deinit_gui(self):

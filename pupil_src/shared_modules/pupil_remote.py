@@ -47,11 +47,11 @@ class Pupil_Remote(Plugin):
 
 
     def init_gui(self):
-        help_str = "Pupil Remote using REQ RREP schemme"
-        self.menu = ui.Growing_Menu("Pupil Remote")
+        help_str = 'Pupil Remote using REQ RREP schemme'
+        self.menu = ui.Growing_Menu('Pupil Remote')
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Text_Input('address',self,setter=self.set_server,label='Address'))
-        self.menu.append(ui.Button('close',self.close))
+        self.menu.append(ui.Button('Close',self.close))
         self.menu.configuration = self.menu_conf
         self.g_pool.sidebar.append(self.menu)
 
