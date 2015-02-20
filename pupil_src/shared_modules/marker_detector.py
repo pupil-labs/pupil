@@ -212,10 +212,9 @@ class Marker_Detector(Plugin):
             if s.detected:
                 s.gaze_on_srf = []
                 for p in events.get('gaze',[]):
-                    if p['norm_pos'] is not None:
-                        gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_pos'])))
-                        p['realtime gaze on ' + s.name] = gp_on_s
-                        s.gaze_on_srf.append(gp_on_s)
+                    gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_pos'])))
+                    p['realtime gaze on ' + s.name] = gp_on_s
+                    s.gaze_on_srf.append(gp_on_s)
 
 
     def get_init_dict(self):
