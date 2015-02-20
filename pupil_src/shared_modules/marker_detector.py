@@ -117,7 +117,7 @@ class Marker_Detector(Plugin):
         self.button = ui.Thumb('running',self,label='Track',hotkey='t')
         self.button.on_color[:] = (.1,.2,1.,.8)
         self.g_pool.quickbar.append(self.button)
-        self.add_button = ui.Thumb('add_surface',setter=self.add_surface,getter=lambda:False,label='Add Surface',hotkey='a')
+        self.add_button = ui.Thumb('add_surface',setter=self.add_surface,getter=lambda:False,label='Add surface',hotkey='a')
         self.g_pool.quickbar.append(self.add_button)
         self.update_gui_markers()
 
@@ -139,7 +139,7 @@ class Marker_Detector(Plugin):
         self.menu.elements[:] = []
         self.menu.append(ui.Info_Text('This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*.'))
         self.menu.append(ui.Button('Close',self.close))
-        self.menu.append(ui.Switch('robust_detection',self,label='Robust Detection'))
+        self.menu.append(ui.Switch('robust_detection',self,label='Robust detection'))
         self.menu.append(ui.Switch('locate_3d',self,label='3d localization'))
         self.menu.append(ui.Selector('mode',self,label="Mode",selection=['Show markers and frames','Show marker IDs', 'Surface edit mode'] ))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_'),))
@@ -182,7 +182,7 @@ class Marker_Detector(Plugin):
                                                     visualize=0)
 
 
-                if self.mode == "Show Marker Id's":
+                if self.mode == "Show marker IDs":
                     draw_markers(frame.img,self.markers)
 
 
@@ -229,7 +229,7 @@ class Marker_Detector(Plugin):
         """
         Display marker and surface info inside world screen
         """
-        if self.mode == "Show Markers and Frames":
+        if self.mode == "Show markers and frames":
             for m in self.markers:
                 hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
