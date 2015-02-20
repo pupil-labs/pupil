@@ -74,6 +74,13 @@ class Pupil_Server(Plugin):
                     msg +=key+":"+str(value)+'\n'
             self.socket.send( msg )
 
+        for g in events['gaze']:
+            msg = "Gaze\n"
+            for key,value in g.iteritems():
+                if key not in self.exclude_list:
+                    msg +=key+":"+str(value)+'\n'
+            self.socket.send( msg )
+
         # for e in events:
         #     msg = 'Event'+'\n'
         #     for key,value in e.iteritems():
