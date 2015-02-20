@@ -190,9 +190,9 @@ class Camera_Capture(object):
         # camera_ids = [c.src_id for c in cameras]
         # self.menu.append(ui.Selector('src_id',self,selection=camera_ids,labels=camera_names,label='Capture Device', setter=gui_init_cam_by_src_id) )
 
-        hardware_ts_switch = ui.Switch('use_hw_ts',self,label='use hardware timestamps')
-        hardware_ts_switch.read_only = True
-        self.menu.append(hardware_ts_switch)
+        #hardware_ts_switch = ui.Switch('use_hw_ts',self,label='use hardware timestamps')
+        #hardware_ts_switch.read_only = True
+        #self.menu.append(hardware_ts_switch)
 
         # self.menu.append(ui.Selector('frame_rate', selection=self.capture.frame_rates,labels=[str(d/float(n)) for n,d in self.capture.frame_rates],
         #                                 label='Frame Rate', getter=gui_get_frame_rate, setter=gui_set_frame_rate) )
