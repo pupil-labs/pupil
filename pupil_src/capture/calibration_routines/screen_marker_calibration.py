@@ -210,6 +210,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             if not self.fullscreen:
                 glfwSetWindowPos(self._window,200,0)
 
+            glfwSetInputMode(self._window,GLFW_CURSOR,GLFW_CURSOR_HIDDEN)
             on_resize(self._window,height,width)
 
             #Register callbacks
@@ -270,6 +271,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
     def close_window(self):
         if self._window:
+            # enable mouse display
+            glfwSetInputMode(self._window,GLFW_CURSOR,GLFW_CURSOR_NORMAL)
             glfwDestroyWindow(self._window)
             self._window = None
 
