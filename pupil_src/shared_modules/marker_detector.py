@@ -110,7 +110,7 @@ class Marker_Detector(Plugin):
         self.update_gui_markers()
 
     def init_gui(self):
-        self.menu = ui.Growing_Menu('Marker Tracker')
+        self.menu = ui.Growing_Menu('Marker Detector')
         self.menu.configuration = self.menu_conf
         self.g_pool.sidebar.append(self.menu)
 
