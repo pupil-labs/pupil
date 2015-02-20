@@ -67,7 +67,7 @@ logger = logging.getLogger(__name__)
 #UI Platform tweaks
 if platform.system() == 'Linux':
      scroll_factor = 10.0
-else:   
+else:
     scroll_factor = 1.0
 
 
@@ -133,7 +133,7 @@ def world(g_pool,cap_src,cap_size):
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, cap_size, 24, timebase=g_pool.timebase)
+    cap = autoCreateCapture(cap_src,0, cap_size, 24, timebase=g_pool.timebase)
 
     # Test capture
     try:

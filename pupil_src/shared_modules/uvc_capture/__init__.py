@@ -48,7 +48,7 @@ from fake_capture import FakeCapture
 from file_capture import File_Capture, FileCaptureError, EndofVideoFileError,FileSeekError
 
 
-def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None):
+def autoCreateCapture(src, preferred_idx = 0,size=(640,480),fps=30,timestamps=None,timebase = None):
     # checking src and handling all cases:
     src_type = type(src)
 
@@ -59,14 +59,18 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None)
             if any([s in device.name for s in src]):
                 matching_devices.append(device)
 
-        if len(matching_devices) >1:
-            logger.warning('Found %s as devices that match the src string pattern Using the first one.'%[d.name for d in matching_devices] )
-        if len(matching_devices) ==0:
-            logger.error('No device found that matched %s'%src)
+        if len(matching_devices) > preferred_idx:
+            logger.warning('Found %s as devices that match the src string pattern Using number %s.'%([d.name for d in matching_devices],preferred_idx) )
+        else:
+            if len(matching_devices) == 0:
+                logger.error('No device found that matched %s'%src)
+            else:
+                logger.error('Not enough devices found that matched %s'%src)
             return FakeCapture(size,fps,timebase=timebase)
 
 
-        cap = Camera_Capture(matching_devices[0],filter_sizes(matching_devices[0],size),fps,timebase)
+
+        cap = Camera_Capture(matching_devices[preferred_idx],filter_sizes(matching_devices[preferred_idx],size),fps,timebase)
         logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
         return cap
 
@@ -99,13 +103,13 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None)
 def filter_sizes(cam,size):
     #here we can force some defaulit formats
 
-    if "Integrated Camera" in cam.name:
+    if "6000" in cam.name:
         if size[0] == 640:
             logger.info("Lenovo Integrated camera selected. Forcing format to 640,480")
-            return 640,480
+            return 640,360
         elif size[0] == 320:
             logger.info("Lenovo Integrated camera selected. Forcing format to 320,240")
-            return 320,240
+            return 320,160
 
     return size
 
