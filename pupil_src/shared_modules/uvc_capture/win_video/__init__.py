@@ -293,7 +293,7 @@ class Camera_Capture(object):
             # if none is found, choose highest framerate
             if match is None:
                 logger.warn("Capture device does not support preferred frame-rate %d"% (self.preferred_fps))
-                match = self.fps_mediatype_map[0]
+                match = self.fps_mediatype_map[-1]
         self.deviceSettings.indexMediaType = match[1]
 
 def _getVideoInputInstance():
