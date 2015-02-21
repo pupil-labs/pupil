@@ -23,6 +23,7 @@ import os,sys
 import cv2
 import numpy as np
 from time import time
+from pyglui import ui
 
 
 #logging
@@ -56,16 +57,17 @@ class Frame(object):
         self.timestamp = timestamp
         self.index = index
         self.img = img
-        self.compressed_img = compressed_img
-        self.compressed_pix_fmt = compressed_pix_fmt
+        self.height,self.width,_ = img.shape
+        self._gray = None
 
     def copy(self):
         return Frame(self.timestamp,self.img.copy(),self.index)
 
     @property
     def gray(self):
-        return cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
-
+        if self._gray is None:
+            self._gray =  cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
+        return self._gray
 
 class File_Capture():
     """
@@ -76,6 +78,7 @@ class File_Capture():
         self.controls = None #No UVC controls available with file capture
         # we initialize the actual capture based on cv2.VideoCapture
         self.cap = cv2.VideoCapture(src)
+        self.src =src
         if timestamps is None and src.endswith("eye.avi"):
             timestamps_loc = os.path.join(src.rsplit(os.path.sep,1)[0],'eye_timestamps.npy')
             logger.debug("trying to auto load eye_video timestamps with video at: %s"%timestamps_loc)
@@ -169,11 +172,17 @@ class File_Capture():
             timestamp = time()
         return timestamp
 
-    def create_atb_bar(self,pos):
-        return 0,0
 
-    def kill_atb_bar(self):
-        pass
+    def init_gui(self,sidebar):
+        self.menu = ui.Growing_Menu(label='File Capture Settings')
+        self.menu.append(ui.Info_Text("Running Capture with '%s' as src"%self.src))
+        self.sidebar = sidebar
+        self.sidebar.append(self.menu)
+
+    def deinit_gui(self):
+        if self.menu:
+            self.sidebar.remove(self.menu)
+            self.menu = None
 
     def close(self):
-        pass
+        self.deinit_gui()

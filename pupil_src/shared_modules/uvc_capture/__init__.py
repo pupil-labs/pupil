@@ -48,9 +48,15 @@ from fake_capture import FakeCapture
 from file_capture import File_Capture, FileCaptureError, EndofVideoFileError,FileSeekError
 
 
-def autoCreateCapture(src, preferred_idx = 0,size=(640,480),fps=30,timestamps=None,timebase = None):
+def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None):
+
+    preferred_idx = 0
     # checking src and handling all cases:
     src_type = type(src)
+
+    if src_type is tuple:
+        src,preferred_idx = src
+        src_type = type(src)
 
     #looking for attached cameras that match the suggested names
     if src_type is list:
@@ -113,9 +119,3 @@ def filter_sizes(cam,size):
 
     return size
 
-
-if __name__ == '__main__':
-    cap = autoCreateCapture(1,(1280,720),30)
-    if cap:
-        print cap.controls
-    print "done"
