@@ -182,8 +182,8 @@ class Marker_Detector(Plugin):
                                                 visualize=0)
 
 
-                if self.mode == "Show marker IDs":
-                    draw_markers(frame.img,self.markers)
+            if self.mode == "Show marker IDs":
+                draw_markers(frame.img,self.markers)
 
 
         # locate surfaces
