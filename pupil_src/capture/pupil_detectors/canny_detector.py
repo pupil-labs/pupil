@@ -114,9 +114,7 @@ class Canny_Detector(Pupil_Detector):
 
 
         #get the user_roi
-        img = frame.img
-        r_img = img[u_r.view]
-        gray_img = cv2.cvtColor(r_img,cv2.COLOR_BGR2GRAY)
+        gray_img = frame.gray[u_r.view]
 
 
         # coarse pupil detection
@@ -132,7 +130,7 @@ class Canny_Detector(Pupil_Detector):
         else:
             p_r = Roi(gray_img.shape)
             p_r.set((0,0,None,None))
-            w = img.shape[0]/2
+            w = gray_img.shape[0]/2
 
         coarse_pupil_width = w/2.
         padding = coarse_pupil_width/4.
@@ -154,6 +152,7 @@ class Canny_Detector(Pupil_Detector):
         offset = self.intensity_range
         spectral_offset = 5
         if visualize:
+            img = frame.img
             # display the histogram
             sx,sy = 100,1
             colors = ((0,0,255),(255,0,0),(255,255,0),(255,255,255))
@@ -194,8 +193,8 @@ class Canny_Detector(Pupil_Detector):
         edges = cv2.min(edges, spec_mask)
         edges = cv2.min(edges,binary_img)
 
-        overlay =  img[u_r.view][p_r.view]
         if visualize:
+            overlay =  img[u_r.view][p_r.view]
             b,g,r = overlay[:,:,0],overlay[:,:,1],overlay[:,:,2]
             g[:] = cv2.max(g,edges)
             b[:] = cv2.max(b,binary_img)
@@ -212,16 +211,16 @@ class Canny_Detector(Pupil_Detector):
             overlay[padding,padding:-padding:4] = 255
             overlay[-padding,padding:-padding:4]= 255
 
-        if visualize:
-            c = (100,frame.img.shape[0]-100)
+            #draw size ellipses
+            c = (100,img.shape[0]-100)
             e_max = ((c),(self.pupil_max,self.pupil_max),0)
             e_recent = ((c),(self.target_size,self.target_size),0)
             e_min = ((c),(self.pupil_min,self.pupil_min),0)
-            cv2.ellipse(frame.img,e_min,(0,0,255),1)
-            cv2.ellipse(frame.img,e_recent,(0,255,0),1)
+            cv2.ellipse(img,e_min,(0,0,255),1)
+            cv2.ellipse(img,e_recent,(0,255,0),1)
             p,_ = cv2.getTextSize('%0.0f'%self.target_size, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
-            cv2.putText(frame.img,'%0.0f'%self.target_size, (c[0]-p[0]/2,c[1]+p[1]/2), cv2.FONT_HERSHEY_SIMPLEX,0.4,(255,100,100))
-            cv2.ellipse(frame.img,e_max,(0,0,255),1)
+            cv2.putText(img,'%0.0f'%self.target_size, (c[0]-p[0]/2,c[1]+p[1]/2), cv2.FONT_HERSHEY_SIMPLEX,0.4,(255,100,100))
+            cv2.ellipse(img,e_max,(0,0,255),1)
 
         #get raw edge pix for later
         raw_edges = cv2.findNonZero(edges)
@@ -260,7 +259,7 @@ class Canny_Detector(Pupil_Detector):
                     pupil_ellipse['axes'] = e[1]
                     pupil_ellipse['angle'] = e[2]
                     e_img_center =u_r.add_vector(p_r.add_vector(e[0]))
-                    norm_center = normalize(e_img_center,(frame.img.shape[1], frame.img.shape[0]),flip_y=True)
+                    norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
                     pupil_ellipse['norm_pos'] = norm_center
                     pupil_ellipse['center'] = e_img_center
                     pupil_ellipse['timestamp'] = frame.timestamp
@@ -487,7 +486,7 @@ class Canny_Detector(Pupil_Detector):
         pupil_ellipse['axes'] = e[1]
         pupil_ellipse['angle'] = e[2]
         e_img_center =u_r.add_vector(p_r.add_vector(e[0]))
-        norm_center = normalize(e_img_center,(frame.img.shape[1], frame.img.shape[0]),flip_y=True)
+        norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
         pupil_ellipse['norm_pos'] = norm_center
         pupil_ellipse['center'] = e_img_center
         pupil_ellipse['timestamp'] = frame.timestamp
@@ -520,7 +519,7 @@ class Canny_Detector(Pupil_Detector):
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
         self.menu.append(self.info)
-        self.menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=20,step=1))
+        self.menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=60,step=1))
         self.menu.append(ui.Slider('pupil_min',self,label='Pupil min',min=1,max=250,step=1))
         self.menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=50,max=400,step=1))
 
