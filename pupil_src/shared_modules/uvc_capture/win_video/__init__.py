@@ -12,6 +12,7 @@ import videoInput as vi
 assert vi.VERSION >= 0.1
 import numpy as np
 import math
+import cv2
 from time import time
 import logging
 from videoInput import CaptureSettings, DeviceSettings
@@ -66,7 +67,7 @@ class Frame(object):
 
     @property
     def gray(self):
-        return None
+        return cv2.cvtColor(self._npy_frame, cv2.COLOR_BGR2GRAY)
 
     @property
     def bgr(self):
@@ -103,7 +104,7 @@ class Camera_Capture(object):
     @property
     def actual_height(self):
         return self.stream.listMediaType[self.deviceSettings.indexMediaType].height
-
+    
     @property
     def src_id(self):
         return self.device.symbolicName
@@ -133,7 +134,7 @@ class Camera_Capture(object):
         self.context = _getVideoInputInstance()
         res = self.context.setupDevice(self.deviceSettings, self.captureSettings)
         if res != vi.ResultCode.OK:
-            raise CameraCaptureError("Could not setup device. Error code: {:0f}".format(res))
+            raise CameraCaptureError("Could not setup device. Error code: %d" %(res))
 
         # creating frame buffer and initializing capture settings
         frame = np.empty((self.actual_height * self.actual_width * 3), dtype=np.uint8)
@@ -143,8 +144,7 @@ class Camera_Capture(object):
         frame.shape = (self.actual_height, self.actual_width, -1)
         self._frame = frame
 
-        print (self.actual_height, self.actual_width, self.preferred_fps)
-        logger.debug("Successfully set up device!")
+        logger.debug("Successfully set up device: %s @ %dx%dpx %dfps (mediatype %d)" %(self.name, self.actual_height, self.actual_width, self.frame_rate, self.deviceSettings.indexMediaType))
 
     def re_init(self, cam, size=(640,480), fps=None):
         # TODO: close capture
@@ -155,9 +155,15 @@ class Camera_Capture(object):
 
     def get_frame(self):
         res = self.context.readPixels(self.readSetting)
+        if res == vi.ResultCode.READINGPIXELS_REJECTED_TIMEOUT:
+            for n in range(5):
+                logger.debug("Reading frame timed out, retry %d/5" %(n+1))
+                res = self.context.readPixels(self.readSetting)
+                if res == vi.ResultCode.READINGPIXELS_DONE:
+                    break
         if res != vi.ResultCode.READINGPIXELS_DONE:
-            print res
-            raise CameraCaptureError("Could not receive frame. Error code: {:0f}".format(res))
+            logger.debug("Could not receive frame. Error code: %d" %(res))
+            raise CameraCaptureError("Could not receive frame. Error code: %d" %(res))
         frame = Frame(self._frame)
         frame.timestamp = self.get_now()
         return frame
@@ -270,7 +276,7 @@ class Camera_Capture(object):
         if not self.fps_mediatype_map:
             raise CameraCaptureError("Capture device does not support resolution: %d x %d"% (self.width, self.height))
 
-        logger.debug("found %d media types for given resolution" %len(self.fps_mediatype_map))
+        logger.debug("found %d media types for given resolution: %s" %(len(self.fps_mediatype_map), str(self.fps_mediatype_map)))
         self.fps_mediatype_map.sort()
 
     def _initMediaTypeId(self):
@@ -287,7 +293,7 @@ class Camera_Capture(object):
             # if none is found, choose highest framerate
             if match is None:
                 logger.warn("Capture device does not support preferred frame-rate %d"% (self.preferred_fps))
-                match = self.fps_mediatype_map[-1]
+                match = self.fps_mediatype_map[0]
         self.deviceSettings.indexMediaType = match[1]
 
 def _getVideoInputInstance():
