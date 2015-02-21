@@ -154,7 +154,7 @@ def main():
     world(g_pool,world_src,world_size)
 
     # Exit / clean-up
-    p_eye1.join()
+    p_eye0.join()
     if bilateral:
         p_eye1.join()
 
