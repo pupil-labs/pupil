@@ -100,19 +100,17 @@ class Global_Container(object):
 
 def main():
     # To assign camera by name: put string(s) in list
-    eye0_src = ["USB 2.0 Camera","Microsoft", "6000","Integrated Camera"]
-    eye1_src = eye0_src # let auto_create_capture assign the first match to 0 and the second to 1
+    eye_cam_names = ["USB 2.0 Camera","Microsoft", "6000","Integrated Camera"]
     world_src = ["Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
+    eye_src = (eye_cam_names,0),(eye_cam_names,1) #first match for eye0 and second match for eye1
 
     # to assign cameras directly, using integers as demonstrated below
-    # eye0_src = 5
-    # eye1_src = 4
+    # eye_src =  4 , 5 #second will be ignored for non bilateral
     # world_src = 1
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    # eye0_src = '/Users/mkassner/Downloads/eye.avi'
-    # eye1_src = '/Users/mkassner/Downloads/eye.avi'
+    eye_src = '/Users/mkassner/Downloads/eye.avi' , '/Users/mkassner/Downloads/eye.avi'
     # world_src = "/Users/mkassner/Desktop/2014_01_21/000/world.avi"
 
     # Camera video size in pixels (width,height)
@@ -128,35 +126,33 @@ def main():
 
     # Create and initialize IPC
     g_pool.pupil_queue = Queue()
-    g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
     g_pool.quit = Value(c_bool,0)
     g_pool.timebase = Value(c_double,0)
+    g_pool.eye_tx = []
     # make some constants avaiable
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
     g_pool.version = version
     g_pool.app = 'capture'
     g_pool.bilateral = bilateral
-    # set up subprocesses
-    p_eye0 = Process(target=eye, args=(g_pool,eye0_src,eye_size,0))
-    p_eye0.start()
 
-    if bilateral:
+
+    p_eye = []
+    for eye_id in range(1+1*bilateral):
+        rx,tx = Pipe(False)
+        p_eye += [Process(target=eye, args=(g_pool,eye_src[eye_id],eye_size,rx,eye_id))]
+        g_pool.eye_tx += [tx]
+        p_eye[-1].start()
         if platform.system() == 'Linux':
             # We need to give the camera driver some time before requesting another camera.
             sleep(0.5)
-        p_eye1 = Process(target=eye, args=(g_pool,eye1_src,eye_size,1))
-        p_eye1.start()
-
-    if platform.system() == 'Linux':
-        sleep(0.5)
 
     world(g_pool,world_src,world_size)
 
+
     # Exit / clean-up
-    p_eye1.join()
-    if bilateral:
-        p_eye1.join()
+    for p in p_eye:
+        p.join()
 
 if __name__ == '__main__':
     freeze_support()

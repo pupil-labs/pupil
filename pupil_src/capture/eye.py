@@ -47,13 +47,13 @@ else:
 
 
 
-def eye(g_pool,cap_src,cap_size,eye_id=0):
+def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     """
     Creates a window, gl context.
     Grabs images from a capture.
     Streams Pupil coordinates into g_pool.pupil_queue
     """
-
+    print eye_id,cap_src
     # modify the root logger for this process
     logger = logging.getLogger()
     # remove inherited handlers
@@ -134,7 +134,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye%s'%eye_id))
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, eye_id, cap_size, 30, timebase=g_pool.timebase)
+    cap = autoCreateCapture(cap_src, cap_size, 30, timebase=g_pool.timebase)
 
     # Test capture
     try:
@@ -275,8 +275,8 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
         ###  RECORDING of Eye Video (on demand) ###
         # Setup variables and lists for recording
-        if g_pool.eye_rx.poll():
-            command = g_pool.eye_rx.recv()
+        if rx_from_world.poll():
+            command = rx_from_world.recv()
             if command is not None:
                 record_path = command
                 logger.info("Will save eye video to: %s"%record_path)
@@ -376,10 +376,10 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     logger.debug("Process done")
 
-def eye_profiled(g_pool,cap_src,cap_size,eye_id=0):
+def eye_profiled(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     import cProfile,subprocess,os
     from eye import eye
-    cProfile.runctx("eye(g_pool,cap_src,cap_size,eye_id)",{"g_pool":g_pool,'cap_src':cap_src,'cap_size':cap_size,'eye_id':eye_id},locals(),"eye%s.pstats"%eye_id)
+    cProfile.runctx("eye(g_pool,cap_src,cap_size,rx_from_world,eye_id)",{"g_pool":g_pool,'cap_src':cap_src,'cap_size':cap_size,'rx_from_world':rx_from_world,'eye_id':eye_id},locals(),"eye%s.pstats"%eye_id)
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye%s.pstats | dot -Tpng -o eye%s_cpu_time.png"%(eye_id,eye_id), shell=True)
