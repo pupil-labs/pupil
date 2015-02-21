@@ -67,7 +67,7 @@ logger = logging.getLogger(__name__)
 #UI Platform tweaks
 if platform.system() == 'Linux':
      scroll_factor = 10.0
-else:   
+else:
     scroll_factor = 1.0
 
 

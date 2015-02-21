@@ -47,27 +47,27 @@ else:
 
 
 
-def eye(g_pool,cap_src,cap_size,eye_id=0):
+def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     """
     Creates a window, gl context.
     Grabs images from a capture.
     Streams Pupil coordinates into g_pool.pupil_queue
     """
-
+    print eye_id,cap_src
     # modify the root logger for this process
     logger = logging.getLogger()
     # remove inherited handlers
     logger.handlers = []
     # create file handler which logs even debug messages
-    fh = logging.FileHandler(os.path.join(g_pool.user_dir,'eye.log'),mode='w')
+    fh = logging.FileHandler(os.path.join(g_pool.user_dir,'eye%s.log'%eye_id),mode='w')
     fh.setLevel(logging.DEBUG)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
     # create formatter and add it to the handlers
-    formatter = logging.Formatter('Eye Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('Eye'+str(eye_id)+' Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
-    formatter = logging.Formatter('EYE Process [%(levelname)s] %(name)s : %(message)s')
+    formatter = logging.Formatter('EYE'+str(eye_id)+' Process [%(levelname)s] %(name)s : %(message)s')
     ch.setFormatter(formatter)
     # add the handlers to the logger
     logger.addHandler(fh)
@@ -131,10 +131,10 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
 
     # load session persistent settings
-    session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye'))
+    session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye%s'%eye_id))
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, cap_size, 24, timebase=g_pool.timebase)
+    cap = autoCreateCapture(cap_src, cap_size, 30, timebase=g_pool.timebase)
 
     # Test capture
     try:
@@ -182,7 +182,12 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     # Initialize glfw
     glfwInit()
-    eye_window = glfwCreateWindow(frame.width, frame.height, "Eye", None, None)
+    if g_pool.bilateral:
+        title = "Bilateral eye %s"%eye_id
+    else:
+        title = 'Eye'
+    eye_window = glfwCreateWindow(frame.width, frame.height, title, None, None)
+
     glfwMakeContextCurrent(eye_window)
     cygl_init()
 
@@ -202,7 +207,7 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     # refresh speed settings
     glfwSwapInterval(0)
-    glfwSetWindowPos(eye_window,800,0)
+    glfwSetWindowPos(eye_window,800,300*eye_id)
 
 
     #setup GUI
@@ -270,17 +275,17 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
         ###  RECORDING of Eye Video (on demand) ###
         # Setup variables and lists for recording
-        if g_pool.eye_rx.poll():
-            command = g_pool.eye_rx.recv()
+        if rx_from_world.poll():
+            command = rx_from_world.recv()
             if command is not None:
                 record_path = command
                 logger.info("Will save eye video to: %s"%record_path)
-                video_path = os.path.join(record_path, "eye.mkv")
-                timestamps_path = os.path.join(record_path, "eye_timestamps.npy")
+                video_path = os.path.join(record_path, "eye%s.mkv"%eye_id)
+                timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
                 writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), float(cap.frame_rate), (frame.img.shape[1], frame.img.shape[0]))
                 timestamps = []
             else:
-                logger.info("Done recording eye.")
+                logger.info("Done recording.")
                 writer = None
                 np.save(timestamps_path,np.asarray(timestamps))
                 del timestamps
@@ -371,14 +376,14 @@ def eye(g_pool,cap_src,cap_size,eye_id=0):
 
     logger.debug("Process done")
 
-def eye_profiled(g_pool,cap_src,cap_size):
+def eye_profiled(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     import cProfile,subprocess,os
     from eye import eye
-    cProfile.runctx("eye(g_pool,cap_src,cap_size)",{"g_pool":g_pool,'cap_src':cap_src,'cap_size':cap_size},locals(),"eye.pstats")
+    cProfile.runctx("eye(g_pool,cap_src,cap_size,rx_from_world,eye_id)",{"g_pool":g_pool,'cap_src':cap_src,'cap_size':cap_size,'rx_from_world':rx_from_world,'eye_id':eye_id},locals(),"eye%s.pstats"%eye_id)
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-    subprocess.call("python "+gprof2dot_loc+" -f pstats eye.pstats | dot -Tpng -o eye_cpu_time.png", shell=True)
-    print "created cpu time graph for eye process. Please check out the png next to the eye.py file"
+    subprocess.call("python "+gprof2dot_loc+" -f pstats eye%s.pstats | dot -Tpng -o eye%s_cpu_time.png"%(eye_id,eye_id), shell=True)
+    print "created cpu time graph for eye%s process. Please check out the png next to the eye.py file"%eye_id
 
 
 

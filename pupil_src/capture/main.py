@@ -69,13 +69,22 @@ logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 
 
-#if you pass any additional argument when calling this script. The profiler will be used.
-if len(sys.argv) >= 2:
+if 'bilateral' in sys.argv:
+    bilateral = True
+    logger.debug("Starting in bilateral mode")
+else:
+    bilateral = False
+    logger.debug("Starting in single eye cam mode")
+
+
+if 'profiled' in sys.argv:
+    logger.debug("Capture processes will be profiled.")
     from eye import eye_profiled as eye
     from world import world_profiled as world
 else:
     from eye import eye
     from world import world
+
 
 
 #get the current software version
@@ -91,20 +100,21 @@ class Global_Container(object):
 
 def main():
     # To assign camera by name: put string(s) in list
-    eye_src = ["USB 2.0 Camera","Microsoft", "6000","Integrated Camera"]
+    eye_cam_names = ["USB 2.0 Camera","Microsoft", "6000","Integrated Camera"]
     world_src = ["Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
+    eye_src = (eye_cam_names,0),(eye_cam_names,1) #first match for eye0 and second match for eye1
 
     # to assign cameras directly, using integers as demonstrated below
-    # eye_src = 5
+    # eye_src =  4 , 5 #second will be ignored for non bilateral
     # world_src = 1
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    # eye_src = '/Users/mkassner/Downloads/eye.avi'
+    # eye_src = '/Users/mkassner/Downloads/eye.avi' , '/Users/mkassner/Downloads/eye.avi'
     # world_src = "/Users/mkassner/Desktop/2014_01_21/000/world.avi"
 
     # Camera video size in pixels (width,height)
-    eye_size = (640,360)
+    eye_size = (640,480)
     world_size = (1280,720)
 
 
@@ -116,27 +126,33 @@ def main():
 
     # Create and initialize IPC
     g_pool.pupil_queue = Queue()
-    g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
     g_pool.quit = Value(c_bool,0)
     g_pool.timebase = Value(c_double,0)
+    g_pool.eye_tx = []
     # make some constants avaiable
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
     g_pool.version = version
     g_pool.app = 'capture'
-    # set up subprocesses
-    p_eye = Process(target=eye, args=(g_pool,eye_src,eye_size))
+    g_pool.bilateral = bilateral
 
-    # Spawn subprocess:
-    p_eye.start()
-    if platform.system() == 'Linux':
-        # We need to give the camera driver some time before requesting another camera.
-        sleep(0.5)
+
+    p_eye = []
+    for eye_id in range(1+1*bilateral):
+        rx,tx = Pipe(False)
+        p_eye += [Process(target=eye, args=(g_pool,eye_src[eye_id],eye_size,rx,eye_id))]
+        g_pool.eye_tx += [tx]
+        p_eye[-1].start()
+        if platform.system() == 'Linux':
+            # We need to give the camera driver some time before requesting another camera.
+            sleep(0.5)
 
     world(g_pool,world_src,world_size)
 
+
     # Exit / clean-up
-    p_eye.join()
+    for p in p_eye:
+        p.join()
 
 if __name__ == '__main__':
     freeze_support()

@@ -189,7 +189,8 @@ class Recorder(Plugin):
         self.writer = None
         # positions path to eye process
         if self.record_eye:
-            self.g_pool.eye_tx.send(self.rec_path)
+            for tx in self.g_pool.eye_tx:
+                tx.send(self.rec_path)
 
     def update(self,frame,events):
         if self.running:
@@ -219,10 +220,11 @@ class Recorder(Plugin):
         self.writer = None
 
         if self.record_eye:
-            try:
-                self.g_pool.eye_tx.send(None)
-            except:
-                logger.warning("Could not stop eye-recording. Please report this bug!")
+            for tx in self.g_pool.eye_tx:
+                try:
+                    tx.send(None)
+                except:
+                    logger.warning("Could not stop eye-recording. Please report this bug!")
 
         gaze_list_path = os.path.join(self.rec_path, "gaze_positions.npy")
         np.save(gaze_list_path,np.asarray(self.gaze_list))
