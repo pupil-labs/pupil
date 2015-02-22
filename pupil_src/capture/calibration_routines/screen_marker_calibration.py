@@ -202,12 +202,14 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             if self.fullscreen:
                 monitor = glfwGetMonitors()[self.monitor_idx]
                 mode = glfwGetVideoMode(monitor)
-                height,width= mode[0],mode[1]
+                # glfwGetFramebufferSize(window)
+                hdpi_factor = glfwGetFramebufferSize(glfwGetCurrentContext())[0]/glfwGetWindowSize(glfwGetCurrentContext())[0]
+                width,height= mode[0]*hdpi_factor,mode[1]*hdpi_factor
             else:
                 monitor = None
-                height,width= 640,360
+                widht,height= 640,360
 
-            self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
+            self._window = glfwCreateWindow(width, height, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen:
                 glfwSetWindowPos(self._window,200,0)
 
