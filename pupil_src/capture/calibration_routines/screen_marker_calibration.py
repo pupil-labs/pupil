@@ -15,14 +15,12 @@ from methods import normalize,denormalize
 from gl_utils import draw_gl_point,adjust_gl_view,draw_gl_point_norm,draw_gl_polyline,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
-from OpenGL.GLU import gluOrtho2D
 import calibrate
 from circle_detector import get_candidate_ellipses
 
 import audio
 
 from pyglui import ui
-from pyglui.cygl.utils import init as cygl_init
 from pyglui.cygl.utils import draw_points as cygl_draw_points
 from pyglui.cygl.utils import RGBA as cygl_rgba
 from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
@@ -36,16 +34,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def draw_marker(pos,scale,alpha,window):
-    pos = int(pos[0]),int(pos[1])
+def draw_marker(pos,r,alpha):
     black = cygl_rgba(0.,0.,0.,alpha)
     white = cygl_rgba(1.,1.,1.,alpha)
-    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-    for r,c in zip((scale*100*hdpi_factor,scale*80*hdpi_factor,scale*60*hdpi_factor,scale*40*hdpi_factor,scale*20*hdpi_factor),(black,white,black,white,black)):
+    for r,c in zip((r,0.8*r,0.6*r,.4*r,.2*r),(black,white,black,white,black)):
         cygl_draw_points([pos],size=r,color=c,sharpness=0.95)
 
 # window calbacks
-def on_resize(window,w, h):
+def on_resize(window,w,h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
     hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
@@ -143,7 +139,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.g_pool.calibration_menu.append(self.menu)
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
-        self.menu.append(ui.Slider('marker_scale',self,step=0.05,min=0.5,max=5.0,label='Pattern scale'))
+        self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Pattern scale'))
 
         submenu = ui.Growing_Menu('Advanced')
         submenu.collapsed = True
@@ -214,7 +210,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 glfwSetWindowPos(self._window,200,0)
 
             glfwSetInputMode(self._window,GLFW_CURSOR,GLFW_CURSOR_HIDDEN)
-            on_resize(self._window,height,width)
+            on_resize(self._window,width,height)
 
             #Register callbacks
             glfwSetWindowSizeCallback(self._window,on_resize)
@@ -326,7 +322,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
             # Animate the screen marker
             if self.screen_marker_state < self.screen_marker_max:
-                if self.detected or not on_position:
+                if self.detected or not on_position or 1:
                     self.screen_marker_state += 1
             else:
                 self.screen_marker_state = 0
@@ -390,19 +386,21 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         #            r             #
         ############################
 
-        r = 110*self.marker_scale
+
+        hdpi_factor = glfwGetFramebufferSize(self._window)[0]/glfwGetWindowSize(self._window)[0]
+        r = 110*self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         p_window_size = glfwGetWindowSize(self._window)
         # compensate for radius of marker
-        gluOrtho2D(-r,p_window_size[0]+r,p_window_size[1]+r, -r) # origin in the top left corner just like the img np-array
+        gl.glOrtho(-r*.6,p_window_size[0]+r*.6, -r*.7, p_window_size[1]+r*.7 ,-1,1)
         # Switch back to Model View Matrix
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
 
-        screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
+        screen_pos = denormalize(self.display_pos,p_window_size,flip_y=False)
 
-        draw_marker(screen_pos,self.marker_scale,self.pattern_alpha,self._window)
+        draw_marker(screen_pos,r,self.pattern_alpha)
         #some feedback on the detection state
 
         if self.detected and self.on_position:
