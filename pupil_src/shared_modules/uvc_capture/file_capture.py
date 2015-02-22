@@ -74,6 +74,7 @@ class File_Capture():
     simple file capture.
     """
     def __init__(self,src,timestamps=None):
+        self.menu = None
         self.auto_rewind = True
         self.controls = None #No UVC controls available with file capture
         # we initialize the actual capture based on cv2.VideoCapture
