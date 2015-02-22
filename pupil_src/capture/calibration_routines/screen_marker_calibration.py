@@ -144,7 +144,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         submenu = ui.Growing_Menu('Advanced')
         submenu.collapsed = True
         self.menu.append(submenu)
-        submenu.append(ui.Slider('sample_duration',self,step=1,min=30,max=200,label='Sample duration',setter=self.update_sample_duration))
+        submenu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration',setter=self.update_sample_duration))
         submenu.append(ui.Switch('show_edges',self,label='show edges'))
         submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area threshold'))
         submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity threshold'))
@@ -322,7 +322,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
             # Animate the screen marker
             if self.screen_marker_state < self.screen_marker_max:
-                if self.detected or not on_position or 1:
+                if self.detected or not on_position:
                     self.screen_marker_state += 1
             else:
                 self.screen_marker_state = 0
