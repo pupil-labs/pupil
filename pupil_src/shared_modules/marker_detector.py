@@ -28,7 +28,7 @@ from math import sqrt
 class Marker_Detector(Plugin):
     """docstring
     """
-    def __init__(self,g_pool,menu_conf={},mode="Show Markers and Frames"):
+    def __init__(self,g_pool,menu_conf={},mode="Show markers and frames"):
         super(Marker_Detector, self).__init__(g_pool)
         self.order = .2
 
