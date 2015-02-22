@@ -231,8 +231,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
             glfwMakeContextCurrent(active_window)
 
-            # initalize cygl
-            cygl_init()
+
 
 
     def on_key(self,window, key, scancode, action, mods):
