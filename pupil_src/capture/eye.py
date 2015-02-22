@@ -182,8 +182,8 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # Initialize glfw
     glfwInit()
-    if g_pool.bilateral:
-        title = "Bilateral eye %s"%eye_id
+    if g_pool.binocular:
+        title = "Binocular eye %s"%eye_id
     else:
         title = 'Eye'
     eye_window = glfwCreateWindow(frame.width, frame.height, title, None, None)

@@ -256,6 +256,11 @@ class Recorder(Plugin):
         try:
             with open(self.meta_info_path, 'a') as f:
                 f.write("Duration Time\t"+ self.get_rec_time_str()+ "\n")
+                if self.g_pool.binocular:
+                    f.write("Eye mode\tbinocular\n")
+                else:
+                    f.write("Eye mode\tmonocular\n")
+                f.write("Duration Time\t"+ self.get_rec_time_str()+ "\n")
                 f.write("World Camera Frames\t"+ str(self.frame_count)+ "\n")
                 f.write("World Camera Resolution\t"+ str(self.width)+"x"+str(self.height)+"\n")
                 f.write("Capture Software Version\t"+ self.g_pool.version + "\n")

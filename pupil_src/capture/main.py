@@ -69,11 +69,11 @@ logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 
 
-if 'bilateral' in sys.argv:
-    bilateral = True
-    logger.debug("Starting in bilateral mode")
+if 'binocular' in sys.argv:
+    binocular = True
+    logger.debug("Starting in binocular mode")
 else:
-    bilateral = False
+    binocular = False
     logger.debug("Starting in single eye cam mode")
 
 
@@ -105,7 +105,7 @@ def main():
     eye_src = (eye_cam_names,0),(eye_cam_names,1) #first match for eye0 and second match for eye1
 
     # to assign cameras directly, using integers as demonstrated below
-    # eye_src =  4 , 5 #second will be ignored for non bilateral
+    # eye_src =  4 , 5 #second arg will be ignored for monocular eye trackers
     # world_src = 1
 
     # to use a pre-recorded video.
@@ -134,11 +134,11 @@ def main():
     g_pool.rec_dir = rec_dir
     g_pool.version = version
     g_pool.app = 'capture'
-    g_pool.bilateral = bilateral
+    g_pool.binocular = binocular
 
 
     p_eye = []
-    for eye_id in range(1+1*bilateral):
+    for eye_id in range(1+1*binocular):
         rx,tx = Pipe(False)
         p_eye += [Process(target=eye, args=(g_pool,eye_src[eye_id],eye_size,rx,eye_id))]
         g_pool.eye_tx += [tx]
