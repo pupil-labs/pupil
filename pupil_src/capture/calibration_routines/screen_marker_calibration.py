@@ -36,11 +36,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def draw_marker(pos,scale,alpha):
+def draw_marker(pos,scale,alpha,window):
     pos = int(pos[0]),int(pos[1])
     black = cygl_rgba(0.,0.,0.,alpha)
     white = cygl_rgba(1.,1.,1.,alpha)
-    for r,c in zip((scale*50,scale*40,scale*30,scale*20,scale*10),(black,white,black,white,black)):
+    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
+    for r,c in zip((scale*100*hdpi_factor,scale*80*hdpi_factor,scale*60*hdpi_factor,scale*40*hdpi_factor,scale*20*hdpi_factor),(black,white,black,white,black)):
         cygl_draw_points([pos],size=r,color=c,sharpness=0.95)
 
 # window calbacks
@@ -387,7 +388,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         # 0,h##################w,h #
         #            r             #
         ############################
-        r = 60*self.marker_scale
+
+        r = 110*self.marker_scale
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         p_window_size = glfwGetWindowSize(self._window)
@@ -399,7 +401,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
 
-        draw_marker(screen_pos,self.marker_scale,self.pattern_alpha)
+        draw_marker(screen_pos,self.marker_scale,self.pattern_alpha,self._window)
         #some feedback on the detection state
 
         if self.detected and self.on_position:
