@@ -265,18 +265,18 @@ def world(g_pool,cap_src,cap_size):
     ts = frame.timestamp
 
     cpu_graph = graph.Bar_Graph()
-    cpu_graph.pos = (20,110)
+    cpu_graph.pos = (20,130)
     cpu_graph.update_fn = ps.get_cpu_percent
     cpu_graph.update_rate = 5
     cpu_graph.label = 'CPU %0.1f'
 
     fps_graph = graph.Bar_Graph()
-    fps_graph.pos = (140,110)
+    fps_graph.pos = (140,130)
     fps_graph.update_rate = 5
     fps_graph.label = "%0.0f FPS"
 
     pupil_graph = graph.Bar_Graph(max_val=1.0)
-    pupil_graph.pos = (260,110)
+    pupil_graph.pos = (260,130)
     pupil_graph.update_rate = 5
     pupil_graph.label = "Confidence: %0.2f"
 
