@@ -146,10 +146,10 @@ def world(g_pool,cap_src,cap_size):
 
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
-    g_pool.update_textures = True
+    g_pool.update_textures = 2
 
     if isinstance(cap,FakeCapture):
-        g_pool.update_textures = False
+        g_pool.update_textures = 0
     g_pool.capture = cap
     g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
     g_pool.window_size = session_settings.get('window_size',1.)
@@ -223,7 +223,7 @@ def world(g_pool,cap_src,cap_size):
     general_settings.configuration = session_settings.get('general_menu_config',{})
     general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface size'))
     general_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
-    general_settings.append(ui.Switch('update_textures',g_pool,label="Update display"))
+    general_settings.append(ui.Selector('update_textures',g_pool,label="Update display",selection=range(3),labels=('No update','Gray','Color')))
     general_settings.append(ui.Button('Set timebase to 0',reset_timebase))
     general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
@@ -320,8 +320,10 @@ def world(g_pool,cap_src,cap_size):
 
         # render camera image
         glfwMakeContextCurrent(world_window)
-        if g_pool.update_textures:
+        if g_pool.update_textures == 2:
             update_named_texture(g_pool.image_tex,frame.img)
+        elif g_pool.update_textures == 1:
+            update_named_texture(g_pool.image_tex,frame.gray)
 
         make_coord_system_norm_based()
         draw_named_texture(g_pool.image_tex)
