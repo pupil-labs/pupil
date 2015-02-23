@@ -159,7 +159,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
 
     def on_click(self,pos,button,action):
-        if action == GLFW_PRESS:
+        if action == GLFW_PRESS and self.active:
             self.first_img = None
             self.point = np.array([pos,],dtype=np.float32)
             self.count = 30
