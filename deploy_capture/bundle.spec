@@ -27,8 +27,9 @@ if platform.system() == 'Darwin':
                    a.datas,
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
                    [('uvcc.so', '../pupil_src/shared_modules/uvc_capture/mac_video/uvcc.so','BINARY')],
-                   [('libAntTweakBar.dylib', '/usr/local/Cellar/anttweakbar/1.16/lib/libAntTweakBar.dylib','BINARY')],
                    [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.0.2/lib/libglfw3.dylib','BINARY')],
+                   [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
+                   [('Roboto-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
                    strip=None,
                    upx=True,
                    name='Pupil Capture')
@@ -60,7 +61,6 @@ elif platform.system() == 'Linux':
                    a.zipfiles,
                    a.datas,
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
-                   [('libAntTweakBar.so', '/usr/lib/libAntTweakBar.so','BINARY')],
                    [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
                    [('libGLEW.so', '/usr/lib/x86_64-linux-gnu/libGLEW.so','BINARY')],
                    [('icon.ico', 'linux_icon.ico','DATA')],
