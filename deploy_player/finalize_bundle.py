@@ -8,7 +8,9 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 import platform
-
+import sys,os
+import write_version_file
+import shutil
 mac_plit_document_type_str = '''
 <key>CFBundleDocumentTypes</key>
         <array>
@@ -59,9 +61,7 @@ if platform.system() == 'Darwin':
     print 'copied pyav binaries'
 
 elif platform.system() == 'Linux':
-    import sys,os
-    import write_version_file
-    import shutil
+
 
     distribtution_dir = 'dist'
     pupil_capture_dir =  os.path.join(distribtution_dir, 'pupil_player')
