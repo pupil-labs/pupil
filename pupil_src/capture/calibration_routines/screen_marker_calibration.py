@@ -181,9 +181,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
         self.sites = [  (.25, .5), (0,.5),
-                        (0.,1),(.5,1),(1.,1.),
-                        (1,.5),
-                        (1., 0),(.5, 0),(0,0.),
+                        (0.,1.),(.5,1.),(1.,1.),
+                        (1.,.5),
+                        (1., 0.),(.5, 0.),(0.,0.),
                         (.75,.5)]
 
         self.active_site = 0
@@ -393,12 +393,12 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         gl.glLoadIdentity()
         p_window_size = glfwGetWindowSize(self._window)
         # compensate for radius of marker
-        gl.glOrtho(-r*.6,p_window_size[0]+r*.6, -r*.7, p_window_size[1]+r*.7 ,-1,1)
+        gl.glOrtho(-r*.6,p_window_size[0]+r*.6,p_window_size[1]+r*.7,-r*.7 ,-1,1)
         # Switch back to Model View Matrix
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
 
-        screen_pos = denormalize(self.display_pos,p_window_size,flip_y=False)
+        screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
 
         draw_marker(screen_pos,r,self.pattern_alpha)
         #some feedback on the detection state
@@ -409,7 +409,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             cygl_draw_points([screen_pos],size=5,color=cygl_rgba(1.,0.,0.,self.pattern_alpha),sharpness=0.95)
 
         if self.clicks_to_close <5:
-            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4,'Touch %s more times to cancel calibration.'%self.clicks_to_close)
+            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,'Touch %s more times to cancel calibration.'%self.clicks_to_close)
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
