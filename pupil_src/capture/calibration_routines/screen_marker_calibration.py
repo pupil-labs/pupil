@@ -408,13 +408,12 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         else:
             cygl_draw_points([screen_pos],size=5,color=cygl_rgba(1.,0.,0.,self.pattern_alpha),sharpness=0.95)
 
-
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()      
-        gl.glOrtho(-r*.6,p_window_size[0]+r*.6,p_window_size[1]+r*.7,-r*.7,-1,1)
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity()
         if self.clicks_to_close <5:
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glLoadIdentity()      
+            gl.glOrtho(-r*.6,p_window_size[0]+r*.6,p_window_size[1]+r*.7,-r*.7,-1,1)
+            gl.glMatrixMode(gl.GL_MODELVIEW)
+            gl.glLoadIdentity()
             self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,'Touch %s more times to cancel calibration.'%self.clicks_to_close)
 
         glfwSwapBuffers(self._window)
