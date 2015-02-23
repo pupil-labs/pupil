@@ -22,7 +22,7 @@ it requires:
 import os,sys
 import cv2
 import numpy as np
-from time import time
+from time import time,sleep
 from pyglui import ui
 
 
@@ -77,6 +77,7 @@ class File_Capture():
         self.menu = None
         self.auto_rewind = True
         self.controls = None #No UVC controls available with file capture
+        self.sleep = 0.0
         # we initialize the actual capture based on cv2.VideoCapture
         self.cap = cv2.VideoCapture(src)
         self.src =src
@@ -119,6 +120,8 @@ class File_Capture():
         return len(self.timestamps)
 
     def get_frame(self):
+        if self.sleep:
+            sleep(self.sleep)
         idx = int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
         s, img = self.cap.read()
         if not s:
@@ -177,6 +180,7 @@ class File_Capture():
     def init_gui(self,sidebar):
         self.menu = ui.Growing_Menu(label='File Capture Settings')
         self.menu.append(ui.Info_Text("Running Capture with '%s' as src"%self.src))
+        self.menu.append(ui.Slider('sleep',self,min=0.,max=.2,label='add delay between frames (sec.)'))
         self.sidebar = sidebar
         self.sidebar.append(self.menu)
 
