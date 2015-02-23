@@ -45,7 +45,7 @@ if platform.system() == 'Darwin':
 elif platform.system() == 'Linux':
     a = Analysis(['../pupil_src/player/main.py'],
                  pathex=['../pupil_src/shared_modules/'],
-                 hiddenimports=['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils'],
+                 hiddenimports=['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']+av_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None)
     pyz = PYZ(a.pure)
