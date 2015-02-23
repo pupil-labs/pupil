@@ -55,7 +55,7 @@ if platform.system() == 'Darwin':
         f.write(txt)
 
     print 'copy pyav binaries'
-    shutil.copytree('/usr/local/lib/python2.7/site-packages/av-0.1.0-py2.7-macosx-10.9-x86_64.egg/av',os.path.join(pupil_capture_dir,'av'))
+    shutil.copytree('/usr/local/lib/python2.7/site-packages/av-0.2.2-py2.7-macosx-10.9-x86_64.egg/av',os.path.join(pupil_capture_dir,'av'))
     print 'copied pyav binaries'
 
 elif platform.system() == 'Linux':
