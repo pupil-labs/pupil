@@ -19,9 +19,6 @@ if platform.system() == 'Darwin':
     shutil.rmtree('dist/Pupil Capture')
     print 'removed the non-app dist bundle'
 
-    print "copy starter app"
-    shutil.copytree('run_pupil_capture_from_mac_terminal.app', 'dist/run_pupil_capture_from_mac_terminal.app')
-
 elif platform.system() == 'Linux':
     import sys,os
     import write_version_file
