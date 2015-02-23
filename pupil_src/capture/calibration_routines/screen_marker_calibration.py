@@ -203,7 +203,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 width,height= mode[0]*hdpi_factor,mode[1]*hdpi_factor
             else:
                 monitor = None
-                widht,height= 640,360
+                width,height= 640,360
 
             self._window = glfwCreateWindow(width, height, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen:
