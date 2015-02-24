@@ -37,7 +37,7 @@ class Frame(object):
 
     @property
     def gray(self):
-        if self._gray == None:
+        if self._gray is None:
             self._gray = cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
         return self._gray
     @gray.setter
