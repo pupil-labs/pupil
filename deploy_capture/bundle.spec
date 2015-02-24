@@ -27,7 +27,7 @@ if platform.system() == 'Darwin':
                    a.datas,
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
                    [('uvcc.so', '../pupil_src/shared_modules/uvc_capture/mac_video/uvcc.so','BINARY')],
-                   [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.0.2/lib/libglfw3.dylib','BINARY')],
+                   [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.0.4/lib/libglfw3.dylib','BINARY')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
                    strip=None,
