@@ -226,14 +226,19 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         p_window_size = glfwGetWindowSize(self._window)
-        r = p_window_size[0]/20.
+        r = p_window_size[0]/15.
         # compensate for radius of marker
         gl.glOrtho(-r,p_window_size[0]+r,p_window_size[1]+r,-r ,-1,1)
         # Switch back to Model View Matrix
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
+        #hacky way of scaling and fitting in different window rations/sizes
+        grid = _make_grid()*min((p_window_size[0],p_window_size[1]*5.5/4.))
+        #center the pattern
+        grid -= np.mean(grid)
+        grid +=(p_window_size[0]/2-r,p_window_size[1]/2+r)
 
-        draw_points(_make_grid()*min((p_window_size[0],p_window_size[1]*5.5/4.)),size=r,color=RGBA(0.,0.,0.,1),sharpness=0.95)
+        draw_points(grid,size=r,color=RGBA(0.,0.,0.,1),sharpness=0.95)
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))
