@@ -118,7 +118,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         self.glfont = fontstash.Context()
         self.glfont.add_font('opensans',get_opensans_font_path())
-        self.glfont.set_size(22)
+        self.glfont.set_size(32)
         self.glfont.set_color_float((0.2,0.5,0.9,1.0))
         self.glfont.set_align_string(v_align='center')
 
@@ -409,6 +409,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             cygl_draw_points([screen_pos],size=5,color=cygl_rgba(1.,0.,0.,self.pattern_alpha),sharpness=0.95)
 
         if self.clicks_to_close <5:
+            self.glfont.set_size(int(p_window_size[0]/30.))
             self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,'Touch %s more times to cancel calibration.'%self.clicks_to_close)
 
         glfwSwapBuffers(self._window)
