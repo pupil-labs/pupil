@@ -53,7 +53,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     Grabs images from a capture.
     Streams Pupil coordinates into g_pool.pupil_queue
     """
-    print eye_id,cap_src
+
     # modify the root logger for this process
     logger = logging.getLogger()
     # remove inherited handlers
@@ -104,7 +104,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
                 return # if the roi interacts we dont what the gui to interact as well
             elif action == GLFW_PRESS:
                 pos = glfwGetCursorPos(window)
-                pos = normalize(pos,glfwGetWindowSize(eye_window))
+                pos = normalize(pos,glfwGetWindowSize(main_window))
                 pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
                 if u_r.mouse_over_edit_pt(pos,u_r.handle_size+20,u_r.handle_size+20):
                     return # if the roi interacts we dont what the gui to interact as well
@@ -118,7 +118,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         g_pool.gui.update_mouse(x*hdpi_factor,y*hdpi_factor)
 
         if u_r.active_edit_pt:
-            pos = normalize((x,y),glfwGetWindowSize(eye_window))
+            pos = normalize((x,y),glfwGetWindowSize(main_window))
             pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) )
             u_r.move_vertex(u_r.active_pt_idx,pos)
 
@@ -164,10 +164,6 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
 
     # UI callback functions
-    def set_window_size(size):
-        w,h = int(frame.width*size),int(frame.height*size)
-        glfwSetWindowSize(eye_window,w,h)
-
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
 
@@ -180,25 +176,29 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         g_pool.display_mode = val
         g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
 
+
+    width,height = session_settings.get('window_size',(frame.width, frame.height))
+    window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
+
     # Initialize glfw
     glfwInit()
     if g_pool.binocular:
         title = "Binocular eye %s"%eye_id
     else:
         title = 'Eye'
-    eye_window = glfwCreateWindow(frame.width, frame.height, title, None, None)
+    main_window = glfwCreateWindow(width,height, title, None, None)
 
-    glfwMakeContextCurrent(eye_window)
+    glfwMakeContextCurrent(main_window)
     cygl_init()
 
-    # Register callbacks eye_window
-    glfwSetWindowSizeCallback(eye_window,on_resize)
-    glfwSetWindowCloseCallback(eye_window,on_close)
-    glfwSetKeyCallback(eye_window,on_key)
-    glfwSetCharCallback(eye_window,on_char)
-    glfwSetMouseButtonCallback(eye_window,on_button)
-    glfwSetCursorPosCallback(eye_window,on_pos)
-    glfwSetScrollCallback(eye_window,on_scroll)
+    # Register callbacks main_window
+    glfwSetWindowSizeCallback(main_window,on_resize)
+    glfwSetWindowCloseCallback(main_window,on_close)
+    glfwSetKeyCallback(main_window,on_key)
+    glfwSetCharCallback(main_window,on_char)
+    glfwSetMouseButtonCallback(main_window,on_button)
+    glfwSetCursorPosCallback(main_window,on_pos)
+    glfwSetScrollCallback(main_window,on_scroll)
 
     # gl_state settings
     basic_gl_setup()
@@ -207,7 +207,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # refresh speed settings
     glfwSwapInterval(0)
-    glfwSetWindowPos(eye_window,800,300*eye_id)
+    glfwSetWindowPos(main_window,800,300*eye_id)
 
 
     #setup GUI
@@ -218,6 +218,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     general_settings = ui.Growing_Menu('General')
     general_settings.configuration = session_settings.get('general_menu_config',{})
     general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
+    general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
     general_settings.append(ui.Selector('display_mode',g_pool,setter=set_display_mode_info,selection=['camera_image','roi','algorithm'], labels=['Camera Image', 'ROI', 'Algorithm'], label="Mode") )
     g_pool.display_mode_info = ui.Info_Text(g_pool.display_mode_info_text[g_pool.display_mode])
     general_settings.append(g_pool.display_mode_info)
@@ -235,8 +236,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
 
     #set the last saved window size
-    set_window_size(g_pool.window_size)
-    on_resize(eye_window, *glfwGetWindowSize(eye_window))
+    on_resize(main_window, *glfwGetWindowSize(main_window))
 
     #set up performance graphs
     pid = os.getpid()
@@ -303,7 +303,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
 
         # GL drawing
-        glfwMakeContextCurrent(eye_window)
+        glfwMakeContextCurrent(main_window)
         clear_gl_screen()
 
         # switch to work in normalized coordinate space
@@ -341,7 +341,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
             u_r.draw(g_pool.gui.scale)
 
         #update screen
-        glfwSwapBuffers(eye_window)
+        glfwSwapBuffers(main_window)
         glfwPollEvents()
 
 
@@ -357,16 +357,17 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     # save session persistent settings
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['roi'] = u_r.get()
-    session_settings['window_size'] = g_pool.window_size
     session_settings['display_mode'] = g_pool.display_mode
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
     session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
     session_settings['general_menu_config'] = general_settings.configuration
+    session_settings['window_size'] = glfwGetWindowSize(main_window)
+    session_settings['window_position'] = glfwGetWindowPos(main_window)
     session_settings.close()
 
     pupil_detector.cleanup()
     cap.close()
-    glfwDestroyWindow(eye_window)
+    glfwDestroyWindow(main_window)
     glfwTerminate()
 
     #flushing queue in case world process did not exit gracefully

@@ -109,7 +109,7 @@ def world(g_pool,cap_src,cap_size):
     def on_button(window,button, action, mods):
         g_pool.gui.update_button(button,action,mods)
         pos = glfwGetCursorPos(window)
-        pos = normalize(pos,glfwGetWindowSize(world_window))
+        pos = normalize(pos,glfwGetWindowSize(main_window))
         pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
         for p in g_pool.plugins:
             p.on_click(pos,button,action)
@@ -152,16 +152,10 @@ def world(g_pool,cap_src,cap_size):
         g_pool.update_textures = 0
     g_pool.capture = cap
     g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
-    g_pool.window_size = session_settings.get('window_size',1.)
     g_pool.active_calibration_plugin = None
 
 
     #UI callback functions
-    def set_window_size(size):
-        w,h = int(frame.width*size),int(frame.height*size)
-        glfwSetWindowSize(world_window,w,h)
-
-
     def reset_timebase():
         #the last frame from worldcam will be t0
         g_pool.timebase.value = g_pool.capture.get_now()
@@ -186,22 +180,25 @@ def world(g_pool,cap_src,cap_size):
         return g_pool.gui.scale
 
 
+    width,height = session_settings.get('window_size',(frame.width, frame.height))
+    window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
+
 
     # Initialize glfw
     glfwInit()
-    world_window = glfwCreateWindow(frame.width, frame.height, "World", None, None)
-    glfwMakeContextCurrent(world_window)
+    main_window = glfwCreateWindow(width,height, "World", None, None)
+    glfwMakeContextCurrent(main_window)
     cygl.utils.init()
 
-    # Register callbacks world_window
-    glfwSetWindowSizeCallback(world_window,on_resize)
-    glfwSetWindowCloseCallback(world_window,on_close)
-    glfwSetWindowIconifyCallback(world_window,on_iconify)
-    glfwSetKeyCallback(world_window,on_key)
-    glfwSetCharCallback(world_window,on_char)
-    glfwSetMouseButtonCallback(world_window,on_button)
-    glfwSetCursorPosCallback(world_window,on_pos)
-    glfwSetScrollCallback(world_window,on_scroll)
+    # Register callbacks main_window
+    glfwSetWindowSizeCallback(main_window,on_resize)
+    glfwSetWindowCloseCallback(main_window,on_close)
+    glfwSetWindowIconifyCallback(main_window,on_iconify)
+    glfwSetKeyCallback(main_window,on_key)
+    glfwSetCharCallback(main_window,on_char)
+    glfwSetMouseButtonCallback(main_window,on_button)
+    glfwSetCursorPosCallback(main_window,on_pos)
+    glfwSetScrollCallback(main_window,on_scroll)
 
     # gl_state settings
     basic_gl_setup()
@@ -211,7 +208,7 @@ def world(g_pool,cap_src,cap_size):
     # refresh speed settings
     glfwSwapInterval(0)
 
-    glfwSetWindowPos(world_window,0,0)
+    glfwSetWindowPos(main_window,0,0)
 
 
     #setup GUI
@@ -222,6 +219,7 @@ def world(g_pool,cap_src,cap_size):
     general_settings = ui.Growing_Menu('General')
     general_settings.configuration = session_settings.get('general_menu_config',{})
     general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface size'))
+    general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
     general_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
     general_settings.append(ui.Selector('update_textures',g_pool,label="Update display",selection=range(3),labels=('No update','Gray','Color')))
     general_settings.append(ui.Button('Set timebase to 0',reset_timebase))
@@ -255,9 +253,7 @@ def world(g_pool,cap_src,cap_size):
 
 
 
-    #set the last saved window size
-    set_window_size(g_pool.window_size)
-    on_resize(world_window, *glfwGetWindowSize(world_window))
+    on_resize(main_window, *glfwGetWindowSize(main_window))
 
     #set up performace graphs:
     pid = os.getpid()
@@ -319,7 +315,7 @@ def world(g_pool,cap_src,cap_size):
         g_pool.plugins.clean()
 
         # render camera image
-        glfwMakeContextCurrent(world_window)
+        glfwMakeContextCurrent(main_window)
         if g_pool.update_textures == 2:
             update_named_texture(g_pool.image_tex,frame.img)
         elif g_pool.update_textures == 1:
@@ -339,18 +335,19 @@ def world(g_pool,cap_src,cap_size):
         pupil_graph.draw()
         graph.pop_view()
         g_pool.gui.update()
-        glfwSwapBuffers(world_window)
+        glfwSwapBuffers(main_window)
         glfwPollEvents()
 
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
-    session_settings['window_size'] = g_pool.window_size
     session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
     session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
     session_settings['general_menu_config'] = general_settings.configuration
     session_settings['calibration_menu_config']=g_pool.calibration_menu.configuration
+    session_settings['window_size'] = glfwGetWindowSize(main_window)
+    session_settings['window_position'] = glfwGetWindowPos(main_window)
     session_settings.close()
 
     # de-init all running plugins
@@ -359,7 +356,7 @@ def world(g_pool,cap_src,cap_size):
     g_pool.plugins.clean()
 
     cap.close()
-    glfwDestroyWindow(world_window)
+    glfwDestroyWindow(main_window)
     glfwTerminate()
     logger.debug("Process done")
 

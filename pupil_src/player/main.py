@@ -231,7 +231,8 @@ def main():
         logger.error("could not start capture.")
         return
 
-    width,height = cap.get_size()
+    width,height = session_settings.get('window_size',cap.get_size())
+    window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
 
 
     # Initialize glfw
@@ -311,6 +312,8 @@ def main():
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
+    g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.get_size()[0],cap.get_size()[1])) )
+
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
     g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey=GLFW_KEY_SPACE)
@@ -445,6 +448,9 @@ def main():
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['main_menu_config'] = g_pool.main_menu.configuration
+    session_settings['window_size'] = glfwGetWindowSize(main_window)
+    session_settings['window_position'] = glfwGetWindowPos(main_window)
+
     session_settings.close()
     # de-init all running plugins
     for p in g_pool.plugins:
