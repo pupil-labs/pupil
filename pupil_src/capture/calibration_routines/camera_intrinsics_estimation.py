@@ -212,7 +212,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
         for grid_points in self.img_points:
             calib_bounds =  cv2.convexHull(grid_points)[:,0] #we dont need that extra encapsulation that opencv likes so much
-            draw_polyline(calib_bounds,(0.,0.,1.,.5), type="Loop")
+            draw_polyline(calib_bounds,1,RGBA(0.,0.,1.,.5),line_type=gl.GL_LINE_LOOP)
 
         if self._window:
             self.gl_display_in_window()
