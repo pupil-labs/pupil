@@ -220,13 +220,16 @@ def world(g_pool,cap_src,cap_size):
     general_settings.configuration = session_settings.get('general_menu_config',{})
     general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
-    general_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
-    general_settings.append(ui.Selector('update_textures',g_pool,label="Update display",selection=range(3),labels=('No update','Gray','Color')))
-    general_settings.append(ui.Button('Set timebase to 0',reset_timebase))
     general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
-                                        setter= open_plugin, getter = lambda: "Select to load"))
+                                        setter= open_plugin, getter=lambda: "Select to load"))
     g_pool.sidebar.append(general_settings)
+    advanced_settings = ui.Growing_Menu('Advanced')
+    advanced_settings.configuration = session_settings.get('advanced_menu_config',{'collapsed':True})
+    advanced_settings.append(ui.Selector('update_textures',g_pool,label="Update display",selection=range(3),labels=('No update','Gray','Color')))
+    advanced_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
+    advanced_settings.append(ui.Button('Set timebase to 0',reset_timebase))
+    general_settings.append(advanced_settings)
     g_pool.calibration_menu = ui.Growing_Menu('Calibration')
     g_pool.calibration_menu.configuration = session_settings.get('calibration_menu_config',{})
     g_pool.calibration_menu.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
@@ -345,6 +348,7 @@ def world(g_pool,cap_src,cap_size):
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
     session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
     session_settings['general_menu_config'] = general_settings.configuration
+    session_settings['advanced_menu_config'] = advanced_settings.configuration
     session_settings['calibration_menu_config']=g_pool.calibration_menu.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
