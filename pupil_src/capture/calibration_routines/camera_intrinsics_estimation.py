@@ -16,11 +16,15 @@ from methods import normalize
 import audio
 
 
+import OpenGL.GL as gl
 from pyglui import ui
+from pyglui.cygl.utils import draw_polyline,draw_points,RGBA
+from pyglui.pyfontstash import fontstash
+from pyglui.ui import get_opensans_font_path
+from glfw import *
+
 from plugin import Calibration_Plugin
 
-
-from glfw import *
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -41,10 +45,9 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         This method is used to calculate camera intrinsics.
 
     """
-    def __init__(self,g_pool, menu_conf = {'collapsed':True}):
+    def __init__(self,g_pool, menu_conf = {'collapsed':True},fullscreen = False):
         super(Camera_Intrinsics_Estimation, self).__init__(g_pool)
         self.collect_new = False
-        self.g_pool = g_pool
         self.calculated = False
         self.obj_grid = _gen_pattern_grid((4, 11))
         self.img_points = []
@@ -59,21 +62,31 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.menu = None
         self.menu_conf = menu_conf
         self.button = None
+        self.clicks_to_close = 5
+        self.window_should_close = False
+        self.fullscreen = fullscreen
+        self.monitor_idx = 0
+
+
+        self.glfont = fontstash.Context()
+        self.glfont.add_font('opensans',get_opensans_font_path())
+        self.glfont.set_size(32)
+        self.glfont.set_color_float((0.2,0.5,0.9,1.0))
+        self.glfont.set_align_string(v_align='center')
+
 
 
     def init_gui(self):
-        self.fullscreen = True
-        self.monitor_idx = 0
-        self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
 
+        monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
         #primary_monitor = glfwGetPrimaryMonitor()
         self.info = ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid. Click 'C' to capture a pattern.")
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
-        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
-        self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
         self.menu.append(ui.Button('show Pattern',self.open_window))
+        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(monitor_names)),labels=monitor_names,label='Monitor'))
+        self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
         self.menu.configuration = self.menu_conf
         self.g_pool.calibration_menu.append(self.menu)
 
@@ -114,7 +127,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
                 height,width= mode[0],mode[1]
             else:
                 monitor = None
-                height,width = 640,360
+                height,width = 640,480
 
             self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen:
@@ -126,6 +139,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             glfwSetWindowSizeCallback(self._window,on_resize)
             glfwSetKeyCallback(self._window,self.on_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
+            glfwSetMouseButtonCallback(self._window,self.on_button)
 
 
             # gl_state settings
@@ -134,12 +148,21 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             basic_gl_setup()
             glfwMakeContextCurrent(active_window)
 
+            self.clicks_to_close = 5
+
 
 
     def on_key(self,window, key, scancode, action, mods):
         if action == GLFW_PRESS:
             if key == GLFW_KEY_ESCAPE:
                 self.on_close()
+
+
+    def on_button(self,window,button, action, mods):
+        if action ==GLFW_PRESS:
+            self.clicks_to_close -=1
+        if self.clicks_to_close ==0:
+            self.on_close()
 
 
     def on_close(self,window=None):
@@ -181,18 +204,15 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             self.calculate()
             self.button.status_text = ''
 
+        if self.window_should_close:
+            self.close_window()
+
 
     def gl_display(self):
-        """
-        use gl calls to render
-        at least:
-            the published position of the reference
-        better:
-            show the detected postion even if not published
-        """
+
         for grid_points in self.img_points:
             calib_bounds =  cv2.convexHull(grid_points)[:,0] #we dont need that extra encapsulation that opencv likes so much
-            draw_gl_polyline(calib_bounds,(0.,0.,1.,.5), type="Loop")
+            draw_polyline(calib_bounds,(0.,0.,1.,.5), type="Loop")
 
         if self._window:
             self.gl_display_in_window()
@@ -202,41 +222,26 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         glfwMakeContextCurrent(self._window)
 
         clear_gl_screen()
-        #todo write code to display pattern.
-        # r = 60.
-        # gl.glMatrixMode(gl.GL_PROJECTION)
-        # gl.glLoadIdentity()
-        # draw_gl_point((-.5,-.5),50.)
 
-        # p_window_size = glfwGetWindowSize(self._window)
-        # # compensate for radius of marker
-        # x_border,y_border = normalize((r,r),p_window_size)
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
+        p_window_size = glfwGetWindowSize(self._window)
+        r = p_window_size[0]/20.
+        # compensate for radius of marker
+        gl.glOrtho(-r,p_window_size[0]+r,p_window_size[1]+r,-r ,-1,1)
+        # Switch back to Model View Matrix
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity()
 
-        # # if p_window_size[0]<p_window_size[1]: #taller
-        # #     ratio = p_window_size[1]/float(p_window_size[0])
-        # #     gluOrtho2D(-x_border,1+x_border,y_border, 1-y_border) # origin in the top left corner just like the img np-array
+        draw_points(_make_grid()*min((p_window_size[0],p_window_size[1]*5.5/4.)),size=r,color=RGBA(0.,0.,0.,1),sharpness=0.95)
 
-        # # else: #wider
-        # #     ratio = p_window_size[0]/float(p_window_size[1])
-        # #     gluOrtho2D(-x_border,ratio+x_border,y_border, 1-y_border) # origin in the top left corner just like the img np-array
-
-        # gluOrtho2D(-x_border,1+x_border,y_border, 1-y_border) # origin in the top left corner just like the img np-array
-
-        # # Switch back to Model View Matrix
-        # gl.glMatrixMode(gl.GL_MODELVIEW)
-        # gl.glLoadIdentity()
-
-        # for p in self.display_grid:
-        #     draw_gl_point(p)
-        # #some feedback on the detection state
-
-        # # if self.detected and self.on_position:
-        # #     draw_gl_point(screen_pos, 5.0, (0.,1.,0.,1.))
-        # # else:
-        # #     draw_gl_point(screen_pos, 5.0, (1.,0.,0.,1.))
+        if self.clicks_to_close <5:
+            self.glfont.set_size(int(p_window_size[0]/30.))
+            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,'Touch %s more times to close window.'%self.clicks_to_close)
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
+
 
     def get_init_dict(self):
         if self.menu:
@@ -275,7 +280,7 @@ def _gen_pattern_grid(size=(4,11)):
 def _make_grid(dim=(11,4)):
     """
     this function generates the structure for an asymmetrical circle grid
-    centered around 0 width=1, height scaled accordingly
+    domain (0-1)
     """
     x,y = range(dim[0]),range(dim[1])
     p = np.array([[[s,i] for s in x] for i in y], dtype=np.float32)
@@ -288,10 +293,6 @@ def _make_grid(dim=(11,4)):
 
     p *=x_scale,x_scale/.5
 
-    # center x,y around (0,0)
-    x_offset = (np.amax(p[:,0])-np.amin(p[:,0]))/2.
-    y_offset = (np.amax(p[:,1])-np.amin(p[:,1]))/2.
-    p -= x_offset,y_offset
     return p
 
 
