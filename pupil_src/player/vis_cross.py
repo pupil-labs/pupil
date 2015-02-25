@@ -56,7 +56,7 @@ class Vis_Cross(Plugin):
 
         color_menu = ui.Growing_Menu('Color')
         color_menu.collapsed = True
-        color_menu(ui.Info_Text('Set RGB color component values.'))
+        color_menu.append(ui.Info_Text('Set RGB color component values.'))
         color_menu.append(ui.Slider('r',self,min=0.0,step=0.05,max=1.0,label='Red'))
         color_menu.append(ui.Slider('g',self,min=0.0,step=0.05,max=1.0,label='Green'))
         color_menu.append(ui.Slider('b',self,min=0.0,step=0.05,max=1.0,label='Blue'))
