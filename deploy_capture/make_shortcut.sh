@@ -1,6 +1,6 @@
 #!/bin/sh
 
-BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+BASEDIR=$( cd "$( dirname "$0" )" && pwd )
 echo $BASEDIR
 
 TEXT="
@@ -17,3 +17,4 @@ Categories=Application;"
 
 echo $TEXT > pupil_capture.desktop
 chmod 775 pupil_capture.desktop
+

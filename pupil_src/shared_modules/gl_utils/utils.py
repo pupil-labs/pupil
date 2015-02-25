@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -13,7 +13,6 @@ from glfw import glfwGetFramebufferSize,glfwGetWindowSize
 # OpenGL.FULL_LOGGING = True
 OpenGL.ERROR_LOGGING = False
 from OpenGL.GL import *
-from OpenGL.GLU import gluOrtho2D
 from shader import Shader
 
 import numpy as np
@@ -35,7 +34,8 @@ __all__ =  ['make_coord_system_norm_based',
             'adjust_gl_view',
             'clear_gl_screen',
             'basic_gl_setup',
-            'cvmat_to_glmat']
+            'cvmat_to_glmat'
+]
 
 
 def cvmat_to_glmat(m):
@@ -56,34 +56,33 @@ def cvmat_to_glmat(m):
 
 def basic_gl_setup():
     glEnable( GL_POINT_SPRITE )
+    # glEnable(GL_POINT_SMOOTH)
     glEnable(GL_VERTEX_PROGRAM_POINT_SIZE) # overwrite pointsize
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     glEnable(GL_BLEND)
     glClearColor(1.,1.,1.,0.)
+    glEnable(GL_LINE_SMOOTH)
+    # glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+    # glEnable(GL_POLYGON_SMOOTH)
+    # glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
+
 
 def clear_gl_screen():
     glClear(GL_COLOR_BUFFER_BIT)
 
-def adjust_gl_view(w,h,window):
+def adjust_gl_view(w,h):
     """
     adjust view onto our scene.
     """
     h = max(h,1)
     w = max(w,1)
-
-    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-    w,h = w*hdpi_factor,h*hdpi_factor
     glViewport(0, 0, w, h)
-    # glMatrixMode(GL_PROJECTION)
-    # glLoadIdentity()
-    # nRange = 1.0
-    # if w <= h:
-    #     glOrtho(-nRange, nRange, -nRange*h/w, nRange*h/w, -nRange, nRange)
-    # else:
-    #     glOrtho(-nRange*w/h, nRange*w/h, -nRange, nRange, -nRange, nRange)
-    # # switch back to Modelview
-    # glMatrixMode(GL_MODELVIEW)
-    # glLoadIdentity()
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    glOrtho(0, w, h, 0, -1, 1)
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
+
 
 def draw_gl_polyline((positions),color,type='Loop',thickness=1):
     glLineWidth(thickness)
@@ -105,7 +104,7 @@ def draw_gl_polyline_norm((positions),color,type='Loop',thickness=1):
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
-    gluOrtho2D(0, 1, 0, 1) # gl coord convention
+    glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()
@@ -226,7 +225,7 @@ def draw_gl_points_norm(pos,size=20,color=(1.,0.5,0.5,.5)):
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
-    gluOrtho2D(0, 1, 0, 1) # gl coord convention
+    glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()
@@ -394,7 +393,7 @@ def make_coord_system_pixel_based(img_shape):
     # Set Projection Matrix
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluOrtho2D(0, width, height, 0) # origin in the top left corner just like the img np-array
+    glOrtho(0, width, height, 0,-1,1) # origin in the top left corner just like the img np-array
     # Switch back to Model View Matrix
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
@@ -403,8 +402,7 @@ def make_coord_system_pixel_based(img_shape):
 def make_coord_system_norm_based():
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluOrtho2D(0, 1, 0, 1) # gl coord convention
+    glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
-
 

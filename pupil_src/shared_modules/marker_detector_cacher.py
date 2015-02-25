@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -22,7 +22,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
     logger.debug('Started cacher process for Marker Detector')
     import cv2
     from uvc_capture import autoCreateCapture, EndofVideoFileError,FileSeekError
-    from square_marker_detect import detect_markers_robust,detect_markers_simple
+    from square_marker_detect import detect_markers_robust
     min_marker_perimeter = 80
     aperture = 9
     markers = []
@@ -76,7 +76,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
             q.put((next,[])) # we cannot look at the frame, report no detection
             return
 
-        markers[:] = detect_markers_robust(frame.img,
+        markers[:] = detect_markers_robust(frame.gray,
                                         grid_size = 5,
                                         prev_markers=markers,
                                         min_marker_perimeter=min_marker_perimeter,
@@ -84,13 +84,8 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
                                         visualize=0,
                                         true_detect_every_frame=1)
 
-        # markers[:] = detect_markers_simple(frame.img,
-        #                         grid_size = 5,
-        #                         min_marker_perimeter=min_marker_perimeter,
-        #                         aperture=aperture,
-        #                         visualize=0)
         visited_list[frame.index] = True
-        q.put((frame.index,markers[:])) #object passed will only be pickeld when collected from other process! need to make a copy ot avoid overwrite!!!
+        q.put((frame.index,markers[:])) #object passed will only be pickeled when collected from other process! need to make a copy ot avoid overwrite!!!
 
     while run.value:
         next = cap.get_frame_index()

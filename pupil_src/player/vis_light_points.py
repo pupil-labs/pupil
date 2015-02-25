@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -11,8 +11,8 @@
 import cv2
 from plugin import Plugin
 import numpy as np
-import atb
-from ctypes import c_int
+
+from pyglui import ui
 from methods import denormalize
 import logging
 logger = logging.getLogger(__name__)
@@ -23,24 +23,26 @@ class Vis_Light_Points(Plugin):
 
     """
 
-    def __init__(self, g_pool=None,falloff = 20, gui_settings={'pos':(10,470),'size':(300,100),'iconified':False}):
-        super(Vis_Light_Points, self).__init__()
+    def __init__(self, g_pool,falloff = 20, menu_conf={'pos':(10,470),'size':(300,100),'collapsed':False}):
+        super(Vis_Light_Points, self).__init__(g_pool)
         self.order = .8
+        self.uniqueness = "not_unique"
         #let the plugin work after most other plugins.
 
-        self.falloff = c_int(falloff)
-        self.gui_settings = gui_settings
+        # initialize empty menu
+        # and load menu configuration of last session
+        self.menu = None
+        self.menu_conf = menu_conf
 
+        self.falloff = falloff
 
-    def update(self,frame,recent_pupil_positions,events):
-
-        falloff = self.falloff.value
+    def update(self,frame,events):
+        falloff = self.falloff
 
         img = frame.img
         img_shape = img.shape[:-1][::-1]#width,height
-        norm_gaze = [ng['norm_gaze'] for ng in recent_pupil_positions if ng['norm_gaze'] is not None]
+        norm_gaze = [ng['norm_gaze'] for ng in events['pupil_positions'] if ng['norm_gaze'] is not None]
         screen_gaze = [denormalize(ng,img_shape,flip_y=True) for ng in norm_gaze]
-
 
         overlay = np.ones(img.shape[:-1],dtype=img.dtype)
 
@@ -61,37 +63,34 @@ class Vis_Light_Points(Plugin):
 
         img *= cv2.cvtColor(overlay,cv2.COLOR_GRAY2RGB)
 
+    def init_gui(self):
+        # initialize the menu
+        self.menu = ui.Scrolling_Menu('Light Points')
+        # load the configuration of last session
+        self.menu.configuration = self.menu_conf
+        # add menu to the window
+        self.g_pool.gui.append(self.menu)
 
-    def init_gui(self,pos=None):
-        pos = self.gui_settings['pos']
-        import atb
-        atb_label = "Light Points"
-        self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
-            help="circle", color=(50, 50, 50), alpha=50,
-            text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
-        self._bar.iconified = self.gui_settings['iconified']
-        self._bar.add_var('falloff',self.falloff,min=1)
-        self._bar.add_button('remove',self.unset_alive)
+        self.menu.append(ui.Slider('falloff',self,min=1,step=1,max=1000))
+        self.menu.append(ui.Button('remove',self.unset_alive))
+
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.gui.remove(self.menu)
+            self.menu = None
 
     def unset_alive(self):
         self.alive = False
 
-
     def get_init_dict(self):
-        d = {'falloff': self.falloff.value}
-        if hasattr(self,'_bar'):
-            gui_settings = {'pos':self._bar.position,'size':self._bar.size,'iconified':self._bar.iconified}
-            d['gui_settings'] = gui_settings
-
-        return d
+        return {'falloff': self.falloff, 'menu_conf':self.menu.configuration}
 
     def clone(self):
         return Vis_Light_Points(**self.get_init_dict())
 
-
     def cleanup(self):
         """ called when the plugin gets terminated.
-        This happends either voluntary or forced.
-        if you have an atb bar or glfw window destroy it here.
+        This happens either voluntarily or forced.
+        if you have a GUI or glfw window destroy it here.
         """
-        self._bar.destroy()
+        self.deinit_gui()

@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -19,13 +19,14 @@ import OpenGL.GL as gl
 from glfw import *
 from OpenGL.GLU import gluOrtho2D
 import calibrate
-from circle_detector import get_canditate_ellipses
+from circle_detector import get_candidate_ellipses
 
-from ctypes import c_int,c_bool,c_float
-import atb
+from pyglui import ui
+from plugin import Calibration_Plugin
+
 import audio
 
-from plugin import Plugin
+
 
 #logging
 import logging
@@ -48,19 +49,19 @@ def draw_marker(pos):
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
-    adjust_gl_view(w,h,window)
+    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
+    w,h = w*hdpi_factor, h*hdpi_factor
+    adjust_gl_view(w,h)
     glfwMakeContextCurrent(active_window)
 
 
-class Accuracy_Test(Plugin):
+class Accuracy_Test(Calibration_Plugin):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites
     Points are collected at sites not between
-
     """
-    def __init__(self, g_pool, atb_pos=(0,0)):
-        Plugin.__init__(self)
-        self.g_pool = g_pool
+    def __init__(self, g_pool,menu_conf = {}):
+        super(Accuracy_Test, self).__init__(g_pool)
         self.active = False
         self.detected = False
         self.screen_marker_state = 0
@@ -75,14 +76,14 @@ class Accuracy_Test(Plugin):
 
         #result calculation variables:
         self.world_size = None
-        self.fov = c_float(90.) #taken from c930e specsheet, confirmed though mesurement within ~10deg.
-        self.res =  c_float(1.)
-        self.outlier_thresh = c_float(5.)
-        self.accuray = c_float(0)
-        self.percision = c_float(0)
+        self.fov = 90. #taken from c930e specsheet, confirmed though mesurement within ~10deg.
+        self.res =  1.
+        self.outlier_thresh = 5.
+        self.accuray = 0
+        self.percision = 0
 
         try:
-            self.pt_cloud = np.load(os.path.join(self.g_pool.user_dir,'accuray_test_pt_cloud.npy'))
+            self.pt_cloud = np.load(os.path.join(self.g_pool.user_dir,'accuracy_test_pt_cloud.npy'))
             gaze,ref = self.pt_cloud[:,0:2],self.pt_cloud[:,2:4]
             error_lines = np.array([[g,r] for g,r in zip(gaze,ref)])
             self.error_lines = error_lines.reshape(-1,2)
@@ -91,31 +92,49 @@ class Accuracy_Test(Plugin):
             self.pt_cloud = None
 
 
-        self.show_edges = c_bool(0)
-        self.dist_threshold = c_int(5)
-        self.area_threshold = c_int(20)
+        self.show_edges = 0
+        self.dist_threshold = 5
+        self.area_threshold = 20
 
+
+        self.menu = None
+        self.menu_conf = menu_conf
+        self.button = None
 
         self._window = None
         self.window_should_close = False
         self.window_should_open = False
-        self.fullscreen = c_bool(1)
-        self.monitor_idx = c_int(0)
-        monitor_handles = glfwGetMonitors()
-        self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
-        monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
+        self.fullscreen = 1
+        self.monitor_idx = 0
+
+
+    def init_gui(self):
+        self.monitor_idx = 0
+        self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+
         #primary_monitor = glfwGetPrimaryMonitor()
+        self.info = ui.Info_Text("Measure gaze mapping accuracy and percision using a screen based animation: After having calibrated on the screen run this test. To compute results set your world cam FOV and click 'calculate results'.")
+        self.g_pool.calibration_menu.append(self.info)
+
+        self.menu = ui.Growing_Menu('Controls')
+        self.menu.configuration = self.menu_conf
+        self.g_pool.calibration_menu.append(self.menu)
+        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
+        self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
 
 
+        submenu = ui.Growing_Menu('Error Calculation')
 
-        atb_label = "screen marker based accuracy test"
-        # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-        self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
-            help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 200))
-        self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
-        self._bar.add_var("fullscreen", self.fullscreen)
-        self._bar.add_button("  start test  ", self.start, key='c')
+        def set_fov(val):
+            try:
+                self.fov = float(val)
+            except:
+                pass
+        submenu.append(ui.Text_Input('diagonal camera FV',setter=set_fov,getter=lambda:str(self.fov) ) )
+        submenu.append(ui.Text_Input('diagonal resolution',getter=lambda:str(self.res) ) )
+        submenu[-1].read_only = True
+        submenu.append(ui.Slider('outlier_thresh',self,label='outlier threshold deg',min=0,max=10))
+        submenu.append(ui.Button('calculate result',self.calc_result))
 
         accuray_help ='''Accuracy is calculated as the average angular
                         offset (distance) (in degrees of visual angle)
@@ -126,22 +145,49 @@ class Accuracy_Test(Plugin):
                             of the angular distance (in degrees of visual angle)
                             between successive samples during a fixation.'''.replace("\n"," ").replace("    ",'')
 
-        self._bar.add_var('diagonal FOV',self.fov,help="set the camera FOV here.",group='Error Calculation')
-        self._bar.add_var('diagonal resolution',self.res,readonly= True ,group='Error Calculation')
-        self._bar.add_var('outlier threshold deg',self.outlier_thresh ,group='Error Calculation')
-        self._bar.add_var('angular accuray',self.accuray,readonly=True ,group='Error Calculation',help=accuray_help)
-        self._bar.add_var('angular percision',self.percision,readonly=True ,group='Error Calculation',help=percision_help)
-        self._bar.add_button('calculate result',self.calc_result ,group='Error Calculation')
-        self._bar.add_var("show edges",self.show_edges, group="Detector Variables")
-        self._bar.add_var("area threshold", self.area_threshold ,group="Detector Variables")
-        self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Detector Variables" )
+        submenu.append(ui.Info_Text(accuray_help))
+        submenu.append(ui.Text_Input('angular accuray',getter=lambda:str(self.accuray) ) )
+        submenu[-1].read_only = True
+        submenu.append(ui.Info_Text(percision_help))
+        submenu.append(ui.Text_Input('diagonal resolution',getter=lambda:str(self.percision) ) )
+        submenu[-1].read_only = True
+        self.menu.append(submenu)
+
+
+        submenu = ui.Growing_Menu('Advanced Detector Settings')
+        submenu.collapsed = True
+        submenu.append(ui.Switch('show_edges',self,label='show edges'))
+        submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area Threshold'))
+        submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity Threshold'))
+        self.menu.append(submenu)
+
+
+        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button.on_color[:] = (.3,.2,1.,.9)
+        self.g_pool.quickbar.insert(0,self.button)
+
+
+    def deinit_gui(self):
+        if self.menu:
+            self.menu_conf = self.menu.configuration
+            self.g_pool.calibration_menu.remove(self.menu)
+            self.g_pool.calibration_menu.remove(self.info)
+            self.menu = None
+        if self.button:
+            self.g_pool.quickbar.remove(self.button)
+            self.button = None
+
+
+    def toggle(self,new_var):
+        if self.active:
+            self.stop()
+        else:
+            self.start()
+
 
 
     def start(self):
-        if self.active:
-            return
-
-        audio.say("Starting Accuracy_Test")
+        audio.say("Starting Accuracy Test")
         logger.info("Starting Accuracy_Test")
         self.sites = [  (.5, .5), (0,.5),
                         (0.,1),(.5,1),(1.,1.),
@@ -153,12 +199,12 @@ class Accuracy_Test(Plugin):
         self.active = True
         self.ref_list = []
         self.gaze_list = []
-        self.window_should_open = True
+        self.open_window()
 
     def open_window(self):
         if not self._window:
-            if self.fullscreen.value:
-                monitor = glfwGetMonitors()[self.monitor_idx.value]
+            if self.fullscreen:
+                monitor = glfwGetMonitors()[self.monitor_idx]
                 mode = glfwGetVideoMode(monitor)
                 height,width= mode[0],mode[1]
             else:
@@ -166,7 +212,7 @@ class Accuracy_Test(Plugin):
                 height,width= 640,360
 
             self._window = glfwCreateWindow(height, width, "Accuracy_Test", monitor=monitor, share=glfwGetCurrentContext())
-            if not self.fullscreen.value:
+            if not self.fullscreen:
                 glfwSetWindowPos(self._window,200,0)
 
             on_resize(self._window,height,width)
@@ -184,7 +230,6 @@ class Accuracy_Test(Plugin):
             glfwSwapInterval(0)
 
             glfwMakeContextCurrent(active_window)
-            self.window_should_open = False
 
 
     def on_key(self,window, key, scancode, action, mods):
@@ -198,11 +243,11 @@ class Accuracy_Test(Plugin):
             self.stop()
 
     def stop(self):
-        audio.say("Stopping Accuracy_Test")
+        audio.say("Stopping Accuracy Test")
         logger.info('Stopping Accuracy_Test')
         self.screen_marker_state = 0
         self.active = False
-        self.window_should_close = True
+        self.close_window()
 
         pt_cloud = preprocess_data_gaze(self.gaze_list,self.ref_list)
 
@@ -213,7 +258,7 @@ class Accuracy_Test(Plugin):
             return
 
         pt_cloud = np.array(pt_cloud)
-        np.save(os.path.join(self.g_pool.user_dir,'accuray_test_pt_cloud.npy'),pt_cloud)
+        np.save(os.path.join(self.g_pool.user_dir,'accuracy_test_pt_cloud.npy'),pt_cloud)
         gaze,ref = pt_cloud[:,0:2],pt_cloud[:,2:4]
         error_lines = np.array([[g,r] for g,r in zip(gaze,ref)])
         self.error_lines = error_lines.reshape(-1,2)
@@ -235,8 +280,8 @@ class Accuracy_Test(Plugin):
         pt_cloud[:,0:3:2] *= res[0]
         pt_cloud[:,1:4:2] *= res[1]
 
-        field_of_view = self.fov.value
-        px_per_degree = self.res.value/field_of_view
+        field_of_view = self.fov
+        px_per_degree = self.res/field_of_view
 
         # Accuracy is calculated as the average angular
         # offset (distance) (in degrees of visual angle)
@@ -252,9 +297,9 @@ class Accuracy_Test(Plugin):
         logger.info("Gaze error mean in world camera pixel: %f"%accuray_pix)
         error_mag /= px_per_degree
         logger.info('Error in degrees: %s'%error_mag)
-        logger.info('Outliers: %s'%np.where(error_mag>=self.outlier_thresh.value))
-        self.accuray.value = np.mean(error_mag[error_mag<self.outlier_thresh.value])
-        logger.info('Angular accuray: %s'%self.accuray.value)
+        logger.info('Outliers: %s'%np.where(error_mag>=self.outlier_thresh))
+        self.accuray = np.mean(error_mag[error_mag<self.outlier_thresh])
+        logger.info('Angular accuray: %s'%self.accuray)
 
 
         #lets calculate percision:  (RMS of distance of succesive samples.)
@@ -271,43 +316,38 @@ class Accuracy_Test(Plugin):
         # if the gaze dis is to big we can assume human error
         # both times gaze data is not valid for this mesurement
         succesive_distances =  succesive_distances_gaze[np.logical_and(succesive_distances_gaze< 1., succesive_distances_ref< .1)]
-        self.percision.value = np.sqrt(np.mean(succesive_distances**2))
-        logger.info("Angular percision: %s"%self.percision.value)
+        self.percision = np.sqrt(np.mean(succesive_distances**2))
+        logger.info("Angular percision: %s"%self.percision)
 
     def close_window(self):
         if self._window:
             glfwDestroyWindow(self._window)
             self._window = None
-            self.window_should_close = False
 
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
+
+        recent_pupil_positions = events['pupil_positions']
 
         #get world image size for error fitting later.
         if self.world_size is None:
-            self.world_size = frame.img.shape[1],frame.img.shape[0]
-            self.res.value = np.sqrt(self.world_size[0]**2+self.world_size[1]**2)
-
-        if self.window_should_close:
-            self.close_window()
-
-        if self.window_should_open:
-            self.open_window()
+            self.world_size = frame.width,frame.height
+            self.res = np.sqrt(self.world_size[0]**2+self.world_size[1]**2)
 
         if self.active:
-            img = frame.img
+            gray_img = frame.gray
 
             #detect the marker
-            self.candidate_ellipses = get_canditate_ellipses(img,
-                                                            area_threshold=self.area_threshold.value,
-                                                            dist_threshold=self.dist_threshold.value,
+            self.candidate_ellipses = get_candidate_ellipses(gray_img,
+                                                            area_threshold=self.area_threshold,
+                                                            dist_threshold=self.dist_threshold,
                                                             min_ring_count=4,
-                                                            visual_debug=self.show_edges.value)
+                                                            visual_debug=self.show_edges)
 
             if len(self.candidate_ellipses) > 0:
                 self.detected= True
                 marker_pos = self.candidate_ellipses[0][0]
-                self.pos = normalize(marker_pos,(img.shape[1],img.shape[0]),flip_y=True)
+                self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
             else:
                 self.detected = False
@@ -427,6 +467,10 @@ class Accuracy_Test(Plugin):
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
 
+    def get_init_dict(self):
+        return {}
+
+
 
     def cleanup(self):
         """gets called when the plugin get terminated.
@@ -436,7 +480,8 @@ class Accuracy_Test(Plugin):
             self.stop()
         if self._window:
             self.close_window()
-        self._bar.destroy()
+
+        self.deinit_gui()
 
 
 def preprocess_data_gaze(gaze_pts,ref_pts):

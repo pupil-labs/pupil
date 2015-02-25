@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inlier_map=False):
+def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inlier_map=False,return_params=False):
     """
     we do a simple two pass fitting to a pair of bi-variate polynomials
     return the function to map vector
@@ -32,20 +32,28 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inli
         logger.info('first iteration. root-mean-square residuals: %s, in pixel' %err_rms)
         logger.info('second iteration: ignoring outliers. root-mean-square residuals: %s in pixel',new_err_rms)
 
-        logger.info('used %i datapoints out of the full dataset %i: subset is %i percent' \
+        logger.info('used %i data points out of the full dataset %i: subset is %i percent' \
             %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
             100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0]))
 
-        if return_inlier_map:
+        if return_inlier_map and return_params:
+            return map_fn,err_dist<=threshold,(cx,cy,model_n)
+        if return_inlier_map and not return_params:
             return map_fn,err_dist<=threshold
+        if return_params and not return_inlier_map:
+            return map_fn,(cx,cy,model_n)
         return map_fn
-    else: # did disregard all pints. The data cannot be represented by the model in a meaningfull way:
+    else: # did disregard all points. The data cannot be represented by the model in a meaningful way:
         map_fn = make_map_function(cx,cy,model_n)
         logger.info('First iteration. root-mean-square residuals: %s in pixel, this is bad!'%err_rms)
         logger.warning('The data cannot be represented by the model in a meaningfull way.')
 
-        if return_inlier_map:
+        if return_inlier_map and return_params:
+            return map_fn,err_dist<=threshold,(cx,cy,model_n)
+        if return_inlier_map and not return_params:
             return map_fn,err_dist<=threshold
+        if return_params and not return_inlier_map:
+            return map_fn,(cx,cy,model_n)
         return map_fn
 
 
@@ -139,7 +147,7 @@ def make_map_function(cx,cy,n):
 
 def preprocess_data(pupil_pts,ref_pts):
     '''small utility function to deal with timestamped but uncorrelated data
-    input must be lists that contain dicts with at least "timestamp" and "norm_pos"/'norm_pupil"
+    input must be lists that contain dicts with at least "timestamp" and "norm_pos"
     '''
     cal_data = []
 
@@ -158,7 +166,7 @@ def preprocess_data(pupil_pts,ref_pts):
                 for p_pt in matched:
                     #only use close points
                     if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                        data_pt = p_pt["norm_pupil"][0], p_pt["norm_pupil"][1],cur_ref_pt['norm_pos'][0],cur_ref_pt['norm_pos'][1]
+                        data_pt = p_pt["norm_pos"][0], p_pt["norm_pos"][1],cur_ref_pt['norm_pos'][0],cur_ref_pt['norm_pos'][1]
                         cal_data.append(data_pt)
                 break
         if ref_pts:

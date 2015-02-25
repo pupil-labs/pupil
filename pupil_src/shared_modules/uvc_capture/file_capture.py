@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -22,7 +22,8 @@ it requires:
 import os,sys
 import cv2
 import numpy as np
-from time import time
+from time import time,sleep
+from pyglui import ui
 
 
 #logging
@@ -56,21 +57,30 @@ class Frame(object):
         self.timestamp = timestamp
         self.index = index
         self.img = img
-        self.compressed_img = compressed_img
-        self.compressed_pix_fmt = compressed_pix_fmt
+        self.height,self.width,_ = img.shape
+        self._gray = None
 
     def copy(self):
         return Frame(self.timestamp,self.img.copy(),self.index)
+
+    @property
+    def gray(self):
+        if self._gray is None:
+            self._gray =  cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
+        return self._gray
 
 class File_Capture():
     """
     simple file capture.
     """
     def __init__(self,src,timestamps=None):
+        self.menu = None
         self.auto_rewind = True
         self.controls = None #No UVC controls available with file capture
+        self.sleep = 0.0
         # we initialize the actual capture based on cv2.VideoCapture
         self.cap = cv2.VideoCapture(src)
+        self.src =src
         if timestamps is None and src.endswith("eye.avi"):
             timestamps_loc = os.path.join(src.rsplit(os.path.sep,1)[0],'eye_timestamps.npy')
             logger.debug("trying to auto load eye_video timestamps with video at: %s"%timestamps_loc)
@@ -110,6 +120,8 @@ class File_Capture():
         return len(self.timestamps)
 
     def get_frame(self):
+        if self.sleep:
+            sleep(self.sleep)
         idx = int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
         s, img = self.cap.read()
         if not s:
@@ -153,23 +165,29 @@ class File_Capture():
     def get_now(self):
         idx = int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
         if self.timestamps:
-
             try:
                 timestamp = self.timestamps[idx]
-                logger.warning("Filecapture is not a realtime source. -NOW- will be the current timestamp")
+                logger.info("Filecapture is not a realtime source. -NOW- will be the current timestamp")
             except IndexError:
                 logger.warning("timestamps not found.")
                 timestamp = 0
         else:
-            logger.warning("Filecapture is not a realtime source. -NOW- will be the current time.")
+            logger.info("Filecapture is not a realtime source. -NOW- will be the current time.")
             timestamp = time()
         return timestamp
 
-    def create_atb_bar(self,pos):
-        return 0,0
 
-    def kill_atb_bar(self):
-        pass
+    def init_gui(self,sidebar):
+        self.menu = ui.Growing_Menu(label='File Capture Settings')
+        self.menu.append(ui.Info_Text("Running Capture with '%s' as src"%self.src))
+        self.menu.append(ui.Slider('sleep',self,min=0.,max=.2,label='add delay between frames (sec.)'))
+        self.sidebar = sidebar
+        self.sidebar.append(self.menu)
+
+    def deinit_gui(self):
+        if self.menu:
+            self.sidebar.remove(self.menu)
+            self.menu = None
 
     def close(self):
-        pass
+        self.deinit_gui()

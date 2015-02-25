@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -13,22 +13,32 @@ logger = logging.getLogger(__name__)
 
 class Plugin(object):
     """docstring for Plugin
-
     plugin is a base class
     it has all interfaces that will be called
     instances of this class ususally get added to a plugins list
     this list will have its members called with all methods invoked.
 
     """
-    def __init__(self):
-        self._alive = True
+    # if you have a plugin that can exist multiple times make this false in your derived class
+    uniqueness = 'by_class'
+    # uniqueness = 'not_unique'
+    # uniqueness = 'by_base_class'
 
+    def __init__(self,g_pool):
+        self._alive = True
+        self.g_pool = g_pool
         self.order = .5
         # between 0 and 1 this indicated where in the plugin excecution order you plugin lives:
         # <.5  are things that add/mofify information that will be used by other plugins and rely on untouched data.
-        # You should not edit frame.img if you are here!
-        # == 5 is the default.
+        # You should not edit frame if you are here!
+        # == .5 is the default.
         # >.5 are things that depend on other plugins work like display , saving and streaming
+
+    def init_gui(self):
+        '''
+        if the app allows a gui, you may initalize your part of it here.
+        '''
+        pass
 
 
     @property
@@ -55,12 +65,12 @@ class Plugin(object):
 
     def on_window_resize(self,window,w,h):
         '''
-        gets called when user resizes window. 
+        gets called when user resizes window.
         window is the glfw window handle of the resized window.
         '''
         pass
-        
-    def update(self,frame,recent_pupil_positions,events):
+
+    def update(self,frame,events):
         """
         gets called once every frame
         if you plan to update the image data, note that this will affect all plugins axecuted after you.
@@ -81,153 +91,141 @@ class Plugin(object):
         """
         gets called when the plugin get terminated.
         This happens either voluntarily or forced.
-        if you have an atb bar or glfw window destroy it here.
+        if you have an gui or glfw window destroy it here.
         """
         pass
 
-    def get_class_name(self):
+
+
+    def on_click(self,pos,button,action):
+        """
+        gets called when the user clicks in the window screen
+        """
+        pass
+
+    @property
+    def class_name(self):
+        '''
+        name of this instance's class
+        '''
         return self.__class__.__name__
 
+    @property
+    def base_class(self):
+        '''
+        base class of this instance's class
+        '''
+        return self.__class__.__bases__[0]
+
+    @property
+    def base_class_name(self):
+        '''
+        base class name of this instance's class
+        '''
+        return self.base_class.__name__
+
+    @property
+    def pretty_class_name(self):
+        return self.class_name.replace('_',' ')
+
+
+    ### if you want a session persistent plugin implement this function:
+    # def get_init_dict(self):
+    #     d = {}
+    #     # add all aguments of your plugin init fn with paramter names as name field
+    #     # do not include g_pool here.
+    #     return d
 
     def __del__(self):
         self._alive = False
 
 
-'''
-# example of a plugin with atb bar and its own private window + gl-context:
 
-from glfw import *
-from plugin import Plugin
-
-from ctypes import c_int,c_bool
-import atb
-from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
+# Derived base classes:
+# If you inherit from these your plugin property base_class will point to them
+# This is good because we can categorize plugins.
+class Calibration_Plugin(Plugin):
+    '''base class for all calibration routines'''
+    uniqueness = 'by_base_class'
 
 
-# window calbacks
-def on_resize(window,w, h):
-    active_window = glfwGetCurrentContext()
-    glfwMakeContextCurrent(window)
-    adjust_gl_view(w,h,window)
-    glfwMakeContextCurrent(active_window)
-
-class Example_Plugin(Plugin):
-
-    def __init__(self,g_pool,atb_pos=(0,0)):
-        Plugin.__init__(self)
-
-        self.window_should_open = False
-        self.window_should_close = False
-        self._window = None
-        self.fullscreen = c_bool(0)
-        self.monitor_idx = c_int(0)
-        monitor_handles = glfwGetMonitors()
-        self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
-        monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(monitor_names))))
-        #primary_monitor = glfwGetPrimaryMonitor()
-
-        atb_label = "example plugin"
-        # Creating an ATB Bar.
-        self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
-            help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
-        self._bar.add_var("fullscreen", self.fullscreen)
-        self._bar.add_button("  show window   ", self.do_open, key='c')
-
-    def do_open(self):
-        if not self._window:
-            self.window_should_open = True
-
-    def open_window(self):
-        if not self._window:
-            if self.fullscreen.value:
-                monitor = glfwGetMonitors()[self.monitor_idx.value]
-                mode = glfwGetVideoMode(monitor)
-                height,width= mode[0],mode[1]
-            else:
-                monitor = None
-                height,width= 640,360
-
-            self._window = glfwCreateWindow(height, width, "Plugin Window", monitor=monitor, share=None)
-            if not self.fullscreen.value:
-                glfwSetWindowPos(self._window,200,0)
-
-            on_resize(self._window,height,width)
-
-            #Register callbacks
-            glfwSetWindowSizeCallback(self._window,on_resize)
-            glfwSetKeyCallback(self._window,self.on_key)
-            glfwSetWindowCloseCallback(self._window,self.on_close)
-
-            # gl_state settings
-            active_window = glfwGetCurrentContext()
-            glfwMakeContextCurrent(self._window)
-            basic_gl_setup()
-
-            # refresh speed settings
-            glfwSwapInterval(0)
-
-            glfwMakeContextCurrent(active_window)
-            self.window_should_open = False
-
-
-    def on_key(self,window, key, scancode, action, mods):
-        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
-            if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
-                    self.on_close()
-
-
-    def on_close(self,window=None):
-        self.window_should_close = True
-
-    def close_window(self):
-        if self._window:
-            glfwDestroyWindow(self._window)
-            self._window = None
-            self.window_should_close = False
-
-
-    def update(self,frame,recent_pupil_positions,events):
-
-        if self.window_should_close:
-            self.close_window()
-
-        if self.window_should_open:
-            self.open_window()
-
-    def gl_display(self):
-        """
-        use gl calls to render on world window
-        """
-
-        # gl stuff that will show on the world window goes here:
-
-        if self._window:
-            self.gl_display_in_window()
-
-    def gl_display_in_window(self):
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(self._window)
-
-        clear_gl_screen()
-
-        # gl stuff that will show on your plugin window goes here
-
-        glfwSwapBuffers(self._window)
-        glfwMakeContextCurrent(active_window)
+class Gaze_Mapping_Plugin(Plugin):
+    '''base class for all calibration routines'''
+    uniqueness = 'by_base_class'
+    def __init__(self,g_pool):
+        super(Gaze_Mapping_Plugin, self).__init__(g_pool)
+        self.order = 0.1
 
 
 
-    def cleanup(self):
-        """gets called when the plugin get terminated.
-        This happends either volunatily or forced.
-        if you have an atb bar or glfw window destroy it here.
-        """
-        if self._window:
-            self.close_window()
-        self._bar.destroy()
+class Plugin_List(list):
+    """This is the Plugin Manger
+        It is a self sorting list with a few functions to manage adding and removing Plugins.
+    """
+    def __init__(self,g_pool,plugin_by_name,plugin_initializers):
+        super(Plugin_List, self).__init__()
+        self.g_pool = g_pool
 
-'''
+        for initializer in plugin_initializers:
+            name, args = initializer
+            logger.info("Loading plugin: %s with settings %s"%(name, args))
+            try:
+                p = plugin_by_name[name](g_pool,**args)
+                self.add(p)
+            except (AttributeError,TypeError,KeyError) as e:
+                logger.warning("Plugin '%s' failed to load from settings file. Becasue of Error:%s" %(name,e))
+
+    def add(self,new_plugin):
+        '''
+        add a plugin instance to the list.
+
+        '''
+
+        if new_plugin.uniqueness == 'by_base_class':
+            for p in self:
+                if p.base_class_name == new_plugin.base_class_name:
+                    logger.debug("Plugin %s of base class %s will be repleced by %s."%(p,p.base_class_name,new_plugin))
+                    p.alive = False
+                    self.clean()
+
+        elif new_plugin.uniqueness == 'by_class':
+            for p in self:
+                if p.class_name == new_plugin.class_name:
+                    logger.warning("Plugin %s is already loaded and flagged as unique. Did not add it."%new_plugin)
+                    return
+
+        logger.debug("Loaded Plugin: %s"%new_plugin)
+        self.append(new_plugin)
+        self.sort(key=lambda p: p.order)
+        if self.g_pool.app in ("capture","player") and new_plugin.alive: #make sure the plugin does not want to be gone already
+            new_plugin.init_gui()
+
+
+    def clean(self):
+        '''
+        plugins may flag themselvse as dead or are flagged as dead. We need to remove them.
+        '''
+        for p in self:
+            if not p.alive: # reading p.alive will trigger the plug-in cleanup fn.
+                logger.debug("Unloaded Plugin: %s"%p)
+                self.remove(p)
+
+    def get_initializers(self):
+        initializers = []
+        for p in self:
+            try:
+                p_initializer = p.class_name,p.get_init_dict()
+                initializers.append(p_initializer)
+            except AttributeError:
+                #not all plugins want to be savable, they will not have the init dict.
+                # any object without a get_init_dict method will throw this exception.
+                pass
+        return initializers
+
+
+
+
+
+
+
 

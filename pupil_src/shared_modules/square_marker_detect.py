@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -233,10 +233,6 @@ def m_screen_to_marker(marker):
     return cv2.getPerspectiveTransform(marker['verts'],mapped_space_one)
 
 
-def detect_markers_simple(img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False):
-    gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    return detect_markers(gray_img,grid_size,min_marker_perimeter,aperture,visualize)
-
 
 
 
@@ -247,9 +243,8 @@ lk_params = dict( winSize  = (45, 45),
 prev_img = None
 tick = 0
 
-def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False,true_detect_every_frame = 1):
+def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False,true_detect_every_frame = 1):
     global prev_img
-    gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
     global tick
     if not tick:
@@ -299,7 +294,7 @@ def detect_markers_robust(img,grid_size,prev_markers,min_marker_perimeter=40,ape
         markers = new_markers
 
 
-    prev_img = gray_img
+    prev_img = gray_img.copy()
     return markers
 
 

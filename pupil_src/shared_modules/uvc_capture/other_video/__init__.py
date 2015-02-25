@@ -1,14 +1,14 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from cv2 import VideoCapture
+import cv2
 from time import time
 
 #logging
@@ -25,13 +25,26 @@ class CameraCaptureError(Exception):
 
 
 
+
 class Frame(object):
     """docstring of Frame"""
-    def __init__(self, timestamp,img,compressed_img=None, compressed_pix_fmt=None):
+    def __init__(self, timestamp,img):
         self.timestamp = timestamp
         self.img = img
-        self.compressed_img = compressed_img
-        self.compressed_pix_fmt = compressed_pix_fmt
+        self.height,self.width,_ = img.shape
+        self._gray = None
+        self._yuv = None
+
+    @property
+    def gray(self):
+        if self._gray is None:
+            self._gray = cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
+        return self._gray
+    @gray.setter
+    def gray(self, value):
+        raise Exception('Read only.')
+
+
 
 
 class Camera_List(list):
@@ -51,7 +64,7 @@ class Camera_Capture():
         self.name = "VideoCapture"
         self.controls = None
         ###add cv videocapture capabilities
-        self.capture = VideoCapture(src_id)
+        self.capture = cv2.VideoCapture(src_id)
         self.set_size(size)
 
         if timebase == None:

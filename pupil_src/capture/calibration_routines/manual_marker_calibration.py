@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -13,18 +13,19 @@ import cv2
 import numpy as np
 from methods import normalize,denormalize
 from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
-from circle_detector import get_canditate_ellipses
+from circle_detector import get_candidate_ellipses
 import calibrate
 
-from ctypes import c_int,c_bool
-import atb
 import audio
-from plugin import Plugin
+
+from pyglui import ui
+from plugin import Calibration_Plugin
+from gaze_mappers import Simple_Gaze_Mapper
 #logging
 import logging
 logger = logging.getLogger(__name__)
 
-class Manual_Marker_Calibration(Plugin):
+class Manual_Marker_Calibration(Calibration_Plugin):
     """Detector looks for a white ring on a black background.
         Using at least 9 positions/points within the FOV
         Ref detector will direct one to good positions with audio cues
@@ -35,11 +36,10 @@ class Manual_Marker_Calibration(Plugin):
             Find contours and filter into 2 level list using RETR_CCOMP
             Fit ellipses
     """
-    def __init__(self, g_pool,atb_pos=(0,0)):
-        Plugin.__init__(self)
+    def __init__(self, g_pool,menu_conf = {'collapsed':True}):
+        super(Manual_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
-        self.g_pool = g_pool
         self.pos = None
         self.smooth_pos = 0.,0.
         self.smooth_vel = 0.
@@ -47,28 +47,52 @@ class Manual_Marker_Calibration(Plugin):
         self.counter = 0
         self.counter_max = 30
         self.candidate_ellipses = []
-        self.show_edges = c_bool(0)
+        self.show_edges = 0
         self.aperture = 7
-        self.dist_threshold = c_int(10)
-        self.area_threshold = c_int(30)
+        self.dist_threshold = 10
+        self.area_threshold = 30
         self.world_size = None
 
         self.stop_marker_found = False
         self.auto_stop = 0
         self.auto_stop_max = 30
-        atb_label = "calibrate using handheld marker"
-        # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-        self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
-            help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 100))
-        self._bar.add_button("start/stop", self.start_stop, key='c')
-        self._bar.add_var("show edges",self.show_edges, group="Advanced")
-        # self._bar.add_var("counter", getter=self.get_count, group="Advanced")
-        # self._bar.add_var("aperture", self.aperture, min=3,step=2, group="Advanced")
-        # self._bar.add_var("area threshold", self.area_threshold, group="Advanced")
-        # self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Advanced")
 
-    def start_stop(self):
+        self.menu = None
+        self.menu_conf = menu_conf
+        self.button = None
+
+
+    def init_gui(self):
+
+        self.info = ui.Info_Text("Calibrate gaze parameters using a handheld marker.")
+        self.g_pool.calibration_menu.append(self.info)
+
+        self.menu = ui.Growing_Menu('Controls')
+        self.menu.configuration = self.menu_conf
+        self.g_pool.calibration_menu.append(self.menu)
+
+
+        submenu = ui.Growing_Menu('Advanced')
+        submenu.collapsed = True
+        self.menu.append(submenu)
+        submenu.append(ui.Slider('aperture',self,min=3,step=2,max=11,label='filter aperture'))
+        submenu.append(ui.Switch('show_edges',self,label='show edges'))
+
+        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button.on_color[:] = (.3,.2,1.,.9)
+        self.g_pool.quickbar.insert(0,self.button)
+
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.calibration_menu.remove(self.menu)
+            self.g_pool.calibration_menu.remove(self.info)
+            self.menu = None
+        if self.button:
+            self.g_pool.quickbar.remove(self.button)
+            self.button = None
+
+
+    def toggle(self,new_var):
         if self.active:
             self.stop()
         else:
@@ -88,7 +112,8 @@ class Manual_Marker_Calibration(Plugin):
         self.smooth_pos = 0,0
         self.counter = 0
         self.active = False
-
+        self.button.status_text = ''
+        print 'button:', self.button.status_text
 
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
         logger.info("Collected %s data points." %len(cal_pt_cloud))
@@ -96,37 +121,36 @@ class Manual_Marker_Calibration(Plugin):
             logger.warning("Did not collect enough data.")
             return
         cal_pt_cloud = np.array(cal_pt_cloud)
-        self.g_pool.map_pupil = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size)
+        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,return_params=True)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
+        self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
 
 
-    def get_count(self):
-        return self.counter
-
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
         """
         gets called once every frame.
         reference positon need to be published to shared_pos
         if no reference was found, publish 0,0
         """
         if self.active:
+            recent_pupil_positions = events['pupil_positions']
 
-            img  = frame.img
+            gray_img  = frame.gray
 
             if self.world_size is None:
-                self.world_size = img.shape[1],img.shape[0]
+                self.world_size = frame.width,frame.height
 
-            self.candidate_ellipses = get_canditate_ellipses(img,
-                                                            area_threshold=self.area_threshold.value,
-                                                            dist_threshold=self.dist_threshold.value,
+            self.candidate_ellipses = get_candidate_ellipses(gray_img,
+                                                            area_threshold=self.area_threshold,
+                                                            dist_threshold=self.dist_threshold,
                                                             min_ring_count=5,
-                                                            visual_debug=self.show_edges.value)
+                                                            visual_debug=self.show_edges)
 
             if len(self.candidate_ellipses) > 0:
                 self.detected = True
                 marker_pos = self.candidate_ellipses[0][0]
-                self.pos = normalize(marker_pos,(img.shape[1],img.shape[0]),flip_y=True)
+                self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
 
             else:
@@ -139,9 +163,8 @@ class Manual_Marker_Calibration(Plugin):
                 second_ellipse =  self.candidate_ellipses[1]
                 col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
                 row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
-                marker_roi = img[slice(*row_slice),slice(*col_slice)]
-                marker_gray = cv2.cvtColor(marker_roi,cv2.COLOR_BGR2GRAY)
-                avg = cv2.mean(marker_gray)[0]
+                marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
+                avg = cv2.mean(marker_gray)[0] #CV2 fn return has changed!
                 center = marker_gray[second_ellipse[1][1]/2,second_ellipse[1][0]/2]
                 rel_shade = center-avg
 
@@ -176,6 +199,7 @@ class Manual_Marker_Calibration(Plugin):
 
                 # start counter if ref is resting in place and not at last sample site
                 if not self.counter:
+
                     if self.smooth_vel < 0.01 and sample_ref_dist > 0.1:
                         self.sample_site = self.smooth_pos
                         audio.beep()
@@ -201,8 +225,16 @@ class Manual_Marker_Calibration(Plugin):
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['norm_pupil'] is not None:
+                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
+
+            if self.counter:
+                if self.detected:
+                    self.button.status_text = 'Sampling Gaze Data'
+                else:
+                    self.button.status_text = 'Marker Lost'
+            else:
+                self.button.status_text = 'Looking for Marker'
 
 
 
@@ -216,6 +248,11 @@ class Manual_Marker_Calibration(Plugin):
             pass
 
 
+    def get_init_dict(self):
+        if self.menu:
+            return {'menu_conf':self.menu.configuration}
+        else:
+            return {'menu_conf':self.menu_conf}
 
     def gl_display(self):
         """
@@ -258,9 +295,9 @@ class Manual_Marker_Calibration(Plugin):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-        This happends either volunatily or forced.
+        This happens either voluntarily or forced.
         if you have an atb bar or glfw window destroy it here.
         """
         if self.active:
             self.stop()
-        self._bar.destroy()
+        self.deinit_gui()

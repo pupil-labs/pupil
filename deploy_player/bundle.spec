@@ -3,12 +3,15 @@
 
 import platform
 
+av_hidden_imports = ['av.format','av.packet','av.frame','av.stream','av.plane','av.audio.plane','av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane']
+
+
 if platform.system() == 'Darwin':
     from git_version import get_tag_commit
 
     a = Analysis(['../pupil_src/player/main.py'],
                  pathex=['../pupil_src/shared_modules/'],
-                 hiddenimports=[],
+                 hiddenimports=['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']+av_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None)
     pyz = PYZ(a.pure)
@@ -21,14 +24,17 @@ if platform.system() == 'Darwin':
               upx=False,
               console=False)
 
+    #exclude system lib.
+    libSystem = [bn for bn in a.binaries if 'libSystem.dylib' in bn]
     coll = COLLECT(exe,
-                   a.binaries,
+                   a.binaries - libSystem,
                    a.zipfiles,
                    a.datas,
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
                    [('uvcc.so', '../pupil_src/shared_modules/uvc_capture/mac_video/uvcc.so','BINARY')],
-                   [('libAntTweakBar.dylib', '/usr/local/Cellar/anttweakbar/1.16/lib/libAntTweakBar.dylib','BINARY')],
                    [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.0.2/lib/libglfw3.dylib','BINARY')],
+                   [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
+                   [('Roboto-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
                    strip=None,
                    upx=True,
                    name='Pupil Player')
@@ -41,7 +47,7 @@ if platform.system() == 'Darwin':
 elif platform.system() == 'Linux':
     a = Analysis(['../pupil_src/player/main.py'],
                  pathex=['../pupil_src/shared_modules/'],
-                 hiddenimports=[],
+                 hiddenimports=['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']+av_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None)
     pyz = PYZ(a.pure)
@@ -59,11 +65,10 @@ elif platform.system() == 'Linux':
                    a.zipfiles,
                    a.datas,
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
-                   [('capture.so', '../pupil_src/shared_modules/uvc_capture/linux_video/v4l2_capture/capture.so','BINARY')],
-                   [('libAntTweakBar.so', '/usr/lib/libAntTweakBar.so','BINARY')],
                    [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
-                   [('v4l2-ctl', '/usr/bin/v4l2-ctl','BINARY')],
                    [('icon.ico', 'linux_icon.ico','DATA')],
+                   [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/OpenSans-Regular.ttf','DATA')],
+                   [('Roboto-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/Roboto-Regular.ttf','DATA')],
                    strip=None,
                    upx=True,
                    name='pupil_player')
