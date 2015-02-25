@@ -42,6 +42,9 @@ from display_recent_gaze import Display_Recent_Gaze
 from pupil_server import Pupil_Server
 from pupil_remote import Pupil_Remote
 from marker_detector import Marker_Detector
+from mytestplugin import myExample_Plugin
+
+
 
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
@@ -242,6 +245,16 @@ def world(g_pool,cap_src,cap_size):
         g_pool.plugins.append(new_plugin)
         g_pool.plugins.sort(key=lambda p: p.order)
 
+    def toggle_myExample():
+        for p in g_pool.plugins:
+            if isinstance(p,myExample_Plugin):
+                p.alive = True
+                return
+    
+        new_plugin = myExample_Plugin(g_pool,(10,300))
+        g_pool.plugins.append(new_plugin)
+        g_pool.plugins.sort(key=lambda p: p.order)
+
     def toggle_remote():
         for p in g_pool.plugins:
             if isinstance(p,Pupil_Remote):
@@ -297,6 +310,7 @@ def world(g_pool,cap_src,cap_size):
     bar.add_button("start/stop marker tracking",toggle_ar,key="x",help="find markers in scene to map gaze onto referace surfaces")
     bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
     bar.add_button("start/stop remote",toggle_remote,key="w",help="remote allows seding commad to pupil via network")
+    bar.add_button("start/stop face detection",toggle_myExample,key="f",help="test forward videostream from world camera")
     bar.add_button("set timebase to now",reset_timebase,help="this button allows the timestamps to count from now on.",key="t")
     bar.add_var("update screen", g_pool.update_textures,help="if you dont need to see the camera image updated, you can turn this of to reduce CPU load.")
     bar.add_separator("Sep1")

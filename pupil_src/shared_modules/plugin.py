@@ -93,7 +93,6 @@ class Plugin(object):
         self._alive = False
 
 
-'''
 # example of a plugin with atb bar and its own private window + gl-context:
 
 from glfw import *
@@ -229,5 +228,4 @@ class Example_Plugin(Plugin):
             self.close_window()
         self._bar.destroy()
 
-'''
 

@@ -93,17 +93,21 @@ else:
 
 def main():
     # To assign camera by name: put string(s) in list
-    eye_src = ["Microsoft", "6000","Integrated Camera"]
-    world_src = ["Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
+    #eye_src = ["Microsoft", "6000","Integrated Camera"]
+    #world_src = ["Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
 
     # to assign cameras directly, using integers as demonstrated below
-    # eye_src = 1
-    # world_src = 0
+    #eye_src = 1
+    #world_src = 0
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    # eye_src = '/Users/mkassner/Pupil/datasets/p1-left/frames/test.avi'
-    # world_src = "/Users/mkassner/Desktop/2014_01_21/000/world.avi"
+    #eye_src = '/Users/mkassner/Pupil/datasets/p1-left/frames/test.avi'
+    #world_src = "/Users/mkassner/Desktop/2014_01_21/000/world.avi"
+    eye_src = '/Users/martin/Desktop/pupil_recordings/2015_02_23/000/eye.avi'
+    #world_src = "/Users/martin/Desktop/pupil_recordings/2015_02_23/000/world.avi"
+    world_src = "/Users/martin/Desktop/world.mov"
+    
 
     # Camera video size in pixels (width,height)
     eye_size = (640,360)
