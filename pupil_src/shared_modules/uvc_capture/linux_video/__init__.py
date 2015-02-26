@@ -96,7 +96,7 @@ class Camera_Capture(object):
         # we use some fuzzy logic to determine if hw timestamping should be employed.
 
         blacklist = ["Microsoft","HD-6000"]
-        qualifying_devices = ["C930e","Integrated Camera"]
+        qualifying_devices = ["C930e","Integrated Camera", "USB 2.0 Camera"]
         attached_devices = [c.name for c in Camera_List()]
         if any(qd in self.name for qd in qualifying_devices):
             use_hw_ts = True
