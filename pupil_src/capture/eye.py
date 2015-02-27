@@ -166,6 +166,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     # UI callback functions
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
+        g_pool.gui.collect_menus()
 
     def get_scale():
         return g_pool.gui.scale

@@ -175,6 +175,8 @@ def world(g_pool,cap_src,cap_size):
 
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
+        g_pool.gui.collect_menus()
+
 
     def get_scale():
         return g_pool.gui.scale
