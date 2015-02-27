@@ -41,6 +41,8 @@ def Camera_List():
         @property
         def src_id(self):
             return self.device.symbolicName
+        
+        # TODO: property bus_info
 
     devices = vi.DeviceList()
     _getVideoInputInstance().getListOfDevices(devices)
@@ -82,7 +84,6 @@ class Camera_Capture(object):
     device = None
     stream = None
 
-
     menu = None
     width = 640
     height = 480
@@ -91,7 +92,6 @@ class Camera_Capture(object):
 
     readSetting = None
     _frame = None
-
 
     @property
     def name(self):
@@ -181,7 +181,7 @@ class Camera_Capture(object):
 
     @property
     def frame_size(self):
-        raise Exception("Not implemented!")
+        return (self.actual_width, self.actual_height)
     @frame_size.setter
     def frame_size(self, value):
         raise Exception("Not implemented!")
@@ -259,7 +259,6 @@ class Camera_Capture(object):
             self.sidebar.remove(self.menu)
             self.menu = None
 
-
     def close(self):
         self.deinit_gui()
         res = self.context.closeDevice(self.deviceSettings)
@@ -298,9 +297,3 @@ class Camera_Capture(object):
 
 def _getVideoInputInstance():
     return vi.videoInput_getInstance()
-
-
-
-
-
-
