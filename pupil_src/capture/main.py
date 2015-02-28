@@ -23,9 +23,9 @@ if getattr(sys, 'frozen', False):
         rec_dir = os.path.expanduser('~/Desktop/pupil_recordings')
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
     else:
-        # Specifiy user irs.
-        user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"capture_settings")
-        rec_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"recordings")
+        # Specifiy user dirs.
+        user_dir = os.path.expanduser("~/pupil_capture_settings")
+        rec_dir = os.path.expanduser("~/pupil_recordings")
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
 
 
@@ -55,7 +55,7 @@ fh = logging.FileHandler(os.path.join(user_dir,'world.log'),mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.WARNING)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('World Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
