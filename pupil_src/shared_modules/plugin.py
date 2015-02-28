@@ -15,7 +15,7 @@ class Plugin(object):
     """docstring for Plugin
     plugin is a base class
     it has all interfaces that will be called
-    instances of this class ususally get added to a plugins list
+    instances of this class usually get added to a plugins list
     this list will have its members called with all methods invoked.
 
     """
@@ -49,7 +49,7 @@ class Plugin(object):
         """
         if not self._alive:
             if hasattr(self,"cleanup"):
-                    self.cleanup()
+                self.cleanup()
         return self._alive
 
     @alive.setter
@@ -73,7 +73,7 @@ class Plugin(object):
     def update(self,frame,events):
         """
         gets called once every frame
-        if you plan to update the image data, note that this will affect all plugins axecuted after you.
+        if you plan to update the image data, note that this will affect all plugins executed after you.
         Use self.order to deal with this appropriately
         """
         pass
@@ -158,12 +158,12 @@ class Gaze_Mapping_Plugin(Plugin):
 
 
 
-class Plugin_List(list):
+class Plugin_List(object):
     """This is the Plugin Manger
         It is a self sorting list with a few functions to manage adding and removing Plugins.
     """
     def __init__(self,g_pool,plugin_by_name,plugin_initializers):
-        super(Plugin_List, self).__init__()
+        self._plugins = []
         self.g_pool = g_pool
 
         for initializer in plugin_initializers:
@@ -173,7 +173,11 @@ class Plugin_List(list):
                 p = plugin_by_name[name](g_pool,**args)
                 self.add(p)
             except (AttributeError,TypeError,KeyError) as e:
-                logger.warning("Plugin '%s' failed to load from settings file. Becasue of Error:%s" %(name,e))
+                logger.warning("Plugin '%s' failed to load from settings file. Because of Error:%s" %(name,e))
+
+    def __iter__(self):
+        for p in self._plugins:
+            yield p
 
     def add(self,new_plugin):
         '''
@@ -182,37 +186,37 @@ class Plugin_List(list):
         '''
 
         if new_plugin.uniqueness == 'by_base_class':
-            for p in self:
+            for p in self._plugins:
                 if p.base_class_name == new_plugin.base_class_name:
-                    logger.debug("Plugin %s of base class %s will be repleced by %s."%(p,p.base_class_name,new_plugin))
+                    logger.debug("Plugin %s of base class %s will be replaced by %s."%(p,p.base_class_name,new_plugin))
                     p.alive = False
                     self.clean()
 
         elif new_plugin.uniqueness == 'by_class':
-            for p in self:
+            for p in self._plugins:
                 if p.class_name == new_plugin.class_name:
                     logger.warning("Plugin %s is already loaded and flagged as unique. Did not add it."%new_plugin)
                     return
 
         logger.debug("Loaded Plugin: %s"%new_plugin)
-        self.append(new_plugin)
-        self.sort(key=lambda p: p.order)
+        self._plugins.append(new_plugin)
+        self._plugins.sort(key=lambda p: p.order)
         if self.g_pool.app in ("capture","player") and new_plugin.alive: #make sure the plugin does not want to be gone already
             new_plugin.init_gui()
 
 
     def clean(self):
         '''
-        plugins may flag themselvse as dead or are flagged as dead. We need to remove them.
+        plugins may flag themselves as dead or are flagged as dead. We need to remove them.
         '''
-        for p in self:
-            if not p.alive: # reading p.alive will trigger the plug-in cleanup fn.
-                logger.debug("Unloaded Plugin: %s"%p)
-                self.remove(p)
+        unloaded = [p for p in self._plugins if not p.alive] # reading p.alive will trigger the plug-in cleanup fn.
+        self._plugins[:] = [p for p in self._plugins if p.alive]
+        for p in unloaded:
+            logger.debug("Unloaded Plugin: %s"%p)
 
     def get_initializers(self):
         initializers = []
-        for p in self:
+        for p in self._plugins:
             try:
                 p_initializer = p.class_name,p.get_init_dict()
                 initializers.append(p_initializer)
