@@ -1,14 +1,16 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
 import platform
-
+import sys,os
+import write_version_file
+import shutil
 mac_plit_document_type_str = '''
 <key>CFBundleDocumentTypes</key>
         <array>
@@ -56,9 +58,7 @@ if platform.system() == 'Darwin':
 
 
 elif platform.system() == 'Linux':
-    import sys,os
-    import write_version_file
-    import shutil
+
 
     distribtution_dir = 'dist'
     pupil_capture_dir =  os.path.join(distribtution_dir, 'pupil_player')
@@ -72,6 +72,5 @@ elif platform.system() == 'Linux':
     print "starting version stript:"
     write_version_file.main(pupil_capture_dir)
     print "created version file in dist folder"
-
 
 

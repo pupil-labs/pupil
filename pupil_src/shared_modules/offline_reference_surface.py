@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -87,7 +87,7 @@ class Offline_Reference_Surface(Reference_Surface):
             #update single data pt
             self.cache.update(idx,self.answer_caching_request(marker_cache,idx))
         else:
-            # update where markercache is not False but surface cache is still false
+            # update where marker cache is not False but surface cache is still false
             # this happens when the markercache was incomplete when this fn was run before
             for i in range(len(marker_cache)):
                 if self.cache[i] == False and marker_cache[i] != False:
@@ -237,7 +237,7 @@ class Offline_Reference_Surface(Reference_Surface):
 
     def generate_heatmap(self,section):
 
-        x,y = self.scale_factor
+        x,y = self.real_world_size['x'],self.real_world_size['y']
         x = max(1,int(x))
         y = max(1,int(y))
 
@@ -254,10 +254,10 @@ class Offline_Reference_Surface(Reference_Surface):
             logger.warning("No gaze data on surface for heatmap found.")
             all_gaze.append((-1.,-1.))
         all_gaze = np.array(all_gaze)
-        all_gaze *= self.scale_factor
+        all_gaze *= [self.real_world_size['x'],self.real_world_size['y']]
         hist,xedge,yedge = np.histogram2d(all_gaze[:,0], all_gaze[:,1],
                                             bins=[x,y],
-                                            range=[[0, self.scale_factor[0]], [0,self.scale_factor[1]]],
+                                            range=[[0, self.real_world_size['x']], [0,self.real_world_size['y']]],
                                             normed=False,
                                             weights=None)
 
@@ -285,7 +285,7 @@ class Offline_Reference_Surface(Reference_Surface):
     def visible_count_in_section(self,section):
         #section is a slice
         #return number of frames where surface is visible.
-        #If cache is not avaible on frames it is reported as not visible
+        #If cache is not available on frames it is reported as not visible
         if self.cache is None:
             return 0
         section_cache = self.cache[section]
@@ -294,7 +294,7 @@ class Offline_Reference_Surface(Reference_Surface):
     def gaze_on_srf_in_section(self,section=slice(0,None)):
         #section is a slice
         #return number of gazepoints that are on surface in section
-        #If cache is not avaible on frames it is reported as not visible
+        #If cache is not available on frames it is reported as not visible
         if self.cache is None:
             return []
         gaze_on_srf = []

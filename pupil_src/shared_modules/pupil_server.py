@@ -1,22 +1,18 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import atb
-import numpy as np
-from gl_utils import draw_gl_polyline_norm
-from ctypes import c_float,c_int,create_string_buffer
-
-import cv2
-import zmq
 from plugin import Plugin
 
+import numpy as np
+from pyglui import ui
+import zmq
 
 
 
@@ -27,54 +23,89 @@ logger = logging.getLogger(__name__)
 
 class Pupil_Server(Plugin):
     """pupil server plugin"""
-    def __init__(self, g_pool, atb_pos=(10,400)):
-        Plugin.__init__(self)
-
+    def __init__(self, g_pool,address="tcp://127.0.0.1:5000",menu_conf = {'collapsed':True,'pos':(300,300),'size':(300,300)}):
+        super(Pupil_Server, self).__init__(g_pool)
+        self.order = .9
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
-        self.address = create_string_buffer("tcp://127.0.0.1:5000",512)
-        self.set_server(self.address)
-
-        help_str = "Pupil Message server: Using ZMQ and the *Publish-Subscribe* scheme"
-
-        self._bar = atb.Bar(name = self.__class__.__name__, label='Server',
-            help=help_str, color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300,40))
-        self._bar.define("valueswidth=170")
-        self._bar.add_var("server address",self.address, getter=lambda:self.address, setter=self.set_server)
-        self._bar.add_button("close", self.close)
+        self.address = ''
+        self.set_server(address)
+        self.menu = None
+        self.menu_conf = menu_conf
 
         self.exclude_list = ['ellipse','pos_in_roi','major','minor','axes','angle','center']
 
+    def init_gui(self):
+        help_str = "Pupil Message server: Using ZMQ and the *Publish-Subscribe* scheme"
+        self.menu = ui.Growing_Menu("Pupil Broadcast Server")
+        self.menu.append(ui.Info_Text(help_str))
+        self.menu.append(ui.Text_Input('address',self,setter=self.set_server,label='Address'))
+        self.menu.append(ui.Button('Close',self.close))
+        if self.g_pool.app == 'capture':
+            self.menu.configuration = {'collapsed':self.menu_conf['collapsed']}
+            self.g_pool.sidebar.append(self.menu)
+        elif self.g_pool.app == 'player':
+            self.menu.configuration = self.menu_conf
+
+            self.g_pool.gui.append(self.menu)
+
+    def deinit_gui(self):
+        if self.menu:
+            self.menu_conf = self.menu.configuration
+            if self.g_pool.app == 'capture':
+                self.g_pool.sidebar.remove(self.menu)
+            elif self.g_pool.app == 'player':
+                self.g_pool.gui.remove(self.menu)
+            self.menu = None
+
+
     def set_server(self,new_address):
         try:
-            self.socket.bind(new_address.value)
-            self.address.value = new_address.value
+            self.socket.bind(new_address)
+            self.address = new_address
         except zmq.ZMQError:
-            logger.error("Could not set Socket.")
+            logger.error("Could not set Socket: %s"%new_address)
 
-    def update(self,frame,recent_pupil_positions,events):
-        for p in recent_pupil_positions:
+    def update(self,frame,events):
+        for p in events['pupil_positions']:
             msg = "Pupil\n"
             for key,value in p.iteritems():
                 if key not in self.exclude_list:
                     msg +=key+":"+str(value)+'\n'
             self.socket.send( msg )
 
-        for e in events:
-            msg = 'Event'+'\n'
-            for key,value in e.iteritems():
+        for g in events.get('gaze',[]):
+            msg = "Gaze\n"
+            for key,value in g.iteritems():
                 if key not in self.exclude_list:
-                    msg +=key+":"+str(value).replace('\n','')+'\n'
+                    msg +=key+":"+str(value)+'\n'
             self.socket.send( msg )
+
+        # for e in events:
+        #     msg = 'Event'+'\n'
+        #     for key,value in e.iteritems():
+        #         if key not in self.exclude_list:
+        #             msg +=key+":"+str(value).replace('\n','')+'\n'
+        #     self.socket.send( msg )
 
     def close(self):
         self.alive = False
 
+
+    def get_init_dict(self):
+        d = {}
+        d['address'] = self.address
+        if self.menu:
+            d['menu_conf'] = self.menu.configuration
+        else:
+            d['menu_conf'] = self.menu_conf
+        return d
+
+
     def cleanup(self):
         """gets called when the plugin get terminated.
-           either volunatily or forced.
+        This happens either voluntarily or forced.
         """
-        self._bar.destroy()
+        self.deinit_gui()
         self.context.destroy()
 

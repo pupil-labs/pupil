@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -10,7 +10,6 @@
 
 from gl_utils import draw_gl_polyline,draw_gl_point
 from OpenGL.GL import *
-from OpenGL.GLU import gluOrtho2D
 
 from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS
 from plugin import Plugin
@@ -21,12 +20,12 @@ logger = logging.getLogger(__name__)
 class Trim_Marks(Plugin):
     """docstring for Trim_Mark
     """
-    def __init__(self, g_pool,capture):
-        super(Trim_Marks, self).__init__()
+    def __init__(self, g_pool):
+        super(Trim_Marks, self).__init__(g_pool)
+        g_pool.trim_marks = self #attach self for ease of acces by others.
         self.order = .8
-        self.g_pool = g_pool
-        self.capture = capture
-        self.frame_count = capture.get_frame_count()
+        self.capture = g_pool.capture
+        self.frame_count = self.capture.get_frame_count()
         self._in_mark = 0
         self._out_mark = self.frame_count
         self.drag_in = False
@@ -53,6 +52,9 @@ class Trim_Marks(Plugin):
     def set(self,mark_range):
         self._in_mark,self._out_mark = mark_range
 
+    def get_string(self):
+        return '%s - %s'%(self._in_mark,self._out_mark)
+
     def init_gui(self):
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 
@@ -61,7 +63,7 @@ class Trim_Marks(Plugin):
         self.h_pad = self.padding * self.frame_count/float(w)
         self.v_pad = self.padding * 1./h
 
-    def update(self,frame,recent_pupil_positions,events):
+    def update(self,frame,events):
 
         if frame.index == self.out_mark or frame.index == self.in_mark:
             self.g_pool.play=False
@@ -103,14 +105,6 @@ class Trim_Marks(Plugin):
             self.drag_out = False
             self.drag_in = False
 
-    def atb_get_in_mark(self):
-        return self.in_mark
-    def atb_get_out_mark(self):
-        return self.out_mark
-    def atb_set_in_mark(self,val):
-        self.in_mark = val
-    def atb_set_out_mark(self,val):
-        self.out_mark = val
 
     def distance_in_pix(self,frame_pos_0,frame_pos_1):
         fr0_screen_x,_ = self.bar_space_to_screen((frame_pos_0,0))
@@ -139,7 +133,7 @@ class Trim_Marks(Plugin):
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
-        gluOrtho2D(-self.h_pad,  (self.frame_count)+self.h_pad, -self.v_pad, 1+self.v_pad) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
+        glOrtho(-self.h_pad,  (self.frame_count)+self.h_pad, -self.v_pad, 1+self.v_pad,-1,1) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
         glLoadIdentity()

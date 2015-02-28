@@ -1,33 +1,30 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import sys, os,platform
+import sys, os, platform
 from time import sleep
-from ctypes import c_bool, c_int,c_double
+from ctypes import c_bool, c_double
 if platform.system() == 'Darwin':
-    from billiard import Process, Pipe, Event,Queue,forking_enable,freeze_support
-    from billiard.sharedctypes import RawValue, Value, Array
+    from billiard import Process, Pipe, Queue, Value, freeze_support, forking_enable
 else:
-    from multiprocessing import Process, Pipe, Event, Queue
-    forking_enable = lambda x: x #dummy fn
-    from multiprocessing import freeze_support
-    from multiprocessing.sharedctypes import RawValue, Value, Array
+    from multiprocessing import Process, Pipe, Queue, Value, freeze_support
+    forking_enable = lambda _: _ #dummy fn
 
 if getattr(sys, 'frozen', False):
     if platform.system() == 'Darwin':
-        user_dir = os.path.expanduser('~/Desktop/pupil_settings')
+        user_dir = os.path.expanduser('~/Desktop/pupil_capture_settings')
         rec_dir = os.path.expanduser('~/Desktop/pupil_recordings')
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
     else:
-        # Specifiy user dirs.
-        user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"settings")
+        # Specifiy user irs.
+        user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"capture_settings")
         rec_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"recordings")
         version_file = os.path.join(sys._MEIPASS,'_version_string_')
 
@@ -39,7 +36,7 @@ else:
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
 	# Specifiy user dirs.
     rec_dir = os.path.join(pupil_base_dir,'recordings')
-    user_dir = os.path.join(pupil_base_dir,'settings')
+    user_dir = os.path.join(pupil_base_dir,'capture_settings')
 
 
 # create folder for user settings, tmp data and a recordings folder
@@ -58,7 +55,7 @@ fh = logging.FileHandler(os.path.join(user_dir,'world.log'),mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.WARNING)
+ch.setLevel(logging.DEBUG)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('World Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -72,15 +69,23 @@ logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 
 
-#if you pass any additional argument when calling this script. The profiler will be used.
-if len(sys.argv) >=2:
+if 'binocular' in sys.argv:
+    binocular = True
+    logger.debug("Starting in binocular mode")
+else:
+    binocular = False
+    logger.debug("Starting in single eye cam mode")
+
+
+if 'profiled' in sys.argv:
+    logger.debug("Capture processes will be profiled.")
     from eye import eye_profiled as eye
     from world import world_profiled as world
 else:
     from eye import eye
     from world import world
 
-from methods import Temp
+
 
 #get the current software version
 if getattr(sys, 'frozen', False):
@@ -90,54 +95,64 @@ else:
     from git_version import get_tag_commit
     version = get_tag_commit()
 
+class Global_Container(object):
+    pass
 
 def main():
     # To assign camera by name: put string(s) in list
-    eye_src = ["Microsoft", "6000","Integrated Camera"]
+    eye_cam_names = ["USB 2.0 Camera","Microsoft", "6000","Integrated Camera"]
     world_src = ["Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
+    eye_src = (eye_cam_names,0),(eye_cam_names,1) #first match for eye0 and second match for eye1
 
     # to assign cameras directly, using integers as demonstrated below
-    # eye_src = 1
-    # world_src = 0
+    # eye_src =  4 , 5 #second arg will be ignored for monocular eye trackers
+    # world_src = 1
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    # eye_src = '/Users/mkassner/Pupil/datasets/p1-left/frames/test.avi'
+    # eye_src = '/Users/mkassner/Downloads/eye.avi' , '/Users/mkassner/Downloads/eye.avi'
     # world_src = "/Users/mkassner/Desktop/2014_01_21/000/world.avi"
 
     # Camera video size in pixels (width,height)
-    eye_size = (640,360)
+    eye_size = (640,480)
     world_size = (1280,720)
 
 
     # on MacOS we will not use os.fork, elsewhere this does nothing.
     forking_enable(0)
 
+    #g_pool holds variables. Only if added here they are shared across processes.
+    g_pool = Global_Container()
+
     # Create and initialize IPC
-    g_pool = Temp()
     g_pool.pupil_queue = Queue()
-    g_pool.eye_rx, g_pool.eye_tx = Pipe(False)
-    g_pool.quit = RawValue(c_bool,0)
-    # this value will be substracted form the capture timestamp
-    g_pool.timebase = RawValue(c_double,0)
+    g_pool.quit = Value(c_bool,0)
+    g_pool.timebase = Value(c_double,0)
+    g_pool.eye_tx = []
     # make some constants avaiable
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
     g_pool.version = version
     g_pool.app = 'capture'
-    # set up subprocesses
-    p_eye = Process(target=eye, args=(g_pool,eye_src,eye_size))
+    g_pool.binocular = binocular
 
-    # Spawn subprocess:
-    p_eye.start()
-    if platform.system() == 'Linux':
-        # We need to give the camera driver some time before requesting another camera.
-        sleep(0.5)
+
+    p_eye = []
+    for eye_id in range(1+1*binocular):
+        rx,tx = Pipe(False)
+        p_eye += [Process(target=eye, args=(g_pool,eye_src[eye_id],eye_size,rx,eye_id))]
+        g_pool.eye_tx += [tx]
+        p_eye[-1].start()
+        if platform.system() == 'Linux':
+            # We need to give the camera driver some time before requesting another camera.
+            sleep(0.5)
 
     world(g_pool,world_src,world_size)
 
+
     # Exit / clean-up
-    p_eye.join()
+    for p in p_eye:
+        p.join()
 
 if __name__ == '__main__':
     freeze_support()

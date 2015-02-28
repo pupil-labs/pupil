@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -24,32 +24,27 @@ from time import time
 import cv2
 import numpy as np
 from uvc_capture import autoCreateCapture
-from player_methods import correlate_gaze
+from player_methods import correlate_gaze,correlate_gaze_legacy
 from methods import denormalize, Temp
+from av_writer import AV_Writer
 #logging
 import logging
 
 # Plug-ins
+from plugin import Plugin_List
 from vis_circle import Vis_Circle
 from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
+from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
 from scan_path import Scan_Path
 from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
 
-plugin_by_index =  (  Vis_Circle,
-                        Vis_Cross,
-                        Vis_Polyline,
-                        Scan_Path,
-                        Vis_Light_Points,
-                        Filter_Fixations,
-                        Manual_Gaze_Correction
-                        )
-
-name_by_index = [p.__name__ for p in plugin_by_index]
+available_plugins =  Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction
+name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
-plugin_by_name = dict(zip(name_by_index,plugin_by_index))
+plugin_by_name = dict(zip(name_by_index,available_plugins))
 
 
 
@@ -57,26 +52,34 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
-    #parse and load data dir info
-    video_path = data_dir + "/world.avi"
-    timestamps_path = data_dir + "/timestamps.npy"
-    gaze_positions_path = data_dir + "/gaze_positions.npy"
-    record_path = data_dir + "/world_viz.avi"
 
 
     #parse info.csv file
     with open(data_dir + "/info.csv") as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
     rec_version = meta_info["Capture Software Version"]
-    rec_version_int = int(filter(type(rec_version).isdigit, rec_version)[:3])/100 #(get major,minor,fix of version)
-    logger.debug("Exporting a video from recording with version: %s , %s"%(rec_version,rec_version_int))
+    rec_version_float = float(filter(type(rec_version).isdigit, rec_version)[:3])/100 #(get major,minor,fix of version)
+    logger.debug("Exporting a video from recording with version: %s , %s"%(rec_version,rec_version_float))
 
+    if rec_version_float < 0.4:
+        video_path = data_dir + "/world.avi"
+        timestamps_path = data_dir + "/timestamps.npy"
+    else:
+        video_path = data_dir + "/world.mkv"
+        timestamps_path = data_dir + "/world_timestamps.npy"
 
+    gaze_positions_path = data_dir + "/gaze_positions.npy"
     #load gaze information
     gaze_list = np.load(gaze_positions_path)
     timestamps = np.load(timestamps_path)
+
     #correlate data
-    positions_by_frame = correlate_gaze(gaze_list,timestamps)
+    if rec_version_float < 0.4:
+        positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
+    else:
+        positions_by_frame = correlate_gaze(gaze_list,timestamps)
+
+
 
 
     # Initialize capture, check if it works
@@ -88,14 +91,14 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
     #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
     if out_file_path is None:
-        out_file_path = os.path.join(data_dir, "world_viz.avi")
+        out_file_path = os.path.join(data_dir, "world_viz.mp4")
     else:
         file_name =  os.path.basename(out_file_path)
         dir_name = os.path.dirname(out_file_path)
         if not dir_name:
             dir_name = data_dir
         if not file_name:
-            file_name = 'world_viz.avi'
+            file_name = 'world_viz.mp4'
         out_file_path = os.path.expanduser(os.path.join(dir_name,file_name))
 
     if os.path.isfile(out_file_path):
@@ -126,28 +129,16 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
 
     #setup of writer
-    writer = cv2.VideoWriter(out_file_path, cv2.cv.CV_FOURCC(*'DIVX'), fps, (width,height))
+    writer = AV_Writer(out_file_path)
 
     cap.seek_to_frame(start_frame)
 
     start_time = time()
 
 
-    plugins = []
     g = Temp()
-    g.plugins = plugins
     g.app = 'exporter'
-
-    # load plugins from initializers:
-    for initializer in plugin_initializers:
-        name, args = initializer
-        logger.debug("Loading plugin: %s with settings %s"%(name, args))
-        try:
-            p = plugin_by_name[name](g,**args)
-            plugins.append(p)
-        except:
-            logger.warning("Plugin '%s' could not be loaded in exporter." %name)
-
+    g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
 
     while frames_to_export.value - current_frame.value > 0:
 
@@ -155,7 +146,7 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
             logger.warning("User aborted export. Exported %s frames to %s."%(current_frame.value,out_file_path))
 
             #explicit release of VideoWriter
-            writer.release()
+            writer.close()
             writer = None
             return False
 
@@ -170,22 +161,19 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
         else:
             frame = new_frame
 
+
+        events = {}
         #new positons and events
-        current_pupil_positions = positions_by_frame[frame.index]
-        events = None
-
+        events['pupil_positions'] = positions_by_frame[frame.index]
         # allow each Plugin to do its work.
-        for p in plugins:
-            p.update(frame,current_pupil_positions,events)
+        for p in g.plugins:
+            p.update(frame,events)
 
-        # # render gl visual feedback from loaded plugins
-        # for p in plugins:
-        #     p.gl_display(frame)
 
-        writer.write(frame.img)
+        writer.write_video_frame(frame)
         current_frame.value +=1
 
-    writer.release()
+    writer.close()
     writer = None
 
     duration = time()-start_time

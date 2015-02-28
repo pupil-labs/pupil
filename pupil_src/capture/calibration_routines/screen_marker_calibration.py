@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -15,54 +15,82 @@ from methods import normalize,denormalize
 from gl_utils import draw_gl_point,adjust_gl_view,draw_gl_point_norm,draw_gl_polyline,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
-from OpenGL.GLU import gluOrtho2D
 import calibrate
-from circle_detector import get_canditate_ellipses
+from circle_detector import get_candidate_ellipses
 
-from ctypes import c_int,c_bool
-import atb
 import audio
 
-from plugin import Plugin
+from pyglui import ui
+from pyglui.cygl.utils import draw_points as cygl_draw_points
+from pyglui.cygl.utils import RGBA as cygl_rgba
+from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
+from pyglui.pyfontstash import fontstash
+from pyglui.ui import get_opensans_font_path
+from plugin import Calibration_Plugin
+from gaze_mappers import Simple_Gaze_Mapper
 
 #logging
 import logging
 logger = logging.getLogger(__name__)
 
 
-def draw_circle(pos,r,c):
-    pts = cv2.ellipse2Poly(tuple(pos),(r,r),0,0,360,10)
-    draw_gl_polyline(pts,c,'Polygon')
-
-def draw_marker(pos):
-    pos = int(pos[0]),int(pos[1])
-    black = (0.,0.,0.,1.)
-    white = (1.,1.,1.,1.)
-    for r,c in zip((50,40,30,20,10),(black,white,black,white,black)):
-        draw_circle(pos,r,c)
-
+def draw_marker(pos,r,alpha):
+    black = cygl_rgba(0.,0.,0.,alpha)
+    white = cygl_rgba(1.,1.,1.,alpha)
+    for r,c in zip((r,0.8*r,0.6*r,.4*r,.2*r),(black,white,black,white,black)):
+        cygl_draw_points([pos],size=r,color=c,sharpness=0.95)
 
 # window calbacks
-def on_resize(window,w, h):
+def on_resize(window,w,h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
-    adjust_gl_view(w,h,window)
+    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
+    w,h = w*hdpi_factor, h*hdpi_factor
+    adjust_gl_view(w,h)
     glfwMakeContextCurrent(active_window)
 
-
-class Screen_Marker_Calibration(Plugin):
-    """Calibrate using a marker on your screen
-    We use a ring detector that moves across the screen to 9 sites
-    Points are collected at sites not between
+# easing functions for animation of the marker fade in/out
+def easeInOutQuad(t, b, c, d):
+    """Robert Penner easing function examples at: http://gizma.com/easing/
+    t = current time in frames or whatever unit
+    b = beginning/start value
+    c = change in value
+    d = duration
 
     """
-    def __init__(self, g_pool, atb_pos=(0,0)):
-        Plugin.__init__(self)
-        self.g_pool = g_pool
+    t /= d/2
+    if t < 1:
+        return c/2*t*t + b
+    t-=1
+    return -c/2 * (t*(t-2) - 1) + b
+
+def interp_fn(t,b,c,d,start_sample=15.,stop_sample=55.):
+    # ease in, sample, ease out
+    if t < start_sample:
+        return easeInOutQuad(t,b,c,start_sample)
+    elif t > stop_sample:
+        return 1-easeInOutQuad(t-stop_sample,b,c,d-stop_sample)
+    else:
+        return 1.0
+
+
+
+class Screen_Marker_Calibration(Calibration_Plugin):
+    """Calibrate using a marker on your screen
+    We use a ring detector that moves across the screen to 9 sites
+    Points are collected at sites - not between
+
+    """
+    def __init__(self, g_pool,menu_conf = {'collapsed':True},fullscreen=True,marker_scale=1.0):
+        super(Screen_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
-        self.screen_marker_state = 0
-        self.screen_marker_max = 70 # maximum bound for state
+        self.screen_marker_state = 0.
+        self.sample_duration = 40 # number of frames
+        self.screen_marker_max = 70 # number of frames, maximum bound for state
+        self.start_sample = 15 # (screen_marker_max - sample_duration) / 2
+        self.stop_sample = 55
+
         self.active_site = 0
         self.sites = []
         self.display_pos = None
@@ -71,76 +99,124 @@ class Screen_Marker_Calibration(Plugin):
         self.candidate_ellipses = []
         self.pos = None
 
-        self.show_edges = c_bool(0)
-        self.dist_threshold = c_int(5)
-        self.area_threshold = c_int(20)
+        self.show_edges = 0
+        self.dist_threshold = 5
+        self.area_threshold = 20
+        self.marker_scale = marker_scale
+        self.pattern_alpha = 1.0
 
         self.world_size = None
 
         self._window = None
-        self.window_should_close = False
-        self.window_should_open = False
-        self.fullscreen = c_bool(1)
-        self.monitor_idx = c_int(0)
-        monitor_handles = glfwGetMonitors()
-        self.monitor_names = [glfwGetMonitorName(m) for m in monitor_handles]
-        monitor_enum = atb.enum("Monitor",dict(((key,val) for val,key in enumerate(self.monitor_names))))
+
+        self.menu = None
+        self.menu_conf = menu_conf
+        self.button = None
+
+        self.fullscreen = fullscreen
+        self.clicks_to_close = 5
+
+        self.glfont = fontstash.Context()
+        self.glfont.add_font('opensans',get_opensans_font_path())
+        self.glfont.set_size(32)
+        self.glfont.set_color_float((0.2,0.5,0.9,1.0))
+        self.glfont.set_align_string(v_align='center')
+
+
+
+
+
+    def init_gui(self):
+        self.monitor_idx = 0
+        self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
+
         #primary_monitor = glfwGetPrimaryMonitor()
+        self.info = ui.Info_Text("Calibrate gaze parameters using a screen based animation.")
+        self.g_pool.calibration_menu.append(self.info)
+
+        self.menu = ui.Growing_Menu('Controls')
+        self.menu.configuration = self.menu_conf
+        self.g_pool.calibration_menu.append(self.menu)
+        self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
+        self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
+        self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Pattern scale'))
+
+        submenu = ui.Growing_Menu('Advanced')
+        submenu.collapsed = True
+        self.menu.append(submenu)
+        submenu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration',setter=self.update_sample_duration))
+        submenu.append(ui.Switch('show_edges',self,label='show edges'))
+        submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area threshold'))
+        submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity threshold'))
+
+        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button.on_color[:] = (.3,.2,1.,.9)
+        self.g_pool.quickbar.insert(0,self.button)
+
+    def update_sample_duration(self,val):
+        self.sample_duration = val
+        self.screen_marker_max = self.sample_duration+30
+        self.stop_sample = self.screen_marker_max-self.start_sample # 55. with above params
+
+    def deinit_gui(self):
+        if self.menu:
+            self.menu_conf = self.menu.configuration
+            self.g_pool.calibration_menu.remove(self.menu)
+            self.g_pool.calibration_menu.remove(self.info)
+            self.menu = None
+        if self.button:
+            self.g_pool.quickbar.remove(self.button)
+            self.button = None
 
 
+    def toggle(self,new_var):
+        if self.active:
+            self.stop()
+        else:
+            self.start()
 
-        atb_label = "calibrate on screen"
-        # Creating an ATB Bar is required. Show at least some info about the Ref_Detector
-        self._bar = atb.Bar(name = self.__class__.__name__, label=atb_label,
-            help="ref detection parameters", color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 90))
-        self._bar.add_var("monitor",self.monitor_idx, vtype=monitor_enum)
-        self._bar.add_var("fullscreen", self.fullscreen)
-        self._bar.add_button("  start calibrating  ", self.start, key='c')
-
-        self._bar.add_var("show edges",self.show_edges, group="Detector Variables")
-        self._bar.add_var("area threshold", self.area_threshold ,group="Detector Variables")
-        self._bar.add_var("eccetricity threshold", self.dist_threshold, group="Detector Variables" )
 
 
     def start(self):
-        if self.active:
-            return
-
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
-        self.sites = [  (.25, .5),(.25, .5), (0,.5),
-                        (0.,1),(.5,1),(1.,1.),
-                        (1,.5),
-                        (1., 0),(.5, 0),(0,0.),
+        self.sites = [  (.25, .5), (0,.5),
+                        (0.,1.),(.5,1.),(1.,1.),
+                        (1.,.5),
+                        (1., 0.),(.5, 0.),(0.,0.),
                         (.75,.5)]
 
         self.active_site = 0
         self.active = True
         self.ref_list = []
         self.pupil_list = []
-        self.window_should_open = True
+        self.clicks_to_close = 5
+        self.open_window()
 
     def open_window(self):
         if not self._window:
-            if self.fullscreen.value:
-                monitor = glfwGetMonitors()[self.monitor_idx.value]
+            if self.fullscreen:
+                monitor = glfwGetMonitors()[self.monitor_idx]
                 mode = glfwGetVideoMode(monitor)
-                height,width= mode[0],mode[1]
+                # glfwGetFramebufferSize(window)
+                hdpi_factor = glfwGetFramebufferSize(glfwGetCurrentContext())[0]/glfwGetWindowSize(glfwGetCurrentContext())[0]
+                width,height= mode[0]*hdpi_factor,mode[1]*hdpi_factor
             else:
                 monitor = None
-                height,width= 640,360
+                width,height= 640,360
 
-            self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
-            if not self.fullscreen.value:
+            self._window = glfwCreateWindow(width, height, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
+            if not self.fullscreen:
                 glfwSetWindowPos(self._window,200,0)
 
-            on_resize(self._window,height,width)
+            glfwSetInputMode(self._window,GLFW_CURSOR,GLFW_CURSOR_HIDDEN)
+            on_resize(self._window,width,height)
 
             #Register callbacks
             glfwSetWindowSizeCallback(self._window,on_resize)
             glfwSetKeyCallback(self._window,self.on_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
+            glfwSetMouseButtonCallback(self._window,self.on_button)
 
             # gl_state settings
             active_window = glfwGetCurrentContext()
@@ -150,14 +226,18 @@ class Screen_Marker_Calibration(Plugin):
             glfwSwapInterval(0)
 
             glfwMakeContextCurrent(active_window)
-            self.window_should_open = False
+
+
 
 
     def on_key(self,window, key, scancode, action, mods):
-        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
-            if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
-                    self.stop()
+        if action == GLFW_PRESS:
+            if key == GLFW_KEY_ESCAPE:
+                self.stop()
+
+    def on_button(self,window,button, action, mods):
+        if action ==GLFW_PRESS:
+            self.clicks_to_close -=1
 
     def on_close(self,window=None):
         if self.active:
@@ -168,7 +248,8 @@ class Screen_Marker_Calibration(Plugin):
         logger.info('Stopping Calibration')
         self.screen_marker_state = 0
         self.active = False
-        self.window_should_close = True
+        self.close_window()
+        self.button.status_text = ''
 
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
 
@@ -179,42 +260,45 @@ class Screen_Marker_Calibration(Plugin):
             return
 
         cal_pt_cloud = np.array(cal_pt_cloud)
-        map_fn = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size)
-        self.g_pool.map_pupil = map_fn
+        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,return_params=True)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
+
+        #replace current gaze mapper with new
+        self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
+
 
     def close_window(self):
         if self._window:
+            # enable mouse display
+            glfwSetInputMode(self._window,GLFW_CURSOR,GLFW_CURSOR_NORMAL)
             glfwDestroyWindow(self._window)
             self._window = None
-            self.window_should_close = False
 
 
-    def update(self,frame,recent_pupil_positions,events):
-        if self.window_should_close:
-            self.close_window()
-
-        if self.window_should_open:
-            self.open_window()
-
+    def update(self,frame,events):
         if self.active:
-            img = frame.img
+            recent_pupil_positions = events['pupil_positions']
+            gray_img = frame.gray
+
+            if self.clicks_to_close <=0:
+                self.stop()
+                return
 
             #get world image size for error fitting later.
             if self.world_size is None:
-                self.world_size = img.shape[1],img.shape[0]
+                self.world_size = frame.width,frame.height
 
             #detect the marker
-            self.candidate_ellipses = get_canditate_ellipses(img,
-                                                            area_threshold=self.area_threshold.value,
-                                                            dist_threshold=self.dist_threshold.value,
+            self.candidate_ellipses = get_candidate_ellipses(gray_img,
+                                                            area_threshold=self.area_threshold,
+                                                            dist_threshold=self.dist_threshold,
                                                             min_ring_count=4,
-                                                            visual_debug=self.show_edges.value)
+                                                            visual_debug=self.show_edges)
 
             if len(self.candidate_ellipses) > 0:
                 self.detected= True
                 marker_pos = self.candidate_ellipses[0][0]
-                self.pos = normalize(marker_pos,(img.shape[1],img.shape[0]),flip_y=True)
+                self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
             else:
                 self.detected = False
@@ -222,7 +306,9 @@ class Screen_Marker_Calibration(Plugin):
 
 
             #only save a valid ref position if within sample window of calibraiton routine
-            on_position = 40 < self.screen_marker_state < self.screen_marker_max-5
+            # on_position = 40 < self.screen_marker_state < self.screen_marker_max-5
+            on_position = self.start_sample < self.screen_marker_state < self.stop_sample
+
             if on_position and self.detected:
                 ref = {}
                 ref["norm_pos"] = self.pos
@@ -231,7 +317,7 @@ class Screen_Marker_Calibration(Plugin):
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['norm_pupil'] is not None:
+                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
             # Animate the screen marker
@@ -246,19 +332,13 @@ class Screen_Marker_Calibration(Plugin):
                     self.stop()
                     return
 
-            # function to smoothly interpolate between points input:(0-screen_marker_max) output: (0-1)
-            m, s = self.screen_marker_max, self.screen_marker_state
-
-            interpolation_weight = np.tanh(((s-1/6.*m)*10.)/(5/6.*m))*(-.5)+.5
+            # interpolation_weight = np.tanh(((s-1/6.*m)*10.)/(5/6.*m))*(-.5)+.5
+            self.pattern_alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.screen_marker_max),float(self.start_sample),float(self.stop_sample))
 
             #use np.arrays for per element wise math
-            current = np.array(self.sites[self.active_site])
-            next = np.array(self.sites[self.active_site+1])
-            # weighted sum to interpolate between current and next
-            new_pos =  current * interpolation_weight + next * (1-interpolation_weight)
-            #broadcast next commanded marker postion of screen
-            self.display_pos = list(new_pos)
+            self.display_pos = np.array(self.sites[self.active_site])
             self.on_position = on_position
+            self.button.status_text = '%s / %s'%(self.active_site,9)
 
 
 
@@ -272,12 +352,14 @@ class Screen_Marker_Calibration(Plugin):
             show the detected postion even if not published
         """
 
+        # debug mode within world will show green ellipses around detected ellipses
         if self.active and self.detected:
             for e in self.candidate_ellipses:
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
-                draw_gl_polyline(pts,(0.,1.,0,1.))
+                cygl_draw_polyline(pts,1,cygl_rgba(0.,1.,0.,1.))
+
         else:
             pass
         if self._window:
@@ -303,36 +385,53 @@ class Screen_Marker_Calibration(Plugin):
         # 0,h##################w,h #
         #            r             #
         ############################
-        r = 60
+
+
+        hdpi_factor = glfwGetFramebufferSize(self._window)[0]/glfwGetWindowSize(self._window)[0]
+        r = 110*self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         p_window_size = glfwGetWindowSize(self._window)
         # compensate for radius of marker
-        gluOrtho2D(-r,p_window_size[0]+r,p_window_size[1]+r, -r) # origin in the top left corner just like the img np-array
+        gl.glOrtho(-r*.6,p_window_size[0]+r*.6,p_window_size[1]+r*.7,-r*.7 ,-1,1)
         # Switch back to Model View Matrix
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
 
         screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
 
-        draw_marker(screen_pos)
+        draw_marker(screen_pos,r,self.pattern_alpha)
         #some feedback on the detection state
 
         if self.detected and self.on_position:
-            draw_gl_point(screen_pos, 5, (0.,1.,0.,1.))
+            cygl_draw_points([screen_pos],size=5,color=cygl_rgba(0.,1.,0.,self.pattern_alpha),sharpness=0.95)
         else:
-            draw_gl_point(screen_pos, 5, (1.,0.,0.,1.))
+            cygl_draw_points([screen_pos],size=5,color=cygl_rgba(1.,0.,0.,self.pattern_alpha),sharpness=0.95)
+
+        if self.clicks_to_close <5:
+            self.glfont.set_size(int(p_window_size[0]/30.))
+            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,'Touch %s more times to cancel calibration.'%self.clicks_to_close)
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
 
 
+    def get_init_dict(self):
+        d = {}
+        d['fullscreen'] = self.fullscreen
+        d['marker_scale'] = self.marker_scale
+        if self.menu:
+            d['menu_conf'] = self.menu.configuration
+        else:
+            d['menu_conf'] = self.menu_conf
+        return d
+
     def cleanup(self):
         """gets called when the plugin get terminated.
-           either volunatily or forced.
+           either voluntarily or forced.
         """
         if self.active:
             self.stop()
         if self._window:
             self.close_window()
-        self._bar.destroy()
+        self.deinit_gui()

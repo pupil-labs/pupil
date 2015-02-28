@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -11,52 +11,64 @@
 from gl_utils import draw_gl_points_norm
 from plugin import Plugin
 import numpy as np
-from ctypes import c_int,c_float,c_bool
 import cv2
 
+from pyglui import ui
 from methods import denormalize
 
 class Vis_Cross(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool=None,inner=20,outer=100,color=(1.,.2,.4,.5),thickness=1,gui_settings={'pos':(10,420),'size':(300,100),'iconified':False}):
-        super(Vis_Cross, self).__init__()
-        self.g_pool = g_pool
+    def __init__(self, g_pool,inner=20,outer=100,color=(1.,0.0,0.0,1.0),thickness=1,menu_conf={'pos':(10,420),'size':(300,100),'collapsed':False}):
+        super(Vis_Cross, self).__init__(g_pool)
         self.order = .9
+        self.uniqueness = "not_unique"
 
-        self.gui_settings = gui_settings
+        # initialize empty menu
+        # and load menu configuration of last session
+        self.menu = None
+        self.menu_conf = menu_conf
 
-        self.inner = c_int(int(inner))
-        self.outer = c_int(int(outer))
-        self.color = (c_float*4)(*color)
-        self.thickness = c_int(int(thickness))
+        self.r = color[0]
+        self.g = color[1]
+        self.b = color[2]
+        self.a = color[3]
+        self.inner = inner
+        self.outer = outer
+        self.thickness = thickness
 
-
-    def update(self,frame,recent_pupil_positions,events):
-        color = map(lambda x:int(x*255),self.color)
-        color = color[:3][::-1]+color[-1:]
-        thickness = self.thickness.value
-        inner = self.inner.value
-        outer = self.outer.value
-
-        pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y=True) for pt in recent_pupil_positions if pt['norm_gaze'] is not None]
+    def update(self,frame,events):
+        pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events['pupil_positions'] if pt['norm_gaze'] is not None]
+        bgra = (self.b*255,self.g*255,self.r*255,self.a*255)
         for pt in pts:
-            lines =  np.array( [((pt[0]-inner,pt[1]),(pt[0]-outer,pt[1])),((pt[0]+inner,pt[1]),(pt[0]+outer,pt[1])) , ((pt[0],pt[1]-inner),(pt[0],pt[1]-outer)) , ((pt[0],pt[1]+inner),(pt[0],pt[1]+outer))],dtype=np.int32 )
-            cv2.polylines(frame.img, lines, isClosed=False, color=color, thickness=thickness, lineType=cv2.cv.CV_AA)
+            lines =  np.array( [((pt[0]-self.inner,pt[1]),(pt[0]-self.outer,pt[1])),((pt[0]+self.inner,pt[1]),(pt[0]+self.outer,pt[1])) , ((pt[0],pt[1]-self.inner),(pt[0],pt[1]-self.outer)) , ((pt[0],pt[1]+self.inner),(pt[0],pt[1]+self.outer))],dtype=np.int32 )
+            cv2.polylines(frame.img, lines, isClosed=False, color=bgra, thickness=self.thickness, lineType=cv2.cv.CV_AA)
 
-    def init_gui(self,pos=None):
-        pos = self.gui_settings['pos']
-        import atb
-        atb_label = "Gaze Cross"
-        self._bar = atb.Bar(name =self.__class__.__name__+str(id(self)), label=atb_label,
-            help="circle", color=(50, 50, 50), alpha=50,
-            text='light', position=pos,refresh=.1, size=self.gui_settings['size'])
-        self._bar.iconified = self.gui_settings['iconified']
+    def init_gui(self):
+        # initialize the menu
+        self.menu = ui.Scrolling_Menu('Gaze Cross')
+        # load the configuration of last session
+        self.menu.configuration = self.menu_conf
+        # add menu to the window
+        self.g_pool.gui.append(self.menu)
+        self.menu.append(ui.Slider('inner',self,min=0,step=10,max=200,label='Inner Offset Length'))
+        self.menu.append(ui.Slider('outer',self,min=0,step=10,max=2000,label='Outer Length'))
+        self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15,label='Stroke width'))
 
-        self._bar.add_var('color',self.color)
-        self._bar.add_var('inner',self.inner, min=0)
-        self._bar.add_var('outer',self.outer, min=0)
-        self._bar.add_var('thickness',self.thickness,min=1)
-        self._bar.add_button('remove',self.unset_alive)
+        color_menu = ui.Growing_Menu('Color')
+        color_menu.collapsed = True
+        color_menu.append(ui.Info_Text('Set RGB color component values.'))
+        color_menu.append(ui.Slider('r',self,min=0.0,step=0.05,max=1.0,label='Red'))
+        color_menu.append(ui.Slider('g',self,min=0.0,step=0.05,max=1.0,label='Green'))
+        color_menu.append(ui.Slider('b',self,min=0.0,step=0.05,max=1.0,label='Blue'))
+        self.menu.append(color_menu)
+
+        self.menu.append(ui.Button('remove',self.unset_alive))
+
+
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.gui.remove(self.menu)
+            self.menu = None
 
     def unset_alive(self):
         self.alive = False
@@ -65,23 +77,16 @@ class Vis_Cross(Plugin):
         pass
 
     def get_init_dict(self):
-        d = {'inner':self.inner.value,'outer':self.outer.value,'color':self.color[:],'thickness':self.thickness.value}
-
-        if hasattr(self,'_bar'):
-            gui_settings = {'pos':self._bar.position,'size':self._bar.size,'iconified':self._bar.iconified}
-            d['gui_settings'] = gui_settings
-
-        return d
+        return {'inner':self.inner,'outer':self.outer,'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness, 'menu_conf':self.menu.configuration}
 
     def clone(self):
         return Vis_Cross(**self.get_init_dict())
 
-
     def cleanup(self):
         """ called when the plugin gets terminated.
-        This happends either voluntary or forced.
-        if you have an atb bar or glfw window destroy it here.
+        This happens either voluntarily or forced.
+        if you have a GUI or glfw window destroy it here.
         """
-        self._bar.destroy()
+        self.deinit_gui()
 
 

@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -12,76 +12,80 @@ import sys, os,platform
 import cv2
 import numpy as np
 from file_methods import Persistent_Dict
-from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture
+from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,cvmat_to_glmat, draw_named_texture
+from pyglui import ui
 from methods import normalize,denormalize
 from glfw import *
-import atb
-from ctypes import c_int,c_bool,create_string_buffer
-
 from plugin import Plugin
 #logging
 import logging
 logger = logging.getLogger(__name__)
 
-from square_marker_detect import detect_markers_robust,detect_markers_simple, draw_markers,m_marker_to_screen
+from square_marker_detect import detect_markers_robust,detect_markers, draw_markers,m_marker_to_screen
 from reference_surface import Reference_Surface
 from math import sqrt
 
 class Marker_Detector(Plugin):
     """docstring
     """
-    def __init__(self,g_pool,atb_pos=(320,220)):
-        super(Marker_Detector, self).__init__()
-        self.g_pool = g_pool
+    def __init__(self,g_pool,menu_conf={},mode="Show markers and frames"):
+        super(Marker_Detector, self).__init__(g_pool)
         self.order = .2
 
         # all markers that are detected in the most recent frame
         self.markers = []
-        # all registered surfaces
 
+        #load camera intrinsics
+
+        try:
+            K = np.load(os.path.join(self.g_pool.user_dir,'camera_matrix.npy'))
+            dist_coef = np.load(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"))
+            img_size = np.load(os.path.join(self.g_pool.user_dir,"camera_resolution.npy"))
+            self.camera_intrinsics = K, dist_coefs, img_size
+        except:
+            self.camera_intrinsics = None
+
+        # all registered surfaces
         self.surface_definitions = Persistent_Dict(os.path.join(g_pool.user_dir,'surface_definitions') )
-        self.surfaces = [Reference_Surface(saved_definition=d) for d in self.load('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+        self.surfaces = [Reference_Surface(saved_definition=d) for d in  self.surface_definitions.get('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
 
         # edit surfaces
-        self.surface_edit_mode = c_bool(0)
         self.edit_surfaces = []
 
-        #detector vars
-        self.robust_detection = c_bool(1)
-        self.aperture = c_int(11)
+        #plugin state
+        self.mode = mode
+        self.running = True
+
+
+        self.robust_detection = 1
+        self.aperture = 11
         self.min_marker_perimeter = 80
+        self.locate_3d = False
 
         #debug vars
-        self.draw_markers = c_bool(0)
-        self.show_surface_idx = c_int(0)
-        self.recent_pupil_positions = []
+        self.draw_markers = 0
+        self.show_surface_idx = 0
 
         self.img_shape = None
 
-        atb_label = "marker detection"
-        self._bar = atb.Bar(name =self.__class__.__name__, label=atb_label,
-            help="marker detection parameters", color=(50, 150, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300, 300))
-
-        self.update_bar_markers()
+        self.menu= None
+        self.menu_conf=  menu_conf
+        self.button=  None
+        self.add_button = None
 
 
 
-    def unset_alive(self):
+    def close(self):
         self.alive = False
 
-    def load(self, var_name, default):
-        return self.surface_definitions.get(var_name,default)
-    def save(self, var_name, var):
-            self.surface_definitions[var_name] = var
 
 
     def on_click(self,pos,button,action):
-        if self.surface_edit_mode.value:
+        if self.mode == "Surface edit mode":
             if self.edit_surfaces:
                 if action == GLFW_RELEASE:
                     self.edit_surfaces = []
-            # no surfaces verts in edit mode, lets see if the curser is close to one:
+            # no surfaces verts in edit mode, lets see if the cursor is close to one:
             else:
                 if action == GLFW_PRESS:
                     surf_verts = ((0.,0.),(1.,0.),(1.,1.),(0.,1.))
@@ -96,66 +100,113 @@ class Marker_Detector(Plugin):
     def advance(self):
         pass
 
-    def add_surface(self):
+    def add_surface(self,_):
         self.surfaces.append(Reference_Surface())
-        self.update_bar_markers()
+        self.update_gui_markers()
 
     def remove_surface(self,i):
         self.surfaces[i].cleanup()
         del self.surfaces[i]
-        self.update_bar_markers()
+        self.update_gui_markers()
 
-    def update_bar_markers(self):
-        self._bar.clear()
-        self._bar.add_button('close',self.unset_alive)
-        self._bar.add_var('robust_detection',self.robust_detection)
-        self._bar.add_var("draw markers",self.draw_markers)
-        self._bar.add_button("  add surface   ", self.add_surface, key='a')
-        self._bar.add_var("  edit mode   ", self.surface_edit_mode )
-        for s,i in zip(self.surfaces,range(len(self.surfaces)))[::-1]:
-            self._bar.add_var("%s_window"%i,setter=s.toggle_window,getter=s.window_open,group=str(i),label='open in window')
-            self._bar.add_var("%s_name"%i,create_string_buffer(512),getter=s.atb_get_name,setter=s.atb_set_name,group=str(i),label='name')
-            self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
-            self._bar.add_button("%s_remove"%i, self.remove_surface,data=i,label='remove',group=str(i))
+    def init_gui(self):
+        self.menu = ui.Growing_Menu('Marker Detector')
+        self.menu.configuration = self.menu_conf
+        self.g_pool.sidebar.append(self.menu)
 
-    def update(self,frame,recent_pupil_positions,events):
-        img = frame.img
-        self.img_shape = frame.img.shape
+        self.button = ui.Thumb('running',self,label='Track',hotkey='t')
+        self.button.on_color[:] = (.1,.2,1.,.8)
+        self.g_pool.quickbar.append(self.button)
+        self.add_button = ui.Thumb('add_surface',setter=self.add_surface,getter=lambda:False,label='Add surface',hotkey='a')
+        self.g_pool.quickbar.append(self.add_button)
+        self.update_gui_markers()
 
-        if self.robust_detection.value:
-            self.markers = detect_markers_robust(img,
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu_conf= self.menu.configuration
+            self.menu= None
+        if self.button:
+            self.g_pool.quickbar.remove(self.button)
+            self.button = None
+        if self.add_button:
+            self.g_pool.quickbar.remove(self.add_button)
+            self.add_button = None
+
+    def update_gui_markers(self):
+        self.menu.elements[:] = []
+        self.menu.append(ui.Info_Text('This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*.'))
+        self.menu.append(ui.Button('Close',self.close))
+        self.menu.append(ui.Switch('robust_detection',self,label='Robust detection'))
+        self.menu.append(ui.Switch('locate_3d',self,label='3D localization'))
+        self.menu.append(ui.Selector('mode',self,label="Mode",selection=['Show markers and frames','Show marker IDs', 'Surface edit mode'] ))
+        self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_'),))
+        
+        # disable locate_3d if camera intrinsics don't exist
+        if self.camera_intrinsics is None:
+            self.menu.elements[3].read_only = True
+
+        for s in self.surfaces:
+            idx = self.surfaces.index(s)
+
+            s_menu = ui.Growing_Menu("Surface %s"%idx)
+            s_menu.collapsed=True
+            s_menu.append(ui.Text_Input('name',s,label='Name'))
+            #     self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
+            s_menu.append(ui.Text_Input('x',s.real_world_size,'x_scale'))
+            s_menu.append(ui.Text_Input('y',s.real_world_size,'y_scale'))
+            s_menu.append(ui.Button('Open debug window',s.open_close_window))
+            #closure to encapsulate idx
+            def make_remove_s(i):
+                return lambda: self.remove_surface(i)
+            remove_s = make_remove_s(idx)
+            s_menu.append(ui.Button('Remove',remove_s))
+            self.menu.append(s_menu)
+
+    def update(self,frame,events):
+        self.img_shape = frame.height,frame.width,3
+
+        if self.running:
+            gray = frame.gray
+
+            if self.robust_detection:
+                self.markers = detect_markers_robust(gray,
+                                                    grid_size = 5,
+                                                    prev_markers=self.markers,
+                                                    min_marker_perimeter=self.min_marker_perimeter,
+                                                    aperture=self.aperture,
+                                                    visualize=0,
+                                                    true_detect_every_frame=3)
+            else:
+                self.markers = detect_markers(gray,
                                                 grid_size = 5,
-                                                prev_markers=self.markers,
                                                 min_marker_perimeter=self.min_marker_perimeter,
-                                                aperture=self.aperture.value,
-                                                visualize=0,
-                                                true_detect_every_frame=3)
-        else:
-            self.markers = detect_markers_simple(img,
-                                                grid_size = 5,
-                                                min_marker_perimeter=self.min_marker_perimeter,
-                                                aperture=self.aperture.value,
+                                                aperture=self.aperture,
                                                 visualize=0)
+
+
+            if self.mode == "Show marker IDs":
+                draw_markers(frame.img,self.markers)
+
 
         # locate surfaces
         for s in self.surfaces:
-            s.locate(self.markers)
-            if s.detected:
-                events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
+            s.locate(self.markers, self.locate_3d,self.camera_intrinsics)
+            # if s.detected:
+                # events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
-        if self.draw_markers.value:
-            draw_markers(img,self.markers)
+        if self.running:
+            self.button.status_text = '%s/%s'%(len([s for s in self.surfaces if s.detected]),len(self.surfaces))
+        else:
+            self.button.status_text = 'tracking paused'
 
         # edit surfaces by user
-        if self.surface_edit_mode:
+        if self.mode == "Surface edit mode":
             window = glfwGetCurrentContext()
             pos = glfwGetCursorPos(window)
-            pos = normalize(pos,glfwGetWindowSize(window))
-            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
-
+            pos = normalize(pos,glfwGetWindowSize(window),flip_y=True)
             for s,v_idx in self.edit_surfaces:
                 if s.detected:
-                    pos = normalize(pos,(self.img_shape[1],self.img_shape[0]),flip_y=True)
                     new_pos =  s.img_to_ref_surface(np.array(pos))
                     s.move_vertex(v_idx,new_pos)
 
@@ -163,48 +214,57 @@ class Marker_Detector(Plugin):
         for s in self.surfaces:
             if s.detected:
                 s.gaze_on_srf = []
-                for p in recent_pupil_positions:
-                    if p['norm_pupil'] is not None:
-                        gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_gaze'])))
-                        p['realtime gaze on '+s.name] = gp_on_s
-                        s.gaze_on_srf.append(gp_on_s)
+                for p in events.get('gaze',[]):
+                    gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_pos'])))
+                    p['realtime gaze on ' + s.name] = gp_on_s
+                    s.gaze_on_srf.append(gp_on_s)
 
 
-        #allow surfaces to open/close windows
-        for s in self.surfaces:
-            if s.window_should_close:
-                s.close_window()
-            if s.window_should_open:
-                s.open_window()
+    def get_init_dict(self):
+        if self.menu:
+            d = {'menu_conf':self.menu.configuration,'mode':self.mode}
+        else:
+            d = {'menu_conf':self.menu_conf,'mode':self.mode}
+
+        return d
+
 
 
     def gl_display(self):
         """
         Display marker and surface info inside world screen
         """
-        for m in self.markers:
-            hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
-            hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-            draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
+        if self.mode == "Show markers and frames":
+            for m in self.markers:
+                hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
+                hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
+                draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
+
+            for s in self.surfaces:
+                s.gl_draw_frame(self.img_shape)
+
 
         for s in self.surfaces:
-            s.gl_draw_frame()
-            s.gl_display_in_window(self.g_pool.image_tex)
+            if self.locate_3d:
+                s.gl_display_in_window_3d(self.g_pool.image_tex,self.camera_intrinsics)
+            else:
+                s.gl_display_in_window(self.g_pool.image_tex)
 
-        if self.surface_edit_mode.value:
-            for s in  self.surfaces:
+
+        if self.mode == "Surface edit mode":
+            for s in self.surfaces:
+                s.gl_draw_frame(self.img_shape)
                 s.gl_draw_corners()
 
 
     def cleanup(self):
         """ called when the plugin gets terminated.
-        This happends either voluntary or forced.
-        if you have an atb bar or glfw window destroy it here.
+        This happens either voluntarily or forced.
+        if you have a GUI or glfw window destroy it here.
         """
-        self.save("realtime_square_marker_surfaces",[rs.save_to_dict() for rs in self.surfaces if rs.defined])
-
+        self.surface_definitions["realtime_square_marker_surfaces"] = [rs.save_to_dict() for rs in self.surfaces if rs.defined]
         self.surface_definitions.close()
 
         for s in self.surfaces:
-            s.close_window()
-        self._bar.destroy()
+            s.cleanup()
+        self.deinit_gui()

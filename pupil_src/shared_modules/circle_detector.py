@@ -1,38 +1,40 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+
 import numpy as np
 import cv2
 
-def get_canditate_ellipses(img,area_threshold,dist_threshold,min_ring_count, visual_debug):
-    gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+def get_candidate_ellipses(gray_img,area_threshold,dist_threshold,min_ring_count, visual_debug):
 
     # get threshold image used to get crisp-clean edges
-    edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 7, 7)
+    edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 5, -3)
     # cv2.flip(edges,1 ,dst = edges,)
     # display the image for debugging purpuses
     # img[:] = cv2.cvtColor(edges,cv2.COLOR_GRAY2BGR)
-     # from edges to contours to ellipses CV_RETR_CCsOMP ls fr hole
+    # from edges to contours to ellipses CV_RETR_CCsOMP ls fr hole
     contours, hierarchy = cv2.findContours(edges,
                                     mode=cv2.RETR_TREE,
                                     method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
 
-
     # remove extra encapsulation
+    if contours is None or hierarchy is None:
+        return []
+        
     hierarchy = hierarchy[0]
     # turn outmost list into array
     contours =  np.array(contours)
     # keep only contours                        with parents     and      children
     contained_contours = contours[np.logical_and(hierarchy[:,3]>=0, hierarchy[:,2]>=0)]
     # turn on to debug contours
-    if visual_debug:
-        cv2.drawContours(img, contained_contours,-1, (0,0,255))
+    # if visual_debug:
+    #     cv2.drawContours(gray_img, contained_contours,-1, (0,0,255))
 
     # need at least 5 points to fit ellipse
     contained_contours =  [c for c in contained_contours if len(c) >= 5]

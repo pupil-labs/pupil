@@ -1,19 +1,16 @@
 '''
-
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
 import sys, os,platform
-from time import sleep
+from time import time, sleep
 from copy import deepcopy
-from ctypes import c_bool, c_int
 
 #bundle relevant imports
 try:
@@ -44,10 +41,13 @@ else:
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
+#monitoring
+import psutil
+
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
-logger.setLevel(logging.INFO) # <-- use this to set verbosity
+logger.setLevel(logging.WARNING) # <-- use this to set verbosity
 #since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
     if __name__ == '__main__': #clear log if main
@@ -74,20 +74,20 @@ logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
 
 from file_methods import Persistent_Dict
-from time import time,sleep
-from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
 
 #display
 from glfw import *
-import atb
+from pyglui import ui,graph,cygl
+from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
+from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
+
 
 from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
-from player_methods import correlate_gaze,patch_meta_info,is_pupil_rec_dir
-from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture
+from player_methods import correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
 
 
 #get the current software version
@@ -100,6 +100,7 @@ else:
 
 
 # Plug-ins
+from plugin import Plugin_List
 from vis_circle import Vis_Circle
 from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
@@ -116,11 +117,12 @@ from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
 from batch_exporter import Batch_Exporter
 
-plugin_by_index =  (Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Marker_Auto_Trim_Marks,Pupil_Server,Batch_Exporter)
-name_by_index = [p.__name__ for p in plugin_by_index]
+system_plugins = Seek_Bar,Trim_Marks
+user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Marker_Auto_Trim_Marks,Pupil_Server,Batch_Exporter
+available_plugins = system_plugins + user_launchable_plugins
+name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
-plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-additive_plugins = (Vis_Circle,Vis_Cross,Vis_Polyline)
+plugin_by_name = dict(zip(name_by_index,available_plugins))
 
 
 def main():
@@ -129,45 +131,39 @@ def main():
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
-        adjust_gl_view(w,h,window)
-        norm_size = normalize((w,h),glfwGetWindowSize(window))
-        fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
-        atb.TwWindowSize(*map(int,fb_size))
+        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
+        w,h = w*hdpi_factor, h*hdpi_factor
+        g_pool.gui.update_window(w,h)
+        g_pool.gui.collect_menus()
+        graph.adjust_size(w,h)
+        adjust_gl_view(w,h)
         glfwMakeContextCurrent(active_window)
-        for p in g.plugins:
+        for p in g_pool.plugins:
             p.on_window_resize(window,w,h)
 
     def on_key(window, key, scancode, action, mods):
-        if not atb.TwEventKeyboardGLFW(key,action):
-            if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
-                    pass
-                else:
-                    for p in g.plugins:
-                        if hasattr(p,'on_key') and callable(getattr(p,'on_key')):
-                            p.on_key(window, key, scancode, action, mods)
+        g_pool.gui.update_key(key,scancode,action,mods)
 
     def on_char(window,char):
-        if not atb.TwEventCharGLFW(char,1):
-            pass
+        g_pool.gui.update_char(char)
+
 
     def on_button(window,button, action, mods):
-        if not atb.TwEventMouseButtonGLFW(button,action):
-            pos = glfwGetCursorPos(window)
-            pos = normalize(pos,glfwGetWindowSize(main_window))
-            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
-            for p in g.plugins:
-                p.on_click(pos,button,action)
+        g_pool.gui.update_button(button,action,mods)
+        pos = glfwGetCursorPos(window)
+        pos = normalize(pos,glfwGetWindowSize(main_window))
+        pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
+        for p in g_pool.plugins:
+            p.on_click(pos,button,action)
 
     def on_pos(window,x, y):
-        norm_pos = normalize((x,y),glfwGetWindowSize(window))
-        fb_x,fb_y = denormalize(norm_pos,glfwGetFramebufferSize(window))
-        if atb.TwMouseMotion(int(fb_x),int(fb_y)):
-            pass
+        hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
+        x,y = x*hdpi_factor,y*hdpi_factor
+        g_pool.gui.update_mouse(x,y)
 
     def on_scroll(window,x,y):
-        if not atb.TwMouseWheel(int(x)):
-            pass
+        g_pool.gui.update_scroll(x,y)
+
 
     def on_close(window):
         glfwSetWindowShouldClose(main_window,True)
@@ -197,12 +193,7 @@ def main():
     #backwards compatibility fn.
     patch_meta_info(rec_dir)
 
-    #parse and load data folder info
-    video_path = rec_dir + "/world.avi"
-    timestamps_path = rec_dir + "/timestamps.npy"
-    gaze_positions_path = rec_dir + "/gaze_positions.npy"
     meta_info_path = rec_dir + "/info.csv"
-
 
     #parse info.csv file
     with open(meta_info_path) as info:
@@ -214,21 +205,26 @@ def main():
         rec_version_float = "unknown"
     logger.debug("Recording version: %s , %s"%(rec_version,rec_version_float))
 
+    if rec_version_float < 0.4:
+        video_path = rec_dir + "/world.avi"
+        timestamps_path = rec_dir + "/timestamps.npy"
+    else:
+        video_path = rec_dir + "/world.mkv"
+        timestamps_path = rec_dir + "/world_timestamps.npy"
 
+    gaze_positions_path = rec_dir + "/gaze_positions.npy"
     #load gaze information
     gaze_list = np.load(gaze_positions_path)
     timestamps = np.load(timestamps_path)
 
     #correlate data
-    positions_by_frame = correlate_gaze(gaze_list,timestamps)
-
+    if rec_version_float < 0.4:
+        positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
+    else:
+        positions_by_frame = correlate_gaze(gaze_list,timestamps)
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
-    def load(var_name,default):
-        return session_settings.get(var_name,default)
-    def save(var_name,var):
-        session_settings[var_name] = var
 
 
     # Initialize capture
@@ -238,13 +234,16 @@ def main():
         logger.error("could not start capture.")
         return
 
-    width,height = cap.get_size()
+    width,height = session_settings.get('window_size',cap.get_size())
+    window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
 
 
     # Initialize glfw
     glfwInit()
     main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "+ rec_dir.split(os.path.sep)[-1], None, None)
     glfwMakeContextCurrent(main_window)
+    cygl.utils.init()
+
 
     # Register callbacks main_window
     glfwSetWindowSizeCallback(main_window,on_resize)
@@ -256,190 +255,185 @@ def main():
     glfwSetScrollCallback(main_window,on_scroll)
 
 
-    # create container for globally scoped varfs (within world)
-    g = Temp()
-    g.plugins = []
-    g.play = False
-    g.new_seek = True
-    g.user_dir = user_dir
-    g.rec_dir = rec_dir
-    g.app = 'player'
-    g.timestamps = timestamps
-    g.positions_by_frame = positions_by_frame
+    # create container for globally scoped vars (within world)
+    g_pool = Temp()
+    g_pool.play = False
+    g_pool.new_seek = True
+    g_pool.user_dir = user_dir
+    g_pool.rec_dir = rec_dir
+    g_pool.app = 'player'
+    g_pool.capture = cap
+    g_pool.timestamps = timestamps
+    g_pool.positions_by_frame = positions_by_frame
 
 
-
-    # helpers called by the main atb bar
-    def update_fps():
-        old_time, bar.timestamp = bar.timestamp, time()
-        dt = bar.timestamp - old_time
-        if dt:
-            bar.fps.value += .1 * (1. / dt - bar.fps.value)
-
-    def set_window_size(mode,data):
-        width,height = cap.get_size()
-        ratio = (1,.75,.5,.25)[mode]
-        w,h = int(width*ratio),int(height*ratio)
-        glfwSetWindowSize(main_window,w,h)
-        data.value=mode # update the bar.value
-
-    def get_from_data(data):
-        """
-        helper for atb getter and setter use
-        """
-        return data.value
-
-    def get_play():
-        return g.play
-
-    def set_play(value):
-        g.play = value
-
-    def next_frame():
+    def next_frame(_):
         try:
             cap.seek_to_frame(cap.get_frame_index())
         except FileSeekError:
             pass
-        g.new_seek = True
+        g_pool.new_seek = True
 
-    def prev_frame():
+    def prev_frame(_):
         try:
             cap.seek_to_frame(cap.get_frame_index()-2)
         except FileSeekError:
             pass
-        g.new_seek = True
+        g_pool.new_seek = True
+
+    def set_scale(new_scale):
+        g_pool.gui.scale = new_scale
+        g_pool.gui.collect_menus()
+
+    def get_scale():
+        return g_pool.gui.scale
+
+    def open_plugin(plugin):
+        if plugin ==  "Select to load":
+            return
+        logger.debug('Open Plugin: %s'%plugin)
+        new_plugin = plugin(g_pool)
+        g_pool.plugins.add(new_plugin)
+
+    def purge_plugins():
+        for p in g_pool.plugins:
+            if p.__class__ in user_launchable_plugins:
+                p.alive=False
+        g_pool.plugins.clean()
 
 
+    g_pool.gui = ui.UI()
+    g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
+    g_pool.gui.scale = session_settings.get('gui_scale',1)
+    g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,300))
+    g_pool.main_menu.configuration = session_settings.get('main_menu_config',{})
+    g_pool.main_menu.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
 
-    def open_plugin(selection,data):
-        if plugin_by_index[selection] not in additive_plugins:
-            for p in g.plugins:
-                if isinstance(p,plugin_by_index[selection]):
-                    return
+    g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%version))
+    g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
 
-        g.plugins = [p for p in g.plugins if p.alive]
-        logger.debug('Open Plugin: %s'%name_by_index[selection])
-        new_plugin = plugin_by_index[selection](g)
-        g.plugins.append(new_plugin)
-        g.plugins.sort(key=lambda p: p.order)
+    g_pool.main_menu.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
+                                        labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
+                                        setter= open_plugin, getter = lambda: "Select to load"))
+    g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
+    g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.get_size()[0],cap.get_size()[1])) )
 
-        if hasattr(new_plugin,'init_gui'):
-            new_plugin.init_gui()
-        # save the value for atb bar
-        data.value=selection
 
-    def get_from_data(data):
-        """
-        helper for atb getter and setter use
-        """
-        return data.value
+    g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
+    g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey=GLFW_KEY_SPACE)
+    g_pool.play_button.on_color[:] = (0,1.,.0,.8)
+    g_pool.forward_button = ui.Thumb('forward',getter = lambda: False,setter= next_frame, hotkey=GLFW_KEY_RIGHT)
+    g_pool.backward_button = ui.Thumb('backward',getter = lambda: False, setter = prev_frame, hotkey=GLFW_KEY_LEFT)
+    g_pool.quickbar.extend([g_pool.play_button,g_pool.forward_button,g_pool.backward_button])
 
-    atb.init()
-    # add main controls ATB bar
-    bar = atb.Bar(name = "Controls", label="Controls",
-            help="Scene controls", color=(50, 50, 50), alpha=100,valueswidth=150,
-            text='light', position=(10, 10),refresh=.1, size=(300, 160))
-    bar.next_atb_pos = (10,220)
-    bar.fps = c_float(0.0)
-    bar.timestamp = time()
-    bar.window_size = c_int(load("window_size",0))
-    window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
-    bar.version = create_string_buffer(version,512)
-    bar.recording_version = create_string_buffer(rec_version,512)
-    bar.add_var("fps", bar.fps, step=1., readonly=True)
-    bar._fps = c_float(cap.get_fps())
-    bar.add_var("recoding fps",bar._fps,readonly=True)
-    bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size)
-    bar.add_var("play",vtype=c_bool,getter=get_play,setter=set_play,key="space")
-    bar.add_button('step next',next_frame,key='right')
-    bar.add_button('step prev',prev_frame,key='left')
-    bar.add_var("frame index",vtype=c_int,getter=lambda:cap.get_frame_index()-1 )
+    g_pool.gui.append(g_pool.quickbar)
+    g_pool.gui.append(g_pool.main_menu)
 
-    bar.plugin_to_load = c_int(0)
-    plugin_type_enum = atb.enum("Plug In",index_by_name)
-    bar.add_var("plugin",setter=open_plugin,getter=get_from_data,data=bar.plugin_to_load, vtype=plugin_type_enum)
-    bar.add_var("version of recording",bar.recording_version, readonly=True, help="version of the capture software used to make this recording")
-    bar.add_var("version of player",bar.version, readonly=True, help="version of the Pupil Player")
-    bar.add_button("exit", on_close,data=main_window,key="esc")
+
+    #we always load these plugins
+    system_plugins = [('Trim_Marks',{}),('Seek_Bar',{})]
+    default_plugins = [('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Export_Launcher',{})]
+    previous_plugins = session_settings.get('loaded_plugins',default_plugins)
+    g_pool.plugins = Plugin_List(g_pool,plugin_by_name,system_plugins+previous_plugins)
+
+    for p in g_pool.plugins:
+        if p.class_name == 'Trim_Marks':
+            g_pool.trim_marks = p
+            break
 
     #set the last saved window size
-    set_window_size(bar.window_size.value,bar.window_size)
     on_resize(main_window, *glfwGetWindowSize(main_window))
     glfwSetWindowPos(main_window,0,0)
 
 
-    #we always load these plugins
-    g.plugins.append(Export_Launcher(g,data_dir=rec_dir,frame_count=len(timestamps)))
-    g.plugins.append(Seek_Bar(g,capture=cap))
-    g.trim_marks = Trim_Marks(g,capture=cap)
-    g.plugins.append(g.trim_marks)
-
-    #these are loaded based on user settings
-    for initializer in load('plugins',[]):
-        name, args = initializer
-        logger.debug("Loading plugin: %s with settings %s"%(name, args))
-        try:
-            p = plugin_by_name[name](g,**args)
-            g.plugins.append(p)
-        except:
-            logger.warning("Plugin '%s' failed to load from settings file." %name)
-
-    if load('plugins',"_") == "_":
-        #lets load some default if we dont have presets
-        g.plugins.append(Scan_Path(g))
-        g.plugins.append(Vis_Polyline(g))
-        g.plugins.append(Vis_Circle(g))
-        # g.plugins.append(Vis_Light_Points(g))
-
-    #sort by exec order
-    g.plugins.sort(key=lambda p: p.order)
-
-    #init gui
-    for p in g.plugins:
-        if hasattr(p,'init_gui'):
-            p.init_gui()
-
     # gl_state settings
     basic_gl_setup()
-    g.image_tex = create_named_texture((height,width,3))
+    g_pool.image_tex = create_named_texture((height,width,3))
 
+    #set up performace graphs:
+    pid = os.getpid()
+    ps = psutil.Process(pid)
+    ts = cap.get_now()-.03
+
+    cpu_graph = graph.Bar_Graph()
+    cpu_graph.pos = (20,110)
+    cpu_graph.update_fn = ps.get_cpu_percent
+    cpu_graph.update_rate = 5
+    cpu_graph.label = 'CPU %0.1f'
+
+    fps_graph = graph.Bar_Graph()
+    fps_graph.pos = (140,110)
+    fps_graph.update_rate = 5
+    fps_graph.label = "%0.0f REC FPS"
+
+    pupil_graph = graph.Bar_Graph(max_val=1.0)
+    pupil_graph.pos = (260,110)
+    pupil_graph.update_rate = 5
+    pupil_graph.label = "Confidence: %0.2f"
 
     while not glfwWindowShouldClose(main_window):
 
-        update_fps()
-
         #grab new frame
-        if g.play or g.new_seek:
+        if g_pool.play or g_pool.new_seek:
             try:
                 new_frame = cap.get_frame()
             except EndofVideoFileError:
                 #end of video logic: pause at last frame.
-                g.play=False
+                g_pool.play=False
 
-            if g.new_seek:
+            if g_pool.new_seek:
                 display_time = new_frame.timestamp
-                g.new_seek = False
+                g_pool.new_seek = False
+
+
+            update_graph = True
+        else:
+            update_graph = False
+
 
         frame = new_frame.copy()
+        events = {}
         #new positons and events we make a deepcopy just like the image is a copy.
-        current_pupil_positions = deepcopy(positions_by_frame[frame.index])
-        events = []
+        events['pupil_positions'] = deepcopy(positions_by_frame[frame.index])
+
+        if update_graph:
+            #update performace graphs
+            for p in  events['pupil_positions']:
+                pupil_graph.add(p['confidence'])
+
+            t = new_frame.timestamp
+            if ts != t:
+                dt,ts = t-ts,t
+            fps_graph.add(1./dt)
+
+            g_pool.play_button.status_text = str(frame.index)
+        #always update the CPU graph
+        cpu_graph.update()
+
 
         # allow each Plugin to do its work.
-        for p in g.plugins:
-            p.update(frame,current_pupil_positions,events)
+        for p in g_pool.plugins:
+            p.update(frame,events)
 
         #check if a plugin need to be destroyed
-        g.plugins = [p for p in g.plugins if p.alive]
+        g_pool.plugins.clean()
 
         # render camera image
         glfwMakeContextCurrent(main_window)
         make_coord_system_norm_based()
-        draw_named_texture(g.image_tex,frame.img)
+        update_named_texture(g_pool.image_tex,frame.img)
+        draw_named_texture(g_pool.image_tex)
         make_coord_system_pixel_based(frame.img.shape)
         # render visual feedback from loaded plugins
-        for p in g.plugins:
+        for p in g_pool.plugins:
             p.gl_display()
+
+        graph.push_view()
+        fps_graph.draw()
+        cpu_graph.draw()
+        pupil_graph.draw()
+        graph.pop_view()
+        g_pool.gui.update()
 
         #present frames at appropriate speed
         wait_time = frame.timestamp - display_time
@@ -452,32 +446,22 @@ def main():
         timestamp = time()
 
 
-        atb.draw()
         glfwSwapBuffers(main_window)
         glfwPollEvents()
 
-    plugin_save = []
-    for p in g.plugins:
-        try:
-            p_initializer = p.get_class_name(),p.get_init_dict()
-            plugin_save.append(p_initializer)
-        except AttributeError:
-            #not all plugins need to be savable, they will not have the init dict.
-            # any object without a get_init_dict method will throw this exception.
-            pass
+    session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
+    session_settings['gui_scale'] = g_pool.gui.scale
+    session_settings['main_menu_config'] = g_pool.main_menu.configuration
+    session_settings['window_size'] = glfwGetWindowSize(main_window)
+    session_settings['window_position'] = glfwGetWindowPos(main_window)
 
-    # de-init all running plugins
-    for p in g.plugins:
-        p.alive = False
-        #reading p.alive actually runs plug-in cleanup
-        _ = p.alive
-
-    save('plugins',plugin_save)
-    save('window_size',bar.window_size.value)
     session_settings.close()
+    # de-init all running plugins
+    for p in g_pool.plugins:
+        p.alive = False
+    g_pool.plugins.clean()
 
     cap.close()
-    bar.destroy()
     glfwDestroyWindow(main_window)
     glfwTerminate()
     logger.debug("Process done")

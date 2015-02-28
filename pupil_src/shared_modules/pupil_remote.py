@@ -1,23 +1,18 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import atb
-import numpy as np
-from gl_utils import draw_gl_polyline_norm
-from ctypes import c_float,c_int,create_string_buffer
 
-import cv2
-import zmq
 from plugin import Plugin
 
-from recorder import Recorder
+from pyglui import ui
+import zmq
 
 import logging
 logger = logging.getLogger(__name__)
@@ -33,35 +28,41 @@ class Pupil_Remote(Plugin):
     'T' set timebase to 0
     'C' start currently selected calibration
     """
-    def __init__(self, g_pool, atb_pos=(10,400),on_char_fn = None):
-        Plugin.__init__(self)
-        self.g_pool = g_pool
-        self.on_char_fn = on_char_fn
+    def __init__(self, g_pool,address="tcp://*:50020",menu_conf = {'collapsed':True,}):
+        super(Pupil_Remote, self).__init__(g_pool)
+        self.menu_conf = menu_conf
         self.order = .9 #excecute late in the plugin list.
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
-        self.address = create_string_buffer('',512)
-        self.set_server(create_string_buffer("tcp://*:50020",512))
+        self.address = address
+        self.set_server(self.address)
 
-        help_str = "Pupil Remote using REQ RREP schema. "
-
-        self._bar = atb.Bar(name = self.__class__.__name__, label='Remote',
-            help=help_str, color=(50, 50, 50), alpha=100,
-            text='light', position=atb_pos,refresh=.3, size=(300,40))
-        self._bar.define("valueswidth=170")
-        self._bar.add_var("server address",self.address, getter=lambda:self.address, setter=self.set_server)
-        self._bar.add_button("close", self.close)
-
-        self.exclude_list = ['ellipse','pos_in_roi','major','minor','axes','angle','center']
 
     def set_server(self,new_address):
         try:
-            self.socket.bind(new_address.value)
-            self.address.value = new_address.value
+            self.socket.bind(new_address)
+            self.address = new_address
         except zmq.ZMQError:
             logger.error("Could not set Socket.")
 
-    def update(self,frame,recent_pupil_positions,events):
+
+    def init_gui(self):
+        help_str = 'Pupil Remote using REQ RREP schemme'
+        self.menu = ui.Growing_Menu('Pupil Remote')
+        self.menu.append(ui.Info_Text(help_str))
+        self.menu.append(ui.Text_Input('address',self,setter=self.set_server,label='Address'))
+        self.menu.append(ui.Button('Close',self.close))
+        self.menu.configuration = self.menu_conf
+        self.g_pool.sidebar.append(self.menu)
+
+    def deinit_gui(self):
+        if self.menu:
+            self.menu_conf = self.menu.configuration
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
+
+
+    def update(self,frame,events):
         try:
             msg = self.socket.recv(flags=zmq.NOBLOCK)
         except zmq.ZMQError :
@@ -71,14 +72,28 @@ class Pupil_Remote(Plugin):
                 rec_name = msg[2:]
                 if rec_name:
                     self.g_pool.rec_name = rec_name
-                self.on_char_fn(None,ord('r') ) #emulate the user hitting 'r'
+                for p in g_pool.plugins:
+                    if p.class_name == 'Recorder':
+                        p.toggle()
+                        break
             elif msg == 'T':
-                self.g_pool.timebase.value = self.g_pool.capure.get_now()
+                self.g_pool.timebase.value = self.g_pool.capture.get_now()
                 logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
             elif msg == 'C':
-                self.on_char_fn(None,ord('c') ) #emulate the user hitting 'c'
+                for p in g_pool.plugins:
+                    if p.base_class_name == 'Calibration_Plugin':
+                        p.toggle()
+                        break
 
-            self.socket.send("%s - confirmed"%msg)
+
+    def get_init_dict(self):
+        d = {}
+        d['address'] = self.address
+        if self.menu:
+            d['menu_conf'] = self.menu.configuration
+        else:
+            d['menu_conf'] = self.menu_conf
+        return d
 
 
     def close(self):
@@ -86,8 +101,8 @@ class Pupil_Remote(Plugin):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-           either volunatily or forced.
+           This happens either volunatily or forced.
         """
-        self._bar.destroy()
+        self.deinit_gui()
         self.context.destroy()
 

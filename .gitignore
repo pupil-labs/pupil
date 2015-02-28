@@ -10,10 +10,11 @@ Thumbs.db
 *.so
 
 # user generated files will be ignored if in directory named 'recordings...' #
+# user generated settings files will also be ignored #
 recordings/
-settings/
 capture_settings/
 player_settings/
+settings/
 *.db
 *.npy
 *.png

@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -21,6 +21,9 @@ class Temp(object):
     def __init__(self):
         pass
 
+
+
+
 class Roi(object):
     """this is a simple 2D Region of Interest class
     it is applied on numpy arrays for convenient slicing
@@ -35,8 +38,8 @@ class Roi(object):
         self.array_shape = array_shape
         self.lX = 0
         self.lY = 0
-        self.uX = array_shape[1]-0
-        self.uY = array_shape[0]-0
+        self.uX = array_shape[1]
+        self.uY = array_shape[0]
         self.nX = 0
         self.nY = 0
 
@@ -47,21 +50,6 @@ class Roi(object):
     @view.setter
     def view(self, value):
         raise Exception('The view field is read-only. Use the set methods instead')
-
-    def setStart(self,(x,y)):
-        x,y = int(x),int(y)
-        x,y = max(0,x),max(0,y)
-        self.nX,self.nY = x,y
-
-    def setEnd(self,(x,y)):
-            x,y = int(x),int(y)
-            x,y = max(0,x),max(0,y)
-            # make sure the ROI actually contains enough pixels
-            if abs(self.nX - x) > 25 and abs(self.nY - y)>25:
-                self.lX = min(x,self.nX)
-                self.lY = min(y,self.nY)
-                self.uX = max(x,self.nX)
-                self.uY = max(y,self.nY)
 
     def add_vector(self,(x,y)):
         """
@@ -86,6 +74,7 @@ class Roi(object):
 
     def get(self):
         return self.lX,self.lY,self.uX,self.uY,self.array_shape
+
 
 
 def bin_thresholding(image, image_lower=0, image_upper=256):

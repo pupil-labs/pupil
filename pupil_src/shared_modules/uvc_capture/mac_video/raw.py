@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -100,6 +100,8 @@ uvcc_controls = ('UVCC_REQ_SCANNING_MODE',
                 'UVCC_REQ_GAMMA_ABS',
                 'UVCC_REQ_WB_TEMP_AUTO',
                 'UVCC_REQ_WB_TEMP_ABS',
+                'UVCC_REQ_WB_COMPONENT_AUTO',
+                'UVCC_REQ_WB_COMPONENT_ABS',
                 '__UVCC_REQ_OUT_OF_RANGE')
 control_dict = dict(zip(uvcc_controls,range(len(uvcc_controls))))
 

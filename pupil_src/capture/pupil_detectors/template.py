@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -12,18 +12,19 @@ import cv2
 from time import sleep
 import numpy as np
 from methods import *
-import atb
-from ctypes import c_int,c_bool,c_float
+
 import logging
 logger = logging.getLogger(__name__)
 
+# gui
+from pyglui import ui
 
 class Pupil_Detector(object):
     """base class for pupil detector"""
-    def __init__(self):
+    def __init__(self,g_pool):
         super(Pupil_Detector, self).__init__()
-        var1 = c_int(0)
-
+        self.g_pool = g_pool
+        
     def detect(self,frame,u_roi,visualize=False):
         img = frame.img
         # hint: create a view into the img with the bounds of user set region of interest
@@ -58,12 +59,11 @@ class Pupil_Detector(object):
             no_result['norm_pupil'] = None
             return no_result
 
+    def init_gui(self):
+        pass
 
-    def create_atb_bar(self,pos):
-        self.bar = atb.Bar(name = "Pupil_Detector", label="Pupil Detector Controls",
-            help="pupil detection params", color=(50, 50, 50), alpha=100,
-            text='light', position=pos,refresh=.3, size=(200, 200))
-        self.bar.add_var("VAR1",self.var1, step=1.,readonly=False)
+
+
 
 
 

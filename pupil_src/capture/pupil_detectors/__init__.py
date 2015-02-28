@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -19,11 +19,8 @@ if __name__ == '__main__':
 import cv2
 import numpy as np
 from methods import *
-import atb
-from ctypes import c_int,c_bool,c_float
 import logging
 logger = logging.getLogger(__name__)
 
 from canny_detector import Canny_Detector
-from blob_detector import Blob_Detector
-from mser_detector import MSER_Detector
+

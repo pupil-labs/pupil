@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -17,88 +17,111 @@ if __name__ == '__main__':
     del syspath, ospath
 
 
-import os, sys
-from time import time
+import os, sys,platform
 from file_methods import Persistent_Dict
 import logging
-from ctypes import  c_int,c_bool,c_float,create_string_buffer
 import numpy as np
 
 #display
 from glfw import *
-import atb
+from pyglui import ui,graph,cygl
+from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
+from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
+
+
+#check versions for our own depedencies as they are fast-changing
+from pyglui import __version__ as pyglui_version
+assert pyglui_version >= '0.1'
+
+#monitoring
+import psutil
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
-from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen, draw_gl_point_norm,make_coord_system_pixel_based,make_coord_system_norm_based,create_named_texture,draw_named_texture
 from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 from audio import Audio_Input_List
-import calibrate
+
+
 # Plug-ins
-import calibration_routines
-import recorder
+from plugin import Plugin_List
+from calibration_routines import calibration_plugins, gaze_mapping_plugins
+from recorder import Recorder
 from show_calibration import Show_Calibration
 from display_recent_gaze import Display_Recent_Gaze
 from pupil_server import Pupil_Server
 from pupil_remote import Pupil_Remote
 from marker_detector import Marker_Detector
 
+#manage plugins
+user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Remote,Marker_Detector]
+system_plugins  = [Display_Recent_Gaze,Recorder]
+plugin_by_index =  user_launchable_plugins+system_plugins+calibration_plugins+gaze_mapping_plugins
+name_by_index = [p.__name__ for p in plugin_by_index]
+plugin_by_name = dict(zip(name_by_index,plugin_by_index))
+default_plugins = [('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{})]
+
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
+
+
+#UI Platform tweaks
+if platform.system() == 'Linux':
+     scroll_factor = 10.0
+else:
+    scroll_factor = 1.0
 
 
 def world(g_pool,cap_src,cap_size):
     """world
     Creates a window, gl context.
     Grabs images from a capture.
-    Receives Pupil coordinates from g_pool.pupil_queue
+    Receives Pupil coordinates from eye process[es]
     Can run various plug-ins.
     """
-
 
     # Callback functions
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
-        norm_size = normalize((w,h),glfwGetWindowSize(window))
-        fb_size = denormalize(norm_size,glfwGetFramebufferSize(window))
-        atb.TwWindowSize(*map(int,fb_size))
-        adjust_gl_view(w,h,window)
-        glfwMakeContextCurrent(active_window)
+        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
+        w,h = w*hdpi_factor, h*hdpi_factor
+        g_pool.gui.update_window(w,h)
+        g_pool.gui.collect_menus()
+        graph.adjust_size(w,h)
+        adjust_gl_view(w,h)
         for p in g_pool.plugins:
             p.on_window_resize(window,w,h)
 
+        glfwMakeContextCurrent(active_window)
+
+
     def on_iconify(window,iconfied):
         if not isinstance(cap,FakeCapture):
-            g_pool.update_textures.value = not iconfied
+            g_pool.update_textures = not iconfied
 
     def on_key(window, key, scancode, action, mods):
-        if not atb.TwEventKeyboardGLFW(key,action):
-            if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
-                    on_close(window)
+        g_pool.gui.update_key(key,scancode,action,mods)
 
     def on_char(window,char):
-        if not atb.TwEventCharGLFW(char,1):
-            pass
+        g_pool.gui.update_char(char)
+
 
     def on_button(window,button, action, mods):
-        if not atb.TwEventMouseButtonGLFW(button,action):
-            pos = glfwGetCursorPos(window)
-            pos = normalize(pos,glfwGetWindowSize(world_window))
-            pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
-            for p in g_pool.plugins:
-                p.on_click(pos,button,action)
+        g_pool.gui.update_button(button,action,mods)
+        pos = glfwGetCursorPos(window)
+        pos = normalize(pos,glfwGetWindowSize(main_window))
+        pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
+        for p in g_pool.plugins:
+            p.on_click(pos,button,action)
 
     def on_pos(window,x, y):
-        norm_pos = normalize((x,y),glfwGetWindowSize(window))
-        fb_x,fb_y = denormalize(norm_pos,glfwGetFramebufferSize(window))
-        if atb.TwMouseMotion(int(fb_x),int(fb_y)):
-            pass
+        hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
+        x,y = x*hdpi_factor,y*hdpi_factor
+        g_pool.gui.update_mouse(x,y)
 
     def on_scroll(window,x,y):
-        if not atb.TwMouseWheel(int(x)):
-            pass
+        g_pool.gui.update_scroll(x,y*scroll_factor)
+
 
     def on_close(window):
         g_pool.quit.value = True
@@ -108,237 +131,155 @@ def world(g_pool,cap_src,cap_size):
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
-    def load(var_name,default):
-        return session_settings.get(var_name,default)
-    def save(var_name,var):
-        session_settings[var_name] = var
-
-
-
 
     # Initialize capture
     cap = autoCreateCapture(cap_src, cap_size, 24, timebase=g_pool.timebase)
 
-     # Get an image from the grabber
+    # Test capture
     try:
         frame = cap.get_frame()
     except CameraCaptureError:
         logger.error("Could not retrieve image from capture")
         cap.close()
         return
-    height,width = frame.img.shape[:2]
-
-    # load last calibration data
-    try:
-        pt_cloud = np.load(os.path.join(g_pool.user_dir,'cal_pt_cloud.npy'))
-        logger.debug("Using calibration found in %s" %g_pool.user_dir)
-        map_pupil = calibrate.get_map_from_cloud(pt_cloud,(width,height))
-    except :
-        logger.debug("No calibration found.")
-        def map_pupil(vector):
-            """ 1 to 1 mapping """
-            return vector
 
 
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
-    g_pool.plugins = []
-    g_pool.map_pupil = map_pupil
-    g_pool.update_textures = c_bool(1)
+    g_pool.update_textures = 2
+
     if isinstance(cap,FakeCapture):
-        g_pool.update_textures.value = False
+        g_pool.update_textures = 0
     g_pool.capture = cap
+    g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
+    g_pool.active_calibration_plugin = None
 
-    g_pool.rec_name = recorder.get_auto_name()
 
-
-    # helpers called by the main atb bar
-    def update_fps():
-        old_time, bar.timestamp = bar.timestamp, time()
-        dt = bar.timestamp - old_time
-        if dt:
-            bar.fps.value += .05 * (1. / dt - bar.fps.value)
-
-    def set_window_size(mode,data):
-        height,width = frame.img.shape[:2]
-        ratio = (1,.75,.5,.25)[mode]
-        w,h = int(width*ratio),int(height*ratio)
-        glfwSetWindowSize(world_window,w,h)
-        data.value=mode # update the bar.value
-
-    def get_from_data(data):
-        """
-        helper for atb getter and setter use
-        """
-        return data.value
-
-    def set_rec_dir(val):
-        try:
-            n_path = os.path.expanduser(val.value)
-            logger.debug("Expanded user path.")
-        except:
-            n_path = val.value
-
-        if not n_path:
-            logger.warning("Please specify a path.")
-        elif not os.path.isdir(n_path):
-            logger.warning("This is not a valid path.")
-        else:
-            g_pool.rec_dir = n_path
-
-    def get_rec_dir():
-        return create_string_buffer(g_pool.rec_dir,512)
-
-    def set_rec_name(val):
-        if not val.value:
-            g_pool.rec_name = recorder.get_auto_name()
-        else:
-            g_pool.rec_name = val.value
-
-    def get_rec_name():
-        return create_string_buffer(g_pool.rec_name,512)
-
-    def open_calibration(selection,data):
-        # prepare destruction of current ref_detector... and remove it
-        for p in g_pool.plugins:
-            if isinstance(p,calibration_routines.detector_by_index):
-                p.alive = False
-        g_pool.plugins = [p for p in g_pool.plugins if p.alive]
-
-        new_ref_detector = calibration_routines.detector_by_index[selection](g_pool,atb_pos=bar.next_atb_pos)
-        g_pool.plugins.append(new_ref_detector)
-        g_pool.plugins.sort(key=lambda p: p.order)
-
-        # save the value for atb bar
-        data.value=selection
-
-    def toggle_record_video():
-        for p in g_pool.plugins:
-            if isinstance(p,recorder.Recorder):
-                p.alive = False
-                return
-
-        new_plugin = recorder.Recorder(g_pool,g_pool.rec_name, bar.fps.value, frame.img.shape, bar.record_eye.value, g_pool.eye_tx,bar.audio.value)
-        g_pool.plugins.append(new_plugin)
-        g_pool.plugins.sort(key=lambda p: p.order)
-
-    def toggle_show_calib_result():
-        for p in g_pool.plugins:
-            if isinstance(p,Show_Calibration):
-                p.alive = False
-                return
-
-        new_plugin = Show_Calibration(g_pool,frame.img.shape)
-        g_pool.plugins.append(new_plugin)
-        g_pool.plugins.sort(key=lambda p: p.order)
-
-    def toggle_server():
-        for p in g_pool.plugins:
-            if isinstance(p,Pupil_Server):
-                p.alive = False
-                return
-
-        new_plugin = Pupil_Server(g_pool,(10,300))
-        g_pool.plugins.append(new_plugin)
-        g_pool.plugins.sort(key=lambda p: p.order)
-
-    def toggle_remote():
-        for p in g_pool.plugins:
-            if isinstance(p,Pupil_Remote):
-                p.alive = False
-                return
-
-        new_plugin = Pupil_Remote(g_pool,(10,360),on_char)
-        g_pool.plugins.append(new_plugin)
-        g_pool.plugins.sort(key=lambda p: p.order)
-
-    def toggle_ar():
-        for p in g_pool.plugins:
-            if isinstance(p,Marker_Detector):
-                p.alive = False
-                return
-
-        new_plugin = Marker_Detector(g_pool,(10,400))
-        g_pool.plugins.append(new_plugin)
-        g_pool.plugins.sort(key=lambda p: p.order)
-
+    #UI callback functions
     def reset_timebase():
         #the last frame from worldcam will be t0
-        g_pool.timebase.value = g_pool.capure.get_now()
+        g_pool.timebase.value = g_pool.capture.get_now()
         logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
 
+    def set_calibration_plugin(new_calibration):
+        g_pool.active_calibration_plugin = new_calibration
+        new_plugin = new_calibration(g_pool)
+        g_pool.plugins.add(new_plugin)
+
+    def open_plugin(plugin):
+        if plugin ==  "Select to load":
+            return
+        logger.debug('Open Plugin: %s'%plugin)
+        new_plugin = plugin(g_pool)
+        g_pool.plugins.add(new_plugin)
+
+    def set_scale(new_scale):
+        g_pool.gui.scale = new_scale
+        g_pool.gui.collect_menus()
 
 
-    atb.init()
-    # add main controls ATB bar
-    bar = atb.Bar(name = "World", label="Controls",
-            help="Scene controls", color=(50, 50, 50), alpha=100,valueswidth=150,
-            text='light', position=(10, 10),refresh=.3, size=(300, 200))
-    bar.next_atb_pos = (10,220)
-    bar.fps = c_float(0.0)
-    bar.timestamp = time()
-    bar.calibration_type = c_int(load("calibration_type",0))
-    bar.record_eye = c_bool(load("record_eye",0))
-    bar.audio = c_int(load("audio",-1))
-    bar.window_size = c_int(load("window_size",0))
-    window_size_enum = atb.enum("Display Size",{"Full":0, "Medium":1,"Half":2,"Mini":3})
-    calibrate_type_enum = atb.enum("Calibration Method",calibration_routines.index_by_name)
-    audio_enum = atb.enum("Audio Input",dict(Audio_Input_List()))
-    bar.version = create_string_buffer(g_pool.version,512)
-    bar.add_var("fps", bar.fps, step=1., readonly=True, help="Refresh speed of this process. Especially during recording it should not drop below the camera set frame rate.")
-    bar.add_var("display size", vtype=window_size_enum,setter=set_window_size,getter=get_from_data,data=bar.window_size,help="Resize the world window. This has no effect on the actual image.")
-    bar.add_var("calibration method",setter=open_calibration,getter=get_from_data,data=bar.calibration_type, vtype=calibrate_type_enum,group="Calibration", help="Please choose your desired calibration method.")
-    bar.add_button("show calibration result",toggle_show_calib_result, group="Calibration", help="Click to show calibration result.")
-    bar.add_var("rec dir",create_string_buffer(512),getter = get_rec_dir,setter= set_rec_dir, group="Recording", help="Specify the recording path")
-    bar.add_var("session name",create_string_buffer(512),getter = get_rec_name,setter= set_rec_name, group="Recording", help="Give your recording session a custom name.")
-    bar.add_button("record", toggle_record_video, key="r", group="Recording", help="Start/Stop Recording")
-    bar.add_var("record eye", bar.record_eye, group="Recording", help="check to save raw video of eye")
-    bar.add_var("record audio", bar.audio, vtype=audio_enum, group="Recording", help="Select from audio recording options.")
-    bar.add_button("start/stop marker tracking",toggle_ar,key="x",help="find markers in scene to map gaze onto referace surfaces")
-    bar.add_button("start/stop server",toggle_server,key="s",help="the server broadcasts pupil and gaze positions locally or via network")
-    bar.add_button("start/stop remote",toggle_remote,key="w",help="remote allows seding commad to pupil via network")
-    bar.add_button("set timebase to now",reset_timebase,help="this button allows the timestamps to count from now on.",key="t")
-    bar.add_var("update screen", g_pool.update_textures,help="if you dont need to see the camera image updated, you can turn this of to reduce CPU load.")
-    bar.add_separator("Sep1")
-    bar.add_var("version",bar.version, readonly=True)
-    bar.add_var("exit", g_pool.quit)
+    def get_scale():
+        return g_pool.gui.scale
 
-    # add uvc camera controls ATB bar
-    cap.create_atb_bar(pos=(320,10))
+
+    width,height = session_settings.get('window_size',(frame.width, frame.height))
+    window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
+
 
     # Initialize glfw
     glfwInit()
-    world_window = glfwCreateWindow(width, height, "World", None, None)
-    glfwMakeContextCurrent(world_window)
+    main_window = glfwCreateWindow(width,height, "World", None, None)
+    glfwMakeContextCurrent(main_window)
+    cygl.utils.init()
 
-    # Register callbacks world_window
-    glfwSetWindowSizeCallback(world_window,on_resize)
-    glfwSetWindowCloseCallback(world_window,on_close)
-    glfwSetWindowIconifyCallback(world_window,on_iconify)
-    glfwSetKeyCallback(world_window,on_key)
-    glfwSetCharCallback(world_window,on_char)
-    glfwSetMouseButtonCallback(world_window,on_button)
-    glfwSetCursorPosCallback(world_window,on_pos)
-    glfwSetScrollCallback(world_window,on_scroll)
-
-    #set the last saved window size
-    set_window_size(bar.window_size.value,bar.window_size)
-    on_resize(world_window, *glfwGetWindowSize(world_window))
-    glfwSetWindowPos(world_window,0,0)
+    # Register callbacks main_window
+    glfwSetWindowSizeCallback(main_window,on_resize)
+    glfwSetWindowCloseCallback(main_window,on_close)
+    glfwSetWindowIconifyCallback(main_window,on_iconify)
+    glfwSetKeyCallback(main_window,on_key)
+    glfwSetCharCallback(main_window,on_char)
+    glfwSetMouseButtonCallback(main_window,on_button)
+    glfwSetCursorPosCallback(main_window,on_pos)
+    glfwSetScrollCallback(main_window,on_scroll)
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.image_tex = create_named_texture(frame.img)
+    g_pool.image_tex = create_named_texture(frame.img.shape)
+    update_named_texture(g_pool.image_tex,frame.img)
+
     # refresh speed settings
     glfwSwapInterval(0)
 
+    glfwSetWindowPos(main_window,0,0)
 
-    #load calibration plugin
-    open_calibration(bar.calibration_type.value,bar.calibration_type)
 
-    #load gaze_display plugin
-    g_pool.plugins.append(Display_Recent_Gaze(g_pool))
+    #setup GUI
+    g_pool.gui = ui.UI()
+    g_pool.gui.scale = session_settings.get('gui_scale',1)
+    g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-250,0),size=(0,0),header_pos='left')
+    g_pool.sidebar.configuration = session_settings.get('side_bar_config',{})
+    general_settings = ui.Growing_Menu('General')
+    general_settings.configuration = session_settings.get('general_menu_config',{})
+    general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface size'))
+    general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
+    general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
+                                        labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
+                                        setter= open_plugin, getter=lambda: "Select to load"))
+    g_pool.sidebar.append(general_settings)
+    advanced_settings = ui.Growing_Menu('Advanced')
+    advanced_settings.configuration = session_settings.get('advanced_menu_config',{'collapsed':True})
+    advanced_settings.append(ui.Selector('update_textures',g_pool,label="Update display",selection=range(3),labels=('No update','Gray','Color')))
+    advanced_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
+    advanced_settings.append(ui.Button('Set timebase to 0',reset_timebase))
+    general_settings.append(advanced_settings)
+    g_pool.calibration_menu = ui.Growing_Menu('Calibration')
+    g_pool.calibration_menu.configuration = session_settings.get('calibration_menu_config',{})
+    g_pool.calibration_menu.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
+                                        labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
+                                        setter= set_calibration_plugin,label='Method'))
+    g_pool.sidebar.append(g_pool.calibration_menu)
+    g_pool.gui.append(g_pool.sidebar)
 
+    g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
+    g_pool.gui.append(g_pool.quickbar)
+    g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
+
+    g_pool.capture.init_gui(g_pool.sidebar)
+    g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{})
+
+    #plugins that are loaded based on user settings from previous session
+    g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
+
+    #only needed for the gui to show the loaded calibration type
+    for p in g_pool.plugins:
+        if p.base_class_name == 'Calibration_Plugin':
+            g_pool.active_calibration_plugin =  p.__class__
+            break
+
+
+
+    on_resize(main_window, *glfwGetWindowSize(main_window))
+
+    #set up performace graphs:
+    pid = os.getpid()
+    ps = psutil.Process(pid)
+    ts = frame.timestamp
+
+    cpu_graph = graph.Bar_Graph()
+    cpu_graph.pos = (20,130)
+    cpu_graph.update_fn = ps.get_cpu_percent
+    cpu_graph.update_rate = 5
+    cpu_graph.label = 'CPU %0.1f'
+
+    fps_graph = graph.Bar_Graph()
+    fps_graph.pos = (140,130)
+    fps_graph.update_rate = 5
+    fps_graph.label = "%0.0f FPS"
+
+    pupil_graph = graph.Bar_Graph(max_val=1.0)
+    pupil_graph.pos = (260,130)
+    pupil_graph.update_rate = 5
+    pupil_graph.label = "Confidence: %0.2f"
 
     # Event loop
     while not g_pool.quit.value:
@@ -347,69 +288,81 @@ def world(g_pool,cap_src,cap_size):
         try:
             frame = cap.get_frame()
         except CameraCaptureError:
-            logger.error("Capture from Camera Failed. Stopping.")
+            logger.error("Capture from camera failed. Stopping.")
             break
         except EndofVideoFileError:
-            logger.warning("Video File is done. Stopping")
+            logger.warning("Video file is done. Stopping")
             break
 
-        update_fps()
+        #update performace graphs
+        t = frame.timestamp
+        dt,ts = t-ts,t
+        fps_graph.add(1./dt)
+        cpu_graph.update()
 
-        #a container that allows plugins to post and read events
-        events = []
+
+        #a dictionary that allows plugins to post and read events
+        events = {}
 
         #receive and map pupil positions
         recent_pupil_positions = []
         while not g_pool.pupil_queue.empty():
             p = g_pool.pupil_queue.get()
-            if p['norm_pupil'] is None:
-                p['norm_gaze'] = None
-            else:
-                p['norm_gaze'] = g_pool.map_pupil(p['norm_pupil'])
             recent_pupil_positions.append(p)
-
+            pupil_graph.add(p['confidence'])
+        events['pupil_positions'] = recent_pupil_positions
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
-            p.update(frame,recent_pupil_positions,events)
+            p.update(frame,events)
 
         #check if a plugin need to be destroyed
-        g_pool.plugins = [p for p in g_pool.plugins if p.alive]
+        g_pool.plugins.clean()
 
         # render camera image
-        glfwMakeContextCurrent(world_window)
+        glfwMakeContextCurrent(main_window)
+        if g_pool.update_textures == 2:
+            update_named_texture(g_pool.image_tex,frame.img)
+        elif g_pool.update_textures == 1:
+            update_named_texture(g_pool.image_tex,frame.gray)
 
         make_coord_system_norm_based()
-        if g_pool.update_textures.value:
-            draw_named_texture(g_pool.image_tex,frame.img)
-        else:
-            draw_named_texture(g_pool.image_tex)
-        make_coord_system_pixel_based(frame.img.shape)
+        draw_named_texture(g_pool.image_tex)
+        make_coord_system_pixel_based((frame.height,frame.width,3))
 
         # render visual feedback from loaded plugins
         for p in g_pool.plugins:
             p.gl_display()
 
-        atb.draw()
-        glfwSwapBuffers(world_window)
+        graph.push_view()
+        fps_graph.draw()
+        cpu_graph.draw()
+        pupil_graph.draw()
+        graph.pop_view()
+        g_pool.gui.update()
+        glfwSwapBuffers(main_window)
         glfwPollEvents()
 
+
+    session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
+    session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
+    session_settings['gui_scale'] = g_pool.gui.scale
+    session_settings['side_bar_config'] = g_pool.sidebar.configuration
+    session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
+    session_settings['general_menu_config'] = general_settings.configuration
+    session_settings['advanced_menu_config'] = advanced_settings.configuration
+    session_settings['calibration_menu_config']=g_pool.calibration_menu.configuration
+    session_settings['window_size'] = glfwGetWindowSize(main_window)
+    session_settings['window_position'] = glfwGetWindowPos(main_window)
+    session_settings.close()
 
     # de-init all running plugins
     for p in g_pool.plugins:
         p.alive = False
-        #reading p.alive actually runs plug-in cleanup
-        _ = p.alive
-
-    save('window_size',bar.window_size.value)
-    save('calibration_type',bar.calibration_type.value)
-    save('record_eye',bar.record_eye.value)
-    save('audio',bar.audio.value)
-    session_settings.close()
+    g_pool.plugins.clean()
 
     cap.close()
-    atb.terminate()
-    glfwDestroyWindow(world_window)
+    glfwDestroyWindow(main_window)
     glfwTerminate()
     logger.debug("Process done")
 

@@ -1,8 +1,7 @@
-
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -17,6 +16,47 @@ logger = logging.getLogger(__name__)
 
 
 def correlate_gaze(gaze_list,timestamps):
+    '''
+    gaze_list: timestamp | confidence | gaze x | gaze y |
+    timestamps timestamps to correlate gaze data to
+
+
+    this takes a gaze positions list and a timestamps list and makes a new list
+    with the length of the number of recorded frames.
+    Each slot conains a list that will have 0, 1 or more assosiated gaze postions.
+    '''
+    gaze_list = list(gaze_list)
+    timestamps = list(timestamps)
+
+    positions_by_frame = [[] for i in timestamps]
+
+    frame_idx = 0
+    try:
+        data_point = gaze_list.pop(0)
+    except:
+        logger.warning("No gaze positons in this recording.")
+        return positions_by_frame
+
+    gaze_timestamp = data_point[0]
+
+    while gaze_list:
+        # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
+        try:
+            t_between_frames = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
+        except IndexError:
+            break
+        if gaze_timestamp <= t_between_frames:
+            ts,confidence,x,y, = data_point
+            positions_by_frame[frame_idx].append({'norm_gaze':(x,y), 'confidence':confidence, 'timestamp':ts})
+            data_point = gaze_list.pop(0)
+            gaze_timestamp = data_point[0]
+        else:
+            frame_idx+=1
+
+    return positions_by_frame
+
+
+def correlate_gaze_legacy(gaze_list,timestamps):
     '''
     gaze_list: gaze x | gaze y | pupil x | pupil y | timestamp
     timestamps timestamps to correlate gaze data to
@@ -57,20 +97,12 @@ def correlate_gaze(gaze_list,timestamps):
     return positions_by_frame
 
 
-def rec_version(data_dir):
-    with open(data_dir + "/info.csv") as info:
-        meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
-    rec_version = meta_info["Capture Software Version"]
-    rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
-    return rec_version_float
-
-
 
 def is_pupil_rec_dir(data_dir):
     if not os.path.isdir(data_dir):
         logger.error("No valid dir supplied")
         return False
-    required_files = ["world.avi", "timestamps.npy", "gaze_positions.npy"]
+    required_files = ["info.csv", "gaze_positions.npy"]
     for f in required_files:
         if not os.path.isfile(os.path.join(data_dir,f)):
             logger.debug("Did not find required file: %s in data folder %s" %(f, data_dir))
@@ -135,7 +167,7 @@ def convert_gaze_pos(gaze_list,capture_version):
     '''
     util fn to update old gaze pos files to new coordsystem. UNTESTED!
     '''
-    #let make a copy here so that we are not making inplace edits of the passed array
+    #lets make a copy here so that we are not making inplace edits of the passed array
     gaze_list = gaze_list.copy()
     if capture_version < .36:
         logger.info("Gaze list is from old Recoding, I will update the data to work with new coordinate system.")
@@ -146,6 +178,8 @@ def convert_gaze_pos(gaze_list,capture_version):
 
 def transparent_circle(img,center,radius,color,thickness):
     center = tuple(map(int,center))
+    rgb = [255*c for c in color[:3]] # convert to 0-255 scale for OpenCV
+    alpha = color[-1]
     if thickness > 0:
         pad = radius + 2 + thickness
     else:
@@ -154,10 +188,10 @@ def transparent_circle(img,center,radius,color,thickness):
 
     try:
         overlay = img[roi].copy()
-        cv2.circle(overlay,(pad,pad), radius=radius, color=color[:3], thickness=thickness, lineType=cv2.cv.CV_AA)
-        opacity = color[-1]/255.
+        cv2.circle(overlay,(pad,pad), radius=radius, color=rgb, thickness=thickness, lineType=cv2.cv.CV_AA)
+        opacity = alpha
         cv2.addWeighted(overlay, opacity, img[roi], 1. - opacity, 0, img[roi])
     except:
-        logger.debug("transparent_circle would have been partially outise of img. Did not draw it.")
+        logger.debug("transparent_circle would have been partially outsize of img. Did not draw it.")
 
 

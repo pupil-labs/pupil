@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2015  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -39,6 +39,8 @@ if os_name == "Linux":
     from linux_video import Camera_Capture,Camera_List,CameraCaptureError
 elif os_name == "Darwin":
     from mac_video import Camera_Capture,Camera_List,CameraCaptureError
+elif os_name == "Windows":
+    from win_video import Camera_Capture,Camera_List,CameraCaptureError
 else:
     from other_video import Camera_Capture,Camera_List,CameraCaptureError
 
@@ -47,8 +49,14 @@ from file_capture import File_Capture, FileCaptureError, EndofVideoFileError,Fil
 
 
 def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None):
+
+    preferred_idx = 0
     # checking src and handling all cases:
     src_type = type(src)
+
+    if src_type is tuple:
+        src,preferred_idx = src
+        src_type = type(src)
 
     #looking for attached cameras that match the suggested names
     if src_type is list:
@@ -57,14 +65,18 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None)
             if any([s in device.name for s in src]):
                 matching_devices.append(device)
 
-        if len(matching_devices) >1:
-            logger.warning('Found %s as devices that match the src string pattern Using the first one.'%[d.name for d in matching_devices] )
-        if len(matching_devices) ==0:
-            logger.error('No device found that matched %s'%src)
+        if len(matching_devices) > preferred_idx:
+            logger.warning('Found %s as devices that match the src string pattern Using the %s match.'%([d.name for d in matching_devices],('first','second','third','fourth')[preferred_idx]) )
+        else:
+            if len(matching_devices) == 0:
+                logger.error('No device found that matched %s'%src)
+            else:
+                logger.error('Not enough devices found that matched %s'%src)
             return FakeCapture(size,fps,timebase=timebase)
 
 
-        cap = Camera_Capture(matching_devices[0],filter_sizes(matching_devices[0],size),fps,timebase)
+
+        cap = Camera_Capture(matching_devices[preferred_idx],filter_sizes(matching_devices[preferred_idx],size),fps,timebase)
         logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
         return cap
 
@@ -97,19 +109,13 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None)
 def filter_sizes(cam,size):
     #here we can force some defaulit formats
 
-    if "Integrated Camera" in cam.name:
+    if "6000" in cam.name:
         if size[0] == 640:
             logger.info("Lenovo Integrated camera selected. Forcing format to 640,480")
-            return 640,480
+            return 640,360
         elif size[0] == 320:
             logger.info("Lenovo Integrated camera selected. Forcing format to 320,240")
-            return 320,240
+            return 320,160
 
     return size
 
-
-if __name__ == '__main__':
-    cap = autoCreateCapture(1,(1280,720),30)
-    if cap:
-        print cap.controls
-    print "done"
