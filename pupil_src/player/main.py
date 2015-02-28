@@ -48,14 +48,28 @@ import logging
 #set up root logger before other imports
 logger = logging.getLogger()
 logger.setLevel(logging.WARNING) # <-- use this to set verbosity
-#since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
+
+
+# since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
-    if __name__ == '__main__': #clear log if main
+
+    # clear log if main
+    if __name__ == '__main__':
         fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
-    #we will use append mode since the exporter will stream into the same file when using os.span processes
+
+    # we will use append mode since the exporter will stream into the same file when using os.span processes
     fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='a')
+
+    # ui scroll bar vertical increment multiplier factor
+    y_scroll_factor = 1.0
+
+elif platform.system() == 'Linux':
+    y_scroll_factor = 10.0
+
 else:
     fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
+    y_scroll_factor = 1.0
+
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
@@ -162,7 +176,7 @@ def main():
         g_pool.gui.update_mouse(x,y)
 
     def on_scroll(window,x,y):
-        g_pool.gui.update_scroll(x,y)
+        g_pool.gui.update_scroll(x,y * y_scroll_factor)
 
 
     def on_close(window):
