@@ -12,8 +12,7 @@ from gl_utils import draw_gl_polyline,draw_gl_point
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 
-from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos
-from glfw import GLFW_RELEASE,GLFW_PRESS,GLFW_KEY_HOME, GLFW_KEY_END, GLFW_KEY_LEFT, GLFW_KEY_RIGHT
+from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS
 from plugin import Plugin
 
 import logging
