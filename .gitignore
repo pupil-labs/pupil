@@ -23,7 +23,8 @@ settings/
 
 # IDE generated files #
 .floo
-.sublime-project
 .flooignore
+*.sublime-project
+*.sublime-workspace
 
 
