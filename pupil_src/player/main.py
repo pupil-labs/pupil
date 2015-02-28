@@ -213,10 +213,7 @@ def main():
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
     rec_version = meta_info["Capture Software Version"]
-    if not rec_version == "unknown":
-        rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
-    else:
-        rec_version_float = "unknown"
+    rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
     logger.debug("Recording version: %s , %s"%(rec_version,rec_version_float))
 
     if rec_version_float < 0.4:
