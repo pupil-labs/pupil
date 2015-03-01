@@ -41,34 +41,19 @@ else:
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
-#monitoring
-import psutil
 
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
 logger.setLevel(logging.WARNING) # <-- use this to set verbosity
-
-# since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
+#since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
-    
-    # clear log if main
-    if __name__ == '__main__': 
+    if __name__ == '__main__': #clear log if main
         fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
-    
-    # we will use append mode since the exporter will stream into the same file when using os.span processes
+    #we will use append mode since the exporter will stream into the same file when using os.span processes
     fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='a')
-    
-    # ui vertical scroll bar increment multiplier factor
-    y_scroll_factor = 1.0
-
-elif platform.system() == 'Linux':
-    y_scroll_factor = 10.0
-
 else:
     fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
-    y_scroll_factor = 1.0
-
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
@@ -86,6 +71,14 @@ logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
 
+
+#Linux scrolling is scaled differently
+if platform.system() == 'Linux':
+    y_scroll_factor = 10.0
+else:
+    y_scroll_factor = 1.0
+
+#imports
 from file_methods import Persistent_Dict
 import numpy as np
 
@@ -95,22 +88,15 @@ from pyglui import ui,graph,cygl
 from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 
-
+#capture
 from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
 from player_methods import correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
 
-
-#get the current software version
-if getattr(sys, 'frozen', False):
-    with open(version_file) as f:
-        version = f.read()
-else:
-    from git_version import get_tag_commit
-    version = get_tag_commit()
-
+#monitoring
+import psutil
 
 # Plug-ins
 from plugin import Plugin_List
@@ -136,6 +122,15 @@ available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
+
+#get the current software version
+if getattr(sys, 'frozen', False):
+    with open(version_file) as f:
+        version = f.read()
+else:
+    from git_version import get_tag_commit
+    version = get_tag_commit()
+
 
 
 def main():
@@ -175,7 +170,7 @@ def main():
         g_pool.gui.update_mouse(x,y)
 
     def on_scroll(window,x,y):
-        g_pool.gui.update_scroll(x,y * y_scroll_factor)
+        g_pool.gui.update_scroll(x,y*y_scroll_factor)
 
 
     def on_close(window):
@@ -487,4 +482,6 @@ if __name__ == '__main__':
         loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
         gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
         subprocess.call("python "+gprof2dot_loc+" -f pstats player.pstats | dot -Tpng -o player_cpu_time.png", shell=True)
+        print "created cpu time graph for pupil player . Please check out the png next to the main.py file"
+ess.call("python "+gprof2dot_loc+" -f pstats player.pstats | dot -Tpng -o player_cpu_time.png", shell=True)
         print "created cpu time graph for pupil player . Please check out the png next to the main.py file"
