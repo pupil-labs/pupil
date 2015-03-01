@@ -95,7 +95,6 @@ Exec=/opt/pupil_capture/pupil_capture
 Terminal=false
 Icon=pupil-capture
 Categories=Application;
-StartupNotify=true
 Name[en_US]=Pupil Capture
 Actions=Monocular;Binocular;Terminal;
 
