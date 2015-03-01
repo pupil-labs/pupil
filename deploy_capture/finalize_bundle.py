@@ -31,10 +31,10 @@ elif platform.system() == 'Linux':
     print "created version file in dist folder"
 
     old_deb_dir = [d for d in os.listdir('.') if  d.startswith('pupil_capture_')]
-    if old_deb_dir:
+    for d in old_deb_dir:
         try:
-            shutil.rmtree(old_deb_dir[0])
-            print 'removed deb structure dir'
+            shutil.rmtree(d)
+            print 'removed deb structure dir: "%s"'%d
         except:
             pass
 
@@ -84,7 +84,6 @@ Name=Pupil Capture
 Comment=Eye Tracking Capture Program
 Exec=/opt/pupil_capture/pupil_capture %F
 Terminal=true
-MimeType=text/plain;
 Icon=pupil-capture
 Categories=Application;
 StartupNotify=true
