@@ -308,9 +308,9 @@ def main():
 
 
     g_pool.gui = ui.UI()
-    g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,300))
+    g_pool.main_menu.append(ui.Button("quit",lambda: on_close(None)))
     g_pool.main_menu.configuration = session_settings.get('main_menu_config',{})
     g_pool.main_menu.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
 
@@ -333,7 +333,6 @@ def main():
 
     g_pool.gui.append(g_pool.quickbar)
     g_pool.gui.append(g_pool.main_menu)
-    g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
 
 
     #we always load these plugins
