@@ -19,14 +19,8 @@ except:
     from multiprocessing import freeze_support
 
 if getattr(sys, 'frozen', False):
-    if platform.system() == 'Darwin':
-        # Specifiy user dirs.
-        user_dir = os.path.expanduser('~/Desktop/pupil_player_settings')
-        version_file = os.path.join(sys._MEIPASS,'_version_string_')
-    else:
-        # Specifiy user dirs.
-        user_dir = os.path.expanduser('~/pupil_player_settings')
-        version_file = os.path.join(sys._MEIPASS,'_version_string_')
+    user_dir = os.path.expanduser('~/pupil_player_settings')
+    version_file = os.path.join(sys._MEIPASS,'_version_string_')
 
 else:
     # We are running in a normal Python environment.
