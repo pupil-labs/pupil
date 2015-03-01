@@ -483,5 +483,3 @@ if __name__ == '__main__':
         gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
         subprocess.call("python "+gprof2dot_loc+" -f pstats player.pstats | dot -Tpng -o player_cpu_time.png", shell=True)
         print "created cpu time graph for pupil player . Please check out the png next to the main.py file"
-ess.call("python "+gprof2dot_loc+" -f pstats player.pstats | dot -Tpng -o player_cpu_time.png", shell=True)
-        print "created cpu time graph for pupil player . Please check out the png next to the main.py file"
