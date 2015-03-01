@@ -103,6 +103,7 @@ Description: Pupil Player is part of the Pupil Eye Tracking Platform
 Installed-Size: %s
 '''%(dpkg_deb_version(),dist_size/1024)
         f.write(content)
+    os.chmod(os.path.join(DEBIAN_dir,'control'),0644)
 
     #bin_starter script
     with open(os.path.join(bin_dir,'pupil_player'),'w') as f:
@@ -128,9 +129,11 @@ Categories=Application;
 StartupNotify=true
 Name[en_US]=Pupil Player'''
         f.write(content) 
+    os.chmod(os.path.join(app_dir,'pupil_player.desktop'),0644)
 
     #copy icon:
     shutil.copy('pupil-player.svg',ico_dir)
+    os.chmod(os.path.join(ico_dir,'pupil-player.svg'),0644)
 
     #copy the actual application
     shutil.copytree(distribtution_dir,opt_dir)

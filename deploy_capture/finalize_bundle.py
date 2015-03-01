@@ -60,10 +60,11 @@ Architecture: amd64
 Maintainer: Pupil Labs <info@pupil-labs.com>
 Section: applications
 Priority: optional
-Description: Pupil Capture is the software side of the Pupil Eye Tracking Platform
+Description: Pupil Capture is part of the Pupil Eye Tracking Platform
 Installed-Size: %s
 '''%(dpkg_deb_version(),dist_size/1024)
         f.write(content)
+    os.chmod(os.path.join(DEBIAN_dir,'control'),0644)
 
     #bin_starter script
     with open(os.path.join(bin_dir,'pupil_capture'),'w') as f:
@@ -82,21 +83,27 @@ Version=1.0
 Type=Application
 Name=Pupil Capture
 Comment=Eye Tracking Capture Program
-Exec=/opt/pupil_capture/pupil_capture %F
+Exec=/opt/pupil_capture/pupil_capture
 Terminal=true
 Icon=pupil-capture
 Categories=Application;
 StartupNotify=true
 Name[en_US]=Pupil Capture
-Actions=Binocular;
+Actions=Monocular;Binocular;
+
+[Desktop Action Monocular]
+Name= Monocular Mode
+Exec=/opt/pupil_capture/pupil_capture
 
 [Desktop Action Binocular]
 Name= Binocular Mode
 Exec=/opt/pupil_capture/pupil_capture binocular'''
         f.write(content) 
+    os.chmod(os.path.join(app_dir,'pupil_capture.desktop'),0644)
 
     #copy icon:
     shutil.copy('pupil-capture.svg',ico_dir)
+    os.chmod(os.path.join(ico_dir,'pupil-capture.svg'),0644)
 
     #copy the actual application
     shutil.copytree(distribtution_dir,opt_dir)
