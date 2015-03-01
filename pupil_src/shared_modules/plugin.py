@@ -160,7 +160,7 @@ class Gaze_Mapping_Plugin(Plugin):
 
 class Plugin_List(object):
     """This is the Plugin Manger
-        It is a self sorting list with a few functions to manage adding and removing Plugins.
+        It is a self sorting list with a few functions to manage adding and removing Plugins and lacking most other list methods.
     """
     def __init__(self,g_pool,plugin_by_name,plugin_initializers):
         self._plugins = []
@@ -179,12 +179,14 @@ class Plugin_List(object):
         for p in self._plugins:
             yield p
 
+    def __str__(self):
+        return 'Plugin List: %s'%self._plugins
+
     def add(self,new_plugin):
         '''
         add a plugin instance to the list.
 
         '''
-
         if new_plugin.uniqueness == 'by_base_class':
             for p in self._plugins:
                 if p.base_class_name == new_plugin.base_class_name:
@@ -207,12 +209,12 @@ class Plugin_List(object):
 
     def clean(self):
         '''
-        plugins may flag themselves as dead or are flagged as dead. We need to remove them.
+        plugins may flag themselvse as dead or are flagged as dead. We need to remove them.
         '''
-        unloaded = [p for p in self._plugins if not p.alive] # reading p.alive will trigger the plug-in cleanup fn.
-        self._plugins[:] = [p for p in self._plugins if p.alive]
-        for p in unloaded:
-            logger.debug("Unloaded Plugin: %s"%p)
+        for p in self._plugins[:]:
+            if not p.alive: # reading p.alive will trigger the plug-in cleanup fn.
+                logger.debug("Unloaded Plugin: %s"%p)
+                self._plugins.remove(p)
 
     def get_initializers(self):
         initializers = []
@@ -225,8 +227,6 @@ class Plugin_List(object):
                 # any object without a get_init_dict method will throw this exception.
                 pass
         return initializers
-
-
 
 
 
