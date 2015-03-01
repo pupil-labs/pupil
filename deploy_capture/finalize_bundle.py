@@ -87,8 +87,9 @@ Exec=/opt/pupil_capture/pupil_capture
 Terminal=false
 Icon=pupil-capture
 Categories=Application;
+StartupNotify=true
 Name[en_US]=Pupil Capture
-Actions=Binocular;Terminal;BinocularTerminal;
+Actions=Monocular;Binocular;Terminal;
 
 [Desktop Action Binocular]
 Name= Binocular Mode
