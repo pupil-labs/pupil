@@ -11,7 +11,6 @@
 import os
 import cv2
 import numpy as np
-from gl_utils import draw_gl_polyline_norm
 from plugin import Plugin
 from calibration_routines.calibrate import get_map_from_cloud
 

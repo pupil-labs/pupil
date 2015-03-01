@@ -25,14 +25,13 @@ from ctypes import c_bool
 
 
 from itertools import chain
-from gl_utils import *
 from OpenGL.GL import *
 from methods import normalize,denormalize
 from file_methods import Persistent_Dict,save_object
 from cache_list import Cache_List
 from glfw import *
 from pyglui import ui
-
+from pyglui.cygl.utils import *
 
 from plugin import Plugin
 #logging
@@ -309,8 +308,8 @@ class Offline_Marker_Detector(Plugin):
             for m in self.markers:
                 hat = np.array([[[0,0],[0,1],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-                draw_gl_polyline(hat.reshape((5,2)),(0.1,1.,1.,.3),type='Polygon')
-                draw_gl_polyline(hat.reshape((5,2)),(0.1,1.,1.,.6))
+                draw_polyline(hat.reshape((5,2)),color=RGBA(0.1,1.,1.,.3),line_type=GL_POLYGON)
+                draw_polyline(hat.reshape((5,2)),color=RGBA(0.1,1.,1.,.6))
 
             for s in self.surfaces:
                 s.gl_draw_frame(self.img_shape)
@@ -361,14 +360,14 @@ class Offline_Marker_Detector(Plugin):
         glPushMatrix()
         glLoadIdentity()
 
-        color = (8.,.6,.2,8.)
-        draw_gl_polyline(cached_ranges,color=color,type='Lines',thickness=4)
+        color = RGBA(8.,.6,.2,8.)
+        draw_polyline(cached_ranges,color=color,line_type=GL_LINES,thickness=4)
 
-        color = (0.,.7,.3,8.)
+        color = RGBA(0.,.7,.3,8.)
 
         for s in cached_surfaces:
             glTranslatef(0,.02,0)
-            draw_gl_polyline(s,color=color,type='Lines',thickness=2)
+            draw_polyline(s,color=color,line_type=GL_LINES,thickness=2)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()

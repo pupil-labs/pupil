@@ -50,23 +50,31 @@ def dpkg_deb_version():
     [major].[minor].[rev]-[trailing-untagged-commits]
     '''
     version = get_tag_commit()
-    if version is not None and '-' in version:
+    if version is None:
+        raise ValueError('Version Error')
+    if '-' in version:
         parts = version.split('-')
         parts[-2] = '-'+parts[-2]
         version = '.'.join(parts[:-2])
         version = version[1:]+parts[-2]
         return version
+    else:
+        return version[1:]
 
 def pupil_version():
     '''
     [major].[minor].[rev].[trailing-untagged-commits]
     '''
     version = get_tag_commit()
-    if version is not None and '-' in version:
+    if version is None:
+        raise ValueError('Version Error')
+    if '-' in version:
         parts = version.split('-')
         version = '.'.join(parts[:-1])
         version = version[1:]
         return version
+    else:
+        return version[1:]
 
 
 
