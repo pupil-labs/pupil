@@ -126,7 +126,6 @@ Exec=/opt/pupil_player/pupil_player %F
 Terminal=false
 Icon=pupil-player
 Categories=Application;
-StartupNotify=true
 Name[en_US]=Pupil Player'''
         f.write(content) 
     os.chmod(os.path.join(app_dir,'pupil_player.desktop'),0644)
