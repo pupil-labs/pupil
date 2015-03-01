@@ -21,6 +21,14 @@ if platform.system() == 'Darwin':
     shutil.rmtree('dist/Pupil Capture')
     print 'removed the non-app dist bundle'
 
+    bundle_name = 'Pupil Capture %s MacOS'%dpkg_deb_version()
+    bundle_dmg_name = 'Install Pupil Capture'
+    src_dir = 'dist'
+    call("ln -s /Applications/ %s/Applications"%src_dir,shell=True)
+    call("hdiutil create -volname '%s' -srcfolder %s -format UDZO '%s.dmg'"%(bundle_dmg_name,src_dir,bundle_name),shell=True)
+
+
+
 elif platform.system() == 'Linux':
 
     distribtution_dir = 'dist'
@@ -71,7 +79,7 @@ Installed-Size: %s
         content = '''\
 #!/bin/sh
 exec /opt/pupil_capture/pupil_capture "$@"'''
-        f.write(content) 
+        f.write(content)
     os.chmod(os.path.join(bin_dir,'pupil_capture'),0755)
 
 
@@ -98,7 +106,7 @@ Exec=/opt/pupil_capture/pupil_capture
 [Desktop Action Binocular]
 Name= Binocular Mode
 Exec=/opt/pupil_capture/pupil_capture binocular'''
-        f.write(content) 
+        f.write(content)
     os.chmod(os.path.join(app_dir,'pupil_capture.desktop'),0644)
 
     #copy icon:
@@ -107,7 +115,7 @@ Exec=/opt/pupil_capture/pupil_capture binocular'''
 
     #copy the actual application
     shutil.copytree(distribtution_dir,opt_dir)
-    
+
 
     #run dpkg_deb
     call('dpkg-deb --build %s'%deb_root,shell=True)

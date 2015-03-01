@@ -43,10 +43,8 @@ split_str = """
 </plist>"""
 
 if platform.system() == 'Darwin':
-    import shutil
-    import write_version_file
     print "starting version stript:"
-    write_version_file.main('dist/Pupil Player.app/Contents/MacOS')
+    write_version_file('dist/Pupil Player.app/Contents/MacOS')
     print "created version file in app dir"
 
     shutil.rmtree('dist/Pupil Player')
@@ -58,6 +56,12 @@ if platform.system() == 'Darwin':
     txt = txt.replace(split_str,mac_splist_document_type_str + split_str)
     with open("dist/Pupil Player.app/Contents/Info.plist", "w") as f:
         f.write(txt)
+
+    bundle_name = 'Pupil Player %s MacOS'%dpkg_deb_version()
+    bundle_dmg_name = 'Install Pupil Player'
+    src_dir = 'dist'
+    call("ln -s /Applications/ %s/Applications"%src_dir,shell=True)
+    call("hdiutil create -volname '%s' -srcfolder %s -format UDZO '%s.dmg'"%(bundle_dmg_name,src_dir,bundle_name),shell=True)
 
 
 elif platform.system() == 'Linux':
@@ -110,7 +114,7 @@ Installed-Size: %s
         content = '''\
 #!/bin/sh
 exec /opt/pupil_player/pupil_player "$@"'''
-        f.write(content) 
+        f.write(content)
     os.chmod(os.path.join(bin_dir,'pupil_player'),0755)
 
 
@@ -128,7 +132,7 @@ Icon=pupil-player
 Categories=Application;
 StartupNotify=true
 Name[en_US]=Pupil Player'''
-        f.write(content) 
+        f.write(content)
     os.chmod(os.path.join(app_dir,'pupil_player.desktop'),0644)
 
     #copy icon:
@@ -137,7 +141,7 @@ Name[en_US]=Pupil Player'''
 
     #copy the actual application
     shutil.copytree(distribtution_dir,opt_dir)
-    
+
 
     #run dpkg_deb
     call('dpkg-deb --build %s'%deb_root,shell=True)
