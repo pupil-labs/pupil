@@ -96,7 +96,7 @@ Terminal=false
 Icon=pupil-capture
 Categories=Application;
 Name[en_US]=Pupil Capture
-Actions=Monocular;Binocular;Terminal;
+Actions=Binocular;Terminal;BinocularTerminal;
 
 [Desktop Action Binocular]
 Name= Binocular Mode
