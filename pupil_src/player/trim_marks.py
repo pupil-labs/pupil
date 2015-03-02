@@ -8,9 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from gl_utils import draw_gl_polyline,draw_gl_point
 from OpenGL.GL import *
-
+from pyglui.cygl.utils import RGBA,draw_points,draw_polyline
 from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS
 from plugin import Plugin
 
@@ -147,13 +146,13 @@ class Trim_Marks(Plugin):
         glPushMatrix()
         glLoadIdentity()
 
-        color1 = (.1,.9,.2,.5)
-        color2 = (.1,.9,.2,.5)
+        color1 = RGBA(.1,.9,.2,.5)
+        color2 = RGBA(.1,.9,.2,.5)
 
         if self.in_mark != 0 or self.out_mark != self.frame_count:
-            draw_gl_polyline( [(self.in_mark,0),(self.out_mark,0)],color=(.1,.9,.2,.5),thickness=2)
-        draw_gl_point((self.in_mark,0),color=color2,size=10)
-        draw_gl_point((self.out_mark,0),color=color2,size=10)
+            draw_polyline( [(self.in_mark,0),(self.out_mark,0)],color=color1,thickness=2)
+        draw_points([(self.in_mark,0),],color=color2,size=10)
+        draw_points([(self.out_mark,0),],color=color2,size=10)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
