@@ -41,7 +41,7 @@ if platform.system() == 'Darwin':
 
     app = BUNDLE(coll,
                  name='Pupil Player.app',
-                 icon='macos_icon.icns',
+                 icon='pupil-player.icns',
                  version = str(get_tag_commit()))
 
 elif platform.system() == 'Linux':

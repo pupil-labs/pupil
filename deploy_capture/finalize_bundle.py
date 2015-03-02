@@ -15,7 +15,7 @@ from subprocess import call
 
 if platform.system() == 'Darwin':
     print "starting version stript:"
-    write_version_file.main('dist/Pupil Capture.app/Contents/MacOS')
+    write_version_file('dist/Pupil Capture.app/Contents/MacOS')
     print "created version file in dist folder"
 
     shutil.rmtree('dist/Pupil Capture')

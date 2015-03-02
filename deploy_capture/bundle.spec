@@ -38,7 +38,7 @@ if platform.system() == 'Darwin':
 
     app = BUNDLE(coll,
                  name='Pupil Capture.app',
-                 icon='macos_icon.icns',
+                 icon='pupil-capture.icns',
                  version = str(get_tag_commit()))
 
 

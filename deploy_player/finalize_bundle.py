@@ -53,7 +53,7 @@ if platform.system() == 'Darwin':
     print "hack injecting file type info in to info.plist"
     with open("dist/Pupil Player.app/Contents/Info.plist", "r") as f:
         txt = f.read() # read everything in the file
-    txt = txt.replace(split_str,mac_splist_document_type_str + split_str)
+    txt = txt.replace(split_str,mac_plist_document_type_str + split_str)
     with open("dist/Pupil Player.app/Contents/Info.plist", "w") as f:
         f.write(txt)
 
