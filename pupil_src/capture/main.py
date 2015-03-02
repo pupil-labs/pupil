@@ -85,8 +85,8 @@ if getattr(sys, 'frozen', False):
     with open(version_file) as f:
         version = f.read()
 else:
-    from git_version import get_tag_commit
-    version = get_tag_commit()
+    from git_version import pupil_version
+    version = pupil_version()
 
 class Global_Container(object):
     pass
