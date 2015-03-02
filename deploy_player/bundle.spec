@@ -68,6 +68,6 @@ elif platform.system() == 'Linux':
                    [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/Roboto-Regular.ttf','DATA')],
-                   strip=None,
+                   strip=True,
                    upx=True,
                    name='pupil_player')

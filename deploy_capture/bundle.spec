@@ -54,7 +54,7 @@ elif platform.system() == 'Linux':
               exclude_binaries=True,
               name='pupil_capture',
               debug=False,
-              strip=None,
+              strip=False,
               upx=True,
               console=True)
 
@@ -67,7 +67,7 @@ elif platform.system() == 'Linux':
                    [('libGLEW.so', '/usr/lib/x86_64-linux-gnu/libGLEW.so','BINARY')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/Roboto-Regular.ttf','DATA')],
-                   strip=None,
+                   strip=True,
                    upx=True,
                    name='pupil_capture')
 

@@ -53,10 +53,10 @@ elif platform.system() == 'Linux':
     bin_dir = os.path.join(deb_root,'usr','bin')
     app_dir = os.path.join(deb_root,'usr','share','applications')
     ico_dir = os.path.join(deb_root,'usr','share','icons','hicolor','scalable','apps')
-    os.makedirs(DEBIAN_dir)
-    os.makedirs(bin_dir)
-    os.makedirs(app_dir)
-    os.makedirs(ico_dir)
+    os.makedirs(DEBIAN_dir,0755)
+    os.makedirs(bin_dir,0755)
+    os.makedirs(app_dir,0755)
+    os.makedirs(ico_dir,0755)
 
     #DEBAIN Package description
     with open(os.path.join(DEBIAN_dir,'control'),'w') as f:
@@ -66,7 +66,6 @@ Package: pupil-capture
 Version: %s
 Architecture: amd64
 Maintainer: Pupil Labs <info@pupil-labs.com>
-Section: applications
 Priority: optional
 Description: Pupil Capture is part of the Pupil Eye Tracking Platform
 Installed-Size: %s
@@ -118,8 +117,19 @@ Exec=x-terminal-emulator -e "pupil_capture binocular"'''
 
     #copy the actual application
     shutil.copytree(distribtution_dir,opt_dir)
+    # set permissions
+    for root, dirs, files in os.walk(opt_dir):
+        for name in files:
+            if name == 'pupil_capture':
+                os.chmod(os.path.join(root,name),0755)
+            else:
+                os.chmod(os.path.join(root,name),0644)
+        for name in dirs:
+            os.chmod(os.path.join(root,name),0755)
+    os.chmod(opt_dir,0755)
+
 
     #run dpkg_deb
-    call('dpkg-deb --build %s'%deb_root,shell=True)
+    call('fakeroot dpkg-deb --build %s'%deb_root,shell=True)
 
     print 'DONE!'
