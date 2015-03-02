@@ -9,8 +9,7 @@
 '''
 import platform
 import sys, os
-sys.path.append(os.path.join('../', 'pupil_src', 'shared_modules'))
-from git_version import write_version_file,dpkg_deb_version
+from version import write_version_file,dpkg_deb_version
 import shutil
 from subprocess import call
 
