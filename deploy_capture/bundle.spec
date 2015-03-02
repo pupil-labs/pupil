@@ -4,7 +4,7 @@
 import platform
 
 if platform.system() == 'Darwin':
-    from git_version import get_tag_commit
+    from version import dpkg_deb_version
 
     a = Analysis(['../pupil_src/capture/main.py'],
                  pathex=['../pupil_src/shared_modules/'],
@@ -39,7 +39,7 @@ if platform.system() == 'Darwin':
     app = BUNDLE(coll,
                  name='Pupil Capture.app',
                  icon='pupil-capture.icns',
-                 version = str(get_tag_commit()))
+                 version = str(dpkg_deb_version()))
 
 
 elif platform.system() == 'Linux':

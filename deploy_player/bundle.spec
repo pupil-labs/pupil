@@ -7,7 +7,7 @@ av_hidden_imports = ['av.format','av.packet','av.frame','av.stream','av.plane','
 
 
 if platform.system() == 'Darwin':
-    from git_version import get_tag_commit
+    from git_version import dpkg_deb_version
 
     a = Analysis(['../pupil_src/player/main.py'],
                  pathex=['../pupil_src/shared_modules/'],
@@ -42,7 +42,7 @@ if platform.system() == 'Darwin':
     app = BUNDLE(coll,
                  name='Pupil Player.app',
                  icon='pupil-player.icns',
-                 version = str(get_tag_commit()))
+                 version = str(dpkg_deb_version()))
 
 elif platform.system() == 'Linux':
     a = Analysis(['../pupil_src/player/main.py'],
