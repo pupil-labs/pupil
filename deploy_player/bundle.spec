@@ -7,7 +7,7 @@ av_hidden_imports = ['av.format','av.packet','av.frame','av.stream','av.plane','
 
 
 if platform.system() == 'Darwin':
-    from git_version import dpkg_deb_version
+    from version import dpkg_deb_version
 
     a = Analysis(['../pupil_src/player/main.py'],
                  pathex=['../pupil_src/shared_modules/'],
