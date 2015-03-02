@@ -55,6 +55,15 @@ class Trim_Marks(Plugin):
     def get_string(self):
         return '%s - %s'%(self._in_mark,self._out_mark)
 
+    def set_string(self,str):
+        try:
+            in_m,out_m = str.split('-')
+            in_m = int(in_m)
+            out_m = int(out_m)
+            self.in_mark = in_m
+            self.out_mark = out_m
+        except:
+            logger.warning("Setting Trimmarks via string failed.")
     def init_gui(self):
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 
