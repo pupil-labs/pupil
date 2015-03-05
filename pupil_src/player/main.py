@@ -111,7 +111,7 @@ from manual_gaze_correction import Manual_Gaze_Correction
 from batch_exporter import Batch_Exporter
 
 system_plugins = Seek_Bar,Trim_Marks
-user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Marker_Auto_Trim_Marks,Pupil_Server,Batch_Exporter
+user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Pupil_Server,Batch_Exporter #,Marker_Auto_Trim_Marks
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
