@@ -203,6 +203,9 @@ class Offline_Marker_Detector(Plugin):
             results.append(len(gaze_on_srf))
             self.metrics_gazecount = len(gaze_on_srf)
 
+        if results == []:
+            logger.warning("No surfaces defined.")
+            return
         max_res = max(results)
         results = np.array(results,dtype=np.float32)
         if not max_res:

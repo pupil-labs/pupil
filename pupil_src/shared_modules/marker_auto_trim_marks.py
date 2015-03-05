@@ -66,7 +66,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         self.menu.configuration = self.menu_conf
         # add menu to the window
         self.g_pool.gui.append(self.menu)
-
+        self.menu.append(ui.Info_Text("Marker Auto uses the marker detector to get markers"))
         self.menu.append(ui.Button('remove',self.unset_alive))
 
         #set up bar display padding
@@ -135,19 +135,16 @@ class Marker_Auto_Trim_Marks(Plugin):
 
     def get_init_dict(self):
         d = {'man_out_marks':self.man_out_marks,'man_in_marks':self.man_in_marks}
-        if hasattr(self,'_bar'):
-            gui_settings = {'pos':self._bar.position,'size':self._bar.size,'iconified':self._bar.iconified}
-            d['gui_settings'] = gui_settings
+        d['gui_settings'] = gui_settings
 
         return d
 
     def update_bar_indicator(self,status):
         if status:
-            #self._bar.color = (50, 50, 50)
-            self.menu.label = "Marker Auto Trim Marks"
+            self.menu[0].text = "Marker Auto uses the marker detector to get markers"
         else:
-            #self._bar.color = (250, 50, 50)
-            self.menu.label = "Marker Auto Trim Marks: Turn on Offline_Marker_Detector!"
+            self.menu[0].text  = "Marker Auto Trim Marks: Turn on Offline_Marker_Detector!"
+
 
     def update(self,frame,events):
         self.current_frame_idx = frame.index
@@ -162,8 +159,6 @@ class Marker_Auto_Trim_Marks(Plugin):
                 marker_tracker_plugin = plugins[0]
             else:
                 self.update_bar_indicator(False)
-                self._bar.color = (250, 50, 50)
-                self._bar.label = "Marker Auto Trim Marks: Turn on Offline_Marker_Detector!"
                 return
 
             if marker_tracker_plugin.cache.complete:
