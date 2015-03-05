@@ -215,7 +215,8 @@ class Offline_Marker_Detector(Plugin):
         for s,c_map in zip(self.surfaces,results_c_maps):
             heatmap = np.ones((1,1,4),dtype=np.uint8)*125
             heatmap[:,:,:3] = c_map
-            s.metrics_texture = create_named_texture(heatmap)
+            s.metrics_texture = create_named_texture(heatmap.shape)
+            update_named_texture(s.metrics_texture,heatmap)
 
 
 
@@ -323,7 +324,7 @@ class Offline_Marker_Detector(Plugin):
             for s in  self.surfaces:
                 s.gl_display_heatmap()
         if self.mode == "Show Metrics":
-            #draw a backdrop to represent the gaze that is not on any surface
+            #todo: draw a backdrop to represent the gaze that is not on any surface
             for s in self.surfaces:
                 #draw a quad on surface with false color of value.
                 s.gl_display_metrics()
@@ -503,7 +504,7 @@ class Offline_Marker_Detector(Plugin):
                             for gp in ref_srf_data['gaze_on_srf']:
                                 gp_x,gp_y = gp['norm_gaze_on_srf']
                                 on_srf = (0 <= gp_x <= 1) and (0 <= gp_y <= 1)
-                                csv_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.real_world_size[0],gp_x*s.real_world_size[1],on_srf) )
+                                csv_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.real_world_size['x'],gp_x*s.real_world_size['y'],on_srf) )
 
             logger.info("Saved surface positon data and gaze on surface data for '%s' with uid:'%s'"%(s.name,s.uid))
 
@@ -526,7 +527,7 @@ class Offline_Marker_Detector(Plugin):
             #     mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
             #     M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
             #     #here we do the actual perspactive transform of the image.
-            #     srf_in_video = cv2.warpPerspective(self.img,M, (int(s.real_world_size[0]),int(s.real_world_size[1])) )
+            #     srf_in_video = cv2.warpPerspective(self.img,M, (int(s.real_world_size['x']),int(s.real_world_size['y'])) )
             #     cv2.imwrite(os.path.join(metrics_dir,'surface'+surface_name+'.png'),srf_in_video)
             #     logger.info("Saved current image as .png file.")
             # else:
