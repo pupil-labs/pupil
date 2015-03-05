@@ -167,7 +167,7 @@ class Recorder(Plugin):
 
         session = os.path.join(self.g_pool.rec_dir, self.session_name)
         try:
-            os.mkdir(session)
+            os.makedirs(session)
             logger.debug("Created new recordings session dir %s"%session)
 
         except:
@@ -363,6 +363,8 @@ class Recorder(Plugin):
         if not val:
             self.session_name = get_auto_name()
         else:
+            if '/' in val:
+                logger.warning('You session name with create one or more subdirectories')
             self.session_name = val
 
 
