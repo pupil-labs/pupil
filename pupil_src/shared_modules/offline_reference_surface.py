@@ -10,11 +10,10 @@
 
 import numpy as np
 import cv2
-from gl_utils import *
+from gl_utils import cvmat_to_glmat
 from glfw import *
 from OpenGL.GL import *
-from OpenGL.GLU import gluOrtho2D
-
+from pyglui.cygl.utils import create_named_texture,update_named_texture, draw_named_texture, draw_points_norm
 from methods import GetAnglesPolyline,normalize
 from cache_list import Cache_List
 
@@ -153,7 +152,7 @@ class Offline_Reference_Surface(Reference_Surface):
             glMatrixMode(GL_PROJECTION)
             glPushMatrix()
             glLoadIdentity()
-            gluOrtho2D(0, 1, 0, 1) # gl coord convention
+            glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
 
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
@@ -178,7 +177,7 @@ class Offline_Reference_Surface(Reference_Surface):
             glMatrixMode(GL_PROJECTION)
             glPushMatrix()
             glLoadIdentity()
-            gluOrtho2D(0, 1, 0, 1) # gl coord convention
+            glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
 
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
@@ -209,7 +208,7 @@ class Offline_Reference_Surface(Reference_Surface):
             glMatrixMode(GL_PROJECTION)
             glPushMatrix()
             glLoadIdentity()
-            gluOrtho2D(0, 1, 0, 1) # gl coord convention
+            glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
 
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
@@ -229,7 +228,7 @@ class Offline_Reference_Surface(Reference_Surface):
 
             # now lets get recent pupil positions on this surface:
             for gp in self.gaze_on_srf:
-                draw_gl_points_norm([gp['norm_gaze_on_srf']],color=(0.,8.,.5,.8), size=80)
+                draw_points_norm([gp['norm_gaze_on_srf']],color=RGBA(0.,8.,.5,.8), size=80)
 
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
@@ -279,7 +278,8 @@ class Offline_Reference_Surface(Reference_Surface):
 
         self.heatmap[:,:,:3] = c_map
         self.heatmap[:,:,3] = 125
-        self.heatmap_texture = create_named_texture(self.heatmap)
+        self.heatmap_texture = create_named_texture(self.heatmap.shape)
+        update_named_texture(self.heatmap_texture,self.heatmap)
 
 
     def visible_count_in_section(self,section):

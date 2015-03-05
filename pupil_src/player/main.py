@@ -19,14 +19,8 @@ except:
     from multiprocessing import freeze_support
 
 if getattr(sys, 'frozen', False):
-    if platform.system() == 'Darwin':
-        # Specifiy user dirs.
-        user_dir = os.path.expanduser('~/Desktop/pupil_player_settings')
-        version_file = os.path.join(sys._MEIPASS,'_version_string_')
-    else:
-        # Specifiy user dirs.
-        user_dir = os.path.join(sys._MEIPASS.rsplit(os.path.sep,1)[0],"player_settings")
-        version_file = os.path.join(sys._MEIPASS,'_version_string_')
+    user_dir = os.path.expanduser('~/pupil_player_settings')
+    version_file = os.path.join(sys._MEIPASS,'_version_string_')
 
 else:
     # We are running in a normal Python environment.
@@ -41,8 +35,6 @@ else:
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
-#monitoring
-import psutil
 
 import logging
 #set up root logger before other imports
@@ -73,6 +65,14 @@ logging.getLogger("OpenGL").propagate = False
 logging.getLogger("OpenGL").addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
 
+
+#Linux scrolling is scaled differently
+if platform.system() == 'Linux':
+    y_scroll_factor = 10.0
+else:
+    y_scroll_factor = 1.0
+
+#imports
 from file_methods import Persistent_Dict
 import numpy as np
 
@@ -82,22 +82,15 @@ from pyglui import ui,graph,cygl
 from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 
-
+#capture
 from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
 from player_methods import correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
 
-
-#get the current software version
-if getattr(sys, 'frozen', False):
-    with open(version_file) as f:
-        version = f.read()
-else:
-    from git_version import get_tag_commit
-    version = get_tag_commit()
-
+#monitoring
+import psutil
 
 # Plug-ins
 from plugin import Plugin_List
@@ -118,11 +111,20 @@ from manual_gaze_correction import Manual_Gaze_Correction
 from batch_exporter import Batch_Exporter
 
 system_plugins = Seek_Bar,Trim_Marks
-user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Marker_Auto_Trim_Marks,Pupil_Server,Batch_Exporter
+user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Pupil_Server,Batch_Exporter #,Marker_Auto_Trim_Marks
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
+
+#get the current software version
+if getattr(sys, 'frozen', False):
+    with open(version_file) as f:
+        version = f.read()
+else:
+    from git_version import get_tag_commit
+    version = get_tag_commit()
+
 
 
 def main():
@@ -162,7 +164,7 @@ def main():
         g_pool.gui.update_mouse(x,y)
 
     def on_scroll(window,x,y):
-        g_pool.gui.update_scroll(x,y)
+        g_pool.gui.update_scroll(x,y*y_scroll_factor)
 
 
     def on_close(window):
@@ -300,9 +302,9 @@ def main():
 
 
     g_pool.gui = ui.UI()
-    g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,300))
+    g_pool.main_menu.append(ui.Button("quit",lambda: on_close(None)))
     g_pool.main_menu.configuration = session_settings.get('main_menu_config',{})
     g_pool.main_menu.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
 

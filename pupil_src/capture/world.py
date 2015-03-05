@@ -232,6 +232,8 @@ def world(g_pool,cap_src,cap_size):
     advanced_settings.append(ui.Selector('update_textures',g_pool,label="Update display",selection=range(3),labels=('No update','Gray','Color')))
     advanced_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
     advanced_settings.append(ui.Button('Set timebase to 0',reset_timebase))
+    advanced_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
+
     general_settings.append(advanced_settings)
     g_pool.calibration_menu = ui.Growing_Menu('Calibration')
     g_pool.calibration_menu.configuration = session_settings.get('calibration_menu_config',{})

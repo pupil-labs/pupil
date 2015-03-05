@@ -25,14 +25,13 @@ from ctypes import c_bool
 
 
 from itertools import chain
-from gl_utils import *
 from OpenGL.GL import *
 from methods import normalize,denormalize
 from file_methods import Persistent_Dict,save_object
 from cache_list import Cache_List
 from glfw import *
 from pyglui import ui
-
+from pyglui.cygl.utils import *
 
 from plugin import Plugin
 #logging
@@ -204,6 +203,9 @@ class Offline_Marker_Detector(Plugin):
             results.append(len(gaze_on_srf))
             self.metrics_gazecount = len(gaze_on_srf)
 
+        if results == []:
+            logger.warning("No surfaces defined.")
+            return
         max_res = max(results)
         results = np.array(results,dtype=np.float32)
         if not max_res:
@@ -216,7 +218,8 @@ class Offline_Marker_Detector(Plugin):
         for s,c_map in zip(self.surfaces,results_c_maps):
             heatmap = np.ones((1,1,4),dtype=np.uint8)*125
             heatmap[:,:,:3] = c_map
-            s.metrics_texture = create_named_texture(heatmap)
+            s.metrics_texture = create_named_texture(heatmap.shape)
+            update_named_texture(s.metrics_texture,heatmap)
 
 
 
@@ -309,8 +312,8 @@ class Offline_Marker_Detector(Plugin):
             for m in self.markers:
                 hat = np.array([[[0,0],[0,1],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-                draw_gl_polyline(hat.reshape((5,2)),(0.1,1.,1.,.3),type='Polygon')
-                draw_gl_polyline(hat.reshape((5,2)),(0.1,1.,1.,.6))
+                draw_polyline(hat.reshape((5,2)),color=RGBA(0.1,1.,1.,.3),line_type=GL_POLYGON)
+                draw_polyline(hat.reshape((5,2)),color=RGBA(0.1,1.,1.,.6))
 
             for s in self.surfaces:
                 s.gl_draw_frame(self.img_shape)
@@ -324,7 +327,7 @@ class Offline_Marker_Detector(Plugin):
             for s in  self.surfaces:
                 s.gl_display_heatmap()
         if self.mode == "Show Metrics":
-            #draw a backdrop to represent the gaze that is not on any surface
+            #todo: draw a backdrop to represent the gaze that is not on any surface
             for s in self.surfaces:
                 #draw a quad on surface with false color of value.
                 s.gl_display_metrics()
@@ -361,14 +364,14 @@ class Offline_Marker_Detector(Plugin):
         glPushMatrix()
         glLoadIdentity()
 
-        color = (8.,.6,.2,8.)
-        draw_gl_polyline(cached_ranges,color=color,type='Lines',thickness=4)
+        color = RGBA(8.,.6,.2,8.)
+        draw_polyline(cached_ranges,color=color,line_type=GL_LINES,thickness=4)
 
-        color = (0.,.7,.3,8.)
+        color = RGBA(0.,.7,.3,8.)
 
         for s in cached_surfaces:
             glTranslatef(0,.02,0)
-            draw_gl_polyline(s,color=color,type='Lines',thickness=2)
+            draw_polyline(s,color=color,line_type=GL_LINES,thickness=2)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
@@ -504,7 +507,7 @@ class Offline_Marker_Detector(Plugin):
                             for gp in ref_srf_data['gaze_on_srf']:
                                 gp_x,gp_y = gp['norm_gaze_on_srf']
                                 on_srf = (0 <= gp_x <= 1) and (0 <= gp_y <= 1)
-                                csv_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.real_world_size[0],gp_x*s.real_world_size[1],on_srf) )
+                                csv_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.real_world_size['x'],gp_x*s.real_world_size['y'],on_srf) )
 
             logger.info("Saved surface positon data and gaze on surface data for '%s' with uid:'%s'"%(s.name,s.uid))
 
@@ -527,7 +530,7 @@ class Offline_Marker_Detector(Plugin):
             #     mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
             #     M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
             #     #here we do the actual perspactive transform of the image.
-            #     srf_in_video = cv2.warpPerspective(self.img,M, (int(s.real_world_size[0]),int(s.real_world_size[1])) )
+            #     srf_in_video = cv2.warpPerspective(self.img,M, (int(s.real_world_size['x']),int(s.real_world_size['y'])) )
             #     cv2.imwrite(os.path.join(metrics_dir,'surface'+surface_name+'.png'),srf_in_video)
             #     logger.info("Saved current image as .png file.")
             # else:

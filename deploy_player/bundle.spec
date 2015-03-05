@@ -7,7 +7,7 @@ av_hidden_imports = ['av.format','av.packet','av.frame','av.stream','av.plane','
 
 
 if platform.system() == 'Darwin':
-    from git_version import get_tag_commit
+    from version import dpkg_deb_version
 
     a = Analysis(['../pupil_src/player/main.py'],
                  pathex=['../pupil_src/shared_modules/'],
@@ -41,8 +41,8 @@ if platform.system() == 'Darwin':
 
     app = BUNDLE(coll,
                  name='Pupil Player.app',
-                 icon='macos_icon.icns',
-                 version = str(get_tag_commit()))
+                 icon='pupil-player.icns',
+                 version = str(dpkg_deb_version()))
 
 elif platform.system() == 'Linux':
     a = Analysis(['../pupil_src/player/main.py'],
@@ -66,9 +66,8 @@ elif platform.system() == 'Linux':
                    a.datas,
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
                    [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
-                   [('icon.ico', 'linux_icon.ico','DATA')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/Roboto-Regular.ttf','DATA')],
-                   strip=None,
+                   strip=True,
                    upx=True,
                    name='pupil_player')

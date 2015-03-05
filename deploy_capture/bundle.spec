@@ -4,7 +4,7 @@
 import platform
 
 if platform.system() == 'Darwin':
-    from git_version import get_tag_commit
+    from version import dpkg_deb_version
 
     a = Analysis(['../pupil_src/capture/main.py'],
                  pathex=['../pupil_src/shared_modules/'],
@@ -38,8 +38,8 @@ if platform.system() == 'Darwin':
 
     app = BUNDLE(coll,
                  name='Pupil Capture.app',
-                 icon='macos_icon.icns',
-                 version = str(get_tag_commit()))
+                 icon='pupil-capture.icns',
+                 version = str(dpkg_deb_version()))
 
 
 elif platform.system() == 'Linux':
@@ -54,7 +54,7 @@ elif platform.system() == 'Linux':
               exclude_binaries=True,
               name='pupil_capture',
               debug=False,
-              strip=None,
+              strip=False,
               upx=True,
               console=True)
 
@@ -65,10 +65,9 @@ elif platform.system() == 'Linux':
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
                    [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
                    [('libGLEW.so', '/usr/lib/x86_64-linux-gnu/libGLEW.so','BINARY')],
-                   [('icon.ico', 'linux_icon.ico','DATA')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/Roboto-Regular.ttf','DATA')],
-                   strip=None,
+                   strip=True,
                    upx=True,
                    name='pupil_capture')
 
