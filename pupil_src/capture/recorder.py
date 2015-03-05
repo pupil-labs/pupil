@@ -214,7 +214,7 @@ class Recorder(Plugin):
         self.info_menu.configuration = self.info_menu_conf
 
         def populate_info_menu():
-            self.info_menu.elements[:-1] = []
+            self.info_menu.elements[:-2] = []
             for name in self.user_info.iterkeys():
                 self.info_menu.insert(0,ui.Text_Input(name,self.user_info))
 
@@ -223,6 +223,7 @@ class Recorder(Plugin):
             populate_info_menu()
 
         populate_info_menu()
+        self.info_menu.append(ui.Info_Text('Use the field below to add/remove additional fields and their values.'))
         self.info_menu.append(ui.Text_Input('user_info',self,setter=set_user_info))
         self.g_pool.gui.append(self.info_menu)
 
@@ -297,9 +298,9 @@ class Recorder(Plugin):
             with open(self.meta_info_path, 'a') as f:
                 f.write("Duration Time\t"+ self.get_rec_time_str()+ "\n")
                 if self.g_pool.binocular:
-                    f.write("Eye mode\tbinocular\n")
+                    f.write("Eye Mode\tbinocular\n")
                 else:
-                    f.write("Eye mode\tmonocular\n")
+                    f.write("Eye Mode\tmonocular\n")
                 f.write("Duration Time\t"+ self.get_rec_time_str()+ "\n")
                 f.write("World Camera Frames\t"+ str(self.frame_count)+ "\n")
                 f.write("World Camera Resolution\t"+ str(self.width)+"x"+str(self.height)+"\n")
