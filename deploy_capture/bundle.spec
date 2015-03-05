@@ -72,3 +72,35 @@ elif platform.system() == 'Linux':
                    upx=True,
                    name='pupil_capture')
 
+elif platform.system() == 'Windows':
+	a = Analysis(['../pupil_src/capture/main.py'],
+	             pathex=['../pupil_src/shared_modules/'],
+	             hiddenimports=['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils'],
+	             hookspath=None,
+	             runtime_hooks=None)
+	pyz = PYZ(a.pure)
+	exe = EXE(pyz,
+	          a.scripts,
+	          exclude_binaries=True,
+	          name='pupil_capture.exe',
+	          debug=False,
+	          strip=None,
+	          upx=True,
+	          console=True )
+	coll = COLLECT(exe,
+	               a.binaries,
+	               a.zipfiles,
+	               a.datas,
+	               [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
+	               [('_videoInput.lib', 'C:/Python27/_videoInput.lib','BINARY')],
+	               [('glfw3.dll', '../pupil_src/shared_modules/external/glfw3.dll','BINARY')],
+	               [('glfw3.lib', '../pupil_src/shared_modules/external/glfw3.lib','BINARY')],
+	               [('glfw3dll.lib', '../pupil_src/shared_modules/external/glfw3dll.lib','BINARY')],
+	               [('icon.ico', 'linux_icon.ico','DATA')],
+	               [('OpenSans-Regular.ttf','C:/Python27/Lib/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
+                   [('Roboto-Regular.ttf','C:/Python27/Lib/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
+	               strip=None,
+	               upx=True,
+	               name='Pupil Capture')
+		
+
