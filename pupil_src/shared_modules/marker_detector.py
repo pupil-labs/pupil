@@ -12,7 +12,7 @@ import sys, os,platform
 import cv2
 import numpy as np
 from file_methods import Persistent_Dict
-from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,cvmat_to_glmat, draw_named_texture
+from gl_utils import draw_gl_polyline
 from pyglui import ui
 from methods import normalize,denormalize
 from glfw import *
