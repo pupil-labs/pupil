@@ -351,11 +351,12 @@ class Recorder(Plugin):
             logger.debug("Expanded user path.")
         except:
             n_path = val
-
         if not n_path:
             logger.warning("Please specify a path.")
         elif not os.path.isdir(n_path):
             logger.warning("This is not a valid path.")
+        elif not os.access(n_path, os.W_OK):
+            logger.warning("Do not have write access to '%s'."%n_path)
         else:
             self.g_pool.rec_dir = n_path
 
