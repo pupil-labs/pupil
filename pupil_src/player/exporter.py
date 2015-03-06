@@ -117,7 +117,7 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
     if start_frame == None:
         start_frame = 0
 
-    #these two vars are shared with the lauching process and give an job lenght and progress report.
+    #these two vars are shared with the lauching process and give a job length and progress report.
     frames_to_export.value = len(trimmed_timestamps)
     current_frame.value = 0
     logger.debug("Will export from frame %s to frame %s. This means I will export %s frames."%(start_frame,start_frame+frames_to_export.value,frames_to_export.value))
