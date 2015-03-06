@@ -86,7 +86,7 @@ elif platform.system() == 'Windows':
 	          a.scripts,
 	          exclude_binaries=True,
 	          name='pupil_capture.exe',
-	          icon='pupil-icon.ico',
+	          icon='pupil-capture.ico',
 	          debug=False,
 	          strip=None,
 	          upx=True,
