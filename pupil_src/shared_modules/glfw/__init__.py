@@ -48,6 +48,8 @@ if getattr(sys, 'frozen', False):
         filename = 'libglfw.so'
     elif os_name == "Darwin":
         filename = 'libglfw3.dylib'
+    elif os_name == "Windows":
+        filename = 'glfw3.dll'
     else:
         filename = 'libglfw.dll'
     dll_path = os.path.join(sys._MEIPASS,filename)
