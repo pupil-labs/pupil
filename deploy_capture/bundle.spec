@@ -72,6 +72,7 @@ elif platform.system() == 'Linux':
                    name='pupil_capture')
 
 elif platform.system() == 'Windows':
+	
 	scipy_imports = []
 	scipy_imports += ['scipy.integrate', 'scipy.integrate._ode', 'scipy.integrate.quadrature', 'scipy.integrate.odepack', 'scipy.integrate._odepack', 'scipy.integrate.quadpack', 'scipy.integrate._quadpack']
 	scipy_imports += ['scipy.integrate.vode', 'scipy.integrate.lsoda', 'scipy.integrate._dop']
@@ -81,6 +82,7 @@ elif platform.system() == 'Windows':
 	             hiddenimports=['pyglui.cygl.shader', 'scipy.special._ufuncs_cxx']+scipy_imports,
 	             hookspath=None,
 	             runtime_hooks=None)
+	#a.datas += [('GLFW_ICON','pupil-capture.ico','ICON')]
 	pyz = PYZ(a.pure)
 	exe = EXE(pyz,
 	          a.scripts,
@@ -90,7 +92,7 @@ elif platform.system() == 'Windows':
 	          debug=False,
 	          strip=None,
 	          upx=True,
-	          console=False )
+	          console=False)
 	coll = COLLECT(exe,
 	               a.binaries,
 	               a.zipfiles,
@@ -102,6 +104,7 @@ elif platform.system() == 'Windows':
 	               [('glfw3dll.lib', '../pupil_src/shared_modules/external/glfw3dll.lib','BINARY')],
 	               [('OpenSans-Regular.ttf','C:/Python27/Lib/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','C:/Python27/Lib/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
+                   #[('GLFW_ICON', 'pupil-capture.ico', 'DATA')],
 	               strip=None,
 	               upx=True,
 	               name='Pupil Capture')
