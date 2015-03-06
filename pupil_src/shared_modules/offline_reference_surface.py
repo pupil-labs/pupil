@@ -10,10 +10,10 @@
 
 import numpy as np
 import cv2
-from gl_utils import cvmat_to_glmat
+from gl_utils import cvmat_to_glmat,clear_gl_screen
 from glfw import *
 from OpenGL.GL import *
-from pyglui.cygl.utils import create_named_texture,update_named_texture, draw_named_texture, draw_points_norm
+from pyglui.cygl.utils import create_named_texture,update_named_texture, draw_named_texture, draw_points_norm, RGBA
 from methods import GetAnglesPolyline,normalize
 from cache_list import Cache_List
 
@@ -228,7 +228,7 @@ class Offline_Reference_Surface(Reference_Surface):
 
             # now lets get recent pupil positions on this surface:
             for gp in self.gaze_on_srf:
-                draw_points_norm([gp['norm_gaze_on_srf']],color=RGBA(0.,8.,.5,.8), size=80)
+                draw_points_norm([gp['norm_gaze_on_srf']],color=RGBA(0.0,0.8,0.5,0.8), size=80)
 
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
