@@ -355,7 +355,8 @@ class Recorder(Plugin):
             logger.warning("Please specify a path.")
         elif not os.path.isdir(n_path):
             logger.warning("This is not a valid path.")
-        elif not os.access(n_path, os.W_OK):
+        # elif not os.access(n_path, os.W_OK):
+        elif not writable_dir(n_path):
             logger.warning("Do not have write access to '%s'."%n_path)
         else:
             self.g_pool.rec_dir = n_path
@@ -368,6 +369,13 @@ class Recorder(Plugin):
                 logger.warning('You session name with create one or more subdirectories')
             self.session_name = val
 
-
+def writable_dir(n_path):
+    try:
+         open(os.path.join(n_path,'dummpy_tmp'), 'w')
+    except IOError:
+         return False
+    else:
+         os.remove(os.path.join(n_path,'dummpy_tmp'))
+         return True
 
 
