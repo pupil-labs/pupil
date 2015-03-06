@@ -223,8 +223,8 @@ class Recorder(Plugin):
             populate_info_menu()
 
         populate_info_menu()
-        self.info_menu.append(ui.Info_Text('Use the field below to add/remove additional fields and their values.'))
-        self.info_menu.append(ui.Text_Input('user_info',self,setter=set_user_info))
+        self.info_menu.append(ui.Info_Text('Use the *user info* field to add/remove additional fields and their values. The format must be a valid Python dictionary. For example -- {"key":"value"}. You can add as many fields as you require. Your custom fields will be saved for your next session.'))
+        self.info_menu.append(ui.Text_Input('user_info',self,setter=set_user_info,label="User info"))
         self.g_pool.gui.append(self.info_menu)
 
     def close_info_menu(self):
