@@ -137,8 +137,8 @@ class Offline_Marker_Detector(Plugin):
             s_menu.collapsed=True
             s_menu.append(ui.Text_Input('name',s))
             #     self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
-            s_menu.append(ui.Text_Input('x',s.real_world_size,label='surface width'))
-            s_menu.append(ui.Text_Input('y',s.real_world_size,label='surface height'))
+            s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
+            s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
