@@ -124,9 +124,10 @@ class Offline_Marker_Detector(Plugin):
         pass
         # self._bar.clear()
         self.menu.elements[:] = []
-        self.menu.append(ui.Info_Text('The offline marker Tracker will look for markers in the entire video. It be default uses surface definitions defined in capture. You can change and add more surfaces here.'))
+        self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
+        self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set the surface width and surface height for each surface to see heatmap visualizations.'))        
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statsics_to_file))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
@@ -136,8 +137,8 @@ class Offline_Marker_Detector(Plugin):
             s_menu.collapsed=True
             s_menu.append(ui.Text_Input('name',s))
             #     self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
-            s_menu.append(ui.Text_Input('x',s.real_world_size,'x_scale'))
-            s_menu.append(ui.Text_Input('y',s.real_world_size,'y_scale'))
+            s_menu.append(ui.Text_Input('x',s.real_world_size,label='surface width'))
+            s_menu.append(ui.Text_Input('y',s.real_world_size,label='surface height'))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
