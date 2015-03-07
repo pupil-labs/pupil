@@ -244,6 +244,8 @@ class Offline_Reference_Surface(Reference_Surface):
         std_dev = filter_size /6.
         self.heatmap = np.ones((y,x,4),dtype=np.uint8)
         all_gaze = []
+        if self.cache is None:
+            return 0
         for c_e in self.cache[section]:
             if c_e:
                 for gp in c_e['gaze_on_srf']:
