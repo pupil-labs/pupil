@@ -236,6 +236,11 @@ class Offline_Reference_Surface(Reference_Surface):
 
     def generate_heatmap(self,section):
 
+        if self.cache is None:
+            logger.warning('Surface cache is not build yet.')
+            return
+
+
         x,y = self.real_world_size['x'],self.real_world_size['y']
         x = max(1,int(x))
         y = max(1,int(y))
@@ -244,8 +249,7 @@ class Offline_Reference_Surface(Reference_Surface):
         std_dev = filter_size /6.
         self.heatmap = np.ones((y,x,4),dtype=np.uint8)
         all_gaze = []
-        if self.cache is None:
-            return 0
+
         for c_e in self.cache[section]:
             if c_e:
                 for gp in c_e['gaze_on_srf']:
