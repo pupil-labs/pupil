@@ -33,17 +33,14 @@
 
 from subprocess import Popen, PIPE
 import sys, os
+import subprocess
 
 def get_tag_commit():
     """
     returns string: 'tag'-'commits since tag'-'7 digit commit id'
     """
     try:
-        p = Popen(['git', 'describe'],
-                  stdout=PIPE, stderr=PIPE,cwd=os.path.dirname(os.path.abspath(__file__)))
-        p.stderr.close()
-        line = p.stdout.readlines()[0]
-        return line.strip()
+        return subprocess.check_output(['git', 'describe'])
 
     except:
         return None
