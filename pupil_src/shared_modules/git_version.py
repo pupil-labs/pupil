@@ -33,14 +33,14 @@
 
 from subprocess import Popen, PIPE
 import sys, os
+import subprocess
 
-def call_git_describe(abbrev=4):
+def get_tag_commit():
+    """
+    returns string: 'tag'-'commits since tag'-'7 digit commit id'
+    """
     try:
-        p = Popen(['git', 'describe', '--abbrev=%d' % abbrev],
-                  stdout=PIPE, stderr=PIPE)
-        p.stderr.close()
-        line = p.stdout.readlines()[0]
-        return line.strip()
+        return subprocess.check_output(['git', 'describe'])
 
     except:
         return None
@@ -78,19 +78,7 @@ def pupil_version():
 
 
 
-def get_tag_commit():
-    """
-    returns string: 'tag'-'commits since tag'-'7 digit commit id'
-    """
-    try:
-        p = Popen(['git', 'describe'],
-                  stdout=PIPE, stderr=PIPE)
-        p.stderr.close()
-        line = p.stdout.readlines()[0]
-        return line.strip()
 
-    except:
-        return None
 
 def write_version_file(target_dir):
     version = pupil_version()
