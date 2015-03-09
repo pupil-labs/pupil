@@ -75,7 +75,6 @@ elif platform.system() == 'Windows':
 	import sys, os, os.path
 
 	system_path = os.path.join(os.environ['windir'], 'system32')
-	print system_path
 
 	python_path = None
 	package_path = None
@@ -84,19 +83,17 @@ elif platform.system() == 'Windows':
 			python_path = os.path.abspath(os.path.join(path, os.path.pardir))
 		elif path.endswith("site-packages"):
 			package_path = path
-	print python_path 
-	print package_path
 	
 	scipy_imports = ['scipy.integrate']
 	#scipy_imports += ['scipy.integrate._ode', 'scipy.integrate.quadrature', 'scipy.integrate.odepack', 'scipy.integrate._odepack', 'scipy.integrate.quadpack', 'scipy.integrate._quadpack']
-	#scipy_imports += ['scipy.integrate.vode', 'scipy.integrate.lsoda', 'scipy.integrate._dop']
+	#scipy_imports += ['scipy.integrate.vode', 'scipy.integrate.lsoda', 'scipy.integrate._dop', 'scipy.special._ufuncs_cxx']
 
 	a = Analysis(['../pupil_src/capture/main.py'],
 	             pathex=['../pupil_src/shared_modules/'],
-	             hiddenimports=['pyglui.cygl.shader']+scipy_imports, # 'scipy.special._ufuncs_cxx'
+	             hiddenimports=['pyglui.cygl.shader']+scipy_imports,
 	             hookspath=None,
 	             runtime_hooks=None)
-	#a.datas += [('GLFW_ICON','pupil-capture.ico','ICON')]
+
 	pyz = PYZ(a.pure)
 	exe = EXE(pyz,
 	          a.scripts,
