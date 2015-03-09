@@ -60,10 +60,10 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     logger.handlers = []
     # create file handler which logs even debug messages
     fh = logging.FileHandler(os.path.join(g_pool.user_dir,'eye%s.log'%eye_id),mode='w')
-    fh.setLevel(logging.DEBUG)
+    # fh.setLevel(logging.DEBUG)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
+    ch.setLevel(logger.level+10)
     # create formatter and add it to the handlers
     formatter = logging.Formatter('Eye'+str(eye_id)+' Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
@@ -74,7 +74,6 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     logger.addHandler(ch)
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
-
 
     # Callback functions
     def on_resize(window,w, h):

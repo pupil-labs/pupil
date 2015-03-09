@@ -42,13 +42,16 @@ if not os.path.isdir(rec_dir):
 import logging
 # Set up root logger for the main process before doing imports of logged modules.
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+if 'debug' in sys.argv:
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
 # create file handler which logs even debug messages
 fh = logging.FileHandler(os.path.join(user_dir,'world.log'),mode='w')
-fh.setLevel(logging.DEBUG)
+fh.setLevel(logger.level)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.WARNING)
+ch.setLevel(logger.level+10)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('World Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -77,7 +80,6 @@ if 'profiled' in sys.argv:
 else:
     from eye import eye
     from world import world
-
 
 
 #get the current software version
