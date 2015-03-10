@@ -18,6 +18,8 @@ from methods import normalize,denormalize
 from plugin import Plugin
 from glob import glob
 
+from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
+
 #capture
 from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
@@ -33,6 +35,8 @@ class Eye_Video_Overlay(Plugin):
         self.order = .2
         self.data_dir = g_pool.rec_dir
         self.menu_conf = menu_conf
+        self.show_eye = False
+        self._frame = None
 
         meta_info_path = self.data_dir + "/info.csv"
 
@@ -73,7 +77,7 @@ class Eye_Video_Overlay(Plugin):
 
         self.width, self.height = self.cap.get_size()
 
-        self.image_tex = create_named_texture((height,width,3))
+        self.image_tex = create_named_texture((self.height,self.width,3))
 
 
     def init_gui(self):
@@ -113,7 +117,7 @@ class Eye_Video_Overlay(Plugin):
         # get 'pupil_positions' for the current timestamp - used to display pupil diameter
 
         #grab new frame
-        if g_pool.play or g_pool.new_seek:
+        if self.g_pool.play or self.g_pool.new_seek:
             try:
                 new_frame = self.cap.get_frame()
             except EndofVideoFileError:
@@ -121,15 +125,16 @@ class Eye_Video_Overlay(Plugin):
                 # g_pool.play=False
                 print "reaced the end of the eye video"
 
+            self._frame = new_frame.copy()
+
     def gl_display(self):
         # update the eye texture 
         # render camera image
-        self.heatmap_texture = create_named_texture(self.heatmap.shape)
-        update_named_texture(self.heatmap_texture,self.heatmap)
-        make_coord_system_norm_based()
-        update_named_texture(g_pool.image_tex,frame.img)
-        draw_named_texture(g_pool.image_tex)
-        make_coord_system_pixel_based(frame.img.shape)
+        if self._frame:
+            make_coord_system_norm_based()
+            update_named_texture(self.image_tex,self._frame.img)
+            draw_named_texture(self.image_tex)
+            make_coord_system_pixel_based(self._frame.img.shape)
         # render visual feedback from loaded plugins
 
     def cleanup(self):
