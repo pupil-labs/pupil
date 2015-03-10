@@ -45,24 +45,24 @@ class Eye_Video_Overlay(Plugin):
 
         if rec_version_float < 0.4:
             required_files = ['eye.avi','eye_timestamps.npy']
-            eye0_video_path = os.path.join(rec_dir,required_files[0])
-            eye0_timestamps_path = os.path.join(rec_dir,required_files[1]) 
+            eye0_video_path = os.path.join(self.data_dir,required_files[0])
+            eye0_timestamps_path = os.path.join(self.data_dir,required_files[1]) 
         else:
             required_files = ['eye0.mkv','eye0_timestamps.npy']
-            eye0_video_path = os.path.join(rec_dir,required_files[0])
-            eye0_timestamps_path = os.path.join(rec_dir,required_files[1])
+            eye0_video_path = os.path.join(self.data_dir,required_files[0])
+            eye0_timestamps_path = os.path.join(self.data_dir,required_files[1])
             if eye_mode == 'binocular':
                 required_files += ['eye1.mkv','eye1_timestamps.npy']
-                eye1_video_path = os.path.join(rec_dir,required_files[2])
-                eye1_timestamps_path = os.path.join(rec_dir,required_files[3])        
+                eye1_video_path = os.path.join(self.data_dir,required_files[2])
+                eye1_timestamps_path = os.path.join(self.data_dir,required_files[3])        
 
         # check to see if eye videos exist
         for f in required_files:
-            if not os.path.isfile(os.path.join(rec_dir,f)):
-                logger.debug("Did not find required file: ") %(f, rec_dir)
+            if not os.path.isfile(os.path.join(self.data_dir,f)):
+                logger.debug("Did not find required file: ") %(f, self.data_dir)
                 self.cleanup() # early exit -- no required files
 
-        logger.debug("%s contains required eye video(s): %s."%(rec_dir,required_files))
+        logger.debug("%s contains required eye video(s): %s."%(self.data_dir,required_files))
 
         # Initialize capture -- for now we just try with monocular
         self.cap = autoCreateCapture(eye0_video_path,timestamps=eye0_timestamps_path)
@@ -94,7 +94,7 @@ class Eye_Video_Overlay(Plugin):
         self.menu.append(ui.Switch('show_eye',self,label='Show Eye Video'))        
         self.menu.append(ui.Button('close',self.unset_alive))
 
-   def deinit_gui(self):
+    def deinit_gui(self):
         if self.menu:
             self.menu_conf = self.menu.configuration
             self.g_pool.gui.remove(self.menu)
@@ -118,12 +118,8 @@ class Eye_Video_Overlay(Plugin):
                 new_frame = self.cap.get_frame()
             except EndofVideoFileError:
                 #end of video logic: pause at last frame.
-                g_pool.play=False
-
-            if g_pool.new_seek:
-                # display_time = new_frame.timestamp
-                g_pool.new_seek = False
-
+                # g_pool.play=False
+                print "reaced the end of the eye video"
 
     def gl_display(self):
         # update the eye texture 
