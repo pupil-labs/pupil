@@ -133,7 +133,7 @@ class Eye_Video_Overlay(Plugin):
         if self._frame:
             make_coord_system_norm_based()
             update_named_texture(self.image_tex,self._frame.img)
-            draw_named_texture(self.image_tex)
+            draw_named_texture(self.image_tex,quad=((0.,0.),(.25,0.),(.25,.25),(0.,.25)) )
             make_coord_system_pixel_based(self._frame.img.shape)
         # render visual feedback from loaded plugins
 
