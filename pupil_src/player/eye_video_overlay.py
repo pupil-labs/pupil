@@ -22,11 +22,11 @@ from glob import glob
 import logging
 logger = logging.getLogger(__name__)
 
-class Eye_Overlay(Plugin):
+class Eye_Video_Overlay(Plugin):
     """docstring
     """
     def __init__(self,g_pool,menu_conf={}):
-        super(Eye_Overlay, self).__init__(g_pool)
+        super(Eye_Video_Overlay, self).__init__(g_pool)
         self.order = .2
         self.data_dir = g_pool.rec_dir
         self.menu_conf = menu_conf
@@ -54,6 +54,12 @@ class Eye_Overlay(Plugin):
                 eye1_timestamps_path = os.path.join(rec_dir,required_files[3])
         
         # check to see if eye videos exist
+        for f in required_files:
+            if not os.path.isfile(os.path.join(rec_dir,f)):
+                logger.debug("Did not find required file: ") %(f, rec_dir)
+                self.cleanup() # early exit -- no required files
+
+        logger.debug("%s contains eye videos - %s."%(rec_dir,required_files))
 
     def init_gui(self):
         # initialize the menu
