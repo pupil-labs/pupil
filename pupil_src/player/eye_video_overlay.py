@@ -75,13 +75,8 @@ class Eye_Video_Overlay(Plugin):
 
     def _update_gui(self):
         self.menu.elements[:] = []
-
-        self.menu.append(ui.Info_Text('Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.'))
-        self.menu.append(ui.Text_Input('rec_name',self,label='export name'))
-        self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar.'))
-        self.menu.append(ui.Text_Input('in_mark',getter=self.g_pool.trim_marks.get_string,setter=self.g_pool.trim_marks.set_string,label='frame range to export'))
-        self.menu.append(ui.Button('new export',self.add_export))
-
+        self.menu.append(ui.Info_Text('Show the eye video overlaid on top of the world video.'))
+        self.menu.append(ui.Switch('show_eye',self,label='Show Eye Video'))        
         self.menu.append(ui.Button('close',self.unset_alive))
 
    def deinit_gui(self):
