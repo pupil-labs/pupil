@@ -13,10 +13,13 @@ import cv2
 import numpy as np
 from file_methods import Persistent_Dict
 from pyglui import ui
+from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
 from methods import normalize,denormalize
-from glfw import *
 from plugin import Plugin
 from glob import glob
+
+#capture
+from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
 #logging
 import logging
@@ -51,15 +54,27 @@ class Eye_Video_Overlay(Plugin):
             if eye_mode == 'binocular':
                 required_files += ['eye1.mkv','eye1_timestamps.npy']
                 eye1_video_path = os.path.join(rec_dir,required_files[2])
-                eye1_timestamps_path = os.path.join(rec_dir,required_files[3])
-        
+                eye1_timestamps_path = os.path.join(rec_dir,required_files[3])        
+
         # check to see if eye videos exist
         for f in required_files:
             if not os.path.isfile(os.path.join(rec_dir,f)):
                 logger.debug("Did not find required file: ") %(f, rec_dir)
                 self.cleanup() # early exit -- no required files
 
-        logger.debug("%s contains eye videos - %s."%(rec_dir,required_files))
+        logger.debug("%s contains required eye video(s): %s."%(rec_dir,required_files))
+
+        # Initialize capture -- for now we just try with monocular
+        self.cap = autoCreateCapture(eye0_video_path,timestamps=eye0_timestamps_path)
+       
+        if isinstance(self.cap,FakeCapture):
+            logger.error("could not start capture.")
+            self.cleanup() # early exit -- no real eye videos
+
+        self.width, self.height = self.cap.get_size()
+
+        self.image_tex = create_named_texture((height,width,3))
+
 
     def init_gui(self):
         # initialize the menu
@@ -93,12 +108,33 @@ class Eye_Video_Overlay(Plugin):
 
     def update(self,frame,events):
         # synchronize timestamps with world timestamps
-        pass
+        # frame.timestamp would be world frame timestamp
+
+        # get 'pupil_positions' for the current timestamp - used to display pupil diameter
+
+        #grab new frame
+        if g_pool.play or g_pool.new_seek:
+            try:
+                new_frame = self.cap.get_frame()
+            except EndofVideoFileError:
+                #end of video logic: pause at last frame.
+                g_pool.play=False
+
+            if g_pool.new_seek:
+                # display_time = new_frame.timestamp
+                g_pool.new_seek = False
 
 
     def gl_display(self):
         # update the eye texture 
-        pass
+        # render camera image
+        self.heatmap_texture = create_named_texture(self.heatmap.shape)
+        update_named_texture(self.heatmap_texture,self.heatmap)
+        make_coord_system_norm_based()
+        update_named_texture(g_pool.image_tex,frame.img)
+        draw_named_texture(g_pool.image_tex)
+        make_coord_system_pixel_based(frame.img.shape)
+        # render visual feedback from loaded plugins
 
     def cleanup(self):
         """ called when the plugin gets terminated.
