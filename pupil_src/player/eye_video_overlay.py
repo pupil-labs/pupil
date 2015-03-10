@@ -130,7 +130,7 @@ class Eye_Video_Overlay(Plugin):
     def gl_display(self):
         # update the eye texture 
         # render camera image
-        if self._frame:
+        if self._frame and self.show_eye:
             make_coord_system_norm_based()
             update_named_texture(self.image_tex,self._frame.img)
             draw_named_texture(self.image_tex,quad=((0.,0.),(.25,0.),(.25,.25),(0.,.25)) )
