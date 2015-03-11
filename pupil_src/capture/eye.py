@@ -104,6 +104,8 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
             elif action == GLFW_PRESS:
                 pos = glfwGetCursorPos(window)
                 pos = normalize(pos,glfwGetWindowSize(main_window))
+                if g_pool.h_flip:
+                    pos = pos[0],1-pos[1]
                 pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
                 if u_r.mouse_over_edit_pt(pos,u_r.handle_size+20,u_r.handle_size+20):
                     return # if the roi interacts we dont what the gui to interact as well
@@ -118,6 +120,8 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
         if u_r.active_edit_pt:
             pos = normalize((x,y),glfwGetWindowSize(main_window))
+            if g_pool.h_flip:
+                pos = pos[0],1-pos[1]
             pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) )
             u_r.move_vertex(u_r.active_pt_idx,pos)
 
@@ -144,7 +148,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         return
 
     g_pool.capture = cap
-
+    g_pool.h_flip = session_settings.get('h_flip',False)
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
     g_pool.window_size = session_settings.get('window_size',1.)
@@ -220,6 +224,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
     general_settings.append(ui.Selector('display_mode',g_pool,setter=set_display_mode_info,selection=['camera_image','roi','algorithm'], labels=['Camera Image', 'ROI', 'Algorithm'], label="Mode") )
+    general_settings.append(ui.Switch('h_flip',g_pool))
     g_pool.display_mode_info = ui.Info_Text(g_pool.display_mode_info_text[g_pool.display_mode])
     general_settings.append(g_pool.display_mode_info)
     g_pool.sidebar.append(general_settings)
@@ -265,6 +270,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         except EndofVideoFileError:
             logger.warning("Video File is done. Stopping")
             break
+
 
         #update performace graphs
         t = frame.timestamp
@@ -314,10 +320,10 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         else:
             pass
 
-        make_coord_system_norm_based()
+        make_coord_system_norm_based(g_pool.h_flip)
         draw_named_texture(g_pool.image_tex)
         # switch to work in pixel space
-        make_coord_system_pixel_based(frame.img.shape)
+        make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.h_flip)
 
         if result['confidence'] >0:
             if result.has_key('axes'):
@@ -357,6 +363,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     # save session persistent settings
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['roi'] = u_r.get()
+    session_settings['h_flip'] = g_pool.h_flip
     session_settings['display_mode'] = g_pool.display_mode
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
     session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
