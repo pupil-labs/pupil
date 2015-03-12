@@ -388,13 +388,13 @@ def draw_gl_texture(image,interpolation=True):
     glDisable(GL_TEXTURE_2D)
 
 
-def make_coord_system_pixel_based(img_shape,hflip=False):
+def make_coord_system_pixel_based(img_shape,flip=False):
     height,width,channels = img_shape
     # Set Projection Matrix
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    if hflip:
-        glOrtho(0, width, 0, height,-1,1) # origin in the top left corner just like the img np-array
+    if flip:
+        glOrtho(width,0, 0, height,-1,1) # origin in the top left corner just like the img np-array
     else:
         glOrtho(0, width, height, 0,-1,1) # origin in the top left corner just like the img np-array
 
@@ -403,11 +403,11 @@ def make_coord_system_pixel_based(img_shape,hflip=False):
     glLoadIdentity()
 
 
-def make_coord_system_norm_based(hflip=False):
+def make_coord_system_norm_based(flip=False):
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    if hflip:
-        glOrtho(0, 1, 1, 0,-1,1) # gl coord convention
+    if flip:
+        glOrtho(1, 0, 1, 0,-1,1) # gl coord convention
     else:
         glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
 
