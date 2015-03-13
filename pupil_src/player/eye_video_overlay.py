@@ -27,6 +27,34 @@ from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,Fake
 import logging
 logger = logging.getLogger(__name__)
 
+
+def correlate_eye_world(eye_timestamps,world_timestamps):
+    e_ts = eye_timestamps
+    w_ts = list(world_timestamps)
+
+    eye_frame_by_world_index = [[] for i in world_timestamps]
+
+    frame_idx = 0
+    try:
+        current_e_ts = e_ts.pop(0)
+    except:
+        logger.warning("No eye timestamps found.")
+        return eye_frame_by_world_index
+
+    while e_ts:
+        # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
+        try:
+            t_between_frames = ( w_ts[frame_idx]+w_ts[frame_idx+1] ) / 2.
+        except IndexError:
+            break
+        if current_e_ts <= t_between_frames:
+            eye_frame_by_world_index[frame_idx].append(current_e_ts)
+            current_e_ts = e_ts.pop(0)
+        else:
+            frame_idx+=1
+
+    return eye_frame_by_world_index
+
 class Eye_Video_Overlay(Plugin):
     """docstring
     """
@@ -76,8 +104,11 @@ class Eye_Video_Overlay(Plugin):
             self.cleanup() # early exit -- no real eye videos
 
         self.width, self.height = self.cap.get_size()
+        self._image_tex = create_named_texture((self.height,self.width,3))
 
-        self.image_tex = create_named_texture((self.height,self.width,3))
+        eye0_timestamps = list(np.load(eye0_timestamps_path))
+        self.eye_frames_by_timestamp = dict(zip(eye0_timestamps,range(len(eye0_timestamps))))
+        self.eye_frames_by_world_index = correlate_eye_world(eye0_timestamps,g_pool.timestamps)
 
 
     def init_gui(self):
@@ -115,6 +146,11 @@ class Eye_Video_Overlay(Plugin):
         # frame.timestamp would be world frame timestamp
 
         # get 'pupil_positions' for the current timestamp - used to display pupil diameter
+        # what is the last frame or should I seek next or repeat the frame
+        # lookup table - eye_frames per frame index [(eye,eye),()]
+        # world frame 242 - what eye frame do I use? eye_frame_by_index[frame.index] -- target index for eye camera (first?)
+        # eye -- seek 
+        # frame.idx (last frame index) - then skip seeking
 
         #grab new frame
         if self.g_pool.play or self.g_pool.new_seek:
@@ -123,17 +159,22 @@ class Eye_Video_Overlay(Plugin):
             except EndofVideoFileError:
                 #end of video logic: pause at last frame.
                 # g_pool.play=False
-                print "reaced the end of the eye video"
+                print "reached the end of the eye video"
 
             self._frame = new_frame.copy()
+            print "frame number: ",frame.index
+            print "world time: ",frame.timestamp
+            print "eye timestamps: ",self.eye_frames_by_world_index[frame.index]
+            # print "eye time: ",self._frame.timestamp
+            # print "time diff: ",frame.timestamp-self._frame.timestamp
 
     def gl_display(self):
         # update the eye texture 
         # render camera image
         if self._frame and self.show_eye:
             make_coord_system_norm_based()
-            update_named_texture(self.image_tex,self._frame.img)
-            draw_named_texture(self.image_tex,quad=((0.,0.),(.25,0.),(.25,.25),(0.,.25)) )
+            update_named_texture(self._image_tex,self._frame.img)
+            draw_named_texture(self._image_tex,quad=((0.,0.),(.25,0.),(0.25,0.25),(0.,0.25)) )
             make_coord_system_pixel_based(self._frame.img.shape)
         # render visual feedback from loaded plugins
 
