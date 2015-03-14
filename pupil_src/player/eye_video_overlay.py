@@ -65,7 +65,7 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
         return eye_frame_by_world_index
 
     while e_ts:
-        # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
+        # if the current eye timestamp is before the mean of the current world frame timestamp and the next worldframe timestamp
         try:
             t_between_frames = ( w_ts[frame_idx]+w_ts[frame_idx+1] ) / 2.
         except IndexError:
@@ -77,6 +77,7 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
             frame_idx+=1
 
     return eye_frame_by_world_index
+
 
 class Eye_Video_Overlay(Plugin):
     """docstring
@@ -170,26 +171,37 @@ class Eye_Video_Overlay(Plugin):
 
         # get 'pupil_positions' for the current timestamp - used to display pupil diameter
         # what is the last frame or should I seek next or repeat the frame
-        # lookup table - eye_frames per frame index [(eye,eye),()]
-        # world frame 242 - what eye frame do I use? eye_frame_by_index[frame.index] -- target index for eye camera (first?)
         # eye -- seek 
         # frame.idx (last frame index) - then skip seeking
 
         #grab new frame
         if self.g_pool.play or self.g_pool.new_seek:
             try:
+                # new_frame = self.cap.get_frame()
+                candidate_eye_frames = self.eye_frames_by_world_index[frame.index]
+                if len(candidate_eye_frames) < 1:
+                    # pop the last one off the list for the prior frame -- could be smarter 
+                    candidate_eye_frames = self.eye_frames_by_world_index[frame.index-1][-1]
+                else:
+                    candidate_eye_frames = candidate_eye_frames[0]
+
+                seek_pos = self.eye_frames_by_timestamp[candidate_eye_frames]
+                print "seek_pos: ",seek_pos
+                print "frame number: ",frame.index
+                print "world time: ",frame.timestamp
+                print "eye time: ",candidate_eye_frames
+
+                # seek pos could be an empty list 
+                self.cap.seek_to_frame(seek_pos)
                 new_frame = self.cap.get_frame()
+                
             except EndofVideoFileError:
                 #end of video logic: pause at last frame.
                 # g_pool.play=False
                 print "reached the end of the eye video"
 
             self._frame = new_frame.copy()
-            print "frame number: ",frame.index
-            print "world time: ",frame.timestamp
-            print "eye timestamps: ",self.eye_frames_by_world_index[frame.index]
-            # print "eye time: ",self._frame.timestamp
-            # print "time diff: ",frame.timestamp-self._frame.timestamp
+
 
     def gl_display(self):
         # update the eye texture 
