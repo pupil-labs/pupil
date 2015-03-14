@@ -29,6 +29,29 @@ logger = logging.getLogger(__name__)
 
 
 def correlate_eye_world(eye_timestamps,world_timestamps):
+    """
+    args:
+        eye_timestamps
+        world_timestamps
+
+    This function takes timestamps from eye and world processes as arguments
+    and correlates the closest eye frame (or frames) by timestamp - similar to the `correlate_gaze` function in `player_methods`. 
+    Returns: 
+        `eye_frames_by_world_index` list - length of the list equals the number of frames in the world video.
+    
+    The eye process (even if captured at the same frame rate as the world video, e.g. 30Hz) typically will run slightly faster than the world process
+    because of a smaller video capture and process load. In the future we will also have high speed eye cameras, therefore 
+    there may be more than one valid timestamp for the eye video for each world frame, or no eye frame for a world frame. 
+
+    Example:
+    [[eye_timestamp, eye_timestamp, eye_timestamp],[eye_timestamp],[eye_timestamp,eye_timestamp],[],[eye_timestamp]...]
+
+
+    This function gets called in the init of the plugin to create a lookup list called `eye_frame_by_world_index`. 
+    
+    The dictionary `eye_frames_by_timestamp` is also created in the plugin init
+    with the `eye_timestamp` as the key and eye `frame_index` as value for convenient reverse lookup.
+    """
     e_ts = eye_timestamps
     w_ts = list(world_timestamps)
 
