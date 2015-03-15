@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os, sys
+import os, sys, platform
 import cv2
 from pyglui import ui
 import numpy as np
@@ -293,7 +293,6 @@ class Recorder(Plugin):
         except:
             logger.info("No camera intrinsics found.")
 
-
         try:
             with open(self.meta_info_path, 'a') as f:
                 f.write("Duration Time\t"+ self.get_rec_time_str()+ "\n")
@@ -305,11 +304,16 @@ class Recorder(Plugin):
                 f.write("World Camera Frames\t"+ str(self.frame_count)+ "\n")
                 f.write("World Camera Resolution\t"+ str(self.width)+"x"+str(self.height)+"\n")
                 f.write("Capture Software Version\t"+ self.g_pool.version + "\n")
-                f.write("User\t"+os.getlogin()+"\n")
-                try:
-                    sysname, nodename, release, version, machine = os.uname()
-                except:
-                    sysname, nodename, release, version, machine = sys.platform,None,None,None,None
+                if platform.system() == "Windows":
+                    username = os.environ["USERNAME"]
+                    sysname, nodename, release, version, machine, _ = platform.uname()
+                else:
+                    username = os.getlogin()
+                    try:
+                        sysname, nodename, release, version, machine = os.uname()
+                    except:
+                        sysname, nodename, release, version, machine = sys.platform,None,None,None,None
+                f.write("User\t"+username+"\n")
                 f.write("Platform\t"+sysname+"\n")
                 f.write("Machine\t"+nodename+"\n")
                 f.write("Release\t"+release+"\n")
