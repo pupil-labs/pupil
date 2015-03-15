@@ -55,6 +55,15 @@ def get_future_timestamp(idx,timestamps):
         idx = min(len(timestamps),idx+1)
         return get_future_timestamp(idx,timestamps)
 
+def get_nearest_timestamp(past_timestamp,future_timestamp,world_timestamp):
+    dt_past = abs(past_timestamp-world_timestamp)
+    dt_future = abs(future_timestamp-world_timestamp) # abs prob not necessary here, but just for sanity 
+    if dt_past < dt_future:
+        return past_timestamp
+    else: 
+        return future_timestamp 
+
+
 def correlate_eye_world(eye_timestamps,world_timestamps):
     """
     args:
@@ -74,7 +83,7 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
     [[eye_timestamp, eye_timestamp, eye_timestamp],[eye_timestamp],[eye_timestamp,eye_timestamp],[],[eye_timestamp]...]
 
 
-    This function gets called in the init of the plugin to create a lookup list called `eye_frame_by_world_index`. 
+    This function gets called in the init of the plugin to create a lookup list called `eye_frames_by_world_index`. 
     
     The dictionary `eye_frames_by_timestamp` is also created in the plugin init
     with the `eye_timestamp` as the key and eye `frame_index` as value for convenient reverse lookup.
@@ -82,14 +91,14 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
     e_ts = eye_timestamps
     w_ts = list(world_timestamps)
 
-    eye_frame_by_world_index = [[] for i in world_timestamps]
+    eye_frames_by_world_index = [[] for i in world_timestamps]
 
     frame_idx = 0
     try:
         current_e_ts = e_ts.pop(0)
     except:
         logger.warning("No eye timestamps found.")
-        return eye_frame_by_world_index
+        return eye_frames_by_world_index
 
     while e_ts:
         # if the current eye timestamp is before the mean of the current world frame timestamp and the next worldframe timestamp
@@ -98,12 +107,12 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
         except IndexError:
             break
         if current_e_ts <= t_between_frames:
-            eye_frame_by_world_index[frame_idx].append(current_e_ts)
+            eye_frames_by_world_index[frame_idx].append(current_e_ts)
             current_e_ts = e_ts.pop(0)
         else:
             frame_idx+=1
 
-    return eye_frame_by_world_index
+    return eye_frames_by_world_index
 
 
 class Eye_Video_Overlay(Plugin):
@@ -163,12 +172,17 @@ class Eye_Video_Overlay(Plugin):
 
         # some indicies may be empty e.g. [[eye_timestamp,eye_timestamp],[],[],[eye_timestamp],...]
         # we need to assign these indexes with timestamps that are closest to the world timestamp at that frame
-        # for e_frame,w_ts in zip(eye_frame_by_world_index,w_ts):
+        idx = 0
+        for e_frame,w_ts in zip(self.eye_frames_by_world_index,list(g_pool.timestamps)):
             # if it is an empty list entry
-            # if not eye_frame:
+            if not e_frame:
                 # get most recent timestamp in the past and future
-                # e_past_ts = get_past_timestamp()        
-                
+                e_past_ts = get_past_timestamp(idx,self.eye_frames_by_world_index)
+                e_future_ts = get_future_timestamp(idx,self.eye_frames_by_world_index)        
+                self.eye_frames_by_world_index[idx] = get_nearest_timestamp(e_past_ts,e_future_ts,w_ts) 
+            else:
+                pass
+            idx += 1
 
     def init_gui(self):
         # initialize the menu
@@ -203,21 +217,12 @@ class Eye_Video_Overlay(Plugin):
     def update(self,frame,events):
         #grab new frame
         if self.g_pool.play or self.g_pool.new_seek:
-            # new_frame = self.cap.get_frame()
-            candidate_eye_frames = self.eye_frames_by_world_index[frame.index]
-            
-            # sometimes we have empty entries 
-            if len(candidate_eye_frames) < 1:
-                # pop the last one off the list for the prior frame -- could be smarter 
-                candidate_eye_frames = self.eye_frames_by_world_index[frame.index-1][-1]
-            else:
-                candidate_eye_frames = candidate_eye_frames[0]
-
-            seek_pos = self.eye_frames_by_timestamp[candidate_eye_frames]
+            current_eye_timestamp = self.eye_frames_by_world_index[frame.index].pop(0)
+            seek_pos = self.eye_frames_by_timestamp[current_eye_timestamp]
             print "seek_pos: ",seek_pos
             print "frame number: ",frame.index
             print "world time: ",frame.timestamp
-            print "eye time: ",candidate_eye_frames
+            print "eye time: ",current_eye_timestamp
 
             try:
                 # seek pos could be an empty list 
