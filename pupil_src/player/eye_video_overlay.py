@@ -28,6 +28,33 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def get_past_timestamp(idx,timestamps):
+    """
+    recursive function to find the most recent valid timestamp in the past 
+    """
+    if idx == 0:
+        # if at the beginning, we can't go back in time.
+        return get_future_timestamp(idx,timestamps)
+    if timestamps[idx]:
+        res = [timestamps[idx][-1]]
+        return res
+    else:
+        return get_past_timestamp(idx-1,timestamps)
+
+def get_future_timestamp(idx,timestamps):
+    """
+    recursive function to find most recent valid timestamp in the future
+    """    
+    if idx == len(timestamps)-1:
+        # if at the end, we can't go further into the future.
+        print idx
+        return get_past_timestamp(idx,timestamps)
+    elif timestamps[idx]:
+        return [timestamps[idx][0]]
+    else:
+        idx = min(len(timestamps),idx+1)
+        return get_future_timestamp(idx,timestamps)
+
 def correlate_eye_world(eye_timestamps,world_timestamps):
     """
     args:
@@ -134,6 +161,14 @@ class Eye_Video_Overlay(Plugin):
         self.eye_frames_by_timestamp = dict(zip(eye0_timestamps,range(len(eye0_timestamps))))
         self.eye_frames_by_world_index = correlate_eye_world(eye0_timestamps,g_pool.timestamps)
 
+        # some indicies may be empty e.g. [[eye_timestamp,eye_timestamp],[],[],[eye_timestamp],...]
+        # we need to assign these indexes with timestamps that are closest to the world timestamp at that frame
+        # for e_frame,w_ts in zip(eye_frame_by_world_index,w_ts):
+            # if it is an empty list entry
+            # if not eye_frame:
+                # get most recent timestamp in the past and future
+                # e_past_ts = get_past_timestamp()        
+                
 
     def init_gui(self):
         # initialize the menu
@@ -166,31 +201,25 @@ class Eye_Video_Overlay(Plugin):
             return {'menu_conf':self.menu_conf}
 
     def update(self,frame,events):
-        # synchronize timestamps with world timestamps
-        # frame.timestamp would be world frame timestamp
-
-        # get 'pupil_positions' for the current timestamp - used to display pupil diameter
-        # what is the last frame or should I seek next or repeat the frame
-        # eye -- seek 
-        # frame.idx (last frame index) - then skip seeking
-
         #grab new frame
         if self.g_pool.play or self.g_pool.new_seek:
+            # new_frame = self.cap.get_frame()
+            candidate_eye_frames = self.eye_frames_by_world_index[frame.index]
+            
+            # sometimes we have empty entries 
+            if len(candidate_eye_frames) < 1:
+                # pop the last one off the list for the prior frame -- could be smarter 
+                candidate_eye_frames = self.eye_frames_by_world_index[frame.index-1][-1]
+            else:
+                candidate_eye_frames = candidate_eye_frames[0]
+
+            seek_pos = self.eye_frames_by_timestamp[candidate_eye_frames]
+            print "seek_pos: ",seek_pos
+            print "frame number: ",frame.index
+            print "world time: ",frame.timestamp
+            print "eye time: ",candidate_eye_frames
+
             try:
-                # new_frame = self.cap.get_frame()
-                candidate_eye_frames = self.eye_frames_by_world_index[frame.index]
-                if len(candidate_eye_frames) < 1:
-                    # pop the last one off the list for the prior frame -- could be smarter 
-                    candidate_eye_frames = self.eye_frames_by_world_index[frame.index-1][-1]
-                else:
-                    candidate_eye_frames = candidate_eye_frames[0]
-
-                seek_pos = self.eye_frames_by_timestamp[candidate_eye_frames]
-                print "seek_pos: ",seek_pos
-                print "frame number: ",frame.index
-                print "world time: ",frame.timestamp
-                print "eye time: ",candidate_eye_frames
-
                 # seek pos could be an empty list 
                 self.cap.seek_to_frame(seek_pos)
                 new_frame = self.cap.get_frame()
