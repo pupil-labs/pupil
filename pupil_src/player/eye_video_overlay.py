@@ -121,8 +121,6 @@ class Eye_Video_Overlay(Plugin):
         self.order = .2
         self.data_dir = g_pool.rec_dir
         self.menu_conf = menu_conf
-        self.show_eye = False
-        self._frame = None
 
         meta_info_path = self.data_dir + "/info.csv"
 
@@ -197,7 +195,6 @@ class Eye_Video_Overlay(Plugin):
     def _update_gui(self):
         self.menu.elements[:] = []
         self.menu.append(ui.Info_Text('Show the eye video overlaid on top of the world video.'))
-        self.menu.append(ui.Switch('show_eye',self,label='Show Eye Video'))        
         self.menu.append(ui.Button('close',self.unset_alive))
 
     def deinit_gui(self):
@@ -213,29 +210,19 @@ class Eye_Video_Overlay(Plugin):
             return {'menu_conf':self.menu_conf}
 
     def update(self,frame,events):
-        if self.g_pool.play:
-            current_eye_timestamp = self.eye_frames_by_world_index[frame.index][0]
-            seek_pos = self.eye_frames_by_timestamp[current_eye_timestamp]
-            # print "seek_pos: ",seek_pos
-            # print "frame number: ",frame.index
-            # print "world time: ",frame.timestamp
-            # print "eye time: ",current_eye_timestamp
+        current_eye_timestamp = self.eye_frames_by_world_index[frame.index][0]
+        seek_pos = self.eye_frames_by_timestamp[current_eye_timestamp]
 
-            try:
-                # seek pos could be an empty list 
-                self.cap.seek_to_frame(seek_pos)
-                new_frame = self.cap.get_frame()
-            except EndofVideoFileError:
-                #end of video logic: pause at last frame.
-                # g_pool.play=False
-                print "reached the end of the eye video"
-
-            self._frame = new_frame.copy()
-        # if self._frame and self.show_eye:
-            transparent_image_overlay((0,0),np.fliplr(self._frame.img),frame.img,0.5)
-
+        try:
+            # seek pos could be an empty list 
+            self.cap.seek_to_frame(seek_pos)
+            new_frame = self.cap.get_frame()
+            transparent_image_overlay((10,10),np.fliplr(new_frame.img),frame.img,0.5)
+        except EndofVideoFileError:
+            print "reached the end of the eye video"
 
     def gl_display(self):
+        # removed texture method because we need to be able to see what we will export - draw directly in the array
         # update the eye texture 
         # render camera image
         # if self._frame and self.show_eye:
