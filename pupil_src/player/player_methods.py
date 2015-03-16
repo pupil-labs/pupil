@@ -195,3 +195,20 @@ def transparent_circle(img,center,radius,color,thickness):
         logger.debug("transparent_circle would have been partially outsize of img. Did not draw it.")
 
 
+def transparent_image_overlay(pos,overlay_img,img,alpha):
+    """
+    Overlay one image with another with alpha blending
+    In player this will be used to overlay the eye (as overlay_img) over the world image (img)
+    Arguments:
+        pos: (row,column) position of the top left corner in numpy coordinates
+        overlay_img: image to overlay
+        img: destination image 
+        alpha: 0.0-1.0    
+    """
+    roi = slice(pos[0],overlay_img.shape[0]),slice(pos[1],overlay_img.shape[1])
+    try:
+        cv2.addWeighted(overlay_img,alpha,img[roi],1.-alpha,0,img[roi])
+    except:
+        logger.debug("transparent_image_overlay was outside of the world image and was not drawn")
+    pass
+

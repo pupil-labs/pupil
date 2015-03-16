@@ -14,9 +14,8 @@ import numpy as np
 from file_methods import Persistent_Dict
 from pyglui import ui
 from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
-from methods import normalize,denormalize
+from player_methods import transparent_image_overlay
 from plugin import Plugin
-from glob import glob
 
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 
@@ -47,7 +46,6 @@ def get_future_timestamp(idx,timestamps):
     """    
     if idx == len(timestamps)-1:
         # if at the end, we can't go further into the future.
-        print idx
         return get_past_timestamp(idx,timestamps)
     elif timestamps[idx]:
         return [timestamps[idx][0]]
@@ -215,37 +213,39 @@ class Eye_Video_Overlay(Plugin):
             return {'menu_conf':self.menu_conf}
 
     def update(self,frame,events):
-        #grab new frame
-        if self.g_pool.play or self.g_pool.new_seek:
-            current_eye_timestamp = self.eye_frames_by_world_index[frame.index].pop(0)
+        if self.g_pool.play:
+            current_eye_timestamp = self.eye_frames_by_world_index[frame.index][0]
             seek_pos = self.eye_frames_by_timestamp[current_eye_timestamp]
-            print "seek_pos: ",seek_pos
-            print "frame number: ",frame.index
-            print "world time: ",frame.timestamp
-            print "eye time: ",current_eye_timestamp
+            # print "seek_pos: ",seek_pos
+            # print "frame number: ",frame.index
+            # print "world time: ",frame.timestamp
+            # print "eye time: ",current_eye_timestamp
 
             try:
                 # seek pos could be an empty list 
                 self.cap.seek_to_frame(seek_pos)
                 new_frame = self.cap.get_frame()
-                
             except EndofVideoFileError:
                 #end of video logic: pause at last frame.
                 # g_pool.play=False
                 print "reached the end of the eye video"
 
             self._frame = new_frame.copy()
+        # if self._frame and self.show_eye:
+            transparent_image_overlay((0,0),np.fliplr(self._frame.img),frame.img,0.5)
 
 
     def gl_display(self):
         # update the eye texture 
         # render camera image
-        if self._frame and self.show_eye:
-            make_coord_system_norm_based()
-            update_named_texture(self._image_tex,self._frame.img)
-            draw_named_texture(self._image_tex,quad=((0.,0.),(.25,0.),(0.25,0.25),(0.,0.25)) )
-            make_coord_system_pixel_based(self._frame.img.shape)
+        # if self._frame and self.show_eye:
+        #     print self._frame.img.shape
+        #     make_coord_system_norm_based()
+        #     update_named_texture(self._image_tex,self._frame.img)
+        #     draw_named_texture(self._image_tex,quad=((0.,0.),(.25,0.),(0.25,0.25),(0.,0.25)) )
+        #     make_coord_system_pixel_based(self._frame.img.shape)
         # render visual feedback from loaded plugins
+        pass
 
     def cleanup(self):
         """ called when the plugin gets terminated.
