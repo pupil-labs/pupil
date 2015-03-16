@@ -31,18 +31,23 @@
 #
 #   include RELEASE-VERSION
 
-from subprocess import Popen, PIPE
-import sys, os
-import subprocess
+from subprocess import check_output,CalledProcessError,STDOUT
+import os
+
+import logging
+logger = logging.getLogger(__name__)
 
 def get_tag_commit():
     """
     returns string: 'tag'-'commits since tag'-'7 digit commit id'
     """
     try:
-        return subprocess.check_output(['git', 'describe'])
-
-    except:
+        return check_output(['git', 'describe'],stderr=STDOUT,cwd=os.path.dirname(os.path.abspath(__file__)))
+    except CalledProcessError as e:
+        logger.error('Error calling git: "%s" \n output: "%s"'%(e,e.output))
+        return None
+    except OSError as e:
+        logger.error('Could not call git, is it installed? error msg: "%s"'%e)
         return None
 
 def dpkg_deb_version():
