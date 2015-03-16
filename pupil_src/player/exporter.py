@@ -40,8 +40,9 @@ from vis_light_points import Vis_Light_Points
 from scan_path import Scan_Path
 from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
+from eye_video_overlay import Eye_Video_Overlay
 
-available_plugins =  Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction
+available_plugins =  Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Eye_Video_Overlay
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
