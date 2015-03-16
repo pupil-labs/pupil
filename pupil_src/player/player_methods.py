@@ -200,12 +200,12 @@ def transparent_image_overlay(pos,overlay_img,img,alpha):
     Overlay one image with another with alpha blending
     In player this will be used to overlay the eye (as overlay_img) over the world image (img)
     Arguments:
-        pos: (row,column) position of the top left corner in numpy coordinates
+        pos: (x,y) position of the top left corner in numpy row,column format from top left corner (numpy coord system)
         overlay_img: image to overlay
         img: destination image 
         alpha: 0.0-1.0    
     """
-    roi = slice(pos[0],overlay_img.shape[0]),slice(pos[1],overlay_img.shape[1])
+    roi = slice(pos[1],pos[1]+overlay_img.shape[0]),slice(pos[0],pos[0]+overlay_img.shape[1])
     try:
         cv2.addWeighted(overlay_img,alpha,img[roi],1.-alpha,0,img[roi])
     except:
