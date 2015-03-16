@@ -86,6 +86,7 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
     The dictionary `eye_frames_by_timestamp` is also created in the plugin init
     with the `eye_timestamp` as the key and eye `frame_index` as value for convenient reverse lookup.
     """
+    # return framewise mapping as a list
     e_ts = eye_timestamps
     w_ts = list(world_timestamps)
 
@@ -110,6 +111,7 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
         else:
             frame_idx+=1
 
+
     return eye_frames_by_world_index
 
 
@@ -120,8 +122,10 @@ class Eye_Video_Overlay(Plugin):
         super(Eye_Video_Overlay, self).__init__(g_pool)
         self.order = .6
         self.data_dir = g_pool.rec_dir
+        self.menu = None
         self.menu_conf = menu_conf
         self.last_world_timestamp = None 
+        self._frame = None
 
         # use g_pool.rec_version 
         meta_info_path = self.data_dir + "/info.csv"
@@ -213,27 +217,33 @@ class Eye_Video_Overlay(Plugin):
 
     def update(self,frame,events):
         requested_eye_timestamp = self.eye_frames_by_world_index[frame.index][0]
-        requested_eye_frame_idx = self.eye_frames_by_timestamp[current_eye_timestamp]
-        if requested_eye_frame_idx != self._frame.index:
-           ###seeklogic
-           if requested_eye_frame_inx == self.cap.get_frame_index()+1:
-               #if we just need to seek by one its faster to just read and throw away.
-               _ = self.cap.get_frame()
-           if requested_eye_frame_idx != self.cap.get_frame_index():
-               #only now do I need to seek
-               self.cap.seek_to_frame(requesed_eye_frame_idx)
+        requested_eye_frame_idx = self.eye_frames_by_timestamp[requested_eye_timestamp]
+        
+        # need to be able to handle pause and end of video
+        # print "frame.index: %s\trequested_eye_frame_idx: %s" %(frame.index,requested_eye_frame_idx) 
+        if requested_eye_frame_idx != frame.index:
+            # seeklogic
+            if requested_eye_frame_idx == self.cap.get_frame_index()+1:
+                # if we just need to seek by one frame, its faster to just read one and and throw it away.
+                _ = self.cap.get_frame()
+            if requested_eye_frame_idx != self.cap.get_frame_index():
+               # only now do I need to seek
+               self.cap.seek_to_frame(requested_eye_frame_idx)
+            
             # reading the frame
             try:
                self._frame = self.cap.get_frame()
             except EndofVideoFileError:
                 logger.warning("Reached the end of the eye video.")
         else:
-         #our old frame is still valid because we are doing upsampling
-         pass
+            #our old frame is still valid because we are doing upsampling
+            pass
         
         pad = 10
         pos = frame.width-self.width-pad, pad
-        transparent_image_overlay(pos,np.fliplr(self._frame.img),frame.img,0.7)
+        
+        if self._frame:
+            transparent_image_overlay(pos,np.fliplr(self._frame.img),frame.img,0.7)
 
 
     def gl_display(self):
