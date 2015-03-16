@@ -212,24 +212,28 @@ class Eye_Video_Overlay(Plugin):
             return {'menu_conf':self.menu_conf}
 
     def update(self,frame,events):
-        current_eye_timestamp = self.eye_frames_by_world_index[frame.index][0]
-        seek_pos = self.eye_frames_by_timestamp[current_eye_timestamp]
-        pad = 10
-        pos = frame.width-self.width-pad, pad
-
-        if frame.index != self.last_world_timestamp:
-            # we don't need to seek with each new frame - only if there is something new
+        requested_eye_timestamp = self.eye_frames_by_world_index[frame.index][0]
+        requested_eye_frame_idx = self.eye_frames_by_timestamp[current_eye_timestamp]
+        if requested_eye_frame_idx != self._frame.index:
+           ###seeklogic
+           if requested_eye_frame_inx == self.cap.get_frame_index()+1:
+               #if we just need to seek by one its faster to just read and throw away.
+               _ = self.cap.get_frame()
+           if requested_eye_frame_idx != self.cap.get_frame_index():
+               #only now do I need to seek
+               self.cap.seek_to_frame(requesed_eye_frame_idx)
+            # reading the frame
             try:
-                # seek pos could be an empty list 
-                self.cap.seek_to_frame(seek_pos)
-                self._frame = self.cap.get_frame()
-                transparent_image_overlay(pos,np.fliplr(self._frame.img),frame.img,0.7)
+               self._frame = self.cap.get_frame()
             except EndofVideoFileError:
                 logger.warning("Reached the end of the eye video.")
-
-            self.last_world_timestamp = frame.index
         else:
-            transparent_image_overlay(pos,np.fliplr(self._frame.img),frame.img,0.7)
+         #our old frame is still valid because we are doing upsampling
+         pass
+        
+        pad = 10
+        pos = frame.width-self.width-pad, pad
+        transparent_image_overlay(pos,np.fliplr(self._frame.img),frame.img,0.7)
 
 
     def gl_display(self):
