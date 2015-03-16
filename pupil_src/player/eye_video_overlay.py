@@ -213,6 +213,7 @@ class Eye_Video_Overlay(Plugin):
     def update(self,frame,events):
         current_eye_timestamp = self.eye_frames_by_world_index[frame.index][0]
         seek_pos = self.eye_frames_by_timestamp[current_eye_timestamp]
+        pad = 10
 
         if frame.index != self.last_world_timestamp:
             # we don't need to seek with each new frame - only if there is something new
@@ -220,13 +221,15 @@ class Eye_Video_Overlay(Plugin):
                 # seek pos could be an empty list 
                 self.cap.seek_to_frame(seek_pos)
                 self._frame = self.cap.get_frame()
-                transparent_image_overlay((10,10),np.fliplr(self._frame.img),frame.img,0.5)
+                pos = frame.width-self._frame.width-pad, pad
+                transparent_image_overlay(pos,np.fliplr(self._frame.img),frame.img,0.5)
             except EndofVideoFileError:
                 logger.warning("Reached the end of the eye video.")
 
             self.last_world_timestamp = frame.index
         else:
-            transparent_image_overlay((10,10),np.fliplr(self._frame.img),frame.img,0.5)
+            pos = frame.width-self._frame.width-pad, pad
+            transparent_image_overlay(pos,np.fliplr(self._frame.img),frame.img,0.5)
 
 
     def gl_display(self):
