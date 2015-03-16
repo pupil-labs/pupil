@@ -121,6 +121,7 @@ class Eye_Video_Overlay(Plugin):
         self.order = .2
         self.data_dir = g_pool.rec_dir
         self.menu_conf = menu_conf
+        self.last_world_timestamp = None
 
         meta_info_path = self.data_dir + "/info.csv"
 
@@ -213,13 +214,20 @@ class Eye_Video_Overlay(Plugin):
         current_eye_timestamp = self.eye_frames_by_world_index[frame.index][0]
         seek_pos = self.eye_frames_by_timestamp[current_eye_timestamp]
 
-        try:
-            # seek pos could be an empty list 
-            self.cap.seek_to_frame(seek_pos)
-            new_frame = self.cap.get_frame()
-            transparent_image_overlay((10,10),np.fliplr(new_frame.img),frame.img,0.5)
-        except EndofVideoFileError:
-            print "reached the end of the eye video"
+        if frame.index != self.last_world_timestamp:
+            # we don't need to seek with each new frame - only if there is something new
+            try:
+                # seek pos could be an empty list 
+                self.cap.seek_to_frame(seek_pos)
+                self._frame = self.cap.get_frame()
+                transparent_image_overlay((10,10),np.fliplr(self._frame.img),frame.img,0.5)
+            except EndofVideoFileError:
+                logger.warning("Reached the end of the eye video.")
+
+            self.last_world_timestamp = frame.index
+        else:
+            transparent_image_overlay((10,10),np.fliplr(self._frame.img),frame.img,0.5)
+
 
     def gl_display(self):
         # removed texture method because we need to be able to see what we will export - draw directly in the array
