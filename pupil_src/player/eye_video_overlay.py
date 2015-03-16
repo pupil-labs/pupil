@@ -118,11 +118,12 @@ class Eye_Video_Overlay(Plugin):
     """
     def __init__(self,g_pool,menu_conf={}):
         super(Eye_Video_Overlay, self).__init__(g_pool)
-        self.order = .2
+        self.order = .6
         self.data_dir = g_pool.rec_dir
         self.menu_conf = menu_conf
         self.last_world_timestamp = None 
 
+        # use g_pool.rec_version 
         meta_info_path = self.data_dir + "/info.csv"
 
         #parse info.csv file
@@ -243,6 +244,13 @@ class Eye_Video_Overlay(Plugin):
         #     make_coord_system_pixel_based(self._frame.img.shape)
         # render visual feedback from loaded plugins
         pass
+
+
+    def get_init_dict(self):
+        return {'menu_conf':self.menu.configuration}
+
+    def clone(self):
+        return Vis_Circle(**self.get_init_dict())
 
     def cleanup(self):
         """ called when the plugin gets terminated.
