@@ -35,7 +35,7 @@ def get_past_timestamp(idx,timestamps):
         # if at the beginning, we can't go back in time.
         return get_future_timestamp(idx,timestamps)
     if timestamps[idx]:
-        res = [timestamps[idx][-1]]
+        res = timestamps[idx][-1]
         return res
     else:
         return get_past_timestamp(idx-1,timestamps)
@@ -48,7 +48,7 @@ def get_future_timestamp(idx,timestamps):
         # if at the end, we can't go further into the future.
         return get_past_timestamp(idx,timestamps)
     elif timestamps[idx]:
-        return [timestamps[idx][0]]
+        return timestamps[idx][0]
     else:
         idx = min(len(timestamps),idx+1)
         return get_future_timestamp(idx,timestamps)
@@ -89,15 +89,16 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
     # return framewise mapping as a list
     e_ts = eye_timestamps
     w_ts = list(world_timestamps)
+    eye_frames_by_timestamp = dict(zip(e_ts,range(len(e_ts))))
 
-    eye_frames_by_world_index = [[] for i in world_timestamps]
+    eye_timestamps_by_world_index = [[] for i in world_timestamps]
 
     frame_idx = 0
     try:
         current_e_ts = e_ts.pop(0)
     except:
         logger.warning("No eye timestamps found.")
-        return eye_frames_by_world_index
+        return eye_timestamps_by_world_index
 
     while e_ts:
         # if the current eye timestamp is before the mean of the current world frame timestamp and the next worldframe timestamp
@@ -106,13 +107,28 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
         except IndexError:
             break
         if current_e_ts <= t_between_frames:
-            eye_frames_by_world_index[frame_idx].append(current_e_ts)
+            eye_timestamps_by_world_index[frame_idx].append(current_e_ts)
             current_e_ts = e_ts.pop(0)
         else:
             frame_idx+=1
 
 
-    return eye_frames_by_world_index
+    # eye_timestamps_by_world_index has the same length as the world timestamps
+    idx = 0
+    eye_frame_index = []
+    for candidate,world_ts in zip(eye_timestamps_by_world_index,w_ts):
+        # if there is no candidate, then assign it to the closest timestamp
+        if not candidate:
+            # get most recent timestamp, either in the past or future
+            e_past_ts = get_past_timestamp(idx,eye_timestamps_by_world_index)
+            e_future_ts = get_future_timestamp(idx,eye_timestamps_by_world_index)        
+            eye_frame_index.append(eye_frames_by_timestamp[get_nearest_timestamp(e_past_ts,e_future_ts,world_ts)]) 
+        else:
+            eye_frame_index.append(eye_frames_by_timestamp[eye_timestamps_by_world_index[idx][-1]])
+
+        idx += 1
+
+    return eye_frame_index
 
 
 class Eye_Video_Overlay(Plugin):
@@ -124,7 +140,7 @@ class Eye_Video_Overlay(Plugin):
         self.data_dir = g_pool.rec_dir
         self.menu = None
         self.menu_conf = menu_conf
-        self.last_world_timestamp = None 
+        self.last_world_idx = None 
         self._frame = None
 
         # use g_pool.rec_version 
@@ -169,22 +185,8 @@ class Eye_Video_Overlay(Plugin):
         self._image_tex = create_named_texture((self.height,self.width,3))
 
         eye0_timestamps = list(np.load(eye0_timestamps_path))
-        self.eye_frames_by_timestamp = dict(zip(eye0_timestamps,range(len(eye0_timestamps))))
-        self.eye_frames_by_world_index = correlate_eye_world(eye0_timestamps,g_pool.timestamps)
+        self.eye0_frame_index = correlate_eye_world(eye0_timestamps,g_pool.timestamps)
 
-        # some indicies may be empty e.g. [[eye_timestamp,eye_timestamp],[],[],[eye_timestamp],...]
-        # we need to assign these indexes with timestamps that are closest to the world timestamp at that frame
-        idx = 0
-        for e_frame,w_ts in zip(self.eye_frames_by_world_index,list(g_pool.timestamps)):
-            # if it is an empty list entry
-            if not e_frame:
-                # get most recent timestamp in the past and future
-                e_past_ts = get_past_timestamp(idx,self.eye_frames_by_world_index)
-                e_future_ts = get_future_timestamp(idx,self.eye_frames_by_world_index)        
-                self.eye_frames_by_world_index[idx] = get_nearest_timestamp(e_past_ts,e_future_ts,w_ts) 
-            else:
-                pass
-            idx += 1
 
     def init_gui(self):
         # initialize the menu
@@ -216,12 +218,9 @@ class Eye_Video_Overlay(Plugin):
             return {'menu_conf':self.menu_conf}
 
     def update(self,frame,events):
-        requested_eye_timestamp = self.eye_frames_by_world_index[frame.index][0]
-        requested_eye_frame_idx = self.eye_frames_by_timestamp[requested_eye_timestamp]
+        requested_eye_frame_idx = self.eye0_frame_index[frame.index]
         
-        # need to be able to handle pause and end of video
-        # print "frame.index: %s\trequested_eye_frame_idx: %s" %(frame.index,requested_eye_frame_idx) 
-        if requested_eye_frame_idx != frame.index:
+        if self.last_world_idx != frame.index and requested_eye_frame_idx != frame.index:
             # seeklogic
             if requested_eye_frame_idx == self.cap.get_frame_index()+1:
                 # if we just need to seek by one frame, its faster to just read one and and throw it away.
@@ -235,6 +234,7 @@ class Eye_Video_Overlay(Plugin):
                self._frame = self.cap.get_frame()
             except EndofVideoFileError:
                 logger.warning("Reached the end of the eye video.")
+            self.last_world_idx = frame.index
         else:
             #our old frame is still valid because we are doing upsampling
             pass
