@@ -64,27 +64,9 @@ def get_nearest_timestamp(past_timestamp,future_timestamp,world_timestamp):
 
 def correlate_eye_world(eye_timestamps,world_timestamps):
     """
-    args:
-        eye_timestamps
-        world_timestamps
-
-    This function takes timestamps from eye and world processes as arguments
-    and correlates the closest eye frame (or frames) by timestamp - similar to the `correlate_gaze` function in `player_methods`. 
-    Returns: 
-        `eye_frames_by_world_index` list - length of the list equals the number of frames in the world video.
-    
-    The eye process (even if captured at the same frame rate as the world video, e.g. 30Hz) typically will run slightly faster than the world process
-    because of a smaller video capture and process load. In the future we will also have high speed eye cameras, therefore 
-    there may be more than one valid timestamp for the eye video for each world frame, or no eye frame for a world frame. 
-
-    Example:
-    [[eye_timestamp, eye_timestamp, eye_timestamp],[eye_timestamp],[eye_timestamp,eye_timestamp],[],[eye_timestamp]...]
-
-
-    This function gets called in the init of the plugin to create a lookup list called `eye_frames_by_world_index`. 
-    
-    The dictionary `eye_frames_by_timestamp` is also created in the plugin init
-    with the `eye_timestamp` as the key and eye `frame_index` as value for convenient reverse lookup.
+    This function takes a list of eye timestamps and world timestamps
+    and correlates one eye frame per world frame
+    Returns a list of eye indicies `eye_frame_index` that has length equal the world frame index
     """
     # return framewise mapping as a list
     e_ts = eye_timestamps
@@ -112,10 +94,10 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
         else:
             frame_idx+=1
 
-
-    # eye_timestamps_by_world_index has the same length as the world timestamps
     idx = 0
     eye_frame_index = []
+    # some entiries in the `eye_timestamps_by_world_index` might be empty -- no correlated eye timestamp
+    # so we will either show the previous frame or next frame - whichever is temporally closest
     for candidate,world_ts in zip(eye_timestamps_by_world_index,w_ts):
         # if there is no candidate, then assign it to the closest timestamp
         if not candidate:
@@ -124,6 +106,7 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
             e_future_ts = get_future_timestamp(idx,eye_timestamps_by_world_index)        
             eye_frame_index.append(eye_frames_by_timestamp[get_nearest_timestamp(e_past_ts,e_future_ts,world_ts)]) 
         else:
+            # TODO - if there is a list of len > 1 - then we should check which is the temporally closest timestamp
             eye_frame_index.append(eye_frames_by_timestamp[eye_timestamps_by_world_index[idx][-1]])
 
         idx += 1
@@ -143,6 +126,7 @@ class Eye_Video_Overlay(Plugin):
         self.last_world_idx = None 
         self._frame = None
 
+        # TODO - rec version float and eye mode should be gathered from main.py
         # use g_pool.rec_version 
         meta_info_path = self.data_dir + "/info.csv"
 
