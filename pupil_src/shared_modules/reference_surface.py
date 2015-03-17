@@ -332,7 +332,8 @@ class Reference_Surface(object):
         after[vert_idx] = new_pos
         transform = cv2.getPerspectiveTransform(after,before)
         for m in self.markers.values():
-            m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
+            if m.uv_coords is not None:
+                m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
 
 
     def marker_status(self):
