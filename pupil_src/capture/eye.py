@@ -107,7 +107,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
                 if g_pool.flip:
                     pos = 1-pos[0],1-pos[1]
                 pos = denormalize(pos,(frame.width,frame.height)) # Position in img pixels
-                if u_r.mouse_over_edit_pt(pos,u_r.handle_size+20,u_r.handle_size+20):
+                if u_r.mouse_over_edit_pt(pos,u_r.handle_size+40,u_r.handle_size+40):
                     return # if the roi interacts we dont what the gui to interact as well
 
         g_pool.gui.update_button(button,action,mods)
