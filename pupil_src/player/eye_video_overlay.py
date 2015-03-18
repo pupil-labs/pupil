@@ -171,6 +171,8 @@ class Eye_Video_Overlay(Plugin):
         eye0_timestamps = list(np.load(eye0_timestamps_path))
         self.eye0_frame_index = correlate_eye_world(eye0_timestamps,g_pool.timestamps)
 
+        # user controls
+        self.alpha = 0.7
 
     def init_gui(self):
         # initialize the menu
@@ -187,6 +189,7 @@ class Eye_Video_Overlay(Plugin):
     def _update_gui(self):
         self.menu.elements[:] = []
         self.menu.append(ui.Info_Text('Show the eye video overlaid on top of the world video.'))
+        self.menu.append(ui.Slider('alpha',self,min=0.0,step=0.05,max=1.0,label='Opacity'))
         self.menu.append(ui.Button('close',self.unset_alive))
 
     def deinit_gui(self):
@@ -222,12 +225,12 @@ class Eye_Video_Overlay(Plugin):
         else:
             #our old frame is still valid because we are doing upsampling
             pass
-        
+
         pad = 10
         pos = frame.width-self.width-pad, pad
         
         if self._frame:
-            transparent_image_overlay(pos,np.fliplr(self._frame.img),frame.img,0.7)
+            transparent_image_overlay(pos,np.fliplr(self._frame.img),frame.img,self.alpha)
 
 
     def gl_display(self):
