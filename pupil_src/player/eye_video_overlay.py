@@ -117,12 +117,17 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
 class Eye_Video_Overlay(Plugin):
     """docstring
     """
-    def __init__(self,g_pool,menu_conf={}):
+    def __init__(self,g_pool,alpha=0.6,mirror=True,menu_conf={'collapsed':False}):
         super(Eye_Video_Overlay, self).__init__(g_pool)
         self.order = .6
         self.data_dir = g_pool.rec_dir
         self.menu = None
         self.menu_conf = menu_conf
+        
+        # user controls
+        self.alpha = alpha
+        self.mirror = mirror
+
         self.last_world_idx = None 
         self._frame = None
 
@@ -171,8 +176,7 @@ class Eye_Video_Overlay(Plugin):
         eye0_timestamps = list(np.load(eye0_timestamps_path))
         self.eye0_frame_index = correlate_eye_world(eye0_timestamps,g_pool.timestamps)
 
-        # user controls
-        self.alpha = 0.7
+
 
     def init_gui(self):
         # initialize the menu
@@ -190,6 +194,7 @@ class Eye_Video_Overlay(Plugin):
         self.menu.elements[:] = []
         self.menu.append(ui.Info_Text('Show the eye video overlaid on top of the world video.'))
         self.menu.append(ui.Slider('alpha',self,min=0.0,step=0.05,max=1.0,label='Opacity'))
+        self.menu.append(ui.Switch('mirror',self,label="Mirror image"))
         self.menu.append(ui.Button('close',self.unset_alive))
 
     def deinit_gui(self):
@@ -229,8 +234,8 @@ class Eye_Video_Overlay(Plugin):
         pad = 10
         pos = frame.width-self.width-pad, pad
         
-        if self._frame:
-            transparent_image_overlay(pos,np.fliplr(self._frame.img),frame.img,self.alpha)
+        if self._frame is not None:
+            transparent_image_overlay(pos,np.fliplr(self._frame.img) if self.mirror else self._frame.img,frame.img,self.alpha)
 
 
     def gl_display(self):
@@ -248,7 +253,7 @@ class Eye_Video_Overlay(Plugin):
 
 
     def get_init_dict(self):
-        return {'menu_conf':self.menu.configuration}
+        return {'alpha':self.alpha,'mirror':self.mirror,'menu_conf':self.menu.configuration}
 
     def clone(self):
         return Vis_Circle(**self.get_init_dict())
