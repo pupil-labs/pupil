@@ -147,12 +147,12 @@ class Batch_Exporter(Plugin):
             current_frame = Value(c_int,0)
             start_frame = None
             end_frame = None
-            data_dir = d
+            export_dir = d
             #we need to know the timestamps of our exports.
             try: # 0.4
-                frames_to_export.value = len(np.load(os.path.join(data_dir,'world_timestamps.npy')))
+                frames_to_export.value = len(np.load(os.path.join(export_dir,'world_timestamps.npy')))
             except: # <0.4
-                frames_to_export.value = len(np.load(os.path.join(data_dir,'timestamps.npy')))
+                frames_to_export.value = len(np.load(os.path.join(export_dir,'timestamps.npy')))
 
             # Here we make clones of every plugin that supports it.
             # So it runs in the current config when we lauch the exporter.
@@ -160,7 +160,7 @@ class Batch_Exporter(Plugin):
 
 
             #make a unique name created from rec_session and dir name
-            rec_session, rec_dir = data_dir.rsplit(os.path.sep,2)[1:]
+            rec_session, rec_dir = export_dir.rsplit(os.path.sep,2)[1:]
             out_name = rec_session+"_"+rec_dir+".mp4"
             out_file_path = os.path.join(self.destination_dir,out_name)
             if out_file_path in outfiles:
@@ -169,7 +169,7 @@ class Batch_Exporter(Plugin):
                 outfiles.add(out_file_path)
                 logger.info("Exporting to: %s"%out_file_path)
 
-                process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, data_dir,start_frame,end_frame,plugins,out_file_path))
+                process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, export_dir,start_frame,end_frame,plugins,out_file_path))
                 self.exports.append(process)
 
     def start(self):

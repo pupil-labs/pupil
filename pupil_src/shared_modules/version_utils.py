@@ -1,38 +1,14 @@
 # -*- coding: utf-8 -*-
 # Author: Douglas Creager <dcreager@dcreager.net>
+# Changes,Addions: Moritz Kassner <moritz@pupil-labs.com>
 # This file is placed into the public domain.
 
-# Calculates the current version number.  If possible, this is the
-# output of “git describe”, modified to conform to the versioning
-# scheme that setuptools uses.  If “git describe” returns an error
-# (most likely because we're in an unpacked copy of a release tarball,
-# rather than in a git working copy), then we fall back on reading the
-# contents of the RELEASE-VERSION file.
-#
-# To use this script, simply import it your setup.py file, and use the
-# results of get_git_version() as your package version:
-#
-# from version import *
-#
-# setup(
-#     version=get_git_version(),
-#     .
-#     .
-#     .
-# )
-#
-# This will automatically update the RELEASE-VERSION file, if
-# necessary.  Note that the RELEASE-VERSION file should *not* be
-# checked into git; please add it to your top-level .gitignore file.
-#
-# You'll probably want to distribute the RELEASE-VERSION file in your
-# sdist tarballs; to do this, just create a MANIFEST.in file that
-# contains the following line:
-#
-#   include RELEASE-VERSION
+
 
 from subprocess import check_output,CalledProcessError,STDOUT
-import os
+import os,sys
+from distutils.version import LooseVersion as VersionFormat
+
 
 import logging
 logger = logging.getLogger(__name__)
@@ -81,8 +57,23 @@ def pupil_version():
     else:
         return version[1:]
 
+def get_version(version_file=None):
+    #get the current software version
+    if getattr(sys, 'frozen', False):
+        with open(version_file) as f:
+            version = f.read()
+    else:
+        version = pupil_version()
+    version = VersionFormat(version)
+    logger.debug("Running version: %s"%version)
+    return version
 
-
+def read_rec_version(meta_info):
+    version = meta_info["Capture Software Version"]
+    version = ''.join([c for c in version if c in '1234567890.-']) #strip letters in case of legacy version format
+    version = VersionFormat(version)
+    logger.debug("Recording version: %s"%(version))
+    return version
 
 
 def write_version_file(target_dir):

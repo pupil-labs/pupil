@@ -41,15 +41,15 @@ class Export_Process(Process):
 
 
 
-def verify_out_file_path(out_file_path,data_dir):
+def verify_out_file_path(out_file_path,rec_dir):
     #Out file path verification
     if not out_file_path:
-        out_file_path = os.path.join(data_dir, "world_viz.mp4")
+        out_file_path = os.path.join(rec_dir, "world_viz.mp4")
     else:
         file_name = os.path.basename(out_file_path)
         dir_name = os.path.dirname(out_file_path)
         if not dir_name:
-            dir_name = data_dir
+            dir_name = rec_dir
         if not file_name:
             file_name = 'world_viz.mp4'
         out_file_path = os.path.expanduser(os.path.join(dir_name,file_name))
@@ -75,15 +75,13 @@ class Export_Launcher(Plugin):
     """
     def __init__(self, g_pool,menu_conf={'pos':(320,10),'size':(300,150),'collapsed':False}):
         super(Export_Launcher, self).__init__(g_pool)
-        self.data_dir = g_pool.rec_dir
-
         # initialize empty menu
         # and load menu configuration of last session
         self.menu = None
         self.menu_conf = menu_conf
         self.new_export = None
         self.exports = []
-        # default_path = verify_out_file_path("world_viz.mp4",data_dir)
+        # default_path = verify_out_file_path("world_viz.mp4",rec_dir)
         default_path = "world_viz.mp4"
         self.rec_name = default_path
 
@@ -140,7 +138,7 @@ class Export_Launcher(Plugin):
         frames_to_export  = Value(c_int,0)
         current_frame = Value(c_int,0)
 
-        data_dir = self.data_dir
+        rec_dir = self.g_pool.rec_dir
         start_frame= self.g_pool.trim_marks.in_mark
         end_frame= self.g_pool.trim_marks.out_mark+1 #end_frame is exclusive
         frames_to_export.value = end_frame-start_frame
@@ -149,8 +147,8 @@ class Export_Launcher(Plugin):
         # So it runs in the current config when we lauch the exporter.
         plugins = self.g_pool.plugins.get_initializers()
 
-        out_file_path=verify_out_file_path(self.rec_name,self.data_dir)
-        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, data_dir,start_frame,end_frame,plugins,out_file_path))
+        out_file_path=verify_out_file_path(self.rec_name,self.g_pool.rec_dir)
+        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,start_frame,end_frame,plugins,out_file_path))
         self.new_export = process
 
     def launch_export(self, new_export):

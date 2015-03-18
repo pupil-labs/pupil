@@ -21,7 +21,6 @@ except:
 if getattr(sys, 'frozen', False):
     user_dir = os.path.expanduser('~/pupil_player_settings')
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
-
 else:
     # We are running in a normal Python environment.
     # Make all pupil shared_modules available to this Python session.
@@ -29,6 +28,7 @@ else:
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
     # Specifiy user dirs.
     user_dir = os.path.join(pupil_base_dir,'player_settings')
+    version_file = None
 
 
 # create folder for user settings, tmp data
@@ -86,6 +86,7 @@ from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_s
 from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
 # helpers/utils
+from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize,Temp
 from player_methods import correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
 
@@ -116,15 +117,6 @@ available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
-
-#get the current software version
-if getattr(sys, 'frozen', False):
-    with open(version_file) as f:
-        version = f.read()
-else:
-    from git_version import get_tag_commit
-    version = get_tag_commit()
-
 
 
 def main():
@@ -192,19 +184,20 @@ def main():
         logger.error("You did not supply a dir with the required files inside.")
         return
 
+    # load session persistent settings
+    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
+
     #backwards compatibility fn.
     patch_meta_info(rec_dir)
 
-    meta_info_path = rec_dir + "/info.csv"
-
     #parse info.csv file
+    meta_info_path = rec_dir + "/info.csv"
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
-    rec_version = meta_info["Capture Software Version"]
-    rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
-    logger.debug("Recording version: %s , %s"%(rec_version,rec_version_float))
 
-    if rec_version_float < 0.4:
+
+    rec_version = read_rec_version(meta_info)
+    if rec_version < VersionFormat('0.4'):
         video_path = rec_dir + "/world.avi"
         timestamps_path = rec_dir + "/timestamps.npy"
     else:
@@ -217,14 +210,10 @@ def main():
     timestamps = np.load(timestamps_path)
 
     #correlate data
-    if rec_version_float < 0.4:
+    if rec_version < VersionFormat('0.4'):
         positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
     else:
         positions_by_frame = correlate_gaze(gaze_list,timestamps)
-
-    # load session persistent settings
-    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
-
 
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
@@ -256,14 +245,17 @@ def main():
 
     # create container for globally scoped vars (within world)
     g_pool = Temp()
+    g_pool.app = 'player'
+    g_pool.version = get_version(version_file)
+    g_pool.capture = cap
+    g_pool.timestamps = timestamps
+    g_pool.gaze_list = gaze_list
+    g_pool.positions_by_frame = positions_by_frame
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
-    g_pool.app = 'player'
-    g_pool.capture = cap
-    g_pool.timestamps = timestamps
-    g_pool.positions_by_frame = positions_by_frame
+    g_pool.rec_version = rec_version
 
 
     def next_frame(_):
@@ -308,7 +300,7 @@ def main():
     g_pool.main_menu.configuration = session_settings.get('main_menu_config',{})
     g_pool.main_menu.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
 
-    g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%version))
+    g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
 
     g_pool.main_menu.append(ui.Selector('Open plugin', selection = user_launchable_plugins,

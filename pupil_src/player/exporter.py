@@ -26,6 +26,7 @@ import numpy as np
 from uvc_capture import autoCreateCapture
 from player_methods import correlate_gaze,correlate_gaze_legacy
 from methods import denormalize, Temp
+from version_utils import VersionFormat, read_rec_version, get_version
 from av_writer import AV_Writer
 #logging
 import logging
@@ -48,38 +49,35 @@ plugin_by_name = dict(zip(name_by_index,available_plugins))
 
 
 
-def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
+def export(should_terminate,frames_to_export,current_frame, rec_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
 
 
     #parse info.csv file
-    with open(data_dir + "/info.csv") as info:
+    with open(rec_dir + "/info.csv") as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
-    rec_version = meta_info["Capture Software Version"]
-    rec_version_float = float(filter(type(rec_version).isdigit, rec_version)[:3])/100 #(get major,minor,fix of version)
-    logger.debug("Exporting a video from recording with version: %s , %s"%(rec_version,rec_version_float))
+    rec_version = read_rec_version(meta_info)
+    logger.debug("Exporting a video from recording with version: %s"%rec_version)
 
-    if rec_version_float < 0.4:
-        video_path = data_dir + "/world.avi"
-        timestamps_path = data_dir + "/timestamps.npy"
+    if rec_version < VersionFormat('0.4'):
+        video_path = rec_dir + "/world.avi"
+        timestamps_path = rec_dir + "/timestamps.npy"
     else:
-        video_path = data_dir + "/world.mkv"
-        timestamps_path = data_dir + "/world_timestamps.npy"
+        video_path = rec_dir + "/world.mkv"
+        timestamps_path = rec_dir + "/world_timestamps.npy"
 
-    gaze_positions_path = data_dir + "/gaze_positions.npy"
+    gaze_positions_path = rec_dir + "/gaze_positions.npy"
     #load gaze information
     gaze_list = np.load(gaze_positions_path)
     timestamps = np.load(timestamps_path)
 
     #correlate data
-    if rec_version_float < 0.4:
+    if rec_version < VersionFormat('0.4'):
         positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
     else:
         positions_by_frame = correlate_gaze(gaze_list,timestamps)
-
-
 
 
     # Initialize capture, check if it works
@@ -91,12 +89,12 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
     #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
     if out_file_path is None:
-        out_file_path = os.path.join(data_dir, "world_viz.mp4")
+        out_file_path = os.path.join(rec_dir, "world_viz.mp4")
     else:
         file_name =  os.path.basename(out_file_path)
         dir_name = os.path.dirname(out_file_path)
         if not dir_name:
-            dir_name = data_dir
+            dir_name = rec_dir
         if not file_name:
             file_name = 'world_viz.mp4'
         out_file_path = os.path.expanduser(os.path.join(dir_name,file_name))
@@ -138,6 +136,7 @@ def export(should_terminate,frames_to_export,current_frame, data_dir,start_frame
 
     g = Temp()
     g.app = 'exporter'
+    g.rec_version = rec_version
     g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
 
     while frames_to_export.value - current_frame.value > 0:
