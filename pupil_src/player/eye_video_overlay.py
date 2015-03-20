@@ -17,7 +17,8 @@ from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_nam
 from player_methods import transparent_image_overlay
 from plugin import Plugin
 
-from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
+# helpers/utils
+from version_utils import VersionFormat
 
 #capture
 from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
@@ -120,7 +121,6 @@ class Eye_Video_Overlay(Plugin):
     def __init__(self,g_pool,alpha=0.6,mirror=True,menu_conf={'collapsed':False}):
         super(Eye_Video_Overlay, self).__init__(g_pool)
         self.order = .6
-        self.data_dir = g_pool.rec_dir
         self.menu = None
         self.menu_conf = menu_conf
         
@@ -131,37 +131,26 @@ class Eye_Video_Overlay(Plugin):
         self.last_world_idx = None 
         self._frame = None
 
-        # TODO - rec version float and eye mode should be gathered from main.py
-        # use g_pool.rec_version 
-        meta_info_path = self.data_dir + "/info.csv"
-
-        #parse info.csv file
-        with open(meta_info_path) as info:
-            meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
-        rec_version = meta_info["Capture Software Version"]
-        rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
-        eye_mode = meta_info["Eye Mode"]
-
-        if rec_version_float < 0.4:
+        if g_pool.rec_version < VersionFormat('0.4'):
             required_files = ['eye.avi','eye_timestamps.npy']
-            eye0_video_path = os.path.join(self.data_dir,required_files[0])
-            eye0_timestamps_path = os.path.join(self.data_dir,required_files[1]) 
+            eye0_video_path = os.path.join(g_pool.rec_dir,required_files[0])
+            eye0_timestamps_path = os.path.join(g_pool.rec_dir,required_files[1]) 
         else:
             required_files = ['eye0.mkv','eye0_timestamps.npy']
-            eye0_video_path = os.path.join(self.data_dir,required_files[0])
-            eye0_timestamps_path = os.path.join(self.data_dir,required_files[1])
-            if eye_mode == 'binocular':
+            eye0_video_path = os.path.join(g_pool.rec_dir,required_files[0])
+            eye0_timestamps_path = os.path.join(g_pool.rec_dir,required_files[1])
+            if g_pool.meta_info['Eye Mode'] == 'binocular':
                 required_files += ['eye1.mkv','eye1_timestamps.npy']
-                eye1_video_path = os.path.join(self.data_dir,required_files[2])
-                eye1_timestamps_path = os.path.join(self.data_dir,required_files[3])        
+                eye1_video_path = os.path.join(g_pool.rec_dir,required_files[2])
+                eye1_timestamps_path = os.path.join(g_pool.rec_dir,required_files[3])        
 
         # check to see if eye videos exist
         for f in required_files:
-            if not os.path.isfile(os.path.join(self.data_dir,f)):
-                logger.debug("Did not find required file: ") %(f, self.data_dir)
+            if not os.path.isfile(os.path.join(g_pool.rec_dir,f)):
+                logger.debug("Did not find required file: ") %(f, g_pool.rec_dir)
                 self.cleanup() # early exit -- no required files
 
-        logger.debug("%s contains required eye video(s): %s."%(self.data_dir,required_files))
+        logger.debug("%s contains required eye video(s): %s."%(g_pool.rec_dir,required_files))
 
         # Initialize capture -- for now we just try with monocular
         self.cap = autoCreateCapture(eye0_video_path,timestamps=eye0_timestamps_path)
