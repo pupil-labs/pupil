@@ -134,6 +134,10 @@ class Eye_Video_Overlay(Plugin):
         self.last_world_idx = None 
         self._frame = None
 
+        #parse info.csv file
+        with open(g_pool.rec_dir + "/info.csv") as info:
+            meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
+
         # load eye videos and eye timestamps 
         if g_pool.rec_version < VersionFormat('0.4'):
             required_files = ['eye.avi','eye_timestamps.npy']
@@ -143,7 +147,7 @@ class Eye_Video_Overlay(Plugin):
             required_files = ['eye0.mkv','eye0_timestamps.npy']
             eye0_video_path = os.path.join(g_pool.rec_dir,required_files[0])
             eye0_timestamps_path = os.path.join(g_pool.rec_dir,required_files[1])
-            if g_pool.meta_info['Eye Mode'] == 'binocular':
+            if meta_info['Eye Mode'] == 'binocular':
                 required_files += ['eye1.mkv','eye1_timestamps.npy']
                 eye1_video_path = os.path.join(g_pool.rec_dir,required_files[2])
                 eye1_timestamps_path = os.path.join(g_pool.rec_dir,required_files[3])        
