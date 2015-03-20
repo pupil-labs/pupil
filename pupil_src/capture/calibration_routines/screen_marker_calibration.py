@@ -74,7 +74,6 @@ def interp_fn(t,b,c,d,start_sample=15.,stop_sample=55.):
         return 1.0
 
 
-
 class Screen_Marker_Calibration(Calibration_Plugin):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites

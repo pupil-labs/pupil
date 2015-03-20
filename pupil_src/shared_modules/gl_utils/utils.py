@@ -18,7 +18,6 @@ from shader import Shader
 import numpy as np
 
 
-
 __all__ =  ['make_coord_system_norm_based',
             'make_coord_system_pixel_based',
             'draw_gl_texture',

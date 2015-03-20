@@ -87,7 +87,7 @@ from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,Fake
 
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
-from methods import normalize, denormalize,Temp
+from methods import normalize, denormalize
 from player_methods import correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
 
 #monitoring
@@ -119,6 +119,8 @@ name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
 
+class Global_Container(object):
+    pass
 
 def main():
 
@@ -245,7 +247,7 @@ def main():
 
 
     # create container for globally scoped vars (within world)
-    g_pool = Temp()
+    g_pool = Global_Container()
     g_pool.app = 'player'
     g_pool.version = get_version(version_file)
     g_pool.capture = cap
@@ -386,7 +388,7 @@ def main():
 
         frame = new_frame.copy()
         events = {}
-        #new positons and events we make a deepcopy just like the image is a copy.
+        #new positons we make a deepcopy just like the image is a copy.
         events['pupil_positions'] = deepcopy(positions_by_frame[frame.index])
 
         if update_graph:
