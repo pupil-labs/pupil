@@ -257,6 +257,7 @@ def main():
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
     g_pool.rec_version = rec_version
+    g_pool.meta_info = meta_info
 
 
     def next_frame(_):
