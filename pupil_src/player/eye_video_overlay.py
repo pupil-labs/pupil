@@ -233,10 +233,9 @@ class Eye_Video_Overlay(Plugin):
 
         pad = 10
         pos = frame.width-self.width-pad, pad
-        
+
         if self._frame is not None:
             transparent_image_overlay(pos,np.fliplr(self._frame.img) if self.mirror else self._frame.img,frame.img,self.alpha)
-
 
     def gl_display(self):
         # removed texture method because we need to be able to see what we will export - draw directly in the array
