@@ -139,6 +139,9 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,start_frame=
     g.app = 'exporter'
     g.rec_dir = rec_dir
     g.rec_version = rec_version
+    g.timestamps = timestamps
+    g.gaze_list = gaze_list
+    g.positions_by_frame = positions_by_frame
     g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
 
     while frames_to_export.value - current_frame.value > 0:
