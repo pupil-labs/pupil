@@ -121,6 +121,9 @@ class Eye_Video_Overlay(Plugin):
     def __init__(self,g_pool,alpha=0.6,mirror=True,menu_conf={'collapsed':False}):
         super(Eye_Video_Overlay, self).__init__(g_pool)
         self.order = .6
+
+        # initialize empty menu
+        # and load menu configuration of last session
         self.menu = None
         self.menu_conf = menu_conf
         
@@ -131,6 +134,7 @@ class Eye_Video_Overlay(Plugin):
         self.last_world_idx = None 
         self._frame = None
 
+        # load eye videos and eye timestamps 
         if g_pool.rec_version < VersionFormat('0.4'):
             required_files = ['eye.avi','eye_timestamps.npy']
             eye0_video_path = os.path.join(g_pool.rec_dir,required_files[0])
