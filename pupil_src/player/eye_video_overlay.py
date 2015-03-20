@@ -13,7 +13,6 @@ import cv2
 import numpy as np
 from file_methods import Persistent_Dict
 from pyglui import ui
-from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
 from player_methods import transparent_image_overlay
 from plugin import Plugin
 
@@ -147,7 +146,7 @@ class Eye_Video_Overlay(Plugin):
             required_files = ['eye0.mkv','eye0_timestamps.npy']
             eye0_video_path = os.path.join(g_pool.rec_dir,required_files[0])
             eye0_timestamps_path = os.path.join(g_pool.rec_dir,required_files[1])
-            if meta_info['Eye Mode'] == 'binocular':
+            if meta_info.get('Eye Mode','monocular') == 'binocular':
                 required_files += ['eye1.mkv','eye1_timestamps.npy']
                 eye1_video_path = os.path.join(g_pool.rec_dir,required_files[2])
                 eye1_timestamps_path = os.path.join(g_pool.rec_dir,required_files[3])
@@ -169,7 +168,6 @@ class Eye_Video_Overlay(Plugin):
             self.cleanup() # early exit -- no real eye videos
 
         self.width, self.height = self.cap.get_size()
-        self._image_tex = create_named_texture((self.height,self.width,3))
 
         eye0_timestamps = list(np.load(eye0_timestamps_path))
         self.eye0_frame_index = correlate_eye_world(eye0_timestamps,g_pool.timestamps)
@@ -228,19 +226,6 @@ class Eye_Video_Overlay(Plugin):
 
         if self._frame is not None:
             transparent_image_overlay(pos,np.fliplr(self._frame.img) if self.mirror else self._frame.img,frame.img,self.alpha)
-
-    def gl_display(self):
-        # removed texture method because we need to be able to see what we will export - draw directly in the array
-        # update the eye texture
-        # render camera image
-        # if self._frame and self.show_eye:
-        #     print self._frame.img.shape
-        #     make_coord_system_norm_based()
-        #     update_named_texture(self._image_tex,self._frame.img)
-        #     draw_named_texture(self._image_tex,quad=((0.,0.),(.25,0.),(0.25,0.25),(0.,0.25)) )
-        #     make_coord_system_pixel_based(self._frame.img.shape)
-        # render visual feedback from loaded plugins
-        pass
 
 
     def get_init_dict(self):
