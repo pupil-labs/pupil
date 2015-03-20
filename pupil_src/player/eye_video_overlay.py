@@ -20,7 +20,7 @@ from plugin import Plugin
 from version_utils import VersionFormat
 
 #capture
-from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
+from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture,FileCaptureError
 
 #logging
 import logging
@@ -66,7 +66,8 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
     """
     This function takes a list of eye timestamps and world timestamps
     and correlates one eye frame per world frame
-    Returns a list of eye indicies `eye_frame_index` that has length equal the world frame index
+    Returns a mapping that correlates a single eye frame index with each world frame index.
+    Up and downsampling is used to achieve this mapping.
     """
     # return framewise mapping as a list
     e_ts = eye_timestamps
@@ -95,7 +96,7 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
             frame_idx+=1
 
     idx = 0
-    eye_frame_index = []
+    eye_world_frame_map = []
     # some entiries in the `eye_timestamps_by_world_index` might be empty -- no correlated eye timestamp
     # so we will either show the previous frame or next frame - whichever is temporally closest
     for candidate,world_ts in zip(eye_timestamps_by_world_index,w_ts):
@@ -104,14 +105,13 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
             # get most recent timestamp, either in the past or future
             e_past_ts = get_past_timestamp(idx,eye_timestamps_by_world_index)
             e_future_ts = get_future_timestamp(idx,eye_timestamps_by_world_index)
-            eye_frame_index.append(eye_frames_by_timestamp[get_nearest_timestamp(e_past_ts,e_future_ts,world_ts)])
+            eye_world_frame_map.append(eye_frames_by_timestamp[get_nearest_timestamp(e_past_ts,e_future_ts,world_ts)])
         else:
             # TODO - if there is a list of len > 1 - then we should check which is the temporally closest timestamp
-            eye_frame_index.append(eye_frames_by_timestamp[eye_timestamps_by_world_index[idx][-1]])
-
+            eye_world_frame_map.append(eye_frames_by_timestamp[eye_timestamps_by_world_index[idx][-1]])
         idx += 1
 
-    return eye_frame_index
+    return eye_world_frame_map
 
 
 class Eye_Video_Overlay(Plugin):
@@ -130,68 +130,47 @@ class Eye_Video_Overlay(Plugin):
         self.alpha = alpha
         self.mirror = mirror
 
-        self.last_world_idx = None
-        self._frame = None
-
-        #parse info.csv file
-        with open(g_pool.rec_dir + "/info.csv") as info:
-            meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
         # load eye videos and eye timestamps
         if g_pool.rec_version < VersionFormat('0.4'):
-            required_files = ['eye.avi','eye_timestamps.npy']
-            eye0_video_path = os.path.join(g_pool.rec_dir,required_files[0])
-            eye0_timestamps_path = os.path.join(g_pool.rec_dir,required_files[1])
+            eye0_video_path = os.path.join(g_pool.rec_dir,'eye.avi')
+            eye0_timestamps_path = os.path.join(g_pool.rec_dir,'eye_timestamps.npy')
         else:
-            required_files = ['eye0.mkv','eye0_timestamps.npy']
-            eye0_video_path = os.path.join(g_pool.rec_dir,required_files[0])
-            eye0_timestamps_path = os.path.join(g_pool.rec_dir,required_files[1])
-            if meta_info.get('Eye Mode','monocular') == 'binocular':
-                required_files += ['eye1.mkv','eye1_timestamps.npy']
-                eye1_video_path = os.path.join(g_pool.rec_dir,required_files[2])
-                eye1_timestamps_path = os.path.join(g_pool.rec_dir,required_files[3])
+            eye0_video_path = os.path.join(g_pool.rec_dir,'eye0.mkv')
+            eye0_timestamps_path = os.path.join(g_pool.rec_dir,'eye0_timestamps.npy')
+            eye1_video_path = os.path.join(g_pool.rec_dir,'eye1.mkv')
+            eye1_timestamps_path = os.path.join(g_pool.rec_dir,'eye1_timestamps.npy')
 
-        # check to see if eye videos exist
-        for f in required_files:
-            if not os.path.isfile(os.path.join(g_pool.rec_dir,f)):
-                logger.error("Did not find required file: '%s' in '%s'."%(f, g_pool.rec_dir))
-                self.alive=False
-                return
-
-        logger.debug("%s contains required eye video(s): %s."%(g_pool.rec_dir,required_files))
 
         # Initialize capture -- for now we just try with monocular
-        self.cap = autoCreateCapture(eye0_video_path,timestamps=eye0_timestamps_path)
+        try:
+            self.cap = autoCreateCapture(eye0_video_path,timestamps=eye0_timestamps_path)
+        except FileCaptureError:
+            logger.error("Could not load eye video.")
+            self.alive = False
+            return
 
-        if isinstance(self.cap,FakeCapture):
-            logger.error("could not start capture.")
-            self.cleanup() # early exit -- no real eye videos
-
+        self._frame = self.cap.get_frame()
         self.width, self.height = self.cap.get_size()
 
         eye0_timestamps = list(np.load(eye0_timestamps_path))
-        self.eye0_frame_index = correlate_eye_world(eye0_timestamps,g_pool.timestamps)
+        self.eye0_world_frame_map = correlate_eye_world(eye0_timestamps,g_pool.timestamps)
 
-
-
-    def init_gui(self):
-        # initialize the menu
-        self.menu = ui.Scrolling_Menu('Eye Video Overlay')
-        # load the configuration of last session
-        self.menu.configuration = self.menu_conf
-        # add menu to the window
-        self.g_pool.gui.append(self.menu)
-        self._update_gui()
 
     def unset_alive(self):
         self.alive = False
 
-    def _update_gui(self):
-        self.menu.elements[:] = []
+    def init_gui(self):
+        # initialize the menu
+        self.menu = ui.Scrolling_Menu('Eye Video Overlay')
+        self.menu.configuration = self.menu_conf
         self.menu.append(ui.Info_Text('Show the eye video overlaid on top of the world video.'))
         self.menu.append(ui.Slider('alpha',self,min=0.0,step=0.05,max=1.0,label='Opacity'))
         self.menu.append(ui.Switch('mirror',self,label="Mirror image"))
         self.menu.append(ui.Button('close',self.unset_alive))
+        # add menu to the window
+        self.g_pool.gui.append(self.menu)
+
 
     def deinit_gui(self):
         if self.menu:
@@ -200,32 +179,33 @@ class Eye_Video_Overlay(Plugin):
             self.menu = None
 
     def update(self,frame,events):
-        requested_eye_frame_idx = self.eye0_frame_index[frame.index]
+        requested_eye_frame_idx = self.eye0_world_frame_map[frame.index]
 
-        if self.last_world_idx != frame.index and requested_eye_frame_idx != frame.index:
-            # seeklogic
+        # do we need a new frame?
+        if requested_eye_frame_idx != self._frame.index:
+            # do we need to seek?
             if requested_eye_frame_idx == self.cap.get_frame_index()+1:
                 # if we just need to seek by one frame, its faster to just read one and and throw it away.
                 _ = self.cap.get_frame()
             if requested_eye_frame_idx != self.cap.get_frame_index():
                # only now do I need to seek
                self.cap.seek_to_frame(requested_eye_frame_idx)
-
-            # reading the frame
+            # reading the new eye frame frame
             try:
                self._frame = self.cap.get_frame()
             except EndofVideoFileError:
                 logger.warning("Reached the end of the eye video.")
-            self.last_world_idx = frame.index
         else:
             #our old frame is still valid because we are doing upsampling
             pass
 
+        # drawing the eye overlay
         pad = 10
         pos = frame.width-self.width-pad, pad
-
-        if self._frame is not None:
-            transparent_image_overlay(pos,np.fliplr(self._frame.img) if self.mirror else self._frame.img,frame.img,self.alpha)
+        if self.mirror:
+            transparent_image_overlay(pos,np.fliplr(self._frame.img),frame.img,self.alpha)
+        else:
+            transparent_image_overlay(pos,self._frame.img,frame.img,self.alpha)
 
 
     def get_init_dict(self):
@@ -243,5 +223,3 @@ class Eye_Video_Overlay(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
-
-
