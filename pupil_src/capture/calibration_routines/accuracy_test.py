@@ -365,9 +365,8 @@ class Accuracy_Test(Calibration_Plugin):
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['norm_gaze'] is not None:
-                    self.gaze_list.append(p_pt)
-
+                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
+                    self.pupil_list.append(p_pt)
             # Animate the screen marker
             if self.screen_marker_state < self.screen_marker_max:
                 if self.detected or not on_position:
