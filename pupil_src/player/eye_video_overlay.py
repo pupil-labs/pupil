@@ -192,12 +192,6 @@ class Eye_Video_Overlay(Plugin):
             self.g_pool.gui.remove(self.menu)
             self.menu = None
 
-    def get_init_dict(self):
-        if self.menu:
-            return {'menu_conf':self.menu.configuration}
-        else:
-            return {'menu_conf':self.menu_conf}
-
     def update(self,frame,events):
         requested_eye_frame_idx = self.eye0_frame_index[frame.index]
         
@@ -241,10 +235,13 @@ class Eye_Video_Overlay(Plugin):
 
 
     def get_init_dict(self):
-        return {'alpha':self.alpha,'mirror':self.mirror,'menu_conf':self.menu.configuration}
+        if self.menu:
+            return {'alpha':self.alpha,'mirror':self.mirror,'menu_conf':self.menu.configuration}
+        else:
+            return {'alpha':self.alpha,'mirror':self.mirror,'menu_conf':self.menu_conf}
 
     def clone(self):
-        return Vis_Circle(**self.get_init_dict())
+        return Eye_Video_Overlay(**self.get_init_dict())
 
     def cleanup(self):
         """ called when the plugin gets terminated.
