@@ -123,7 +123,7 @@ class Eye_Video_Overlay(Plugin):
         self.order = .6
         self.menu = None
         self.menu_conf = menu_conf
-        
+        self.g_pool = g_pool
         # user controls
         self.alpha = alpha
         self.mirror = mirror
@@ -131,26 +131,26 @@ class Eye_Video_Overlay(Plugin):
         self.last_world_idx = None 
         self._frame = None
 
-        if g_pool.rec_version < VersionFormat('0.4'):
+        if self.g_pool.rec_version < VersionFormat('0.4'):
             required_files = ['eye.avi','eye_timestamps.npy']
-            eye0_video_path = os.path.join(g_pool.rec_dir,required_files[0])
-            eye0_timestamps_path = os.path.join(g_pool.rec_dir,required_files[1]) 
+            eye0_video_path = os.path.join(self.g_pool.rec_dir,required_files[0])
+            eye0_timestamps_path = os.path.join(self.g_pool.rec_dir,required_files[1]) 
         else:
             required_files = ['eye0.mkv','eye0_timestamps.npy']
-            eye0_video_path = os.path.join(g_pool.rec_dir,required_files[0])
-            eye0_timestamps_path = os.path.join(g_pool.rec_dir,required_files[1])
-            if g_pool.meta_info['Eye Mode'] == 'binocular':
+            eye0_video_path = os.path.join(self.g_pool.rec_dir,required_files[0])
+            eye0_timestamps_path = os.path.join(self.g_pool.rec_dir,required_files[1])
+            if self.g_pool.meta_info['Eye Mode'] == 'binocular':
                 required_files += ['eye1.mkv','eye1_timestamps.npy']
-                eye1_video_path = os.path.join(g_pool.rec_dir,required_files[2])
-                eye1_timestamps_path = os.path.join(g_pool.rec_dir,required_files[3])        
+                eye1_video_path = os.path.join(self.g_pool.rec_dir,required_files[2])
+                eye1_timestamps_path = os.path.join(self.g_pool.rec_dir,required_files[3])        
 
         # check to see if eye videos exist
         for f in required_files:
-            if not os.path.isfile(os.path.join(g_pool.rec_dir,f)):
-                logger.debug("Did not find required file: ") %(f, g_pool.rec_dir)
+            if not os.path.isfile(os.path.join(self.g_pool.rec_dir,f)):
+                logger.debug("Did not find required file: ") %(f, self.g_pool.rec_dir)
                 self.cleanup() # early exit -- no required files
 
-        logger.debug("%s contains required eye video(s): %s."%(g_pool.rec_dir,required_files))
+        logger.debug("%s contains required eye video(s): %s."%(self.g_pool.rec_dir,required_files))
 
         # Initialize capture -- for now we just try with monocular
         self.cap = autoCreateCapture(eye0_video_path,timestamps=eye0_timestamps_path)
@@ -163,7 +163,7 @@ class Eye_Video_Overlay(Plugin):
         self._image_tex = create_named_texture((self.height,self.width,3))
 
         eye0_timestamps = list(np.load(eye0_timestamps_path))
-        self.eye0_frame_index = correlate_eye_world(eye0_timestamps,g_pool.timestamps)
+        self.eye0_frame_index = correlate_eye_world(eye0_timestamps,self.g_pool.timestamps)
 
 
 
