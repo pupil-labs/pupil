@@ -155,7 +155,7 @@ class Eye_Video_Overlay(Plugin):
         # check to see if eye videos exist
         for f in required_files:
             if not os.path.isfile(os.path.join(g_pool.rec_dir,f)):
-                logger.error("Did not find required file: %s in %s"%(f, g_pool.rec_dir))
+                logger.error("Did not find required file: '%s' in '%s'."%(f, g_pool.rec_dir))
                 self.alive=False
                 return
 
