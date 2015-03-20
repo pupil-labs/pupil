@@ -91,7 +91,7 @@ class Marker_Detector(Plugin):
                     surf_verts = ((0.,0.),(1.,0.),(1.,1.),(0.,1.))
                     x,y = pos
                     for s in self.surfaces:
-                        if s.detected:
+                        if s.detected and s.defined:
                             for (vx,vy),i in zip(s.ref_surface_to_img(np.array(surf_verts)),range(4)):
                                 vx,vy = denormalize((vx,vy),(self.img_shape[1],self.img_shape[0]),flip_y=True)
                                 if sqrt((x-vx)**2 + (y-vy)**2) <15: #img pixels

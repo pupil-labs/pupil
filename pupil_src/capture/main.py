@@ -11,6 +11,7 @@
 import sys, os, platform
 from time import sleep
 from ctypes import c_bool, c_double
+
 if platform.system() == 'Darwin':
     from billiard import Process, Pipe, Queue, Value, freeze_support, forking_enable
 else:
@@ -30,6 +31,7 @@ else:
 	# Specifiy user dirs.
     rec_dir = os.path.join(pupil_base_dir,'recordings')
     user_dir = os.path.join(pupil_base_dir,'capture_settings')
+    version_file = None
 
 
 # create folder for user settings, tmp data and a recordings folder
@@ -38,17 +40,21 @@ if not os.path.isdir(user_dir):
 if not os.path.isdir(rec_dir):
     os.mkdir(rec_dir)
 
+from version_utils import get_version
 
 import logging
 # Set up root logger for the main process before doing imports of logged modules.
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+if 'debug' in sys.argv:
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
 # create file handler which logs even debug messages
 fh = logging.FileHandler(os.path.join(user_dir,'world.log'),mode='w')
-fh.setLevel(logging.DEBUG)
+fh.setLevel(logger.level)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.WARNING)
+ch.setLevel(logger.level+10)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('World Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -78,15 +84,6 @@ else:
     from eye import eye
     from world import world
 
-
-
-#get the current software version
-if getattr(sys, 'frozen', False):
-    with open(version_file) as f:
-        version = f.read()
-else:
-    from git_version import pupil_version
-    version = pupil_version()
 
 class Global_Container(object):
     pass
@@ -125,7 +122,7 @@ def main():
     # make some constants avaiable
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
-    g_pool.version = version
+    g_pool.version = get_version(version_file)
     g_pool.app = 'capture'
     g_pool.binocular = binocular
 

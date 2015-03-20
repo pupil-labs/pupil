@@ -59,7 +59,8 @@ class Frame(object):
 
     _npy_frame = None
 
-    def __init__(self, npy_frame):
+    def __init__(self, timestamp, npy_frame):
+        self.timestamp = timestamp
         self._npy_frame = npy_frame
         self.height, self.width, _ = npy_frame.shape
 
@@ -69,11 +70,11 @@ class Frame(object):
 
     @property
     def gray(self):
-        return cv2.cvtColor(self._npy_frame, cv2.COLOR_BGR2GRAY)
+        return cv2.cvtColor(self._npy_frame, cv2.COLOR_RGB2GRAY)
 
     @property
     def bgr(self):
-        return self._npy_frame
+        return cv2.cvtColor(self._npy_frame, cv2.COLOR_RGB2BGR)
 
 class Camera_Capture(object):
     """
@@ -112,7 +113,7 @@ class Camera_Capture(object):
     def __init__(self, cam, size=(640,480), fps=None, timebase=None):
         self._init(cam, size, fps)
 
-    def _init(self, cam, size=(640,480), fps=None):
+    def _init(self, cam, size=(640,480), fps=None, timebase=None):
         # setting up device
         self.device = cam.device
         self.deviceSettings = vi.DeviceSettings()
@@ -121,10 +122,17 @@ class Camera_Capture(object):
         self.deviceSettings.indexMediaType = 0
         self.captureSettings = vi.CaptureSettings()
         self.captureSettings.readMode = vi.ReadMode.SYNC
-        self.captureSettings.videoFormat = vi.CaptureVideoFormat.RGB24
+        self.captureSettings.videoFormat = vi.CaptureVideoFormat.RGB32
         self.stream = self.device.listStream[self.deviceSettings.indexStream]
 
         # collecting additional information
+        if timebase == None:
+            logger.debug("Capture will run with default system timebase")
+            self.timebase = 0
+        else:
+            logger.debug("Capture will run with app wide adjustable timebase")
+            self.timebase = timebase
+        
         self.width = size[0]
         self.height = size[1]
         self.preferred_fps = fps
@@ -137,7 +145,7 @@ class Camera_Capture(object):
             raise CameraCaptureError("Could not setup device. Error code: %d" %(res))
 
         # creating frame buffer and initializing capture settings
-        frame = np.empty((self.actual_height * self.actual_width * 3), dtype=np.uint8)
+        frame = np.empty((self.actual_height * self.actual_width * 4), dtype=np.uint8)
         self.readSetting = vi.ReadSetting()
         self.readSetting.symbolicLink = self.deviceSettings.symbolicLink
         self.readSetting.setNumpyArray(frame)
@@ -157,15 +165,15 @@ class Camera_Capture(object):
         res = self.context.readPixels(self.readSetting)
         if res == vi.ResultCode.READINGPIXELS_REJECTED_TIMEOUT:
             for n in range(5):
-                logger.debug("Reading frame timed out, retry %d/5" %(n+1))
+                logger.warning("Reading frame timed out, retry %d/5" %(n+1))
                 res = self.context.readPixels(self.readSetting)
                 if res == vi.ResultCode.READINGPIXELS_DONE:
                     break
         if res != vi.ResultCode.READINGPIXELS_DONE:
-            logger.debug("Could not receive frame. Error code: %d" %(res))
-            raise CameraCaptureError("Could not receive frame. Error code: %d" %(res))
-        frame = Frame(self._frame)
-        frame.timestamp = self.get_now()
+            msg = "Could not receive frame. Error code: %d" %(res)
+            logger.error(msg)
+            raise CameraCaptureError(msg)
+        frame = Frame(self.get_now() - self.timebase, self._frame)
         return frame
 
     @property
@@ -176,9 +184,6 @@ class Camera_Capture(object):
         self.preferred_fps = preferred_fps
         self._initMediaTypeId()
 
-    def get_now(self):
-        return time()
-
     @property
     def frame_size(self):
         return (self.actual_width, self.actual_height)
@@ -186,6 +191,8 @@ class Camera_Capture(object):
     def frame_size(self, value):
         raise Exception("Not implemented!")
 
+    def get_now(self):
+        return time()
 
     def init_gui(self,sidebar):
 

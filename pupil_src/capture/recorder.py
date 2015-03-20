@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os, sys
+import os, sys, platform
 import cv2
 from pyglui import ui
 import numpy as np
@@ -223,8 +223,8 @@ class Recorder(Plugin):
             populate_info_menu()
 
         populate_info_menu()
-        self.info_menu.append(ui.Info_Text('Use the field below to add/remove additional fields and their values.'))
-        self.info_menu.append(ui.Text_Input('user_info',self,setter=set_user_info))
+        self.info_menu.append(ui.Info_Text('Use the *user info* field to add/remove additional fields and their values. The format must be a valid Python dictionary. For example -- {"key":"value"}. You can add as many fields as you require. Your custom fields will be saved for your next session.'))
+        self.info_menu.append(ui.Text_Input('user_info',self,setter=set_user_info,label="User info"))
         self.g_pool.gui.append(self.info_menu)
 
     def close_info_menu(self):
@@ -293,7 +293,6 @@ class Recorder(Plugin):
         except:
             logger.info("No camera intrinsics found.")
 
-
         try:
             with open(self.meta_info_path, 'a') as f:
                 f.write("Duration Time\t"+ self.get_rec_time_str()+ "\n")
@@ -305,11 +304,16 @@ class Recorder(Plugin):
                 f.write("World Camera Frames\t"+ str(self.frame_count)+ "\n")
                 f.write("World Camera Resolution\t"+ str(self.width)+"x"+str(self.height)+"\n")
                 f.write("Capture Software Version\t"+ self.g_pool.version + "\n")
-                f.write("User\t"+os.getlogin()+"\n")
-                try:
-                    sysname, nodename, release, version, machine = os.uname()
-                except:
-                    sysname, nodename, release, version, machine = sys.platform,None,None,None,None
+                if platform.system() == "Windows":
+                    username = os.environ["USERNAME"]
+                    sysname, nodename, release, version, machine, _ = platform.uname()
+                else:
+                    username = os.getlogin()
+                    try:
+                        sysname, nodename, release, version, machine = os.uname()
+                    except:
+                        sysname, nodename, release, version, machine = sys.platform,None,None,None,None
+                f.write("User\t"+username+"\n")
                 f.write("Platform\t"+sysname+"\n")
                 f.write("Machine\t"+nodename+"\n")
                 f.write("Release\t"+release+"\n")
@@ -351,11 +355,13 @@ class Recorder(Plugin):
             logger.debug("Expanded user path.")
         except:
             n_path = val
-
         if not n_path:
             logger.warning("Please specify a path.")
         elif not os.path.isdir(n_path):
             logger.warning("This is not a valid path.")
+        # elif not os.access(n_path, os.W_OK):
+        elif not writable_dir(n_path):
+            logger.warning("Do not have write access to '%s'."%n_path)
         else:
             self.g_pool.rec_dir = n_path
 
@@ -367,6 +373,13 @@ class Recorder(Plugin):
                 logger.warning('You session name with create one or more subdirectories')
             self.session_name = val
 
-
+def writable_dir(n_path):
+    try:
+         open(os.path.join(n_path,'dummpy_tmp'), 'w')
+    except IOError:
+         return False
+    else:
+         os.remove(os.path.join(n_path,'dummpy_tmp'))
+         return True
 
 

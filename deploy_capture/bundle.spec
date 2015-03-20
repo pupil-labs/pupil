@@ -72,32 +72,52 @@ elif platform.system() == 'Linux':
                    name='pupil_capture')
 
 elif platform.system() == 'Windows':
+	import sys, os, os.path
+
+	system_path = os.path.join(os.environ['windir'], 'system32')
+
+	python_path = None
+	package_path = None
+	for path in sys.path:
+		if path.endswith("scripts"):
+			python_path = os.path.abspath(os.path.join(path, os.path.pardir))
+		elif path.endswith("site-packages"):
+			package_path = path
+	
+	scipy_imports = ['scipy.integrate']
+	#scipy_imports += ['scipy.integrate._ode', 'scipy.integrate.quadrature', 'scipy.integrate.odepack', 'scipy.integrate._odepack', 'scipy.integrate.quadpack', 'scipy.integrate._quadpack']
+	#scipy_imports += ['scipy.integrate.vode', 'scipy.integrate.lsoda', 'scipy.integrate._dop', 'scipy.special._ufuncs_cxx']
+
 	a = Analysis(['../pupil_src/capture/main.py'],
 	             pathex=['../pupil_src/shared_modules/'],
-	             hiddenimports=['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils'],
+	             hiddenimports=['pyglui.cygl.shader']+scipy_imports,
 	             hookspath=None,
 	             runtime_hooks=None)
+
 	pyz = PYZ(a.pure)
 	exe = EXE(pyz,
 	          a.scripts,
 	          exclude_binaries=True,
 	          name='pupil_capture.exe',
+	          icon='pupil-capture.ico',
 	          debug=False,
 	          strip=None,
 	          upx=True,
-	          console=True )
+	          console=False,
+	          resources=['pupil-capture.ico,ICON,GLFW_ICON'])
 	coll = COLLECT(exe,
 	               a.binaries,
 	               a.zipfiles,
 	               a.datas,
 	               [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
-	               [('_videoInput.lib', 'C:/Python27/_videoInput.lib','BINARY')],
 	               [('glfw3.dll', '../pupil_src/shared_modules/external/glfw3.dll','BINARY')],
 	               [('glfw3.lib', '../pupil_src/shared_modules/external/glfw3.lib','BINARY')],
 	               [('glfw3dll.lib', '../pupil_src/shared_modules/external/glfw3dll.lib','BINARY')],
-	               [('icon.ico', 'linux_icon.ico','DATA')],
-	               [('OpenSans-Regular.ttf','C:/Python27/Lib/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
-                   [('Roboto-Regular.ttf','C:/Python27/Lib/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
+	               [('_videoInput.lib', os.path.join(python_path, '_videoInput.lib'),'BINARY')],
+	               [('msvcp110.dll', os.path.join(system_path, 'msvcp110.dll'),'BINARY')],
+	               [('msvcr110.dll', os.path.join(system_path, 'msvcr110.dll'),'BINARY')],
+	               [('OpenSans-Regular.ttf', os.path.join(package_path, 'pyglui/OpenSans-Regular.ttf'),'DATA')],
+                   [('Roboto-Regular.ttf', os.path.join(package_path, 'pyglui/Roboto-Regular.ttf'),'DATA')],
 	               strip=None,
 	               upx=True,
 	               name='Pupil Capture')

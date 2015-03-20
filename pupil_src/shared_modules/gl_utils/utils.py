@@ -332,7 +332,7 @@ def draw_named_texture(texture_id, image=None, interpolation=True, quad=((0.,0.)
 def draw_gl_texture(image,interpolation=True):
     """
     We draw the image as a texture on a quad from 0,0 to img.width,img.height.
-    Simple anaymos texture one time use. Look at named texture fn's for better perfomance
+    Simple anonymous texture one time use. Look at named texture fn's for better perfomance
     """
 
 
@@ -388,21 +388,29 @@ def draw_gl_texture(image,interpolation=True):
     glDisable(GL_TEXTURE_2D)
 
 
-def make_coord_system_pixel_based(img_shape):
+def make_coord_system_pixel_based(img_shape,flip=False):
     height,width,channels = img_shape
     # Set Projection Matrix
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    glOrtho(0, width, height, 0,-1,1) # origin in the top left corner just like the img np-array
+    if flip:
+        glOrtho(width,0, 0, height,-1,1) # origin in the top left corner just like the img np-array
+    else:
+        glOrtho(0, width, height, 0,-1,1) # origin in the top left corner just like the img np-array
+
     # Switch back to Model View Matrix
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
 
-def make_coord_system_norm_based():
+def make_coord_system_norm_based(flip=False):
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
+    if flip:
+        glOrtho(1, 0, 1, 0,-1,1) # gl coord convention
+    else:
+        glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
+
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 

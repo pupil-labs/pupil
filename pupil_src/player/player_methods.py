@@ -113,7 +113,7 @@ def is_pupil_rec_dir(data_dir):
 
 # backwards compatibility tools:
 
-def patch_meta_info(data_dir):
+def patch_meta_info(rec_dir):
     #parse info.csv file
 
     '''
@@ -144,7 +144,7 @@ def patch_meta_info(data_dir):
                     'Release',
                     'Version']
 
-    with open(data_dir + "/info.csv") as info:
+    with open(rec_dir + "/info.csv") as info:
         meta_info = [line.strip().split('\t') for line in info.readlines() ]
 
     for entry in meta_info:
@@ -160,7 +160,7 @@ def patch_meta_info(data_dir):
     for e in meta_info:
         new_info += e[0]+'\t'+e[1]+'\n'
 
-    with open(data_dir + "/info.csv",'w') as info:
+    with open(rec_dir + "/info.csv",'w') as info:
         info.write(new_info)
 
 def convert_gaze_pos(gaze_list,capture_version):

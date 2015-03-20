@@ -72,15 +72,15 @@ class Pupil_Remote(Plugin):
                 rec_name = msg[2:]
                 if rec_name:
                     self.g_pool.rec_name = rec_name
-                for p in g_pool.plugins:
+                for p in self.g_pool.plugins:
                     if p.class_name == 'Recorder':
                         p.toggle()
                         break
             elif msg == 'T':
                 self.g_pool.timebase.value = self.g_pool.capture.get_now()
-                logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
+                logger.info("New timebase set to %s all timestamps will count from here now."%self.g_pool.timebase.value)
             elif msg == 'C':
-                for p in g_pool.plugins:
+                for p in self.g_pool.plugins:
                     if p.base_class_name == 'Calibration_Plugin':
                         p.toggle()
                         break
