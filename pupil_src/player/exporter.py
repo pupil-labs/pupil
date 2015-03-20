@@ -136,6 +136,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,start_frame=
 
     g = Temp()
     g.app = 'exporter'
+    g.rec_dir = rec_dir
     g.rec_version = rec_version
     g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
 
