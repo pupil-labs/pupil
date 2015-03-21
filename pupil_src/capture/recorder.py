@@ -303,7 +303,7 @@ class Recorder(Plugin):
                 f.write("Duration Time\t"+ self.get_rec_time_str()+ "\n")
                 f.write("World Camera Frames\t"+ str(self.frame_count)+ "\n")
                 f.write("World Camera Resolution\t"+ str(self.width)+"x"+str(self.height)+"\n")
-                f.write("Capture Software Version\t"+ self.g_pool.version + "\n")
+                f.write("Capture Software Version\t%s\n"%self.g_pool.version)
                 if platform.system() == "Windows":
                     username = os.environ["USERNAME"]
                     sysname, nodename, release, version, machine, _ = platform.uname()
