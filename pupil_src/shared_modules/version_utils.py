@@ -39,7 +39,7 @@ def dpkg_deb_version():
         parts = version.split('-')
         parts[-2] = '-'+parts[-2]
         version = '.'.join(parts[:-2])
-        version = version[1:]+parts[-2]
+        version += parts[-2]
     return version
 
 
