@@ -66,7 +66,7 @@ class Frame(object):
 
     @property
     def img(self):
-        return self._npy_frame
+        return cv2.cvtColor(self._npy_frame, cv2.COLOR_RGBA2RGB)
 
     @property
     def gray(self):
