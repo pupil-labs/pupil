@@ -36,10 +36,15 @@ if os_name == "Linux":
 
     if 'Ubuntu' in platform.linux_distribution():
         def beep():
-            sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
-
+            try:
+                sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
+            except OSError:
+                logger.warning("Soundfile not found.")
         def tink():
-            sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/button-pressed.ogg"])
+            try:
+                sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/button-pressed.ogg"])
+            except OSError:
+                logger.warning("Soundfile not found.")
 
         def say(message):
             try:
