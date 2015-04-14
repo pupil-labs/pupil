@@ -85,9 +85,6 @@ class Vis_Light_Points(Plugin):
     def get_init_dict(self):
         return {'falloff': self.falloff, 'menu_conf':self.menu.configuration}
 
-    def clone(self):
-        return Vis_Light_Points(**self.get_init_dict())
-
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happens either voluntarily or forced.

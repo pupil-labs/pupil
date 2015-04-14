@@ -79,9 +79,6 @@ class Vis_Cross(Plugin):
     def get_init_dict(self):
         return {'inner':self.inner,'outer':self.outer,'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness, 'menu_conf':self.menu.configuration}
 
-    def clone(self):
-        return Vis_Cross(**self.get_init_dict())
-
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happens either voluntarily or forced.

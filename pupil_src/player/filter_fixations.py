@@ -102,8 +102,6 @@ class Filter_Fixations(Plugin):
     def get_init_dict(self):
         return {'distance':self.distance, 'menu_conf':self.menu.configuration}
 
-    def clone(self):
-        return Filter_Fixations(**self.get_init_dict())
 
     def cleanup(self):
         """ called when the plugin gets terminated.

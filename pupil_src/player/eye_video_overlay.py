@@ -214,9 +214,6 @@ class Eye_Video_Overlay(Plugin):
         else:
             return {'alpha':self.alpha,'mirror':self.mirror,'menu_conf':self.menu_conf}
 
-    def clone(self):
-        return Eye_Video_Overlay(**self.get_init_dict())
-
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happens either voluntarily or forced.

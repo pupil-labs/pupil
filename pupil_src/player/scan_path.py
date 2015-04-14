@@ -118,9 +118,6 @@ class Scan_Path(Plugin):
     def get_init_dict(self):
         return {'timeframe':self.timeframe, 'menu_conf':self.menu.configuration}
 
-    def clone(self):
-        return Scan_Path(**self.get_init_dict())
-
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happens either voluntarily or forced.

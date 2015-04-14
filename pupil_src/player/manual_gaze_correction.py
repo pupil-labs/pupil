@@ -63,8 +63,6 @@ class Manual_Gaze_Correction(Plugin):
     def get_init_dict(self):
         return {'x_offset':self.x_offset,'y_offset':self.y_offset,'menu_conf':self.menu.configuration}
 
-    def clone(self):
-        return Manual_Gaze_Correction(**self.get_init_dict())
 
     def cleanup(self):
         """ called when the plugin gets terminated.
