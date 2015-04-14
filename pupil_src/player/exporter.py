@@ -35,12 +35,14 @@ from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
 from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
+from vis_watermark import Vis_Watermark
+
 from scan_path import Scan_Path
 from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
 from eye_video_overlay import Eye_Video_Overlay
 
-available_plugins =  Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Eye_Video_Overlay
+available_plugins =  Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points, Vis_Watermark, Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Eye_Video_Overlay
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
@@ -48,7 +50,7 @@ plugin_by_name = dict(zip(name_by_index,available_plugins))
 class Global_Container(object):
         pass
 
-def export(should_terminate,frames_to_export,current_frame, rec_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
+def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
@@ -124,6 +126,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,start_frame=
     g = Global_Container()
     g.app = 'exporter'
     g.rec_dir = rec_dir
+    g.user_dir = user_dir
     g.rec_version = rec_version
     g.timestamps = timestamps
     g.gaze_list = gaze_list

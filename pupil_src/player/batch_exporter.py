@@ -148,6 +148,8 @@ class Batch_Exporter(Plugin):
             start_frame = None
             end_frame = None
             export_dir = d
+            user_dir = self.g_pool.user_dir
+
             #we need to know the timestamps of our exports.
             try: # 0.4
                 frames_to_export.value = len(np.load(os.path.join(export_dir,'world_timestamps.npy')))
@@ -169,7 +171,7 @@ class Batch_Exporter(Plugin):
                 outfiles.add(out_file_path)
                 logger.info("Exporting to: %s"%out_file_path)
 
-                process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, export_dir,start_frame,end_frame,plugins,out_file_path))
+                process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, export_dir,user_dir,start_frame,end_frame,plugins,out_file_path))
                 self.exports.append(process)
 
     def start(self):
