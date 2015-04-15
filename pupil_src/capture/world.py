@@ -97,8 +97,7 @@ def world(g_pool,cap_src,cap_size):
 
 
     def on_iconify(window,iconfied):
-        if not isinstance(cap,FakeCapture):
-            g_pool.update_textures = not iconfied
+        pass
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key,scancode,action,mods)
@@ -147,10 +146,9 @@ def world(g_pool,cap_src,cap_size):
 
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
-    g_pool.update_textures = 2
+    g_pool.update_textures = session_settings.get("update_textures",2)
 
-    if isinstance(cap,FakeCapture):
-        g_pool.update_textures = 0
+
     g_pool.capture = cap
     g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
     g_pool.active_calibration_plugin = None
@@ -357,6 +355,7 @@ def world(g_pool,cap_src,cap_size):
     session_settings['calibration_menu_config']=g_pool.calibration_menu.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
+    session_settings['update_textures'] = g_pool.update_textures
     session_settings.close()
 
     # de-init all running plugins
