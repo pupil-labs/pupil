@@ -29,20 +29,12 @@ class Show_Calibration(Plugin):
         super(Show_Calibration, self).__init__(g_pool)
         self.menu=None
 
+        width,height = self.g_pool.capture.frame_size
 
-        try:
-            width,height = self.g_pool.capture.frame_size
-        except AttributeError:
-            logger.warning("Works only with real capture")
-            self.close()
-            return
         if g_pool.app == 'capture':
             cal_pt_path =  os.path.join(g_pool.user_dir,"cal_pt_cloud.npy")
         else:
-            # cal_pt_path =  os.path.join(g_pool.rec_dir,"cal_pt_cloud.npy")
-            logger.error('Plugin only works in capture.')
-            self.close()
-            return
+            cal_pt_path =  os.path.join(g_pool.rec_dir,"cal_pt_cloud.npy")
 
         try:
             cal_pt_cloud = np.load(cal_pt_path)

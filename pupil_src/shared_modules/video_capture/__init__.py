@@ -9,7 +9,7 @@
 '''
 
 """
-uvc_capture is a module that extends opencv"s camera_capture for mac and windows
+video_capture is a module that extends opencv"s camera_capture for mac and windows
 on Linux it repleaces it completelty.
 it adds some fuctionalty like:
     - access to all uvc controls
