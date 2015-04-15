@@ -72,6 +72,11 @@ class Vis_Watermark(Plugin):
             self.pos[0] = pos[0]+self.drag_offset[0]
             self.pos[1] = pos[1]+self.drag_offset[1]
 
+
+        #keep in image bounds, do this even when not dragging becasue the image sizes could change.
+        self.pos[1] = min(frame.img.shape[0]-self.watermark.shape[0],max(self.pos[1],0))
+        self.pos[0] = min(frame.img.shape[1]-self.watermark.shape[1],max(self.pos[0],0))
+
         if self.watermark is not None:
             img  = frame.img
             roi = slice(self.pos[1],self.pos[1]+self.watermark.shape[0]),slice(self.pos[0],self.pos[0]+self.watermark.shape[1])
@@ -99,7 +104,8 @@ class Vis_Watermark(Plugin):
         if self.watermark is None:
             self.menu.append(ui.Info_Text("Please save a .png file in the users settings dir: '%s' in RGBA format. Once this plugin is closed and re-loaded the png will be used as a watermark."%self.g_pool.user_dir))
         else:
-            self.menu.append(ui.Selector("watermark_path",self,selection= self.available_files,setter=self.load_watermark))
+            if len(self.available_files) > 1:
+                self.menu.append(ui.Selector("watermark_path",self,label='file',selection= self.available_files,labels= [os.path.basename(p) for p in self.available_files], setter=self.load_watermark))
             self.menu.append(ui.Switch('move_watermark',self))
 
     def deinit_gui(self):
