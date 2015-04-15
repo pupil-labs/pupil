@@ -83,7 +83,7 @@ from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_nam
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 
 #capture
-from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
+from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version

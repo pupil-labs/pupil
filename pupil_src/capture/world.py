@@ -38,7 +38,7 @@ import psutil
 
 # helpers/utils
 from methods import normalize, denormalize,Temp
-from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
+from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 from audio import Audio_Input_List
 
 

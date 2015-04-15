@@ -21,7 +21,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
     logger.debug('Started cacher process for Marker Detector')
     import cv2
-    from uvc_capture import autoCreateCapture, EndofVideoFileError,FileSeekError
+    from video_capture import autoCreateCapture, EndofVideoFileError,FileSeekError
     from square_marker_detect import detect_markers_robust
     min_marker_perimeter = 80
     aperture = 9

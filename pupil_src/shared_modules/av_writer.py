@@ -145,7 +145,7 @@ def test():
 
     import os
     import cv2
-    from uvc_capture import autoCreateCapture
+    from video_capture import autoCreateCapture
     logging.basicConfig(level=logging.DEBUG)
 
     writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out.mp4"))

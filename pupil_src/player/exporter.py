@@ -20,7 +20,7 @@ import os
 from time import time
 import cv2
 import numpy as np
-from uvc_capture import autoCreateCapture,EndofVideoFileError
+from video_capture import autoCreateCapture,EndofVideoFileError
 from player_methods import correlate_gaze,correlate_gaze_legacy
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version

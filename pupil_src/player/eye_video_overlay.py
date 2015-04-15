@@ -20,7 +20,7 @@ from plugin import Plugin
 from version_utils import VersionFormat
 
 #capture
-from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture,FileCaptureError
+from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture,FileCaptureError
 
 #logging
 import logging
