@@ -110,11 +110,12 @@ from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from pupil_server import Pupil_Server
 from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
+from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
 
 system_plugins = Seek_Bar,Trim_Marks
-user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Vis_Watermark, Manual_Gaze_Correction,Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
+user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
@@ -226,7 +227,7 @@ def main():
         logger.error("could not start capture.")
         return
 
-    width,height = session_settings.get('window_size',cap.get_size())
+    width,height = session_settings.get('window_size',cap.frame_size)
     window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
 
 
@@ -312,7 +313,7 @@ def main():
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
-    g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.get_size()[0],cap.get_size()[1])) )
+    g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
 
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))

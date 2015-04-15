@@ -83,19 +83,23 @@ class Camera_Capture():
         timestamp = time()
         return Frame(timestamp,img)
 
-    def set_size(self,size):
+
+    @property
+    def frame_size(self):
+        return self.capture.get(3), self.capture.get(4)
+    @frame_size.setter
+    def frame_size(self, value):
         width,height = size
         self.capture.set(3, width)
         self.capture.set(4, height)
 
-    def get_size(self):
-        return self.capture.get(3), self.capture.get(4)
-
-    def set_fps(self,fps):
-        self.capture.set(5,fps)
-
-    def get_fps(self):
+    @property
+    def frame_rate(self):
+        #return rate as denominator only
         return self.capture.get(5)
+    @frame_rate.setter
+    def frame_rate(self, rate):
+        self.capture.set(5,fps)
 
     def get_now(self):
         return time()

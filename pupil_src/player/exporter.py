@@ -81,7 +81,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
         positions_by_frame = correlate_gaze(gaze_list,timestamps)
 
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-    width,height = cap.get_size()
+    width,height = cap.frame_size
 
     #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
     if out_file_path is None:

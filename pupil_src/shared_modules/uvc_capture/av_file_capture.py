@@ -111,16 +111,15 @@ class File_Capture():
         self.next_frame = self._next_frame()
 
 
-    def get_size(self):
+    @property
+    def frame_size(self):
         if self.video_stream:
             return int(self.videostream.format.width),int(self.videostream.format.height)
         else:
             logger.error("No videostream.")
 
-    def set_fps(self):
-        logger.warning("You cannot set the Framerate on this File Capture")
-
-    def get_fps(self):
+    @property
+    def frame_rate(self):
         if self.video_stream:
             return float(self.videostream.average_rate)
         else:

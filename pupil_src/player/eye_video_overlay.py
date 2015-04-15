@@ -151,7 +151,7 @@ class Eye_Video_Overlay(Plugin):
             return
 
         self._frame = self.cap.get_frame()
-        self.width, self.height = self.cap.get_size()
+        self.width, self.height = self.cap.frame_size
 
         eye0_timestamps = list(np.load(eye0_timestamps_path))
         self.eye0_world_frame_map = correlate_eye_world(eye0_timestamps,g_pool.timestamps)

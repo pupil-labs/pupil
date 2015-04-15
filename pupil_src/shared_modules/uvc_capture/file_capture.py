@@ -95,20 +95,23 @@ class File_Capture():
             self.timestamps = None
 
 
-    def get_size(self):
+
+    @property
+    def frame_rate(self):
+        #return rate as denominator only
+        fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)
+        if fps == 0:
+            logger.error("Could not load media framerate info.")
+        return fps
+
+
+    @property
+    def frame_size(self):
         width,height = int(self.cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)),int(self.cap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
         if width == 0:
             logger.error("Could not load media size info.")
         return width,height
 
-    def set_fps(self):
-        logger.warning("You cannot set the Framerate on this File Capture")
-
-    def get_fps(self):
-        fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)
-        if fps == 0:
-            logger.error("Could not load media framerate info.")
-        return fps
 
     def get_frame_index(self):
         return int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
