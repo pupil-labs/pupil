@@ -73,11 +73,11 @@ class Vis_Watermark(Plugin):
             self.pos[1] = pos[1]+self.drag_offset[1]
 
 
-        #keep in image bounds, do this even when not dragging becasue the image sizes could change.
-        self.pos[1] = min(frame.img.shape[0]-self.watermark.shape[0],max(self.pos[1],0))
-        self.pos[0] = min(frame.img.shape[1]-self.watermark.shape[1],max(self.pos[0],0))
-
         if self.watermark is not None:
+            #keep in image bounds, do this even when not dragging becasue the image sizes could change.
+            self.pos[1] = min(frame.img.shape[0]-self.watermark.shape[0],max(self.pos[1],0))
+            self.pos[0] = min(frame.img.shape[1]-self.watermark.shape[1],max(self.pos[0],0))
+
             img  = frame.img
             roi = slice(self.pos[1],self.pos[1]+self.watermark.shape[0]),slice(self.pos[0],self.pos[0]+self.watermark.shape[1])
             img[roi] = self.watermark*self.alpha_mask + img[roi]*(1-self.alpha_mask)
