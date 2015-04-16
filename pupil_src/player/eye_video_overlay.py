@@ -20,7 +20,7 @@ from plugin import Plugin
 from version_utils import VersionFormat
 
 #capture
-from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture,FileCaptureError
+from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture,FileCaptureError
 
 #logging
 import logging
@@ -151,7 +151,7 @@ class Eye_Video_Overlay(Plugin):
             return
 
         self._frame = self.cap.get_frame()
-        self.width, self.height = self.cap.get_size()
+        self.width, self.height = self.cap.frame_size
 
         eye0_timestamps = list(np.load(eye0_timestamps_path))
         self.eye0_world_frame_map = correlate_eye_world(eye0_timestamps,g_pool.timestamps)
@@ -213,9 +213,6 @@ class Eye_Video_Overlay(Plugin):
             return {'alpha':self.alpha,'mirror':self.mirror,'menu_conf':self.menu.configuration}
         else:
             return {'alpha':self.alpha,'mirror':self.mirror,'menu_conf':self.menu_conf}
-
-    def clone(self):
-        return Eye_Video_Overlay(**self.get_init_dict())
 
     def cleanup(self):
         """ called when the plugin gets terminated.

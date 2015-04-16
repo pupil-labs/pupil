@@ -68,6 +68,7 @@ class Accuracy_Test(Calibration_Plugin):
         self.screen_marker_max = 70 # maximum bound for state
         self.active_site = 0
         self.sites = []
+        self.gaze_list = []
         self.display_pos = None
         self.on_position = False
 
@@ -79,8 +80,8 @@ class Accuracy_Test(Calibration_Plugin):
         self.fov = 90. #taken from c930e specsheet, confirmed though mesurement within ~10deg.
         self.res =  1.
         self.outlier_thresh = 5.
-        self.accuray = 0
-        self.percision = 0
+        self.accuracy = 0
+        self.precision = 0
 
         try:
             self.pt_cloud = np.load(os.path.join(self.g_pool.user_dir,'accuracy_test_pt_cloud.npy'))
@@ -113,7 +114,7 @@ class Accuracy_Test(Calibration_Plugin):
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
 
         #primary_monitor = glfwGetPrimaryMonitor()
-        self.info = ui.Info_Text("Measure gaze mapping accuracy and percision using a screen based animation: After having calibrated on the screen run this test. To compute results set your world cam FOV and click 'calculate results'.")
+        self.info = ui.Info_Text("Measure gaze mapping accuracy and precision using a screen based animation: After having calibrated on the screen run this test. To compute results set your world cam FOV and click 'calculate results'.")
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
@@ -136,20 +137,20 @@ class Accuracy_Test(Calibration_Plugin):
         submenu.append(ui.Slider('outlier_thresh',self,label='outlier threshold deg',min=0,max=10))
         submenu.append(ui.Button('calculate result',self.calc_result))
 
-        accuray_help ='''Accuracy is calculated as the average angular
+        accuracy_help ='''Accuracy is calculated as the average angular
                         offset (distance) (in degrees of visual angle)
                         between fixations locations and the corresponding
                         locations of the fixation targets.'''.replace("\n"," ").replace("    ",'')
 
-        percision_help = '''Precision is calculated as the Root Mean Square (RMS)
+        precision_help = '''Precision is calculated as the Root Mean Square (RMS)
                             of the angular distance (in degrees of visual angle)
                             between successive samples during a fixation.'''.replace("\n"," ").replace("    ",'')
 
-        submenu.append(ui.Info_Text(accuray_help))
-        submenu.append(ui.Text_Input('angular accuray',getter=lambda:str(self.accuray) ) )
+        submenu.append(ui.Info_Text(accuracy_help))
+        submenu.append(ui.Text_Input('angular accuracy',getter=lambda:str(self.accuracy) ) )
         submenu[-1].read_only = True
-        submenu.append(ui.Info_Text(percision_help))
-        submenu.append(ui.Text_Input('diagonal resolution',getter=lambda:str(self.percision) ) )
+        submenu.append(ui.Info_Text(precision_help))
+        submenu.append(ui.Text_Input('diagonal resolution',getter=lambda:str(self.precision) ) )
         submenu[-1].read_only = True
         self.menu.append(submenu)
 
@@ -268,7 +269,7 @@ class Accuracy_Test(Calibration_Plugin):
     def calc_result(self):
         #lets denormalize:
         # test world cam resolution
-        if self.pt_cloud == None:
+        if self.pt_cloud is None:
             logger.warning("Please run test first!")
             return
 
@@ -293,16 +294,16 @@ class Accuracy_Test(Calibration_Plugin):
         error_lines = np.array([[g,r] for g,r in zip(gaze,ref)])
         error_lines = error_lines.reshape(-1,2)
         error_mag = sp.distance.cdist(gaze,ref).diagonal().copy()
-        accuray_pix = np.mean(error_mag)
-        logger.info("Gaze error mean in world camera pixel: %f"%accuray_pix)
+        accuracy_pix = np.mean(error_mag)
+        logger.info("Gaze error mean in world camera pixel: %f"%accuracy_pix)
         error_mag /= px_per_degree
         logger.info('Error in degrees: %s'%error_mag)
         logger.info('Outliers: %s'%np.where(error_mag>=self.outlier_thresh))
-        self.accuray = np.mean(error_mag[error_mag<self.outlier_thresh])
-        logger.info('Angular accuray: %s'%self.accuray)
+        self.accuracy = np.mean(error_mag[error_mag<self.outlier_thresh])
+        logger.info('Angular accuracy: %s'%self.accuracy)
 
 
-        #lets calculate percision:  (RMS of distance of succesive samples.)
+        #lets calculate precision:  (RMS of distance of succesive samples.)
         # This is a little rough as we do not compensate headmovements in this test.
 
         # Precision is calculated as the Root Mean Square (RMS)
@@ -316,8 +317,8 @@ class Accuracy_Test(Calibration_Plugin):
         # if the gaze dis is to big we can assume human error
         # both times gaze data is not valid for this mesurement
         succesive_distances =  succesive_distances_gaze[np.logical_and(succesive_distances_gaze< 1., succesive_distances_ref< .1)]
-        self.percision = np.sqrt(np.mean(succesive_distances**2))
-        logger.info("Angular percision: %s"%self.percision)
+        self.precision = np.sqrt(np.mean(succesive_distances**2))
+        logger.info("Angular precision: %s"%self.precision)
 
     def close_window(self):
         if self._window:
@@ -327,7 +328,7 @@ class Accuracy_Test(Calibration_Plugin):
 
     def update(self,frame,events):
 
-        recent_pupil_positions = events['pupil_positions']
+        recent_pupil_positions = events['gaze']
 
         #get world image size for error fitting later.
         if self.world_size is None:
@@ -366,7 +367,7 @@ class Accuracy_Test(Calibration_Plugin):
             #always save pupil positions
             for p_pt in recent_pupil_positions:
                 if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
-                    self.pupil_list.append(p_pt)
+                    self.gaze_list.append(p_pt)
             # Animate the screen marker
             if self.screen_marker_state < self.screen_marker_max:
                 if self.detected or not on_position:
@@ -483,33 +484,33 @@ class Accuracy_Test(Calibration_Plugin):
         self.deinit_gui()
 
 
-def preprocess_data_gaze(gaze_pts,ref_pts):
+def preprocess_data_gaze(pupil_pts,ref_pts):
     '''small utility function to deal with timestamped but uncorrelated data
-    input must be lists that contain dicts with at least "timestamp",'norm_pos' and "norm_gaze""
+    input must be lists that contain dicts with at least "timestamp" and "norm_pos"
     '''
-    correlated_data = []
+    cal_data = []
 
     if len(ref_pts)<=2:
-        return correlated_data
+        return cal_data
 
     cur_ref_pt = ref_pts.pop(0)
     next_ref_pt = ref_pts.pop(0)
     while True:
         matched = []
-        while gaze_pts:
+        while pupil_pts:
             #select all points past the half-way point between current and next ref data sample
-            if gaze_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
-                matched.append(gaze_pts.pop(0))
+            if pupil_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
+                matched.append(pupil_pts.pop(0))
             else:
                 for p_pt in matched:
                     #only use close points
                     if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                        data_pt = p_pt["norm_gaze"][0], p_pt["norm_gaze"][1],cur_ref_pt['norm_pos'][0],cur_ref_pt['norm_pos'][1],cur_ref_pt['site']
-                        correlated_data.append(data_pt)
+                        data_pt = p_pt["norm_pos"][0], p_pt["norm_pos"][1],cur_ref_pt['norm_pos'][0],cur_ref_pt['norm_pos'][1]
+                        cal_data.append(data_pt)
                 break
         if ref_pts:
             cur_ref_pt = next_ref_pt
             next_ref_pt = ref_pts.pop(0)
         else:
             break
-    return correlated_data
+    return cal_data

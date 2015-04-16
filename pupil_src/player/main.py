@@ -83,7 +83,7 @@ from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_nam
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 
 #capture
-from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
+from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
@@ -100,6 +100,7 @@ from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
 from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
+from vis_watermark import Vis_Watermark
 from seek_bar import Seek_Bar
 from trim_marks import Trim_Marks
 from export_launcher import Export_Launcher
@@ -109,11 +110,12 @@ from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from pupil_server import Pupil_Server
 from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
+from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
 
 system_plugins = Seek_Bar,Trim_Marks
-user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
+user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
@@ -148,7 +150,7 @@ def main():
     def on_button(window,button, action, mods):
         g_pool.gui.update_button(button,action,mods)
         pos = glfwGetCursorPos(window)
-        pos = normalize(pos,glfwGetWindowSize(main_window))
+        pos = normalize(pos,glfwGetWindowSize(window))
         pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
         for p in g_pool.plugins:
             p.on_click(pos,button,action)
@@ -225,7 +227,7 @@ def main():
         logger.error("could not start capture.")
         return
 
-    width,height = session_settings.get('window_size',cap.get_size())
+    width,height = session_settings.get('window_size',cap.frame_size)
     window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
 
 
@@ -311,7 +313,7 @@ def main():
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
-    g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.get_size()[0],cap.get_size()[1])) )
+    g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
 
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))

@@ -8,17 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-"""
-uvc_capture is a module that extends opencv"s camera_capture for mac and windows
-on Linux it repleaces it completelty.
-it adds some fuctionalty like:
-    - access to all uvc controls
-    - assosication by name patterns instead of id's (0,1,2..)
-it requires:
-    - opencv 2.3+
-    - on Linux: v4l2-ctl (via apt-get install v4l2-util)
-    - on MacOS: uvcc (binary is distributed with this module)
-"""
+
 import os,sys
 import cv2
 import numpy as np
@@ -95,20 +85,23 @@ class File_Capture():
             self.timestamps = None
 
 
-    def get_size(self):
+
+    @property
+    def frame_rate(self):
+        #return rate as denominator only
+        fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)
+        if fps == 0:
+            logger.error("Could not load media framerate info.")
+        return fps
+
+
+    @property
+    def frame_size(self):
         width,height = int(self.cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)),int(self.cap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
         if width == 0:
             logger.error("Could not load media size info.")
         return width,height
 
-    def set_fps(self):
-        logger.warning("You cannot set the Framerate on this File Capture")
-
-    def get_fps(self):
-        fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)
-        if fps == 0:
-            logger.error("Could not load media framerate info.")
-        return fps
 
     def get_frame_index(self):
         return int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))

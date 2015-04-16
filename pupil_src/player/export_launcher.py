@@ -32,7 +32,7 @@ class Export_Process(Process):
     """small aditions to the process class"""
     def __init__(self, target,args):
         super(Export_Process, self).__init__(target=target,args=args)
-        self.should_terminate,self.frames_to_export,self.current_frame,_,_,_,_,self.out_file_path = args
+        self.should_terminate,self.frames_to_export,self.current_frame,_,_,_,_,_,self.out_file_path = args
 
     def status(self):
         return self.current_frame.value
@@ -139,6 +139,7 @@ class Export_Launcher(Plugin):
         current_frame = Value(c_int,0)
 
         rec_dir = self.g_pool.rec_dir
+        user_dir = self.g_pool.user_dir
         start_frame= self.g_pool.trim_marks.in_mark
         end_frame= self.g_pool.trim_marks.out_mark+1 #end_frame is exclusive
         frames_to_export.value = end_frame-start_frame
@@ -148,7 +149,7 @@ class Export_Launcher(Plugin):
         plugins = self.g_pool.plugins.get_initializers()
 
         out_file_path=verify_out_file_path(self.rec_name,self.g_pool.rec_dir)
-        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,start_frame,end_frame,plugins,out_file_path))
+        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame,end_frame,plugins,out_file_path))
         self.new_export = process
 
     def launch_export(self, new_export):

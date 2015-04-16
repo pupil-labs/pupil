@@ -8,17 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-"""
-uvc_capture is a module that extends opencv"s camera_capture for mac and windows
-on Linux it repleaces it completelty.
-it adds some fuctionalty like:
-    - access to all uvc controls
-    - assosication by name patterns instead of id's (0,1,2..)
-it requires:
-    - opencv 2.3+
-    - on Linux: v4l2-ctl (via apt-get install v4l2-util)
-    - on MacOS: uvcc (binary is distributed with this module)
-"""
 import os,sys
 import av
 import numpy as np
@@ -111,16 +100,15 @@ class File_Capture():
         self.next_frame = self._next_frame()
 
 
-    def get_size(self):
+    @property
+    def frame_size(self):
         if self.video_stream:
             return int(self.videostream.format.width),int(self.videostream.format.height)
         else:
             logger.error("No videostream.")
 
-    def set_fps(self):
-        logger.warning("You cannot set the Framerate on this File Capture")
-
-    def get_fps(self):
+    @property
+    def frame_rate(self):
         if self.video_stream:
             return float(self.videostream.average_rate)
         else:

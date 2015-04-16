@@ -85,9 +85,6 @@ class Vis_Circle(Plugin):
     def get_init_dict(self):
         return {'radius':self.radius,'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness,'fill':self.fill, 'menu_conf':self.menu.configuration}
 
-    def clone(self):
-        return Vis_Circle(**self.get_init_dict())
-
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happens either voluntarily or forced.

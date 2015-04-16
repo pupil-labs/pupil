@@ -34,7 +34,7 @@ import psutil
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based
 from OpenGL.GL import GL_LINE_LOOP
 from methods import *
-from uvc_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
+from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
 # Pupil detectors
 from pupil_detectors import Canny_Detector

@@ -33,14 +33,15 @@ def dpkg_deb_version():
     version = get_tag_commit()
     if version is None:
         raise ValueError('Version Error')
+    version = version.replace("\n",'')#strip newlines
+    version = version.replace("v",'')#strip version 'v' 
     if '-' in version:
         parts = version.split('-')
         parts[-2] = '-'+parts[-2]
         version = '.'.join(parts[:-2])
-        version = version[1:]+parts[-2]
-        return version
-    else:
-        return version[1:]
+        version += parts[-2]
+    return version
+
 
 def pupil_version():
     '''
@@ -49,13 +50,13 @@ def pupil_version():
     version = get_tag_commit()
     if version is None:
         raise ValueError('Version Error')
+    version = version.replace("\n",'')#strip newlines
+    version = version.replace("v",'')#strip version 'v' 
     if '-' in version:
         parts = version.split('-')
         version = '.'.join(parts[:-1])
-        version = version[1:]
-        return version
-    else:
-        return version[1:]
+    return version
+
 
 def get_version(version_file=None):
     #get the current software version

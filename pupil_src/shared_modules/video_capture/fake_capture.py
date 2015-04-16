@@ -89,7 +89,8 @@ class FakeCapture(object):
         self.presentation_time = time()
         return Frame(time()-self.timebase.value,self.img.copy())
 
-    def get_size(self):
+    @property
+    def frame_size(self):
         return self.size
 
     @property
