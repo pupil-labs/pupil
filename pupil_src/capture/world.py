@@ -298,7 +298,8 @@ def world(g_pool,cap_src,cap_size):
         #update performace graphs
         t = frame.timestamp
         dt,ts = t-ts,t
-        fps_graph.add(1./dt)
+        if dt != 0:
+            fps_graph.add(1./dt)
         cpu_graph.update()
 
 
