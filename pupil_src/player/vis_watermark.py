@@ -74,7 +74,7 @@ class Vis_Watermark(Plugin):
 
 
         if self.watermark is not None:
-            #keep in image bounds, do this even when not dragging becasue the image sizes could change.
+            #keep in image bounds, do this even when not dragging because the image sizes could change.
             self.pos[1] = min(frame.img.shape[0]-self.watermark.shape[0],max(self.pos[1],0))
             self.pos[0] = min(frame.img.shape[1]-self.watermark.shape[1],max(self.pos[0],0))
 
