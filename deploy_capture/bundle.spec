@@ -113,6 +113,7 @@ elif platform.system() == 'Windows':
 	               [('glfw3.dll', '../pupil_src/shared_modules/external/glfw3.dll','BINARY')],
 	               [('glfw3.lib', '../pupil_src/shared_modules/external/glfw3.lib','BINARY')],
 	               [('glfw3dll.lib', '../pupil_src/shared_modules/external/glfw3dll.lib','BINARY')],
+	               [('opencv_ffmpeg248_64.dll', os.path.join(python_path, 'opencv_ffmpeg248_64.dll'),'BINARY')],
 	               [('_videoInput.lib', os.path.join(python_path, '_videoInput.lib'),'BINARY')],
 	               [('msvcp110.dll', os.path.join(system_path, 'msvcp110.dll'),'BINARY')],
 	               [('msvcr110.dll', os.path.join(system_path, 'msvcr110.dll'),'BINARY')],
