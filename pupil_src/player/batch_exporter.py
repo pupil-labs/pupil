@@ -77,16 +77,18 @@ class Batch_Exporter(Plugin):
     def _update_gui(self):
         self.menu.elements[:] = []
         self.menu.append(ui.Text_Input('source_dir',self,label='Recording Source Directory',setter=self.set_src_dir))
-        self.menu.append(ui.Text_Input('destination_dir',self,label='Recording Destination Directory',setter=self.set_src_dir))
+        self.menu.append(ui.Text_Input('destination_dir',self,label='Recording Destination Directory',setter=self.set_dest_dir))
         self.menu.append(ui.Button('start export',self.start))
 
-        for job in self.exports[::-1]:
-            submenu = ui.Growing_Menu(job.out_file_path)
+        for idx,job  in enumerate(self.exports[::-1]):
+            submenu = ui.Growing_Menu("Export Job %s: '%s'"%(idx,job.out_file_path))
             progress_bar = ui.Slider('progress', getter=job.status, min=0, max=job.frames_to_export.value)
             progress_bar.read_only = True
             submenu.append(progress_bar)
             submenu.append(ui.Button('cancel',job.cancel))
             self.menu.append(submenu)
+        if not self.exports:
+            self.menu.append(ui.Info_Text('Please select a Recording Source directory from with to pull all recordings for export.'))
 
         self.menu.append(ui.Button('close',self.unset_alive))
 
