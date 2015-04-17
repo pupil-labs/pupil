@@ -63,11 +63,11 @@ class Canny_Detector(Pupil_Detector):
         self.canny_aperture = 5
 
         # edge intensity filter params
-        self.intensity_range = self.session_settings.get('intensity_range',11)
+        self.intensity_range = self.session_settings.get('intensity_range',17)
         self.bin_thresh = 0
 
         # contour prefilter params
-        self.min_contour_size = self.session_settings.get('min_contour_size',80)
+        self.min_contour_size = self.session_settings.get('min_contour_size',60)
 
         #ellipse filter params
         self.inital_ellipse_fit_threshhold = 1.8
@@ -365,7 +365,7 @@ class Canny_Detector(Pupil_Detector):
             # #draw into the suport mast with thickness 2
             new_edges = cv2.min(edges, support_mask)
             new_contours = cv2.findNonZero(new_edges)
-            if self._window:
+            if self._window and visualize:
                 new_edges[new_edges!=0] = 255
                 overlay[:,:,1] = cv2.max(overlay[:,:,1], new_edges)
                 overlay[:,:,2] = cv2.max(overlay[:,:,2], new_edges)
