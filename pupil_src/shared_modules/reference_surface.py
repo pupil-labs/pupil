@@ -275,13 +275,17 @@ class Reference_Surface(object):
                     rot3d_object_to_cam_mat = rot3d_cam_to_object_mat.T
 
 
-                    # tranform3d_object_to_cam = np.eye(4, dtype=np.float32)
+                    # we assume that the volume of the object grows out of the marker surface and not into it. We thus have to flip the z-Axis:
                     flip_z_axix_hm = np.eye(4, dtype=np.float32)
                     flip_z_axix_hm[2,2] = -1
+                    # create a homogenous tranformation matrix from the rotation mat
                     rot3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
                     rot3d_object_to_cam_hm[:-1,:-1] = rot3d_object_to_cam_mat
+                    # create a homogenous tranformation matrix from the translation vect
                     translate3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
                     translate3d_object_to_cam_hm[:-1, -1] = translate3d_object_to_cam.reshape(3)
+
+                    # combine all tranformations into of matrix that decribes the move from object origin and orientation to camera origin and orientation
                     tranform3d_object_to_cam =  np.matrix(flip_z_axix_hm) * np.matrix(rot3d_object_to_cam_hm) * np.matrix(translate3d_object_to_cam_hm)
                     self.camera_pose_3d = tranform3d_object_to_cam
                 else:
