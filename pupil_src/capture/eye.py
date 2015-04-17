@@ -275,7 +275,10 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         #update performace graphs
         t = frame.timestamp
         dt,ts = t-ts,t
-        fps_graph.add(1./dt)
+        try:
+            fps_graph.add(1./dt)
+        except ZeroDivisionError:
+            pass
         cpu_graph.update()
 
 
