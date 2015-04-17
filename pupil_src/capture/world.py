@@ -298,8 +298,10 @@ def world(g_pool,cap_src,cap_size):
         #update performace graphs
         t = frame.timestamp
         dt,ts = t-ts,t
-        if dt != 0:
+        try:
             fps_graph.add(1./dt)
+        except ZeroDivisionError:
+            pass
         cpu_graph.update()
 
 
