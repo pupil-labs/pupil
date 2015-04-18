@@ -9,6 +9,7 @@
 '''
 
 import videoInput as vi
+from matplotlib._cm import _gray_data
 assert vi.VERSION >= 0.1
 import numpy as np
 import math
@@ -58,6 +59,10 @@ class Frame(object):
     height = 0
 
     _npy_frame = None
+    
+    _img = None
+    _gray = None
+    _bgr = None
 
     def __init__(self, timestamp, npy_frame):
         self.timestamp = timestamp
@@ -66,16 +71,22 @@ class Frame(object):
 
     @property
     def img(self):
-        return cv2.cvtColor(self._npy_frame, cv2.COLOR_RGBA2RGB)
+        if self._img is None:
+            self._img = cv2.cvtColor(self._npy_frame, cv2.COLOR_RGBA2RGB)
+        return self._img
 
     @property
     def gray(self):
-        return cv2.cvtColor(self._npy_frame, cv2.COLOR_RGB2GRAY)
+        if self._gray is None:
+            self._gray = cv2.cvtColor(self._npy_frame, cv2.COLOR_RGB2GRAY)
+        return self._gray
 
     @property
     def bgr(self):
-        return cv2.cvtColor(self._npy_frame, cv2.COLOR_RGB2BGR)
-
+        if self._bgr is None:
+            self._bgr = cv2.cvtColor(self._npy_frame, cv2.COLOR_RGB2BGR)
+        return self.bgr
+    
 class Camera_Capture(object):
     """
     Camera Capture encapsulates the videoInput class
