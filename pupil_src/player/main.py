@@ -19,7 +19,7 @@ except:
     from multiprocessing import freeze_support
 
 if getattr(sys, 'frozen', False):
-    user_dir = os.path.expanduser('~/pupil_player_settings')
+    user_dir = os.path.expanduser(os.path.join('~','pupil_player_settings'))
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
 else:
     # We are running in a normal Python environment.

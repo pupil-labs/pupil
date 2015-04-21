@@ -20,8 +20,8 @@ else:
 
 if getattr(sys, 'frozen', False):
     # Specifiy user dirs.
-    user_dir = os.path.expanduser("~/pupil_capture_settings")
-    rec_dir = os.path.expanduser("~/pupil_recordings")
+    user_dir = os.path.expanduser(os.path.join('~','pupil_capture_settings'))
+    rec_dir = os.path.expanduser(os.path.join('~','pupil_recordings'))
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
 else:
     # We are running in a normal Python environment.
