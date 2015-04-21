@@ -330,7 +330,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 if self.active_site == 10:
                     self.stop()
                     return
-
+            events["calib_info"] = (self.screen_marker_state, self.active_site)
             # interpolation_weight = np.tanh(((s-1/6.*m)*10.)/(5/6.*m))*(-.5)+.5
             self.pattern_alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.screen_marker_max),float(self.start_sample),float(self.stop_sample))
 
