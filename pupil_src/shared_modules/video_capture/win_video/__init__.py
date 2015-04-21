@@ -21,30 +21,36 @@ from pyglui import ui
 
 logger = logging.getLogger(__name__)
 
+ERR_INIT_FAIL = "Could not setup capture device. " 
+
 class CameraCaptureError(Exception):
     """General Exception for this module"""
     def __init__(self, arg):
         super(CameraCaptureError, self).__init__()
         self.arg = arg
+        
+class Cam(object):
+    def __init__(self, d):
+        if d is None:
+            msg = ERR_INIT_FAIL + "Device was 'None'"
+            logger.error(msg)
+            raise CameraCaptureError(msg)
+        self.device = d
+
+    @property
+    def name(self):
+        return self.device.friendlyName
+
+    @property
+    def src_id(self):
+        return self.device.symbolicName
+    
+    # TODO: property bus_info
 
 def Camera_List():
     '''
     Thin wrapper around list_devices to improve formatting.
     '''
-    class Cam(object):
-        def __init__(self, d):
-            self.device = d
-
-        @property
-        def name(self):
-            return self.device.friendlyName
-
-        @property
-        def src_id(self):
-            return self.device.symbolicName
-        
-        # TODO: property bus_info
-
     devices = vi.DeviceList()
     _getVideoInputInstance().getListOfDevices(devices)
 
@@ -104,10 +110,12 @@ class Camera_Capture(object):
 
     readSetting = None
     _frame = None
+    
+    _is_initialized = False
 
     @property
     def name(self):
-        return self.device.friendlyName
+        return str(self.device.friendlyName)
 
     @property
     def actual_width(self):
@@ -125,6 +133,14 @@ class Camera_Capture(object):
         self._init(cam, size, fps)
 
     def _init(self, cam, size=(640,480), fps=None, timebase=None):
+        if not isinstance(cam, Cam):
+            msg = ERR_INIT_FAIL + "Class was not of instance 'Cam'"
+            logger.error(msg)
+            raise CameraCaptureError(msg)
+        if not len(size) == 2:
+            msg = ERR_INIT_FAIL + "Parameter 'size' must have length 2."
+            logger.error(msg)
+            raise CameraCaptureError(msg)
         # setting up device
         self.device = cam.device
         self.deviceSettings = vi.DeviceSettings()
@@ -153,7 +169,9 @@ class Camera_Capture(object):
         self.context = _getVideoInputInstance()
         res = self.context.setupDevice(self.deviceSettings, self.captureSettings)
         if res != vi.ResultCode.OK:
-            raise CameraCaptureError("Could not setup device. Error code: %d" %(res))
+            msg = ERR_INIT_FAIL + "Error code: %d" %(res)
+            logger.error(msg)
+            raise CameraCaptureError(msg)
 
         # creating frame buffer and initializing capture settings
         frame = np.empty((self.actual_height * self.actual_width * 4), dtype=np.uint8)
@@ -164,18 +182,19 @@ class Camera_Capture(object):
         self._frame = frame
 
         logger.debug("Successfully set up device: %s @ %dx%dpx %dfps (mediatype %d)" %(self.name, self.actual_height, self.actual_width, self.frame_rate, self.deviceSettings.indexMediaType))
+        self._is_initialized = True
 
     def re_init(self, cam, size=(640,480), fps=None):
-        # TODO: close capture
-        # TODO: set reset attributes
+        self.deinit_gui()
+        self._close_device()
         self._init(cam, size, fps)
-
-        # TODO: start new capture
+        self.init_gui(self.sidebar)
+        self.menu.collapsed = False
 
     def get_frame(self):
         res = self.context.readPixels(self.readSetting)
         if res == vi.ResultCode.READINGPIXELS_REJECTED_TIMEOUT:
-            for n in range(5):
+            for n in range(25):
                 logger.warning("Reading frame timed out, retry %d/5" %(n+1))
                 res = self.context.readPixels(self.readSetting)
                 if res == vi.ResultCode.READINGPIXELS_DONE:
@@ -192,35 +211,68 @@ class Camera_Capture(object):
         return self.stream.listMediaType[self.deviceSettings.indexMediaType].MF_MT_FRAME_RATE
     @frame_rate.setter
     def frame_rate(self, preferred_fps):
-        self.preferred_fps = preferred_fps
-        self._initMediaTypeId()
+        self.re_init( Cam(self.device), (self.width, self.height), preferred_fps)
+    
+    @property
+    def available_frame_rates(self):
+        fps_list = []
+        for fps, _ in self.fps_mediatype_map:
+            fps_list.append(fps)
+        return fps_list
 
     @property
     def frame_size(self):
         return (self.actual_width, self.actual_height)
     @frame_size.setter
-    def frame_size(self, value):
-        raise Exception("Not implemented!")
+    def frame_size(self, size):
+        self.re_init( Cam(self.device), size, self.preferred_fps)
+        
+    @property
+    def available_frame_sizes(self):
+        size_list = []
+        for size in self.size_mediatype_map:
+            size_list.append(size)
+        return size_list
 
     def get_now(self):
         return time()
 
     def init_gui(self,sidebar):
+        
+        def gui_init_cam(d):
+            self.re_init(Cam(d), (self.width, self.height), self.preferred_fps)
+        
+        def gui_get_cam():
+            return self.name
+        
+        def gui_get_frame_size():
+            return self.frame_size
+    
+        def gui_set_frame_size(new_size):
+            self.frame_size = new_size
+            
+        def gui_get_frame_rate():
+            return self.frame_rate
+        
+        def gui_set_frame_rate(new_fps):
+            self.frame_rate = new_fps
 
         #create the menu entry
         self.menu = ui.Growing_Menu(label='Camera Settings')
-        # cameras = Camera_List()
-        # camera_names = [c.name for c in cameras]
-        # camera_ids = [c.src_id for c in cameras]
-        # self.menu.append(ui.Selector('src_id',self,selection=camera_ids,labels=camera_names,label='Capture Device', setter=gui_init_cam_by_src_id) )
+        
+        #cams = Camera_List()
+        #cam_names = [str(c.name) for c in cams]
+        #cam_devices = [c.device for c in cams]
+        #self.menu.append(ui.Selector('device',self,selection=cam_devices,labels=cam_names,label='Capture Device', getter=gui_get_cam, setter=gui_init_cam))
+
+        self.menu.append(ui.Info_Text("Device: " + self.name))
 
         #hardware_ts_switch = ui.Switch('use_hw_ts',self,label='use hardware timestamps')
         #hardware_ts_switch.read_only = True
         #self.menu.append(hardware_ts_switch)
 
-        # self.menu.append(ui.Selector('frame_rate', selection=self.capture.frame_rates,labels=[str(d/float(n)) for n,d in self.capture.frame_rates],
-        #                                 label='Frame Rate', getter=gui_get_frame_rate, setter=gui_set_frame_rate) )
-
+        self.menu.append(ui.Selector('frame_size', selection=self.available_frame_sizes, label='Frame Size', getter=gui_get_frame_size, setter=gui_set_frame_size))
+        self.menu.append(ui.Selector('frame_rate', selection=self.available_frame_rates, label='Frame Rate', getter=gui_get_frame_rate, setter=gui_set_frame_rate))
 
         # for control in self.controls:
         #     c = None
@@ -271,7 +323,7 @@ class Camera_Capture(object):
         self.sidebar = sidebar
         #add below geneal settings
         self.sidebar.insert(1,self.menu)
-
+        
     def deinit_gui(self):
         if self.menu:
             self.sidebar.remove(self.menu)
@@ -279,19 +331,32 @@ class Camera_Capture(object):
 
     def close(self):
         self.deinit_gui()
-        res = self.context.closeDevice(self.deviceSettings)
-        if res != vi.ResultCode.OK:
-            raise CameraCaptureError("Error while closing the capture device. Error code: %s" %res)
+        self._close_device()
+    
+    def _close_device(self):
+        if self._is_initialized:
+            self._is_initialized = False
+            res = self.context.closeDevice(self.deviceSettings)
+            if res != vi.ResultCode.OK:
+                msg = "Error while closing the capture device. Error code: %s" %res
+                logger.error(msg)
+                raise CameraCaptureError(msg)
 
     def _initFrameRates(self):
         self.fps_mediatype_map = []
+        self.size_mediatype_map = []
         media_types = self.stream.listMediaType
         for mt, i in zip(media_types, range(len(media_types))):
+            size_tuple = (mt.width, mt.height)
+            if not size_tuple in self.size_mediatype_map:
+                self.size_mediatype_map.append(size_tuple)
             if mt.width == self.width and mt.height == self.height:
                 self.fps_mediatype_map.append((mt.MF_MT_FRAME_RATE, i))
 
         if not self.fps_mediatype_map:
-            raise CameraCaptureError("Capture device does not support resolution: %d x %d"% (self.width, self.height))
+            msg = ERR_INIT_FAIL + "Capture device does not support resolution: %d x %d"% (self.width, self.height)
+            logger.error(msg)
+            raise CameraCaptureError(msg)
 
         logger.debug("found %d media types for given resolution: %s" %(len(self.fps_mediatype_map), str(self.fps_mediatype_map)))
         self.fps_mediatype_map.sort()
