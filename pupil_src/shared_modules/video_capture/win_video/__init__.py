@@ -271,7 +271,7 @@ class Camera_Capture(object):
         #self.menu.append(hardware_ts_switch)
 
         #self.menu.append(ui.Selector('frame_size', selection=self.available_frame_sizes, label='Frame Size', getter=gui_get_frame_size, setter=gui_set_frame_size))
-        self.menu.append(ui.Info_Text("Resolution: " + str(self.frame_size)))
+        self.menu.append(ui.Info_Text("Resolution: %d x %d pixels".format(self.actual_width, self.actual_height)))
         self.menu.append(ui.Selector('frame_rate', selection=self.available_frame_rates, label='Frame Rate', getter=gui_get_frame_rate, setter=gui_set_frame_rate))
 
         # for control in self.controls:
