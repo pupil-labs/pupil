@@ -67,9 +67,14 @@ logger = logging.getLogger(__name__)
 
 #UI Platform tweaks
 if platform.system() == 'Linux':
-     scroll_factor = 10.0
+    scroll_factor = 10.0
+    window_position_default = (0,0)
+elif platform.system() == 'Windows':
+    scroll_factor = 1.0
+    window_position_default = (8,31)
 else:
     scroll_factor = 1.0
+    window_position_default = (0,0)
 
 
 def world(g_pool,cap_src,cap_size):
@@ -208,8 +213,7 @@ def world(g_pool,cap_src,cap_size):
 
     # refresh speed settings
     glfwSwapInterval(0)
-
-    glfwSetWindowPos(main_window,0,0)
+    glfwSetWindowPos(main_window,window_position_default[0],window_position_default[1])
 
 
     #setup GUI

@@ -41,9 +41,14 @@ from pupil_detectors import Canny_Detector
 
 #UI Platform tweaks
 if platform.system() == 'Linux':
-     scroll_factor = 10.0
+    scroll_factor = 10.0
+    window_position_default = (0,0)
+elif platform.system() == 'Windows':
+    scroll_factor = 1.0
+    window_position_default = (8,31)
 else:
     scroll_factor = 1.0
+    window_position_default = (0,0)
 
 
 
@@ -211,7 +216,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # refresh speed settings
     glfwSwapInterval(0)
-    glfwSetWindowPos(main_window,800,300*eye_id)
+    glfwSetWindowPos(main_window,800,300*eye_id+window_position_default[1])
 
 
     #setup GUI
