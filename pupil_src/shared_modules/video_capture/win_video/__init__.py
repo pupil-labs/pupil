@@ -21,14 +21,14 @@ from pyglui import ui
 
 logger = logging.getLogger(__name__)
 
-ERR_INIT_FAIL = "Could not setup capture device. " 
+ERR_INIT_FAIL = "Could not setup capture device. "
 
 class CameraCaptureError(Exception):
     """General Exception for this module"""
     def __init__(self, arg):
         super(CameraCaptureError, self).__init__()
         self.arg = arg
-        
+
 class Cam(object):
     def __init__(self, d):
         if d is None:
@@ -44,7 +44,7 @@ class Cam(object):
     @property
     def src_id(self):
         return self.device.symbolicName
-    
+
     # TODO: property bus_info
 
 def Camera_List():
@@ -65,8 +65,6 @@ class Frame(object):
     height = 0
 
     _npy_frame = None
-    
-    _img = None
     _gray = None
     _bgr = None
 
@@ -77,9 +75,7 @@ class Frame(object):
 
     @property
     def img(self):
-        if self._img is None:
-            self._img = cv2.cvtColor(self._npy_frame, cv2.COLOR_RGBA2RGB)
-        return self._img
+        return self.bgr
 
     @property
     def gray(self):
@@ -90,9 +86,9 @@ class Frame(object):
     @property
     def bgr(self):
         if self._bgr is None:
-            self._bgr = cv2.cvtColor(self._npy_frame, cv2.COLOR_RGB2BGR)
-        return self.bgr
-    
+            self._bgr = cv2.cvtColor(self._npy_frame, cv2.COLOR_BGRA2BGR)
+        return self._bgr
+
 class Camera_Capture(object):
     """
     Camera Capture encapsulates the videoInput class
@@ -110,7 +106,7 @@ class Camera_Capture(object):
 
     readSetting = None
     _frame = None
-    
+
     _is_initialized = False
 
     @property
@@ -124,7 +120,7 @@ class Camera_Capture(object):
     @property
     def actual_height(self):
         return self.stream.listMediaType[self.deviceSettings.indexMediaType].height
-    
+
     @property
     def src_id(self):
         return self.device.symbolicName
@@ -159,7 +155,7 @@ class Camera_Capture(object):
         else:
             logger.debug("Capture will run with app wide adjustable timebase")
             self.timebase = timebase
-        
+
         self.width = size[0]
         self.height = size[1]
         self.preferred_fps = fps
@@ -212,7 +208,7 @@ class Camera_Capture(object):
     @frame_rate.setter
     def frame_rate(self, preferred_fps):
         self.re_init( Cam(self.device), (self.width, self.height), preferred_fps)
-    
+
     @property
     def available_frame_rates(self):
         fps_list = []
@@ -226,7 +222,7 @@ class Camera_Capture(object):
     @frame_size.setter
     def frame_size(self, size):
         self.re_init( Cam(self.device), size, self.preferred_fps)
-        
+
     @property
     def available_frame_sizes(self):
         size_list = []
@@ -238,28 +234,28 @@ class Camera_Capture(object):
         return time()
 
     def init_gui(self,sidebar):
-        
+
         def gui_init_cam(d):
             self.re_init(Cam(d), (self.width, self.height), self.preferred_fps)
-        
+
         def gui_get_cam():
             return self.name
-        
+
         def gui_get_frame_size():
             return self.frame_size
-    
+
         def gui_set_frame_size(new_size):
             self.frame_size = new_size
-            
+
         def gui_get_frame_rate():
             return self.frame_rate
-        
+
         def gui_set_frame_rate(new_fps):
             self.frame_rate = new_fps
 
         #create the menu entry
         self.menu = ui.Growing_Menu(label='Camera Settings')
-        
+
         #cams = Camera_List()
         #cam_names = [str(c.name) for c in cams]
         #cam_devices = [c.device for c in cams]
@@ -323,7 +319,7 @@ class Camera_Capture(object):
         self.sidebar = sidebar
         #add below geneal settings
         self.sidebar.insert(1,self.menu)
-        
+
     def deinit_gui(self):
         if self.menu:
             self.sidebar.remove(self.menu)
@@ -332,7 +328,7 @@ class Camera_Capture(object):
     def close(self):
         self.deinit_gui()
         self._close_device()
-    
+
     def _close_device(self):
         if self._is_initialized:
             self._is_initialized = False
