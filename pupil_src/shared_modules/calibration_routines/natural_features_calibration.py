@@ -75,7 +75,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
             self.button = None
 
 
-    def toggle(self,new_var):
+    def toggle(self,_=None):
         if self.active:
             self.stop()
         else:
