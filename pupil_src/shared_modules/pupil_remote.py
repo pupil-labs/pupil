@@ -31,19 +31,22 @@ class Pupil_Remote(Plugin):
     def __init__(self, g_pool,address="tcp://*:50020",menu_conf = {'collapsed':True,}):
         super(Pupil_Remote, self).__init__(g_pool)
         self.menu_conf = menu_conf
-        self.order = .9 #excecute late in the plugin list.
+        self.order = .01 #excecute first
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
-        self.address = address
-        self.set_server(self.address)
+        self.address = 'not set'
+        self.set_server(address)
 
 
     def set_server(self,new_address):
-        try:
-            self.socket.bind(new_address)
-            self.address = new_address
-        except zmq.ZMQError:
-            logger.error("Could not set Socket.")
+        if new_address != self.address:
+            try:
+                self.socket.bind(new_address)
+                self.address = new_address
+            except zmq.ZMQError:
+                logger.error("Could not set Socket.")
+                self.address = "Could not set Socket."
+
 
 
     def init_gui(self):
@@ -68,22 +71,39 @@ class Pupil_Remote(Plugin):
         except zmq.ZMQError :
             msg = None
         if msg:
+            confirmation = "Unknown error in receive logic."
             if msg[0] == 'R':
                 rec_name = msg[2:]
-                if rec_name:
-                    self.g_pool.rec_name = rec_name
                 for p in self.g_pool.plugins:
                     if p.class_name == 'Recorder':
+                        if p.running:
+                            confirmation = "Stopped recording."
+                        else:
+                            if rec_name:
+                                self.g_pool.rec_name = rec_name
+                            confirmation = 'started recording with name: %s'%self.g_pool.rec_name
                         p.toggle()
                         break
             elif msg == 'T':
                 self.g_pool.timebase.value = self.g_pool.capture.get_now()
+                confirmation = "New timebase set to %s all timestamps will count from here now."%self.g_pool.timebase.value
                 logger.info("New timebase set to %s all timestamps will count from here now."%self.g_pool.timebase.value)
             elif msg == 'C':
                 for p in self.g_pool.plugins:
                     if p.base_class_name == 'Calibration_Plugin':
-                        p.toggle()
+                        try:
+                            p.toggle()
+                            if p.active:
+                                confirmation = 'Started Calibration: "%s"'%p.class_name
+                            else:
+                                confirmation = 'Stopped Calibration: "%s"'%p.class_name
+                        except AttributeError:
+                            confirmation = "'%s' does not support remote start."%p.class_name
                         break
+            else:
+                confirmation = 'Unknown command.'
+
+            self.socket.send(confirmation)
 
 
     def get_init_dict(self):
