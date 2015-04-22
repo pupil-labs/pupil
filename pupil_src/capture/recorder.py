@@ -125,7 +125,7 @@ class Recorder(Plugin):
         self.menu.append(ui.Info_Text('Recording the raw eye video is optional. We use it for debugging.'))
         self.menu.append(ui.Switch('record_eye',self,on_val=True,off_val=False,label='Record eye'))
 
-        self.button = ui.Thumb('running',self,setter=self.start_stop,label='Record',hotkey='r')
+        self.button = ui.Thumb('running',self,setter=self.toggle,label='Record',hotkey='r')
         self.button.on_color[:] = (1,.0,.0,.8)
         self.g_pool.quickbar.insert(1,self.button)
 
@@ -139,13 +139,9 @@ class Recorder(Plugin):
             self.g_pool.quickbar.remove(self.button)
             self.button = None
 
-    def start_stop(self,val):
-        if val:
-            self.start()
-        else:
-            self.stop()
 
-    def toggle(self):
+
+    def toggle(self, _=None):
         if self.running:
             self.stop()
         else:
