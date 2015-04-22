@@ -264,14 +264,14 @@ class Camera_Capture(object):
         #cam_names = [str(c.name) for c in cams]
         #cam_devices = [c.device for c in cams]
         #self.menu.append(ui.Selector('device',self,selection=cam_devices,labels=cam_names,label='Capture Device', getter=gui_get_cam, setter=gui_init_cam))
-
         self.menu.append(ui.Info_Text("Device: " + self.name))
 
         #hardware_ts_switch = ui.Switch('use_hw_ts',self,label='use hardware timestamps')
         #hardware_ts_switch.read_only = True
         #self.menu.append(hardware_ts_switch)
 
-        self.menu.append(ui.Selector('frame_size', selection=self.available_frame_sizes, label='Frame Size', getter=gui_get_frame_size, setter=gui_set_frame_size))
+        #self.menu.append(ui.Selector('frame_size', selection=self.available_frame_sizes, label='Frame Size', getter=gui_get_frame_size, setter=gui_set_frame_size))
+        self.menu.append(ui.Info_Text("Resolution: " + str(self.frame_size)))
         self.menu.append(ui.Selector('frame_rate', selection=self.available_frame_rates, label='Frame Rate', getter=gui_get_frame_rate, setter=gui_set_frame_rate))
 
         # for control in self.controls:
