@@ -80,6 +80,13 @@ class Pupil_Server(Plugin):
                 if key not in self.exclude_list:
                     msg +=key+":"+str(value)+'\n'
             self.socket.send( msg )
+            
+        for c in events.get('calib_info',[]):
+            msg = "Calibration\n"
+            for key,value in c.iteritems():
+                if key not in self.exclude_list:
+                    msg +=key+":"+str(value)+'\n'
+            self.socket.send( msg )
 
         # for e in events:
         #     msg = 'Event'+'\n'
