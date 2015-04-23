@@ -273,7 +273,9 @@ class Control(object):
 
     def set_val(self,val):
         uvccSetVal(val,self.name,self.handle)
-        self.value = uvccGetVal(self.name,self.handle)
+        new_val = uvccGetVal(self.name,self.handle)
+        if new_val is not None:
+            self.value = uvccGetVal(self.name,self.handle)
 
     def get_info(self):
         return uvccRequestInfo(self.name,self.handle)

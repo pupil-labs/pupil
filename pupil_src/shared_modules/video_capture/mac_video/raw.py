@@ -239,8 +239,7 @@ def uvccSetVal(val,control,camera):
     bRequest = UVC_SET_CUR
     val = c_int(val)
     err = __uvcc_dll.uvccSendRequest(camera,bRequest,control_dict[control],byref(val))
-    if err == 0:
-        return val.value
+    return err
 
 def uvccGetVal(control,camera):
     bRequest = UVC_GET_CUR
@@ -248,6 +247,8 @@ def uvccGetVal(control,camera):
     err = __uvcc_dll.uvccSendRequest(camera,bRequest,control_dict[control],byref(val))
     if err == 0:
         return val.value
+    else:
+        return None
 
 
 
