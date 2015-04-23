@@ -10,30 +10,37 @@
 
 import cPickle as pickle
 import os 
+import json
 import logging
 logger = logging.getLogger(__name__)
 
 class Persistent_Dict(dict):
-	"""a dict class that uses pickle to save inself to file"""
+	"""a dict class that uses json to save itself to file. backward-compatible with pickled objects."""
 	def __init__(self, file_path):
 		super(Persistent_Dict, self).__init__()
 		self.file_path = os.path.expanduser(file_path)
-		try:
+
+		# pickled files
+		if os.path.exists(self.file_path):
 			with open(self.file_path,'rb') as fh:
-				try:
-					self.update(pickle.load(fh))
-				except: #KeyError,EOFError 
-					logger.warning("Session settings file '%s'could not be read. Will overwrite on exit."%self.file_path)
-		except IOError:
-			logger.debug("Session settings file '%s' not found. Will make new one on exit."%self.file_path)
+				self.update(pickle.load(fh))
+		elif os.path.exists(self.file_path+'.json'):
+			with open(self.file_path+'.json') as fh:
+				self.update(json.load(fh))
+		else:
+			logger.debug("Session settings file '{}' not found. Will make new one on exit.".format(self.file_path))
 		
 
 	def save(self):
-		d = {}
-		d.update(self)
+		logger.debug("Saving {}".format(self.file_path))
 		try:
-			with open(self.file_path,'wb') as fh:
-				pickle.dump(d,fh,-1)
+			with open(self.file_path+'.json','w') as fh:
+				json.dump(self, fh, sort_keys=True, indent=2)
+			# remove old pickled file
+			if os.path.exists(self.file_path):
+				logger.debug("Removing old '{}' pickled file.".format(self.file_path))
+				os.remove(self.file_path)
+
 		except IOError:
 			logger.warning("Could not save session settings to '%s'"%self.file_path)
 
@@ -43,25 +50,12 @@ class Persistent_Dict(dict):
 		self.save()
 
 	
-
-def load_object(file_path):
-	file_path = os.path.expanduser(file_path)
-	with open(file_path,'rb') as fh:
-		return pickle.load(fh)
-
 def save_object(object,file_path):
 	file_path = os.path.expanduser(file_path)
-	with open(file_path,'wb') as fh:
-		pickle.dump(object,fh,-1)
+	with open(file_path, 'w') as fh:
+		json.dump(self, fh, sort_keys=True, indent=2)
 
 if __name__ == '__main__':
 	logging.basicConfig(level=logging.DEBUG)
-	# settings = Persistent_Dict("~/Desktop/test")
-	# settings['f'] = "this is a test"
-	# settings['list'] = ["list 1","list2"]
-	# settings.close()
-
-	# save_object("string",'test')
-	# print load_object('test')
 	settings = Persistent_Dict('~/Desktop/pupil_settings/user_settings_eye')
 	print settings['roi']
