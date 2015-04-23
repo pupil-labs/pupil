@@ -63,11 +63,11 @@ if os_name == "Linux":
             print message
 
 
-    class Audio_Input_List(list):
-        """docstring for Audio_Input_List"""
+    class Audio_Input_Dict(dict):
+        """docstring for Audio_Input_Dict"""
         def __init__(self):
-            super(Audio_Input_List, self).__init__()
-            self.append(('No Audio',-1))
+            super(Audio_Input_Dict, self).__init__()
+            self['No Audio'] =-1
             try:
                 ret = sp.check_output([arecord_bin,"-l"])
             except OSError:
@@ -92,7 +92,7 @@ if os_name == "Linux":
             device_names = [w.split(":")[-1] for w in devices]
             device_names = [w[1:] for w in device_names]
             for d,idx in zip(device_names,range(len(device_names))):
-                self.append((d,idx))
+                self[d] = idx
 
 
     class Audio_Capture(object):
@@ -110,7 +110,7 @@ if os_name == "Linux":
                         '-r', '16000',
                         '-f', 'S16_LE',
                         '-c', '2',
-                        '-q', #we use quite because signint will write into stderr and we sue this to check for real errors.
+                        '-q', #we use quite because signint will write into stderr and we use this to check for real errors.
                         out_file]
             try:
                 self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE)
@@ -134,16 +134,12 @@ if os_name == "Linux":
 
 elif os_name == "Darwin":
 
-
-
-    class Audio_Input_List(list):
-        """docstring for Audio_Input_List"""
+    class Audio_Input_Dict(dict):
+        """docstring for Audio_Input_Dict"""
         def __init__(self):
-            super(Audio_Input_List, self).__init__()
-            self.append(('No Audio',-1))
-            self.append(('Default Mic',0))
-
-
+            super(Audio_Input_Dict, self).__init__()
+            self['No Audio'] = -1
+            self['Default Mic'] = 0
 
     # if getattr(sys, 'frozen', False):
     #     # we are running in a |PyInstaller| bundle
@@ -202,11 +198,11 @@ else:
         print message
 
 
-    class Audio_Input_List(list):
-        """docstring for Audio_Input_List"""
+    class Audio_Input_Dict(dict):
+        """docstring for Audio_Input_Dict"""
         def __init__(self):
-            super(Audio_Input_List, self).__init__()
-            self.append(('No Audio Available',-1))
+            super(Audio_Input_Dict, self).__init__()
+            self['No Audio'] = -1
 
 
     class Audio_Capture(object):
@@ -227,4 +223,4 @@ if __name__ == '__main__':
     say("Hello, I am Pupil's audio module.")
     sleep(3)
     cap = None
-    print Audio_Input_List()
+    print Audio_Input_Dict()
