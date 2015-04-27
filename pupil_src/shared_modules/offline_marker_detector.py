@@ -94,6 +94,10 @@ class Offline_Marker_Detector(Plugin):
         self.show_surface_idx = c_int(0)
         self.recent_pupil_positions = []
 
+        # heatmap
+        self.heatmap_blur = True
+        self.heatmap_blur_gradation = 0.2
+
         self.img_shape = None
         self.img = None
 
@@ -127,10 +131,15 @@ class Offline_Marker_Detector(Plugin):
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
+        # the info message should be updated in order to include the heat map steps. 
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))        
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statsics_to_file))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
+        self.menu.append(ui.Info_Text('Heatmap Blur'))
+        self.menu.append(ui.Switch('heatmap_blur', self, label='Blur'))
+        self.menu.append(ui.Slider('heatmap_blur_gradation',self,min=0.01,step=0.01,max=1.0,label='Blur Gradation'))
+
         for s in self.surfaces:
             idx = self.surfaces.index(s)
             s_menu = ui.Growing_Menu("Surface %s"%idx)
@@ -139,6 +148,9 @@ class Offline_Marker_Detector(Plugin):
             #     self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
+            # heatmap steps
+            s_menu.append(ui.Text_Input('x',s.heatmap_steps, label='Heatmap X step'))
+            s_menu.append(ui.Text_Input('y',s.heatmap_steps, label='Heatmap Y step'))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
@@ -194,6 +206,8 @@ class Offline_Marker_Detector(Plugin):
         # calc heatmaps
         for s in self.surfaces:
             if s.defined:
+                s.heatmap_blur = self.heatmap_blur
+                s.heatmap_blur_gradation = self.heatmap_blur_gradation
                 s.generate_heatmap(section)
 
         # calc metrics:
