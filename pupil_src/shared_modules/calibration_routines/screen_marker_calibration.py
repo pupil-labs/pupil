@@ -12,7 +12,7 @@ import os
 import cv2
 import numpy as np
 from methods import normalize,denormalize
-from gl_utils import draw_gl_point,adjust_gl_view,draw_gl_point_norm,draw_gl_polyline,clear_gl_screen,basic_gl_setup
+from gl_utils import draw_gl_point,adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
 import calibrate
@@ -21,9 +21,7 @@ from circle_detector import get_candidate_ellipses
 import audio
 
 from pyglui import ui
-from pyglui.cygl.utils import draw_points as cygl_draw_points
-from pyglui.cygl.utils import RGBA as cygl_rgba
-from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
+from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
@@ -35,10 +33,10 @@ logger = logging.getLogger(__name__)
 
 
 def draw_marker(pos,r,alpha):
-    black = cygl_rgba(0.,0.,0.,alpha)
-    white = cygl_rgba(1.,1.,1.,alpha)
+    black = RGBA(0.,0.,0.,alpha)
+    white = RGBA(1.,1.,1.,alpha)
     for r,c in zip((r,0.8*r,0.6*r,.4*r,.2*r),(black,white,black,white,black)):
-        cygl_draw_points([pos],size=r,color=c,sharpness=0.95)
+        draw_points([pos],size=r,color=c,sharpness=0.95)
 
 # window calbacks
 def on_resize(window,w,h):
@@ -104,7 +102,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.marker_scale = marker_scale
         self.pattern_alpha = 1.0
 
-        self.world_size = None
+        self.world_size = self.g_pool.capture.frame_size
 
         self._window = None
 
@@ -190,9 +188,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.ref_list = []
         self.pupil_list = []
         self.clicks_to_close = 5
-        self.open_window()
+        self.open_window("Calibration")
 
-    def open_window(self):
+    def open_window(self,title='new_window'):
         if not self._window:
             if self.fullscreen:
                 monitor = glfwGetMonitors()[self.monitor_idx]
@@ -200,11 +198,12 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 # glfwGetFramebufferSize(window)
                 hdpi_factor = glfwGetFramebufferSize(glfwGetCurrentContext())[0]/glfwGetWindowSize(glfwGetCurrentContext())[0]
                 width,height= mode[0]*hdpi_factor,mode[1]*hdpi_factor
+
             else:
                 monitor = None
                 width,height= 640,360
 
-            self._window = glfwCreateWindow(width, height, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
+            self._window = glfwCreateWindow(width, height, title, monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen:
                 glfwSetWindowPos(self._window,200,0)
 
@@ -283,10 +282,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 self.stop()
                 return
 
-            #get world image size for error fitting later.
-            if self.world_size is None:
-                self.world_size = frame.width,frame.height
-
             #detect the marker
             self.candidate_ellipses = get_candidate_ellipses(gray_img,
                                                             area_threshold=self.area_threshold,
@@ -327,11 +322,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 self.screen_marker_state = 0
                 self.active_site += 1
                 logger.debug("Moving screen marker to site no %s"%self.active_site)
-                if self.active_site == 10:
+                if self.active_site >= len(self.sites):
                     self.stop()
                     return
 
-            # interpolation_weight = np.tanh(((s-1/6.*m)*10.)/(5/6.*m))*(-.5)+.5
             self.pattern_alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.screen_marker_max),float(self.start_sample),float(self.stop_sample))
 
             #use np.arrays for per element wise math
@@ -357,7 +351,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
-                cygl_draw_polyline(pts,1,cygl_rgba(0.,1.,0.,1.))
+                draw_polyline(pts,1,RGBA(0.,1.,0.,1.))
 
         else:
             pass
@@ -403,9 +397,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         #some feedback on the detection state
 
         if self.detected and self.on_position:
-            cygl_draw_points([screen_pos],size=5,color=cygl_rgba(0.,1.,0.,self.pattern_alpha),sharpness=0.95)
+            draw_points([screen_pos],size=5,color=RGBA(0.,1.,0.,self.pattern_alpha),sharpness=0.95)
         else:
-            cygl_draw_points([screen_pos],size=5,color=cygl_rgba(1.,0.,0.,self.pattern_alpha),sharpness=0.95)
+            draw_points([screen_pos],size=5,color=RGBA(1.,0.,0.,self.pattern_alpha),sharpness=0.95)
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))

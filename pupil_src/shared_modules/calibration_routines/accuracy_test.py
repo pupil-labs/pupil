@@ -8,77 +8,47 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+
 import os
 import cv2
 import numpy as np
 import scipy.spatial as sp
 
+
+
 from methods import normalize,denormalize
-from gl_utils import draw_gl_point,adjust_gl_view, draw_gl_point_norm,draw_gl_points_norm,draw_gl_polyline,draw_gl_polyline_norm,clear_gl_screen,basic_gl_setup
+from gl_utils import draw_gl_point,adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
-from OpenGL.GLU import gluOrtho2D
 import calibrate
 from circle_detector import get_candidate_ellipses
 
-from pyglui import ui
-from plugin import Calibration_Plugin
-
 import audio
 
-
-
+from pyglui import ui
+from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA
+from pyglui.pyfontstash import fontstash
+from pyglui.ui import get_opensans_font_path
+from plugin import Calibration_Plugin
+from screen_marker_calibration import draw_marker,on_resize, easeInOutQuad, interp_fn, Screen_Marker_Calibration
+from calibrate import preprocess_data
 #logging
 import logging
 logger = logging.getLogger(__name__)
 
 
-def draw_circle(pos,r,c):
-    pts = cv2.ellipse2Poly(tuple(pos),(r,r),0,0,360,10)
-    draw_gl_polyline(pts,c,'Polygon')
 
-def draw_marker(pos):
-    pos = int(pos[0]),int(pos[1])
-    black = (0.,0.,0.,1.)
-    white = (1.,1.,1.,1.)
-    for r,c in zip((50,40,30,20,10),(black,white,black,white,black)):
-        draw_circle(pos,r,c)
-
-
-# window calbacks
-def on_resize(window,w, h):
-    active_window = glfwGetCurrentContext()
-    glfwMakeContextCurrent(window)
-    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-    w,h = w*hdpi_factor, h*hdpi_factor
-    adjust_gl_view(w,h)
-    glfwMakeContextCurrent(active_window)
-
-
-class Accuracy_Test(Calibration_Plugin):
+class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
     """Calibrate using a marker on your screen
     We use a ring detector that moves across the screen to 9 sites
     Points are collected at sites not between
     """
-    def __init__(self, g_pool,menu_conf = {}):
-        super(Accuracy_Test, self).__init__(g_pool)
-        self.active = False
-        self.detected = False
-        self.screen_marker_state = 0
-        self.screen_marker_max = 70 # maximum bound for state
-        self.active_site = 0
-        self.sites = []
-        self.gaze_list = []
-        self.display_pos = None
-        self.on_position = False
-
-        self.candidate_ellipses = []
-        self.pos = None
+    def __init__(self, g_pool,menu_conf = {'collapsed':False},fullscreen=True,marker_scale=1.0):
+        super(Accuracy_Test, self).__init__(g_pool,menu_conf,fullscreen,marker_scale)
 
         #result calculation variables:
-        self.world_size = None
         self.fov = 90. #taken from c930e specsheet, confirmed though mesurement within ~10deg.
-        self.res =  1.
+        self.res =  np.sqrt(self.world_size[0]**2+self.world_size[1]**2)
         self.outlier_thresh = 5.
         self.accuracy = 0
         self.precision = 0
@@ -91,22 +61,6 @@ class Accuracy_Test(Calibration_Plugin):
         except Exception:
             self.error_lines = None
             self.pt_cloud = None
-
-
-        self.show_edges = 0
-        self.dist_threshold = 5
-        self.area_threshold = 20
-
-
-        self.menu = None
-        self.menu_conf = menu_conf
-        self.button = None
-
-        self._window = None
-        self.window_should_close = False
-        self.window_should_open = False
-        self.fullscreen = 1
-        self.monitor_idx = 0
 
 
     def init_gui(self):
@@ -125,14 +79,8 @@ class Accuracy_Test(Calibration_Plugin):
 
 
         submenu = ui.Growing_Menu('Error Calculation')
-
-        def set_fov(val):
-            try:
-                self.fov = float(val)
-            except:
-                pass
-        submenu.append(ui.Text_Input('diagonal camera FV',setter=set_fov,getter=lambda:str(self.fov) ) )
-        submenu.append(ui.Text_Input('diagonal resolution',getter=lambda:str(self.res) ) )
+        submenu.append(ui.Text_Input('fov',self,'diagonal camera FV'))
+        submenu.append(ui.Text_Input('res',self,'diagonal resolution'))
         submenu[-1].read_only = True
         submenu.append(ui.Slider('outlier_thresh',self,label='outlier threshold deg',min=0,max=10))
         submenu.append(ui.Button('calculate result',self.calc_result))
@@ -147,11 +95,9 @@ class Accuracy_Test(Calibration_Plugin):
                             between successive samples during a fixation.'''.replace("\n"," ").replace("    ",'')
 
         submenu.append(ui.Info_Text(accuracy_help))
-        submenu.append(ui.Text_Input('angular accuracy',getter=lambda:str(self.accuracy) ) )
-        submenu[-1].read_only = True
+        submenu.append(ui.Text_Input('accuracy',self,'angular accuracy'))
         submenu.append(ui.Info_Text(precision_help))
-        submenu.append(ui.Text_Input('diagonal resolution',getter=lambda:str(self.precision) ) )
-        submenu[-1].read_only = True
+        submenu.append(ui.Text_Input('precision',self,'diagonal resolution'))
         self.menu.append(submenu)
 
 
@@ -179,13 +125,6 @@ class Accuracy_Test(Calibration_Plugin):
             self.button = None
 
 
-    def toggle(self,_=None):
-        if self.active:
-            self.stop()
-        else:
-            self.start()
-
-
 
     def start(self):
         audio.say("Starting Accuracy Test")
@@ -199,49 +138,18 @@ class Accuracy_Test(Calibration_Plugin):
         self.active_site = 0
         self.active = True
         self.ref_list = []
+        self.pupil_list = [] #we dont use it only here becasue we use update fn from parent
         self.gaze_list = []
-        self.open_window()
+        self.open_window("Accuracy_Test")
 
-    def open_window(self):
-        if not self._window:
-            if self.fullscreen:
-                monitor = glfwGetMonitors()[self.monitor_idx]
-                mode = glfwGetVideoMode(monitor)
-                height,width= mode[0],mode[1]
-            else:
-                monitor = None
-                height,width= 640,360
+    def update(self,frame,events):
+        super(Accuracy_Test,self).update(frame,events)
+        if self.active :
+            #always save gaze positions as opposed to pupil positons during calibration
+            for pt in events.get('gaze',[]):
+                if pt['confidence'] > self.g_pool.pupil_confidence_threshold:
+                    self.gaze_list.append(pt)
 
-            self._window = glfwCreateWindow(height, width, "Accuracy_Test", monitor=monitor, share=glfwGetCurrentContext())
-            if not self.fullscreen:
-                glfwSetWindowPos(self._window,200,0)
-
-            on_resize(self._window,height,width)
-
-            #Register callbacks
-            glfwSetWindowSizeCallback(self._window,on_resize)
-            glfwSetKeyCallback(self._window,self.on_key)
-            glfwSetWindowCloseCallback(self._window,self.on_close)
-
-            # gl_state settings
-            active_window = glfwGetCurrentContext()
-            glfwMakeContextCurrent(self._window)
-            basic_gl_setup()
-            # refresh speed settings
-            glfwSwapInterval(0)
-
-            glfwMakeContextCurrent(active_window)
-
-
-    def on_key(self,window, key, scancode, action, mods):
-        if not atb.TwEventKeyboardGLFW(key,int(action == GLFW_PRESS)):
-            if action == GLFW_PRESS:
-                if key == GLFW_KEY_ESCAPE:
-                    self.stop()
-
-    def on_close(self,window=None):
-        if self.active:
-            self.stop()
 
     def stop(self):
         audio.say("Stopping Accuracy Test")
@@ -250,7 +158,7 @@ class Accuracy_Test(Calibration_Plugin):
         self.active = False
         self.close_window()
 
-        pt_cloud = preprocess_data_gaze(self.gaze_list,self.ref_list)
+        pt_cloud = preprocess_data(self.gaze_list,self.ref_list)
 
         logger.info("Collected %s data points." %len(pt_cloud))
 
@@ -283,7 +191,7 @@ class Accuracy_Test(Calibration_Plugin):
 
         field_of_view = self.fov
         px_per_degree = self.res/field_of_view
-
+        print px_per_degree
         # Accuracy is calculated as the average angular
         # offset (distance) (in degrees of visual angle)
         # between fixations locations and the corresponding
@@ -320,197 +228,15 @@ class Accuracy_Test(Calibration_Plugin):
         self.precision = np.sqrt(np.mean(succesive_distances**2))
         logger.info("Angular precision: %s"%self.precision)
 
-    def close_window(self):
-        if self._window:
-            glfwDestroyWindow(self._window)
-            self._window = None
-
-
-    def update(self,frame,events):
-
-        recent_pupil_positions = events['gaze']
-
-        #get world image size for error fitting later.
-        if self.world_size is None:
-            self.world_size = frame.width,frame.height
-            self.res = np.sqrt(self.world_size[0]**2+self.world_size[1]**2)
-
-        if self.active:
-            gray_img = frame.gray
-
-            #detect the marker
-            self.candidate_ellipses = get_candidate_ellipses(gray_img,
-                                                            area_threshold=self.area_threshold,
-                                                            dist_threshold=self.dist_threshold,
-                                                            min_ring_count=4,
-                                                            visual_debug=self.show_edges)
-
-            if len(self.candidate_ellipses) > 0:
-                self.detected= True
-                marker_pos = self.candidate_ellipses[0][0]
-                self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
-
-            else:
-                self.detected = False
-                self.pos = None #indicate that no reference is detected
-
-
-            #only save a valid ref position if within sample window of calibraiton routine
-            on_position = 0 < self.screen_marker_state < self.screen_marker_max-50
-            if on_position and self.detected:
-                ref = {}
-                ref["norm_pos"] = self.pos
-                ref["timestamp"] = frame.timestamp
-                ref['site'] = self.active_site
-                self.ref_list.append(ref)
-
-            #always save pupil positions
-            for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
-                    self.gaze_list.append(p_pt)
-            # Animate the screen marker
-            if self.screen_marker_state < self.screen_marker_max:
-                if self.detected or not on_position:
-                    self.screen_marker_state += 1
-            else:
-                self.screen_marker_state = 0
-                self.active_site += 1
-                logger.debug("Moving screen marker to site no %s"%self.active_site)
-                if self.active_site == len(self.sites)-2:
-                    self.stop()
-                    return
-
-            # function to smoothly interpolate between points input:(0-screen_marker_max) output: (0-1)
-            m, s = self.screen_marker_max, self.screen_marker_state
-
-            interpolation_weight = np.tanh(((s-2/3.*m)*4.)/(1/3.*m))*(-.5)+.5
-
-            #use np.arrays for per element wise math
-            current = np.array(self.sites[self.active_site])
-            next = np.array(self.sites[self.active_site+1])
-            # weighted sum to interpolate between current and next
-            new_pos =  current * interpolation_weight + next * (1-interpolation_weight)
-            #broadcast next commanded marker postion of screen
-            self.display_pos = list(new_pos)
-            self.on_position = on_position
-
-
-
 
     def gl_display(self):
-        """
-        use gl calls to render
-        at least:
-            the published position of the reference
-        better:
-            show the detected postion even if not published
-        """
-
-        if self.active and self.detected:
-            for e in self.candidate_ellipses:
-                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
-                                    (int(e[1][0]/2),int(e[1][1]/2)),
-                                    int(e[-1]),0,360,15)
-                draw_gl_polyline(pts,(0.,1.,0,1.))
-        else:
-            pass
-        if self._window:
-            self.gl_display_in_window()
-
+        super(Accuracy_Test, self).gl_display()
 
         if not self.active and self.error_lines is not None:
-            draw_gl_polyline_norm(self.error_lines,(1.,0.5,0.,.5),type='Lines')
-            draw_gl_points_norm(self.error_lines[1::2],color=(.0,0.5,0.5,.5),size=3)
-            draw_gl_points_norm(self.error_lines[0::2],color=(.5,0.0,0.0,.5),size=3)
+            draw_polyline_norm(self.error_lines,color=RGBA(1.,0.5,0.,.5),line_type=gl.GL_LINES)
+            draw_points_norm(self.error_lines[1::2],color=RGBA(.0,0.5,0.5,.5),size=3)
+            draw_points_norm(self.error_lines[0::2],color=RGBA(.5,0.0,0.0,.5),size=3)
 
 
 
-    def gl_display_in_window(self):
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(self._window)
 
-        clear_gl_screen()
-
-        # Set Matrix unsing gluOrtho2D to include padding for the marker of radius r
-        #
-        ############################
-        #            r             #
-        # 0,0##################w,h #
-        # #                      # #
-        # #                      # #
-        #r#                      #r#
-        # #                      # #
-        # #                      # #
-        # 0,h##################w,h #
-        #            r             #
-        ############################
-        r = 60
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
-        p_window_size = glfwGetWindowSize(self._window)
-        # compensate for radius of marker
-        gluOrtho2D(-r,p_window_size[0]+r,p_window_size[1]+r, -r) # origin in the top left corner just like the img np-array
-        # Switch back to Model View Matrix
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity()
-
-        screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
-
-        draw_marker(screen_pos)
-        #some feedback on the detection state
-
-        if self.detected and self.on_position:
-            draw_gl_point(screen_pos, 5, (0.,1.,0.,1.))
-        else:
-            draw_gl_point(screen_pos, 5, (1.,0.,0.,1.))
-
-        glfwSwapBuffers(self._window)
-        glfwMakeContextCurrent(active_window)
-
-    def get_init_dict(self):
-        return {}
-
-
-
-    def cleanup(self):
-        """gets called when the plugin get terminated.
-           either volunatily or forced.
-        """
-        if self.active:
-            self.stop()
-        if self._window:
-            self.close_window()
-
-        self.deinit_gui()
-
-
-def preprocess_data_gaze(pupil_pts,ref_pts):
-    '''small utility function to deal with timestamped but uncorrelated data
-    input must be lists that contain dicts with at least "timestamp" and "norm_pos"
-    '''
-    cal_data = []
-
-    if len(ref_pts)<=2:
-        return cal_data
-
-    cur_ref_pt = ref_pts.pop(0)
-    next_ref_pt = ref_pts.pop(0)
-    while True:
-        matched = []
-        while pupil_pts:
-            #select all points past the half-way point between current and next ref data sample
-            if pupil_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
-                matched.append(pupil_pts.pop(0))
-            else:
-                for p_pt in matched:
-                    #only use close points
-                    if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                        data_pt = p_pt["norm_pos"][0], p_pt["norm_pos"][1],cur_ref_pt['norm_pos'][0],cur_ref_pt['norm_pos'][1]
-                        cal_data.append(data_pt)
-                break
-        if ref_pts:
-            cur_ref_pt = next_ref_pt
-            next_ref_pt = ref_pts.pop(0)
-        else:
-            break
-    return cal_data

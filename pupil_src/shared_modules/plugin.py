@@ -113,9 +113,10 @@ class Plugin(object):
     @property
     def base_class(self):
         '''
-        base class of this instance's class
+        rightmost base class of this instance's class
+        this way you can inherit from muliple classes and use the rightmost as your plugin group classifier
         '''
-        return self.__class__.__bases__[0]
+        return self.__class__.__bases__[-1]
 
     @property
     def base_class_name(self):
