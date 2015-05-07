@@ -21,24 +21,21 @@ else:
 if getattr(sys, 'frozen', False):
     # Specifiy user dirs.
     user_dir = os.path.expanduser(os.path.join('~','pupil_capture_settings'))
-    rec_dir = os.path.expanduser(os.path.join('~','pupil_recordings'))
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
 else:
     # We are running in a normal Python environment.
     # Make all pupil shared_modules available to this Python session.
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
-	# Specifiy user dirs.
-    rec_dir = os.path.join(pupil_base_dir,'recordings')
+	# Specifiy user dir.
     user_dir = os.path.join(pupil_base_dir,'capture_settings')
     version_file = None
 
 
-# create folder for user settings, tmp data and a recordings folder
+# create folder for user settings, tmp data
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
-if not os.path.isdir(rec_dir):
-    os.mkdir(rec_dir)
+
 
 from version_utils import get_version
 
@@ -121,7 +118,6 @@ def main():
     g_pool.eye_tx = []
     # make some constants avaiable
     g_pool.user_dir = user_dir
-    g_pool.rec_dir = rec_dir
     g_pool.version = get_version(version_file)
     g_pool.app = 'capture'
     g_pool.binocular = binocular
