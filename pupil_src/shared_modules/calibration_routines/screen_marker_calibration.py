@@ -78,15 +78,15 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     Points are collected at sites - not between
 
     """
-    def __init__(self, g_pool,menu_conf = {'collapsed':True},fullscreen=True,marker_scale=1.0):
+    def __init__(self, g_pool,menu_conf = {'collapsed':True},fullscreen=True,marker_scale=1.0,sample_duration=40):
         super(Screen_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
         self.screen_marker_state = 0.
-        self.sample_duration = 40 # number of frames
-        self.screen_marker_max = 70 # number of frames, maximum bound for state
-        self.start_sample = 15 # (screen_marker_max - sample_duration) / 2
-        self.stop_sample = 55
+        self.sample_duration =  sample_duration # number of frames to sample per site
+        self.lead_in = 25 #frames of marker shown before starting to sample
+        self.lead_out = 5 #frames of markers shown after sampling is donw
+
 
         self.active_site = 0
         self.sites = []
@@ -100,7 +100,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.dist_threshold = 5
         self.area_threshold = 20
         self.marker_scale = marker_scale
-        self.pattern_alpha = 1.0
 
         self.world_size = self.g_pool.capture.frame_size
 
@@ -141,7 +140,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         submenu = ui.Growing_Menu('Advanced')
         submenu.collapsed = True
         self.menu.append(submenu)
-        submenu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration',setter=self.update_sample_duration))
+        submenu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
         submenu.append(ui.Switch('show_edges',self,label='show edges'))
         submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area threshold'))
         submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity threshold'))
@@ -149,11 +148,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
-
-    def update_sample_duration(self,val):
-        self.sample_duration = val
-        self.screen_marker_max = self.sample_duration+30
-        self.stop_sample = self.screen_marker_max-self.start_sample # 55. with above params
 
     def deinit_gui(self):
         if self.menu:
@@ -300,8 +294,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
             #only save a valid ref position if within sample window of calibraiton routine
-            # on_position = 40 < self.screen_marker_state < self.screen_marker_max-5
-            on_position = self.start_sample < self.screen_marker_state < self.stop_sample
+            on_position = self.lead_in < self.screen_marker_state < (self.lead_in+self.sample_duration)
 
             if on_position and self.detected:
                 ref = {}
@@ -315,7 +308,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.pupil_list.append(p_pt)
 
             # Animate the screen marker
-            if self.screen_marker_state < self.screen_marker_max:
+            if self.screen_marker_state < self.sample_duration+self.lead_in+self.lead_out:
                 if self.detected or not on_position:
                     self.screen_marker_state += 1
             else:
@@ -326,7 +319,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.stop()
                     return
 
-            self.pattern_alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.screen_marker_max),float(self.start_sample),float(self.stop_sample))
 
             #use np.arrays for per element wise math
             self.display_pos = np.array(self.sites[self.active_site])
@@ -392,14 +384,15 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         gl.glLoadIdentity()
 
         screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
+        alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
-        draw_marker(screen_pos,r,self.pattern_alpha)
+        draw_marker(screen_pos,r,alpha)
         #some feedback on the detection state
 
         if self.detected and self.on_position:
-            draw_points([screen_pos],size=5,color=RGBA(0.,1.,0.,self.pattern_alpha),sharpness=0.95)
+            draw_points([screen_pos],size=5,color=RGBA(0.,1.,0.,alpha),sharpness=0.95)
         else:
-            draw_points([screen_pos],size=5,color=RGBA(1.,0.,0.,self.pattern_alpha),sharpness=0.95)
+            draw_points([screen_pos],size=5,color=RGBA(1.,0.,0.,alpha),sharpness=0.95)
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))

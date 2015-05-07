@@ -43,7 +43,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
     We use a ring detector that moves across the screen to 9 sites
     Points are collected at sites not between
     """
-    def __init__(self, g_pool,menu_conf = {'collapsed':False},fullscreen=True,marker_scale=1.0):
+    def __init__(self, g_pool,menu_conf = {'collapsed':False},fullscreen=True,marker_scale=1.0,sample_duration=40):
         super(Accuracy_Test, self).__init__(g_pool,menu_conf,fullscreen,marker_scale)
 
         #result calculation variables:
@@ -103,6 +103,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
 
         submenu = ui.Growing_Menu('Advanced Detector Settings')
         submenu.collapsed = True
+        submenu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
         submenu.append(ui.Switch('show_edges',self,label='show edges'))
         submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area Threshold'))
         submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity Threshold'))
