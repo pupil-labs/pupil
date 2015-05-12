@@ -25,7 +25,7 @@ from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
-from gaze_mappers import Simple_Gaze_Mapper
+from gaze_mappers import Simple_Gaze_Mapper, Binocular_Gaze_Mapper
 
 #logging
 import logging
@@ -247,16 +247,24 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         logger.info("Collected %s data points." %len(cal_pt_cloud))
 
-        if len(cal_pt_cloud) < 20:
+        cal_pt_cloud = np.array(cal_pt_cloud)
+        if self.g_pool.binocular:
+            not_enough_data = cal_pt_cloud[cal_pt_cloud[:,4] == 0].shape[0] < 20 or cal_pt_cloud[cal_pt_cloud[:,4] == 1].shape[0] < 20
+        else:
+            not_enough_data = cal_pt_cloud.shape[0] < 20
+        if not_enough_data:
             logger.warning("Did not collect enough data.")
             return
 
-        cal_pt_cloud = np.array(cal_pt_cloud)
-        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,return_params=True)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
-
-        #replace current gaze mapper with new
-        self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
+        if self.g_pool.binocular:
+            map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,binocular=True,return_params=True)
+            #replace current gaze mapper with new
+            self.g_pool.plugins.add(Binocular_Gaze_Mapper(self.g_pool,params))
+        else:
+            map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,return_params=True)    
+            #replace current gaze mapper with new
+            self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
 
 
     def close_window(self):
