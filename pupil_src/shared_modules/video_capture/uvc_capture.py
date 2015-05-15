@@ -8,9 +8,9 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import v4l2
+import uvc
 #check versions for our own depedencies as they are fast-changing
-assert v4l2.__version__ >= '0.1'
+assert uvc.__version__ >= '0.1'
 
 from ctypes import c_double
 from pyglui import ui
@@ -33,7 +33,7 @@ def Camera_List():
         pass
 
     cam_list = []
-    for c in v4l2.list_devices():
+    for c in uvc.list_devices():
         cam = Cam()
         cam.name = c['dev_name']
         cam.src_id = int(c['dev_path'][-1])
@@ -44,7 +44,7 @@ def Camera_List():
 
 class Camera_Capture(object):
     """
-    Camera Capture is a class that encapsualtes v4l2.Capture:
+    Camera Capture is a class that encapsualtes uvc.Capture:
      - adds UI elements
      - adds timestamping sanitization fns.
     """
@@ -65,7 +65,7 @@ class Camera_Capture(object):
         self.use_hw_ts = self.check_hw_ts_support()
         self._last_timestamp = self.get_now()
 
-        self.capture = v4l2.Capture('/dev/video'+str(self.src_id))
+        self.capture = uvc.Capture('/dev/video'+str(self.src_id))
         self.capture.frame_size = size
         self.capture.frame_rate = (1,fps or 30)
         self.controls = self.capture.enum_controls()
@@ -87,7 +87,7 @@ class Camera_Capture(object):
 
     def check_hw_ts_support(self):
         # hw timestamping:
-        # v4l2 supports Sart of Exposure hardware timestamping ofr UVC Capture devices
+        # uvc supports Sart of Exposure hardware timestamping ofr UVC Capture devices
         # these HW timestamps are excellent referece times and
         # prefferec over softwaretimestamp denoting the avaibleilt of frames to the user.
         # however not all uvc cameras report valid hw timestamps, notably microsoft hd-6000
@@ -125,7 +125,7 @@ class Camera_Capture(object):
         self.name = cam.name
 
         self.use_hw_ts = self.check_hw_ts_support()
-        self.capture = v4l2.Capture('/dev/video'+str(self.src_id))
+        self.capture = uvc.Capture('/dev/video'+str(self.src_id))
         self.capture.frame_size = current_size
         self.capture.frame_rate = (1,current_fps or 30)
         self.controls = self.capture.enum_controls()
@@ -154,39 +154,26 @@ class Camera_Capture(object):
         timestamp = frame.timestamp
         if self.use_hw_ts:
             # lets make sure this timestamps is sane:
-            if abs(timestamp-v4l2.get_sys_time_monotonic()) > 2: #hw_timestamp more than 2secs away from now?
-                logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s"%('/dev/video'+str(self.src_id),timestamp,v4l2.get_sys_time_monotonic()))
-                timestamp = v4l2.get_sys_time_monotonic()
+            if abs(timestamp-uvc.get_sys_time_monotonic()) > 2: #hw_timestamp more than 2secs away from now?
+                logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s"%('/dev/video'+str(self.src_id),timestamp,uvc.get_sys_time_monotonic()))
+                timestamp = uvc.get_sys_time_monotonic()
         else:
-            timestamp = v4l2.get_sys_time_monotonic()
+            timestamp = uvc.get_sys_time_monotonic()
 
         timestamp -= self.timebase.value
         frame.timestamp = timestamp
         return frame
 
     def get_now(self):
-        return v4l2.get_sys_time_monotonic()
+        return uvc.get_sys_time_monotonic()
 
     @property
     def frame_rate(self):
-        #return rate as denominator only
-        return float(self.capture.frame_rate[1])/self.capture.frame_rate[0]
-    @frame_rate.setter
-    def frame_rate(self, rate):
-        if isinstance(rate,(tuple,list)):
-            self.capture.frame_rate = rate
-        elif isinstance(rate,(int,float)):
-            self.capture.frame_rate = 1. , rate
-        else:
-            raise Exception("Please set rate as '(num,den)' or as 'den' assuming num is 1")
+        return self.capture.frame_rate
 
     @property
     def frame_size(self):
         return self.capture.frame_size
-    @frame_size.setter
-    def frame_size(self, value):
-        self.capture.frame_size = value
-
 
 
     def init_gui(self,sidebar):
