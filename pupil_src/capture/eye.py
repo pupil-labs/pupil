@@ -39,17 +39,6 @@ from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileErr
 # Pupil detectors
 from pupil_detectors import Canny_Detector
 
-#UI Platform tweaks
-if platform.system() == 'Linux':
-    scroll_factor = 10.0
-    window_position_default = (0,0)
-elif platform.system() == 'Windows':
-    scroll_factor = 1.0
-    window_position_default = (8,31)
-else:
-    scroll_factor = 1.0
-    window_position_default = (0,0)
-
 
 
 def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
@@ -79,6 +68,19 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     logger.addHandler(ch)
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
+
+
+    #UI Platform tweaks
+    if platform.system() == 'Linux':
+        scroll_factor = 10.0
+        window_position_default = (1280,300*eye_id)
+    elif platform.system() == 'Windows':
+        scroll_factor = 1.0
+        window_position_default = (1280,31+300*eye_id)
+    else:
+        scroll_factor = 1.0
+        window_position_default = (1280,300*eye_id)
+
 
     # Callback functions
     def on_resize(window,w, h):
@@ -142,7 +144,9 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye%s'%eye_id))
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, cap_size, 30, timebase=g_pool.timebase)
+    cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
+    cap.frame_size = cap_size
+    cap.frame_rate = 90
 
     # Test capture
     try:
@@ -186,8 +190,8 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
 
 
+    window_pos = session_settings.get('window_position',window_position_default) # not yet using this one.
     width,height = session_settings.get('window_size',(frame.width, frame.height))
-    window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
 
     # Initialize glfw
     glfwInit()
@@ -216,7 +220,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # refresh speed settings
     glfwSwapInterval(0)
-    glfwSetWindowPos(main_window,800,300*eye_id+window_position_default[1])
+    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
 
 
     #setup GUI

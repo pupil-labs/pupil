@@ -137,8 +137,9 @@ def world(g_pool,cap_src,cap_size):
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, cap_size, 30, timebase=g_pool.timebase)
-
+    cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
+    cap.frame_size = cap_size
+    cap.frame_rate = 24
     # Test capture
     try:
         frame = cap.get_frame()
@@ -186,7 +187,7 @@ def world(g_pool,cap_src,cap_size):
 
 
     width,height = session_settings.get('window_size',(frame.width, frame.height))
-    window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
+    window_pos = session_settings.get('window_position',window_position_default) # not yet using this one.
 
 
     # Initialize glfw
@@ -212,7 +213,7 @@ def world(g_pool,cap_src,cap_size):
 
     # refresh speed settings
     glfwSwapInterval(0)
-    glfwSetWindowPos(main_window,window_position_default[0],window_position_default[1])
+    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
 
 
     #setup GUI
