@@ -381,9 +381,9 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     session_settings.close()
 
     pupil_detector.cleanup()
-    cap.close()
     glfwDestroyWindow(main_window)
     glfwTerminate()
+    cap.close()
 
     #flushing queue in case world process did not exit gracefully
     while not g_pool.pupil_queue.empty():

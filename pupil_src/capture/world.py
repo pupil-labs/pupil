@@ -137,7 +137,7 @@ def world(g_pool,cap_src,cap_size):
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, cap_size, 24, timebase=g_pool.timebase)
+    cap = autoCreateCapture(cap_src, cap_size, 30, timebase=g_pool.timebase)
 
     # Test capture
     try:
@@ -369,9 +369,10 @@ def world(g_pool,cap_src,cap_size):
         p.alive = False
     g_pool.plugins.clean()
 
-    cap.close()
     glfwDestroyWindow(main_window)
     glfwTerminate()
+    cap.close()
+
     logger.debug("Process done")
 
 def world_profiled(g_pool,cap_src,cap_size):
