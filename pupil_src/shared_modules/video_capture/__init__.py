@@ -44,8 +44,7 @@ from fake_capture import FakeCapture
 from file_capture import File_Capture, FileCaptureError, EndofVideoFileError,FileSeekError
 
 
-def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None):
-
+def autoCreateCapture(src,timestamps=None,timebase = None):
     preferred_idx = 0
     # checking src and handling all cases:
     src_type = type(src)
@@ -62,17 +61,16 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None)
                 matching_devices.append(device)
 
         if len(matching_devices) > preferred_idx:
-            logger.warning('Found %s as devices that match the src string pattern Using the %s match.'%([d['name'] for d in matching_devices],('first','second','third','fourth')[preferred_idx]) )
+            logger.info('Found %s as devices that match the src string pattern Using the %s match.'%([d['name'] for d in matching_devices],('first','second','third','fourth')[preferred_idx]) )
         else:
             if len(matching_devices) == 0:
                 logger.error('No device found that matched %s'%src)
             else:
                 logger.error('Not enough devices found that matched %s'%src)
-            return FakeCapture(size,fps,timebase=timebase)
+            return FakeCapture(timebase=timebase)
 
 
-        size = filter_sizes(matching_devices[preferred_idx],size)
-        cap = Camera_Capture(matching_devices[preferred_idx]['uid'],size,fps,timebase)
+        cap = Camera_Capture(matching_devices[preferred_idx]['uid'],timebase)
         logger.info("Camera selected: %s  with id: %s" %(matching_devices[preferred_idx]['name'],matching_devices[preferred_idx]['uid']))
         return cap
 
@@ -82,7 +80,7 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None)
             cap = device_list()[i]
         except IndexError, e:
             logger.warning('Camera with id %s not found.'%src_type)
-            return FakeCapture(size,fps,timebase=timebase)
+            return FakeCapture(timebase=timebase)
         else:
             return Camera_Capture(cap['uid'],size,fps,timebase)
 
@@ -99,16 +97,4 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None)
         return FakeCapture(size,fps,timebase=timebase)
 
 
-def filter_sizes(cam,size):
-    #here we can force some defaulit formats
-
-    if "6000" in cam['name']:
-        if size[0] == 640:
-            logger.info("HD-6000 camera selected. Forcing format to 640,360")
-            return 640,360
-        elif size[0] == 320:
-            logger.info("HD-6000 camera selected. Forcing format to 320,360")
-            return 320,160
-
-    return size
 

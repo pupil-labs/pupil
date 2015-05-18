@@ -15,7 +15,7 @@ assert uvc.__version__ >= '0.1'
 
 from ctypes import c_double
 from pyglui import ui
-from time import sleep,time
+from time import time
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class Camera_Capture(object):
      - adds UI elements
      - adds timestamping sanitization fns.
     """
-    def __init__(self,uid,size=(640,480),fps=30,timebase=None):
+    def __init__(self,uid,timebase=None):
         self.uid = uid
         if timebase == None:
             logger.debug("Capture will run with default system timebase")
@@ -52,8 +52,7 @@ class Camera_Capture(object):
 
         self.capture = uvc.Capture(uid)
         logger.debug('avaible modes %s'%self.capture.avaible_modes)
-        self.capture.frame_size = size
-        self.capture.frame_rate = fps
+
         # self.controls = self.capture.enum_controls()
         self.controls = []
         # controls_dict = dict([(c['name'],c) for c in self.controls])
@@ -84,7 +83,7 @@ class Camera_Capture(object):
 
         blacklist = ["Microsoft","HD-6000"]
         qualifying_devices = ["C930e","Integrated Camera", "USB 2.0 Camera"]
-        attached_devices = [c.name for c in Camera_List()]
+        attached_devices = [c.name for c in device_list()]
         if any(qd in self.name for qd in qualifying_devices):
             use_hw_ts = True
             logger.info("Capture device: '%s' supports HW timestamping. Using hardware timestamps." %self.name)
@@ -103,14 +102,11 @@ class Camera_Capture(object):
         current_size = self.capture.frame_size
         current_fps = self.capture.frame_rate
 
-        self.capture.close()
         self.capture = None
         #recreate the bar with new values
         self.deinit_gui()
 
-
-
-        self.use_hw_ts = self.check_hw_ts_support()
+        # self.use_hw_ts = self.check_hw_ts_support()
         self.use_hw_ts = False
         self.capture = uvc.Capture(uid)
         self.capture.frame_size = current_size
@@ -158,13 +154,29 @@ class Camera_Capture(object):
     @property
     def frame_rate(self):
         return self.capture.frame_rate
+    @frame_rate.setter
+    def frame_rate(self,new_rate):
+        #closest match for rate
+        rates = [ abs(r-new_rate) for r in self.capture.frame_rates ]
+        best_rate_idx = rates.index(min(rates))
+        rate = self.capture.frame_rates[best_rate_idx]
+        if rate != new_rate:
+            logger.warning("%sfps capture mode not available at (%s) on '%s'. Selected %sfps. "%(new_rate,self.capture.frame_size,self.capture.name,rate))
+        self.capture.frame_rate = rate
 
     @property
     def frame_size(self):
         return self.capture.frame_size
+    @frame_size.setter
+    def frame_size(self,new_size):
+        self.capture.frame_size = filter_sizes(self.name,new_size)
 
+    @property
+    def name(self):
+        return self.capture.name
 
     def init_gui(self,sidebar):
+
 
         # #lets define some  helper functions:
         # def gui_load_defaults():
@@ -270,5 +282,16 @@ class Camera_Capture(object):
         del self.capture
         logger.info("Capture released")
 
+
+def filter_sizes(cam_name,size):
+    #here we can force some defaulit formats
+    if "6000" in cam_name:
+        if size[0] == 640:
+            logger.info("HD-6000 camera selected. Forcing format to 640,360")
+            return 640,360
+        elif size[0] == 320:
+            logger.info("HD-6000 camera selected. Forcing format to 320,360")
+            return 320,160
+    return size
 
 
