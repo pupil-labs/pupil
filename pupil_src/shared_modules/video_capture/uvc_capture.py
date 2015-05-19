@@ -35,7 +35,6 @@ class Camera_Capture(object):
      - adds timestamping sanitization fns.
     """
     def __init__(self,uid,timebase=None):
-        self.uid = uid
         if timebase == None:
             logger.debug("Capture will run with default system timebase")
             self.timebase = c_double(0)
@@ -50,7 +49,10 @@ class Camera_Capture(object):
         self.use_hw_ts = False
         self._last_timestamp = self.get_now()
 
+
         self.capture = uvc.Capture(uid)
+        self.uid = uid
+
         logger.debug('avaible modes %s'%self.capture.avaible_modes)
 
         # self.controls = self.capture.enum_controls()
@@ -109,8 +111,10 @@ class Camera_Capture(object):
         # self.use_hw_ts = self.check_hw_ts_support()
         self.use_hw_ts = False
         self.capture = uvc.Capture(uid)
-        self.capture.frame_size = current_size
-        self.capture.frame_rate = current_fps
+        self.uid = uid
+
+        self.frame_size = current_size
+        self.frame_rate = current_fps
         # self.controls = self.capture.enum_controls()
         # controls_dict = dict([(c['name'],c) for c in self.controls])
         # try:
