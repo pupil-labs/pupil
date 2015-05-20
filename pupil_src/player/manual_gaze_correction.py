@@ -35,9 +35,8 @@ class Manual_Gaze_Correction(Plugin):
         self.y_offset = float(y_offset)
 
     def update(self,frame,events):
-        for p in events['pupil_positions']:
-            if p['norm_gaze'] is not None:
-                p['norm_gaze'] = p['norm_gaze'][0]+self.x_offset,p['norm_gaze'][1]+self.y_offset
+        for p in events.get('pupil_positions',[]):
+            p['norm_pos'] = p['norm_pos'][0]+self.x_offset,p['norm_gaze'][1]+self.y_offset
 
     def init_gui(self):
         # initialize the menu

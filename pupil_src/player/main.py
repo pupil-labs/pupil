@@ -98,7 +98,6 @@ from plugin import Plugin_List
 from vis_circle import Vis_Circle
 from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
-from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
 from vis_watermark import Vis_Watermark
 from seek_bar import Seek_Bar
@@ -216,9 +215,9 @@ def main():
 
     #correlate data
     if rec_version < VersionFormat('0.4'):
-        positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
+        gaze_positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
     else:
-        positions_by_frame = correlate_gaze(gaze_list,timestamps)
+        gaze_positions_by_frame = correlate_gaze(gaze_list,timestamps)
 
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
@@ -255,7 +254,7 @@ def main():
     g_pool.capture = cap
     g_pool.timestamps = timestamps
     g_pool.gaze_list = gaze_list
-    g_pool.positions_by_frame = positions_by_frame
+    g_pool.gaze_positions_by_frame = gaze_positions_by_frame
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
@@ -391,11 +390,11 @@ def main():
         frame = new_frame.copy()
         events = {}
         #new positons we make a deepcopy just like the image is a copy.
-        events['pupil_positions'] = deepcopy(positions_by_frame[frame.index])
+        events['gaze_positions'] = deepcopy(g_pool.gaze_positions_by_frame[frame.index])
 
         if update_graph:
             #update performace graphs
-            for p in  events['pupil_positions']:
+            for p in  events['gaze_positions']:
                 pupil_graph.add(p['confidence'])
 
             t = new_frame.timestamp

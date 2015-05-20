@@ -33,7 +33,6 @@ from plugin import Plugin_List
 from vis_circle import Vis_Circle
 from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
-from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
 from vis_watermark import Vis_Watermark
 
@@ -76,9 +75,9 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     #correlate data
     if rec_version < VersionFormat('0.4'):
-        positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
+        gaze_positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
     else:
-        positions_by_frame = correlate_gaze(gaze_list,timestamps)
+        gaze_positions_by_frame = correlate_gaze(gaze_list,timestamps)
 
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
     width,height = cap.frame_size
@@ -130,7 +129,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     g.rec_version = rec_version
     g.timestamps = timestamps
     g.gaze_list = gaze_list
-    g.positions_by_frame = positions_by_frame
+    g.gaze_positions_by_frame = gaze_positions_by_frame
     g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
 
     while frames_to_export.value - current_frame.value > 0:
@@ -150,7 +149,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
         events = {}
         #new positons and events
-        events['pupil_positions'] = positions_by_frame[frame.index]
+        events['gaze_positions'] = gaze_positions_by_frame[frame.index]
         # allow each Plugin to do its work.
         for p in g.plugins:
             p.update(frame,events)

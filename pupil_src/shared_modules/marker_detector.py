@@ -141,7 +141,7 @@ class Marker_Detector(Plugin):
         self.menu.append(ui.Switch('locate_3d',self,label='3D localization'))
         self.menu.append(ui.Selector('mode',self,label="Mode",selection=['Show markers and frames','Show marker IDs', 'Surface edit mode'] ))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_'),))
-        
+
         # disable locate_3d if camera intrinsics don't exist
         if self.camera_intrinsics is None:
             self.menu.elements[3].read_only = True
@@ -214,7 +214,7 @@ class Marker_Detector(Plugin):
         for s in self.surfaces:
             if s.detected:
                 s.gaze_on_srf = []
-                for p in events.get('gaze',[]):
+                for p in events.get('gaze_positions',[]):
                     gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_pos'])))
                     p['realtime gaze on ' + s.name] = gp_on_s
                     s.gaze_on_srf.append(gp_on_s)

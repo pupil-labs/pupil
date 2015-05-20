@@ -41,8 +41,7 @@ class Vis_Light_Points(Plugin):
 
         img = frame.img
         img_shape = img.shape[:-1][::-1]#width,height
-        norm_gaze = [ng['norm_gaze'] for ng in events['pupil_positions'] if ng['norm_gaze'] is not None]
-        screen_gaze = [denormalize(ng,img_shape,flip_y=True) for ng in norm_gaze]
+        screen_gaze = [denormalize(ng,img_shape,flip_y=True) for ng in events.get('gaze_positions',[])]
 
         overlay = np.ones(img.shape[:-1],dtype=img.dtype)
 

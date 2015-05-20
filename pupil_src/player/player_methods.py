@@ -47,7 +47,7 @@ def correlate_gaze(gaze_list,timestamps):
             break
         if gaze_timestamp <= t_between_frames:
             ts,confidence,x,y, = data_point
-            positions_by_frame[frame_idx].append({'norm_gaze':(x,y), 'confidence':confidence, 'timestamp':ts})
+            positions_by_frame[frame_idx].append({'norm_pos':(x,y), 'confidence':confidence, 'timestamp':ts})
             data_point = gaze_list.pop(0)
             gaze_timestamp = data_point[0]
         else:
@@ -88,7 +88,7 @@ def correlate_gaze_legacy(gaze_list,timestamps):
         except IndexError:
             break
         if gaze_timestamp <= t_between_frames:
-            positions_by_frame[frame_idx].append({'norm_gaze':(data_point[0],data_point[1]),'norm_pupil': (data_point[2],data_point[3]), 'timestamp':data_point[4],'confidence':data_point[5]})
+            positions_by_frame[frame_idx].append({'norm_pos':(data_point[0],data_point[1]), 'timestamp':data_point[4],'confidence':data_point[5]})
             data_point = gaze_list.pop(0)
             gaze_timestamp = data_point[4]
         else:
@@ -202,8 +202,8 @@ def transparent_image_overlay(pos,overlay_img,img,alpha):
     Arguments:
         pos: (x,y) position of the top left corner in numpy row,column format from top left corner (numpy coord system)
         overlay_img: image to overlay
-        img: destination image 
-        alpha: 0.0-1.0    
+        img: destination image
+        alpha: 0.0-1.0
     """
     roi = slice(pos[1],pos[1]+overlay_img.shape[0]),slice(pos[0],pos[0]+overlay_img.shape[1])
     try:

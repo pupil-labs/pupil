@@ -58,9 +58,11 @@ class Filter_Fixations(Plugin):
 
         filtered_gaze = []
 
-        for gp1, gp2 in zip(events['pupil_positions'][:-1], events['pupil_positions'][1:]):
-            gp1_norm = denormalize(gp1['norm_gaze'], img_shape,flip_y=True)
-            gp2_norm = denormalize(gp2['norm_gaze'], img_shape,flip_y=True)
+
+        ##TODO: THIS NEED WORK!
+        for gp1, gp2 in zip(events['gaze_posistions'][:-1], events['gaze_posistions'][1:]):
+            gp1_norm = denormalize(gp1['norm_pos'], img_shape,flip_y=True)
+            gp2_norm = denormalize(gp2['norm_pos'], img_shape,flip_y=True)
             x_dist =  abs(gp1_norm[0] - gp2_norm[0])
             y_dist = abs(gp1_norm[1] - gp2_norm[1])
             man = x_dist + y_dist
@@ -71,8 +73,8 @@ class Filter_Fixations(Plugin):
                 # print "filtered"
                 pass
 
-        events['pupil_positions'][:] = filtered_gaze[:]
-        events['pupil_positions'].sort(key=lambda x: x['timestamp']) #this may be redundant...
+        events['gaze_posistions'][:] = filtered_gaze[:]
+        events['gaze_posistions'].sort(key=lambda x: x['timestamp']) #this may be redundant...
 
     def init_gui(self):
         # initialize the menu
