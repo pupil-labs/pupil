@@ -208,10 +208,10 @@ def main():
         video_path = rec_dir + "/world.mkv"
         timestamps_path = rec_dir + "/world_timestamps.npy"
 
+
     gaze_positions_path = rec_dir + "/gaze_positions.npy"
     pupil_positions_path = rec_dir + "/pupil_positions.npy"
     #load gaze information
-    pupil_list = np.load(pupil_positions_path)
     gaze_list = np.load(gaze_positions_path)
     timestamps = np.load(timestamps_path)
 
@@ -220,6 +220,7 @@ def main():
         gaze_positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
         pupil_positions_by_frame = [[]for x in range(len(timestamps))]
     else:
+        pupil_list = np.load(pupil_positions_path)
         gaze_positions_by_frame = correlate_gaze(gaze_list,timestamps)
         pupil_positions_by_frame = correlate_pupil_data(pupil_list,timestamps)
 
