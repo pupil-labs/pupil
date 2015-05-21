@@ -39,7 +39,7 @@ if not os.path.isdir(user_dir):
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
-logger.setLevel(logging.WARNING) # <-- use this to set verbosity
+logger.setLevel(logging.INFO) # <-- use this to set verbosity
 #since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
     if __name__ == '__main__': #clear log if main
@@ -51,7 +51,7 @@ else:
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.WARNING)
+ch.setLevel(logging.INFO)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('Player: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -88,7 +88,7 @@ from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,Fa
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize
-from player_methods import correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
+from player_methods import correlate_pupil_data,correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
 
 #monitoring
 import psutil
@@ -209,15 +209,19 @@ def main():
         timestamps_path = rec_dir + "/world_timestamps.npy"
 
     gaze_positions_path = rec_dir + "/gaze_positions.npy"
+    pupil_positions_path = rec_dir + "/pupil_positions.npy"
     #load gaze information
+    pupil_list = np.load(pupil_positions_path)
     gaze_list = np.load(gaze_positions_path)
     timestamps = np.load(timestamps_path)
 
     #correlate data
     if rec_version < VersionFormat('0.4'):
         gaze_positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
+        pupil_positions_by_frame = [[]for x in range(len(timestamps))]
     else:
         gaze_positions_by_frame = correlate_gaze(gaze_list,timestamps)
+        pupil_positions_by_frame = correlate_pupil_data(pupil_list,timestamps)
 
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
@@ -253,7 +257,7 @@ def main():
     g_pool.version = get_version(version_file)
     g_pool.capture = cap
     g_pool.timestamps = timestamps
-    g_pool.gaze_list = gaze_list
+    g_pool.pupil_positions_by_frame = pupil_positions_by_frame
     g_pool.gaze_positions_by_frame = gaze_positions_by_frame
     g_pool.play = False
     g_pool.new_seek = True
@@ -391,6 +395,7 @@ def main():
         events = {}
         #new positons we make a deepcopy just like the image is a copy.
         events['gaze_positions'] = deepcopy(g_pool.gaze_positions_by_frame[frame.index])
+        events['pupil_positions'] = deepcopy(g_pool.pupil_positions_by_frame[frame.index])
 
         if update_graph:
             #update performace graphs
