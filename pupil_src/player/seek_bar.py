@@ -38,7 +38,7 @@ class Seek_Bar(Plugin):
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 
     def on_window_resize(self,window,w,h):
-        self.window_size = w,h
+        self.window_size = glfwGetWindowSize(glfwGetCurrentContext())
         self.h_pad = self.padding * self.frame_count/float(w)
         self.v_pad = self.padding * 1./h
 
