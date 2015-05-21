@@ -74,14 +74,14 @@ class Pupil_Server(Plugin):
             logger.error("Could not set Socket: %s. Reason: %s"%(new_address,e))
 
     def update(self,frame,events):
-        for p in events['pupil_positions']:
+        for p in events.get('pupil_positions',[]):
             msg = "Pupil\n"
             for key,value in p.iteritems():
                 if key not in self.exclude_list:
                     msg +=key+":"+str(value)+'\n'
             self.socket.send( msg )
 
-        for g in events.get('gaze',[]):
+        for g in events.get('gaze_positions',[]):
             msg = "Gaze\n"
             for key,value in g.iteritems():
                 if key not in self.exclude_list:

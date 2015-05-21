@@ -22,7 +22,7 @@ class Display_Recent_Gaze(Plugin):
         self.pupil_display_list = []
 
     def update(self,frame,events):
-        for pt in events.get('gaze',[]):
+        for pt in events.get('gaze_positions',[]):
             self.pupil_display_list.append(pt['norm_pos'])
         self.pupil_display_list[:-3] = []
 

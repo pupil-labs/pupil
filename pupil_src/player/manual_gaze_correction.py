@@ -9,6 +9,7 @@
 '''
 
 import cv2
+from copy import deepcopy
 from plugin import Plugin
 import numpy as np
 from methods import denormalize,normalize
@@ -26,18 +27,33 @@ class Manual_Gaze_Correction(Plugin):
         #let the plugin work before most other plugins.
         self.order = .3
 
+
+        self.untouched_gaze_positions_by_frame = deepcopy(self.g_pool.gaze_positions_by_frame)
+        self.x_offset = float(x_offset)
+        self.y_offset = float(y_offset)
+
         # initialize empty menu
         # and load menu configuration of last session
         self.menu = None
         self.menu_conf = menu_conf
-        #user settings
-        self.x_offset = float(x_offset)
-        self.y_offset = float(y_offset)
 
-    def update(self,frame,events):
-        for p in events['pupil_positions']:
-            if p['norm_gaze'] is not None:
-                p['norm_gaze'] = p['norm_gaze'][0]+self.x_offset,p['norm_gaze'][1]+self.y_offset
+
+
+    def _set_offset(self):
+        x,y = self.x_offset,self.y_offset
+        for f in range(len(self.g_pool.gaze_positions_by_frame)):
+            for i in range(len(self.g_pool.gaze_positions_by_frame[f])):
+                gaze_pos = self.untouched_gaze_positions_by_frame[f][i]['norm_pos']
+                gaze_pos = gaze_pos[0]+x, gaze_pos[0]+y
+                self.g_pool.gaze_positions_by_frame[f][i]['norm_pos'] =  gaze_pos
+
+    def _set_offset_x(self,offset_x):
+        self.x_offset = offset_x
+        self._set_offset()
+
+    def _set_offset_y(self,offset_y):
+        self.y_offset = offset_y
+        self._set_offset()
 
     def init_gui(self):
         # initialize the menu
@@ -48,8 +64,8 @@ class Manual_Gaze_Correction(Plugin):
         self.g_pool.gui.append(self.menu)
 
         self.menu.append(ui.Info_Text('Move gaze horizontally and vertically. Screen width and height are one unit respectively.'))
-        self.menu.append(ui.Slider('x_offset',self,min=-1,step=0.01,max=1))
-        self.menu.append(ui.Slider('y_offset',self,min=-1,step=0.01,max=1))
+        self.menu.append(ui.Slider('x_offset',self,min=-1,step=0.01,max=1,setter=self._set_offset_x))
+        self.menu.append(ui.Slider('y_offset',self,min=-1,step=0.01,max=1,setter=self._set_offset_y))
         self.menu.append(ui.Button('remove',self.unset_alive))
 
     def deinit_gui(self):
@@ -69,5 +85,6 @@ class Manual_Gaze_Correction(Plugin):
         This happens either voluntarily or forced.
         if you have a GUI or glfw window destroy it here.
         """
+        self.g_pool.gaze_positions_by_frame = self.untouched_gaze_positions_by_frame
         self.deinit_gui()
 

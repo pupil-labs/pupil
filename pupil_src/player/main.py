@@ -39,7 +39,7 @@ if not os.path.isdir(user_dir):
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
-logger.setLevel(logging.WARNING) # <-- use this to set verbosity
+logger.setLevel(logging.INFO) # <-- use this to set verbosity
 #since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
     if __name__ == '__main__': #clear log if main
@@ -51,7 +51,7 @@ else:
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.WARNING)
+ch.setLevel(logging.INFO)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('Player: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -88,7 +88,7 @@ from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,Fa
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize
-from player_methods import correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
+from player_methods import correlate_pupil_data,correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
 
 #monitoring
 import psutil
@@ -98,7 +98,6 @@ from plugin import Plugin_List
 from vis_circle import Vis_Circle
 from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
-from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
 from vis_watermark import Vis_Watermark
 from seek_bar import Seek_Bar
@@ -209,16 +208,21 @@ def main():
         video_path = rec_dir + "/world.mkv"
         timestamps_path = rec_dir + "/world_timestamps.npy"
 
+
     gaze_positions_path = rec_dir + "/gaze_positions.npy"
+    pupil_positions_path = rec_dir + "/pupil_positions.npy"
     #load gaze information
     gaze_list = np.load(gaze_positions_path)
     timestamps = np.load(timestamps_path)
 
     #correlate data
     if rec_version < VersionFormat('0.4'):
-        positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
+        gaze_positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
+        pupil_positions_by_frame = [[]for x in range(len(timestamps))]
     else:
-        positions_by_frame = correlate_gaze(gaze_list,timestamps)
+        pupil_list = np.load(pupil_positions_path)
+        gaze_positions_by_frame = correlate_gaze(gaze_list,timestamps)
+        pupil_positions_by_frame = correlate_pupil_data(pupil_list,timestamps)
 
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
@@ -234,7 +238,9 @@ def main():
     # Initialize glfw
     glfwInit()
     main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "+ rec_dir.split(os.path.sep)[-1], None, None)
+    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfwMakeContextCurrent(main_window)
+
     cygl.utils.init()
 
 
@@ -254,8 +260,8 @@ def main():
     g_pool.version = get_version(version_file)
     g_pool.capture = cap
     g_pool.timestamps = timestamps
-    g_pool.gaze_list = gaze_list
-    g_pool.positions_by_frame = positions_by_frame
+    g_pool.pupil_positions_by_frame = pupil_positions_by_frame
+    g_pool.gaze_positions_by_frame = gaze_positions_by_frame
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
@@ -340,7 +346,6 @@ def main():
 
     #set the last saved window size
     on_resize(main_window, *glfwGetWindowSize(main_window))
-    glfwSetWindowPos(main_window,0,0)
 
 
     # gl_state settings
@@ -391,11 +396,12 @@ def main():
         frame = new_frame.copy()
         events = {}
         #new positons we make a deepcopy just like the image is a copy.
-        events['pupil_positions'] = deepcopy(positions_by_frame[frame.index])
+        events['gaze_positions'] = deepcopy(g_pool.gaze_positions_by_frame[frame.index])
+        events['pupil_positions'] = deepcopy(g_pool.pupil_positions_by_frame[frame.index])
 
         if update_graph:
             #update performace graphs
-            for p in  events['pupil_positions']:
+            for p in  events['gaze_positions']:
                 pupil_graph.add(p['confidence'])
 
             t = new_frame.timestamp

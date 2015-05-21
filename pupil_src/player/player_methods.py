@@ -15,6 +15,51 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
+
+def correlate_pupil_data(pupil_list,timestamps):
+    '''
+    pupil_list:  timestamp | confidence | id | norm_pos x | norm_pos y | diameter | other data ...
+
+    timestamps timestamps to correlate gaze data to
+
+
+    this takes a pupil positions list and a timestamps list and makes a new list
+    with the length of the number of recorded frames.
+    Each slot conains a list that will have 0, 1 or more assosiated pupil data points.
+    '''
+    pupil_list = list(pupil_list)
+    timestamps = list(timestamps)
+
+    positions_by_frame = [[] for i in timestamps]
+
+    frame_idx = 0
+    try:
+        data_point = list(pupil_list.pop(0))
+    except:
+        logger.warning("No gaze positons in this recording.")
+        return positions_by_frame
+
+    gaze_timestamp = data_point[0]
+
+    while pupil_list:
+        # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
+        try:
+            t_between_frames = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
+        except IndexError:
+            break
+        if gaze_timestamp <= t_between_frames:
+            timestamp, confidence, id, x, y, diameter = data_point[:6]
+            other_data = data_point[6:] #use python slicing to generate empty list is case no other_data is recorded.
+            positions_by_frame[frame_idx].append({'norm_pos':(x,y), 'confidence':confidence, 'timestamp':timestamp,'id':id,'diameter':diameter,'other_data':other_data})
+            data_point = list(pupil_list.pop(0))
+            gaze_timestamp = data_point[0]
+        else:
+            frame_idx+=1
+
+    return positions_by_frame
+
+
 def correlate_gaze(gaze_list,timestamps):
     '''
     gaze_list: timestamp | confidence | gaze x | gaze y |
@@ -47,7 +92,7 @@ def correlate_gaze(gaze_list,timestamps):
             break
         if gaze_timestamp <= t_between_frames:
             ts,confidence,x,y, = data_point
-            positions_by_frame[frame_idx].append({'norm_gaze':(x,y), 'confidence':confidence, 'timestamp':ts})
+            positions_by_frame[frame_idx].append({'norm_pos':(x,y), 'confidence':confidence, 'timestamp':ts})
             data_point = gaze_list.pop(0)
             gaze_timestamp = data_point[0]
         else:
@@ -88,7 +133,7 @@ def correlate_gaze_legacy(gaze_list,timestamps):
         except IndexError:
             break
         if gaze_timestamp <= t_between_frames:
-            positions_by_frame[frame_idx].append({'norm_gaze':(data_point[0],data_point[1]),'norm_pupil': (data_point[2],data_point[3]), 'timestamp':data_point[4],'confidence':data_point[5]})
+            positions_by_frame[frame_idx].append({'norm_pos':(data_point[0],data_point[1]), 'timestamp':data_point[4],'confidence':data_point[5]})
             data_point = gaze_list.pop(0)
             gaze_timestamp = data_point[4]
         else:
@@ -202,8 +247,8 @@ def transparent_image_overlay(pos,overlay_img,img,alpha):
     Arguments:
         pos: (x,y) position of the top left corner in numpy row,column format from top left corner (numpy coord system)
         overlay_img: image to overlay
-        img: destination image 
-        alpha: 0.0-1.0    
+        img: destination image
+        alpha: 0.0-1.0
     """
     roi = slice(pos[1],pos[1]+overlay_img.shape[0]),slice(pos[0],pos[0]+overlay_img.shape[1])
     try:

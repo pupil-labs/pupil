@@ -256,7 +256,7 @@ class Recorder(Plugin):
 
                 self.pupil_list.append(pupil_pos)
 
-            for g in events.get('gaze',[]):
+            for g in events.get('gaze_positions',[]):
                 gaze_pos = g['timestamp'],g['confidence'],g['norm_pos'][0],g['norm_pos'][1]
                 self.gaze_list.append(gaze_pos)
 
