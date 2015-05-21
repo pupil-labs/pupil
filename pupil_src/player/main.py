@@ -238,7 +238,9 @@ def main():
     # Initialize glfw
     glfwInit()
     main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "+ rec_dir.split(os.path.sep)[-1], None, None)
+    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfwMakeContextCurrent(main_window)
+
     cygl.utils.init()
 
 
@@ -344,7 +346,6 @@ def main():
 
     #set the last saved window size
     on_resize(main_window, *glfwGetWindowSize(main_window))
-    glfwSetWindowPos(main_window,0,0)
 
 
     # gl_state settings
