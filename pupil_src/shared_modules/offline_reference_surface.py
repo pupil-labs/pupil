@@ -28,10 +28,10 @@ from reference_surface import Reference_Surface
 
 class Offline_Reference_Surface(Reference_Surface):
     """docstring for Offline_Reference_Surface"""
-    def __init__(self,g_pool,name="unnamed",saved_definition=None, gaze_positions_by_frame = None):
+    def __init__(self,g_pool,name="unnamed",saved_definition=None):
         super(Offline_Reference_Surface, self).__init__(name,saved_definition)
         self.g_pool = g_pool
-        self.gaze_positions_by_frame = gaze_positions_by_frame
+        self.g_pool.gaze_positions_by_frame
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
 
@@ -63,7 +63,7 @@ class Offline_Reference_Surface(Reference_Surface):
             self.m_from_screen = cache_result['m_from_screen']
             self.m_to_screen =  cache_result['m_to_screen']
             self.detected_markers = cache_result['detected_markers']
-            self.gaze_on_srf = cache_result['gaze_on_srf']
+            self.gaze_on_srf = self.gaze_on_srf_by_frame_idx(frame_idx,self.m_from_screen)
             return True
         raise Exception("Invalid cache entry. Please report Bug.")
 
@@ -123,28 +123,26 @@ class Offline_Reference_Surface(Reference_Surface):
 
             return {'m_to_screen':m_to_screen,
                     'm_from_screen':m_from_screen,
-                    'detected_markers':len(overlap),
-                    'gaze_on_srf':self.gaze_on_srf_by_frame_idx(frame_index,m_from_screen)}
+                    'detected_markers':len(overlap)}
         else:
             #surface not found
             return None
 
 
     def gaze_on_srf_by_frame_idx(self,frame_index,m_from_screen):
-        gaze_positions = self.gaze_positions_by_frame[frame_index]
+        gaze_positions = self.g_pool.gaze_positions_by_frame[frame_index]
         gaze_on_src = []
         for g_p in gaze_positions:
-            gaze_points = np.array([g_p['norm_gaze']]).reshape(1,1,2)
+            gaze_points = np.array([g_p['norm_pos']]).reshape(1,1,2)
             gaze_points_on_srf = cv2.perspectiveTransform(gaze_points , m_from_screen )
             gaze_points_on_srf.shape = (2)
-            gaze_on_src.append( {'norm_gaze_on_srf':(gaze_points_on_srf[0],gaze_points_on_srf[1]),'timestamp':g_p['timestamp'] } )
+            gaze_on_src.append( {'norm_pos':(gaze_points_on_srf[0],gaze_points_on_srf[1]),'timestamp':g_p['timestamp'] } )
         return gaze_on_src
 
 
 
     def gl_display_heatmap(self):
         if self.heatmap_texture and self.detected:
-
 
             # cv uses 3x3 gl uses 4x4 tranformation matricies
             m = cvmat_to_glmat(self.m_to_screen)
@@ -228,7 +226,7 @@ class Offline_Reference_Surface(Reference_Surface):
 
             # now lets get recent pupil positions on this surface:
             for gp in self.gaze_on_srf:
-                draw_points_norm([gp['norm_gaze_on_srf']],color=RGBA(0.0,0.8,0.5,0.8), size=80)
+                draw_points_norm([gp['norm_pos']],color=RGBA(0.0,0.8,0.5,0.8), size=80)
 
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
@@ -250,10 +248,10 @@ class Offline_Reference_Surface(Reference_Surface):
         self.heatmap = np.ones((y,x,4),dtype=np.uint8)
         all_gaze = []
 
-        for c_e in self.cache[section]:
+        for frame_idx,c_e in enumerate(self.cache[section]):
             if c_e:
-                for gp in c_e['gaze_on_srf']:
-                    all_gaze.append(gp['norm_gaze_on_srf'])
+                for gp in self.gaze_on_srf_by_frame_idx(frame_idx,c_e['m_from_screen']):
+                    all_gaze.append(gp['norm_pos'])
 
         if not all_gaze:
             logger.warning("No gaze data on surface for heatmap found.")
@@ -304,12 +302,12 @@ class Offline_Reference_Surface(Reference_Surface):
         if self.cache is None:
             return []
         gaze_on_srf = []
-        for c_e in self.cache[section]:
+        for frame_idx,c_e in enumerate(self.cache[section]):
             if c_e:
                 #c_e['gaze_on_srf'] is list of gaze points
-                # each defined as {'norm_gaze_on_srf':(gaze_points_on_srf[0],gaze_points_on_srf[1]),'timestamp':g_p['timestamp'] }
+                # each defined as {'norm_pos':(gaze_points_on_srf[0],gaze_points_on_srf[1]),'timestamp':g_p['timestamp'] }
                 # and sum of gazepoints that are on srf meaning 0<= x,y <=1
-                gaze_on_srf += [gp for gp in c_e['gaze_on_srf'] if (0<= gp['norm_gaze_on_srf'][0] <=1 and 0<= gp['norm_gaze_on_srf'][1] <=1) ]
+                gaze_on_srf += [gp for gp in self.gaze_on_srf_by_frame_idx(frame_idx,c_e['m_from_screen']) if (0<= gp['norm_pos'][0] <=1 and 0<= gp['norm_pos'][1] <=1) ]
 
         return gaze_on_srf
 
