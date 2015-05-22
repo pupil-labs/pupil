@@ -55,9 +55,7 @@ class Camera_Capture(object):
 
         logger.debug('avaible modes %s'%self.capture.avaible_modes)
 
-        # self.controls = self.capture.enum_controls()
-        self.controls = []
-        # controls_dict = dict([(c['name'],c) for c in self.controls])
+        # controls_dict = dict([(c['name'],c) for c in self.capture.controls])
         # try:
         #     self.capture.set_control(controls_dict['Focus, Auto']['id'], 0)
         # except KeyError:
@@ -115,8 +113,8 @@ class Camera_Capture(object):
 
         self.frame_size = current_size
         self.frame_rate = current_fps
-        # self.controls = self.capture.enum_controls()
-        # controls_dict = dict([(c['name'],c) for c in self.controls])
+        # self.capture.controls = self.capture.enum_controls()
+        # controls_dict = dict([(c['name'],c) for c in self.capture.controls])
         # try:
         #     self.capture.set_control(controls_dict['Focus, Auto']['id'], 0)
         # except KeyError:
@@ -182,24 +180,17 @@ class Camera_Capture(object):
     def init_gui(self,sidebar):
 
 
-        # #lets define some  helper functions:
-        # def gui_load_defaults():
-        #     for c in self.controls:
-        #         if not c['disabled']:
-        #             self.capture.set_control(c['id'],c['default'])
-        #             c['value'] = self.capture.get_control(c['id'])
+        #lets define some  helper functions:
+        def gui_load_defaults():
+            for c in self.capture.controls:
+                try:
+                    c.value = c.def_val
+                except:
+                    pass
 
-        # def gui_update_from_device():
-        #     for c in self.controls:
-        #         if not c['disabled']:
-        #             c['value'] = self.capture.get_control(c['id'])
-
-
-        def gui_get_frame_rate():
-            return self.capture.frame_rate
-
-        def gui_set_frame_rate(rate):
-            self.capture.frame_rate = rate
+        def gui_update_from_device():
+            for c in self.capture.controls:
+                c.refresh()
 
         def gui_init_cam_by_uid(requested_id):
             for cam in uvc.device_list():
@@ -220,54 +211,35 @@ class Camera_Capture(object):
         hardware_ts_switch.read_only = True
         self.menu.append(hardware_ts_switch)
 
-        self.menu.append(ui.Selector('frame_rate', selection=self.capture.frame_rates,label='Frames per second', getter=gui_get_frame_rate, setter=gui_set_frame_rate) )
+        self.menu.append(ui.Selector('frame_rate',self, selection=self.capture.frame_rates,label='Frames per second' ) )
 
 
-        for control in self.controls:
+        for control in self.capture.controls:
             c = None
-            ctl_name = control['name']
-
-            # we use closures as setters and getters for each control element
-            def make_setter(control):
-                def fn(val):
-                    self.capture.set_control(control['id'],val)
-                    control['value'] = self.capture.get_control(control['id'])
-                return fn
-            def make_getter(control):
-                def fn():
-                    return control['value']
-                return fn
-            set_ctl = make_setter(control)
-            get_ctl = make_getter(control)
+            ctl_name = control.display_name
 
             #now we add controls
-            if control['type']=='bool':
-                c = ui.Switch(ctl_name,getter=get_ctl,setter=set_ctl)
-            elif control['type']=='int':
-                c = ui.Slider(ctl_name,getter=get_ctl,min=control['min'],max=control['max'],
-                                step=control['step'], setter=set_ctl)
-
-            elif control['type']=="menu":
-                if control['menu'] is None:
-                    selection = range(control['min'],control['max']+1,control['step'])
-                    labels = selection
-                else:
-                    selection = [value for name,value in control['menu'].iteritems()]
-                    labels = [name for name,value in control['menu'].iteritems()]
-                c = ui.Selector(ctl_name,getter=get_ctl,selection=selection,labels = labels,setter=set_ctl)
+            if control.d_type == bool :
+                c = ui.Switch('value',control,label=ctl_name)
+            elif control.d_type == int:
+                c = ui.Slider('value',control,label=ctl_name,min=control.min_val,max=control.max_val,step=control.step)
+            elif type(control.d_type) == dict:
+                selection = [value for name,value in control.d_type.iteritems()]
+                labels = [name for name,value in control.d_type.iteritems()]
+                c = ui.Selector('value',control, label = ctl_name, selection=selection,labels = labels)
             else:
                 pass
-            if control['disabled']:
-                c.read_only = True
-            if ctl_name == 'Exposure, Auto Priority':
-                # the controll should always be off. we set it to 0 on init (see above)
-                c.read_only = True
+            # if control['disabled']:
+            #     c.read_only = True
+            # if ctl_name == 'Exposure, Auto Priority':
+            #     # the controll should always be off. we set it to 0 on init (see above)
+            #     c.read_only = True
 
             if c is not None:
                 self.menu.append(c)
 
-        # self.menu.append(ui.Button("refresh",gui_update_from_device))
-        # self.menu.append(ui.Button("load defaults",gui_load_defaults))
+        self.menu.append(ui.Button("refresh",gui_update_from_device))
+        self.menu.append(ui.Button("load defaults",gui_load_defaults))
         self.menu.collapsed = True
         self.sidebar = sidebar
         #add below geneal settings
