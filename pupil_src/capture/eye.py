@@ -146,7 +146,9 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     # Initialize capture
     cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
     cap.frame_size = cap_size
-    cap.frame_rate = 90
+    cap.frame_rate = 90 #default
+    cap.settings = session_settings.get('capture_settings',{})
+
 
     # Test capture
     try:
@@ -243,7 +245,6 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # let the camera add its GUI
     g_pool.capture.init_gui(g_pool.sidebar)
-    g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{'collapsed':True})
 
     # let detector add its GUI
     pupil_detector.init_gui(g_pool.sidebar)
@@ -378,7 +379,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     session_settings['flip'] = g_pool.flip
     session_settings['display_mode'] = g_pool.display_mode
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
-    session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
+    session_settings['capture_settings'] = g_pool.capture.settings
     session_settings['general_menu_config'] = general_settings.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)

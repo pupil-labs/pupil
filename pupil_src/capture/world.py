@@ -139,7 +139,8 @@ def world(g_pool,cap_src,cap_size):
     # Initialize capture
     cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
     cap.frame_size = cap_size
-    cap.frame_rate = 24
+    cap.frame_rate = 24 #default
+    cap.settings = session_settings.get('capture_settings',{})
     # Test capture
     try:
         frame = cap.get_frame()
@@ -250,7 +251,7 @@ def world(g_pool,cap_src,cap_size):
     g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
 
     g_pool.capture.init_gui(g_pool.sidebar)
-    g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{})
+
 
     #plugins that are loaded based on user settings from previous session
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
@@ -356,7 +357,7 @@ def world(g_pool,cap_src,cap_size):
     session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
-    session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
+    session_settings['capture_settings'] = g_pool.capture.settings
     session_settings['general_menu_config'] = general_settings.configuration
     session_settings['advanced_menu_config'] = advanced_settings.configuration
     session_settings['calibration_menu_config']=g_pool.calibration_menu.configuration
