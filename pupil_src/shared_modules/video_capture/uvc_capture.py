@@ -55,20 +55,21 @@ class Camera_Capture(object):
 
         logger.debug('avaible modes %s'%self.capture.avaible_modes)
 
-        # controls_dict = dict([(c['name'],c) for c in self.capture.controls])
-        # try:
-        #     self.capture.set_control(controls_dict['Focus, Auto']['id'], 0)
-        # except KeyError:
-        #     pass
-        # try:
-        #     # exposure_auto_priority == 1
-        #     # leads to reduced framerates under low light and corrupt timestamps.
-        #     self.capture.set_control(controls_dict['Exposure, Auto Priority']['id'], 0)
-        # except KeyError:
-        #     pass
+        controls_dict = dict([(c.display_name,c) for c in self.capture.controls])
+        try:
+            controls_dict['Auto Focus'].value = 0
+        except KeyError:
+            pass
+        try:
+            # exposure_auto_priority == 1
+            # leads to reduced framerates under low light and corrupt timestamps.
+            controls_dict['Auto Exposure Priority'].value = 0
+        except KeyError:
+            pass
 
         self.sidebar = None
         self.menu = None
+        self.menu_conf = {"collapsed":True}
 
 
     def check_hw_ts_support(self):
@@ -113,12 +114,11 @@ class Camera_Capture(object):
 
         self.frame_size = current_size
         self.frame_rate = current_fps
-        # self.capture.controls = self.capture.enum_controls()
-        # controls_dict = dict([(c['name'],c) for c in self.capture.controls])
-        # try:
-        #     self.capture.set_control(controls_dict['Focus, Auto']['id'], 0)
-        # except KeyError:
-        #     pass
+        controls_dict = dict([(c.display_name,c) for c in self.capture.controls])
+        try:
+            controls_dict['Auto Focus'].value = 0
+        except KeyError:
+            pass
         # try:
         #     # exposure_auto_priority == 1
         #     # leads to reduced framerates under low light and corrupt timestamps.
@@ -166,6 +166,36 @@ class Camera_Capture(object):
             logger.warning("%sfps capture mode not available at (%s) on '%s'. Selected %sfps. "%(new_rate,self.capture.frame_size,self.capture.name,rate))
         self.capture.frame_rate = rate
 
+
+    @property
+    def settings(self):
+        settings = {}
+        if self.menu is not None:
+            settings['menu_conf']= self.menu.configuration
+        else:
+            settings['menu_conf'] = self.menu_conf
+        settings['name'] = self.capture.name
+        settings['frame_rate'] = self.frame_rate
+        settings['uvc_controls'] = {}
+        for c in self.capture.controls:
+            settings['uvc_controls'][c.display_name] = c.value
+        return settings
+    @settings.setter
+    def settings(self,settings):
+        if self.menu is not None:
+            self.menu.configuration = settings.get('menu_conf',{})
+        else:
+            self.menu_conf = settings.get('menu_conf',{})
+
+        try:
+            self.frame_rate = settings['frame_rate']
+        except KeyError:
+            pass
+
+        if settings.get('name','') == self.capture.name:
+            for c in self.capture.controls:
+                c.value = settings['uvc_controls'][c.display_name]
+
     @property
     def frame_size(self):
         return self.capture.frame_size
@@ -178,7 +208,6 @@ class Camera_Capture(object):
         return self.capture.name
 
     def init_gui(self,sidebar):
-
 
         #lets define some  helper functions:
         def gui_load_defaults():
@@ -202,6 +231,7 @@ class Camera_Capture(object):
 
         #create the menu entry
         self.menu = ui.Growing_Menu(label='Camera Settings')
+        self.menu.configuration = self.menu_conf
         cameras = uvc.device_list()
         camera_names = [c['name'] for c in cameras]
         camera_ids = [c['uid'] for c in cameras]
@@ -240,13 +270,13 @@ class Camera_Capture(object):
 
         self.menu.append(ui.Button("refresh",gui_update_from_device))
         self.menu.append(ui.Button("load defaults",gui_load_defaults))
-        self.menu.collapsed = True
         self.sidebar = sidebar
         #add below geneal settings
         self.sidebar.insert(1,self.menu)
 
     def deinit_gui(self):
         if self.menu:
+            self.menu_conf = self.menu.configuration
             self.sidebar.remove(self.menu)
             self.menu = None
 
