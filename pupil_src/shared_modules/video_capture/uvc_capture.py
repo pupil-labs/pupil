@@ -61,8 +61,7 @@ class Camera_Capture(object):
         except KeyError:
             pass
         try:
-            # exposure_auto_priority == 1
-            # leads to reduced framerates under low light and corrupt timestamps.
+            # Auto Exposure Priority = 1 leads to reduced framerates under low light and corrupt timestamps.
             controls_dict['Auto Exposure Priority'].value = 0
         except KeyError:
             pass
