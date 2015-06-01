@@ -100,13 +100,13 @@ class Offline_Marker_Detector(Plugin):
 
     def init_gui(self):
         self.menu = ui.Scrolling_Menu('Offline Marker Tracker')
-        self.menu.configuration = self.menu_conf
         self.g_pool.gui.append(self.menu)
 
 
         self.add_button = ui.Thumb('add_surface',setter=self.add_surface,getter=lambda:False,label='Add Surface',hotkey='a')
         self.g_pool.quickbar.append(self.add_button)
         self.update_gui_markers()
+        self.menu.configuration = self.menu_conf
 
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 

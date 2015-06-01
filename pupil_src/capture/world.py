@@ -31,7 +31,7 @@ from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_s
 
 #check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.1'
+assert pyglui_version >= '0.2'
 
 #monitoring
 import psutil

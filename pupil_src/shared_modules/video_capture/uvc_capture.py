@@ -232,7 +232,6 @@ class Camera_Capture(object):
 
         #create the menu entry
         self.menu = ui.Growing_Menu(label='Camera Settings')
-        self.menu.configuration = self.menu_conf
         cameras = uvc.device_list()
         camera_names = [c['name'] for c in cameras]
         camera_ids = [c['uid'] for c in cameras]
@@ -244,6 +243,10 @@ class Camera_Capture(object):
 
         self.menu.append(ui.Selector('frame_rate',self, selection=self.capture.frame_rates,label='Frames per second' ) )
 
+        sensor_control = ui.Growing_Menu(label='Sensor Settings')
+        sensor_control.collapsed=False
+        image_processing = ui.Growing_Menu(label='Image Post Processing')
+        image_processing.collapsed=True
 
         for control in self.capture.controls:
             c = None
@@ -267,10 +270,17 @@ class Camera_Capture(object):
             #     c.read_only = True
 
             if c is not None:
-                self.menu.append(c)
+                if control.unit == 'processing_unit':
+                    image_processing.append(c)
+                else:
+                    sensor_control.append(c)
 
+        self.menu.append(sensor_control)
+        self.menu.append(image_processing)
         self.menu.append(ui.Button("refresh",gui_update_from_device))
         self.menu.append(ui.Button("load defaults",gui_load_defaults))
+        self.menu.configuration = self.menu_conf
+
         self.sidebar = sidebar
         #add below geneal settings
         self.sidebar.insert(1,self.menu)
