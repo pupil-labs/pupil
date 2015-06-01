@@ -160,7 +160,7 @@ elif os_name == "Darwin":
             try:
                 self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE)
             except OSError:
-                logger.debug("Audio module for recording not found. Not recording audio. Please do 'brew install sox' ")
+                logger.warning("Audio module for recording not found. Not recording audio. Please do 'brew install sox' ")
                 self.process = None
                 return
             logger.debug("stared recording mic to %s with SOX process, pid: %s"%(out_file,self.process.pid))

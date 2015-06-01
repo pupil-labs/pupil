@@ -35,21 +35,16 @@ logger = logging.getLogger(__name__)
 
 
 ###OS specific imports and defs
-if os_name == "Linux":
-    from linux_video import Camera_Capture,Camera_List,CameraCaptureError
-elif os_name == "Darwin":
-    from mac_video import Camera_Capture,Camera_List,CameraCaptureError
-elif os_name == "Windows":
-    from win_video import Camera_Capture,Camera_List,CameraCaptureError
+if os_name in ("Linux","Darwin","Windows"):
+    from uvc_capture import Camera_Capture,device_list,CameraCaptureError
 else:
-    from other_video import Camera_Capture,Camera_List,CameraCaptureError
+    raise NotImplementedError()
 
 from fake_capture import FakeCapture
 from file_capture import File_Capture, FileCaptureError, EndofVideoFileError,FileSeekError
 
 
-def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None):
-
+def autoCreateCapture(src,timestamps=None,timebase = None):
     preferred_idx = 0
     # checking src and handling all cases:
     src_type = type(src)
@@ -61,37 +56,33 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None)
     #looking for attached cameras that match the suggested names
     if src_type is list:
         matching_devices = []
-        for device in Camera_List():
-            if any([s in device.name for s in src]):
+        for device in device_list():
+            if any([s in device['name'] for s in src]):
                 matching_devices.append(device)
 
         if len(matching_devices) > preferred_idx:
-            logger.warning('Found %s as devices that match the src string pattern Using the %s match.'%([d.name for d in matching_devices],('first','second','third','fourth')[preferred_idx]) )
+            logger.info('Found %s as devices that match the src string pattern Using the %s match.'%([d['name'] for d in matching_devices],('first','second','third','fourth')[preferred_idx]) )
         else:
             if len(matching_devices) == 0:
                 logger.error('No device found that matched %s'%src)
             else:
                 logger.error('Not enough devices found that matched %s'%src)
-            return FakeCapture(size,fps,timebase=timebase)
+            return FakeCapture(timebase=timebase)
 
 
-
-        cap = Camera_Capture(matching_devices[preferred_idx],filter_sizes(matching_devices[preferred_idx],size),fps,timebase)
-        logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
+        cap = Camera_Capture(matching_devices[preferred_idx]['uid'],timebase)
+        logger.info("Camera selected: %s  with id: %s" %(matching_devices[preferred_idx]['name'],matching_devices[preferred_idx]['uid']))
         return cap
 
     #looking for attached cameras that match cv_id
     elif src_type is int:
-        for device in Camera_List():
-            if device.src_id == src:
-                cap = Camera_Capture(device,filter_sizes(device,size),fps,timebase)
-                logger.info("Camera selected: %s  with id: %s" %(cap.name,cap.src_id))
-                return cap
-
-        #control not supported for windows: init capture without uvc controls
-        cap = Camera_Capture(src,size,fps,timebase)
-        logger.warning('No UVC support: Using camera with id: %s'%src)
-        return cap
+        try:
+            cap = device_list()[i]
+        except IndexError, e:
+            logger.warning('Camera with id %s not found.'%src_type)
+            return FakeCapture(timebase=timebase)
+        else:
+            return Camera_Capture(cap['uid'],size,fps,timebase)
 
 
     #looking for videofiles
@@ -106,16 +97,4 @@ def autoCreateCapture(src,size=(640,480),fps=30,timestamps=None,timebase = None)
         return FakeCapture(size,fps,timebase=timebase)
 
 
-def filter_sizes(cam,size):
-    #here we can force some defaulit formats
-
-    if "6000" in cam.name:
-        if size[0] == 640:
-            logger.info("Lenovo Integrated camera selected. Forcing format to 640,480")
-            return 640,360
-        elif size[0] == 320:
-            logger.info("Lenovo Integrated camera selected. Forcing format to 320,240")
-            return 320,160
-
-    return size
 

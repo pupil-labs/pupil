@@ -9,7 +9,6 @@
 '''
 
 import sys, os, platform
-from time import sleep
 from ctypes import c_bool, c_double
 
 if platform.system() == 'Darwin':
@@ -129,9 +128,6 @@ def main():
         p_eye += [Process(target=eye, args=(g_pool,eye_src[eye_id],eye_size,rx,eye_id))]
         g_pool.eye_tx += [tx]
         p_eye[-1].start()
-        if platform.system() == 'Linux':
-            # We need to give the camera driver some time before requesting another camera.
-            sleep(0.5)
 
     world(g_pool,world_src,world_size)
 

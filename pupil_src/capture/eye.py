@@ -39,17 +39,6 @@ from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileErr
 # Pupil detectors
 from pupil_detectors import Canny_Detector
 
-#UI Platform tweaks
-if platform.system() == 'Linux':
-    scroll_factor = 10.0
-    window_position_default = (0,0)
-elif platform.system() == 'Windows':
-    scroll_factor = 1.0
-    window_position_default = (8,31)
-else:
-    scroll_factor = 1.0
-    window_position_default = (0,0)
-
 
 
 def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
@@ -79,6 +68,19 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     logger.addHandler(ch)
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
+
+
+    #UI Platform tweaks
+    if platform.system() == 'Linux':
+        scroll_factor = 10.0
+        window_position_default = (1280,300*eye_id)
+    elif platform.system() == 'Windows':
+        scroll_factor = 1.0
+        window_position_default = (1280,31+300*eye_id)
+    else:
+        scroll_factor = 1.0
+        window_position_default = (1280,300*eye_id)
+
 
     # Callback functions
     def on_resize(window,w, h):
@@ -142,7 +144,11 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye%s'%eye_id))
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, cap_size, 30, timebase=g_pool.timebase)
+    cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
+    cap.frame_size = cap_size
+    cap.frame_rate = 90 #default
+    cap.settings = session_settings.get('capture_settings',{})
+
 
     # Test capture
     try:
@@ -186,8 +192,8 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
 
 
+    window_pos = session_settings.get('window_position',window_position_default) # not yet using this one.
     width,height = session_settings.get('window_size',(frame.width, frame.height))
-    window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
 
     # Initialize glfw
     glfwInit()
@@ -216,7 +222,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # refresh speed settings
     glfwSwapInterval(0)
-    glfwSetWindowPos(main_window,800,300*eye_id+window_position_default[1])
+    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
 
 
     #setup GUI
@@ -239,7 +245,6 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # let the camera add its GUI
     g_pool.capture.init_gui(g_pool.sidebar)
-    g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{'collapsed':True})
 
     # let detector add its GUI
     pupil_detector.init_gui(g_pool.sidebar)
@@ -374,16 +379,16 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     session_settings['flip'] = g_pool.flip
     session_settings['display_mode'] = g_pool.display_mode
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
-    session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
+    session_settings['capture_settings'] = g_pool.capture.settings
     session_settings['general_menu_config'] = general_settings.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
     session_settings.close()
 
     pupil_detector.cleanup()
-    cap.close()
     glfwDestroyWindow(main_window)
     glfwTerminate()
+    cap.close()
 
     #flushing queue in case world process did not exit gracefully
     while not g_pool.pupil_queue.empty():
