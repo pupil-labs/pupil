@@ -193,8 +193,10 @@ class Camera_Capture(object):
 
         if settings.get('name','') == self.capture.name:
             for c in self.capture.controls:
-                c.value = settings['uvc_controls'][c.display_name]
-
+                try:
+                    c.value = settings['uvc_controls'][c.display_name]
+                except KeyError as e:
+                    logger.warning('Could not set UVC setting "%s" from last session.'%c.display_name)
     @property
     def frame_size(self):
         return self.capture.frame_size
@@ -249,7 +251,7 @@ class Camera_Capture(object):
 
             #now we add controls
             if control.d_type == bool :
-                c = ui.Switch('value',control,label=ctl_name)
+                c = ui.Switch('value',control,label=ctl_name, on_val=control.max_val, off_val=control.min_val)
             elif control.d_type == int:
                 c = ui.Slider('value',control,label=ctl_name,min=control.min_val,max=control.max_val,step=control.step)
             elif type(control.d_type) == dict:
