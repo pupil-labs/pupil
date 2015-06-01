@@ -68,7 +68,6 @@ class Camera_Capture(object):
 
         self.sidebar = None
         self.menu = None
-        self.menu_conf = {"collapsed":True}
 
 
     def check_hw_ts_support(self):
@@ -104,6 +103,7 @@ class Camera_Capture(object):
 
         self.capture = None
         #recreate the bar with new values
+        menu_conf = self.menu.configuration
         self.deinit_gui()
 
         # self.use_hw_ts = self.check_hw_ts_support()
@@ -126,7 +126,7 @@ class Camera_Capture(object):
         #     pass
 
         self.init_gui(self.sidebar)
-
+        self.menu.configuration = menu_conf
 
 
     def get_frame(self):
@@ -169,10 +169,6 @@ class Camera_Capture(object):
     @property
     def settings(self):
         settings = {}
-        if self.menu is not None:
-            settings['menu_conf']= self.menu.configuration
-        else:
-            settings['menu_conf'] = self.menu_conf
         settings['name'] = self.capture.name
         settings['frame_rate'] = self.frame_rate
         settings['uvc_controls'] = {}
@@ -181,11 +177,6 @@ class Camera_Capture(object):
         return settings
     @settings.setter
     def settings(self,settings):
-        if self.menu is not None:
-            self.menu.configuration = settings.get('menu_conf',{})
-        else:
-            self.menu_conf = settings.get('menu_conf',{})
-
         try:
             self.frame_rate = settings['frame_rate']
         except KeyError:
@@ -279,7 +270,6 @@ class Camera_Capture(object):
         self.menu.append(image_processing)
         self.menu.append(ui.Button("refresh",gui_update_from_device))
         self.menu.append(ui.Button("load defaults",gui_load_defaults))
-        self.menu.configuration = self.menu_conf
 
         self.sidebar = sidebar
         #add below geneal settings
@@ -287,7 +277,6 @@ class Camera_Capture(object):
 
     def deinit_gui(self):
         if self.menu:
-            self.menu_conf = self.menu.configuration
             self.sidebar.remove(self.menu)
             self.menu = None
 

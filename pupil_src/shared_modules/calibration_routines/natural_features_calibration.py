@@ -55,9 +55,9 @@ class Natural_Features_Calibration(Calibration_Plugin):
         self.info = ui.Info_Text("Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window.")
         self.g_pool.calibration_menu.append(self.info)
 
-        self.menu = ui.Growing_Menu('Controls')
-        self.menu.configuration = self.menu_conf
-        self.g_pool.calibration_menu.append(self.menu)
+        # self.menu = ui.Growing_Menu('Controls')
+        # self.menu.configuration = self.menu_conf
+        # self.g_pool.calibration_menu.append(self.menu)
 
         self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)

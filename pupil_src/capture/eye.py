@@ -182,8 +182,6 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
 
-    def get_scale():
-        return g_pool.gui.scale
 
     def set_display_mode_info(val):
         # set info text here and append to the general settings menu
@@ -229,16 +227,15 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-300,0),size=(0,0),header_pos='left')
-    g_pool.sidebar.configuration = session_settings.get('side_bar_config',{'collapsed':True})
     general_settings = ui.Growing_Menu('General')
-    general_settings.configuration = session_settings.get('general_menu_config',{})
-    general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
+    general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
     general_settings.append(ui.Selector('display_mode',g_pool,setter=set_display_mode_info,selection=['camera_image','roi','algorithm'], labels=['Camera Image', 'ROI', 'Algorithm'], label="Mode") )
     general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
     g_pool.display_mode_info = ui.Info_Text(g_pool.display_mode_info_text[g_pool.display_mode])
     general_settings.append(g_pool.display_mode_info)
     g_pool.sidebar.append(general_settings)
+
     g_pool.gui.append(g_pool.sidebar)
     g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
 
@@ -248,6 +245,9 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # let detector add its GUI
     pupil_detector.init_gui(g_pool.sidebar)
+
+    # load last menu configuration
+    g_pool.sidebar.configuration = session_settings.get('side_bar_config',{'collapsed':True})
 
 
     #set the last saved window size
@@ -380,7 +380,6 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     session_settings['display_mode'] = g_pool.display_mode
     session_settings['side_bar_config'] = g_pool.sidebar.configuration
     session_settings['capture_settings'] = g_pool.capture.settings
-    session_settings['general_menu_config'] = general_settings.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
     session_settings.close()

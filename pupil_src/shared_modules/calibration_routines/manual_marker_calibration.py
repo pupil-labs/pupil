@@ -68,15 +68,15 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
-        self.menu.configuration = self.menu_conf
         self.g_pool.calibration_menu.append(self.menu)
 
 
-        submenu = ui.Growing_Menu('Advanced')
-        submenu.collapsed = True
-        self.menu.append(submenu)
-        submenu.append(ui.Slider('aperture',self,min=3,step=2,max=11,label='filter aperture'))
-        submenu.append(ui.Switch('show_edges',self,label='show edges'))
+        # submenu = ui.Growing_Menu('Advanced')
+        # submenu.collapsed = True
+        # self.menu.append(submenu)
+        self.menu.append(ui.Slider('aperture',self,min=3,step=2,max=11,label='filter aperture'))
+        self.menu.append(ui.Switch('show_edges',self,label='show edges'))
+        self.menu.configuration = self.menu_conf
 
         self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)

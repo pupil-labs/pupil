@@ -221,9 +221,7 @@ def world(g_pool,cap_src,cap_size):
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-250,0),size=(0,0),header_pos='left')
-    g_pool.sidebar.configuration = session_settings.get('side_bar_config',{})
     general_settings = ui.Growing_Menu('General')
-    general_settings.configuration = session_settings.get('general_menu_config',{})
     general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
     general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
@@ -231,19 +229,19 @@ def world(g_pool,cap_src,cap_size):
                                         setter= open_plugin, getter=lambda: "Select to load"))
     g_pool.sidebar.append(general_settings)
     advanced_settings = ui.Growing_Menu('Advanced')
-    advanced_settings.configuration = session_settings.get('advanced_menu_config',{'collapsed':True})
     advanced_settings.append(ui.Selector('update_textures',g_pool,label="Update display",selection=range(3),labels=('No update','Gray','Color')))
     advanced_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
     advanced_settings.append(ui.Button('Set timebase to 0',reset_timebase))
     advanced_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
 
     general_settings.append(advanced_settings)
+
     g_pool.calibration_menu = ui.Growing_Menu('Calibration')
-    g_pool.calibration_menu.configuration = session_settings.get('calibration_menu_config',{})
     g_pool.calibration_menu.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
                                         setter= set_calibration_plugin,label='Method'))
     g_pool.sidebar.append(g_pool.calibration_menu)
+
     g_pool.gui.append(g_pool.sidebar)
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
@@ -251,6 +249,7 @@ def world(g_pool,cap_src,cap_size):
     g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
 
     g_pool.capture.init_gui(g_pool.sidebar)
+    g_pool.sidebar.configuration = session_settings.get('side_bar_config',{})
 
 
     #plugins that are loaded based on user settings from previous session
@@ -354,22 +353,18 @@ def world(g_pool,cap_src,cap_size):
 
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
-    session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
-    session_settings['gui_scale'] = g_pool.gui.scale
-    session_settings['side_bar_config'] = g_pool.sidebar.configuration
-    session_settings['capture_settings'] = g_pool.capture.settings
-    session_settings['general_menu_config'] = general_settings.configuration
-    session_settings['advanced_menu_config'] = advanced_settings.configuration
-    session_settings['calibration_menu_config']=g_pool.calibration_menu.configuration
-    session_settings['window_size'] = glfwGetWindowSize(main_window)
-    session_settings['window_position'] = glfwGetWindowPos(main_window)
-    session_settings['update_textures'] = g_pool.update_textures
-    session_settings.close()
-
     # de-init all running plugins
     for p in g_pool.plugins:
         p.alive = False
     g_pool.plugins.clean()
+    session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
+    session_settings['gui_scale'] = g_pool.gui.scale
+    session_settings['side_bar_config'] = g_pool.sidebar.configuration
+    session_settings['capture_settings'] = g_pool.capture.settings
+    session_settings['window_size'] = glfwGetWindowSize(main_window)
+    session_settings['window_position'] = glfwGetWindowPos(main_window)
+    session_settings['update_textures'] = g_pool.update_textures
+    session_settings.close()
 
     glfwDestroyWindow(main_window)
     glfwTerminate()
