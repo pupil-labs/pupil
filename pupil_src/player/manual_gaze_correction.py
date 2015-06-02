@@ -22,20 +22,17 @@ class Manual_Gaze_Correction(Plugin):
     correct gaze with manually set x and y offset
     """
 
-    def __init__(self, g_pool,x_offset=0.,y_offset=0.,menu_conf={'pos':(10,390),'size':(300,100),'collapsed':False}):
+    def __init__(self, g_pool,x_offset=0.,y_offset=0.):
         super(Manual_Gaze_Correction, self).__init__(g_pool)
         #let the plugin work before most other plugins.
         self.order = .3
+        self.menu = None
 
 
         self.untouched_gaze_positions_by_frame = deepcopy(self.g_pool.gaze_positions_by_frame)
         self.x_offset = float(x_offset)
         self.y_offset = float(y_offset)
 
-        # initialize empty menu
-        # and load menu configuration of last session
-        self.menu = None
-        self.menu_conf = menu_conf
 
 
 
@@ -58,9 +55,6 @@ class Manual_Gaze_Correction(Plugin):
     def init_gui(self):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Manual Gaze Correction')
-        # load the configuration of last session
-        self.menu.configuration = self.menu_conf
-        # add menu to the window
         self.g_pool.gui.append(self.menu)
 
         self.menu.append(ui.Info_Text('Move gaze horizontally and vertically. Screen width and height are one unit respectively.'))
@@ -77,7 +71,7 @@ class Manual_Gaze_Correction(Plugin):
         self.alive = False
 
     def get_init_dict(self):
-        return {'x_offset':self.x_offset,'y_offset':self.y_offset,'menu_conf':self.menu.configuration}
+        return {'x_offset':self.x_offset,'y_offset':self.y_offset}
 
 
     def cleanup(self):

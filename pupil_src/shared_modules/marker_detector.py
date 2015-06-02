@@ -28,7 +28,7 @@ from math import sqrt
 class Marker_Detector(Plugin):
     """docstring
     """
-    def __init__(self,g_pool,menu_conf={},mode="Show markers and frames"):
+    def __init__(self,g_pool,mode="Show markers and frames"):
         super(Marker_Detector, self).__init__(g_pool)
         self.order = .2
 
@@ -69,7 +69,6 @@ class Marker_Detector(Plugin):
         self.img_shape = None
 
         self.menu= None
-        self.menu_conf=  menu_conf
         self.button=  None
         self.add_button = None
 
@@ -111,7 +110,6 @@ class Marker_Detector(Plugin):
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Marker Detector')
-        self.menu.configuration = self.menu_conf
         self.g_pool.sidebar.append(self.menu)
 
         self.button = ui.Thumb('running',self,label='Track',hotkey='t')
@@ -124,7 +122,6 @@ class Marker_Detector(Plugin):
     def deinit_gui(self):
         if self.menu:
             self.g_pool.sidebar.remove(self.menu)
-            self.menu_conf= self.menu.configuration
             self.menu= None
         if self.button:
             self.g_pool.quickbar.remove(self.button)
@@ -221,13 +218,7 @@ class Marker_Detector(Plugin):
 
 
     def get_init_dict(self):
-        if self.menu:
-            d = {'menu_conf':self.menu.configuration,'mode':self.mode}
-        else:
-            d = {'menu_conf':self.menu_conf,'mode':self.mode}
-
-        return d
-
+        return {'mode':self.mode}
 
 
     def gl_display(self):

@@ -288,9 +288,6 @@ def main():
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
 
-    def get_scale():
-        return g_pool.gui.scale
-
     def open_plugin(plugin):
         if plugin ==  "Select to load":
             return
@@ -309,8 +306,7 @@ def main():
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,300))
     g_pool.main_menu.append(ui.Button("quit",lambda: on_close(None)))
-    g_pool.main_menu.configuration = session_settings.get('main_menu_config',{})
-    g_pool.main_menu.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
+    g_pool.main_menu.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
 
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
@@ -344,7 +340,8 @@ def main():
             g_pool.trim_marks = p
             break
 
-    #set the last saved window size
+    g_pool.gui.configuration = session_settings.get('ui_config',{})
+    #trigger on_resize
     on_resize(main_window, *glfwGetWindowSize(main_window))
 
 
@@ -454,11 +451,11 @@ def main():
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['gui_scale'] = g_pool.gui.scale
-    session_settings['main_menu_config'] = g_pool.main_menu.configuration
+    session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
-
     session_settings.close()
+
     # de-init all running plugins
     for p in g_pool.plugins:
         p.alive = False

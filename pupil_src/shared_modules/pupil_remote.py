@@ -28,9 +28,8 @@ class Pupil_Remote(Plugin):
     'T' set timebase to 0
     'C' start currently selected calibration
     """
-    def __init__(self, g_pool,address="tcp://*:50020",menu_conf = {'collapsed':True,}):
+    def __init__(self, g_pool,address="tcp://*:50020"):
         super(Pupil_Remote, self).__init__(g_pool)
-        self.menu_conf = menu_conf
         self.order = .01 #excecute first
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
@@ -58,12 +57,10 @@ class Pupil_Remote(Plugin):
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Text_Input('address',self,setter=self.set_server,label='Address'))
         self.menu.append(ui.Button('Close',self.close))
-        self.menu.configuration = self.menu_conf
         self.g_pool.sidebar.append(self.menu)
 
     def deinit_gui(self):
         if self.menu:
-            self.menu_conf = self.menu.configuration
             self.g_pool.sidebar.remove(self.menu)
             self.menu = None
 
@@ -110,13 +107,7 @@ class Pupil_Remote(Plugin):
 
 
     def get_init_dict(self):
-        d = {}
-        d['address'] = self.address
-        if self.menu:
-            d['menu_conf'] = self.menu.configuration
-        else:
-            d['menu_conf'] = self.menu_conf
-        return d
+        return {'address':self.address}
 
 
     def close(self):

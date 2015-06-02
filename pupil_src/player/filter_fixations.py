@@ -23,16 +23,12 @@ class Filter_Fixations(Plugin):
     using this plugin will filter the recent_pupil_positions by manhattan distance from previous frame
     only recent_pupil_positions within distance tolerance will be shown
     """
-    def __init__(self, g_pool=None,distance=25.0,menu_conf={'pos':(10,470),'size':(300,100),'collapsed':False}):
+    def __init__(self, g_pool=None,distance=25.0):
         super(Filter_Fixations, self).__init__(g_pool)
         self.g_pool = g_pool
         # let the plugin work after most other plugins
         self.order = .7
-
-        # initialize empty menu
-        # and load menu configuration of last session
         self.menu = None
-        self.menu_conf = menu_conf
 
         # user settings
         self.distance = distance
@@ -79,8 +75,6 @@ class Filter_Fixations(Plugin):
     def init_gui(self):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Filter Fixations')
-        # load the configuration of last session
-        self.menu.configuration = self.menu_conf
         # add menu to the window
         self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Info_Text("Filter Fixations uses Scan_Path to understand past gaze"))
@@ -102,7 +96,7 @@ class Filter_Fixations(Plugin):
         self.alive = False
 
     def get_init_dict(self):
-        return {'distance':self.distance, 'menu_conf':self.menu.configuration}
+        return {'distance':self.distance}
 
 
     def cleanup(self):

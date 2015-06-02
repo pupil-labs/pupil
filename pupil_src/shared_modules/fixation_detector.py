@@ -52,19 +52,17 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         + cohesion (spatial+temporal) = is the cluster of fixations close together
 
     '''
-    def __init__(self,g_pool,min_dispersion = 0.45,min_duration = 0.15,h_fov=78, v_fov=50,show_fixations = False, menu_conf={}):
+    def __init__(self,g_pool,min_dispersion = 0.45,min_duration = 0.15,h_fov=78, v_fov=50,show_fixations = False, ):
         self.min_duration = min_duration
         self.min_dispersion = min_dispersion
         self.h_fov = h_fov
         self.v_fov = v_fov
-        self.menu_conf = menu_conf
         self.show_fixations = show_fixations
 
         self.pix_per_degree = float(self.g_pool.capture.frame_size[0])/h_fov
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Fixation Detector')
-        self.menu.configuration = self.menu_conf
         self.g_pool.sidebar.append(self.menu)
 
         def set_h_fov(new_fov):
@@ -82,7 +80,6 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
 
     def deinit_gui(self):
         if self.menu:
-            self.menu_conf = self.menu.configuration
             self.g_pool.sidebar.remove(self.menu)
             self.menu = None
 
@@ -120,9 +117,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             pass
 
     def get_init_dict(self):
-        if self.menu:
-            self.menu_conf = self.menu.configuration
-        return {'min_dispersion': self.min_dispersion, 'min_duration':self.min_duration, 'h_fov':self.h_fov, 'v_fov': self.v_fov,'show_fixations':self.show_fixations, 'menu_conf': self.menu.configuration}
+        return {'min_dispersion': self.min_dispersion, 'min_duration':self.min_duration, 'h_fov':self.h_fov, 'v_fov': self.v_fov,'show_fixations':self.show_fixations}
 
     def cleanup(self):
         self.deinit_gui()
@@ -131,9 +126,8 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
 class Dispersion_Fixation_Detector(Fixation_Detector):
 
     """ fixation detection algorithm based on a dispersion threshold """
-    def __init__(self, g_pool, dispersion=0.45, h_fov=78, v_fov=50, menu_conf={}):
+    def __init__(self, g_pool, dispersion=0.45, h_fov=78, v_fov=50):
         super(Fixation_Detector, self).__init__(g_pool)
-        self.menu_conf = menu_conf
         self.dispersion = dispersion
         self.h_fov = h_fov
         self.v_fov = v_fov
@@ -144,7 +138,6 @@ class Dispersion_Fixation_Detector(Fixation_Detector):
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Fixation Detector')
-        self.menu.configuration = self.menu_conf
         self.g_pool.sidebar.append(self.menu)
 
         self.menu.append(ui.Info_Text('This plugin detects fixations based on a dispersion threshold in terms of degrees of visual angle'))
@@ -192,7 +185,7 @@ class Dispersion_Fixation_Detector(Fixation_Detector):
             draw_gl_polyline(ellipse,(0.,0.,.5,.75),'Polygon')
 
     def get_init_dict(self):
-        return {'dispersion': self.dispersion, 'h_fov':self.h_fov, 'v_fov': self.v_fov, 'menu_conf': self.menu.configuration}
+        return {'dispersion': self.dispersion, 'h_fov':self.h_fov, 'v_fov': self.v_fov}
 
     def cleanup(self):
         self.deinit_gui()

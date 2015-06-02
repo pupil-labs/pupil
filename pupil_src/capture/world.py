@@ -233,7 +233,6 @@ def world(g_pool,cap_src,cap_size):
     advanced_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
     advanced_settings.append(ui.Button('Set timebase to 0',reset_timebase))
     advanced_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
-
     general_settings.append(advanced_settings)
 
     g_pool.calibration_menu = ui.Growing_Menu('Calibration')
@@ -249,8 +248,6 @@ def world(g_pool,cap_src,cap_size):
     g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
 
     g_pool.capture.init_gui(g_pool.sidebar)
-    g_pool.sidebar.configuration = session_settings.get('side_bar_config',{})
-
 
     #plugins that are loaded based on user settings from previous session
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
@@ -261,9 +258,10 @@ def world(g_pool,cap_src,cap_size):
             g_pool.active_calibration_plugin =  p.__class__
             break
 
-
-
     on_resize(main_window, *glfwGetWindowSize(main_window))
+
+    g_pool.gui.configuration = session_settings.get('ui_config',{})
+
 
     #set up performace graphs:
     pid = os.getpid()
@@ -353,18 +351,19 @@ def world(g_pool,cap_src,cap_size):
 
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
-    # de-init all running plugins
-    for p in g_pool.plugins:
-        p.alive = False
-    g_pool.plugins.clean()
     session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['gui_scale'] = g_pool.gui.scale
-    session_settings['side_bar_config'] = g_pool.sidebar.configuration
+    session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['capture_settings'] = g_pool.capture.settings
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
     session_settings['update_textures'] = g_pool.update_textures
     session_settings.close()
+
+    # de-init all running plugins
+    for p in g_pool.plugins:
+        p.alive = False
+    g_pool.plugins.clean()
 
     glfwDestroyWindow(main_window)
     glfwTerminate()

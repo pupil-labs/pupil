@@ -246,8 +246,8 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     # let detector add its GUI
     pupil_detector.init_gui(g_pool.sidebar)
 
-    # load last menu configuration
-    g_pool.sidebar.configuration = session_settings.get('side_bar_config',{'collapsed':True})
+    # load last gui configuration
+    g_pool.gui.configuration = session_settings.get('ui_config',{})
 
 
     #set the last saved window size
@@ -378,7 +378,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     session_settings['roi'] = u_r.get()
     session_settings['flip'] = g_pool.flip
     session_settings['display_mode'] = g_pool.display_mode
-    session_settings['side_bar_config'] = g_pool.sidebar.configuration
+    session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['capture_settings'] = g_pool.capture.settings
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)

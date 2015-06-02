@@ -22,15 +22,12 @@ class Scan_Path(Plugin):
     lock recent gaze points onto pixels.
     """
 
-    def __init__(self, g_pool,timeframe=.5,menu_conf={'pos':(10,390),'size':(300,70),'collapsed':False}):
+    def __init__(self, g_pool,timeframe=.5):
         super(Scan_Path, self).__init__(g_pool)
         #let the plugin work after most other plugins.
         self.order = .6
-
-        # initialize empty menu
-        # and load menu configuration of last session
         self.menu = None
-        self.menu_conf = menu_conf
+
         #user settings
         self.timeframe = timeframe
 
@@ -99,9 +96,6 @@ class Scan_Path(Plugin):
     def init_gui(self):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Scan Path')
-        # load the configuration of last session
-        self.menu.configuration = self.menu_conf
-        # add menu to the window
         self.g_pool.gui.append(self.menu)
 
         self.menu.append(ui.Slider('timeframe',self,min=0,step=0.1,max=5,label="duration in sec"))
@@ -116,7 +110,7 @@ class Scan_Path(Plugin):
         self.alive = False
 
     def get_init_dict(self):
-        return {'timeframe':self.timeframe, 'menu_conf':self.menu.configuration}
+        return {'timeframe':self.timeframe}
 
     def cleanup(self):
         """ called when the plugin gets terminated.

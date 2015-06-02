@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class Pupil_Server(Plugin):
     """pupil server plugin"""
-    def __init__(self, g_pool,address="tcp://127.0.0.1:5000",menu_conf = {'collapsed':True,'pos':(300,300),'size':(300,300)}):
+    def __init__(self, g_pool,address="tcp://127.0.0.1:5000"):
         super(Pupil_Server, self).__init__(g_pool)
         self.order = .9
         self.context = zmq.Context()
@@ -31,7 +31,6 @@ class Pupil_Server(Plugin):
         self.address = ''
         self.set_server(address)
         self.menu = None
-        self.menu_conf = menu_conf
 
         self.exclude_list = ['ellipse','pos_in_roi','major','minor','axes','angle','center']
 
@@ -42,16 +41,12 @@ class Pupil_Server(Plugin):
         self.menu.append(ui.Text_Input('address',self,setter=self.set_server,label='Address'))
         self.menu.append(ui.Button('Close',self.close))
         if self.g_pool.app == 'capture':
-            self.menu.configuration = {'collapsed':self.menu_conf['collapsed']}
             self.g_pool.sidebar.append(self.menu)
         elif self.g_pool.app == 'player':
-            self.menu.configuration = self.menu_conf
-
             self.g_pool.gui.append(self.menu)
 
     def deinit_gui(self):
         if self.menu:
-            self.menu_conf = self.menu.configuration
             if self.g_pool.app == 'capture':
                 self.g_pool.sidebar.remove(self.menu)
             elif self.g_pool.app == 'player':
@@ -100,13 +95,7 @@ class Pupil_Server(Plugin):
 
 
     def get_init_dict(self):
-        d = {}
-        d['address'] = self.address
-        if self.menu:
-            d['menu_conf'] = self.menu.configuration
-        else:
-            d['menu_conf'] = self.menu_conf
-        return d
+        return {'address':self.address}
 
 
     def cleanup(self):

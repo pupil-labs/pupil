@@ -78,7 +78,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     Points are collected at sites - not between
 
     """
-    def __init__(self, g_pool,menu_conf = {'collapsed':True},fullscreen=True,marker_scale=1.0,sample_duration=40):
+    def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
         super(Screen_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
@@ -106,7 +106,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self._window = None
 
         self.menu = None
-        self.menu_conf = menu_conf
         self.button = None
 
         self.fullscreen = fullscreen
@@ -143,7 +142,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area threshold'))
         submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity threshold'))
 
-        self.menu.configuration = self.menu_conf
 
         self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
@@ -152,7 +150,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
     def deinit_gui(self):
         if self.menu:
-            self.menu_conf = self.menu.configuration
             self.g_pool.calibration_menu.remove(self.menu)
             self.g_pool.calibration_menu.remove(self.info)
             self.menu = None
@@ -407,10 +404,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         d = {}
         d['fullscreen'] = self.fullscreen
         d['marker_scale'] = self.marker_scale
-        if self.menu:
-            d['menu_conf'] = self.menu.configuration
-        else:
-            d['menu_conf'] = self.menu_conf
         return d
 
     def cleanup(self):

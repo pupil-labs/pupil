@@ -53,9 +53,8 @@ class Offline_Marker_Detector(Plugin):
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    def __init__(self,g_pool,menu_conf={'pos':(300,200),'size':(300,300),'collapsed':False},mode="Show Markers and Frames"):
+    def __init__(self,g_pool,mode="Show Markers and Frames"):
         super(Offline_Marker_Detector, self).__init__(g_pool)
-        self.menu_conf = menu_conf
         self.order = .2
 
 
@@ -106,14 +105,12 @@ class Offline_Marker_Detector(Plugin):
         self.add_button = ui.Thumb('add_surface',setter=self.add_surface,getter=lambda:False,label='Add Surface',hotkey='a')
         self.g_pool.quickbar.append(self.add_button)
         self.update_gui_markers()
-        self.menu.configuration = self.menu_conf
 
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
-            self.menu_conf= self.menu.configuration
             self.menu= None
         if self.add_button:
             self.g_pool.quickbar.remove(self.add_button)
@@ -536,12 +533,7 @@ class Offline_Marker_Detector(Plugin):
 
 
     def get_init_dict(self):
-        if self.menu:
-            d = {'menu_conf':self.menu.configuration,'mode':self.mode}
-        else:
-            d = {'menu_conf':self.menu_conf,'mode':self.mode}
-        return d
-
+        return {'mode':self.mode}
 
 
     def cleanup(self):
