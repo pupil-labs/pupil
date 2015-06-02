@@ -228,16 +228,18 @@ class Camera_Capture(object):
         camera_ids = [c['uid'] for c in cameras]
         self.menu.append(ui.Selector('uid',self,selection=camera_ids,labels=camera_names,label='Capture Device', setter=gui_init_cam_by_uid) )
 
-        hardware_ts_switch = ui.Switch('use_hw_ts',self,label='use hardware timestamps')
-        hardware_ts_switch.read_only = True
-        self.menu.append(hardware_ts_switch)
+        # hardware_ts_switch = ui.Switch('use_hw_ts',self,label='use hardware timestamps')
+        # hardware_ts_switch.read_only = True
+        # self.menu.append(hardware_ts_switch)
 
-        self.menu.append(ui.Selector('frame_rate',self, selection=self.capture.frame_rates,label='Frames per second' ) )
 
         sensor_control = ui.Growing_Menu(label='Sensor Settings')
         sensor_control.collapsed=False
         image_processing = ui.Growing_Menu(label='Image Post Processing')
         image_processing.collapsed=True
+
+        sensor_control.append(ui.Selector('frame_rate',self, selection=self.capture.frame_rates,label='Frames per second' ) )
+
 
         for control in self.capture.controls:
             c = None
