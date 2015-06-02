@@ -37,6 +37,7 @@ assert pyglui_version >= '0.2'
 import psutil
 
 # helpers/utils
+from version_utils import VersionFormat
 from methods import normalize, denormalize,Temp
 from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 
@@ -135,6 +136,8 @@ def world(g_pool,cap_src,cap_size):
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
+    if session_settings.get("version",VersionFormat('0.0')) < g_pool.version:
+        session_settings.clear()
 
     # Initialize capture
     cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
@@ -358,6 +361,7 @@ def world(g_pool,cap_src,cap_size):
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
     session_settings['update_textures'] = g_pool.update_textures
+    session_settings['version'] = g_pool.version
     session_settings.close()
 
     # de-init all running plugins

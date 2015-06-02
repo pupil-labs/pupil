@@ -31,6 +31,7 @@ assert pyglui_version >= '0.2'
 import psutil
 
 # helpers/utils
+from version_utils import VersionFormat
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based
 from OpenGL.GL import GL_LINE_LOOP
 from methods import *
@@ -142,7 +143,8 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye%s'%eye_id))
-
+    if session_settings.get("version",VersionFormat('0.0')) < g_pool.version:
+        session_settings.clear()
     # Initialize capture
     cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
     cap.frame_size = cap_size
@@ -382,6 +384,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     session_settings['capture_settings'] = g_pool.capture.settings
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
+    session_settings['version'] = g_pool.version
     session_settings.close()
 
     pupil_detector.cleanup()
