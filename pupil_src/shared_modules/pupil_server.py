@@ -35,15 +35,18 @@ class Pupil_Server(Plugin):
         self.exclude_list = ['ellipse','pos_in_roi','major','minor','axes','angle','center']
 
     def init_gui(self):
+        if self.g_pool.app == 'capture':
+            self.menu = ui.Growing_Menu("Pupil Broadcast Server")
+            self.g_pool.sidebar.append(self.menu)
+        elif self.g_pool.app == 'player':
+            self.menu = ui.Scrolling_Menu("Pupil Broadcast Server")
+            self.g_pool.gui.append(self.menu)
+
         help_str = "Pupil Message server: Using ZMQ and the *Publish-Subscribe* scheme"
-        self.menu = ui.Growing_Menu("Pupil Broadcast Server")
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Text_Input('address',self,setter=self.set_server,label='Address'))
         self.menu.append(ui.Button('Close',self.close))
-        if self.g_pool.app == 'capture':
-            self.g_pool.sidebar.append(self.menu)
-        elif self.g_pool.app == 'player':
-            self.g_pool.gui.append(self.menu)
+
 
     def deinit_gui(self):
         if self.menu:

@@ -137,6 +137,7 @@ def world(g_pool,cap_src,cap_size):
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
     if session_settings.get("version",VersionFormat('0.0')) < g_pool.version:
+        logger.info("Session setting are from older version of this app. I will not use those.")
         session_settings.clear()
 
     # Initialize capture
@@ -191,7 +192,7 @@ def world(g_pool,cap_src,cap_size):
 
 
     width,height = session_settings.get('window_size',(frame.width, frame.height))
-    window_pos = session_settings.get('window_position',window_position_default) # not yet using this one.
+    window_pos = session_settings.get('window_position',window_position_default)
 
 
     # Initialize glfw

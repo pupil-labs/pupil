@@ -74,13 +74,13 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     #UI Platform tweaks
     if platform.system() == 'Linux':
         scroll_factor = 10.0
-        window_position_default = (1280,300*eye_id)
+        window_position_default = (600,300*eye_id)
     elif platform.system() == 'Windows':
         scroll_factor = 1.0
-        window_position_default = (1280,31+300*eye_id)
+        window_position_default = (600,31+300*eye_id)
     else:
         scroll_factor = 1.0
-        window_position_default = (1280,300*eye_id)
+        window_position_default = (600,300*eye_id)
 
 
     # Callback functions
@@ -144,6 +144,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye%s'%eye_id))
     if session_settings.get("version",VersionFormat('0.0')) < g_pool.version:
+        logger.info("Session setting are from older version of this app. I will not use those.")
         session_settings.clear()
     # Initialize capture
     cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
@@ -186,13 +187,11 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
 
     def set_display_mode_info(val):
-        # set info text here and append to the general settings menu
-        # 'camera_image','roi','algorithm','cpu_save'
         g_pool.display_mode = val
         g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
 
 
-    window_pos = session_settings.get('window_position',window_position_default) # not yet using this one.
+    window_pos = session_settings.get('window_position',window_position_default)
     width,height = session_settings.get('window_size',(frame.width, frame.height))
 
     # Initialize glfw

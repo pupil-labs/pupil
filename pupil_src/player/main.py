@@ -188,29 +188,27 @@ def main():
         logger.error("You did not supply a dir with the required files inside.")
         return
 
-    # load session persistent settings
-    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
 
     #backwards compatibility fn.
     patch_meta_info(rec_dir)
 
     #parse info.csv file
-    meta_info_path = rec_dir + "/info.csv"
+    meta_info_path = rec_dir + "info.csv"
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
 
     rec_version = read_rec_version(meta_info)
     if rec_version < VersionFormat('0.4'):
-        video_path = rec_dir + "/world.avi"
-        timestamps_path = rec_dir + "/timestamps.npy"
+        video_path = rec_dir + "world.avi"
+        timestamps_path = rec_dir + "timestamps.npy"
     else:
-        video_path = rec_dir + "/world.mkv"
-        timestamps_path = rec_dir + "/world_timestamps.npy"
+        video_path = rec_dir + "world.mkv"
+        timestamps_path = rec_dir + "world_timestamps.npy"
 
 
-    gaze_positions_path = rec_dir + "/gaze_positions.npy"
-    pupil_positions_path = rec_dir + "/pupil_positions.npy"
+    gaze_positions_path = rec_dir + "gaze_positions.npy"
+    pupil_positions_path = rec_dir + "pupil_positions.npy"
     #load gaze information
     gaze_list = np.load(gaze_positions_path)
     timestamps = np.load(timestamps_path)
@@ -230,6 +228,14 @@ def main():
     if isinstance(cap,FakeCapture):
         logger.error("could not start capture.")
         return
+
+    # load session persistent settings
+    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
+    print session_settings.get("version",VersionFormat('0.0'))
+    if session_settings.get("version",VersionFormat('0.0')) < get_version(version_file):
+        logger.info("Session setting are from older version of this app. I will not use those.")
+        session_settings.clear()
+
 
     width,height = session_settings.get('window_size',cap.frame_size)
     window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
@@ -341,6 +347,7 @@ def main():
             break
 
     g_pool.gui.configuration = session_settings.get('ui_config',{})
+
     #trigger on_resize
     on_resize(main_window, *glfwGetWindowSize(main_window))
 
@@ -454,6 +461,7 @@ def main():
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
+    session_settings['version'] = g_pool.version
     session_settings.close()
 
     # de-init all running plugins

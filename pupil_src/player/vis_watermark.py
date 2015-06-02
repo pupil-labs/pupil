@@ -92,7 +92,7 @@ class Vis_Watermark(Plugin):
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Growing_Menu('Watermark')
+        self.menu = ui.Scrolling_Menu('Watermark')
         self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Button('remove',self.unset_alive))
         if self.watermark is None:
