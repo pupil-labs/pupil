@@ -21,6 +21,8 @@ if getattr(sys, 'frozen', False):
     # Specifiy user dirs.
     user_dir = os.path.expanduser(os.path.join('~','pupil_capture_settings'))
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
+
+
 else:
     # We are running in a normal Python environment.
     # Make all pupil shared_modules available to this Python session.
@@ -29,9 +31,10 @@ else:
 	# Specifiy user dir.
     user_dir = os.path.join(pupil_base_dir,'capture_settings')
     version_file = None
-    #compile all pyx source files
-    from pyx_compiler import build_extensions
-    build_extensions()
+    if __name__ == '__main__':
+        #compile all pyx source files
+        from pyx_compiler import build_extensions
+        build_extensions()
 
 
 # create folder for user settings, tmp data
@@ -88,6 +91,7 @@ class Global_Container(object):
     pass
 
 def main():
+
     # To assign camera by name: put string(s) in list
     eye_cam_names = ["USB 2.0 Camera","Microsoft", "6000","Integrated Camera","HD USB Camera"]
     world_src = ["Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
