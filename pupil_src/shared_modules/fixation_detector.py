@@ -106,7 +106,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
 
 
 
-        sample_threshold = self.min_duration * 3 *.3 #lets assume we need date for at least 30% if the duration
+        sample_threshold = self.min_duration * 3 *.3 #lets assume we need data for at least 30% of the duration
         dispersion_threshold = self.max_dispersion
         duration_threshold = self.min_duration
 
