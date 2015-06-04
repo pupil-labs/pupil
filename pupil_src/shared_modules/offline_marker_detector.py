@@ -118,7 +118,6 @@ class Offline_Marker_Detector(Plugin):
 
     def update_gui_markers(self):
         pass
-        # self._bar.clear()
         self.menu.elements[:] = []
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Button('Close',self.close))
@@ -132,7 +131,6 @@ class Offline_Marker_Detector(Plugin):
             s_menu = ui.Growing_Menu("Surface %s"%idx)
             s_menu.collapsed=True
             s_menu.append(ui.Text_Input('name',s))
-            #     self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))

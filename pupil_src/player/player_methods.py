@@ -225,6 +225,7 @@ def transparent_circle(img,center,radius,color,thickness):
     center = tuple(map(int,center))
     rgb = [255*c for c in color[:3]] # convert to 0-255 scale for OpenCV
     alpha = color[-1]
+    radius = int(radius)
     if thickness > 0:
         pad = radius + 2 + thickness
     else:
