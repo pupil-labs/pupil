@@ -32,7 +32,7 @@ else:
     user_dir = os.path.join(pupil_base_dir,'capture_settings')
     version_file = None
     if __name__ == '__main__':
-        #compile all pyx source files
+        #compile all cython source files
         from pyx_compiler import build_extensions
         build_extensions()
 
