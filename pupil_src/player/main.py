@@ -111,14 +111,14 @@ from scan_path import Scan_Path
 from offline_marker_detector import Offline_Marker_Detector
 from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from pupil_server import Pupil_Server
-from filter_fixations import Filter_Fixations
+from fixation_detector import Dispersion_Duration_Fixation_Detector
 from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
 
 system_plugins = Seek_Bar,Trim_Marks
-user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
+user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
@@ -272,13 +272,14 @@ def main():
     g_pool.timestamps = timestamps
     g_pool.pupil_positions_by_frame = pupil_positions_by_frame
     g_pool.gaze_positions_by_frame = gaze_positions_by_frame
+    # g_pool.fixations_by_frame = [[] for x in timestamps] #let this be filled by the fixation detector plugin
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
     g_pool.rec_version = rec_version
     g_pool.meta_info = meta_info
-
+    g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
 
     def next_frame(_):
         try:
@@ -326,6 +327,7 @@ def main():
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
+    g_pool.main_menu.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
 
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
@@ -462,6 +464,7 @@ def main():
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['gui_scale'] = g_pool.gui.scale
+    session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
