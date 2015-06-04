@@ -9,6 +9,10 @@ Thumbs.db
 # binaries #
 *.so
 
+#cython build files
+*.c
+*.o
+
 # user generated files will be ignored if in directory named 'recordings...' #
 # user generated settings files will also be ignored #
 recordings/

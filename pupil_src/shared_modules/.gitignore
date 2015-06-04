@@ -1,6 +1,5 @@
 /external/
 
 # cython build files
-*.c
-*.o
+
 build/
