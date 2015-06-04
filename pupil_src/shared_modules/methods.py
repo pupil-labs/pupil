@@ -16,11 +16,6 @@ except:
 import cv2
 import logging
 logger = logging.getLogger(__name__)
-class Temp(object):
-    """Temp class to make objects"""
-    def __init__(self):
-        pass
-
 
 
 

@@ -38,7 +38,7 @@ import psutil
 
 # helpers/utils
 from version_utils import VersionFormat
-from methods import normalize, denormalize,Temp
+from methods import normalize, denormalize
 from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 
 

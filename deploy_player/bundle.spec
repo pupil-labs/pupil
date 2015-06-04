@@ -13,7 +13,9 @@ if platform.system() == 'Darwin':
                  pathex=['../pupil_src/shared_modules/'],
                  hiddenimports=['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']+av_hidden_imports,
                  hookspath=None,
-                 runtime_hooks=None)
+                 runtime_hooks=None,
+                 excludes=['pyx_compiler','matplotlib'])
+
     pyz = PYZ(a.pure)
     exe = EXE(pyz,
               a.scripts,
@@ -30,8 +32,6 @@ if platform.system() == 'Darwin':
                    a.binaries - libSystem,
                    a.zipfiles,
                    a.datas,
-                   [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
-                   [('uvcc.so', '../pupil_src/shared_modules/video_capture/mac_video/uvcc.so','BINARY')],
                    [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.0.2/lib/libglfw3.dylib','BINARY')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
@@ -49,7 +49,9 @@ elif platform.system() == 'Linux':
                  pathex=['../pupil_src/shared_modules/'],
                  hiddenimports=['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']+av_hidden_imports,
                  hookspath=None,
-                 runtime_hooks=None)
+                 runtime_hooks=None,
+                 excludes=['pyx_compiler','matplotlib'])
+
     pyz = PYZ(a.pure)
     exe = EXE(pyz,
               a.scripts,

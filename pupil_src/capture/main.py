@@ -29,6 +29,9 @@ else:
 	# Specifiy user dir.
     user_dir = os.path.join(pupil_base_dir,'capture_settings')
     version_file = None
+    #compile all pyx source files
+    from pyx_compiler import build_extensions
+    build_extensions()
 
 
 # create folder for user settings, tmp data
