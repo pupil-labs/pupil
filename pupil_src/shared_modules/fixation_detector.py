@@ -43,7 +43,6 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
     Terms
         + dispersion (spatial) = how much spatial movement is allowed within one fixation (in visual angular degrees or pixels)
         + duration (temporal) = what is the minimum time required for gaze data to be within dispersion threshold?
-        + cohesion (spatial+temporal) = is the cluster of fixations close together
 
     '''
     def __init__(self,g_pool,max_dispersion = 1.0,min_duration = 0.15,h_fov=78, v_fov=50,show_fixations = False):
@@ -100,71 +99,96 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         '''
         classify fixations
         '''
-        gaze_data = chain(*self.g_pool.gaze_positions_by_frame)
+        gaze_data = list(chain(*self.g_pool.gaze_positions_by_frame))
         #filter out  below threshold confidence mesurements
-        gaze_data = filter(lambda g: g['confidence'] > self.g_pool.pupil_confidence_threshold, gaze_data)
-
+        # gaze_data = filter(lambda g: g['confidence'] > self.g_pool.pupil_confidence_threshold, gaze_data)
 
 
         sample_threshold = self.min_duration * 3 *.3 #lets assume we need data for at least 30% of the duration
         dispersion_threshold = self.max_dispersion
         duration_threshold = self.min_duration
 
-
+        def get_next_sample(gaze_data,support,low_confidence):
+            while gaze_data:
+                gp = gaze_data.pop(0)
+                if gp['confidence'] < self.g_pool.pupil_confidence_threshold:
+                    low_confidence.append(gp)
+                else:
+                    support.append(gp)
+                    return
         def dist_deg(p1,p2):
             return sqrt(((p1[0]-p2[0])*self.h_fov)**2+((p1[1]-p2[1])*self.v_fov)**2)
 
         fixations = []
         fixation_support = [gaze_data.pop(0)]
-
-
-        while gaze_data:
+        low_confidence_samples = []
+        while fixation_support and gaze_data:
             fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
             dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
 
-            if dispersion < dispersion_threshold:
+            if dispersion < dispersion_threshold and gaze_data:
                 #so far all samples inside the threshold, lets add a new canditate
-                fixation_support.append(gaze_data.pop(0))
+                get_next_sample(gaze_data,fixation_support,low_confidence_samples)
             else:
                 #last added point will break dispersion threshold for current candite fixation. So we conclude sampling for this fixation
                 last_sample = fixation_support.pop(-1)
-                duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
-                if duration > duration_threshold and len(fixation_support) > sample_threshold:
-                    #long enough for fixation: we classifiy this fixation canditae as fixation
-                    fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
-                    dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
-                    new_fixation = {'id': len(fixations),'norm_pos':fixation_centroid,'gaze':fixation_support, 'duration':duration,'dispersion':dispersion, 'pix_dispersion':dispersion*self.pix_per_degree, 'start_timestamp':fixation_support[0]['timestamp']}
-                    fixations.append(new_fixation)
+                if fixation_support:
+                    duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
+                    if duration > duration_threshold and len(fixation_support) > sample_threshold:
+                        #long enough for fixation: we classifiy this fixation canditae as fixation
+                        fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
+                        dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
+                        confidence = sum(g['confidence'] for g in fixation_support+low_confidence_samples)/(len(fixation_support)+len(low_confidence_samples))
+                        new_fixation = {'id': len(fixations),
+                                        'norm_pos':fixation_centroid,
+                                        'gaze':fixation_support,
+                                        'low_confidece_gaze':low_confidence_samples,
+                                        'duration':duration,
+                                        'dispersion':dispersion,
+                                        'pix_dispersion':dispersion*self.pix_per_degree,
+                                        'timestamp':fixation_support[0]['timestamp'],
+                                        'confidence':confidence}
+                        fixations.append(new_fixation)
                 #start a new fixation candite
                 fixation_support = [last_sample]
+                low_confidence_samples = []
 
 
         logger.debug("detected %s Fixations"%len(fixations))
-        self.fixations = fixations[:] #keep a copy because we destroy our list below.
+
+
 
         # now lets bin fixations into frames. Fixations may be repeated this way as they span muliple frames
+        self.fixations = fixations[:] #keep a copy because we destroy our list below.
         fixations_by_frame = [[] for x in self.g_pool.timestamps]
+        if not fixations:
+            logger.error('No fixations detected.')
+            return
+
         index = 0
         f = fixations.pop(0)
-        while fixations:
+        while True:
             try:
                 t = self.g_pool.timestamps[index]
             except IndexError:
                 #reached end of ts list
                 break
-            if f['start_timestamp'] > t:
+            if f['timestamp'] > t:
                 #fixation in the future, lets move forward in time.
                 index += 1
-            elif  f['start_timestamp']+f['duration'] > t:
+            elif  f['timestamp']+f['duration'] > t:
                 # fixation during this frame
                 fixations_by_frame[index].append(f)
                 index += 1
             else:
                 #fixation in the past, get new one and check again
-                f = fixations.pop(0)
+                try:
+                    f = fixations.pop(0)
+                except:
+                    break
 
         self.fixations_by_frame = fixations_by_frame
-
+        self.g_pool.fixations_by_frame = fixations_by_frame
 
     def update(self,frame,events):
         events['fixations'] = self.fixations_by_frame[frame.index]

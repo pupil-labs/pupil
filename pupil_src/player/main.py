@@ -77,7 +77,7 @@ else:
     y_scroll_factor = 1.0
 
 #imports
-from file_methods import Persistent_Dict
+from file_methods import Persistent_Dict,load_object
 import numpy as np
 
 #display
@@ -116,10 +116,12 @@ from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
+from gaze_mappers import Dummy_Gaze_Mapper,Simple_Gaze_Mapper,Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper
 
 system_plugins = Seek_Bar,Trim_Marks
+gaze_mapper_plugins = Dummy_Gaze_Mapper,Simple_Gaze_Mapper,Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper
 user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
-available_plugins = system_plugins + user_launchable_plugins
+available_plugins = system_plugins + user_launchable_plugins + gaze_mapper_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
@@ -203,32 +205,18 @@ def main():
 
 
     rec_version = read_rec_version(meta_info)
-    if rec_version < VersionFormat('0.4'):
-        video_path = rec_dir + "world.avi"
-        timestamps_path = rec_dir + "timestamps.npy"
-    else:
-        video_path = rec_dir + "world.mkv"
-        timestamps_path = rec_dir + "world_timestamps.npy"
+    if rec_version < VersionFormat('0.5'):
+        logger.Error("This version is to old. Please upgrade recording format.")
+        return
 
 
-    gaze_positions_path = rec_dir + "gaze_positions.npy"
-    pupil_positions_path = rec_dir + "pupil_positions.npy"
-    #load gaze information
-    gaze_list = np.load(gaze_positions_path)
-    timestamps = np.load(timestamps_path)
-
-    #correlate data
-    if rec_version < VersionFormat('0.4'):
-        gaze_positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
-        pupil_positions_by_frame = [[]for x in range(len(timestamps))]
-    else:
-        pupil_list = np.load(pupil_positions_path)
-        gaze_positions_by_frame = correlate_gaze(gaze_list,timestamps)
-        pupil_positions_by_frame = correlate_pupil_data(pupil_list,timestamps)
+    video_path = rec_dir + "world.mkv"
+    timestamps_path = rec_dir + "world_timestamps.npy"
+    pupil_positions_path = rec_dir + "pupil_positions"
+    gaze_mapper_path = rec_dir + 'active_gaze_mapper'
 
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-
     if isinstance(cap,FakeCapture):
         logger.error("could not start capture.")
         return
@@ -264,15 +252,12 @@ def main():
     glfwSetScrollCallback(main_window,on_scroll)
 
 
-    # create container for globally scoped vars (within world)
+    # create container for globally scoped vars
     g_pool = Global_Container()
     g_pool.app = 'player'
     g_pool.version = get_version(version_file)
     g_pool.capture = cap
     g_pool.timestamps = timestamps
-    g_pool.pupil_positions_by_frame = pupil_positions_by_frame
-    g_pool.gaze_positions_by_frame = gaze_positions_by_frame
-    # g_pool.fixations_by_frame = [[] for x in timestamps] #let this be filled by the fixation detector plugin
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
@@ -280,6 +265,22 @@ def main():
     g_pool.rec_version = rec_version
     g_pool.meta_info = meta_info
     g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
+
+
+    # load calibration and map gaze
+    pupil_list = load_object(pupil_positions_path)
+    timestamps = np.load(timestamps_path)
+    gaze_mapper_init_dict = load_object(gaze_mapper_path)
+    name, args = gaze_mapper_init_dict
+    logger.info("Loading gaze mapper: %s with settings %s"%(name, args))
+    gaze_mapper = gaze_mapper_plugins[name](g_pool,**args)
+    gaze_list = gaze_mapper.map_gaze_offline(pupil_list)
+
+
+    #add new data to g_pool
+    g_pool.pupil_positions_by_frame = correlate_data(pupil_list,timestamps)
+    g_pool.gaze_positions_by_frame = correlate_data(gaze_list,timestamps)
+    g_pool.fixations_by_frame = [[] for x in timestamps] #let this be filled by the fixation detector plugin
 
     def next_frame(_):
         try:

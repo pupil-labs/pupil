@@ -18,6 +18,7 @@ from time import strftime,localtime,time,gmtime
 from shutil import copy2
 from glob import glob
 from audio import Audio_Capture,Audio_Input_Dict
+from file_methods import save_object
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -166,7 +167,6 @@ class Recorder(Plugin):
     def start(self):
         self.timestamps = []
         self.pupil_list = []
-        self.gaze_list = []
         self.frame_count = 0
         self.running = True
         self.menu.read_only = True
@@ -242,16 +242,7 @@ class Recorder(Plugin):
 
     def update(self,frame,events):
         if self.running:
-
-            # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
-            for p in events['pupil_positions']:
-                pupil_pos = p['timestamp'],p['confidence'],p['id'],p['norm_pos'][0],p['norm_pos'][1],p['diameter']
-                self.pupil_list.append(pupil_pos)
-
-            for g in events.get('gaze_positions',[]):
-                gaze_pos = g['timestamp'],g['confidence'],g['norm_pos'][0],g['norm_pos'][1]
-                self.gaze_list.append(gaze_pos)
-
+            self.pupil_list += events['pupil_positions']
             self.timestamps.append(frame.timestamp)
             self.writer.write(frame.img)
             self.frame_count += 1
@@ -270,11 +261,14 @@ class Recorder(Plugin):
                 except:
                     logger.warning("Could not stop eye-recording. Please report this bug!")
 
-        gaze_list_path = os.path.join(self.rec_path, "gaze_positions.npy")
-        np.save(gaze_list_path,np.asarray(self.gaze_list))
 
-        pupil_list_path = os.path.join(self.rec_path, "pupil_positions.npy")
-        np.save(pupil_list_path,np.asarray(self.pupil_list))
+        save_object(self.pupil_list,os.path.join(self.rec_path, "pupil_positions"))
+
+        for p in g_pool.plugins:
+            if p.base_class_name == 'Calibration_Plugin':
+                calibration_plugin = p
+                break
+        save_object(p.get_init_dict(),os.path.join(self.rec_path,'active_calibration'))
 
         timestamps_path = os.path.join(self.rec_path, "world_timestamps.npy")
         ts = sanitize_timestamps(np.array(self.timestamps))
