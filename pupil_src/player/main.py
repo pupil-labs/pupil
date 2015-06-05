@@ -92,7 +92,7 @@ from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,Fa
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize
-from player_methods import correlate_pupil_data,correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
+from player_methods import correlate_data, is_pupil_rec_dir
 
 #monitoring
 import psutil
@@ -116,7 +116,7 @@ from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
-from gaze_mappers import Dummy_Gaze_Mapper,Simple_Gaze_Mapper,Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper
+from calibration_routines.gaze_mappers import Dummy_Gaze_Mapper,Simple_Gaze_Mapper,Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper
 
 system_plugins = Seek_Bar,Trim_Marks
 gaze_mapper_plugins = Dummy_Gaze_Mapper,Simple_Gaze_Mapper,Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper
@@ -178,7 +178,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording/'
+        rec_dir = '/Users/mkassner/Pupil/pupil_code/recordings/2015_06_05/001'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
@@ -194,12 +194,8 @@ def main():
         logger.error("You did not supply a dir with the required files inside.")
         return
 
-
-    #backwards compatibility fn.
-    patch_meta_info(rec_dir)
-
     #parse info.csv file
-    meta_info_path = rec_dir + "info.csv"
+    meta_info_path = os.path.join(rec_dir,"info.csv")
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
@@ -210,10 +206,10 @@ def main():
         return
 
 
-    video_path = rec_dir + "world.mkv"
-    timestamps_path = rec_dir + "world_timestamps.npy"
-    pupil_positions_path = rec_dir + "pupil_positions"
-    gaze_mapper_path = rec_dir + 'active_gaze_mapper'
+    video_path = os.path.join(rec_dir,"world.mkv")
+    timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
+    pupil_positions_path = os.path.join(rec_dir, "pupil_positions")
+    gaze_mapper_path = os.path.join(rec_dir, 'active_gaze_mapper')
 
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
@@ -223,7 +219,6 @@ def main():
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
-    print session_settings.get("version",VersionFormat('0.0'))
     if session_settings.get("version",VersionFormat('0.0')) < get_version(version_file):
         logger.info("Session setting are from older version of this app. I will not use those.")
         session_settings.clear()
@@ -257,7 +252,7 @@ def main():
     g_pool.app = 'player'
     g_pool.version = get_version(version_file)
     g_pool.capture = cap
-    g_pool.timestamps = timestamps
+    g_pool.timestamps = np.load(timestamps_path)
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
@@ -267,20 +262,17 @@ def main():
     g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
 
 
-    # load calibration and map gaze
+    # load pupil_positions, gaze_mapper and map gaze
     pupil_list = load_object(pupil_positions_path)
-    timestamps = np.load(timestamps_path)
     gaze_mapper_init_dict = load_object(gaze_mapper_path)
     name, args = gaze_mapper_init_dict
-    logger.info("Loading gaze mapper: %s with settings %s"%(name, args))
-    gaze_mapper = gaze_mapper_plugins[name](g_pool,**args)
+    logger.debug("Loading gaze mapper: %s with settings %s"%(name, args))
+    gaze_mapper = plugin_by_name[name](g_pool,**args)
     gaze_list = gaze_mapper.map_gaze_offline(pupil_list)
-
-
     #add new data to g_pool
-    g_pool.pupil_positions_by_frame = correlate_data(pupil_list,timestamps)
-    g_pool.gaze_positions_by_frame = correlate_data(gaze_list,timestamps)
-    g_pool.fixations_by_frame = [[] for x in timestamps] #let this be filled by the fixation detector plugin
+    g_pool.pupil_positions_by_frame = correlate_data(pupil_list,g_pool.timestamps)
+    g_pool.gaze_positions_by_frame = correlate_data(gaze_list,g_pool.timestamps)
+    g_pool.fixations_by_frame = [[] for x in g_pool.timestamps] #populated by the fixation detector plugin
 
     def next_frame(_):
         try:
@@ -412,7 +404,7 @@ def main():
 
         if update_graph:
             #update performace graphs
-            for p in  events['gaze_positions']:
+            for p in  events['pupil_positions']:
                 pupil_graph.add(p['confidence'])
 
             t = new_frame.timestamp

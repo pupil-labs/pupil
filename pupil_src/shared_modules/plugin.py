@@ -157,6 +157,9 @@ class Gaze_Mapping_Plugin(Plugin):
         super(Gaze_Mapping_Plugin, self).__init__(g_pool)
         self.order = 0.1
 
+    def map_gaze_offline(self,pupil_positions):
+        raise NotImplementedError()
+
 
 
 class Plugin_List(object):

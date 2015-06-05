@@ -167,7 +167,7 @@ class Batch_Exporter(Plugin):
                 outfiles.add(out_file_path)
                 logger.info("Exporting to: %s"%out_file_path)
 
-                process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, export_dir,user_dir,start_frame,end_frame,plugins,out_file_path))
+                process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, export_dir,user_dir,start_frame,end_frame,plugins,out_file_path,self.g_pool.pupil_confidence_threshold))
                 self.exports.append(process)
 
     def start(self):

@@ -264,11 +264,11 @@ class Recorder(Plugin):
 
         save_object(self.pupil_list,os.path.join(self.rec_path, "pupil_positions"))
 
-        for p in g_pool.plugins:
-            if p.base_class_name == 'Calibration_Plugin':
-                calibration_plugin = p
+        for p in self.g_pool.plugins:
+            if p.base_class_name == 'Gaze_Mapping_Plugin':
+                initializer = p.class_name,p.get_init_dict()
+                save_object(initializer,os.path.join(self.rec_path,'active_gaze_mapper'))
                 break
-        save_object(p.get_init_dict(),os.path.join(self.rec_path,'active_calibration'))
 
         timestamps_path = os.path.join(self.rec_path, "world_timestamps.npy")
         ts = sanitize_timestamps(np.array(self.timestamps))

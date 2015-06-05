@@ -136,9 +136,13 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
                     duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
                     if duration > duration_threshold and len(fixation_support) > sample_threshold:
                         #long enough for fixation: we classifiy this fixation canditae as fixation
+                        #calulate charachter of fixation
                         fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
                         dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
                         confidence = sum(g['confidence'] for g in fixation_support+low_confidence_samples)/(len(fixation_support)+len(low_confidence_samples))
+
+                        # avg pupil size  = mean of (mean of pupil size per gaze ) for all gaze points of support
+                        avg_pupil_size =  sum([sum([p['diameter'] for p in g['base']])/len(g['base']) for g in fixation_support])/len(fixation_support)
                         new_fixation = {'id': len(fixations),
                                         'norm_pos':fixation_centroid,
                                         'gaze':fixation_support,
@@ -147,6 +151,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
                                         'dispersion':dispersion,
                                         'pix_dispersion':dispersion*self.pix_per_degree,
                                         'timestamp':fixation_support[0]['timestamp'],
+                                        'pupil_diameter':avg_pupil_size,
                                         'confidence':confidence}
                         fixations.append(new_fixation)
                 #start a new fixation candite

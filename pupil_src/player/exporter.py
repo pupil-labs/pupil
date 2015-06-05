@@ -20,11 +20,13 @@ import os
 from time import time
 import cv2
 import numpy as np
-from video_capture import autoCreateCapture,EndofVideoFileError
-from player_methods import correlate_gaze,correlate_gaze_legacy
+from video_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
+from player_methods import correlate_data
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version
 from av_writer import AV_Writer
+from file_methods import load_object
+
 #logging
 import logging
 
@@ -40,8 +42,17 @@ from scan_path import Scan_Path
 from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
 from eye_video_overlay import Eye_Video_Overlay
+from calibration_routines.gaze_mappers import Dummy_Gaze_Mapper,Simple_Gaze_Mapper,Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper
+from fixation_detector import Dispersion_Duration_Fixation_Detector
 
-available_plugins =  Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points, Vis_Watermark, Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Eye_Video_Overlay
+
+available_plugins = Vis_Circle,Vis_Cross, Vis_Polyline, \
+                    Vis_Light_Points, Vis_Watermark, \
+                    Scan_Path,Filter_Fixations, \
+                    Manual_Gaze_Correction,Eye_Video_Overlay, \
+                    Dummy_Gaze_Mapper,Simple_Gaze_Mapper, \
+                    Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper, \
+                    Dispersion_Duration_Fixation_Detector
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
@@ -49,38 +60,32 @@ plugin_by_name = dict(zip(name_by_index,available_plugins))
 class Global_Container(object):
         pass
 
-def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
+def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None,pupil_confidence_threshold=0.6):
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
-
-
-    #parse info.csv file
-    with open(rec_dir + "/info.csv") as info:
+   #parse info.csv file
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+    with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
+
+
     rec_version = read_rec_version(meta_info)
-    logger.debug("Exporting a video from recording with version: %s"%rec_version)
+    if rec_version < VersionFormat('0.5'):
+        logger.Error("This version is to old. Please upgrade recording format.")
+        return
 
-    if rec_version < VersionFormat('0.4'):
-        video_path = rec_dir + "/world.avi"
-        timestamps_path = rec_dir + "/timestamps.npy"
-    else:
-        video_path = rec_dir + "/world.mkv"
-        timestamps_path = rec_dir + "/world_timestamps.npy"
 
-    gaze_positions_path = rec_dir + "/gaze_positions.npy"
-    #load gaze information
-    gaze_list = np.load(gaze_positions_path)
+    video_path = os.path.join(rec_dir,"world.mkv")
+    timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
+    pupil_positions_path = os.path.join(rec_dir, "pupil_positions")
+    gaze_mapper_path = os.path.join(rec_dir, 'active_gaze_mapper')
     timestamps = np.load(timestamps_path)
 
-    #correlate data
-    if rec_version < VersionFormat('0.4'):
-        gaze_positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
-    else:
-        gaze_positions_by_frame = correlate_gaze(gaze_list,timestamps)
-
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-    width,height = cap.frame_size
+    if isinstance(cap,FakeCapture):
+        logger.error("could not start capture.")
+        return
 
     #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
     if out_file_path is None:
@@ -124,12 +129,26 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     g = Global_Container()
     g.app = 'exporter'
+    g.capture = cap
     g.rec_dir = rec_dir
     g.user_dir = user_dir
     g.rec_version = rec_version
     g.timestamps = timestamps
-    g.gaze_list = gaze_list
-    g.gaze_positions_by_frame = gaze_positions_by_frame
+    g.pupil_confidence_threshold = pupil_confidence_threshold
+
+    # load pupil_positions, gaze_mapper and map gaze
+    pupil_list = load_object(pupil_positions_path)
+    gaze_mapper_init_dict = load_object(gaze_mapper_path)
+    name, args = gaze_mapper_init_dict
+    logger.debug("Loading gaze mapper: %s with settings %s"%(name, args))
+    gaze_mapper = plugin_by_name[name](g,**args)
+    gaze_list = gaze_mapper.map_gaze_offline(pupil_list)
+    #add new data to g
+    g.pupil_positions_by_frame = correlate_data(pupil_list,g.timestamps)
+    g.gaze_positions_by_frame = correlate_data(gaze_list,g.timestamps)
+    g.fixations_by_frame = [[] for x in g.timestamps] #populated by the fixation detector plugin
+
+    #add plugins
     g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
 
     while frames_to_export.value - current_frame.value > 0:
@@ -149,7 +168,9 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
         events = {}
         #new positons and events
-        events['gaze_positions'] = gaze_positions_by_frame[frame.index]
+        events['gaze_positions'] = g.gaze_positions_by_frame[frame.index]
+        events['pupil_positions'] = g.pupil_positions_by_frame[frame.index]
+
         # allow each Plugin to do its work.
         for p in g.plugins:
             p.update(frame,events)
