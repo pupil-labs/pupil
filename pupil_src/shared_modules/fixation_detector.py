@@ -159,8 +159,11 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
                 low_confidence_samples = []
 
 
-        logger.debug("detected %s Fixations"%len(fixations))
-
+        #gather some statisics for debugging and feedback.
+        total_fixation_time  = sum([f['duration'] for f in fixations])
+        total_video_time = self.g_pool.timestamps[-1]- self.g_pool.timestamps[0]
+        fixation_count = len(fixations)
+        logger.debug("detected %s Fixations. Total duration of fixations: '%s'sec total time of video '%s'sec "%(fixation_count,total_fixation_time,total_video_time))
 
 
         # now lets bin fixations into frames. Fixations may be repeated this way as they span muliple frames
@@ -198,18 +201,13 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
     def update(self,frame,events):
         events['fixations'] = self.fixations_by_frame[frame.index]
         if self.show_fixations:
-            self.fixations_to_display = self.fixations_by_frame[frame.index]
-            for f in self.fixations_to_display:
+            for f in self.fixations_by_frame[frame.index]:
                 x = int(f['norm_pos'][0]*self.img_size[0])
                 y = int((1-f['norm_pos'][1])*self.img_size[1])
                 transparent_circle(frame.img, (x,y), radius=f['pix_dispersion'], color=(.5, .2, .6, .7), thickness=-1)
-                cv2.putText(frame.img,'%i'%f['id'],(x,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,100,100))
+                cv2.putText(frame.img,'%i'%f['id'],(x,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,150,100))
 
 
-    def gl_display(self):
-        pass
-        # for f in self.fixations_to_display:
-            # print f['id'],f['norm_pos']
 
     def get_init_dict(self):
         return {'max_dispersion': self.max_dispersion, 'min_duration':self.min_duration, 'h_fov':self.h_fov, 'v_fov': self.v_fov,'show_fixations':self.show_fixations}
