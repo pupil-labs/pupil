@@ -26,6 +26,8 @@ def correlate_data(data,timestamps):
     this takes a data list and a timestamps list and makes a new list
     with the length of the number of timestamps.
     Each slot conains a list that will have 0, 1 or more assosiated data points.
+
+    Finnaly we add an index field to the data_point with the assosiated index
     '''
     timestamps = list(timestamps)
     data_by_frame = [[] for i in timestamps]
@@ -37,12 +39,16 @@ def correlate_data(data,timestamps):
     while True:
         try:
             datum = data[data_index]
-            t_between_frames = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
+            # we can take the midpoint between two frames in time: More appropriate for SW timestamps
+            ts = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
+            # or the time of the next frame: More appropriate for Sart Of Exposure Timestamps (HW timestamps).
+            # ts = timestamps[frame_idx+1]
         except IndexError:
             # we might loose a data point at the end but we dont care
             break
 
-        if datum['timestamp'] <= t_between_frames:
+        if datum['timestamp'] <= ts:
+            datum['index'] = frame_idx
             data_by_frame[frame_idx].append(datum)
             data_index +=1
         else:
