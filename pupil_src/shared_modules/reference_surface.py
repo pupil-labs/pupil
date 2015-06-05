@@ -26,7 +26,6 @@ from pyglui.ui import get_opensans_font_path
 from time import time
 
 import logging
-from pickle import FALSE
 logger = logging.getLogger(__name__)
 
 def m_verts_to_screen(verts):

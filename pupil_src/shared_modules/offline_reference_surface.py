@@ -31,7 +31,6 @@ class Offline_Reference_Surface(Reference_Surface):
     def __init__(self,g_pool,name="unnamed",saved_definition=None):
         super(Offline_Reference_Surface, self).__init__(name,saved_definition)
         self.g_pool = g_pool
-        self.g_pool.gaze_positions_by_frame
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
 
