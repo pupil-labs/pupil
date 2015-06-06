@@ -64,7 +64,7 @@ def is_pupil_rec_dir(data_dir):
     if not os.path.isdir(data_dir):
         logger.error("No valid dir supplied")
         return False
-    required_files = ["info.csv", "pupil_positions"]
+    required_files = ["info.csv"]
     for f in required_files:
         if not os.path.isfile(os.path.join(data_dir,f)):
             logger.debug("Did not find required file: %s in data folder %s" %(f, data_dir))

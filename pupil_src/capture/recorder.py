@@ -166,7 +166,7 @@ class Recorder(Plugin):
 
     def start(self):
         self.timestamps = []
-        self.pupil_list = []
+        self.data = {'pupil_positions':[],'gaze_positions':[]}
         self.pupil_pos_list = []
         self.gaze_pos_list = []
         self.frame_count = 0
@@ -244,7 +244,8 @@ class Recorder(Plugin):
 
     def update(self,frame,events):
         if self.running:
-            self.pupil_list += events['pupil_positions']
+            self.data['pupil_positions'] += events['pupil_positions']
+            self.data['gaze_positions'] += events['gaze_positions']
             self.timestamps.append(frame.timestamp)
             self.writer.write(frame.img)
             self.frame_count += 1
@@ -272,20 +273,14 @@ class Recorder(Plugin):
                 except:
                     logger.warning("Could not stop eye-recording. Please report this bug!")
 
+        save_object(self.data,os.path.join(self.rec_path, "pupil_data"))
+
 
         gaze_list_path = os.path.join(self.rec_path, "gaze_positions.npy")
         np.save(gaze_list_path,np.asarray(self.gaze_pos_list))
 
         pupil_list_path = os.path.join(self.rec_path, "pupil_positions.npy")
         np.save(pupil_list_path,np.asarray(self.pupil_pos_list))
-
-        save_object(self.pupil_list,os.path.join(self.rec_path, "pupil_positions"))
-
-        for p in self.g_pool.plugins:
-            if p.base_class_name == 'Gaze_Mapping_Plugin':
-                initializer = p.class_name,p.get_init_dict()
-                save_object(initializer,os.path.join(self.rec_path,'active_gaze_mapper'))
-                break
 
         timestamps_path = os.path.join(self.rec_path, "world_timestamps.npy")
         ts = sanitize_timestamps(np.array(self.timestamps))

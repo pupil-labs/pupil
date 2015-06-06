@@ -116,12 +116,10 @@ from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
-from calibration_routines.gaze_mappers import Dummy_Gaze_Mapper,Simple_Gaze_Mapper,Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper
 
 system_plugins = Seek_Bar,Trim_Marks
-gaze_mapper_plugins = Dummy_Gaze_Mapper,Simple_Gaze_Mapper,Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper
 user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
-available_plugins = system_plugins + user_launchable_plugins + gaze_mapper_plugins
+available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
@@ -178,7 +176,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/Users/mkassner/Pupil/pupil_code/recordings/2015_06_05/001'
+        rec_dir = '/Users/mkassner/Pupil/pupil_code/recordings/2015_06_06/000'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
@@ -208,8 +206,7 @@ def main():
 
     video_path = os.path.join(rec_dir,"world.mkv")
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
-    pupil_positions_path = os.path.join(rec_dir, "pupil_positions")
-    gaze_mapper_path = os.path.join(rec_dir, 'active_gaze_mapper')
+    pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
@@ -247,6 +244,11 @@ def main():
     glfwSetScrollCallback(main_window,on_scroll)
 
 
+    # load pupil_positions, gaze_positions
+    pupil_data = load_object(pupil_data_path)
+    pupil_list = pupil_data['pupil_positions']
+    gaze_list = pupil_data['gaze_positions']
+
     # create container for globally scoped vars
     g_pool = Global_Container()
     g_pool.app = 'player'
@@ -259,17 +261,6 @@ def main():
     g_pool.rec_dir = rec_dir
     g_pool.rec_version = rec_version
     g_pool.meta_info = meta_info
-    g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
-
-
-    # load pupil_positions, gaze_mapper and map gaze
-    pupil_list = load_object(pupil_positions_path)
-    gaze_mapper_init_dict = load_object(gaze_mapper_path)
-    name, args = gaze_mapper_init_dict
-    logger.debug("Loading gaze mapper: %s with settings %s"%(name, args))
-    gaze_mapper = plugin_by_name[name](g_pool,**args)
-    gaze_list = gaze_mapper.map_gaze_offline(pupil_list)
-    #add new data to g_pool
     g_pool.pupil_positions_by_frame = correlate_data(pupil_list,g_pool.timestamps)
     g_pool.gaze_positions_by_frame = correlate_data(gaze_list,g_pool.timestamps)
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps] #populated by the fixation detector plugin
@@ -291,11 +282,6 @@ def main():
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
-
-    def set_confidence(new_confidence):
-        g_pool.pupil_confidence_threshold = new_confidence
-        gaze_list = gaze_mapper.map_gaze_offline(pupil_list)
-        g_pool.gaze_positions_by_frame = correlate_data(gaze_list,g_pool.timestamps)
 
     def open_plugin(plugin):
         if plugin ==  "Select to load":
@@ -325,8 +311,6 @@ def main():
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
-    g_pool.main_menu.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence',setter=set_confidence))
-
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
     g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey=GLFW_KEY_SPACE)
@@ -462,7 +446,6 @@ def main():
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['gui_scale'] = g_pool.gui.scale
-    session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
