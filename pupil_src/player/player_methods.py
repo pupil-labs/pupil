@@ -10,9 +10,11 @@
 
 import os
 import cv2
+import numpy as np
 #logging
 import logging
 logger = logging.getLogger(__name__)
+from file_methods import save_object
 
 
 def correlate_data(data,timestamps):
@@ -58,7 +60,44 @@ def correlate_data(data,timestamps):
 
 
 
+def update_recording_0v4_to_0v5(rec_dir):
+    gaze_array = np.load(os.path.join(rec_dir,'gaze_positions.npy'))
+    pupil_array = np.load(os.path.join(rec_dir,'pupil_positions.npy'))
+    gaze_list = []
+    pupil_list = []
 
+    for datum in pupil_array:
+        ts, confidence, id, x, y, diameter = datum[:6]
+        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':id,'norm_pos':[x,y],'diameter':diameter})
+
+    pupil_by_ts = dict([(p['timestamp'],p) for p in pupil_list])
+
+    for datum in gaze_array:
+        ts,confidence,x,y, = datum
+        gaze_list.append({'timestamp':ts,'confidence':confidence,'norm_pos':[x,y],'base':[pupil_by_ts.get(ts,None)]})
+
+    pupil_data = {'pupil_positions':pupil_list,'gaze_positions':gaze_list}
+    try:
+        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+    except IOError:
+        pass
+
+def update_recording_0v3_to_0v5(rec_dir):
+    pupilgaze_array = np.load(os.path.join(rec_dir,'gaze_positions.npy'))
+    gaze_list = []
+    pupil_list = []
+
+    for datum in pupilgaze_array:
+        gaze_x,gaze_y,pupil_x,pupil_y,ts,confidence = datum
+        #some bogus size and confidence as we did not save it back then
+        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':0,'norm_pos':[pupil_x,pupil_y],'diameter':50})
+        gaze_list.append({'timestamp':ts,'confidence':confidence,'norm_pos':[gaze_x,gaze_y],'base':[pupil_list[-1]]})
+
+    pupil_data = {'pupil_positions':pupil_list,'gaze_positions':gaze_list}
+    try:
+        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+    except IOError:
+        pass
 
 def is_pupil_rec_dir(data_dir):
     if not os.path.isdir(data_dir):

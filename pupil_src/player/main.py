@@ -92,7 +92,7 @@ from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,Fa
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize
-from player_methods import correlate_data, is_pupil_rec_dir
+from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_0v5,update_recording_0v3_to_0v5
 
 #monitoring
 import psutil
@@ -176,7 +176,7 @@ def main():
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/Users/mkassner/Pupil/pupil_code/recordings/2015_06_06/000'
+        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hadcoded data dir.")
         else:
@@ -197,16 +197,25 @@ def main():
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
-
-    rec_version = read_rec_version(meta_info)
-    if rec_version < VersionFormat('0.5'):
-        logger.Error("This version is to old. Please upgrade recording format.")
-        return
-
-
     video_path = os.path.join(rec_dir,"world.mkv")
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
+
+
+    rec_version = read_rec_version(meta_info)
+    if rec_version >= VersionFormat('0.5'):
+        pass
+    elif rec_version >= VersionFormat('0.4'):
+        update_recording_0v4_to_0v5(rec_dir)
+    elif rec_version >= VersionFormat('0.3'):
+        update_recording_0v3_to_0v5(rec_dir)
+        video_path = os.path.join(rec_dir,"world.avi")
+        timestamps_path = os.path.join(rec_dir, "timestamps.npy")
+    else:
+        logger.Error("This recording is to old. Sorry.")
+        return
+
+
 
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
