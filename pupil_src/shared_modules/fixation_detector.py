@@ -196,7 +196,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             return
 
         for f in self.fixations:
-            if f['start_frame_index'] <= in_mark:
+            if f['start_frame_index'] >= in_mark:
                 first_fixation = f
                 break
         for f in self.fixations[::-1]:
