@@ -292,6 +292,11 @@ def main():
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
 
+    def set_confidence(new_confidence):
+        g_pool.pupil_confidence_threshold = new_confidence
+        gaze_list = gaze_mapper.map_gaze_offline(pupil_list)
+        g_pool.gaze_positions_by_frame = correlate_data(gaze_list,g_pool.timestamps)
+
     def open_plugin(plugin):
         if plugin ==  "Select to load":
             return
@@ -320,7 +325,7 @@ def main():
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
-    g_pool.main_menu.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
+    g_pool.main_menu.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence',setter=set_confidence))
 
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))

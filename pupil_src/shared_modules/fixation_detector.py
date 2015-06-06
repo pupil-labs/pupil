@@ -10,7 +10,6 @@
 import os
 import csv
 import numpy as np
-from math import sqrt
 import cv2
 import logging
 from itertools import chain
@@ -102,38 +101,29 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         classify fixations
         '''
         gaze_data = list(chain(*self.g_pool.gaze_positions_by_frame))
-        #filter out  below threshold confidence mesurements
-        # gaze_data = filter(lambda g: g['confidence'] > self.g_pool.pupil_confidence_threshold, gaze_data)
 
 
         sample_threshold = self.min_duration * 3 *.3 #lets assume we need data for at least 30% of the duration
         dispersion_threshold = self.max_dispersion
         duration_threshold = self.min_duration
 
-        def get_next_sample(gaze_data,support,low_confidence):
-            while gaze_data:
-                gp = gaze_data.pop(0)
-                if gp['confidence'] < self.g_pool.pupil_confidence_threshold:
-                    low_confidence.append(gp)
-                else:
-                    support.append(gp)
-                    return
+
         def dist_deg(p1,p2):
-            return sqrt(((p1[0]-p2[0])*self.h_fov)**2+((p1[1]-p2[1])*self.v_fov)**2)
+            return np.sqrt(((p1[0]-p2[0])*self.h_fov)**2+((p1[1]-p2[1])*self.v_fov)**2)
 
         fixations = []
         fixation_support = [gaze_data.pop(0)]
-        low_confidence_samples = []
-        while fixation_support and gaze_data:
+        while True:
             fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
             dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
 
             if dispersion < dispersion_threshold and gaze_data:
                 #so far all samples inside the threshold, lets add a new canditate
-                get_next_sample(gaze_data,fixation_support,low_confidence_samples)
+                fixation_support += [gaze_data.pop(0)]
             else:
-                #last added point will break dispersion threshold for current candite fixation. So we conclude sampling for this fixation
-                last_sample = fixation_support.pop(-1)
+                if gaze_data:
+                    #last added point will break dispersion threshold for current candite fixation. So we conclude sampling for this fixation
+                    last_sample = fixation_support.pop(-1)
                 if fixation_support:
                     duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
                     if duration > duration_threshold and len(fixation_support) > sample_threshold:
@@ -141,15 +131,13 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
                         #calulate charachter of fixation
                         fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
                         dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
-                        confidence = sum(g['confidence'] for g in fixation_support+low_confidence_samples)/(len(fixation_support)+len(low_confidence_samples))
+                        confidence = sum(g['confidence'] for g in fixation_support)/len(fixation_support)
 
                         # avg pupil size  = mean of (mean of pupil size per gaze ) for all gaze points of support
                         avg_pupil_size =  sum([sum([p['diameter'] for p in g['base']])/len(g['base']) for g in fixation_support])/len(fixation_support)
-
                         new_fixation = {'id': len(fixations),
                                         'norm_pos':fixation_centroid,
                                         'gaze':fixation_support,
-                                        'low_confidece_gaze':low_confidence_samples,
                                         'duration':duration,
                                         'dispersion':dispersion,
                                         'start_frame_index':fixation_support[0]['index'],
@@ -159,16 +147,18 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
                                         'pupil_diameter':avg_pupil_size,
                                         'confidence':confidence}
                         fixations.append(new_fixation)
-                #start a new fixation candite
-                fixation_support = [last_sample]
-                low_confidence_samples = []
+                if gaze_data:
+                    #start a new fixation candite
+                    fixation_support = [last_sample]
+                else:
+                    break
 
         self.fixations = fixations
         #gather some statisics for debugging and feedback.
         total_fixation_time  = sum([f['duration'] for f in fixations])
         total_video_time = self.g_pool.timestamps[-1]- self.g_pool.timestamps[0]
         fixation_count = len(fixations)
-        logger.debug("detected %s Fixations. Total duration of fixations: '%s'sec total time of video '%s'sec "%(fixation_count,total_fixation_time,total_video_time))
+        logger.info("detected %s Fixations. Total duration of fixations: %0.2fsec total time of video %0.2fsec "%(fixation_count,total_fixation_time,total_video_time))
 
 
         # now lets bin fixations into frames. Fixations may be repeated this way as they span muliple frames
@@ -239,7 +229,8 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         with open(os.path.join(metrics_dir,'fixation_report.csv'),'wb') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
             csv_writer.writerow(('fixation classifier','Dispersion_Duration'))
-            csv_writer.writerow(('classifier params',str(self.get_init_dict()) ))
+            csv_writer.writerow(('max_dispersion','%0.3f deg'%self.max_dispersion) )
+            csv_writer.writerow(('min_duration','%0.3f sec'%self.min_duration) )
             csv_writer.writerow((''))
             csv_writer.writerow(('fixation_count',len(fixations_in_section)))
             logger.info("Created 'fixation_report.csv' file.")

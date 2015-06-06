@@ -395,6 +395,7 @@ class Offline_Marker_Detector(Plugin):
                 frame_no, ts, surface "name", "id" enter/exit
 
             for each surface:
+                fixations_on_name.csv
                 gaze_on_name_id.csv
                 positions_of_name_id.csv
 
@@ -501,6 +502,21 @@ class Offline_Marker_Detector(Plugin):
                                 gp_x,gp_y = gp['norm_pos']
                                 on_srf = (0 <= gp_x <= 1) and (0 <= gp_y <= 1)
                                 csv_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.real_world_size['x'],gp_x*s.real_world_size['y'],on_srf) )
+
+
+            #todo: Fixations.
+            # # save fixation on srf as csv.
+            # with open(os.path.join(metrics_dir,'fixations_on_surface'+surface_name+'.csv'),'wb') as csvfile:
+            #     csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            #     csv_writer.writerow(('world_frame_idx','world_timestamp','eye_timestamp','x_norm','y_norm','x_scaled','y_scaled','on_srf'))
+            #     for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
+            #         if in_mark <= idx <= out_mark:
+            #             if ref_srf_data is not None and ref_srf_data is not False:
+            #                 for gp in s.gaze_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
+            #                     gp_x,gp_y = gp['norm_pos']
+            #                     on_srf = (0 <= gp_x <= 1) and (0 <= gp_y <= 1)
+            #                     csv_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.real_world_size['x'],gp_x*s.real_world_size['y'],on_srf) )
+
 
             logger.info("Saved surface positon data and gaze on surface data for '%s' with uid:'%s'"%(s.name,s.uid))
 
