@@ -60,7 +60,8 @@ def correlate_data(data,timestamps):
 
 
 
-def update_recording_0v4_to_0v5(rec_dir):
+def update_recording_0v4_to_current(rec_dir):
+    logger.info("Updatig recording from v0.4x format to current version")
     gaze_array = np.load(os.path.join(rec_dir,'gaze_positions.npy'))
     pupil_array = np.load(os.path.join(rec_dir,'pupil_positions.npy'))
     gaze_list = []
@@ -82,7 +83,8 @@ def update_recording_0v4_to_0v5(rec_dir):
     except IOError:
         pass
 
-def update_recording_0v3_to_0v5(rec_dir):
+def update_recording_0v3_to_current(rec_dir):
+    logger.info("Updatig recording from v0.3x format to current version")
     pupilgaze_array = np.load(os.path.join(rec_dir,'gaze_positions.npy'))
     gaze_list = []
     pupil_list = []

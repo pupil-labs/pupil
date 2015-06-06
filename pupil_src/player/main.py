@@ -92,7 +92,7 @@ from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,Fa
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize
-from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_0v5,update_recording_0v3_to_0v5
+from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current
 
 #monitoring
 import psutil
@@ -206,9 +206,9 @@ def main():
     if rec_version >= VersionFormat('0.5'):
         pass
     elif rec_version >= VersionFormat('0.4'):
-        update_recording_0v4_to_0v5(rec_dir)
+        update_recording_0v4_to_current(rec_dir)
     elif rec_version >= VersionFormat('0.3'):
-        update_recording_0v3_to_0v5(rec_dir)
+        update_recording_0v3_to_current(rec_dir)
         video_path = os.path.join(rec_dir,"world.avi")
         timestamps_path = os.path.join(rec_dir, "timestamps.npy")
     else:

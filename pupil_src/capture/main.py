@@ -21,10 +21,7 @@ if getattr(sys, 'frozen', False):
     # Specifiy user dirs.
     user_dir = os.path.expanduser(os.path.join('~','pupil_capture_settings'))
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
-
-
 else:
-    # We are running in a normal Python environment.
     # Make all pupil shared_modules available to this Python session.
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
