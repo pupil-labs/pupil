@@ -19,15 +19,11 @@ from methods import denormalize
 
 class Vis_Polyline(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool,color=(1.0,0.0,0.4,1.0),thickness=2,menu_conf={'pos':(10,320),'size':(300,70),'collapsed':False}):
+    def __init__(self, g_pool,color=(1.0,0.0,0.4,1.0),thickness=2):
         super(Vis_Polyline, self).__init__(g_pool)
         self.order = .9
         self.uniqueness = "not_unique"
-
-        # initialize empty menu
-        # and load menu configuration of last session
         self.menu = None
-        self.menu_conf = menu_conf
 
         self.r = color[0]
         self.g = color[1]
@@ -45,9 +41,6 @@ class Vis_Polyline(Plugin):
     def init_gui(self):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Gaze Polyline')
-        # load the configuration of last session
-        self.menu.configuration = self.menu_conf
-        # add menu to the window
         self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15,label='Line thickness'))
 
@@ -70,7 +63,7 @@ class Vis_Polyline(Plugin):
         self.alive = False
 
     def get_init_dict(self):
-        return {'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness, 'menu_conf':self.menu.configuration}
+        return {'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness}
 
     def cleanup(self):
         """ called when the plugin gets terminated.

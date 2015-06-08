@@ -45,7 +45,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         This method is used to calculate camera intrinsics.
 
     """
-    def __init__(self,g_pool, menu_conf = {'collapsed':True},fullscreen = False):
+    def __init__(self,g_pool,fullscreen = False):
         super(Camera_Intrinsics_Estimation, self).__init__(g_pool)
         self.collect_new = False
         self.calculated = False
@@ -60,7 +60,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self._window = None
 
         self.menu = None
-        self.menu_conf = menu_conf
         self.button = None
         self.clicks_to_close = 5
         self.window_should_close = False
@@ -87,7 +86,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.menu.append(ui.Button('show Pattern',self.open_window))
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(monitor_names)),labels=monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
-        self.menu.configuration = self.menu_conf
         self.g_pool.calibration_menu.append(self.menu)
 
         self.button = ui.Thumb('collect_new',self,setter=self.advance,label='Capture',hotkey='c')
@@ -96,7 +94,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
     def deinit_gui(self):
         if self.menu:
-            self.menu_conf = self.menu.configuration
             self.g_pool.calibration_menu.remove(self.menu)
             self.g_pool.calibration_menu.remove(self.info)
 
@@ -249,10 +246,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
 
     def get_init_dict(self):
-        if self.menu:
-            return {'menu_conf':self.menu.configuration}
-        else:
-            return {'menu_conf':self.menu_conf}
+        return {}
 
 
     def cleanup(self):

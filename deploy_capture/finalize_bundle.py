@@ -74,6 +74,16 @@ Installed-Size: %s
         f.write(content)
     os.chmod(os.path.join(DEBIAN_dir,'control'),0644)
 
+    #pre install script
+    with open(os.path.join(DEBIAN_dir,'preinst'),'w') as f:
+        content = '''\
+#!/bin/sh
+echo 'SUBSYSTEM=="usb",  ENV{DEVTYPE}=="usb_device", GROUP="plugdev", MODE="0664"' > /etc/udev/rules.d/10-libuvc.rules 
+udevadm trigger'''
+        f.write(content)
+    os.chmod(os.path.join(DEBIAN_dir,'preinst'),0755)
+
+
     #bin_starter script
     with open(os.path.join(bin_dir,'pupil_capture'),'w') as f:
         content = '''\

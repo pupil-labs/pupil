@@ -18,15 +18,11 @@ from methods import denormalize
 
 class Vis_Cross(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool,inner=20,outer=100,color=(1.,0.0,0.0,1.0),thickness=1,menu_conf={'pos':(10,420),'size':(300,100),'collapsed':False}):
+    def __init__(self, g_pool,inner=20,outer=100,color=(1.,0.0,0.0,1.0),thickness=1):
         super(Vis_Cross, self).__init__(g_pool)
         self.order = .9
         self.uniqueness = "not_unique"
-
-        # initialize empty menu
-        # and load menu configuration of last session
         self.menu = None
-        self.menu_conf = menu_conf
 
         self.r = color[0]
         self.g = color[1]
@@ -46,9 +42,6 @@ class Vis_Cross(Plugin):
     def init_gui(self):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Gaze Cross')
-        # load the configuration of last session
-        self.menu.configuration = self.menu_conf
-        # add menu to the window
         self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Slider('inner',self,min=0,step=10,max=200,label='Inner Offset Length'))
         self.menu.append(ui.Slider('outer',self,min=0,step=10,max=2000,label='Outer Length'))
@@ -77,7 +70,7 @@ class Vis_Cross(Plugin):
         pass
 
     def get_init_dict(self):
-        return {'inner':self.inner,'outer':self.outer,'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness, 'menu_conf':self.menu.configuration}
+        return {'inner':self.inner,'outer':self.outer,'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness}
 
     def cleanup(self):
         """ called when the plugin gets terminated.

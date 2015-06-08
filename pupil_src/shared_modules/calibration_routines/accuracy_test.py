@@ -43,8 +43,8 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
     We use a ring detector that moves across the screen to 9 sites
     Points are collected at sites not between
     """
-    def __init__(self, g_pool,menu_conf = {'collapsed':False},fullscreen=True,marker_scale=1.0,sample_duration=40):
-        super(Accuracy_Test, self).__init__(g_pool,menu_conf,fullscreen,marker_scale)
+    def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
+        super(Accuracy_Test, self).__init__(g_pool,fullscreen,marker_scale)
 
         #result calculation variables:
         self.fov = 90. #taken from c930e specsheet, confirmed though mesurement within ~10deg.
@@ -72,7 +72,6 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
-        self.menu.configuration = self.menu_conf
         self.g_pool.calibration_menu.append(self.menu)
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
@@ -117,7 +116,6 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
 
     def deinit_gui(self):
         if self.menu:
-            self.menu_conf = self.menu.configuration
             self.g_pool.calibration_menu.remove(self.menu)
             self.g_pool.calibration_menu.remove(self.info)
             self.menu = None

@@ -9,7 +9,6 @@
 '''
 
 import sys, os, platform
-from time import sleep
 from ctypes import c_bool, c_double
 
 if platform.system() == 'Darwin':
@@ -22,6 +21,8 @@ if getattr(sys, 'frozen', False):
     # Specifiy user dirs.
     user_dir = os.path.expanduser(os.path.join('~','pupil_capture_settings'))
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
+
+
 else:
     # We are running in a normal Python environment.
     # Make all pupil shared_modules available to this Python session.
@@ -30,6 +31,10 @@ else:
 	# Specifiy user dir.
     user_dir = os.path.join(pupil_base_dir,'capture_settings')
     version_file = None
+    if __name__ == '__main__':
+        #compile all cython source files
+        from pyx_compiler import build_extensions
+        build_extensions()
 
 
 # create folder for user settings, tmp data
@@ -86,6 +91,7 @@ class Global_Container(object):
     pass
 
 def main():
+
     # To assign camera by name: put string(s) in list
     eye_cam_names = ["USB 2.0 Camera","Microsoft", "6000","Integrated Camera","HD USB Camera"]
     world_src = ["Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
@@ -129,9 +135,6 @@ def main():
         p_eye += [Process(target=eye, args=(g_pool,eye_src[eye_id],eye_size,rx,eye_id))]
         g_pool.eye_tx += [tx]
         p_eye[-1].start()
-        if platform.system() == 'Linux':
-            # We need to give the camera driver some time before requesting another camera.
-            sleep(0.5)
 
     world(g_pool,world_src,world_size)
 

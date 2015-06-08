@@ -73,12 +73,10 @@ class Export_Launcher(Plugin):
     """docstring for Export_Launcher
     this plugin can export the video in a seperate process using exporter
     """
-    def __init__(self, g_pool,menu_conf={'pos':(320,10),'size':(300,150),'collapsed':False}):
+    def __init__(self, g_pool):
         super(Export_Launcher, self).__init__(g_pool)
         # initialize empty menu
-        # and load menu configuration of last session
         self.menu = None
-        self.menu_conf = menu_conf
         self.new_export = None
         self.exports = []
         # default_path = verify_out_file_path("world_viz.mp4",rec_dir)
@@ -88,8 +86,6 @@ class Export_Launcher(Plugin):
     def init_gui(self):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Export Recording')
-        # load the configuration of last session
-        self.menu.configuration = self.menu_conf
         # add menu to the window
         self.g_pool.gui.append(self.menu)
         self._update_gui()
@@ -118,16 +114,12 @@ class Export_Launcher(Plugin):
 
     def deinit_gui(self):
         if self.menu:
-            self.menu_conf = self.menu.configuration
             self.g_pool.gui.remove(self.menu)
             self.menu = None
 
 
     def get_init_dict(self):
-        if self.menu:
-            return {'menu_conf':self.menu.configuration}
-        else:
-            return {'menu_conf':self.menu_conf}
+        return {}
 
     def add_export(self):
         # on MacOS we will not use os.fork, elsewhere this does nothing.

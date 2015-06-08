@@ -53,9 +53,8 @@ class Offline_Marker_Detector(Plugin):
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    def __init__(self,g_pool,menu_conf={'pos':(300,200),'size':(300,300),'collapsed':False},mode="Show Markers and Frames"):
+    def __init__(self,g_pool,mode="Show Markers and Frames"):
         super(Offline_Marker_Detector, self).__init__(g_pool)
-        self.menu_conf = menu_conf
         self.order = .2
 
 
@@ -100,7 +99,6 @@ class Offline_Marker_Detector(Plugin):
 
     def init_gui(self):
         self.menu = ui.Scrolling_Menu('Offline Marker Tracker')
-        self.menu.configuration = self.menu_conf
         self.g_pool.gui.append(self.menu)
 
 
@@ -113,7 +111,6 @@ class Offline_Marker_Detector(Plugin):
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
-            self.menu_conf= self.menu.configuration
             self.menu= None
         if self.add_button:
             self.g_pool.quickbar.remove(self.add_button)
@@ -121,7 +118,6 @@ class Offline_Marker_Detector(Plugin):
 
     def update_gui_markers(self):
         pass
-        # self._bar.clear()
         self.menu.elements[:] = []
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Button('Close',self.close))
@@ -135,7 +131,6 @@ class Offline_Marker_Detector(Plugin):
             s_menu = ui.Growing_Menu("Surface %s"%idx)
             s_menu.collapsed=True
             s_menu.append(ui.Text_Input('name',s))
-            #     self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
@@ -536,12 +531,7 @@ class Offline_Marker_Detector(Plugin):
 
 
     def get_init_dict(self):
-        if self.menu:
-            d = {'menu_conf':self.menu.configuration,'mode':self.mode}
-        else:
-            d = {'menu_conf':self.menu_conf,'mode':self.mode}
-        return d
-
+        return {'mode':self.mode}
 
 
     def cleanup(self):

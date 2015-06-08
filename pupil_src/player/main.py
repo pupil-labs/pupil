@@ -29,6 +29,10 @@ else:
     # Specifiy user dirs.
     user_dir = os.path.join(pupil_base_dir,'player_settings')
     version_file = None
+    if __name__ == '__main__':
+        #compile all cython source files
+        from pyx_compiler import build_extensions
+        build_extensions()
 
 
 # create folder for user settings, tmp data
@@ -107,14 +111,14 @@ from scan_path import Scan_Path
 from offline_marker_detector import Offline_Marker_Detector
 from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from pupil_server import Pupil_Server
-from filter_fixations import Filter_Fixations
+from fixation_detector import Dispersion_Duration_Fixation_Detector
 from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
 
 system_plugins = Seek_Bar,Trim_Marks
-user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
+user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
@@ -188,29 +192,27 @@ def main():
         logger.error("You did not supply a dir with the required files inside.")
         return
 
-    # load session persistent settings
-    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
 
     #backwards compatibility fn.
     patch_meta_info(rec_dir)
 
     #parse info.csv file
-    meta_info_path = rec_dir + "/info.csv"
+    meta_info_path = rec_dir + "info.csv"
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
 
     rec_version = read_rec_version(meta_info)
     if rec_version < VersionFormat('0.4'):
-        video_path = rec_dir + "/world.avi"
-        timestamps_path = rec_dir + "/timestamps.npy"
+        video_path = rec_dir + "world.avi"
+        timestamps_path = rec_dir + "timestamps.npy"
     else:
-        video_path = rec_dir + "/world.mkv"
-        timestamps_path = rec_dir + "/world_timestamps.npy"
+        video_path = rec_dir + "world.mkv"
+        timestamps_path = rec_dir + "world_timestamps.npy"
 
 
-    gaze_positions_path = rec_dir + "/gaze_positions.npy"
-    pupil_positions_path = rec_dir + "/pupil_positions.npy"
+    gaze_positions_path = rec_dir + "gaze_positions.npy"
+    pupil_positions_path = rec_dir + "pupil_positions.npy"
     #load gaze information
     gaze_list = np.load(gaze_positions_path)
     timestamps = np.load(timestamps_path)
@@ -230,6 +232,14 @@ def main():
     if isinstance(cap,FakeCapture):
         logger.error("could not start capture.")
         return
+
+    # load session persistent settings
+    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
+    print session_settings.get("version",VersionFormat('0.0'))
+    if session_settings.get("version",VersionFormat('0.0')) < get_version(version_file):
+        logger.info("Session setting are from older version of this app. I will not use those.")
+        session_settings.clear()
+
 
     width,height = session_settings.get('window_size',cap.frame_size)
     window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
@@ -262,13 +272,14 @@ def main():
     g_pool.timestamps = timestamps
     g_pool.pupil_positions_by_frame = pupil_positions_by_frame
     g_pool.gaze_positions_by_frame = gaze_positions_by_frame
+    # g_pool.fixations_by_frame = [[] for x in timestamps] #let this be filled by the fixation detector plugin
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
     g_pool.rec_version = rec_version
     g_pool.meta_info = meta_info
-
+    g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
 
     def next_frame(_):
         try:
@@ -288,9 +299,6 @@ def main():
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
 
-    def get_scale():
-        return g_pool.gui.scale
-
     def open_plugin(plugin):
         if plugin ==  "Select to load":
             return
@@ -307,10 +315,9 @@ def main():
 
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
-    g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,300))
+    g_pool.main_menu = ui.Growing_Menu("Settings",pos=(-350,20),size=(300,400))
     g_pool.main_menu.append(ui.Button("quit",lambda: on_close(None)))
-    g_pool.main_menu.configuration = session_settings.get('main_menu_config',{})
-    g_pool.main_menu.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
+    g_pool.main_menu.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
 
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
@@ -320,6 +327,7 @@ def main():
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
+    g_pool.main_menu.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
 
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
@@ -344,7 +352,9 @@ def main():
             g_pool.trim_marks = p
             break
 
-    #set the last saved window size
+    g_pool.gui.configuration = session_settings.get('ui_config',{})
+
+    #trigger on_resize
     on_resize(main_window, *glfwGetWindowSize(main_window))
 
 
@@ -454,11 +464,13 @@ def main():
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['gui_scale'] = g_pool.gui.scale
-    session_settings['main_menu_config'] = g_pool.main_menu.configuration
+    session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
+    session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
-
+    session_settings['version'] = g_pool.version
     session_settings.close()
+
     # de-init all running plugins
     for p in g_pool.plugins:
         p.alive = False

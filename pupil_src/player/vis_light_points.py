@@ -23,16 +23,11 @@ class Vis_Light_Points(Plugin):
 
     """
 
-    def __init__(self, g_pool,falloff = 20, menu_conf={'pos':(10,470),'size':(300,100),'collapsed':False}):
+    def __init__(self, g_pool,falloff = 20):
         super(Vis_Light_Points, self).__init__(g_pool)
         self.order = .8
         self.uniqueness = "not_unique"
-        #let the plugin work after most other plugins.
-
-        # initialize empty menu
-        # and load menu configuration of last session
         self.menu = None
-        self.menu_conf = menu_conf
 
         self.falloff = falloff
 
@@ -65,8 +60,6 @@ class Vis_Light_Points(Plugin):
     def init_gui(self):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Light Points')
-        # load the configuration of last session
-        self.menu.configuration = self.menu_conf
         # add menu to the window
         self.g_pool.gui.append(self.menu)
 
@@ -82,7 +75,7 @@ class Vis_Light_Points(Plugin):
         self.alive = False
 
     def get_init_dict(self):
-        return {'falloff': self.falloff, 'menu_conf':self.menu.configuration}
+        return {'falloff': self.falloff}
 
     def cleanup(self):
         """ called when the plugin gets terminated.
