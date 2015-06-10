@@ -519,7 +519,7 @@ class Offline_Marker_Detector(Plugin):
                     csv_writer.writerow( (f['id'],f['timestamp'],f['duration'],f['start_frame_index'],f['end_frame_index'],f_x,f_y,f_x*s.real_world_size['x'],f_y*s.real_world_size['y'],f_on_srf) )
 
 
-            logger.info("Saved surface positon data and gaze on surface data for '%s' with uid:'%s'"%(s.name,s.uid))
+            logger.info("Saved surface positon gaze and fixation data for '%s' with uid:'%s'"%(s.name,s.uid))
 
             if s.heatmap is not None:
                 logger.info("Saved Heatmap as .png file.")
