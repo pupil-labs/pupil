@@ -244,7 +244,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
                 x = int(f['norm_pos'][0]*self.img_size[0])
                 y = int((1-f['norm_pos'][1])*self.img_size[1])
                 transparent_circle(frame.img, (x,y), radius=f['pix_dispersion'], color=(.5, .2, .6, .7), thickness=-1)
-                cv2.putText(frame.img,'%i'%f['id'],(x,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,150,100))
+                cv2.putText(frame.img,'%i'%f['id'],(x+20,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,150,100))
                 # cv2.putText(frame.img,'%i - %i'%(f['start_frame_index'],f['end_frame_index']),(x,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,150,100))
 
 
