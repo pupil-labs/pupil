@@ -139,6 +139,17 @@ class Offline_Reference_Surface(Reference_Surface):
         return gaze_on_src
 
 
+    def fixations_on_srf_by_frame_idx(self,frame_index,m_from_screen):
+        positions = self.g_pool.fixations_by_frame[frame_index]
+        on_src = []
+        for p in positions:
+            pos = np.array([p['norm_pos']]).reshape(1,1,2)
+            mapped_pos = cv2.perspectiveTransform(pos , m_from_screen )
+            mapped_pos.shape = (2)
+            gaze_on_src.append( {'norm_pos':(mapped_pos[0],mapped_pos[1]),'fixation':pos } )
+        return gaze_on_src
+
+
 
     def gl_display_heatmap(self):
         if self.heatmap_texture and self.detected:
