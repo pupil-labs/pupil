@@ -51,7 +51,6 @@ from display_recent_gaze import Display_Recent_Gaze
 from pupil_server import Pupil_Server
 from pupil_remote import Pupil_Remote
 from marker_detector import Marker_Detector
-from fixation_detector import Fixation_Detector, Dispersion_Fixation_Detector
 
 #manage plugins
 user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Remote,Marker_Detector] # TODO: Dispersion_Fixation_Detector
