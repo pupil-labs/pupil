@@ -21,7 +21,7 @@ from time import time
 import cv2
 import numpy as np
 from video_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
-from player_methods import correlate_data
+from player_methods import correlate_data,update_recording_0v4_to_current,update_recording_0v3_to_current
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version
 from av_writer import AV_Writer
@@ -60,7 +60,7 @@ plugin_by_name = dict(zip(name_by_index,available_plugins))
 class Global_Container(object):
         pass
 
-def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None,pupil_confidence_threshold=0.6):
+def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
@@ -69,17 +69,25 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
+    video_path = os.path.join(rec_dir,"world.mkv")
+    timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
+    pupil_data_path = os.path.join(rec_dir, "pupil_data")
+
 
     rec_version = read_rec_version(meta_info)
-    if rec_version < VersionFormat('0.5'):
-        logger.Error("This version is to old. Please upgrade recording format.")
+    if rec_version >= VersionFormat('0.5'):
+        pass
+    elif rec_version >= VersionFormat('0.4'):
+        update_recording_0v4_to_current(rec_dir)
+    elif rec_version >= VersionFormat('0.3'):
+        update_recording_0v3_to_current(rec_dir)
+        video_path = os.path.join(rec_dir,"world.avi")
+        timestamps_path = os.path.join(rec_dir, "timestamps.npy")
+    else:
+        logger.Error("This recording is to old. Sorry.")
         return
 
 
-    video_path = os.path.join(rec_dir,"world.mkv")
-    timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
-    pupil_positions_path = os.path.join(rec_dir, "pupil_positions")
-    gaze_mapper_path = os.path.join(rec_dir, 'active_gaze_mapper')
     timestamps = np.load(timestamps_path)
 
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
@@ -134,18 +142,16 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     g.user_dir = user_dir
     g.rec_version = rec_version
     g.timestamps = timestamps
-    g.pupil_confidence_threshold = pupil_confidence_threshold
 
-    # load pupil_positions, gaze_mapper and map gaze
-    pupil_list = load_object(pupil_positions_path)
-    gaze_mapper_init_dict = load_object(gaze_mapper_path)
-    name, args = gaze_mapper_init_dict
-    logger.debug("Loading gaze mapper: %s with settings %s"%(name, args))
-    gaze_mapper = plugin_by_name[name](g,**args)
-    gaze_list = gaze_mapper.map_gaze_offline(pupil_list)
-    #add new data to g
+
+    # load pupil_positions, gaze_positions
+    pupil_data = load_object(pupil_data_path)
+    pupil_list = pupil_data['pupil_positions']
+    gaze_list = pupil_data['gaze_positions']
+
     g.pupil_positions_by_frame = correlate_data(pupil_list,g.timestamps)
     g.gaze_positions_by_frame = correlate_data(gaze_list,g.timestamps)
+    g.fixations_by_frame = [[] for x in g.timestamps] #populated by the fixation detector plugin
     g.fixations_by_frame = [[] for x in g.timestamps] #populated by the fixation detector plugin
 
     #add plugins
