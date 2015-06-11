@@ -3,12 +3,6 @@
 
 import platform
 
-from pupil_pyx_compiler import build_extensions
-logger.info("Building cython extension modules:")
-build_extensions()
-logger.info("Finished Building cython extension modules")
-
-
 av_hidden_imports = ['av.format','av.packet','av.frame','av.stream','av.plane','av.audio.plane','av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane']
 
 

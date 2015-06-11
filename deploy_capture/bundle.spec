@@ -3,12 +3,6 @@
 
 import platform
 
-from pupil_pyx_compiler import build_extensions
-logger.info("Building cython extension modules:")
-build_extensions()
-logger.info("Finished Building cython extension modules")
-
-
 if platform.system() == 'Darwin':
     from version import dpkg_deb_version
 
