@@ -75,7 +75,7 @@ from glfw import *
 from pyglui import __version__ as pyglui_version
 assert pyglui_version >= '0.3'
 from pyglui import ui,graph,cygl
-from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
+from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture,destroy_named_texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 from OpenGL.GL import glClearColor
 #capture
@@ -432,6 +432,7 @@ def session(rec_dir):
 
     cap.close()
     g_pool.gui.terminate()
+    destroy_named_texture(g_pool.image_tex)
     glfwDestroyWindow(main_window)
 
 
