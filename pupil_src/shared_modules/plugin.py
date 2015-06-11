@@ -11,6 +11,13 @@
 import logging
 logger = logging.getLogger(__name__)
 
+
+'''
+A simple example Plugin: 'displat_recent_gaze.py'
+It is a good starting point to build your onw plugin.
+'''
+
+
 class Plugin(object):
     """docstring for Plugin
     plugin is a base class
