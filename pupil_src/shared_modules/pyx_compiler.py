@@ -38,14 +38,15 @@ def build_extension_inplace(dir,ext):
 
 def build_all_extensions():
     #find all pyx src files
-    pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
+    pupil_base_dir = os.path.abspath(__file__).rsplit('shared_modules', 1)[0]
     for root, dirs, files in os.walk(pupil_base_dir):
         for file in files:
             if file.endswith(".pyx"):
-                 build_extension_inplace(root, file)
+                print file
+                build_extension_inplace(root, file)
 
 def build_extensions():
-    if True:
+    if False:
         #silence the output
         old_stdout = sys.stdout
         sys.stdout = open(os.devnull,'w')
