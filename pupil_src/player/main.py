@@ -131,15 +131,10 @@ def main():
 
     # Callback functions
     def on_resize(window,w, h):
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(window)
-        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-        w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
         g_pool.gui.collect_menus()
         graph.adjust_size(w,h)
         adjust_gl_view(w,h)
-        glfwMakeContextCurrent(active_window)
         for p in g_pool.plugins:
             p.on_window_resize(window,w,h)
 
@@ -148,7 +143,6 @@ def main():
 
     def on_char(window,char):
         g_pool.gui.update_char(char)
-
 
     def on_button(window,button, action, mods):
         g_pool.gui.update_button(button,action,mods)
@@ -160,8 +154,7 @@ def main():
 
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
-        x,y = x*hdpi_factor,y*hdpi_factor
-        g_pool.gui.update_mouse(x,y)
+        g_pool.gui.update_mouse(x*hdpi_factor,y*hdpi_factor)
 
     def on_scroll(window,x,y):
         g_pool.gui.update_scroll(x,y*y_scroll_factor)
@@ -171,14 +164,13 @@ def main():
         glfwSetWindowShouldClose(main_window,True)
         logger.debug('Process closing from window')
 
-
     try:
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
         rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording'
         if os.path.isdir(rec_dir):
-            logger.debug("Dev option: Using hadcoded data dir.")
+            logger.debug("Dev option: Using hardcoded data dir.")
         else:
             if getattr(sys, 'frozen', False):
                 logger.warning("You did not supply a data directory when you called this script! \
@@ -244,7 +236,7 @@ def main():
 
 
     # Register callbacks main_window
-    glfwSetWindowSizeCallback(main_window,on_resize)
+    glfwSetFramebufferSizeCallback(main_window,on_resize)
     glfwSetWindowCloseCallback(main_window,on_close)
     glfwSetKeyCallback(main_window,on_key)
     glfwSetCharCallback(main_window,on_char)
@@ -346,7 +338,7 @@ def main():
     g_pool.gui.configuration = session_settings.get('ui_config',{})
 
     #trigger on_resize
-    on_resize(main_window, *glfwGetWindowSize(main_window))
+    on_resize(main_window, *glfwGetFramebufferSize(main_window))
 
 
     # gl_state settings
