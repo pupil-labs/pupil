@@ -100,6 +100,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         '''
         classify fixations
         '''
+
         gaze_data = list(chain(*self.g_pool.gaze_positions_by_frame))
 
 
@@ -112,7 +113,11 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             return np.sqrt(((p1[0]-p2[0])*self.h_fov)**2+((p1[1]-p2[1])*self.v_fov)**2)
 
         fixations = []
-        fixation_support = [gaze_data.pop(0)]
+        try:
+            fixation_support = [gaze_data.pop(0)]
+        except IndexError:
+            logger.warning("This recording has no gaze data. Aborting")
+            return
         while True:
             fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
             dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
@@ -167,8 +172,6 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             for idx in range(f['start_frame_index'],f['end_frame_index']+1):
                 fixations_by_frame[idx].append(f)
 
-
-        self.fixations_by_frame = fixations_by_frame
         self.g_pool.fixations_by_frame = fixations_by_frame
 
 
@@ -238,9 +241,9 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
 
 
     def update(self,frame,events):
-        events['fixations'] = self.fixations_by_frame[frame.index]
+        events['fixations'] = self.g_pool.fixations_by_frame[frame.index]
         if self.show_fixations:
-            for f in self.fixations_by_frame[frame.index]:
+            for f in self.g_pool.fixations_by_frame[frame.index]:
                 x = int(f['norm_pos'][0]*self.img_size[0])
                 y = int((1-f['norm_pos'][1])*self.img_size[1])
                 transparent_circle(frame.img, (x,y), radius=f['pix_dispersion'], color=(.5, .2, .6, .7), thickness=-1)
