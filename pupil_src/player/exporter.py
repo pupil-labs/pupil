@@ -39,7 +39,6 @@ from vis_light_points import Vis_Light_Points
 from vis_watermark import Vis_Watermark
 
 from scan_path import Scan_Path
-from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
 from eye_video_overlay import Eye_Video_Overlay
 from calibration_routines.gaze_mappers import Dummy_Gaze_Mapper,Simple_Gaze_Mapper,Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper
