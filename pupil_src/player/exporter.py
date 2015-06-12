@@ -47,7 +47,7 @@ from fixation_detector import Dispersion_Duration_Fixation_Detector
 
 available_plugins = Vis_Circle,Vis_Cross, Vis_Polyline, \
                     Vis_Light_Points, Vis_Watermark, \
-                    Scan_Path,Filter_Fixations, \
+                    Scan_Path, \
                     Manual_Gaze_Correction,Eye_Video_Overlay, \
                     Dummy_Gaze_Mapper,Simple_Gaze_Mapper, \
                     Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper, \
