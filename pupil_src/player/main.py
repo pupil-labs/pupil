@@ -294,7 +294,7 @@ def main():
     def purge_plugins():
         for p in g_pool.plugins:
             if p.__class__ in user_launchable_plugins:
-                p.alive=False
+                p.alive = False
         g_pool.plugins.clean()
 
 
