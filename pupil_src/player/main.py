@@ -369,7 +369,7 @@ def main():
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,110)
-    cpu_graph.update_fn = ps.get_cpu_percent
+    cpu_graph.update_fn = ps.cpu_percent
     cpu_graph.update_rate = 5
     cpu_graph.label = 'CPU %0.1f'
 
