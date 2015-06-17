@@ -22,10 +22,13 @@ from version_utils import VersionFormat
 #capture
 from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture,FileCaptureError
 
+#mouse
+from glfw import glfwGetCursorPos,glfwGetWindowSize,glfwGetCurrentContext
+from methods import normalize,denormalize
+
 #logging
 import logging
 logger = logging.getLogger(__name__)
-
 
 def get_past_timestamp(idx,timestamps):
     """
@@ -60,7 +63,6 @@ def get_nearest_timestamp(past_timestamp,future_timestamp,world_timestamp):
         return past_timestamp
     else:
         return future_timestamp
-
 
 def correlate_eye_world(eye_timestamps,world_timestamps):
     """
@@ -113,45 +115,65 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
 
     return eye_world_frame_map
 
-
 class Eye_Video_Overlay(Plugin):
-    """docstring
+    """docstring This plugin allows the user to overlay the eye recording on the recording of his field of vision
+        Features: flip video across horiz/vert axes, click and drag around interface, scale video size from 20% to 100%, 
+        show only 1 or 2 or both eyes
+        features updated by Andrew June 2015
     """
-    def __init__(self,g_pool,alpha=0.6,mirror=True):
+    def __init__(self,g_pool,alpha=0.6,eye_scale_factor=.5,move_around=0,mirror={'0':False,'1':False}, flip={'0':False,'1':False},pos=[(640,10),(10,10)]):
         super(Eye_Video_Overlay, self).__init__(g_pool)
         self.order = .6
         self.menu = None
 
         # user controls
-        self.alpha = alpha
-        self.mirror = mirror
+        self.alpha = alpha #opacity level of eyes
+        self.eye_scale_factor = eye_scale_factor #scale
+        self.showeyes = 0,1 #modes: any text containg both means both eye is present, on 'only eye1' if only one eye recording
+        self.move_around = move_around #boolean whether allow to move clip around screen or not
+        self.video_size = [0,0] #video_size of recording (bc scaling)
 
+        #variables specific to each eye
+        self.eye_frames = []
+        self.eye_world_frame_map = []
+        self.eye_cap = []
+        self.mirror = mirror #do we horiz flip first eye
+        self.flip = flip #do we vert flip first eye
+        self.pos = [list(pos[0]),list(pos[1])] #positions of 2 eyes
+        self.drag_offset = [None,None]
 
         # load eye videos and eye timestamps
         if g_pool.rec_version < VersionFormat('0.4'):
-            eye0_video_path = os.path.join(g_pool.rec_dir,'eye.avi')
-            eye0_timestamps_path = os.path.join(g_pool.rec_dir,'eye_timestamps.npy')
+            eye_video_path = os.path.join(g_pool.rec_dir,'eye.avi'),None
+            eye_timestamps_path = os.path.join(g_pool.rec_dir,'eye_timestamps.npy'),None
         else:
-            eye0_video_path = os.path.join(g_pool.rec_dir,'eye0.mkv')
-            eye0_timestamps_path = os.path.join(g_pool.rec_dir,'eye0_timestamps.npy')
-            eye1_video_path = os.path.join(g_pool.rec_dir,'eye1.mkv')
-            eye1_timestamps_path = os.path.join(g_pool.rec_dir,'eye1_timestamps.npy')
+            eye_video_path = os.path.join(g_pool.rec_dir,'eye0.mkv'),os.path.join(g_pool.rec_dir,'eye1.mkv')
+            eye_timestamps_path = os.path.join(g_pool.rec_dir,'eye0_timestamps.npy'),os.path.join(g_pool.rec_dir,'eye1_timestamps.npy')
 
+        #try to load eye video and ts for each eye.
+        for video,ts in zip(eye_video_path,eye_timestamps_path):
+            try:
+                self.eye_cap.append(autoCreateCapture(video,timestamps=ts))
+            except FileCaptureError:
+                pass
+            else:
+                self.eye_frames.append(self.eye_cap[-1].get_frame())
+            try:
+                eye_timestamps = list(np.load(ts))
+            except:
+                pass
+            else:
+                self.eye_world_frame_map.append(correlate_eye_world(eye_timestamps,g_pool.timestamps))
 
-        # Initialize capture -- for now we just try with monocular
-        try:
-            self.cap = autoCreateCapture(eye0_video_path,timestamps=eye0_timestamps_path)
-        except FileCaptureError:
+        if len(self.eye_cap) == 2:
+            logger.debug("Loaded binocular eye video data.")
+        elif len(self.eye_cap) == 1:
+            logger.debug("Loaded monocular eye video data")
+            self.showeyes = (0,)
+        else:
             logger.error("Could not load eye video.")
             self.alive = False
             return
-
-        self._frame = self.cap.get_frame()
-        self.width, self.height = self.cap.frame_size
-
-        eye0_timestamps = list(np.load(eye0_timestamps_path))
-        self.eye0_world_frame_map = correlate_eye_world(eye0_timestamps,g_pool.timestamps)
-
 
     def unset_alive(self):
         self.alive = False
@@ -159,13 +181,29 @@ class Eye_Video_Overlay(Plugin):
     def init_gui(self):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Eye Video Overlay')
-        self.menu.append(ui.Info_Text('Show the eye video overlaid on top of the world video.'))
-        self.menu.append(ui.Slider('alpha',self,min=0.0,step=0.05,max=1.0,label='Opacity'))
-        self.menu.append(ui.Switch('mirror',self,label="Mirror image"))
-        self.menu.append(ui.Button('close',self.unset_alive))
-        # add menu to the window
+        self.update_gui()
         self.g_pool.gui.append(self.menu)
 
+    def update_gui(self):
+        self.menu.elements[:] = []
+        self.menu.append(ui.Info_Text('Show the eye video overlaid on top of the world video. Eye1 is usually the right eye'))
+        self.menu.append(ui.Slider('alpha',self,min=0.0,step=0.05,max=1.0,label='Opacity'))
+        self.menu.append(ui.Slider('eye_scale_factor',self,min=0.2,step=0.1,max=1.0,label='Scale of Video'))
+        self.menu.append(ui.Switch('move_around',self,label="Move Overlay Around"))
+        if len(self.eye_cap) == 2:
+            self.menu.append(ui.Selector('showeyes',self,label='Show',selection=[(0,),(1,),(0,1)],labels= ['eye 1','eye 2','both'],setter=self.set_showeyes))
+        if 0 in self.showeyes:
+            self.menu.append(ui.Switch('0',self.mirror,label="Eye 1: Horiz. Flip"))
+            self.menu.append(ui.Switch('0',self.flip,label="Eye 1: Vert. Flip"))
+        if 1 in self.showeyes:
+            self.menu.append(ui.Switch('1',self.mirror,label="Eye 2: Horiz Flip"))
+            self.menu.append(ui.Switch('1',self.flip,label="Eye 2: Vert Flip"))
+        self.menu.append(ui.Button('close',self.unset_alive))
+
+    def set_showeyes(self,new_mode):
+        #everytime we choose eye setting (either use eye 1, 2, or both, updates the gui menu to remove certain options from list)
+        self.showeyes = new_mode
+        self.update_gui()
 
     def deinit_gui(self):
         if self.menu:
@@ -173,37 +211,64 @@ class Eye_Video_Overlay(Plugin):
             self.menu = None
 
     def update(self,frame,events):
-        requested_eye_frame_idx = self.eye0_world_frame_map[frame.index]
+        for eye_index in self.showeyes:
+            requested_eye_frame_idx = self.eye_world_frame_map[eye_index][frame.index]
 
-        # do we need a new frame?
-        if requested_eye_frame_idx != self._frame.index:
-            # do we need to seek?
-            if requested_eye_frame_idx == self.cap.get_frame_index()+1:
-                # if we just need to seek by one frame, its faster to just read one and and throw it away.
-                _ = self.cap.get_frame()
-            if requested_eye_frame_idx != self.cap.get_frame_index():
-               # only now do I need to seek
-               self.cap.seek_to_frame(requested_eye_frame_idx)
-            # reading the new eye frame frame
-            try:
-               self._frame = self.cap.get_frame()
-            except EndofVideoFileError:
-                logger.warning("Reached the end of the eye video.")
+            #1. do we need a new frame?
+            if requested_eye_frame_idx != self.eye_frames[eye_index].index:
+                # do we need to seek?
+                if requested_eye_frame_idx == self.eye_cap[eye_index].get_frame_index()+1:
+                    # if we just need to seek by one frame, its faster to just read one and and throw it away.
+                    _ = self.eye_cap[eye_index].get_frame()
+                if requested_eye_frame_idx != self.eye_cap[eye_index].get_frame_index():
+                    # only now do I need to seek
+                    self.eye_cap[eye_index].seek_to_frame(requested_eye_frame_idx)
+                # reading the new eye frame frame
+                try:
+                    self.eye_frames[eye_index] = self.eye_cap[eye_index].get_frame()
+                except EndofVideoFileError:
+                    logger.warning("Reached the end of the eye video for eye video %s."%eye_index)
+            else:
+                #our old frame is still valid because we are doing upsampling
+                pass
+
+            #2. dragging image
+            if self.drag_offset[eye_index] is not None:
+                pos = glfwGetCursorPos(glfwGetCurrentContext())
+                pos = normalize(pos,glfwGetWindowSize(glfwGetCurrentContext()))
+                pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
+                self.pos[eye_index][0] = pos[0]+self.drag_offset[eye_index][0]
+                self.pos[eye_index][1] = pos[1]+self.drag_offset[eye_index][1]
+            else:
+                self.video_size = [round(self.eye_frames[eye_index].width*self.eye_scale_factor), round(self.eye_frames[eye_index].height*self.eye_scale_factor)]
+
+            #3. keep in image bounds, do this even when not dragging because the image video_sizes could change.
+            self.pos[eye_index][1] = min(frame.img.shape[0]-self.video_size[1],max(self.pos[eye_index][1],0)) #frame.img.shape[0] is height, frame.img.shape[1] is width of screen
+            self.pos[eye_index][0] = min(frame.img.shape[1]-self.video_size[0],max(self.pos[eye_index][0],0))
+
+            #4. flipping images, converting to greyscale
+            eye_gray = cv2.cvtColor(self.eye_frames[eye_index].img,cv2.COLOR_BGR2GRAY) #auto gray scaling
+            eyeimage = cv2.resize(eye_gray,(0,0),fx=self.eye_scale_factor, fy=self.eye_scale_factor) 
+            if self.mirror[str(eye_index)]:
+                eyeimage = np.fliplr(eyeimage)
+            if self.flip[str(eye_index)]:
+                eyeimage = np.flipud(eyeimage)
+
+            #5. finally overlay the image
+            x,y = int(self.pos[eye_index][0]),int(self.pos[eye_index][1])
+            transparent_image_overlay((x,y),cv2.cvtColor(eyeimage,cv2.COLOR_GRAY2BGR),frame.img,self.alpha)
+
+    def on_click(self,pos,button,action):
+        if self.move_around == 1 and action == 1:
+            for eye_index in self.showeyes:
+                if self.pos[eye_index][0] < pos[0] < self.pos[eye_index][0]+self.video_size[0] and self.pos[eye_index][1] < pos[1] < self.pos[eye_index][1] + self.video_size[1]:
+                    self.drag_offset[eye_index] = self.pos[eye_index][0]-pos[0],self.pos[eye_index][1]-pos[1]
+                    return
         else:
-            #our old frame is still valid because we are doing upsampling
-            pass
-
-        # drawing the eye overlay
-        pad = 10
-        pos = frame.width-self.width-pad, pad
-        if self.mirror:
-            transparent_image_overlay(pos,np.fliplr(self._frame.img),frame.img,self.alpha)
-        else:
-            transparent_image_overlay(pos,self._frame.img,frame.img,self.alpha)
-
+            self.drag_offset = [None,None]
 
     def get_init_dict(self):
-        return {'alpha':self.alpha,'mirror':self.mirror}
+        return {'alpha':self.alpha,'eye_scale_factor':self.eye_scale_factor,'move_around':self.move_around,'mirror':self.mirror,'flip':self.flip,'pos':self.pos,'move_around':self.move_around}
 
     def cleanup(self):
         """ called when the plugin gets terminated.
