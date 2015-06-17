@@ -243,6 +243,13 @@ class Recorder(Plugin):
     def update(self,frame,events):
         if self.running:
 
+            with open(os.path.join(self.rec_dir,'test.raw'), 'ab') as f:
+                f.write(frame.jpeg_buffer.get_view())
+
+            with open(os.path.join(self.rec_dir,'test.jpeg'), 'wb') as f:
+                f.write(frame.jpeg_buffer.get_view())
+
+
             # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
             for p in events['pupil_positions']:
                 pupil_pos = p['timestamp'],p['confidence'],p['id'],p['norm_pos'][0],p['norm_pos'][1],p['diameter']
