@@ -47,7 +47,6 @@ class Camera_Capture(object):
 
         self.use_hw_ts = self.check_hw_ts_support()
         self._last_timestamp = self.get_now()
-
         self.capture = uvc.Capture(uid)
         self.uid = uid
         if 'C930e' in self.capture.name:
@@ -56,6 +55,9 @@ class Camera_Capture(object):
         else:
             self.ts_offset = 0.0
 
+        if "USB 2.0 Camera" in self.capture.name:
+            self.capture.bandwidth_factor = 1.2
+            
         logger.debug('avaible modes %s'%self.capture.avaible_modes)
 
         controls_dict = dict([(c.display_name,c) for c in self.capture.controls])

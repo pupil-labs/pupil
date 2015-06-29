@@ -138,7 +138,8 @@ class Plugin(object):
     #     return d
 
     def __del__(self):
-        print 'Goodbye',self
+        pass
+        # print 'Goodbye',self
 
 # Derived base classes:
 # If you inherit from these your plugin property base_class will point to them
