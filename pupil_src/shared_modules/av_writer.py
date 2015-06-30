@@ -124,6 +124,35 @@ class AV_Writer(object):
             self.container.mux(packet)
 
 
+    def write_video_frame_yuv422(self, input_frame):
+        if not self.configured:
+            self.video_stream.height = input_frame.height
+            self.video_stream.width = input_frame.width
+            self.configured = True
+            self.start_time = input_frame.timestamp
+
+        # frame
+        frame = av.VideoFrame(input_frame.width, input_frame.height,'yuv422p')
+        y,u,v = input_frame.yuv422
+        frame.planes[0].update(y)
+        frame.planes[1].update(u)
+        frame.planes[2].update(v)
+        # here we create a timestamp in ms resolution to be used for the frame pts.
+        # later libav will scale this to stream timebase
+        frame_ts_ms = int((input_frame.timestamp-self.start_time)*self.time_resolution)
+        frame.pts = frame_ts_ms
+        frame.time_base = self.time_base
+        # we keep a version of the timestamp counting from first frame in the codec resoltion (lowest time resolution in toolchain)
+        frame_ts_s = float(frame_ts_ms)/self.time_resolution
+        # we append it to our list to correlate hi-res absolute timestamps with media timstamps
+        self.timestamps_list.append((input_frame.timestamp,frame_ts_s))
+
+        #send frame of to encoder
+        packet = self.video_stream.encode(frame)
+        if packet:
+            # print 'paket',packet.pts
+            self.container.mux(packet)
+
     def close(self):
         # flush encoder
         while 1:
@@ -139,6 +168,9 @@ class AV_Writer(object):
         ts_array = np.array(self.timestamps_list)
         np.save(self.ts_file_loc,ts_array)
         logger.debug("Saved %s frames"%ts_array.shape[0])
+
+    def release(self):
+        self.close()
 
 
 def test():
