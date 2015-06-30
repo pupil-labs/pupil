@@ -35,8 +35,7 @@ class Vis_Light_Points(Plugin):
         falloff = self.falloff
 
         img = frame.img
-        img_shape = img.shape[:-1][::-1]#width,height
-        screen_gaze = [denormalize(ng,img_shape,flip_y=True) for ng in events.get('gaze_positions',[])]
+        screen_gaze = [denormalize(g['norm_pos'],self.g_pool.capture.frame_size,flip_y=True) for g in events.get('gaze_positions',[])]
 
         overlay = np.ones(img.shape[:-1],dtype=img.dtype)
 
@@ -49,7 +48,7 @@ class Vis_Light_Points(Plugin):
 
         out = cv2.distanceTransform(overlay,cv2.cv.CV_DIST_L2, 5)
 
-        # fix for opencv binding incositency
+        # fix for opencv binding inconsitency
         if type(out)==tuple:
             out = out[0]
 
