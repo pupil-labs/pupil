@@ -213,9 +213,9 @@ class Recorder(Plugin):
         if self.raw_jpeg:
             self.video_path = os.path.join(self.rec_path, "world.raw")
             self.writer = JPEG_Dumper(self.rec_path)
-        elif 1:
-            self.video_path = os.path.join(self.rec_path, "world.mkv")
-            self.writer = av_writer.AV_Writer(self.video_path)
+        # elif 1:
+        #     self.video_path = os.path.join(self.rec_path, "world.mkv")
+        #     self.writer = av_writer.AV_Writer(self.video_path)
         else:
             self.video_path = os.path.join(self.rec_path, "world.mkv")
             self.writer = cv2.VideoWriter(self.video_path, cv2.cv.CV_FOURCC(*'DIVX'), float(self.g_pool.capture.frame_rate), self.g_pool.capture.frame_size)
@@ -267,7 +267,8 @@ class Recorder(Plugin):
             if self.raw_jpeg:
                 self.writer.write(frame)
             else:
-                self.writer.write_video_frame_yuv422(frame)
+                self.writer.write(frame.img)
+                # self.writer.write_video_frame_yuv422(frame)
             self.frame_count += 1
 
             self.button.status_text = self.get_rec_time_str()
@@ -404,9 +405,15 @@ class JPEG_Dumper(object):
             f.write(frame.jpeg_buffer.view())
 
     def release(self):
-        # ffmpeg  -f mjpeg -i world.raw -vcodec copy world.mkv
-        sp.Popen(['ffmpeg -f mjpeg -i '+self.raw_path +' -vcodec copy '+self.out_path],shell=True)
-        #this should be done programatically but require a better video backend.
+        try:
+            sp.Popen('ffmpeg')
+        except IOError:
+            logger.error("Please install ffmpeg to enable pupil capture to convert raw jpeg streams to a readable format.")
+        else:
+            # ffmpeg  -f mjpeg -i world.raw -vcodec copy world.mkv
+            sp.Popen(['ffmpeg -f mjpeg -i '+self.raw_path +' -vcodec copy '+self.out_path],shell=True)
+            #this should be done programatically but require a better video backend.
+            sp.Popen(["rm "+ self.raw_path],shell=True)
 
 def writable_dir(n_path):
     try:

@@ -78,7 +78,7 @@ class AV_Writer(object):
             logger.error("'%s' is not a valid media file name."%file_loc)
             raise Exception("Error")
 
-        if ext not in ('mp4,mov'):
+        if ext not in ('mp4,mov,mkv'):
             logger.warning("media file container should be mp4 or mov. Using a different container is risky.")
 
         self.ts_file_loc = file_path+'timestamps.npy'
@@ -92,7 +92,7 @@ class AV_Writer(object):
 
         self.video_stream = self.container.add_stream(video_stream['codec'],self.time_resolution)
         self.video_stream.bit_rate = video_stream['bit_rate']
-        # self.video_stream.pix_fmt = video_stream['format']
+        # self.video_stream.pix_fmt = "yuv420p"#video_stream['format']
         self.configured = False
         self.start_time = None
 
@@ -131,12 +131,17 @@ class AV_Writer(object):
             self.configured = True
             self.start_time = input_frame.timestamp
 
-        # frame
         frame = av.VideoFrame(input_frame.width, input_frame.height,'yuv422p')
         y,u,v = input_frame.yuv422
         frame.planes[0].update(y)
         frame.planes[1].update(u)
         frame.planes[2].update(v)
+
+        # frame = av.VideoFrame(input_frame.width, input_frame.height,'yuv420p')
+        # y,u,v = input_frame.yuv420
+        # frame.planes[0].update(y)
+        # frame.planes[1].update(np.ascontiguousarray(u))
+        # frame.planes[2].update(np.ascontiguousarray(v))
         # here we create a timestamp in ms resolution to be used for the frame pts.
         # later libav will scale this to stream timebase
         frame_ts_ms = int((input_frame.timestamp-self.start_time)*self.time_resolution)
