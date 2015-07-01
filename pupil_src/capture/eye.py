@@ -37,6 +37,9 @@ from OpenGL.GL import GL_LINE_LOOP
 from methods import *
 from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
+from av_writer import JPEG_Dumper
+from cv2_writer import CV_Writer
+
 # Pupil detectors
 from pupil_detectors import Canny_Detector
 
@@ -85,9 +88,16 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # Callback functions
     def on_resize(window,w, h):
+        active_window = glfwGetCurrentContext()
+        glfwMakeContextCurrent(window)
+        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
+        w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
         graph.adjust_size(w,h)
         adjust_gl_view(w,h)
+        # for p in g_pool.plugins:
+            # p.on_window_resize(window,w,h)
+        glfwMakeContextCurrent(active_window)
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key,scancode,action,mods)
@@ -95,6 +105,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     def on_char(window,char):
         g_pool.gui.update_char(char)
+
 
     def on_button(window,button, action, mods):
         if g_pool.display_mode == 'roi':
@@ -164,7 +175,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
                                 'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters with in the Pupil Detection menu below."}
     # g_pool.draw_pupil = session_settings.get('draw_pupil',True)
 
-    u_r = UIRoi(frame.gray.shape)
+    u_r = UIRoi(frame.img.shape)
     u_r.set(session_settings.get('roi',u_r.get()))
 
     writer = None
@@ -198,7 +209,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     cygl_init()
 
     # Register callbacks main_window
-    glfwSetFramebufferSizeCallback(main_window,on_resize)
+    glfwSetWindowSizeCallback(main_window,on_resize)
     glfwSetWindowCloseCallback(main_window,on_close)
     glfwSetKeyCallback(main_window,on_key)
     glfwSetCharCallback(main_window,on_char)
@@ -244,7 +255,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
 
     #set the last saved window size
-    on_resize(main_window, *glfwGetFramebufferSize(main_window))
+    on_resize(main_window, *glfwGetWindowSize(main_window))
 
     #set up performance graphs
     pid = os.getpid()
@@ -288,22 +299,26 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         ###  RECORDING of Eye Video (on demand) ###
         # Setup variables and lists for recording
         if rx_from_world.poll():
-            command = rx_from_world.recv()
+            command,raw_mode = rx_from_world.recv()
             if command is not None:
                 record_path = command
                 logger.info("Will save eye video to: %s"%record_path)
                 video_path = os.path.join(record_path, "eye%s.mkv"%eye_id)
                 timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-                writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), float(cap.frame_rate), cap.frame_size)
+                if raw_mode:
+                    writer = JPEG_Dumper(video_path)
+                else:
+                    writer = CV_Writer(video_path,float(cap.frame_rate), cap.frame_size)
                 timestamps = []
             else:
                 logger.info("Done recording.")
+                writer.release()
                 writer = None
                 np.save(timestamps_path,np.asarray(timestamps))
                 del timestamps
 
         if writer:
-            writer.write(frame.img)
+            writer.write_video_frame(frame)
             timestamps.append(frame.timestamp)
 
 
