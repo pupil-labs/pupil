@@ -45,14 +45,19 @@ class Camera_Capture(object):
             logger.error("Invalid timebase variable type. Will use default system timebase")
             self.timebase = c_double(0)
 
-        # self.use_hw_ts = self.check_hw_ts_support()
-        self.use_hw_ts = False
+        self.use_hw_ts = self.check_hw_ts_support()
         self._last_timestamp = self.get_now()
-
-
         self.capture = uvc.Capture(uid)
         self.uid = uid
+        if 'C930e' in self.capture.name:
+            logger.debug('Timestamp offset for c930 applied: -0.1sec')
+            self.ts_offset = -0.1
+        else:
+            self.ts_offset = 0.0
 
+        if "USB 2.0 Camera" in self.capture.name:
+            self.capture.bandwidth_factor = 1.2
+            
         logger.debug('avaible modes %s'%self.capture.avaible_modes)
 
         controls_dict = dict([(c.display_name,c) for c in self.capture.controls])
@@ -79,7 +84,7 @@ class Camera_Capture(object):
         # becasue all used devices need to properly implement hw timestamping for it to be usefull
         # but we cannot now what device the other process is using  + the user may select a differet capture device during runtime
         # we use some fuzzy logic to determine if hw timestamping should be employed.
-
+        return False
         blacklist = ["Microsoft","HD-6000"]
         qualifying_devices = ["C930e","Integrated Camera", "USB 2.0 Camera"]
         attached_devices = [c.name for c in device_list()]
@@ -106,8 +111,7 @@ class Camera_Capture(object):
         menu_conf = self.menu.configuration
         self.deinit_gui()
 
-        # self.use_hw_ts = self.check_hw_ts_support()
-        self.use_hw_ts = False
+        self.use_hw_ts = self.check_hw_ts_support()
         self.capture = uvc.Capture(uid)
         self.uid = uid
 
@@ -128,6 +132,12 @@ class Camera_Capture(object):
         self.init_gui(self.sidebar)
         self.menu.configuration = menu_conf
 
+        if 'C930e' in self.capture.name:
+            logger.debug('Timestamp offset for c930 applied: -0.1sec')
+            self.ts_offset = -0.1
+        else:
+            self.ts_offset = 0.0
+
 
     def get_frame(self):
         try:
@@ -143,7 +153,7 @@ class Camera_Capture(object):
                 timestamp = uvc.get_sys_time_monotonic()
         else:
             # timestamp = uvc.get_sys_time_monotonic()
-            timestamp = self.get_now()
+            timestamp = self.get_now()+self.ts_offset
 
         timestamp -= self.timebase.value
         frame.timestamp = timestamp

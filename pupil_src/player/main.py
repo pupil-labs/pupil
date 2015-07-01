@@ -77,7 +77,7 @@ else:
     y_scroll_factor = 1.0
 
 #imports
-from file_methods import Persistent_Dict
+from file_methods import Persistent_Dict,load_object
 import numpy as np
 
 #display
@@ -92,7 +92,7 @@ from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,Fa
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize
-from player_methods import correlate_pupil_data,correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
+from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current
 
 #monitoring
 import psutil
@@ -131,15 +131,10 @@ def main():
 
     # Callback functions
     def on_resize(window,w, h):
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(window)
-        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-        w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
         g_pool.gui.collect_menus()
         graph.adjust_size(w,h)
         adjust_gl_view(w,h)
-        glfwMakeContextCurrent(active_window)
         for p in g_pool.plugins:
             p.on_window_resize(window,w,h)
 
@@ -148,7 +143,6 @@ def main():
 
     def on_char(window,char):
         g_pool.gui.update_char(char)
-
 
     def on_button(window,button, action, mods):
         g_pool.gui.update_button(button,action,mods)
@@ -160,8 +154,7 @@ def main():
 
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
-        x,y = x*hdpi_factor,y*hdpi_factor
-        g_pool.gui.update_mouse(x,y)
+        g_pool.gui.update_mouse(x*hdpi_factor,y*hdpi_factor)
 
     def on_scroll(window,x,y):
         g_pool.gui.update_scroll(x,y*y_scroll_factor)
@@ -171,14 +164,13 @@ def main():
         glfwSetWindowShouldClose(main_window,True)
         logger.debug('Process closing from window')
 
-
     try:
         rec_dir = sys.argv[1]
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording/'
+        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording'
         if os.path.isdir(rec_dir):
-            logger.debug("Dev option: Using hadcoded data dir.")
+            logger.debug("Dev option: Using hardcoded data dir.")
         else:
             if getattr(sys, 'frozen', False):
                 logger.warning("You did not supply a data directory when you called this script! \
@@ -192,50 +184,39 @@ def main():
         logger.error("You did not supply a dir with the required files inside.")
         return
 
-
-    #backwards compatibility fn.
-    patch_meta_info(rec_dir)
-
     #parse info.csv file
-    meta_info_path = rec_dir + "info.csv"
+    meta_info_path = os.path.join(rec_dir,"info.csv")
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
+    video_path = os.path.join(rec_dir,"world.mkv")
+    timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
+    pupil_data_path = os.path.join(rec_dir, "pupil_data")
+
 
     rec_version = read_rec_version(meta_info)
-    if rec_version < VersionFormat('0.4'):
-        video_path = rec_dir + "world.avi"
-        timestamps_path = rec_dir + "timestamps.npy"
+    if rec_version >= VersionFormat('0.5'):
+        pass
+    elif rec_version >= VersionFormat('0.4'):
+        update_recording_0v4_to_current(rec_dir)
+    elif rec_version >= VersionFormat('0.3'):
+        update_recording_0v3_to_current(rec_dir)
+        video_path = os.path.join(rec_dir,"world.avi")
+        timestamps_path = os.path.join(rec_dir, "timestamps.npy")
     else:
-        video_path = rec_dir + "world.mkv"
-        timestamps_path = rec_dir + "world_timestamps.npy"
+        logger.Error("This recording is to old. Sorry.")
+        return
 
 
-    gaze_positions_path = rec_dir + "gaze_positions.npy"
-    pupil_positions_path = rec_dir + "pupil_positions.npy"
-    #load gaze information
-    gaze_list = np.load(gaze_positions_path)
-    timestamps = np.load(timestamps_path)
-
-    #correlate data
-    if rec_version < VersionFormat('0.4'):
-        gaze_positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
-        pupil_positions_by_frame = [[]for x in range(len(timestamps))]
-    else:
-        pupil_list = np.load(pupil_positions_path)
-        gaze_positions_by_frame = correlate_gaze(gaze_list,timestamps)
-        pupil_positions_by_frame = correlate_pupil_data(pupil_list,timestamps)
 
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-
     if isinstance(cap,FakeCapture):
         logger.error("could not start capture.")
         return
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
-    print session_settings.get("version",VersionFormat('0.0'))
     if session_settings.get("version",VersionFormat('0.0')) < get_version(version_file):
         logger.info("Session setting are from older version of this app. I will not use those.")
         session_settings.clear()
@@ -255,7 +236,7 @@ def main():
 
 
     # Register callbacks main_window
-    glfwSetWindowSizeCallback(main_window,on_resize)
+    glfwSetFramebufferSizeCallback(main_window,on_resize)
     glfwSetWindowCloseCallback(main_window,on_close)
     glfwSetKeyCallback(main_window,on_key)
     glfwSetCharCallback(main_window,on_char)
@@ -264,22 +245,26 @@ def main():
     glfwSetScrollCallback(main_window,on_scroll)
 
 
-    # create container for globally scoped vars (within world)
+    # load pupil_positions, gaze_positions
+    pupil_data = load_object(pupil_data_path)
+    pupil_list = pupil_data['pupil_positions']
+    gaze_list = pupil_data['gaze_positions']
+
+    # create container for globally scoped vars
     g_pool = Global_Container()
     g_pool.app = 'player'
     g_pool.version = get_version(version_file)
     g_pool.capture = cap
-    g_pool.timestamps = timestamps
-    g_pool.pupil_positions_by_frame = pupil_positions_by_frame
-    g_pool.gaze_positions_by_frame = gaze_positions_by_frame
-    # g_pool.fixations_by_frame = [[] for x in timestamps] #let this be filled by the fixation detector plugin
+    g_pool.timestamps = np.load(timestamps_path)
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
     g_pool.rec_version = rec_version
     g_pool.meta_info = meta_info
-    g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
+    g_pool.pupil_positions_by_frame = correlate_data(pupil_list,g_pool.timestamps)
+    g_pool.gaze_positions_by_frame = correlate_data(gaze_list,g_pool.timestamps)
+    g_pool.fixations_by_frame = [[] for x in g_pool.timestamps] #populated by the fixation detector plugin
 
     def next_frame(_):
         try:
@@ -309,7 +294,7 @@ def main():
     def purge_plugins():
         for p in g_pool.plugins:
             if p.__class__ in user_launchable_plugins:
-                p.alive=False
+                p.alive = False
         g_pool.plugins.clean()
 
 
@@ -327,8 +312,6 @@ def main():
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
-    g_pool.main_menu.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
-
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
     g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey=GLFW_KEY_SPACE)
@@ -355,7 +338,7 @@ def main():
     g_pool.gui.configuration = session_settings.get('ui_config',{})
 
     #trigger on_resize
-    on_resize(main_window, *glfwGetWindowSize(main_window))
+    on_resize(main_window, *glfwGetFramebufferSize(main_window))
 
 
     # gl_state settings
@@ -411,7 +394,7 @@ def main():
 
         if update_graph:
             #update performace graphs
-            for p in  events['gaze_positions']:
+            for p in  events['pupil_positions']:
                 pupil_graph.add(p['confidence'])
 
             t = new_frame.timestamp
@@ -464,7 +447,6 @@ def main():
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['gui_scale'] = g_pool.gui.scale
-    session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)

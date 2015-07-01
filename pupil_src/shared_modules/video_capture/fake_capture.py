@@ -32,12 +32,13 @@ class CameraCaptureError(Exception):
 
 class Frame(object):
     """docstring of Frame"""
-    def __init__(self, timestamp,img):
+    def __init__(self, timestamp,img,index):
         self.timestamp = timestamp
         self.img = img
         self.height,self.width,_ = img.shape
         self._gray = None
         self._yuv = None
+        self.index = index
 
     @property
     def gray(self):
@@ -56,7 +57,7 @@ class FakeCapture(object):
         self.timestamps = timestamps
         self.presentation_time = time()
         self.make_img((640,480))
-
+        self.frame_count = 0
         self.sidebar = None
         self.menu = None
 
@@ -85,7 +86,9 @@ class FakeCapture(object):
         wait = max(0,1./self.fps - spent)
         sleep(wait)
         self.presentation_time = time()
-        return Frame(time()-self.timebase.value,self.img.copy())
+        frame_count = self.frame_count
+        self.frame_count +=1
+        return Frame(time()-self.timebase.value,self.img.copy(),frame_count)
 
     @property
     def frame_size(self):

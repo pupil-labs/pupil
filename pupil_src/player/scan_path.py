@@ -13,6 +13,7 @@ from plugin import Plugin
 import numpy as np
 from pyglui import ui
 from methods import denormalize,normalize
+from copy import deepcopy
 import logging
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ class Scan_Path(Plugin):
         self.prev_gray = gray_img
         self.prev_frame_idx = frame.index
         # copy the data/contents of recent_gaze_positions don't make a reference
-        self.past_gaze_positions = events['gaze_positions'][:]
+        self.past_gaze_positions = deepcopy(events['gaze_positions'])
 
     def init_gui(self):
         # initialize the menu

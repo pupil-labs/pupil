@@ -53,7 +53,7 @@ from pupil_remote import Pupil_Remote
 from marker_detector import Marker_Detector
 
 #manage plugins
-user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Remote,Marker_Detector] # TODO: Dispersion_Fixation_Detector
+user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Remote,Marker_Detector]
 system_plugins  = [Display_Recent_Gaze,Recorder]
 plugin_by_index =  user_launchable_plugins+system_plugins+calibration_plugins+gaze_mapping_plugins
 name_by_index = [p.__name__ for p in plugin_by_index]
@@ -86,18 +86,12 @@ def world(g_pool,cap_src,cap_size):
 
     # Callback functions
     def on_resize(window,w, h):
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(window)
-        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-        w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
         g_pool.gui.collect_menus()
         graph.adjust_size(w,h)
         adjust_gl_view(w,h)
         for p in g_pool.plugins:
             p.on_window_resize(window,w,h)
-
-        glfwMakeContextCurrent(active_window)
 
 
     def on_iconify(window,iconfied):
@@ -201,7 +195,7 @@ def world(g_pool,cap_src,cap_size):
     cygl.utils.init()
 
     # Register callbacks main_window
-    glfwSetWindowSizeCallback(main_window,on_resize)
+    glfwSetFramebufferSizeCallback(main_window,on_resize)
     glfwSetWindowCloseCallback(main_window,on_close)
     glfwSetWindowIconifyCallback(main_window,on_iconify)
     glfwSetKeyCallback(main_window,on_key)
@@ -261,7 +255,7 @@ def world(g_pool,cap_src,cap_size):
             g_pool.active_calibration_plugin =  p.__class__
             break
 
-    on_resize(main_window, *glfwGetWindowSize(main_window))
+    on_resize(main_window, *glfwGetFramebufferSize(main_window))
 
     g_pool.gui.configuration = session_settings.get('ui_config',{})
 

@@ -35,8 +35,10 @@ logger = logging.getLogger(__name__)
 
 
 ###OS specific imports and defs
-if os_name in ("Linux","Darwin","Windows"):
+if os_name in ("Linux","Darwin"):
     from uvc_capture import Camera_Capture,device_list,CameraCaptureError
+elif os_name == "Windows":
+    from win_capture import Camera_Capture,device_list,CameraCaptureError
 else:
     raise NotImplementedError()
 

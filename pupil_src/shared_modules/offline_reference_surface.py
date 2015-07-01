@@ -129,15 +129,22 @@ class Offline_Reference_Surface(Reference_Surface):
 
 
     def gaze_on_srf_by_frame_idx(self,frame_index,m_from_screen):
-        gaze_positions = self.g_pool.gaze_positions_by_frame[frame_index]
-        gaze_on_src = []
-        for g_p in gaze_positions:
-            gaze_points = np.array([g_p['norm_pos']]).reshape(1,1,2)
-            gaze_points_on_srf = cv2.perspectiveTransform(gaze_points , m_from_screen )
-            gaze_points_on_srf.shape = (2)
-            gaze_on_src.append( {'norm_pos':(gaze_points_on_srf[0],gaze_points_on_srf[1]),'timestamp':g_p['timestamp'] } )
-        return gaze_on_src
+        return self._on_srf_by_frame_idx(frame_index,m_from_screen,self.g_pool.gaze_positions_by_frame[frame_index])
 
+
+    def fixations_on_srf_by_frame_idx(self,frame_index,m_from_screen):
+        return self._on_srf_by_frame_idx(frame_index,m_from_screen,self.g_pool.fixations_by_frame[frame_index])
+
+
+    def _on_srf_by_frame_idx(self,frame_idx,m_from_screen,data_by_frame):
+        data_on_srf = []
+        for d in data_by_frame:
+            pos = np.array([d['norm_pos']]).reshape(1,1,2)
+            mapped_pos = cv2.perspectiveTransform(pos , m_from_screen )
+            mapped_pos.shape = (2)
+            on_srf = bool((0 <= mapped_pos[0] <= 1) and (0 <= mapped_pos[1] <= 1))
+            data_on_srf.append( {'norm_pos':(mapped_pos[0],mapped_pos[1]),'on_srf':on_srf,'base':d } )
+        return data_on_srf
 
 
     def gl_display_heatmap(self):
