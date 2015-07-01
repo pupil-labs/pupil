@@ -18,6 +18,7 @@ import av
 import numpy as np
 from time import time
 from fractions import Fraction
+import subprocess as sp
 
 #logging
 import logging
@@ -178,6 +179,42 @@ class AV_Writer(object):
         self.close()
 
 
+
+class JPEG_Dumper(object):
+    """simple for JPEG_Dumper"""
+    def __init__(self, file_loc):
+        super(JPEG_Dumper, self).__init__()
+
+        try:
+            file_path,ext = file_loc.rsplit('.', 1)
+        except:
+            logger.error("'%s' is not a valid media file name."%file_loc)
+            raise Exception("Error")
+
+        self.raw_path = file_path+'.raw'
+        self.out_path = file_loc
+
+        self.file_handle = open(self.raw_path, 'wb')
+
+
+    def write_video_frame(self,frame):
+        self.file_handle.write(frame.jpeg_buffer.view())
+
+    def release(self):
+        self.file_handle.close()
+        try:
+            sp.Popen('ffmpeg',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
+        except IOError:
+            logger.error("Please install ffmpeg to enable pupil capture to convert raw jpeg streams to a readable format.")
+        else:
+            # ffmpeg  -f mjpeg -i world.raw -vcodec copy world.mkv
+            sp.call(['ffmpeg -f mjpeg -i '+self.raw_path +' -vcodec copy '+self.out_path],shell=True)
+            #this should be done programatically but requires a better video backend.
+            sp.Popen(["rm "+ self.raw_path],shell=True)
+
+
+
+
 def test():
 
     import os
@@ -200,6 +237,8 @@ def test():
 
     cap.close()
     writer.close()
+
+
 
 
 if __name__ == '__main__':

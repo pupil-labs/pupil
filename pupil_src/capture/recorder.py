@@ -9,7 +9,6 @@
 '''
 
 import os, sys, platform
-import cv2
 from pyglui import ui
 import numpy as np
 from scipy.interpolate import UnivariateSpline
@@ -18,9 +17,9 @@ from time import strftime,localtime,time,gmtime
 from shutil import copy2
 from glob import glob
 from audio import Audio_Capture,Audio_Input_Dict
-import subprocess as sp
 
-import av_writer
+from av_writer import JPEG_Dumper
+from cv2_writer import CV_Writer
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -138,8 +137,8 @@ class Recorder(Plugin):
         self.menu.append(ui.Text_Input('session_name',self,setter=self.set_session_name,label='Recording session name'))
         self.menu.append(ui.Switch('show_info_menu',self,on_val=True,off_val=False,label='Request additional user info'))
         self.menu.append(ui.Info_Text('Recording the raw eye video is optional. We use it for debugging.'))
+        self.menu.append(ui.Selector('raw_jpeg',self,selection = [True,False], labels=["bigger file, less CPU", "smaller file, more CPU"],label='compression'))
         self.menu.append(ui.Switch('record_eye',self,on_val=True,off_val=False,label='Record eye'))
-        self.menu.append(ui.Switch('raw_jpeg',self,on_val=False,off_val=True,label='Use compression'))
         self.menu.append(ui.Selector('audio_src',self, selection=self.audio_devices_dict.keys()))
 
         self.button = ui.Thumb('running',self,setter=self.toggle,label='Record',hotkey='r')
@@ -210,19 +209,18 @@ class Recorder(Plugin):
             self.audio_writer = Audio_Capture(self.audio_devices_dict[self.audio_src],audio_path)
         else:
             self.audio_writer = None
+
+        self.video_path = os.path.join(self.rec_path, "world.mkv")
         if self.raw_jpeg:
-            self.video_path = os.path.join(self.rec_path, "world.raw")
-            self.writer = JPEG_Dumper(self.rec_path)
+            self.writer = JPEG_Dumper(self.video_path)
         # elif 1:
-        #     self.video_path = os.path.join(self.rec_path, "world.mkv")
         #     self.writer = av_writer.AV_Writer(self.video_path)
         else:
-            self.video_path = os.path.join(self.rec_path, "world.mkv")
-            self.writer = cv2.VideoWriter(self.video_path, cv2.cv.CV_FOURCC(*'DIVX'), float(self.g_pool.capture.frame_rate), self.g_pool.capture.frame_size)
+            self.writer = CV_Writer(self.video_path, float(self.g_pool.capture.frame_rate), self.g_pool.capture.frame_size)
         # positions path to eye process
         if self.record_eye:
             for tx in self.g_pool.eye_tx:
-                tx.send(self.rec_path)
+                tx.send((self.rec_path,self.raw_jpeg))
 
         if self.show_info_menu:
             self.open_info_menu()
@@ -253,7 +251,6 @@ class Recorder(Plugin):
 
     def update(self,frame,events):
         if self.running:
-
             # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
             for p in events['pupil_positions']:
                 pupil_pos = p['timestamp'],p['confidence'],p['id'],p['norm_pos'][0],p['norm_pos'][1],p['diameter']
@@ -264,11 +261,8 @@ class Recorder(Plugin):
                 self.gaze_list.append(gaze_pos)
 
             self.timestamps.append(frame.timestamp)
-            if self.raw_jpeg:
-                self.writer.write(frame)
-            else:
-                self.writer.write(frame.img)
-                # self.writer.write_video_frame_yuv422(frame)
+            self.writer.write_video_frame(frame)
+            # self.writer.write_video_frame_yuv422(frame)
             self.frame_count += 1
 
             self.button.status_text = self.get_rec_time_str()
@@ -281,7 +275,7 @@ class Recorder(Plugin):
         if self.record_eye:
             for tx in self.g_pool.eye_tx:
                 try:
-                    tx.send(None)
+                    tx.send((None,None))
                 except:
                     logger.warning("Could not stop eye-recording. Please report this bug!")
 
@@ -392,31 +386,6 @@ class Recorder(Plugin):
                 logger.warning('You session name with create one or more subdirectories')
             self.session_name = val
 
-
-class JPEG_Dumper(object):
-    """docstring for JPEG_Dumper"""
-    def __init__(self, path):
-        super(JPEG_Dumper, self).__init__()
-        self.raw_path = os.path.join(path,'world.raw')
-        self.out_path = os.path.join(path,'world.mkv')
-
-        self.file_handle = open(self.raw_path, 'wb')
-
-
-    def write(self,frame):
-        self.file_handle.write(frame.jpeg_buffer.view())
-
-    def release(self):
-        self.file_handle.close()
-        try:
-            sp.Popen('ffmpeg',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
-        except IOError:
-            logger.error("Please install ffmpeg to enable pupil capture to convert raw jpeg streams to a readable format.")
-        else:
-            # ffmpeg  -f mjpeg -i world.raw -vcodec copy world.mkv
-            sp.call(['ffmpeg -f mjpeg -i '+self.raw_path +' -vcodec copy '+self.out_path],shell=True)
-            #this should be done programatically but require a better video backend.
-            sp.Popen(["rm "+ self.raw_path],shell=True)
 
 def writable_dir(n_path):
     try:

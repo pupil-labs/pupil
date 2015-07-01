@@ -37,6 +37,9 @@ from OpenGL.GL import GL_LINE_LOOP
 from methods import *
 from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
+from av_writer import JPEG_Dumper
+from cv2_writer import CV_Writer
+
 # Pupil detectors
 from pupil_detectors import Canny_Detector
 
@@ -296,22 +299,26 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         ###  RECORDING of Eye Video (on demand) ###
         # Setup variables and lists for recording
         if rx_from_world.poll():
-            command = rx_from_world.recv()
+            command,raw_mode = rx_from_world.recv()
             if command is not None:
                 record_path = command
                 logger.info("Will save eye video to: %s"%record_path)
                 video_path = os.path.join(record_path, "eye%s.mkv"%eye_id)
                 timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-                writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), float(cap.frame_rate), (frame.img.shape[1], frame.img.shape[0]))
+                if raw_mode:
+                    writer = JPEG_Dumper(video_path)
+                else:
+                    writer = CV_Writer(video_path,float(cap.frame_rate), cap.frame_size)
                 timestamps = []
             else:
                 logger.info("Done recording.")
+                writer.release()
                 writer = None
                 np.save(timestamps_path,np.asarray(timestamps))
                 del timestamps
 
         if writer:
-            writer.write(frame.img)
+            writer.write_video_frame(frame)
             timestamps.append(frame.timestamp)
 
 
