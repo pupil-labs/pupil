@@ -213,6 +213,14 @@ class JPEG_Dumper(object):
             sp.Popen(["rm "+ self.raw_path],shell=True)
 
 
+def ffmpeg_available():
+    try:
+        sp.Popen('ffmpeg',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
+    except IOError:
+        logger.error("Please install ffmpeg to enable pupil capture to capture raw jpeg streams as a readable format.")
+        return False
+    else:
+        return True
 
 
 def test():

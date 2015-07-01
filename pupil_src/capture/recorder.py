@@ -18,11 +18,13 @@ from shutil import copy2
 from glob import glob
 from audio import Audio_Capture,Audio_Input_Dict
 
-from av_writer import JPEG_Dumper
+from av_writer import JPEG_Dumper,ffmpeg_available
 from cv2_writer import CV_Writer
 #logging
 import logging
 logger = logging.getLogger(__name__)
+
+import subprocess as sp
 
 
 def get_auto_name():
@@ -136,8 +138,11 @@ class Recorder(Plugin):
         self.menu.append(ui.Text_Input('rec_dir',self,setter=self.set_rec_dir,label='Path to recordings'))
         self.menu.append(ui.Text_Input('session_name',self,setter=self.set_session_name,label='Recording session name'))
         self.menu.append(ui.Switch('show_info_menu',self,on_val=True,off_val=False,label='Request additional user info'))
+        if ffmpeg_available():
+            self.menu.append(ui.Selector('raw_jpeg',self,selection = [True,False], labels=["bigger file, less CPU", "smaller file, more CPU"],label='compression'))
+        else:
+            self.menu.append(ui.Info_Text("If you install ffmpeg. Pupil Capture can record using less CPU."))
         self.menu.append(ui.Info_Text('Recording the raw eye video is optional. We use it for debugging.'))
-        self.menu.append(ui.Selector('raw_jpeg',self,selection = [True,False], labels=["bigger file, less CPU", "smaller file, more CPU"],label='compression'))
         self.menu.append(ui.Switch('record_eye',self,on_val=True,off_val=False,label='Record eye'))
         self.menu.append(ui.Selector('audio_src',self, selection=self.audio_devices_dict.keys()))
 
