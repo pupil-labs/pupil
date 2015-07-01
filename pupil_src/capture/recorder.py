@@ -400,18 +400,21 @@ class JPEG_Dumper(object):
         self.raw_path = os.path.join(path,'world.raw')
         self.out_path = os.path.join(path,'world.mkv')
 
+        self.file_handle = open(self.raw_path, 'wb')
+
+
     def write(self,frame):
-        with open(self.raw_path, 'ab') as f:
-            f.write(frame.jpeg_buffer.view())
+        self.file_handle.write(frame.jpeg_buffer.view())
 
     def release(self):
+        self.file_handle.close()
         try:
-            sp.Popen('ffmpeg')
+            sp.Popen('ffmpeg',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
         except IOError:
             logger.error("Please install ffmpeg to enable pupil capture to convert raw jpeg streams to a readable format.")
         else:
             # ffmpeg  -f mjpeg -i world.raw -vcodec copy world.mkv
-            sp.Popen(['ffmpeg -f mjpeg -i '+self.raw_path +' -vcodec copy '+self.out_path],shell=True)
+            sp.call(['ffmpeg -f mjpeg -i '+self.raw_path +' -vcodec copy '+self.out_path],shell=True)
             #this should be done programatically but require a better video backend.
             sp.Popen(["rm "+ self.raw_path],shell=True)
 
