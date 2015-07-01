@@ -164,7 +164,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
                                 'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters with in the Pupil Detection menu below."}
     # g_pool.draw_pupil = session_settings.get('draw_pupil',True)
 
-    u_r = UIRoi(frame.img.shape)
+    u_r = UIRoi(frame.gray.shape)
     u_r.set(session_settings.get('roi',u_r.get()))
 
     writer = None
@@ -294,7 +294,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
                 logger.info("Will save eye video to: %s"%record_path)
                 video_path = os.path.join(record_path, "eye%s.mkv"%eye_id)
                 timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-                writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), float(cap.frame_rate), (frame.img.shape[1], frame.img.shape[0]))
+                writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), float(cap.frame_rate), cap.frame_size)
                 timestamps = []
             else:
                 logger.info("Done recording.")
