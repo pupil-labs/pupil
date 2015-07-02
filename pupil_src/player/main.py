@@ -477,6 +477,7 @@ def show_no_rec_window():
                 logger.error("'%s' is not a valid pupil recording"%new_rec_dir)
     glfwInit()
     glfwWindowHint(GLFW_RESIZABLE,0)
+    # glfwWindowHint(GLFW_DECORATED,0)
     window = glfwCreateWindow(600, 300,'Pupil Player')
     glfwMakeContextCurrent(window)
     glfwSetWindowPos(window,200,200)
@@ -486,18 +487,26 @@ def show_no_rec_window():
     glfont = fontstash.Context()
     glfont.add_font('roboto',get_roboto_font_path())
     glfont.set_align_string(v_align="center",h_align="middle")
-    glfont.set_color_float((0.2,0.2,0.2,0.5))
+    glfont.set_color_float((0.2,0.2,0.2,0.9))
     basic_gl_setup()
 
-    text = 'Please drag a Pupil recoding directory onto this window.'
-    tipp = '(Tipp: Drag a recording directory onto the app icon.)'
+    text = 'Please drop a recoding directory onto this window.'
+    tipp = '(Tipp: Drop a recording directory onto the app icon.)'
     # text = "Please supply a Pupil recoding directory as first arg when calling Pupil Player."
     while not glfwWindowShouldClose(window):
         clear_gl_screen()
-        glfont.set_size(30)
-        glfont.draw_text(300,100,text)
+        glfont.set_blur(10.5)
+        glfont.set_color_float((0.0,0.0,0.0,1.))
+        glfont.set_size(31)
+        glfont.draw_text(300,120,text)
         glfont.set_size(25)
-        glfont.draw_text(300,200,tipp)
+        glfont.draw_text(300,180,tipp)
+        glfont.set_blur(0.96)
+        glfont.set_color_float((1.,1.,1.,1.))
+        glfont.set_size(31)
+        glfont.draw_text(300,120,text)
+        glfont.set_size(25)
+        glfont.draw_text(300,180,tipp)
         glfwSwapBuffers(window)
         glfwPollEvents()
     del glfont
