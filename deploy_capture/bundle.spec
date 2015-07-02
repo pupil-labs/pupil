@@ -3,12 +3,15 @@
 
 import platform
 
+av_hidden_imports = ['av.format','av.packet','av.frame','av.stream','av.plane','av.audio.plane','av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane']
+
+
 if platform.system() == 'Darwin':
     from version import dpkg_deb_version
 
     a = Analysis(['../pupil_src/capture/main.py'],
                  pathex=['../pupil_src/shared_modules/'],
-                 hiddenimports=['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils'],
+                 hiddenimports=['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']+av_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None,
                  excludes=['pyx_compiler','matplotlib'])
@@ -28,7 +31,7 @@ if platform.system() == 'Darwin':
                    a.binaries - libSystem,
                    a.zipfiles,
                    a.datas,
-                   [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.0.2/lib/libglfw3.dylib','BINARY')],
+                   [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.1.1/lib/libglfw3.dylib','BINARY')],
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
