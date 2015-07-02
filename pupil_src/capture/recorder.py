@@ -17,7 +17,7 @@ from time import strftime,localtime,time,gmtime
 from shutil import copy2
 from glob import glob
 from audio import Audio_Capture,Audio_Input_Dict
-
+from file_methods import save_object
 from av_writer import JPEG_Dumper,ffmpeg_available
 from cv2_writer import CV_Writer
 #logging
@@ -174,8 +174,10 @@ class Recorder(Plugin):
 
     def start(self):
         self.timestamps = []
-        self.pupil_list = []
-        self.gaze_list = []
+        self.data = {'pupil_positions':[],'gaze_positions':[]}
+        self.pupil_pos_list = []
+        self.gaze_pos_list = []
+
         self.frame_count = 0
         self.running = True
         self.menu.read_only = True
@@ -256,19 +258,21 @@ class Recorder(Plugin):
 
     def update(self,frame,events):
         if self.running:
-            # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
-            for p in events['pupil_positions']:
-                pupil_pos = p['timestamp'],p['confidence'],p['id'],p['norm_pos'][0],p['norm_pos'][1],p['diameter']
-                self.pupil_list.append(pupil_pos)
-
-            for g in events.get('gaze_positions',[]):
-                gaze_pos = g['timestamp'],g['confidence'],g['norm_pos'][0],g['norm_pos'][1]
-                self.gaze_list.append(gaze_pos)
-
+            self.data['pupil_positions'] += events['pupil_positions']
+            self.data['gaze_positions'] += events['gaze_positions']
             self.timestamps.append(frame.timestamp)
             self.writer.write_video_frame(frame)
             # self.writer.write_video_frame_yuv422(frame)
             self.frame_count += 1
+
+            # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
+            for p in events['pupil_positions']:
+                pupil_pos = p['timestamp'],p['confidence'],p['id'],p['norm_pos'][0],p['norm_pos'][1],p['diameter']
+                self.pupil_pos_list.append(pupil_pos)
+
+            for g in events.get('gaze_positions',[]):
+                gaze_pos = g['timestamp'],g['confidence'],g['norm_pos'][0],g['norm_pos'][1]
+                self.gaze_pos_list.append(gaze_pos)
 
             self.button.status_text = self.get_rec_time_str()
 
@@ -284,11 +288,13 @@ class Recorder(Plugin):
                 except:
                     logger.warning("Could not stop eye-recording. Please report this bug!")
 
+        save_object(self.data,os.path.join(self.rec_path, "pupil_data"))
+
         gaze_list_path = os.path.join(self.rec_path, "gaze_positions.npy")
-        np.save(gaze_list_path,np.asarray(self.gaze_list))
+        np.save(gaze_list_path,np.asarray(self.gaze_pos_list))
 
         pupil_list_path = os.path.join(self.rec_path, "pupil_positions.npy")
-        np.save(pupil_list_path,np.asarray(self.pupil_list))
+        np.save(pupil_list_path,np.asarray(self.pupil_pos_list))
 
         timestamps_path = os.path.join(self.rec_path, "world_timestamps.npy")
         ts = sanitize_timestamps(np.array(self.timestamps))
