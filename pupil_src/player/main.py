@@ -463,7 +463,7 @@ def session(rec_dir):
 
 def show_no_rec_window():
     from pyglui.pyfontstash import fontstash
-    from pyglui.ui import get_opensans_font_path
+    from pyglui.ui import get_roboto_font_path
 
     def on_drop(window,count,paths):
         for x in range(count):
@@ -484,10 +484,9 @@ def show_no_rec_window():
     glfwSetDropCallback(window,on_drop)
     adjust_gl_view(600,300)
     glfont = fontstash.Context()
-    glfont.add_font('opensans',get_opensans_font_path())
-    glfont.set_size(30)
+    glfont.add_font('roboto',get_roboto_font_path())
     glfont.set_align_string(v_align="center",h_align="middle")
-    glfont.set_color_float((0.2,0.5,0.9,1.0))
+    glfont.set_color_float((0.2,0.2,0.2,0.5))
     basic_gl_setup()
 
     text = 'Please drag a Pupil recoding directory onto this window.'
@@ -513,7 +512,7 @@ if __name__ == '__main__':
         rec_dir = os.path.expanduser(sys.argv[1])
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording'
+        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recordingfd'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hardcoded data dir.")
         else:
