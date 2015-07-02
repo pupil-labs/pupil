@@ -214,6 +214,9 @@ class JPEG_Dumper(object):
 
 
 def ffmpeg_available():
+    import platform
+    if platform.system() == 'Darwin' and getattr(sys, 'frozen', False):
+        return False
     try:
         sp.Popen('ffmpeg',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
     except IOError:
