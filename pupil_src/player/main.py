@@ -39,19 +39,12 @@ if not os.path.isdir(user_dir):
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
-logger.setLevel(logging.INFO) # <-- use this to set verbosity
-#since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
-if platform.system() == 'Darwin':
-    if __name__ == '__main__': #clear log if main
-        fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
-    #we will use append mode since the exporter will stream into the same file when using os.span processes
-    fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='a')
-else:
-    fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
+
+fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
+ch.setLevel(logging.DEBUG)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('Player: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -84,7 +77,7 @@ assert pyglui_version >= '0.3'
 from pyglui import ui,graph,cygl
 from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
-
+from OpenGL.GL import glClearColor
 #capture
 from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
@@ -218,7 +211,7 @@ def session(rec_dir):
 
 
     width,height = session_settings.get('window_size',cap.frame_size)
-    window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
+    window_pos = session_settings.get('window_position',(0,0))
 
 
     # Initialize glfw
@@ -231,7 +224,6 @@ def session(rec_dir):
 
     # Register callbacks main_window
     glfwSetFramebufferSizeCallback(main_window,on_resize)
-    glfwSetWindowCloseCallback(main_window,on_close)
     glfwSetKeyCallback(main_window,on_key)
     glfwSetCharCallback(main_window,on_char)
     glfwSetMouseButtonCallback(main_window,on_button)
@@ -291,7 +283,6 @@ def session(rec_dir):
             if p.__class__ in user_launchable_plugins:
                 p.alive = False
         g_pool.plugins.clean()
-
 
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
@@ -436,7 +427,6 @@ def session(rec_dir):
             pass
         timestamp = time()
 
-
         glfwSwapBuffers(main_window)
         glfwPollEvents()
 
@@ -457,7 +447,6 @@ def session(rec_dir):
     g_pool.gui.terminate()
     glfwDestroyWindow(main_window)
     glfwTerminate()
-    logger.debug("Process done")
 
 
 
@@ -476,39 +465,52 @@ def show_no_rec_window():
             else:
                 logger.error("'%s' is not a valid pupil recording"%new_rec_dir)
     glfwInit()
+
+    # load session persistent settings
+    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
+    if session_settings.get("version",VersionFormat('0.0')) < get_version(version_file):
+        logger.info("Session setting are from older version of this app. I will not use those.")
+        session_settings.clear()
+    w,h = session_settings.get('window_size',(1280,720))
+    window_pos = session_settings.get('window_position',(0,0))
+
     glfwWindowHint(GLFW_RESIZABLE,0)
-    # glfwWindowHint(GLFW_DECORATED,0)
-    window = glfwCreateWindow(600, 300,'Pupil Player')
+    window = glfwCreateWindow(w, h,'Pupil Player')
+    glfwWindowHint(GLFW_RESIZABLE,1)
+
     glfwMakeContextCurrent(window)
-    glfwSetWindowPos(window,200,200)
+    glfwSetWindowPos(window,window_pos[0],window_pos[1])
     #Register callbacks
     glfwSetDropCallback(window,on_drop)
-    adjust_gl_view(600,300)
+    adjust_gl_view(w,h)
     glfont = fontstash.Context()
     glfont.add_font('roboto',get_roboto_font_path())
     glfont.set_align_string(v_align="center",h_align="middle")
     glfont.set_color_float((0.2,0.2,0.2,0.9))
     basic_gl_setup()
-
-    text = 'Please drop a recoding directory onto this window.'
-    tip = '(Tip: Drop a recording directory onto the app icon.)'
+    glClearColor(0.5,.5,0.5,0.0)
+    text = 'Drop a recoding directory onto this window.'
+    tip = '(Tip: You can drop a recording directory onto the app icon.)'
     # text = "Please supply a Pupil recoding directory as first arg when calling Pupil Player."
     while not glfwWindowShouldClose(window):
         clear_gl_screen()
         glfont.set_blur(10.5)
         glfont.set_color_float((0.0,0.0,0.0,1.))
-        glfont.set_size(31)
-        glfont.draw_text(300,120,text)
-        glfont.set_size(25)
-        glfont.draw_text(300,180,tip)
+        glfont.set_size(w/25.)
+        glfont.draw_text(w/2,.3*h,text)
+        glfont.set_size(w/30.)
+        glfont.draw_text(w/2,.4*h,tip)
         glfont.set_blur(0.96)
         glfont.set_color_float((1.,1.,1.,1.))
-        glfont.set_size(31)
-        glfont.draw_text(300,120,text)
-        glfont.set_size(25)
-        glfont.draw_text(300,180,tip)
+        glfont.set_size(w/25.)
+        glfont.draw_text(w/2,.3*h,text)
+        glfont.set_size(w/30.)
+        glfont.draw_text(w/2,.4*h,tip)
         glfwSwapBuffers(window)
         glfwPollEvents()
+
+    session_settings['window_position'] = glfwGetWindowPos(window)
+    session_settings.close()
     del glfont
     glfwDestroyWindow(window)
     glfwTerminate()
@@ -521,7 +523,7 @@ if __name__ == '__main__':
         rec_dir = os.path.expanduser(sys.argv[1])
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recordingfd'
+        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recordingn'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hardcoded data dir.")
         else:
