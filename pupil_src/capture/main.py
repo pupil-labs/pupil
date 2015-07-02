@@ -10,7 +10,12 @@
 
 import sys, os, platform
 from ctypes import c_bool, c_double
-from multiprocessing import Process, Pipe, Queue, Value, freeze_support
+
+if platform.system() == 'Darwin':
+    from billiard import Process, Pipe, Queue, Value, freeze_support, forking_enable
+else:
+    from multiprocessing import Process, Pipe, Queue, Value, freeze_support
+    forking_enable = lambda _: _ #dummy fn
 
 if getattr(sys, 'frozen', False):
     # Specifiy user dirs.
@@ -101,6 +106,9 @@ def main():
     eye_size = (640,480)
     world_size = (1280,720)
 
+
+    # on MacOS we will not use os.fork, elsewhere this does nothing.
+    forking_enable(0)
 
     #g_pool holds variables. Only if added here they are shared across processes.
     g_pool = Global_Container()
