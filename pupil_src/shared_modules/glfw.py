@@ -478,10 +478,12 @@ def glfwInit():
     # glfw changes the directory,so we change it back.
     cwd = os.getcwd()
     # Initialize
-    _glfw.glfwInit()
+    res = _glfw.glfwInit()
     # Restore the old cwd.
     os.chdir(cwd)
     del os
+    if res < 0:
+        raise Exception("GLFW could not be initialized")
 
 
 def glfwCreateWindow(width=640, height=480, title="GLFW Window", monitor=None, share=None):
