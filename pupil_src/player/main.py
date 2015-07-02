@@ -130,7 +130,7 @@ def session(rec_dir):
 
     if not is_pupil_rec_dir(rec_dir):
         logger.error("You did not supply a dir with the required files inside.")
-        return
+        return show_no_rec_window()
 
     # Callback functions
     def on_resize(window,w, h):
@@ -460,31 +460,72 @@ def session(rec_dir):
     logger.debug("Process done")
 
 
+
+def show_no_rec_window():
+    from pyglui.pyfontstash import fontstash
+    from pyglui.ui import get_opensans_font_path
+
+    def on_drop(window,count,paths):
+        for x in range(count):
+            new_rec_dir =  paths[x]
+            if is_pupil_rec_dir(new_rec_dir):
+                logger.debug("Starting new session with '%s'"%new_rec_dir)
+                global rec_dir
+                rec_dir = new_rec_dir
+                glfwSetWindowShouldClose(window,True)
+            else:
+                logger.error("'%s' is not a valid pupil recording"%new_rec_dir)
+    glfwInit()
+    glfwWindowHint(GLFW_RESIZABLE,0)
+    window = glfwCreateWindow(600, 300,'Pupil Player')
+    glfwMakeContextCurrent(window)
+    glfwSetWindowPos(window,200,200)
+    #Register callbacks
+    glfwSetDropCallback(window,on_drop)
+    adjust_gl_view(600,300)
+    glfont = fontstash.Context()
+    glfont.add_font('opensans',get_opensans_font_path())
+    glfont.set_size(30)
+    glfont.set_align_string(v_align="center",h_align="middle")
+    glfont.set_color_float((0.2,0.5,0.9,1.0))
+    basic_gl_setup()
+
+    text = 'Please drag a Pupil recoding directory onto this window.'
+    tipp = '(Tipp: Drag a recording directory onto the app icon.)'
+    # text = "Please supply a Pupil recoding directory as first arg when calling Pupil Player."
+    while not glfwWindowShouldClose(window):
+        clear_gl_screen()
+        glfont.set_size(30)
+        glfont.draw_text(300,100,text)
+        glfont.set_size(25)
+        glfont.draw_text(300,200,tipp)
+        glfwSwapBuffers(window)
+        glfwPollEvents()
+    del glfont
+    glfwDestroyWindow(window)
+    glfwTerminate()
+
+
+
 if __name__ == '__main__':
     freeze_support()
-    if 1:
-        try:
-            rec_dir = sys.argv[1]
-        except:
-            #for dev, supply hardcoded dir:
-            rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording'
-            if os.path.isdir(rec_dir):
-                logger.debug("Dev option: Using hardcoded data dir.")
-            else:
-                if getattr(sys, 'frozen', False):
-                    logger.warning("You did not supply a data directory when you called this script! \
-                       \nPlease drag a Pupil recoding directory onto the launch icon.")
-                else:
-                    logger.warning("You did not supply a data directory when you called this script! \
-                           \nPlease supply a Pupil recoding directory as first arg when calling Pupil Player.")
-        while rec_dir is not None:
-            this_session_dir = rec_dir
-            rec_dir = None
-            session(this_session_dir)
-    else:
-        import cProfile,subprocess,os
-        cProfile.runctx("main()",{},locals(),"player.pstats")
-        loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
-        gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-        subprocess.call("python "+gprof2dot_loc+" -f pstats player.pstats | dot -Tpng -o player_cpu_time.png", shell=True)
-        print "created cpu time graph for pupil player . Please check out the png next to the main.py file"
+    try:
+        rec_dir = os.path.expanduser(sys.argv[1])
+    except:
+        #for dev, supply hardcoded dir:
+        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording'
+        if os.path.isdir(rec_dir):
+            logger.debug("Dev option: Using hardcoded data dir.")
+        else:
+            logger.warning("You did not supply a data directory when you called this script!")
+    while rec_dir is not None:
+        this_session_dir = rec_dir
+        rec_dir = None
+        session(this_session_dir)
+
+    # import cProfile,subprocess,os
+    # cProfile.runctx("main()",{},locals(),"player.pstats")
+    # loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
+    # gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
+    # subprocess.call("python "+gprof2dot_loc+" -f pstats player.pstats | dot -Tpng -o player_cpu_time.png", shell=True)
+    # print "created cpu time graph for pupil player . Please check out the png next to the main.py file"
