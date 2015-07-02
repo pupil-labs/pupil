@@ -489,27 +489,29 @@ def glfwInit():
 def glfwCreateWindow(width=640, height=480, title="GLFW Window", monitor=None, share=None):
     _glfw.glfwCreateWindow.restype = POINTER(GLFWwindow)
     window = _glfw.glfwCreateWindow(width,height,title,monitor,share)
-    __windows__.append(window)
-    index = __windows__.index(window)
-    __c_callbacks__[index] = {}
-    __py_callbacks__[index] = { 'errorfun'           : None,
-                                'monitorfun'         : None,
-                                'windowposfun'       : None,
-                                'windowsizefun'      : None,
-                                'windowclosefun'     : None,
-                                'windowrefreshfun'   : None,
-                                'windowfocusfun'     : None,
-                                'windowiconifyfun'   : None,
-                                'framebuffersizefun' : None,
-                                'keyfun'             : None,
-                                'charfun'            : None,
-                                'mousebuttonfun'     : None,
-                                'cursorposfun'       : None,
-                                'cursorenterfun'     : None,
-                                'scrollfun'          : None,
-                                'dropfun'            : None,}
-    return window
-
+    if window:
+        __windows__.append(window)
+        index = __windows__.index(window)
+        __c_callbacks__[index] = {}
+        __py_callbacks__[index] = { 'errorfun'           : None,
+                                    'monitorfun'         : None,
+                                    'windowposfun'       : None,
+                                    'windowsizefun'      : None,
+                                    'windowclosefun'     : None,
+                                    'windowrefreshfun'   : None,
+                                    'windowfocusfun'     : None,
+                                    'windowiconifyfun'   : None,
+                                    'framebuffersizefun' : None,
+                                    'keyfun'             : None,
+                                    'charfun'            : None,
+                                    'mousebuttonfun'     : None,
+                                    'cursorposfun'       : None,
+                                    'cursorenterfun'     : None,
+                                    'scrollfun'          : None,
+                                    'dropfun'            : None,}
+        return window
+    else:
+        raise Exception("GLFW window failed to create.")
 def glfwDestroyWindow(window):
     index = __windows__.index(window)
     #glfw 3.1 appears to require to the context to be destroyed to be current.
