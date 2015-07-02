@@ -190,7 +190,7 @@ def world(g_pool,cap_src,cap_size):
 
     # Initialize glfw
     glfwInit()
-    main_window = glfwCreateWindow(width,height, "World", None, None)
+    main_window = glfwCreateWindow(width,height, "World")
     glfwMakeContextCurrent(main_window)
     cygl.utils.init()
 
