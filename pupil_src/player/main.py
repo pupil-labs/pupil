@@ -121,10 +121,6 @@ class Global_Container(object):
 
 def session(rec_dir):
 
-    if not is_pupil_rec_dir(rec_dir):
-        logger.error("You did not supply a dir with the required files inside.")
-        return show_no_rec_window()
-
     # Callback functions
     def on_resize(window,w, h):
         g_pool.gui.update_window(w,h)
@@ -155,10 +151,6 @@ def session(rec_dir):
     def on_scroll(window,x,y):
         g_pool.gui.update_scroll(x,y*y_scroll_factor)
 
-
-    def on_close(window):
-        glfwSetWindowShouldClose(main_window,True)
-        logger.debug('Process closing from window')
 
     def on_drop(window,count,paths):
         for x in range(count):
@@ -209,13 +201,8 @@ def session(rec_dir):
         logger.info("Session setting are from older version of this app. I will not use those.")
         session_settings.clear()
 
-
     width,height = session_settings.get('window_size',cap.frame_size)
     window_pos = session_settings.get('window_position',(0,0))
-
-
-    # Initialize glfw
-    glfwInit()
     main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "+ rec_dir.split(os.path.sep)[-1], None, None)
     glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfwMakeContextCurrent(main_window)
@@ -446,7 +433,6 @@ def session(rec_dir):
     cap.close()
     g_pool.gui.terminate()
     glfwDestroyWindow(main_window)
-    glfwTerminate()
 
 
 
@@ -464,7 +450,6 @@ def show_no_rec_window():
                 glfwSetWindowShouldClose(window,True)
             else:
                 logger.error("'%s' is not a valid pupil recording"%new_rec_dir)
-    glfwInit()
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
@@ -480,8 +465,8 @@ def show_no_rec_window():
 
     glfwMakeContextCurrent(window)
     glfwSetWindowPos(window,window_pos[0],window_pos[1])
-    #Register callbacks
     glfwSetDropCallback(window,on_drop)
+
     adjust_gl_view(w,h)
     glfont = fontstash.Context()
     glfont.add_font('roboto',get_roboto_font_path())
@@ -510,10 +495,10 @@ def show_no_rec_window():
         glfwPollEvents()
 
     session_settings['window_position'] = glfwGetWindowPos(window)
+    session_settings['version'] = get_version(version_file)
     session_settings.close()
     del glfont
     glfwDestroyWindow(window)
-    glfwTerminate()
 
 
 
@@ -523,15 +508,21 @@ if __name__ == '__main__':
         rec_dir = os.path.expanduser(sys.argv[1])
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recordingn'
+        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recordings'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hardcoded data dir.")
         else:
             logger.warning("You did not supply a data directory when you called this script!")
+    glfwInit()
     while rec_dir is not None:
-        this_session_dir = rec_dir
-        rec_dir = None
-        session(this_session_dir)
+        if not is_pupil_rec_dir(rec_dir):
+            rec_dir = None
+            show_no_rec_window()
+        else:
+            this_session_dir = rec_dir
+            rec_dir = None
+            session(this_session_dir)
+    glfwTerminate()
 
     # import cProfile,subprocess,os
     # cProfile.runctx("main()",{},locals(),"player.pstats")

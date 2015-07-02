@@ -514,7 +514,6 @@ def glfwDestroyWindow(window):
     current = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
     _glfw.glfwDestroyWindow(window)
-    glfwMakeContextCurrent(current)
     # We do not delete window from the list (or it would impact windows numbering)
     # del __windows__[index]
     del __c_callbacks__[index]
