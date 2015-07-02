@@ -12,11 +12,7 @@ import sys, os,platform
 from time import time, sleep
 from copy import deepcopy
 
-#bundle relevant imports
-try:
-    from billiard import freeze_support
-except:
-    from multiprocessing import freeze_support
+from multiprocessing import freeze_support
 
 if getattr(sys, 'frozen', False):
     user_dir = os.path.expanduser(os.path.join('~','pupil_player_settings'))
@@ -82,6 +78,9 @@ import numpy as np
 
 #display
 from glfw import *
+# check versions for our own depedencies as they are fast-changing
+from pyglui import __version__ as pyglui_version
+assert pyglui_version >= '0.3'
 from pyglui import ui,graph,cygl
 from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
@@ -127,7 +126,11 @@ plugin_by_name = dict(zip(name_by_index,available_plugins))
 class Global_Container(object):
     pass
 
-def main():
+def session(rec_dir):
+
+    if not is_pupil_rec_dir(rec_dir):
+        logger.error("You did not supply a dir with the required files inside.")
+        return
 
     # Callback functions
     def on_resize(window,w, h):
@@ -164,25 +167,18 @@ def main():
         glfwSetWindowShouldClose(main_window,True)
         logger.debug('Process closing from window')
 
-    try:
-        rec_dir = sys.argv[1]
-    except:
-        #for dev, supply hardcoded dir:
-        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording'
-        if os.path.isdir(rec_dir):
-            logger.debug("Dev option: Using hardcoded data dir.")
-        else:
-            if getattr(sys, 'frozen', False):
-                logger.warning("You did not supply a data directory when you called this script! \
-                   \nPlease drag a Pupil recoding directory onto the launch icon.")
+    def on_drop(window,count,paths):
+        for x in range(count):
+            new_rec_dir =  paths[x]
+            if is_pupil_rec_dir(new_rec_dir):
+                logger.debug("Starting new session with '%s'"%new_rec_dir)
+                global rec_dir
+                rec_dir = new_rec_dir
+                glfwSetWindowShouldClose(window,True)
             else:
-                logger.warning("You did not supply a data directory when you called this script! \
-                       \nPlease supply a Pupil recoding directory as first arg when calling Pupil Player.")
-            return
+                logger.error("'%s' is not a valid pupil recording"%new_rec_dir)
 
-    if not is_pupil_rec_dir(rec_dir):
-        logger.error("You did not supply a dir with the required files inside.")
-        return
+
 
     #parse info.csv file
     meta_info_path = os.path.join(rec_dir,"info.csv")
@@ -208,7 +204,6 @@ def main():
         return
 
 
-
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
     if isinstance(cap,FakeCapture):
@@ -231,7 +226,6 @@ def main():
     main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "+ rec_dir.split(os.path.sep)[-1], None, None)
     glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfwMakeContextCurrent(main_window)
-
     cygl.utils.init()
 
 
@@ -243,6 +237,7 @@ def main():
     glfwSetMouseButtonCallback(main_window,on_button)
     glfwSetCursorPosCallback(main_window,on_pos)
     glfwSetScrollCallback(main_window,on_scroll)
+    glfwSetDropCallback(main_window,on_drop)
 
 
     # load pupil_positions, gaze_positions
@@ -459,6 +454,7 @@ def main():
     g_pool.plugins.clean()
 
     cap.close()
+    g_pool.gui.terminate()
     glfwDestroyWindow(main_window)
     glfwTerminate()
     logger.debug("Process done")
@@ -467,7 +463,24 @@ def main():
 if __name__ == '__main__':
     freeze_support()
     if 1:
-        main()
+        try:
+            rec_dir = sys.argv[1]
+        except:
+            #for dev, supply hardcoded dir:
+            rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording'
+            if os.path.isdir(rec_dir):
+                logger.debug("Dev option: Using hardcoded data dir.")
+            else:
+                if getattr(sys, 'frozen', False):
+                    logger.warning("You did not supply a data directory when you called this script! \
+                       \nPlease drag a Pupil recoding directory onto the launch icon.")
+                else:
+                    logger.warning("You did not supply a data directory when you called this script! \
+                           \nPlease supply a Pupil recoding directory as first arg when calling Pupil Player.")
+        while rec_dir is not None:
+            this_session_dir = rec_dir
+            rec_dir = None
+            session(this_session_dir)
     else:
         import cProfile,subprocess,os
         cProfile.runctx("main()",{},locals(),"player.pstats")
