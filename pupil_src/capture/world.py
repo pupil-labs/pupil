@@ -31,7 +31,7 @@ from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_s
 
 #check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.2'
+assert pyglui_version >= '0.3'
 
 #monitoring
 import psutil
@@ -304,6 +304,7 @@ def world(g_pool,cap_src,cap_size):
         cpu_graph.update()
 
 
+
         #a dictionary that allows plugins to post and read events
         events = {}
 
@@ -362,7 +363,7 @@ def world(g_pool,cap_src,cap_size):
     for p in g_pool.plugins:
         p.alive = False
     g_pool.plugins.clean()
-
+    g_pool.gui.terminate()
     glfwDestroyWindow(main_window)
     glfwTerminate()
     cap.close()

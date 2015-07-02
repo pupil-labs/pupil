@@ -25,7 +25,7 @@ from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_nam
 
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.2'
+assert pyglui_version >= '0.3'
 
 #monitoring
 import psutil
@@ -394,6 +394,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     session_settings.close()
 
     pupil_detector.cleanup()
+    g_pool.gui.terminate()
     glfwDestroyWindow(main_window)
     glfwTerminate()
     cap.close()
