@@ -101,17 +101,18 @@ def update_recording_0v3_to_current(rec_dir):
     except IOError:
         pass
 
-def is_pupil_rec_dir(data_dir):
-    if not os.path.isdir(data_dir):
+def is_pupil_rec_dir(rec_dir):
+    if not os.path.isdir(rec_dir):
         logger.error("No valid dir supplied")
         return False
-    required_files = ["info.csv"]
-    for f in required_files:
-        if not os.path.isfile(os.path.join(data_dir,f)):
-            logger.debug("Did not find required file: %s in data folder %s" %(f, data_dir))
-            return False
-
-    logger.debug("%s contains %s and is therefore considered a valid rec dir."%(data_dir,required_files))
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+    try:
+        with open(meta_info_path) as info:
+            meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
+            info = meta_info["Capture Software Version"]
+    except:
+        logger.error("Could not read info.csv file: Not a valid Pupil recording.")
+        return False
     return True
 
 
