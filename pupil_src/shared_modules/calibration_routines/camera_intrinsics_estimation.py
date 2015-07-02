@@ -11,7 +11,7 @@
 import os
 import cv2
 import numpy as np
-from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_point_norm,basic_gl_setup
+from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 from methods import normalize
 import audio
 

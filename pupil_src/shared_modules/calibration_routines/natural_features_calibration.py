@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 from methods import normalize
 import calibrate
-from gl_utils import draw_gl_point_norm
+from pyglui.cygl.utils import draw_points_norm,RGBA
 from glfw import GLFW_PRESS
 import audio
 
@@ -146,7 +146,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
     def gl_display(self):
         if self.detected:
-            draw_gl_point_norm(self.pos,size=self.r,color=(0.,1.,0.,.5))
+            draw_points_norm([self.pos],size=self.r,color=RGBA(0.,1.,0.,.5))
 
 
 

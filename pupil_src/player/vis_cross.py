@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from gl_utils import draw_gl_points_norm
 from plugin import Plugin
 import numpy as np
 import cv2

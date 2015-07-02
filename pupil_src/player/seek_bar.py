@@ -8,7 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from gl_utils import draw_gl_polyline,draw_gl_point
+from pyglui.cygl.utils import draw_polyline,draw_points,RGBA
+
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 
@@ -118,10 +119,10 @@ class Seek_Bar(Plugin):
             color1 = (.25,.8,.8,.5)
             color2 = (.25,.8,.8,1.)
 
-        draw_gl_polyline( [(0,0),(self.current_frame_index,0)],color=color1)
-        draw_gl_polyline( [(self.current_frame_index,0),(self.frame_count,0)],color=(.5,.5,.5,.5))
-        draw_gl_point((self.current_frame_index,0),color=color1,size=40)
-        draw_gl_point((self.current_frame_index,0),color=color2,size=10)
+        draw_polyline(verts=[(0,0),(self.current_frame_index,0)],color=RGBA(*color1))
+        draw_polyline(verts=[(self.current_frame_index,0),(self.frame_count,0)],color=RGBA(.5,.5,.5,.5))
+        draw_points([(self.current_frame_index,0)],color=RGBA(*color1),size=40)
+        draw_points([(self.current_frame_index,0)],color=RGBA(*color2),size=10)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()

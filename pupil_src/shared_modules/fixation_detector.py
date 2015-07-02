@@ -17,8 +17,6 @@ from math import atan, tan
 from methods import denormalize
 from plugin import Plugin
 from pyglui import ui
-from gl_utils.utils import make_coord_system_pixel_based, draw_gl_polyline,\
-    draw_gl_polyline_norm
 from player_methods import transparent_circle
 # logging
 logger = logging.getLogger(__name__)

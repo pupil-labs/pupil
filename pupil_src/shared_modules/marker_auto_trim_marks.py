@@ -17,9 +17,9 @@ from export_launcher import Export_Launcher
 from ctypes import c_int
 
 from pyglui import ui
-from gl_utils import draw_gl_polyline,adjust_gl_view,draw_gl_polyline_norm,clear_gl_screen,draw_gl_point,draw_gl_points,draw_gl_point_norm,draw_gl_points_norm,basic_gl_setup,cvmat_to_glmat, draw_named_texture
+from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup,cvmat_to_glmat
+from pyglui.cygl.utils import RGBA,draw_points,draw_polyline
 from OpenGL.GL import *
-from OpenGL.GLU import gluOrtho2D
 from glfw import *
 
 import numpy as np
@@ -250,14 +250,14 @@ class Marker_Auto_Trim_Marks(Plugin):
         width,height = self.win_size
         h_pad = padding * (frame_max-2)/float(width)
         v_pad = padding* 1./(height-2)
-        gluOrtho2D(-h_pad,  (frame_max-1)+h_pad, -v_pad, 1+v_pad) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
+        gluOrtho(-h_pad,  (frame_max-1)+h_pad, -v_pad, 1+v_pad,-1, 1) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
 
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
         glLoadIdentity()
         glTranslatef(0,-.02,0)
         color = (7.,.1,.2,8.)
-        draw_gl_polyline(self.gl_display_ranges,color=color,type='Lines',thickness=2)
+        draw_polyline(self.gl_display_ranges,color=RGBA(*color),line_type=GL_LINES,thickness=2.)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
