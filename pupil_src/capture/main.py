@@ -33,7 +33,6 @@ else:
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
-
 from version_utils import get_version
 
 import logging
@@ -126,7 +125,6 @@ def main():
         p_eye[-1].start()
 
     world(g_pool,world_src,world_size)
-
 
     # Exit / clean-up
     for p in p_eye:
