@@ -491,7 +491,7 @@ def show_no_rec_window():
     basic_gl_setup()
 
     text = 'Please drop a recoding directory onto this window.'
-    tipp = '(Tipp: Drop a recording directory onto the app icon.)'
+    tip = '(Tip: Drop a recording directory onto the app icon.)'
     # text = "Please supply a Pupil recoding directory as first arg when calling Pupil Player."
     while not glfwWindowShouldClose(window):
         clear_gl_screen()
@@ -500,13 +500,13 @@ def show_no_rec_window():
         glfont.set_size(31)
         glfont.draw_text(300,120,text)
         glfont.set_size(25)
-        glfont.draw_text(300,180,tipp)
+        glfont.draw_text(300,180,tip)
         glfont.set_blur(0.96)
         glfont.set_color_float((1.,1.,1.,1.))
         glfont.set_size(31)
         glfont.draw_text(300,120,text)
         glfont.set_size(25)
-        glfont.draw_text(300,180,tipp)
+        glfont.draw_text(300,180,tip)
         glfwSwapBuffers(window)
         glfwPollEvents()
     del glfont
