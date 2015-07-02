@@ -132,12 +132,13 @@ def main():
         g_pool.eye_tx += [tx]
         p_eye[-1].start()
 
-    world(g_pool,world_src,world_size)
-
+    p_world = Process(target=world,args=(g_pool,world_src,world_size))
+    # world(g_pool,world_src,world_size)
+    p_world.start()
+    p_world.join()
     # Exit / clean-up
     for p in p_eye:
         p.join()
-
 if __name__ == '__main__':
     freeze_support()
     main()
