@@ -188,8 +188,8 @@ class Eye_Video_Overlay(Plugin):
         self.menu.elements[:] = []
         self.menu.append(ui.Info_Text('Show the eye video overlaid on top of the world video. Eye1 is usually the right eye'))
         self.menu.append(ui.Slider('alpha',self,min=0.0,step=0.05,max=1.0,label='Opacity'))
-        self.menu.append(ui.Slider('eye_scale_factor',self,min=0.2,step=0.1,max=1.0,label='Scale of Video'))
-        self.menu.append(ui.Switch('move_around',self,label="Move Overlay Around"))
+        self.menu.append(ui.Slider('eye_scale_factor',self,min=0.2,step=0.1,max=1.0,label='Video Scale'))
+        self.menu.append(ui.Switch('move_around',self,label="Move Overlay"))
         if len(self.eye_cap) == 2:
             self.menu.append(ui.Selector('showeyes',self,label='Show',selection=[(0,),(1,),(0,1)],labels= ['eye 1','eye 2','both'],setter=self.set_showeyes))
         if 0 in self.showeyes:
