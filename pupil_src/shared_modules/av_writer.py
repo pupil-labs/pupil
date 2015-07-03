@@ -253,9 +253,8 @@ class JPEG_Dumper(object):
         cmd_bin = ffmpeg_bin()
         if cmd_bin:
             # ffmpeg  -f mjpeg -i world.raw -vcodec copy world.mkv
-            sp.call([cmd_bin+' -f mjpeg -i '+self.raw_path +' -vcodec copy '+self.out_path],shell=True)
+            sp.Popen([cmd_bin+' -f mjpeg -i '+self.raw_path +' -vcodec copy '+self.out_path + '&& rm '+ self.raw_path],shell=True)
             #this should be done programatically but requires a better video backend.
-            sp.Popen(["rm "+ self.raw_path],shell=True)
 
 
 def ffmpeg_bin():
