@@ -305,7 +305,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
                 logger.info("Will save eye video to: %s"%record_path)
                 video_path = os.path.join(record_path, "eye%s.mkv"%eye_id)
                 timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-                if raw_mode:
+                if raw_mode and hasattr(frame,'jpeg_buffer') :
                     writer = JPEG_Dumper(video_path)
                 else:
                     writer = CV_Writer(video_path,float(cap.frame_rate), cap.frame_size)
