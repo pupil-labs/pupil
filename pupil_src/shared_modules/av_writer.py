@@ -250,28 +250,34 @@ class JPEG_Dumper(object):
 
     def release(self):
         self.file_handle.close()
-        try:
-            sp.Popen('ffmpeg',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
-        except OSError:
-            logger.error("Please install ffmpeg to enable pupil capture to convert raw jpeg streams to a readable format.")
-        else:
+        cmd_bin = ffmpeg_bin()
+        if cmd_bin:
             # ffmpeg  -f mjpeg -i world.raw -vcodec copy world.mkv
-            sp.call(['ffmpeg -f mjpeg -i '+self.raw_path +' -vcodec copy '+self.out_path],shell=True)
+            sp.call([cmd_bin+' -f mjpeg -i '+self.raw_path +' -vcodec copy '+self.out_path],shell=True)
             #this should be done programatically but requires a better video backend.
             sp.Popen(["rm "+ self.raw_path],shell=True)
 
+
+def ffmpeg_bin():
+    try:
+        sp.Popen('ffmpeg',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
+    except OSError:
+        pass
+    else:
+        return 'ffmpeg'
+    try:
+        sp.Popen('avconv',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
+    except OSError:
+        logger.error("Please install ffmpeg or libav-tools to enable pupil capture to record raw jpeg streams as a readable format.")
+        return None
+    else:
+        return 'avconv'
 
 def ffmpeg_available():
     import platform
     if platform.system() == 'Darwin' and getattr(sys, 'frozen', False):
         return False
-    try:
-        sp.Popen('ffmpeg',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
-    except OSError:
-        logger.error("Please install ffmpeg to enable pupil capture to capture raw jpeg streams as a readable format.")
-        return False
-    else:
-        return True
+    return bool(ffmpeg_bin())
 
 
 def test():
