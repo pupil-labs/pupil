@@ -252,7 +252,7 @@ class JPEG_Dumper(object):
         self.file_handle.close()
         try:
             sp.Popen('ffmpeg',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
-        except IOError:
+        except OSError:
             logger.error("Please install ffmpeg to enable pupil capture to convert raw jpeg streams to a readable format.")
         else:
             # ffmpeg  -f mjpeg -i world.raw -vcodec copy world.mkv
@@ -267,7 +267,7 @@ def ffmpeg_available():
         return False
     try:
         sp.Popen('ffmpeg',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
-    except IOError:
+    except OSError:
         logger.error("Please install ffmpeg to enable pupil capture to capture raw jpeg streams as a readable format.")
         return False
     else:
