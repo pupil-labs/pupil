@@ -23,7 +23,7 @@ if platform.system() == 'Darwin':
               debug=False,
               strip=None,
               upx=False,
-              console=True)
+              console=False)
 
     #exclude system lib.
     libSystem = [bn for bn in a.binaries if 'libSystem.dylib' in bn]
