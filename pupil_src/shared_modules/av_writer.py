@@ -15,6 +15,7 @@ requires:
 """
 import os,sys
 import av
+from av.packet import Packet
 import numpy as np
 from time import time
 from fractions import Fraction
@@ -56,8 +57,6 @@ to be valid and should only now be accesed.
 
 
 """
-
-import numpy as np
 
 class AV_Writer(object):
     """
@@ -178,6 +177,55 @@ class AV_Writer(object):
     def release(self):
         self.close()
 
+
+class JPEG_Writer(object):
+    """
+    Does not work yet.
+    """
+
+    def __init__(self, file_loc):
+        super(JPEG_Writer, self).__init__()
+
+        try:
+            file_path,ext = file_loc.rsplit('.', 1)
+        except:
+            logger.error("'%s' is not a valid media file name."%file_loc)
+            raise Exception("Error")
+
+        if ext not in ('mp4,mov,mkv'):
+            logger.warning("media file container should be mp4 or mov. Using a different container is risky.")
+
+        self.file_loc = file_loc
+        self.container = av.open(self.file_loc,'w')
+        logger.debug("Opended '%s' for writing."%self.file_loc)
+
+
+
+        self.video_stream = self.container.add_stream('mjpeg',1000)
+        self.video_stream.pix_fmt = "yuv422p"
+        print self.video_stream
+        print self.container
+        self.configured = False
+
+
+    def write_video_frame(self, input_frame):
+        if not self.configured:
+            self.video_stream.height = input_frame.height
+            self.video_stream.width = input_frame.width
+            self.configured = True
+
+        packet = Packet()
+        packet.payload = input_frame.jpeg_buffer.view()
+        self.container.mux(packet)
+
+
+    def close(self):
+
+        self.container.close()
+        logger.debug("Closed media container")
+
+    def release(self):
+        self.close()
 
 
 class JPEG_Dumper(object):
