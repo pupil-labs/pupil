@@ -11,8 +11,10 @@
 import sys, os,platform
 from time import time, sleep
 from copy import deepcopy
-
-from multiprocessing import freeze_support
+try:
+    from billiard import freeze_support
+except:
+    from multiprocessing import reeze_support
 
 if getattr(sys, 'frozen', False):
     user_dir = os.path.expanduser(os.path.join('~','pupil_player_settings'))
@@ -39,8 +41,15 @@ if not os.path.isdir(user_dir):
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
-
-fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
+logger.setLevel(logging.INFO) # <-- use this to set verbosity
+#since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
+if platform.system() == 'Darwin':
+    if __name__ == '__main__': #clear log if main
+        fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
+    #we will use append mode since the exporter will stream into the same file when using os.span processes
+    fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='a')
+else:
+    fh = logging.FileHandler(os.path.join(user_dir,'player.log'),mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
@@ -509,7 +518,7 @@ if __name__ == '__main__':
         rec_dir = os.path.expanduser(sys.argv[1])
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recordings'
+        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording'
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hardcoded data dir.")
         else:
