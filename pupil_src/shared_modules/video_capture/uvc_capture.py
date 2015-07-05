@@ -11,7 +11,7 @@
 import uvc
 from uvc import device_list
 #check versions for our own depedencies as they are fast-changing
-assert uvc.__version__ >= '0.1'
+assert uvc.__version__ >= '0.2'
 
 from ctypes import c_double
 from pyglui import ui
@@ -57,7 +57,7 @@ class Camera_Capture(object):
 
         if "USB 2.0 Camera" in self.capture.name:
             self.capture.bandwidth_factor = 1.2
-            
+
         logger.debug('avaible modes %s'%self.capture.avaible_modes)
 
         controls_dict = dict([(c.display_name,c) for c in self.capture.controls])

@@ -183,7 +183,7 @@ class JPEG_Writer(object):
     Does not work yet.
     """
 
-    def __init__(self, file_loc):
+    def __init__(self, file_loc,fps=30):
         super(JPEG_Writer, self).__init__()
 
         try:
@@ -193,18 +193,14 @@ class JPEG_Writer(object):
             raise Exception("Error")
 
         if ext not in ('mp4,mov,mkv'):
-            logger.warning("media file container should be mp4 or mov. Using a different container is risky.")
+            logger.warning("media file container should be mkv,mp4 or mov. Using a different container is risky.")
 
         self.file_loc = file_loc
         self.container = av.open(self.file_loc,'w')
         logger.debug("Opended '%s' for writing."%self.file_loc)
 
-
-
-        self.video_stream = self.container.add_stream('mjpeg',1000)
-        self.video_stream.pix_fmt = "yuv422p"
-        print self.video_stream
-        print self.container
+        self.video_stream = self.container.add_stream('mjpeg',fps)
+        self.video_stream.pix_fmt = "yuvj422p"
         self.configured = False
 
 
@@ -215,7 +211,7 @@ class JPEG_Writer(object):
             self.configured = True
 
         packet = Packet()
-        packet.payload = input_frame.jpeg_buffer.view()
+        packet.payload = input_frame.jpeg_buffer
         self.container.mux(packet)
 
 
