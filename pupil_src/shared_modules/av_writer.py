@@ -224,6 +224,10 @@ class JPEG_Writer(object):
         self.close()
 
 
+
+
+
+
 class JPEG_Dumper(object):
     """simple for JPEG_Dumper"""
     def __init__(self, file_loc):
@@ -268,13 +272,6 @@ def ffmpeg_bin():
     else:
         return 'avconv'
 
-def ffmpeg_available():
-    import platform
-    if platform.system() == 'Darwin' and getattr(sys, 'frozen', False):
-        return False
-    return bool(ffmpeg_bin())
-
-
 def test():
 
     import os
@@ -303,10 +300,74 @@ def test():
 
 if __name__ == '__main__':
 
-    import cProfile,subprocess,os
-    cProfile.runctx("test()",{},locals(),"av_writer.pstats")
-    loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
-    gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-    subprocess.call("python "+gprof2dot_loc+" -f pstats av_writer.pstats | dot -Tpng -o av_writer.png", shell=True)
-    print "created cpu time graph for av_writer process. Please check out the png next to the av_writer.py file"
+    logging.basicConfig(level=logging.DEBUG)
+
+    #mic device
+
+    def format_time(time, time_base):
+        if time is None:
+            return 'None'
+        return '%.3fs (%s or %s/%s)' % (time_base * time, time_base * time, time_base.numerator * time, time_base.denominator)
+
+
+    container = av.open(':0',format="avfoundation")
+    print 'container:', container
+    print '\tformat:', container.format
+    print '\tduration:', float(container.duration) / av.time_base
+    print '\tmetadata:'
+    for k, v in sorted(container.metadata.iteritems()):
+        print '\t\t%s: %r' % (k, v)
+    print
+
+    print len(container.streams), 'stream(s):'
+    for i, stream in enumerate(container.streams):
+
+        print '\t%r' % stream
+        print '\t\ttime_base: %r' % stream.time_base
+        print '\t\trate: %r' % stream.rate
+        print '\t\tstart_time: %r' % stream.start_time
+        print '\t\tduration: %s' % format_time(stream.duration, stream.time_base)
+        print '\t\tbit_rate: %r' % stream.bit_rate
+        print '\t\tbit_rate_tolerance: %r' % stream.bit_rate_tolerance
+
+        if stream.type == b'audio':
+            print '\t\taudio:'
+            print '\t\t\tformat:', stream.format
+            print '\t\t\tchannels: %s' % stream.channels
+
+        elif stream.type == 'container':
+            print '\t\tcontainer:'
+            print '\t\t\tformat:', stream.format
+            print '\t\t\taverage_rate: %r' % stream.average_rate
+
+        print '\t\tmetadata:'
+        for k, v in sorted(stream.metadata.iteritems()):
+            print '\t\t\t%s: %r' % (k, v)
+
+
+    #file contianer:
+
+    out_container = av.open('test.wav','w')
+    out_stream = out_container.add_stream('pcm_f32le')
+    # out_stream.rate = 44100
+    for i,packet in enumerate(container.demux(container.streams[0])):
+        # for frame in packet.decode():
+        #     packet = out_stream.encode(frame)
+        #     if packet:
+        # print '%r' %packet
+        # print '\tduration: %s' % format_time(packet.duration, packet.stream.time_base)
+        # print '\tpts: %s' % format_time(packet.pts, packet.stream.time_base)
+        # print '\tdts: %s' % format_time(packet.dts, packet.stream.time_base)
+        out_container.mux(packet)
+        if i >1000:
+            break
+
+    out_container.close()
+
+    # import cProfile,subprocess,os
+    # cProfile.runctx("test()",{},locals(),"av_writer.pstats")
+    # loc = os.path.abspath(_file__).rsplit('pupil_src', 1)
+    # gprof2dot_loc = os.path.oin(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
+    # subprocess.call("python "+gprof2dot_loc+" -f pstats av_writer.pstats | dot -Tpng -o av_writer.png", shell=True)
+    # print "created cpu time graph for av_writer process. Please check out the png next to the av_writer.py file"
 
