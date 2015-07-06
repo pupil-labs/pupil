@@ -174,6 +174,9 @@ def session(rec_dir):
                 logger.error("'%s' is not a valid pupil recording"%new_rec_dir)
 
 
+    video_path = glob(os.path.join(rec_dir,"world.*"))[0]
+    timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
+    pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
     #parse info.csv file
     meta_info_path = os.path.join(rec_dir,"info.csv")
@@ -187,14 +190,13 @@ def session(rec_dir):
         update_recording_0v4_to_current(rec_dir)
     elif rec_version >= VersionFormat('0.3'):
         update_recording_0v3_to_current(rec_dir)
-        video_path = os.path.join(rec_dir,"world.avi")
+        timestamps_path = os.path.join(rec_dir, "timestamps.npy")
+
     else:
         logger.Error("This recording is to old. Sorry.")
         return
 
-    video_path = glob(os.path.join(rec_dir,"world.*"))[0]
-    timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
-    pupil_data_path = os.path.join(rec_dir, "pupil_data")
+
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
     if isinstance(cap,FakeCapture):
