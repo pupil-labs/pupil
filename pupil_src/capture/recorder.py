@@ -214,12 +214,13 @@ class Recorder(Plugin):
         else:
             self.audio_writer = None
 
-        self.video_path = os.path.join(self.rec_path, "world.mkv")
         if self.raw_jpeg  and "uvc_capture" in str(self.g_pool.capture.__class__):
+            self.video_path = os.path.join(self.rec_path, "world.mp4")
             self.writer = JPEG_Writer(self.video_path,int(self.g_pool.capture.frame_rate))
         # elif 1:
         #     self.writer = av_writer.AV_Writer(self.video_path)
         else:
+            self.video_path = os.path.join(self.rec_path, "world.mkv")
             self.writer = CV_Writer(self.video_path, float(self.g_pool.capture.frame_rate), self.g_pool.capture.frame_size)
         # positions path to eye process
         if self.record_eye:

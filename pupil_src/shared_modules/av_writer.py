@@ -192,17 +192,17 @@ class JPEG_Writer(object):
             logger.error("'%s' is not a valid media file name."%file_loc)
             raise Exception("Error")
 
-        if ext not in ('mp4,mov,mkv'):
-            logger.warning("media file container should be mkv,mp4 or mov. Using a different container is risky.")
+        if ext not in ('mp4'):
+            logger.warning("media file container should be mp4. Using a different container is risky.")
 
         self.file_loc = file_loc
         self.container = av.open(self.file_loc,'w')
         logger.debug("Opended '%s' for writing."%self.file_loc)
 
-        self.video_stream = self.container.add_stream('mjpeg',fps)
+        self.video_stream = self.container.add_stream('mjpeg',int(10000*fps))
         self.video_stream.pix_fmt = "yuvj422p"
         self.configured = False
-
+        self.frame_count = 0
 
     def write_video_frame(self, input_frame):
         if not self.configured:
@@ -212,11 +212,13 @@ class JPEG_Writer(object):
 
         packet = Packet()
         packet.payload = input_frame.jpeg_buffer
+        packet.dts = self.frame_count*10000
+        packet.pts = self.frame_count*10000
+        self.frame_count +=1
         self.container.mux(packet)
 
 
     def close(self):
-
         self.container.close()
         logger.debug("Closed media container")
 
@@ -294,8 +296,6 @@ def test():
 
     cap.close()
     writer.close()
-
-
 
 
 if __name__ == '__main__':

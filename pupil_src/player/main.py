@@ -9,6 +9,7 @@
 '''
 
 import sys, os,platform
+from glob import glob
 from time import time, sleep
 from copy import deepcopy
 try:
@@ -41,7 +42,7 @@ if not os.path.isdir(user_dir):
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
-logger.setLevel(logging.INFO) # <-- use this to set verbosity
+logger.setLevel(logging.WARNING) # <-- use this to set verbosity
 #since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
     if __name__ == '__main__': #clear log if main
@@ -179,11 +180,6 @@ def session(rec_dir):
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
-    video_path = os.path.join(rec_dir,"world.mkv")
-    timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
-    pupil_data_path = os.path.join(rec_dir, "pupil_data")
-
-
     rec_version = read_rec_version(meta_info)
     if rec_version >= VersionFormat('0.5'):
         pass
@@ -192,12 +188,13 @@ def session(rec_dir):
     elif rec_version >= VersionFormat('0.3'):
         update_recording_0v3_to_current(rec_dir)
         video_path = os.path.join(rec_dir,"world.avi")
-        timestamps_path = os.path.join(rec_dir, "timestamps.npy")
     else:
         logger.Error("This recording is to old. Sorry.")
         return
 
-
+    video_path = glob(os.path.join(rec_dir,"world.*"))[0]
+    timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
+    pupil_data_path = os.path.join(rec_dir, "pupil_data")
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
     if isinstance(cap,FakeCapture):
