@@ -180,7 +180,7 @@ class AV_Writer(object):
 
 class JPEG_Writer(object):
     """
-    Does not work yet.
+    PyAV based jpeg writer.
     """
 
     def __init__(self, file_loc,fps=30):
