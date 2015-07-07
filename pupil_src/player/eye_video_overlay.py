@@ -9,6 +9,7 @@
 '''
 
 import sys, os,platform
+from glob import glob
 import cv2
 import numpy as np
 from file_methods import Persistent_Dict
@@ -117,7 +118,7 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
 
 class Eye_Video_Overlay(Plugin):
     """docstring This plugin allows the user to overlay the eye recording on the recording of his field of vision
-        Features: flip video across horiz/vert axes, click and drag around interface, scale video size from 20% to 100%, 
+        Features: flip video across horiz/vert axes, click and drag around interface, scale video size from 20% to 100%,
         show only 1 or 2 or both eyes
         features updated by Andrew June 2015
     """
@@ -147,14 +148,14 @@ class Eye_Video_Overlay(Plugin):
             eye_video_path = os.path.join(g_pool.rec_dir,'eye.avi'),None
             eye_timestamps_path = os.path.join(g_pool.rec_dir,'eye_timestamps.npy'),None
         else:
-            eye_video_path = os.path.join(g_pool.rec_dir,'eye0.mkv'),os.path.join(g_pool.rec_dir,'eye1.mkv')
+            eye_video_path = os.path.join(g_pool.rec_dir,'eye0.*'),os.path.join(g_pool.rec_dir,'eye1.*')
             eye_timestamps_path = os.path.join(g_pool.rec_dir,'eye0_timestamps.npy'),os.path.join(g_pool.rec_dir,'eye1_timestamps.npy')
 
         #try to load eye video and ts for each eye.
         for video,ts in zip(eye_video_path,eye_timestamps_path):
             try:
-                self.eye_cap.append(autoCreateCapture(video,timestamps=ts))
-            except FileCaptureError:
+                self.eye_cap.append(autoCreateCapture(glob(video)[0],timestamps=ts))
+            except IndexError,FileCaptureError:
                 pass
             else:
                 self.eye_frames.append(self.eye_cap[-1].get_frame())
@@ -188,8 +189,8 @@ class Eye_Video_Overlay(Plugin):
         self.menu.elements[:] = []
         self.menu.append(ui.Info_Text('Show the eye video overlaid on top of the world video. Eye1 is usually the right eye'))
         self.menu.append(ui.Slider('alpha',self,min=0.0,step=0.05,max=1.0,label='Opacity'))
-        self.menu.append(ui.Slider('eye_scale_factor',self,min=0.2,step=0.1,max=1.0,label='Scale of Video'))
-        self.menu.append(ui.Switch('move_around',self,label="Move Overlay Around"))
+        self.menu.append(ui.Slider('eye_scale_factor',self,min=0.2,step=0.1,max=1.0,label='Video Scale'))
+        self.menu.append(ui.Switch('move_around',self,label="Move Overlay"))
         if len(self.eye_cap) == 2:
             self.menu.append(ui.Selector('showeyes',self,label='Show',selection=[(0,),(1,),(0,1)],labels= ['eye 1','eye 2','both'],setter=self.set_showeyes))
         if 0 in self.showeyes:
@@ -248,7 +249,7 @@ class Eye_Video_Overlay(Plugin):
 
             #4. flipping images, converting to greyscale
             eye_gray = cv2.cvtColor(self.eye_frames[eye_index].img,cv2.COLOR_BGR2GRAY) #auto gray scaling
-            eyeimage = cv2.resize(eye_gray,(0,0),fx=self.eye_scale_factor, fy=self.eye_scale_factor) 
+            eyeimage = cv2.resize(eye_gray,(0,0),fx=self.eye_scale_factor, fy=self.eye_scale_factor)
             if self.mirror[str(eye_index)]:
                 eyeimage = np.fliplr(eyeimage)
             if self.flip[str(eye_index)]:

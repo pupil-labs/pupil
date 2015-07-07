@@ -12,7 +12,7 @@ import sys, os,platform
 import cv2
 import numpy as np
 from file_methods import Persistent_Dict
-from gl_utils import draw_gl_polyline
+from pyglui.cygl.utils import draw_polyline,RGBA
 from pyglui import ui
 from methods import normalize,denormalize
 from glfw import *
@@ -229,7 +229,7 @@ class Marker_Detector(Plugin):
             for m in self.markers:
                 hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-                draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
+                draw_polyline(hat.reshape((6,2)),color=RGBA(0.1,1.,1.,.5))
 
             for s in self.surfaces:
                 s.gl_draw_frame(self.img_shape)

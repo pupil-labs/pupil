@@ -31,7 +31,7 @@ from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_s
 
 #check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.2'
+assert pyglui_version >= '0.3'
 
 #monitoring
 import psutil
@@ -53,7 +53,7 @@ from pupil_remote import Pupil_Remote
 from marker_detector import Marker_Detector
 
 #manage plugins
-user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Remote,Marker_Detector] # TODO: Dispersion_Fixation_Detector
+user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Remote,Marker_Detector]
 system_plugins  = [Display_Recent_Gaze,Recorder]
 plugin_by_index =  user_launchable_plugins+system_plugins+calibration_plugins+gaze_mapping_plugins
 name_by_index = [p.__name__ for p in plugin_by_index]
@@ -86,18 +86,12 @@ def world(g_pool,cap_src,cap_size):
 
     # Callback functions
     def on_resize(window,w, h):
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(window)
-        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-        w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
         g_pool.gui.collect_menus()
         graph.adjust_size(w,h)
         adjust_gl_view(w,h)
         for p in g_pool.plugins:
             p.on_window_resize(window,w,h)
-
-        glfwMakeContextCurrent(active_window)
 
 
     def on_iconify(window,iconfied):
@@ -196,12 +190,12 @@ def world(g_pool,cap_src,cap_size):
 
     # Initialize glfw
     glfwInit()
-    main_window = glfwCreateWindow(width,height, "World", None, None)
+    main_window = glfwCreateWindow(width,height, "World")
     glfwMakeContextCurrent(main_window)
     cygl.utils.init()
 
     # Register callbacks main_window
-    glfwSetWindowSizeCallback(main_window,on_resize)
+    glfwSetFramebufferSizeCallback(main_window,on_resize)
     glfwSetWindowCloseCallback(main_window,on_close)
     glfwSetWindowIconifyCallback(main_window,on_iconify)
     glfwSetKeyCallback(main_window,on_key)
@@ -223,7 +217,7 @@ def world(g_pool,cap_src,cap_size):
     #setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
-    g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-250,0),size=(0,0),header_pos='left')
+    g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-350,0),size=(0,0),header_pos='left')
     general_settings = ui.Growing_Menu('General')
     general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
@@ -261,7 +255,7 @@ def world(g_pool,cap_src,cap_size):
             g_pool.active_calibration_plugin =  p.__class__
             break
 
-    on_resize(main_window, *glfwGetWindowSize(main_window))
+    on_resize(main_window, *glfwGetFramebufferSize(main_window))
 
     g_pool.gui.configuration = session_settings.get('ui_config',{})
 
@@ -308,6 +302,7 @@ def world(g_pool,cap_src,cap_size):
         except ZeroDivisionError:
             pass
         cpu_graph.update()
+
 
 
         #a dictionary that allows plugins to post and read events
@@ -368,7 +363,7 @@ def world(g_pool,cap_src,cap_size):
     for p in g_pool.plugins:
         p.alive = False
     g_pool.plugins.clean()
-
+    g_pool.gui.terminate()
     glfwDestroyWindow(main_window)
     glfwTerminate()
     cap.close()

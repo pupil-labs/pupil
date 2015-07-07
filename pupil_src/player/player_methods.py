@@ -10,215 +10,112 @@
 
 import os
 import cv2
+import numpy as np
 #logging
 import logging
 logger = logging.getLogger(__name__)
+from file_methods import save_object
 
 
-
-
-def correlate_pupil_data(pupil_list,timestamps):
+def correlate_data(data,timestamps):
     '''
-    pupil_list:  timestamp | confidence | id | norm_pos x | norm_pos y | diameter | other data ...
+    data:  dict of data :
+        will have at least:
+            timestamp: float
 
-    timestamps timestamps to correlate gaze data to
+    timestamps: timestamps list to correlate  data to
 
+    this takes a data list and a timestamps list and makes a new list
+    with the length of the number of timestamps.
+    Each slot conains a list that will have 0, 1 or more assosiated data points.
 
-    this takes a pupil positions list and a timestamps list and makes a new list
-    with the length of the number of recorded frames.
-    Each slot conains a list that will have 0, 1 or more assosiated pupil data points.
+    Finnaly we add an index field to the data_point with the assosiated index
     '''
-    pupil_list = list(pupil_list)
     timestamps = list(timestamps)
-
-    positions_by_frame = [[] for i in timestamps]
+    data_by_frame = [[] for i in timestamps]
 
     frame_idx = 0
-    try:
-        data_point = list(pupil_list.pop(0))
-    except:
-        logger.warning("No gaze positons in this recording.")
-        return positions_by_frame
+    data_index = 0
 
-    gaze_timestamp = data_point[0]
 
-    while pupil_list:
-        # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
+    while True:
         try:
-            t_between_frames = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
+            datum = data[data_index]
+            # we can take the midpoint between two frames in time: More appropriate for SW timestamps
+            ts = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
+            # or the time of the next frame: More appropriate for Sart Of Exposure Timestamps (HW timestamps).
+            # ts = timestamps[frame_idx+1]
         except IndexError:
+            # we might loose a data point at the end but we dont care
             break
-        if gaze_timestamp <= t_between_frames:
-            timestamp, confidence, id, x, y, diameter = data_point[:6]
-            other_data = data_point[6:] #use python slicing to generate empty list is case no other_data is recorded.
-            positions_by_frame[frame_idx].append({'norm_pos':(x,y), 'confidence':confidence, 'timestamp':timestamp,'id':id,'diameter':diameter,'other_data':other_data})
-            data_point = list(pupil_list.pop(0))
-            gaze_timestamp = data_point[0]
+
+        if datum['timestamp'] <= ts:
+            datum['index'] = frame_idx
+            data_by_frame[frame_idx].append(datum)
+            data_index +=1
         else:
             frame_idx+=1
 
-    return positions_by_frame
+    return data_by_frame
 
 
-def correlate_gaze(gaze_list,timestamps):
-    '''
-    gaze_list: timestamp | confidence | gaze x | gaze y |
-    timestamps timestamps to correlate gaze data to
 
+def update_recording_0v4_to_current(rec_dir):
+    logger.info("Updatig recording from v0.4x format to current version")
+    gaze_array = np.load(os.path.join(rec_dir,'gaze_positions.npy'))
+    pupil_array = np.load(os.path.join(rec_dir,'pupil_positions.npy'))
+    gaze_list = []
+    pupil_list = []
 
-    this takes a gaze positions list and a timestamps list and makes a new list
-    with the length of the number of recorded frames.
-    Each slot conains a list that will have 0, 1 or more assosiated gaze postions.
-    '''
-    gaze_list = list(gaze_list)
-    timestamps = list(timestamps)
+    for datum in pupil_array:
+        ts, confidence, id, x, y, diameter = datum[:6]
+        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':id,'norm_pos':[x,y],'diameter':diameter})
 
-    positions_by_frame = [[] for i in timestamps]
+    pupil_by_ts = dict([(p['timestamp'],p) for p in pupil_list])
 
-    frame_idx = 0
+    for datum in gaze_array:
+        ts,confidence,x,y, = datum
+        gaze_list.append({'timestamp':ts,'confidence':confidence,'norm_pos':[x,y],'base':[pupil_by_ts.get(ts,None)]})
+
+    pupil_data = {'pupil_positions':pupil_list,'gaze_positions':gaze_list}
     try:
-        data_point = gaze_list.pop(0)
-    except:
-        logger.warning("No gaze positons in this recording.")
-        return positions_by_frame
+        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+    except IOError:
+        pass
 
-    gaze_timestamp = data_point[0]
+def update_recording_0v3_to_current(rec_dir):
+    logger.info("Updatig recording from v0.3x format to current version")
+    pupilgaze_array = np.load(os.path.join(rec_dir,'gaze_positions.npy'))
+    gaze_list = []
+    pupil_list = []
 
-    while gaze_list:
-        # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
-        try:
-            t_between_frames = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
-        except IndexError:
-            break
-        if gaze_timestamp <= t_between_frames:
-            ts,confidence,x,y, = data_point
-            positions_by_frame[frame_idx].append({'norm_pos':(x,y), 'confidence':confidence, 'timestamp':ts})
-            data_point = gaze_list.pop(0)
-            gaze_timestamp = data_point[0]
-        else:
-            frame_idx+=1
+    for datum in pupilgaze_array:
+        gaze_x,gaze_y,pupil_x,pupil_y,ts,confidence = datum
+        #some bogus size and confidence as we did not save it back then
+        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':0,'norm_pos':[pupil_x,pupil_y],'diameter':50})
+        gaze_list.append({'timestamp':ts,'confidence':confidence,'norm_pos':[gaze_x,gaze_y],'base':[pupil_list[-1]]})
 
-    return positions_by_frame
-
-
-def correlate_gaze_legacy(gaze_list,timestamps):
-    '''
-    gaze_list: gaze x | gaze y | pupil x | pupil y | timestamp
-    timestamps timestamps to correlate gaze data to
-
-
-    this takes a gaze positions list and a timestamps list and makes a new list
-    with the length of the number of recorded frames.
-    Each slot conains a list that will have 0, 1 or more assosiated gaze postions.
-    load gaze information
-    '''
-    gaze_list = list(gaze_list)
-    timestamps = list(timestamps)
-
-    positions_by_frame = [[] for i in timestamps]
-
-    frame_idx = 0
+    pupil_data = {'pupil_positions':pupil_list,'gaze_positions':gaze_list}
     try:
-        data_point = gaze_list.pop(0)
-    except:
-        logger.warning("No gaze positons in this recording.")
-        return positions_by_frame
+        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+    except IOError:
+        pass
 
-    gaze_timestamp = data_point[4]
-
-    while gaze_list:
-        # if the current gaze point is before the mean of the current world frame timestamp and the next worldframe timestamp
-        try:
-            t_between_frames = ( timestamps[frame_idx]+timestamps[frame_idx+1] ) / 2.
-        except IndexError:
-            break
-        if gaze_timestamp <= t_between_frames:
-            positions_by_frame[frame_idx].append({'norm_pos':(data_point[0],data_point[1]), 'timestamp':data_point[4],'confidence':data_point[5]})
-            data_point = gaze_list.pop(0)
-            gaze_timestamp = data_point[4]
-        else:
-            frame_idx+=1
-
-    return positions_by_frame
-
-
-
-def is_pupil_rec_dir(data_dir):
-    if not os.path.isdir(data_dir):
+def is_pupil_rec_dir(rec_dir):
+    if not os.path.isdir(rec_dir):
         logger.error("No valid dir supplied")
         return False
-    required_files = ["info.csv", "gaze_positions.npy"]
-    for f in required_files:
-        if not os.path.isfile(os.path.join(data_dir,f)):
-            logger.debug("Did not find required file: %s in data folder %s" %(f, data_dir))
-            return False
-
-    logger.debug("%s contains %s and is therefore considered a valid rec dir."%(data_dir,required_files))
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+    try:
+        with open(meta_info_path) as info:
+            meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
+            info = meta_info["Capture Software Version"]
+    except:
+        logger.error("Could not read info.csv file: Not a valid Pupil recording.")
+        return False
     return True
 
-# backwards compatibility tools:
 
-def patch_meta_info(rec_dir):
-    #parse info.csv file
-
-    '''
-    This is how we need it:
-
-    Recording Name  2014_01_21
-    Start Date  21.01.2014
-    Start Time  11:42:24
-    Duration Time   00:00:29
-    World Camera Frames 710
-    World Camera Resolution 1280x720
-    Capture Software Version    v0.3.7
-    User    testing
-    Platform    Linux
-    Machine brosnan
-    Release 3.5.0-45-generic
-    Version #68~precise1-Ubuntu SMP Wed Dec 4 16:18:46 UTC 2013
-    '''
-    proper_names = ['Recording Name',
-                    'Start Date',
-                    'Start Time',
-                    'Duration Time',
-                    'World Camera Frames',
-                    'World Camera Resolution',
-                    'Capture Software Version',
-                    'User',
-                    'Platform',
-                    'Release',
-                    'Version']
-
-    with open(rec_dir + "/info.csv") as info:
-        meta_info = [line.strip().split('\t') for line in info.readlines() ]
-
-    for entry in meta_info:
-        for proper_name in proper_names:
-            if proper_name == entry[0]:
-                break
-            elif proper_name in entry[0]:
-                logger.info("Permanently updated info.csv field name: '%s' to '%s'."%(entry[0],proper_name))
-                entry[0]=proper_name
-                break
-
-    new_info = ''
-    for e in meta_info:
-        new_info += e[0]+'\t'+e[1]+'\n'
-
-    with open(rec_dir + "/info.csv",'w') as info:
-        info.write(new_info)
-
-def convert_gaze_pos(gaze_list,capture_version):
-    '''
-    util fn to update old gaze pos files to new coordsystem. UNTESTED!
-    '''
-    #lets make a copy here so that we are not making inplace edits of the passed array
-    gaze_list = gaze_list.copy()
-    if capture_version < .36:
-        logger.info("Gaze list is from old Recoding, I will update the data to work with new coordinate system.")
-        gaze_list[:,:4] += 1. #broadcasting
-        gaze_list[:,:4] /= 2. #broadcasting
-    return gaze_list
 
 
 def transparent_circle(img,center,radius,color,thickness):

@@ -190,7 +190,7 @@ class Offline_Marker_Detector(Plugin):
             if s.defined:
                 s.generate_heatmap(section)
 
-        # calc metrics:
+        # calc distirbution accross all surfaces.
         results = []
         for s in self.surfaces:
             gaze_on_srf  = s.gaze_on_srf_in_section(section)
@@ -214,8 +214,6 @@ class Offline_Marker_Detector(Plugin):
             heatmap[:,:,:3] = c_map
             s.metrics_texture = create_named_texture(heatmap.shape)
             update_named_texture(s.metrics_texture,heatmap)
-
-
 
 
     def update(self,frame,events):
@@ -395,6 +393,7 @@ class Offline_Marker_Detector(Plugin):
                 frame_no, ts, surface "name", "id" enter/exit
 
             for each surface:
+                fixations_on_name.csv
                 gaze_on_name_id.csv
                 positions_of_name_id.csv
 
@@ -445,7 +444,7 @@ class Offline_Marker_Detector(Plugin):
 
             for s in self.surfaces:
                 gaze_on_srf  = s.gaze_on_srf_in_section(section)
-                gaze_on_srf = set([gp["timestamp"] for gp in gaze_on_srf])
+                gaze_on_srf = set([gp['base']["timestamp"] for gp in gaze_on_srf])
                 not_on_any_srf -= gaze_on_srf
                 csv_writer.writerow( (s.name, len(gaze_on_srf)) )
 
@@ -493,21 +492,41 @@ class Offline_Marker_Detector(Plugin):
             # save gaze on srf as csv.
             with open(os.path.join(metrics_dir,'gaze_positions_on_surface'+surface_name+'.csv'),'wb') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                csv_writer.writerow(('world_frame_idx','world_timestamp','eye_timestamp','x_norm','y_norm','x_scaled','y_scaled','on_srf'))
+                csv_writer.writerow(('world_timestamp','world_frame_idx','gaze_timestamp','x_norm','y_norm','x_scaled','y_scaled','on_srf'))
                 for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
                     if in_mark <= idx <= out_mark:
                         if ref_srf_data is not None and ref_srf_data is not False:
                             for gp in s.gaze_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
-                                gp_x,gp_y = gp['norm_pos']
-                                on_srf = (0 <= gp_x <= 1) and (0 <= gp_y <= 1)
-                                csv_writer.writerow( (idx,ts,gp['timestamp'],gp_x,gp_y,gp_x*s.real_world_size['x'],gp_x*s.real_world_size['y'],on_srf) )
+                                csv_writer.writerow( (ts,idx,gp['base']['timestamp'],gp['norm_pos'][0],gp['norm_pos'][1],gp['norm_pos'][0]*s.real_world_size['x'],gp['norm_pos'][1]*s.real_world_size['y'],gp['on_srf']) )
 
-            logger.info("Saved surface positon data and gaze on surface data for '%s' with uid:'%s'"%(s.name,s.uid))
+
+            # # save fixation on srf as csv.
+            with open(os.path.join(metrics_dir,'fixations_on_surface'+surface_name+'.csv'),'wb') as csvfile:
+                csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','x_scaled','y_scaled','on_srf'))
+                fixations_on_surface = []
+                for idx,ref_srf_data in zip(range(len(self.g_pool.timestamps)),s.cache):
+                    if in_mark <= idx <= out_mark:
+                        if ref_srf_data is not None and ref_srf_data is not False:
+                            for f in s.fixations_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
+                                fixations_on_surface.append(f)
+
+                removed_dublicates = dict([(f['base']['id'],f) for f in fixations_on_surface]).values()
+                for f_on_s in removed_dublicates:
+                    f = f_on_s['base']
+                    f_x,f_y = f_on_s['norm_pos']
+                    f_on_srf = f_on_s['on_srf']
+                    csv_writer.writerow( (f['id'],f['timestamp'],f['duration'],f['start_frame_index'],f['end_frame_index'],f_x,f_y,f_x*s.real_world_size['x'],f_y*s.real_world_size['y'],f_on_srf) )
+
+
+            logger.info("Saved surface positon gaze and fixation data for '%s' with uid:'%s'"%(s.name,s.uid))
 
             if s.heatmap is not None:
                 logger.info("Saved Heatmap as .png file.")
                 cv2.imwrite(os.path.join(metrics_dir,'heatmap'+surface_name+'.png'),s.heatmap)
 
+
+        logger.info("Done exporting reference surface data.")
             # if s.detected and self.img is not None:
             #     #let save out the current surface image found in video
 

@@ -7,9 +7,9 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
+import os
+import csv
 import numpy as np
-from math import sqrt
 import cv2
 import logging
 from itertools import chain
@@ -17,8 +17,6 @@ from math import atan, tan
 from methods import denormalize
 from plugin import Plugin
 from pyglui import ui
-from gl_utils.utils import make_coord_system_pixel_based, draw_gl_polyline,\
-    draw_gl_polyline_norm
 from player_methods import transparent_circle
 # logging
 logger = logging.getLogger(__name__)
@@ -43,7 +41,6 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
     Terms
         + dispersion (spatial) = how much spatial movement is allowed within one fixation (in visual angular degrees or pixels)
         + duration (temporal) = what is the minimum time required for gaze data to be within dispersion threshold?
-        + cohesion (spatial+temporal) = is the cluster of fixations close together
 
     '''
     def __init__(self,g_pool,max_dispersion = 1.0,min_duration = 0.15,h_fov=78, v_fov=50,show_fixations = False):
@@ -75,6 +72,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         self.menu.append(ui.Slider('min_duration',self,min=0.0,step=0.05,max=1.0,label='duration threshold'))
         self.menu.append(ui.Slider('max_dispersion',self,min=0.0,step=0.05,max=3.0,label='dispersion threshold'))
         self.menu.append(ui.Button('Run fixation detector',self._classify))
+        self.menu.append(ui.Button('Export fixations',self.export_fixations))
         self.menu.append(ui.Switch('show_fixations',self,label='Show fixations'))
         self.menu.append(ui.Slider('h_fov',self,min=5,step=1,max=180,label='horizontal FOV of scene camera',setter=set_h_fov))
         self.menu.append(ui.Slider('v_fov',self,min=5,step=1,max=180,label='vertical FOV of scene camera',setter=set_v_fov))
@@ -100,10 +98,8 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         '''
         classify fixations
         '''
-        gaze_data = chain(*self.g_pool.gaze_positions_by_frame)
-        #filter out  below threshold confidence mesurements
-        gaze_data = filter(lambda g: g['confidence'] > self.g_pool.pupil_confidence_threshold, gaze_data)
 
+        gaze_data = list(chain(*self.g_pool.gaze_positions_by_frame))
 
 
         sample_threshold = self.min_duration * 3 *.3 #lets assume we need data for at least 30% of the duration
@@ -112,75 +108,147 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
 
 
         def dist_deg(p1,p2):
-            return sqrt(((p1[0]-p2[0])*self.h_fov)**2+((p1[1]-p2[1])*self.v_fov)**2)
+            return np.sqrt(((p1[0]-p2[0])*self.h_fov)**2+((p1[1]-p2[1])*self.v_fov)**2)
 
         fixations = []
-        fixation_support = [gaze_data.pop(0)]
-
-
-        while gaze_data:
+        try:
+            fixation_support = [gaze_data.pop(0)]
+        except IndexError:
+            logger.warning("This recording has no gaze data. Aborting")
+            return
+        while True:
             fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
             dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
 
-            if dispersion < dispersion_threshold:
+            if dispersion < dispersion_threshold and gaze_data:
                 #so far all samples inside the threshold, lets add a new canditate
-                fixation_support.append(gaze_data.pop(0))
+                fixation_support += [gaze_data.pop(0)]
             else:
-                #last added point will break dispersion threshold for current candite fixation. So we conclude sampling for this fixation
-                last_sample = fixation_support.pop(-1)
-                duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
-                if duration > duration_threshold and len(fixation_support) > sample_threshold:
-                    #long enough for fixation: we classifiy this fixation canditae as fixation
-                    fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
-                    dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
-                    new_fixation = {'id': len(fixations),'norm_pos':fixation_centroid,'gaze':fixation_support, 'duration':duration,'dispersion':dispersion, 'pix_dispersion':dispersion*self.pix_per_degree, 'start_timestamp':fixation_support[0]['timestamp']}
-                    fixations.append(new_fixation)
-                #start a new fixation candite
-                fixation_support = [last_sample]
+                if gaze_data:
+                    #last added point will break dispersion threshold for current candite fixation. So we conclude sampling for this fixation
+                    last_sample = fixation_support.pop(-1)
+                if fixation_support:
+                    duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
+                    if duration > duration_threshold and len(fixation_support) > sample_threshold:
+                        #long enough for fixation: we classifiy this fixation canditae as fixation
+                        #calulate charachter of fixation
+                        fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
+                        dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
+                        confidence = sum(g['confidence'] for g in fixation_support)/len(fixation_support)
 
+                        # avg pupil size  = mean of (mean of pupil size per gaze ) for all gaze points of support
+                        avg_pupil_size =  sum([sum([p['diameter'] for p in g['base']])/len(g['base']) for g in fixation_support])/len(fixation_support)
+                        new_fixation = {'id': len(fixations),
+                                        'norm_pos':fixation_centroid,
+                                        'gaze':fixation_support,
+                                        'duration':duration,
+                                        'dispersion':dispersion,
+                                        'start_frame_index':fixation_support[0]['index'],
+                                        'end_frame_index':fixation_support[-1]['index'],
+                                        'pix_dispersion':dispersion*self.pix_per_degree,
+                                        'timestamp':fixation_support[0]['timestamp'],
+                                        'pupil_diameter':avg_pupil_size,
+                                        'confidence':confidence}
+                        fixations.append(new_fixation)
+                if gaze_data:
+                    #start a new fixation candite
+                    fixation_support = [last_sample]
+                else:
+                    break
 
-        logger.debug("detected %s Fixations"%len(fixations))
-        self.fixations = fixations[:] #keep a copy because we destroy our list below.
+        self.fixations = fixations
+        #gather some statisics for debugging and feedback.
+        total_fixation_time  = sum([f['duration'] for f in fixations])
+        total_video_time = self.g_pool.timestamps[-1]- self.g_pool.timestamps[0]
+        fixation_count = len(fixations)
+        logger.info("detected %s Fixations. Total duration of fixations: %0.2fsec total time of video %0.2fsec "%(fixation_count,total_fixation_time,total_video_time))
+
 
         # now lets bin fixations into frames. Fixations may be repeated this way as they span muliple frames
         fixations_by_frame = [[] for x in self.g_pool.timestamps]
-        index = 0
-        f = fixations.pop(0)
-        while fixations:
-            try:
-                t = self.g_pool.timestamps[index]
-            except IndexError:
-                #reached end of ts list
-                break
-            if f['start_timestamp'] > t:
-                #fixation in the future, lets move forward in time.
-                index += 1
-            elif  f['start_timestamp']+f['duration'] > t:
-                # fixation during this frame
-                fixations_by_frame[index].append(f)
-                index += 1
-            else:
-                #fixation in the past, get new one and check again
-                f = fixations.pop(0)
+        for f in fixations:
+            for idx in range(f['start_frame_index'],f['end_frame_index']+1):
+                fixations_by_frame[idx].append(f)
 
-        self.fixations_by_frame = fixations_by_frame
+        self.g_pool.fixations_by_frame = fixations_by_frame
+
+
+    def export_fixations(self):
+        #todo
+
+        in_mark = self.g_pool.trim_marks.in_mark
+        out_mark = self.g_pool.trim_marks.out_mark
+
+
+        """
+        between in and out mark
+
+            fixation report:
+                - fixation detection method and parameters
+                - fixation count
+
+            fixation list:
+                id | start_timestamp | duration | start_frame_index | end_frame_index | dispersion | avg_pupil_size | confidence
+
+        """
+
+        if not self.fixations:
+            logger.warning('No fixations in this recording nothing to export')
+            return
+
+        for f in self.fixations:
+            if f['start_frame_index'] >= in_mark:
+                first_fixation = f
+                break
+        for f in self.fixations[::-1]:
+            if f['end_frame_index'] <= out_mark:
+                last_fixation = f
+                break
+
+        fixations_in_section = self.fixations[first_fixation['id']:last_fixation['id']+1]
+
+
+        metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
+        logger.info("exporting metrics to %s"%metrics_dir)
+        if os.path.isdir(metrics_dir):
+            logger.info("Will overwrite previous export for this section.")
+        else:
+            try:
+                os.mkdir(metrics_dir)
+            except:
+                logger.warning("Could not make metrics dir %s!"%metrics_dir)
+                return
+
+
+        with open(os.path.join(metrics_dir,'fixations.csv'),'wb') as csvfile:
+            csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','dispersion','avg_pupil_size','confidence'))
+            for f in fixations_in_section:
+                csv_writer.writerow( ( f['id'],f['timestamp'],f['duration'],f['start_frame_index'],f['end_frame_index'],f['norm_pos'][0],f['norm_pos'][1],f['dispersion'],f['pupil_diameter'],f['confidence'] ) )
+            logger.info("Created 'fixations.csv' file.")
+
+        with open(os.path.join(metrics_dir,'fixation_report.csv'),'wb') as csvfile:
+            csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            csv_writer.writerow(('fixation classifier','Dispersion_Duration'))
+            csv_writer.writerow(('max_dispersion','%0.3f deg'%self.max_dispersion) )
+            csv_writer.writerow(('min_duration','%0.3f sec'%self.min_duration) )
+            csv_writer.writerow((''))
+            csv_writer.writerow(('fixation_count',len(fixations_in_section)))
+            logger.info("Created 'fixation_report.csv' file.")
+
 
 
     def update(self,frame,events):
-        events['fixations'] = self.fixations_by_frame[frame.index]
+        events['fixations'] = self.g_pool.fixations_by_frame[frame.index]
         if self.show_fixations:
-            self.fixations_to_display = self.fixations_by_frame[frame.index]
-            for f in self.fixations_to_display:
+            for f in self.g_pool.fixations_by_frame[frame.index]:
                 x = int(f['norm_pos'][0]*self.img_size[0])
                 y = int((1-f['norm_pos'][1])*self.img_size[1])
                 transparent_circle(frame.img, (x,y), radius=f['pix_dispersion'], color=(.5, .2, .6, .7), thickness=-1)
-                cv2.putText(frame.img,'%i'%f['id'],(x,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,100,100))
+                cv2.putText(frame.img,'%i'%f['id'],(x+20,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,150,100))
+                # cv2.putText(frame.img,'%i - %i'%(f['start_frame_index'],f['end_frame_index']),(x,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,150,100))
 
 
-    def gl_display(self):
-        pass
-        # for f in self.fixations_to_display:
-            # print f['id'],f['norm_pos']
 
     def get_init_dict(self):
         return {'max_dispersion': self.max_dispersion, 'min_duration':self.min_duration, 'h_fov':self.h_fov, 'v_fov': self.v_fov,'show_fixations':self.show_fixations}

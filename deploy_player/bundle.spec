@@ -3,12 +3,6 @@
 
 import platform
 
-from compiler import build_extensions
-logger.info("Building cython extension modules:")
-build_extensions()
-logger.info("Finished Building cython extension modules")
-
-
 av_hidden_imports = ['av.format','av.packet','av.frame','av.stream','av.plane','av.audio.plane','av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane']
 
 
@@ -38,7 +32,7 @@ if platform.system() == 'Darwin':
                    a.binaries - libSystem,
                    a.zipfiles,
                    a.datas,
-                   [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.0.2/lib/libglfw3.dylib','BINARY')],
+                   [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.1.1/lib/libglfw3.dylib','BINARY')],                   [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
                    strip=None,

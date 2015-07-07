@@ -18,7 +18,9 @@ from distutils.core import setup
 from distutils.command import clean
 from Cython.Build import cythonize
 import os,sys
+#logging
 import logging
+logger = logging.getLogger(__name__)
 
 
 def build_extension_inplace(dir,ext):
@@ -38,14 +40,15 @@ def build_extension_inplace(dir,ext):
 
 def build_all_extensions():
     #find all pyx src files
-    pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
+    pupil_base_dir = os.path.abspath(__file__).rsplit('shared_modules', 1)[0]
     for root, dirs, files in os.walk(pupil_base_dir):
         for file in files:
             if file.endswith(".pyx"):
-                 build_extension_inplace(root, file)
+                print file
+                build_extension_inplace(root, file)
 
 def build_extensions():
-    if True:
+    if False:
         #silence the output
         old_stdout = sys.stdout
         sys.stdout = open(os.devnull,'w')
@@ -59,4 +62,8 @@ def build_extensions():
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger('pyx_compiler')
+    logger.info("Finding and compiling all exentions inside pupil_src dir.")
     build_extensions()
+    logger.info('Completed comilation of pyx files.')

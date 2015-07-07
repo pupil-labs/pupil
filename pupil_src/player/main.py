@@ -9,14 +9,13 @@
 '''
 
 import sys, os,platform
+from glob import glob
 from time import time, sleep
 from copy import deepcopy
-
-#bundle relevant imports
 try:
     from billiard import freeze_support
 except:
-    from multiprocessing import freeze_support
+    from multiprocessing import reeze_support
 
 if getattr(sys, 'frozen', False):
     user_dir = os.path.expanduser(os.path.join('~','pupil_player_settings'))
@@ -43,7 +42,7 @@ if not os.path.isdir(user_dir):
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
-logger.setLevel(logging.INFO) # <-- use this to set verbosity
+logger.setLevel(logging.WARNING) # <-- use this to set verbosity
 #since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
     if __name__ == '__main__': #clear log if main
@@ -55,7 +54,7 @@ else:
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
+ch.setLevel(logging.DEBUG)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('Player: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -77,22 +76,25 @@ else:
     y_scroll_factor = 1.0
 
 #imports
-from file_methods import Persistent_Dict
+from file_methods import Persistent_Dict,load_object
 import numpy as np
 
 #display
 from glfw import *
+# check versions for our own depedencies as they are fast-changing
+from pyglui import __version__ as pyglui_version
+assert pyglui_version >= '0.3'
 from pyglui import ui,graph,cygl
-from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
+from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture,destroy_named_texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
-
+from OpenGL.GL import glClearColor
 #capture
 from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize
-from player_methods import correlate_pupil_data,correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
+from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current
 
 #monitoring
 import psutil
@@ -127,19 +129,14 @@ plugin_by_name = dict(zip(name_by_index,available_plugins))
 class Global_Container(object):
     pass
 
-def main():
+def session(rec_dir):
 
     # Callback functions
     def on_resize(window,w, h):
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(window)
-        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-        w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
         g_pool.gui.collect_menus()
         graph.adjust_size(w,h)
         adjust_gl_view(w,h)
-        glfwMakeContextCurrent(active_window)
         for p in g_pool.plugins:
             p.on_window_resize(window,w,h)
 
@@ -148,7 +145,6 @@ def main():
 
     def on_char(window,char):
         g_pool.gui.update_char(char)
-
 
     def on_button(window,button, action, mods):
         g_pool.gui.update_button(button,action,mods)
@@ -160,126 +156,97 @@ def main():
 
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
-        x,y = x*hdpi_factor,y*hdpi_factor
-        g_pool.gui.update_mouse(x,y)
+        g_pool.gui.update_mouse(x*hdpi_factor,y*hdpi_factor)
 
     def on_scroll(window,x,y):
         g_pool.gui.update_scroll(x,y*y_scroll_factor)
 
 
-    def on_close(window):
-        glfwSetWindowShouldClose(main_window,True)
-        logger.debug('Process closing from window')
-
-
-    try:
-        rec_dir = sys.argv[1]
-    except:
-        #for dev, supply hardcoded dir:
-        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording/'
-        if os.path.isdir(rec_dir):
-            logger.debug("Dev option: Using hadcoded data dir.")
-        else:
-            if getattr(sys, 'frozen', False):
-                logger.warning("You did not supply a data directory when you called this script! \
-                   \nPlease drag a Pupil recoding directory onto the launch icon.")
+    def on_drop(window,count,paths):
+        for x in range(count):
+            new_rec_dir =  paths[x]
+            if is_pupil_rec_dir(new_rec_dir):
+                logger.debug("Starting new session with '%s'"%new_rec_dir)
+                global rec_dir
+                rec_dir = new_rec_dir
+                glfwSetWindowShouldClose(window,True)
             else:
-                logger.warning("You did not supply a data directory when you called this script! \
-                       \nPlease supply a Pupil recoding directory as first arg when calling Pupil Player.")
-            return
-
-    if not is_pupil_rec_dir(rec_dir):
-        logger.error("You did not supply a dir with the required files inside.")
-        return
+                logger.error("'%s' is not a valid pupil recording"%new_rec_dir)
 
 
-    #backwards compatibility fn.
-    patch_meta_info(rec_dir)
+    video_path = glob(os.path.join(rec_dir,"world.*"))[0]
+    timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
+    pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
     #parse info.csv file
-    meta_info_path = rec_dir + "info.csv"
+    meta_info_path = os.path.join(rec_dir,"info.csv")
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
-
     rec_version = read_rec_version(meta_info)
-    if rec_version < VersionFormat('0.4'):
-        video_path = rec_dir + "world.avi"
-        timestamps_path = rec_dir + "timestamps.npy"
+    if rec_version >= VersionFormat('0.5'):
+        pass
+    elif rec_version >= VersionFormat('0.4'):
+        update_recording_0v4_to_current(rec_dir)
+    elif rec_version >= VersionFormat('0.3'):
+        update_recording_0v3_to_current(rec_dir)
+        timestamps_path = os.path.join(rec_dir, "timestamps.npy")
+
     else:
-        video_path = rec_dir + "world.mkv"
-        timestamps_path = rec_dir + "world_timestamps.npy"
+        logger.Error("This recording is to old. Sorry.")
+        return
 
-
-    gaze_positions_path = rec_dir + "gaze_positions.npy"
-    pupil_positions_path = rec_dir + "pupil_positions.npy"
-    #load gaze information
-    gaze_list = np.load(gaze_positions_path)
-    timestamps = np.load(timestamps_path)
-
-    #correlate data
-    if rec_version < VersionFormat('0.4'):
-        gaze_positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
-        pupil_positions_by_frame = [[]for x in range(len(timestamps))]
-    else:
-        pupil_list = np.load(pupil_positions_path)
-        gaze_positions_by_frame = correlate_gaze(gaze_list,timestamps)
-        pupil_positions_by_frame = correlate_pupil_data(pupil_list,timestamps)
 
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-
     if isinstance(cap,FakeCapture):
         logger.error("could not start capture.")
         return
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
-    print session_settings.get("version",VersionFormat('0.0'))
     if session_settings.get("version",VersionFormat('0.0')) < get_version(version_file):
         logger.info("Session setting are from older version of this app. I will not use those.")
         session_settings.clear()
 
-
     width,height = session_settings.get('window_size',cap.frame_size)
-    window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
-
-
-    # Initialize glfw
-    glfwInit()
+    window_pos = session_settings.get('window_position',(0,0))
     main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "+ rec_dir.split(os.path.sep)[-1], None, None)
     glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfwMakeContextCurrent(main_window)
-
     cygl.utils.init()
 
 
     # Register callbacks main_window
-    glfwSetWindowSizeCallback(main_window,on_resize)
-    glfwSetWindowCloseCallback(main_window,on_close)
+    glfwSetFramebufferSizeCallback(main_window,on_resize)
     glfwSetKeyCallback(main_window,on_key)
     glfwSetCharCallback(main_window,on_char)
     glfwSetMouseButtonCallback(main_window,on_button)
     glfwSetCursorPosCallback(main_window,on_pos)
     glfwSetScrollCallback(main_window,on_scroll)
+    glfwSetDropCallback(main_window,on_drop)
 
 
-    # create container for globally scoped vars (within world)
+    # load pupil_positions, gaze_positions
+    pupil_data = load_object(pupil_data_path)
+    pupil_list = pupil_data['pupil_positions']
+    gaze_list = pupil_data['gaze_positions']
+
+    # create container for globally scoped vars
     g_pool = Global_Container()
     g_pool.app = 'player'
     g_pool.version = get_version(version_file)
     g_pool.capture = cap
-    g_pool.timestamps = timestamps
-    g_pool.pupil_positions_by_frame = pupil_positions_by_frame
-    g_pool.gaze_positions_by_frame = gaze_positions_by_frame
-    # g_pool.fixations_by_frame = [[] for x in timestamps] #let this be filled by the fixation detector plugin
+    g_pool.timestamps = np.load(timestamps_path)
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
     g_pool.rec_version = rec_version
     g_pool.meta_info = meta_info
-    g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
+    g_pool.pupil_positions_by_frame = correlate_data(pupil_list,g_pool.timestamps)
+    g_pool.gaze_positions_by_frame = correlate_data(gaze_list,g_pool.timestamps)
+    g_pool.fixations_by_frame = [[] for x in g_pool.timestamps] #populated by the fixation detector plugin
 
     def next_frame(_):
         try:
@@ -309,9 +276,8 @@ def main():
     def purge_plugins():
         for p in g_pool.plugins:
             if p.__class__ in user_launchable_plugins:
-                p.alive=False
+                p.alive = False
         g_pool.plugins.clean()
-
 
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
@@ -327,8 +293,6 @@ def main():
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
-    g_pool.main_menu.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
-
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
     g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey=GLFW_KEY_SPACE)
@@ -355,7 +319,7 @@ def main():
     g_pool.gui.configuration = session_settings.get('ui_config',{})
 
     #trigger on_resize
-    on_resize(main_window, *glfwGetWindowSize(main_window))
+    on_resize(main_window, *glfwGetFramebufferSize(main_window))
 
 
     # gl_state settings
@@ -411,7 +375,7 @@ def main():
 
         if update_graph:
             #update performace graphs
-            for p in  events['gaze_positions']:
+            for p in  events['pupil_positions']:
                 pupil_graph.add(p['confidence'])
 
             t = new_frame.timestamp
@@ -458,13 +422,11 @@ def main():
             pass
         timestamp = time()
 
-
         glfwSwapBuffers(main_window)
         glfwPollEvents()
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['gui_scale'] = g_pool.gui.scale
-    session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
@@ -477,19 +439,103 @@ def main():
     g_pool.plugins.clean()
 
     cap.close()
+    g_pool.gui.terminate()
+    destroy_named_texture(g_pool.image_tex)
     glfwDestroyWindow(main_window)
-    glfwTerminate()
-    logger.debug("Process done")
+
+
+
+def show_no_rec_window():
+    from pyglui.pyfontstash import fontstash
+    from pyglui.ui import get_roboto_font_path
+
+    def on_drop(window,count,paths):
+        for x in range(count):
+            new_rec_dir =  paths[x]
+            if is_pupil_rec_dir(new_rec_dir):
+                logger.debug("Starting new session with '%s'"%new_rec_dir)
+                global rec_dir
+                rec_dir = new_rec_dir
+                glfwSetWindowShouldClose(window,True)
+            else:
+                logger.error("'%s' is not a valid pupil recording"%new_rec_dir)
+
+    # load session persistent settings
+    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
+    if session_settings.get("version",VersionFormat('0.0')) < get_version(version_file):
+        logger.info("Session setting are from older version of this app. I will not use those.")
+        session_settings.clear()
+    w,h = session_settings.get('window_size',(1280,720))
+    window_pos = session_settings.get('window_position',(0,0))
+
+    glfwWindowHint(GLFW_RESIZABLE,0)
+    window = glfwCreateWindow(w, h,'Pupil Player')
+    glfwWindowHint(GLFW_RESIZABLE,1)
+
+    glfwMakeContextCurrent(window)
+    glfwSetWindowPos(window,window_pos[0],window_pos[1])
+    glfwSetDropCallback(window,on_drop)
+
+    adjust_gl_view(w,h)
+    glfont = fontstash.Context()
+    glfont.add_font('roboto',get_roboto_font_path())
+    glfont.set_align_string(v_align="center",h_align="middle")
+    glfont.set_color_float((0.2,0.2,0.2,0.9))
+    basic_gl_setup()
+    glClearColor(0.5,.5,0.5,0.0)
+    text = 'Drop a recoding directory onto this window.'
+    tip = '(Tip: You can drop a recording directory onto the app icon.)'
+    # text = "Please supply a Pupil recoding directory as first arg when calling Pupil Player."
+    while not glfwWindowShouldClose(window):
+        clear_gl_screen()
+        glfont.set_blur(10.5)
+        glfont.set_color_float((0.0,0.0,0.0,1.))
+        glfont.set_size(w/25.)
+        glfont.draw_text(w/2,.3*h,text)
+        glfont.set_size(w/30.)
+        glfont.draw_text(w/2,.4*h,tip)
+        glfont.set_blur(0.96)
+        glfont.set_color_float((1.,1.,1.,1.))
+        glfont.set_size(w/25.)
+        glfont.draw_text(w/2,.3*h,text)
+        glfont.set_size(w/30.)
+        glfont.draw_text(w/2,.4*h,tip)
+        glfwSwapBuffers(window)
+        glfwPollEvents()
+
+    session_settings['window_position'] = glfwGetWindowPos(window)
+    session_settings['version'] = get_version(version_file)
+    session_settings.close()
+    del glfont
+    glfwDestroyWindow(window)
+
 
 
 if __name__ == '__main__':
     freeze_support()
-    if 1:
-        main()
-    else:
-        import cProfile,subprocess,os
-        cProfile.runctx("main()",{},locals(),"player.pstats")
-        loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
-        gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-        subprocess.call("python "+gprof2dot_loc+" -f pstats player.pstats | dot -Tpng -o player_cpu_time.png", shell=True)
-        print "created cpu time graph for pupil player . Please check out the png next to the main.py file"
+    try:
+        rec_dir = os.path.expanduser(sys.argv[1])
+    except:
+        #for dev, supply hardcoded dir:
+        rec_dir = '/Users/mkassner/Desktop/Marker_Tracking_Demo_Recording'
+        if os.path.isdir(rec_dir):
+            logger.debug("Dev option: Using hardcoded data dir.")
+        else:
+            logger.warning("You did not supply a data directory when you called this script!")
+    glfwInit()
+    while rec_dir is not None:
+        if not is_pupil_rec_dir(rec_dir):
+            rec_dir = None
+            show_no_rec_window()
+        else:
+            this_session_dir = rec_dir
+            rec_dir = None
+            session(this_session_dir)
+    glfwTerminate()
+
+    # import cProfile,subprocess,os
+    # cProfile.runctx("main()",{},locals(),"player.pstats")
+    # loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
+    # gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
+    # subprocess.call("python "+gprof2dot_loc+" -f pstats player.pstats | dot -Tpng -o player_cpu_time.png", shell=True)
+    # print "created cpu time graph for pupil player . Please check out the png next to the main.py file"

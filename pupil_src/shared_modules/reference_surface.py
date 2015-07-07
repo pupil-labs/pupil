@@ -10,7 +10,7 @@
 
 import numpy as np
 import cv2
-from gl_utils import adjust_gl_view,clear_gl_screen,draw_gl_point,basic_gl_setup,cvmat_to_glmat,make_coord_system_norm_based
+from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup,cvmat_to_glmat,make_coord_system_norm_based
 from gl_utils.trackball import Trackball
 from glfw import *
 from OpenGL.GL import *
@@ -433,7 +433,7 @@ class Reference_Surface(object):
             draw_coordinate_system(l=self.real_world_size['x'])
             glPushMatrix()
             glScalef(self.real_world_size['x'],self.real_world_size['y'],1)
-            draw_gl_polyline([[0,0],[0,1],[1,1],[1,0]],color = RGBA(.5,.3,.1,.5),thickness=3)
+            draw_polyline([[0,0],[0,1],[1,1],[1,0]],color = RGBA(.5,.3,.1,.5),thickness=3)
             glPopMatrix()
             # Draw the world window as projected onto the plane using the homography mapping
             glPushMatrix()
@@ -443,7 +443,7 @@ class Reference_Surface(object):
             glMultMatrixf(m)
             glTranslatef(0,0,-.01)
             draw_named_texture(world_tex_id)
-            draw_gl_polyline([[0,0],[0,1],[1,1],[1,0]],color = RGBA(.5,.3,.6,.5),thickness=3)
+            draw_polyline([[0,0],[0,1],[1,1],[1,0]],color = RGBA(.5,.3,.6,.5),thickness=3)
             glPopMatrix()
 
             # Draw the camera frustum and origin using the 3d tranformation obtained from solvepnp

@@ -11,7 +11,7 @@
 import os
 import cv2
 import numpy as np
-from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_point_norm,basic_gl_setup
+from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 from methods import normalize
 import audio
 
@@ -173,12 +173,10 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
     def calculate(self):
         self.calculated = True
-        camera_matrix, dist_coefs = _calibrate_camera(np.asarray(self.img_points),
-                                                    np.asarray(self.obj_points),
-                                                    (self.img_shape[1], self.img_shape[0]))
+        rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(np.array(self.obj_points), np.array(self.img_points),self.g_pool.capture.frame_size)
+        logger.info("Calibrated Camera, RMS:%s"%rms)
         np.save(os.path.join(self.g_pool.user_dir,'camera_matrix.npy'), camera_matrix)
         np.save(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"), dist_coefs)
-        np.save(os.path.join(self.g_pool.user_dir,"camera_resolution.npy"), np.array([self.img_shape[1], self.img_shape[0]]))
         audio.say("Camera calibrated. Calibration saved to user folder")
         logger.info("Camera calibrated. Calibration saved to user folder")
 
@@ -197,7 +195,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
                 self.button.status_text = "%i to go"%(self.count)
 
 
-        if not self.count and not self.calculated:
+        if self.count<=0 and not self.calculated:
             self.calculate()
             self.button.status_text = ''
 
@@ -258,15 +256,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             self.close_window()
         self.deinit_gui()
 
-
-# shared helper functions for detectors private to the module
-def _calibrate_camera(img_pts, obj_pts, img_size):
-    # generate pattern size
-    camera_matrix = np.zeros((3,3))
-    dist_coef = np.zeros(4)
-    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_pts, img_pts,
-                                                    img_size, camera_matrix, dist_coef)
-    return camera_matrix, dist_coefs
 
 def _gen_pattern_grid(size=(4,11)):
     pattern_grid = []

@@ -10,7 +10,7 @@
 
 from OpenGL.GL import *
 from pyglui.cygl.utils import RGBA,draw_points,draw_polyline
-from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS
+from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS,glfwGetFramebufferSize
 from plugin import Plugin
 
 import logging
@@ -31,6 +31,7 @@ class Trim_Marks(Plugin):
         self.drag_out = False
         #display layout
         self.padding = 20. #in sceen pixel
+        self.window_size = 0,0
 
     @property
     def in_mark(self):
@@ -91,7 +92,10 @@ class Trim_Marks(Plugin):
         """
         gets called when the user clicks in the window screen
         """
+        hdpi_factor = float(glfwGetFramebufferSize(glfwGetCurrentContext())[0]/glfwGetWindowSize(glfwGetCurrentContext())[0])
         pos = glfwGetCursorPos(glfwGetCurrentContext())
+        pos = pos[0]*hdpi_factor,pos[1]*hdpi_factor
+
         #drag the seek point
         if action == GLFW_PRESS:
             screen_in_mark_pos = self.bar_space_to_screen((self.in_mark,0))

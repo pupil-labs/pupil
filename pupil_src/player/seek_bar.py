@@ -8,11 +8,12 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from gl_utils import draw_gl_polyline,draw_gl_point
+from pyglui.cygl.utils import draw_polyline,draw_points,RGBA
+
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 
-from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS
+from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS,glfwGetFramebufferSize
 from plugin import Plugin
 
 import logging
@@ -33,12 +34,13 @@ class Seek_Bar(Plugin):
         self.was_playing = True
         #display layout
         self.padding = 20. #in sceen pixel
+        self.window_size = 0,0
 
     def init_gui(self):
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 
     def on_window_resize(self,window,w,h):
-        self.window_size = glfwGetWindowSize(glfwGetCurrentContext())
+        self.window_size = w,h
         self.h_pad = self.padding * self.frame_count/float(w)
         self.v_pad = self.padding * 1./h
 
@@ -62,7 +64,9 @@ class Seek_Bar(Plugin):
         """
         gets called when the user clicks in the window screen
         """
+        hdpi_factor = float(glfwGetFramebufferSize(glfwGetCurrentContext())[0]/glfwGetWindowSize(glfwGetCurrentContext())[0])
         pos = glfwGetCursorPos(glfwGetCurrentContext())
+        pos = pos[0]*hdpi_factor,pos[1]*hdpi_factor
         #drag the seek point
         if action == GLFW_PRESS:
             screen_seek_pos = self.seek_bar_to_screen((self.current_frame_index,0))
@@ -115,10 +119,10 @@ class Seek_Bar(Plugin):
             color1 = (.25,.8,.8,.5)
             color2 = (.25,.8,.8,1.)
 
-        draw_gl_polyline( [(0,0),(self.current_frame_index,0)],color=color1)
-        draw_gl_polyline( [(self.current_frame_index,0),(self.frame_count,0)],color=(.5,.5,.5,.5))
-        draw_gl_point((self.current_frame_index,0),color=color1,size=40)
-        draw_gl_point((self.current_frame_index,0),color=color2,size=10)
+        draw_polyline(verts=[(0,0),(self.current_frame_index,0)],color=RGBA(*color1))
+        draw_polyline(verts=[(self.current_frame_index,0),(self.frame_count,0)],color=RGBA(.5,.5,.5,.5))
+        draw_points([(self.current_frame_index,0)],color=RGBA(*color1),size=40)
+        draw_points([(self.current_frame_index,0)],color=RGBA(*color2),size=10)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
