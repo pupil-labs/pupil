@@ -11,11 +11,14 @@
 import sys, os, platform
 from ctypes import c_bool, c_double
 
+forking_enable = lambda _: _ #dummy fn
+
 if platform.system() == 'Darwin':
-    from billiard import Process, Pipe, Queue, Value, freeze_support, forking_enable
+    from billiard import Process, Pipe, Queue, Value, freeze_support
+    if getattr(sys, 'frozen', False):
+        from billiard import forking_enable
 else:
     from multiprocessing import Process, Pipe, Queue, Value, freeze_support
-    forking_enable = lambda _: _ #dummy fn
 
 if getattr(sys, 'frozen', False):
     # Specifiy user dirs.
