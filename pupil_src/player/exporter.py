@@ -18,6 +18,7 @@ if __name__ == '__main__':
 
 import os
 from time import time
+from glob import glob
 import cv2
 import numpy as np
 from video_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
@@ -68,7 +69,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
-    video_path = os.path.join(rec_dir,"world.mkv")
+    video_path = glob(os.path.join(rec_dir,"world.*"))[0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
@@ -80,7 +81,6 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
         update_recording_0v4_to_current(rec_dir)
     elif rec_version >= VersionFormat('0.3'):
         update_recording_0v3_to_current(rec_dir)
-        video_path = os.path.join(rec_dir,"world.avi")
         timestamps_path = os.path.join(rec_dir, "timestamps.npy")
     else:
         logger.Error("This recording is to old. Sorry.")
