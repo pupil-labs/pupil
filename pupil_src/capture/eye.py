@@ -164,7 +164,6 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     g_pool.flip = session_settings.get('flip',False)
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
-    g_pool.window_size = session_settings.get('window_size',1.)
     g_pool.display_mode = session_settings.get('display_mode','camera_image')
     g_pool.display_mode_info_text = {'camera_image': "Raw eye camera image. This uses the least amount of CPU power",
                                 'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be a small as possible but big enough to capture to pupil in its movements",
@@ -190,37 +189,24 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
 
 
-    window_pos = session_settings.get('window_position',window_position_default)
-    width,height = session_settings.get('window_size',(frame.width, frame.height))
-
     # Initialize glfw
     glfwInit()
     if g_pool.binocular:
         title = "Binocular eye %s"%eye_id
     else:
         title = 'Eye'
+    width,height = session_settings.get('window_size',(frame.width, frame.height))
     main_window = glfwCreateWindow(width,height, title, None, None)
-
+    window_pos = session_settings.get('window_position',window_position_default)
+    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfwMakeContextCurrent(main_window)
     cygl_init()
-
-    # Register callbacks main_window
-    glfwSetFramebufferSizeCallback(main_window,on_resize)
-    glfwSetWindowCloseCallback(main_window,on_close)
-    glfwSetKeyCallback(main_window,on_key)
-    glfwSetCharCallback(main_window,on_char)
-    glfwSetMouseButtonCallback(main_window,on_button)
-    glfwSetCursorPosCallback(main_window,on_pos)
-    glfwSetScrollCallback(main_window,on_scroll)
 
     # gl_state settings
     basic_gl_setup()
     g_pool.image_tex = create_named_texture(frame.img.shape)
     update_named_texture(g_pool.image_tex,frame.img)
-
-    # refresh speed settings
     glfwSwapInterval(0)
-    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
 
 
     #setup GUI
@@ -235,23 +221,29 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     g_pool.display_mode_info = ui.Info_Text(g_pool.display_mode_info_text[g_pool.display_mode])
     general_settings.append(g_pool.display_mode_info)
     g_pool.sidebar.append(general_settings)
-
     g_pool.gui.append(g_pool.sidebar)
     g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
-
-
     # let the camera add its GUI
     g_pool.capture.init_gui(g_pool.sidebar)
-
     # let detector add its GUI
     pupil_detector.init_gui(g_pool.sidebar)
+
+    # Register callbacks main_window
+    glfwSetFramebufferSizeCallback(main_window,on_resize)
+    glfwSetWindowCloseCallback(main_window,on_close)
+    glfwSetKeyCallback(main_window,on_key)
+    glfwSetCharCallback(main_window,on_char)
+    glfwSetMouseButtonCallback(main_window,on_button)
+    glfwSetCursorPosCallback(main_window,on_pos)
+    glfwSetScrollCallback(main_window,on_scroll)
+
+    #set the last saved window size
+    on_resize(main_window, *glfwGetWindowSize(main_window))
+
 
     # load last gui configuration
     g_pool.gui.configuration = session_settings.get('ui_config',{})
 
-
-    #set the last saved window size
-    on_resize(main_window, *glfwGetWindowSize(main_window))
 
     #set up performance graphs
     pid = os.getpid()

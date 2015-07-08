@@ -216,17 +216,6 @@ def session(rec_dir):
     glfwMakeContextCurrent(main_window)
     cygl.utils.init()
 
-
-    # Register callbacks main_window
-    glfwSetFramebufferSizeCallback(main_window,on_resize)
-    glfwSetKeyCallback(main_window,on_key)
-    glfwSetCharCallback(main_window,on_char)
-    glfwSetMouseButtonCallback(main_window,on_button)
-    glfwSetCursorPosCallback(main_window,on_pos)
-    glfwSetScrollCallback(main_window,on_scroll)
-    glfwSetDropCallback(main_window,on_drop)
-
-
     # load pupil_positions, gaze_positions
     pupil_data = load_object(pupil_data_path)
     pupil_list = pupil_data['pupil_positions']
@@ -284,23 +273,19 @@ def session(rec_dir):
     g_pool.main_menu = ui.Growing_Menu("Settings",pos=(-350,20),size=(300,400))
     g_pool.main_menu.append(ui.Button("quit",lambda: on_close(None)))
     g_pool.main_menu.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
-
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
-
     g_pool.main_menu.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
-
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
     g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey=GLFW_KEY_SPACE)
     g_pool.play_button.on_color[:] = (0,1.,.0,.8)
     g_pool.forward_button = ui.Thumb('forward',getter = lambda: False,setter= next_frame, hotkey=GLFW_KEY_RIGHT)
     g_pool.backward_button = ui.Thumb('backward',getter = lambda: False, setter = prev_frame, hotkey=GLFW_KEY_LEFT)
     g_pool.quickbar.extend([g_pool.play_button,g_pool.forward_button,g_pool.backward_button])
-
     g_pool.gui.append(g_pool.quickbar)
     g_pool.gui.append(g_pool.main_menu)
 
@@ -316,11 +301,19 @@ def session(rec_dir):
             g_pool.trim_marks = p
             break
 
-    g_pool.gui.configuration = session_settings.get('ui_config',{})
 
+    # Register callbacks main_window
+    glfwSetFramebufferSizeCallback(main_window,on_resize)
+    glfwSetKeyCallback(main_window,on_key)
+    glfwSetCharCallback(main_window,on_char)
+    glfwSetMouseButtonCallback(main_window,on_button)
+    glfwSetCursorPosCallback(main_window,on_pos)
+    glfwSetScrollCallback(main_window,on_scroll)
+    glfwSetDropCallback(main_window,on_drop)
     #trigger on_resize
     on_resize(main_window, *glfwGetFramebufferSize(main_window))
 
+    g_pool.gui.configuration = session_settings.get('ui_config',{})
 
     # gl_state settings
     basic_gl_setup()

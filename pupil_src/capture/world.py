@@ -180,19 +180,52 @@ def world(g_pool,cap_src,cap_size):
         g_pool.gui.collect_menus()
 
 
-    def get_scale():
-        return g_pool.gui.scale
 
-
-    width,height = session_settings.get('window_size',(frame.width, frame.height))
-    window_pos = session_settings.get('window_position',window_position_default)
-
-
-    # Initialize glfw
+    #window and gl setup
     glfwInit()
+    width,height = session_settings.get('window_size',(frame.width, frame.height))
     main_window = glfwCreateWindow(width,height, "World")
+    window_pos = session_settings.get('window_position',window_position_default)
+    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfwMakeContextCurrent(main_window)
     cygl.utils.init()
+
+    #setup GUI
+    g_pool.gui = ui.UI()
+    g_pool.gui.scale = session_settings.get('gui_scale',1)
+    g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-350,0),size=(0,0),header_pos='left')
+    general_settings = ui.Growing_Menu('General')
+    general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface size'))
+    general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
+    general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
+                                        labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
+                                        setter= open_plugin, getter=lambda: "Select to load"))
+    g_pool.sidebar.append(general_settings)
+    advanced_settings = ui.Growing_Menu('Advanced')
+    advanced_settings.append(ui.Selector('update_textures',g_pool,label="Update display",selection=range(3),labels=('No update','Gray','Color')))
+    advanced_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
+    advanced_settings.append(ui.Button('Set timebase to 0',reset_timebase))
+    advanced_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
+    general_settings.append(advanced_settings)
+    g_pool.calibration_menu = ui.Growing_Menu('Calibration')
+    g_pool.calibration_menu.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
+                                        labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
+                                        setter= set_calibration_plugin,label='Method'))
+    g_pool.sidebar.append(g_pool.calibration_menu)
+    g_pool.gui.append(g_pool.sidebar)
+    g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
+    g_pool.gui.append(g_pool.quickbar)
+    g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
+    g_pool.capture.init_gui(g_pool.sidebar)
+
+    #plugins that are loaded based on user settings from previous session
+    g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
+
+    #only needed for the gui to show the loaded calibration type
+    for p in g_pool.plugins:
+        if p.base_class_name == 'Calibration_Plugin':
+            g_pool.active_calibration_plugin =  p.__class__
+            break
 
     # Register callbacks main_window
     glfwSetFramebufferSizeCallback(main_window,on_resize)
@@ -211,52 +244,11 @@ def world(g_pool,cap_src,cap_size):
 
     # refresh speed settings
     glfwSwapInterval(0)
-    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
 
-
-    #setup GUI
-    g_pool.gui = ui.UI()
-    g_pool.gui.scale = session_settings.get('gui_scale',1)
-    g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-350,0),size=(0,0),header_pos='left')
-    general_settings = ui.Growing_Menu('General')
-    general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface size'))
-    general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
-    general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
-                                        labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
-                                        setter= open_plugin, getter=lambda: "Select to load"))
-    g_pool.sidebar.append(general_settings)
-    advanced_settings = ui.Growing_Menu('Advanced')
-    advanced_settings.append(ui.Selector('update_textures',g_pool,label="Update display",selection=range(3),labels=('No update','Gray','Color')))
-    advanced_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
-    advanced_settings.append(ui.Button('Set timebase to 0',reset_timebase))
-    advanced_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
-    general_settings.append(advanced_settings)
-
-    g_pool.calibration_menu = ui.Growing_Menu('Calibration')
-    g_pool.calibration_menu.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
-                                        labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
-                                        setter= set_calibration_plugin,label='Method'))
-    g_pool.sidebar.append(g_pool.calibration_menu)
-
-    g_pool.gui.append(g_pool.sidebar)
-
-    g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
-    g_pool.gui.append(g_pool.quickbar)
-    g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
-
-    g_pool.capture.init_gui(g_pool.sidebar)
-
-    #plugins that are loaded based on user settings from previous session
-    g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
-
-    #only needed for the gui to show the loaded calibration type
-    for p in g_pool.plugins:
-        if p.base_class_name == 'Calibration_Plugin':
-            g_pool.active_calibration_plugin =  p.__class__
-            break
-
+    #trigger setup of window and gl sizes
     on_resize(main_window, *glfwGetFramebufferSize(main_window))
 
+    #now the we have  aproper window we can load the last gui configuration
     g_pool.gui.configuration = session_settings.get('ui_config',{})
 
 
