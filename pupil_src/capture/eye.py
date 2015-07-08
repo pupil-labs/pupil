@@ -90,13 +90,9 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
-        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-        w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
         graph.adjust_size(w,h)
         adjust_gl_view(w,h)
-        # for p in g_pool.plugins:
-            # p.on_window_resize(window,w,h)
         glfwMakeContextCurrent(active_window)
 
     def on_key(window, key, scancode, action, mods):
@@ -209,7 +205,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     cygl_init()
 
     # Register callbacks main_window
-    glfwSetWindowSizeCallback(main_window,on_resize)
+    glfwSetFramebufferSizeCallback(main_window,on_resize)
     glfwSetWindowCloseCallback(main_window,on_close)
     glfwSetKeyCallback(main_window,on_key)
     glfwSetCharCallback(main_window,on_char)
