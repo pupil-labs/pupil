@@ -15,7 +15,7 @@ from copy import deepcopy
 try:
     from billiard import freeze_support
 except:
-    from multiprocessing import reeze_support
+    from multiprocessing import freeze_support
 
 if getattr(sys, 'frozen', False):
     user_dir = os.path.expanduser(os.path.join('~','pupil_player_settings'))
