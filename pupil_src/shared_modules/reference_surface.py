@@ -483,7 +483,7 @@ class Reference_Surface(object):
 
 
             #Register callbacks
-            glfwSeFramebufferSizeCallback(self._window,self.on_resize)
+            glfwSetFramebufferSizeCallback(self._window,self.on_resize)
             glfwSetKeyCallback(self._window,self.on_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
             glfwSetMouseButtonCallback(self._window,self.on_button)
