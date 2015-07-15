@@ -268,6 +268,15 @@ class Line3D(Line):
     pass
 
 
+class PupilParams(): #was a structure in C
+    def __init__(self, theta = 0, psi = 0, radius = 0):
+        self.theta = theta
+        self.psi = psi
+        self.radius = radius
+
+    def __str__(self):
+        return "PupilParams Class: Theta " + str(self.theta) + " psi " + str(self.psi) + " r " + str(self.radius)
+
 class Sphere:
     def __init__(self,center,radius):
         self.center = np.array(center).reshape(3)

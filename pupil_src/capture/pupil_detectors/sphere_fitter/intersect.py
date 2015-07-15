@@ -57,7 +57,6 @@ def intersect_2D_lines(line1,line2):
 		py = ((x1*y2 - y1*x2)*(y3-y4) - (y1-y2)*(x3*x4 - y3*x4))/denom
 		return px,py
 
-
 def nearest_intersect_3D(lines):
 	#finds the learest intersection of many lines (which may not be a real intersection)
 	#the original nearest_intersect(const Range& lines) function
@@ -123,8 +122,44 @@ def sphere_intersect(line,sphere):
 	return p1,p2 #a line intersects a sphere at two points
 
 def get_sphere_intersect_params(line,sphere):
-	v = line.direction
-	p = line.origin
+	point = sphere_intersect(line,sphere)[0]
+	normal = point - sphere.center
+
+	theta = np.arctan2(normal[1],normal[0])
+	psi = np.arctan2(np.sqrt(normal[0]**2 + normal[1]**2),normal[2])
+
+	return geometry.PupilParams(theta, psi, sphere.radius)
+
+def residual_distance_intersect_2D(p, lines):
+	#used to calculate residual distance
+    x3,y3 = p
+    x1 = []
+    y1 = []
+    dx21 = []
+    dy21 = []
+    for line in lines:
+    	x1.append(line.origin[0])
+    	y1.append(line.origin[1])
+    	dx21.append(line.direction[0])
+    	dy21.append(line.direction[1])
+    x1 = np.asarray(x1)
+    y1 = np.asarray(y1)
+    dx21 = np.asarray(dx21)
+    dy21 = np.asarray(dy21)
+
+    lensq21 = dx21*dx21 + dy21*dy21
+
+    u = (x3-x1)*dx21 + (y3-y1)*dy21
+
+    u = u / lensq21
+    x = x1+ u * dx21
+    y = y1+ u * dy21
+    dx30 = x3-x
+    dy30 = y3-y
+    return np.sqrt( dx30**2 + dy30**2 )
+
+def residual_distance_intersect_3D(p,lines):
+	#to implement
 
 
 ################################################
@@ -136,9 +171,16 @@ if __name__ == '__main__':
 	# huding2 = geometry.Line2D([3.,5.],[-1.,-1.])
 	# print intersect_2D_lines(huding, huding2)
 
-	huding = geometry.Line3D([0.,0.,0.],[-0.16545883,-0.11183079 ,0.97985573])
-	hudang = geometry.Sphere([0.31493994,0.05115442,20.], 5.0751367958)
+	lines = []
+	lines.append(geometry.Line2D([-146.26909863,-99.45170178],[ 0.92645834,0.37639732]))
+	lines.append(geometry.Line2D([-133.13767081,-97.685709] ,[ 0.91785761,0.39690981]))
+	lines.append(geometry.Line2D([-92.31869627,-8.12721281] ,[ 0.65350508,0.75692213]))
+	lines.append(geometry.Line2D([-73.57488028,-65.2793859] ,[ 0.7564165 ,0.65409027]))
+	hudong = nearest_intersect_2D(lines)
+	print hudong
+	print np.mean(residual_distance_intersect_2D(hudong, lines))
 
-
-
-	print "done"
+	# huding = geometry.Line3D([0.,0.,0.],[-0.16545883,-0.11183079 ,0.97985573])
+	# hudang = geometry.Sphere([0.31493994,0.05115442,20.], 5.0751367958)
+	# print hudang
+	# print get_sphere_intersect_params(huding, hudang)

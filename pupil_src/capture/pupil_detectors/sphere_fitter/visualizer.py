@@ -284,8 +284,10 @@ class Visualizer():
 		glPopMatrix()
 
 	def draw_eye_model_text(self, model):
-		self.glfont.draw_multi_line_text(5,20,'Eye model center: \n %s'%model.eye.center)
-		self.glfont.draw_multi_line_text(440,20,'View: %.2f %.2f %.2f'%(self.trackball.distance[0],self.trackball.distance[1],self.trackball.distance[2]))
+		self.glfont.draw_multi_line_text(5,20,'Eye model center: \n %s \n Theta: %.3f Psi: %.3f Radius: %.3f '%(model.eye.center,
+			model.observations[-1].params.theta, model.observations[-1].params.psi, model.observations[-1].params.radius))
+		self.glfont.draw_multi_line_text(440,20,'View: %.2f %.2f %.2f'%(self.trackball.distance[0],
+			self.trackball.distance[1],self.trackball.distance[2]))
 
 
 	########## Setup functions I don't really understand ############

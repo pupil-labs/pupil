@@ -31,21 +31,12 @@ def sph2cart(r,theta,psi):
 	#np is column major, so initializing this should give a 3x1 matrix (or vector)
 	return r*toreturn
 
-class PupilParams: #was a structure in C
-	def __init__(self, theta = 0, psi = 0, radius = 0):
-		self.theta = theta
-		self.psi = psi
-		self.radius = radius
-
-	def __str__(self):
-		return "PupilParams Class: Theta " + str(self.theta) + " psi " + str(self.psi) + " r " + str(self.radius)
-
-class Pupil: #data structure for a pupil
+class Pupil(): #data structure for a pupil
 	def __init__(self, ellipse = geometry.Ellipse(), intrinsics = None, radius = 1):
 		self.ellipse = ellipse
 		self.circle = geometry.Circle3D() #may delete later
 		self.projected_circles = self.ellipse.unproject(radius = 1, intrinsics= intrinsics)
-		self.params = PupilParams()
+		self.params = geometry.PupilParams()
 		self.init_valid = False
 
 	def __str__(self):
@@ -188,12 +179,6 @@ class Sphere_Fitter():
 			"""
 			unprojection_pair = pupil.projected_circles
 
-			# print unprojection_pair[0]
-			# print unprojection_pair[1]
-			# print projection.project_point_camera_intrinsics(unprojection_pair[0].center,self.intrinsics)
-			# print projection.project_point_camera_intrinsics(unprojection_pair[1].center,self.intrinsics)
-			# print " "
-
 			""" get projected circles and gaze vectors
 				Project the circle centers and gaze vectors down back onto the image plane.
 				We're only using them as line parameterizations, so it doesn't matter which of the two centers/gaze
@@ -210,6 +195,7 @@ class Sphere_Fitter():
 			v_proj = geometry.project_point(v + c, self.intrinsics) - c_proj
 			v_proj = v_proj/np.linalg.norm(v_proj) #normalizing
 			line = geometry.Line2D(c_proj, v_proj)
+			# print line
 			self.pupil_gazelines_proj.append(line)
 
 		""" Get eyeball center
@@ -251,7 +237,6 @@ class Sphere_Fitter():
 		else:
 			#no inliers, so no eye
 			self.eye = Sphere.Sphere()
-
 			# arbitrarily pick first circle
 			for i in xrange(len(self.observations)):
 				pupil_pair = pupil_unprojection_pairs[i]
@@ -287,14 +272,12 @@ if __name__ == '__main__':
 	huding.add_observation(ellipse2)
 	huding.add_observation(ellipse3)
 	huding.add_observation(ellipse4)
-	huding.add_observation(ellipse5)
-	huding.add_observation(ellipse6)
-	huding.add_observation(ellipse7)
-	huding.add_observation(ellipse8)
-	huding.add_observation(ellipse9)
-	huding.add_observation(ellipse10)
+	# huding.add_observation(ellipse5)
+	# huding.add_observation(ellipse6)
+	# huding.add_observation(ellipse7)
+	# huding.add_observation(ellipse8)
+	# huding.add_observation(ellipse9)
+	# huding.add_observation(ellipse10)
 
 	huding.unproject_observations()
 	huding.initialize_model()
-	# for pupil in huding.observations:
-	# 	print pupil.circle
