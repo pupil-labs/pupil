@@ -149,7 +149,6 @@ class Sphere_Fitter():
 		if pupil_centre_sphere_intersect == None:
 			# logger.warning('no intersection') # the warning is already called in intersect.py
 			return
-
 		new_pupil_center = pupil_centre_sphere_intersect[0]
 		#given 3D position for pupil (rather than just projection line), recalculate pupil radius at position
 		pupil_radius_at_1 = pupil.circle.radius/pupil.circle.center[2] #radius at z=1
@@ -167,7 +166,7 @@ class Sphere_Fitter():
 
 	def update_model(self):
 		self.count += 1
-		if self.count == 30:
+		if self.count == 30 or 1:
 			self.unproject_observations()
 			self.initialize_model()
 			self.count = 0
@@ -296,11 +295,6 @@ if __name__ == '__main__':
 	huding.add_observation(ellipse10)
 
 	huding.unproject_observations()
-	print huding.eye
-
 	huding.initialize_model()
-	print huding.eye
-
-	print huding.scale
 	# for pupil in huding.observations:
 	# 	print pupil.circle

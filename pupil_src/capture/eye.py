@@ -360,34 +360,31 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
                 pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
                                         (int(result['axes'][0]/2),int(result['axes'][1]/2)),
                                         int(result['angle']),0,360,15)
-                # print "huding"
-                # print result['center']
-                # print pts.shape
-                # cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
+                cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
             cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
 
         #eye sphere fitter adding
         if result['confidence'] > 0.8:
             eye_model.add_pupil_labs_observation(result)
+            print eye_model.observations[-1].ellipse
 
             #draw the circle back as an ellipse
-            reproj_pupil = eye_model.observations[-1].projected_circles[0].project_to_ellipse(eye_model.intrinsics)
-            # print reproj_pupil
-            pts = cv2.ellipse2Poly( (int(reproj_pupil.center[0]), int(reproj_pupil.center[1])),
-                (int(reproj_pupil.major_radius), int(reproj_pupil.minor_radius)),
-                int(reproj_pupil.angle*180/scipy.pi), 0,360,15)
-            cygl_draw_polyline(pts,4,cygl_rgba(0,0,1,.5))
+            # reproj_pupil = eye_model.observations[-1].projected_circles[0].project_to_ellipse(eye_model.intrinsics)
+            # pts = cv2.ellipse2Poly( (int(reproj_pupil.center[0]), int(reproj_pupil.center[1])),
+            #     (int(reproj_pupil.major_radius), int(reproj_pupil.minor_radius)),
+            #     int(reproj_pupil.angle*180/scipy.pi), 0,360,15)
+            # cygl_draw_polyline(pts,4,cygl_rgba(0,0,1,.5))
 
-            reproj_pupil = eye_model.observations[-1].projected_circles[1].project_to_ellipse(eye_model.intrinsics)
-            pts = cv2.ellipse2Poly( (int(reproj_pupil.center[0]), int(reproj_pupil.center[1])),
-                (int(reproj_pupil.major_radius), int(reproj_pupil.minor_radius)),
-                int(reproj_pupil.angle*180/scipy.pi), 0,360,15)
-            cygl_draw_polyline(pts,2,cygl_rgba(1,1,0,.5))
+            # reproj_pupil = eye_model.observations[-1].projected_circles[1].project_to_ellipse(eye_model.intrinsics)
+            # pts = cv2.ellipse2Poly( (int(reproj_pupil.center[0]), int(reproj_pupil.center[1])),
+            #     (int(reproj_pupil.major_radius), int(reproj_pupil.minor_radius)),
+            #     int(reproj_pupil.angle*180/scipy.pi), 0,360,15)
+            # cygl_draw_polyline(pts,2,cygl_rgba(1,1,0,.5))
 
         if len(eye_model.observations) > 1:
             # eye_model.unproject_observations()
             # eye_model.initialize_model()
-            eye_model.update_model()
+            eye_model.update_model() #this calls unproject and initialize
             cygl_draw_points([eye_model.eye.project(eye_model.intrinsics).center],30,cygl_rgba(1,1,0,.5)) #draw eye center
 
         #draw all eye normal lines
