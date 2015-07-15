@@ -56,7 +56,7 @@ class Pupil: #data structure for a pupil
 class Sphere_Fitter():
 
 	def __init__(self, intrinsics = None, focal_length = 554.256):
-		if intrinsics == None:
+		if intrinsics is None:
 			intrinsics = np.identity(3)
 			if focal_length != None:
 				intrinsics[0,0] = focal_length

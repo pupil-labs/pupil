@@ -25,7 +25,7 @@ from pyglui.ui import get_opensans_font_path
 
 import numpy as np
 import scipy
-import geometry 
+import geometry
 from __init__ import Sphere_Fitter
 import cv2
 
@@ -70,7 +70,7 @@ class Visualizer():
 		# self.video_frame = (np.linspace(0,1,num=(400*400*4))*255).astype(np.uint8).reshape((400,400,4)) #the randomized image, should be video frame
 		# self.screen_points = [] #collection of points
 
-		if intrinsics == None:
+		if intrinsics is None:
 			intrinsics = np.identity(3)
 			if focal_length != None:
 				intrinsics[0,0] = focal_length
@@ -466,7 +466,7 @@ class Visualizer():
 			old_x,old_y = self.input['mouse']
 			self.trackball.pan_to(x-old_x,y-old_y)
 			self.input['mouse'] = x,y
-	
+
 	def on_scroll(self,window,x,y):
 		# self.gui.update_scroll(x,y)
 		self.trackball.zoom_to(y)
