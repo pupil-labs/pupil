@@ -21,7 +21,7 @@ from pyglui.cygl.utils import init as cygl_init
 from pyglui.cygl.utils import draw_points as cygl_draw_points
 from pyglui.cygl.utils import RGBA as cygl_rgba
 from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
-from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
+from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture,draw_points_norm
 
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
@@ -37,13 +37,18 @@ from OpenGL.GL import GL_LINE_LOOP
 from methods import *
 from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
-from av_writer import JPEG_Writer
+from av_writer import JPEG_Dumper
 from cv2_writer import CV_Writer
 
 # Pupil detectors
 from pupil_detectors import Canny_Detector
+from pupil_detectors import sphere_fitter
+from pupil_detectors.sphere_fitter import visualizer
+from pupil_detectors.sphere_fitter import geometry
 
-
+# time
+import time
+import scipy
 
 def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     """
@@ -90,9 +95,13 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
+        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
+        w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
         graph.adjust_size(w,h)
         adjust_gl_view(w,h)
+        # for p in g_pool.plugins:
+            # p.on_window_resize(window,w,h)
         glfwMakeContextCurrent(active_window)
 
     def on_key(window, key, scancode, action, mods):
@@ -164,6 +173,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     g_pool.flip = session_settings.get('flip',False)
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
+    g_pool.window_size = session_settings.get('window_size',1.)
     g_pool.display_mode = session_settings.get('display_mode','camera_image')
     g_pool.display_mode_info_text = {'camera_image': "Raw eye camera image. This uses the least amount of CPU power",
                                 'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be a small as possible but big enough to capture to pupil in its movements",
@@ -176,7 +186,8 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     writer = None
 
     pupil_detector = Canny_Detector(g_pool)
-
+    intrinsics = np.matrix('879.193 0 320; 0 -879.193 240; 0 0 1')
+    eye_model = sphere_fitter.Sphere_Fitter(intrinsics = intrinsics)
 
     # UI callback functions
     def set_scale(new_scale):
@@ -189,24 +200,37 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
 
 
+    window_pos = session_settings.get('window_position',window_position_default)
+    width,height = session_settings.get('window_size',(frame.width, frame.height))
+
     # Initialize glfw
     glfwInit()
     if g_pool.binocular:
         title = "Binocular eye %s"%eye_id
     else:
         title = 'Eye'
-    width,height = session_settings.get('window_size',(frame.width, frame.height))
     main_window = glfwCreateWindow(width,height, title, None, None)
-    window_pos = session_settings.get('window_position',window_position_default)
-    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
+
     glfwMakeContextCurrent(main_window)
     cygl_init()
+
+    # Register callbacks main_window
+    glfwSetWindowSizeCallback(main_window,on_resize)
+    glfwSetWindowCloseCallback(main_window,on_close)
+    glfwSetKeyCallback(main_window,on_key)
+    glfwSetCharCallback(main_window,on_char)
+    glfwSetMouseButtonCallback(main_window,on_button)
+    glfwSetCursorPosCallback(main_window,on_pos)
+    glfwSetScrollCallback(main_window,on_scroll)
 
     # gl_state settings
     basic_gl_setup()
     g_pool.image_tex = create_named_texture(frame.img.shape)
-    update_named_texture(g_pool.image_tex,frame.img)
+    update_named_texture(g_pool.image_tex,frame.img) #adding the currently eye image to g_pool
+
+    # refresh speed settings
     glfwSwapInterval(0)
+    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
 
 
     #setup GUI
@@ -221,29 +245,23 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     g_pool.display_mode_info = ui.Info_Text(g_pool.display_mode_info_text[g_pool.display_mode])
     general_settings.append(g_pool.display_mode_info)
     g_pool.sidebar.append(general_settings)
+
     g_pool.gui.append(g_pool.sidebar)
     g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
+
+
     # let the camera add its GUI
     g_pool.capture.init_gui(g_pool.sidebar)
+
     # let detector add its GUI
     pupil_detector.init_gui(g_pool.sidebar)
-
-    # Register callbacks main_window
-    glfwSetFramebufferSizeCallback(main_window,on_resize)
-    glfwSetWindowCloseCallback(main_window,on_close)
-    glfwSetKeyCallback(main_window,on_key)
-    glfwSetCharCallback(main_window,on_char)
-    glfwSetMouseButtonCallback(main_window,on_button)
-    glfwSetCursorPosCallback(main_window,on_pos)
-    glfwSetScrollCallback(main_window,on_scroll)
-
-    #set the last saved window size
-    on_resize(main_window, *glfwGetWindowSize(main_window))
-
 
     # load last gui configuration
     g_pool.gui.configuration = session_settings.get('ui_config',{})
 
+
+    #set the last saved window size
+    on_resize(main_window, *glfwGetWindowSize(main_window))
 
     #set up performance graphs
     pid = os.getpid()
@@ -261,8 +279,13 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     fps_graph.update_rate = 5
     fps_graph.label = "%0.0f FPS"
 
+    #initialize visualizer
+    visual = visualizer.Visualizer("eye model", intrinsics = eye_model.intrinsics)
+    visual.open_window()
+
     # Event loop
     while not g_pool.quit.value:
+
         # Get an image from the grabber
         try:
             frame = cap.get_frame()
@@ -291,12 +314,11 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
             if command is not None:
                 record_path = command
                 logger.info("Will save eye video to: %s"%record_path)
+                video_path = os.path.join(record_path, "eye%s.mkv"%eye_id)
                 timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-                if raw_mode and hasattr(frame,'jpeg_buffer') :
-                    video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
-                    writer = JPEG_Writer(video_path,cap.frame_rate)
+                if raw_mode:
+                    writer = JPEG_Dumper(video_path)
                 else:
-                    video_path = os.path.join(record_path, "eye%s.mkv"%eye_id)
                     writer = CV_Writer(video_path,float(cap.frame_rate), cap.frame_size)
                 timestamps = []
             else:
@@ -317,11 +339,6 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         # stream the result
         g_pool.pupil_queue.put(result)
 
-
-        # GL drawing
-        glfwMakeContextCurrent(main_window)
-        clear_gl_screen()
-
         # switch to work in normalized coordinate space
         if g_pool.display_mode == 'algorithm':
             update_named_texture(g_pool.image_tex,frame.img)
@@ -329,7 +346,10 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
             update_named_texture(g_pool.image_tex,frame.gray)
         else:
             pass
-
+        make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
+        # GL drawing
+        glfwMakeContextCurrent(main_window)
+        clear_gl_screen()
         make_coord_system_norm_based(g_pool.flip)
         draw_named_texture(g_pool.image_tex)
         # switch to work in pixel space
@@ -340,8 +360,44 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
                 pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
                                         (int(result['axes'][0]/2),int(result['axes'][1]/2)),
                                         int(result['angle']),0,360,15)
-                cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
+                # print "huding"
+                # print result['center']
+                # print pts.shape
+                # cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
             cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
+
+        #eye sphere fitter adding
+        if result['confidence'] > 0.8:
+            eye_model.add_pupil_labs_observation(result)
+            print eye_model.observations[-1].ellipse
+            visual.ellipses.append(eye_model.observations[-1].ellipse)
+
+            #draw the circle back as an ellipse
+            reproj_pupil = eye_model.observations[-1].projected_circles[0].project_to_ellipse(eye_model.intrinsics)
+            # print reproj_pupil
+            pts = cv2.ellipse2Poly( (int(reproj_pupil.center[0]), int(reproj_pupil.center[1])),
+                (int(reproj_pupil.major_radius), int(reproj_pupil.minor_radius)),
+                int(reproj_pupil.angle*180/scipy.pi), 0,360,15)
+            cygl_draw_polyline(pts,4,cygl_rgba(0,0,1,.5))
+
+            reproj_pupil = eye_model.observations[-1].projected_circles[1].project_to_ellipse(eye_model.intrinsics)
+            pts = cv2.ellipse2Poly( (int(reproj_pupil.center[0]), int(reproj_pupil.center[1])),
+                (int(reproj_pupil.major_radius), int(reproj_pupil.minor_radius)),
+                int(reproj_pupil.angle*180/scipy.pi), 0,360,15)
+            cygl_draw_polyline(pts,2,cygl_rgba(1,1,0,.5))
+
+        if len(eye_model.observations) > 1:
+            eye_model.unproject_observations()
+            eye_model.initialize_model()
+            cygl_draw_points([eye_model.eye.project(eye_model.intrinsics).center],60,cygl_rgba(1,1,0,.5)) #draw eye center
+            visual.sphere = eye_model.eye
+
+        #draw all eye normal lines
+        if eye_model.projected_eye.center[0] != 0 and eye_model.projected_eye.center[1] != 0:
+            #the eye model has been initialized
+            for line in eye_model.pupil_gazelines_proj:
+                cygl_draw_polyline([line.origin-line.direction*500,line.origin+line.direction*500],1,cygl_rgba(0,1.0,0,.5))
+
 
         # render graphs
         graph.push_view()
@@ -356,12 +412,20 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         if g_pool.display_mode == 'roi':
             u_r.draw(g_pool.gui.scale)
 
+        # show the visualizer
+        visual.update_window(g_pool,eye_model)
+        glfwMakeContextCurrent(main_window)
+
         #update screen
         glfwSwapBuffers(main_window)
         glfwPollEvents()
 
+        # time.sleep(1)
 
     # END while running
+
+    #close visualiser
+    visual.close_window()
 
     # in case eye recording was still runnnig: Save&close
     if writer:
