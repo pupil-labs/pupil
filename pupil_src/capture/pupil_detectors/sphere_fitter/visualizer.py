@@ -238,23 +238,22 @@ class Visualizer():
 		glVertex3f( 0, 0, l )
 		glEnd( )
 
-	def draw_sphere(self,circle,sphere,contours = 15):
+	def draw_sphere(self,circle,sphere,contours = 45):
 		# this function draws the location of the eye sphere
 		glPushMatrix()
 		glLoadMatrixf(self.get_rotated_sphere_matrix(circle,sphere))
 
-		contours -= 1
 		glTranslatef(0,0,sphere.radius)
 		draw_points(((0,0),),color=RGBA(0,1,0.2,.5))
-		for i in xrange(contours):
+		for i in xrange(1,contours+1):
+			glTranslatef(0,0,-sphere.radius/contours*2)
+			position = sphere.radius- i*sphere.radius*2/contours
 			draw_radius = np.sqrt(sphere.radius**2 - position**2)
 			glPushMatrix()
 			glScalef(draw_radius,draw_radius,1)
 			draw_polyline((rad),5,color=RGBA(0,1,0.2,.5))
 			glPopMatrix()
-			position -= sphere.radius/contours*2
-			glTranslatef(0,0,-sphere.radius/contours*2)
-		draw_polyline((rad),5,color=RGBA(0,1,0.2,.5))
+			# draw_points(((0,0),),color=RGBA(0,1,0.2,.5))
 
 		glPopMatrix()
 
