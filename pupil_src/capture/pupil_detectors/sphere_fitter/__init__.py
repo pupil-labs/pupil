@@ -93,17 +93,10 @@ class Sphere_Fitter():
 		self.model_version += 1
 
 	def circleFromParams(self, params):
-		# currently badly written
 		# params = angles + diameter (theta, psi, radius)
-		if (params.radius == None):
-			logger.warning("dafaq, gimme params pls")
-			return None
-		# print "center " + str(self.eye.center)
-		# print "radius " + str(self.eye.radius)
 		radial = sph2cart(1, params.theta, params.psi)
 		cent = self.eye.center + self.eye.radius*radial
 		cent = np.asarray(cent).reshape(3)
-		# print cent
 		return geometry.Circle3D(cent,radial, params.radius)
 
 	def initialize_model(self):
@@ -128,8 +121,6 @@ class Sphere_Fitter():
 
 		#set eye radius as mean distance from pupil centers to eye center
 		self.eye.radius = eye_radius_acc / eye_radius_count
-		# print "eye radius " + str(self.eye.radius)
-		# print "eye acc " + str(eye_radius_acc)
 		#second estimate of pupil radius, used to get position of pupil on eye
 		for pupil in self.observations:
 			self.initialize_single_observation(pupil)
@@ -144,10 +135,7 @@ class Sphere_Fitter():
 			pupil.circle = self.circleFromParams(pupil.params)
 
 		#print every 30
-		self.count += 1
-		if self.count == 30:
-			logger.warning(self.eye)
-			self.count = 0
+		logger.warning(self.eye)
 		# logger.warning(self.eye)
 
 		self.model_version += 1
@@ -156,7 +144,7 @@ class Sphere_Fitter():
 		# Ignore pupil circle normal, intersect pupil circle
 		# center projection line with eyeball sphere
 		# try:
-		line1 = geometry.Line3D(self.camera_center, pupil.circle.center/np.linalg.norm(pupil.circle.center))
+		line1 = geometry.Line3D(self.camera_center, pupil.circle.center)
 		pupil_centre_sphere_intersect = intersect.sphere_intersect(line1,self.eye)
 		if pupil_centre_sphere_intersect == None:
 			# logger.warning('no intersection') # the warning is already called in intersect.py
@@ -164,7 +152,7 @@ class Sphere_Fitter():
 
 		new_pupil_center = pupil_centre_sphere_intersect[0]
 		#given 3D position for pupil (rather than just projection line), recalculate pupil radius at position
-		pupil_radius_at_1 = pupil.circle.radius/pupil.circle.center[2] #z coordinate
+		pupil_radius_at_1 = pupil.circle.radius/pupil.circle.center[2] #radius at z=1
 		new_pupil_radius = pupil_radius_at_1 * new_pupil_center[2]
 		#parametrize new pupil position using spherical coordinates
 		center_to_pupil = np.asarray(new_pupil_center) - np.asarray(self.eye.center)
@@ -175,7 +163,14 @@ class Sphere_Fitter():
 		pupil.params.radius = new_pupil_radius
 
 		#update pupil circle to match new parameter
-		pupil.circle = self.circleFromParams(pupil.params)
+		# pupil.circle = self.circleFromParams(pupil.params)
+
+	def update_model(self):
+		self.count += 1
+		if self.count == 30:
+			self.unproject_observations()
+			self.initialize_model()
+			self.count = 0
 
 	def unproject_observations(self, eye_z = 20):
 		# ransac default to false so I skip for loop (haven't implemented it yet)

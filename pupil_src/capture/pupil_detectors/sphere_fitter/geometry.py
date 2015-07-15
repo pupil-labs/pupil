@@ -238,7 +238,7 @@ class Line:
     def __init__(self, origin, direction):
         self.origin = np.asarray(origin).reshape(-1)
         self.direction = np.asarray(direction).reshape(-1)
-        self.direction /= np.sqrt(sum(self.direction**2))
+        self.direction = self.direction/np.sqrt(sum(self.direction**2))
 
     def __str__(self):
         return "Line { from %s direction %s }" %(self.origin,self.direction)
@@ -281,17 +281,23 @@ class Sphere:
         radius = abs(self.radius/self.center[2] * intrinsics[1,1]) #scale based on fx in camera intrinsic matrix
         return Ellipse(center,radius,radius,0)
 
-extrinsics = np.matrix('1 0 0 0 ; 0 1 0 0 ; 0 0 1 0')
+# extrinsics = np.matrix('1 0 0 0 ; 0 1 0 0 ; 0 0 1 0')
+
+# def project_point(point, intrinsics):
+#     point = np.append(np.asarray(point),[1]) #convert point to homogeneous coordinates
+#     h_point = point.reshape((4,1))
+#     projected_pt = intrinsics * extrinsics * h_point
+#     projected_pt = (projected_pt/projected_pt[-1])[:-1] #convert back to cartesian
+#     return np.asarray(projected_pt).reshape(2)
 
 def project_point(point, intrinsics):
-    point = np.append(np.asarray(point),[1]) #convert point to homogeneous coordinates
-    h_point = point.reshape((4,1))
-    projected_pt = intrinsics * extrinsics * h_point
-    projected_pt = (projected_pt/projected_pt[-1])[:-1] #convert back to cartesian
-    return np.asarray(projected_pt).reshape(2)
+    x = intrinsics[0,0]*point[0]/point[2] + intrinsics[0,2]
+    y = intrinsics[1,1]*point[1]/point[2] + intrinsics[1,2]
+    return np.array([x,y])
 
 def unproject_point(point,z,intrinsics):
-    return (point[0]-intrinsics[0,2]) * z / intrinsics[0,0],(point[1]-intrinsics[1,2]) * z / intrinsics[1,1],z
+    return np.array([(point[0]-intrinsics[0,2]) * z / intrinsics[0,0],
+                    (point[1]-intrinsics[1,2]) * z / intrinsics[1,1],z])
 
 
 def unproject(ellipse,circle_radius, focal_length):
@@ -335,7 +341,6 @@ def unproject(ellipse,circle_radius, focal_length):
     if (lamb[2] >= 0):
         logger.error("Lambda 2 < 0, die")
         return
-    print lamb
     #Calculate l,m,n of plane
     n = np.sqrt((lamb[1] - lamb[2])/(lamb[0]-lamb[2]))
     m = 0.0
@@ -442,7 +447,7 @@ if __name__ == '__main__':
     k = np.matrix('100 0 10; 0 -100 10; 0 0 1')
 
     # print k[0,2]
-    p3 = unproject_point((0.0,20),100,k)
+    p3 = unproject_point((0.0 , 20),100,k)
     p2 = project_point(p3,k)
     print p3,p2
     #testing uproject

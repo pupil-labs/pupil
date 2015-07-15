@@ -130,9 +130,10 @@ def sphere_intersect(line,sphere):
 if __name__ == '__main__':
 	import geometry
 	# #testing stuff
-	# huding = geometry.Line2D([5,7],[10,10])
-	# huding2 = geometry.Line2D([3,5],[4,-1])
-	# print intersect_2D_lines(huding, huding2)
+	huding = geometry.Line2D([5.,7.],[10.,10.])
+	print huding
+	huding2 = geometry.Line2D([3.,5.],[-1.,-1.])
+	print intersect_2D_lines(huding, huding2)
 
 	#testing nearest_intersect_3D
 	# huding = geometry.Line3D([0.835233,3.67143,20], [-0.303085,-0.54173,-0.784008])
@@ -147,16 +148,16 @@ if __name__ == '__main__':
 	# huding2 = Line3D([0, 0, 0], [ -0.150507,0.109365,0.982541])
 	# print nearest_intersect_3D([huding, huding2])
 
-	huding = geometry.Line3D([0.835451, 3.67313, 20],[0.0687859, -0.42695, -0.901655])
-	huding2 = geometry.Line3D([0, 0, 0],[0.0852856, 0.0771611, 0.993364])
-	print [  1.25055031,   1.13423371 , 14.63264343]
-	print nearest_intersect_3D([huding, huding2])
+	# huding = geometry.Line3D([0.835451, 3.67313, 20],[0.0687859, -0.42695, -0.901655])
+	# huding2 = geometry.Line3D([0, 0, 0],[0.0852856, 0.0771611, 0.993364])
+	# print [  1.25055031,   1.13423371 , 14.63264343]
+	# print nearest_intersect_3D([huding, huding2])
 
 	#testing sphere_intersect
-	l1 = geometry.Line3D((0,0,0),(0.0471124,0.0831234, 0.995425))
-	s1 = geometry.Sphere((0.671767,3.56112,20),6.41521)
-	sphere_intersect(l1,s1)[0]
-	print sphere_intersect(l1,s1)
+	# l1 = geometry.Line3D((0,0,0),(0.0471124,0.0831234, 0.995425))
+	# s1 = geometry.Sphere((0.671767,3.56112,20),6.41521)
+	# sphere_intersect(l1,s1)[0]
+	# print sphere_intersect(l1,s1)
 
 
 	print "done"

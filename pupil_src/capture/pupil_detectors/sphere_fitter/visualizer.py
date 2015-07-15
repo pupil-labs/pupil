@@ -57,12 +57,14 @@ def get_perpendicular_vector(v):
     #     c = -(x + y)/z
     return np.array([1, 1, -1.0 * (v[0] + v[1]) / v[2]])
 
+rad = []
+for i in xrange(45):
+	temp = i*16*scipy.pi/360.
+	rad.append([np.cos(temp),np.sin(temp)])
+
 class Visualizer():
 	def __init__(self,name = "unnamed", focal_length = 554.25625, intrinsics = None, run_independently = False):
-		self.sphere = geometry.Sphere((0,0,0),0) #the eyeball, initialized as something random
-		self.ellipses = [] #collection of ellipses
-		self.circles = [] #collection of all 3D circles on the sphere
-		self.video_frame = (np.linspace(0,1,num=(400*400*4))*255).astype(np.uint8).reshape((400,400,4)) #the randomized image, should be video frame
+		# self.video_frame = (np.linspace(0,1,num=(400*400*4))*255).astype(np.uint8).reshape((400,400,4)) #the randomized image, should be video frame
 		# self.screen_points = [] #collection of points
 
 		if intrinsics == None:
@@ -246,20 +248,21 @@ class Visualizer():
 		glVertex3f( 0, 0, l )
 		glEnd( )
 
-	def draw_sphere(self,circle):
+	def draw_sphere(self,circle,sphere):
 		# this function draws the location of the eye sphere
 		glPushMatrix()
 		# glColor4f(0.0, 1.0, 1.0,0.2)  #set color to blue
-		glLoadMatrixf(self.get_rotated_sphere_matrix(circle,self.sphere))
-		# glutSolidSphere(self.sphere.radius,20,10)
+		glLoadMatrixf(self.get_rotated_sphere_matrix(circle,sphere))
+		# glutSolidSphere(sphere.radius,20,10)
 		glColor4f(0.0, 0.0, 1.0,0.8)  #set color to blue
-		# glutWireSphere(self.sphere.radius,20,10)
+		# glutWireSphere(sphere.radius,20,10)
 		glPopMatrix()
 
-	def draw_all_ellipses(self):
-		# draws all ellipses in self.ellipses.
+	def draw_all_ellipses(self,model,number = 10):
+		# draws all ellipses in model. numder determines last x amt of ellipses to show
 		glPushMatrix()
-		for ellipse in self.ellipses[-10:]:
+		for observation in model.observations[-number:]:
+			ellipse = observation.ellipse
 			glColor3f(0.0, 1.0, 0.0)  #set color to green
 			pts = cv2.ellipse2Poly( (int(ellipse.center[0]),int(ellipse.center[1])),
                                         (int(ellipse.major_radius),int(ellipse.minor_radius)),
@@ -271,11 +274,10 @@ class Visualizer():
 		glPushMatrix()
 		glLoadMatrixf(self.get_pupil_transformation_matrix(circle))
 		draw_points(((0,0),),color=RGBA(1.1,0.2,.8))
+		glScalef(circle.radius,circle.radius,1)
+		draw_polyline((rad),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
 		glColor4f(0.0, 0.0, 0.0,0.5)  #set color to green
 		glBegin(GL_POLYGON) #draw circle
-		for i in xrange(45):
-			rad = i*16*scipy.pi/360.
-			glVertex2f(np.cos(rad)*circle.radius,np.sin(rad)*circle.radius)
 		glEnd()
 		glPopMatrix()
 
@@ -385,12 +387,13 @@ class Visualizer():
 				for pupil in model.observations[-10:]: #draw the last 10
 					self.draw_circle(pupil.circle)
 
-			self.draw_sphere(pupil.circle) #draw the eyeball
+				self.draw_sphere(pupil.circle,model.eye) #draw the eyeball
 
 			self.draw_coordinate_system(4)
-			glTranslatef(*self.sphere.center)
+			glTranslatef(*model.eye.center)
 			glScalef(0.1,0.1,0.1)
-			self.glfont.draw_multi_line_text(0,0,'Eyeball location: \n %s'%self.sphere.center)
+			# print "center",model.eye.center
+			self.glfont.draw_multi_line_text(0,0,'Eyeball location: \n %s'%model.eye.center)
 
 			# 1a. draw frustum in pixel scale, but retaining origin
 			glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))
@@ -400,7 +403,7 @@ class Visualizer():
 			glLoadMatrixf(self.get_image_space_matrix(30))
 			if g_pool: #if display eye camera frames
 				draw_named_texture(g_pool.image_tex,quad=((0,480),(640,480),(640,0),(0,0)),alpha=0.5)
-			self.draw_all_ellipses()
+			self.draw_all_ellipses(model,10)
 
 			# 3. display text on screen
 			# glWindowPos2i(100, 100)
