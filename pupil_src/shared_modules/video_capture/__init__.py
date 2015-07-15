@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 if os_name in ("Linux","Darwin"):
     from uvc_capture import Camera_Capture,device_list,CameraCaptureError
 elif os_name == "Windows":
-    from win_capture import Camera_Capture,device_list,CameraCaptureError
+    from win_video import Camera_Capture,device_list,CameraCaptureError
 else:
     raise NotImplementedError()
 
