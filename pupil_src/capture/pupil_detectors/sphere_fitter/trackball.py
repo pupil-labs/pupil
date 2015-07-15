@@ -29,19 +29,19 @@ class Trackball(object):
         glLoadIdentity( )
         gluPerspective( 30.0, self.aspect, 0.1, 10000.0 )
 
-        # glPushMatrix()
         # glLoadIdentity( )
         glTranslatef(*self.distance)
         glRotatef(0,1,0,0)
         glRotatef(self.pitch,1,0,0)
         glRotatef(self.roll,0,1,0)
         glMatrixMode( GL_MODELVIEW )
+        glPushMatrix()
 
     def pop(self):
         glMatrixMode( GL_PROJECTION )
         glPopMatrix()
         glMatrixMode( GL_MODELVIEW )
-        # glPopMatrix()
+        glPopMatrix()
 
     def drag_to(self,dx,dy):
         self.pitch += dy*(360./self.window[1])

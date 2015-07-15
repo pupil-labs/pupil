@@ -9,7 +9,6 @@ import logging
 from glfw import *
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
-from OpenGL.GLUT import glutWireSphere, glutInit
 
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
@@ -251,7 +250,7 @@ class Visualizer():
 			draw_radius = np.sqrt(sphere.radius**2 - position**2)
 			glPushMatrix()
 			glScalef(draw_radius,draw_radius,1)
-			draw_polyline((rad),5,color=RGBA(0,1,0.2,.5))
+			draw_polyline((rad),2,color=RGBA(.2,.5,0.5,.5))
 			glPopMatrix()
 			# draw_points(((0,0),),color=RGBA(0,1,0.2,.5))
 
@@ -285,26 +284,9 @@ class Visualizer():
 		glPopMatrix()
 
 	def draw_eye_model_text(self, model):
-		glLoadIdentity()
-		glMatrixMode(GL_PROJECTION)
-		glPushMatrix()
-		glLoadIdentity()
-		gluOrtho2D(0., 640.,0.0, 480.)
-		glMatrixMode(GL_MODELVIEW)
-		glPushMatrix()
-		glLoadIdentity()
+		self.glfont.draw_multi_line_text(5,20,'Eye model center: \n %s'%model.eye.center)
+		self.glfont.draw_multi_line_text(440,20,'View: %.2f %.2f %.2f'%(self.trackball.distance[0],self.trackball.distance[1],self.trackball.distance[2]))
 
-		glTranslatef(5,35,0)
-		glScalef(1,-1,0)
-		self.glfont.draw_multi_line_text(0,0,'Eye model center: \n %s'%model.eye.center)
-		glTranslatef(0,-20,0)
-		self.glfont.draw_multi_line_text(0,0,'View: %s'%self.trackball.distance)
-
-		glMatrixMode(GL_MODELVIEW)
-		glPopMatrix()
-		glMatrixMode(GL_PROJECTION)
-		glPopMatrix()
-		glEnable(GL_TEXTURE_2D)
 
 	########## Setup functions I don't really understand ############
 
@@ -367,7 +349,6 @@ class Visualizer():
 			# get glfw started
 			if self.run_independently:
 				init()
-			glutInit() #can delete later
 			self.basic_gl_setup()
 
 			self.glfont = fs.Context()
@@ -399,7 +380,7 @@ class Visualizer():
 			# 1. in anthromorphic space, draw pupil sphere and circles on it
 			glLoadMatrixf(self.get_anthropomorphic_matrix())
 
-			if model: #if we are feeding in spheres to draw
+			if model and model.observations: #if we are feeding in spheres to draw
 				self.draw_all_circles(model,10)
 				self.draw_sphere(model.observations[-1].circle,model.eye) #draw the eyeball
 
@@ -415,10 +396,11 @@ class Visualizer():
 				draw_named_texture(g_pool.image_tex,quad=((0,480),(640,480),(640,0),(0,0)),alpha=0.5)
 			self.draw_all_ellipses(model,10)
 
+
+			self.trackball.pop()
 			# 3. draw eye model text
 			self.draw_eye_model_text(model)
 
-			self.trackball.pop()
 			glfwSwapBuffers(self._window)
 			glfwPollEvents()
 			return True
