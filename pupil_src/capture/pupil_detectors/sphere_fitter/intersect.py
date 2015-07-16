@@ -202,7 +202,9 @@ if __name__ == '__main__':
 	lines = []
 	lines.append(geometry.Line3D([3,3,5],[1,0,0]))
 	lines.append(geometry.Line3D([3,3,3],[0,1,0]))
-	hudong =  nearest_intersect_3D(lines)
-	print hudong
-	print np.mean(residual_distance_intersect_3D(hudong, lines))
+	sp = geometry.Sphere([10,3,5],2)
+	print sphere_intersect(lines[0],sp)
+	# hudong =  nearest_intersect_3D(lines)
+	# print hudong
+	# print np.mean(residual_distance_intersect_3D(hudong, lines))
 

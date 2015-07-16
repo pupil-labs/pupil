@@ -334,7 +334,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
 
         # pupil ellipse detection
-        result = pupil_detector.detect(frame,user_roi=u_r,visualize=g_pool.display_mode == 'algorithm')
+        result,contours = pupil_detector.detect(frame,user_roi=u_r,visualize=g_pool.display_mode == 'algorithm')
         result['id'] = eye_id
         # stream the result
         g_pool.pupil_queue.put(result)
@@ -401,7 +401,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         graph.pop_view()
 
         # show the visualizer
-        visual.update_window(g_pool,eye_model)
+        visual.update_window(g_pool,eye_model,contours) #also feeding in contours
         glfwMakeContextCurrent(main_window)
 
         # render GUI

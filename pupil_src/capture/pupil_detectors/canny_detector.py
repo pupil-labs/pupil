@@ -102,7 +102,7 @@ class Canny_Detector(Pupil_Detector):
     def detect(self,frame,user_roi,visualize=False):
 
         def early_exit():
-            return {'norm_pos':(0,0),'diameter':0,'timestamp':frame.timestamp,'confidence':0}
+            return {'norm_pos':(0,0),'diameter':0,'timestamp':frame.timestamp,'confidence':0}, [] #accounting for 
 
         u_r = user_roi
         if self.window_should_open:
@@ -278,11 +278,8 @@ class Canny_Detector(Pupil_Detector):
                         lines = np.array([[[2*x,debug_img.shape[0]-int(100*y)],[2*x,debug_img.shape[0]]] for x,y in enumerate(self.confidence_hist)])
                         cv2.polylines(debug_img,lines,isClosed=False,color=(255,100,100))
                         self.gl_display_in_window(debug_img)
-                    return pupil_ellipse
-
-
-
-
+                        # print "hudang"
+                    return pupil_ellipse, [] #also returning contours
 
         # from edges to contours
         contours, hierarchy = cv2.findContours(edges,
@@ -504,10 +501,8 @@ class Canny_Detector(Pupil_Detector):
             lines = np.array([[[2*x,debug_img.shape[0]-int(100*y)],[2*x,debug_img.shape[0]]] for x,y in enumerate(self.confidence_hist)])
             cv2.polylines(debug_img,lines,isClosed=False,color=(255,100,100))
             self.gl_display_in_window(debug_img)
-        return pupil_ellipse
-
-
-
+        # print "rarr"
+        return pupil_ellipse,contours #also returning contours so visualizer.py can display that data.
 
     # Display and interface methods
     def set_final_perimeter_ratio_range(self,val):

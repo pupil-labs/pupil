@@ -21,7 +21,8 @@ from pyglui.cygl import utils as glutils
 from trackball import Trackball
 from pyglui.pyfontstash import fontstash as fs
 from pyglui.ui import get_opensans_font_path
-
+from intersect import sphere_intersect
+from geometry  import Line3D
 import numpy as np
 import scipy
 import geometry
@@ -94,6 +95,11 @@ class Visualizer():
 	############## MATRIX FUNCTIONS ##############################
 
 	def get_anthropomorphic_matrix(self):
+		temp =  np.identity(4)
+		temp[2,2] *=-1 #consistent with our 3d coord system
+		return temp
+
+	def get_adjusted_pixel_space_matrix(self):
 		temp =  np.identity(4)
 		temp[2,2] *=-1 #consistent with our 3d coord system
 		return temp
@@ -241,7 +247,8 @@ class Visualizer():
 		# this function draws the location of the eye sphere
 		glPushMatrix()
 		glLoadMatrixf(self.get_rotated_sphere_matrix(circle,sphere))
-
+		glLoadMatrixf(self.get_anthropomorphic_matrix())
+		glTranslatef(sphere.center[0],sphere.center[1],sphere.center[2])
 		glTranslatef(0,0,sphere.radius)
 		draw_points(((0,0),),color=RGBA(0,1,0.2,.5))
 		for i in xrange(1,contours+1):
@@ -283,10 +290,17 @@ class Visualizer():
 		glEnd()
 		glPopMatrix()
 
+	def draw_contours(self,contours,model):
+		for contour in contours:
+				intersect_contour = [sphere_intersect(Line3D((0,0,0),geometry.unproject_point(c[0],20,self.intrinsics)),model.eye) for c in contour]
+				intersect_contour = [c[0] for c in intersect_contour if c is not None]
+				draw_polyline3d(np.array(intersect_contour),color=RGBA(0.,0.,0.,.5))
+
 	def draw_eye_model_text(self, model):
-		status = 'Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\n Gaze vector: Theta: %.3f Psi %.3f\n Pupil Diameter: %.2fmm'%(model.eye.center[0],model.eye.center[1],model.eye.center[2],model.observations[-1].params.theta, model.observations[-1].params.psi, 2*model.observations[-1].params.radius)
+		status = 'Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\nGaze vector: Theta: %.3f Psi %.3f\nPupil Diameter: %.2fmm'%(model.eye.center[0],model.eye.center[1],model.eye.center[2],model.observations[-1].params.theta, model.observations[-1].params.psi, 2*model.observations[-1].params.radius)
 		self.glfont.draw_multi_line_text(5,20,status)
 		self.glfont.draw_multi_line_text(440,20,'View: %.2f %.2f %.2f'%(self.trackball.distance[0],self.trackball.distance[1],self.trackball.distance[2]))
+
 	########## Setup functions I don't really understand ############
 
 	def basic_gl_setup(self):
@@ -360,7 +374,7 @@ class Visualizer():
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool = None,model = None):
+	def update_window(self, g_pool = None,model = None, contours = None):
 		if self.window_should_close:
 			self.close_window()
 		if self._window != None:
@@ -380,11 +394,12 @@ class Visualizer():
 			glLoadMatrixf(self.get_anthropomorphic_matrix())
 
 			if model and model.observations: #if we are feeding in spheres to draw
-				self.draw_all_circles(model,10)
+				# self.draw_all_circles(model,10)
 				self.draw_sphere(model.observations[-1].circle,model.eye) #draw the eyeball
 
 			self.draw_coordinate_system(4)
-
+			if contours:
+				self.draw_contours(contours,model)
 			# 1b. draw frustum in pixel scale, but retaining origin
 			glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))
 			self.draw_frustum()
@@ -394,6 +409,7 @@ class Visualizer():
 			if g_pool: #if display eye camera frames
 				draw_named_texture(g_pool.image_tex,quad=((0,480),(640,480),(640,0),(0,0)),alpha=0.5)
 			self.draw_all_ellipses(model,10)
+
 
 
 			self.trackball.pop()
@@ -495,5 +511,5 @@ if __name__ == '__main__':
 	a = 0
 	while visualhuding.update_window(model = huding):
 		a += 1
-	visual.close_window()
+	visualhuding.close_window()
 	print a
