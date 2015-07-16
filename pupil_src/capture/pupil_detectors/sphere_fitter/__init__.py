@@ -59,7 +59,7 @@ class Pupil(): #data structure for a pupil
 		self.line = geometry.Line2D(c_proj, v_proj) #append this to self.pupil_gazeline_proj
 
 	def __str__(self):
-		return "Pupil Class: " + str(self.ellipse) + str(self.circle) + " " + str(self.params) + " init_valid: " + str(self.init_valid)
+		return "Pupil Class: %s %s %s "%(self.ellipse,self.circle,self.params)
 
 
 #the class
