@@ -126,7 +126,7 @@ class Sphere_Fitter():
 			pupil.circle = self.circleFromParams(pupil.params)
 
 		#print every 30
-		logger.warning(self.eye)
+		# logger.warning(self.eye)
 		# logger.warning(self.eye)
 
 		self.model_version += 1

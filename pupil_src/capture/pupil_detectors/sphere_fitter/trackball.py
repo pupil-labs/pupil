@@ -28,8 +28,6 @@ class Trackball(object):
         glPushMatrix()
         glLoadIdentity( )
         gluPerspective( 30.0, self.aspect, 0.1, 10000.0 )
-
-        # glLoadIdentity( )
         glTranslatef(*self.distance)
         glRotatef(0,1,0,0)
         glRotatef(self.pitch,1,0,0)
@@ -45,7 +43,7 @@ class Trackball(object):
 
     def drag_to(self,dx,dy):
         self.pitch += dy*(360./self.window[1])
-        self.roll += dx*(360./self.window[0])
+        self.roll -= dx*(360./self.window[0])
 
     def pan_to(self,dx,dy):
         self.distance[0] +=dx/10.

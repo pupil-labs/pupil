@@ -159,6 +159,7 @@ def residual_distance_intersect_2D(p, lines):
     return np.sqrt( dx30**2 + dy30**2 )
 
 def residual_distance_intersect_3D(p,lines):
+	pass
 	#to implement
 
 

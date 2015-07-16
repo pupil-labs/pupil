@@ -284,12 +284,9 @@ class Visualizer():
 		glPopMatrix()
 
 	def draw_eye_model_text(self, model):
-		self.glfont.draw_multi_line_text(5,20,'Eye model center: \n %s \n Theta: %.3f Psi: %.3f Radius: %.3f '%(model.eye.center,
-			model.observations[-1].params.theta, model.observations[-1].params.psi, model.observations[-1].params.radius))
-		self.glfont.draw_multi_line_text(440,20,'View: %.2f %.2f %.2f'%(self.trackball.distance[0],
-			self.trackball.distance[1],self.trackball.distance[2]))
-
-
+		status = 'Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\n Gaze vector: Theta: %.3f Psi %.3f\n Pupil Diameter: %.2fmm'%(model.eye.center[0],model.eye.center[1],model.eye.center[2],model.observations[-1].params.theta, model.observations[-1].params.psi, 2*model.observations[-1].params.radius)
+		self.glfont.draw_multi_line_text(5,20,status)
+		self.glfont.draw_multi_line_text(440,20,'View: %.2f %.2f %.2f'%(self.trackball.distance[0],self.trackball.distance[1],self.trackball.distance[2]))
 	########## Setup functions I don't really understand ############
 
 	def basic_gl_setup(self):
@@ -357,16 +354,18 @@ class Visualizer():
 			self.glfont.add_font('opensans',get_opensans_font_path())
 			self.glfont.set_size(22)
 			self.glfont.set_color_float((0.2,0.5,0.9,1.0))
+			self.on_resize(self._window,*glfwGetFramebufferSize(self._window))
+			glfwMakeContextCurrent(window)
 
 
 			# self.gui = ui.UI()
-			self.on_resize(self._window,*glfwGetFramebufferSize(self._window))
 
 	def update_window(self, g_pool = None,model = None):
 		if self.window_should_close:
 			self.close_window()
 		if self._window != None:
 			glfwMakeContextCurrent(self._window)
+			# print glGetDoublev(GL_MODELVIEW_MATRIX), glGetDoublev(GL_PROJECTION_MATRIX)
 
 			# glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 			# glClearDepth(1.0)
@@ -374,10 +373,8 @@ class Visualizer():
 			# glEnable(GL_DEPTH_TEST)
 			# glAlphaFunc(GL_GREATER, 0)
 			self.clear_gl_screen()
-
 			self.trackball.push()
 
-			#THINGS I NEED TO DRAW
 
 			# 1. in anthromorphic space, draw pupil sphere and circles on it
 			glLoadMatrixf(self.get_anthropomorphic_matrix())
