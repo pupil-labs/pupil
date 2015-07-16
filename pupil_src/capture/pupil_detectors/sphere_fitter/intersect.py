@@ -91,9 +91,6 @@ def nearest_intersect_2D(lines):
 
 		A += Ivivi
 		b += pi.dot(Ivivi)
-
-	#correct to here
-
 	# x = A.partialPivLu.solve(b) #WHAT?
 	#not sure if partialPivLu actually does anything...
 
@@ -102,14 +99,12 @@ def nearest_intersect_2D(lines):
 def sphere_intersect(line,sphere):
 	#intersection between a line and a sphere, originally called intersect(line,sphere)
 	#line should be geometry.line3D() class, sphere is geometry.sphere() class
-
 	v = line.direction
 	p = line.origin #put p at origin
 	c = sphere.center - p
 	r = sphere.radius
 
-	# from wikipedia :)
-	vcvc_cc_rr = v.dot(c)**2 - c.dot(c) + r**2
+	vcvc_cc_rr = v.dot(c)**2 - c.dot(c) + r**2 # from wikipedia :)
 	if (vcvc_cc_rr < 0):
 		# logger.warning("NO INTERSECTION between line and sphere")
 		return None
@@ -124,43 +119,72 @@ def sphere_intersect(line,sphere):
 def get_sphere_intersect_params(line,sphere):
 	point = sphere_intersect(line,sphere)[0]
 	normal = point - sphere.center
-
 	theta = np.arctan2(normal[1],normal[0])
 	psi = np.arctan2(np.sqrt(normal[0]**2 + normal[1]**2),normal[2])
-
 	return geometry.PupilParams(theta, psi, sphere.radius)
 
 def residual_distance_intersect_2D(p, lines):
 	#used to calculate residual distance
-    x3,y3 = p
-    x1 = []
-    y1 = []
-    dx21 = []
-    dy21 = []
-    for line in lines:
-    	x1.append(line.origin[0])
-    	y1.append(line.origin[1])
-    	dx21.append(line.direction[0])
-    	dy21.append(line.direction[1])
-    x1 = np.asarray(x1)
-    y1 = np.asarray(y1)
-    dx21 = np.asarray(dx21)
-    dy21 = np.asarray(dy21)
+	x3,y3 = p
+	x1 = []
+	y1 = []
+	dx21 = []
+	dy21 = []
+	for line in lines:
+		x1.append(line.origin[0])
+		y1.append(line.origin[1])
+		dx21.append(line.direction[0])
+		dy21.append(line.direction[1])
+	x1 = np.asarray(x1)
+	y1 = np.asarray(y1)
+	dx21 = np.asarray(dx21)
+	dy21 = np.asarray(dy21)
 
-    lensq21 = dx21*dx21 + dy21*dy21
+	lensq21 = dx21*dx21 + dy21*dy21
 
-    u = (x3-x1)*dx21 + (y3-y1)*dy21
+	u = (x3-x1)*dx21 + (y3-y1)*dy21
 
-    u = u / lensq21
-    x = x1+ u * dx21
-    y = y1+ u * dy21
-    dx30 = x3-x
-    dy30 = y3-y
-    return np.sqrt( dx30**2 + dy30**2 )
+	u = u / lensq21
+	x = x1+ u * dx21
+	y = y1+ u * dy21
+	dx30 = x3-x
+	dy30 = y3-y
+	return np.sqrt( dx30**2 + dy30**2 )
 
-def residual_distance_intersect_3D(p,lines):
-	pass
-	#to implement
+def residual_distance_intersect_3D(point,lines):
+	x3,y3,z3 = point
+	x1 = []
+	y1 = []
+	z1 = []
+	dx1 = []
+	dy1 = []
+	dz1 = []
+	for line in lines:
+		x1.append(line.origin[0])
+		y1.append(line.origin[1])
+		z1.append(line.origin[2])
+		dx1.append(line.direction[0])
+		dy1.append(line.direction[1])
+		dz1.append(line.direction[2])
+	x1 = np.asarray(x1)
+	y1 = np.asarray(y1)
+	z1 = np.asarray(z1)
+	dx1 = np.asarray(dx1)
+	dy1 = np.asarray(dy1)
+	dz1 = np.asarray(dz1)
+
+	lensq21 = dx1**2 + dy1**2 + dz1**2
+	u = ((x3-x1)*dx1 + (y3-y1)*dy1 + (z3 - z1)*dz1) / lensq21
+	x = x1+ u * dx1
+	y = y1+ u * dy1
+	z = z1+ u * dz1
+	dx3 = x3-x
+	dy3 = y3-y
+	dz3 = z3-z
+	return np.sqrt(dx3**2 + dy3**2 + dz3**2)
+
+
+
 
 
 ################################################
@@ -181,7 +205,10 @@ if __name__ == '__main__':
 	print hudong
 	print np.mean(residual_distance_intersect_2D(hudong, lines))
 
-	# huding = geometry.Line3D([0.,0.,0.],[-0.16545883,-0.11183079 ,0.97985573])
-	# hudang = geometry.Sphere([0.31493994,0.05115442,20.], 5.0751367958)
-	# print hudang
-	# print get_sphere_intersect_params(huding, hudang)
+	lines = []
+	lines.append(geometry.Line3D([3,3,5],[1,0,0]))
+	lines.append(geometry.Line3D([3,3,3],[0,1,0]))
+	hudong =  nearest_intersect_3D(lines)
+	print hudong
+	print np.mean(residual_distance_intersect_3D(hudong, lines))
+

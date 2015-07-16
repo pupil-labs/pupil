@@ -215,7 +215,9 @@ class Sphere_Fitter():
 			pupil.init_valid = True
 		eye_center_proj = intersect.nearest_intersect_2D(self.pupil_gazelines_proj)
 		eye_center_proj = np.reshape(eye_center_proj,(2,))
-		# print eye_center_proj
+
+		print np.mean(intersect.residual_distance_intersect_2D(eye_center_proj,self.pupil_gazelines_proj))
+
 		valid_eye = True
 
 		if (valid_eye):
