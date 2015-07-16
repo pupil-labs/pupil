@@ -63,14 +63,12 @@ def nearest_intersect_3D(lines):
 	#each element in array lines should be geometry.line3D() class
 	A = np.zeros((3,3))
 	b = np.zeros(3)
-	Ivv = [] #vector of matrices
 	for line in lines:
 		vi = line.direction.reshape(3,1)
 		pi = line.origin
-		Ivivi = np.identity(3) - vi.dot(vi.T)
-		Ivv.append(Ivivi)
+		Ivivi = np.identity(3) - np.dot(vi,vi.T)
 		A += Ivivi
-		b += pi.dot(Ivivi)
+		b += np.dot(pi,Ivivi)
 
 	# x = A.partialPivLu.solve(b)
 	#not sure if partialPivLu actually does anything...
@@ -82,15 +80,12 @@ def nearest_intersect_2D(lines):
 	#each element in array lines should be geometry.line2D() class
 	A = np.zeros((2,2))
 	b = np.zeros((2))
-	Ivv = [] #vector of matrices
 	for line in lines:
 		vi = line.direction.reshape(2,1)
 		pi = line.origin
-		Ivivi = np.identity(2) - vi.dot(vi.T)
-		Ivv.append(Ivivi)
-
+		Ivivi = np.identity(2) - np.dot(vi,vi.T)
 		A += Ivivi
-		b += pi.dot(Ivivi)
+		b += np.dot(pi,Ivivi)
 	# x = A.partialPivLu.solve(b) #WHAT?
 	#not sure if partialPivLu actually does anything...
 

@@ -75,13 +75,17 @@ class Sphere_Fitter():
 			else:
 				logger.warning('no camera intrinsic input, set to default identity matrix')
 		self.intrinsics = intrinsics #camera intrinsics of our webcam.
-		self.camera_center = np.array([0,0,0])
+		self.camera_center = [0,0,0]
 		self.eye = geometry.Sphere((0,0,0),0) #model of our eye. geometry.sphere()
 		self.projected_eye = geometry.Ellipse() #ellipse that is the projected eye sphere
 		self.observations = [] #array containing elements in pupil class, originally "pupils"
 		self.scale = 1
 		self.model_version = 0
+
+		#stuff used for calculating intersections
 		self.pupil_gazelines_proj = []
+		self.twoDim_A = np.zeros((2,2)) #basically we run intersect incrementally
+		self.twoDim_B = np.zeros(2) #these are matrices/vectors used in intersect.py
 
 		# self.region_band_width = region_band_width
 		# self.region_step_epsilon = region_step_epsilon
@@ -93,13 +97,22 @@ class Sphere_Fitter():
 		#ellipse is the ellipse of pupil in camera image
 		pupil = Pupil(ellipse = ellipse, intrinsics = self.intrinsics)
 		self.observations.append(pupil)
-		self.pupil_gazelines_proj.append(pupil.line)		
+		self.pupil_gazelines_proj.append(pupil.line) #appending line to list
+		vi = pupil.line.direction.reshape(2,1) #appending to intersection matrix calculations
+		Ivivi = np.identity(2) - np.dot(vi,vi.T)
+		self.twoDim_A += Ivivi
+		self.twoDim_B += np.dot(pupil.line.origin,Ivivi)
+
 
 	def add_pupil_labs_observation(self,pupil_ellipse):
 		converted_ellipse = geometry.Ellipse.from_ellipse_dict(pupil_ellipse)
 		pupil = Pupil(ellipse = converted_ellipse, intrinsics = self.intrinsics)
 		self.observations.append(pupil)
 		self.pupil_gazelines_proj.append(pupil.line)
+		vi = pupil.line.direction.reshape(2,1) #appending to intersection matrix calculations
+		Ivivi = np.identity(2) - np.dot(vi,vi.T)
+		self.twoDim_A += Ivivi
+		self.twoDim_B += np.dot(pupil.line.origin,Ivivi)
 
 	def reset(self):
 		self.observations = []
@@ -196,16 +209,11 @@ class Sphere_Fitter():
 			Find a least-squares 'intersection' (point nearest to all lines) of
 			the projected 2D gaze vectors. Then, unproject that circle onto a
 			point a fixed distance away.
+			np.linalg.solve has replaced intersect.nearest_intersect_2D
 			For robustness, use RANSAC to eliminate stray gaze lines
 			(This has to be done here because it's used by the pupil circle disambiguation)
 		"""
-		# if (use_ransac):
-		# 	""" TO BE IMPLEMENTED (or maybe I won't bother since ransac isn't most important part"""
-		# 	pass
-		# else:
-		for pupil in self.observations: #this line can be optimized
-			pupil.init_valid = True
-		eye_center_proj = intersect.nearest_intersect_2D(self.pupil_gazelines_proj)
+		eye_center_proj = np.linalg.solve(self.twoDim_A,self.twoDim_B) #don't need to recalculate matrix
 		eye_center_proj = np.reshape(eye_center_proj,(2,))
 
 		# print np.mean(intersect.residual_distance_intersect_2D(eye_center_proj,self.pupil_gazelines_proj))
@@ -228,6 +236,7 @@ class Sphere_Fitter():
 					self.observations[i].circle = self.observations[i].projected_circles[0]
 				else:
 					self.observations[i].circle = self.observations[i].projected_circles[1]
+				self.observations[i].init_valid = True
 		else:
 			#no inliers, so no eye
 			self.eye = Sphere.Sphere()
@@ -276,5 +285,5 @@ if __name__ == '__main__':
 
 	huding.unproject_observations()
 	huding.initialize_model()
-	print huding.observations[-1].params
+	print huding.observations[-1]
 	print huding.eye #Sphere {center: [ -3.02103998  -4.64862274  49.54492648] radius: 12.0}
