@@ -11,7 +11,7 @@ class Circle3D(object):
         self.radius = radius
 
     def __str__(self):
-        return "Circle { center: %s  normal: %s radius: %s} "%(self.center,self.normal,self.radius)
+        return "Circle(center = %s, normal = %s, radius = %.3f)"%(self.center,self.normal,self.radius)
 
 
     def project_to_ellipse(self,intrinsics):
@@ -209,7 +209,7 @@ class Ellipse:
         return cls(center,major_radius,minor_radius,angle)
 
     def __str__(self):
-        return "Ellipse center: %s  major_radius: %s  minor_radius: %s  angle: %s "%(self.center,self.major_radius,self.minor_radius,self.angle)
+        return "Ellipse(center = %s, major_radius = %.3f, minor_radius = %.3f, angle = %.3f)"%(self.center,self.major_radius,self.minor_radius,self.angle)
 
     def scale(self,scale):
         self.center *=scale
@@ -241,7 +241,7 @@ class Line:
         self.direction = self.direction/np.sqrt(sum(self.direction**2))
 
     def __str__(self):
-        return "Line { from %s direction %s }" %(self.origin,self.direction)
+        return "Line(origin = %s, direction = %s )" %(self.origin,self.direction)
 
 
     ## other functions from the eigen class that exist, but may not be used
@@ -275,7 +275,7 @@ class PupilParams(): #was a structure in C
         self.radius = radius
 
     def __str__(self):
-        return "PupilParams Class: Theta " + str(self.theta) + " psi " + str(self.psi) + " r " + str(self.radius)
+        return "PupilParams(theta = %s, psi = %s, radius = %s)" %(self.theta, self.psi, self.radius)
 
 class Sphere:
     def __init__(self,center,radius):
@@ -283,7 +283,7 @@ class Sphere:
         self.radius = radius
 
     def __str__(self):
-        return "Sphere {center: %s radius: %s}" %(self.center,self.radius)
+        return "Sphere(center = %s, radius = %s)" %(self.center,self.radius)
 
     def project(self, intrinsics):
         center = project_point(self.center,intrinsics)

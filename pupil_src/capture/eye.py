@@ -366,7 +366,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         #eye sphere fitter adding
         if result['confidence'] > 0.8:
             eye_model.add_pupil_labs_observation(result)
-            # print eye_model.observations[-1].ellipse
+            print eye_model.observations[-1].ellipse
 
             #draw the circle back as an ellipse
             # reproj_pupil = eye_model.observations[-1].projected_circles[0].project_to_ellipse(eye_model.intrinsics)

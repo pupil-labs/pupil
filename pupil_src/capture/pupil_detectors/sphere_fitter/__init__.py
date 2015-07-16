@@ -35,9 +35,28 @@ class Pupil(): #data structure for a pupil
 	def __init__(self, ellipse = geometry.Ellipse(), intrinsics = None, radius = 1):
 		self.ellipse = ellipse
 		self.circle = geometry.Circle3D() #may delete later
-		self.projected_circles = self.ellipse.unproject(radius = 1, intrinsics= intrinsics)
 		self.params = geometry.PupilParams()
 		self.init_valid = False
+
+		""" get pupil circles
+			Do a per-image unprojection of the pupil ellipse into the two fixed
+			size circles that would project onto it. The size of the circles
+			doesn't matter here, only their center and normal does.
+		"""
+		self.projected_circles = self.ellipse.unproject(radius = 1, intrinsics= intrinsics)
+		""" get projected circles and gaze vectors
+			Project the circle centers and gaze vectors down back onto the image plane.
+			We're only using them as line parameterizations, so it doesn't matter which of the two centers/gaze
+			vectors we use, as the two gazes are parallel and the centers are co-linear
+		"""
+		#why do I default use the 0th one, not the 1st one???
+		#here maybe write some function that determines which line is better
+		c = np.reshape(self.projected_circles[0].center, (3,1)) #it is a 3D circle
+		v = np.reshape(self.projected_circles[0].normal, (3,1))
+		c_proj = geometry.project_point(c,intrinsics)
+		v_proj = geometry.project_point(v + c, intrinsics) - c_proj
+		v_proj = v_proj/np.linalg.norm(v_proj) #normalizing
+		self.line = geometry.Line2D(c_proj, v_proj) #append this to self.pupil_gazeline_proj
 
 	def __str__(self):
 		return "Pupil Class: " + str(self.ellipse) + str(self.circle) + " " + str(self.params) + " init_valid: " + str(self.init_valid)
@@ -62,6 +81,7 @@ class Sphere_Fitter():
 		self.observations = [] #array containing elements in pupil class, originally "pupils"
 		self.scale = 1
 		self.model_version = 0
+		self.pupil_gazelines_proj = []
 
 		# self.region_band_width = region_band_width
 		# self.region_step_epsilon = region_step_epsilon
@@ -71,12 +91,15 @@ class Sphere_Fitter():
 
 	def add_observation(self,ellipse):
 		#ellipse is the ellipse of pupil in camera image
-		self.observations.append(Pupil(ellipse = ellipse, intrinsics = self.intrinsics))
+		pupil = Pupil(ellipse = ellipse, intrinsics = self.intrinsics)
+		self.observations.append(pupil)
+		self.pupil_gazelines_proj.append(pupil.line)		
 
 	def add_pupil_labs_observation(self,pupil_ellipse):
 		converted_ellipse = geometry.Ellipse.from_ellipse_dict(pupil_ellipse)
-		self.observations.append(Pupil(ellipse = converted_ellipse, intrinsics = self.intrinsics))
-
+		pupil = Pupil(ellipse = converted_ellipse, intrinsics = self.intrinsics)
+		self.observations.append(pupil)
+		self.pupil_gazelines_proj.append(pupil.line)
 
 	def reset(self):
 		self.observations = []
@@ -169,35 +192,6 @@ class Sphere_Fitter():
 		if (len(self.observations) < 2):
 			logger.warning("Need at least two observations")
 			return
-		self.pupil_gazelines_proj = [] #it is a vector<line> !!
-
-		for pupil in self.observations:
-			""" get pupil circles
-				Do a per-image unprojection of the pupil ellipse into the two fixed
-				size circles that would project onto it. The size of the circles
-				doesn't matter here, only their center and normal does.
-			"""
-			unprojection_pair = pupil.projected_circles
-
-			""" get projected circles and gaze vectors
-				Project the circle centers and gaze vectors down back onto the image plane.
-				We're only using them as line parameterizations, so it doesn't matter which of the two centers/gaze
-				vectors we use, as the two gazes are parallel and the centers are co-linear
-			"""
-
-			#why do I default use the 0th one, not the 1st one???
-
-			#here maybe write some function that determines which line is better
-
-			c = np.reshape(unprojection_pair[0].center, (3,1)) #it is a 3D circle
-			v = np.reshape(unprojection_pair[0].normal, (3,1))
-			c_proj = geometry.project_point(c,self.intrinsics)
-			v_proj = geometry.project_point(v + c, self.intrinsics) - c_proj
-			v_proj = v_proj/np.linalg.norm(v_proj) #normalizing
-			line = geometry.Line2D(c_proj, v_proj)
-			# print line
-			self.pupil_gazelines_proj.append(line)
-
 		""" Get eyeball center
 			Find a least-squares 'intersection' (point nearest to all lines) of
 			the projected 2D gaze vectors. Then, unproject that circle onto a
@@ -205,18 +199,16 @@ class Sphere_Fitter():
 			For robustness, use RANSAC to eliminate stray gaze lines
 			(This has to be done here because it's used by the pupil circle disambiguation)
 		"""
-		eye_center_proj = []
-
 		# if (use_ransac):
 		# 	""" TO BE IMPLEMENTED (or maybe I won't bother since ransac isn't most important part"""
 		# 	pass
 		# else:
-		for pupil in self.observations:
+		for pupil in self.observations: #this line can be optimized
 			pupil.init_valid = True
 		eye_center_proj = intersect.nearest_intersect_2D(self.pupil_gazelines_proj)
 		eye_center_proj = np.reshape(eye_center_proj,(2,))
 
-		print np.mean(intersect.residual_distance_intersect_2D(eye_center_proj,self.pupil_gazelines_proj))
+		# print np.mean(intersect.residual_distance_intersect_2D(eye_center_proj,self.pupil_gazelines_proj))
 
 		valid_eye = True
 
@@ -256,30 +248,33 @@ class Sphere_Fitter():
 if __name__ == '__main__':
 
 	#testing stuff
-	huding = Sphere_Fitter(focal_length = 879.193)
+	intrinsics = np.matrix('879.193 0 320; 0 -879.193 240; 0 0 1')
+	huding = Sphere_Fitter(intrinsics = intrinsics)
 
-	#testing unproject_observation, data from singleeyefitter/img_small
-	ellipse1 = geometry.Ellipse((-147.579,100.093), 45.9498, 35.4209, 0.616285*scipy.pi)
-	ellipse2 = geometry.Ellipse((-134.405,98.3423), 45.7818, 36.7225, 0.623024*scipy.pi)
-	ellipse3 = geometry.Ellipse((-93.3441,9.03186), 47.185, 34.9949, 0.777285*scipy.pi)
-	ellipse4 = geometry.Ellipse((-75.7188,67.1436), 69.3691, 60.3261, 0.726734*scipy.pi)
-	ellipse5 = geometry.Ellipse((75.7414,69.3795), 63.0367, 58.3862, 0.155879*scipy.pi)
-	ellipse6 = geometry.Ellipse((32.4573,44.9959), 56.4572, 51.3966, 0.0248723*scipy.pi)
-	ellipse7 = geometry.Ellipse((-92.549,33.4655), 66.5554, 52.3161, 0.750369*scipy.pi)
-	ellipse8 = geometry.Ellipse((-31.3134,81.571), 69.4012, 65.275, 0.7931*scipy.pi)
-	ellipse9 = geometry.Ellipse((-134.405,98.3423), 45.7818, 36.7225, 0.623024*scipy.pi)
-	ellipse10 = geometry.Ellipse((41.84,74.0696), 67.413, 63.518, 0.0462735*scipy.pi)
+	#testing unproject_observation, with data suitable for camera intrinsics
+	ellipse1 = geometry.Ellipse([422.255,255.123],40.428,30.663,1.116)
+	ellipse2 = geometry.Ellipse([442.257,365.003],44.205,32.146,1.881)
+	ellipse3 = geometry.Ellipse([307.473,178.163],41.29,22.765,0.2601)
+	ellipse4 = geometry.Ellipse([411.339,290.978],51.663,41.082,1.377)
+	ellipse5 = geometry.Ellipse([198.128,223.905],46.852,34.949,2.659)
+	ellipse6 = geometry.Ellipse([299.641,177.639],40.133,24.089,0.171)
+	ellipse7 = geometry.Ellipse([211.669,212.248],46.885,33.538,2.738)
+	ellipse8 = geometry.Ellipse([196.43,236.69],47.094,38.258,2.632)
+	ellipse9 = geometry.Ellipse([317.584,189.71],42.599,27.721,0.3)
+	ellipse10 = geometry.Ellipse([482.762,315.186],38.397,23.238,1.519)
 
 	huding.add_observation(ellipse1)
 	huding.add_observation(ellipse2)
 	huding.add_observation(ellipse3)
 	huding.add_observation(ellipse4)
-	# huding.add_observation(ellipse5)
-	# huding.add_observation(ellipse6)
-	# huding.add_observation(ellipse7)
-	# huding.add_observation(ellipse8)
-	# huding.add_observation(ellipse9)
-	# huding.add_observation(ellipse10)
+	huding.add_observation(ellipse5)
+	huding.add_observation(ellipse6)
+	huding.add_observation(ellipse7)
+	huding.add_observation(ellipse8)
+	huding.add_observation(ellipse9)
+	huding.add_observation(ellipse10)
 
 	huding.unproject_observations()
 	huding.initialize_model()
+	print huding.observations[-1].params
+	print huding.eye #Sphere {center: [ -3.02103998  -4.64862274  49.54492648] radius: 12.0}

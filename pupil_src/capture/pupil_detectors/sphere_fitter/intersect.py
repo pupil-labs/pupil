@@ -117,8 +117,11 @@ def sphere_intersect(line,sphere):
 	return p1,p2 #a line intersects a sphere at two points
 
 def get_sphere_intersect_params(line,sphere):
-	point = sphere_intersect(line,sphere)[0]
-	normal = point - sphere.center
+	point = sphere_intersect(line,sphere)
+	if point == None:
+		# logger.warning("NO INTERSECTION between line and sphere")
+		return None
+	normal = point[0] - sphere.center #take closer point of two
 	theta = np.arctan2(normal[1],normal[0])
 	psi = np.arctan2(np.sqrt(normal[0]**2 + normal[1]**2),normal[2])
 	return geometry.PupilParams(theta, psi, sphere.radius)
@@ -182,10 +185,6 @@ def residual_distance_intersect_3D(point,lines):
 	dy3 = y3-y
 	dz3 = z3-z
 	return np.sqrt(dx3**2 + dy3**2 + dz3**2)
-
-
-
-
 
 ################################################
 if __name__ == '__main__':
