@@ -69,6 +69,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             self.pix_per_degree = float(self.g_pool.capture.frame_size[1])/new_fov
 
         self.menu.append(ui.Info_Text('This plugin detects fixations based on a dispersion threshold in terms of degrees of visual angle. It also uses a min duration threshold.'))
+        self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Slider('min_duration',self,min=0.0,step=0.05,max=1.0,label='duration threshold'))
         self.menu.append(ui.Slider('max_dispersion',self,min=0.0,step=0.05,max=3.0,label='dispersion threshold'))
         self.menu.append(ui.Button('Run fixation detector',self._classify))
@@ -248,6 +249,8 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
                 cv2.putText(frame.img,'%i'%f['id'],(x+20,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,150,100))
                 # cv2.putText(frame.img,'%i - %i'%(f['start_frame_index'],f['end_frame_index']),(x,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,150,100))
 
+    def close(self):
+        self.alive = False
 
 
     def get_init_dict(self):
