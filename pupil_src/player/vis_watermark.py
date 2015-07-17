@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from gl_utils import draw_gl_points_norm
 from player_methods import transparent_image_overlay
 from plugin import Plugin
 import numpy as np
@@ -24,16 +23,12 @@ logger = logging.getLogger(__name__)
 
 
 class Vis_Watermark(Plugin):
-    """docstring for DisplayGaze"""
-    def __init__(self, g_pool,selected_watermark_path = None,pos = [20,20],menu_conf={'pos':(300,300),'size':(300,300),'collapsed':False}):
+    def __init__(self, g_pool,selected_watermark_path = None,pos = (20,20)):
         super(Vis_Watermark, self).__init__(g_pool)
         self.order = .9
         self.uniqueness = "not_unique"
-
-        # initialize empty menu
-        # and load menu configuration of last session
         self.menu = None
-        self.menu_conf = menu_conf
+
         available_files = glob(os.path.join(self.g_pool.user_dir,'*png')) #we only look for png's
         self.available_files = [f for f in available_files if cv2.imread(f,-1).shape[2]==4] #we only look for rgba images
         logger.debug('Found %s watermark files: %s'%(len(self.available_files),self.available_files))
@@ -49,7 +44,7 @@ class Vis_Watermark(Plugin):
         else:
             logger.warning("No .png files found. Make sure they are in RGBA format.")
 
-        self.pos = pos
+        self.pos = list(pos) #if we make the default arg a list the instance will edit the default vals and a new call of the class constructor creates an ainstace with modified default values.
         self.move_watermark = False
         self.drag_offset = None
 
@@ -64,7 +59,6 @@ class Vis_Watermark(Plugin):
             self.watermark_path = path
 
     def update(self,frame,events):
-
         if self.drag_offset is not None:
             pos = glfwGetCursorPos(glfwGetCurrentContext())
             pos = normalize(pos,glfwGetWindowSize(glfwGetCurrentContext()))
@@ -77,12 +71,10 @@ class Vis_Watermark(Plugin):
             #keep in image bounds, do this even when not dragging because the image sizes could change.
             self.pos[1] = min(frame.img.shape[0]-self.watermark.shape[0],max(self.pos[1],0))
             self.pos[0] = min(frame.img.shape[1]-self.watermark.shape[1],max(self.pos[0],0))
-
+            pos = int(self.pos[0]),int(self.pos[1])
             img  = frame.img
-            roi = slice(self.pos[1],self.pos[1]+self.watermark.shape[0]),slice(self.pos[0],self.pos[0]+self.watermark.shape[1])
+            roi = slice(pos[1],pos[1]+self.watermark.shape[0]),slice(pos[0],pos[0]+self.watermark.shape[1])
             img[roi] = self.watermark*self.alpha_mask + img[roi]*(1-self.alpha_mask)
-
-
 
 
     def on_click(self,pos,button,action):
@@ -95,10 +87,7 @@ class Vis_Watermark(Plugin):
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Growing_Menu('Watermark')
-        # load the configuration of last session
-        self.menu.configuration = self.menu_conf
-        # add menu to the window
+        self.menu = ui.Scrolling_Menu('Watermark')
         self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Button('remove',self.unset_alive))
         if self.watermark is None:
@@ -121,10 +110,10 @@ class Vis_Watermark(Plugin):
             pass
 
     def get_init_dict(self):
-        return {'selected_watermark_path':self.watermark_path,'pos':self.pos, 'menu_conf':self.menu.configuration}
+        return {'selected_watermark_path':self.watermark_path,'pos':tuple(self.pos)}
 
     def cleanup(self):
-        """ called when the plugin gets terminated.
+        """called when the plugin gets terminated.
         This happens either voluntarily or forced.
         if you have a GUI or glfw window destroy it here.
         """

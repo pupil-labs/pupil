@@ -11,7 +11,7 @@
 import os
 import cv2
 import numpy as np
-from gl_utils import draw_gl_polyline,adjust_gl_view,clear_gl_screen,draw_gl_point,draw_gl_point_norm,basic_gl_setup
+from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 from methods import normalize
 import audio
 
@@ -34,8 +34,6 @@ logger = logging.getLogger(__name__)
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
-    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-    w,h = w*hdpi_factor, h*hdpi_factor
     adjust_gl_view(w,h)
     glfwMakeContextCurrent(active_window)
 
@@ -45,7 +43,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         This method is used to calculate camera intrinsics.
 
     """
-    def __init__(self,g_pool, menu_conf = {'collapsed':True},fullscreen = False):
+    def __init__(self,g_pool,fullscreen = False):
         super(Camera_Intrinsics_Estimation, self).__init__(g_pool)
         self.collect_new = False
         self.calculated = False
@@ -60,7 +58,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self._window = None
 
         self.menu = None
-        self.menu_conf = menu_conf
         self.button = None
         self.clicks_to_close = 5
         self.window_should_close = False
@@ -87,7 +84,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.menu.append(ui.Button('show Pattern',self.open_window))
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(monitor_names)),labels=monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
-        self.menu.configuration = self.menu_conf
         self.g_pool.calibration_menu.append(self.menu)
 
         self.button = ui.Thumb('collect_new',self,setter=self.advance,label='Capture',hotkey='c')
@@ -96,7 +92,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
     def deinit_gui(self):
         if self.menu:
-            self.menu_conf = self.menu.configuration
             self.g_pool.calibration_menu.remove(self.menu)
             self.g_pool.calibration_menu.remove(self.info)
 
@@ -133,13 +128,14 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             if not self.fullscreen:
                 glfwSetWindowPos(self._window,200,0)
 
-            on_resize(self._window,height,width)
 
             #Register callbacks
-            glfwSetWindowSizeCallback(self._window,on_resize)
+            glfwSetFramebufferSizeCallback(self._window,on_resize)
             glfwSetKeyCallback(self._window,self.on_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
             glfwSetMouseButtonCallback(self._window,self.on_button)
+
+            on_resize(self._window,*glfwGetFramebufferSize(self._window))
 
 
             # gl_state settings
@@ -176,12 +172,10 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
     def calculate(self):
         self.calculated = True
-        camera_matrix, dist_coefs = _calibrate_camera(np.asarray(self.img_points),
-                                                    np.asarray(self.obj_points),
-                                                    (self.img_shape[1], self.img_shape[0]))
+        rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(np.array(self.obj_points), np.array(self.img_points),self.g_pool.capture.frame_size)
+        logger.info("Calibrated Camera, RMS:%s"%rms)
         np.save(os.path.join(self.g_pool.user_dir,'camera_matrix.npy'), camera_matrix)
         np.save(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"), dist_coefs)
-        np.save(os.path.join(self.g_pool.user_dir,"camera_resolution.npy"), np.array([self.img_shape[1], self.img_shape[0]]))
         audio.say("Camera calibrated. Calibration saved to user folder")
         logger.info("Camera calibrated. Calibration saved to user folder")
 
@@ -200,7 +194,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
                 self.button.status_text = "%i to go"%(self.count)
 
 
-        if not self.count and not self.calculated:
+        if self.count<=0 and not self.calculated:
             self.calculate()
             self.button.status_text = ''
 
@@ -249,10 +243,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
 
     def get_init_dict(self):
-        if self.menu:
-            return {'menu_conf':self.menu.configuration}
-        else:
-            return {'menu_conf':self.menu_conf}
+        return {}
 
 
     def cleanup(self):
@@ -264,15 +255,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             self.close_window()
         self.deinit_gui()
 
-
-# shared helper functions for detectors private to the module
-def _calibrate_camera(img_pts, obj_pts, img_size):
-    # generate pattern size
-    camera_matrix = np.zeros((3,3))
-    dist_coef = np.zeros(4)
-    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_pts, img_pts,
-                                                    img_size, camera_matrix, dist_coef)
-    return camera_matrix, dist_coefs
 
 def _gen_pattern_grid(size=(4,11)):
     pattern_grid = []

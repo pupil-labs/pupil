@@ -25,30 +25,23 @@ from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_nam
 
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.1'
+assert pyglui_version >= '0.3'
 
 #monitoring
 import psutil
 
 # helpers/utils
+from version_utils import VersionFormat
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based
 from OpenGL.GL import GL_LINE_LOOP
 from methods import *
 from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
+from av_writer import JPEG_Writer
+from cv2_writer import CV_Writer
+
 # Pupil detectors
 from pupil_detectors import Canny_Detector
-
-#UI Platform tweaks
-if platform.system() == 'Linux':
-    scroll_factor = 10.0
-    window_position_default = (0,0)
-elif platform.system() == 'Windows':
-    scroll_factor = 1.0
-    window_position_default = (8,31)
-else:
-    scroll_factor = 1.0
-    window_position_default = (0,0)
 
 
 
@@ -80,17 +73,26 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 
+
+    #UI Platform tweaks
+    if platform.system() == 'Linux':
+        scroll_factor = 10.0
+        window_position_default = (600,300*eye_id)
+    elif platform.system() == 'Windows':
+        scroll_factor = 1.0
+        window_position_default = (600,31+300*eye_id)
+    else:
+        scroll_factor = 1.0
+        window_position_default = (600,300*eye_id)
+
+
     # Callback functions
     def on_resize(window,w, h):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
-        hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-        w,h = w*hdpi_factor, h*hdpi_factor
         g_pool.gui.update_window(w,h)
         graph.adjust_size(w,h)
         adjust_gl_view(w,h)
-        # for p in g_pool.plugins:
-            # p.on_window_resize(window,w,h)
         glfwMakeContextCurrent(active_window)
 
     def on_key(window, key, scancode, action, mods):
@@ -140,9 +142,15 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye%s'%eye_id))
-
+    if session_settings.get("version",VersionFormat('0.0')) < g_pool.version:
+        logger.info("Session setting are from older version of this app. I will not use those.")
+        session_settings.clear()
     # Initialize capture
-    cap = autoCreateCapture(cap_src, cap_size, 30, timebase=g_pool.timebase)
+    cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
+    cap.frame_size = cap_size
+    cap.frame_rate = 90 #default
+    cap.settings = session_settings.get('capture_settings',{})
+
 
     # Test capture
     try:
@@ -156,7 +164,6 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     g_pool.flip = session_settings.get('flip',False)
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
-    g_pool.window_size = session_settings.get('window_size',1.)
     g_pool.display_mode = session_settings.get('display_mode','camera_image')
     g_pool.display_mode_info_text = {'camera_image': "Raw eye camera image. This uses the least amount of CPU power",
                                 'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be a small as possible but big enough to capture to pupil in its movements",
@@ -176,18 +183,11 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
 
-    def get_scale():
-        return g_pool.gui.scale
 
     def set_display_mode_info(val):
-        # set info text here and append to the general settings menu
-        # 'camera_image','roi','algorithm','cpu_save'
         g_pool.display_mode = val
         g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
 
-
-    width,height = session_settings.get('window_size',(frame.width, frame.height))
-    window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
 
     # Initialize glfw
     glfwInit()
@@ -195,38 +195,26 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         title = "Binocular eye %s"%eye_id
     else:
         title = 'Eye'
+    width,height = session_settings.get('window_size',(frame.width, frame.height))
     main_window = glfwCreateWindow(width,height, title, None, None)
-
+    window_pos = session_settings.get('window_position',window_position_default)
+    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfwMakeContextCurrent(main_window)
     cygl_init()
-
-    # Register callbacks main_window
-    glfwSetWindowSizeCallback(main_window,on_resize)
-    glfwSetWindowCloseCallback(main_window,on_close)
-    glfwSetKeyCallback(main_window,on_key)
-    glfwSetCharCallback(main_window,on_char)
-    glfwSetMouseButtonCallback(main_window,on_button)
-    glfwSetCursorPosCallback(main_window,on_pos)
-    glfwSetScrollCallback(main_window,on_scroll)
 
     # gl_state settings
     basic_gl_setup()
     g_pool.image_tex = create_named_texture(frame.img.shape)
     update_named_texture(g_pool.image_tex,frame.img)
-
-    # refresh speed settings
     glfwSwapInterval(0)
-    glfwSetWindowPos(main_window,800,300*eye_id+window_position_default[1])
 
 
     #setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-300,0),size=(0,0),header_pos='left')
-    g_pool.sidebar.configuration = session_settings.get('side_bar_config',{'collapsed':True})
     general_settings = ui.Growing_Menu('General')
-    general_settings.configuration = session_settings.get('general_menu_config',{})
-    general_settings.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
+    general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
     general_settings.append(ui.Selector('display_mode',g_pool,setter=set_display_mode_info,selection=['camera_image','roi','algorithm'], labels=['Camera Image', 'ROI', 'Algorithm'], label="Mode") )
     general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
@@ -235,18 +223,27 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     g_pool.sidebar.append(general_settings)
     g_pool.gui.append(g_pool.sidebar)
     g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
-
-
     # let the camera add its GUI
     g_pool.capture.init_gui(g_pool.sidebar)
-    g_pool.capture.menu.configuration = session_settings.get('capture_menu_config',{'collapsed':True})
-
     # let detector add its GUI
     pupil_detector.init_gui(g_pool.sidebar)
 
+    # Register callbacks main_window
+    glfwSetFramebufferSizeCallback(main_window,on_resize)
+    glfwSetWindowCloseCallback(main_window,on_close)
+    glfwSetKeyCallback(main_window,on_key)
+    glfwSetCharCallback(main_window,on_char)
+    glfwSetMouseButtonCallback(main_window,on_button)
+    glfwSetCursorPosCallback(main_window,on_pos)
+    glfwSetScrollCallback(main_window,on_scroll)
 
     #set the last saved window size
     on_resize(main_window, *glfwGetWindowSize(main_window))
+
+
+    # load last gui configuration
+    g_pool.gui.configuration = session_settings.get('ui_config',{})
+
 
     #set up performance graphs
     pid = os.getpid()
@@ -255,7 +252,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,130)
-    cpu_graph.update_fn = ps.get_cpu_percent
+    cpu_graph.update_fn = ps.cpu_percent
     cpu_graph.update_rate = 5
     cpu_graph.label = 'CPU %0.1f'
 
@@ -290,22 +287,27 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         ###  RECORDING of Eye Video (on demand) ###
         # Setup variables and lists for recording
         if rx_from_world.poll():
-            command = rx_from_world.recv()
+            command,raw_mode = rx_from_world.recv()
             if command is not None:
                 record_path = command
                 logger.info("Will save eye video to: %s"%record_path)
-                video_path = os.path.join(record_path, "eye%s.mkv"%eye_id)
                 timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-                writer = cv2.VideoWriter(video_path, cv2.cv.CV_FOURCC(*'DIVX'), float(cap.frame_rate), (frame.img.shape[1], frame.img.shape[0]))
+                if raw_mode and hasattr(frame,'jpeg_buffer') :
+                    video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
+                    writer = JPEG_Writer(video_path,cap.frame_rate)
+                else:
+                    video_path = os.path.join(record_path, "eye%s.mkv"%eye_id)
+                    writer = CV_Writer(video_path,float(cap.frame_rate), cap.frame_size)
                 timestamps = []
             else:
                 logger.info("Done recording.")
+                writer.release()
                 writer = None
                 np.save(timestamps_path,np.asarray(timestamps))
                 del timestamps
 
         if writer:
-            writer.write(frame.img)
+            writer.write_video_frame(frame)
             timestamps.append(frame.timestamp)
 
 
@@ -373,17 +375,18 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     session_settings['roi'] = u_r.get()
     session_settings['flip'] = g_pool.flip
     session_settings['display_mode'] = g_pool.display_mode
-    session_settings['side_bar_config'] = g_pool.sidebar.configuration
-    session_settings['capture_menu_config'] = g_pool.capture.menu.configuration
-    session_settings['general_menu_config'] = general_settings.configuration
+    session_settings['ui_config'] = g_pool.gui.configuration
+    session_settings['capture_settings'] = g_pool.capture.settings
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
+    session_settings['version'] = g_pool.version
     session_settings.close()
 
     pupil_detector.cleanup()
-    cap.close()
+    g_pool.gui.terminate()
     glfwDestroyWindow(main_window)
     glfwTerminate()
+    cap.close()
 
     #flushing queue in case world process did not exit gracefully
     while not g_pool.pupil_queue.empty():

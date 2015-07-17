@@ -9,36 +9,37 @@
 '''
 
 import sys, os, platform
-from time import sleep
 from ctypes import c_bool, c_double
 
+forking_enable = lambda _: _ #dummy fn
+
 if platform.system() == 'Darwin':
-    from billiard import Process, Pipe, Queue, Value, freeze_support, forking_enable
+    from billiard import Process, Pipe, Queue, Value, freeze_support
+    if getattr(sys, 'frozen', False):
+        from billiard import forking_enable
 else:
     from multiprocessing import Process, Pipe, Queue, Value, freeze_support
-    forking_enable = lambda _: _ #dummy fn
 
 if getattr(sys, 'frozen', False):
     # Specifiy user dirs.
     user_dir = os.path.expanduser(os.path.join('~','pupil_capture_settings'))
-    rec_dir = os.path.expanduser(os.path.join('~','pupil_recordings'))
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
 else:
-    # We are running in a normal Python environment.
     # Make all pupil shared_modules available to this Python session.
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
-	# Specifiy user dirs.
-    rec_dir = os.path.join(pupil_base_dir,'recordings')
+	# Specifiy user dir.
     user_dir = os.path.join(pupil_base_dir,'capture_settings')
     version_file = None
+    if __name__ == '__main__':
+        #compile all cython source files
+        from pyx_compiler import build_extensions
+        build_extensions()
 
 
-# create folder for user settings, tmp data and a recordings folder
+# create folder for user settings, tmp data
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
-if not os.path.isdir(rec_dir):
-    os.mkdir(rec_dir)
 
 from version_utils import get_version
 
@@ -89,6 +90,7 @@ class Global_Container(object):
     pass
 
 def main():
+
     # To assign camera by name: put string(s) in list
     eye_cam_names = ["USB 2.0 Camera","Microsoft", "6000","Integrated Camera","HD USB Camera"]
     world_src = ["Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
@@ -100,8 +102,8 @@ def main():
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
-    # eye_src = '/Users/mkassner/Downloads/eye.avi' , '/Users/mkassner/Downloads/eye.avi'
-    # world_src = "/Users/mkassner/Desktop/2014_01_21/000/world.avi"
+    # eye_src = '/Users/mkassner/Downloads/000/eye0.mkv' , '/Users/mkassner/Downloads/eye.avi'
+    # world_src = "/Users/mkassner/Downloads/000/world.mkv"
 
     # Camera video size in pixels (width,height)
     eye_size = (640,480)
@@ -121,7 +123,6 @@ def main():
     g_pool.eye_tx = []
     # make some constants avaiable
     g_pool.user_dir = user_dir
-    g_pool.rec_dir = rec_dir
     g_pool.version = get_version(version_file)
     g_pool.app = 'capture'
     g_pool.binocular = binocular
@@ -133,17 +134,12 @@ def main():
         p_eye += [Process(target=eye, args=(g_pool,eye_src[eye_id],eye_size,rx,eye_id))]
         g_pool.eye_tx += [tx]
         p_eye[-1].start()
-        if platform.system() == 'Linux':
-            # We need to give the camera driver some time before requesting another camera.
-            sleep(0.5)
 
     world(g_pool,world_src,world_size)
-
 
     # Exit / clean-up
     for p in p_eye:
         p.join()
-
 if __name__ == '__main__':
     freeze_support()
     main()

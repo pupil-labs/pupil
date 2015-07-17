@@ -12,7 +12,7 @@ import sys, os,platform
 import cv2
 import numpy as np
 from file_methods import Persistent_Dict
-from gl_utils import draw_gl_polyline
+from pyglui.cygl.utils import draw_polyline,RGBA
 from pyglui import ui
 from methods import normalize,denormalize
 from glfw import *
@@ -28,7 +28,7 @@ from math import sqrt
 class Marker_Detector(Plugin):
     """docstring
     """
-    def __init__(self,g_pool,menu_conf={},mode="Show markers and frames"):
+    def __init__(self,g_pool,mode="Show markers and frames"):
         super(Marker_Detector, self).__init__(g_pool)
         self.order = .2
 
@@ -69,7 +69,6 @@ class Marker_Detector(Plugin):
         self.img_shape = None
 
         self.menu= None
-        self.menu_conf=  menu_conf
         self.button=  None
         self.add_button = None
 
@@ -111,7 +110,6 @@ class Marker_Detector(Plugin):
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Marker Detector')
-        self.menu.configuration = self.menu_conf
         self.g_pool.sidebar.append(self.menu)
 
         self.button = ui.Thumb('running',self,label='Track',hotkey='t')
@@ -124,7 +122,6 @@ class Marker_Detector(Plugin):
     def deinit_gui(self):
         if self.menu:
             self.g_pool.sidebar.remove(self.menu)
-            self.menu_conf= self.menu.configuration
             self.menu= None
         if self.button:
             self.g_pool.quickbar.remove(self.button)
@@ -141,7 +138,7 @@ class Marker_Detector(Plugin):
         self.menu.append(ui.Switch('locate_3d',self,label='3D localization'))
         self.menu.append(ui.Selector('mode',self,label="Mode",selection=['Show markers and frames','Show marker IDs', 'Surface edit mode'] ))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_'),))
-        
+
         # disable locate_3d if camera intrinsics don't exist
         if self.camera_intrinsics is None:
             self.menu.elements[3].read_only = True
@@ -214,20 +211,14 @@ class Marker_Detector(Plugin):
         for s in self.surfaces:
             if s.detected:
                 s.gaze_on_srf = []
-                for p in events.get('gaze',[]):
+                for p in events.get('gaze_positions',[]):
                     gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_pos'])))
                     p['realtime gaze on ' + s.name] = gp_on_s
                     s.gaze_on_srf.append(gp_on_s)
 
 
     def get_init_dict(self):
-        if self.menu:
-            d = {'menu_conf':self.menu.configuration,'mode':self.mode}
-        else:
-            d = {'menu_conf':self.menu_conf,'mode':self.mode}
-
-        return d
-
+        return {'mode':self.mode}
 
 
     def gl_display(self):
@@ -238,7 +229,7 @@ class Marker_Detector(Plugin):
             for m in self.markers:
                 hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-                draw_gl_polyline(hat.reshape((6,2)),(0.1,1.,1.,.5))
+                draw_polyline(hat.reshape((6,2)),color=RGBA(0.1,1.,1.,.5))
 
             for s in self.surfaces:
                 s.gl_draw_frame(self.img_shape)

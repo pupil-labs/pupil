@@ -9,7 +9,7 @@
 '''
 
 import cPickle as pickle
-import os 
+import os
 import logging
 logger = logging.getLogger(__name__)
 
@@ -22,11 +22,11 @@ class Persistent_Dict(dict):
 			with open(self.file_path,'rb') as fh:
 				try:
 					self.update(pickle.load(fh))
-				except: #KeyError,EOFError 
+				except: #KeyError,EOFError
 					logger.warning("Session settings file '%s'could not be read. Will overwrite on exit."%self.file_path)
 		except IOError:
 			logger.debug("Session settings file '%s' not found. Will make new one on exit."%self.file_path)
-		
+
 
 	def save(self):
 		d = {}
@@ -37,12 +37,10 @@ class Persistent_Dict(dict):
 		except IOError:
 			logger.warning("Could not save session settings to '%s'"%self.file_path)
 
-	
 
 	def close(self):
 		self.save()
 
-	
 
 def load_object(file_path):
 	file_path = os.path.expanduser(file_path)

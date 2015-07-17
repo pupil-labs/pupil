@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from gl_utils import draw_gl_points_norm
 from plugin import Plugin
 import numpy as np
 import cv2
@@ -18,15 +17,11 @@ from methods import denormalize
 
 class Vis_Cross(Plugin):
     """docstring for DisplayGaze"""
-    def __init__(self, g_pool,inner=20,outer=100,color=(1.,0.0,0.0,1.0),thickness=1,menu_conf={'pos':(10,420),'size':(300,100),'collapsed':False}):
+    def __init__(self, g_pool,inner=20,outer=100,color=(1.,0.0,0.0,1.0),thickness=1):
         super(Vis_Cross, self).__init__(g_pool)
         self.order = .9
         self.uniqueness = "not_unique"
-
-        # initialize empty menu
-        # and load menu configuration of last session
         self.menu = None
-        self.menu_conf = menu_conf
 
         self.r = color[0]
         self.g = color[1]
@@ -37,7 +32,7 @@ class Vis_Cross(Plugin):
         self.thickness = thickness
 
     def update(self,frame,events):
-        pts = [denormalize(pt['norm_gaze'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events['pupil_positions'] if pt['norm_gaze'] is not None]
+        pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze_positions',[])]
         bgra = (self.b*255,self.g*255,self.r*255,self.a*255)
         for pt in pts:
             lines =  np.array( [((pt[0]-self.inner,pt[1]),(pt[0]-self.outer,pt[1])),((pt[0]+self.inner,pt[1]),(pt[0]+self.outer,pt[1])) , ((pt[0],pt[1]-self.inner),(pt[0],pt[1]-self.outer)) , ((pt[0],pt[1]+self.inner),(pt[0],pt[1]+self.outer))],dtype=np.int32 )
@@ -46,9 +41,6 @@ class Vis_Cross(Plugin):
     def init_gui(self):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Gaze Cross')
-        # load the configuration of last session
-        self.menu.configuration = self.menu_conf
-        # add menu to the window
         self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Slider('inner',self,min=0,step=10,max=200,label='Inner Offset Length'))
         self.menu.append(ui.Slider('outer',self,min=0,step=10,max=2000,label='Outer Length'))
@@ -77,7 +69,7 @@ class Vis_Cross(Plugin):
         pass
 
     def get_init_dict(self):
-        return {'inner':self.inner,'outer':self.outer,'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness, 'menu_conf':self.menu.configuration}
+        return {'inner':self.inner,'outer':self.outer,'color':(self.r, self.g, self.b, self.a),'thickness':self.thickness}
 
     def cleanup(self):
         """ called when the plugin gets terminated.

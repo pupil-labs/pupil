@@ -32,12 +32,13 @@ class CameraCaptureError(Exception):
 
 class Frame(object):
     """docstring of Frame"""
-    def __init__(self, timestamp,img):
+    def __init__(self, timestamp,img,index):
         self.timestamp = timestamp
         self.img = img
         self.height,self.width,_ = img.shape
         self._gray = None
         self._yuv = None
+        self.index = index
 
     @property
     def gray(self):
@@ -50,15 +51,13 @@ class Frame(object):
 
 class FakeCapture(object):
     """docstring for FakeCapture"""
-    def __init__(self, size=(640,480),fps=30,timestamps=None,timebase=None):
+    def __init__(self,timestamps=None,timebase=None):
         super(FakeCapture, self).__init__()
-        self.size = size
-        self.fps = fps
+        self.fps = 30
         self.timestamps = timestamps
         self.presentation_time = time()
-
-        self.make_img()
-
+        self.make_img((640,480))
+        self.frame_count = 0
         self.sidebar = None
         self.menu = None
 
@@ -72,11 +71,11 @@ class FakeCapture(object):
             logger.error("Invalid timebase variable type. Will use default system timebase")
             self.timebase = c_double(0)
 
-    def make_img(self):
-        c_w ,c_h = max(1,self.size[0]/20),max(1,self.size[1]/20)
+    def make_img(self,size):
+        c_w ,c_h = max(1,size[0]/20),max(1,size[1]/20)
         coarse = np.random.randint(0,255,size=(c_h,c_w,3)).astype(np.uint8)
         # self.img = np.ones((size[1],size[0],3),dtype=np.uint8)
-        self.img = cv2.resize(coarse,self.size,interpolation=cv2.INTER_NEAREST)
+        self.img = cv2.resize(coarse,size,interpolation=cv2.INTER_NEAREST)
 
     def fastmode(self):
         self.fps = 2000
@@ -87,15 +86,27 @@ class FakeCapture(object):
         wait = max(0,1./self.fps - spent)
         sleep(wait)
         self.presentation_time = time()
-        return Frame(time()-self.timebase.value,self.img.copy())
+        frame_count = self.frame_count
+        self.frame_count +=1
+        return Frame(time()-self.timebase.value,self.img.copy(),frame_count)
 
     @property
     def frame_size(self):
-        return self.size
+        return self.img.shape[1],self.img.shape[0]
+    @frame_size.setter
+    def frame_size(self,new_size):
+        self.make_img(new_size)
 
     @property
     def frame_rate(self):
         return self.fps
+    @frame_rate.setter
+    def frame_rate(self,new_rate):
+        self.fps = new_rate
+
+    @property
+    def name(self):
+        return 'Fake Capture'
 
     def get_now(self):
         return time()

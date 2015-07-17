@@ -12,7 +12,8 @@ import os
 import cv2
 import numpy as np
 from methods import normalize,denormalize
-from gl_utils import draw_gl_point,draw_gl_point_norm,draw_gl_polyline
+from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
+from OpenGL.GL import GL_POLYGON
 from circle_detector import get_candidate_ellipses
 import calibrate
 
@@ -36,7 +37,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             Find contours and filter into 2 level list using RETR_CCOMP
             Fit ellipses
     """
-    def __init__(self, g_pool,menu_conf = {'collapsed':True}):
+    def __init__(self, g_pool):
         super(Manual_Marker_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
@@ -58,7 +59,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.auto_stop_max = 30
 
         self.menu = None
-        self.menu_conf = menu_conf
         self.button = None
 
 
@@ -68,15 +68,10 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
-        self.menu.configuration = self.menu_conf
         self.g_pool.calibration_menu.append(self.menu)
 
-
-        submenu = ui.Growing_Menu('Advanced')
-        submenu.collapsed = True
-        self.menu.append(submenu)
-        submenu.append(ui.Slider('aperture',self,min=3,step=2,max=11,label='filter aperture'))
-        submenu.append(ui.Switch('show_edges',self,label='show edges'))
+        self.menu.append(ui.Slider('aperture',self,min=3,step=2,max=11,label='filter aperture'))
+        self.menu.append(ui.Switch('show_edges',self,label='show edges'))
 
         self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
@@ -249,10 +244,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
 
     def get_init_dict(self):
-        if self.menu:
-            return {'menu_conf':self.menu.configuration}
-        else:
-            return {'menu_conf':self.menu_conf}
+        return {}
 
     def gl_display(self):
         """
@@ -264,14 +256,14 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         """
 
         if self.active:
-            draw_gl_point_norm(self.smooth_pos,size=15,color=(1.,1.,0.,.5))
+            draw_points_norm([self.smooth_pos],size=15,color=RGBA(1.,1.,0.,.5))
 
         if self.active and self.detected:
             for e in self.candidate_ellipses:
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
-                draw_gl_polyline(pts,(0.,1.,0,1.))
+                draw_polyline(pts,color=RGBA(0.,1.,0,1.))
 
             if self.counter:
                 # lets draw an indicator on the count
@@ -280,7 +272,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360/self.counter_max)
                 indicator = [e[0]] + pts[self.counter:].tolist()[::-1] + [e[0]]
-                draw_gl_polyline(indicator,(0.1,.5,.7,.8),type='Polygon')
+                draw_polyline(indicator,color=RGBA(0.1,.5,.7,.8),line_type=GL_POLYGON)
 
             if self.auto_stop:
                 # lets draw an indicator on the autostop count
@@ -289,7 +281,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360/self.auto_stop_max)
                 indicator = [e[0]] + pts[self.auto_stop:].tolist() + [e[0]]
-                draw_gl_polyline(indicator,(8.,0.1,0.1,.8),type='Polygon')
+                draw_polyline(indicator,color=RGBA(8.,0.1,0.1,.8),line_type=GL_POLYGON)
         else:
             pass
 

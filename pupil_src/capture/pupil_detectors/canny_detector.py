@@ -24,7 +24,8 @@ from methods import *
 
 from c_methods import eye_filter
 from glfw import *
-from gl_utils import  draw_gl_texture,adjust_gl_view, clear_gl_screen, draw_gl_point_norm, draw_gl_polyline,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
+from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
+from pyglui.cygl.utils import draw_gl_texture
 from template import Pupil_Detector
 
 # gui
@@ -514,7 +515,6 @@ class Canny_Detector(Pupil_Detector):
 
     def init_gui(self,sidebar):
         self.menu = ui.Growing_Menu('Pupil Detector')
-        self.menu.configuration = self.session_settings.get('menu_config',{'collapsed':True})
         self.info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
@@ -524,7 +524,6 @@ class Canny_Detector(Pupil_Detector):
         self.menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=50,max=400,step=1))
 
         self.advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
-        self.advanced_controls_menu.configuration = self.session_settings.get('advanced_controls_menu_config',{'collapsed':True})
         self.advanced_controls_menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
         self.advanced_controls_menu.append(ui.Slider('min_contour_size',self,label='Contour min length',min=1,max=200,step=1))
 
@@ -604,6 +603,4 @@ class Canny_Detector(Pupil_Detector):
         self.session_settings['pupil_max'] = self.pupil_max
         self.session_settings['min_contour_size'] = self.min_contour_size
         self.session_settings['final_perimeter_ratio_range'] = self.final_perimeter_ratio_range
-        self.session_settings['advanced_controls_menu_config'] = self.advanced_controls_menu.configuration
-        self.session_settings['menu_config'] = self.menu.configuration
         self.session_settings.close()

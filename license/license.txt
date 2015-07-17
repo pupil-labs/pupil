@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Pupil - open source eye tracking platform
-Copyright (C) 2012-2014  Pupil Labs UG
+Copyright (C) 2012-2015  Pupil Labs UG
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Motivation
@@ -28,6 +28,6 @@ You can use Pupil in your research, academic work, art projects and personal wor
 ------------------------------------------------------------------------------------------
 Using PUPIL commercially
 
-If you plan to use Pupil in a commercial context please contact us so we can work out an appropriate license with you.  Contact sales [at] pupil-labs [dot] com 
+If you plan to use Pupil in a commercial context please contact us so we can work out an appropriate license with you.  Contact sales [at] pupil-labs [dot] com
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
