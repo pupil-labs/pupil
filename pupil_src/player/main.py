@@ -463,9 +463,9 @@ def show_no_rec_window():
     glfont.set_color_float((0.2,0.2,0.2,0.9))
     basic_gl_setup()
     glClearColor(0.5,.5,0.5,0.0)
-    text = 'Drop a recoding directory onto this window.'
+    text = 'Drop a recording directory onto this window.'
     tip = '(Tip: You can drop a recording directory onto the app icon.)'
-    # text = "Please supply a Pupil recoding directory as first arg when calling Pupil Player."
+    # text = "Please supply a Pupil recording directory as first arg when calling Pupil Player."
     while not glfwWindowShouldClose(window):
         clear_gl_screen()
         glfont.set_blur(10.5)
