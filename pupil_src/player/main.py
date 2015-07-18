@@ -10,7 +10,6 @@
 
 import sys, os,platform
 from glob import glob
-from time import time, sleep
 from copy import deepcopy
 try:
     from billiard import freeze_support
@@ -344,17 +343,12 @@ def session(rec_dir):
 
         #grab new frame
         if g_pool.play or g_pool.new_seek:
+            g_pool.new_seek = False
             try:
-                new_frame = cap.get_frame()
+                new_frame = cap.get_frame_nowait()
             except EndofVideoFileError:
                 #end of video logic: pause at last frame.
                 g_pool.play=False
-
-            if g_pool.new_seek:
-                display_time = new_frame.timestamp
-                g_pool.new_seek = False
-
-
             update_graph = True
         else:
             update_graph = False
@@ -406,14 +400,7 @@ def session(rec_dir):
         g_pool.gui.update()
 
         #present frames at appropriate speed
-        wait_time = frame.timestamp - display_time
-        display_time = frame.timestamp
-        try:
-            spent_time = time()-timestamp
-            sleep(wait_time-spent_time)
-        except:
-            pass
-        timestamp = time()
+        cap.wait(frame)
 
         glfwSwapBuffers(main_window)
         glfwPollEvents()
