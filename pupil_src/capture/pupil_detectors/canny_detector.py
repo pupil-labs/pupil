@@ -102,7 +102,7 @@ class Canny_Detector(Pupil_Detector):
     def detect(self,frame,user_roi,visualize=False):
 
         def early_exit():
-            return {'norm_pos':(0,0),'diameter':0,'timestamp':frame.timestamp,'confidence':0}, [] #accounting for 
+            return {'norm_pos':(0,0),'diameter':0,'timestamp':frame.timestamp,'confidence':0}, contours
 
         u_r = user_roi
         if self.window_should_open:
