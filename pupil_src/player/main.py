@@ -159,7 +159,10 @@ def session(rec_dir):
 
     def on_scroll(window,x,y):
         g_pool.gui.update_scroll(x,y*y_scroll_factor)
-
+ 
+    def on_close(window):
+        glfwSetWindowShouldClose(main_window,True)
+        logger.debug('Process closing from window')
 
     def on_drop(window,count,paths):
         for x in range(count):
