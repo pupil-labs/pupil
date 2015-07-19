@@ -90,19 +90,13 @@ class Trim_Marks(Plugin):
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
             x,_ = self.screen_to_bar_space((x,y))
             self.in_mark = x
-            if (self.frame_count > x > 0):
-                self.text[0] = str(int(x))
-            else:
-                self.text[0] = str('')
+            self.text[0] = str(self.in_mark)
             
         elif self.drag_out:
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
             x,_ = self.screen_to_bar_space((x,y))
             self.out_mark = x
-            if (self.frame_count > x > 0):
-                self.text[1] = str(int(x))
-            else:
-                self.text[1] = str('')
+            self.text[1] = str(self.out_mark)
 
     def on_click(self,img_pos,button,action):
         """
