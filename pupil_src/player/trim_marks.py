@@ -10,6 +10,8 @@
 
 from OpenGL.GL import *
 from pyglui.cygl.utils import RGBA,draw_points,draw_polyline
+from pyglui.pyfontstash import fontstash
+from pyglui.ui import get_roboto_font_path
 from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS,glfwGetFramebufferSize
 from plugin import Plugin
 
@@ -30,8 +32,16 @@ class Trim_Marks(Plugin):
         self.drag_in = False
         self.drag_out = False
         #display layout
-        self.padding = 20. #in sceen pixel
+        self.padding = 20. #in screen pixel
         self.window_size = 0,0
+
+        self.frame_size = self.capture.frame_size
+        # on drag text
+        self.text = ['','']
+        self.glfont = fontstash.Context()
+        self.glfont.add_font('roboto',get_roboto_font_path())
+        self.glfont.set_size(self.frame_size[0]/30)
+        self.glfont.set_color_float((0.7,0.7,0.7,1.0))
 
     @property
     def in_mark(self):
@@ -73,7 +83,6 @@ class Trim_Marks(Plugin):
         self.v_pad = self.padding * 1./h
 
     def update(self,frame,events):
-
         if frame.index == self.out_mark or frame.index == self.in_mark:
             self.g_pool.play=False
 
@@ -82,19 +91,18 @@ class Trim_Marks(Plugin):
             x,_ = self.screen_to_bar_space((x,y))
             self.in_mark = x
             if (self.frame_count > x > 0):
-                cv2.putText(frame.img, str(int(x)),
-                    (30, int(frame.img.shape[0]) - 45),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (160,160,160), 2, lineType = cv2.CV_AA )
-    
+                self.text[0] = str(int(x))
+            else:
+                self.text[0] = str('')
+            
         elif self.drag_out:
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
             x,_ = self.screen_to_bar_space((x,y))
             self.out_mark = x
             if (self.frame_count > x > 0):
-                cv2.putText(frame.img, str(int(x)),
-                    (int(frame.img.shape[1]) - 160, int(frame.img.shape[0]) - 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (160,160,160), 2, lineType = cv2.CV_AA )
-
+                self.text[1] = str(int(x))
+            else:
+                self.text[1] = str('')
 
     def on_click(self,img_pos,button,action):
         """
@@ -131,7 +139,6 @@ class Trim_Marks(Plugin):
         fr1_screen_x,_ = self.bar_space_to_screen((frame_pos_1,0))
         return abs(fr0_screen_x-fr1_screen_x)
 
-
     def bar_space_to_screen(self,pos):
         width,height = self.window_size
         x,y=pos
@@ -139,7 +146,6 @@ class Trim_Marks(Plugin):
         x = (x/float(self.frame_count))*(width-self.padding*2) +self.padding
         y  = y*(height-2*self.padding)+self.padding
         return x,y
-
 
     def screen_to_bar_space(self,pos):
         width,height = glfwGetWindowSize(glfwGetCurrentContext())
@@ -149,10 +155,17 @@ class Trim_Marks(Plugin):
         return x,1-y
 
     def gl_display(self):
+        # still need appropriate padding and resizing
+        w, h = self.frame_size
+        if self.drag_in:
+            self.glfont.draw_text((w/8),h-(h/20),self.text[0])
+        elif self.drag_out:
+            self.glfont.draw_text((w/8)*7,h-(h/20),self.text[1])
 
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
+
         glOrtho(-self.h_pad,  (self.frame_count)+self.h_pad, -self.v_pad, 1+self.v_pad,-1,1) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
