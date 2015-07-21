@@ -113,18 +113,20 @@ class Camera_Capture(object):
     def _init(self, uid, size=(640,480), fps=None, timebase=None):
 
         devices = vi.DeviceList()
-        for cam in _getVideoInputInstance().getListOfDevices(devices):
-            if cam.symbolicName == uid:
+        _getVideoInputInstance().getListOfDevices(devices)
+        for device in devices:
+            if device.symbolicName == uid:
                 break
-        if cam.symbolicName != uid:
+        if device.symbolicName != uid:
             raise CameraCaptureError("uid for camera not found.")
 
         if not len(size) == 2:
             msg = ERR_INIT_FAIL + "Parameter 'size' must have length 2."
             logger.error(msg)
             raise CameraCaptureError(msg)
+        
         # setting up device
-        self.device = cam.device
+        self.device = device
         self.deviceSettings = vi.DeviceSettings()
         self.deviceSettings.symbolicLink = self.device.symbolicName
         self.deviceSettings.indexStream = 0
@@ -133,7 +135,7 @@ class Camera_Capture(object):
         self.captureSettings.readMode = vi.ReadMode.SYNC
         self.captureSettings.videoFormat = vi.CaptureVideoFormat.RGB32
         self.stream = self.device.listStream[self.deviceSettings.indexStream]
-
+        
         # collecting additional information
         if timebase == None:
             logger.debug("Capture will run with default system timebase")
@@ -141,7 +143,7 @@ class Camera_Capture(object):
         else:
             logger.debug("Capture will run with app wide adjustable timebase")
             self.timebase = timebase
-
+        
         self.width = size[0]
         self.height = size[1]
         self.preferred_fps = fps
@@ -162,7 +164,7 @@ class Camera_Capture(object):
                 sleep(1)
             else:
                 break
-
+        
         # creating frame buffer and initializing capture settings
         frame = np.empty((self.actual_height * self.actual_width * 4), dtype=np.uint8)
         self.readSetting = vi.ReadSetting()
@@ -170,21 +172,21 @@ class Camera_Capture(object):
         self.readSetting.setNumpyArray(frame)
         frame.shape = (self.actual_height, self.actual_width, -1)
         self._frame = frame
-
+        
         logger.debug("Successfully set up device: %s @ %dx%dpx %dfps (mediatype %d)" %(self.name, self.actual_height, self.actual_width, self.frame_rate, self.deviceSettings.indexMediaType))
         self._is_initialized = True
         self._failed_inits = 0
 
     def re_init(self, uid, size=(640,480), fps=None):
         if self.sidebar is None:
-            msg = "Sidebar menu was not defined. This happens if the camera could not be initialized correctly for the first time."
-            logger.error(msg)
-            raise CameraCaptureError(msg)
-        self.deinit_gui()
-        self._close_device()
-        self._init(uid, size, fps)
-        self.init_gui(self.sidebar)
-        self.menu.collapsed = False
+            self._close_device()
+            self._init(uid, size, fps)
+        else:
+            self.deinit_gui()
+            self._close_device()
+            self._init(uid, size, fps)
+            self.init_gui(self.sidebar)
+            self.menu.collapsed = False
 
     def get_frame(self):
         res = self.context.readPixels(self.readSetting)

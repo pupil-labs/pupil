@@ -72,7 +72,7 @@ def autoCreateCapture(src,timestamps=None,timebase = None):
             return FakeCapture(timebase=timebase)
 
 
-        cap = Camera_Capture(matching_devices[preferred_idx]['uid'],timebase)
+        cap = Camera_Capture(matching_devices[preferred_idx]['uid'],timebase=timebase)
         logger.info("Camera selected: %s  with id: %s" %(matching_devices[preferred_idx]['name'],matching_devices[preferred_idx]['uid']))
         return cap
 
