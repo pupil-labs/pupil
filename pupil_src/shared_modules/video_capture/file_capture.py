@@ -67,6 +67,7 @@ class File_Capture():
         self.menu = None
         self.auto_rewind = True
         self.freerun = False
+        self.timestamps = None
         # we initialize the actual capture based on cv2.VideoCapture
         self.cap = cv2.VideoCapture(src)
         self.src =src
@@ -77,9 +78,9 @@ class File_Capture():
             timestamps = timestamps_path+'_timestamps.npy'
         try:
             self.timestamps = np.load(timestamps).tolist()
-            logger.debug("loaded %s timestamps from %s"%len(self.timestamps),timestamps)
-        except:
-            logger.debug("did not find timestamps, Making some up based on fps.")
+            logger.debug("loaded %s timestamps from %s"%(len(self.timestamps),timestamps))
+        except IOError:
+            logger.warning("did not find timestamps, Making some up based on fps.")
             frame_rate = float(self.frame_rate)
             if frame_rate == 0:
                 logger.warning("Framerate not available setting to 30fps.")
