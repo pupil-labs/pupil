@@ -151,7 +151,6 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     g.pupil_positions_by_frame = correlate_data(pupil_list,g.timestamps)
     g.gaze_positions_by_frame = correlate_data(gaze_list,g.timestamps)
     g.fixations_by_frame = [[] for x in g.timestamps] #populated by the fixation detector plugin
-    g.fixations_by_frame = [[] for x in g.timestamps] #populated by the fixation detector plugin
 
     #add plugins
     g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)

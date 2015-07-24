@@ -444,7 +444,7 @@ class Offline_Marker_Detector(Plugin):
 
             for s in self.surfaces:
                 gaze_on_srf  = s.gaze_on_srf_in_section(section)
-                gaze_on_srf = set([gp['base']["timestamp"] for gp in gaze_on_srf])
+                gaze_on_srf = set([gp['base']['timestamp'] for gp in gaze_on_srf])
                 not_on_any_srf -= gaze_on_srf
                 csv_writer.writerow( (s.name, len(gaze_on_srf)) )
 
