@@ -63,6 +63,8 @@ if platform.system() == 'Darwin':
     call("ln -s /Applications/ %s/Applications"%src_dir,shell=True)
     call("hdiutil create -volname '%s' -srcfolder %s -format UDZO '%s.dmg'"%(bundle_dmg_name,src_dir,bundle_name),shell=True)
 
+elif platform.system() == 'Windows':
+    write_version_file(os.path.join('dist', 'Pupil Player'))
 
 elif platform.system() == 'Linux':
 
