@@ -133,6 +133,7 @@ elif platform.system() == 'Windows':
 	               [('_videoInput.lib', os.path.join(python_path, '_videoInput.lib'),'BINARY')],
 	               [('msvcp110.dll', os.path.join(system_path, 'msvcp110.dll'),'BINARY')],
 	               [('msvcr110.dll', os.path.join(system_path, 'msvcr110.dll'),'BINARY')],
+	               [('msvcr120.dll', os.path.join(system_path, 'msvcr120.dll'),'BINARY')],
 	               [('OpenSans-Regular.ttf', os.path.join(package_path, 'pyglui/OpenSans-Regular.ttf'),'DATA')],
                    [('Roboto-Regular.ttf', os.path.join(package_path, 'pyglui/Roboto-Regular.ttf'),'DATA')],
 	               strip=None,
