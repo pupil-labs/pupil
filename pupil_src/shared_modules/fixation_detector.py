@@ -122,17 +122,17 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
 
             if dispersion < dispersion_threshold and gaze_data:
-                #so far all samples inside the threshold, lets add a new canditate
+                #so far all samples inside the threshold, lets add a new candidate
                 fixation_support += [gaze_data.pop(0)]
             else:
                 if gaze_data:
-                    #last added point will break dispersion threshold for current candite fixation. So we conclude sampling for this fixation
+                    #last added point will break dispersion threshold for current candidate fixation. So we conclude sampling for this fixation.
                     last_sample = fixation_support.pop(-1)
                 if fixation_support:
                     duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
                     if duration > duration_threshold and len(fixation_support) > sample_threshold:
-                        #long enough for fixation: we classifiy this fixation canditae as fixation
-                        #calulate charachter of fixation
+                        #long enough for fixation: we classifiy this fixation candidate as fixation
+                        #calculate character of fixation
                         fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
                         dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
                         confidence = sum(g['confidence'] for g in fixation_support)/len(fixation_support)
