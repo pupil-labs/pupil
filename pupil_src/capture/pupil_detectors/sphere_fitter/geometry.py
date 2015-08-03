@@ -456,6 +456,7 @@ if __name__ == '__main__':
     k = np.matrix('100 0 10; 0 -100 10; 0 0 1')
 
     # print k[0,2]
+    # 
     p3 = unproject_point((0.0 , 20),100,k)
     p2 = project_point(p3,k)
     print p3,p2
