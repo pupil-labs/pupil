@@ -148,7 +148,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     # Initialize capture
     cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
     cap.frame_size = cap_size
-    cap.frame_rate = 90 #default
+    cap.frame_rate = 60 #default
     cap.settings = session_settings.get('capture_settings',{})
 
 
