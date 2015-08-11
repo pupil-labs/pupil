@@ -55,8 +55,8 @@ class Camera_Capture(object):
         else:
             self.ts_offset = 0.0
 
-        if "USB 2.0 Camera" in self.capture.name:
-            self.capture.bandwidth_factor = 1.2
+        if "Pupil Cam1" in self.capture.name or "USB2.0 Camera" in self.capture.name:
+            self.capture.bandwidth_factor = 1.3
 
         logger.debug('avaible modes %s'%self.capture.avaible_modes)
 
