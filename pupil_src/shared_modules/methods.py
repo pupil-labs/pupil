@@ -17,6 +17,19 @@ import cv2
 import logging
 logger = logging.getLogger(__name__)
 
+from time import time
+def timer(dt):
+    '''
+    a generator used to time window refreshs
+    '''
+    t = time()
+    while True:
+        nt = time()
+        if nt-t > dt:
+            t = nt
+            yield True
+        else:
+            yield False
 
 
 class Roi(object):
