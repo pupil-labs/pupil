@@ -120,10 +120,6 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         g_pool.gui.update_button(button,action,mods)
 
 
-    window_update_timer = timer(1/60.)
-    def window_should_update():
-        return next(window_update_timer)
-
 
     def on_pos(window,x, y):
         hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
@@ -264,6 +260,12 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     fps_graph.pos = (140,130)
     fps_graph.update_rate = 5
     fps_graph.label = "%0.0f FPS"
+
+
+    #create a timer to control window update frequency
+    window_update_timer = timer(1/60.)
+    def window_should_update():
+        return next(window_update_timer)
 
     # Event loop
     while not g_pool.quit.value:
