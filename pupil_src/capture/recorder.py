@@ -9,6 +9,7 @@
 '''
 
 import os, sys, platform
+import getpass
 from pyglui import ui
 import numpy as np
 from scipy.interpolate import UnivariateSpline
@@ -336,7 +337,7 @@ class Recorder(Plugin):
                     username = os.environ["USERNAME"]
                     sysname, nodename, release, version, machine, _ = platform.uname()
                 else:
-                    username = os.getlogin()
+                    username = getpass.getuser()
                     try:
                         sysname, nodename, release, version, machine = os.uname()
                     except:
