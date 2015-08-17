@@ -59,8 +59,8 @@ class Log_Display(Plugin):
         self.rendered_log.append(record)
         self.rendered_log = self.rendered_log[-10:]
 
-        self.alpha = 2.
         self.should_redraw = True
+        self.alpha = 2.
 
 
     def on_window_resize(self,window,w,h):
@@ -88,6 +88,8 @@ class Log_Display(Plugin):
             pop_ortho()
             self.tex.pop()
             self.should_redraw = False
+            self.alpha = 2.
+
         if self.alpha > 0:
             self.tex.draw(min(1.0,self.alpha))
 
