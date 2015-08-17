@@ -203,14 +203,14 @@ class Plugin_List(object):
         if new_plugin.uniqueness == 'by_base_class':
             for p in self._plugins:
                 if p.base_class == new_plugin.__bases__[-1]:
-                    logger.debug("Plugin %s of base class %s will be replaced by %s."%(p,p.base_class_name,new_plugin))
+                    logger.debug("Plugin %s of base class %s will be replaced by %s."%(p,p.base_class_name,new_plugin.__name__))
                     p.alive = False
                     self.clean()
 
         elif new_plugin.uniqueness == 'by_class':
             for p in self._plugins:
                 if p.this_class == new_plugin:
-                    logger.warning("Plugin %s is already loaded and flagged as unique. Did not add it."%new_plugin)
+                    logger.warning("Plugin '%s' is already loaded . Did not add it."%new_plugin.__name__)
                     return
 
         logger.info("Loading Plugin: %s"%new_plugin.__name__)

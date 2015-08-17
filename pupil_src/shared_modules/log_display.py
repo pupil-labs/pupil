@@ -25,7 +25,7 @@ class Log_to_Callback(logging.Handler):
         self.cb(record)
 
 def color_from_level(lvl):
-    return {"CRITICAL":(.8,0,0,1),"ERROR":(1,0,0,1),"WARNING":(1.0,.8,0,1),"INFO":(.5,.5,.5,1),"DEBUG":(.5,.5,.5,.5),"NOTSET":(.5,.5,.5,.2)}[lvl]
+    return {"CRITICAL":(.8,0,0,1),"ERROR":(1,0,0,1),"WARNING":(1.0,.8,0,1),"INFO":(1,1,1,1),"DEBUG":(1,1,1,.5),"NOTSET":(.5,.5,.5,.2)}[lvl]
 
 
 class Log_Display(Plugin):
@@ -65,10 +65,10 @@ class Log_Display(Plugin):
         for record in self.rendered_log:
             self.glfont.set_color_float((0.,0.,0.,1.))
             self.glfont.set_blur(10.5)
-            self.glfont.draw_limited_text(self.window_size[0]/2,y,record.msg,self.window_size[0]/2)
-            self.glfont.set_blur(0.0)
+            self.glfont.draw_limited_text(self.window_size[0]/2,y,record.msg,self.window_size[0]*0.8)
+            self.glfont.set_blur(0.96)
             self.glfont.set_color_float(color_from_level(record.levelname))
-            self.glfont.draw_limited_text(self.window_size[0]/2,y,record.msg,self.window_size[0]/2)
+            self.glfont.draw_limited_text(self.window_size[0]/2,y,record.msg,self.window_size[0]*0.8)
             y +=lineh
         self.tex.pop()
 
