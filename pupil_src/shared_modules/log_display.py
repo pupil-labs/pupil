@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 from plugin import Plugin
-from pyglui.cygl.utils import Render_Target
+from pyglui.cygl.utils import Render_Target,push_ortho,pop_ortho
 import logging
 from glfw import glfwGetFramebufferSize,glfwGetCurrentContext
 
@@ -33,8 +33,9 @@ class Log_Display(Plugin):
     def __init__(self, g_pool):
         super(Log_Display, self).__init__(g_pool)
         self.rendered_log = []
-
+        self.order = 0.0
         self.alpha = 0.0
+        self.should_redraw = True
 
     def init_gui(self):
 
@@ -42,13 +43,12 @@ class Log_Display(Plugin):
         self.glfont.add_font('opensans',get_opensans_font_path())
         self.glfont.set_size(32)
         self.glfont.set_color_float((0.2,0.5,0.9,1.0))
-        self.glfont.set_align_string(v_align='center')
+        self.glfont.set_align_string(v_align='center',h_align='middle')
 
         self.window_size = glfwGetFramebufferSize(glfwGetCurrentContext())
         self.tex = Render_Target(*self.window_size)
 
         self.log_handler = Log_to_Callback(self.on_log)
-
         logger = logging.getLogger()
         logger.addHandler(self.log_handler)
         self.log_handler.setLevel(logging.DEBUG)
@@ -58,19 +58,9 @@ class Log_Display(Plugin):
             self.rendered_log = []
         self.rendered_log.append(record)
         self.rendered_log = self.rendered_log[-10:]
-        self.alpha = 2.0
-        self.tex.push()
-        _,_,lineh = self.glfont.vertical_metrics()
-        y = self.window_size[1]/3 - 0.5*lineh*len(self.rendered_log)
-        for record in self.rendered_log:
-            self.glfont.set_color_float((0.,0.,0.,1.))
-            self.glfont.set_blur(10.5)
-            self.glfont.draw_limited_text(self.window_size[0]/2,y,record.msg,self.window_size[0]*0.8)
-            self.glfont.set_blur(0.96)
-            self.glfont.set_color_float(color_from_level(record.levelname))
-            self.glfont.draw_limited_text(self.window_size[0]/2,y,record.msg,self.window_size[0]*0.8)
-            y +=lineh
-        self.tex.pop()
+
+        self.alpha = 2.
+        self.should_redraw = True
 
 
     def on_window_resize(self,window,w,h):
@@ -81,6 +71,23 @@ class Log_Display(Plugin):
         self.alpha -= events['dt']
 
     def gl_display(self):
+        if self.should_redraw:
+            #render log content
+            self.tex.push()
+            push_ortho(*self.window_size)
+            _,_,lineh = self.glfont.vertical_metrics()
+            y = self.window_size[1]/3 - 0.5*lineh*len(self.rendered_log)
+            for record in self.rendered_log:
+                self.glfont.set_color_float((0.,0.,0.,1.))
+                self.glfont.set_blur(10.5)
+                self.glfont.draw_limited_text(self.window_size[0]/2.,y,record.msg,self.window_size[0]*0.8)
+                self.glfont.set_blur(0.96)
+                self.glfont.set_color_float(color_from_level(record.levelname))
+                self.glfont.draw_limited_text(self.window_size[0]/2.,y,record.msg,self.window_size[0]*0.8)
+                y +=lineh
+            pop_ortho()
+            self.tex.pop()
+            self.should_redraw = False
         if self.alpha > 0:
             self.tex.draw(min(1.0,self.alpha))
 

@@ -94,7 +94,6 @@ class Recorder(Plugin):
         if rec_dir and rec_dir != default_rec_dir and self.verify_path(rec_dir):
             self.rec_dir = rec_dir
         else:
-            logger.info('Creating standard Rec dir at "%s"'%default_rec_dir)
             try:
                 os.makedirs(default_rec_dir)
             except OSError as e:
@@ -103,6 +102,8 @@ class Recorder(Plugin):
                 else:
                     logger.error("Could not create Rec dir")
                     raise e
+            else:
+                logger.info('Created standard Rec dir at "%s"'%default_rec_dir)
             self.rec_dir = default_rec_dir
 
         self.raw_jpeg = raw_jpeg
