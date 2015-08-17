@@ -51,7 +51,7 @@ class Log_Display(Plugin):
         self.log_handler = Log_to_Callback(self.on_log)
         logger = logging.getLogger()
         logger.addHandler(self.log_handler)
-        self.log_handler.setLevel(logging.DEBUG)
+        self.log_handler.setLevel(logging.INFO)
 
     def on_log(self,record):
         if self.alpha <= 1.5:
