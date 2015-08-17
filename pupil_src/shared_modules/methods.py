@@ -32,7 +32,7 @@ def timer(dt):
             yield False
 
 def delta_t():
-    ''' return time between each call
+    ''' return time between each call like so:
 
     tick = delta_t()
     def get_dt():
