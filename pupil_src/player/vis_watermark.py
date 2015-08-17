@@ -23,10 +23,11 @@ logger = logging.getLogger(__name__)
 
 
 class Vis_Watermark(Plugin):
+    uniqueness = "not_unique"
+
     def __init__(self, g_pool,selected_watermark_path = None,pos = (20,20)):
         super(Vis_Watermark, self).__init__(g_pool)
         self.order = .9
-        self.uniqueness = "not_unique"
         self.menu = None
 
         available_files = glob(os.path.join(self.g_pool.user_dir,'*png')) #we only look for png's
