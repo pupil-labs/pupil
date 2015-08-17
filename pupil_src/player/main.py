@@ -41,7 +41,7 @@ if not os.path.isdir(user_dir):
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
-logger.setLevel(logging.WARNING) # <-- use this to set verbosity
+logger.setLevel(logging.DEBUG)
 #since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
     if __name__ == '__main__': #clear log if main
@@ -53,7 +53,7 @@ else:
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('Player: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -62,9 +62,10 @@ ch.setFormatter(formatter)
 # add the handlers to the logger
 logger.addHandler(fh)
 logger.addHandler(ch)
-# mute OpenGL logger
-logging.getLogger("OpenGL").propagate = False
-logging.getLogger("OpenGL").addHandler(logging.NullHandler())
+
+logging.getLogger("OpenGL").setLevel(logging.ERROR)
+logging.getLogger("libav").setLevel(logging.ERROR)
+
 logger = logging.getLogger(__name__)
 
 
@@ -92,7 +93,7 @@ from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,Fa
 
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
-from methods import normalize, denormalize
+from methods import normalize, denormalize, delta_t
 from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current
 
 #monitoring
@@ -117,8 +118,9 @@ from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
+from log_display import Log_Display
 
-system_plugins = Seek_Bar,Trim_Marks
+system_plugins = Log_Display,Seek_Bar,Trim_Marks
 user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
@@ -171,6 +173,13 @@ def session(rec_dir):
                 glfwSetWindowShouldClose(window,True)
             else:
                 logger.error("'%s' is not a valid pupil recording"%new_rec_dir)
+
+
+
+
+    tick = delta_t()
+    def get_dt():
+        return next(tick)
 
 
     video_path = glob(os.path.join(rec_dir,"world.*"))[0]
@@ -257,7 +266,6 @@ def session(rec_dir):
     def open_plugin(plugin):
         if plugin ==  "Select to load":
             return
-        logger.debug('Open Plugin: %s'%plugin)
         g_pool.plugins.add(plugin)
 
     def purge_plugins():
@@ -290,7 +298,7 @@ def session(rec_dir):
 
     #we always load these plugins
     system_plugins = [('Trim_Marks',{}),('Seek_Bar',{})]
-    default_plugins = [('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Export_Launcher',{})]
+    default_plugins = [('Log_Display',{}),('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Export_Launcher',{})]
     previous_plugins = session_settings.get('loaded_plugins',default_plugins)
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,system_plugins+previous_plugins)
 
@@ -355,6 +363,8 @@ def session(rec_dir):
 
         frame = new_frame.copy()
         events = {}
+        #report time between now and the last loop interation
+        events['dt'] = get_dt()
         #new positons we make a deepcopy just like the image is a copy.
         events['gaze_positions'] = deepcopy(g_pool.gaze_positions_by_frame[frame.index])
         events['pupil_positions'] = deepcopy(g_pool.pupil_positions_by_frame[frame.index])

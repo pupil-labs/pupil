@@ -64,9 +64,9 @@ ch.setFormatter(formatter)
 # add the handlers to the logger
 logger.addHandler(fh)
 logger.addHandler(ch)
-# mute OpenGL logger
-logging.getLogger("OpenGL").propagate = False
-logging.getLogger("OpenGL").addHandler(logging.NullHandler())
+
+logging.getLogger("OpenGL").setLevel(logging.ERROR)
+logging.getLogger("libav").setLevel(logging.ERROR)
 
 
 if 'binocular' in sys.argv:
