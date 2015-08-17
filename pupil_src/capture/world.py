@@ -298,7 +298,7 @@ def world(g_pool,cap_src,cap_size):
 
 
         #a dictionary that allows plugins to post and read events
-        events = {}
+        events = {'dt':dt}
 
         #receive and map pupil positions
         recent_pupil_positions = []
