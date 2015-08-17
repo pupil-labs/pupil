@@ -31,6 +31,22 @@ def timer(dt):
         else:
             yield False
 
+def delta_t():
+    ''' return time between each call
+
+    tick = delta_t()
+    def get_dt():
+        return next(tick)
+    print get_dt()
+    sleep(1)
+    print get_dt()
+    '''
+    ts = time()
+    while True:
+        t = time()
+        dt,ts = t-ts,t
+        yield dt
+
 
 class Roi(object):
     """this is a simple 2D Region of Interest class

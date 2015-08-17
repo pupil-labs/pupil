@@ -38,7 +38,7 @@ import psutil
 
 # helpers/utils
 from version_utils import VersionFormat
-from methods import normalize, denormalize
+from methods import normalize, denormalize, delta_t
 from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 
 
@@ -126,6 +126,9 @@ def world(g_pool,cap_src,cap_size):
         logger.info('Process closing from window')
 
 
+    tick = delta_t()
+    def get_dt():
+        return next(tick)
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
@@ -249,6 +252,7 @@ def world(g_pool,cap_src,cap_size):
     g_pool.gui.configuration = session_settings.get('ui_config',{})
 
 
+
     #set up performace graphs:
     pid = os.getpid()
     ps = psutil.Process(pid)
@@ -295,7 +299,10 @@ def world(g_pool,cap_src,cap_size):
 
 
         #a dictionary that allows plugins to post and read events
-        events = {'dt':dt}
+        events = {}
+
+        #report time between now and the last loop interation
+        events['dt'] = get_dt()
 
         #receive and map pupil positions
         recent_pupil_positions = []
