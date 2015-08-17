@@ -95,9 +95,10 @@ class Marker_Detector(Plugin):
                                 vx,vy = denormalize((vx,vy),(self.img_shape[1],self.img_shape[0]),flip_y=True)
                                 if sqrt((x-vx)**2 + (y-vy)**2) <15: #img pixels
                                     self.edit_surfaces.append((s,i))
+                                    print self.edit_surfaces
+                                    return
 
-    def advance(self):
-        pass
+
 
     def add_surface(self,_):
         self.surfaces.append(Reference_Surface())

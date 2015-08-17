@@ -38,12 +38,13 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
+from marker_detector import Marker_Detector
 from square_marker_detect import detect_markers_robust, draw_markers,m_marker_to_screen
 from offline_reference_surface import Offline_Reference_Surface
 from math import sqrt
 
 
-class Offline_Marker_Detector(Plugin):
+class Offline_Marker_Detector(Marker_Detector):
     """
     Special version of marker detector for use with videofile source.
     It uses a seperate process to search all frames in the world.avi file for markers.
@@ -143,40 +144,14 @@ class Offline_Marker_Detector(Plugin):
 
 
 
-    def close(self):
-        self.alive = False
-
     def on_window_resize(self,window,w,h):
         self.win_size = w,h
 
-    def on_click(self,pos,button,action):
-        if self.mode=="Surface edit mode":
-            if self.edit_surfaces:
-                if action == GLFW_RELEASE:
-                    self.edit_surfaces = []
-            # no surfaces verts in edit mode, lets see if the curser is close to one:
-            else:
-                if action == GLFW_PRESS:
-                    surf_verts = ((0.,0.),(1.,0.),(1.,1.),(0.,1.))
-                    x,y = pos
-                    for s in self.surfaces:
-                        if s.detected and s.defined:
-                            for (vx,vy),i in zip(s.ref_surface_to_img(np.array(surf_verts)),range(4)):
-                                vx,vy = denormalize((vx,vy),(self.img_shape[1],self.img_shape[0]),flip_y=True)
-                                if sqrt((x-vx)**2 + (y-vy)**2) <15: #img pixels
-                                    self.edit_surfaces.append((s,i))
-
-    def advance(self):
-        pass
 
     def add_surface(self,_):
         self.surfaces.append(Offline_Reference_Surface(self.g_pool))
         self.update_gui_markers()
 
-    def remove_surface(self,i):
-        self.surfaces[i].cleanup()
-        del self.surfaces[i]
-        self.update_gui_markers()
 
 
     def recalculate(self):
