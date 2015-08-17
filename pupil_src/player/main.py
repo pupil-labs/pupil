@@ -258,8 +258,7 @@ def session(rec_dir):
         if plugin ==  "Select to load":
             return
         logger.debug('Open Plugin: %s'%plugin)
-        new_plugin = plugin(g_pool)
-        g_pool.plugins.add(new_plugin)
+        g_pool.plugins.add(plugin)
 
     def purge_plugins():
         for p in g_pool.plugins:
