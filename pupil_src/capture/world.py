@@ -165,15 +165,12 @@ def world(g_pool,cap_src,cap_size):
 
     def set_calibration_plugin(new_calibration):
         g_pool.active_calibration_plugin = new_calibration
-        new_plugin = new_calibration(g_pool)
-        g_pool.plugins.add(new_plugin)
+        g_pool.plugins.add(new_calibration)
 
     def open_plugin(plugin):
         if plugin ==  "Select to load":
             return
-        logger.debug('Open Plugin: %s'%plugin)
-        new_plugin = plugin(g_pool)
-        g_pool.plugins.add(new_plugin)
+        g_pool.plugins.add(plugin)
 
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
