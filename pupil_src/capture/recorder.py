@@ -239,6 +239,8 @@ class Recorder(Plugin):
         if self.show_info_menu:
             self.open_info_menu()
 
+        self.notify_all( {'name':'rec_started','rec_path':self.rec_path} )
+
     def open_info_menu(self):
         self.info_menu = ui.Growing_Menu('additional Recording Info',size=(300,300),pos=(300,300))
         self.info_menu.configuration = self.info_menu_conf
@@ -367,6 +369,8 @@ class Recorder(Plugin):
         self.running = False
         self.menu.read_only = False
         self.button.status_text = ''
+
+        self.notify_all( {'name':'rec_stopped','rec_path':self.rec_path} )
 
 
 

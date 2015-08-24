@@ -224,6 +224,7 @@ def world(g_pool,cap_src,cap_size):
     g_pool.capture.init_gui(g_pool.sidebar)
 
     #plugins that are loaded based on user settings from previous session
+    g_pool.notifications = []
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
 
     #only needed for the gui to show the loaded calibration type
@@ -316,6 +317,12 @@ def world(g_pool,cap_src,cap_size):
             recent_pupil_positions.append(p)
             pupil_graph.add(p['confidence'])
         events['pupil_positions'] = recent_pupil_positions
+
+        # notify each plugin if there are new notifactions:
+        for n in g_pool.notifications:
+            for p in g_pool.plugins:
+                p.on_notify(n)
+        g_pool.notifications = []
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:

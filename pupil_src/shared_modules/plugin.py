@@ -49,22 +49,6 @@ class Plugin(object):
         pass
 
 
-    @property
-    def alive(self):
-        """
-        This field indicates of the instance should be detroyed
-        Writing False to this will schedule the instance for deletion
-        """
-        if not self._alive:
-            if hasattr(self,"cleanup"):
-                self.cleanup()
-        return self._alive
-
-    @alive.setter
-    def alive(self, value):
-        if isinstance(value,bool):
-            self._alive = value
-
     def on_click(self,pos,button,action):
         """
         gets called when the user clicks in the window screen
@@ -103,13 +87,53 @@ class Plugin(object):
         """
         pass
 
-
-
     def on_click(self,pos,button,action):
         """
         gets called when the user clicks in the window screen
         """
         pass
+
+    def on_notify(self,notification):
+        """
+        this gets called when a plugin want to notify all others.
+        notification is a tuple in the format {'name':'notification_name',['addional_fields':'blah']}
+        implement this fn if you want to deal with notifications
+        """
+        pass
+
+    ### if you want a session persistent plugin implement this function:
+    # def get_init_dict(self):
+    #     d = {}
+    #     # add all aguments of your plugin init fn with paramter names as name field
+    #     # do not include g_pool here.
+    #     return d
+
+    ###do not change methods,properties below this line in your derived class
+
+    @property
+    def alive(self):
+        """
+        This field indicates of the instance should be detroyed
+        Writing False to this will schedule the instance for deletion
+        """
+        if not self._alive:
+            if hasattr(self,"cleanup"):
+                self.cleanup()
+        return self._alive
+
+    @alive.setter
+    def alive(self, value):
+        if isinstance(value,bool):
+            self._alive = value
+
+
+    def notify_all(self,notification):
+        """
+        call this to notify all other plugins with a notification:
+        notification is a tuple in the format {'name':'notification_name',['addional_fields':'blah']}
+        do not overwrite this method
+        """
+        self.g_pool.notifications.append(notification)
 
     @property
     def this_class(self):
@@ -145,13 +169,6 @@ class Plugin(object):
     def pretty_class_name(self):
         return self.class_name.replace('_',' ')
 
-
-    ### if you want a session persistent plugin implement this function:
-    # def get_init_dict(self):
-    #     d = {}
-    #     # add all aguments of your plugin init fn with paramter names as name field
-    #     # do not include g_pool here.
-    #     return d
 
     def __del__(self):
         pass
