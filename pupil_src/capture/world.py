@@ -18,7 +18,6 @@ if __name__ == '__main__':
 
 
 import os, sys,platform
-from file_methods import Persistent_Dict
 import logging
 import numpy as np
 
@@ -28,7 +27,6 @@ from pyglui import ui,graph,cygl
 from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 
-
 #check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
 assert pyglui_version >= '0.5'
@@ -37,6 +35,7 @@ assert pyglui_version >= '0.5'
 import psutil
 
 # helpers/utils
+from file_methods import Persistent_Dict
 from version_utils import VersionFormat
 from methods import normalize, denormalize, delta_t
 from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
