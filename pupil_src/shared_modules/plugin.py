@@ -7,9 +7,10 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
+import os,sys
 import logging
 logger = logging.getLogger(__name__)
+import importlib
 
 
 '''
@@ -242,3 +243,24 @@ class Plugin_List(object):
                 # any object without a get_init_dict method will throw this exception.
                 pass
         return initializers
+
+
+
+def import_runtime_plugins(plugin_dir):
+    runtime_plugins = []
+    if os.path.isdir(plugin_dir):
+        sys.path.append(plugin_dir)
+        for d in os.listdir(plugin_dir):
+            logger.debug('Scanning: %s'%d)
+            try:
+                d =  d.rsplit(".", 1 )[ 0 ]
+                module = importlib.import_module(d)
+                logger.debug('Imported: %s'%module)
+                for name in dir(module):
+                    member = getattr(module, name)
+                    if isinstance(member, type) and issubclass(member, Plugin) and member.__name__ != 'Plugin':
+                        logger.info('Added: %s'%member)
+                        runtime_plugins.append(member)
+            except:
+                pass
+    return runtime_plugins

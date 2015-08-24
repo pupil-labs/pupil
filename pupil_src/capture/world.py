@@ -43,7 +43,7 @@ from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileErr
 
 
 # Plug-ins
-from plugin import Plugin_List
+from plugin import Plugin_List,import_runtime_plugins
 from calibration_routines import calibration_plugins, gaze_mapping_plugins
 from recorder import Recorder
 from show_calibration import Show_Calibration
@@ -52,16 +52,11 @@ from pupil_server import Pupil_Server
 from pupil_remote import Pupil_Remote
 from marker_detector import Marker_Detector
 from log_display import Log_Display
-#manage plugins
-user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Remote,Marker_Detector]
-system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder,]
-plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins
-name_by_index = [p.__name__ for p in plugin_by_index]
-plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{})]
+
 
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
+
 
 
 #UI Platform tweaks
@@ -83,6 +78,17 @@ def world(g_pool,cap_src,cap_size):
     Receives Pupil coordinates from eye process[es]
     Can run various plug-ins.
     """
+
+    #manage plugins
+    runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
+    user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Remote,Marker_Detector]+runtime_plugins
+    system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder]
+    plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins
+    name_by_index = [p.__name__ for p in plugin_by_index]
+    plugin_by_name = dict(zip(name_by_index,plugin_by_index))
+    default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{})]
+
+
 
     # Callback functions
     def on_resize(window,w, h):
