@@ -162,6 +162,9 @@ class Camera_Capture(object):
     def get_now(self):
         return time()
 
+    def get_timestamp():
+        return self.get_now()-self.timebase.value
+
     @property
     def frame_rate(self):
         return self.capture.frame_rate
