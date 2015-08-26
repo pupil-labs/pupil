@@ -9,6 +9,7 @@
 '''
 
 import os, sys, platform
+import getpass
 from pyglui import ui
 import numpy as np
 from scipy.interpolate import UnivariateSpline
@@ -87,15 +88,23 @@ class Recorder(Plugin):
         if session_name.startswith('20') and len(session_name)==10:
             session_name = get_auto_name()
 
-        if rec_dir:
-            self.set_rec_dir(rec_dir)
-        else:
-            #lets make a rec dir next to the user dir
-            base_dir = self.g_pool.user_dir.rsplit(os.path.sep,1)[0]
-            self.rec_dir = os.path.join(base_dir,'recordings')
-            if not os.path.isdir(self.rec_dir):
-                os.mkdir(self.rec_dir)
+        base_dir = self.g_pool.user_dir.rsplit(os.path.sep,1)[0]
+        default_rec_dir = os.path.join(base_dir,'recordings')
 
+        if rec_dir and rec_dir != default_rec_dir and self.verify_path(rec_dir):
+            self.rec_dir = rec_dir
+        else:
+            try:
+                os.makedirs(default_rec_dir)
+            except OSError as e:
+                if 'File exists' in '%s'%e:
+                    pass
+                else:
+                    logger.error("Could not create Rec dir")
+                    raise e
+            else:
+                logger.info('Created standard Rec dir at "%s"'%default_rec_dir)
+            self.rec_dir = default_rec_dir
 
         self.raw_jpeg = raw_jpeg
         self.order = .9
@@ -329,7 +338,7 @@ class Recorder(Plugin):
                     username = os.environ["USERNAME"]
                     sysname, nodename, release, version, machine, _ = platform.uname()
                 else:
-                    username = os.getlogin()
+                    username = getpass.getuser()
                     try:
                         sysname, nodename, release, version, machine = os.uname()
                     except:
@@ -369,9 +378,7 @@ class Recorder(Plugin):
             self.stop()
         self.deinit_gui()
 
-
-
-    def set_rec_dir(self,val):
+    def verify_path(self,val):
         try:
             n_path = os.path.expanduser(val)
             logger.debug("Expanded user path.")
@@ -379,12 +386,20 @@ class Recorder(Plugin):
             n_path = val
         if not n_path:
             logger.warning("Please specify a path.")
+            return False
         elif not os.path.isdir(n_path):
             logger.warning("This is not a valid path.")
+            return False
         # elif not os.access(n_path, os.W_OK):
         elif not writable_dir(n_path):
             logger.warning("Do not have write access to '%s'."%n_path)
+            return False
         else:
+            return n_path
+
+    def set_rec_dir(self,val):
+        n_path = self.verify_path(val)
+        if n_path:
             self.rec_dir = n_path
 
     def set_session_name(self, val):
@@ -392,7 +407,7 @@ class Recorder(Plugin):
             self.session_name = get_auto_name()
         else:
             if '/' in val:
-                logger.warning('You session name with create one or more subdirectories')
+                logger.warning('You session name will create one or more subdirectories')
             self.session_name = val
 
 

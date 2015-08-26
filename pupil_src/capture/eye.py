@@ -25,7 +25,7 @@ from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_nam
 
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.3'
+assert pyglui_version >= '0.5'
 
 #monitoring
 import psutil
@@ -148,7 +148,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     # Initialize capture
     cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
     cap.frame_size = cap_size
-    cap.frame_rate = 90 #default
+    cap.frame_rate = 60 #default
     cap.settings = session_settings.get('capture_settings',{})
 
 
@@ -261,6 +261,12 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     fps_graph.update_rate = 5
     fps_graph.label = "%0.0f FPS"
 
+
+    #create a timer to control window update frequency
+    window_update_timer = timer(1/60.)
+    def window_should_update():
+        return next(window_update_timer)
+
     # Event loop
     while not g_pool.quit.value:
         # Get an image from the grabber
@@ -319,47 +325,47 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
 
         # GL drawing
-        glfwMakeContextCurrent(main_window)
-        clear_gl_screen()
+        if window_should_update():
+            glfwMakeContextCurrent(main_window)
+            clear_gl_screen()
 
-        # switch to work in normalized coordinate space
-        if g_pool.display_mode == 'algorithm':
-            update_named_texture(g_pool.image_tex,frame.img)
-        elif g_pool.display_mode in ('camera_image','roi'):
-            update_named_texture(g_pool.image_tex,frame.gray)
-        else:
-            pass
+            # switch to work in normalized coordinate space
+            if g_pool.display_mode == 'algorithm':
+                update_named_texture(g_pool.image_tex,frame.img)
+            elif g_pool.display_mode in ('camera_image','roi'):
+                update_named_texture(g_pool.image_tex,frame.gray)
+            else:
+                pass
 
-        make_coord_system_norm_based(g_pool.flip)
-        draw_named_texture(g_pool.image_tex)
-        # switch to work in pixel space
-        make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
+            make_coord_system_norm_based(g_pool.flip)
+            draw_named_texture(g_pool.image_tex)
+            # switch to work in pixel space
+            make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
 
-        if result['confidence'] >0:
-            if result.has_key('axes'):
-                pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
-                                        (int(result['axes'][0]/2),int(result['axes'][1]/2)),
-                                        int(result['angle']),0,360,15)
-                cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
-            cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
+            if result['confidence'] >0:
+                if result.has_key('axes'):
+                    pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
+                                            (int(result['axes'][0]/2),int(result['axes'][1]/2)),
+                                            int(result['angle']),0,360,15)
+                    cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
+                cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
 
-        # render graphs
-        graph.push_view()
-        fps_graph.draw()
-        cpu_graph.draw()
-        graph.pop_view()
+            # render graphs
+            graph.push_view()
+            fps_graph.draw()
+            cpu_graph.draw()
+            graph.pop_view()
 
-        # render GUI
-        g_pool.gui.update()
+            # render GUI
+            g_pool.gui.update()
 
-        #render the ROI
-        if g_pool.display_mode == 'roi':
-            u_r.draw(g_pool.gui.scale)
+            #render the ROI
+            if g_pool.display_mode == 'roi':
+                u_r.draw(g_pool.gui.scale)
 
-        #update screen
-        glfwSwapBuffers(main_window)
-        glfwPollEvents()
-
+            #update screen
+            glfwSwapBuffers(main_window)
+            glfwPollEvents()
 
     # END while running
 

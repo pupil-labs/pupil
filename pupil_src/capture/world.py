@@ -18,7 +18,6 @@ if __name__ == '__main__':
 
 
 import os, sys,platform
-from file_methods import Persistent_Dict
 import logging
 import numpy as np
 
@@ -28,22 +27,22 @@ from pyglui import ui,graph,cygl
 from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 
-
 #check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.3'
+assert pyglui_version >= '0.5'
 
 #monitoring
 import psutil
 
 # helpers/utils
+from file_methods import Persistent_Dict
 from version_utils import VersionFormat
-from methods import normalize, denormalize
+from methods import normalize, denormalize, delta_t
 from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
 
 
 # Plug-ins
-from plugin import Plugin_List
+from plugin import Plugin_List,import_runtime_plugins
 from calibration_routines import calibration_plugins, gaze_mapping_plugins
 from recorder import Recorder
 from show_calibration import Show_Calibration
@@ -51,17 +50,12 @@ from display_recent_gaze import Display_Recent_Gaze
 from pupil_server import Pupil_Server
 from pupil_remote import Pupil_Remote
 from marker_detector import Marker_Detector
+from log_display import Log_Display
 
-#manage plugins
-user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Remote,Marker_Detector]
-system_plugins  = [Display_Recent_Gaze,Recorder]
-plugin_by_index =  user_launchable_plugins+system_plugins+calibration_plugins+gaze_mapping_plugins
-name_by_index = [p.__name__ for p in plugin_by_index]
-plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-default_plugins = [('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{})]
 
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
+
 
 
 #UI Platform tweaks
@@ -83,6 +77,17 @@ def world(g_pool,cap_src,cap_size):
     Receives Pupil coordinates from eye process[es]
     Can run various plug-ins.
     """
+
+    #manage plugins
+    runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
+    user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Remote,Marker_Detector]+runtime_plugins
+    system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder]
+    plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins
+    name_by_index = [p.__name__ for p in plugin_by_index]
+    plugin_by_name = dict(zip(name_by_index,plugin_by_index))
+    default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{})]
+
+
 
     # Callback functions
     def on_resize(window,w, h):
@@ -126,6 +131,9 @@ def world(g_pool,cap_src,cap_size):
         logger.info('Process closing from window')
 
 
+    tick = delta_t()
+    def get_dt():
+        return next(tick)
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
@@ -165,15 +173,12 @@ def world(g_pool,cap_src,cap_size):
 
     def set_calibration_plugin(new_calibration):
         g_pool.active_calibration_plugin = new_calibration
-        new_plugin = new_calibration(g_pool)
-        g_pool.plugins.add(new_plugin)
+        g_pool.plugins.add(new_calibration)
 
     def open_plugin(plugin):
         if plugin ==  "Select to load":
             return
-        logger.debug('Open Plugin: %s'%plugin)
-        new_plugin = plugin(g_pool)
-        g_pool.plugins.add(new_plugin)
+        g_pool.plugins.add(plugin)
 
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
@@ -252,6 +257,7 @@ def world(g_pool,cap_src,cap_size):
     g_pool.gui.configuration = session_settings.get('ui_config',{})
 
 
+
     #set up performace graphs:
     pid = os.getpid()
     ps = psutil.Process(pid)
@@ -299,6 +305,9 @@ def world(g_pool,cap_src,cap_size):
 
         #a dictionary that allows plugins to post and read events
         events = {}
+
+        #report time between now and the last loop interation
+        events['dt'] = get_dt()
 
         #receive and map pupil positions
         recent_pupil_positions = []

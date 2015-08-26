@@ -17,11 +17,10 @@ from pyglui import ui
 from methods import denormalize
 
 class Vis_Polyline(Plugin):
-    """docstring for DisplayGaze"""
+    uniqueness = "not_unique"
     def __init__(self, g_pool,color=(1.0,0.0,0.4,1.0),thickness=2):
         super(Vis_Polyline, self).__init__(g_pool)
         self.order = .9
-        self.uniqueness = "not_unique"
         self.menu = None
 
         self.r = color[0]

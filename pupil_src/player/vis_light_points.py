@@ -22,11 +22,11 @@ class Vis_Light_Points(Plugin):
     show gaze dots at light dots on numpy.
 
     """
+    uniqueness = "not_unique"
 
     def __init__(self, g_pool,falloff = 20):
         super(Vis_Light_Points, self).__init__(g_pool)
         self.order = .8
-        self.uniqueness = "not_unique"
         self.menu = None
 
         self.falloff = falloff

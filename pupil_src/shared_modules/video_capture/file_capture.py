@@ -177,6 +177,10 @@ class File_Capture():
             timestamp = time()
         return timestamp
 
+    def get_timestamp():
+        return self.get_now()
+
+
 
     def init_gui(self,sidebar):
         self.menu = ui.Growing_Menu(label='File Capture Settings')

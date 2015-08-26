@@ -88,6 +88,7 @@ class Trim_Marks(Plugin):
             self.out_mark = x
 
 
+
     def on_click(self,img_pos,button,action):
         """
         gets called when the user clicks in the window screen
@@ -114,8 +115,11 @@ class Trim_Marks(Plugin):
                     self.drag_out=True
 
         elif action == GLFW_RELEASE:
-            self.drag_out = False
-            self.drag_in = False
+            if self.drag_out or self.drag_in:
+                logger.info("Section: "+self.get_string())
+                self.drag_out = False
+                self.drag_in = False
+
 
 
     def distance_in_pix(self,frame_pos_0,frame_pos_1):

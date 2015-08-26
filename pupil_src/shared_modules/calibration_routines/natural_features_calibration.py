@@ -100,7 +100,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
         #replace gaze mapper
-        self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
+        self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
 
 
 

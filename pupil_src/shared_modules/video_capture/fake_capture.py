@@ -111,6 +111,9 @@ class FakeCapture(object):
     def get_now(self):
         return time()
 
+    def get_timestamp():
+        return self.get_now()-self.timebase.value
+
 
     def init_gui(self,sidebar):
 

@@ -64,9 +64,9 @@ ch.setFormatter(formatter)
 # add the handlers to the logger
 logger.addHandler(fh)
 logger.addHandler(ch)
-# mute OpenGL logger
-logging.getLogger("OpenGL").propagate = False
-logging.getLogger("OpenGL").addHandler(logging.NullHandler())
+
+logging.getLogger("OpenGL").setLevel(logging.ERROR)
+logging.getLogger("libav").setLevel(logging.ERROR)
 
 
 if 'binocular' in sys.argv:
@@ -92,8 +92,8 @@ class Global_Container(object):
 def main():
 
     # To assign camera by name: put string(s) in list
-    eye_cam_names = ["USB 2.0 Camera","Microsoft", "6000","Integrated Camera","HD USB Camera"]
-    world_src = ["Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
+    eye_cam_names = ["Pupil Cam1 ID0","Pupil Cam1 ID1", "USB 2.0 Camera","Microsoft", "6000","Integrated Camera","HD USB Camera"]
+    world_src = ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
     eye_src = (eye_cam_names,0),(eye_cam_names,1) #first match for eye0 and second match for eye1
 
     # to assign cameras directly, using integers as demonstrated below
