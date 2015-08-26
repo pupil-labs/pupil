@@ -241,11 +241,12 @@ class Camera_Capture(object):
 
     def init_gui(self,sidebar):
 
-        def gui_init_cam(d):
-            self.re_init(d.symbolicName, (self.width, self.height), self.preferred_fps)
+        def gui_init_cam(uid):
+            print "selected new device: " + str(uid)
+            self.re_init(uid, (self.width, self.height), self.preferred_fps)
 
         def gui_get_cam():
-            return self.name
+            return self.device.symbolicName
 
         def gui_get_frame_size():
             return self.frame_size
@@ -262,11 +263,12 @@ class Camera_Capture(object):
         #create the menu entry
         self.menu = ui.Growing_Menu(label='Camera Settings')
 
-        #cams = Camera_List()
-        #cam_names = [str(c.name) for c in cams]
-        #cam_devices = [c.device for c in cams]
-        #self.menu.append(ui.Selector('device',self,selection=cam_devices,labels=cam_names,label='Capture Device', getter=gui_get_cam, setter=gui_init_cam))
         self.menu.append(ui.Info_Text("Device: " + self.name))
+        cams = device_list()
+        cam_names = [str(c["name"]) for c in cams]
+        print cam_names
+        cam_devices = [c["uid"] for c in cams]
+        self.menu.append(ui.Selector('device',self,selection=cam_devices,labels=cam_names,label='Capture Device', getter=gui_get_cam, setter=gui_init_cam))
 
         #hardware_ts_switch = ui.Switch('use_hw_ts',self,label='use hardware timestamps')
         #hardware_ts_switch.read_only = True
