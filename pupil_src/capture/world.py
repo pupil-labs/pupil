@@ -48,7 +48,7 @@ from recorder import Recorder
 from show_calibration import Show_Calibration
 from display_recent_gaze import Display_Recent_Gaze
 from pupil_server import Pupil_Server
-from pupil_remote import Pupil_Remote
+from pupil_sync import Pupil_Sync
 from marker_detector import Marker_Detector
 from log_display import Log_Display
 from event_capture import Event_Capture
@@ -81,7 +81,7 @@ def world(g_pool,cap_src,cap_size):
 
     #manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
-    user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Remote,Marker_Detector,Event_Capture]+runtime_plugins
+    user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Sync,Marker_Detector,Event_Capture]+runtime_plugins
     system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder]
     plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins
     name_by_index = [p.__name__ for p in plugin_by_index]
@@ -166,12 +166,6 @@ def world(g_pool,cap_src,cap_size):
     g_pool.active_calibration_plugin = None
 
 
-    #UI callback functions
-    def reset_timebase():
-        #the last frame from worldcam will be t0
-        g_pool.timebase.value = g_pool.capture.get_now()
-        logger.info("New timebase set to %s all timestamps will count from here now."%g_pool.timebase.value)
-
     def set_calibration_plugin(new_calibration):
         g_pool.active_calibration_plugin = new_calibration
         g_pool.plugins.add(new_calibration)
@@ -210,7 +204,6 @@ def world(g_pool,cap_src,cap_size):
     advanced_settings = ui.Growing_Menu('Advanced')
     advanced_settings.append(ui.Selector('update_textures',g_pool,label="Update display",selection=range(3),labels=('No update','Gray','Color')))
     advanced_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
-    advanced_settings.append(ui.Button('Set timebase to 0',reset_timebase))
     advanced_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
     general_settings.append(advanced_settings)
     g_pool.calibration_menu = ui.Growing_Menu('Calibration')
@@ -320,10 +313,10 @@ def world(g_pool,cap_src,cap_size):
         events['pupil_positions'] = recent_pupil_positions
 
         # notify each plugin if there are new notifactions:
-        for n in g_pool.notifications:
+        while g_pool.notifications:
+            n = g_pool.notifications.pop(0)
             for p in g_pool.plugins:
                 p.on_notify(n)
-        g_pool.notifications = []
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:

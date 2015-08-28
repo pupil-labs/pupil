@@ -173,6 +173,19 @@ class Recorder(Plugin):
         else:
             self.start()
 
+    def on_notify(self,notification):
+        if notification['name'] == 'rec_should_start':
+            if self.running:
+                logger.debug('Recording is already running!')
+            else:
+                self.set_session_name(notification["session_name"])
+                self.start()
+        elif notification['name'] == 'rec_should_stop':
+            if self.running:
+                self.stop()
+            else:
+                logger.debug('Recording is already stopped!')
+
 
     def get_rec_time_str(self):
         rec_time = gmtime(time()-self.start_time)
@@ -239,7 +252,7 @@ class Recorder(Plugin):
         if self.show_info_menu:
             self.open_info_menu()
 
-        self.notify_all( {'name':'rec_started','rec_path':self.rec_path} )
+        self.notify_all( {'name':'rec_started','rec_path':self.rec_path,'session_name':self.session_name} )
 
     def open_info_menu(self):
         self.info_menu = ui.Growing_Menu('additional Recording Info',size=(300,300),pos=(300,300))
