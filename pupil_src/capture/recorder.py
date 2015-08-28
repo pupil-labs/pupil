@@ -176,22 +176,23 @@ class Recorder(Plugin):
     def on_notify(self,notification):
         if notification['name'] == 'rec_should_start':
             if self.running:
-                logger.debug('Recording is already running!')
+                logger.warning('Recording is already running!')
             else:
                 self.set_session_name(notification["session_name"])
-                self.start()
+                # dont propagate this event on the network we would create feedback loops.
+                self.start(network_propagate=False)
         elif notification['name'] == 'rec_should_stop':
             if self.running:
-                self.stop()
+                self.stop(network_propagate=False)
             else:
-                logger.debug('Recording is already stopped!')
+                logger.warning('Recording is already stopped!')
 
 
     def get_rec_time_str(self):
         rec_time = gmtime(time()-self.start_time)
         return strftime("%H:%M:%S", rec_time)
 
-    def start(self):
+    def start(self,network_propagate=True):
         self.timestamps = []
         self.data = {'pupil_positions':[],'gaze_positions':[]}
         self.pupil_pos_list = []
@@ -252,7 +253,7 @@ class Recorder(Plugin):
         if self.show_info_menu:
             self.open_info_menu()
 
-        self.notify_all( {'name':'rec_started','rec_path':self.rec_path,'session_name':self.session_name} )
+        self.notify_all( {'name':'rec_started','rec_path':self.rec_path,'session_name':self.session_name,'network_propagate':network_propagate} )
 
     def open_info_menu(self):
         self.info_menu = ui.Growing_Menu('additional Recording Info',size=(300,300),pos=(300,300))
@@ -298,7 +299,7 @@ class Recorder(Plugin):
 
             self.button.status_text = self.get_rec_time_str()
 
-    def stop(self):
+    def stop(self,network_propagate=True):
         #explicit release of VideoWriter
         self.writer.release()
         self.writer = None
@@ -384,7 +385,7 @@ class Recorder(Plugin):
         self.menu.read_only = False
         self.button.status_text = ''
 
-        self.notify_all( {'name':'rec_stopped','rec_path':self.rec_path} )
+        self.notify_all( {'name':'rec_stopped','rec_path':self.rec_path,'network_propagate':network_propagate} )
 
 
 

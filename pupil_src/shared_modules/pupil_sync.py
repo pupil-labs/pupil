@@ -180,9 +180,9 @@ class Pupil_Sync(Plugin):
 
 
     def on_notify(self,notification):
-        if notification['name'] == 'rec_started':
+        if notification['name'] == 'rec_started' and notification['network_propagate']:
             self.thread_pipe.send(start_rec+notification['session_name'])
-        if notification['name'] == 'rec_stopped':
+        if notification['name'] == 'rec_stopped' and notification['network_propagate']:
             self.thread_pipe.send(stop_rec)
 
     def get_init_dict(self):
