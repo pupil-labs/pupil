@@ -45,8 +45,6 @@ class Camera_Capture(object):
             logger.error("Invalid timebase variable type. Will use default system timebase")
             self.timebase = c_double(0)
 
-        self.use_hw_ts = self.check_hw_ts_support()
-        self._last_timestamp = self.get_now()
         self.capture = uvc.Capture(uid)
         self.uid = uid
         if 'C930e' in self.capture.name:
@@ -61,16 +59,17 @@ class Camera_Capture(object):
 
         if "Pupil Cam1" in self.capture.name or "USB2.0 Camera" in self.capture.name:
             self.capture.bandwidth_factor = 1.3
-            try:
-                # Auto Exposure Priority = 1 leads to reduced framerates under low light and corrupt timestamps.
-                controls_dict['Auto Exposure Priority'].value = 1
-            except KeyError:
-                pass
+            if "ID0" in self.capture.name or "ID1" in self.capture.name:
+                try:
+                    # Auto Exposure Priority = 1 leads to reduced framerates under low light and corrupt timestamps.
+                    controls_dict['Auto Exposure Priority'].value = 1
+                except KeyError:
+                    pass
 
-            try:
-                controls_dict['Absolute Exposure Time'].value = 59
-            except KeyError:
-                pass
+                try:
+                    controls_dict['Absolute Exposure Time'].value = 59
+                except KeyError:
+                    pass
 
         logger.debug('avaible modes %s'%self.capture.avaible_modes)
 
@@ -84,31 +83,7 @@ class Camera_Capture(object):
         self.menu = None
 
 
-    def check_hw_ts_support(self):
-        # hw timestamping:
-        # uvc supports Sart of Exposure hardware timestamping ofr UVC Capture devices
-        # these HW timestamps are excellent referece times and
-        # preferred over softwaretimestamp denoting the avaibleilt of frames to the user.
-        # however not all uvc cameras report valid hw timestamps, notably microsoft hd-6000
-        # becasue all used devices need to properly implement hw timestamping for it to be usefull
-        # but we cannot now what device the other process is using  + the user may select a differet capture device during runtime
-        # we use some fuzzy logic to determine if hw timestamping should be employed.
-        return False
-        blacklist = ["Microsoft","HD-6000"]
-        qualifying_devices = ["C930e","Integrated Camera", "USB 2.0 Camera"]
-        attached_devices = [c.name for c in device_list()]
-        if any(qd in self.name for qd in qualifying_devices):
-            use_hw_ts = True
-            logger.info("Capture device: '%s' supports HW timestamping. Using hardware timestamps." %self.name)
-        else:
-            use_hw_ts = False
-            logger.info("Capture device: '%s' is not known to support HW timestamping. Using software timestamps." %self.name)
 
-        for d in attached_devices:
-            if any(bd in d for bd in blacklist):
-                logger.info("Capture device: '%s' detected as attached device. Falling back to software timestamps"%d)
-                use_hw_ts = False
-        return use_hw_ts
 
     def re_init(self,uid,size=(640,480),fps=30):
 
@@ -120,7 +95,6 @@ class Camera_Capture(object):
         menu_conf = self.menu.configuration
         self.deinit_gui()
 
-        self.use_hw_ts = self.check_hw_ts_support()
         self.capture = uvc.Capture(uid)
         self.uid = uid
 
@@ -131,12 +105,7 @@ class Camera_Capture(object):
             controls_dict['Auto Focus'].value = 0
         except KeyError:
             pass
-        # try:
-        #     # exposure_auto_priority == 1
-        #     # leads to reduced framerates under low light and corrupt timestamps.
-        #     self.capture.set_control(controls_dict['Exposure, Auto Priority']['id'], 0)
-        # except KeyError:
-        #     pass
+
 
         self.init_gui(self.sidebar)
         self.menu.configuration = menu_conf
@@ -154,16 +123,7 @@ class Camera_Capture(object):
         except:
             raise CameraCaptureError("Could not get frame from %s"%self.uid)
 
-        timestamp = frame.timestamp
-        if self.use_hw_ts:
-            # lets make sure this timestamps is sane:
-            if abs(timestamp-uvc.get_sys_time_monotonic()) > 2: #hw_timestamp more than 2secs away from now?
-                logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s"%('/dev/video'+str(self.src_id),timestamp,uvc.get_sys_time_monotonic()))
-                timestamp = uvc.get_sys_time_monotonic()
-        else:
-            # timestamp = uvc.get_sys_time_monotonic()
-            timestamp = self.get_now()+self.ts_offset
-
+        timestamp = self.get_now()+self.ts_offset
         timestamp -= self.timebase.value
         frame.timestamp = timestamp
         return frame
@@ -250,9 +210,6 @@ class Camera_Capture(object):
         camera_ids = [c['uid'] for c in cameras]
         self.menu.append(ui.Selector('uid',self,selection=camera_ids,labels=camera_names,label='Capture Device', setter=gui_init_cam_by_uid) )
 
-        # hardware_ts_switch = ui.Switch('use_hw_ts',self,label='use hardware timestamps')
-        # hardware_ts_switch.read_only = True
-        # self.menu.append(hardware_ts_switch)
 
 
         sensor_control = ui.Growing_Menu(label='Sensor Settings')
