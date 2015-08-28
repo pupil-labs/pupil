@@ -179,11 +179,10 @@ class Recorder(Plugin):
                 logger.warning('Recording is already running!')
             else:
                 self.set_session_name(notification["session_name"])
-                # dont propagate this event on the network we would create feedback loops.
-                self.start(network_propagate=False)
+                self.start(network_propagate=notification.get('network_propagate',True))
         elif notification['name'] == 'rec_should_stop':
             if self.running:
-                self.stop(network_propagate=False)
+                self.stop(network_propagate=notification.get('network_propagate',True))
             else:
                 logger.warning('Recording is already stopped!')
 

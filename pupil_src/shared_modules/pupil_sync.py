@@ -138,9 +138,9 @@ class Pupil_Sync(Plugin):
                     logger.debug("'%s' shouts '%s'."%(name,msg))
                     if start_rec in msg :
                         session_name = msg.replace(start_rec,'')
-                        self.notify_all({'name':'rec_should_start','session_name':session_name})
+                        self.notify_all({'name':'rec_should_start','session_name':session_name,'network_propagate':False})
                     elif stop_rec in msg:
-                        self.notify_all({'name':'rec_should_stop'})
+                        self.notify_all({'name':'rec_should_stop','network_propagate':False})
                     elif sync_time in msg:
                         timebase = float(msg.replace(sync_time,''))
                         ok_to_change = True
@@ -180,6 +180,11 @@ class Pupil_Sync(Plugin):
 
 
     def on_notify(self,notification):
+        # if we get a rec event that was not triggered though pupil_sync it will carry network_propage=True
+        # then we should tell other Pupils to mirror this action
+        # this msg has come because rec was triggered through pupil sync,
+        # we dont need to echo this action out again.
+        # otherwise we create a feedback loop and bad things happen.
         if notification['name'] == 'rec_started' and notification['network_propagate']:
             self.thread_pipe.send(start_rec+notification['session_name'])
         if notification['name'] == 'rec_stopped' and notification['network_propagate']:
