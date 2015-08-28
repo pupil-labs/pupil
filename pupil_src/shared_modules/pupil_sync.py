@@ -83,19 +83,24 @@ class Pupil_Sync(Plugin):
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
 
     def set_sync(self):
+        if self.ok_to_set_timebase():
+            self.thread_pipe.send(sync_time+'0.0')
+            self.adjust_timebase(0.0)
 
+
+    def adjust_timebase(self,offset):
+        raw_time = self.g_pool.capture.get_now()
+        self.g_pool.timebase.value =  self.g_pool.capture.get_now() - offset
+        logger.info("New timebase set to %s all timestamps will count from here now."%self.g_pool.timebase.value)
+
+    def ok_to_set_timebase(self):
         ok_to_change = True
         for p in self.g_pool.plugins:
             if p.class_name == 'Recorder':
                 if p.running:
                     ok_to_change = False
-        if ok_to_change:
-            self.thread_pipe.send(sync_time+'0.0')
-            self.g_pool.timebase.value = 0.0
-            logger.info("New timebase set to %s all timestamps will count from here now."%self.g_pool.timebase.value)
-        else:
-            logger.warning("Request to change timebase during recording ignored. Turn of recording first.")
-
+                    logger.warning("Request to change timebase during recording ignored. Turn of recording first.")
+        return ok_to_change
 
     def close(self):
         self.alive = False
@@ -142,17 +147,9 @@ class Pupil_Sync(Plugin):
                     elif stop_rec in msg:
                         self.notify_all({'name':'rec_should_stop','network_propagate':False})
                     elif sync_time in msg:
-                        timebase = float(msg.replace(sync_time,''))
-                        ok_to_change = True
-                        for p in self.g_pool.plugins:
-                            if p.class_name == 'Recorder':
-                                if p.running:
-                                    ok_to_change = False
-                        if ok_to_change:
-                            self.g_pool.timebase.value = timebase
-                            logger.info("New timebase set to %s all timestamps will count from here now."%self.g_pool.timebase.value)
-                        else:
-                            logger.warning("Request to change timebase during recording ignored. Turn of recording first.")
+                        offset = float(msg.replace(sync_time,''))
+                        if self.ok_to_set_timebase():
+                            self.adjust_timebase(offset)
 
                 elif msg_type == "ENTER":
                     uid,name,headers,ip = cmds
