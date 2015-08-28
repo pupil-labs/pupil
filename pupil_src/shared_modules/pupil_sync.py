@@ -66,13 +66,18 @@ class Pupil_Sync(Plugin):
 
     def set_name(self,new_name):
         self.name = new_name
-        self.thread_pipe.send("EXIT_THREAD".encode('utf_8'))
+        if self.thread_pipe:
+            self.thread_pipe.send("EXIT_THREAD".encode('utf_8'))
+            while self.thread_pipe:
+                sleep(.01)
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
 
     def set_group(self,new_name):
         self.group = new_name
-        self.thread_pipe.send("EXIT_THREAD".encode('utf_8'))
-
+        if self.thread_pipe:
+            self.thread_pipe.send("EXIT_THREAD".encode('utf_8'))
+            while self.thread_pipe:
+                sleep(.01)
         self.group_members = {}
         self.update_gui()
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
@@ -100,7 +105,6 @@ class Pupil_Sync(Plugin):
             self.g_pool.sidebar.remove(self.menu)
             self.menu = None
 
-        self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
 
 
     def thread_loop(self,context,pipe):

@@ -319,7 +319,8 @@ class Recorder(Plugin):
         np.save(pupil_list_path,np.asarray(self.pupil_pos_list))
 
         timestamps_path = os.path.join(self.rec_path, "world_timestamps.npy")
-        ts = sanitize_timestamps(np.array(self.timestamps))
+        # ts = sanitize_timestamps(np.array(self.timestamps))
+        ts = np.array(self.timestamps)
         np.save(timestamps_path,ts)
 
         try:
