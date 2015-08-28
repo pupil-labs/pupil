@@ -96,7 +96,7 @@ class Plugin(object):
     def on_notify(self,notification):
         """
         this gets called when a plugin want to notify all others.
-        notification is a tuple in the format {'name':'notification_name',['addional_fields':'blah']}
+        notification is a dict in the format {'name':'notification_name',['addional_fields':'blah']}
         implement this fn if you want to deal with notifications
         """
         pass
@@ -130,7 +130,7 @@ class Plugin(object):
     def notify_all(self,notification):
         """
         call this to notify all other plugins with a notification:
-        notification is a tuple in the format {'name':'notification_name',['addional_fields':'blah']}
+        notification is a dict in the format {'name':'notification_name',['addional_fields':'blah']}
         do not overwrite this method
         """
         self.g_pool.notifications.append(notification)
