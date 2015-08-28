@@ -123,9 +123,11 @@ class Pupil_Sync(Plugin):
         poller.register(n.socket(), zmq.POLLIN)
         while(True):
             try:
+                #this should not fail but it does sometimes. We need to clean this out.
+                # I think we are not treating sockets correclty as they are not thread-save.
                 items = dict(poller.poll())
             except zmq.ZMQError:
-                break
+                logger.warning('Socket fail.')
             # print(n.socket(), items)
             if pipe in items and items[pipe] == zmq.POLLIN:
                 message = pipe.recv()
