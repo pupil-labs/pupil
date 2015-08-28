@@ -55,21 +55,30 @@ class Camera_Capture(object):
         else:
             self.ts_offset = 0.0
 
+
+        controls_dict = dict([(c.display_name,c) for c in self.capture.controls])
+
+
         if "Pupil Cam1" in self.capture.name or "USB2.0 Camera" in self.capture.name:
             self.capture.bandwidth_factor = 1.3
+            try:
+                # Auto Exposure Priority = 1 leads to reduced framerates under low light and corrupt timestamps.
+                controls_dict['Auto Exposure Priority'].value = 1
+            except KeyError:
+                pass
+
+            try:
+                controls_dict['Absolute Exposure Time'].value = 59
+            except KeyError:
+                pass
 
         logger.debug('avaible modes %s'%self.capture.avaible_modes)
 
-        controls_dict = dict([(c.display_name,c) for c in self.capture.controls])
         try:
             controls_dict['Auto Focus'].value = 0
         except KeyError:
             pass
-        try:
-            # Auto Exposure Priority = 1 leads to reduced framerates under low light and corrupt timestamps.
-            controls_dict['Auto Exposure Priority'].value = 0
-        except KeyError:
-            pass
+
 
         self.sidebar = None
         self.menu = None

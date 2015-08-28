@@ -301,6 +301,7 @@ def session(rec_dir):
     system_plugins = [('Trim_Marks',{}),('Seek_Bar',{})]
     default_plugins = [('Log_Display',{}),('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Export_Launcher',{})]
     previous_plugins = session_settings.get('loaded_plugins',default_plugins)
+    g_pool.notifications = []
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,system_plugins+previous_plugins)
 
     for p in g_pool.plugins:
@@ -384,6 +385,11 @@ def session(rec_dir):
         #always update the CPU graph
         cpu_graph.update()
 
+        # notify each plugin if there are new notifactions:
+        while g_pool.notifications:
+            n = g_pool.notifications.pop(0)
+            for p in g_pool.plugins:
+                p.on_notify(n)
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
