@@ -172,6 +172,9 @@ class Plugin(object):
 class Calibration_Plugin(Plugin):
     '''base class for all calibration routines'''
     uniqueness = 'by_base_class'
+    def __init__(self,g_pool):
+        super(Calibration_Plugin, self).__init__(g_pool)
+        self.g_pool.active_calibration_plugin = self
 
 
 class Gaze_Mapping_Plugin(Plugin):

@@ -166,10 +166,6 @@ def world(g_pool,cap_src,cap_size):
     g_pool.active_calibration_plugin = None
 
 
-    def set_calibration_plugin(new_calibration):
-        g_pool.active_calibration_plugin = new_calibration
-        g_pool.plugins.add(new_calibration)
-
     def open_plugin(plugin):
         if plugin ==  "Select to load":
             return
@@ -178,7 +174,6 @@ def world(g_pool,cap_src,cap_size):
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
-
 
 
     #window and gl setup
@@ -207,9 +202,9 @@ def world(g_pool,cap_src,cap_size):
     advanced_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
     general_settings.append(advanced_settings)
     g_pool.calibration_menu = ui.Growing_Menu('Calibration')
-    g_pool.calibration_menu.append(ui.Selector('active_calibration_plugin',g_pool, selection = calibration_plugins,
+    g_pool.calibration_menu.append(ui.Selector('active_calibration_plugin',getter=lambda: g_pool.active_calibration_plugin.__class__, selection = calibration_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
-                                        setter= set_calibration_plugin,label='Method'))
+                                        setter= open_plugin,label='Method'))
     g_pool.sidebar.append(g_pool.calibration_menu)
     g_pool.gui.append(g_pool.sidebar)
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
@@ -221,11 +216,6 @@ def world(g_pool,cap_src,cap_size):
     g_pool.notifications = []
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
 
-    #only needed for the gui to show the loaded calibration type
-    for p in g_pool.plugins:
-        if p.base_class_name == 'Calibration_Plugin':
-            g_pool.active_calibration_plugin =  p.__class__
-            break
 
     # Register callbacks main_window
     glfwSetFramebufferSizeCallback(main_window,on_resize)
