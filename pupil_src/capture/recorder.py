@@ -96,7 +96,8 @@ class Recorder(Plugin):
         else:
             try:
                 os.makedirs(default_rec_dir)
-            except OSError,WindowsError as e:
+            except OSError as e:
+                #       posix                          windows
                 if 'File exists' in '%s'%e or 'file already exists' in '%s'%e:
                     pass
                 else:
