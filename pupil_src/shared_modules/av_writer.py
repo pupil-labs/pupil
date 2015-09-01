@@ -274,28 +274,28 @@ def ffmpeg_bin():
     else:
         return 'avconv'
 
-def test():
+# def test():
 
-    import os
-    import cv2
-    from video_capture import autoCreateCapture
-    logging.basicConfig(level=logging.DEBUG)
+#     import os
+#     import cv2
+#     from video_capture import autoCreateCapture
+#     logging.basicConfig(level=logging.DEBUG)
 
-    writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out.mp4"))
-    # writer = cv2.VideoWriter(os.path.expanduser("~/Desktop/av_writer_out.avi"),cv2.cv.CV_FOURCC(*"DIVX"),30,(1280,720))
-    cap = autoCreateCapture(0,(1280,720))
-    frame = cap.get_frame()
-    # print writer.video_stream.time_base
-    # print writer.
+#     writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out.mp4"))
+#     # writer = cv2.VideoWriter(os.path.expanduser("~/Desktop/av_writer_out.avi"),cv2.cv.CV_FOURCC(*"DIVX"),30,(1280,720))
+#     cap = autoCreateCapture(0,(1280,720))
+#     frame = cap.get_frame()
+#     # print writer.video_stream.time_base
+#     # print writer.
 
-    for x in xrange(300):
-        frame = cap.get_frame()
-        writer.write_video_frame(frame)
-        # writer.write(frame.img)
-        # print writer.video_stream
+#     for x in xrange(300):
+#         frame = cap.get_frame()
+#         writer.write_video_frame(frame)
+#         # writer.write(frame.img)
+#         # print writer.video_stream
 
-    cap.close()
-    writer.close()
+#     cap.close()
+#     writer.close()
 
 
 if __name__ == '__main__':

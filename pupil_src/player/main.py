@@ -89,7 +89,7 @@ from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_nam
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 from OpenGL.GL import glClearColor
 #capture
-from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
+from video_capture import File_Capture,EndofVideoFileError,FileSeekError
 
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
@@ -207,10 +207,7 @@ def session(rec_dir):
 
 
     # Initialize capture
-    cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-    if isinstance(cap,FakeCapture):
-        logger.error("could not start capture.")
-        return
+    cap = File_Capture(video_path,timestamps=timestamps_path)
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))

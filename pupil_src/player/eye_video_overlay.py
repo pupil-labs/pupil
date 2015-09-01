@@ -21,7 +21,7 @@ from plugin import Plugin
 from version_utils import VersionFormat
 
 #capture
-from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture,FileCaptureError
+from video_capture import EndofVideoFileError,FileSeekError,FileCaptureError,File_Capture
 
 #mouse
 from glfw import glfwGetCursorPos,glfwGetWindowSize,glfwGetCurrentContext
@@ -145,8 +145,8 @@ class Eye_Video_Overlay(Plugin):
 
         # load eye videos and eye timestamps
         if g_pool.rec_version < VersionFormat('0.4'):
-            eye_video_path = os.path.join(g_pool.rec_dir,'eye.avi'),None
-            eye_timestamps_path = os.path.join(g_pool.rec_dir,'eye_timestamps.npy'),None
+            eye_video_path = os.path.join(g_pool.rec_dir,'eye.avi'),'None'
+            eye_timestamps_path = os.path.join(g_pool.rec_dir,'eye_timestamps.npy'),'None'
         else:
             eye_video_path = os.path.join(g_pool.rec_dir,'eye0.*'),os.path.join(g_pool.rec_dir,'eye1.*')
             eye_timestamps_path = os.path.join(g_pool.rec_dir,'eye0_timestamps.npy'),os.path.join(g_pool.rec_dir,'eye1_timestamps.npy')
@@ -154,7 +154,7 @@ class Eye_Video_Overlay(Plugin):
         #try to load eye video and ts for each eye.
         for video,ts in zip(eye_video_path,eye_timestamps_path):
             try:
-                self.eye_cap.append(autoCreateCapture(glob(video)[0],timestamps=ts))
+                self.eye_cap.append(File_Capture(glob(video)[0],timestamps=ts))
             except IndexError,FileCaptureError:
                 pass
             else:

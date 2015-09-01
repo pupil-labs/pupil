@@ -38,7 +38,7 @@ import psutil
 from file_methods import Persistent_Dict
 from version_utils import VersionFormat
 from methods import normalize, denormalize, delta_t
-from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError, FakeCapture
+from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
 
 # Plug-ins

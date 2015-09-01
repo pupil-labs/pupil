@@ -21,7 +21,7 @@ from time import time
 from glob import glob
 import cv2
 import numpy as np
-from video_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
+from video_capture import File_Capture,EndofVideoFileError
 from player_methods import correlate_data,update_recording_0v4_to_current,update_recording_0v3_to_current
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version
@@ -89,10 +89,8 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     timestamps = np.load(timestamps_path)
 
-    cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-    if isinstance(cap,FakeCapture):
-        logger.error("could not start capture.")
-        return
+    cap = File_Capture(video_path,timestamps=timestamps_path)
+
 
     #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
     if out_file_path is None:

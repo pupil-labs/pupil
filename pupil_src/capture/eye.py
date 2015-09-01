@@ -45,7 +45,7 @@ from pupil_detectors import Canny_Detector
 
 
 
-def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
+def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     """
     Creates a window, gl context.
     Grabs images from a capture.
@@ -160,6 +160,10 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         cap.close()
         return
 
+    #signal world that we are ready to go
+    pipe_to_world.send('eye%s process ready'%eye_id)
+
+
     g_pool.capture = cap
     g_pool.flip = session_settings.get('flip',False)
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
@@ -267,6 +271,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     def window_should_update():
         return next(window_update_timer)
 
+
     # Event loop
     while not g_pool.quit.value:
         # Get an image from the grabber
@@ -292,8 +297,8 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
         ###  RECORDING of Eye Video (on demand) ###
         # Setup variables and lists for recording
-        if rx_from_world.poll():
-            command,raw_mode = rx_from_world.recv()
+        if pipe_to_world.poll():
+            command,raw_mode = pipe_to_world.recv()
             if command is not None:
                 record_path = command
                 logger.info("Will save eye video to: %s"%record_path)
@@ -401,10 +406,10 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     logger.debug("Process done")
 
-def eye_profiled(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
+def eye_profiled(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     import cProfile,subprocess,os
     from eye import eye
-    cProfile.runctx("eye(g_pool,cap_src,cap_size,rx_from_world,eye_id)",{"g_pool":g_pool,'cap_src':cap_src,'cap_size':cap_size,'rx_from_world':rx_from_world,'eye_id':eye_id},locals(),"eye%s.pstats"%eye_id)
+    cProfile.runctx("eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id)",{"g_pool":g_pool,'cap_src':cap_src,'cap_size':cap_size,'pipe_to_world':pipe_to_world,'eye_id':eye_id},locals(),"eye%s.pstats"%eye_id)
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye%s.pstats | dot -Tpng -o eye%s_cpu_time.png"%(eye_id,eye_id), shell=True)
