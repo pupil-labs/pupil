@@ -96,8 +96,8 @@ class Recorder(Plugin):
         else:
             try:
                 os.makedirs(default_rec_dir)
-            except OSError as e:
-                if 'File exists' in '%s'%e:
+            except OSError,WindowsError as e:
+                if 'File exists' in '%s'%e or 'file already exists' in '%s'%e:
                     pass
                 else:
                     logger.error("Could not create Rec dir")
