@@ -56,7 +56,7 @@ class Pupil(): #data structure for a pupil
 		c_proj = geometry.project_point(c,intrinsics)
 		v_proj = geometry.project_point(v + c, intrinsics) - c_proj
 		v_proj = v_proj/np.linalg.norm(v_proj) #normalizing
-		self.line = geometry.Line2D(c_proj, v_proj) #append this to self.pupil_gazeline_proj
+		self.line = geometry.Line2D(c_proj, v_proj) #append this to self.pupil_gazeline_proj, will delete later
 
 	def __str__(self):
 		return "Pupil Class: %s %s %s "%(self.ellipse,self.circle,self.params)
@@ -102,6 +102,7 @@ class Sphere_Fitter():
 		Ivivi = np.identity(2) - np.dot(vi,vi.T)
 		self.twoDim_A += Ivivi
 		self.twoDim_B += np.dot(pupil.line.origin,Ivivi)
+		self.line = None #deallocate
 
 
 	def add_pupil_labs_observation(self,pupil_ellipse):
@@ -113,6 +114,7 @@ class Sphere_Fitter():
 		Ivivi = np.identity(2) - np.dot(vi,vi.T)
 		self.twoDim_A += Ivivi
 		self.twoDim_B += np.dot(pupil.line.origin,Ivivi)
+		self.line = None #deallocate
 
 	def reset(self):
 		self.observations = []
@@ -192,11 +194,14 @@ class Sphere_Fitter():
 		# pupil.circle = self.circleFromParams(pupil.params)
 
 	def update_model(self):
-		self.count += 1
-		if self.count == 30 or 1:
-			self.unproject_observations()
-			self.initialize_model()
+		# this function runs unproject_observations and initialise_model, and prints
+		# the eye model once every 30 iterations.
+		if self.count >= 30:
 			self.count = 0
+			logger.warning(self.eye)
+		self.count += 1
+		self.unproject_observations()
+		self.initialize_model()
 
 	def unproject_observations(self, eye_z = 20):
 		# ransac default to false so I skip for loop (haven't implemented it yet)
@@ -231,6 +236,7 @@ class Sphere_Fitter():
 				c_proj = np.reshape(line.origin, (2,))
 				v_proj = np.reshape(line.direction, (2,))
 
+
 				if (np.dot(c_proj - eye_center_proj, v_proj) >= 0):
 					#check if v_proj going away from estimated eye center, take the one going away.
 					self.observations[i].circle = self.observations[i].projected_circles[0]
@@ -257,10 +263,26 @@ class Sphere_Fitter():
 if __name__ == '__main__':
 
 	#testing stuff
-	intrinsics = np.matrix('879.193 0 320; 0 -879.193 240; 0 0 1')
-	huding = Sphere_Fitter(intrinsics = intrinsics)
+	# intrinsics = np.matrix('879.193 0 320; 0 -879.193 240; 0 0 1')
+	# intrinsics = np.matrix('100 0 50; 0 -100 80; 0 0 1')
+	# intrinsics = np.matrix('100 0 0; 0 -100 0; 50 80 1')
+	# huding = Sphere_Fitter(intrinsics = intrinsics)
+	import timeit
+
+	# huding.add_observation(geometry.Ellipse([20,20],5,3,1))
+	# huding.add_observation(geometry.Ellipse([40,20],5,2,1))
+	# print huding.intrinsics
+	# print huding.observations[0].ellipse
+	# print huding.observations[1].ellipse
+	# huding.unproject_observations() #Sphere(center = [ 29.78174904  40.23627353  20.], radius = 1)
+	# huding.initialize_model()
+	# after unproject & initialize, should be
+	# Sphere(center = [ 6.46494922  8.73439181  4.34155107], radius = 12.0)
 
 	#testing unproject_observation, with data suitable for camera intrinsics
+	# def basic_test():
+	intrinsics = np.matrix('879.193 0 320; 0 -879.193 240; 0 0 1')
+	huding = Sphere_Fitter(intrinsics = intrinsics)
 	ellipse1 = geometry.Ellipse([422.255,255.123],40.428,30.663,1.116)
 	ellipse2 = geometry.Ellipse([442.257,365.003],44.205,32.146,1.881)
 	ellipse3 = geometry.Ellipse([307.473,178.163],41.29,22.765,0.2601)
@@ -282,8 +304,14 @@ if __name__ == '__main__':
 	huding.add_observation(ellipse8)
 	huding.add_observation(ellipse9)
 	huding.add_observation(ellipse10)
-
-	huding.unproject_observations()
+	huding.unproject_observations() #Sphere(center = [ 29.78174904  40.23627353  20.], radius = 1)
 	huding.initialize_model()
-	print huding.observations[-1]
-	print huding.eye #Sphere {center: [ -3.02103998  -4.64862274  49.54492648] radius: 12.0}
+
+	print geometry.project_point([200,300,100],intrinsics) # [ 2078.386 -2397.579]
+
+	# print "starting"
+	# start_time = timeit.default_timer()
+	# timeit.Timer(basic_test).timeit(number=1000)
+	# print(timeit.default_timer() - start_time)	
+
+	# print huding.eye #Sphere {center: [ -3.02103998  -4.64862274  49.54492648] radius: 12.0}

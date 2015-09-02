@@ -11,14 +11,14 @@ namespace singleeyefitter {
         typedef T Scalar;
         typedef Eigen::Matrix<Scalar, 3, 1> Vector;
 
-        Vector centre, normal;
+        Vector center, normal;
         Scalar radius;
 
-        Circle3D() : centre(0, 0, 0), normal(0, 0, 0), radius(0)
+        Circle3D() : center(0, 0, 0), normal(0, 0, 0), radius(0)
         {
         }
-        Circle3D(Vector centre, Vector normal, Scalar radius)
-            : centre(std::move(centre)), normal(std::move(normal)), radius(std::move(radius))
+        Circle3D(Vector center, Vector normal, Scalar radius)
+            : center(std::move(center)), normal(std::move(normal)), radius(std::move(radius))
         {
         }
 
@@ -39,20 +39,20 @@ namespace singleeyefitter {
 
     template<typename Scalar>
     bool operator== (const Circle3D<Scalar>& s1, const Circle3D<Scalar>& s2) {
-        return s1.centre == s2.centre
+        return s1.center == s2.center
             && s1.normal == s2.normal
             && s1.radius == s2.radius;
     }
     template<typename Scalar>
     bool operator!= (const Circle3D<Scalar>& s1, const Circle3D<Scalar>& s2) {
-        return s1.centre != s2.centre
+        return s1.center != s2.center
             || s1.normal != s2.normal
             || s1.radius != s2.radius;
     }
 
     template<typename T>
     std::ostream& operator<< (std::ostream& os, const Circle3D<T>& circle) {
-        return os << "Circle { centre: (" << circle.centre[0] << "," << circle.centre[1] << "," << circle.centre[2] << "), "
+        return os << "Circle { center: (" << circle.center[0] << "," << circle.center[1] << "," << circle.center[2] << "), "
             "normal: (" << circle.normal[0] << "," << circle.normal[1] << "," << circle.normal[2] << "), "
             "radius: " << circle.radius << " }";
     }
@@ -74,9 +74,9 @@ struct matlab_traits<typename Circle<Scalar>, typename std::enable_if<
             throw std::exception("Conversion requires struct");
         }
 
-        mxArray* centre_arr = mxGetField(arr, 0, "centre");
-        if (!centre_arr)  {
-            throw std::exception("No 'centre' field on struct");
+        mxArray* center_arr = mxGetField(arr, 0, "center");
+        if (!center_arr)  {
+            throw std::exception("No 'center' field on struct");
         }
 
         mxArray* normal_arr = mxGetField(arr, 0, "normal");
@@ -89,21 +89,21 @@ struct matlab_traits<typename Circle<Scalar>, typename std::enable_if<
             throw std::exception("No 'radius' field on struct");
         }
 
-        Circle<Scalar> ret(matlab::matlab_traits<Circle<Scalar>::Vector>::fromMxArray(centre_arr),
+        Circle<Scalar> ret(matlab::matlab_traits<Circle<Scalar>::Vector>::fromMxArray(center_arr),
                            matlab::matlab_traits<Circle<Scalar>::Vector>::fromMxArray(normal_arr),
                            matlab::matlab_traits<Circle<Scalar>::Scalar>::fromMxArray(radius_arr));
         return ret;
     }
 
     static std::unique_ptr<mxArray, decltype(&mxDestroyArray)> createMxArray(const Circle<Scalar>& circle) throw() {
-        const char* fields[3] = {"centre", "normal", "radius"};
+        const char* fields[3] = {"center", "normal", "radius"};
         mwSize dims[1] = {1};
         std::unique_ptr<mxArray, decltype(&mxDestroyArray)> arr(
             mxCreateStructArray(1, dims, 3, fields),
             mxDestroyArray);
 
-        auto centre = matlab::matlab_traits<Circle<Scalar>::Vector>::createMxArray(circle.centre);
-        mxSetField(arr.get(), 0, "centre", centre.release());
+        auto center = matlab::matlab_traits<Circle<Scalar>::Vector>::createMxArray(circle.center);
+        mxSetField(arr.get(), 0, "center", center.release());
         auto normal = matlab::matlab_traits<Circle<Scalar>::Vector>::createMxArray(circle.normal);
         mxSetField(arr.get(), 0, "normal", normal.release());
         auto radius = matlab::matlab_traits<Circle<Scalar>::Scalar>::createMxArray(circle.radius);

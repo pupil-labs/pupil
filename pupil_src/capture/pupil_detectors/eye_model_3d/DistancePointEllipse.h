@@ -155,7 +155,7 @@ namespace singleeyefitter {
         A << cos(ellipse.angle), sin(ellipse.angle),
             -sin(ellipse.angle), cos(ellipse.angle);
 
-        Eigen::Matrix<Scalar, 2, 1> p(x - ellipse.centre.x(), y - ellipse.centre.y());
+        Eigen::Matrix<Scalar, 2, 1> p(x - ellipse.center.x(), y - ellipse.center.y());
         Eigen::Matrix<Scalar, 2, 1> Ap = A*p;
 
         // Flip signs to make sure Ap is in the positive quadrant

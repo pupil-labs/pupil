@@ -164,7 +164,6 @@ class Ellipse:
         self.minor_radius = minor_radius
         self.angle = angle%np.pi
 
-
     @classmethod
     def from_ellipse_dict(cls, e_dict):
         center = np.asarray(e_dict['center'])
@@ -456,10 +455,10 @@ if __name__ == '__main__':
     k = np.matrix('100 0 10; 0 -100 10; 0 0 1')
 
     # print k[0,2]
-    # 
     p3 = unproject_point((0.0 , 20),100,k)
     p2 = project_point(p3,k)
     print p3,p2
+    
     #testing uproject
     ellipse = Ellipse((0.,0.),2.0502,1.0001,2.01)
     circ = ellipse.unproject(1,k)

@@ -502,6 +502,7 @@ class Canny_Detector(Pupil_Detector):
             cv2.polylines(debug_img,lines,isClosed=False,color=(255,100,100))
             self.gl_display_in_window(debug_img)
         # print "rarr"
+        # print contours
         return pupil_ellipse,contours #also returning contours so visualizer.py can display that data.
 
     # Display and interface methods
