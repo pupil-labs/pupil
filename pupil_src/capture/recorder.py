@@ -237,7 +237,7 @@ class Recorder(Plugin):
         else:
             self.audio_writer = None
 
-        if self.raw_jpeg  and "uvc_capture" in str(self.g_pool.capture.__class__):
+        if self.raw_jpeg and self.g_pool.capture.jpeg_support:
             self.video_path = os.path.join(self.rec_path, "world.mp4")
             self.writer = JPEG_Writer(self.video_path,int(self.g_pool.capture.frame_rate))
         # elif 1:

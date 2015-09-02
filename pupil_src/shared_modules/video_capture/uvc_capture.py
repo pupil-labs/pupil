@@ -181,6 +181,14 @@ class Camera_Capture(object):
     def name(self):
         return self.capture.name
 
+
+    @property
+    def jpeg_support(self):
+        if self.capture.__class__ is Fake_Capture:
+            return False
+        else:
+            return True
+
     def init_gui(self,sidebar):
 
         #lets define some  helper functions:

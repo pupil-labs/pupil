@@ -236,6 +236,12 @@ class Camera_Capture(object):
             size_list.append(size)
         return size_list
 
+
+    @property
+    def jpeg_support(self):
+        return False
+
+
     def get_now(self):
         return time()
 
