@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 start_rec = "START_REC:"
 stop_rec = "STOP_REC:"
+start_cal = "START_CAL"
+stop_cal = "STOP_CAL"
 sync_time = "SYNC:"
 
 
@@ -143,23 +145,20 @@ class Pupil_Sync(Plugin):
                 if msg_type == "SHOUT":
                     uid,name,group,msg = cmds
                     logger.debug("'%s' shouts '%s'."%(name,msg))
-                    if start_rec in msg :
-                        session_name = msg.replace(start_rec,'')
-                        self.notify_all({'name':'rec_should_start','session_name':session_name,'network_propagate':False})
-                    elif stop_rec in msg:
-                        self.notify_all({'name':'rec_should_stop','network_propagate':False})
-                    elif sync_time in msg:
-                        offset = float(msg.replace(sync_time,''))
-                        if self.ok_to_set_timebase():
-                            self.adjust_timebase(offset)
+                    self.handle_msg(name,msg)
 
-                elif msg_type == "ENTER":
-                    uid,name,headers,ip = cmds
+                elif msg_type == "WHISPER":
+                    pass
+                    # uid,name,group,msg = cmds
+                    # logger.debug("'%s' whispers '%s'."%(name,msg))
+                    # self.handle_msg(name,msg)
+
                 elif msg_type == "JOIN":
                     uid,name,group = cmds
                     if group == self.group:
                         self.group_members[uid] = name
                         self.update_gui()
+
                 elif msg_type == "EXIT":
                     uid,name = cmds
                     try:
@@ -168,15 +167,33 @@ class Pupil_Sync(Plugin):
                         pass
                     else:
                         self.update_gui()
-                elif msg_type == "LEAVE":
-                    uid,name,group = cmds
-                elif msg_tpye == "WHISPER":
-                    pass
+
+                # elif msg_type == "LEAVE":
+                #     uid,name,group = cmds
+                # elif msg_type == "ENTER":
+                #     uid,name,headers,ip = cmds
+
+
 
         logger.debug('thread_loop closing.')
         self.thread_pipe = None
         n.stop()
 
+
+    def handle_msg(self,name,msg):
+        if start_rec in msg :
+            session_name = msg.replace(start_rec,'')
+            self.notify_all({'name':'rec_should_start','session_name':session_name,'network_propagate':False})
+        elif stop_rec in msg:
+            self.notify_all({'name':'rec_should_stop','network_propagate':False})
+        elif start_cal in msg:
+            self.notify_all({'name':'cal_should_start'})
+        elif stop_cal in msg:
+            self.notify_all({'name':'cal_should_stop'})
+        elif sync_time in msg:
+            offset = float(msg.replace(sync_time,''))
+            if self.ok_to_set_timebase():
+                self.adjust_timebase(offset)
 
     def on_notify(self,notification):
         # if we get a rec event that was not triggered though pupil_sync it will carry network_propage=True
