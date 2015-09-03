@@ -80,6 +80,7 @@ class Offline_Marker_Detector(Marker_Detector):
 
         # ui mode settings
         self.mode = mode
+        self.min_marker_perimeter = 20  #if we make this a slider we need to invalidate the cache on change.
         # edit surfaces
         self.edit_surfaces = []
 
@@ -121,6 +122,7 @@ class Offline_Marker_Detector(Marker_Detector):
         pass
         self.menu.elements[:] = []
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
+        self.menu.append(ui.Info_Text('Please note: Unlike the real-time marker detector the offline marker detector works with a fixed min_marker_perimeter of 20.'))
         self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
@@ -248,7 +250,7 @@ class Offline_Marker_Detector(Marker_Detector):
         self.cache_queue = Queue()
         self.cacher_seek_idx = Value('i',0)
         self.cacher_run = Value(c_bool,True)
-        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,self.cache_queue,self.cacher_seek_idx,self.cacher_run))
+        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter))
         self.cacher.start()
 
     def update_marker_cache(self):
