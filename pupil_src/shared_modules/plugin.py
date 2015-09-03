@@ -176,6 +176,24 @@ class Calibration_Plugin(Plugin):
         super(Calibration_Plugin, self).__init__(g_pool)
         self.g_pool.active_calibration_plugin = self
 
+    def on_notify(self,notification):
+        if notification['name'] is 'cal_should_start':
+            if self.active:
+                logger.warning('Calibration already running.')
+            else:
+                self.start()
+        elif notification['name'] is 'cal_should_stop':
+            if self.active:
+                self.stop()
+            else:
+                logger.warning('Calibration already stopped.')
+
+    def start(self):
+        raise  NotImplementedError()
+
+    def stop(self):
+        raise  NotImplementedError()
+
 
 class Gaze_Mapping_Plugin(Plugin):
     '''base class for all calibration routines'''
