@@ -135,7 +135,7 @@ class Camera_Capture(object):
         self.uid = uid
         if uid is not None:
             # validate parameter UID
-            devices = device_list()
+            devices = device_list() # TODO: read list only once (initially) to save runtime
             for device in devices:
                 print 
                 if device['uid'] == uid:
@@ -143,13 +143,15 @@ class Camera_Capture(object):
             if device['uid'] != uid:
                 msg = ERR_INIT_FAIL + "UID of camera was not found."
                 logger.error(msg)
-                raise CameraCaptureError(msg)
+                self.init_capture(None, size, fps, timebase)
+                return
                 
             # validate parameter SIZE
             if not len(size) == 2:
                 msg = ERR_INIT_FAIL + "Parameter 'size' must have length 2."
                 logger.error(msg)
-                raise CameraCaptureError(msg)
+                self.init_capture(None, size, fps, timebase)
+                return
 
             # setting up device
             self.device = device
@@ -222,7 +224,7 @@ class Camera_Capture(object):
                     if res == vi.ResultCode.READINGPIXELS_DONE:
                         break
             if res != vi.ResultCode.READINGPIXELS_DONE:
-                msg = "Could not read frame. Error code: %d" %(res)
+                msg = "Could not read frame. Fall back to Fake Capture. Error code: %d" %(res)
                 logger.error(msg)
                 self.re_init_capture(None, self.frame_size, self.preferred_fps)
                 return self.get_frame()
@@ -297,6 +299,7 @@ class Camera_Capture(object):
         self.menu = ui.Growing_Menu(label='Camera Settings')
 
         self.menu.append(ui.Info_Text("Device: " + self.name))
+        # TODO: refresh button for capture list. Make properties that refresh on reading...
         cams = device_list()
         cam_names = ['Fake Capture'] + [str(c["name"]) for c in cams]
         cam_devices = [None] + [c["uid"] for c in cams]
