@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os, sys, platform
+import os, sys, platform, errno
 import getpass
 from pyglui import ui
 import numpy as np
@@ -97,10 +97,7 @@ class Recorder(Plugin):
             try:
                 os.makedirs(default_rec_dir)
             except OSError as e:
-                #    both                               posix                          windows
-                if os.path.exists(default_rec_dir): #'File exists' in '%s'%e or 'file already exists' in '%s'%e:
-                    pass
-                else:
+                if e.errno != errno.EEXIST:
                     logger.error("Could not create Rec dir")
                     raise e
             else:
