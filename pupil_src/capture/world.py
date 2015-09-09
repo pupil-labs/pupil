@@ -91,13 +91,13 @@ def world(g_pool,cap_src,cap_size):
 
     # Callback functions
     def on_resize(window,w, h):
-        g_pool.gui.update_window(w,h)
-        g_pool.gui.collect_menus()
-        graph.adjust_size(w,h)
-        adjust_gl_view(w,h)
-        for p in g_pool.plugins:
-            p.on_window_resize(window,w,h)
-
+        if not g_pool.iconified:
+            g_pool.gui.update_window(w,h)
+            g_pool.gui.collect_menus()
+            graph.adjust_size(w,h)
+            adjust_gl_view(w,h)
+            for p in g_pool.plugins:
+                p.on_window_resize(window,w,h)
 
     def on_iconify(window,iconified):
         g_pool.iconified = iconified
@@ -107,7 +107,6 @@ def world(g_pool,cap_src,cap_size):
 
     def on_char(window,char):
         g_pool.gui.update_char(char)
-
 
     def on_button(window,button, action, mods):
         g_pool.gui.update_button(button,action,mods)
@@ -317,18 +316,19 @@ def world(g_pool,cap_src,cap_size):
         #check if a plugin need to be destroyed
         g_pool.plugins.clean()
 
-        if not g_pool.iconified:
-            # render camera image
-            glfwMakeContextCurrent(main_window)
-            if g_pool.update_textures == 2:
-                update_named_texture(g_pool.image_tex,frame.img)
-            elif g_pool.update_textures == 1:
-                update_named_texture(g_pool.image_tex,frame.gray)
+        # render camera image
+        glfwMakeContextCurrent(main_window)
+        if g_pool.iconified:
+            pass
+        elif g_pool.update_textures == 2:
+            update_named_texture(g_pool.image_tex,frame.img)
+        elif g_pool.update_textures == 1:
+            update_named_texture(g_pool.image_tex,frame.gray)
 
-            make_coord_system_norm_based()
-            draw_named_texture(g_pool.image_tex)
-            make_coord_system_pixel_based((frame.height,frame.width,3))
+        make_coord_system_norm_based()
+        draw_named_texture(g_pool.image_tex)
 
+        make_coord_system_pixel_based((frame.height,frame.width,3))
         # render visual feedback from loaded plugins
         for p in g_pool.plugins:
             p.gl_display()
@@ -343,7 +343,7 @@ def world(g_pool,cap_src,cap_size):
             glfwSwapBuffers(main_window)
         glfwPollEvents()
 
-
+    glfwRestoreWindow(main_window) #need to do this for windows os
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['gui_scale'] = g_pool.gui.scale

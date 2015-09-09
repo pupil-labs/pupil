@@ -88,12 +88,13 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
     # Callback functions
     def on_resize(window,w, h):
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(window)
-        g_pool.gui.update_window(w,h)
-        graph.adjust_size(w,h)
-        adjust_gl_view(w,h)
-        glfwMakeContextCurrent(active_window)
+        if not g_pool.iconified:
+            active_window = glfwGetCurrentContext()
+            glfwMakeContextCurrent(window)
+            g_pool.gui.update_window(w,h)
+            graph.adjust_size(w,h)
+            adjust_gl_view(w,h)
+            glfwMakeContextCurrent(active_window)
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key,scancode,action,mods)
@@ -384,7 +385,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         writer = None
         np.save(timestamps_path,np.asarray(timestamps))
 
-
+    glfwRestoreWindow(main_window) #need to do this for windows os
     # save session persistent settings
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['roi'] = u_r.get()
