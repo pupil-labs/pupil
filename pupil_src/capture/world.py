@@ -99,8 +99,8 @@ def world(g_pool,cap_src,cap_size):
             p.on_window_resize(window,w,h)
 
 
-    def on_iconify(window,iconfied):
-        pass
+    def on_iconify(window,iconified):
+        g_pool.iconified = iconified
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key,scancode,action,mods)
@@ -158,7 +158,7 @@ def world(g_pool,cap_src,cap_size):
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
     g_pool.update_textures = session_settings.get("update_textures",2)
-
+    g_pool.iconified = False
 
     g_pool.capture = cap
     g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
@@ -313,28 +313,30 @@ def world(g_pool,cap_src,cap_size):
         #check if a plugin need to be destroyed
         g_pool.plugins.clean()
 
-        # render camera image
-        glfwMakeContextCurrent(main_window)
-        if g_pool.update_textures == 2:
-            update_named_texture(g_pool.image_tex,frame.img)
-        elif g_pool.update_textures == 1:
-            update_named_texture(g_pool.image_tex,frame.gray)
+        if not g_pool.iconified:
+            # render camera image
+            glfwMakeContextCurrent(main_window)
+            if g_pool.update_textures == 2:
+                update_named_texture(g_pool.image_tex,frame.img)
+            elif g_pool.update_textures == 1:
+                update_named_texture(g_pool.image_tex,frame.gray)
 
-        make_coord_system_norm_based()
-        draw_named_texture(g_pool.image_tex)
-        make_coord_system_pixel_based((frame.height,frame.width,3))
+            make_coord_system_norm_based()
+            draw_named_texture(g_pool.image_tex)
+            make_coord_system_pixel_based((frame.height,frame.width,3))
 
         # render visual feedback from loaded plugins
         for p in g_pool.plugins:
             p.gl_display()
 
-        graph.push_view()
-        fps_graph.draw()
-        cpu_graph.draw()
-        pupil_graph.draw()
-        graph.pop_view()
-        g_pool.gui.update()
-        glfwSwapBuffers(main_window)
+        if not g_pool.iconified:
+            graph.push_view()
+            fps_graph.draw()
+            cpu_graph.draw()
+            pupil_graph.draw()
+            graph.pop_view()
+            g_pool.gui.update()
+            glfwSwapBuffers(main_window)
         glfwPollEvents()
 
 
