@@ -88,16 +88,15 @@ def world(g_pool,cap_src,cap_size):
     default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{})]
 
 
-
     # Callback functions
     def on_resize(window,w, h):
-        g_pool.gui.update_window(w,h)
-        g_pool.gui.collect_menus()
-        graph.adjust_size(w,h)
-        adjust_gl_view(w,h)
-        for p in g_pool.plugins:
-            p.on_window_resize(window,w,h)
-
+        if w and h:
+            g_pool.gui.update_window(w,h)
+            g_pool.gui.collect_menus()
+            graph.adjust_size(w,h)
+            adjust_gl_view(w,h)
+            for p in g_pool.plugins:
+                p.on_window_resize(window,w,h)
 
     def on_iconify(window,iconified):
         g_pool.iconified = iconified

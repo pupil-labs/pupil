@@ -88,12 +88,13 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
     # Callback functions
     def on_resize(window,w, h):
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(window)
-        g_pool.gui.update_window(w,h)
-        graph.adjust_size(w,h)
-        adjust_gl_view(w,h)
-        glfwMakeContextCurrent(active_window)
+        if w and h:
+            active_window = glfwGetCurrentContext()
+            glfwMakeContextCurrent(window)
+            g_pool.gui.update_window(w,h)
+            graph.adjust_size(w,h)
+            adjust_gl_view(w,h)
+            glfwMakeContextCurrent(active_window)
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key,scancode,action,mods)

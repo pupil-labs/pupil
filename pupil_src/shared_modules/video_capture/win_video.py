@@ -91,6 +91,19 @@ class Camera_Capture(object):
 
     _is_initialized = False
     _failed_inits = 0
+    
+    @property
+    def settings(self):
+        settings = {}
+        settings['name'] = self.name
+        settings['frame_rate'] = self.frame_rate
+        settings['frame_size'] = self.frame_size
+        return settings
+    @settings.setter
+    def settings(self,settings):
+        self.frame_size = settings['frame_size']
+        self.frame_rate = settings['frame_rate']
+
 
     @property
     def name(self):
