@@ -148,10 +148,12 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         session_settings.clear()
     # Initialize capture
     cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
-    cap.frame_size = cap_size
-    cap.frame_rate = 60 #default
-    cap.settings = session_settings.get('capture_settings',{})
-
+    default_settings = {'frame_size':cap_size,'frame_rate':30}
+    previous_settings = session_settings.get('capture_settings',None)
+    if previous_settings and previous_settings['name'] == cap.name:
+        cap.settings = previous_settings
+    else:
+        cap.settings = default_settings
 
     # Test capture
     try:

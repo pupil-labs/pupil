@@ -107,7 +107,7 @@ def main():
     # eye_src = '/Users/mkassner/Downloads/000/eye0.mkv' , '/Users/mkassner/Downloads/eye.avi'
     # world_src = "/Users/mkassner/Downloads/000/world.mkv"
 
-    # Camera video size in pixels (width,height)
+    # Default camera video size in pixels (width,height)
     eye_size = (640,480)
     world_size = (1280,720)
 

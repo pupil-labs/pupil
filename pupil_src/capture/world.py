@@ -143,9 +143,13 @@ def world(g_pool,cap_src,cap_size):
 
     # Initialize capture
     cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
-    cap.frame_size = cap_size
-    cap.frame_rate = 24 #default
-    cap.settings = session_settings.get('capture_settings',{})
+    default_settings = {'frame_size':cap_size,'frame_rate':24}
+    previous_settings = session_settings.get('capture_settings',None)
+    if previous_settings and previous_settings['name'] == cap.name:
+        cap.settings = previous_settings
+    else:
+        cap.settings = default_settings
+
     # Test capture
     try:
         frame = cap.get_frame()

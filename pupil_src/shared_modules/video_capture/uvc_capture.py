@@ -48,8 +48,7 @@ class Camera_Capture(object):
 
         self.sidebar = None
         self.menu = None
-
-        self.init_capture(uid,size=(1280,720),fps=30)
+        self.init_capture(uid)
 
 
     def re_init_capture(self,uid):
@@ -60,30 +59,24 @@ class Camera_Capture(object):
         #recreate the bar with new values
         menu_conf = self.menu.configuration
         self.deinit_gui()
-        self.init_capture(uid,current_size,current_fps)
-
-
+        self.init_capture(uid)
+        self.frame_size = current_size
+        self.frame_rate = current_fps
         self.init_gui(self.sidebar)
         self.menu.configuration = menu_conf
 
 
-    def init_capture(self,uid,size,fps):
-
+    def init_capture(self,uid):
+        self.uid = uid
 
         if uid is not None:
             self.capture = uvc.Capture(uid)
         else:
             self.capture = Fake_Capture()
-        self.uid = uid
-
-
-        self.frame_size = size
-        self.frame_rate = fps
-
 
         if 'C930e' in self.capture.name:
-            logger.debug('Timestamp offset for c930 applied: -0.1sec')
-            self.ts_offset = -0.1
+                logger.debug('Timestamp offset for c930 applied: -0.1sec')
+                self.ts_offset = -0.1
         else:
             self.ts_offset = 0.0
 
@@ -97,25 +90,19 @@ class Camera_Capture(object):
 
         if "Pupil Cam1" in self.capture.name or "USB2.0 Camera" in self.capture.name:
             self.capture.bandwidth_factor = 1.3
-
             if "ID0" in self.capture.name or "ID1" in self.capture.name:
                 try:
-                    # Auto Exposure Priority = 1 leads to reduced framerates under low light and corrupt timestamps.
                     controls_dict['Auto Exposure Priority'].value = 1
                 except KeyError:
                     pass
-
                 try:
                     controls_dict['Absolute Exposure Time'].value = 59
                 except KeyError:
                     pass
-
-
-        try:
-            controls_dict['Auto Focus'].value = 0
-        except KeyError:
-            pass
-
+            try:
+                controls_dict['Auto Focus'].value = 0
+            except KeyError:
+                pass
 
     def get_frame(self):
         try:
@@ -153,29 +140,32 @@ class Camera_Capture(object):
         settings = {}
         settings['name'] = self.capture.name
         settings['frame_rate'] = self.frame_rate
+        settings['frame_size'] = self.frame_size
         settings['uvc_controls'] = {}
         for c in self.capture.controls:
             settings['uvc_controls'][c.display_name] = c.value
         return settings
     @settings.setter
     def settings(self,settings):
-        try:
-            self.frame_rate = settings['frame_rate']
-        except KeyError:
-            pass
-
-        if settings.get('name','') == self.capture.name:
-            for c in self.capture.controls:
-                try:
-                    c.value = settings['uvc_controls'][c.display_name]
-                except KeyError as e:
-                    logger.warning('Could not set UVC setting "%s" from last session.'%c.display_name)
+        self.frame_size = settings['frame_size']
+        self.frame_rate = settings['frame_rate']
+        for c in self.capture.controls:
+            try:
+                c.value = settings['uvc_controls'][c.display_name]
+            except KeyError as e:
+                logger.info('No UVC setting "%s" found from settings.'%c.display_name)
     @property
     def frame_size(self):
         return self.capture.frame_size
     @frame_size.setter
     def frame_size(self,new_size):
-        self.capture.frame_size = filter_sizes(self.name,new_size)
+        #closest match for size
+        sizes = [ abs(r[0]-new_size[0]) for r in self.capture.frame_sizes ]
+        best_size_idx = sizes.index(min(sizes))
+        size = self.capture.frame_sizes[best_size_idx]
+        if size != new_size:
+            logger.warning("%s resolution capture mode not available. Selected %s."%(new_size,size))
+        self.capture.frame_size = size
 
     @property
     def name(self):
@@ -198,6 +188,13 @@ class Camera_Capture(object):
                     c.value = c.def_val
                 except:
                     pass
+        def set_size(new_size):
+            self.frame_size = new_size
+            menu_conf = self.menu.configuration
+            self.deinit_gui()
+            self.init_gui(self.sidebar)
+            self.menu.configuration = menu_conf
+
 
         def gui_update_from_device():
             for c in self.capture.controls:
@@ -225,10 +222,12 @@ class Camera_Capture(object):
         self.menu.append(ui.Selector('uid',self,selection=camera_ids,labels=camera_names,label='Capture Device', setter=gui_init_cam_by_uid) )
 
         sensor_control = ui.Growing_Menu(label='Sensor Settings')
+        sensor_control.append(ui.Info_Text("Do not change these during calibration or recording!"))
         sensor_control.collapsed=False
         image_processing = ui.Growing_Menu(label='Image Post Processing')
         image_processing.collapsed=True
 
+        sensor_control.append(ui.Selector('frame_size',self,setter=set_size, selection=self.capture.frame_sizes,label='Resolution' ) )
         sensor_control.append(ui.Selector('frame_rate',self, selection=self.capture.frame_rates,label='Frames per second' ) )
 
 
@@ -281,20 +280,5 @@ class Camera_Capture(object):
         # self.capture.close()
         del self.capture
         logger.info("Capture released")
-
-
-
-
-
-def filter_sizes(cam_name,size):
-    #here we can force some defaulit formats
-    if "6000" in cam_name:
-        if size[0] == 640:
-            logger.info("HD-6000 camera selected. Forcing format to 640,360")
-            return 640,360
-        elif size[0] == 320:
-            logger.info("HD-6000 camera selected. Forcing format to 320,360")
-            return 320,160
-    return size
 
 
