@@ -228,7 +228,7 @@ class Camera_Capture(object):
         image_processing.collapsed=True
 
         sensor_control.append(ui.Selector('frame_size',self,setter=set_size, selection=self.capture.frame_sizes,label='Resolution' ) )
-        sensor_control.append(ui.Selector('frame_rate',self, selection=self.capture.frame_rates,label='Frames per second' ) )
+        sensor_control.append(ui.Selector('frame_rate',self, selection=self.capture.frame_rates,label='Framerate' ) )
 
 
         for control in self.capture.controls:
