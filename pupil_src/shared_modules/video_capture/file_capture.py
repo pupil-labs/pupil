@@ -107,6 +107,12 @@ class File_Capture():
             logger.error("Could not load media size info.")
         return width,height
 
+    @property
+    def settings(self):
+        return None
+    @settings.setter
+    def settings(self,settings):
+        pass
 
     def get_frame_index(self):
         return int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
@@ -179,8 +185,6 @@ class File_Capture():
 
     def get_timestamp():
         return self.get_now()
-
-
 
     def init_gui(self,sidebar):
         self.menu = ui.Growing_Menu(label='File Capture Settings')
