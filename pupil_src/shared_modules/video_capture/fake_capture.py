@@ -88,6 +88,9 @@ class Fake_Capture(object):
     def frame_rates(self):
         return range(30,121,30)
 
+    @property
+    def frame_sizes(self):
+        return ((640,480),(1280,720),(1920,1080))
 
     @property
     def frame_rate(self):

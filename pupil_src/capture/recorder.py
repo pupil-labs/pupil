@@ -121,7 +121,6 @@ class Recorder(Plugin):
         self.show_info_menu = show_info_menu
         self.info_menu = None
         self.info_menu_conf = info_menu_conf
-        self.height, self.width = self.g_pool.capture.frame_size
 
 
     def get_init_dict(self):
@@ -346,7 +345,7 @@ class Recorder(Plugin):
                     f.write("Eye Mode\tmonocular\n")
                 f.write("Duration Time\t"+ self.get_rec_time_str()+ "\n")
                 f.write("World Camera Frames\t"+ str(self.frame_count)+ "\n")
-                f.write("World Camera Resolution\t"+ str(self.width)+"x"+str(self.height)+"\n")
+                f.write("World Camera Resolution\t"+ str(self.g_pool.capture.frame_size[0])+"x"+str(self.g_pool.capture.frame_size[1])+"\n")
                 f.write("Capture Software Version\t%s\n"%self.g_pool.version)
                 if platform.system() == "Windows":
                     username = os.environ["USERNAME"]

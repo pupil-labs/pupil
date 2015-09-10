@@ -91,23 +91,22 @@ def world(g_pool,cap_src,cap_size):
 
     # Callback functions
     def on_resize(window,w, h):
-        g_pool.gui.update_window(w,h)
-        g_pool.gui.collect_menus()
-        graph.adjust_size(w,h)
-        adjust_gl_view(w,h)
-        for p in g_pool.plugins:
-            p.on_window_resize(window,w,h)
+        if not g_pool.iconified:
+            g_pool.gui.update_window(w,h)
+            g_pool.gui.collect_menus()
+            graph.adjust_size(w,h)
+            adjust_gl_view(w,h)
+            for p in g_pool.plugins:
+                p.on_window_resize(window,w,h)
 
-
-    def on_iconify(window,iconfied):
-        pass
+    def on_iconify(window,iconified):
+        g_pool.iconified = iconified
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key,scancode,action,mods)
 
     def on_char(window,char):
         g_pool.gui.update_char(char)
-
 
     def on_button(window,button, action, mods):
         g_pool.gui.update_button(button,action,mods)
@@ -143,9 +142,13 @@ def world(g_pool,cap_src,cap_size):
 
     # Initialize capture
     cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
-    cap.frame_size = cap_size
-    cap.frame_rate = 24 #default
-    cap.settings = session_settings.get('capture_settings',{})
+    default_settings = {'frame_size':cap_size,'frame_rate':24}
+    previous_settings = session_settings.get('capture_settings',None)
+    if previous_settings and previous_settings['name'] == cap.name:
+        cap.settings = previous_settings
+    else:
+        cap.settings = default_settings
+
     # Test capture
     try:
         frame = cap.get_frame()
@@ -158,7 +161,7 @@ def world(g_pool,cap_src,cap_size):
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
     g_pool.update_textures = session_settings.get("update_textures",2)
-
+    g_pool.iconified = False
 
     g_pool.capture = cap
     g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
@@ -315,29 +318,32 @@ def world(g_pool,cap_src,cap_size):
 
         # render camera image
         glfwMakeContextCurrent(main_window)
-        if g_pool.update_textures == 2:
+        if g_pool.iconified:
+            pass
+        elif g_pool.update_textures == 2:
             update_named_texture(g_pool.image_tex,frame.img)
         elif g_pool.update_textures == 1:
             update_named_texture(g_pool.image_tex,frame.gray)
 
         make_coord_system_norm_based()
         draw_named_texture(g_pool.image_tex)
-        make_coord_system_pixel_based((frame.height,frame.width,3))
 
+        make_coord_system_pixel_based((frame.height,frame.width,3))
         # render visual feedback from loaded plugins
         for p in g_pool.plugins:
             p.gl_display()
 
-        graph.push_view()
-        fps_graph.draw()
-        cpu_graph.draw()
-        pupil_graph.draw()
-        graph.pop_view()
-        g_pool.gui.update()
-        glfwSwapBuffers(main_window)
+        if not g_pool.iconified:
+            graph.push_view()
+            fps_graph.draw()
+            cpu_graph.draw()
+            pupil_graph.draw()
+            graph.pop_view()
+            g_pool.gui.update()
+            glfwSwapBuffers(main_window)
         glfwPollEvents()
 
-
+    glfwRestoreWindow(main_window) #need to do this for windows os
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['gui_scale'] = g_pool.gui.scale

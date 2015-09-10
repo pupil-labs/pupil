@@ -59,7 +59,7 @@ class Frame(object):
             self._gray =  cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
         return self._gray
 
-class File_Capture():
+class File_Capture(object):
     """
     simple file capture.
     """
@@ -90,6 +90,10 @@ class File_Capture():
         else:
             logger.debug("loaded %s timestamps from %s"%(len(self.timestamps),timestamps))
 
+    @property
+    def name(self):
+        return 'File Capture'
+
 
     @property
     def frame_rate(self):
@@ -99,7 +103,6 @@ class File_Capture():
             logger.error("Could not load media framerate info.")
         return fps
 
-
     @property
     def frame_size(self):
         width,height = int(self.cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)),int(self.cap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
@@ -107,6 +110,13 @@ class File_Capture():
             logger.error("Could not load media size info.")
         return width,height
 
+    @property
+    def settings(self):
+        logger.warning("File capture has no settings.")
+        return {}
+    @settings.setter
+    def settings(self,settings):
+        logger.warning("File capture ignores settings.")
 
     def get_frame_index(self):
         return int(self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES))
@@ -179,8 +189,6 @@ class File_Capture():
 
     def get_timestamp():
         return self.get_now()
-
-
 
     def init_gui(self,sidebar):
         self.menu = ui.Growing_Menu(label='File Capture Settings')
