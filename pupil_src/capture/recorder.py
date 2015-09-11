@@ -381,6 +381,12 @@ class Recorder(Plugin):
         self.menu.read_only = False
         self.button.status_text = ''
 
+        self.timestamps = []
+        self.data = {'pupil_positions':[],'gaze_positions':[]}
+        self.pupil_pos_list = []
+        self.gaze_pos_list = []
+
+
         self.notify_all( {'name':'rec_stopped','rec_path':self.rec_path,'network_propagate':network_propagate} )
 
 
