@@ -34,8 +34,6 @@ logger = logging.getLogger(__name__)
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
-    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-    w,h = w*hdpi_factor, h*hdpi_factor
     adjust_gl_view(w,h)
     glfwMakeContextCurrent(active_window)
 
@@ -130,13 +128,14 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             if not self.fullscreen:
                 glfwSetWindowPos(self._window,200,0)
 
-            on_resize(self._window,height,width)
 
             #Register callbacks
-            glfwSetWindowSizeCallback(self._window,on_resize)
+            glfwSetFramebufferSizeCallback(self._window,on_resize)
             glfwSetKeyCallback(self._window,self.on_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
             glfwSetMouseButtonCallback(self._window,self.on_button)
+
+            on_resize(self._window,*glfwGetFramebufferSize(self._window))
 
 
             # gl_state settings

@@ -256,6 +256,7 @@ class Offline_Reference_Surface(Reference_Surface):
 
         for frame_idx,c_e in enumerate(self.cache[section]):
             if c_e:
+                frame_idx+=section.start
                 for gp in self.gaze_on_srf_by_frame_idx(frame_idx,c_e['m_from_screen']):
                     all_gaze.append(gp['norm_pos'])
 
@@ -309,11 +310,8 @@ class Offline_Reference_Surface(Reference_Surface):
             return []
         gaze_on_srf = []
         for frame_idx,c_e in enumerate(self.cache[section]):
+            frame_idx+=section.start
             if c_e:
-                #c_e['gaze_on_srf'] is list of gaze points
-                # each defined as {'norm_pos':(gaze_points_on_srf[0],gaze_points_on_srf[1]),'timestamp':g_p['timestamp'] }
-                # and sum of gazepoints that are on srf meaning 0<= x,y <=1
-                gaze_on_srf += [gp for gp in self.gaze_on_srf_by_frame_idx(frame_idx,c_e['m_from_screen']) if (0<= gp['norm_pos'][0] <=1 and 0<= gp['norm_pos'][1] <=1) ]
-
+                gaze_on_srf += [gp for gp in self.gaze_on_srf_by_frame_idx(frame_idx,c_e['m_from_screen']) if gp['on_srf']]
         return gaze_on_srf
 

@@ -42,8 +42,6 @@ def draw_marker(pos,r,alpha):
 def on_resize(window,w,h):
     active_window = glfwGetCurrentContext()
     glfwMakeContextCurrent(window)
-    hdpi_factor = glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0]
-    w,h = w*hdpi_factor, h*hdpi_factor
     adjust_gl_view(w,h)
     glfwMakeContextCurrent(active_window)
 
@@ -101,7 +99,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.area_threshold = 20
         self.marker_scale = marker_scale
 
-        self.world_size = self.g_pool.capture.frame_size
 
         self._window = None
 
@@ -186,11 +183,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         if not self._window:
             if self.fullscreen:
                 monitor = glfwGetMonitors()[self.monitor_idx]
-                mode = glfwGetVideoMode(monitor)
-                # glfwGetFramebufferSize(window)
-                hdpi_factor = glfwGetFramebufferSize(glfwGetCurrentContext())[0]/glfwGetWindowSize(glfwGetCurrentContext())[0]
-                width,height= mode[0]*hdpi_factor,mode[1]*hdpi_factor
-
+                width,height,redBits,blueBits,greenBits,refreshRate = glfwGetVideoMode(monitor)
             else:
                 monitor = None
                 width,height= 640,360
@@ -200,13 +193,13 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 glfwSetWindowPos(self._window,200,0)
 
             glfwSetInputMode(self._window,GLFW_CURSOR,GLFW_CURSOR_HIDDEN)
-            on_resize(self._window,width,height)
 
             #Register callbacks
-            glfwSetWindowSizeCallback(self._window,on_resize)
+            glfwSetFramebufferSizeCallback(self._window,on_resize)
             glfwSetKeyCallback(self._window,self.on_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
             glfwSetMouseButtonCallback(self._window,self.on_button)
+            on_resize(self._window,*glfwGetFramebufferSize(self._window))
 
             # gl_state settings
             active_window = glfwGetCurrentContext()
@@ -254,15 +247,16 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             logger.warning("Did not collect enough data.")
             return
 
+<<<<<<< HEAD
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
         if self.g_pool.binocular:
             map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,binocular=True,return_params=True)
             #replace current gaze mapper with new
-            self.g_pool.plugins.add(Binocular_Gaze_Mapper(self.g_pool,params))
+            self.g_pool.plugins.add(Binocular_Gaze_Mapper,args={'params':params})
         else:
             map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,return_params=True)    
             #replace current gaze mapper with new
-            self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
+            self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
 
 
     def close_window(self):

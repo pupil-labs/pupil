@@ -7,9 +7,10 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
+import os,sys
 import logging
 logger = logging.getLogger(__name__)
+import importlib
 
 
 '''
@@ -48,6 +49,70 @@ class Plugin(object):
         pass
 
 
+    def update(self,frame,events):
+        """
+        gets called once every frame
+        if you plan to update data inplace, note that this will affect all plugins executed after you.
+        Use self.order to deal with this appropriately
+        """
+        pass
+
+
+    def gl_display(self):
+        """
+        gets called once every frame when its time to draw onto the gl canvas.
+        """
+        pass
+
+
+    def on_click(self,pos,button,action):
+        """
+        gets called when the user clicks in the window screen
+        """
+        pass
+
+    def on_window_resize(self,window,w,h):
+        '''
+        gets called when user resizes window.
+        window is the glfw window handle of the resized window.
+        '''
+        pass
+
+
+    def on_notify(self,notification):
+        """
+        this gets called when a plugin want to notify all others.
+        notification is a tuple in the format {'name':'notification_name',['addional_fields':'blah']}
+        implement this fn if you want to deal with notifications
+        """
+        pass
+
+    ### if you want a session persistent plugin implement this function:
+    # def get_init_dict(self):
+    #     d = {}
+    #     # add all aguments of your plugin init fn with paramter names as name field
+    #     # do not include g_pool here.
+    #     return d
+
+    def cleanup(self):
+        """
+        gets called when the plugin get terminated.
+        This happens either voluntarily or forced.
+        if you have an gui or glfw window destroy it here.
+        """
+        pass
+
+    ###do not change methods,properties below this line in your derived class
+
+    def notify_all(self,notification):
+        """
+        call this to notify all other plugins with a notification:
+        notification is a tuple in the format {'name':'notification_name',['addional_fields':'blah']}
+        do not overwrite this method
+        """
+        self.g_pool.notifications.append(notification)
+
+
     @property
     def alive(self):
         """
@@ -64,51 +129,14 @@ class Plugin(object):
         if isinstance(value,bool):
             self._alive = value
 
-    def on_click(self,pos,button,action):
-        """
-        gets called when the user clicks in the window screen
-        """
-        pass
 
-    def on_window_resize(self,window,w,h):
+    @property
+    def this_class(self):
         '''
-        gets called when user resizes window.
-        window is the glfw window handle of the resized window.
+        this instance's class
         '''
-        pass
+        return self.__class__
 
-    def update(self,frame,events):
-        """
-        gets called once every frame
-        if you plan to update the image data, note that this will affect all plugins executed after you.
-        Use self.order to deal with this appropriately
-        """
-        pass
-
-
-
-    def gl_display(self):
-        """
-        gets called once every frame when its time to draw onto the gl canvas.
-        """
-        pass
-
-
-    def cleanup(self):
-        """
-        gets called when the plugin get terminated.
-        This happens either voluntarily or forced.
-        if you have an gui or glfw window destroy it here.
-        """
-        pass
-
-
-
-    def on_click(self,pos,button,action):
-        """
-        gets called when the user clicks in the window screen
-        """
-        pass
 
     @property
     def class_name(self):
@@ -137,16 +165,6 @@ class Plugin(object):
         return self.class_name.replace('_',' ')
 
 
-    ### if you want a session persistent plugin implement this function:
-    # def get_init_dict(self):
-    #     d = {}
-    #     # add all aguments of your plugin init fn with paramter names as name field
-    #     # do not include g_pool here.
-    #     return d
-
-    def __del__(self):
-        pass
-        # print 'Goodbye',self
 
 # Derived base classes:
 # If you inherit from these your plugin property base_class will point to them
@@ -154,6 +172,27 @@ class Plugin(object):
 class Calibration_Plugin(Plugin):
     '''base class for all calibration routines'''
     uniqueness = 'by_base_class'
+    def __init__(self,g_pool):
+        super(Calibration_Plugin, self).__init__(g_pool)
+        self.g_pool.active_calibration_plugin = self
+
+    def on_notify(self,notification):
+        if notification['name'] is 'cal_should_start':
+            if self.active:
+                logger.warning('Calibration already running.')
+            else:
+                self.start()
+        elif notification['name'] is 'cal_should_stop':
+            if self.active:
+                self.stop()
+            else:
+                logger.warning('Calibration already stopped.')
+
+    def start(self):
+        raise  NotImplementedError()
+
+    def stop(self):
+        raise  NotImplementedError()
 
 
 class Gaze_Mapping_Plugin(Plugin):
@@ -164,6 +203,7 @@ class Gaze_Mapping_Plugin(Plugin):
         self.order = 0.1
 
 
+# Plugin manager classes and fns
 
 class Plugin_List(object):
     """This is the Plugin Manager
@@ -175,10 +215,9 @@ class Plugin_List(object):
 
         for initializer in plugin_initializers:
             name, args = initializer
-            logger.info("Loading plugin: %s with settings %s"%(name, args))
+            logger.debug("Loading plugin: %s with settings %s"%(name, args))
             try:
-                p = plugin_by_name[name](g_pool,**args)
-                self.add(p)
+                self.add(plugin_by_name[name],args)
             except (AttributeError,TypeError,KeyError) as e:
                 logger.warning("Plugin '%s' failed to load from settings file. Because of Error:%s" %(name,e))
 
@@ -189,29 +228,29 @@ class Plugin_List(object):
     def __str__(self):
         return 'Plugin List: %s'%self._plugins
 
-    def add(self,new_plugin):
+    def add(self,new_plugin,args={}):
         '''
         add a plugin instance to the list.
-
         '''
         if new_plugin.uniqueness == 'by_base_class':
             for p in self._plugins:
-                if p.base_class_name == new_plugin.base_class_name:
-                    logger.debug("Plugin %s of base class %s will be replaced by %s."%(p,p.base_class_name,new_plugin))
+                if p.base_class == new_plugin.__bases__[-1]:
+                    logger.debug("Plugin %s of base class %s will be replaced by %s."%(p,p.base_class_name,new_plugin.__name__))
                     p.alive = False
                     self.clean()
 
         elif new_plugin.uniqueness == 'by_class':
             for p in self._plugins:
-                if p.class_name == new_plugin.class_name:
-                    logger.warning("Plugin %s is already loaded and flagged as unique. Did not add it."%new_plugin)
+                if p.this_class == new_plugin:
+                    logger.warning("Plugin '%s' is already loaded . Did not add it."%new_plugin.__name__)
                     return
 
-        logger.debug("Loaded Plugin: %s"%new_plugin)
-        self._plugins.append(new_plugin)
+        plugin_instance = new_plugin(self.g_pool,**args)
+        self._plugins.append(plugin_instance)
         self._plugins.sort(key=lambda p: p.order)
-        if self.g_pool.app in ("capture","player") and new_plugin.alive: #make sure the plugin does not want to be gone already
-            new_plugin.init_gui()
+        if self.g_pool.app in ("capture","player") and plugin_instance.alive: #make sure the plugin does not want to be gone already
+            plugin_instance.init_gui()
+            logger.info("Loaded: %s"%new_plugin.__name__)
         self.clean()
 
 
@@ -235,3 +274,39 @@ class Plugin_List(object):
                 # any object without a get_init_dict method will throw this exception.
                 pass
         return initializers
+
+
+
+def import_runtime_plugins(plugin_dir):
+    """
+    Parse all files and folders in 'plugin_dir' and try to import them as modules:
+    files are imported if their extension is .py or .so or .dylib
+    folder are imported if they contain an __init__.py file
+
+    once a module is sucessfully imported any classes that are subclasses of Plugin
+    are added to the runtime plugins list
+
+    any exceptions that are raised during parsing, import filtering and addion are silently ignored.
+    """
+    runtime_plugins = []
+    if os.path.isdir(plugin_dir):
+        # we prepend to give the plugin dir content precendece
+        # over other modules with identical name.
+        sys.path.insert(0,plugin_dir)
+        for d in os.listdir(plugin_dir):
+            logger.debug('Scanning: %s'%d)
+            try:
+                if os.path.isfile(os.path.join(plugin_dir,d)):
+                    d,ext =  d.rsplit(".", 1 )
+                    if ext not in ('py','so','dylib'):
+                        continue
+                module = importlib.import_module(d)
+                logger.debug('Imported: %s'%module)
+                for name in dir(module):
+                    member = getattr(module, name)
+                    if isinstance(member, type) and issubclass(member, Plugin) and member.__name__ != 'Plugin':
+                        logger.info('Added: %s'%member)
+                        runtime_plugins.append(member)
+            except Exception as e:
+                logger.warning("Failed to load '%s'. Reason: '%s' "%(d,e))
+    return runtime_plugins

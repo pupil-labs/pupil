@@ -38,12 +38,13 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
+from marker_detector import Marker_Detector
 from square_marker_detect import detect_markers_robust, draw_markers,m_marker_to_screen
 from offline_reference_surface import Offline_Reference_Surface
 from math import sqrt
 
 
-class Offline_Marker_Detector(Plugin):
+class Offline_Marker_Detector(Marker_Detector):
     """
     Special version of marker detector for use with videofile source.
     It uses a seperate process to search all frames in the world.avi file for markers.
@@ -79,6 +80,7 @@ class Offline_Marker_Detector(Plugin):
 
         # ui mode settings
         self.mode = mode
+        self.min_marker_perimeter = 20  #if we make this a slider we need to invalidate the cache on change.
         # edit surfaces
         self.edit_surfaces = []
 
@@ -120,6 +122,7 @@ class Offline_Marker_Detector(Plugin):
         pass
         self.menu.elements[:] = []
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
+        self.menu.append(ui.Info_Text('Please note: Unlike the real-time marker detector the offline marker detector works with a fixed min_marker_perimeter of 20.'))
         self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
@@ -143,40 +146,14 @@ class Offline_Marker_Detector(Plugin):
 
 
 
-    def close(self):
-        self.alive = False
-
     def on_window_resize(self,window,w,h):
         self.win_size = w,h
 
-    def on_click(self,pos,button,action):
-        if self.mode=="Surface edit mode":
-            if self.edit_surfaces:
-                if action == GLFW_RELEASE:
-                    self.edit_surfaces = []
-            # no surfaces verts in edit mode, lets see if the curser is close to one:
-            else:
-                if action == GLFW_PRESS:
-                    surf_verts = ((0.,0.),(1.,0.),(1.,1.),(0.,1.))
-                    x,y = pos
-                    for s in self.surfaces:
-                        if s.detected and s.defined:
-                            for (vx,vy),i in zip(s.ref_surface_to_img(np.array(surf_verts)),range(4)):
-                                vx,vy = denormalize((vx,vy),(self.img_shape[1],self.img_shape[0]),flip_y=True)
-                                if sqrt((x-vx)**2 + (y-vy)**2) <15: #img pixels
-                                    self.edit_surfaces.append((s,i))
-
-    def advance(self):
-        pass
 
     def add_surface(self,_):
         self.surfaces.append(Offline_Reference_Surface(self.g_pool))
         self.update_gui_markers()
 
-    def remove_surface(self,i):
-        self.surfaces[i].cleanup()
-        del self.surfaces[i]
-        self.update_gui_markers()
 
 
     def recalculate(self):
@@ -273,7 +250,7 @@ class Offline_Marker_Detector(Plugin):
         self.cache_queue = Queue()
         self.cacher_seek_idx = Value('i',0)
         self.cacher_run = Value(c_bool,True)
-        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,self.cache_queue,self.cacher_seek_idx,self.cacher_run))
+        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter))
         self.cacher.start()
 
     def update_marker_cache(self):
@@ -444,7 +421,7 @@ class Offline_Marker_Detector(Plugin):
 
             for s in self.surfaces:
                 gaze_on_srf  = s.gaze_on_srf_in_section(section)
-                gaze_on_srf = set([gp['base']["timestamp"] for gp in gaze_on_srf])
+                gaze_on_srf = set([gp['base']['timestamp'] for gp in gaze_on_srf])
                 not_on_any_srf -= gaze_on_srf
                 csv_writer.writerow( (s.name, len(gaze_on_srf)) )
 
@@ -500,7 +477,7 @@ class Offline_Marker_Detector(Plugin):
                                 csv_writer.writerow( (ts,idx,gp['base']['timestamp'],gp['norm_pos'][0],gp['norm_pos'][1],gp['norm_pos'][0]*s.real_world_size['x'],gp['norm_pos'][1]*s.real_world_size['y'],gp['on_srf']) )
 
 
-            # # save fixation on srf as csv.
+            # save fixation on srf as csv.
             with open(os.path.join(metrics_dir,'fixations_on_surface'+surface_name+'.csv'),'wb') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
                 csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','x_scaled','y_scaled','on_srf'))
@@ -527,26 +504,26 @@ class Offline_Marker_Detector(Plugin):
 
 
         logger.info("Done exporting reference surface data.")
-            # if s.detected and self.img is not None:
-            #     #let save out the current surface image found in video
+        # if s.detected and self.img is not None:
+        #     #let save out the current surface image found in video
 
-            #     #here we get the verts of the surface quad in norm_coords
-            #     mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32).reshape(-1,1,2)
-            #     screen_space = cv2.perspectiveTransform(mapped_space_one,s.m_to_screen).reshape(-1,2)
-            #     #now we convert to image pixel coods
-            #     screen_space[:,1] = 1-screen_space[:,1]
-            #     screen_space[:,1] *= self.img.shape[0]
-            #     screen_space[:,0] *= self.img.shape[1]
-            #     s_0,s_1 = s.real_world_size
-            #     #no we need to flip vertically again by setting the mapped_space verts accordingly.
-            #     mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
-            #     M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
-            #     #here we do the actual perspactive transform of the image.
-            #     srf_in_video = cv2.warpPerspective(self.img,M, (int(s.real_world_size['x']),int(s.real_world_size['y'])) )
-            #     cv2.imwrite(os.path.join(metrics_dir,'surface'+surface_name+'.png'),srf_in_video)
-            #     logger.info("Saved current image as .png file.")
-            # else:
-            #     logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
+        #     #here we get the verts of the surface quad in norm_coords
+        #     mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32).reshape(-1,1,2)
+        #     screen_space = cv2.perspectiveTransform(mapped_space_one,s.m_to_screen).reshape(-1,2)
+        #     #now we convert to image pixel coods
+        #     screen_space[:,1] = 1-screen_space[:,1]
+        #     screen_space[:,1] *= self.img.shape[0]
+        #     screen_space[:,0] *= self.img.shape[1]
+        #     s_0,s_1 = s.real_world_size
+        #     #no we need to flip vertically again by setting the mapped_space verts accordingly.
+        #     mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
+        #     M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
+        #     #here we do the actual perspactive transform of the image.
+        #     srf_in_video = cv2.warpPerspective(self.img,M, (int(s.real_world_size['x']),int(s.real_world_size['y'])) )
+        #     cv2.imwrite(os.path.join(metrics_dir,'surface'+surface_name+'.png'),srf_in_video)
+        #     logger.info("Saved current image as .png file.")
+        # else:
+        #     logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
 
 
     def get_init_dict(self):

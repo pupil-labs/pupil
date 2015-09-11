@@ -127,11 +127,11 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         if self.g_pool.binocular:
             map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,binocular=True,return_params=True)
             #replace current gaze mapper with new
-            self.g_pool.plugins.add(Binocular_Gaze_Mapper(self.g_pool,params))
+            self.g_pool.plugins.add(Binocular_Gaze_Mapper,args={'params':params})
         else:
             map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,return_params=True)    
             #replace current gaze mapper with new
-            self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
+            self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
 
 
     def update(self,frame,events):

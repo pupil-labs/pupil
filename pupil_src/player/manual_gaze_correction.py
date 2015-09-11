@@ -28,11 +28,10 @@ class Manual_Gaze_Correction(Plugin):
         self.order = .3
         self.menu = None
 
-
         self.untouched_gaze_positions_by_frame = deepcopy(self.g_pool.gaze_positions_by_frame)
         self.x_offset = float(x_offset)
         self.y_offset = float(y_offset)
-
+        self._set_offset()
 
 
 
@@ -41,7 +40,7 @@ class Manual_Gaze_Correction(Plugin):
         for f in range(len(self.g_pool.gaze_positions_by_frame)):
             for i in range(len(self.g_pool.gaze_positions_by_frame[f])):
                 gaze_pos = self.untouched_gaze_positions_by_frame[f][i]['norm_pos']
-                gaze_pos = gaze_pos[0]+x, gaze_pos[0]+y
+                gaze_pos = gaze_pos[0]+x, gaze_pos[1]+y
                 self.g_pool.gaze_positions_by_frame[f][i]['norm_pos'] =  gaze_pos
 
     def _set_offset_x(self,offset_x):

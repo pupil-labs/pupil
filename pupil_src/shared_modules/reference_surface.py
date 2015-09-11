@@ -482,14 +482,15 @@ class Reference_Surface(object):
             self.input = {'down':False, 'mouse':(0,0)}
 
 
-            self.on_resize(self._window,height,width)
             #Register callbacks
-            glfwSetWindowSizeCallback(self._window,self.on_resize)
+            glfwSetFramebufferSizeCallback(self._window,self.on_resize)
             glfwSetKeyCallback(self._window,self.on_key)
             glfwSetWindowCloseCallback(self._window,self.on_close)
             glfwSetMouseButtonCallback(self._window,self.on_button)
             glfwSetCursorPosCallback(self._window,self.on_pos)
             glfwSetScrollCallback(self._window,self.on_scroll)
+
+            self.on_resize(self._window,*glfwGetFramebufferSize(self._window))
 
             # gl_state settings
             active_window = glfwGetCurrentContext()
@@ -518,7 +519,6 @@ class Reference_Surface(object):
     # window calbacks
     def on_resize(self,window,w, h):
         self.trackball.set_window_size(w,h)
-
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(window)
         adjust_gl_view(w,h)

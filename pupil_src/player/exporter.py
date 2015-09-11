@@ -18,9 +18,10 @@ if __name__ == '__main__':
 
 import os
 from time import time
+from glob import glob
 import cv2
 import numpy as np
-from video_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
+from video_capture import File_Capture,EndofVideoFileError
 from player_methods import correlate_data,update_recording_0v4_to_current,update_recording_0v3_to_current
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version
@@ -68,7 +69,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
-    video_path = os.path.join(rec_dir,"world.mkv")
+    video_path = glob(os.path.join(rec_dir,"world.*"))[0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
@@ -80,7 +81,6 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
         update_recording_0v4_to_current(rec_dir)
     elif rec_version >= VersionFormat('0.3'):
         update_recording_0v3_to_current(rec_dir)
-        video_path = os.path.join(rec_dir,"world.avi")
         timestamps_path = os.path.join(rec_dir, "timestamps.npy")
     else:
         logger.Error("This recording is to old. Sorry.")
@@ -89,10 +89,8 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     timestamps = np.load(timestamps_path)
 
-    cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-    if isinstance(cap,FakeCapture):
-        logger.error("could not start capture.")
-        return
+    cap = File_Capture(video_path,timestamps=timestamps_path)
+
 
     #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
     if out_file_path is None:
@@ -151,7 +149,6 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     g.pupil_positions_by_frame = correlate_data(pupil_list,g.timestamps)
     g.gaze_positions_by_frame = correlate_data(gaze_list,g.timestamps)
     g.fixations_by_frame = [[] for x in g.timestamps] #populated by the fixation detector plugin
-    g.fixations_by_frame = [[] for x in g.timestamps] #populated by the fixation detector plugin
 
     #add plugins
     g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
@@ -167,7 +164,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
             return False
 
         try:
-            frame = cap.get_frame()
+            frame = cap.get_frame_nowait()
         except EndofVideoFileError:
             break
 
