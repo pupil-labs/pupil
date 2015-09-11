@@ -16,11 +16,11 @@ from pyglui import ui
 from methods import denormalize
 
 class Vis_Cross(Plugin):
-    """docstring for DisplayGaze"""
+    uniqueness = "not_unique"
+
     def __init__(self, g_pool,inner=20,outer=100,color=(1.,0.0,0.0,1.0),thickness=1):
         super(Vis_Cross, self).__init__(g_pool)
         self.order = .9
-        self.uniqueness = "not_unique"
         self.menu = None
 
         self.r = color[0]

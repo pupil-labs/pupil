@@ -69,6 +69,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             self.pix_per_degree = float(self.g_pool.capture.frame_size[1])/new_fov
 
         self.menu.append(ui.Info_Text('This plugin detects fixations based on a dispersion threshold in terms of degrees of visual angle. It also uses a min duration threshold.'))
+        self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Slider('min_duration',self,min=0.0,step=0.05,max=1.0,label='duration threshold'))
         self.menu.append(ui.Slider('max_dispersion',self,min=0.0,step=0.05,max=3.0,label='dispersion threshold'))
         self.menu.append(ui.Button('Run fixation detector',self._classify))
@@ -121,17 +122,17 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
 
             if dispersion < dispersion_threshold and gaze_data:
-                #so far all samples inside the threshold, lets add a new canditate
+                #so far all samples inside the threshold, lets add a new candidate
                 fixation_support += [gaze_data.pop(0)]
             else:
                 if gaze_data:
-                    #last added point will break dispersion threshold for current candite fixation. So we conclude sampling for this fixation
+                    #last added point will break dispersion threshold for current candidate fixation. So we conclude sampling for this fixation.
                     last_sample = fixation_support.pop(-1)
                 if fixation_support:
                     duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
                     if duration > duration_threshold and len(fixation_support) > sample_threshold:
-                        #long enough for fixation: we classifiy this fixation canditae as fixation
-                        #calulate charachter of fixation
+                        #long enough for fixation: we classifiy this fixation candidate as fixation
+                        #calculate character of fixation
                         fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
                         dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
                         confidence = sum(g['confidence'] for g in fixation_support)/len(fixation_support)
@@ -196,18 +197,9 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             logger.warning('No fixations in this recording nothing to export')
             return
 
-        for f in self.fixations:
-            if f['start_frame_index'] >= in_mark:
-                first_fixation = f
-                break
-        for f in self.fixations[::-1]:
-            if f['end_frame_index'] <= out_mark:
-                last_fixation = f
-                break
-
-        fixations_in_section = self.fixations[first_fixation['id']:last_fixation['id']+1]
-
-
+        fixations_in_section = chain(*self.g_pool.fixations_by_frame[slice(in_mark,out_mark)])
+        fixations_in_section = dict([(f['id'],f) for f in fixations_in_section]).values() #remove dublicates
+        fixations_in_section.sort(key=lambda f:f['id'])
         metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
         logger.info("exporting metrics to %s"%metrics_dir)
         if os.path.isdir(metrics_dir):
@@ -248,6 +240,8 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
                 cv2.putText(frame.img,'%i'%f['id'],(x+20,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,150,100))
                 # cv2.putText(frame.img,'%i - %i'%(f['start_frame_index'],f['end_frame_index']),(x,y), cv2.FONT_HERSHEY_DUPLEX,0.8,(255,150,100))
 
+    def close(self):
+        self.alive = False
 
 
     def get_init_dict(self):

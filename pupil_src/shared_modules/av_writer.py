@@ -100,25 +100,28 @@ class AV_Writer(object):
 
     def write_video_frame(self, input_frame):
         if not self.configured:
-            self.video_stream.height = input_frame.img.shape[0]
-            self.video_stream.width = input_frame.img.shape[1]
+            self.video_stream.height = input_frame.height
+            self.video_stream.width = input_frame.width
             self.configured = True
             self.start_time = input_frame.timestamp
+            self.frame = av.VideoFrame(input_frame.width,input_frame.height,'bgr24')
+            self.frame.time_base = self.time_base
 
         # frame from np.array
-        frame = av.VideoFrame.from_ndarray(input_frame.img, format='bgr24')
+        # frame = av.VideoFrame.from_ndarray(input_frame.img, format='bgr24')
+        self.frame.planes[0].update(input_frame.img)
+
         # here we create a timestamp in ms resolution to be used for the frame pts.
         # later libav will scale this to stream timebase
         frame_ts_ms = int((input_frame.timestamp-self.start_time)*self.time_resolution)
-        frame.pts = frame_ts_ms
-        frame.time_base = self.time_base
+        self.frame.pts = frame_ts_ms
         # we keep a version of the timestamp counting from first frame in the codec resoltion (lowest time resolution in toolchain)
         frame_ts_s = float(frame_ts_ms)/self.time_resolution
         # we append it to our list to correlate hi-res absolute timestamps with media timstamps
         self.timestamps_list.append((input_frame.timestamp,frame_ts_s))
 
         #send frame of to encoder
-        packet = self.video_stream.encode(frame)
+        packet = self.video_stream.encode(self.frame)
         if packet:
             # print 'paket',packet.pts
             self.container.mux(packet)
@@ -274,28 +277,28 @@ def ffmpeg_bin():
     else:
         return 'avconv'
 
-def test():
+# def test():
 
-    import os
-    import cv2
-    from video_capture import autoCreateCapture
-    logging.basicConfig(level=logging.DEBUG)
+#     import os
+#     import cv2
+#     from video_capture import autoCreateCapture
+#     logging.basicConfig(level=logging.DEBUG)
 
-    writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out.mp4"))
-    # writer = cv2.VideoWriter(os.path.expanduser("~/Desktop/av_writer_out.avi"),cv2.cv.CV_FOURCC(*"DIVX"),30,(1280,720))
-    cap = autoCreateCapture(0,(1280,720))
-    frame = cap.get_frame()
-    # print writer.video_stream.time_base
-    # print writer.
+#     writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out.mp4"))
+#     # writer = cv2.VideoWriter(os.path.expanduser("~/Desktop/av_writer_out.avi"),cv2.cv.CV_FOURCC(*"DIVX"),30,(1280,720))
+#     cap = autoCreateCapture(0,(1280,720))
+#     frame = cap.get_frame()
+#     # print writer.video_stream.time_base
+#     # print writer.
 
-    for x in xrange(300):
-        frame = cap.get_frame()
-        writer.write_video_frame(frame)
-        # writer.write(frame.img)
-        # print writer.video_stream
+#     for x in xrange(300):
+#         frame = cap.get_frame()
+#         writer.write_video_frame(frame)
+#         # writer.write(frame.img)
+#         # print writer.video_stream
 
-    cap.close()
-    writer.close()
+#     cap.close()
+#     writer.close()
 
 
 if __name__ == '__main__':

@@ -99,7 +99,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.area_threshold = 20
         self.marker_scale = marker_scale
 
-        self.world_size = self.g_pool.capture.frame_size
 
         self._window = None
 
@@ -244,11 +243,11 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             return
 
         cal_pt_cloud = np.array(cal_pt_cloud)
-        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,return_params=True)
+        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
         #replace current gaze mapper with new
-        self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
+        self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
 
 
     def close_window(self):

@@ -64,9 +64,9 @@ ch.setFormatter(formatter)
 # add the handlers to the logger
 logger.addHandler(fh)
 logger.addHandler(ch)
-# mute OpenGL logger
-logging.getLogger("OpenGL").propagate = False
-logging.getLogger("OpenGL").addHandler(logging.NullHandler())
+
+logging.getLogger("OpenGL").setLevel(logging.ERROR)
+logging.getLogger("libav").setLevel(logging.ERROR)
 
 
 if 'binocular' in sys.argv:
@@ -86,29 +86,30 @@ else:
     from world import world
 
 
+
 class Global_Container(object):
     pass
 
 def main():
 
     # To assign camera by name: put string(s) in list
-    eye_cam_names = ["USB 2.0 Camera","Microsoft", "6000","Integrated Camera","HD USB Camera"]
-    world_src = ["Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
-    eye_src = (eye_cam_names,0),(eye_cam_names,1) #first match for eye0 and second match for eye1
+    world_src = ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
+    eye0 = ["Pupil Cam1 ID0","HD-6000","Integrated Camera","HD USB Camera","USB 2.0 Camera"]
+    eye1 = ["Pupil Cam1 ID1","HD-6000","Integrated Camera"]
+    eye_src = eye0, eye1
 
     # to assign cameras directly, using integers as demonstrated below
-    # eye_src =  4 , 5 #second arg will be ignored for monocular eye trackers
-    # world_src = 1
+    # eye_src =  1 , 1 #second arg will be ignored for monocular eye trackers
+    # world_src = 0
 
     # to use a pre-recorded video.
     # Use a string to specify the path to your video file as demonstrated below
     # eye_src = '/Users/mkassner/Downloads/000/eye0.mkv' , '/Users/mkassner/Downloads/eye.avi'
     # world_src = "/Users/mkassner/Downloads/000/world.mkv"
 
-    # Camera video size in pixels (width,height)
+    # Default camera video size in pixels (width,height)
     eye_size = (640,480)
     world_size = (1280,720)
-
 
     # on MacOS we will not use os.fork, elsewhere this does nothing.
     forking_enable(0)
@@ -130,10 +131,12 @@ def main():
 
     p_eye = []
     for eye_id in range(1+1*binocular):
-        rx,tx = Pipe(False)
-        p_eye += [Process(target=eye, args=(g_pool,eye_src[eye_id],eye_size,rx,eye_id))]
-        g_pool.eye_tx += [tx]
+        eye_end,world_end = Pipe(True)
+        p_eye += [Process(target=eye, args=(g_pool,eye_src[eye_id],eye_size,eye_end,eye_id))]
         p_eye[-1].start()
+        #wait for ready message from eye to sequentialize startup
+        logger.debug(world_end.recv())
+        g_pool.eye_tx += [world_end]
 
     world(g_pool,world_src,world_size)
 
