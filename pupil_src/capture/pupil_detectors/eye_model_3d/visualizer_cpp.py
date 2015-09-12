@@ -18,7 +18,7 @@ from pyglui.cygl.utils import init
 from pyglui.cygl.utils import RGBA
 from pyglui.cygl.utils import *
 from pyglui.cygl import utils as glutils
-from gl_utils.trackball import Trackball
+from trackball import Trackball
 from pyglui.pyfontstash import fontstash as fs
 from pyglui.ui import get_opensans_font_path
 # from intersect import sphere_intersect #not gonna work
@@ -319,9 +319,9 @@ class Visualizer():
 
 	def draw_circle(self,circle):
 		glPushMatrix()
-		glLoadMatrixf(self.get_pupil_transformation_matrix(circle))
+		glLoadMatrixf(self.get_pupil_transformation_matrix(circle[2][1],circle[2][0]))
 		draw_points(((0,0),),color=RGBA(1.1,0.2,.8))
-		glScalef(circle.radius,circle.radius,1)
+		glScalef(circle[-1][-1],circle[-1][-1],1)
 		draw_polyline((rad),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
 		glColor4f(0.0, 0.0, 0.0,0.5)  #set color to green
 		glBegin(GL_POLYGON) #draw circle
@@ -345,7 +345,7 @@ class Visualizer():
 		# num = 0
 		for contour in contours:
 			# draw_polyline3d(cpp_model.intersect_contour_with_eye(contour),color=RGBA(0.,0.,0.,.5))
-			intersect_contour = [self.sphere_intersect(point[0],cpp_model.eye,cpp_model) for point in contour]
+			intersect_contour = [self.sphere_intersect(point[0],cpp_model) for point in contour]
 			intersect_contour = [c for c in intersect_contour if c is not None]
 			draw_polyline3d(np.array(intersect_contour),color=RGBA(0.,0.,0.,.5))
 			# num += len(intersect_contour)
@@ -406,7 +406,7 @@ class Visualizer():
 			if not self._window:
 				exit()
 
-			glfwSetWindowPos(self._window,2000,0)
+			glfwSetWindowPos(self._window,0,0)
 			# Register callbacks window
 			glfwSetFramebufferSizeCallback(self._window,self.on_resize)
 			glfwSetWindowIconifyCallback(self._window,self.on_iconify)
@@ -449,10 +449,11 @@ class Visualizer():
 			# 1. in anthromorphic space, draw pupil sphere and circles on it
 			glLoadMatrixf(self.get_anthropomorphic_matrix())
 
-			if cpp_model and cpp_model.num_observations > 3:
+			if cpp_model and cpp_model.num_observations > 10:
 				# self.draw_all_circles(cpp_model, 10)
 				self.draw_sphere(cpp_model.get_last_pupil_observation(),cpp_model.eye) #draw CPP
-
+				for c in cpp_model.get_last_pupil_observations(5):
+					self.draw_circle(c)
 			glLoadMatrixf(self.get_anthropomorphic_matrix())
 
 			self.draw_coordinate_system(4)
@@ -506,9 +507,6 @@ class Visualizer():
 		if action == GLFW_RELEASE:
 			self.input['button'] = None
 
-		# pos = normalize(pos,glfwGetWindowSize(window))
-		# pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
-
 	def on_pos(self,window,x, y):
 		hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
 		x,y = x*hdpi_factor,y*hdpi_factor
@@ -523,25 +521,24 @@ class Visualizer():
 			self.input['mouse'] = x,y
 
 	def on_scroll(self,window,x,y):
-		# self.gui.update_scroll(x,y)
 		self.trackball.zoom_to(y)
 
 	def on_close(self,window=None):
 		self.window_should_close = True
 
 	def on_iconify(self,window,x,y): pass
-	def on_key(self,window, key, scancode, action, mods): pass #self.gui.update_key(key,scancode,action,mods)
-	def on_char(window,char): pass # self.gui.update_char(char)
+	def on_key(self,window, key, scancode, action, mods): pass
+	def on_char(window,char): pass
 
-	def sphere_intersect(self,point,sphere,cpp_model):
+	def sphere_intersect(self,point,cpp_model):
 		#auxiliary function originally in intersect.py, used here to find sphere intersect.
 		#intersection between a line and a sphere, originally called intersect(line,sphere)
 		#we only return the closer value
 
 		#first, need to unproject point to 3d. We put z position at 1 arbitrarily.
-		# direction= np.array([(point[0]-self.intrinsics[0,2])/ self.intrinsics[0,0],
-	 #                    (point[1]-self.intrinsics[1,2])/ self.intrinsics[1,1],1])
-		# # return direction #this prints unprojected at z=20. Not on sphere
+		# direction= np.array([(point[0]-self.intrinsics[0,2])/self.intrinsics[0,0],
+	 #                    (point[1]-self.intrinsics[1,2])/self.intrinsics[1,1],1])*80
+		# return direction #this prints unprojected at z=20. Not on sphere
 		# origin= np.array([0,0,0])
 		# s_center= np.array(sphere[0]) #the center
 		# s_radius= sphere[1] #the radius
@@ -560,12 +557,14 @@ class Visualizer():
 
 		# point[0] = point[0]*cpp_model.scale
 		# point[1] = point[1]*cpp_model.scale #not sure if this works
-
+		# self.intrinsics = self.intrinsics.T
 		v = np.array([(point[0]-self.intrinsics[0,2])/ self.intrinsics[0,0],
 	                    (point[1]-self.intrinsics[1,2])/ self.intrinsics[1,1],1])
+		# self.intrinsics = self.intrinsics.T
+
 		p = (0,0,0) #put p at origin
-		c = np.array(sphere[0]) #sphere center
-		r = sphere[1] # /cpp_model.scale #sphere radius
+		c = np.array(cpp_model.eye[0]) #sphere center
+		r = cpp_model.eye[1] #sphere radius
 
 		vcvc_cc_rr = v.dot(c)**2 - c.dot(c) + r**2 # from wikipedia :)
 		if (vcvc_cc_rr < 0):
