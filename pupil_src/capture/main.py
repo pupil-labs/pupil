@@ -74,7 +74,7 @@ else:
     logger.debug("Starting in single eye cam mode")
 
 
-if 'profiled' in sys.argv or 1:
+if 'profiled' in sys.argv:
     logger.debug("Capture processes will be profiled.")
     from eye import eye_profiled as eye
     from world import world_profiled as world
