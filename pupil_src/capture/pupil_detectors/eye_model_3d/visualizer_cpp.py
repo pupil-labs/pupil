@@ -18,7 +18,7 @@ from pyglui.cygl.utils import init
 from pyglui.cygl.utils import RGBA
 from pyglui.cygl.utils import *
 from pyglui.cygl import utils as glutils
-from trackball import Trackball
+from gl_utils.trackball import Trackball
 from pyglui.pyfontstash import fontstash as fs
 from pyglui.ui import get_opensans_font_path
 # from intersect import sphere_intersect #not gonna work
@@ -348,7 +348,7 @@ class Visualizer():
 			intersect_contour = [self.sphere_intersect(point[0],cpp_model.eye,cpp_model) for point in contour]
 			intersect_contour = [c for c in intersect_contour if c is not None]
 			draw_polyline3d(np.array(intersect_contour),color=RGBA(0.,0.,0.,.5))
-			# num += len(intersect_contour) 
+			# num += len(intersect_contour)
 		# print num #see how many points are inside contours
 
 	def draw_eye_model_text(self, model):
@@ -594,7 +594,7 @@ if __name__ == '__main__':
 	huding.add_observation([482.762,315.186],38.397,23.238,1.519)
 	huding.update_model()
 
-	# print huding.print_eye()	
+	# print huding.print_eye()
 	# for pupil in huding.get_all_pupil_observations():
 	# 		#circle is pupil[2]. circle is (center[x,y,z], normal[x,y,z], radius)
 	# 		print pupil[2]

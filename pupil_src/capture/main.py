@@ -31,10 +31,7 @@ else:
 	# Specifiy user dir.
     user_dir = os.path.join(pupil_base_dir,'capture_settings')
     version_file = None
-    if __name__ == '__main__':
-        #compile all cython source files
-        from pyx_compiler import build_extensions
-        build_extensions()
+
 
 
 # create folder for user settings, tmp data

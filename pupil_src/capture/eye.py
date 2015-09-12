@@ -42,9 +42,8 @@ from cv2_writer import CV_Writer
 
 # Pupil detectors
 from pupil_detectors import Canny_Detector
-from pupil_detectors import sphere_fitter
-from pupil_detectors.sphere_fitter import visualizer
-from pupil_detectors.sphere_fitter import geometry
+from pupil_detectors import eye_model_3d
+from pupil_detectors.eye_model_3d.visualizer_cpp import Visualizer
 
 # time
 import time
@@ -187,7 +186,8 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     pupil_detector = Canny_Detector(g_pool)
     intrinsics = np.matrix('879.193 0 320; 0 -879.193 240; 0 0 1')
-    eye_model = sphere_fitter.Sphere_Fitter(intrinsics = intrinsics)
+    eye_model = eye_model_3d.PyEyeModelFitter(879.193,320,240)
+    visual = Visualizer("eye model",879.193, intrinsics = intrinsics)
 
     # UI callback functions
     def set_scale(new_scale):
@@ -279,8 +279,6 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     fps_graph.update_rate = 5
     fps_graph.label = "%0.0f FPS"
 
-    #initialize visualizer
-    visual = visualizer.Visualizer("eye model", intrinsics = eye_model.intrinsics)
     visual.open_window()
 
     # Event loop
@@ -401,7 +399,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         graph.pop_view()
 
         # show the visualizer
-        visual.update_window(g_pool,eye_model,contours) #also feeding in contours
+        visual.update_window(g_pool,eye_model,contours)
         glfwMakeContextCurrent(main_window)
 
         # render GUI
