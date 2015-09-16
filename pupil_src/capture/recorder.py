@@ -19,7 +19,7 @@ from shutil import copy2
 from glob import glob
 from audio import Audio_Capture,Audio_Input_Dict
 from file_methods import save_object
-from av_writer import JPEG_Writer
+from av_writer import JPEG_Writer, AV_Writer
 from cv2_writer import CV_Writer
 #logging
 import logging
@@ -237,7 +237,8 @@ class Recorder(Plugin):
             self.video_path = os.path.join(self.rec_path, "world.mp4")
             self.writer = JPEG_Writer(self.video_path,int(self.g_pool.capture.frame_rate))
         # elif 1:
-        #     self.writer = av_writer.AV_Writer(self.video_path)
+            # self.video_path = os.path.join(self.rec_path, "world.mp4")
+            # self.writer = AV_Writer(self.video_path)
         else:
             self.video_path = os.path.join(self.rec_path, "world.mkv")
             self.writer = CV_Writer(self.video_path, float(self.g_pool.capture.frame_rate), self.g_pool.capture.frame_size)

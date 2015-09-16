@@ -28,10 +28,14 @@ class Frame(object):
     def __init__(self, timestamp,img,index):
         self.timestamp = timestamp
         self.img = img
+        self.bgr = img
         self.height,self.width,_ = img.shape
         self._gray = None
         self._yuv = None
         self.index = index
+        #indicate that the frame does not have a native yuv or jpeg buffer
+        self.yuv_buffer = None
+        self.jpeg_buffer = None
 
     @property
     def gray(self):

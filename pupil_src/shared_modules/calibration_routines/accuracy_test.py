@@ -27,10 +27,11 @@ import audio
 
 from pyglui import ui
 from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA
+
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
-from screen_marker_calibration import draw_marker,on_resize, easeInOutQuad, interp_fn, Screen_Marker_Calibration
+from screen_marker_calibration import Screen_Marker_Calibration
 from calibrate import preprocess_data
 #logging
 import logging

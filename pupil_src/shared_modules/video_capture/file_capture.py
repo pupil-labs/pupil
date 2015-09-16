@@ -47,6 +47,9 @@ class Frame(object):
         self.timestamp = timestamp
         self.index = index
         self.img = img
+        self.bgr = img
+        self.jpeg_buffer = None
+        self.yuv_buffer = None
         self.height,self.width,_ = img.shape
         self._gray = None
 
@@ -69,6 +72,8 @@ class File_Capture(object):
         self.freerun = False
         self.timestamps = None
         self.display_time = 0
+
+        assert os.path.isfile(src)
 
         # we initialize the actual capture based on cv2.VideoCapture
         self.cap = cv2.VideoCapture(src)

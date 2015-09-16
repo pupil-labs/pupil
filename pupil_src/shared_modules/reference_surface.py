@@ -16,7 +16,7 @@ from glfw import *
 from OpenGL.GL import *
 
 from pyglui.cygl.utils import RGBA
-from pyglui.cygl.utils import draw_polyline_norm,draw_polyline,draw_points_norm,draw_points,draw_named_texture
+from pyglui.cygl.utils import draw_polyline_norm,draw_polyline,draw_points_norm,draw_points
 from OpenGL.GL import GL_LINES
 from methods import GetAnglesPolyline,normalize
 
@@ -374,7 +374,7 @@ class Reference_Surface(object):
 
 
     #### fns to draw surface in separate window
-    def gl_display_in_window(self,world_tex_id):
+    def gl_display_in_window(self,world_tex):
         """
         here we map a selected surface onto a seperate window.
         """
@@ -396,7 +396,7 @@ class Reference_Surface(object):
             #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
             glLoadMatrixf(m)
 
-            draw_named_texture(world_tex_id)
+            world_tex.draw()
             glMatrixMode(GL_PROJECTION)
             glPopMatrix()
             glMatrixMode(GL_MODELVIEW)
@@ -411,7 +411,7 @@ class Reference_Surface(object):
             self.close_window()
 
     #### fns to draw surface in separate window
-    def gl_display_in_window_3d(self,world_tex_id,camera_intrinsics):
+    def gl_display_in_window_3d(self,world_tex,camera_intrinsics):
         """
         here we map a selected surface onto a seperate window.
         """
@@ -442,7 +442,7 @@ class Reference_Surface(object):
             m = cvmat_to_glmat(self.m_from_screen)
             glMultMatrixf(m)
             glTranslatef(0,0,-.01)
-            draw_named_texture(world_tex_id)
+            world_tex.draw()
             draw_polyline([[0,0],[0,1],[1,1],[1,0]],color = RGBA(.5,.3,.6,.5),thickness=3)
             glPopMatrix()
 

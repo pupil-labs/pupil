@@ -21,11 +21,11 @@ from pyglui.cygl.utils import init as cygl_init
 from pyglui.cygl.utils import draw_points as cygl_draw_points
 from pyglui.cygl.utils import RGBA as cygl_rgba
 from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
-from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
+from pyglui.cygl.utils import Named_Texture
 
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.5'
+assert pyglui_version >= '0.6'
 
 #monitoring
 import psutil
@@ -212,8 +212,8 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.image_tex = create_named_texture(frame.img.shape)
-    update_named_texture(g_pool.image_tex,frame.img)
+    g_pool.image_tex = Named_Texture()
+    g_pool.image_tex.update_from_frame(frame)
     glfwSwapInterval(0)
 
 
@@ -341,14 +341,14 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
                 # switch to work in normalized coordinate space
                 if g_pool.display_mode == 'algorithm':
-                    update_named_texture(g_pool.image_tex,frame.img)
+                    g_pool.image_tex.update_from_ndarray(frame.img)
                 elif g_pool.display_mode in ('camera_image','roi'):
-                    update_named_texture(g_pool.image_tex,frame.gray)
+                    g_pool.image_tex.update_from_ndarray(frame.gray)
                 else:
                     pass
 
                 make_coord_system_norm_based(g_pool.flip)
-                draw_named_texture(g_pool.image_tex)
+                g_pool.image_tex.draw()
                 # switch to work in pixel space
                 make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
 

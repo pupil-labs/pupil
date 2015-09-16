@@ -21,7 +21,7 @@ from circle_detector import get_candidate_ellipses
 import audio
 
 from pyglui import ui
-from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA
+from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA,draw_concentric_circles
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
@@ -32,11 +32,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def draw_marker(pos,r,alpha):
-    black = RGBA(0.,0.,0.,alpha)
-    white = RGBA(1.,1.,1.,alpha)
-    for r,c in zip((r,0.8*r,0.6*r,.4*r,.2*r),(black,white,black,white,black)):
-        draw_points([pos],size=r,color=c,sharpness=0.95)
 
 # window calbacks
 def on_resize(window,w,h):
@@ -377,7 +372,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
         alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
-        draw_marker(screen_pos,r,alpha)
+        draw_concentric_circles(screen_pos,r,6,alpha)
         #some feedback on the detection state
 
         if self.detected and self.on_position:

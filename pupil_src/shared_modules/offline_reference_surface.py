@@ -13,7 +13,7 @@ import cv2
 from gl_utils import cvmat_to_glmat,clear_gl_screen
 from glfw import *
 from OpenGL.GL import *
-from pyglui.cygl.utils import create_named_texture,update_named_texture, draw_named_texture, draw_points_norm, RGBA
+from pyglui.cygl.utils import Named_Texture, draw_points_norm, RGBA
 from methods import GetAnglesPolyline,normalize
 from cache_list import Cache_List
 
@@ -163,7 +163,7 @@ class Offline_Reference_Surface(Reference_Surface):
             #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
             glLoadMatrixf(m)
 
-            draw_named_texture(self.heatmap_texture)
+            self.heatmap_texture.draw()
 
             glMatrixMode(GL_PROJECTION)
             glPopMatrix()
@@ -188,7 +188,7 @@ class Offline_Reference_Surface(Reference_Surface):
             #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
             glLoadMatrixf(m)
 
-            draw_named_texture(self.metrics_texture)
+            self.metrics_texture.draw()
 
             glMatrixMode(GL_PROJECTION)
             glPopMatrix()
@@ -197,7 +197,7 @@ class Offline_Reference_Surface(Reference_Surface):
 
 
     #### fns to draw surface in seperate window
-    def gl_display_in_window(self,world_tex_id):
+    def gl_display_in_window(self,world_tex):
         """
         here we map a selected surface onto a seperate window.
         """
@@ -219,7 +219,7 @@ class Offline_Reference_Surface(Reference_Surface):
             #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
             glLoadMatrixf(m)
 
-            draw_named_texture(world_tex_id)
+            world_tex.draw()
 
             glMatrixMode(GL_PROJECTION)
             glPopMatrix()
@@ -228,7 +228,7 @@ class Offline_Reference_Surface(Reference_Surface):
 
 
             if self.heatmap_texture:
-                draw_named_texture(self.heatmap_texture)
+                self.heatmap_texture.draw()
 
             # now lets get recent pupil positions on this surface:
             for gp in self.gaze_on_srf:
@@ -289,8 +289,8 @@ class Offline_Reference_Surface(Reference_Surface):
 
         self.heatmap[:,:,:3] = c_map
         self.heatmap[:,:,3] = 125
-        self.heatmap_texture = create_named_texture(self.heatmap.shape)
-        update_named_texture(self.heatmap_texture,self.heatmap)
+        self.heatmap_texture = Named_Texture()
+        self.heatmap_texture.update_from_ndarray(self.heatmap)
 
 
     def visible_count_in_section(self,section):

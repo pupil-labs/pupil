@@ -85,7 +85,7 @@ from glfw import *
 from pyglui import __version__ as pyglui_version
 assert pyglui_version >= '0.3'
 from pyglui import ui,graph,cygl
-from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture,destroy_named_texture
+from pyglui.cygl.utils import Named_Texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 from OpenGL.GL import glClearColor
 #capture
@@ -322,7 +322,7 @@ def session(rec_dir):
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.image_tex = create_named_texture((height,width,3))
+    g_pool.image_tex = Named_Texture()
 
     #set up performace graphs:
     pid = os.getpid()
@@ -398,8 +398,8 @@ def session(rec_dir):
         # render camera image
         glfwMakeContextCurrent(main_window)
         make_coord_system_norm_based()
-        update_named_texture(g_pool.image_tex,frame.img)
-        draw_named_texture(g_pool.image_tex)
+        g_pool.image_tex.update_from_frame(frame)
+        g_pool.image_tex.draw()
         make_coord_system_pixel_based(frame.img.shape)
         # render visual feedback from loaded plugins
         for p in g_pool.plugins:
@@ -433,7 +433,6 @@ def session(rec_dir):
 
     cap.close()
     g_pool.gui.terminate()
-    destroy_named_texture(g_pool.image_tex)
     glfwDestroyWindow(main_window)
 
 
