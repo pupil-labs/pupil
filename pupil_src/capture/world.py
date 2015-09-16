@@ -231,7 +231,7 @@ def world(g_pool,cap_src,cap_size):
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.image_tex = create_named_texture(frame.img.shape)
+    g_pool.image_tex = create_named_texture()
     update_named_texture(g_pool.image_tex,frame.img)
 
     # refresh speed settings

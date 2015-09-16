@@ -219,7 +219,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.image_tex = create_named_texture(frame.img.shape)
+    g_pool.image_tex = create_named_texture()
     update_named_texture(g_pool.image_tex,frame.img)
     glfwSwapInterval(0)
 
