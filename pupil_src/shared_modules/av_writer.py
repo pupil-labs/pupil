@@ -140,11 +140,6 @@ class AV_Writer(object):
         frame.planes[1].update(u)
         frame.planes[2].update(v)
 
-        # frame = av.VideoFrame(input_frame.width, input_frame.height,'yuv420p')
-        # y,u,v = input_frame.yuv420
-        # frame.planes[0].update(y)
-        # frame.planes[1].update(np.ascontiguousarray(u))
-        # frame.planes[2].update(np.ascontiguousarray(v))
         # here we create a timestamp in ms resolution to be used for the frame pts.
         # later libav will scale this to stream timebase
         frame_ts_ms = int((input_frame.timestamp-self.start_time)*self.time_resolution)
