@@ -183,7 +183,7 @@ def session(rec_dir):
         return next(tick)
 
 
-    video_path = glob(os.path.join(rec_dir,"world.*"))[0]
+    video_path = [f for f in glob(os.path.join(rec_dir,"world.*")) if f[-3:] in ('mp4','mkv','avi')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
