@@ -65,6 +65,11 @@ cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
         ParametrizedLine3d() except +
         ParametrizedLine3d(Matrix31d origin, Matrix31d direction)
 
+
+from collections import namedtuple
+
+PyPupil = namedtuple('Pupil' , 'ellipse_center, ellipse_major_radius, ellipse_minor_radius, ellipse_angle,params_theta, params_psi, params_radius, circle_center, circle_normal, circle_radius')
+
 cdef class PyEyeModelFitter:
     cdef EyeModelFitter *thisptr
     cdef public int counter
@@ -148,43 +153,39 @@ cdef class PyEyeModelFitter:
         cdef EyeModelFitter.Pupil p = self.thisptr.pupils[index]
         # returning (Ellipse, Params, Cicle). Ellipse = ([x,y],major,minor,angle). Params = (theta,psi,r)
         # Circle = (center[x,y,z], normal[x,y,z], radius)
-        return (((p.ellipse.center[0],p.ellipse.center[1]),
-            p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle),
-            (p.params.theta,p.params.psi,p.params.radius),
-            ((p.circle.center[0],p.circle.center[1],p.circle.center[2]),
+        return PyPupil( (p.ellipse.center[0],p.ellipse.center[1]), p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle,
+            p.params.theta,p.params.psi,p.params.radius,
+            (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
-            p.circle.radius))
+            p.circle.radius)
 
     def get_last_pupil_observations(self,number):
         cdef EyeModelFitter.Pupil p
         for i in xrange(self.thisptr.pupils.size()-number,self.thisptr.pupils.size()):
             p = self.thisptr.pupils[i]
-            yield (((p.ellipse.center[0],p.ellipse.center[1]),
-                p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle),
-                (p.params.theta,p.params.psi,p.params.radius),
-                ((p.circle.center[0],p.circle.center[1],p.circle.center[2]),
-                (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
-                p.circle.radius))
+            yield  PyPupil( (p.ellipse.center[0],p.ellipse.center[1]), p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle,
+            p.params.theta,p.params.psi,p.params.radius,
+            (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
+            (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
+            p.circle.radius)
 
 
     def get_last_pupil_observation(self):
         cdef EyeModelFitter.Pupil p = self.thisptr.pupils.back()
-        return (((p.ellipse.center[0],p.ellipse.center[1]),
-            p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle),
-            (p.params.theta,p.params.psi,p.params.radius),
-            ((p.circle.center[0],p.circle.center[1],p.circle.center[2]),
+        return PyPupil( (p.ellipse.center[0],p.ellipse.center[1]), p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle,
+            p.params.theta,p.params.psi,p.params.radius,
+            (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
-            p.circle.radius))
+            p.circle.radius)
 
     def get_all_pupil_observations(self):
         cdef EyeModelFitter.Pupil p
         for p in self.thisptr.pupils:
-            yield (((p.ellipse.center[0],p.ellipse.center[1]),
-                p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle),
-                (p.params.theta,p.params.psi,p.params.radius),
-                ((p.circle.center[0],p.circle.center[1],p.circle.center[2]),
-                (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
-                p.circle.radius))
+            yield PyPupil( (p.ellipse.center[0],p.ellipse.center[1]), p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle,
+            p.params.theta,p.params.psi,p.params.radius,
+            (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
+            (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
+            p.circle.radius)
 
     def intersect_contour_with_eye(self,float[:,:] contour):
         #eye is sphere.
