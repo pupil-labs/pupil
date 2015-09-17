@@ -1072,7 +1072,7 @@ EyeModelFitter::PupilParams::PupilParams() : theta(0), psi(0), radius(0)
 }
 
 
-EyeModelFitter::Observation::Observation(cv::Mat image, Ellipse ellipse, std::vector<cv::Point2f> inliers) : image(std::move(image)), ellipse(std::move(ellipse)), inliers(std::move(inliers))
+EyeModelFitter::Observation::Observation(/*cv::Mat image, */Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/) :/* image(std::move(image)),*/ ellipse(std::move(ellipse))/*, inliers(std::move(inliers)*/)
 {
 
 }
@@ -1094,27 +1094,41 @@ singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length, double regi
 
 }
 
-singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_observation(cv::Mat image, Ellipse pupil, int n_pseudo_inliers /*= 0*/)
-{
-    std::vector<cv::Point2f> pupil_inliers;
-    for (int i = 0; i < n_pseudo_inliers; ++i) {
-        auto p = pointAlongEllipse(pupil, i * 2 * M_PI / n_pseudo_inliers);
-        pupil_inliers.emplace_back(static_cast<float>(p[0]), static_cast<float>(p[1]));
-    }
-    return add_observation(std::move(image), std::move(pupil), std::move(pupil_inliers));
-}
+// singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_observation(cv::Mat image, Ellipse pupil, int n_pseudo_inliers /*= 0*/)
+// {
+//     std::vector<cv::Point2f> pupil_inliers;
+//     for (int i = 0; i < n_pseudo_inliers; ++i) {
+//         auto p = pointAlongEllipse(pupil, i * 2 * M_PI / n_pseudo_inliers);
+//         pupil_inliers.emplace_back(static_cast<float>(p[0]), static_cast<float>(p[1]));
+//     }
+//     return add_observation(std::move(image), std::move(pupil), std::move(pupil_inliers));
+// }
 
-singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_observation(cv::Mat image, Ellipse pupil, std::vector<cv::Point2f> pupil_inliers)
-{
-    assert(image.channels() == 1 && image.depth() == CV_8U);
+// singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_observation(cv::Mat image, Ellipse pupil, std::vector<cv::Point2f> pupil_inliers)
+// {
+//     assert(image.channels() == 1 && image.depth() == CV_8U);
 
+//     std::lock_guard<std::mutex> lock_model(model_mutex);
+
+//     pupils.emplace_back(
+//         Observation(std::move(image), std::move(pupil), std::move(pupil_inliers))
+//         );
+//     return pupils.size() - 1;
+// }
+
+singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_observation( Ellipse pupil )
+{
+    // std::vector<cv::Point2f> pupil_inliers;
+    // for (int i = 0; i < n_pseudo_inliers; ++i) {
+    //     auto p = pointAlongEllipse(pupil, i * 2 * M_PI / n_pseudo_inliers);
+    //     pupil_inliers.emplace_back(static_cast<float>(p[0]), static_cast<float>(p[1]));
+    // }
     std::lock_guard<std::mutex> lock_model(model_mutex);
 
     pupils.emplace_back(
-        Observation(std::move(image), std::move(pupil), std::move(pupil_inliers))
+        Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/)
         );
-    return pupils.size() - 1;
-}
+    return pupils.size() - 1;}
 
 void EyeModelFitter::reset()
 {

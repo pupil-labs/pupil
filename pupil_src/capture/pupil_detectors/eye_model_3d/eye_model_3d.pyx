@@ -4,6 +4,8 @@ from libcpp.vector cimport vector
 cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter":
 
     cdef cppclass Ellipse2D[T]:
+        Ellipse2D()
+        Ellipse2D(T x, T y, T major_radius, T minor_radius, T angle) except +
         Matrix21d center
         T major_radius
         T minor_radius
@@ -24,7 +26,7 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         void reset()
         void initialise_model()
         void unproject_observations(double pupil_radius, double eye_z )
-        void add_observation(double center_x,double center_y, double major_radius, double minor_radius, double angle)
+        void add_observation( Ellipse2D[double] ellipse)
 
         cppclass PupilParams:
             float theta
@@ -33,7 +35,7 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
 
         cppclass Pupil:
             Pupil() except +
-            Ellipse2D[double] ellipse  
+            Ellipse2D[double] ellipse
             PupilParams params
             Circle3D[double] circle
 
@@ -47,21 +49,21 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
 # cdef extern from 'singleeyefitter/intersect.h' namespace 'singleeyefitter':
 #     cdef pair[Matrix31d,Matrix31d] intersect(const ParametrizedLine3d line, const Sphere[double] sphere) except +
 
-cdef extern from '<Eigen/Eigen>' namespace 'Eigen': 
+cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
     cdef cppclass Matrix21d "Eigen::Matrix<double,2,1>": # eigen defaults to column major layout
-        Matrix21d() except + 
+        Matrix21d() except +
         double * data()
         double& operator[](size_t)
 
     cdef cppclass Matrix31d "Eigen::Matrix<double,3,1>": # eigen defaults to column major layout
-        Matrix31d() except + 
+        Matrix31d() except +
         Matrix31d(double x, double y, double z)
         double * data()
         double& operator[](size_t)
 
     cdef cppclass ParametrizedLine3d "Eigen::ParametrizedLine<double, 3>":
         ParametrizedLine3d() except +
-        ParametrizedLine3d(Matrix31d origin, Matrix31d direction)        
+        ParametrizedLine3d(Matrix31d origin, Matrix31d direction)
 
 cdef class PyEyeModelFitter:
     cdef EyeModelFitter *thisptr
@@ -98,25 +100,35 @@ cdef class PyEyeModelFitter:
         self.thisptr.unproject_observations(pupil_radius,eye_z)
         self.thisptr.initialise_model()
 
-    def add_observation(self,center,major_radius,minor_radius,angle):
-        #standard way of adding an observation
-        self.thisptr.add_observation(center[0], center[1],major_radius,minor_radius,angle)
-        self.num_observations += 1
+    # def add_observation(self,center,major_radius,minor_radius,angle):
+    #     #standard way of adding an observation
+    #     self.thisptr.add_observation(center[0], center[1],major_radius,minor_radius,angle)
+    #     self.num_observations += 1
 
-    def add_pupil_labs_observation(self,e_dict):
+    def add_pupil_labs_observation(self,ellipse_dict, image_size):
         # a special method for taking in arguments from eye.py
-        a,b = e_dict['axes']
-        a,b = e_dict['axes']
+
+        # change coord system
+        x,y = ellipse_dict['center']
+        x -= image_size[0]/2.0
+        y -= image_size[1]/2.0
+
+        a,b = ellipse_dict['axes']
+        a,b = ellipse_dict['axes']
         if a > b:
-            major_radius = a/2
-            minor_radius = b/2
-            angle = e_dict['angle']*3.1415926535/180
+            major_radius = a/2.0
+            minor_radius = b/2.0
+            angle = ellipse_dict['angle']*3.1415926535/180
         else:
-            major_radius = b/2
-            minor_radius = a/2
-            angle = (e_dict['angle']+90)*3.1415926535/180 # not importing np just for pi constant
+            major_radius = b/2.0
+            minor_radius = a/2.0
+            angle = (ellipse_dict['angle']+90)*3.1415926535/180 # not importing np just for pi constant
+
+        # add cpp ellipse
+        cdef Ellipse2D[double] ellipse  =  Ellipse2D[double](x,y, major_radius, minor_radius, angle)
+
         # print e_dict['center'][0],e_dict['center'][1],major_radius,minor_radius,angle
-        self.thisptr.add_observation(e_dict['center'][0],e_dict['center'][1],major_radius,minor_radius,angle)
+        self.thisptr.add_observation(ellipse)
         self.num_observations += 1
 
     def print_ellipse(self,index):
@@ -162,7 +174,7 @@ cdef class PyEyeModelFitter:
             (p.params.theta,p.params.psi,p.params.radius),
             ((p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
-            p.circle.radius))        
+            p.circle.radius))
 
     def get_all_pupil_observations(self):
         cdef EyeModelFitter.Pupil p
