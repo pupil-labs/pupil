@@ -36,12 +36,12 @@ namespace singleeyefitter {
             A = ax*ax / a2 + ay*ay / b2;
             B = 2 * ax*ay / a2 - 2 * ax*ay / b2;
             C = ay*ay / a2 + ax*ax / b2;
-            D = (-2 * ax*ay*ellipse.centre[1] - 2 * ax*ax*ellipse.centre[0]) / a2
-                + (2 * ax*ay*ellipse.centre[1] - 2 * ay*ay*ellipse.centre[0]) / b2;
-            E = (-2 * ax*ay*ellipse.centre[0] - 2 * ay*ay*ellipse.centre[1]) / a2
-                + (2 * ax*ay*ellipse.centre[0] - 2 * ax*ax*ellipse.centre[1]) / b2;
-            F = (2 * ax*ay*ellipse.centre[0] * ellipse.centre[1] + ax*ax*ellipse.centre[0] * ellipse.centre[0] + ay*ay*ellipse.centre[1] * ellipse.centre[1]) / a2
-                + (-2 * ax*ay*ellipse.centre[0] * ellipse.centre[1] + ay*ay*ellipse.centre[0] * ellipse.centre[0] + ax*ax*ellipse.centre[1] * ellipse.centre[1]) / b2
+            D = (-2 * ax*ay*ellipse.center[1] - 2 * ax*ax*ellipse.center[0]) / a2
+                + (2 * ax*ay*ellipse.center[1] - 2 * ay*ay*ellipse.center[0]) / b2;
+            E = (-2 * ax*ay*ellipse.center[0] - 2 * ay*ay*ellipse.center[1]) / a2
+                + (2 * ax*ay*ellipse.center[0] - 2 * ax*ax*ellipse.center[1]) / b2;
+            F = (2 * ax*ay*ellipse.center[0] * ellipse.center[1] + ax*ax*ellipse.center[0] * ellipse.center[0] + ay*ay*ellipse.center[1] * ellipse.center[1]) / a2
+                + (-2 * ax*ay*ellipse.center[0] * ellipse.center[1] + ay*ay*ellipse.center[0] * ellipse.center[0] + ax*ax*ellipse.center[1] * ellipse.center[1]) / b2
                 - 1;
         }
 

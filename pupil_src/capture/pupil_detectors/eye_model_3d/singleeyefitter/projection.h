@@ -16,7 +16,7 @@ namespace singleeyefitter {
         typedef typename Circle3D<Scalar>::Vector Vector;
         using math::sq;
 
-        Vector c = circle.centre;
+        Vector c = circle.center;
         Vector n = circle.normal;
         Scalar r = circle.radius;
         Scalar f = focal_length;
@@ -27,7 +27,7 @@ namespace singleeyefitter {
         //     |p - c|^2 = r^2 where (p-c).n = 0 (i.e. on the circle plane)
         //
         // A cone is basically concentric circles, with center on the line c->v.
-        // For any point p, the corresponding circle centre c' is the intersection
+        // For any point p, the corresponding circle center c' is the intersection
         // of the line c->v and the plane through p normal to n. So,
         //
         //     d = ((p - v).n)/(c.n)
@@ -111,11 +111,11 @@ namespace singleeyefitter {
     //
     //     Input as in camera space,
     //     Transform to conic space,
-    //     Form conicoid with conic as base and camera centre as vertex
+    //     Form conicoid with conic as base and camera center as vertex
     //     Transform back to camera space
     //     Intersect conicoid with image plane (z=f)
 
-    Eigen::Matrix<Scalar,3,1> camera_centre(0,0,0);
+    Eigen::Matrix<Scalar,3,1> camera_center(0,0,0);
     }*/
 
 
@@ -123,9 +123,9 @@ namespace singleeyefitter {
     Ellipse2D<Scalar> project(const Sphere<Scalar>& sphere, Scalar focal_length)
     {
         return Ellipse2D<Scalar>(
-            focal_length * sphere.centre.template head<2>() / sphere.centre[2],
-            focal_length * sphere.radius / sphere.centre[2],
-            focal_length * sphere.radius / sphere.centre[2],
+            focal_length * sphere.center.template head<2>() / sphere.center[2],
+            focal_length * sphere.radius / sphere.center[2],
+            focal_length * sphere.radius / sphere.center[2],
             0);
     }
     template<typename Derived>
@@ -155,8 +155,8 @@ namespace singleeyefitter {
         // Get cone with base of ellipse and vertex at [0 0 -f]
         // Safaee-Rad 1992 eq (3)
         Conic conic(ellipse);
-        Vector3 cam_centre_in_ellipse(0, 0, -focal_length);
-        Conicoid pupil_cone(conic, cam_centre_in_ellipse);
+        Vector3 cam_center_in_ellipse(0, 0, -focal_length);
+        Conicoid pupil_cone(conic, cam_center_in_ellipse);
 
         auto a = pupil_cone.A;
         auto b = pupil_cone.B;
@@ -262,7 +262,7 @@ namespace singleeyefitter {
                     0, abs(l), n;
             }
 
-            // Calculate the circle centre
+            // Calculate the circle center
             // Safaee-Rad 1992 eq (38), using T3 as defined in (36)
             auto A = lambda.matrix().dot(T3.col(0).cwiseAbs2());
             auto B = lambda.matrix().dot(T3.col(0).cwiseProduct(T3.col(2)));
@@ -270,35 +270,35 @@ namespace singleeyefitter {
             auto D = lambda.matrix().dot(T3.col(2).cwiseAbs2());
 
             // Safaee-Rad 1992 eq (41)
-            Vector3 centre_in_Xprime;
-            centre_in_Xprime(2) = A*circle_radius / sqrt(sq(B) + sq(C) - A*D);
-            centre_in_Xprime(0) = -B / A * centre_in_Xprime(2);
-            centre_in_Xprime(1) = -C / A * centre_in_Xprime(2);
+            Vector3 center_in_Xprime;
+            center_in_Xprime(2) = A*circle_radius / sqrt(sq(B) + sq(C) - A*D);
+            center_in_Xprime(0) = -B / A * center_in_Xprime(2);
+            center_in_Xprime(1) = -C / A * center_in_Xprime(2);
 
             // Safaee-Rad 1992 eq (34)
             Translation3 T0;
             T0.translation() << 0, 0, focal_length;
 
             // Safaee-Rad 1992 eq (42) using (35)
-            Vector3 centre = T0*T1*T2*T3*centre_in_Xprime;
+            Vector3 center = T0*T1*T2*T3*center_in_Xprime;
 
             // If z is negative (behind the camera), choose the other
             // solution of eq (41) [maybe there's a way of calculating which
             // solution should be chosen first]
 
-            if (centre(2) < 0) {
-                centre_in_Xprime = -centre_in_Xprime;
-                centre = T0*T1*T2*T3*centre_in_Xprime;
+            if (center(2) < 0) {
+                center_in_Xprime = -center_in_Xprime;
+                center = T0*T1*T2*T3*center_in_Xprime;
             }
 
             // Make sure that the gaze vector is toward the camera and is normalised
-            if (gaze.dot(centre) > 0) {
+            if (gaze.dot(center) > 0) {
                 gaze = -gaze;
             }
             gaze.normalize();
 
             // Save the results
-            solutions[i] = Circle(centre, gaze, circle_radius);
+            solutions[i] = Circle(center, gaze, circle_radius);
         }
         return std::make_pair(solutions[0], solutions[1]);
     }

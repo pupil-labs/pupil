@@ -121,7 +121,7 @@ std::pair<Eigen::Matrix<Scalar, 3, 1>, Eigen::Matrix<Scalar, 3, 1>> intersect(co
     Vector v = line.direction();
     // Put p at origin
     Vector p = line.origin();
-    Vector c = sphere.centre - p;
+    Vector c = sphere.center - p;
     Scalar r = sphere.radius;
 
     // From Wikipedia :)

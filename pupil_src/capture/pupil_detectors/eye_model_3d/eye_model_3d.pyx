@@ -33,9 +33,12 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
             float psi
             float radius
 
+        cppclass Observation:
+            Ellipse2D[double] ellipse
+
         cppclass Pupil:
             Pupil() except +
-            Ellipse2D[double] ellipse
+            Observation observation
             PupilParams params
             Circle3D[double] circle
 

@@ -11,14 +11,14 @@ namespace singleeyefitter {
         typedef T Scalar;
         typedef Eigen::Matrix<Scalar, 3, 1> Vector;
 
-        Vector centre;
+        Vector center;
         Scalar radius;
 
-        Sphere() : centre(0, 0, 0), radius(0)
+        Sphere() : center(0, 0, 0), radius(0)
         {
         }
-        Sphere(Vector centre, Scalar radius)
-            : centre(std::move(centre)), radius(std::move(radius))
+        Sphere(Vector center, Scalar radius)
+            : center(std::move(center)), radius(std::move(radius))
         {
         }
 
@@ -39,18 +39,18 @@ namespace singleeyefitter {
 
     template<typename Scalar>
     bool operator== (const Sphere<Scalar>& s1, const Sphere<Scalar>& s2) {
-        return s1.centre == s2.centre
+        return s1.center == s2.center
             && s1.radius == s2.radius;
     }
     template<typename Scalar>
     bool operator!= (const Sphere<Scalar>& s1, const Sphere<Scalar>& s2) {
-        return s1.centre != s2.centre
+        return s1.center != s2.center
             || s1.radius != s2.radius;
     }
 
     template<typename T>
     std::ostream& operator<< (std::ostream& os, const Sphere<T>& circle) {
-        return os << "Sphere { centre: (" << circle.centre[0] << "," << circle.centre[1] << "," << circle.centre[2] << "), "
+        return os << "Sphere { center: (" << circle.center[0] << "," << circle.center[1] << "," << circle.center[2] << "), "
             "radius: " << circle.radius << " }";
     }
 
@@ -71,9 +71,9 @@ namespace singleeyefitter {
                 throw std::exception("Conversion requires struct");
             }
 
-            mxArray* centre_arr = mxGetField(arr, 0, "centre");
-            if (!centre_arr)  {
-                throw std::exception("No 'centre' field on struct");
+            mxArray* center_arr = mxGetField(arr, 0, "center");
+            if (!center_arr)  {
+                throw std::exception("No 'center' field on struct");
             }
 
             mxArray* radius_arr = mxGetField(arr, 0, "radius");
@@ -81,7 +81,7 @@ namespace singleeyefitter {
                 throw std::exception("No 'radius' field on struct");
             }
 
-            return Sphere<T>(matlab::matlab_traits<Sphere<T>::Vector>::fromMxArray(centre_arr),
+            return Sphere<T>(matlab::matlab_traits<Sphere<T>::Vector>::fromMxArray(center_arr),
                 matlab::matlab_traits<Sphere<T>::Scalar>::fromMxArray(radius_arr));
         }
 

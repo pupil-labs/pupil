@@ -14,22 +14,22 @@ namespace singleeyefitter {
     public:
         typedef T Scalar;
         typedef Eigen::Matrix<Scalar, 2, 1> Vector;
-        Vector centre;
+        Vector center;
         Scalar major_radius;
         Scalar minor_radius;
         Scalar angle;
 
         Ellipse2D()
-            : centre(0, 0), major_radius(0), minor_radius(0), angle(0)
+            : center(0, 0), major_radius(0), minor_radius(0), angle(0)
         {
         }
         template<typename Derived>
-        Ellipse2D(const Eigen::EigenBase<Derived>& centre, Scalar major_radius, Scalar minor_radius, Scalar angle)
-            : centre(centre), major_radius(major_radius), minor_radius(minor_radius), angle(angle)
+        Ellipse2D(const Eigen::EigenBase<Derived>& center, Scalar major_radius, Scalar minor_radius, Scalar angle)
+            : center(center), major_radius(major_radius), minor_radius(minor_radius), angle(angle)
         {
         }
         Ellipse2D(Scalar x, Scalar y, Scalar major_radius, Scalar minor_radius, Scalar angle)
-            : centre(x, y), major_radius(major_radius), minor_radius(minor_radius), angle(angle)
+            : center(x, y), major_radius(major_radius), minor_radius(minor_radius), angle(angle)
         {
         }
         template<typename U>
@@ -54,15 +54,15 @@ namespace singleeyefitter {
 
             // ROTATED = [Ao Au Av Auu Avv]
 
-            auto tuCentre = -Au / (2.0*Auu);
-            auto tvCentre = -Av / (2.0*Avv);
-            auto wCentre = Ao - Auu*tuCentre*tuCentre - Avv*tvCentre*tvCentre;
+            auto tucenter = -Au / (2.0*Auu);
+            auto tvcenter = -Av / (2.0*Avv);
+            auto wcenter = Ao - Auu*tucenter*tucenter - Avv*tvcenter*tvcenter;
 
-            centre[0] = tuCentre * cost - tvCentre * sint;
-            centre[1] = tuCentre * sint + tvCentre * cost;
+            center[0] = tucenter * cost - tvcenter * sint;
+            center[1] = tucenter * sint + tvcenter * cost;
 
-            major_radius = sqrt(abs(-wCentre / Auu));
-            minor_radius = sqrt(abs(-wCentre / Avv));
+            major_radius = sqrt(abs(-wcenter / Auu));
+            minor_radius = sqrt(abs(-wcenter / Avv));
 
             if (major_radius < minor_radius) {
                 std::swap(major_radius, minor_radius);
@@ -102,8 +102,8 @@ namespace singleeyefitter {
 
     template<typename T, typename U>
     bool operator==(const Ellipse2D<T>& el1, const Ellipse2D<U>& el2) {
-        return el1.centre[0] == el2.centre[0] &&
-            el1.centre[1] == el2.centre[1] &&
+        return el1.center[0] == el2.center[0] &&
+            el1.center[1] == el2.center[1] &&
             el1.major_radius == el2.major_radius &&
             el1.minor_radius == el2.minor_radius &&
             el1.angle == el2.angle;
@@ -115,15 +115,15 @@ namespace singleeyefitter {
 
     template<typename T>
     std::ostream& operator<< (std::ostream& os, const Ellipse2D<T>& ellipse) {
-        return os << "Ellipse { centre: (" << ellipse.centre[0] << "," << ellipse.centre[1] << "), a: " <<
+        return os << "Ellipse { center: (" << ellipse.center[0] << "," << ellipse.center[1] << "), a: " <<
             ellipse.major_radius << ", b: " << ellipse.minor_radius << ", theta: " << (ellipse.angle / boost::math::double_constants::pi) << "pi }";
     }
 
     template<typename T, typename U>
     Ellipse2D<T> scaled(const Ellipse2D<T>& ellipse, U scale) {
         return Ellipse2D<T>(
-            ellipse.centre[0].a,
-            ellipse.centre[1].a,
+            ellipse.center[0].a,
+            ellipse.center[1].a,
             ellipse.major_radius.a,
             ellipse.minor_radius.a,
             ellipse.angle.a);
@@ -134,8 +134,8 @@ namespace singleeyefitter {
     {
         using std::sin;
         using std::cos;
-        auto xt = el.centre.x() + el.major_radius*cos(el.angle)*cos(t) - el.minor_radius*sin(el.angle)*sin(t);
-        auto yt = el.centre.y() + el.major_radius*sin(el.angle)*cos(t) + el.minor_radius*cos(el.angle)*sin(t);
+        auto xt = el.center.x() + el.major_radius*cos(el.angle)*cos(t) - el.minor_radius*sin(el.angle)*sin(t);
+        auto yt = el.center.y() + el.major_radius*sin(el.angle)*cos(t) + el.minor_radius*cos(el.angle)*sin(t);
         return Eigen::Matrix<typename std::common_type<Scalar, Scalar2>::type, 2, 1>(xt, yt);
     }
 
@@ -152,8 +152,8 @@ struct matlab_traits<typename Ellipse<T>, typename std::enable_if<
             internal::mxHelper<T>::createMatrix(1, 5),
             mxDestroyArray);
         T* data = (T*)mxGetData(arr.get());
-        data[0] = ellipse.centre[0];
-        data[1] = ellipse.centre[1];
+        data[0] = ellipse.center[0];
+        data[1] = ellipse.center[1];
         data[2] = ellipse.major_radius;
         data[3] = ellipse.minor_radius;
         data[4] = ellipse.angle;

@@ -29,7 +29,7 @@ namespace singleeyefitter {
     }
     template<typename Scalar>
     inline cv::RotatedRect toRotatedRect(const Ellipse2D<Scalar>& ellipse) {
-        return cv::RotatedRect(toPoint2f(ellipse.centre),
+        return cv::RotatedRect(toPoint2f(ellipse.center),
             cv::Size2f(static_cast<float>(2 * ellipse.major_radius),
             static_cast<float>(2 * ellipse.minor_radius)),
             static_cast<float>(ellipse.angle * 180 / PI));
@@ -54,7 +54,7 @@ namespace singleeyefitter {
         typedef singleeyefitter::Sphere<double> Sphere;
         typedef size_t Index;
 
-        static const Vector3 camera_centre;
+        static const Vector3 camera_center;
 
         // Public fields
         double focal_length;

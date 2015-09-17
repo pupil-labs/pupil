@@ -169,7 +169,7 @@ cv::Rect bounding_box(const Ellipse2D<Scalar>& ellipse) {
     Scalar bbox_halfwidth = sqrt(ux*ux + vx*vx);
     Scalar bbox_halfheight = sqrt(uy*uy + vy*vy);
 
-    return cv::Rect(floor(ellipse.centre[0] - bbox_halfwidth), floor(ellipse.centre[1] - bbox_halfheight),
+    return cv::Rect(floor(ellipse.center[0] - bbox_halfwidth), floor(ellipse.center[1] - bbox_halfheight),
                     2*ceil(bbox_halfwidth) + 1, 2*ceil(bbox_halfheight) + 1);
 }
 
@@ -192,7 +192,7 @@ public:
         using std::cos;
         rA << r*cos(ellipse.angle)/ellipse.major_radius, r*sin(ellipse.angle)/ellipse.major_radius,
              -r*sin(ellipse.angle)/ellipse.minor_radius, r*cos(ellipse.angle)/ellipse.minor_radius;
-        rAt = rA*ellipse.centre;
+        rAt = rA*ellipse.center;
     }
     template<typename U>
     T operator()(U&& x, U&& y) {
@@ -276,8 +276,8 @@ template<template<class, int> class Jet, class T, int N>
 typename std::enable_if<std::is_same<typename ad_traits<Jet<T,N>>::ad_tag, ceres_jet_tag>::value, Ellipse2D<T>>::type
 toConst(const Ellipse2D<Jet<T,N>>& ellipse) {
     return Ellipse2D<T>(
-        ellipse.centre[0].a,
-        ellipse.centre[1].a,
+        ellipse.center[0].a,
+        ellipse.center[1].a,
         ellipse.major_radius.a,
         ellipse.minor_radius.a,
         ellipse.angle.a);
@@ -286,8 +286,8 @@ toConst(const Ellipse2D<Jet<T,N>>& ellipse) {
 template<class T>
 Ellipse2D<T> scaledMajorRadius(const Ellipse2D<T>& ellipse, const T& target_radius) {
     return Ellipse2D<T>(
-        ellipse.centre[0],
-        ellipse.centre[1],
+        ellipse.center[0],
+        ellipse.center[1],
         target_radius,
         target_radius * ellipse.minor_radius/ellipse.major_radius,
         ellipse.angle);
@@ -380,7 +380,7 @@ T ellipseGoodness(const Ellipse2D<T>& ellipse, const cv::Mat_<uint8_t>& eye, T b
     T r = ellipse.major_radius;
     rA << r*cos(ellipse.angle)/ellipse.major_radius, r*sin(ellipse.angle)/ellipse.major_radius,
         -r*sin(ellipse.angle)/ellipse.minor_radius, r*cos(ellipse.angle)/ellipse.minor_radius;
-    Eigen::Matrix<T, 2, 1> rAt = rA*ellipse.centre;
+    Eigen::Matrix<T, 2, 1> rAt = rA*ellipse.center;
 
     // Actually,
     ///    rAp - rAt = rA(0,y) + rA(x,0) - rAt
@@ -395,7 +395,7 @@ T ellipseGoodness(const Ellipse2D<T>& ellipse, const cv::Mat_<uint8_t>& eye, T b
 #endif
 
     for (int i = bb.y; i < bb.y + bb.height; ++i IF_INLINED_ELLIPSE_DIST(, rA0yrAt += rA01)) {
-        // Image row pointer -- (0,0) is centre of image, so shift accordingly
+        // Image row pointer -- (0,0) is center of image, so shift accordingly
         const uint8_t* eye_i = eye[i + eye.rows/2];
 
         // Only iterate over pixels between the inner and outer ellipse
@@ -524,14 +524,14 @@ Jet ellipseGoodness(const Ellipse2D<Jet>& ellipse, const cv::Mat_<uint8_t>& eye,
     T r = constEllipse.major_radius;
     rA << r*cos(constEllipse.angle)/constEllipse.major_radius, r*sin(constEllipse.angle)/constEllipse.major_radius,
          -r*sin(constEllipse.angle)/constEllipse.minor_radius, r*cos(constEllipse.angle)/constEllipse.minor_radius;
-    Eigen::Matrix<T, 2, 1> rAt = rA*constEllipse.centre;
+    Eigen::Matrix<T, 2, 1> rAt = rA*constEllipse.center;
 
     // And non-constant versions of the above
     Eigen::Matrix<Jet_t, 2, 2> rA_jet;
     Jet_t r_jet = ellipse.major_radius;
     rA_jet << r_jet*cos(ellipse.angle)/ellipse.major_radius, r_jet*sin(ellipse.angle)/ellipse.major_radius,
              -r_jet*sin(ellipse.angle)/ellipse.minor_radius, r_jet*cos(ellipse.angle)/ellipse.minor_radius;
-    Eigen::Matrix<Jet_t, 2, 1> rAt_jet = rA_jet*ellipse.centre;
+    Eigen::Matrix<Jet_t, 2, 1> rAt_jet = rA_jet*ellipse.center;
 
     // Actually,
     ///    rAp - rAt = rA(0,y) + rA(x,0) - rAt
@@ -546,7 +546,7 @@ Jet ellipseGoodness(const Ellipse2D<Jet>& ellipse, const cv::Mat_<uint8_t>& eye,
 #endif
 
     for (int i = bb.y; i < bb.y + bb.height; ++i IF_INLINED_ELLIPSE_DIST(, rA0yrAt += rA01)) {
-        // Image row pointer -- (0,0) is centre of image, so shift accordingly
+        // Image row pointer -- (0,0) is center of image, so shift accordingly
         const uint8_t* eye_i = eye[i + eye.rows/2];
 
         // Only iterate over pixels between the inner and outer ellipse
@@ -732,7 +732,7 @@ Circle3D<T> circleOnSphere(const Sphere<T>& sphere, T theta, T psi, T circle_rad
     typedef Eigen::Matrix<T,3,1> Vector3;
 
     Vector3 radial = sph2cart<T>(T(1), theta, psi);
-    return Circle3D<T>(sphere.centre + sphere.radius * radial,
+    return Circle3D<T>(sphere.center + sphere.radius * radial,
         radial,
         circle_radius);
 }
@@ -743,7 +743,7 @@ struct EllipseGoodnessFunction {
         typedef Eigen::Matrix<T,3,1> Vector3;
         typedef typename ad_traits<T>::scalar Const;
 
-        static const Vector3 camera_centre(T(0),T(0),T(0));
+        static const Vector3 camera_center(T(0),T(0),T(0));
 
         // Check for bounds. The worst possible value of ellipseGoodness is -255, so use that as a starting point for out-of-bounds pupils
 
@@ -760,7 +760,7 @@ struct EllipseGoodnessFunction {
         Circle3D<T> pupil_circle = circleOnSphere(eye, theta, psi, pupil_radius);
 
         // Ellipse normal must point towards camera
-        T normalDotPos = pupil_circle.normal.dot(camera_centre - pupil_circle.centre);
+        T normalDotPos = pupil_circle.normal.dot(camera_center - pupil_circle.center);
         if (normalDotPos <= Const(0))
         {
             // Return -255 for normalDotPos == 0, and even lower values for
@@ -779,7 +779,7 @@ struct EllipseGoodnessFunction {
         // are, again to push the gradient back inwards.
         if (theta < Const(0) || theta > Const(PI) || psi < Const(-PI) || psi > Const(0))
         {
-            T ret = Const(-255.0) - (camera_centre - pupil_circle.centre).norm();
+            T ret = Const(-255.0) - (camera_center - pupil_circle.center).norm();
             if (theta < Const(0))
                 ret -= (Const(0) - theta);
             else if (theta > Const(PI))
@@ -894,7 +894,7 @@ struct PupilContrastTerm : public spii::Term {
         auto eye = init_eye;
         if (has_eye_var) {
             auto& eye_vars = vars[eye_var_idx()];
-            eye.centre = Sphere<double>::Vector(eye_vars[0], eye_vars[1], eye_vars[2]);
+            eye.center = Sphere<double>::Vector(eye_vars[0], eye_vars[1], eye_vars[2]);
         }
 
         EllipseGoodnessFunction<double> goodnessFunction;
@@ -946,7 +946,7 @@ struct PupilContrastTerm : public spii::Term {
             // Otherwise, calculate the gradient wrt. to the 3 pupil params
             typedef ::ceres::Jet<double,3> PupilJet;
 
-            Eigen::Matrix<PupilJet,3,1> eye_pos(PupilJet(init_eye.centre[0]), PupilJet(init_eye.centre[1]), PupilJet(init_eye.centre[2]));
+            Eigen::Matrix<PupilJet,3,1> eye_pos(PupilJet(init_eye.center[0]), PupilJet(init_eye.center[1]), PupilJet(init_eye.center[2]));
             ::Sphere<PupilJet> eye(eye_pos, PupilJet(init_eye.radius));
 
             PupilJet contrast_goodness;
@@ -1047,7 +1047,7 @@ struct PupilAnthroTerm : public spii::Term {
 
 };
 
-const EyeModelFitter::Vector3 EyeModelFitter::camera_centre = EyeModelFitter::Vector3::Zero();
+const EyeModelFitter::Vector3 EyeModelFitter::camera_center = EyeModelFitter::Vector3::Zero();
 
 
 EyeModelFitter::Pupil::Pupil(Observation observation) : observation(observation), params(0, 0, 0)
@@ -1144,7 +1144,7 @@ singleeyefitter::EyeModelFitter::Circle singleeyefitter::EyeModelFitter::circleF
         return Circle::Null;
 
     Vector3 radial = sph2cart<double>(double(1), params.theta, params.psi);
-    return Circle(eye.centre + eye.radius * radial,
+    return Circle(eye.center + eye.radius * radial,
         radial,
         params.radius);
 }
@@ -1260,22 +1260,22 @@ const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::
 const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::initialise_single_observation(Pupil& pupil)
 {
     // Ignore the pupil circle normal, and intersect the pupil circle
-    // centre projection line with the eyeball sphere
+    // center projection line with the eyeball sphere
     try {
-        auto pupil_centre_sphere_intersect = intersect(Line3(camera_centre, pupil.circle.centre.normalized()),
+        auto pupil_center_sphere_intersect = intersect(Line3(camera_center, pupil.circle.center.normalized()),
             eye);
-        auto new_pupil_centre = pupil_centre_sphere_intersect.first;
+        auto new_pupil_center = pupil_center_sphere_intersect.first;
 
         // Now that we have 3D positions for the pupil (rather than just a
         // projection line), recalculate the pupil radius at that position.
-        auto pupil_radius_at_1 = pupil.circle.radius / pupil.circle.centre.z();
-        auto new_pupil_radius = pupil_radius_at_1 * new_pupil_centre.z();
+        auto pupil_radius_at_1 = pupil.circle.radius / pupil.circle.center.z();
+        auto new_pupil_radius = pupil_radius_at_1 * new_pupil_center.z();
 
         // Parametrise this new pupil position using spherical coordinates
-        Vector3 centre_to_pupil = new_pupil_centre - eye.centre;
-        double r = centre_to_pupil.norm();
-        pupil.params.theta = acos(centre_to_pupil[1] / r);
-        pupil.params.psi = atan2(centre_to_pupil[2], centre_to_pupil[0]);
+        Vector3 center_to_pupil = new_pupil_center - eye.center;
+        double r = center_to_pupil.norm();
+        pupil.params.theta = acos(center_to_pupil[1] / r);
+        pupil.params.psi = atan2(center_to_pupil[2], center_to_pupil[0]);
         pupil.params.radius = new_pupil_radius;
 
         // Update pupil circle to match parameters
@@ -1319,14 +1319,14 @@ const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::
 const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::unproject_single_observation(Pupil& pupil, double pupil_radius /*= 1*/) const
 {
     if (eye == Sphere::Null) {
-        throw std::runtime_error("Need to get eye centre estimate first (by unprojecting multiple observations)");
+        throw std::runtime_error("Need to get eye center estimate first (by unprojecting multiple observations)");
     }
 
     // Single pupil version of "unproject_observations"
 
     auto unprojection_pair = unproject(pupil.observation.ellipse, pupil_radius, focal_length);
 
-    const Vector3& c = unprojection_pair.first.centre;
+    const Vector3& c = unprojection_pair.first.center;
     const Vector3& v = unprojection_pair.first.normal;
 
     Vector2 c_proj = project(c, focal_length);
@@ -1334,9 +1334,9 @@ const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::
 
     v_proj.normalize();
 
-    Vector2 eye_centre_proj = project(eye.centre, focal_length);
+    Vector2 eye_center_proj = project(eye.center, focal_length);
 
-    if ((c_proj - eye_centre_proj).dot(v_proj) >= 0) {
+    if ((c_proj - eye_center_proj).dot(v_proj) >= 0) {
         pupil.circle = std::move(unprojection_pair.first);
     }
     else {
@@ -1361,7 +1361,7 @@ void singleeyefitter::EyeModelFitter::refine_with_inliers(const CallbackFunction
         current_model_version = model_version;
 
         x = Eigen::Matrix<double, Eigen::Dynamic, 1>(3 + 3 * pupils.size());
-        x.segment<3>(0) = eye.centre;
+        x.segment<3>(0) = eye.center;
         for (int i = 0; i < pupils.size(); ++i) {
             const PupilParams& pupil_params = pupils[i].params;
             x.segment<3>(3 + 3 * i)[0] = pupil_params.theta;
@@ -1428,7 +1428,7 @@ void singleeyefitter::EyeModelFitter::refine_with_inliers(const CallbackFunction
             return;
         }
 
-        eye.centre = x.segment<3>(0);
+        eye.center = x.segment<3>(0);
 
         for (int i = 0; i < pupils.size(); ++i) {
             auto&& pupil_param = x.segment<3>(3 + 3 * i);
@@ -1449,7 +1449,7 @@ void singleeyefitter::EyeModelFitter::refine_with_region_contrast(const Callback
         current_model_version = model_version;
 
         x0 = Eigen::Matrix<double, Eigen::Dynamic, 1>(3 + 3 * pupils.size());
-        x0.segment<3>(0) = eye.centre;
+        x0.segment<3>(0) = eye.center;
         for (int i = 0; i < pupils.size(); ++i) {
             const PupilParams& pupil_params = pupils[i].params;
             x0.segment<3>(3 + 3 * i)[0] = pupil_params.theta;
@@ -1514,7 +1514,7 @@ void singleeyefitter::EyeModelFitter::refine_with_region_contrast(const Callback
             return;
         }
 
-        eye.centre = x0.segment<3>(0);
+        eye.center = x0.segment<3>(0);
 
         for (int i = 0; i < (x0.size() - 3) / 3; ++i) {
             auto pupil_param = x0.segment<3>(3 + 3 * i);
@@ -1538,7 +1538,7 @@ void singleeyefitter::EyeModelFitter::initialise_model()
     // circle given the eyeball sphere estimate and gaze vector. Re-estimate
     // the gaze vector to be consistent with this position.
 
-    // First estimate of pupil centre, used only to get an estimate of eye radius
+    // First estimate of pupil center, used only to get an estimate of eye radius
 
     double eye_radius_acc = 0;
     int eye_radius_count = 0;
@@ -1551,21 +1551,21 @@ void singleeyefitter::EyeModelFitter::initialise_model()
             continue;
         }
 
-        // Intersect the gaze from the eye centre with the pupil circle
-        // centre projection line (with perfect estimates of gaze, eye
-        // centre and pupil circle centre, these should intersect,
+        // Intersect the gaze from the eye center with the pupil circle
+        // center projection line (with perfect estimates of gaze, eye
+        // center and pupil circle center, these should intersect,
         // otherwise find the nearest point to both lines)
 
-        Vector3 pupil_centre = nearest_intersect(Line3(eye.centre, pupil.circle.normal),
-            Line3(camera_centre, pupil.circle.centre.normalized()));
+        Vector3 pupil_center = nearest_intersect(Line3(eye.center, pupil.circle.normal),
+            Line3(camera_center, pupil.circle.center.normalized()));
 
-        auto distance = (pupil_centre - eye.centre).norm();
+        auto distance = (pupil_center - eye.center).norm();
 
         eye_radius_acc += distance;
         ++eye_radius_count;
     }
 
-    // Set the eye radius as the mean distance from pupil centres to eye centre
+    // Set the eye radius as the mean distance from pupil centers to eye center
     eye.radius = eye_radius_acc / eye_radius_count;
 
     // Second estimate of pupil radius, used to get position of pupil on eye
@@ -1577,7 +1577,7 @@ void singleeyefitter::EyeModelFitter::initialise_model()
     // Scale eye to anthropomorphic average radius of 12mm
     auto scale = 12.0 / eye.radius;
     eye.radius = 12.0;
-    eye.centre *= scale;
+    eye.center *= scale;
     for (auto& pupil : pupils) {
         pupil.params.radius *= scale;
         pupil.circle = circleFromParams(pupil.params);
@@ -1624,18 +1624,18 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
         //
         // Do a per-image unprojection of the pupil ellipse into the two fixed
         // size circles that would project onto it. The size of the circles
-        // doesn't matter here, only their centre and normal does.
+        // doesn't matter here, only their center and normal does.
         auto unprojection_pair = unproject(pupil.observation.ellipse,
             pupil_radius, focal_length);
 
         // Get projected circles and gaze vectors
         //
-        // Project the circle centres and gaze vectors down back onto the image
+        // Project the circle centers and gaze vectors down back onto the image
         // plane. We're only using them as line parametrisations, so it doesn't
-        // matter which of the two centres/gaze vectors we use, as the
-        // two gazes are parallel and the centres are co-linear.
+        // matter which of the two centers/gaze vectors we use, as the
+        // two gazes are parallel and the centers are co-linear.
 
-        const auto& c = unprojection_pair.first.centre;
+        const auto& c = unprojection_pair.first.center;
         const auto& v = unprojection_pair.first.normal;
 
         Vector2 c_proj = project(c, focal_length);
@@ -1648,7 +1648,7 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
     }
 
 
-    // Get eyeball centre
+    // Get eyeball center
     //
     // Find a least-squares 'intersection' (point nearest to all lines) of
     // the projected 2D gaze vectors. Then, unproject that circle onto a
@@ -1659,7 +1659,7 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
     // (This has to be done here because it's used by the pupil circle
     // disambiguation)
 
-    Vector2 eye_centre_proj;
+    Vector2 eye_center_proj;
     bool valid_eye;
 
     if (use_ransac) {
@@ -1688,17 +1688,17 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
         auto error = m_error;
 
         auto best_inlier_indices = decltype(indices)();
-        Vector2 best_eye_centre_proj;// = nearest_intersect(pupil_gazelines_proj);
-        double best_line_distance_error = std::numeric_limits<double>::infinity();// = fun::sum(LAMBDA(const Line& line)(error(best_eye_centre_proj,line)), pupil_gazelines_proj);
+        Vector2 best_eye_center_proj;// = nearest_intersect(pupil_gazelines_proj);
+        double best_line_distance_error = std::numeric_limits<double>::infinity();// = fun::sum(LAMBDA(const Line& line)(error(best_eye_center_proj,line)), pupil_gazelines_proj);
 
         for (int i = 0; i < k; ++i) {
             auto index_sample = singleeyefitter::randomSubset(indices, n);
             auto sample = fun::map([&](size_t i){ return pupil_gazelines_proj[i]; }, index_sample);
 
-            auto sample_centre_proj = nearest_intersect(sample);
+            auto sample_center_proj = nearest_intersect(sample);
 
             auto index_inliers = fun::filter(
-                [&](size_t i){ return euclidean_distance(sample_centre_proj, pupil_gazelines_proj[i]) < epsilon; },
+                [&](size_t i){ return euclidean_distance(sample_center_proj, pupil_gazelines_proj[i]) < epsilon; },
                 indices);
             auto inliers = fun::map([&](size_t i){ return pupil_gazelines_proj[i]; }, index_inliers);
 
@@ -1706,14 +1706,14 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
                 continue;
             }
 
-            auto inlier_centre_proj = nearest_intersect(inliers);
+            auto inlier_center_proj = nearest_intersect(inliers);
 
             double line_distance_error = fun::sum(
-                [&](size_t i){ return error(inlier_centre_proj, pupil_gazelines_proj[i]); },
+                [&](size_t i){ return error(inlier_center_proj, pupil_gazelines_proj[i]); },
                 indices);
 
             if (line_distance_error < best_line_distance_error) {
-                best_eye_centre_proj = inlier_centre_proj;
+                best_eye_center_proj = inlier_center_proj;
                 best_line_distance_error = line_distance_error;
                 best_inlier_indices = std::move(index_inliers);
             }
@@ -1732,7 +1732,7 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
         }
 
         if (best_inlier_indices.size() > 0) {
-            eye_centre_proj = best_eye_centre_proj;
+            eye_center_proj = best_eye_center_proj;
             valid_eye = true;
         }
         else {
@@ -1743,19 +1743,19 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
         for (auto& pupil : pupils) {
             pupil.init_valid = true;
         }
-        eye_centre_proj = nearest_intersect(pupil_gazelines_proj);
+        eye_center_proj = nearest_intersect(pupil_gazelines_proj);
         valid_eye = true;
     }
 
     if (valid_eye) {
-        eye.centre << eye_centre_proj * eye_z / focal_length,
+        eye.center << eye_center_proj * eye_z / focal_length,
             eye_z;
         eye.radius = 1;
 
-        // Disambiguate pupil circles using projected eyeball centre
+        // Disambiguate pupil circles using projected eyeball center
         //
-        // Assume that the gaze vector points away from the eye centre, and
-        // so projected gaze points away from projected eye centre. Pick the
+        // Assume that the gaze vector points away from the eye center, and
+        // so projected gaze points away from projected eye center. Pick the
         // solution which satisfies this assumption
         for (size_t i = 0; i < pupils.size(); ++i) {
             const auto& pupil_pair = pupil_unprojection_pairs[i];
@@ -1764,11 +1764,11 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
             const auto& c_proj = line.origin();
             const auto& v_proj = line.direction();
 
-            // Check if v_proj going away from est eye centre. If it is, then
+            // Check if v_proj going away from est eye center. If it is, then
             // the first circle was correct. Otherwise, take the second one.
             // The two normals will point in opposite directions, so only need
             // to check one.
-            if ((c_proj - eye_centre_proj).dot(v_proj) >= 0) {
+            if ((c_proj - eye_center_proj).dot(v_proj) >= 0) {
                 pupils[i].circle = std::move(pupil_pair.first);
             }
             else {

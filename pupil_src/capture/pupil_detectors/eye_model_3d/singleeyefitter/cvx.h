@@ -23,9 +23,9 @@ namespace cvx
         return cv::Rect_<T>(x - radius, y - radius, 2*radius + 1, 2*radius + 1);
     }
     template<typename T>
-    inline cv::Rect_<T> roiAround(const cv::Point_<T>& centre, T radius)
+    inline cv::Rect_<T> roiAround(const cv::Point_<T>& center, T radius)
     {
-        return roiAround(centre.x, centre.y, radius);
+        return roiAround(center.x, center.y, radius);
     }
 
 
@@ -37,26 +37,26 @@ namespace cvx
         return dst;
     }
 
-    inline void cross(cv::Mat& img, cv::Point2f centre, double radius, const cv::Scalar& colour, int thickness = 1, int lineType = CV_AA, int shift = 8)
+    inline void cross(cv::Mat& img, cv::Point2f center, double radius, const cv::Scalar& colour, int thickness = 1, int lineType = CV_AA, int shift = 8)
     {
-        cvx::line(img, centre + cv::Point2f(-radius, -radius), centre + cv::Point2f(radius, radius), colour, thickness, lineType, shift);
-        cvx::line(img, centre + cv::Point2f(-radius, radius), centre + cv::Point2f(radius, -radius), colour, thickness, lineType, shift);
+        cvx::line(img, center + cv::Point2f(-radius, -radius), center + cv::Point2f(radius, radius), colour, thickness, lineType, shift);
+        cvx::line(img, center + cv::Point2f(-radius, radius), center + cv::Point2f(radius, -radius), colour, thickness, lineType, shift);
     }
-    inline void plus(cv::Mat& img, cv::Point2f centre, double radius, const cv::Scalar& colour, int thickness = 1, int lineType = CV_AA, int shift = 8)
+    inline void plus(cv::Mat& img, cv::Point2f center, double radius, const cv::Scalar& colour, int thickness = 1, int lineType = CV_AA, int shift = 8)
     {
-        cvx::line(img, centre + cv::Point2f(0, -radius), centre + cv::Point2f(0, radius), colour, thickness, lineType, shift);
-        cvx::line(img, centre + cv::Point2f(-radius, 0), centre + cv::Point2f(radius, 0), colour, thickness, lineType, shift);
+        cvx::line(img, center + cv::Point2f(0, -radius), center + cv::Point2f(0, radius), colour, thickness, lineType, shift);
+        cvx::line(img, center + cv::Point2f(-radius, 0), center + cv::Point2f(radius, 0), colour, thickness, lineType, shift);
     }
 
-    /*inline void cross(cv::Mat& img, cv::Point centre, int radius, const cv::Scalar& colour, int thickness = 1, int lineType = 8, int shift = 0)
+    /*inline void cross(cv::Mat& img, cv::Point center, int radius, const cv::Scalar& colour, int thickness = 1, int lineType = 8, int shift = 0)
     {
-        cv::line(img, centre + cv::Point(-radius, -radius), centre + cv::Point(radius, radius), colour, thickness, lineType, shift);
-        cv::line(img, centre + cv::Point(-radius, radius), centre + cv::Point(radius, -radius), colour, thickness, lineType, shift);
+        cv::line(img, center + cv::Point(-radius, -radius), center + cv::Point(radius, radius), colour, thickness, lineType, shift);
+        cv::line(img, center + cv::Point(-radius, radius), center + cv::Point(radius, -radius), colour, thickness, lineType, shift);
     }
-    inline void plus(cv::Mat& img, cv::Point centre, int radius, const cv::Scalar& colour, int thickness = 1, int lineType = 8, int shift = 0)
+    inline void plus(cv::Mat& img, cv::Point center, int radius, const cv::Scalar& colour, int thickness = 1, int lineType = 8, int shift = 0)
     {
-        cv::line(img, centre + cv::Point(0, -radius), centre + cv::Point(0, radius), colour, thickness, lineType, shift);
-        cv::line(img, centre + cv::Point(-radius, 0), centre + cv::Point(radius, 0), colour, thickness, lineType, shift);
+        cv::line(img, center + cv::Point(0, -radius), center + cv::Point(0, radius), colour, thickness, lineType, shift);
+        cv::line(img, center + cv::Point(-radius, 0), center + cv::Point(radius, 0), colour, thickness, lineType, shift);
     }*/
 
     inline cv::Rect boundingBox(const cv::Mat& img)
@@ -66,7 +66,7 @@ namespace cvx
 
     void getROI(const cv::Mat& src, cv::Mat& dst, const cv::Rect& roi, int borderType = cv::BORDER_REPLICATE);
 
-    float histKmeans(const cv::Mat_<float>& hist, int bin_min, int bin_max, int K, float init_centres[], cv::Mat_<uchar>& labels, cv::TermCriteria termCriteria);
+    float histKmeans(const cv::Mat_<float>& hist, int bin_min, int bin_max, int K, float init_centers[], cv::Mat_<uchar>& labels, cv::TermCriteria termCriteria);
 
     cv::RotatedRect fitEllipse(const cv::Moments& m);
     cv::Vec2f majorAxis(const cv::RotatedRect& ellipse);
