@@ -201,9 +201,6 @@ def world(g_pool,cap_src,cap_size):
     g_pool.sidebar.append(general_settings)
 
     g_pool.calibration_menu = ui.Growing_Menu('Calibration')
-    g_pool.calibration_menu.append(ui.Selector('active_calibration_plugin',getter=lambda: g_pool.active_calibration_plugin.__class__, selection = calibration_plugins,
-                                        labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
-                                        setter= open_plugin,label='Method'))
     g_pool.sidebar.append(g_pool.calibration_menu)
     g_pool.gui.append(g_pool.sidebar)
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
@@ -215,6 +212,10 @@ def world(g_pool,cap_src,cap_size):
     g_pool.notifications = []
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
 
+    #We add the calibration menu selector, after a calibration has been added:
+    g_pool.calibration_menu.insert(0,ui.Selector('active_calibration_plugin',getter=lambda: g_pool.active_calibration_plugin.__class__, selection = calibration_plugins,
+                                        labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
+                                        setter= open_plugin,label='Method'))
 
     # Register callbacks main_window
     glfwSetFramebufferSizeCallback(main_window,on_resize)

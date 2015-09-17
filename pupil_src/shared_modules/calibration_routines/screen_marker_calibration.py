@@ -89,7 +89,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.candidate_ellipses = []
         self.pos = None
 
-        self.show_edges = 0
         self.dist_threshold = 5
         self.area_threshold = 20
         self.marker_scale = marker_scale
@@ -125,15 +124,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.g_pool.calibration_menu.append(self.menu)
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
-        self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Pattern scale'))
-
-        submenu = ui.Growing_Menu('Advanced')
-        self.menu.append(submenu)
-        submenu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
-        submenu.append(ui.Switch('show_edges',self,label='show edges'))
-        submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area threshold'))
-        submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity threshold'))
-
+        self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
+        self.menu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
 
         self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
@@ -267,7 +259,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                                                             area_threshold=self.area_threshold,
                                                             dist_threshold=self.dist_threshold,
                                                             min_ring_count=4,
-                                                            visual_debug=self.show_edges)
+                                                            visual_debug=False)
 
             if len(self.candidate_ellipses) > 0:
                 self.detected= True
