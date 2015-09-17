@@ -323,7 +323,8 @@ class Audio_Capture(object):
 
     def stop(self):
         self.should_close.set()
-        self.process.join()
+        self.process.join(timeout=1)
+        self.process.terminate()
         self.process = None
 
     def close(self):
@@ -367,7 +368,7 @@ if __name__ == '__main__':
         pass
     logging.basicConfig(level=logging.DEBUG)
 
-    cap = Audio_Capture('test.wav',0)
+    cap = Audio_Capture('test.wav',1)
 
     import time
     time.sleep(20)
