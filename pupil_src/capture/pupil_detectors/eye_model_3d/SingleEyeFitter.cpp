@@ -1050,7 +1050,7 @@ struct PupilAnthroTerm : public spii::Term {
 const EyeModelFitter::Vector3 EyeModelFitter::camera_center = EyeModelFitter::Vector3::Zero();
 
 
-EyeModelFitter::Pupil::Pupil(Observation observation) : observation(observation), params(0, 0, 0)
+EyeModelFitter::Pupil::Pupil(Ellipse ellipse) : ellipse(ellipse), params(0, 0, 0)
 {
 
 }
@@ -1072,15 +1072,15 @@ EyeModelFitter::PupilParams::PupilParams() : theta(0), psi(0), radius(0)
 }
 
 
-EyeModelFitter::Observation::Observation(/*cv::Mat image, */Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/) :/* image(std::move(image)),*/ ellipse(std::move(ellipse))/*, inliers(std::move(inliers)*/)
-{
+// EyeModelFitter::Observation::Observation(/*cv::Mat image, */Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/) : image(std::move(image)), ellipse(std::move(ellipse))/*, inliers(std::move(inliers)*/)
+// {
 
-}
+// }
 
-EyeModelFitter::Observation::Observation()
-{
+// EyeModelFitter::Observation::Observation()
+// {
 
-}
+// }
 
 }
 
@@ -1126,7 +1126,8 @@ singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_obse
     std::lock_guard<std::mutex> lock_model(model_mutex);
 
     pupils.emplace_back(
-        Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/)
+        //Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/)
+        pupil
         );
     return pupils.size() - 1;}
 
@@ -1154,108 +1155,108 @@ singleeyefitter::EyeModelFitter::Circle singleeyefitter::EyeModelFitter::circleF
     return circleFromParams(eye, params);
 }
 
-void singleeyefitter::EyeModelFitter::print_single_contrast_metric(const Pupil& pupil) const
-{
-    if (!pupil.circle) {
-        std::cout << "No pupil" << std::endl;
-        return;
-    }
+// void singleeyefitter::EyeModelFitter::print_single_contrast_metric(const Pupil& pupil) const
+// {
+//     if (!pupil.circle) {
+//         std::cout << "No pupil" << std::endl;
+//         return;
+//     }
 
-    double params[3];
-    params[0] = pupil.params.theta;
-    params[1] = pupil.params.psi;
-    params[2] = pupil.params.radius;
-    double* vars[1];
-    vars[0] = params;
+//     double params[3];
+//     params[0] = pupil.params.theta;
+//     params[1] = pupil.params.psi;
+//     params[2] = pupil.params.radius;
+//     double* vars[1];
+//     vars[0] = params;
 
-    std::vector<Eigen::VectorXd> gradient;
-    gradient.push_back(Eigen::VectorXd::Zero(3));
+//     std::vector<Eigen::VectorXd> gradient;
+//     gradient.push_back(Eigen::VectorXd::Zero(3));
 
-    PupilContrastTerm<false> contrast_term(
-        eye,
-        focal_length * region_scale,
-        cvx::resize(pupil.observation.image, region_scale),
-        region_band_width,
-        region_step_epsilon);
+//     PupilContrastTerm<false> contrast_term(
+//         eye,
+//         focal_length * region_scale,
+//         cvx::resize(pupil.observation.image, region_scale),
+//         region_band_width,
+//         region_step_epsilon);
 
-    double contrast_val = contrast_term.evaluate(vars, &gradient);
+//     double contrast_val = contrast_term.evaluate(vars, &gradient);
 
-    std::cout << "Contrast term: " << contrast_val << std::endl;
-    std::cout << "     gradient: [ " << gradient[0].transpose() << " ]" << std::endl;
-}
+//     std::cout << "Contrast term: " << contrast_val << std::endl;
+//     std::cout << "     gradient: [ " << gradient[0].transpose() << " ]" << std::endl;
+// }
 
-void singleeyefitter::EyeModelFitter::print_single_contrast_metric(Index id) const
-{
-    print_single_contrast_metric(pupils[id]);
-}
+// void singleeyefitter::EyeModelFitter::print_single_contrast_metric(Index id) const
+// {
+//     print_single_contrast_metric(pupils[id]);
+// }
 
-double singleeyefitter::EyeModelFitter::single_contrast_metric(const Pupil& pupil) const
-{
-    if (!pupil.circle) {
-        std::cout << "No pupil" << std::endl;
-        return 0;
-    }
+// double singleeyefitter::EyeModelFitter::single_contrast_metric(const Pupil& pupil) const
+// {
+//     if (!pupil.circle) {
+//         std::cout << "No pupil" << std::endl;
+//         return 0;
+//     }
 
-    double params[3];
-    params[0] = pupil.params.theta;
-    params[1] = pupil.params.psi;
-    params[2] = pupil.params.radius;
-    double* vars[1];
-    vars[0] = params;
+//     double params[3];
+//     params[0] = pupil.params.theta;
+//     params[1] = pupil.params.psi;
+//     params[2] = pupil.params.radius;
+//     double* vars[1];
+//     vars[0] = params;
 
-    PupilContrastTerm<false> contrast_term(
-        eye,
-        focal_length * region_scale,
-        cvx::resize(pupil.observation.image, region_scale),
-        region_band_width,
-        region_step_epsilon);
+//     PupilContrastTerm<false> contrast_term(
+//         eye,
+//         focal_length * region_scale,
+//         cvx::resize(pupil.observation.image, region_scale),
+//         region_band_width,
+//         region_step_epsilon);
 
-    double contrast_val = contrast_term.evaluate(vars);
+//     double contrast_val = contrast_term.evaluate(vars);
 
-    return contrast_val;
-}
+//     return contrast_val;
+// }
 
-double singleeyefitter::EyeModelFitter::single_contrast_metric(Index id) const
-{
-    return single_contrast_metric(pupils[id]);
-}
+// double singleeyefitter::EyeModelFitter::single_contrast_metric(Index id) const
+// {
+//     return single_contrast_metric(pupils[id]);
+// }
 
-const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::refine_single_with_contrast(Pupil& pupil)
-{
-    if (!pupil.circle)
-        return pupil.circle;
+// const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::refine_single_with_contrast(Pupil& pupil)
+// {
+//     if (!pupil.circle)
+//         return pupil.circle;
 
-    double params[3];
-    params[0] = pupil.params.theta;
-    params[1] = pupil.params.psi;
-    params[2] = pupil.params.radius;
+//     double params[3];
+//     params[0] = pupil.params.theta;
+//     params[1] = pupil.params.psi;
+//     params[2] = pupil.params.radius;
 
-    spii::Function f;
-    f.add_variable(&params[0], 3);
-    f.add_term(std::make_shared<PupilContrastTerm<false>>(
-        eye,
-        focal_length * region_scale,
-        cvx::resize(pupil.observation.image, region_scale),
-        region_band_width,
-        region_step_epsilon), &params[0]);
+//     spii::Function f;
+//     f.add_variable(&params[0], 3);
+//     f.add_term(std::make_shared<PupilContrastTerm<false>>(
+//         eye,
+//         focal_length * region_scale,
+//         cvx::resize(pupil.observation.image, region_scale),
+//         region_band_width,
+//         region_step_epsilon), &params[0]);
 
-    spii::LBFGSSolver solver;
-    solver.log_function = [](const std::string&) {};
-    //solver.function_improvement_tolerance = 1e-5;
-    spii::SolverResults results;
-    solver.solve(f, &results);
-    //std::cout << results << std::endl;
+//     spii::LBFGSSolver solver;
+//     solver.log_function = [](const std::string&) {};
+//     //solver.function_improvement_tolerance = 1e-5;
+//     spii::SolverResults results;
+//     solver.solve(f, &results);
+//     //std::cout << results << std::endl;
 
-    pupil.params = PupilParams(params[0], params[1], params[2]);
-    pupil.circle = circleFromParams(pupil.params);
+//     pupil.params = PupilParams(params[0], params[1], params[2]);
+//     pupil.circle = circleFromParams(pupil.params);
 
-    return pupil.circle;
-}
+//     return pupil.circle;
+// }
 
-const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::refine_single_with_contrast(Index id)
-{
-    return refine_single_with_contrast(pupils[id]);
-}
+// const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::refine_single_with_contrast(Index id)
+// {
+//     return refine_single_with_contrast(pupils[id]);
+// }
 
 const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::initialise_single_observation(Pupil& pupil)
 {
@@ -1324,7 +1325,7 @@ const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::
 
     // Single pupil version of "unproject_observations"
 
-    auto unprojection_pair = unproject(pupil.observation.ellipse, pupil_radius, focal_length);
+    auto unprojection_pair = unproject(pupil.ellipse, pupil_radius, focal_length);
 
     const Vector3& c = unprojection_pair.first.center;
     const Vector3& v = unprojection_pair.first.normal;
@@ -1351,178 +1352,178 @@ const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::
     return unproject_single_observation(pupils[id], pupil_radius);
 }
 
-void singleeyefitter::EyeModelFitter::refine_with_inliers(const CallbackFunction& callback /*= CallbackFunction()*/)
-{
-    int current_model_version;
-    Eigen::Matrix<double, Eigen::Dynamic, 1> x;
-    {
-        std::lock_guard<std::mutex> lock_model(model_mutex);
+// void singleeyefitter::EyeModelFitter::refine_with_inliers(const CallbackFunction& callback /*= CallbackFunction()*/)
+// {
+//     int current_model_version;
+//     Eigen::Matrix<double, Eigen::Dynamic, 1> x;
+//     {
+//         std::lock_guard<std::mutex> lock_model(model_mutex);
 
-        current_model_version = model_version;
+//         current_model_version = model_version;
 
-        x = Eigen::Matrix<double, Eigen::Dynamic, 1>(3 + 3 * pupils.size());
-        x.segment<3>(0) = eye.center;
-        for (int i = 0; i < pupils.size(); ++i) {
-            const PupilParams& pupil_params = pupils[i].params;
-            x.segment<3>(3 + 3 * i)[0] = pupil_params.theta;
-            x.segment<3>(3 + 3 * i)[1] = pupil_params.psi;
-            x.segment<3>(3 + 3 * i)[2] = pupil_params.radius;
-        }
-    }
+//         x = Eigen::Matrix<double, Eigen::Dynamic, 1>(3 + 3 * pupils.size());
+//         x.segment<3>(0) = eye.center;
+//         for (int i = 0; i < pupils.size(); ++i) {
+//             const PupilParams& pupil_params = pupils[i].params;
+//             x.segment<3>(3 + 3 * i)[0] = pupil_params.theta;
+//             x.segment<3>(3 + 3 * i)[1] = pupil_params.psi;
+//             x.segment<3>(3 + 3 * i)[2] = pupil_params.radius;
+//         }
+//     }
 
-    ceres::Problem problem;
-    for (int i = 0; i < pupils.size(); ++i) {
-        const cv::Mat& eye_image = pupils[i].observation.image;
-        const auto& pupil_inliers = pupils[i].observation.inliers;
+//     ceres::Problem problem;
+//     for (int i = 0; i < pupils.size(); ++i) {
+//         const cv::Mat& eye_image = pupils[i].observation.image;
+//         const auto& pupil_inliers = pupils[i].observation.inliers;
 
-        problem.AddResidualBlock(
-            new ceres::AutoDiffCostFunction<EllipseDistanceResidualFunction<double>, ceres::DYNAMIC, 3, 3>(
-            new EllipseDistanceResidualFunction<double>(eye_image, pupil_inliers, eye.radius, focal_length),
-            pupil_inliers.size()
-            ),
-            NULL, &x[0], &x[3 + 3 * i]);
-    }
+//         problem.AddResidualBlock(
+//             new ceres::AutoDiffCostFunction<EllipseDistanceResidualFunction<double>, ceres::DYNAMIC, 3, 3>(
+//             new EllipseDistanceResidualFunction<double>(eye_image, pupil_inliers, eye.radius, focal_length),
+//             pupil_inliers.size()
+//             ),
+//             NULL, &x[0], &x[3 + 3 * i]);
+//     }
 
-    ceres::Solver::Options options;
-    options.linear_solver_type = ceres::DENSE_SCHUR;
-    options.max_num_iterations = 1000;
-    options.function_tolerance = 1e-10;
-    options.minimizer_progress_to_stdout = true;
-    options.update_state_every_iteration = true;
-    if (callback) {
-        struct CallCallbackWrapper : public ceres::IterationCallback
-        {
-            double eye_radius;
-            const CallbackFunction& callback;
-            const Eigen::Matrix<double, Eigen::Dynamic, 1>& x;
+//     ceres::Solver::Options options;
+//     options.linear_solver_type = ceres::DENSE_SCHUR;
+//     options.max_num_iterations = 1000;
+//     options.function_tolerance = 1e-10;
+//     options.minimizer_progress_to_stdout = true;
+//     options.update_state_every_iteration = true;
+//     if (callback) {
+//         struct CallCallbackWrapper : public ceres::IterationCallback
+//         {
+//             double eye_radius;
+//             const CallbackFunction& callback;
+//             const Eigen::Matrix<double, Eigen::Dynamic, 1>& x;
 
-            CallCallbackWrapper(const EyeModelFitter& fitter, const CallbackFunction& callback, const Eigen::Matrix<double, Eigen::Dynamic, 1>& x)
-                : eye_radius(fitter.eye.radius), callback(callback), x(x) {}
+//             CallCallbackWrapper(const EyeModelFitter& fitter, const CallbackFunction& callback, const Eigen::Matrix<double, Eigen::Dynamic, 1>& x)
+//                 : eye_radius(fitter.eye.radius), callback(callback), x(x) {}
 
-            virtual ceres::CallbackReturnType operator() (const ceres::IterationSummary& summary) {
-                Eigen::Matrix<double, 3, 1> eye_pos(x[0], x[1], x[2]);
-                Sphere eye(eye_pos, eye_radius);
+//             virtual ceres::CallbackReturnType operator() (const ceres::IterationSummary& summary) {
+//                 Eigen::Matrix<double, 3, 1> eye_pos(x[0], x[1], x[2]);
+//                 Sphere eye(eye_pos, eye_radius);
 
-                std::vector<Circle> pupils;
-                for (int i = 0; i < (x.size() - 3)/3; ++i) {
-                    auto&& pupil_param_v = x.segment<3>(3 + 3 * i);
-                    pupils.push_back(EyeModelFitter::circleFromParams(eye, PupilParams(pupil_param_v[0], pupil_param_v[1], pupil_param_v[2])));
-                }
+//                 std::vector<Circle> pupils;
+//                 for (int i = 0; i < (x.size() - 3)/3; ++i) {
+//                     auto&& pupil_param_v = x.segment<3>(3 + 3 * i);
+//                     pupils.push_back(EyeModelFitter::circleFromParams(eye, PupilParams(pupil_param_v[0], pupil_param_v[1], pupil_param_v[2])));
+//                 }
 
-                callback(eye, pupils);
+//                 callback(eye, pupils);
 
-                return ceres::SOLVER_CONTINUE;
-            }
-        };
-        options.callbacks.push_back(new CallCallbackWrapper(*this, callback, x));
-    }
-    ceres::Solver::Summary summary;
-    ceres::Solve(options, &problem, &summary);
-    std::cout << summary.BriefReport() << "\n";
+//                 return ceres::SOLVER_CONTINUE;
+//             }
+//         };
+//         options.callbacks.push_back(new CallCallbackWrapper(*this, callback, x));
+//     }
+//     ceres::Solver::Summary summary;
+//     ceres::Solve(options, &problem, &summary);
+//     std::cout << summary.BriefReport() << "\n";
 
-    {
-        std::lock_guard<std::mutex> lock_model(model_mutex);
+//     {
+//         std::lock_guard<std::mutex> lock_model(model_mutex);
 
-        if (current_model_version != model_version)    {
-            std::cout << "Old model, not applying refined parameters" << std::endl;
-            return;
-        }
+//         if (current_model_version != model_version)    {
+//             std::cout << "Old model, not applying refined parameters" << std::endl;
+//             return;
+//         }
 
-        eye.center = x.segment<3>(0);
+//         eye.center = x.segment<3>(0);
 
-        for (int i = 0; i < pupils.size(); ++i) {
-            auto&& pupil_param = x.segment<3>(3 + 3 * i);
-            pupils[i].params = PupilParams(pupil_param[0], pupil_param[1], pupil_param[2]);
-            pupils[i].circle = circleFromParams(eye, pupils[i].params);
-        }
-    }
-}
+//         for (int i = 0; i < pupils.size(); ++i) {
+//             auto&& pupil_param = x.segment<3>(3 + 3 * i);
+//             pupils[i].params = PupilParams(pupil_param[0], pupil_param[1], pupil_param[2]);
+//             pupils[i].circle = circleFromParams(eye, pupils[i].params);
+//         }
+//     }
+// }
 
-void singleeyefitter::EyeModelFitter::refine_with_region_contrast(const CallbackFunction& callback /*= CallbackFunction()*/)
-{
-    int current_model_version;
-    Eigen::Matrix<double, Eigen::Dynamic, 1> x0;
-    spii::Function f;
-    {
-        std::lock_guard<std::mutex> lock_model(model_mutex);
+// void singleeyefitter::EyeModelFitter::refine_with_region_contrast(const CallbackFunction& callback /*= CallbackFunction()*/)
+// {
+//     int current_model_version;
+//     Eigen::Matrix<double, Eigen::Dynamic, 1> x0;
+//     spii::Function f;
+//     {
+//         std::lock_guard<std::mutex> lock_model(model_mutex);
 
-        current_model_version = model_version;
+//         current_model_version = model_version;
 
-        x0 = Eigen::Matrix<double, Eigen::Dynamic, 1>(3 + 3 * pupils.size());
-        x0.segment<3>(0) = eye.center;
-        for (int i = 0; i < pupils.size(); ++i) {
-            const PupilParams& pupil_params = pupils[i].params;
-            x0.segment<3>(3 + 3 * i)[0] = pupil_params.theta;
-            x0.segment<3>(3 + 3 * i)[1] = pupil_params.psi;
-            x0.segment<3>(3 + 3 * i)[2] = pupil_params.radius;
-        }
+//         x0 = Eigen::Matrix<double, Eigen::Dynamic, 1>(3 + 3 * pupils.size());
+//         x0.segment<3>(0) = eye.center;
+//         for (int i = 0; i < pupils.size(); ++i) {
+//             const PupilParams& pupil_params = pupils[i].params;
+//             x0.segment<3>(3 + 3 * i)[0] = pupil_params.theta;
+//             x0.segment<3>(3 + 3 * i)[1] = pupil_params.psi;
+//             x0.segment<3>(3 + 3 * i)[2] = pupil_params.radius;
+//         }
 
-        f.add_variable(&x0[0], 3);
-        for (int i = 0; i < pupils.size(); ++i) {
-            if (pupils[i].circle) {
-                f.add_variable(&x0[3 + 3 * i], 3);
+//         f.add_variable(&x0[0], 3);
+//         for (int i = 0; i < pupils.size(); ++i) {
+//             if (pupils[i].circle) {
+//                 f.add_variable(&x0[3 + 3 * i], 3);
 
-                f.add_term(
-                    std::make_shared<PupilContrastTerm<true>>(
-                    eye,
-                    focal_length * region_scale,
-                    cvx::resize(pupils[i].observation.image, region_scale),
-                    region_band_width,
-                    region_step_epsilon),
-                    &x0[0], &x0[3 + 3 * i]);
-                //f.add_term(std::make_shared<PupilAnthroTerm>(2.5, 1, 0.001), &x0[3+3*i]);
+//                 f.add_term(
+//                     std::make_shared<PupilContrastTerm<true>>(
+//                     eye,
+//                     focal_length * region_scale,
+//                     cvx::resize(pupils[i].observation.image, region_scale),
+//                     region_band_width,
+//                     region_step_epsilon),
+//                     &x0[0], &x0[3 + 3 * i]);
+//                 //f.add_term(std::make_shared<PupilAnthroTerm>(2.5, 1, 0.001), &x0[3+3*i]);
 
-                /*if (i == 0 || !pupils[i-1].circle) {
-                } else {
-                vars.push_back(&x0[3+3*(i-1)]);
-                f.add_term(std::make_shared<SinglePupilTerm<true,true,true>>(*this, pupils[i].observation.image), vars);
-                }*/
-            }
-        }
-    }
+//                 /*if (i == 0 || !pupils[i-1].circle) {
+//                 } else {
+//                 vars.push_back(&x0[3+3*(i-1)]);
+//                 f.add_term(std::make_shared<SinglePupilTerm<true,true,true>>(*this, pupils[i].observation.image), vars);
+//                 }*/
+//             }
+//         }
+//     }
 
-    spii::LBFGSSolver solver;
-    solver.maximum_iterations = 1000;
-    solver.function_improvement_tolerance = 1e-5;
-    spii::SolverResults results;
-    if (callback) {
-        double eye_radius = eye.radius;
-        solver.callback_function = [eye_radius, &callback](const spii::CallbackInformation& info) {
-            auto& x = *info.x;
+//     spii::LBFGSSolver solver;
+//     solver.maximum_iterations = 1000;
+//     solver.function_improvement_tolerance = 1e-5;
+//     spii::SolverResults results;
+//     if (callback) {
+//         double eye_radius = eye.radius;
+//         solver.callback_function = [eye_radius, &callback](const spii::CallbackInformation& info) {
+//             auto& x = *info.x;
 
-            Eigen::Matrix<double, 3, 1> eye_pos(x(0), x(1), x(2));
-            Sphere eye(eye_pos, eye_radius);
+//             Eigen::Matrix<double, 3, 1> eye_pos(x(0), x(1), x(2));
+//             Sphere eye(eye_pos, eye_radius);
 
-            std::vector<Circle> pupils;
-            for (int i = 0; i < (x.size() - 3) / 3; ++i) {
-                pupils.push_back(EyeModelFitter::circleFromParams(eye, PupilParams(x(3 + 3 * i + 0), x(3 + 3 * i + 1), x(3 + 3 * i + 2))));
-            }
+//             std::vector<Circle> pupils;
+//             for (int i = 0; i < (x.size() - 3) / 3; ++i) {
+//                 pupils.push_back(EyeModelFitter::circleFromParams(eye, PupilParams(x(3 + 3 * i + 0), x(3 + 3 * i + 1), x(3 + 3 * i + 2))));
+//             }
 
-            callback(eye, pupils);
+//             callback(eye, pupils);
 
-            return true;
-        };
-    }
-    solver.solve(f, &results);
-    std::cout << results << std::endl;
+//             return true;
+//         };
+//     }
+//     solver.solve(f, &results);
+//     std::cout << results << std::endl;
 
-    {
-        std::lock_guard<std::mutex> lock_model(model_mutex);
+//     {
+//         std::lock_guard<std::mutex> lock_model(model_mutex);
 
-        if (current_model_version != model_version)    {
-            std::cout << "Old model, not applying refined parameters" << std::endl;
-            return;
-        }
+//         if (current_model_version != model_version)    {
+//             std::cout << "Old model, not applying refined parameters" << std::endl;
+//             return;
+//         }
 
-        eye.center = x0.segment<3>(0);
+//         eye.center = x0.segment<3>(0);
 
-        for (int i = 0; i < (x0.size() - 3) / 3; ++i) {
-            auto pupil_param = x0.segment<3>(3 + 3 * i);
-            pupils[i].params = PupilParams(pupil_param[0], pupil_param[1], pupil_param[2]);
-            pupils[i].circle = circleFromParams(pupils[i].params);
-        }
-    }
-}
+//         for (int i = 0; i < (x0.size() - 3) / 3; ++i) {
+//             auto pupil_param = x0.segment<3>(3 + 3 * i);
+//             pupils[i].params = PupilParams(pupil_param[0], pupil_param[1], pupil_param[2]);
+//             pupils[i].circle = circleFromParams(pupils[i].params);
+//         }
+//     }
+// }
 
 void singleeyefitter::EyeModelFitter::initialise_model()
 {
@@ -1625,7 +1626,7 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
         // Do a per-image unprojection of the pupil ellipse into the two fixed
         // size circles that would project onto it. The size of the circles
         // doesn't matter here, only their center and normal does.
-        auto unprojection_pair = unproject(pupil.observation.ellipse,
+        auto unprojection_pair = unproject(pupil.ellipse,
             pupil_radius, focal_length);
 
         // Get projected circles and gaze vectors

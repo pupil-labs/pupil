@@ -88,27 +88,28 @@ namespace singleeyefitter {
         void refine_with_inliers(const CallbackFunction& callback = CallbackFunction());
 
 
-        struct Observation {
-            //cv::Mat image;
-            Ellipse ellipse;
-            //std::vector<cv::Point2f> inliers;
+        // struct Observation {
+        //     //cv::Mat image;
+        //     Ellipse ellipse;
+        //     //std::vector<cv::Point2f> inliers;
 
-            Observation();
-            Observation(/*cv::Mat image,*/ Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/);
-        };
+        //     Observation();
+        //     Observation(/*cv::Mat image,*/ Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/);
+        // };
         struct PupilParams {
             double theta, psi, radius;
             PupilParams();
             PupilParams(double theta, double psi, double radius);
         };
         struct Pupil {
-            Observation observation;
+            Ellipse ellipse;
             Circle circle;
             PupilParams params;
             bool init_valid;
 
             Pupil();
-            Pupil(Observation observation);
+           // Pupil(Observation observation);
+            Pupil(Ellipse ellipse);
         };
 
         //
@@ -116,9 +117,9 @@ namespace singleeyefitter {
         //
         const Circle& unproject_single_observation(Index id, double pupil_radius = 1);
         const Circle& initialise_single_observation(Index id);
-        const Circle& refine_single_with_contrast(Index id);
-        double single_contrast_metric(Index id) const;
-        void print_single_contrast_metric(Index id) const;
+        //const Circle& refine_single_with_contrast(Index id);
+        //double single_contrast_metric(Index id) const;
+        //void print_single_contrast_metric(Index id) const;
 
         Sphere eye;
         std::vector<Pupil> pupils;
@@ -126,11 +127,11 @@ namespace singleeyefitter {
         // Model version gets incremented on initialisation/reset, so that long-running background-thread refines don't overwrite the model
         int model_version = 0;
 
-        const Circle& unproject_single_observation(Pupil& pupil, double pupil_radius = 1) const;
-        const Circle& initialise_single_observation(Pupil& pupil);
-        const Circle& refine_single_with_contrast(Pupil& pupil);
-        double single_contrast_metric(const Pupil& pupil) const;
-        void print_single_contrast_metric(const Pupil& pupil) const;
+         const Circle& unproject_single_observation(Pupil& pupil, double pupil_radius = 1) const;
+         const Circle& initialise_single_observation(Pupil& pupil);
+        // const Circle& refine_single_with_contrast(Pupil& pupil);
+        // double single_contrast_metric(const Pupil& pupil) const;
+        // void print_single_contrast_metric(const Pupil& pupil) const;
 
         Circle circleFromParams(const PupilParams& params) const;
         static Circle circleFromParams(const Sphere& eye, const PupilParams& params);

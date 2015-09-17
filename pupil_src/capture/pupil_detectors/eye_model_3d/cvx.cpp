@@ -26,7 +26,7 @@ void singleeyefitter::cvx::getROI(const cv::Mat& src, cv::Mat& dst, const cv::Re
 }
 
 
-float singleeyefitter::cvx::histKmeans(const cv::Mat_<float>& hist, int bin_min, int bin_max, int K, float init_centres[], cv::Mat_<uchar>& labels, cv::TermCriteria termCriteria)
+float singleeyefitter::cvx::histKmeans(const cv::Mat_<float>& hist, int bin_min, int bin_max, int K, float init_centers[], cv::Mat_<uchar>& labels, cv::TermCriteria termCriteria)
 {
     using namespace math;
 
@@ -37,19 +37,19 @@ float singleeyefitter::cvx::histKmeans(const cv::Mat_<float>& hist, int bin_min,
     float binWidth = (bin_max - bin_min)/nbins;
     float binStart = bin_min + binWidth/2;
 
-    cv::Mat_<float> centres(K, 1, init_centres, 4);
+    cv::Mat_<float> centers(K, 1, init_centers, 4);
 
     int iters = 0;
     bool finalRun = false;
     while (true)
     {
         ++iters;
-        cv::Mat_<float> old_centres = centres.clone();
+        cv::Mat_<float> old_centers = centers.clone();
 
         int i_bin;
         cv::Mat_<float>::const_iterator i_hist;
         cv::Mat_<uchar>::iterator i_labels;
-        cv::Mat_<float>::iterator i_centres;
+        cv::Mat_<float>::iterator i_centers;
         uchar label;
 
         float sumDist = 0;
@@ -61,12 +61,12 @@ float singleeyefitter::cvx::histKmeans(const cv::Mat_<float>& hist, int bin_min,
              ++i_bin, ++i_labels, ++i_hist)
         {
             float bin_val = binStart + i_bin*binWidth;
-            float minDist = sq(bin_val - centres(*i_labels));
+            float minDist = sq(bin_val - centers(*i_labels));
             int curLabel = *i_labels;
 
             for (label = 0; label < K; ++label)
             {
-                float dist = sq(bin_val - centres(label));
+                float dist = sq(bin_val - centers(label));
                 if (dist < minDist)
                 {
                     minDist = dist;
@@ -83,7 +83,7 @@ float singleeyefitter::cvx::histKmeans(const cv::Mat_<float>& hist, int bin_min,
         if (finalRun)
             return sumDist;
 
-        // Step 2. Recalculate centres
+        // Step 2. Recalculate centers
         cv::Mat_<float> counts(K, 1, 0.0f);
         for (i_bin = 0, i_labels = labels.begin(), i_hist = hist.begin();
              i_bin < nbins;
@@ -91,7 +91,7 @@ float singleeyefitter::cvx::histKmeans(const cv::Mat_<float>& hist, int bin_min,
         {
             float bin_val = binStart + i_bin*binWidth;
 
-            centres(*i_labels) += (*i_hist) * bin_val;
+            centers(*i_labels) += (*i_hist) * bin_val;
             counts(*i_labels) += *i_hist;
         }
         for (label = 0; label < K; ++label)
@@ -99,7 +99,7 @@ float singleeyefitter::cvx::histKmeans(const cv::Mat_<float>& hist, int bin_min,
             if (counts(label) == 0)
                 return std::numeric_limits<float>::infinity();
 
-            centres(label) /= counts(label);
+            centers(label) /= counts(label);
         }
 
         // Step 3. Detect termination criteria
@@ -112,7 +112,7 @@ float singleeyefitter::cvx::histKmeans(const cv::Mat_<float>& hist, int bin_min,
             float max_movement = 0;
             for (label = 0; label < K; ++label)
             {
-                max_movement = std::max(max_movement, sq(centres(label) - old_centres(label)));
+                max_movement = std::max(max_movement, sq(centers(label) - old_centers(label)));
             }
             if (sqrt(max_movement) < termCriteria.epsilon)
                 finalRun = true;

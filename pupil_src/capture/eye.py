@@ -344,7 +344,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         # GL drawing
         #eye sphere fitter adding
         if result['confidence'] > 0.8:
-            eye_model.add_pupil_labs_observation(result)
+            eye_model.add_pupil_labs_observation(result, (frame.width, frame.height) )
             if eye_model.num_observations > 3:
                 eye_model.update_model() #this calls unproject and initialize
 

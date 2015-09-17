@@ -33,12 +33,9 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
             float psi
             float radius
 
-        cppclass Observation:
-            Ellipse2D[double] ellipse
-
         cppclass Pupil:
             Pupil() except +
-            Observation observation
+            Ellipse2D[double] ellipse
             PupilParams params
             Circle3D[double] circle
 
@@ -46,8 +43,8 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         float model_version
         vector[Pupil] pupils
         Sphere[double] eye
-        Ellipse2D[double] projected_eye #technically only need center, not whole ellipse. can optimize here
-        float scale
+        #Ellipse2D[double] projected_eye #technically only need center, not whole ellipse. can optimize here
+        #float scale
 
 # cdef extern from 'singleeyefitter/intersect.h' namespace 'singleeyefitter':
 #     cdef pair[Matrix31d,Matrix31d] intersect(const ParametrizedLine3d line, const Sphere[double] sphere) except +
@@ -143,9 +140,9 @@ cdef class PyEyeModelFitter:
         cdef Sphere[double] eye = self.thisptr.eye
         return "Sphere ( center = [%s, %s, %s], radius = %s)" %(eye.center[0],eye.center[1],eye.center[2],eye.radius)
 
-    def get_projected_eye_center(self):
-        cdef Ellipse2D[double] projected_eye = self.thisptr.projected_eye
-        return (projected_eye.center[0],projected_eye.center[1])
+    # def get_projected_eye_center(self):
+    #     cdef Ellipse2D[double] projected_eye = self.thisptr.projected_eye
+    #     return (projected_eye.center[0],projected_eye.center[1])
 
     def get_pupil_observation(self,index):
         cdef EyeModelFitter.Pupil p = self.thisptr.pupils[index]
@@ -211,9 +208,9 @@ cdef class PyEyeModelFitter:
         def __get__(self):
             return self.thisptr.model_version
 
-    property scale:
-        def __get__(self):
-            return self.thisptr.scale
+    # property scale:
+    #     def __get__(self):
+    #         return self.thisptr.scale
 
     property eye:
         def __get__(self):
@@ -221,11 +218,11 @@ cdef class PyEyeModelFitter:
             temp = ((eye.center[0],eye.center[1],eye.center[2]),eye.radius)
             return temp
 
-    property projected_eye:
-        def __get__(self):
-            cdef Ellipse2D[double] projected_eye = self.thisptr.projected_eye
-            temp = ((projected_eye.center[0],projected_eye.center[1]),
-                projected_eye.major_radius,projected_eye.minor_radius,projected_eye.angle)
+    # property projected_eye:
+    #     def __get__(self):
+    #         cdef Ellipse2D[double] projected_eye = self.thisptr.projected_eye
+    #         temp = ((projected_eye.center[0],projected_eye.center[1]),
+    #             projected_eye.major_radius,projected_eye.minor_radius,projected_eye.angle)
 
 
 
