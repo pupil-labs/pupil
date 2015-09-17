@@ -4,7 +4,6 @@
 #include <iostream>
 #include <boost/range.hpp>
 #include <Eigen/Core>
-#include <math.h> // added by Andrew
 
 namespace singleeyefitter {
 
@@ -122,7 +121,7 @@ std::pair<Eigen::Matrix<Scalar, 3, 1>, Eigen::Matrix<Scalar, 3, 1>> intersect(co
     Vector v = line.direction();
     // Put p at origin
     Vector p = line.origin();
-    Vector c = sphere.center - p;
+    Vector c = sphere.centre - p;
     Scalar r = sphere.radius;
 
     // From Wikipedia :)
