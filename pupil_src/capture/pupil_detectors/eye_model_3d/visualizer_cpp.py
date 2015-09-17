@@ -251,7 +251,7 @@ class Visualizer():
 	def draw_sphere(self,pupil_observation,sphere,contours = 45):
 		# this function draws the location of the eye sphere
 		glPushMatrix()
-		circle_normal = pupil_observation[2][1]
+		circle_normal = pupil_observation.circle_normal
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		# glLoadMatrixf(self.get_rotated_sphere_matrix(circle_normal,sphere[0]))
 		glTranslatef(sphere[0][0],sphere[0][1],sphere[0][2]) #sphere[0] contains center coordinates (x,y,z)
@@ -276,17 +276,20 @@ class Visualizer():
 			for pupil in eye_model.get_all_pupil_observations():
 				#ellipse is pupil[0]. ellipse is ([x,y], major, minor, angle)
 				glColor3f(0.0, 1.0, 0.0)  #set color to green
-				pts = cv2.ellipse2Poly( (int(pupil[0][0][0]),int(pupil[0][0][1])),
-	                                        (int(pupil[0][1]),int(pupil[0][2])),
-	                                        int(pupil[0][3]*180/scipy.pi),0,360,15)
+				pts = cv2.ellipse2Poly( (int(pupil.ellipse_center[0]),int(pupil.ellipse_center[1])),
+	                              (int(pupil.ellipse_major_radius), int(pupil.ellipse_minor_radius) ),
+	                              int(pupil.ellipse_angle*180/scipy.pi),
+	                              0,360,15)
+
 				draw_polyline(pts,4,color = RGBA(0,1,1,.5))
 		else:
 			for pupil in eye_model.get_last_pupil_observations(number):
 				#ellipse is pupil[0]. ellipse is ([x,y], major, minor, angle)
 				glColor3f(0.0, 1.0, 0.0)  #set color to green
-				pts = cv2.ellipse2Poly( (int(pupil[0][0][0]),int(pupil[0][0][1])),
-	                                        (int(pupil[0][1]),int(pupil[0][2])),
-	                                        int(pupil[0][3]*180/scipy.pi),0,360,15)
+				pts = cv2.ellipse2Poly( (int(pupil.ellipse_center[0]),int(pupil.ellipse_center[1])),
+	                              (int(pupil.ellipse_major_radius), int(pupil.ellipse_minor_radius) ),
+	                              int(pupil.ellipse_angle*180/scipy.pi),
+	                              0,360,15)
 				draw_polyline(pts,4,color = RGBA(0,1,1,.5))
 		glPopMatrix()
 
@@ -317,12 +320,12 @@ class Visualizer():
 				glPopMatrix()
 
 
-	def draw_circle(self,circle):
+	def draw_circle(self,circle_normal, circle_center, circle_radius):
 		glPushMatrix()
-		glLoadMatrixf(self.get_pupil_transformation_matrix(circle[2][1],circle[2][0]))
+		glLoadMatrixf(self.get_pupil_transformation_matrix(circle_normal,circle_center))
 		draw_points(((0,0),),color=RGBA(1.1,0.2,.8))
-		glScalef(circle[-1][-1],circle[-1][-1],1)
-		draw_polyline((rad),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
+		glScalef(circle_radius,circle_radius,1)
+		#draw_polyline((rad),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
 		glColor4f(0.0, 0.0, 0.0,0.5)  #set color to green
 		glBegin(GL_POLYGON) #draw circle
 		glEnd()
@@ -343,19 +346,25 @@ class Visualizer():
 		# 	intersect_contour = [c[0] for c in intersect_contour if c is not None]
 		# 	draw_polyline3d(np.array(intersect_contour),color=RGBA(0.,0.,0.,.5))
 		# num = 0
+		glLoadMatrixf(self.get_anthropomorphic_matrix())
+
 		for contour in contours:
 			# draw_polyline3d(eye_model.intersect_contour_with_eye(contour),color=RGBA(0.,0.,0.,.5))
-			intersect_contour = [self.sphere_intersect(point[0],eye_model) for point in contour]
+			#intersect_contour = [self.sphere_intersect(point[0],eye_model) for point in contour]
+
+			eye_center = eye_model.eye[0]
+			eye_radius = eye_model.eye[1]
+			intersect_contour = [self.project_on_sphere(point[0],eye_center, eye_radius) for point in contour]
 			intersect_contour = [c for c in intersect_contour if c is not None]
 			draw_polyline3d(np.array(intersect_contour),color=RGBA(0.,0.,0.,.5))
 			# num += len(intersect_contour)
 		# print num #see how many points are inside contours
 
-	def draw_eye_model_text(self, model):
-		params = model.get_pupil_observation(0)[1] #0 is temporary, should be -1 but can't do that in cpp
-		status = 'Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\nGaze vector (currently WRONG): Theta: %.3f Psi %.3f\nPupil Diameter: %.2fmm'%(model.eye[0][0],
-			model.eye[0][1],model.eye[0][2],
-			params[0], params[1], params[2]*2)
+	def draw_eye_model_text(self, eye_model):
+		pupil = eye_model.get_pupil_observation(0) #0 is temporary, should be -1 but can't do that in cpp
+		status = 'Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\nGaze vector (currently WRONG): Theta: %.3f Psi %.3f\nPupil Diameter: %.2fmm'%(eye_model.eye[0][0],
+			eye_model.eye[0][1],eye_model.eye[0][2],
+			pupil.params_theta, pupil.params_psi, pupil.params_radius*2)
 		self.glfont.draw_multi_line_text(5,20,status)
 		self.glfont.draw_multi_line_text(440,20,'View: %.2f %.2f %.2f'%(self.trackball.distance[0],self.trackball.distance[1],self.trackball.distance[2]))
 
@@ -452,8 +461,9 @@ class Visualizer():
 			if eye_model and eye_model.num_observations > 10:
 				# self.draw_all_circles(eye_model, 10)
 				self.draw_sphere(eye_model.get_last_pupil_observation(),eye_model.eye) #draw CPP
-				for c in eye_model.get_last_pupil_observations(5):
-					self.draw_circle(c)
+				for pupil in eye_model.get_last_pupil_observations(5):
+					self.draw_circle(pupil.circle_normal, pupil.circle_center, pupil.circle_radius)
+
 			glLoadMatrixf(self.get_anthropomorphic_matrix())
 
 			self.draw_coordinate_system(4)
@@ -558,6 +568,9 @@ class Visualizer():
 		# point[0] = point[0]*eye_model.scale
 		# point[1] = point[1]*eye_model.scale #not sure if this works
 		# self.intrinsics = self.intrinsics.T
+
+		#intrinsics = np.matrix('879.193 0 320; 0 -879.193 240; 0 0 1')
+
 		v = np.array([(point[0]-self.intrinsics[0,2])/ self.intrinsics[0,0],
 	                    (point[1]-self.intrinsics[1,2])/ self.intrinsics[1,1],1])
 		# self.intrinsics = self.intrinsics.T
@@ -575,6 +588,36 @@ class Visualizer():
 		p1 = p + s1*v
 		# p2 = p + s2*v
 		return p1 #,p2 #a line intersects a sphere at two points
+
+	def project_on_sphere(self,point,sphere_center_point, sphere_radius):
+
+
+		#point coords are in pixels, with origin top left
+		# map them so coord origin is centerd with y up
+		x = point[0] - self.intrinsics[0,2]
+		y = self.intrinsics[1,2] - point[1]
+		z = self.intrinsics[0,0]
+		ray_direction  = np.array([x , y , z] )
+		ray_direction = ray_direction / np.linalg.norm(ray_direction)# normalize
+
+		ray_origin = (0,0,0)
+		q = np.array(sphere_center_point) - ray_origin
+		vDotQ = ray_direction.dot( q)
+		squareDiffs = q.dot( q) - sphere_radius*sphere_radius
+		discrim = vDotQ * vDotQ - squareDiffs
+
+		if discrim >= 0:
+		  root = np.sqrt(discrim)
+		  t0 = (vDotQ - root)
+		  t1 = (vDotQ + root)
+		  if t0 < t1:
+		  	return ray_origin + ray_direction * t0
+		  else:
+		  	return ray_origin + ray_direction * t1
+
+		return None
+
+
 
 if __name__ == '__main__':
 	print "done"
