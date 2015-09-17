@@ -262,13 +262,13 @@ def rec_thread(file_loc, audio_src,should_close):
     # print len(in_container.streams), 'stream(s):'
     for i, stream in enumerate(in_container.streams):
 
-        # print '\t%r' % stream
-        # print '\t\ttime_base: %r' % stream.time_base
-        # print '\t\trate: %r' % stream.rate
-        # print '\t\tstart_time: %r' % stream.start_time
-        # print '\t\tduration: %s' % format_time(stream.duration, stream.time_base)
-        # print '\t\tbit_rate: %r' % stream.bit_rate
-        # print '\t\tbit_rate_tolerance: %r' % stream.bit_rate_tolerance
+        print '\t%r' % stream
+        print '\t\ttime_base: %r' % stream.time_base
+        print '\t\trate: %r' % stream.rate
+        print '\t\tstart_time: %r' % stream.start_time
+        print '\t\tduration: %s' % format_time(stream.duration, stream.time_base)
+        print '\t\tbit_rate: %r' % stream.bit_rate
+        print '\t\tbit_rate_tolerance: %r' % stream.bit_rate_tolerance
 
         if stream.type == 'audio':
             # print '\t\taudio:'
