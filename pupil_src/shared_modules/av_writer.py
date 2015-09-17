@@ -244,13 +244,12 @@ def format_time(time, time_base):
 
 def rec_thread(file_loc, audio_src,should_close):
 
-    #create out container
-    out_container = av.open(file_loc,'w')
-    logger.debug("Opended '%s' for writing."%file_loc)
-    out_stream =  out_container.add_stream('pcm_f32le')
-
     #create in container
-    in_container = av.open(':%s'%audio_src,format="avfoundation")
+    if platform.system() == "Darwin":
+        in_container = av.open(':%s'%audio_src,format="avfoundation")
+    elif platform.system() == "Linux":
+        in_container = av.open('hw:%s'%audio_src,format="alsa")
+     
     in_stream = None
     # print 'container:', in_container
     # print '\tformat:', in_container.format
@@ -289,8 +288,13 @@ def rec_thread(file_loc, audio_src,should_close):
 
     if in_stream is None:
         logger.error("No input audio stream found.")
-        out_container.close()
         return
+
+    #create out container
+    out_container = av.open(file_loc,'w')
+    logger.debug("Opended '%s' for writing."%file_loc)
+    out_stream =  out_container.add_stream(template = in_stream)
+
 
     for packet in in_container.demux(in_stream):
         # for frame in packet.decode():
@@ -390,6 +394,7 @@ if __name__ == '__main__':
     exit()
 
 
+    container = av.open('hw:0',format="alsa")
     container = av.open(':0',format="avfoundation")
     print 'container:', container
     print '\tformat:', container.format
@@ -431,7 +436,7 @@ if __name__ == '__main__':
     #file contianer:
 
     out_container = av.open('test.wav','w')
-    out_stream = out_container.add_stream('pcm_f32le')
+    out_stream = out_container.add_stream(audio_stream.format)
     # out_stream.rate = 44100
     for i,packet in enumerate(container.demux(audio_stream)):
         # for frame in packet.decode():
