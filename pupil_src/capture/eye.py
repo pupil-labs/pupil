@@ -294,9 +294,9 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
             logger.error("Capture from Camera Failed. Stopping.")
             break
         except EndofVideoFileError:
-            logger.warning("Video File is done. Stopping")
-            break
-
+            logger.warning("Video File is done. Rewind")
+            cap.seek_to_frame(0)
+            frame = cap.get_frame()
 
         #update performace graphs
         t = frame.timestamp
