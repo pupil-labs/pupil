@@ -269,11 +269,11 @@ class Visualizer():
 
 		glPopMatrix()
 
-	def draw_all_ellipses(self,cpp_model,number = 0):
+	def draw_all_ellipses(self,eye_model,number = 0):
 		# draws all ellipses in model. numder determines last x amt of ellipses to show
 		glPushMatrix()
-		if number == 0 or number > cpp_model.num_observations: #print everything. or statement in case try to access too many
-			for pupil in cpp_model.get_all_pupil_observations():
+		if number == 0 or number > eye_model.num_observations: #print everything. or statement in case try to access too many
+			for pupil in eye_model.get_all_pupil_observations():
 				#ellipse is pupil[0]. ellipse is ([x,y], major, minor, angle)
 				glColor3f(0.0, 1.0, 0.0)  #set color to green
 				pts = cv2.ellipse2Poly( (int(pupil[0][0][0]),int(pupil[0][0][1])),
@@ -281,7 +281,7 @@ class Visualizer():
 	                                        int(pupil[0][3]*180/scipy.pi),0,360,15)
 				draw_polyline(pts,4,color = RGBA(0,1,1,.5))
 		else:
-			for pupil in cpp_model.get_last_pupil_observations(number):
+			for pupil in eye_model.get_last_pupil_observations(number):
 				#ellipse is pupil[0]. ellipse is ([x,y], major, minor, angle)
 				glColor3f(0.0, 1.0, 0.0)  #set color to green
 				pts = cv2.ellipse2Poly( (int(pupil[0][0][0]),int(pupil[0][0][1])),
@@ -290,9 +290,9 @@ class Visualizer():
 				draw_polyline(pts,4,color = RGBA(0,1,1,.5))
 		glPopMatrix()
 
-	def draw_all_circles(self,cpp_model,number = 0):
-		if number == 0 or number > cpp_model.num_observations: #print everything. or statement in case try to access too many
-			for pupil in cpp_model.get_all_pupil_observations():
+	def draw_all_circles(self,eye_model,number = 0):
+		if number == 0 or number > eye_model.num_observations: #print everything. or statement in case try to access too many
+			for pupil in eye_model.get_all_pupil_observations():
 				#circle is pupil[2]. circle is (center[x,y,z], normal[x,y,z], radius)
 				glPushMatrix()
 				glLoadMatrixf(self.get_pupil_transformation_matrix(pupil[2][1],pupil[2][0])) #circle normal, center
@@ -304,7 +304,7 @@ class Visualizer():
 				glEnd()
 				glPopMatrix()
 		else:
-			for pupil in cpp_model.get_last_pupil_observations(number):
+			for pupil in eye_model.get_last_pupil_observations(number):
 				#circle is pupil[2]. circle is (center[x,y,z], normal[x,y,z], radius)
 				glPushMatrix()
 				glLoadMatrixf(self.get_pupil_transformation_matrix(pupil[2][1],pupil[2][0])) #circle normal, center
@@ -337,15 +337,15 @@ class Visualizer():
 			draw_polyline(contour_2d,color=RGBA(0,0,0,0.5))
 		glPopMatrix()
 
-	def draw_contours(self,contours,cpp_model):
+	def draw_contours(self,contours,eye_model):
 		# for contour in contours:
 		# 	intersect_contour = [sphere_intersect(Line3D((0,0,0),geometry.unproject_point(c[0],20,self.intrinsics)),model.eye) for c in contour]
 		# 	intersect_contour = [c[0] for c in intersect_contour if c is not None]
 		# 	draw_polyline3d(np.array(intersect_contour),color=RGBA(0.,0.,0.,.5))
 		# num = 0
 		for contour in contours:
-			# draw_polyline3d(cpp_model.intersect_contour_with_eye(contour),color=RGBA(0.,0.,0.,.5))
-			intersect_contour = [self.sphere_intersect(point[0],cpp_model) for point in contour]
+			# draw_polyline3d(eye_model.intersect_contour_with_eye(contour),color=RGBA(0.,0.,0.,.5))
+			intersect_contour = [self.sphere_intersect(point[0],eye_model) for point in contour]
 			intersect_contour = [c for c in intersect_contour if c is not None]
 			draw_polyline3d(np.array(intersect_contour),color=RGBA(0.,0.,0.,.5))
 			# num += len(intersect_contour)
@@ -431,7 +431,7 @@ class Visualizer():
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool = None, cpp_model = None, contours = None):
+	def update_window(self, g_pool = None, eye_model = None, contours = None):
 		if self.window_should_close:
 			self.close_window()
 		if self._window != None:
@@ -449,17 +449,17 @@ class Visualizer():
 			# 1. in anthromorphic space, draw pupil sphere and circles on it
 			glLoadMatrixf(self.get_anthropomorphic_matrix())
 
-			if cpp_model and cpp_model.num_observations > 10:
-				# self.draw_all_circles(cpp_model, 10)
-				self.draw_sphere(cpp_model.get_last_pupil_observation(),cpp_model.eye) #draw CPP
-				for c in cpp_model.get_last_pupil_observations(5):
+			if eye_model and eye_model.num_observations > 10:
+				# self.draw_all_circles(eye_model, 10)
+				self.draw_sphere(eye_model.get_last_pupil_observation(),eye_model.eye) #draw CPP
+				for c in eye_model.get_last_pupil_observations(5):
 					self.draw_circle(c)
 			glLoadMatrixf(self.get_anthropomorphic_matrix())
 
 			self.draw_coordinate_system(4)
 			if contours:
 				self.draw_contours_on_screen(contours)
-				self.draw_contours(contours,cpp_model)
+				self.draw_contours(contours,eye_model)
 			# 1b. draw frustum in pixel scale, but retaining origin
 			glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))
 			self.draw_frustum()
@@ -468,12 +468,12 @@ class Visualizer():
 			glLoadMatrixf(self.get_image_space_matrix(30))
 			if g_pool: #if display eye camera frames
 				draw_named_texture(g_pool.image_tex,quad=((0,480),(640,480),(640,0),(0,0)),alpha=0.5)
-			self.draw_all_ellipses(cpp_model, 5)
+			self.draw_all_ellipses(eye_model, 5)
 
 			self.trackball.pop()
 			# 3. draw eye model text
-			if cpp_model and cpp_model.num_observations > 3:
-				self.draw_eye_model_text(cpp_model)
+			if eye_model and eye_model.num_observations > 3:
+				self.draw_eye_model_text(eye_model)
 
 			glfwSwapBuffers(self._window)
 			glfwPollEvents()
@@ -530,7 +530,7 @@ class Visualizer():
 	def on_key(self,window, key, scancode, action, mods): pass
 	def on_char(window,char): pass
 
-	def sphere_intersect(self,point,cpp_model):
+	def sphere_intersect(self,point,eye_model):
 		#auxiliary function originally in intersect.py, used here to find sphere intersect.
 		#intersection between a line and a sphere, originally called intersect(line,sphere)
 		#we only return the closer value
@@ -555,16 +555,16 @@ class Visualizer():
 		# # p2 = origin + s2*direction
 		# return p1 #, p2 a line intersects a sphere at two points
 
-		# point[0] = point[0]*cpp_model.scale
-		# point[1] = point[1]*cpp_model.scale #not sure if this works
+		# point[0] = point[0]*eye_model.scale
+		# point[1] = point[1]*eye_model.scale #not sure if this works
 		# self.intrinsics = self.intrinsics.T
 		v = np.array([(point[0]-self.intrinsics[0,2])/ self.intrinsics[0,0],
 	                    (point[1]-self.intrinsics[1,2])/ self.intrinsics[1,1],1])
 		# self.intrinsics = self.intrinsics.T
 
 		p = (0,0,0) #put p at origin
-		c = np.array(cpp_model.eye[0]) #sphere center
-		r = cpp_model.eye[1] #sphere radius
+		c = np.array(eye_model.eye[0]) #sphere center
+		r = eye_model.eye[1] #sphere radius
 
 		vcvc_cc_rr = v.dot(c)**2 - c.dot(c) + r**2 # from wikipedia :)
 		if (vcvc_cc_rr < 0):
@@ -610,9 +610,9 @@ if __name__ == '__main__':
 
 	visualhuding.open_window()
 	a = 0
-	while visualhuding.update_window(cpp_model = huding, contours = contours):
-	# while visualhuding.update_window(cpp_model = huding):
+	while visualhuding.update_window(eye_model = huding, contours = contours):
+	# while visualhuding.update_window(eye_model = huding):
 		a += 1
-	# visualhuding.update_window(cpp_model = huding)
+	# visualhuding.update_window(eye_model = huding)
 	visualhuding.close_window()
 	print a
