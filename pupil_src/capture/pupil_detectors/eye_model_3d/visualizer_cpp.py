@@ -594,8 +594,8 @@ class Visualizer():
 
 		#point coords are in pixels, with origin top left
 		# map them so coord origin is centerd with y up
-		x = point[0] - self.image_width
-		y = self.image_height - point[1]
+		x = point[0] - self.image_width/2.0
+		y = self.image_height/2.0 - point[1]
 		z = self.focal_length
 		ray_direction  = np.array([x , y , z] )
 		ray_direction = ray_direction / np.linalg.norm(ray_direction)# normalize
