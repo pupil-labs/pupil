@@ -114,25 +114,25 @@ cdef class PyEyeModelFitter:
     def add_pupil_labs_observation(self,ellipse_dict, image_size):
         # a special method for taking in arguments from eye.py
 
-        # change coord system to centered origin
-        x,y = ellipse_dict['center']
-        x -= image_size[0]/2.0
-        y = image_size[1]/2.0 - y
-
         a,b = ellipse_dict['axes']
         if a > b:
             major_radius = a/2.0
             minor_radius = b/2.0
-            angle = ellipse_dict['angle']* pi/180
+            angle = -ellipse_dict['angle']* pi/180
         else:
             major_radius = b/2.0
             minor_radius = a/2.0
             angle = (ellipse_dict['angle']+90)*pi/180 # not importing np just for pi constant
 
+        # change coord system to centered origin
+        x,y = ellipse_dict['center']
+        x -= image_size[0]/2.0
+        y = image_size[1]/2.0 - y
+        angle = -angle #take y axis flip into account
+
         # add cpp ellipse
         cdef Ellipse2D[double] ellipse  =  Ellipse2D[double](x,y, major_radius, minor_radius, angle)
 
-        # print e_dict['center'][0],e_dict['center'][1],major_radius,minor_radius,angle
         self.thisptr.add_observation(ellipse)
         self.num_observations += 1
 
