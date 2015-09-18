@@ -416,40 +416,43 @@ class Visualizer():
 			self.image_width = image_width # reassign in case the image size got changed during running
 			self.image_height = image_height
 
-			self.clear_gl_screen()
-			self.trackball.push()
+		self.clear_gl_screen()
+		self.trackball.push()
 
-			# 1. in anthromorphic space, draw pupil sphere and circles on it
-			glLoadMatrixf(self.get_anthropomorphic_matrix())
+		eye_position = eye_model_fitter.eye[0]
+		eye_radius = eye_model_fitter.eye[1]
 
-
-			self.draw_sphere(eye_model_fitter.eye[0],eye_model_fitter.eye[1]) #draw CPP
-			for pupil in eye_model_fitter.get_last_pupil_observations(5):
-				self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal)
-
-			self.draw_coordinate_system(4)
-
-			if contours:
-				self.draw_contours_on_screen(contours)
-				self.draw_contours_on_sphere(contours,eye_model_fitter.eye[0], eye_model_fitter.eye[1])
-
-			# 1b. draw frustum in pixel scale, but retaining origin
-			glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))
-			self.draw_frustum()
-
-			# 2. in pixel space draw video frame
-			glLoadMatrixf(self.get_image_space_matrix(30))
-
-			draw_named_texture(g_pool.image_tex,quad=((0,480),(640,480),(640,0),(0,0)),alpha=0.5)
+		# 1. in anthromorphic space, draw pupil sphere and circles on it
+		glLoadMatrixf(self.get_anthropomorphic_matrix())
 
 
-			self.trackball.pop()
+		self.draw_sphere(eye_position,eye_radius)
+		for pupil in eye_model_fitter.get_last_pupil_observations(5):
+			self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal)
 
-			self.draw_eye_model_fitter_text(eye_model_fitter)
+		self.draw_coordinate_system(4)
 
-			glfwSwapBuffers(self._window)
-			glfwPollEvents()
-			return True
+		if contours:
+			self.draw_contours_on_screen(contours)
+			self.draw_contours_on_sphere(contours,eye_position, eye_radius)
+
+		# 1b. draw frustum in pixel scale, but retaining origin
+		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))
+		self.draw_frustum()
+
+		# 2. in pixel space draw video frame
+		glLoadMatrixf(self.get_image_space_matrix(30))
+
+		draw_named_texture(g_pool.image_tex,quad=((0,480),(640,480),(640,0),(0,0)),alpha=0.5)
+
+
+		self.trackball.pop()
+
+		self.draw_eye_model_fitter_text(eye_model_fitter)
+
+		glfwSwapBuffers(self._window)
+		glfwPollEvents()
+		return True
 
 	def close_window(self):
 		if self.window_should_close == True:
