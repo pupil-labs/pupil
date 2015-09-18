@@ -62,26 +62,22 @@ def get_perpendicular_vector(v):
     #     c = -(x + y)/z
     return np.array([1, 1, -1.0 * (v[0] + v[1]) / v[2]])
 
-rad = [] #this is a global variable
-for i in xrange(45 + 1): #so go to 45
-	temp = i*16*scipy.pi/360.
-	rad.append([np.cos(temp),np.sin(temp)])
+circle_xy = [] #this is a global variable
+circle_res = 30.0
+for i in range(0,int(circle_res+1)):
+	temp =  (i)/circle_res *  scipy.pi * 2.0
+	circle_xy.append([np.cos(temp),np.sin(temp)])
 
 class Visualizer():
-	def __init__(self,name = "unnamed", focal_length = 554.25625, intrinsics = None, run_independently = False):
+	def __init__(self,focal_length, image_width, image_height,name = "unnamed", run_independently = False):
 		# self.video_frame = (np.linspace(0,1,num=(400*400*4))*255).astype(np.uint8).reshape((400,400,4)) #the randomized image, should be video frame
 		# self.screen_points = [] #collection of points
 
-		if intrinsics is None:
-			intrinsics = np.identity(3)
-			if focal_length != None:
-				intrinsics[0,0] = focal_length
-				intrinsics[1,1] = focal_length
-				logger.warning('no camera intrinsic input, set to focal length')
-			else:
-				logger.warning('no camera intrinsic input, set to default identity matrix')
+
+		self.focal_length = focal_length
+		self.image_width = image_width
+		self.image_height = image_height
 		# transformation matrices
-		self.intrinsics = intrinsics #camera intrinsics of our webcam.
 		self.anthromorphic_matrix = self.get_anthropomorphic_matrix()
 		self.adjusted_pixel_space_matrix = self.get_adjusted_pixel_space_matrix(1)
 
@@ -115,9 +111,9 @@ class Visualizer():
 	def get_image_space_matrix(self,scale=1.):
 		temp = self.get_adjusted_pixel_space_matrix(scale)
 		temp[1,1] *=-1 #image origin is top left
-		temp[0,3] = -self.intrinsics[0,2] #cx
-		temp[1,3] = self.intrinsics[1,2] #cy
-		temp[2,3] = -self.intrinsics[0,0] #focal length
+		temp[0,3] = -self.image_width/2.0
+		temp[1,3] = self.image_height/2.0
+		temp[2,3] = -self.focal_length
 		return temp.T
 
 	def get_pupil_transformation_matrix(self,circle_normal,circle_center):
@@ -198,12 +194,10 @@ class Visualizer():
 	############## DRAWING FUNCTIONS ##############################
 
 	def draw_frustum(self, scale=1):
-		# average focal length
-		#f = (K[0, 0] + K[1, 1]) / 2
-		# compute distances for setting up the camera pyramid
-		W = self.intrinsics[0,2]
-		H = self.intrinsics[1,2]
-		Z = self.intrinsics[0,0]
+
+		W = self.image_width/2.0
+		H = self.image_height/2.0
+		Z = self.focal_length
 		# scale the pyramid
 		W *= scale
 		H *= scale
@@ -254,16 +248,22 @@ class Visualizer():
 		circle_normal = pupil_observation.circle_normal
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		# glLoadMatrixf(self.get_rotated_sphere_matrix(circle_normal,sphere[0]))
-		glTranslatef(sphere[0][0],sphere[0][1],sphere[0][2]) #sphere[0] contains center coordinates (x,y,z)
+
+		sphere_radius = sphere[1]
+		sphere_position = sphere[0]
+
+		glTranslatef(sphere_position[0],sphere_position[1],sphere_position[2]) #sphere[0] contains center coordinates (x,y,z)
+
 		glTranslatef(0,0,sphere[1]) #sphere[1] contains radius
-		draw_points(((0,0),),color=RGBA(0,1,0.2,.5))
+
 		for i in xrange(1,contours+1):
-			glTranslatef(0,0,-sphere[1]/contours*2)
-			position = sphere[1]- i*sphere[1]*2/contours
-			draw_radius = np.sqrt(sphere[1]**2 - position**2)
+
+			glTranslatef(0,0, -sphere_radius/contours*2)
+			position = sphere_radius - i*sphere_radius*2/contours
+			draw_radius = np.sqrt(sphere_radius**2 - position**2)
 			glPushMatrix()
 			glScalef(draw_radius,draw_radius,1)
-			draw_polyline((rad),2,color=RGBA(.2,.5,0.5,.5))
+			draw_polyline((circle_xy),2,color=RGBA(.2,.5,0.5,.5))
 			glPopMatrix()
 			# draw_points(((0,0),),color=RGBA(0,1,0.2,.5))
 
@@ -301,7 +301,7 @@ class Visualizer():
 				glLoadMatrixf(self.get_pupil_transformation_matrix(pupil[2][1],pupil[2][0])) #circle normal, center
 				draw_points(((0,0),),color=RGBA(1.1,0.2,.8))
 				glScalef(pupil[2][2],pupil[2][2],1) #scale by pupil radius
-				draw_polyline((rad),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
+				draw_polyline((circle_xy),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
 				glColor4f(0.0, 0.0, 0.0,0.5)  #set color to green
 				glBegin(GL_POLYGON) #draw circle
 				glEnd()
@@ -313,7 +313,7 @@ class Visualizer():
 				glLoadMatrixf(self.get_pupil_transformation_matrix(pupil[2][1],pupil[2][0])) #circle normal, center
 				draw_points(((0,0),),color=RGBA(1.1,0.2,.8))
 				glScalef(pupil[2][2],pupil[2][2],1) #scale by pupil radius
-				draw_polyline((rad),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
+				draw_polyline((circle_xy),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
 				glColor4f(0.0, 0.0, 0.0,0.5)  #set color to green
 				glBegin(GL_POLYGON) #draw circle
 				glEnd()
@@ -325,7 +325,7 @@ class Visualizer():
 		glLoadMatrixf(self.get_pupil_transformation_matrix(circle_normal,circle_center))
 		draw_points(((0,0),),color=RGBA(1.1,0.2,.8))
 		glScalef(circle_radius,circle_radius,1)
-		#draw_polyline((rad),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
+		#draw_polyline((circle_xy),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
 		glColor4f(0.0, 0.0, 0.0,0.5)  #set color to green
 		glBegin(GL_POLYGON) #draw circle
 		glEnd()
@@ -341,16 +341,10 @@ class Visualizer():
 		glPopMatrix()
 
 	def draw_contours(self,contours,eye_model):
-		# for contour in contours:
-		# 	intersect_contour = [sphere_intersect(Line3D((0,0,0),geometry.unproject_point(c[0],20,self.intrinsics)),model.eye) for c in contour]
-		# 	intersect_contour = [c[0] for c in intersect_contour if c is not None]
-		# 	draw_polyline3d(np.array(intersect_contour),color=RGBA(0.,0.,0.,.5))
-		# num = 0
+
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 
 		for contour in contours:
-			# draw_polyline3d(eye_model.intersect_contour_with_eye(contour),color=RGBA(0.,0.,0.,.5))
-			#intersect_contour = [self.sphere_intersect(point[0],eye_model) for point in contour]
 
 			eye_center = eye_model.eye[0]
 			eye_radius = eye_model.eye[1]
@@ -440,11 +434,17 @@ class Visualizer():
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool = None, eye_model = None, contours = None):
+	def update_window(self, g_pool = None, eye_model = None, contours = None, image_width = None , image_height = None ):
+
 		if self.window_should_close:
 			self.close_window()
 		if self._window != None:
 			glfwMakeContextCurrent(self._window)
+
+		if image_height and image_width:
+			self.image_width = image_width # reassign in case the image size got changed during running
+			self.image_height = image_height
+
 			# print glGetDoublev(GL_MODELVIEW_MATRIX), glGetDoublev(GL_PROJECTION_MATRIX)
 
 			# glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -594,9 +594,9 @@ class Visualizer():
 
 		#point coords are in pixels, with origin top left
 		# map them so coord origin is centerd with y up
-		x = point[0] - self.intrinsics[0,2]
-		y = self.intrinsics[1,2] - point[1]
-		z = self.intrinsics[0,0]
+		x = point[0] - self.image_width
+		y = self.image_height - point[1]
+		z = self.focal_length
 		ray_direction  = np.array([x , y , z] )
 		ray_direction = ray_direction / np.linalg.norm(ray_direction)# normalize
 
@@ -619,43 +619,43 @@ class Visualizer():
 
 
 
-if __name__ == '__main__':
-	print "done"
+# if __name__ == '__main__':
+# 	print "done"
 
-	huding = build_test.eye_model_3d.PyEyeModelFitter(focal_length=879.193, x_disp = 320, y_disp = 240)
-	# print model
-	huding.add_observation([422.255,255.123],40.428,30.663,1.116)
-	huding.add_observation([442.257,365.003],44.205,32.146,1.881)
-	huding.add_observation([307.473,178.163],41.29,22.765,0.2601)
-	huding.add_observation([411.339,290.978],51.663,41.082,1.377)
-	huding.add_observation([198.128,223.905],46.852,34.949,2.659)
-	huding.add_observation([299.641,177.639],40.133,24.089,0.171)
-	huding.add_observation([211.669,212.248],46.885,33.538,2.738)
-	huding.add_observation([196.43,236.69],47.094,38.258,2.632)
-	huding.add_observation([317.584,189.71],42.599,27.721,0.3)
-	huding.add_observation([482.762,315.186],38.397,23.238,1.519)
-	huding.update_model()
+# 	huding = build_test.eye_model_3d.PyEyeModelFitter(focal_length=879.193, x_disp = 320, y_disp = 240)
+# 	# print model
+# 	huding.add_observation([422.255,255.123],40.428,30.663,1.116)
+# 	huding.add_observation([442.257,365.003],44.205,32.146,1.881)
+# 	huding.add_observation([307.473,178.163],41.29,22.765,0.2601)
+# 	huding.add_observation([411.339,290.978],51.663,41.082,1.377)
+# 	huding.add_observation([198.128,223.905],46.852,34.949,2.659)
+# 	huding.add_observation([299.641,177.639],40.133,24.089,0.171)
+# 	huding.add_observation([211.669,212.248],46.885,33.538,2.738)
+# 	huding.add_observation([196.43,236.69],47.094,38.258,2.632)
+# 	huding.add_observation([317.584,189.71],42.599,27.721,0.3)
+# 	huding.add_observation([482.762,315.186],38.397,23.238,1.519)
+# 	huding.update_model()
 
-	# print huding.print_eye()
-	# for pupil in huding.get_all_pupil_observations():
-	# 		#circle is pupil[2]. circle is (center[x,y,z], normal[x,y,z], radius)
-	# 		print pupil[2]
+# 	# print huding.print_eye()
+# 	# for pupil in huding.get_all_pupil_observations():
+# 	# 		#circle is pupil[2]. circle is (center[x,y,z], normal[x,y,z], radius)
+# 	# 		print pupil[2]
 
-	# contours = [[[[38, 78]], [[39, 78]]],
-	# 	[[[ 65, 40]], [[ 66, 39]], [[ 67, 40]], [[ 68, 40]], [[ 69, 41]], [[ 70, 41]], [[ 71, 40]], [[ 72, 41]], [[ 73, 41]], [[ 74, 41]], [[ 75, 42]], [[ 76, 42]], [[ 77, 42]], [[ 78, 42]], [[ 79, 43]], [[ 80, 44]], [[ 81, 45]], [[ 82, 45]], [[ 83, 45]], [[ 84, 46]], [[ 85, 46]], [[ 86, 47]], [[ 87, 47]], [[ 88, 48]], [[ 89, 49]], [[ 90, 50]], [[ 90, 51]],[[ 91, 52]],[[ 92, 53]],[[ 93, 53]],[[ 94, 54]],[[ 95, 55]],[[ 96, 56]],[[ 96, 57]],[[ 97, 58]],[[ 98, 59]],[[ 99, 60]],[[ 99, 61]],[[100, 62]],[[100, 63]],[[100, 64]], [[101, 65]],[[101, 66]],[[102, 67]],[[102, 68]],[[103, 69]], [[103, 70]],[[103, 71]], [[104, 72]],[[104, 73]],[[104, 74]],[[104, 75]],[[104, 76]],[[104, 77]],[[104, 78]],[[104, 79]], [[104, 80]],[[104, 81]],[[104, 82]],[[104, 83]],[[104, 84]],[[104, 85]], [[103, 86]],[[103, 87]],[[103, 88]], [[103, 89]],[[103, 90]],[[103, 91]],[[102, 92]], [[101, 93]],[[101, 94]],[[100, 95]], [[100, 96]],[[ 99, 97]],[[ 98, 98]],[[ 97, 99]], [[ 96, 100]],[[ 95, 101]],[[ 94, 101]],[[ 93, 102]],[[ 92, 103]],[[ 91, 103]], [[ 90, 104]],[[ 89, 104]],[[ 88, 104]],[[ 87, 104]],[[ 86, 104]],[[ 85, 105]],[[ 84, 105]],[[ 83, 105]],[[ 82, 105]],[[ 81, 105]],[[ 80, 106]],[[ 79, 106]],[[ 78, 106]],[[ 77, 106]],[[ 76, 106]],[[ 75, 105]],[[ 74, 105]],[[ 73, 105]],[[ 72, 105]],[[ 71, 104]],[[ 70, 104]],[[ 69, 104]],[[ 68, 104]],[[ 67, 103]],[[ 66, 103]],[[ 65, 102]],[[ 64, 101]],[[ 63, 100]],[[ 62, 100]], [[ 61, 99]],[[ 60, 99]],[[ 59, 98]],[[ 58, 97]],[[ 57, 97]], [[ 56, 96]],[[ 55, 95]],[[ 54, 94]],[[ 53, 93]],[[ 52, 92]],[[ 51, 91]],[[ 51, 90]], [[ 50, 89]], [[ 49, 88]],[[ 48, 87]],[[ 47, 86]],[[ 47, 85]],[[ 47, 84]], [[ 46, 83]], [[ 45, 82]],[[ 45, 81]],[[ 45, 80]],[[ 45, 79]],[[ 44, 78]],[[ 44, 77]],[[ 43, 76]],[[ 43, 75]],[[ 43, 74]],[[ 42, 73]],[[ 42, 72]],[[ 42, 71]], [[ 42, 70]],[[ 41, 69]],[[ 41, 68]],[[ 41, 67]],[[ 41, 66]],[[ 41, 65]], [[ 41, 64]],[[ 41, 63]],[[ 41, 62]], [[ 41, 61]],[[ 41, 60]], [[ 41, 59]], [[ 41, 58]],[[ 42, 57]],[[ 42, 56]],[[ 43, 55]],[[ 43, 54]],[[ 44, 53]],[[ 44, 52]],[[ 45, 51]],[[ 45, 50]],[[ 46, 49]],[[ 47, 48]],[[ 48, 47]],[[ 49, 47]],[[ 50, 46]],[[ 51, 45]],[[ 52, 45]],[[ 53, 44]],[[ 54, 43]],[[ 55, 42]],[[ 56, 42]],[[ 57, 41]],[[ 58, 41]],[[ 59, 41]],[[ 60, 41]],[[ 61, 41]],[[ 62, 40]],[[ 63, 40]],[[ 64, 40]]]
-	# 	[[[ 66, 39]],[[ 65, 40]],[[ 64, 40]],[[ 63, 40]],[[ 62, 40]],[[ 61, 41]],[[ 60, 41]],[[ 59, 41]],[[ 58, 41]],[[ 57, 41]],[[ 56, 42]],[[ 55, 42]],[[ 54, 42]],[[ 53, 43]],[[ 52, 44]],[[ 51, 45]],[[ 50, 45]],[[ 49, 46]],[[ 48, 47]],[[ 47, 47]],[[ 46, 48]],[[ 45, 49]],[[ 45, 50]],[[ 44, 51]],[[ 44, 52]],[[ 43, 53]],[[ 43, 54]],[[ 42, 55]],[[ 42, 56]],[[ 42, 57]],[[ 41, 58]],[[ 41, 59]],[[ 41, 60]],[[ 41, 61]],[[ 41, 62]],[[ 41, 63]],[[ 41, 64]],[[ 41, 65]],[[ 41, 66]],[[ 41, 67]],[[ 41, 68]],[[ 41, 69]],[[ 42, 70]],[[ 42, 71]], [[ 42, 72]],[[ 42, 73]],[[ 43, 74]],[[ 43, 75]],[[ 43, 76]],[[ 44, 77]],[[ 44, 78]],[[ 44, 79]],[[ 45, 80]],[[ 45, 81]],[[ 45, 82]],[[ 46, 83]],[[ 46, 84]],[[ 47, 85]],[[ 47, 86]],[[ 48, 87]],[[ 48, 88]],[[ 49, 89]],[[ 50, 90]],[[ 51, 91]],[[ 51, 92]],[[ 52, 93]],[[ 53, 94]],[[ 54, 95]],[[ 55, 96]],[[ 56, 97]],[[ 57, 97]],[[ 58, 98]],[[ 59, 99]],[[ 60, 99]],[[ 61, 100]],[[ 62, 100]],[[ 63, 101]],[[ 64, 102]],[[ 65, 103]],[[ 66, 103]],[[ 67, 103]],[[ 68, 104]],[[ 69, 104]],[[ 70, 104]],[[ 71, 104]],[[ 72, 105]],[[ 73, 105]],[[ 74, 105]],[[ 75, 105]],[[ 76, 106]],[[ 77, 106]],[[ 78, 106]],[[ 79, 106]],[[ 80, 106]],[[ 81, 105]], [[ 82, 105]],[[ 83, 105]],[[ 84, 105]],[[ 85, 105]],[[ 86, 104]],[[ 87, 104]],[[ 88, 104]],[[ 89, 104]],[[ 90, 104]],[[ 91, 103]],[[ 92, 103]],[[ 93, 103]],[[ 94, 102]],[[ 95, 101]],[[ 96, 101]],[[ 97, 100]],[[ 98, 99]],[[ 99, 98]],[[100, 97]],[[100, 96]],[[101, 95]],[[101, 94]],[[102, 93]],[[103, 92]],[[103, 91]],[[103, 90]],[[103, 89]],[[103, 88]],[[103, 87]],[[103, 86]],[[104, 85]],[[104, 84]],[[104, 83]],[[104, 82]],[[104, 81]],[[104, 80]],[[104, 79]],[[104, 78]],[[104, 77]],[[104, 76]],[[104, 75]], [[104, 74]],[[104, 73]],[[104, 72]],[[103, 71]],[[103, 70]],[[103, 69]],[[102, 68]],[[102, 67]],[[102, 66]],[[101, 65]],[[101, 64]],[[100, 63]],[[100, 62]],[[ 99, 61]],[[ 99, 60]],[[ 99, 59]],[[ 98, 58]],[[ 97, 57]],[[ 96, 56]],[[ 96, 55]],[[ 95, 54]],[[ 94, 53]],[[ 93, 53]],[[ 92, 52]],[[ 91, 51]],[[ 90, 50]],[[ 90, 49]],[[ 89, 48]],[[ 88, 47]],[[ 87, 47]],[[ 86, 46]],[[ 85, 46]],[[ 84, 45]],[[ 83, 45]],[[ 82, 44]],[[ 81, 44]],[[ 80, 43]],[[ 79, 42]],[[ 78, 42]],[[ 77, 42]], [[ 76, 42]],[[ 75, 42]],[[ 74, 41]],[[ 73, 41]],[[ 72, 41]],[[ 71, 40]],[[ 70, 41]],[[ 69, 41]],[[ 68, 40]],[[ 67, 40]]]]
-	contours = [[[[20,20]],[[21,20]],[[22,23]]]]
+# 	# contours = [[[[38, 78]], [[39, 78]]],
+# 	# 	[[[ 65, 40]], [[ 66, 39]], [[ 67, 40]], [[ 68, 40]], [[ 69, 41]], [[ 70, 41]], [[ 71, 40]], [[ 72, 41]], [[ 73, 41]], [[ 74, 41]], [[ 75, 42]], [[ 76, 42]], [[ 77, 42]], [[ 78, 42]], [[ 79, 43]], [[ 80, 44]], [[ 81, 45]], [[ 82, 45]], [[ 83, 45]], [[ 84, 46]], [[ 85, 46]], [[ 86, 47]], [[ 87, 47]], [[ 88, 48]], [[ 89, 49]], [[ 90, 50]], [[ 90, 51]],[[ 91, 52]],[[ 92, 53]],[[ 93, 53]],[[ 94, 54]],[[ 95, 55]],[[ 96, 56]],[[ 96, 57]],[[ 97, 58]],[[ 98, 59]],[[ 99, 60]],[[ 99, 61]],[[100, 62]],[[100, 63]],[[100, 64]], [[101, 65]],[[101, 66]],[[102, 67]],[[102, 68]],[[103, 69]], [[103, 70]],[[103, 71]], [[104, 72]],[[104, 73]],[[104, 74]],[[104, 75]],[[104, 76]],[[104, 77]],[[104, 78]],[[104, 79]], [[104, 80]],[[104, 81]],[[104, 82]],[[104, 83]],[[104, 84]],[[104, 85]], [[103, 86]],[[103, 87]],[[103, 88]], [[103, 89]],[[103, 90]],[[103, 91]],[[102, 92]], [[101, 93]],[[101, 94]],[[100, 95]], [[100, 96]],[[ 99, 97]],[[ 98, 98]],[[ 97, 99]], [[ 96, 100]],[[ 95, 101]],[[ 94, 101]],[[ 93, 102]],[[ 92, 103]],[[ 91, 103]], [[ 90, 104]],[[ 89, 104]],[[ 88, 104]],[[ 87, 104]],[[ 86, 104]],[[ 85, 105]],[[ 84, 105]],[[ 83, 105]],[[ 82, 105]],[[ 81, 105]],[[ 80, 106]],[[ 79, 106]],[[ 78, 106]],[[ 77, 106]],[[ 76, 106]],[[ 75, 105]],[[ 74, 105]],[[ 73, 105]],[[ 72, 105]],[[ 71, 104]],[[ 70, 104]],[[ 69, 104]],[[ 68, 104]],[[ 67, 103]],[[ 66, 103]],[[ 65, 102]],[[ 64, 101]],[[ 63, 100]],[[ 62, 100]], [[ 61, 99]],[[ 60, 99]],[[ 59, 98]],[[ 58, 97]],[[ 57, 97]], [[ 56, 96]],[[ 55, 95]],[[ 54, 94]],[[ 53, 93]],[[ 52, 92]],[[ 51, 91]],[[ 51, 90]], [[ 50, 89]], [[ 49, 88]],[[ 48, 87]],[[ 47, 86]],[[ 47, 85]],[[ 47, 84]], [[ 46, 83]], [[ 45, 82]],[[ 45, 81]],[[ 45, 80]],[[ 45, 79]],[[ 44, 78]],[[ 44, 77]],[[ 43, 76]],[[ 43, 75]],[[ 43, 74]],[[ 42, 73]],[[ 42, 72]],[[ 42, 71]], [[ 42, 70]],[[ 41, 69]],[[ 41, 68]],[[ 41, 67]],[[ 41, 66]],[[ 41, 65]], [[ 41, 64]],[[ 41, 63]],[[ 41, 62]], [[ 41, 61]],[[ 41, 60]], [[ 41, 59]], [[ 41, 58]],[[ 42, 57]],[[ 42, 56]],[[ 43, 55]],[[ 43, 54]],[[ 44, 53]],[[ 44, 52]],[[ 45, 51]],[[ 45, 50]],[[ 46, 49]],[[ 47, 48]],[[ 48, 47]],[[ 49, 47]],[[ 50, 46]],[[ 51, 45]],[[ 52, 45]],[[ 53, 44]],[[ 54, 43]],[[ 55, 42]],[[ 56, 42]],[[ 57, 41]],[[ 58, 41]],[[ 59, 41]],[[ 60, 41]],[[ 61, 41]],[[ 62, 40]],[[ 63, 40]],[[ 64, 40]]]
+# 	# 	[[[ 66, 39]],[[ 65, 40]],[[ 64, 40]],[[ 63, 40]],[[ 62, 40]],[[ 61, 41]],[[ 60, 41]],[[ 59, 41]],[[ 58, 41]],[[ 57, 41]],[[ 56, 42]],[[ 55, 42]],[[ 54, 42]],[[ 53, 43]],[[ 52, 44]],[[ 51, 45]],[[ 50, 45]],[[ 49, 46]],[[ 48, 47]],[[ 47, 47]],[[ 46, 48]],[[ 45, 49]],[[ 45, 50]],[[ 44, 51]],[[ 44, 52]],[[ 43, 53]],[[ 43, 54]],[[ 42, 55]],[[ 42, 56]],[[ 42, 57]],[[ 41, 58]],[[ 41, 59]],[[ 41, 60]],[[ 41, 61]],[[ 41, 62]],[[ 41, 63]],[[ 41, 64]],[[ 41, 65]],[[ 41, 66]],[[ 41, 67]],[[ 41, 68]],[[ 41, 69]],[[ 42, 70]],[[ 42, 71]], [[ 42, 72]],[[ 42, 73]],[[ 43, 74]],[[ 43, 75]],[[ 43, 76]],[[ 44, 77]],[[ 44, 78]],[[ 44, 79]],[[ 45, 80]],[[ 45, 81]],[[ 45, 82]],[[ 46, 83]],[[ 46, 84]],[[ 47, 85]],[[ 47, 86]],[[ 48, 87]],[[ 48, 88]],[[ 49, 89]],[[ 50, 90]],[[ 51, 91]],[[ 51, 92]],[[ 52, 93]],[[ 53, 94]],[[ 54, 95]],[[ 55, 96]],[[ 56, 97]],[[ 57, 97]],[[ 58, 98]],[[ 59, 99]],[[ 60, 99]],[[ 61, 100]],[[ 62, 100]],[[ 63, 101]],[[ 64, 102]],[[ 65, 103]],[[ 66, 103]],[[ 67, 103]],[[ 68, 104]],[[ 69, 104]],[[ 70, 104]],[[ 71, 104]],[[ 72, 105]],[[ 73, 105]],[[ 74, 105]],[[ 75, 105]],[[ 76, 106]],[[ 77, 106]],[[ 78, 106]],[[ 79, 106]],[[ 80, 106]],[[ 81, 105]], [[ 82, 105]],[[ 83, 105]],[[ 84, 105]],[[ 85, 105]],[[ 86, 104]],[[ 87, 104]],[[ 88, 104]],[[ 89, 104]],[[ 90, 104]],[[ 91, 103]],[[ 92, 103]],[[ 93, 103]],[[ 94, 102]],[[ 95, 101]],[[ 96, 101]],[[ 97, 100]],[[ 98, 99]],[[ 99, 98]],[[100, 97]],[[100, 96]],[[101, 95]],[[101, 94]],[[102, 93]],[[103, 92]],[[103, 91]],[[103, 90]],[[103, 89]],[[103, 88]],[[103, 87]],[[103, 86]],[[104, 85]],[[104, 84]],[[104, 83]],[[104, 82]],[[104, 81]],[[104, 80]],[[104, 79]],[[104, 78]],[[104, 77]],[[104, 76]],[[104, 75]], [[104, 74]],[[104, 73]],[[104, 72]],[[103, 71]],[[103, 70]],[[103, 69]],[[102, 68]],[[102, 67]],[[102, 66]],[[101, 65]],[[101, 64]],[[100, 63]],[[100, 62]],[[ 99, 61]],[[ 99, 60]],[[ 99, 59]],[[ 98, 58]],[[ 97, 57]],[[ 96, 56]],[[ 96, 55]],[[ 95, 54]],[[ 94, 53]],[[ 93, 53]],[[ 92, 52]],[[ 91, 51]],[[ 90, 50]],[[ 90, 49]],[[ 89, 48]],[[ 88, 47]],[[ 87, 47]],[[ 86, 46]],[[ 85, 46]],[[ 84, 45]],[[ 83, 45]],[[ 82, 44]],[[ 81, 44]],[[ 80, 43]],[[ 79, 42]],[[ 78, 42]],[[ 77, 42]], [[ 76, 42]],[[ 75, 42]],[[ 74, 41]],[[ 73, 41]],[[ 72, 41]],[[ 71, 40]],[[ 70, 41]],[[ 69, 41]],[[ 68, 40]],[[ 67, 40]]]]
+# 	contours = [[[[20,20]],[[21,20]],[[22,23]]]]
 
-	intrinsics = np.matrix('879.193 0 320; 0 -879.193 240; 0 0 1')
-	visualhuding = Visualizer("huding", run_independently = True, intrinsics = intrinsics)
+# 	intrinsics = np.matrix('879.193 0 320; 0 -879.193 240; 0 0 1')
+# 	visualhuding = Visualizer("huding", run_independently = True, intrinsics = intrinsics)
 
-	# print visualhuding.sphere_intersect([320,240],((0,0,49),12))
+# 	# print visualhuding.sphere_intersect([320,240],((0,0,49),12))
 
-	visualhuding.open_window()
-	a = 0
-	while visualhuding.update_window(eye_model = huding, contours = contours):
-	# while visualhuding.update_window(eye_model = huding):
-		a += 1
-	# visualhuding.update_window(eye_model = huding)
-	visualhuding.close_window()
-	print a
+# 	visualhuding.open_window()
+# 	a = 0
+# 	while visualhuding.update_window(eye_model = huding, contours = contours):
+# 	# while visualhuding.update_window(eye_model = huding):
+# 		a += 1
+# 	# visualhuding.update_window(eye_model = huding)
+# 	visualhuding.close_window()
+# 	print a

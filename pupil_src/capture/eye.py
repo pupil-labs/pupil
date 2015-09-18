@@ -189,9 +189,9 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     writer = None
 
     pupil_detector = Canny_Detector(g_pool)
-    intrinsics = np.matrix('879.193 0 320; 0 -879.193 240; 0 0 1')
-    eye_model = eye_model_3d.PyEyeModelFitter(879.193,320,240)
-    visual = Visualizer("eye model",879.193, intrinsics = intrinsics)
+    focal_length = 879.193
+    eye_model_fitter = eye_model_3d.PyEyeModelFitter(focal_length )
+    visual = Visualizer(focal_length, frame.width, frame.height , "eye model",)
 
     # UI callback functions
     def set_scale(new_scale):
@@ -344,12 +344,12 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         # GL drawing
         #eye sphere fitter adding
         if result['confidence'] > 0.8:
-            eye_model.add_pupil_labs_observation(result, (frame.width, frame.height) )
-            if eye_model.num_observations > 3:
-                eye_model.update_model() #this calls unproject and initialize
+            eye_model_fitter.add_pupil_labs_observation(result, (frame.width, frame.height) )
+            if eye_model_fitter.num_observations > 3:
+                eye_model_fitter.update_model() #this calls unproject and initialize
 
         # show the visualizer
-        visual.update_window(g_pool,eye_model,contours)
+        visual.update_window(g_pool,eye_model_fitter,contours, frame.width, frame.height)
         glfwMakeContextCurrent(main_window)
 
         if window_should_update():

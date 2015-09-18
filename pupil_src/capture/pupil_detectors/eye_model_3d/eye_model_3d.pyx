@@ -42,6 +42,7 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
 
         #variables
         float model_version
+        float focal_length
         vector[Pupil] pupils
         Sphere[double] eye
         #Ellipse2D[double] projected_eye #technically only need center, not whole ellipse. can optimize here
@@ -77,10 +78,10 @@ cdef class PyEyeModelFitter:
     cdef public int num_observations
     # def __cinit__(self, focal_length):
     #     self.thisptr = new EyeModelFitter(focal_length)
-    def __cinit__(self, focal_length, x_disp, y_disp):
-        self.thisptr = new EyeModelFitter(focal_length, x_disp, y_disp)
+    def __cinit__(self, focal_length, region_band_width = 5 , region_step_epsilon = 0.5):
+        self.thisptr = new EyeModelFitter(focal_length, region_band_width, region_step_epsilon)
 
-    def __init__(self,focal_length, x_disp, y_disp):
+    def __init__(self,focal_length, region_band_width = 5 , region_step_epsilon = 0.5):
         self.counter = 0
         self.num_observations = 0
 
@@ -218,6 +219,10 @@ cdef class PyEyeModelFitter:
             cdef Sphere[double] eye = self.thisptr.eye
             temp = ((eye.center[0],eye.center[1],eye.center[2]),eye.radius)
             return temp
+
+    property focal_length:
+        def __get__(self):
+            return self.thisptr.focal_length
 
     # property projected_eye:
     #     def __get__(self):
