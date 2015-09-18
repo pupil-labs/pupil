@@ -1129,7 +1129,32 @@ singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_obse
         //Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/)
         pupil
         );
-    return pupils.size() - 1;}
+    return pupils.size() - 1;
+}
+
+singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_observation( Ellipse pupil, std::vector<std::vector<double>> contours )
+{
+    // std::vector<cv::Point2f> pupil_inliers;
+    // for (int i = 0; i < n_pseudo_inliers; ++i) {
+    //     auto p = pointAlongEllipse(pupil, i * 2 * M_PI / n_pseudo_inliers);
+    //     pupil_inliers.emplace_back(static_cast<float>(p[0]), static_cast<float>(p[1]));
+    // }
+    std::lock_guard<std::mutex> lock_model(model_mutex);
+
+
+    for( auto& point : contours){
+
+        std::cout << "point: " << point[0] << " "<< point[1];
+
+    }
+
+
+    pupils.emplace_back(
+        //Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/)
+        pupil
+        );
+    return pupils.size() - 1;
+}
 
 void EyeModelFitter::reset()
 {

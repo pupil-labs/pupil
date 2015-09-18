@@ -341,10 +341,16 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         # stream the result
         g_pool.pupil_queue.put(result)
 
+        print contours.__class__.__name__
+        print contours[0].__class__.__name__
+        print contours[0][0].__class__.__name__
+        print contours[0][0][0].__class__.__name__
+        print contours[0][0][0][0].__class__.__name__
+        print contours[10][0]
         # GL drawing
         #eye sphere fitter adding
         if result['confidence'] > 0.8:
-            eye_model_fitter.add_pupil_labs_observation(result, (frame.width, frame.height) )
+            eye_model_fitter.add_pupil_labs_observation(result, contours, (frame.width, frame.height) )
             if eye_model_fitter.num_observations > 3:
                 eye_model_fitter.update_model() #this calls unproject and initialize
 

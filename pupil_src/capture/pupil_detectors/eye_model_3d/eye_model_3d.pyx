@@ -28,6 +28,7 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         void initialise_model()
         void unproject_observations(double pupil_radius, double eye_z )
         void add_observation( Ellipse2D[double] ellipse)
+        void add_observation( Ellipse2D[double] ellipse, vector[vector[double]] )
 
         cppclass PupilParams:
             float theta
@@ -112,7 +113,7 @@ cdef class PyEyeModelFitter:
     #     self.thisptr.add_observation(center[0], center[1],major_radius,minor_radius,angle)
     #     self.num_observations += 1
 
-    def add_pupil_labs_observation(self,ellipse_dict, image_size):
+    def add_pupil_labs_observation(self,ellipse_dict, contours, image_size):
         # a special method for taking in arguments from eye.py
 
         a,b = ellipse_dict['axes']
@@ -134,7 +135,7 @@ cdef class PyEyeModelFitter:
         # add cpp ellipse
         cdef Ellipse2D[double] ellipse  =  Ellipse2D[double](x,y, major_radius, minor_radius, angle)
 
-        self.thisptr.add_observation(ellipse)
+        self.thisptr.add_observation(ellipse, contours)
         self.num_observations += 1
 
     def print_ellipse(self,index):
