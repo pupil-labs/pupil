@@ -368,7 +368,9 @@ class Visualizer():
 	def open_window(self):
 		if not self._window:
 			self.input = {'button':None, 'mouse':(0,0)}
-			self.trackball = Trackball()
+
+			camera_fov = math.degrees(2.0 * math.atan( self.image_width / (2.0 * self.focal_length)))
+			self.trackball = Trackball(camera_fov)
 
 			# get glfw started
 			if self.run_independently:

@@ -12,14 +12,15 @@ from OpenGL.GL import *
 from OpenGL.GLU import gluPerspective
 
 class Trackball(object):
-    """docstring for Trackball"""
-    def __init__(self):
+
+    def __init__(self, fov = 30):
         super(Trackball, self).__init__()
 
         self.distance = [0,0,-40]
         self.pitch = 0
         self.roll = 0
         self.aspect = 1.
+        self.fov = fov
         self.window = 1,1
 
 
@@ -27,7 +28,7 @@ class Trackball(object):
         glMatrixMode( GL_PROJECTION )
         glPushMatrix()
         glLoadIdentity( )
-        gluPerspective( 30.0, self.aspect, 0.1, 10000.0 )
+        gluPerspective( self.fov, self.aspect, 0.1, 10000.0 )
         glTranslatef(*self.distance)
         glRotatef(0,1,0,0)
         glRotatef(self.pitch,1,0,0)
