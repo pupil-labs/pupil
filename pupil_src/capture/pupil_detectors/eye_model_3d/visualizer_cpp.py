@@ -1,10 +1,4 @@
-"""
-	Andrew Xia working on visualizing data.
-	I want to use opengl to display the 3d sphere and lines that connect to it.
-	This file is in pupil-labs-andrew/sphere_fitter, so it is the prototype version
-	July 6 2015
 
-"""
 import logging
 from glfw import *
 from OpenGL.GL import *
@@ -21,18 +15,14 @@ from pyglui.cygl import utils as glutils
 from trackball import Trackball
 from pyglui.pyfontstash import fontstash as fs
 from pyglui.ui import get_opensans_font_path
-# from intersect import sphere_intersect #not gonna work
-# from geometry  import Line3D #not gonna work
 import numpy as np
-import scipy
-# import geometry #not gonna work
-# from __init__ import Sphere_Fitter #not gonna work
+import math
 import cv2
 
 import build_test
 
 def convert_fov(fov,width):
-	fov = fov*scipy.pi/180
+	fov = fov* math.pi/180
 	focal_length = (width/2)/np.tan(fov/2)
 	return focal_length
 
@@ -65,14 +55,11 @@ def get_perpendicular_vector(v):
 circle_xy = [] #this is a global variable
 circle_res = 30.0
 for i in range(0,int(circle_res+1)):
-	temp =  (i)/circle_res *  scipy.pi * 2.0
+	temp =  (i)/circle_res *  math.pi * 2.0
 	circle_xy.append([np.cos(temp),np.sin(temp)])
 
 class Visualizer():
 	def __init__(self,focal_length, image_width, image_height,name = "unnamed", run_independently = False):
-		# self.video_frame = (np.linspace(0,1,num=(400*400*4))*255).astype(np.uint8).reshape((400,400,4)) #the randomized image, should be video frame
-		# self.screen_points = [] #collection of points
-
 
 		self.focal_length = focal_length
 		self.image_width = image_width
@@ -80,7 +67,6 @@ class Visualizer():
 		# transformation matrices
 		self.anthromorphic_matrix = self.get_anthropomorphic_matrix()
 		self.adjusted_pixel_space_matrix = self.get_adjusted_pixel_space_matrix(1)
-
 
 		self.name = name
 		self._window = None
@@ -242,20 +228,12 @@ class Visualizer():
 		glVertex3f( 0, 0, l )
 		glEnd( )
 
-	def draw_sphere(self,pupil_observation,sphere,contours = 45):
+	def draw_sphere(self,sphere_position, sphere_radius,contours = 45):
 		# this function draws the location of the eye sphere
 		glPushMatrix()
-		circle_normal = pupil_observation.circle_normal
-		glLoadMatrixf(self.get_anthropomorphic_matrix())
-		# glLoadMatrixf(self.get_rotated_sphere_matrix(circle_normal,sphere[0]))
-
-		sphere_radius = sphere[1]
-		sphere_position = sphere[0]
 
 		glTranslatef(sphere_position[0],sphere_position[1],sphere_position[2]) #sphere[0] contains center coordinates (x,y,z)
-
-		glTranslatef(0,0,sphere[1]) #sphere[1] contains radius
-
+		glTranslatef(0,0,sphere_radius) #sphere[1] contains radius
 		for i in xrange(1,contours+1):
 
 			glTranslatef(0,0, -sphere_radius/contours*2)
@@ -265,37 +243,36 @@ class Visualizer():
 			glScalef(draw_radius,draw_radius,1)
 			draw_polyline((circle_xy),2,color=RGBA(.2,.5,0.5,.5))
 			glPopMatrix()
-			# draw_points(((0,0),),color=RGBA(0,1,0.2,.5))
 
 		glPopMatrix()
 
-	def draw_all_ellipses(self,eye_model,number = 0):
+	def draw_all_ellipses(self,eye_model_fitter,number = 0):
 		# draws all ellipses in model. numder determines last x amt of ellipses to show
 		glPushMatrix()
-		if number == 0 or number > eye_model.num_observations: #print everything. or statement in case try to access too many
-			for pupil in eye_model.get_all_pupil_observations():
+		if number == 0 or number > eye_model_fitter.num_observations: #print everything. or statement in case try to access too many
+			for pupil in eye_model_fitter.get_all_pupil_observations():
 				#ellipse is pupil[0]. ellipse is ([x,y], major, minor, angle)
 				glColor3f(0.0, 1.0, 0.0)  #set color to green
 				pts = cv2.ellipse2Poly( (int(pupil.ellipse_center[0]),int(pupil.ellipse_center[1])),
 	                              (int(pupil.ellipse_major_radius), int(pupil.ellipse_minor_radius) ),
-	                              int(pupil.ellipse_angle*180/scipy.pi),
+	                              int(pupil.ellipse_angle*180/math.pi),
 	                              0,360,15)
 
 				draw_polyline(pts,4,color = RGBA(0,1,1,.5))
 		else:
-			for pupil in eye_model.get_last_pupil_observations(number):
+			for pupil in eye_model_fitter.get_last_pupil_observations(number):
 				#ellipse is pupil[0]. ellipse is ([x,y], major, minor, angle)
 				glColor3f(0.0, 1.0, 0.0)  #set color to green
 				pts = cv2.ellipse2Poly( (int(pupil.ellipse_center[0]),int(pupil.ellipse_center[1])),
 	                              (int(pupil.ellipse_major_radius), int(pupil.ellipse_minor_radius) ),
-	                              int(pupil.ellipse_angle*180/scipy.pi),
+	                              int(pupil.ellipse_angle*180/math.pi),
 	                              0,360,15)
 				draw_polyline(pts,4,color = RGBA(0,1,1,.5))
 		glPopMatrix()
 
-	def draw_all_circles(self,eye_model,number = 0):
-		if number == 0 or number > eye_model.num_observations: #print everything. or statement in case try to access too many
-			for pupil in eye_model.get_all_pupil_observations():
+	def draw_all_circles(self,eye_model_fitter,number = 0):
+		if number == 0 or number > eye_model_fitter.num_observations: #print everything. or statement in case try to access too many
+			for pupil in eye_model_fitter.get_all_pupil_observations():
 				#circle is pupil[2]. circle is (center[x,y,z], normal[x,y,z], radius)
 				glPushMatrix()
 				glLoadMatrixf(self.get_pupil_transformation_matrix(pupil[2][1],pupil[2][0])) #circle normal, center
@@ -307,7 +284,7 @@ class Visualizer():
 				glEnd()
 				glPopMatrix()
 		else:
-			for pupil in eye_model.get_last_pupil_observations(number):
+			for pupil in eye_model_fitter.get_last_pupil_observations(number):
 				#circle is pupil[2]. circle is (center[x,y,z], normal[x,y,z], radius)
 				glPushMatrix()
 				glLoadMatrixf(self.get_pupil_transformation_matrix(pupil[2][1],pupil[2][0])) #circle normal, center
@@ -320,15 +297,12 @@ class Visualizer():
 				glPopMatrix()
 
 
-	def draw_circle(self,circle_normal, circle_center, circle_radius):
+	def draw_circle(self, circle_center, circle_radius, circle_normal):
 		glPushMatrix()
 		glLoadMatrixf(self.get_pupil_transformation_matrix(circle_normal,circle_center))
-		draw_points(((0,0),),color=RGBA(1.1,0.2,.8))
 		glScalef(circle_radius,circle_radius,1)
+		draw_points(((0,0),),color=RGBA(1.1,0.2,.8))
 		#draw_polyline((circle_xy),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
-		glColor4f(0.0, 0.0, 0.0,0.5)  #set color to green
-		glBegin(GL_POLYGON) #draw circle
-		glEnd()
 		glPopMatrix()
 
 	def draw_contours_on_screen(self,contours):
@@ -340,24 +314,21 @@ class Visualizer():
 			draw_polyline(contour_2d,color=RGBA(0,0,0,0.5))
 		glPopMatrix()
 
-	def draw_contours(self,contours,eye_model):
+	def draw_contours_on_sphere(self,contours,sphere_center, sphere_radius):
 
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 
 		for contour in contours:
-
-			eye_center = eye_model.eye[0]
-			eye_radius = eye_model.eye[1]
-			intersect_contour = [self.project_on_sphere(point[0],eye_center, eye_radius) for point in contour]
+			intersect_contour = [self.project_on_sphere(point[0],sphere_center, sphere_radius) for point in contour]
 			intersect_contour = [c for c in intersect_contour if c is not None]
 			draw_polyline3d(np.array(intersect_contour),color=RGBA(0.,0.,0.,.5))
 			# num += len(intersect_contour)
 		# print num #see how many points are inside contours
 
-	def draw_eye_model_text(self, eye_model):
-		pupil = eye_model.get_pupil_observation(0) #0 is temporary, should be -1 but can't do that in cpp
-		status = 'Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\nGaze vector (currently WRONG): Theta: %.3f Psi %.3f\nPupil Diameter: %.2fmm'%(eye_model.eye[0][0],
-			eye_model.eye[0][1],eye_model.eye[0][2],
+	def draw_eye_model_fitter_text(self, eye_model_fitter):
+		pupil = eye_model_fitter.get_pupil_observation(0) #0 is temporary, should be -1 but can't do that in cpp
+		status = 'Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\nGaze vector (currently WRONG): Theta: %.3f Psi %.3f\nPupil Diameter: %.2fmm'%(eye_model_fitter.eye[0][0],
+			eye_model_fitter.eye[0][1],eye_model_fitter.eye[0][2],
 			pupil.params_theta, pupil.params_psi, pupil.params_radius*2)
 		self.glfont.draw_multi_line_text(5,20,status)
 		self.glfont.draw_multi_line_text(440,20,'View: %.2f %.2f %.2f'%(self.trackball.distance[0],self.trackball.distance[1],self.trackball.distance[2]))
@@ -434,7 +405,7 @@ class Visualizer():
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool = None, eye_model = None, contours = None, image_width = None , image_height = None ):
+	def update_window(self, g_pool, eye_model_fitter, contours = None, image_width = None , image_height = None ):
 
 		if self.window_should_close:
 			self.close_window()
@@ -445,45 +416,36 @@ class Visualizer():
 			self.image_width = image_width # reassign in case the image size got changed during running
 			self.image_height = image_height
 
-			# print glGetDoublev(GL_MODELVIEW_MATRIX), glGetDoublev(GL_PROJECTION_MATRIX)
-
-			# glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-			# glClearDepth(1.0)
-			# glDepthFunc(GL_LESS)
-			# glEnable(GL_DEPTH_TEST)
-			# glAlphaFunc(GL_GREATER, 0)
 			self.clear_gl_screen()
 			self.trackball.push()
 
 			# 1. in anthromorphic space, draw pupil sphere and circles on it
 			glLoadMatrixf(self.get_anthropomorphic_matrix())
 
-			if eye_model and eye_model.num_observations > 10:
-				# self.draw_all_circles(eye_model, 10)
-				self.draw_sphere(eye_model.get_last_pupil_observation(),eye_model.eye) #draw CPP
-				for pupil in eye_model.get_last_pupil_observations(5):
-					self.draw_circle(pupil.circle_normal, pupil.circle_center, pupil.circle_radius)
 
-			glLoadMatrixf(self.get_anthropomorphic_matrix())
+			self.draw_sphere(eye_model_fitter.eye[0],eye_model_fitter.eye[1]) #draw CPP
+			for pupil in eye_model_fitter.get_last_pupil_observations(5):
+				self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal)
 
 			self.draw_coordinate_system(4)
+
 			if contours:
 				self.draw_contours_on_screen(contours)
-				self.draw_contours(contours,eye_model)
+				self.draw_contours_on_sphere(contours,eye_model_fitter.eye[0], eye_model_fitter.eye[1])
+
 			# 1b. draw frustum in pixel scale, but retaining origin
 			glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))
 			self.draw_frustum()
 
-			# 2. in pixel space, draw ellipses, and video frame
+			# 2. in pixel space draw video frame
 			glLoadMatrixf(self.get_image_space_matrix(30))
-			if g_pool: #if display eye camera frames
-				draw_named_texture(g_pool.image_tex,quad=((0,480),(640,480),(640,0),(0,0)),alpha=0.5)
-			self.draw_all_ellipses(eye_model, 5)
+
+			draw_named_texture(g_pool.image_tex,quad=((0,480),(640,480),(640,0),(0,0)),alpha=0.5)
+
 
 			self.trackball.pop()
-			# 3. draw eye model text
-			if eye_model and eye_model.num_observations > 3:
-				self.draw_eye_model_text(eye_model)
+
+			self.draw_eye_model_fitter_text(eye_model_fitter)
 
 			glfwSwapBuffers(self._window)
 			glfwPollEvents()
@@ -540,57 +502,7 @@ class Visualizer():
 	def on_key(self,window, key, scancode, action, mods): pass
 	def on_char(window,char): pass
 
-	def sphere_intersect(self,point,eye_model):
-		#auxiliary function originally in intersect.py, used here to find sphere intersect.
-		#intersection between a line and a sphere, originally called intersect(line,sphere)
-		#we only return the closer value
-
-		#first, need to unproject point to 3d. We put z position at 1 arbitrarily.
-		# direction= np.array([(point[0]-self.intrinsics[0,2])/self.intrinsics[0,0],
-	 #                    (point[1]-self.intrinsics[1,2])/self.intrinsics[1,1],1])*80
-		# return direction #this prints unprojected at z=20. Not on sphere
-		# origin= np.array([0,0,0])
-		# s_center= np.array(sphere[0]) #the center
-		# s_radius= sphere[1] #the radius
-
-		# # print origin, direction, s_center, s_radius
-
-		# vcvc_cc_rr = direction.dot(s_center)**2 - s_center.dot(s_center) + s_radius**2 # from wikipedia :)
-		# if (vcvc_cc_rr < 0):
-		# 	# logger.warning("NO INTERSECTION between line and sphere")
-		# 	return None
-		# s1 = direction.dot(s_center) - np.sqrt(vcvc_cc_rr)
-		# # s2 = direction.dot(s_center) + np.sqrt(vcvc_cc_rr)
-		# p1 = origin + s1*direction
-		# # p2 = origin + s2*direction
-		# return p1 #, p2 a line intersects a sphere at two points
-
-		# point[0] = point[0]*eye_model.scale
-		# point[1] = point[1]*eye_model.scale #not sure if this works
-		# self.intrinsics = self.intrinsics.T
-
-		#intrinsics = np.matrix('879.193 0 320; 0 -879.193 240; 0 0 1')
-
-		v = np.array([(point[0]-self.intrinsics[0,2])/ self.intrinsics[0,0],
-	                    (point[1]-self.intrinsics[1,2])/ self.intrinsics[1,1],1])
-		# self.intrinsics = self.intrinsics.T
-
-		p = (0,0,0) #put p at origin
-		c = np.array(eye_model.eye[0]) #sphere center
-		r = eye_model.eye[1] #sphere radius
-
-		vcvc_cc_rr = v.dot(c)**2 - c.dot(c) + r**2 # from wikipedia :)
-		if (vcvc_cc_rr < 0):
-			# logger.warning("NO INTERSECTION between line and sphere")
-			return None
-		s1 = v.dot(c) - np.sqrt(vcvc_cc_rr)
-		# s2 = v.dot(c) + np.sqrt(vcvc_cc_rr)
-		p1 = p + s1*v
-		# p2 = p + s2*v
-		return p1 #,p2 #a line intersects a sphere at two points
-
 	def project_on_sphere(self,point,sphere_center_point, sphere_radius):
-
 
 		#point coords are in pixels, with origin top left
 		# map them so coord origin is centerd with y up
@@ -622,7 +534,7 @@ class Visualizer():
 # if __name__ == '__main__':
 # 	print "done"
 
-# 	huding = build_test.eye_model_3d.PyEyeModelFitter(focal_length=879.193, x_disp = 320, y_disp = 240)
+# 	huding = build_test.eye_model_fitter_3d.PyEyeModelFitter(focal_length=879.193, x_disp = 320, y_disp = 240)
 # 	# print model
 # 	huding.add_observation([422.255,255.123],40.428,30.663,1.116)
 # 	huding.add_observation([442.257,365.003],44.205,32.146,1.881)
@@ -653,9 +565,9 @@ class Visualizer():
 
 # 	visualhuding.open_window()
 # 	a = 0
-# 	while visualhuding.update_window(eye_model = huding, contours = contours):
-# 	# while visualhuding.update_window(eye_model = huding):
+# 	while visualhuding.update_window(eye_model_fitter = huding, contours = contours):
+# 	# while visualhuding.update_window(eye_model_fitter = huding):
 # 		a += 1
-# 	# visualhuding.update_window(eye_model = huding)
+# 	# visualhuding.update_window(eye_model_fitter = huding)
 # 	visualhuding.close_window()
 # 	print a

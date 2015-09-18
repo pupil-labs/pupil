@@ -1,6 +1,6 @@
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
-from math import pi
+import math
 
 cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter":
 
@@ -119,11 +119,11 @@ cdef class PyEyeModelFitter:
         if a > b:
             major_radius = a/2.0
             minor_radius = b/2.0
-            angle = -ellipse_dict['angle']* pi/180
+            angle = -ellipse_dict['angle']* math.pi/180
         else:
             major_radius = b/2.0
             minor_radius = a/2.0
-            angle = (ellipse_dict['angle']+90)*pi/180 # not importing np just for pi constant
+            angle = (ellipse_dict['angle']+90)*math.pi/180 # not importing np just for pi constant
 
         # change coord system to centered origin
         x,y = ellipse_dict['center']
