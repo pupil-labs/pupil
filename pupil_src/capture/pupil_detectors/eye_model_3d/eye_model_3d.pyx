@@ -160,9 +160,10 @@ cdef class PyEyeModelFitter:
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
             p.circle.radius)
 
-    def get_last_pupil_observations(self,number):
+    def get_last_pupil_observations(self,count):
         cdef EyeModelFitter.Pupil p
-        for i in xrange(self.thisptr.pupils.size()-number,self.thisptr.pupils.size()):
+        count = min(self.thisptr.pupils.size() , count )
+        for i in xrange(self.thisptr.pupils.size()-count,self.thisptr.pupils.size()):
             p = self.thisptr.pupils[i]
             yield  PyPupil( (p.ellipse.center[0],p.ellipse.center[1]), p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle,
             p.params.theta,p.params.psi,p.params.radius,
