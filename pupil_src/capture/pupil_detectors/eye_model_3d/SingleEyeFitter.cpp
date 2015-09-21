@@ -1072,16 +1072,16 @@ EyeModelFitter::PupilParams::PupilParams() : theta(0), psi(0), radius(0)
 }
 
 
-EyeModelFitter::Observation::Observation(/*cv::Mat image, */Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/,  std::vector<std::vector<int32_t>> contours) : /* image(image),*/ ellipse(ellipse)/*, inliers(std::move(inliers)*/, contours(contours)
+EyeModelFitter::Observation::Observation(/*cv::Mat image, */Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/,   std::vector<std::vector<cv::Point2i>> contours) : /* image(image),*/ ellipse(ellipse)/*, inliers(std::move(inliers)*/, contours(contours)
 {
-    // for(auto& contour : contours){
+    for(auto& contour : contours){
 
-    //     for( int i =0 ; i < contour.size(); i+=2){
+        for( int i =0 ; i < contour.size(); i++){
 
-    //         std::cout << "[" << contour[i] << " " << contour[i+1] << "] ";
-    //     }
-    //     std::cout << std::endl;
-    // }
+            std::cout << "[" << contour[i].x << " " << contour[i].y << "] ";
+        }
+        std::cout << std::endl;
+    }
 
 }
 
@@ -1155,11 +1155,15 @@ singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_obse
     //     i++;
     // }
 
-    std::vector<std::vector<int32_t>> contours;
+     std::vector<std::vector<cv::Point2i>> contours;
     int i = 0;
     for( int32_t* contour_ptr : contour_ptrs){
         uint length = contour_sizes.at(i);
-        contours.emplace_back( contour_ptr , contour_ptr + length );  // ue pointers as iterators and assinge construct vector
+        std::vector<cv::Point2i> contour;
+        for( int j = 0; j < length; j+=2){
+            contour.emplace_back( contour_ptr[j], contour_ptr[j+1]);
+        }
+        contours.push_back(contour);
         i++;
     }
 

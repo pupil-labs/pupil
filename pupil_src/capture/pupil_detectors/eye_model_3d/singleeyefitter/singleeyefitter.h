@@ -97,9 +97,10 @@ namespace singleeyefitter {
             //cv::Mat image;
             Ellipse ellipse;
             //std::vector<cv::Point2f> inliers;
-            std::vector<std::vector<int32_t>> contours;
+            std::vector<std::vector<cv::Point2i>> contours;
+            //std::vector<std::vector<int32_t>> contours;
             Observation();
-            Observation(/*cv::Mat image,*/ Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/, std::vector<std::vector<int32_t>> contours );
+            Observation(/*cv::Mat image,*/ Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/,  std::vector<std::vector<cv::Point2i>> contours );
         };
 
         struct PupilParams {
