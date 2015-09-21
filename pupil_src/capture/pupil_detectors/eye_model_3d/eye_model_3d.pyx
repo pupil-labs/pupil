@@ -144,6 +144,14 @@ cdef class PyEyeModelFitter:
         # add cpp ellipse
         cdef Ellipse2D[double] ellipse  =  Ellipse2D[double](x,y, major_radius, minor_radius, angle)
 
+
+        #point coords are in pixels, with origin top left
+        # map them so coord origin is centerd with y up
+        for contour in contours:
+            for point in contour:
+                point[0][0] = point[0][0] - image_size[0]/2.0
+                point[0][1] = image_size[1]/2.0 - point[0][1]
+
         cdef vector[int32_t*] contour_ptrs #vector holding pointers to each contour memory
         cdef vector[size_t] contour_sizes   #vector containing the size of each corresponded contour
 
