@@ -15,11 +15,11 @@ from file_methods import save_object
 import logging
 logger = logging.getLogger(__name__)
 
-class User_Events(Plugin):
+class User_Event_Capture(Plugin):
     """Describe your plugin here
     """
     def __init__(self,g_pool,events=[('My event','e')]):
-        super(User_Events, self).__init__(g_pool)
+        super(User_Event_Capture, self).__init__(g_pool)
         self.menu = None
         self.sub_menu = None
         self.buttons = []
@@ -130,3 +130,11 @@ class User_Events(Plugin):
         if self.recording:
             self.stop()
 
+
+
+
+class User_Event_Player(Plugin):
+    """Describe your plugin here
+    """
+    def __init__(self,g_pool,events=[('My event','e')]):
+        pass
