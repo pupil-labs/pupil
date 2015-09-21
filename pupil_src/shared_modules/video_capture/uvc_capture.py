@@ -118,7 +118,7 @@ class Camera_Capture(object):
     def get_now(self):
         return time()
 
-    def get_timestamp():
+    def get_timestamp(self):
         return self.get_now()-self.timebase.value
 
     @property
