@@ -9,11 +9,9 @@
 '''
 
 import OpenGL
-from glfw import glfwGetFramebufferSize,glfwGetWindowSize
 # OpenGL.FULL_LOGGING = True
 OpenGL.ERROR_LOGGING = False
 from OpenGL.GL import *
-from shader import Shader
 
 import numpy as np
 

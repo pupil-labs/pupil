@@ -85,11 +85,11 @@ from glfw import *
 from pyglui import __version__ as pyglui_version
 assert pyglui_version >= '0.3'
 from pyglui import ui,graph,cygl
-from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture,destroy_named_texture
+from pyglui.cygl.utils import Named_Texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 from OpenGL.GL import glClearColor
 #capture
-from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
+from video_capture import File_Capture,EndofVideoFileError,FileSeekError
 
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
@@ -184,7 +184,7 @@ def session(rec_dir):
         return next(tick)
 
 
-    video_path = glob(os.path.join(rec_dir,"world.*"))[0]
+    video_path = [f for f in glob(os.path.join(rec_dir,"world.*")) if f[-3:] in ('mp4','mkv','avi')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
@@ -208,10 +208,7 @@ def session(rec_dir):
 
 
     # Initialize capture
-    cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-    if isinstance(cap,FakeCapture):
-        logger.error("could not start capture.")
-        return
+    cap = File_Capture(video_path,timestamps=timestamps_path)
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
@@ -326,12 +323,12 @@ def session(rec_dir):
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.image_tex = create_named_texture((height,width,3))
+    g_pool.image_tex = Named_Texture()
 
     #set up performace graphs:
     pid = os.getpid()
     ps = psutil.Process(pid)
-    ts = cap.get_now()-.03
+    ts = cap.get_timestamp()-.03
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,110)
@@ -402,8 +399,8 @@ def session(rec_dir):
         # render camera image
         glfwMakeContextCurrent(main_window)
         make_coord_system_norm_based()
-        update_named_texture(g_pool.image_tex,frame.img)
-        draw_named_texture(g_pool.image_tex)
+        g_pool.image_tex.update_from_frame(frame)
+        g_pool.image_tex.draw()
         make_coord_system_pixel_based(frame.img.shape)
         # render visual feedback from loaded plugins
         for p in g_pool.plugins:
@@ -437,7 +434,6 @@ def session(rec_dir):
 
     cap.close()
     g_pool.gui.terminate()
-    destroy_named_texture(g_pool.image_tex)
     glfwDestroyWindow(main_window)
 
 

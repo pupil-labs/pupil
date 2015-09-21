@@ -11,7 +11,7 @@
 
 
 
-def fill_cache(visited_list,video_file_path,q,seek_idx,run):
+def fill_cache(visited_list,video_file_path,q,seek_idx,run,min_marker_perimeter):
     '''
     this function is part of marker_detector it is run as a seperate process.
     it must be kept in a seperate file for namespace sanatisation
@@ -21,13 +21,12 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run):
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
     logger.debug('Started cacher process for Marker Detector')
     import cv2
-    from video_capture import autoCreateCapture, EndofVideoFileError,FileSeekError
+    from video_capture import File_Capture, EndofVideoFileError,FileSeekError
     from square_marker_detect import detect_markers_robust
-    min_marker_perimeter = 80
     aperture = 9
     markers = []
 
-    cap = autoCreateCapture(video_file_path)
+    cap = File_Capture(video_file_path)
 
     def next_unvisited_idx(frame_idx):
         try:
