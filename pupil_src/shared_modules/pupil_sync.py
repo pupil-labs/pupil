@@ -25,6 +25,7 @@ stop_rec = "STOP_REC:"
 start_cal = "START_CAL"
 stop_cal = "STOP_CAL"
 sync_time = "SYNC:"
+user_event = "USREVENT:"
 
 
 
@@ -194,6 +195,10 @@ class Pupil_Sync(Plugin):
             offset = float(msg.replace(sync_time,''))
             if self.ok_to_set_timebase():
                 self.adjust_timebase(offset)
+        elif user_event in msg:
+            payload = msg.replace(user_event,'')
+            user_event_name,timestamp = payload.split('@')
+            self.notify_all({'name':'remote_user_event','user_event_name':user_event_name,'timestamp':float(timestamp),'network_propagate':False,'sender':name})
 
     def on_notify(self,notification):
         # if we get a rec event that was not triggered though pupil_sync it will carry network_propage=True
@@ -203,8 +208,13 @@ class Pupil_Sync(Plugin):
         # otherwise we create a feedback loop and bad things happen.
         if notification['name'] == 'rec_started' and notification['network_propagate']:
             self.thread_pipe.send(start_rec+notification['session_name'])
-        if notification['name'] == 'rec_stopped' and notification['network_propagate']:
+        elif notification['name'] == 'rec_stopped' and notification['network_propagate']:
             self.thread_pipe.send(stop_rec)
+
+        #userevents are also sycronized
+        elif notification['name'] == 'local_user_event':
+            self.thread_pipe.send('%s%s@%s'%(user_event,notification['user_event_name'],notification['timestamp']))
+
 
     def get_init_dict(self):
         return {'name':self.name,'group':self.group}
