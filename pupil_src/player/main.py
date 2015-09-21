@@ -327,7 +327,7 @@ def session(rec_dir):
     #set up performace graphs:
     pid = os.getpid()
     ps = psutil.Process(pid)
-    ts = cap.get_now()-.03
+    ts = cap.get_timestamp()-.03
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,110)
