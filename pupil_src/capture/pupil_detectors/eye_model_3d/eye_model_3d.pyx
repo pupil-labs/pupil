@@ -1,6 +1,11 @@
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
+from libc.stdint cimport int32_t
+cimport numpy as np
+
+import numpy as np
 import math
+
 
 cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter":
 
@@ -28,16 +33,20 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         void initialise_model()
         void unproject_observations(double pupil_radius, double eye_z )
         void add_observation( Ellipse2D[double] ellipse)
-        void add_observation( Ellipse2D[double] ellipse, vector[vector[double]] )
+        void add_observation( Ellipse2D[double] ellipse, vector[int32_t*] contours , vector[size_t] sizes )
 
         cppclass PupilParams:
             float theta
             float psi
             float radius
 
+        cppclass Observation:
+            Ellipse2D[double] ellipse;
+            vector[vector[int32_t]] contours;
+
         cppclass Pupil:
             Pupil() except +
-            Ellipse2D[double] ellipse
+            Observation observation
             PupilParams params
             Circle3D[double] circle
 
@@ -135,12 +144,22 @@ cdef class PyEyeModelFitter:
         # add cpp ellipse
         cdef Ellipse2D[double] ellipse  =  Ellipse2D[double](x,y, major_radius, minor_radius, angle)
 
-        self.thisptr.add_observation(ellipse, contours)
+        cdef vector[int32_t*] contour_ptrs #vector holding pointers to each contour memory
+        cdef vector[size_t] contour_sizes   #vector containing the size of each corresponded contour
+
+        # is there a better way of doing this ?
+        cdef int32_t[:,:,:] cc # typed memoryview
+        for c in contours:
+            cc = c
+            contour_ptrs.push_back( &cc[0,0,0]  )
+            contour_sizes.push_back( c.size )
+
+        self.thisptr.add_observation(ellipse, contour_ptrs, contour_sizes  )
         self.num_observations += 1
 
     def print_ellipse(self,index):
         # self.thisptr.print_ellipse(index)
-        cdef Ellipse2D[double] ellipse = self.thisptr.pupils[index].ellipse
+        cdef Ellipse2D[double] ellipse = self.thisptr.pupils[index].observation.ellipse
         return "Ellipse ( center = [%s, %s], major_radius = %.3f, minor_radius = %.3f, angle = %.3f)"%(ellipse.center[0],ellipse.center[1],ellipse.major_radius,ellipse.minor_radius,ellipse.angle)
 
     def print_eye(self):
@@ -155,7 +174,7 @@ cdef class PyEyeModelFitter:
         cdef EyeModelFitter.Pupil p = self.thisptr.pupils[index]
         # returning (Ellipse, Params, Cicle). Ellipse = ([x,y],major,minor,angle). Params = (theta,psi,r)
         # Circle = (center[x,y,z], normal[x,y,z], radius)
-        return PyPupil( (p.ellipse.center[0],p.ellipse.center[1]), p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle,
+        return PyPupil( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
@@ -166,7 +185,7 @@ cdef class PyEyeModelFitter:
         count = min(self.thisptr.pupils.size() , count )
         for i in xrange(self.thisptr.pupils.size()-count,self.thisptr.pupils.size()):
             p = self.thisptr.pupils[i]
-            yield  PyPupil( (p.ellipse.center[0],p.ellipse.center[1]), p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle,
+            yield  PyPupil( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
@@ -175,7 +194,7 @@ cdef class PyEyeModelFitter:
 
     def get_last_pupil_observation(self):
         cdef EyeModelFitter.Pupil p = self.thisptr.pupils.back()
-        return PyPupil( (p.ellipse.center[0],p.ellipse.center[1]), p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle,
+        return PyPupil( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
@@ -184,7 +203,7 @@ cdef class PyEyeModelFitter:
     def get_all_pupil_observations(self):
         cdef EyeModelFitter.Pupil p
         for p in self.thisptr.pupils:
-            yield PyPupil( (p.ellipse.center[0],p.ellipse.center[1]), p.ellipse.major_radius,p.ellipse.minor_radius,p.ellipse.angle,
+            yield PyPupil( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),

@@ -68,8 +68,13 @@ namespace singleeyefitter {
 
        // Index add_observation(cv::Mat image, Ellipse pupil, int n_pseudo_inliers = 0);
        // Index add_observation(cv::Mat image, Ellipse pupil, std::vector<cv::Point2f> pupil_inliers);
-        Index add_observation( Ellipse pupil );
-        Index add_observation( Ellipse pupil, std::vector<std::vector<double>> contours );
+       // Index add_observation( Ellipse pupil );
+
+        /*
+            contours contains pointers to memory location of each contour
+            contour_sizes contains the size of the corresponded contour, so we know how much memory we can claim on the c++ side
+        */
+        Index add_observation( Ellipse pupil, std::vector<int32_t*> contour_ptrs ,  std::vector<size_t> contour_sizes );
         void reset();
 
         //
@@ -88,28 +93,29 @@ namespace singleeyefitter {
         void refine_with_inliers(const CallbackFunction& callback = CallbackFunction());
 
 
-        // struct Observation {
-        //     //cv::Mat image;
-        //     Ellipse ellipse;
-        //     //std::vector<cv::Point2f> inliers;
+        struct Observation {
+            //cv::Mat image;
+            Ellipse ellipse;
+            //std::vector<cv::Point2f> inliers;
+            std::vector<std::vector<int32_t>> contours;
+            Observation();
+            Observation(/*cv::Mat image,*/ Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/, std::vector<std::vector<int32_t>> contours );
+        };
 
-        //     Observation();
-        //     Observation(/*cv::Mat image,*/ Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/);
-        // };
         struct PupilParams {
             double theta, psi, radius;
             PupilParams();
             PupilParams(double theta, double psi, double radius);
         };
         struct Pupil {
-            Ellipse ellipse;
+            Observation observation;
             Circle circle;
             PupilParams params;
             bool init_valid;
 
             Pupil();
-           // Pupil(Observation observation);
-            Pupil(Ellipse ellipse);
+            Pupil(Observation observation);
+            //Pupil(Ellipse ellipse);
         };
 
         //

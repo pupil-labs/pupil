@@ -1050,7 +1050,7 @@ struct PupilAnthroTerm : public spii::Term {
 const EyeModelFitter::Vector3 EyeModelFitter::camera_center = EyeModelFitter::Vector3::Zero();
 
 
-EyeModelFitter::Pupil::Pupil(Ellipse ellipse) : ellipse(ellipse), params(0, 0, 0)
+EyeModelFitter::Pupil::Pupil(Observation observation) : observation(observation), params(0, 0, 0)
 {
 
 }
@@ -1072,15 +1072,23 @@ EyeModelFitter::PupilParams::PupilParams() : theta(0), psi(0), radius(0)
 }
 
 
-// EyeModelFitter::Observation::Observation(/*cv::Mat image, */Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/) : image(std::move(image)), ellipse(std::move(ellipse))/*, inliers(std::move(inliers)*/)
-// {
+EyeModelFitter::Observation::Observation(/*cv::Mat image, */Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/,  std::vector<std::vector<int32_t>> contours) : /* image(image),*/ ellipse(ellipse)/*, inliers(std::move(inliers)*/, contours(contours)
+{
+    // for(auto& contour : contours){
 
-// }
+    //     for( int i =0 ; i < contour.size(); i+=2){
 
-// EyeModelFitter::Observation::Observation()
-// {
+    //         std::cout << "[" << contour[i] << " " << contour[i+1] << "] ";
+    //     }
+    //     std::cout << std::endl;
+    // }
 
-// }
+}
+
+EyeModelFitter::Observation::Observation()
+{
+
+}
 
 }
 
@@ -1116,42 +1124,48 @@ singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length, double regi
 //     return pupils.size() - 1;
 // }
 
-singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_observation( Ellipse pupil )
+// singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_observation( Ellipse pupil )
+// {
+//     // std::vector<cv::Point2f> pupil_inliers;
+//     // for (int i = 0; i < n_pseudo_inliers; ++i) {
+//     //     auto p = pointAlongEllipse(pupil, i * 2 * M_PI / n_pseudo_inliers);
+//     //     pupil_inliers.emplace_back(static_cast<float>(p[0]), static_cast<float>(p[1]));
+//     // }
+//     std::lock_guard<std::mutex> lock_model(model_mutex);
+
+//     pupils.emplace_back(
+//         //Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/)
+//         pupil
+//         );
+//     return pupils.size() - 1;
+// }
+
+singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_observation( Ellipse pupil, std::vector<int32_t*> contour_ptrs , std::vector<size_t> contour_sizes )
 {
-    // std::vector<cv::Point2f> pupil_inliers;
-    // for (int i = 0; i < n_pseudo_inliers; ++i) {
-    //     auto p = pointAlongEllipse(pupil, i * 2 * M_PI / n_pseudo_inliers);
-    //     pupil_inliers.emplace_back(static_cast<float>(p[0]), static_cast<float>(p[1]));
-    // }
+
     std::lock_guard<std::mutex> lock_model(model_mutex);
 
-    pupils.emplace_back(
-        //Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/)
-        pupil
-        );
-    return pupils.size() - 1;
-}
-
-singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_observation( Ellipse pupil, std::vector<std::vector<double>> contours )
-{
-    // std::vector<cv::Point2f> pupil_inliers;
-    // for (int i = 0; i < n_pseudo_inliers; ++i) {
-    //     auto p = pointAlongEllipse(pupil, i * 2 * M_PI / n_pseudo_inliers);
-    //     pupil_inliers.emplace_back(static_cast<float>(p[0]), static_cast<float>(p[1]));
+    // uint i = 0;
+    // for( auto* contour : contour_ptrs){
+    //     uint length = contour_sizes.at(i);
+    //     for( int k = 0; k<length; k+=2){
+    //         std::cout << "[" << contour[k] << ","<< contour[k+1] << "] " ;
+    //     }
+    //     std::cout << std::endl;
+    //     i++;
     // }
-    std::lock_guard<std::mutex> lock_model(model_mutex);
 
-
-    for( auto& point : contours){
-
-        std::cout << "point: " << point[0] << " "<< point[1];
-
+    std::vector<std::vector<int32_t>> contours;
+    int i = 0;
+    for( int32_t* contour_ptr : contour_ptrs){
+        uint length = contour_sizes.at(i);
+        contours.emplace_back( contour_ptr , contour_ptr + length );  // ue pointers as iterators and assinge construct vector
+        i++;
     }
 
 
     pupils.emplace_back(
-        //Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/)
-        pupil
+        Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/, std::move(contours))
         );
     return pupils.size() - 1;
 }
@@ -1350,7 +1364,7 @@ const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::
 
     // Single pupil version of "unproject_observations"
 
-    auto unprojection_pair = unproject(pupil.ellipse, pupil_radius, focal_length);
+    auto unprojection_pair = unproject(pupil.observation.ellipse, pupil_radius, focal_length);
 
     const Vector3& c = unprojection_pair.first.center;
     const Vector3& v = unprojection_pair.first.normal;
@@ -1651,7 +1665,7 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
         // Do a per-image unprojection of the pupil ellipse into the two fixed
         // size circles that would project onto it. The size of the circles
         // doesn't matter here, only their center and normal does.
-        auto unprojection_pair = unproject(pupil.ellipse,
+        auto unprojection_pair = unproject(pupil.observation.ellipse,
             pupil_radius, focal_length);
 
         // Get projected circles and gaze vectors
