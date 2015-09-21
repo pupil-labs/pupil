@@ -92,6 +92,11 @@ namespace singleeyefitter {
 
         void refine_with_inliers(const CallbackFunction& callback = CallbackFunction());
 
+        //
+        // Pubil-Laps addons
+        //
+
+        void unproject_contours();
 
         struct Observation {
             //cv::Mat image;
@@ -110,10 +115,11 @@ namespace singleeyefitter {
         };
         struct Pupil {
             Observation observation;
+            std::vector<std::vector<Vector3>> unprojected_contours;  // whre to put this ? observations ? keep projected contours ?
             Circle circle;
             PupilParams params;
             bool init_valid;
-
+            bool processed; // indicate if this pupil is already processed
             Pupil();
             Pupil(Observation observation);
             //Pupil(Ellipse ellipse);
