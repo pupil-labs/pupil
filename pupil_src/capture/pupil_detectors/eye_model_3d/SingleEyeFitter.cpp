@@ -1833,3 +1833,35 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
 
     model_version++;
 }
+
+
+void singleeyefitter::EyeModelFitter::unproject_contours(){
+
+    if (eye == Sphere::Null || pupils.size() == 0) {
+        return;
+    }
+
+
+    for(auto& pupil : pupils ){
+
+        if(pupil.processed)
+            continue;
+
+        auto& contours = pupil.observation.contours;
+        pupil.unprojected_contours.reserve( contours.size() );
+        int i = 0;
+        for( auto& contour : contours ){
+            for(auto& point : contour){
+
+                Vector3 point_a(point.x, point.y , focal_length);
+                Vector3 direction = point_a - camera_center;
+                auto unprojected_point = intersect( Line3(camera_center,  direction.normalized()), eye );
+                pupil.unprojected_contours.at(i).push_back( unprojected_point.first );
+            }
+        }
+
+
+    }
+
+
+}
