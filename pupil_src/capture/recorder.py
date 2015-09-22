@@ -171,13 +171,13 @@ class Recorder(Plugin):
             self.start()
 
     def on_notify(self,notification):
-        if notification['name'] == 'rec_should_start':
+        if notification['subject'] == 'rec_should_start':
             if self.running:
                 logger.warning('Recording is already running!')
             else:
                 self.set_session_name(notification["session_name"])
                 self.start(network_propagate=notification.get('network_propagate',True))
-        elif notification['name'] == 'rec_should_stop':
+        elif notification['subject'] == 'rec_should_stop':
             if self.running:
                 self.stop(network_propagate=notification.get('network_propagate',True))
             else:
@@ -250,7 +250,7 @@ class Recorder(Plugin):
         if self.show_info_menu:
             self.open_info_menu()
 
-        self.notify_all( {'name':'rec_started','rec_path':self.rec_path,'session_name':self.session_name,'network_propagate':network_propagate} )
+        self.notify_all( {'subject':'rec_started','rec_path':self.rec_path,'session_name':self.session_name,'network_propagate':network_propagate} )
 
     def open_info_menu(self):
         self.info_menu = ui.Growing_Menu('additional Recording Info',size=(300,300),pos=(300,300))
@@ -388,7 +388,7 @@ class Recorder(Plugin):
         self.gaze_pos_list = []
 
 
-        self.notify_all( {'name':'rec_stopped','rec_path':self.rec_path,'network_propagate':network_propagate} )
+        self.notify_all( {'subject':'rec_stopped','rec_path':self.rec_path,'network_propagate':network_propagate} )
 
 
 
