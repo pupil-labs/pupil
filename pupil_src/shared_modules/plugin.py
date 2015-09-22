@@ -87,12 +87,13 @@ class Plugin(object):
         """
         pass
 
-    ### if you want a session persistent plugin implement this function:
-    # def get_init_dict(self):
-    #     d = {}
-    #     # add all aguments of your plugin init fn with paramter names as name field
-    #     # do not include g_pool here.
-    #     return d
+    ## if you want a session persistent plugin implement this function:
+    def get_init_dict(self):
+        raise NotImplementedError()
+        # d = {}
+        # # add all aguments of your plugin init fn with paramter names as name field
+        # # do not include g_pool here.
+        # return d
 
     def cleanup(self):
         """
@@ -269,7 +270,7 @@ class Plugin_List(object):
             try:
                 p_initializer = p.class_name,p.get_init_dict()
                 initializers.append(p_initializer)
-            except AttributeError:
+            except NotImplementedError:
                 #not all plugins want to be savable, they will not have the init dict.
                 # any object without a get_init_dict method will throw this exception.
                 pass
