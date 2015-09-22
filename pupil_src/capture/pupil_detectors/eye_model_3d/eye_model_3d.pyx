@@ -219,14 +219,19 @@ cdef class PyEyeModelFitter:
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
             p.circle.radius)
 
-    def get_last_pupil_contour(self):
+    def get_last_contour(self):
+        if self.thisptr.pupils.size() == 0:
+            return []
+
         cdef EyeModelFitter.Pupil p = self.thisptr.pupils.back()
+        contours = []
         for contour in p.unprojected_contours:
             c = []
             for point in contour:
                 c.append([point[0],point[1],point[2]])
-            yield c
+            contours.append(c)
 
+        return contours
 
 
     def get_all_pupil_observations(self):
