@@ -7,6 +7,30 @@ import numpy as np
 import math
 
 
+# cdef extern from 'singleeyefitter/intersect.h' namespace 'singleeyefitter':
+#     cdef pair[Matrix31d,Matrix31d] intersect(const ParametrizedLine3d line, const Sphere[double] sphere) except +
+
+cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
+    cdef cppclass Matrix21d "Eigen::Matrix<double,2,1>": # eigen defaults to column major layout
+        Matrix21d() except +
+        double * data()
+        double& operator[](size_t)
+
+
+    cdef cppclass Matrix31d "Eigen::Matrix<double,3,1>": # eigen defaults to column major layout
+        Matrix31d() except +
+        Matrix31d(double x, double y, double z)
+        double * data()
+        double& operator[](size_t)
+
+    # cdef cppclass ParametrizedLine3d "Eigen::ParametrizedLine<double, 3>":
+    #     ParametrizedLine3d() except +
+    #     ParametrizedLine3d(Matrix31d origin, Matrix31d direction)
+
+
+#typdefs
+ctypedef Matrix31d Vector3
+
 cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter":
 
     cdef cppclass Ellipse2D[T]:
@@ -35,18 +59,27 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         void add_observation( Ellipse2D[double] ellipse)
         void add_observation( Ellipse2D[double] ellipse, vector[int32_t*] contours , vector[size_t] sizes )
 
+        #######################
+        ## Pubil-Laps addons ##
+        #######################
+
+        void unproject_contours();
+
+        #######################
+
         cppclass PupilParams:
             float theta
             float psi
             float radius
 
         cppclass Observation:
-            Ellipse2D[double] ellipse;
-            vector[vector[int32_t]] contours;
+            Ellipse2D[double] ellipse
+            vector[vector[int32_t]] contours
 
         cppclass Pupil:
             Pupil() except +
             Observation observation
+            vector[vector[Vector3]] unprojected_contours
             PupilParams params
             Circle3D[double] circle
 
@@ -58,29 +91,12 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         #Ellipse2D[double] projected_eye #technically only need center, not whole ellipse. can optimize here
         #float scale
 
-# cdef extern from 'singleeyefitter/intersect.h' namespace 'singleeyefitter':
-#     cdef pair[Matrix31d,Matrix31d] intersect(const ParametrizedLine3d line, const Sphere[double] sphere) except +
 
-cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
-    cdef cppclass Matrix21d "Eigen::Matrix<double,2,1>": # eigen defaults to column major layout
-        Matrix21d() except +
-        double * data()
-        double& operator[](size_t)
-
-    cdef cppclass Matrix31d "Eigen::Matrix<double,3,1>": # eigen defaults to column major layout
-        Matrix31d() except +
-        Matrix31d(double x, double y, double z)
-        double * data()
-        double& operator[](size_t)
-
-    cdef cppclass ParametrizedLine3d "Eigen::ParametrizedLine<double, 3>":
-        ParametrizedLine3d() except +
-        ParametrizedLine3d(Matrix31d origin, Matrix31d direction)
 
 
 from collections import namedtuple
 
-PyPupil = namedtuple('Pupil' , 'ellipse_center, ellipse_major_radius, ellipse_minor_radius, ellipse_angle,params_theta, params_psi, params_radius, circle_center, circle_normal, circle_radius')
+PyObservation = namedtuple('Observation' , 'ellipse_center, ellipse_major_radius, ellipse_minor_radius, ellipse_angle,params_theta, params_psi, params_radius, circle_center, circle_normal, circle_radius')
 
 cdef class PyEyeModelFitter:
     cdef EyeModelFitter *thisptr
@@ -116,6 +132,10 @@ cdef class PyEyeModelFitter:
         self.counter += 1
         self.thisptr.unproject_observations(pupil_radius,eye_z)
         self.thisptr.initialise_model()
+
+        #now we have an updated eye model
+        #use it to unproject contours
+        self.thisptr.unproject_contours()
 
     # def add_observation(self,center,major_radius,minor_radius,angle):
     #     #standard way of adding an observation
@@ -178,62 +198,45 @@ cdef class PyEyeModelFitter:
     #     cdef Ellipse2D[double] projected_eye = self.thisptr.projected_eye
     #     return (projected_eye.center[0],projected_eye.center[1])
 
-    def get_pupil_observation(self,index):
+    def get_observation(self,index):
         cdef EyeModelFitter.Pupil p = self.thisptr.pupils[index]
         # returning (Ellipse, Params, Cicle). Ellipse = ([x,y],major,minor,angle). Params = (theta,psi,r)
         # Circle = (center[x,y,z], normal[x,y,z], radius)
-        return PyPupil( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
+        return PyObservation( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
             p.circle.radius)
 
-    def get_last_pupil_observations(self,count):
+    def get_last_observations(self,count=1):
         cdef EyeModelFitter.Pupil p
         count = min(self.thisptr.pupils.size() , count )
         for i in xrange(self.thisptr.pupils.size()-count,self.thisptr.pupils.size()):
             p = self.thisptr.pupils[i]
-            yield  PyPupil( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
+            yield  PyObservation( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
             p.circle.radius)
 
-
-    def get_last_pupil_observation(self):
+    def get_last_pupil_contour(self):
         cdef EyeModelFitter.Pupil p = self.thisptr.pupils.back()
-        return PyPupil( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
-            p.params.theta,p.params.psi,p.params.radius,
-            (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
-            (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
-            p.circle.radius)
+        for contour in p.unprojected_contours:
+            c = []
+            for point in contour:
+                c.append([point[0],point[1],point[2]])
+            yield c
+
+
 
     def get_all_pupil_observations(self):
         cdef EyeModelFitter.Pupil p
         for p in self.thisptr.pupils:
-            yield PyPupil( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
+            yield PyObservation( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
             p.circle.radius)
-
-    def intersect_contour_with_eye(self,float[:,:] contour):
-        #eye is sphere.
-        # self.thisptr.intersect_contour_with_eye(contour)
-        pass
-        # cdef Matrix31d direction
-        # cdef Matrix31d origin = Matrix31d(0,0,0)
-        # cdef ParametrizedLine3d line
-        # cdef pair[Matrix31d,Matrix31d] intersect_pts
-        # for point in contour:
-        #     direction = Matrix31d(point[0],point[1],point[2])
-        #     line = ParametrizedLine3d(origin,direction)
-        #     try:
-        #         intersect_pts = intersect(line,self.thisptr.eye)
-        #     except:
-        #         pass
-        #     finally:
-        #         print intersect_pts.first[0],intersect_pts.first[1],intersect_pts.first[2]
 
     property model_version:
         def __get__(self):

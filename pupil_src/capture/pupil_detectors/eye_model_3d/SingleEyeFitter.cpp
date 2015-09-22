@@ -1074,14 +1074,14 @@ EyeModelFitter::PupilParams::PupilParams() : theta(0), psi(0), radius(0)
 
 EyeModelFitter::Observation::Observation(/*cv::Mat image, */Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/,   std::vector<std::vector<cv::Point2i>> contours) : /* image(image),*/ ellipse(ellipse)/*, inliers(std::move(inliers)*/, contours(contours)
 {
-    for(auto& contour : contours){
+    // for(auto& contour : contours){
 
-        for( int i =0 ; i < contour.size(); i++){
+    //     for( int i =0 ; i < contour.size(); i++){
 
-            std::cout << "[" << contour[i].x << " " << contour[i].y << "] ";
-        }
-        std::cout << std::endl;
-    }
+    //         std::cout << "[" << contour[i].x << " " << contour[i].y << "] ";
+    //     }
+    //     std::cout << std::endl;
+    // }
 
 }
 
@@ -1841,22 +1841,32 @@ void singleeyefitter::EyeModelFitter::unproject_contours(){
         return;
     }
 
-
     for(auto& pupil : pupils ){
 
-        if(pupil.processed)
-            continue;
+        //if(pupil.processed)
+          //  continue;
 
         auto& contours = pupil.observation.contours;
-        pupil.unprojected_contours.reserve( contours.size() );
+        pupil.unprojected_contours.clear();
+        pupil.unprojected_contours.resize( contours.size() );
         int i = 0;
         for( auto& contour : contours ){
             for(auto& point : contour){
 
-                Vector3 point_a(point.x, point.y , focal_length);
-                Vector3 direction = point_a - camera_center;
-                auto unprojected_point = intersect( Line3(camera_center,  direction.normalized()), eye );
-                pupil.unprojected_contours.at(i).push_back( unprojected_point.first );
+                Vector3 point_3d(point.x, point.y , focal_length);
+                Vector3 direction = point_3d - camera_center;
+
+                try{
+
+                     // we use the eye properties uf the current eye, when ever we call this
+                   const auto& unprojected_point = intersect( Line3(camera_center,  direction.normalized()), eye );
+                   pupil.unprojected_contours.at(i).push_back( std::move(unprojected_point.first) );
+
+                }catch (no_intersection_exception&) {
+                    // if there is no intersection we don't do anything
+
+                }
+
             }
         }
 

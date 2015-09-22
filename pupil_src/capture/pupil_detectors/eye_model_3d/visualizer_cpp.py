@@ -314,8 +314,16 @@ class Visualizer():
 			draw_polyline(contour_2d,color=RGBA(0,0,0,0.5))
 		glPopMatrix()
 
-	def draw_contours_on_sphere(self,contours,sphere_center, sphere_radius):
+	def draw_contours(self, contours):
+		glPushMatrix()
 
+		glLoadMatrixf(self.get_anthropomorphic_matrix())
+		for contour in contours:
+			draw_polyline3d(contour,color=RGBA(0.,0.,0.,.5))
+		glPopMatrix()
+
+	def draw_contours_on_sphere(self,contours,sphere_center, sphere_radius):
+		glPushMatrix()
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 
 		for contour in contours:
@@ -324,9 +332,11 @@ class Visualizer():
 			draw_polyline3d(np.array(intersect_contour),color=RGBA(0.,0.,0.,.5))
 			# num += len(intersect_contour)
 		# print num #see how many points are inside contours
+		glPopMatrix()
+
 
 	def draw_eye_model_fitter_text(self, eye_model_fitter):
-		pupil = eye_model_fitter.get_pupil_observation(0) #0 is temporary, should be -1 but can't do that in cpp
+		pupil = eye_model_fitter.get_observation(0) #0 is temporary, should be -1 but can't do that in cpp
 		status = 'Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\nGaze vector (currently WRONG): Theta: %.3f Psi %.3f\nPupil Diameter: %.2fmm'%(eye_model_fitter.eye[0][0],
 			eye_model_fitter.eye[0][1],eye_model_fitter.eye[0][2],
 			pupil.params_theta, pupil.params_psi, pupil.params_radius*2)
@@ -407,7 +417,7 @@ class Visualizer():
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool, eye_model_fitter, contours = None, image_width = None , image_height = None ):
+	def update_window(self, g_pool, eye_model_fitter, image_width = None , image_height = None ):
 
 		if self.window_should_close:
 			self.close_window()
@@ -429,14 +439,16 @@ class Visualizer():
 
 
 		self.draw_sphere(eye_position,eye_radius)
-		for pupil in eye_model_fitter.get_last_pupil_observations(5):
+		for pupil in eye_model_fitter.get_last_observations(5):
 			self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal)
 
 		self.draw_coordinate_system(4)
 
-		if contours:
-			self.draw_contours_on_screen(contours)
-			self.draw_contours_on_sphere(contours,eye_position, eye_radius)
+		#draw unprojecte contours
+		contours =  eye_model_fitter.get_last_pupil_contour()
+		self.draw_contours(contours)
+			#self.draw_contours_on_screen(contours)
+			#self.draw_contours_on_sphere(contours,eye_position, eye_radius)
 
 		# 1b. draw frustum in pixel scale, but retaining origin
 		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))
