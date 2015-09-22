@@ -332,10 +332,9 @@ class Recorder(Plugin):
             logger.warning("No calibration data found. Please calibrate first.")
 
         try:
-            copy2(os.path.join(self.g_pool.user_dir,"camera_matrix.npy"),os.path.join(self.rec_path,"camera_matrix.npy"))
-            copy2(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"),os.path.join(self.rec_path,"dist_coefs.npy"))
+            copy2(os.path.join(self.g_pool.user_dir,"camera_calibration"),os.path.join(self.rec_path,"camera_calibration"))
         except:
-            logger.info("No camera intrinsics found.")
+            logger.info("No camera calibration found.")
 
         try:
             with open(self.meta_info_path, 'a') as f:

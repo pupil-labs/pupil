@@ -284,7 +284,7 @@ class Reference_Surface(object):
                     translate3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
                     translate3d_object_to_cam_hm[:-1, -1] = translate3d_object_to_cam.reshape(3)
 
-                    # combine all tranformations into of matrix that decribes the move from object origin and orientation to camera origin and orientation
+                    # combine all tranformations into transformation matrix that decribes the move from object origin and orientation to camera origin and orientation
                     tranform3d_object_to_cam =  np.matrix(flip_z_axix_hm) * np.matrix(rot3d_object_to_cam_hm) * np.matrix(translate3d_object_to_cam_hm)
                     self.camera_pose_3d = tranform3d_object_to_cam
                 else:
@@ -449,9 +449,9 @@ class Reference_Surface(object):
             # Draw the camera frustum and origin using the 3d tranformation obtained from solvepnp
             glPushMatrix()
             glMultMatrixf(self.camera_pose_3d.T.flatten())
-            draw_frustum(self.img_size, K, 150)
+            draw_frustum(img_size, K, 150)
             glLineWidth(1)
-            draw_frustum(self.img_size, K, .1)
+            draw_frustum(img_size, K, .1)
             draw_coordinate_system(l=5)
             glPopMatrix()
 

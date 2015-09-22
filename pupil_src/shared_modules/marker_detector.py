@@ -11,7 +11,7 @@
 import sys, os,platform
 import cv2
 import numpy as np
-from file_methods import Persistent_Dict
+from file_methods import Persistent_Dict,load_object
 from pyglui.cygl.utils import draw_polyline,RGBA
 from pyglui import ui
 from methods import normalize,denormalize
@@ -38,12 +38,22 @@ class Marker_Detector(Plugin):
         #load camera intrinsics
 
         try:
-            K = np.load(os.path.join(self.g_pool.user_dir,'camera_matrix.npy'))
-            dist_coef = np.load(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"))
-            img_size = np.load(os.path.join(self.g_pool.user_dir,"camera_resolution.npy"))
-            self.camera_intrinsics = K, dist_coefs, img_size
+            camera_calibration = load_object(os.path.join(self.g_pool.user_dir,'camera_calibration'))
         except:
             self.camera_intrinsics = None
+        else:
+            same_name = camera_calibration['camera_name'] == self.g_pool.capture.name
+            same_resolution =  camera_calibration['resolution'] == self.g_pool.capture.frame_size
+            if same_name and same_resolution:
+                logger.info('Loaded camera calibration. 3D marker tracking enabled.')
+                K = camera_calibration['camera_matrix']
+                dist_coefs = camera_calibration['dist_coefs']
+                resolution = camera_calibration['resolution']
+                self.camera_intrinsics = K,dist_coefs,resolution
+            else:
+                logger.info('Loaded camera calibration but camera name and/or resolution has changed. Please re-calibrate.')
+                self.camera_intrinsics = None
+
 
         # all registered surfaces
         self.surface_definitions = Persistent_Dict(os.path.join(g_pool.user_dir,'surface_definitions') )
