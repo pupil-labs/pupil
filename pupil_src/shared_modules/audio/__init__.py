@@ -104,7 +104,7 @@ if os_name == "Linux":
             #         '-i', 'hw:0,0',
             #         '-v', 'error',
             #         out_file]
-            logger.debug("Recording audio  using 'arecord' device %s to %s"%(audio_src_idx,out_file))
+            logger.info("Recording audio  using 'arecord' device %s to %s"%(audio_src_idx,out_file))
             command = [ arecord_bin,
                         '-D', 'plughw:'+str(audio_src_idx)+',0',
                         '-r', '16000',
@@ -153,12 +153,12 @@ elif os_name == "Darwin":
         """docstring for audio_capture"""
         def __init__(self,audio_src_idx=0, out_file='out.wav'):
             super(Audio_Capture, self).__init__()
-            logger.debug("Recording audio  using 'sox' device %s to %s"%(audio_src_idx,out_file))
+            logger.info("Recording audio  using 'sox' device %s to %s"%(audio_src_idx,out_file))
 
             command = [ sox_bin,
                     '-d','-q', out_file]
             try:
-                self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE)
+                self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE,shell=True)
             except OSError:
                 logger.warning("Audio module for recording not found. Not recording audio. Please do 'brew install sox' ")
                 self.process = None
