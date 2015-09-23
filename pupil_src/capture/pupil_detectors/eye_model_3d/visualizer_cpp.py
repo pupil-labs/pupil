@@ -449,7 +449,6 @@ class Visualizer():
 		contours =  eye_model_fitter.get_last_contour()
 		self.draw_contours(contours)
 		#self.draw_contours_on_screen(projected_contours)
-		#self.draw_contours_on_sphere(projected_contours,eye_position, eye_radius)
 
 		# 1b. draw frustum in pixel scale, but retaining origin
 		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))
@@ -519,34 +518,6 @@ class Visualizer():
 	def on_iconify(self,window,x,y): pass
 	def on_key(self,window, key, scancode, action, mods): pass
 	def on_char(window,char): pass
-
-	def project_on_sphere(self,point,sphere_center_point, sphere_radius):
-
-		#point coords are in pixels, with origin top left
-		# map them so coord origin is centerd with y up
-		x = point[0] - self.image_width/2.0
-		y = self.image_height/2.0 - point[1]
-		z = self.focal_length
-		ray_direction  = np.array([x , y , z] )
-		ray_direction = ray_direction / np.linalg.norm(ray_direction)# normalize
-
-		ray_origin = (0,0,0)
-		q = np.array(sphere_center_point) - ray_origin
-		vDotQ = ray_direction.dot( q)
-		squareDiffs = q.dot( q) - sphere_radius*sphere_radius
-		discrim = vDotQ * vDotQ - squareDiffs
-
-		if discrim >= 0:
-		  root = np.sqrt(discrim)
-		  t0 = (vDotQ - root)
-		  t1 = (vDotQ + root)
-		  if t0 < t1:
-		  	return ray_origin + ray_direction * t0
-		  else:
-		  	return ray_origin + ray_direction * t1
-
-		return None
-
 
 
 # if __name__ == '__main__':

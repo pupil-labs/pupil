@@ -1763,10 +1763,10 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
             }
         }
 
-        std::cout << "Inliers: " << best_inlier_indices.size()
-            << " (" << (100.0*best_inlier_indices.size() / pupil_gazelines_proj.size()) << "%)"
-            << " = " << best_line_distance_error
-            << std::endl;
+        // std::cout << "Inliers: " << best_inlier_indices.size()
+        //     << " (" << (100.0*best_inlier_indices.size() / pupil_gazelines_proj.size()) << "%)"
+        //     << " = " << best_line_distance_error
+        //     << std::endl;
 
         for (auto& pupil : pupils) {
             pupil.init_valid = false;
