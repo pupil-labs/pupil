@@ -141,11 +141,12 @@ elif os_name == "Darwin":
             self['No Audio'] = -1
             self['Default Mic'] = 0
 
-    # if getattr(sys, 'frozen', False):
-    #     # we are running in a |PyInstaller| bundle
-    #     sox_bin = os.path.join(sys._MEIPASS,'sox')
-    # else:
-    #     # we are running in a normal Python environment
+    if getattr(sys, 'frozen', False):
+        # we are running in a |PyInstaller| bundle
+        sox_bin = os.path.join(sys._MEIPASS,'sox')
+        sox_bin = os.path.join('/usr/local/bin''sox')
+    else:
+        # we are running in a normal Python environment
     sox_bin = "sox"
 
 
@@ -154,9 +155,10 @@ elif os_name == "Darwin":
         def __init__(self,audio_src_idx=0, out_file='out.wav'):
             super(Audio_Capture, self).__init__()
             logger.info("Recording audio  using 'sox' device %s to %s"%(audio_src_idx,out_file))
-            command = sox_bin + ' -d ' + ' -q ' + out_file
+            command = [ sox_bin,
+                    '-d','-q', out_file]
             try:
-                self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE,shell=True)
+                self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE)
             except OSError:
                 logger.warning("Audio module for recording not found. Not recording audio. Please do 'brew install sox' ")
                 self.process = None
@@ -170,7 +172,7 @@ elif os_name == "Darwin":
                 if err:
                     logger.warning('Audio recording failed. Error:\n %s'%err)
                 if out:
-                    logger.debug('Audio recording. INFO:\n %s'%out)
+                    logger.info('Audio recording. INFO:\n %s'%out)
                 logger.debug("Finished recording mic with SOX process, pid: %s"%(self.process.pid))
 
 
