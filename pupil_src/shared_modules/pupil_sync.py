@@ -184,13 +184,13 @@ class Pupil_Sync(Plugin):
     def handle_msg(self,name,msg):
         if start_rec in msg :
             session_name = msg.replace(start_rec,'')
-            self.notify_all({'name':'rec_should_start','session_name':session_name,'network_propagate':False})
+            self.notify_all({'subject':'rec_should_start','session_name':session_name,'network_propagate':False})
         elif stop_rec in msg:
-            self.notify_all({'name':'rec_should_stop','network_propagate':False})
+            self.notify_all({'subject':'rec_should_stop','network_propagate':False})
         elif start_cal in msg:
-            self.notify_all({'name':'cal_should_start'})
+            self.notify_all({'subject':'cal_should_start'})
         elif stop_cal in msg:
-            self.notify_all({'name':'cal_should_stop'})
+            self.notify_all({'subject':'cal_should_stop'})
         elif sync_time in msg:
             offset = float(msg.replace(sync_time,''))
             if self.ok_to_set_timebase():
@@ -198,7 +198,7 @@ class Pupil_Sync(Plugin):
         elif user_event in msg:
             payload = msg.replace(user_event,'')
             user_event_name,timestamp = payload.split('@')
-            self.notify_all({'name':'remote_user_event','user_event_name':user_event_name,'timestamp':float(timestamp),'network_propagate':False,'sender':name})
+            self.notify_all({'subject':'remote_user_event','user_event_name':user_event_name,'timestamp':float(timestamp),'network_propagate':False,'sender':name,'received_timestamp':self.g_pool.capture.get_timestamp()})
 
     def on_notify(self,notification):
         # if we get a rec event that was not triggered though pupil_sync it will carry network_propage=True
@@ -206,13 +206,13 @@ class Pupil_Sync(Plugin):
         # this msg has come because rec was triggered through pupil sync,
         # we dont need to echo this action out again.
         # otherwise we create a feedback loop and bad things happen.
-        if notification['name'] == 'rec_started' and notification['network_propagate']:
+        if notification['subject'] == 'rec_started' and notification['network_propagate']:
             self.thread_pipe.send(start_rec+notification['session_name'])
-        elif notification['name'] == 'rec_stopped' and notification['network_propagate']:
+        elif notification['subject'] == 'rec_stopped' and notification['network_propagate']:
             self.thread_pipe.send(stop_rec)
 
         #userevents are also sycronized
-        elif notification['name'] == 'local_user_event':
+        elif notification['subject'] == 'local_user_event':
             self.thread_pipe.send('%s%s@%s'%(user_event,notification['user_event_name'],notification['timestamp']))
 
 

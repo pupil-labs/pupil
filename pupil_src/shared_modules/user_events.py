@@ -93,21 +93,21 @@ class User_Event_Capture(Plugin):
     def fire_event(self,event_name):
         t = self.g_pool.capture.get_timestamp()
         logger.info('"%s"@%s'%(event_name,t))
-        event = {'name':'local_user_event','user_event_name':event_name,'timestamp':t}
+        event = {'subject':'local_user_event','user_event_name':event_name,'timestamp':t}
         self.notify_all(event)
         if self.recording:
             self.event_list.append( event )
 
     def on_notify(self,notification):
-        if notification['name'] is 'rec_started':
+        if notification['subject'] is 'rec_started':
             self.file_path = os.path.join(notification['rec_path'],'user_events')
             self.recording = True
             self.event_list = []
 
-        elif notification['name'] is 'rec_stopped':
+        elif notification['subject'] is 'rec_stopped':
             self.stop()
 
-        elif notification['name'] is 'remote_user_event':
+        elif notification['subject'] is 'remote_user_event':
             logger.info('"%s"@%s via sync from "%s"'%(notification['user_event_name'],notification['timestamp'],notification['sender']))
             if self.recording:
                 self.event_list.append(notification)
