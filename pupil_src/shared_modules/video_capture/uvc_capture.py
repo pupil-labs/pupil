@@ -9,9 +9,11 @@
 '''
 
 import uvc
-from uvc import device_list
+from uvc import device_list,is_accessible
 #check versions for our own depedencies as they are fast-changing
-assert uvc.__version__ >= '0.2'
+assert uvc.__version__ >= '0.4'
+
+from fake_capture import Fake_Capture
 
 from ctypes import c_double
 from pyglui import ui
@@ -25,7 +27,6 @@ class CameraCaptureError(Exception):
     def __init__(self, arg):
         super(CameraCaptureError, self).__init__()
         self.arg = arg
-
 
 
 class Camera_Capture(object):
@@ -45,64 +46,12 @@ class Camera_Capture(object):
             logger.error("Invalid timebase variable type. Will use default system timebase")
             self.timebase = c_double(0)
 
-        self.use_hw_ts = self.check_hw_ts_support()
-        self._last_timestamp = self.get_now()
-        self.capture = uvc.Capture(uid)
-        self.uid = uid
-        if 'C930e' in self.capture.name:
-            logger.debug('Timestamp offset for c930 applied: -0.1sec')
-            self.ts_offset = -0.1
-        else:
-            self.ts_offset = 0.0
-
-        if "Pupil Cam1" in self.capture.name or "USB2.0 Camera" in self.capture.name:
-            self.capture.bandwidth_factor = 1.3
-
-        logger.debug('avaible modes %s'%self.capture.avaible_modes)
-
-        controls_dict = dict([(c.display_name,c) for c in self.capture.controls])
-        try:
-            controls_dict['Auto Focus'].value = 0
-        except KeyError:
-            pass
-        try:
-            # Auto Exposure Priority = 1 leads to reduced framerates under low light and corrupt timestamps.
-            controls_dict['Auto Exposure Priority'].value = 0
-        except KeyError:
-            pass
-
         self.sidebar = None
         self.menu = None
+        self.init_capture(uid)
 
 
-    def check_hw_ts_support(self):
-        # hw timestamping:
-        # uvc supports Sart of Exposure hardware timestamping ofr UVC Capture devices
-        # these HW timestamps are excellent referece times and
-        # preferred over softwaretimestamp denoting the avaibleilt of frames to the user.
-        # however not all uvc cameras report valid hw timestamps, notably microsoft hd-6000
-        # becasue all used devices need to properly implement hw timestamping for it to be usefull
-        # but we cannot now what device the other process is using  + the user may select a differet capture device during runtime
-        # we use some fuzzy logic to determine if hw timestamping should be employed.
-        return False
-        blacklist = ["Microsoft","HD-6000"]
-        qualifying_devices = ["C930e","Integrated Camera", "USB 2.0 Camera"]
-        attached_devices = [c.name for c in device_list()]
-        if any(qd in self.name for qd in qualifying_devices):
-            use_hw_ts = True
-            logger.info("Capture device: '%s' supports HW timestamping. Using hardware timestamps." %self.name)
-        else:
-            use_hw_ts = False
-            logger.info("Capture device: '%s' is not known to support HW timestamping. Using software timestamps." %self.name)
-
-        for d in attached_devices:
-            if any(bd in d for bd in blacklist):
-                logger.info("Capture device: '%s' detected as attached device. Falling back to software timestamps"%d)
-                use_hw_ts = False
-        return use_hw_ts
-
-    def re_init(self,uid,size=(640,480),fps=30):
-
+    def re_init_capture(self,uid):
         current_size = self.capture.frame_size
         current_fps = self.capture.frame_rate
 
@@ -110,34 +59,50 @@ class Camera_Capture(object):
         #recreate the bar with new values
         menu_conf = self.menu.configuration
         self.deinit_gui()
-
-        self.use_hw_ts = self.check_hw_ts_support()
-        self.capture = uvc.Capture(uid)
-        self.uid = uid
-
+        self.init_capture(uid)
         self.frame_size = current_size
         self.frame_rate = current_fps
+        self.init_gui(self.sidebar)
+        self.menu.configuration = menu_conf
+
+
+    def init_capture(self,uid):
+        self.uid = uid
+
+        if uid is not None:
+            self.capture = uvc.Capture(uid)
+        else:
+            self.capture = Fake_Capture()
+
+        if 'C930e' in self.capture.name:
+                logger.debug('Timestamp offset for c930 applied: -0.1sec')
+                self.ts_offset = -0.1
+        else:
+            self.ts_offset = 0.0
+
+
+        #UVC setting quirks:
         controls_dict = dict([(c.display_name,c) for c in self.capture.controls])
         try:
             controls_dict['Auto Focus'].value = 0
         except KeyError:
             pass
-        # try:
-        #     # exposure_auto_priority == 1
-        #     # leads to reduced framerates under low light and corrupt timestamps.
-        #     self.capture.set_control(controls_dict['Exposure, Auto Priority']['id'], 0)
-        # except KeyError:
-        #     pass
 
-        self.init_gui(self.sidebar)
-        self.menu.configuration = menu_conf
-
-        if 'C930e' in self.capture.name:
-            logger.debug('Timestamp offset for c930 applied: -0.1sec')
-            self.ts_offset = -0.1
-        else:
-            self.ts_offset = 0.0
-
+        if "Pupil Cam1" in self.capture.name or "USB2.0 Camera" in self.capture.name:
+            self.capture.bandwidth_factor = 1.3
+            if "ID0" in self.capture.name or "ID1" in self.capture.name:
+                try:
+                    controls_dict['Auto Exposure Priority'].value = 1
+                except KeyError:
+                    pass
+                try:
+                    controls_dict['Absolute Exposure Time'].value = 59
+                except KeyError:
+                    pass
+            try:
+                controls_dict['Auto Focus'].value = 0
+            except KeyError:
+                pass
 
     def get_frame(self):
         try:
@@ -145,22 +110,16 @@ class Camera_Capture(object):
         except:
             raise CameraCaptureError("Could not get frame from %s"%self.uid)
 
-        timestamp = frame.timestamp
-        if self.use_hw_ts:
-            # lets make sure this timestamps is sane:
-            if abs(timestamp-uvc.get_sys_time_monotonic()) > 2: #hw_timestamp more than 2secs away from now?
-                logger.warning("Hardware timestamp from %s is reported to be %s but monotonic time is %s"%('/dev/video'+str(self.src_id),timestamp,uvc.get_sys_time_monotonic()))
-                timestamp = uvc.get_sys_time_monotonic()
-        else:
-            # timestamp = uvc.get_sys_time_monotonic()
-            timestamp = self.get_now()+self.ts_offset
-
+        timestamp = self.get_now()+self.ts_offset
         timestamp -= self.timebase.value
         frame.timestamp = timestamp
         return frame
 
     def get_now(self):
         return time()
+
+    def get_timestamp():
+        return self.get_now()-self.timebase.value
 
     @property
     def frame_rate(self):
@@ -181,33 +140,44 @@ class Camera_Capture(object):
         settings = {}
         settings['name'] = self.capture.name
         settings['frame_rate'] = self.frame_rate
+        settings['frame_size'] = self.frame_size
         settings['uvc_controls'] = {}
         for c in self.capture.controls:
             settings['uvc_controls'][c.display_name] = c.value
         return settings
     @settings.setter
     def settings(self,settings):
-        try:
-            self.frame_rate = settings['frame_rate']
-        except KeyError:
-            pass
-
-        if settings.get('name','') == self.capture.name:
-            for c in self.capture.controls:
-                try:
-                    c.value = settings['uvc_controls'][c.display_name]
-                except KeyError as e:
-                    logger.warning('Could not set UVC setting "%s" from last session.'%c.display_name)
+        self.frame_size = settings['frame_size']
+        self.frame_rate = settings['frame_rate']
+        for c in self.capture.controls:
+            try:
+                c.value = settings['uvc_controls'][c.display_name]
+            except KeyError as e:
+                logger.info('No UVC setting "%s" found from settings.'%c.display_name)
     @property
     def frame_size(self):
         return self.capture.frame_size
     @frame_size.setter
     def frame_size(self,new_size):
-        self.capture.frame_size = filter_sizes(self.name,new_size)
+        #closest match for size
+        sizes = [ abs(r[0]-new_size[0]) for r in self.capture.frame_sizes ]
+        best_size_idx = sizes.index(min(sizes))
+        size = self.capture.frame_sizes[best_size_idx]
+        if size != new_size:
+            logger.warning("%s resolution capture mode not available. Selected %s."%(new_size,size))
+        self.capture.frame_size = size
 
     @property
     def name(self):
         return self.capture.name
+
+
+    @property
+    def jpeg_support(self):
+        if self.capture.__class__ is Fake_Capture:
+            return False
+        else:
+            return True
 
     def init_gui(self,sidebar):
 
@@ -218,37 +188,47 @@ class Camera_Capture(object):
                     c.value = c.def_val
                 except:
                     pass
+        def set_size(new_size):
+            self.frame_size = new_size
+            menu_conf = self.menu.configuration
+            self.deinit_gui()
+            self.init_gui(self.sidebar)
+            self.menu.configuration = menu_conf
+
 
         def gui_update_from_device():
             for c in self.capture.controls:
                 c.refresh()
 
         def gui_init_cam_by_uid(requested_id):
-            for cam in uvc.device_list():
-                if cam['uid'] == requested_id:
-                    self.re_init(requested_id)
-                    return
-            logger.warning("could not reinit capture, src_id not valid anymore")
-            return
+            if requested_id is None:
+                self.re_init_capture(None)
+            else:
+                for cam in uvc.device_list():
+                    if cam['uid'] == requested_id:
+                        if is_accessible(requested_id):
+                            self.re_init_capture(requested_id)
+                        else:
+                            logger.error("The selected Camera is already in use or blocked.")
+                        return
+                logger.warning("could not reinit capture, src_id not valid anymore")
+                return
 
         #create the menu entry
         self.menu = ui.Growing_Menu(label='Camera Settings')
         cameras = uvc.device_list()
-        camera_names = [c['name'] for c in cameras]
-        camera_ids = [c['uid'] for c in cameras]
+        camera_names = ['Fake Capture']+[c['name'] for c in cameras]
+        camera_ids = [None]+[c['uid'] for c in cameras]
         self.menu.append(ui.Selector('uid',self,selection=camera_ids,labels=camera_names,label='Capture Device', setter=gui_init_cam_by_uid) )
 
-        # hardware_ts_switch = ui.Switch('use_hw_ts',self,label='use hardware timestamps')
-        # hardware_ts_switch.read_only = True
-        # self.menu.append(hardware_ts_switch)
-
-
         sensor_control = ui.Growing_Menu(label='Sensor Settings')
+        sensor_control.append(ui.Info_Text("Do not change these during calibration or recording!"))
         sensor_control.collapsed=False
         image_processing = ui.Growing_Menu(label='Image Post Processing')
         image_processing.collapsed=True
 
-        sensor_control.append(ui.Selector('frame_rate',self, selection=self.capture.frame_rates,label='Frames per second' ) )
+        sensor_control.append(ui.Selector('frame_size',self,setter=set_size, selection=self.capture.frame_sizes,label='Resolution' ) )
+        sensor_control.append(ui.Selector('frame_rate',self, selection=self.capture.frame_rates,label='Framerate' ) )
 
 
         for control in self.capture.controls:
@@ -279,7 +259,8 @@ class Camera_Capture(object):
                     sensor_control.append(c)
 
         self.menu.append(sensor_control)
-        self.menu.append(image_processing)
+        if image_processing.elements:
+            self.menu.append(image_processing)
         self.menu.append(ui.Button("refresh",gui_update_from_device))
         self.menu.append(ui.Button("load defaults",gui_load_defaults))
 
@@ -287,11 +268,11 @@ class Camera_Capture(object):
         #add below geneal settings
         self.sidebar.insert(1,self.menu)
 
+
     def deinit_gui(self):
         if self.menu:
             self.sidebar.remove(self.menu)
             self.menu = None
-
 
 
     def close(self):
@@ -299,17 +280,5 @@ class Camera_Capture(object):
         # self.capture.close()
         del self.capture
         logger.info("Capture released")
-
-
-def filter_sizes(cam_name,size):
-    #here we can force some defaulit formats
-    if "6000" in cam_name:
-        if size[0] == 640:
-            logger.info("HD-6000 camera selected. Forcing format to 640,360")
-            return 640,360
-        elif size[0] == 320:
-            logger.info("HD-6000 camera selected. Forcing format to 320,360")
-            return 320,160
-    return size
 
 

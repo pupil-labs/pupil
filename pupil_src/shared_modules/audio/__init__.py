@@ -104,7 +104,7 @@ if os_name == "Linux":
             #         '-i', 'hw:0,0',
             #         '-v', 'error',
             #         out_file]
-            logger.debug("Recording audio  using 'arecord' device %s to %s"%(audio_src_idx,out_file))
+            logger.info("Recording audio  using 'arecord' device %s to %s"%(audio_src_idx,out_file))
             command = [ arecord_bin,
                         '-D', 'plughw:'+str(audio_src_idx)+',0',
                         '-r', '16000',
@@ -141,20 +141,20 @@ elif os_name == "Darwin":
             self['No Audio'] = -1
             self['Default Mic'] = 0
 
-    # if getattr(sys, 'frozen', False):
-    #     # we are running in a |PyInstaller| bundle
-    #     sox_bin = os.path.join(sys._MEIPASS,'sox')
-    # else:
-    #     # we are running in a normal Python environment
-    sox_bin = "sox"
+    if getattr(sys, 'frozen', False):
+        # we are running in a |PyInstaller| bundle
+        # sox_bin = os.path.join(sys._MEIPASS,'sox')
+        sox_bin = os.path.join('/usr/local/bin','sox')
+    else:
+        # we are running in a normal Python environment
+        sox_bin = "sox"
 
 
     class Audio_Capture(object):
         """docstring for audio_capture"""
         def __init__(self,audio_src_idx=0, out_file='out.wav'):
             super(Audio_Capture, self).__init__()
-            logger.debug("Recording audio  using 'sox' device %s to %s"%(audio_src_idx,out_file))
-
+            logger.info("Recording audio  using 'sox' device %s to %s"%(audio_src_idx,out_file))
             command = [ sox_bin,
                     '-d','-q', out_file]
             try:
@@ -172,7 +172,7 @@ elif os_name == "Darwin":
                 if err:
                     logger.warning('Audio recording failed. Error:\n %s'%err)
                 if out:
-                    logger.debug('Audio recording. INFO:\n %s'%out)
+                    logger.info('Audio recording. INFO:\n %s'%out)
                 logger.debug("Finished recording mic with SOX process, pid: %s"%(self.process.pid))
 
 

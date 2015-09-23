@@ -11,7 +11,7 @@
 import sys, os,platform
 import cv2
 import numpy as np
-from file_methods import Persistent_Dict
+from file_methods import Persistent_Dict,load_object
 from pyglui.cygl.utils import draw_polyline,RGBA
 from pyglui import ui
 from methods import normalize,denormalize
@@ -28,7 +28,7 @@ from math import sqrt
 class Marker_Detector(Plugin):
     """docstring
     """
-    def __init__(self,g_pool,mode="Show markers and frames"):
+    def __init__(self,g_pool,mode="Show markers and frames",min_marker_perimeter = 40):
         super(Marker_Detector, self).__init__(g_pool)
         self.order = .2
 
@@ -38,12 +38,22 @@ class Marker_Detector(Plugin):
         #load camera intrinsics
 
         try:
-            K = np.load(os.path.join(self.g_pool.user_dir,'camera_matrix.npy'))
-            dist_coef = np.load(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"))
-            img_size = np.load(os.path.join(self.g_pool.user_dir,"camera_resolution.npy"))
-            self.camera_intrinsics = K, dist_coefs, img_size
+            camera_calibration = load_object(os.path.join(self.g_pool.user_dir,'camera_calibration'))
         except:
             self.camera_intrinsics = None
+        else:
+            same_name = camera_calibration['camera_name'] == self.g_pool.capture.name
+            same_resolution =  camera_calibration['resolution'] == self.g_pool.capture.frame_size
+            if same_name and same_resolution:
+                logger.info('Loaded camera calibration. 3D marker tracking enabled.')
+                K = camera_calibration['camera_matrix']
+                dist_coefs = camera_calibration['dist_coefs']
+                resolution = camera_calibration['resolution']
+                self.camera_intrinsics = K,dist_coefs,resolution
+            else:
+                logger.info('Loaded camera calibration but camera name and/or resolution has changed. Please re-calibrate.')
+                self.camera_intrinsics = None
+
 
         # all registered surfaces
         self.surface_definitions = Persistent_Dict(os.path.join(g_pool.user_dir,'surface_definitions') )
@@ -59,7 +69,7 @@ class Marker_Detector(Plugin):
 
         self.robust_detection = 1
         self.aperture = 11
-        self.min_marker_perimeter = 80
+        self.min_marker_perimeter = min_marker_perimeter
         self.locate_3d = False
 
         #debug vars
@@ -136,13 +146,14 @@ class Marker_Detector(Plugin):
         self.menu.append(ui.Info_Text('This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*.'))
         self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Switch('robust_detection',self,label='Robust detection'))
+        self.menu.append(ui.Slider('min_marker_perimeter',self,step=1,min=10,max=80))
         self.menu.append(ui.Switch('locate_3d',self,label='3D localization'))
         self.menu.append(ui.Selector('mode',self,label="Mode",selection=['Show markers and frames','Show marker IDs', 'Surface edit mode'] ))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_'),))
 
         # disable locate_3d if camera intrinsics don't exist
         if self.camera_intrinsics is None:
-            self.menu.elements[3].read_only = True
+            self.menu.elements[4].read_only = True
 
         for s in self.surfaces:
             idx = self.surfaces.index(s)
@@ -219,7 +230,7 @@ class Marker_Detector(Plugin):
 
 
     def get_init_dict(self):
-        return {'mode':self.mode}
+        return {'mode':self.mode,'min_marker_perimeter':self.min_marker_perimeter}
 
 
     def gl_display(self):
