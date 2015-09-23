@@ -25,13 +25,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-from threading import Thread as Process
-from threading import Event
+# from threading import Thread as Process
+# from threading import Event
 
-# if platform.system() == 'Darwin':
-#     from billiard import Process,Event
-# else:
-#     from multiprocessing import Process,Event
+if platform.system() == 'Darwin':
+    from billiard import Process,Event
+else:
+    from multiprocessing import Process,Event
 
 
 """
@@ -243,32 +243,17 @@ def format_time(time, time_base):
 
 
 def rec_thread(file_loc, audio_src,should_close):
-
+    import av,platform
     #create in container
     if platform.system() == "Darwin":
         in_container = av.open(':%s'%audio_src,format="avfoundation")
     elif platform.system() == "Linux":
         in_container = av.open('hw:%s'%audio_src,format="alsa")
-     
+
     in_stream = None
-    # print 'container:', in_container
-    # print '\tformat:', in_container.format
-    # print '\tduration:', float(in_container.duration) / av.time_base
-    # print '\tmetadata:'
-    # for k, v in sorted(in_container.metadata.iteritems()):
-    #     print '\t\t%s: %r' % (k, v)
-    # print
 
     # print len(in_container.streams), 'stream(s):'
     for i, stream in enumerate(in_container.streams):
-
-        print '\t%r' % stream
-        print '\t\ttime_base: %r' % stream.time_base
-        print '\t\trate: %r' % stream.rate
-        print '\t\tstart_time: %r' % stream.start_time
-        print '\t\tduration: %s' % format_time(stream.duration, stream.time_base)
-        print '\t\tbit_rate: %r' % stream.bit_rate
-        print '\t\tbit_rate_tolerance: %r' % stream.bit_rate_tolerance
 
         if stream.type == 'audio':
             # print '\t\taudio:'
@@ -277,22 +262,13 @@ def rec_thread(file_loc, audio_src,should_close):
             in_stream = stream
             break
 
-        # elif stream.type == 'container':
-        #     print '\t\tcontainer:'
-        #     print '\t\t\tformat:', stream.format
-        #     print '\t\t\taverage_rate: %r' % stream.average_rate
-
-        # print '\t\tmetadata:'
-        # for k, v in sorted(stream.metadata.iteritems()):
-        #     print '\t\t\t%s: %r' % (k, v)
-
     if in_stream is None:
-        logger.error("No input audio stream found.")
+        # logger.error("No input audio stream found.")
         return
 
     #create out container
     out_container = av.open(file_loc,'w')
-    logger.debug("Opended '%s' for writing."%file_loc)
+    # logger.debug("Opended '%s' for writing."%file_loc)
     out_stream =  out_container.add_stream(template = in_stream)
 
 
@@ -335,6 +311,12 @@ class Audio_Capture(object):
         self.start(file_loc,audio_src)
 
     def start(self,file_loc, audio_src):
+        # from rec_thread import rec_thread
+        try:
+            from billiard import forking_enable
+            forking_enable(0)
+        except ImportError:
+            pass
         self.should_close.clear()
         self.process = Process(target=rec_thread, args=(file_loc, audio_src,self.should_close))
         self.process.start()
@@ -378,11 +360,11 @@ class Audio_Capture(object):
 
 
 if __name__ == '__main__':
-    # try:
-    #     from billiard import forking_enable
-    #     forking_enable(0)
-    # except ImportError:
-    #     pass
+    try:
+        from billiard import forking_enable
+        forking_enable(0)
+    except ImportError:
+        pass
     logging.basicConfig(level=logging.DEBUG)
 
     cap = Audio_Capture('test.wav',0)
