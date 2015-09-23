@@ -352,7 +352,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
                 eye_model_fitter.update_model() #this calls unproject and initialize
 
         # show the visualizer
-        visual.update_window(g_pool,eye_model_fitter, frame.width, frame.height)
+        visual.update_window(g_pool,contours, eye_model_fitter, frame.width, frame.height)
         glfwMakeContextCurrent(main_window)
 
         if window_should_update():

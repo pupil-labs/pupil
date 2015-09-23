@@ -418,7 +418,7 @@ class Visualizer():
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool, eye_model_fitter, image_width = None , image_height = None ):
+	def update_window(self, g_pool, projected_contours, eye_model_fitter, image_width = None , image_height = None ):
 
 		if self.window_should_close:
 			self.close_window()
@@ -448,8 +448,8 @@ class Visualizer():
 		#draw unprojecte contours
 		contours =  eye_model_fitter.get_last_contour()
 		self.draw_contours(contours)
-			#self.draw_contours_on_screen(contours)
-			#self.draw_contours_on_sphere(contours,eye_position, eye_radius)
+		#self.draw_contours_on_screen(projected_contours)
+		#self.draw_contours_on_sphere(projected_contours,eye_position, eye_radius)
 
 		# 1b. draw frustum in pixel scale, but retaining origin
 		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))
