@@ -154,9 +154,7 @@ elif os_name == "Darwin":
         def __init__(self,audio_src_idx=0, out_file='out.wav'):
             super(Audio_Capture, self).__init__()
             logger.info("Recording audio  using 'sox' device %s to %s"%(audio_src_idx,out_file))
-
-            command = [ sox_bin,
-                    '-d','-q', out_file]
+            command = sox_bin + ' -d ' + ' -q ' + out_file
             try:
                 self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE,shell=True)
             except OSError:
