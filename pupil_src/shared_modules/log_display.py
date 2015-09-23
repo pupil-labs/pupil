@@ -60,7 +60,7 @@ class Log_Display(Plugin):
         self.rendered_log = self.rendered_log[-10:]
 
         self.should_redraw = True
-        self.alpha = 2.
+        self.alpha = 2.+ len(self.rendered_log)*0.3
 
 
     def on_window_resize(self,window,w,h):

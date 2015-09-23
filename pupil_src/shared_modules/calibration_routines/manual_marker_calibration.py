@@ -119,7 +119,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,return_params=True)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
-        self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
+        self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
 
 
     def update(self,frame,events):

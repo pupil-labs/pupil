@@ -55,7 +55,6 @@ class Event_Capture(Plugin):
 
     def add_event(self,_):
         if self.recording:
-            self.events.append(('my_event_name',self.g_pool.capture.get_now()))
 
     def on_notify(self,notification):
         if notification['name'] is 'rec_started':

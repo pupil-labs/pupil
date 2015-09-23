@@ -21,11 +21,11 @@ from pyglui.cygl.utils import init as cygl_init
 from pyglui.cygl.utils import draw_points as cygl_draw_points
 from pyglui.cygl.utils import RGBA as cygl_rgba
 from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
-from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
+from pyglui.cygl.utils import Named_Texture
 
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.5'
+assert pyglui_version >= '0.6'
 
 #monitoring
 import psutil
@@ -45,7 +45,7 @@ from pupil_detectors import Canny_Detector
 
 
 
-def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
+def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     """
     Creates a window, gl context.
     Grabs images from a capture.
@@ -88,20 +88,22 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # Callback functions
     def on_resize(window,w, h):
-        active_window = glfwGetCurrentContext()
-        glfwMakeContextCurrent(window)
-        g_pool.gui.update_window(w,h)
-        graph.adjust_size(w,h)
-        adjust_gl_view(w,h)
-        glfwMakeContextCurrent(active_window)
+        if not g_pool.iconified:
+            active_window = glfwGetCurrentContext()
+            glfwMakeContextCurrent(window)
+            g_pool.gui.update_window(w,h)
+            graph.adjust_size(w,h)
+            adjust_gl_view(w,h)
+            glfwMakeContextCurrent(active_window)
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key,scancode,action,mods)
 
-
     def on_char(window,char):
         g_pool.gui.update_char(char)
 
+    def on_iconify(window,iconified):
+        g_pool.iconified = iconified
 
     def on_button(window,button, action, mods):
         if g_pool.display_mode == 'roi':
@@ -147,10 +149,12 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         session_settings.clear()
     # Initialize capture
     cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
-    cap.frame_size = cap_size
-    cap.frame_rate = 60 #default
-    cap.settings = session_settings.get('capture_settings',{})
-
+    default_settings = {'frame_size':cap_size,'frame_rate':30}
+    previous_settings = session_settings.get('capture_settings',None)
+    if previous_settings and previous_settings['name'] == cap.name:
+        cap.settings = previous_settings
+    else:
+        cap.settings = default_settings
 
     # Test capture
     try:
@@ -160,10 +164,14 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         cap.close()
         return
 
-    g_pool.capture = cap
-    g_pool.flip = session_settings.get('flip',False)
+    #signal world that we are ready to go
+    pipe_to_world.send('eye%s process ready'%eye_id)
+
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
+    g_pool.iconified = False
+    g_pool.capture = cap
+    g_pool.flip = session_settings.get('flip',False)
     g_pool.display_mode = session_settings.get('display_mode','camera_image')
     g_pool.display_mode_info_text = {'camera_image': "Raw eye camera image. This uses the least amount of CPU power",
                                 'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be a small as possible but big enough to capture to pupil in its movements",
@@ -204,8 +212,8 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.image_tex = create_named_texture(frame.img.shape)
-    update_named_texture(g_pool.image_tex,frame.img)
+    g_pool.image_tex = Named_Texture()
+    g_pool.image_tex.update_from_frame(frame)
     glfwSwapInterval(0)
 
 
@@ -231,6 +239,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     # Register callbacks main_window
     glfwSetFramebufferSizeCallback(main_window,on_resize)
     glfwSetWindowCloseCallback(main_window,on_close)
+    glfwSetWindowIconifyCallback(main_window,on_iconify)
     glfwSetKeyCallback(main_window,on_key)
     glfwSetCharCallback(main_window,on_char)
     glfwSetMouseButtonCallback(main_window,on_button)
@@ -267,6 +276,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
     def window_should_update():
         return next(window_update_timer)
 
+
     # Event loop
     while not g_pool.quit.value:
         # Get an image from the grabber
@@ -292,8 +302,8 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
         ###  RECORDING of Eye Video (on demand) ###
         # Setup variables and lists for recording
-        if rx_from_world.poll():
-            command,raw_mode = rx_from_world.recv()
+        if pipe_to_world.poll():
+            command,raw_mode = pipe_to_world.recv()
             if command is not None:
                 record_path = command
                 logger.info("Will save eye video to: %s"%record_path)
@@ -323,48 +333,48 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         # stream the result
         g_pool.pupil_queue.put(result)
 
-
         # GL drawing
         if window_should_update():
-            glfwMakeContextCurrent(main_window)
-            clear_gl_screen()
+            if not g_pool.iconified:
+                glfwMakeContextCurrent(main_window)
+                clear_gl_screen()
 
-            # switch to work in normalized coordinate space
-            if g_pool.display_mode == 'algorithm':
-                update_named_texture(g_pool.image_tex,frame.img)
-            elif g_pool.display_mode in ('camera_image','roi'):
-                update_named_texture(g_pool.image_tex,frame.gray)
-            else:
-                pass
+                # switch to work in normalized coordinate space
+                if g_pool.display_mode == 'algorithm':
+                    g_pool.image_tex.update_from_ndarray(frame.img)
+                elif g_pool.display_mode in ('camera_image','roi'):
+                    g_pool.image_tex.update_from_ndarray(frame.gray)
+                else:
+                    pass
 
-            make_coord_system_norm_based(g_pool.flip)
-            draw_named_texture(g_pool.image_tex)
-            # switch to work in pixel space
-            make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
+                make_coord_system_norm_based(g_pool.flip)
+                g_pool.image_tex.draw()
+                # switch to work in pixel space
+                make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
 
-            if result['confidence'] >0:
-                if result.has_key('axes'):
-                    pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
-                                            (int(result['axes'][0]/2),int(result['axes'][1]/2)),
-                                            int(result['angle']),0,360,15)
-                    cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
-                cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
+                if result['confidence'] >0:
+                    if result.has_key('axes'):
+                        pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
+                                                (int(result['axes'][0]/2),int(result['axes'][1]/2)),
+                                                int(result['angle']),0,360,15)
+                        cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
+                    cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
 
-            # render graphs
-            graph.push_view()
-            fps_graph.draw()
-            cpu_graph.draw()
-            graph.pop_view()
+                # render graphs
+                graph.push_view()
+                fps_graph.draw()
+                cpu_graph.draw()
+                graph.pop_view()
 
-            # render GUI
-            g_pool.gui.update()
+                # render GUI
+                g_pool.gui.update()
 
-            #render the ROI
-            if g_pool.display_mode == 'roi':
-                u_r.draw(g_pool.gui.scale)
+                #render the ROI
+                if g_pool.display_mode == 'roi':
+                    u_r.draw(g_pool.gui.scale)
 
-            #update screen
-            glfwSwapBuffers(main_window)
+                #update screen
+                glfwSwapBuffers(main_window)
             glfwPollEvents()
 
     # END while running
@@ -375,7 +385,7 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
         writer = None
         np.save(timestamps_path,np.asarray(timestamps))
 
-
+    glfwRestoreWindow(main_window) #need to do this for windows os
     # save session persistent settings
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['roi'] = u_r.get()
@@ -401,10 +411,10 @@ def eye(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
 
     logger.debug("Process done")
 
-def eye_profiled(g_pool,cap_src,cap_size,rx_from_world,eye_id=0):
+def eye_profiled(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     import cProfile,subprocess,os
     from eye import eye
-    cProfile.runctx("eye(g_pool,cap_src,cap_size,rx_from_world,eye_id)",{"g_pool":g_pool,'cap_src':cap_src,'cap_size':cap_size,'rx_from_world':rx_from_world,'eye_id':eye_id},locals(),"eye%s.pstats"%eye_id)
+    cProfile.runctx("eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id)",{"g_pool":g_pool,'cap_src':cap_src,'cap_size':cap_size,'pipe_to_world':pipe_to_world,'eye_id':eye_id},locals(),"eye%s.pstats"%eye_id)
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye%s.pstats | dot -Tpng -o eye%s_cpu_time.png"%(eye_id,eye_id), shell=True)

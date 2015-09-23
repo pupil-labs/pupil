@@ -71,7 +71,7 @@ class Volumetric_Gaze_Mapper(Gaze_Mapping_Plugin):
 
     def update(self,frame,events):
         gaze_pts = []
-        raise NotImplementedError
+        raise NotImplementedError()
         events['gaze_positions'] = gaze_pts
 
     def get_init_dict(self):
@@ -84,7 +84,7 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
 
     def update(self,frame,events):
         gaze_pts = []
-        raise NotImplementedError
+        raise NotImplementedError()
         events['gaze_positions'] = gaze_pts
 
     def get_init_dict(self):

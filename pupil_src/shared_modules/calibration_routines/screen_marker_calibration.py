@@ -21,7 +21,7 @@ from circle_detector import get_candidate_ellipses
 import audio
 
 from pyglui import ui
-from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA
+from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA,draw_concentric_circles
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
@@ -32,11 +32,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def draw_marker(pos,r,alpha):
-    black = RGBA(0.,0.,0.,alpha)
-    white = RGBA(1.,1.,1.,alpha)
-    for r,c in zip((r,0.8*r,0.6*r,.4*r,.2*r),(black,white,black,white,black)):
-        draw_points([pos],size=r,color=c,sharpness=0.95)
 
 # window calbacks
 def on_resize(window,w,h):
@@ -94,12 +89,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.candidate_ellipses = []
         self.pos = None
 
-        self.show_edges = 0
         self.dist_threshold = 5
         self.area_threshold = 20
         self.marker_scale = marker_scale
 
-        self.world_size = self.g_pool.capture.frame_size
 
         self._window = None
 
@@ -131,15 +124,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.g_pool.calibration_menu.append(self.menu)
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
-        self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Pattern scale'))
-
-        submenu = ui.Growing_Menu('Advanced')
-        self.menu.append(submenu)
-        submenu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
-        submenu.append(ui.Switch('show_edges',self,label='show edges'))
-        submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area threshold'))
-        submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity threshold'))
-
+        self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
+        self.menu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
 
         self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
@@ -244,11 +230,11 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             return
 
         cal_pt_cloud = np.array(cal_pt_cloud)
-        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.world_size,return_params=True)
+        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
         #replace current gaze mapper with new
-        self.g_pool.plugins.add(Simple_Gaze_Mapper(self.g_pool,params))
+        self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
 
 
     def close_window(self):
@@ -273,7 +259,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                                                             area_threshold=self.area_threshold,
                                                             dist_threshold=self.dist_threshold,
                                                             min_ring_count=4,
-                                                            visual_debug=self.show_edges)
+                                                            visual_debug=False)
 
             if len(self.candidate_ellipses) > 0:
                 self.detected= True
@@ -378,7 +364,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
         alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
-        draw_marker(screen_pos,r,alpha)
+        draw_concentric_circles(screen_pos,r,6,alpha)
         #some feedback on the detection state
 
         if self.detected and self.on_position:

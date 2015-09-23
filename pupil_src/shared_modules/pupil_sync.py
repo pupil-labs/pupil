@@ -22,7 +22,10 @@ logger = logging.getLogger(__name__)
 
 start_rec = "START_REC:"
 stop_rec = "STOP_REC:"
+start_cal = "START_CAL"
+stop_cal = "STOP_CAL"
 sync_time = "SYNC:"
+user_event = "USREVENT:"
 
 
 
@@ -83,19 +86,24 @@ class Pupil_Sync(Plugin):
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
 
     def set_sync(self):
+        if self.ok_to_set_timebase():
+            self.thread_pipe.send(sync_time+'0.0')
+            self.adjust_timebase(0.0)
 
+
+    def adjust_timebase(self,offset):
+        raw_time = self.g_pool.capture.get_now()
+        self.g_pool.timebase.value =  self.g_pool.capture.get_now() - offset
+        logger.info("New timebase set to %s all timestamps will count from here now."%self.g_pool.timebase.value)
+
+    def ok_to_set_timebase(self):
         ok_to_change = True
         for p in self.g_pool.plugins:
             if p.class_name == 'Recorder':
                 if p.running:
                     ok_to_change = False
-        if ok_to_change:
-            self.thread_pipe.send(sync_time+'0.0')
-            self.g_pool.timebase.value = 0.0
-            logger.info("New timebase set to %s all timestamps will count from here now."%self.g_pool.timebase.value)
-        else:
-            logger.warning("Request to change timebase during recording ignored. Turn of recording first.")
-
+                    logger.warning("Request to change timebase during recording ignored. Turn of recording first.")
+        return ok_to_change
 
     def close(self):
         self.alive = False
@@ -118,9 +126,11 @@ class Pupil_Sync(Plugin):
         poller.register(n.socket(), zmq.POLLIN)
         while(True):
             try:
+                #this should not fail but it does sometimes. We need to clean this out.
+                # I think we are not treating sockets correclty as they are not thread-save.
                 items = dict(poller.poll())
             except zmq.ZMQError:
-                break
+                logger.warning('Socket fail.')
             # print(n.socket(), items)
             if pipe in items and items[pipe] == zmq.POLLIN:
                 message = pipe.recv()
@@ -136,31 +146,20 @@ class Pupil_Sync(Plugin):
                 if msg_type == "SHOUT":
                     uid,name,group,msg = cmds
                     logger.debug("'%s' shouts '%s'."%(name,msg))
-                    if start_rec in msg :
-                        session_name = msg.replace(start_rec,'')
-                        self.notify_all({'name':'rec_should_start','session_name':session_name,'network_propagate':False})
-                    elif stop_rec in msg:
-                        self.notify_all({'name':'rec_should_stop','network_propagate':False})
-                    elif sync_time in msg:
-                        timebase = float(msg.replace(sync_time,''))
-                        ok_to_change = True
-                        for p in self.g_pool.plugins:
-                            if p.class_name == 'Recorder':
-                                if p.running:
-                                    ok_to_change = False
-                        if ok_to_change:
-                            self.g_pool.timebase.value = timebase
-                            logger.info("New timebase set to %s all timestamps will count from here now."%self.g_pool.timebase.value)
-                        else:
-                            logger.warning("Request to change timebase during recording ignored. Turn of recording first.")
+                    self.handle_msg(name,msg)
 
-                elif msg_type == "ENTER":
-                    uid,name,headers,ip = cmds
+                elif msg_type == "WHISPER":
+                    pass
+                    # uid,name,group,msg = cmds
+                    # logger.debug("'%s' whispers '%s'."%(name,msg))
+                    # self.handle_msg(name,msg)
+
                 elif msg_type == "JOIN":
                     uid,name,group = cmds
                     if group == self.group:
                         self.group_members[uid] = name
                         self.update_gui()
+
                 elif msg_type == "EXIT":
                     uid,name = cmds
                     try:
@@ -169,15 +168,37 @@ class Pupil_Sync(Plugin):
                         pass
                     else:
                         self.update_gui()
-                elif msg_type == "LEAVE":
-                    uid,name,group = cmds
-                elif msg_tpye == "WHISPER":
-                    pass
+
+                # elif msg_type == "LEAVE":
+                #     uid,name,group = cmds
+                # elif msg_type == "ENTER":
+                #     uid,name,headers,ip = cmds
+
+
 
         logger.debug('thread_loop closing.')
         self.thread_pipe = None
         n.stop()
 
+
+    def handle_msg(self,name,msg):
+        if start_rec in msg :
+            session_name = msg.replace(start_rec,'')
+            self.notify_all({'name':'rec_should_start','session_name':session_name,'network_propagate':False})
+        elif stop_rec in msg:
+            self.notify_all({'name':'rec_should_stop','network_propagate':False})
+        elif start_cal in msg:
+            self.notify_all({'name':'cal_should_start'})
+        elif stop_cal in msg:
+            self.notify_all({'name':'cal_should_stop'})
+        elif sync_time in msg:
+            offset = float(msg.replace(sync_time,''))
+            if self.ok_to_set_timebase():
+                self.adjust_timebase(offset)
+        elif user_event in msg:
+            payload = msg.replace(user_event,'')
+            user_event_name,timestamp = payload.split('@')
+            self.notify_all({'name':'remote_user_event','user_event_name':user_event_name,'timestamp':float(timestamp),'network_propagate':False,'sender':name})
 
     def on_notify(self,notification):
         # if we get a rec event that was not triggered though pupil_sync it will carry network_propage=True
@@ -187,8 +208,13 @@ class Pupil_Sync(Plugin):
         # otherwise we create a feedback loop and bad things happen.
         if notification['name'] == 'rec_started' and notification['network_propagate']:
             self.thread_pipe.send(start_rec+notification['session_name'])
-        if notification['name'] == 'rec_stopped' and notification['network_propagate']:
+        elif notification['name'] == 'rec_stopped' and notification['network_propagate']:
             self.thread_pipe.send(stop_rec)
+
+        #userevents are also sycronized
+        elif notification['name'] == 'local_user_event':
+            self.thread_pipe.send('%s%s@%s'%(user_event,notification['user_event_name'],notification['timestamp']))
+
 
     def get_init_dict(self):
         return {'name':self.name,'group':self.group}
