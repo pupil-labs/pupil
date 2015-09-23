@@ -147,7 +147,7 @@ elif os_name == "Darwin":
         sox_bin = os.path.join('/usr/local/bin''sox')
     else:
         # we are running in a normal Python environment
-    sox_bin = "sox"
+        sox_bin = "sox"
 
 
     class Audio_Capture(object):
