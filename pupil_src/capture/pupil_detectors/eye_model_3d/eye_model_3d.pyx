@@ -166,20 +166,22 @@ cdef class PyEyeModelFitter:
 
 
         #point coords are in pixels, with origin top left
-        # map them so coord origin is centerd with y up
+        # map them so coord origin is centered with y up
         for contour in contours:
+            contour.shape = (-1,2)
+            print contour
             for point in contour:
-                point[0][0] = point[0][0] - image_size[0]/2.0
-                point[0][1] = image_size[1]/2.0 - point[0][1]
+                point[0] = point[0] - image_size[0]/2.0
+                point[1] = image_size[1]/2.0 - point[1]
 
         cdef vector[int32_t*] contour_ptrs #vector holding pointers to each contour memory
         cdef vector[size_t] contour_sizes   #vector containing the size of each corresponded contour
 
         # is there a better way of doing this ?
-        cdef int32_t[:,:,:] cc # typed memoryview
+        cdef int32_t[:,:] cc # typed memoryview
         for c in contours:
             cc = c
-            contour_ptrs.push_back( &cc[0,0,0]  )
+            contour_ptrs.push_back( &cc[0,0]  )
             contour_sizes.push_back( c.size )
 
         self.thisptr.add_observation(ellipse, contour_ptrs, contour_sizes  )
