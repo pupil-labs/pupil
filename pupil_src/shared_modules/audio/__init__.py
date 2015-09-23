@@ -144,7 +144,7 @@ elif os_name == "Darwin":
     if getattr(sys, 'frozen', False):
         # we are running in a |PyInstaller| bundle
         sox_bin = os.path.join(sys._MEIPASS,'sox')
-        sox_bin = os.path.join('/usr/local/bin''sox')
+        sox_bin = os.path.join('/usr/local/bin','sox')
     else:
         # we are running in a normal Python environment
         sox_bin = "sox"
