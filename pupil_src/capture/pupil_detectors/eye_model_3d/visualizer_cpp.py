@@ -310,13 +310,11 @@ class Visualizer():
 		glPushMatrix()
 		glLoadMatrixf(self.get_image_space_matrix(30))
 		for contour in contours:
-			contour_2d = [point[0] for point in contour]
-			draw_polyline(contour_2d,color=RGBA(0,0,0,0.5))
+			draw_polyline(contour,color=RGBA(0,0,0,0.5))
 		glPopMatrix()
 
 	def draw_contours(self, contours):
 		glPushMatrix()
-
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		for contour in contours:
 			draw_polyline3d(contour,color=RGBA(0.,0.,0.,.5))
@@ -327,7 +325,7 @@ class Visualizer():
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 
 		for contour in contours:
-			intersect_contour = [self.project_on_sphere(point[0],sphere_center, sphere_radius) for point in contour]
+			intersect_contour = [self.project_on_sphere(point,sphere_center, sphere_radius) for point in contour]
 			intersect_contour = [c for c in intersect_contour if c is not None]
 			draw_polyline3d(np.array(intersect_contour),color=RGBA(0.,0.,0.,.5))
 			# num += len(intersect_contour)

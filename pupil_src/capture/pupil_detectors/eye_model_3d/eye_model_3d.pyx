@@ -168,7 +168,6 @@ cdef class PyEyeModelFitter:
         #point coords are in pixels, with origin top left
         # map them so coord origin is centered with y up
         for contour in contours:
-            contour.shape = (-1,2)
             for point in contour:
                 point[0] = point[0] - image_size[0]/2.0
                 point[1] = image_size[1]/2.0 - point[1]

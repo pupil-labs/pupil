@@ -341,6 +341,9 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         # stream the result
         g_pool.pupil_queue.put(result)
 
+        for contour in contours: #better way to do this ?
+            contour.shape = (-1, 2 )
+
         # GL drawing
         #eye sphere fitter adding
         if result['confidence'] > 0.8:
