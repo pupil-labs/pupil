@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <Eigen/Core>
-#include <singleeyefitter/Ellipse.h>
+#include <Ellipse.h>
 #include "DistancePointEllipse.h"
 
 using namespace singleeyefitter;

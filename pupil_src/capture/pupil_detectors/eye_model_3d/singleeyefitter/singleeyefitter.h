@@ -4,10 +4,10 @@
 #include <mutex>
 #include <Eigen/Core>
 #include <opencv2/core/core.hpp>
-#include <singleeyefitter/cvx.h>
-#include <singleeyefitter/Circle.h>
-#include <singleeyefitter/Ellipse.h>
-#include <singleeyefitter/Sphere.h>
+#include <cvx.h>
+#include <Circle.h>
+#include <Ellipse.h>
+#include <Sphere.h>
 
 namespace singleeyefitter {
 

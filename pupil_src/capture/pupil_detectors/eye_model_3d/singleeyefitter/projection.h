@@ -5,8 +5,8 @@
 #include "Ellipse.h"
 #include "Circle.h"
 #include "Conic.h"
-#include "math.h"
-#include <singleeyefitter/Conicoid.h>
+#include "mathHelper.h"
+#include <Conicoid.h>
 
 namespace singleeyefitter {
 

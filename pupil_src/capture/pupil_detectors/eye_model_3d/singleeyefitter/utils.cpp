@@ -1,4 +1,4 @@
-#include <singleeyefitter/utils.h>
+#include <utils.h>
 
 #include <random>
 

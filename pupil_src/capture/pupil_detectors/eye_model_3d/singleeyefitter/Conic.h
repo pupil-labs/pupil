@@ -2,7 +2,7 @@
 #define _CONIC_H_
 
 #include <Eigen/Core>
-#include <singleeyefitter/math.h>
+#include <mathHelper.h>
 
 namespace singleeyefitter {
 

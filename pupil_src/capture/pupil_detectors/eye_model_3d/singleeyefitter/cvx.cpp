@@ -1,5 +1,5 @@
-#include <singleeyefitter/cvx.h>
-#include <singleeyefitter/math.h>
+#include <cvx.h>
+#include <mathHelper.h>
 
 void singleeyefitter::cvx::getROI(const cv::Mat& src, cv::Mat& dst, const cv::Rect& roi, int borderType)
 {

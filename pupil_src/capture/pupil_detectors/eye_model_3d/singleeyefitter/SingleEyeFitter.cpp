@@ -1,8 +1,8 @@
 ﻿// SingleEyeFitter.cpp : Defines the entry point for the console application.
 //
 
-#include <boost/math/special_functions/sign.hpp>
 
+#include <boost/math/special_functions/sign.hpp>
 #include <Eigen/StdVector>
 
 #include <ceres/ceres.h>
@@ -11,20 +11,20 @@
 #include <ceres/solver.h>
 #include <ceres/jet.h>
 
-#include <singleeyefitter/singleeyefitter.h>
+#include "singleeyefitter.h"
 
-#include <singleeyefitter/utils.h>
-#include <singleeyefitter/cvx.h>
-#include <singleeyefitter/Conic.h>
-#include <singleeyefitter/Ellipse.h>
-#include <singleeyefitter/Circle.h>
-#include <singleeyefitter/Conicoid.h>
-#include <singleeyefitter/Sphere.h>
-#include <singleeyefitter/solve.h>
-#include <singleeyefitter/intersect.h>
-#include <singleeyefitter/projection.h>
-#include <singleeyefitter/fun.h>
-#include <singleeyefitter/math.h>
+#include <utils.h>
+#include <cvx.h>
+#include <Conic.h>
+#include <Ellipse.h>
+#include <Circle.h>
+#include <Conicoid.h>
+#include <Sphere.h>
+#include <solve.h>
+#include <intersect.h>
+#include <projection.h>
+#include <fun.h>
+#include <math.h>
 
 #include "distance.h"
 

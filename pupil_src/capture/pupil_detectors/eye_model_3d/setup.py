@@ -26,8 +26,8 @@ extensions = [
     Extension(
         # configured to Andrew Xia's ubuntu installation location
         name="eye_model_3d",
-        sources=['eye_model_3d.pyx','SingleEyeFitter.cpp','utils.cpp'],#,'cvx.cpp'], #I don't need cvx.
-        include_dirs = [ '.', '/usr/local/include/eigen3','/usr/local/include/ceres' , np.get_include()
+        sources=['eye_model_3d.pyx','singleeyefitter/SingleEyeFitter.cpp','singleeyefitter/utils.cpp'],#,'cvx.cpp'], #I don't need cvx.
+        include_dirs = [ 'singleeyefitter/', '/usr/local/include/eigen3','/usr/local/include/ceres' , np.get_include()
         #'usr/local/include/spii',#'/home/ceres-solver',
         ],
         libraries = ['spii','opencv_highgui','opencv_core','opencv_imgproc','ceres'],
