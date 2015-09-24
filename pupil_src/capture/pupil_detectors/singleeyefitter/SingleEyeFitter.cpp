@@ -24,7 +24,7 @@
 #include <intersect.h>
 #include <projection.h>
 #include <fun.h>
-#include <math.h>
+#include <mathHelper.h>
 
 #include "distance.h"
 

@@ -42,8 +42,8 @@ from cv2_writer import CV_Writer
 
 # Pupil detectors
 from pupil_detectors import Canny_Detector
-from pupil_detectors.eye_model_3d import eye_model_3d
-from pupil_detectors.eye_model_3d.visualizer_cpp import Visualizer
+from pupil_detectors import eye_model_3d
+from pupil_detectors.visualizer_cpp import Visualizer
 
 # time
 import time

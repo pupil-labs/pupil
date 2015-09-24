@@ -25,6 +25,16 @@ import numpy as np
 extensions = [
     Extension(
         # configured to Andrew Xia's ubuntu installation location
+        name="detector_2d",
+        sources=['detector_2d.pyx'],#,'cvx.cpp'], #I don't need cvx.
+        include_dirs = [ np.get_include()],
+        libraries = ['opencv_highgui','opencv_core','opencv_imgproc'],
+        # library_dirs = ['/usr/local/lib'],
+        extra_link_args=[], #'-WL,-R/usr/local/lib'
+        extra_compile_args=["-std=c++11",'-w'], #-w hides warnings
+        language="c++"),
+    Extension(
+        # configured to Andrew Xia's ubuntu installation location
         name="eye_model_3d",
         sources=['eye_model_3d.pyx','singleeyefitter/SingleEyeFitter.cpp','singleeyefitter/utils.cpp'],#,'cvx.cpp'], #I don't need cvx.
         include_dirs = [ 'singleeyefitter/', '/usr/local/include/eigen3','/usr/local/include/ceres' , np.get_include()
