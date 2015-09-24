@@ -89,7 +89,7 @@ class AV_Writer(object):
         if ext not in ('mp4,mov,mkv'):
             logger.warning("media file container should be mp4 or mov. Using a different container is risky.")
 
-        self.ts_file_loc = file_path+'timestamps.npy'
+        self.ts_file_loc = file_path+'_timestamps_pts.npy'
         self.file_loc = file_loc
         self.container = av.open(self.file_loc,'w')
         logger.debug("Opended '%s' for writing."%self.file_loc)
@@ -100,6 +100,7 @@ class AV_Writer(object):
 
         self.video_stream = self.container.add_stream(video_stream['codec'],self.time_resolution)
         self.video_stream.bit_rate = video_stream['bit_rate']
+        self.video_stream.thread_count = 1
         # self.video_stream.pix_fmt = "yuv420p"#video_stream['format']
         self.configured = False
         self.start_time = None
@@ -135,31 +136,31 @@ class AV_Writer(object):
             self.container.mux(packet)
 
 
-    def write_video_frame_yuv422(self, input_frame):
+    def write_video_frame_compressed(self, input_frame):
         if not self.configured:
             self.video_stream.height = input_frame.height
             self.video_stream.width = input_frame.width
             self.configured = True
             self.start_time = input_frame.timestamp
+            self.frame = av.VideoFrame(input_frame.width, input_frame.height,'yuv422p')
+            self.frame.time_base = self.time_base
 
-        frame = av.VideoFrame(input_frame.width, input_frame.height,'yuv422p')
         y,u,v = input_frame.yuv422
-        frame.planes[0].update(y)
-        frame.planes[1].update(u)
-        frame.planes[2].update(v)
+        self.frame.planes[0].update(y)
+        self.frame.planes[1].update(u)
+        self.frame.planes[2].update(v)
 
         # here we create a timestamp in ms resolution to be used for the frame pts.
         # later libav will scale this to stream timebase
         frame_ts_ms = int((input_frame.timestamp-self.start_time)*self.time_resolution)
-        frame.pts = frame_ts_ms
-        frame.time_base = self.time_base
+        self.frame.pts = frame_ts_ms
         # we keep a version of the timestamp counting from first frame in the codec resoltion (lowest time resolution in toolchain)
         frame_ts_s = float(frame_ts_ms)/self.time_resolution
         # we append it to our list to correlate hi-res absolute timestamps with media timstamps
         self.timestamps_list.append((input_frame.timestamp,frame_ts_s))
 
         #send frame of to encoder
-        packet = self.video_stream.encode(frame)
+        packet = self.video_stream.encode(self.frame)
         if packet:
             # print 'paket',packet.pts
             self.container.mux(packet)
@@ -209,6 +210,8 @@ class JPEG_Writer(object):
         self.video_stream.pix_fmt = "yuvj422p"
         self.configured = False
         self.frame_count = 0
+
+        self.write_video_frame_compressed = self.write_video_frame
 
     def write_video_frame(self, input_frame):
         if not self.configured:
@@ -320,6 +323,10 @@ class Audio_Capture(object):
         self.should_close.clear()
         self.process = Process(target=rec_thread, args=(file_loc, audio_src,self.should_close))
         self.process.start()
+        try:
+            forking_enable(1)
+        except:
+            pass
 
     def stop(self):
         self.should_close.set()
