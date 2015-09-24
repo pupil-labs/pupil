@@ -600,3 +600,136 @@ class Canny_Detector(Pupil_Detector):
         self.session_settings['min_contour_size'] = self.min_contour_size
         self.session_settings['final_perimeter_ratio_range'] = self.final_perimeter_ratio_range
         self.session_settings.close()
+
+if __name__ == '__main__':
+
+    from video_capture import autoCreateCapture, CameraCaptureError,EndofVideoFileError
+    from methods import Roi
+    from collections import namedtuple
+    from file_methods import save_object, load_object
+    import shutil
+    #write test cases
+    cap_src = '/Users/patrickfuerst/Documents/Projects/Pupil-Laps/recordings/2015_09_16/000/eye0.mp4'
+    cap_size = (640,480)
+
+    # Initialize capture
+    cap = autoCreateCapture(cap_src, timebase=None)
+    default_settings = {'frame_size':cap_size,'frame_rate':30}
+    cap.settings = default_settings
+    # Test capture
+    try:
+        frame = cap.get_frame()
+    except CameraCaptureError:
+        logger.error("Could not retrieve image from capture")
+        cap.close()
+
+    u_r = Roi(frame.img.shape)
+
+    Pool = namedtuple('Pool', 'user_dir');
+    pool = Pool('/')
+    #Our detector to test
+    pupil_detector = Canny_Detector(pool)
+
+    test_file_Folder = '../../../Pupil_Test_Files/' # write files to the project root folder
+
+
+
+    def compare_dict(first, second):
+        """ Return a dict of keys that differ with another config object.  If a value is
+            not found in one fo the configs, it will be represented by KEYNOTFOUND.
+            @param first:   Fist dictionary to diff.
+            @param second:  Second dicationary to diff.
+            @return diff:   Dict of Key => (first.val, second.val)
+        """
+        KEYNOTFOUNDIN1 = '<KEYNOTFOUNDIN1>'       # KeyNotFound for dictDiff
+        KEYNOTFOUNDIN2 = '<KEYNOTFOUNDIN2>'       # KeyNotFound for dictDiff
+        diff = {}
+        sd1 = set(first)
+        sd2 = set(second)
+        #Keys missing in the second dict
+        for key in sd1.difference(sd2):
+            diff[key] = KEYNOTFOUNDIN2
+        #Keys missing in the first dict
+        for key in sd2.difference(sd1):
+            diff[key] = KEYNOTFOUNDIN1
+        #Check for differences
+        for key in sd1.intersection(sd2):
+            if first[key] != second[key]:
+                diff[key] = (first[key], second[key])
+
+        if diff: print diff
+
+    def compare_contours(first,second ):
+        for x,y in zip(first,second):
+            for a,b in zip(x,y):
+                if a[0] != b[0] or a[1] != b[1]: print "Different contours"
+
+    def write_test_values():
+
+        #remove file path and create an empty one, befor writing new files to it
+        if os.path.exists(test_file_Folder):
+            shutil.rmtree(test_file_Folder)
+        os.makedirs( os.path.expanduser(test_file_Folder))
+
+        # Iterate every frame
+        frameNumber = 0
+        while True:
+            # Get an image from the grabber
+            try:
+                frame = cap.get_frame()
+                frameNumber += 1
+            except CameraCaptureError:
+                logger.error("Capture from Camera Failed. Stopping.")
+                break
+            except EndofVideoFileError:
+                logger.warning("Video File is done.")
+                break
+            # send to detector
+            result,contours = pupil_detector.detect(frame,user_roi=u_r,visualize=True)
+            for contour in contours: #better way to do this ?
+                contour.shape = (-1, 2 )
+
+            #save test values
+            save_object( result, test_file_Folder + 'result_frame{}'.format(frameNumber))
+            save_object( contours, test_file_Folder + 'contours_frame{}'.format(frameNumber))
+
+            print "Frame {}".format(frameNumber)
+
+        print "Finished writing Test file."
+
+
+    def compare_test():
+
+        # Iterate every frame
+        frameNumber = 0
+        while True:
+            # Get an image from the grabber
+            try:
+                frame = cap.get_frame()
+                frameNumber += 1
+            except CameraCaptureError:
+                logger.error("Capture from Camera Failed. Stopping.")
+                break
+            except EndofVideoFileError:
+                logger.warning("Video File is done.")
+                break
+            # send to detector
+            result,contours = pupil_detector.detect(frame,user_roi=u_r,visualize=True)
+            for contour in contours: #better way to do this ?
+                contour.shape = (-1, 2 )
+
+            #load corresponding test files
+            reference_result = load_object( test_file_Folder + 'result_frame{}'.format(frameNumber))
+            reference_contours = load_object(test_file_Folder + 'contours_frame{}'.format(frameNumber))
+
+            compare_dict(reference_result, result )
+            compare_contours( contours, reference_contours)
+
+            print "Frame {}".format(frameNumber)
+
+        print "Finished writing Test file."
+
+
+    #write_test_values()
+    compare_test()
+
