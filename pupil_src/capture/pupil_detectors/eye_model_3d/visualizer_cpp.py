@@ -69,6 +69,7 @@ class Visualizer():
 		self.adjusted_pixel_space_matrix = self.get_adjusted_pixel_space_matrix(1)
 
 		self.name = name
+		self.window_size = (640,480)
 		self._window = None
 		self.input = None
 		self.trackball = None
@@ -320,17 +321,34 @@ class Visualizer():
 			draw_polyline3d(contour,color=RGBA(0.,0.,0.,.5))
 		glPopMatrix()
 
-	def draw_contours_on_sphere(self,contours,sphere_center, sphere_radius):
+	def draw_unwrapped_contours_on_screen( self, contours, screen_pos = (20,20), size =(400,400)):
+
+		glViewport(screen_pos[0],screen_pos[1], size[0], size[1])
+		glMatrixMode(GL_PROJECTION)
 		glPushMatrix()
-		glLoadMatrixf(self.get_anthropomorphic_matrix())
+		glLoadIdentity()
+		glOrtho(0,1, 1,0, -1 , 1 )
+		glMatrixMode(GL_MODELVIEW)
+		glPushMatrix()
+		glLoadIdentity()
+
+		bottom_left = (0,0);
+		top_left = (0,1)
+		top_right = (1,1)
+		bottom_right = (1,0)
+
+		#draw lines around the current viewport, to show border
+		quad = [bottom_left, top_left, top_right, bottom_right]
+		draw_polyline( quad,color=RGBA(0.,0.,0.,1.0), line_type= GL_LINE_LOOP)
 
 		for contour in contours:
-			intersect_contour = [self.project_on_sphere(point,sphere_center, sphere_radius) for point in contour]
-			intersect_contour = [c for c in intersect_contour if c is not None]
-			draw_polyline3d(np.array(intersect_contour),color=RGBA(0.,0.,0.,.5))
-			# num += len(intersect_contour)
-		# print num #see how many points are inside contours
+			draw_polyline(contour,color=RGBA(0.,0.,0.,1.0))
+
 		glPopMatrix()
+		glMatrixMode(GL_PROJECTION)
+		glPopMatrix()
+
+		glViewport(0,0, self.window_size[0], self.window_size[1])
 
 
 	def draw_eye_model_fitter_text(self, eye_model_fitter):
@@ -387,7 +405,7 @@ class Visualizer():
 			if self.run_independently:
 				glfwInit()
 			window = glfwGetCurrentContext()
-			self._window = glfwCreateWindow(640, 480, self.name, None, window)
+			self._window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None, window)
 			glfwMakeContextCurrent(self._window)
 
 			if not self._window:
@@ -461,6 +479,8 @@ class Visualizer():
 
 
 		self.trackball.pop()
+		unwrapped_contours =  eye_model_fitter.get_last_unwrapped_contour()
+		self.draw_unwrapped_contours_on_screen(unwrapped_contours)
 
 		self.draw_eye_model_fitter_text(eye_model_fitter)
 
@@ -483,6 +503,7 @@ class Visualizer():
 		w = max(w,1)
 		self.trackball.set_window_size(w,h)
 
+		self.window_size = (w,h)
 		active_window = glfwGetCurrentContext()
 		glfwMakeContextCurrent(window)
 		self.adjust_gl_view(w,h)

@@ -1845,7 +1845,6 @@ void singleeyefitter::EyeModelFitter::unproject_contours(){
 
         //if(pupil.processed)
           //  continue;
-
         auto& contours = pupil.observation.contours;
         pupil.unprojected_contours.clear();
         pupil.unprojected_contours.resize( contours.size() );
@@ -1856,7 +1855,7 @@ void singleeyefitter::EyeModelFitter::unproject_contours(){
                 Vector3 point_3d(point.x, point.y , focal_length);
                 Vector3 direction = point_3d - camera_center;
                 try{
-                     // we use the eye properties uf the current eye, when ever we call this
+                     // we use the eye properties of the current eye, when ever we call this
                    const auto& unprojected_point = intersect( Line3(camera_center,  direction.normalized()), eye );
                    pupil.unprojected_contours.at(i).push_back( std::move(unprojected_point.first) );
 
@@ -1866,9 +1865,92 @@ void singleeyefitter::EyeModelFitter::unproject_contours(){
             }
             i++;
         }
+    }
+}
+void singleeyefitter::EyeModelFitter::unwrap_contours(){
+
+    if (eye == Sphere::Null || pupils.size() == 0) {
+        return;
+    }
+    // we should do this just once per pupil with the right eye back then
+
+    for(auto& pupil : pupils ){
+
+        //if(pupil.processed)
+          //  continue;
+
+        auto& contours = pupil.unprojected_contours;
+        pupil.unwrapped_contours.clear();
+        pupil.unwrapped_contours.resize( contours.size() );
+        uint i = 0;
+        for( auto& contour : contours ){
+            for(auto& point : contour){
+
+                // put coordinates from camera space to sphere space
+                Vector3 point_sphere_space = point - eye.center;
+
+                // normalize vector, so it's in space of a unit sphere
+                point_sphere_space.normalize();
+
+                // calculate uv coords with Y axis aligned with the sphere poles
+                // uv coords if point lies on axis are
+                //        | x     | y      | z        |
+                // (u,v)  (.5,.5) | (undef,0) | ( .75,.5)
+                //        | -x     | -y      | -z        |
+                // (u,v)  ([1,0],.5) | (undef,1) | (.25,.5)
+
+                // u coord is split at -x axis
+
+                double u = 0.5 + std::atan2(point_sphere_space.z() , point_sphere_space.x() ) / ( 2.0 * M_PI );
+                double v = 0.5 - std::asin( point_sphere_space.y()) / M_PI;
+                // u includes spherical distortion
+                // to normalize we divide them through the perimeter
+
+                 double y = std::abs(v - 0.5 ) * 2.0; // map v coord from 0.0 - 0.5 - 1.0 to 1.0 - 0.0 - 1.0
+                 double c  =  2.0*M_PI * std::sqrt(1.0-y*y); // circumference at y coord
+                // u = (2.0*M_PI - c ) * 0.5 + u * c/(2.0*M_PI);
+                   // u = u * c  + (2.0*M_PI - c ) * 0.5;
+                   // u = u / (2.0*M_PI);
+                pupil.unwrapped_contours.at(i).push_back(  Vector2(u,v) );
+            }
+            i++;
+        }
+
+        // std::vector<Vector3> coordqs{
+        //     Vector3(-0.707,-0.707,-0.707),
+        //     Vector3(-0.707,0.707,-0.707),
+        //     Vector3(0.707,0.707,-0.707),
+        //     Vector3(0.707,-0.707,-0.707),
+
+        // }
+
+        // for(int i = 0; i < 4; i++){
+
+
+        //         // normalize vector, so it's in space of a unit sphere
+        //         Vector3 point_sphere_space = coords.at(i);
+
+        //         // calculate uv coords with Y axis aligned with the sphere poles
+        //         // uv coords if point lies on axis are
+        //         //        | x     | y      | z        |
+        //         // (u,v)  (.5,.5) | (undef,0) | ( .75,.5)
+        //         //        | -x     | -y      | -z        |
+        //         // (u,v)  ([1,0],.5) | (undef,1) | (.25,.5)
+
+        //         // u coord is split at -x axis
+
+        //         double u = 0.5 + std::atan2(point_sphere_space.z() , point_sphere_space.x() ) / ( 2.0 * M_PI );
+        //         double v = 0.5 - std::asin( point_sphere_space.y()) / M_PI;
+        //         // u includes spherical distortion
+        //         // to normalize we divide them through the perimeter
+
+        //         double y = std::abs(v - 0.5 ) * 2.0; // map v coord from 0.0 - 0.5 - 1.0 to 0.5 - 0.0 - 0.5
+        //         double c  =  2.0*M_PI * std::sqrt(1-y*y);
+        //         u = u * c / (2.0*M_PI);
+
+        //         pupil.unwrapped_contours.at(i).push_back(  Vector2(u,v) );
+        // }
 
 
     }
-
-
 }

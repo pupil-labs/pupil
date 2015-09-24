@@ -30,6 +30,7 @@ cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
 
 #typdefs
 ctypedef Matrix31d Vector3
+ctypedef Matrix21d Vector2
 
 cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter":
 
@@ -64,6 +65,7 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         #######################
 
         void unproject_contours();
+        void unwrap_contours();
 
         #######################
 
@@ -80,6 +82,7 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
             Pupil() except +
             Observation observation
             vector[vector[Vector3]] unprojected_contours
+            vector[vector[Vector2]] unwrapped_contours
             PupilParams params
             Circle3D[double] circle
 
@@ -136,6 +139,8 @@ cdef class PyEyeModelFitter:
         #now we have an updated eye model
         #use it to unproject contours
         self.thisptr.unproject_contours()
+        #calculate uv coords of unprojected contours
+        self.thisptr.unwrap_contours()
 
     # def add_observation(self,center,major_radius,minor_radius,angle):
     #     #standard way of adding an observation
@@ -233,6 +238,19 @@ cdef class PyEyeModelFitter:
 
         return contours
 
+    def get_last_unwrapped_contour(self):
+        if self.thisptr.pupils.size() == 0:
+            return []
+
+        cdef EyeModelFitter.Pupil p = self.thisptr.pupils.back()
+        contours = []
+        for contour in p.unwrapped_contours:
+            c = []
+            for point in contour:
+                c.append([point[0],point[1]])
+            contours.append(c)
+
+        return contours
 
     def get_all_pupil_observations(self):
         cdef EyeModelFitter.Pupil p

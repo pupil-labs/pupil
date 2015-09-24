@@ -97,6 +97,7 @@ namespace singleeyefitter {
         //
 
         void unproject_contours();
+        void unwrap_contours();
 
         struct Observation {
             //cv::Mat image;
@@ -116,6 +117,7 @@ namespace singleeyefitter {
         struct Pupil {
             Observation observation;
             std::vector<std::vector<Vector3>> unprojected_contours;  // whre to put this ? observations ? keep projected contours ?
+            std::vector<std::vector<Vector2>> unwrapped_contours;
             Circle circle;
             PupilParams params;
             bool init_valid;
