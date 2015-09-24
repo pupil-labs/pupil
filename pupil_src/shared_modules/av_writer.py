@@ -25,13 +25,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# from threading import Thread as Process
-# from threading import Event
+from threading import Thread as Process
+from threading import Event
 
-if platform.system() == 'Darwin':
-    from billiard import Process,Event
-else:
-    from multiprocessing import Process,Event
+# if platform.system() == 'Darwin':
+#     from billiard import Process,Event
+# else:
+#     from multiprocessing import Process,Event
 
 
 """
@@ -371,7 +371,7 @@ if __name__ == '__main__':
     cap = Audio_Capture('test.wav',1)
 
     import time
-    time.sleep(20)
+    time.sleep(2)
     cap.close()
     #mic device
     exit()
