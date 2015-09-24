@@ -20,7 +20,6 @@ from glob import glob
 from audio import Audio_Input_Dict
 from file_methods import save_object
 from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
-from cv2_writer import CV_Writer
 #logging
 import logging
 logger = logging.getLogger(__name__)
