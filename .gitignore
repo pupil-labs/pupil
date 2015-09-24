@@ -30,4 +30,5 @@ settings/
 *.sublime-project
 *.sublime-workspace
 
-
+#directory for test file will be ignored
+Pupil_Test_Files
