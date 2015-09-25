@@ -301,7 +301,7 @@ def world(g_pool,cap_src,cap_size):
             pupil_graph.add(p['confidence'])
         events['pupil_positions'] = recent_pupil_positions
 
-        # notify each plugin if there are new notifactions:
+        # notify each plugin if there are new notifications:
         while g_pool.notifications:
             n = g_pool.notifications.pop(0)
             for p in g_pool.plugins:
