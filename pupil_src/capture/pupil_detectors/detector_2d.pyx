@@ -28,7 +28,17 @@ cdef extern from 'detect_2d.hpp':
     int test
     double test2
 
-  cdef Result detect( Mat& image, Rect_[int]& usr_roi, Mat& color_image , bint visualize , int intensity_range )
+  cdef struct DetectProperties:
+    int intensity_range
+    int blur_size
+    double canny_treshold
+    double canny_ration
+    int canny_aperture
+    int pupil_max
+    int pupil_min
+    int target_size
+
+  cdef Result detect( Mat& image, Rect_[int]& usr_roi, Mat& color_image , bint visualize , DetectProperties& prop )
 
 
 cdef class Detector_2D:
@@ -44,12 +54,22 @@ cdef class Detector_2D:
           cdef Mat cv_image_color = Mat(height, width, CV_8UC3, <void *> &img_color[0,0,0] )
 
 
-          intensity_range = 20
+          detect_properties  = {};
+          detect_properties["intensity_range"] = 20;
+          detect_properties["blur_size"] = 1;
+          detect_properties["canny_treshold"] = 159;
+          detect_properties["canny_ration"] = 2;
+          detect_properties["canny_aperture"] = 5;
+          detect_properties["pupil_max"] = 150;
+          detect_properties["pupil_min"] = 40;
+          detect_properties["target_size"] = 100.0;
+
+
           x = roi.get()[0]
           y = roi.get()[1]
           width  = roi.get()[2] - roi.get()[0]
           height  = roi.get()[3] - roi.get()[1]
-          result =  detect( cv_image , Rect_[int](x,y,width,height), cv_image_color, True , intensity_range)
+          result =  detect( cv_image , Rect_[int](x,y,width,height), cv_image_color, True , detect_properties)
           return result
 
 
