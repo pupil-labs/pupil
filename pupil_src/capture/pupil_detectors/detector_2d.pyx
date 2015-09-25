@@ -28,7 +28,7 @@ cdef extern from 'detect_2d.hpp':
     int test
     double test2
 
-  cdef Result detect( Mat& image, Rect_[int]& usr_roi, Mat& color_image , bint visualize  )
+  cdef Result detect( Mat& image, Rect_[int]& usr_roi, Mat& color_image , bint visualize , int intensity_range )
 
 
 cdef class Detector_2D:
@@ -43,11 +43,13 @@ cdef class Detector_2D:
           cdef Mat cv_image = Mat(height, width, CV_8UC1, <void *> &img[0,0] )
           cdef Mat cv_image_color = Mat(height, width, CV_8UC3, <void *> &img_color[0,0,0] )
 
+
+          intensity_range = 20
           x = roi.get()[0]
           y = roi.get()[1]
           width  = roi.get()[2] - roi.get()[0]
           height  = roi.get()[3] - roi.get()[1]
-          result =  detect( cv_image , Rect_[int](x,y,width,height), cv_image_color, True )
+          result =  detect( cv_image , Rect_[int](x,y,width,height), cv_image_color, True , intensity_range)
           return result
 
 
