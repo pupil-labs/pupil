@@ -192,7 +192,7 @@ class File_Capture(object):
             timestamp = time()
         return timestamp
 
-    def get_timestamp():
+    def get_timestamp(self):
         return self.get_now()
 
     def init_gui(self,sidebar):
