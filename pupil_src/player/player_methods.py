@@ -27,9 +27,9 @@ def correlate_data(data,timestamps):
 
     this takes a data list and a timestamps list and makes a new list
     with the length of the number of timestamps.
-    Each slot conains a list that will have 0, 1 or more assosiated data points.
+    Each slot contains a list that will have 0, 1 or more assosiated data points.
 
-    Finnaly we add an index field to the data_point with the assosiated index
+    Finally we add an index field to the data_point with the assosiated index
     '''
     timestamps = list(timestamps)
     data_by_frame = [[] for i in timestamps]

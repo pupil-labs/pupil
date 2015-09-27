@@ -77,7 +77,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
         monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
         #primary_monitor = glfwGetPrimaryMonitor()
-        self.info = ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid. Click 'C' to capture a pattern.")
+        self.info = ui.Info_Text("Estimate Camera intrinsics of the world camera. This is only used for 3D marker tracking at the moment. Using an 11x9 asymmetrical circle grid. Click 'C' to capture a pattern.")
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
