@@ -7,6 +7,11 @@
 #include <sstream>
 #include <stdexcept>
 
+#include <Eigen/Core>
+#include <opencv2/core/core.hpp>
+#include "Ellipse.h"
+
+
 namespace singleeyefitter {
 
 class MakeString
@@ -71,6 +76,36 @@ std::vector<T> randomSubset(const std::vector<T>& src, typename std::vector<T>::
     }
 
     return ret;
+}
+
+template<typename Scalar>
+inline Eigen::Matrix<Scalar, 2, 1> toEigen(const cv::Point2f& point) {
+    return Eigen::Matrix<Scalar, 2, 1>(static_cast<Scalar>(point.x),
+        static_cast<Scalar>(point.y));
+}
+template<typename Scalar>
+inline cv::Point2f toPoint2f(const Eigen::Matrix<Scalar, 2, 1>& point) {
+    return cv::Point2f(static_cast<float>(point[0]),
+        static_cast<float>(point[1]));
+}
+template<typename Scalar>
+inline cv::Point toPoint(const Eigen::Matrix<Scalar, 2, 1>& point) {
+    return cv::Point(static_cast<int>(point[0]),
+        static_cast<int>(point[1]));
+}
+template<typename Scalar>
+inline cv::RotatedRect toRotatedRect(const Ellipse2D<Scalar>& ellipse) {
+    return cv::RotatedRect(toPoint2f(ellipse.center),
+        cv::Size2f(static_cast<float>(2 * ellipse.major_radius),
+        static_cast<float>(2 * ellipse.minor_radius)),
+        static_cast<float>(ellipse.angle * 180 / M_PI));
+}
+template<typename Scalar>
+inline Ellipse2D<Scalar> toEllipse(const cv::RotatedRect& rect) {
+    return Ellipse2D<Scalar>(toEigen<Scalar>(rect.center),
+        static_cast<Scalar>(rect.size.width / 2),
+        static_cast<Scalar>(rect.size.height / 2),
+        static_cast<Scalar>(rect.angle*M_PI / 180));
 }
 
 } //namespace singleeyefitter
