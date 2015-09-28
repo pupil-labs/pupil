@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <Eigen/Core>
-#include <Ellipse.h>
+#include "Ellipse.h"
 #include "DistancePointEllipse.h"
 
 using namespace singleeyefitter;
@@ -55,12 +55,16 @@ template<typename Scalar>
 Scalar euclidean_distance(const Eigen::Matrix<Scalar,2,1>& point, const Ellipse2D<Scalar>& ellipse) {
     return DistancePointEllipse<Scalar>(ellipse, point[0], point[1]);
 }
+template<typename Scalar>
+Scalar euclidean_distance( const Scalar x,const Scalar y, const Ellipse2D<Scalar>& ellipse) {
+    return DistancePointEllipse<Scalar>(ellipse, x, y);
+}
 
 template<typename Scalar, typename TOther>
 Scalar oneway_hausdorff_distance(const Ellipse2D<Scalar>& ellipse, const TOther& other) {
     Scalar max_dist = -1;
     for (Scalar i = 0; i < 100; ++i) {
-        Scalar t = i * 2*PI / 100;
+        Scalar t = i * 2*M_PI / 100;
         auto pt = pointAlongEllipse(ellipse, t);
         Scalar i_dist = euclidean_distance(pt, other);
         max_dist = std::max(max_dist, i_dist);
