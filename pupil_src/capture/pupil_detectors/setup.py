@@ -26,7 +26,7 @@ extensions = [
     Extension(
         # configured to Andrew Xia's ubuntu installation location
         name="detector_2d",
-        sources=['detector_2d.pyx'],#,'cvx.cpp'], #I don't need cvx.
+        sources=['detector_2d.pyx','singleeyefitter/cvx.cpp'], #I don't need cvx.
         include_dirs = [ np.get_include()],
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc'],
         # library_dirs = ['/usr/local/lib'],
