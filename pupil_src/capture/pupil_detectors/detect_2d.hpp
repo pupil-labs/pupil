@@ -3,6 +3,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+#include "singleeyefitter/Ellipse.h"  // use ellipse eyefitter
+
 #include <iostream>
 
 struct Result{
@@ -10,20 +12,49 @@ struct Result{
   double test2;
 };
 
+// use a struct for all properties and pass it to detect method every time we call it.
+// Thus we don't need to keep track if GUI is updated and cython handles conversion from Dict to struct
 struct DetectProperties{
- int intensity_range;
- int blur_size;
- double canny_treshold;
- double canny_ration;
- int canny_aperture;
- int pupil_max;
- int pupil_min;
- int target_size;
+  int intensity_range;
+  int blur_size;
+  double canny_treshold;
+  double canny_ration;
+  int canny_aperture;
+  int pupil_max;
+  int pupil_min;
+  int target_size;
+};
+
+typedef singleeyefitter::Ellipse2D<double> Ellipse;
+
+class Detector2D{
+
+public:
+
+  Detector2D();
+  Result detect(cv::Mat& image, cv::Rect& usr_roi, cv::Mat& color_image , bool visualize, DetectProperties& props);
+
+
+
+private:
+
+  void draw_dotted_rect( cv::Mat& image, cv::Rect& rect , int color );
+
+  bool mUse_strong_prior;
+  Ellipse mPrior_ellipse;
+
+  const cv::Scalar mRed_color = {0,0,255};
+  const cv::Scalar mGreen_color = {0,255,0};
+  const cv::Scalar mBlue_color = {255,0,0};
+  const cv::Scalar mYellow_color = {255,255,0};
+  const cv::Scalar mWhite_color = {255,255,255};
 
 };
 
+Detector2D::Detector2D(): mUse_strong_prior(false){};
 
-void draw_dotted_rect( cv::Mat& image, cv::Rect& rect , int color ){
+
+void Detector2D::draw_dotted_rect( cv::Mat& image, cv::Rect& rect , int color ){
 
   int count = 0;
   auto create_Dotted_Line = [&](cv::Vec3b& pixel){
@@ -50,34 +81,18 @@ void draw_dotted_rect( cv::Mat& image, cv::Rect& rect , int color ){
 
 }
 
-Result detect( cv::Mat& image, cv::Rect& usr_roi, cv::Mat& color_image , bool visualize, DetectProperties& prop ){
+Result Detector2D::detect( cv::Mat& image, cv::Rect& usr_roi, cv::Mat& color_image , bool visualize, DetectProperties& props  ){
 
   image = cv::Mat(image, usr_roi);  // image with usr_roi
 
   const int image_width = image.size().width;
   const int image_height = image.size().height;
 
-  const int intensity_range = prop.intensity_range;
-  const int blur_size = prop.blur_size;
-  const double canny_treshold = prop.canny_treshold;
-  const double canny_ration = prop.canny_ration;
-  const int canny_aperture = prop.canny_aperture;
-  const int pupil_max = prop.pupil_max;
-  const int pupil_min = prop.pupil_min;
-  const int target_size = prop.target_size;
-
-  const cv::Scalar red_color(0,0,255);
-  const cv::Scalar green_color(0,255,0);
-  const cv::Scalar blue_color(255,0,0);
-  const cv::Scalar yellow_color(255,255,0);
-  const cv::Scalar white_color(255,255,255);
-
-
   const int w = image.size().width/2;
   const float coarse_pupil_width = w/2.0f;
   const int padding = int(coarse_pupil_width/4.0f);
 
-  const int offset = intensity_range;
+  const int offset = props.intensity_range;
   const int spectral_offset = 5;
 
   const cv::Rect pupil_roi = usr_roi; // gets changed when coarse detection is on
@@ -124,19 +139,19 @@ Result detect( cv::Mat& image, cv::Rect& usr_roi, cv::Mat& color_image , bool vi
 
       for(int i = 0; i < histogram.rows; i++){
         const float norm_i  = histogram.ptr<float>(i)[0]/max_intensity ; // normalized intensity
-        cv::line( color_image, {image_width, i*scale_y}, { image_width - int(norm_i * scale_x), i * scale_y}, blue_color );
+        cv::line( color_image, {image_width, i*scale_y}, { image_width - int(norm_i * scale_x), i * scale_y}, mBlue_color );
       }
-      cv::line(color_image, {image_width, lowest_spike_index* scale_y}, { int(image_width - 0.5f * scale_x), lowest_spike_index * scale_y }, red_color);
-      cv::line(color_image, {image_width, (lowest_spike_index+offset)* scale_y}, { int(image_width - 0.5f * scale_x), (lowest_spike_index + offset)* scale_y }, yellow_color);
-      cv::line(color_image, {image_width, (highest_spike_index)* scale_y}, { int(image_width - 0.5f * scale_x), highest_spike_index* scale_y }, red_color);
-      cv::line(color_image, {image_width, (highest_spike_index - spectral_offset)* scale_y}, { int(image_width - 0.5f * scale_x), (highest_spike_index - spectral_offset)* scale_y }, white_color);
+      cv::line(color_image, {image_width, lowest_spike_index* scale_y}, { int(image_width - 0.5f * scale_x), lowest_spike_index * scale_y }, mRed_color);
+      cv::line(color_image, {image_width, (lowest_spike_index+offset)* scale_y}, { int(image_width - 0.5f * scale_x), (lowest_spike_index + offset)* scale_y }, mYellow_color);
+      cv::line(color_image, {image_width, (highest_spike_index)* scale_y}, { int(image_width - 0.5f * scale_x), highest_spike_index* scale_y }, mRed_color);
+      cv::line(color_image, {image_width, (highest_spike_index - spectral_offset)* scale_y}, { int(image_width - 0.5f * scale_x), (highest_spike_index - spectral_offset)* scale_y }, mWhite_color);
 
   }
 
    //create dark and spectral glint masks
   cv::Mat binary_img;
   cv::Mat kernel;
-  cv::inRange( image, cv::Scalar(0) , cv::Scalar(lowest_spike_index + intensity_range), binary_img );  // binary threshold
+  cv::inRange( image, cv::Scalar(0) , cv::Scalar(lowest_spike_index + props.intensity_range), binary_img );  // binary threshold
   kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, {7,7} );
   cv::dilate( binary_img, binary_img, kernel, {-1,-1}, 2 );
 
@@ -148,11 +163,11 @@ Result detect( cv::Mat& image, cv::Rect& usr_roi, cv::Mat& color_image , bool vi
   //open operation to remove eye lashes
   cv::morphologyEx( image, image, cv::MORPH_OPEN, kernel);
 
-  if( blur_size > 1 )
-    cv::medianBlur(image, image, blur_size);
+  if( props.blur_size > 1 )
+    cv::medianBlur(image, image, props.blur_size );
 
-  cv::Mat edges;
-  cv::Canny( image, edges, canny_treshold, canny_treshold * canny_ration, canny_aperture);
+   cv::Mat edges;
+   cv::Canny( image, edges, props.canny_treshold, props.canny_treshold * props.canny_ration, props.canny_aperture);
 
   //remove edges in areas not dark enough and where the glint is (spectral refelction from IR leds)
   cv::min(edges, spec_mask, edges);
@@ -183,28 +198,23 @@ Result detect( cv::Mat& image, cv::Rect& usr_roi, cv::Mat& color_image , bool vi
 
     //draw size ellipses
     cv::Point center(100, image_height -100);
-    cv::circle( overlay, center, pupil_min/2.0, red_color );
-    cv::circle( overlay, center, target_size/2.0, green_color );
-    cv::circle( overlay, center, pupil_max/2.0, red_color );
+    cv::circle( overlay, center, props.pupil_min/2.0, mRed_color );
+    cv::circle( overlay, center, props.target_size/2.0, mGreen_color );
+    cv::circle( overlay, center, props.pupil_max/2.0, mRed_color );
 
-    auto text_string = std::to_string(target_size);
+    auto text_string = std::to_string(props.target_size);
     cv::Size text_size = cv::getTextSize( text_string, cv::FONT_HERSHEY_SIMPLEX, 0.4 , 1, 0);
     cv::Point text_pos = { center.x - text_size.width/2 , center.y + text_size.height/2};
     cv::putText( overlay, text_string, text_pos, cv::FONT_HERSHEY_SIMPLEX, 0.4, {255,100,100} );
 
 
-
-
-    cv::imshow("asdasd", overlay );
-
-
-
-
   }
 
+  //get raw edge pix for later
+  cv::Mat raw_edges;
+  cv::findNonZero(edges, raw_edges);
 
-
-
+  cv::imshow("asdasd", edges );
   return { 1, 3.0 };
 
 }
