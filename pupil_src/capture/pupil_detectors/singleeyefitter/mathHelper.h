@@ -43,6 +43,20 @@ namespace singleeyefitter {
             return val1*(1.0 - alpha) + val2*alpha;
         }
 
+        template<typename T>
+        float getAngleABC( const T& a, const T& b, const T& c )
+        {
+            T ab = { b.x - a.x, b.y - a.y };
+            T cb = { b.x - c.x, b.y - c.y };
+
+            float dot = ab.dot(cb); // dot product
+            float cross = ab.cross(cb); // cross product
+
+            float alpha = atan2(cross, dot);
+
+            return alpha * 180.0f / M_PI;
+        }
+
     }
 
 }
