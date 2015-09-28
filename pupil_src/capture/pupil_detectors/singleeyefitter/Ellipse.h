@@ -85,6 +85,16 @@ namespace singleeyefitter {
             return Vector(-minor_radius*cos(angle), minor_radius*sin(angle));
         }
 
+        Scalar circumference() const{
+            using std::abs;
+            using std::sqrt;
+            using std::pow;
+            return M_PI * abs( 3.0 * ( major_radius + minor_radius) -
+                 sqrt( 10.0 * major_radius * minor_radius + 3.0 *
+                    (pow(major_radius,2) + pow(minor_radius,2)) ));
+        }
+
+
         static const Ellipse2D Null;
 
     private:
