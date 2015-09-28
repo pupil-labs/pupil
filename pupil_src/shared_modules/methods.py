@@ -319,11 +319,11 @@ def find_kink_and_dir_change(curvature,angle):
     split = []
     if curvature.shape[0] == 0:
         return split
-    curv_pos = curvature > 0
-    currently_pos = curv_pos[0]
-    for idx,c, is_pos in zip(range(curvature.shape[0]),curvature,curv_pos):
-        if (is_pos !=currently_pos) or abs(c) < angle:
-            currently_pos = is_pos
+    curv_positive = curvature > 0
+    currently_positive = curv_positive[0]
+    for idx,c, is_posisitve in zip(range(curvature.shape[0]),curvature,curv_positive):
+        if (is_posisitve !=currently_positive) or abs(c) < angle:
+            currently_positive = is_posisitve
             split.append(idx)
     return split
 
