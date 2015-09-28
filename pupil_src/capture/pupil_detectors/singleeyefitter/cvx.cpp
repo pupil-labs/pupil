@@ -1,5 +1,34 @@
-#include <cvx.h>
-#include <mathHelper.h>
+#include "cvx.h"
+#include "mathHelper.h"
+
+
+void singleeyefitter::cvx::draw_dotted_rect( cv::Mat& image, cv::Rect& rect , int color ){
+
+  int count = 0;
+  auto create_Dotted_Line = [&](cv::Vec3b& pixel){
+      if( count%4 == 0)
+        pixel[0] = pixel[1] = pixel[2] = color;
+      count++;
+  };
+  int x = rect.x;
+  int y = rect.y;
+  int width = rect.width-1;
+  int height = rect.height-1;
+
+  cv::Mat line  = image.colRange(x, width +1 ).rowRange( y , y +1);
+  cv::Mat line2  = image.colRange(x, x +1 ).rowRange( y ,height +1);
+  cv::Mat line3  = image.colRange(x, width +1 ).rowRange( height , height +1);
+  cv::Mat line4  = image.colRange(width, width +1 ).rowRange( y , height+1);
+  std::for_each(line.begin<cv::Vec3b>(), line.end<cv::Vec3b>(), create_Dotted_Line );
+  count = 0;
+  std::for_each(line2.begin<cv::Vec3b>(), line2.end<cv::Vec3b>(), create_Dotted_Line );
+  count = 0;
+  std::for_each(line3.begin<cv::Vec3b>(), line3.end<cv::Vec3b>(), create_Dotted_Line );
+  count = 0;
+  std::for_each(line4.begin<cv::Vec3b>(), line4.end<cv::Vec3b>(), create_Dotted_Line );
+
+}
+
 
 void singleeyefitter::cvx::getROI(const cv::Mat& src, cv::Mat& dst, const cv::Rect& roi, int borderType)
 {
