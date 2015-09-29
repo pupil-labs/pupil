@@ -312,7 +312,7 @@ class Canny_Detector(Pupil_Detector):
                         c = color.pop(0)
                         color.append(c)
                         s = s.copy()
-                        s[:,:,0] += debug_img.shape[1]-coarse_pupil_width*2
+                        #s[:,:,0] += debug_img.shape[1]-coarse_pupil_width*2  # not showing up with this
                         # s[:,:,0] += x_shift
                         # x_shift += 5
                         cv2.polylines(debug_img,[s],isClosed=False,color=map(lambda x: x,c),thickness = 1,lineType=4)#cv2.CV_AA
