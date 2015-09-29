@@ -21,6 +21,12 @@ cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Rect':
     Rect_() except +
     Rect_( T x, T y, T width, T height ) except +
 
+cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Scalar':
+
+  cdef cppclass Scalar_[T]:
+    Scalar_() except +
+    Scalar_( T x ) except +
+
 cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
     cdef cppclass Matrix21d "Eigen::Matrix<double,2,1>": # eigen defaults to column major layout
         Matrix21d() except +
@@ -86,8 +92,9 @@ cdef class Detector_2D:
         cdef Mat cv_image_color = Mat(height, width, CV_8UC3, <void *> &img_color[0,0,0] )
         cdef Mat debug_image = Mat(height, width, CV_8UC3 ) ;
 
+
         detect_properties  = {};
-        detect_properties["intensity_range"] = 20;
+        detect_properties["intensity_range"] = 17;
         detect_properties["blur_size"] = 1;
         detect_properties["canny_treshold"] = 159;
         detect_properties["canny_ration"] = 2;

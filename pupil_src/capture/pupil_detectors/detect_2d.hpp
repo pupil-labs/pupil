@@ -7,6 +7,7 @@
 #include "singleeyefitter/cvx.h"
 #include "singleeyefitter/Ellipse.h"  // use ellipse eyefitter
 #include "singleeyefitter/distance.h"
+#include "singleeyefitter/mathHelper.h"
 #include <iostream>
 
 
@@ -59,6 +60,39 @@ private:
 
 };
 
+std::vector<int> find_kink_and_dir_change(std::vector<float>& curvature, float max_angle){
+
+  std::vector<int> split_indeces;
+  if( curvature.empty() ) return split_indeces;
+
+  bool currently_positive = curvature.at(0) > 0;
+  for(int i=0 ; i < curvature.size(); i++){
+      float angle = curvature.at(i);
+      bool is_positive = angle > 0;
+      if( std::abs(angle) < max_angle || is_positive != currently_positive ){
+        currently_positive = is_positive;
+        split_indeces.push_back(i);
+      }
+  }
+  return split_indeces;
+}
+std::vector<std::vector<cv::Point>> split_at_corner_index(std::vector<cv::Point>& contour, std::vector<int>& indices){
+
+  std::vector<std::vector<cv::Point>> contour_segments;
+  if(indices.empty()){
+     contour_segments.push_back(contour);
+      return contour_segments;
+  }
+  int startIndex = 0;
+  for(int i=0 ; i < indices.size() + 1 ; i++){
+      int next_Index = i < indices.size() ?  indices.at(i) + 1  : contour.size(); // don't forget the last one
+      auto begin = contour.begin();
+      contour_segments.push_back( {begin + startIndex , begin + next_Index + 1} );
+      startIndex = next_Index;
+  }
+  return contour_segments;
+}
+
 Detector2D::Detector2D(): mUse_strong_prior(false), mPupil_Size(100){};
 
 
@@ -67,7 +101,7 @@ std::vector<cv::Point> Detector2D::ellipse_true_support( Ellipse& ellipse, doubl
   double major_radius = ellipse.major_radius;
   double minor_radius = ellipse.minor_radius;
 
-  std::cout << ellipse_circumference << std::endl;
+  //std::cout << ellipse_circumference << std::endl;
   std::vector<double> distances;
   std::vector<cv::Point> support_pixels;
 
@@ -87,6 +121,9 @@ std::vector<cv::Point> Detector2D::ellipse_true_support( Ellipse& ellipse, doubl
 Result Detector2D::detect( DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , bool visualize, bool use_debug_image ){
 
   Result result;
+
+  //remove this later
+  debug_image = cv::Scalar(0); //clear debug image
 
   image = cv::Mat(image, usr_roi);  // image with usr_roi
 
@@ -161,7 +198,7 @@ Result Detector2D::detect( DetectProperties& props, cv::Mat& image, cv::Mat& col
   cv::dilate( binary_img, binary_img, kernel, {-1,-1}, 2 );
 
   cv::Mat spec_mask;
-  cv::inRange( image, cv::Scalar(0) , cv::Scalar(highest_spike_index + spectral_offset), spec_mask );  // binary threshold
+  cv::inRange( image, cv::Scalar(0) , cv::Scalar(highest_spike_index - spectral_offset), spec_mask );  // binary threshold
   cv::erode( spec_mask, spec_mask, kernel);
 
   kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, {9,9} );
@@ -224,49 +261,49 @@ Result Detector2D::detect( DetectProperties& props, cv::Mat& image, cv::Mat& col
   ///////////////////////////////
 
   //if we had a good ellipse before ,let see if it is still a good first guess:
-  if( mUse_strong_prior ){
+  // if( mUse_strong_prior ){
 
-    mUse_strong_prior = false;
+  //   mUse_strong_prior = false;
 
-    //recalculate center in coords system of ROI views
-    Ellipse ellipse = mPrior_ellipse;
-    ellipse.center[0] -= ( pupil_roi.x + usr_roi.x  );
-    ellipse.center[1] -= ( pupil_roi.y + usr_roi.y  );
+  //   //recalculate center in coords system of ROI views
+  //   Ellipse ellipse = mPrior_ellipse;
+  //   ellipse.center[0] -= ( pupil_roi.x + usr_roi.x  );
+  //   ellipse.center[1] -= ( pupil_roi.y + usr_roi.y  );
 
-    if( !raw_edges.empty() ){
+  //   if( !raw_edges.empty() ){
 
-      std::vector<cv::Point> support_pixels;
-      double ellipse_circumference = ellipse.circumference();
-      support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
+  //     std::vector<cv::Point> support_pixels;
+  //     double ellipse_circumference = ellipse.circumference();
+  //     support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
 
-      double support_ration = support_pixels.size() / ellipse_circumference;
+  //     double support_ration = support_pixels.size() / ellipse_circumference;
 
-      if(support_ration >= props.strong_perimeter_ratio_range_min){
+  //     if(support_ration >= props.strong_perimeter_ratio_range_min){
 
-        cv::RotatedRect refit_ellipse = cv::fitEllipse(support_pixels);
+  //       cv::RotatedRect refit_ellipse = cv::fitEllipse(support_pixels);
 
-        if(use_debug_image){
-            cv::ellipse(debug_image, toRotatedRect(ellipse), mRoyalBlue_color, 4);
-            cv::ellipse(debug_image, refit_ellipse, mRed_color, 1);
-        }
+  //       if(use_debug_image){
+  //           cv::ellipse(debug_image, toRotatedRect(ellipse), mRoyalBlue_color, 4);
+  //           cv::ellipse(debug_image, refit_ellipse, mRed_color, 1);
+  //       }
 
-        ellipse = toEllipse<double>(refit_ellipse);
-        ellipse.center[0] += ( pupil_roi.x + usr_roi.x  );
-        ellipse.center[1] += ( pupil_roi.y + usr_roi.y  );
-        mPrior_ellipse = ellipse;
+  //       ellipse = toEllipse<double>(refit_ellipse);
+  //       ellipse.center[0] += ( pupil_roi.x + usr_roi.x  );
+  //       ellipse.center[1] += ( pupil_roi.y + usr_roi.y  );
+  //       mPrior_ellipse = ellipse;
 
-        double goodness = std::min(0.1, support_ration);
+  //       double goodness = std::min(0.1, support_ration);
 
-        result.confidence = goodness;
-        result.ellipse = ellipse;
+  //       result.confidence = goodness;
+  //       result.ellipse = ellipse;
 
-        mPupil_Size = ellipse.major_radius;
+  //       mPupil_Size = ellipse.major_radius;
 
-        return result;
+  //       return result;
 
-      }
-    }
-  }
+  //     }
+  //   }
+  // }
 
   ///////////////////////////////
   ///  Strong Prior Part End  ///
@@ -278,13 +315,41 @@ Result Detector2D::detect( DetectProperties& props, cv::Mat& image, cv::Mat& col
   good_contours.resize( contours.size() );
 
   //first we want to filter out the bad stuff, to short
-  auto min_contour_size_pred = [&]( const std::vector<cv::Point>& contour){ return contour.size() > props.contour_size_min; };
-  std::copy_if( contours.begin(), contours.end(), good_contours.begin(), min_contour_size_pred); // better way than copy, erase probably not better with vector
+  auto min_contour_size_pred = [&]( const std::vector<cv::Point>& contour){
+    return contour.size() > props.contour_size_min;
+  };
+  auto end = std::copy_if( contours.begin(), contours.end(), good_contours.begin(), min_contour_size_pred); // better way than copy, erase probably not better with vector
+  good_contours.resize(std::distance(good_contours.begin(),end));
 
   //now we learn things about each contour through looking at the curvature.
   //For this we need to simplyfy the contour so that pt to pt angles become more meaningfull
 
-  cv::imshow("asdasd", edges );
+  std::vector<std::vector<cv::Point>> approx_contours;
+  std::for_each(good_contours.begin(), good_contours.end(), [&]( std::vector<cv::Point>& contour){
+    std::vector<cv::Point> approx_c;
+    cv::approxPolyDP( contour, approx_c, 1.5, false);
+    approx_contours.push_back(approx_c);
+  });
+
+  for(auto it = approx_contours.begin(); it != approx_contours.end(); it++ ){
+
+    std::vector<cv::Point>& contour  = *it;
+    std::vector<float> curvature;
+    // closed curves not handled yet
+    for(auto point_it = contour.begin(); point_it != contour.end()-2; point_it++){
+        cv::Point& first = *point_it;
+        cv::Point& second = *(point_it+1);
+        cv::Point& third = *(point_it+2);
+        curvature.push_back( math::getAngleABC(first, second, third) );
+    }
+
+    //we split whenever there is a real kink (abs(curvature)<right angle) or a change in the genreal direction
+
+    auto kink_indices = find_kink_and_dir_change( curvature, 80);
+    auto contour_segments = split_at_corner_index( contour, kink_indices);
+  }
+
+  cv::drawContours(debug_image, approx_contours, -1, mGreen_color, 2);
   cv::imshow("debug_image", debug_image);
 
   return result;
