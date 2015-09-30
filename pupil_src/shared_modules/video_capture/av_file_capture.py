@@ -92,24 +92,21 @@ class File_Capture(object):
         try:
             self.video_stream = next(s for s in self.container.streams if s.type=="video")# looking for the first videostream
             logger.debug("loaded videostream: %s"%self.video_stream)
-            self.v_packet_iterator = self.container.demux(self.video_stream)
-            self.video_stream.thread_count = 4
+            self.video_stream.thread_count = 2
         except StopIteration:
             self.video_stream = None
-            self.v_packet_iterator = None
             logger.error("No videostream found in media container")
 
         try:
             self.audio_stream = next(s for s in self.container.streams if s.type=='audio')# looking for the first audiostream
             logger.debug("loaded audiostream: %s"%self.audio_stream)
-            self.a_packet_iterator = self.container.demux(self.audio_stream)
         except StopIteration:
             self.audio_stream = None
-            self.a_packet_iterator = None
             logger.debug("No audiostream found in media container")
 
-        self.selected_streams = [s for s in (self.video_stream,self.audio_stream) if s]
-        self.av_packet_iterator = self.container.demux(self.selected_streams)
+        #we will use below for av playback
+        # self.selected_streams = [s for s in (self.video_stream,self.audio_stream) if s]
+        # self.av_packet_iterator = self.container.demux(self.selected_streams)
 
         if float(self.video_stream.average_rate)%1 != 0.0:
             logger.warning('Videofile pts are not evenly spaced, pts to index conversion may fail and be inconsitent.')
@@ -164,7 +161,7 @@ class File_Capture(object):
         return len(self.timestamps)
 
     def _next_frame(self):
-        for packet in self.v_packet_iterator:
+        for packet in self.container.demux(self.video_stream):
             for frame in packet.decode():
                 if frame:
                     yield frame
@@ -262,10 +259,10 @@ class File_Capture(object):
 if __name__ == '__main__':
     import os
     import cv2
-    logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(level=logging.DEBUG)
     file_loc = os.path.expanduser("~/Pupil/pupil_code/recordings/2015_09_30/019/world.mp4")
     # file_loc = os.path.expanduser("~/Desktop/Marker_Tracking_Demo_Recording/world_viz1443597178.mp4")
-    file_loc = os.path.expanduser("~/Desktop/Marker_Tracking_Demo_Recording/world.avi")
+    file_loc = os.path.expanduser('~/pupil/recordings/2015_09_30/000/world.mp4')
     # file_loc = os.path.expanduser("~/Desktop/MAH02282.MP4")
     logging.getLogger("libav").setLevel(logging.ERROR)
 
@@ -282,23 +279,23 @@ if __name__ == '__main__':
     t = time.time()
     try:
         while 1:
-            frame = cap.get_frame_nowait().img
+            frame = cap.get_frame_nowait()
             # cv2.imshow("test",frame.img)
             # print frame.index, frame.timestamp
             # if cv2.waitKey(30)==27:
             #     print "seeking to ",95
             #     cap.seek_to_frame(95)
 
-    except EndofVideoFileError:
+    except IOError:
         print 'Video Over'
     print'avcapture took:', time.time()-t
 
-    import cv2
-    cap = cv2.VideoCapture(file_loc)
-    s,i = cap.read()
+    # import cv2
+    # cap = cv2.VideoCapture(file_loc)
+    # s,i = cap.read()
 
-    t = time.time()
-    while s:
-        s,i = cap.read()
-    print time.time()-t
+    # t = time.time()
+    # while s:
+    #     s,i = cap.read()
+    # print time.time()-t
 
