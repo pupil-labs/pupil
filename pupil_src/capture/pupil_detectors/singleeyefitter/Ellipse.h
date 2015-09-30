@@ -93,6 +93,9 @@ namespace singleeyefitter {
                  sqrt( 10.0 * major_radius * minor_radius + 3.0 *
                     (pow(major_radius,2) + pow(minor_radius,2)) ));
         }
+        Scalar area() const{
+            return M_PI * major_radius * minor_radius;
+        }
 
 
         static const Ellipse2D Null;
