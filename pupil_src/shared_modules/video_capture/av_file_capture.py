@@ -13,7 +13,7 @@ import av
 import numpy as np
 from time import time,sleep
 from fractions import Fraction
-
+from  multiprocessing import cpu_count
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ class File_Capture(object):
         try:
             self.video_stream = next(s for s in self.container.streams if s.type=="video")# looking for the first videostream
             logger.debug("loaded videostream: %s"%self.video_stream)
-            self.video_stream.thread_count = 2
+            self.video_stream.thread_count = cpu_count()
         except StopIteration:
             self.video_stream = None
             logger.error("No videostream found in media container")
@@ -260,9 +260,9 @@ if __name__ == '__main__':
     import os
     import cv2
     logging.basicConfig(level=logging.DEBUG)
-    file_loc = os.path.expanduser("~/Pupil/pupil_code/recordings/2015_09_30/019/world.mp4")
-    # file_loc = os.path.expanduser("~/Desktop/Marker_Tracking_Demo_Recording/world_viz1443597178.mp4")
-    file_loc = os.path.expanduser('~/pupil/recordings/2015_09_30/000/world.mp4')
+    # file_loc = os.path.expanduser("~/Pupil/pupil_code/recordings/2015_09_30/019/world.mp4")
+    file_loc = os.path.expanduser("~/Desktop/Marker_Tracking_Demo_Recording/world.avi")
+    # file_loc = os.path.expanduser('~/pupil/recordings/2015_09_30/000/world.mp4')
     # file_loc = os.path.expanduser("~/Desktop/MAH02282.MP4")
     logging.getLogger("libav").setLevel(logging.ERROR)
 
@@ -279,23 +279,23 @@ if __name__ == '__main__':
     t = time.time()
     try:
         while 1:
-            frame = cap.get_frame_nowait()
+            frame = cap.get_frame_nowait().gray
             # cv2.imshow("test",frame.img)
             # print frame.index, frame.timestamp
             # if cv2.waitKey(30)==27:
             #     print "seeking to ",95
             #     cap.seek_to_frame(95)
 
-    except IOError:
+    except EndofVideoFileError:
         print 'Video Over'
     print'avcapture took:', time.time()-t
 
-    # import cv2
-    # cap = cv2.VideoCapture(file_loc)
-    # s,i = cap.read()
+    import cv2
+    cap = cv2.VideoCapture(file_loc)
+    s,i = cap.read()
 
-    # t = time.time()
-    # while s:
-    #     s,i = cap.read()
-    # print time.time()-t
+    t = time.time()
+    while s:
+        s,i = cap.read()
+    print time.time()-t
 
