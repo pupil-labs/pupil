@@ -77,9 +77,11 @@ class AV_Writer(object):
     We are creating a
     """
 
-    def __init__(self, file_loc, video_stream={'codec':'mpeg4','bit_rate': 8000*10e3}, audio_stream=None):
+    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 8000*10e3}, audio_stream=None,use_timestamps=False):
         super(AV_Writer, self).__init__()
-
+        self.use_timestamps = use_timestamps
+        # the approximate capture rate.
+        self.fps = int(fps)
         try:
             file_path,ext = file_loc.rsplit('.', 1)
         except:
@@ -94,18 +96,19 @@ class AV_Writer(object):
         self.container = av.open(self.file_loc,'w')
         logger.debug("Opended '%s' for writing."%self.file_loc)
 
-        self.time_resolution = 1000  # time_base in milliseconds
-        self.time_base = Fraction(1,self.time_resolution)
+        if self.use_timestamps:
+            self.time_base = Fraction(1,65535) #highest resolution for mp4
+        else:
+            self.time_base = Fraction(1000,self.fps*1000) #timebase is fps
 
-
-        self.video_stream = self.container.add_stream(video_stream['codec'],self.time_resolution)
+        self.video_stream = self.container.add_stream(video_stream['codec'],1/self.time_base)
         self.video_stream.bit_rate = video_stream['bit_rate']
         self.video_stream.thread_count = 1
         # self.video_stream.pix_fmt = "yuv420p"#video_stream['format']
         self.configured = False
         self.start_time = None
 
-        self.timestamps_list = []
+        self.current_frame_idx = 0
 
     def write_video_frame(self, input_frame):
         if not self.configured:
@@ -113,57 +116,37 @@ class AV_Writer(object):
             self.video_stream.width = input_frame.width
             self.configured = True
             self.start_time = input_frame.timestamp
-            self.frame = av.VideoFrame(input_frame.width,input_frame.height,'bgr24')
-            self.frame.time_base = self.time_base
+            if input_frame.yuv_buffer:
+                self.frame = av.VideoFrame(input_frame.width, input_frame.height,'yuv422p')
+            else:
+                self.frame = av.VideoFrame(input_frame.width,input_frame.height,'bgr24')
+            if self.use_timestamps:
+                self.frame.time_base = self.time_base
+            else:
+                self.frame.time_base = Fraction(1,self.fps)
 
-        # frame from np.array
-        # frame = av.VideoFrame.from_ndarray(input_frame.img, format='bgr24')
-        self.frame.planes[0].update(input_frame.img)
+        if input_frame.yuv_buffer:
+            y,u,v = input_frame.yuv422
+            self.frame.planes[0].update(y)
+            self.frame.planes[1].update(u)
+            self.frame.planes[2].update(v)
+        else:
+            self.frame.planes[0].update(input_frame.img)
 
-        # here we create a timestamp in ms resolution to be used for the frame pts.
-        # later libav will scale this to stream timebase
-        frame_ts_ms = int((input_frame.timestamp-self.start_time)*self.time_resolution)
-        self.frame.pts = frame_ts_ms
-        # we keep a version of the timestamp counting from first frame in the codec resoltion (lowest time resolution in toolchain)
-        frame_ts_s = float(frame_ts_ms)/self.time_resolution
-        # we append it to our list to correlate hi-res absolute timestamps with media timstamps
-        self.timestamps_list.append((input_frame.timestamp,frame_ts_s))
-
+        if self.use_timestamps:
+            frame_ts = int( (input_frame.timestamp-self.start_time)/self.time_base )
+            print frame_ts,self.time_base
+            self.frame.pts = frame_ts
+        else:
+            # our timebase is 1/30  so a frame idx is the correct pts for an fps recorded video.
+            self.frame.pts = self.current_frame_idx
         #send frame of to encoder
         packet = self.video_stream.encode(self.frame)
         if packet:
-            # print 'paket',packet.pts
             self.container.mux(packet)
+        self.current_frame_idx +=1
 
 
-    def write_video_frame_compressed(self, input_frame):
-        if not self.configured:
-            self.video_stream.height = input_frame.height
-            self.video_stream.width = input_frame.width
-            self.configured = True
-            self.start_time = input_frame.timestamp
-            self.frame = av.VideoFrame(input_frame.width, input_frame.height,'yuv422p')
-            self.frame.time_base = self.time_base
-
-        y,u,v = input_frame.yuv422
-        self.frame.planes[0].update(y)
-        self.frame.planes[1].update(u)
-        self.frame.planes[2].update(v)
-
-        # here we create a timestamp in ms resolution to be used for the frame pts.
-        # later libav will scale this to stream timebase
-        frame_ts_ms = int((input_frame.timestamp-self.start_time)*self.time_resolution)
-        self.frame.pts = frame_ts_ms
-        # we keep a version of the timestamp counting from first frame in the codec resoltion (lowest time resolution in toolchain)
-        frame_ts_s = float(frame_ts_ms)/self.time_resolution
-        # we append it to our list to correlate hi-res absolute timestamps with media timstamps
-        self.timestamps_list.append((input_frame.timestamp,frame_ts_s))
-
-        #send frame of to encoder
-        packet = self.video_stream.encode(self.frame)
-        if packet:
-            # print 'paket',packet.pts
-            self.container.mux(packet)
 
     def close(self):
         # flush encoder
@@ -177,9 +160,6 @@ class AV_Writer(object):
         self.container.close()
         logger.debug("Closed media container")
 
-        ts_array = np.array(self.timestamps_list)
-        np.save(self.ts_file_loc,ts_array)
-        logger.debug("Saved %s frames"%ts_array.shape[0])
 
     def release(self):
         self.close()
@@ -192,6 +172,9 @@ class JPEG_Writer(object):
 
     def __init__(self, file_loc,fps=30):
         super(JPEG_Writer, self).__init__()
+        # the approximate capture rate.
+        self.fps = int(fps)
+        self.time_base = Fraction(1000,self.fps*1000)
 
         try:
             file_path,ext = file_loc.rsplit('.', 1)
@@ -206,7 +189,7 @@ class JPEG_Writer(object):
         self.container = av.open(self.file_loc,'w')
         logger.debug("Opended '%s' for writing."%self.file_loc)
 
-        self.video_stream = self.container.add_stream('mjpeg',int(10000*fps))
+        self.video_stream = self.container.add_stream('mjpeg',1/self.time_base)
         self.video_stream.pix_fmt = "yuvj422p"
         self.configured = False
         self.frame_count = 0
@@ -221,8 +204,9 @@ class JPEG_Writer(object):
 
         packet = Packet()
         packet.payload = input_frame.jpeg_buffer
-        packet.dts = self.frame_count*10000
-        packet.pts = self.frame_count*10000
+        #we are setting the packet pts manually this uses a different timebase av.frame!
+        packet.dts = int(self.frame_count/self.video_stream.time_base/self.fps)
+        packet.pts = int(self.frame_count/self.video_stream.time_base/self.fps)
         self.frame_count +=1
         self.container.mux(packet)
 

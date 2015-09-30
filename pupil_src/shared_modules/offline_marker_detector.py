@@ -245,10 +245,11 @@ class Offline_Marker_Detector(Marker_Detector):
         from marker_detector_cacher import fill_cache
         visited_list = [False if x == False else True for x in self.cache]
         video_file_path =  self.g_pool.capture.src
+        timestamps = self.g_pool.capture.timestamps
         self.cache_queue = Queue()
         self.cacher_seek_idx = Value('i',0)
         self.cacher_run = Value(c_bool,True)
-        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter))
+        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,timestamps,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter))
         self.cacher.start()
 
     def update_marker_cache(self):

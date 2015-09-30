@@ -44,7 +44,7 @@ elif os_name == "Windows":
 else:
     raise NotImplementedError()
 
-from file_capture import File_Capture, FileCaptureError, EndofVideoFileError,FileSeekError
+from av_file_capture import File_Capture, FileCaptureError, EndofVideoFileError,FileSeekError
 
 
 def autoCreateCapture(src,timestamps=None,timebase = None):

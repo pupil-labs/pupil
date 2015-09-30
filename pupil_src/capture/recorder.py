@@ -234,10 +234,10 @@ class Recorder(Plugin):
 
         if self.raw_jpeg and self.g_pool.capture.jpeg_support:
             self.video_path = os.path.join(self.rec_path, "world.mp4")
-            self.writer = JPEG_Writer(self.video_path,int(self.g_pool.capture.frame_rate))
+            self.writer = JPEG_Writer(self.video_path,self.g_pool.capture.frame_rate)
         else:
             self.video_path = os.path.join(self.rec_path, "world.mp4")
-            self.writer = AV_Writer(self.video_path)
+            self.writer = AV_Writer(self.video_path,fps=self.g_pool.capture.frame_rate)
         # positions path to eye process
         if self.record_eye:
             for tx in self.g_pool.eye_tx:
@@ -277,10 +277,7 @@ class Recorder(Plugin):
             self.data['pupil_positions'] += events['pupil_positions']
             self.data['gaze_positions'] += events['gaze_positions']
             self.timestamps.append(frame.timestamp)
-            if self.g_pool.capture.jpeg_support:
-                self.writer.write_video_frame_compressed(frame)
-            else:
-                self.writer.write_video_frame(frame)
+            self.writer.write_video_frame(frame)
             self.frame_count += 1
 
             # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))

@@ -205,9 +205,9 @@ def session(rec_dir):
         logger.Error("This recording is to old. Sorry.")
         return
 
-
+    timestamps = np.load(timestamps_path)
     # Initialize capture
-    cap = File_Capture(video_path,timestamps=timestamps_path)
+    cap = File_Capture(video_path,timestamps=list(timestamps))
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
@@ -232,7 +232,7 @@ def session(rec_dir):
     g_pool.app = 'player'
     g_pool.version = get_version(version_file)
     g_pool.capture = cap
-    g_pool.timestamps = np.load(timestamps_path)
+    g_pool.timestamps = timestamps
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
