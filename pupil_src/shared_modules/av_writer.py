@@ -134,9 +134,7 @@ class AV_Writer(object):
             self.frame.planes[0].update(input_frame.img)
 
         if self.use_timestamps:
-            frame_ts = int( (input_frame.timestamp-self.start_time)/self.time_base )
-            print frame_ts,self.time_base
-            self.frame.pts = frame_ts
+            self.frame.pts = int( (input_frame.timestamp-self.start_time)/self.time_base )
         else:
             # our timebase is 1/30  so a frame idx is the correct pts for an fps recorded video.
             self.frame.pts = self.current_frame_idx
