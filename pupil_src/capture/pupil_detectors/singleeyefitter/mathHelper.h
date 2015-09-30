@@ -3,6 +3,8 @@
 
 #include <limits>
 
+#include "traits.h"
+
 namespace singleeyefitter {
 
     namespace math {
@@ -57,9 +59,89 @@ namespace singleeyefitter {
             return alpha * 180.0f / M_PI;
         }
 
-    }
+        template<typename T>
+        inline T smootherstep(T edge0, T edge1, T x, scalar_tag)
+        {
+            if (x >= edge1)
+                return T(1);
+            else if (x <= edge0)
+                return T(0);
+            else {
+                x = (x - edge0)/(edge1 - edge0);
+                return x*x*x*(x*(x*T(6) - T(15)) + T(10));
+            }
+        }
+        template<typename T, int N>
+        inline ::ceres::Jet<T,N> smootherstep(T edge0, T edge1, const ::ceres::Jet<T,N>& f, ceres_jet_tag)
+        {
+            if (f.a >= edge1)
+                return ::ceres::Jet<T,N>(1);
+            else if (f.a <= edge0)
+                return ::ceres::Jet<T,N>(0);
+            else {
+                T x = (f.a - edge0)/(edge1 - edge0);
 
-}
+                // f is referenced by this function, so create new value for return.
+                ::ceres::Jet<T,N> g;
+                g.a = x*x*x*(x*(x*T(6) - T(15)) + T(10));
+                g.v = f.v * (x*x*(x*(x*T(30) - T(60)) + T(30))/(edge1 - edge0));
+                return g;
+            }
+        }
+        template<typename T, int N>
+        inline ::ceres::Jet<T,N> smootherstep(T edge0, T edge1, ::ceres::Jet<T,N>&& f, ceres_jet_tag)
+        {
+            if (f.a >= edge1)
+                return ::ceres::Jet<T,N>(1);
+            else if (f.a <= edge0)
+                return ::ceres::Jet<T,N>(0);
+            else {
+                T x = (f.a - edge0)/(edge1 - edge0);
+
+                // f is moved into this function, so reuse it.
+                f.a = x*x*x*(x*(x*T(6) - T(15)) + T(10));
+                f.v *= (x*x*(x*(x*T(30) - T(60)) + T(30))/(edge1 - edge0));
+                return f;
+            }
+        }
+        template<typename T>
+        inline auto smootherstep(typename ad_traits<T>::scalar edge0, typename ad_traits<T>::scalar edge1, T&& val)
+            -> decltype(smootherstep(edge0, edge1, std::forward<T>(val), typename ad_traits<T>::ad_tag()))
+        {
+            return smootherstep(edge0, edge1, std::forward<T>(val), typename ad_traits<T>::ad_tag());
+        }
+
+        template<typename T>
+        inline T norm(T x, T y, scalar_tag) {
+            using std::sqrt;
+            using math::sq;
+
+            return sqrt(sq(x) + sq(y));
+        }
+        template<typename T, int N>
+        inline ::ceres::Jet<T,N> norm(const ::ceres::Jet<T,N>& x, const ::ceres::Jet<T,N>& y, ceres_jet_tag) {
+            T anorm = norm<T>(x.a, y.a, scalar_tag());
+
+            ::ceres::Jet<T,N> g;
+            g.a = anorm;
+            g.v = (x.a/anorm)*x.v + (y.a/anorm)*y.v;
+
+            return g;
+        }
+        template<typename T>
+        inline typename std::decay<T>::type norm(T&& x, T&& y) {
+            return norm(std::forward<T>(x), std::forward<T>(y), typename ad_traits<T>::ad_tag());
+        }
+
+        template<typename T>
+        inline auto Heaviside(T&& val, typename ad_traits<T>::scalar epsilon) -> decltype(smootherstep(-epsilon, epsilon, std::forward<T>(val))) {
+            return smootherstep(-epsilon, epsilon, std::forward<T>(val));
+        }
+
+
+    } // math namespace
+
+} // singleeyefitter namespace
 
 
 #endif // singleeyefitter_math_h__

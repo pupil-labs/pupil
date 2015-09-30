@@ -12,6 +12,7 @@
 #include <ceres/jet.h>
 
 #include "singleeyefitter.h"
+#include "EllipseDistanceApproxCalculator.h"
 
 #include <utils.h>
 #include <cvx.h>
@@ -24,9 +25,10 @@
 #include <intersect.h>
 #include <projection.h>
 #include <fun.h>
-#include <mathHelper.h>
 
+#include "mathHelper.h"
 #include "distance.h"
+#include "traits.h"
 
 #include <spii/spii.h>
 #include <spii/term.h>
@@ -45,113 +47,6 @@ namespace ceres {
 }
 
 namespace singleeyefitter {
-
-struct scalar_tag{};
-struct ceres_jet_tag{};
-
-template<typename T, typename Enabled=void>
-struct ad_traits;
-
-template<typename T>
-struct ad_traits<T, typename std::enable_if< std::is_arithmetic<T>::value >::type >
-{
-    typedef scalar_tag ad_tag;
-    typedef T scalar;
-    static inline scalar value(const T& x) { return x; }
-};
-
-template<typename T, int N>
-struct ad_traits<::ceres::Jet<T,N>>
-{
-    typedef ceres_jet_tag ad_tag;
-    typedef T scalar;
-    static inline scalar get(const ::ceres::Jet<T,N>& x) { return x.a; }
-};
-
-template<typename T>
-struct ad_traits<T, typename std::enable_if< !std::is_same<T, typename std::decay<T>::type>::value >::type >
-    : public ad_traits<typename std::decay<T>::type>
-{
-};
-
-template<typename T>
-inline T smootherstep(T edge0, T edge1, T x, scalar_tag)
-{
-    if (x >= edge1)
-        return T(1);
-    else if (x <= edge0)
-        return T(0);
-    else {
-        x = (x - edge0)/(edge1 - edge0);
-        return x*x*x*(x*(x*T(6) - T(15)) + T(10));
-    }
-}
-template<typename T, int N>
-inline ::ceres::Jet<T,N> smootherstep(T edge0, T edge1, const ::ceres::Jet<T,N>& f, ceres_jet_tag)
-{
-    if (f.a >= edge1)
-        return ::ceres::Jet<T,N>(1);
-    else if (f.a <= edge0)
-        return ::ceres::Jet<T,N>(0);
-    else {
-        T x = (f.a - edge0)/(edge1 - edge0);
-
-        // f is referenced by this function, so create new value for return.
-        ::ceres::Jet<T,N> g;
-        g.a = x*x*x*(x*(x*T(6) - T(15)) + T(10));
-        g.v = f.v * (x*x*(x*(x*T(30) - T(60)) + T(30))/(edge1 - edge0));
-        return g;
-    }
-}
-template<typename T, int N>
-inline ::ceres::Jet<T,N> smootherstep(T edge0, T edge1, ::ceres::Jet<T,N>&& f, ceres_jet_tag)
-{
-    if (f.a >= edge1)
-        return ::ceres::Jet<T,N>(1);
-    else if (f.a <= edge0)
-        return ::ceres::Jet<T,N>(0);
-    else {
-        T x = (f.a - edge0)/(edge1 - edge0);
-
-        // f is moved into this function, so reuse it.
-        f.a = x*x*x*(x*(x*T(6) - T(15)) + T(10));
-        f.v *= (x*x*(x*(x*T(30) - T(60)) + T(30))/(edge1 - edge0));
-        return f;
-    }
-}
-template<typename T>
-inline auto smootherstep(typename ad_traits<T>::scalar edge0, typename ad_traits<T>::scalar edge1, T&& val)
-    -> decltype(smootherstep(edge0, edge1, std::forward<T>(val), typename ad_traits<T>::ad_tag()))
-{
-    return smootherstep(edge0, edge1, std::forward<T>(val), typename ad_traits<T>::ad_tag());
-}
-
-template<typename T>
-inline T norm(T x, T y, scalar_tag) {
-    using std::sqrt;
-    using math::sq;
-
-    return sqrt(sq(x) + sq(y));
-}
-template<typename T, int N>
-inline ::ceres::Jet<T,N> norm(const ::ceres::Jet<T,N>& x, const ::ceres::Jet<T,N>& y, ceres_jet_tag) {
-    T anorm = norm<T>(x.a, y.a, scalar_tag());
-
-    ::ceres::Jet<T,N> g;
-    g.a = anorm;
-    g.v = (x.a/anorm)*x.v + (y.a/anorm)*y.v;
-
-    return g;
-}
-template<typename T>
-inline typename std::decay<T>::type norm(T&& x, T&& y) {
-    return norm(std::forward<T>(x), std::forward<T>(y), typename ad_traits<T>::ad_tag());
-}
-
-template<typename T>
-inline auto Heaviside(T&& val, typename ad_traits<T>::scalar epsilon) -> decltype(smootherstep(-epsilon, epsilon, std::forward<T>(val))) {
-    return smootherstep(-epsilon, epsilon, std::forward<T>(val));
-}
 
 template<typename Scalar>
 cv::Rect bounding_box(const Ellipse2D<Scalar>& ellipse) {
@@ -172,82 +67,6 @@ cv::Rect bounding_box(const Ellipse2D<Scalar>& ellipse) {
     return cv::Rect(floor(ellipse.center[0] - bbox_halfwidth), floor(ellipse.center[1] - bbox_halfheight),
                     2*ceil(bbox_halfwidth) + 1, 2*ceil(bbox_halfheight) + 1);
 }
-
-// Calculates:
-//     r * (1 - ||A(p - t)||)
-//
-//          ||A(p - t)||   maps the ellipse to a unit circle
-//      1 - ||A(p - t)||   measures signed distance from unit circle edge
-// r * (1 - ||A(p - t)||)  scales this to major radius of ellipse, for (roughly) pixel distance
-//
-// Actually use (r - ||rAp - rAt||) and precalculate r, rA and rAt.
-template<typename T>
-class EllipseDistCalculator {
-public:
-    typedef typename ad_traits<T>::scalar Const;
-
-    EllipseDistCalculator(const Ellipse2D<T>& ellipse) : r(ellipse.major_radius)
-    {
-        using std::sin;
-        using std::cos;
-        rA << r*cos(ellipse.angle)/ellipse.major_radius, r*sin(ellipse.angle)/ellipse.major_radius,
-             -r*sin(ellipse.angle)/ellipse.minor_radius, r*cos(ellipse.angle)/ellipse.minor_radius;
-        rAt = rA*ellipse.center;
-    }
-    template<typename U>
-    T operator()(U&& x, U&& y) {
-        return calculate(std::forward<U>(x), std::forward<U>(y), typename ad_traits<T>::ad_tag(), typename ad_traits<U>::ad_tag());
-    }
-
-    template<typename U>
-    T calculate(U&& x, U&& y, scalar_tag, scalar_tag) {
-        T rAxt((rA(0,0) * x + rA(0,1) * y) - rAt[0]);
-        T rAyt((rA(1,0) * x + rA(1,1) * y) - rAt[1]);
-
-        T xy_dist = norm(rAxt, rAyt);
-
-        return (r - xy_dist);
-    }
-
-    // Expanded versions for Jet calculations so that Eigen can do some of its expression magic
-    template<typename U>
-    T calculate(U&& x, U&& y, scalar_tag, ceres_jet_tag) {
-        T rAxt(rA(0,0) * x.a + rA(0,1) * y.a - rAt[0],
-            rA(0,0) * x.v + rA(0,1) * y.v);
-        T rAyt(rA(1,0) * x.a + rA(1,1) * y.a - rAt[1],
-            rA(1,0) * x.v + rA(1,1) * y.v);
-
-        T xy_dist = norm(rAxt, rAyt);
-
-        return (r - xy_dist);
-    }
-    template<typename U>
-    T calculate(U&& x, U&& y, ceres_jet_tag, scalar_tag) {
-        T rAxt(rA(0,0).a * x + rA(0,1).a * y - rAt[0].a,
-            rA(0,0).v * x + rA(0,1).v * y - rAt[0].v);
-        T rAyt(rA(1,0).a * x + rA(1,1).a * y - rAt[1].a,
-            rA(1,0).v * x + rA(1,1).v * y - rAt[1].v);
-
-        T xy_dist = norm(rAxt, rAyt);
-
-        return (r - xy_dist);
-    }
-    template<typename U>
-    T calculate(U&& x, U&& y, ceres_jet_tag, ceres_jet_tag) {
-        T rAxt(rA(0,0).a * x.a + rA(0,1).a * y.a - rAt[0].a,
-            rA(0,0).v * x.a + rA(0,0).a * x.v + rA(0,1).v * y.a + rA(0,1).a * y.v - rAt[0].v);
-        T rAyt(rA(1,0).a * x.a + rA(1,1).a * y.a - rAt[1].a,
-            rA(1,0).v * x.a + rA(1,0).a * x.v + rA(1,1).v * y.a + rA(1,1).a * y.v - rAt[1].v);
-
-        T xy_dist = norm(rAxt, rAyt);
-
-        return (r - xy_dist);
-    }
-private:
-    Eigen::Matrix<T, 2, 2> rA;
-    Eigen::Matrix<T, 2, 1> rAt;
-    T r;
-};
 
 // Calculates the x crossings of a conic at a given y value. Returns the number of crossings (0, 1 or 2)
 template<typename Scalar>

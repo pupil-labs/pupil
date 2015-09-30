@@ -2,18 +2,19 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <iostream>
+
 
 #include "singleeyefitter/utils.h"
 #include "singleeyefitter/cvx.h"
 #include "singleeyefitter/Ellipse.h"  // use ellipse eyefitter
 #include "singleeyefitter/distance.h"
 #include "singleeyefitter/mathHelper.h"
-#include <iostream>
+#include "singleeyefitter/EllipseDistanceApproxCalculator.h"
 
-
-typedef singleeyefitter::Ellipse2D<double> Ellipse;
-
+template<typename Scalar>
 struct Result{
+  typedef singleeyefitter::Ellipse2D<Scalar> Ellipse;
   double confidence =  0.0 ;
   Ellipse ellipse;
   double timeStampe = 0.0;
@@ -32,17 +33,23 @@ struct DetectProperties{
   float strong_perimeter_ratio_range_min;
   float strong_perimeter_ratio_range_max;
   int contour_size_min;
+  float ellipse_roundness_ratio;
+
 };
 
-using namespace singleeyefitter;
 
+template< typename Scalar >
 class Detector2D{
+
+private:
+  typedef singleeyefitter::Ellipse2D<Scalar> Ellipse;
+
 
 public:
 
   Detector2D();
-  Result detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , bool visualize, bool use_debug_image);
-  std::vector<cv::Point> ellipse_true_support(Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges);
+  Result<Scalar> detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , bool visualize, bool use_debug_image);
+  std::vector<cv::Point> ellipse_true_support(Ellipse& ellipse, Scalar ellipse_circumference, std::vector<cv::Point>& raw_edges);
 
 
 private:
@@ -51,14 +58,18 @@ private:
   int mPupil_Size;
   Ellipse mPrior_ellipse;
 
-  const cv::Scalar mRed_color = {0,0,255};
-  const cv::Scalar mGreen_color = {0,255,0};
-  const cv::Scalar mBlue_color = {255,0,0};
-  const cv::Scalar mRoyalBlue_color = {255,100,100};
-  const cv::Scalar mYellow_color = {255,255,0};
-  const cv::Scalar mWhite_color = {255,255,255};
+  const cv::Scalar_<int> mRed_color = {0,0,255};
+  const cv::Scalar_<int> mGreen_color = {0,255,0};
+  const cv::Scalar_<int> mBlue_color = {255,0,0};
+  const cv::Scalar_<int> mRoyalBlue_color = {255,100,100};
+  const cv::Scalar_<int> mYellow_color = {255,255,0};
+  const cv::Scalar_<int> mWhite_color = {255,255,255};
 
 };
+
+void printPoints( std::vector<cv::Point> points){
+  std::for_each(points.begin(), points.end(), [](cv::Point& p ){ std::cout << p << std::endl;} );
+}
 
 std::vector<int> find_kink_and_dir_change(std::vector<float>& curvature, float max_angle){
 
@@ -85,18 +96,18 @@ std::vector<std::vector<cv::Point>> split_at_corner_index(std::vector<cv::Point>
   }
   int startIndex = 0;
   for(int i=0 ; i < indices.size() + 1 ; i++){
-      int next_Index = i < indices.size() ?  indices.at(i) + 1  : contour.size(); // don't forget the last one
+      int next_Index = i < indices.size() ?  indices.at(i) + 1  : contour.size()-1; // don't forget the last one
       auto begin = contour.begin();
       contour_segments.push_back( {begin + startIndex , begin + next_Index + 1} );
       startIndex = next_Index;
   }
   return contour_segments;
 }
+template <typename Scalar>
+Detector2D<Scalar>::Detector2D(): mUse_strong_prior(false), mPupil_Size(100){};
 
-Detector2D::Detector2D(): mUse_strong_prior(false), mPupil_Size(100){};
-
-
-std::vector<cv::Point> Detector2D::ellipse_true_support( Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges){
+template <typename Scalar>
+std::vector<cv::Point> Detector2D<Scalar>::ellipse_true_support( Ellipse& ellipse, Scalar ellipse_circumference, std::vector<cv::Point>& raw_edges){
 
   double major_radius = ellipse.major_radius;
   double minor_radius = ellipse.minor_radius;
@@ -108,8 +119,8 @@ std::vector<cv::Point> Detector2D::ellipse_true_support( Ellipse& ellipse, doubl
   for(auto it = raw_edges.begin(); it != raw_edges.end(); it++){
 
       const cv::Point p = *it;
-      double distance = euclidean_distance( (double)p.x, (double)p.y, ellipse);
-
+      double distance = euclidean_distance( (double)p.x, (double)p.y, ellipse);  // change this one, to approxx ?
+      std::cout << ellipse.center << std::endl;
       if(distance <=  1.3 ){
         support_pixels.push_back(p);
       }
@@ -117,10 +128,10 @@ std::vector<cv::Point> Detector2D::ellipse_true_support( Ellipse& ellipse, doubl
 
   return std::move(support_pixels);
 }
+template<typename Scalar>
+Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , bool visualize, bool use_debug_image ){
 
-Result Detector2D::detect( DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , bool visualize, bool use_debug_image ){
-
-  Result result;
+  Result<Scalar> result;
 
   //remove this later
   debug_image = cv::Scalar(0); //clear debug image
@@ -331,6 +342,7 @@ Result Detector2D::detect( DetectProperties& props, cv::Mat& image, cv::Mat& col
     approx_contours.push_back(approx_c);
   });
 
+  std::vector<std::vector<cv::Point>> split_contours;
   for(auto it = approx_contours.begin(); it != approx_contours.end(); it++ ){
 
     std::vector<cv::Point>& contour  = *it;
@@ -347,9 +359,99 @@ Result Detector2D::detect( DetectProperties& props, cv::Mat& image, cv::Mat& col
 
     auto kink_indices = find_kink_and_dir_change( curvature, 80);
     auto contour_segments = split_at_corner_index( contour, kink_indices);
+    //TODO: split at shart inward turns
+    int colorIndex = 0;
+    for( auto seg_it = contour_segments.begin(); seg_it != contour_segments.end(); seg_it++){
+
+      std::vector<cv::Point> segment = *seg_it;
+      //printPoints(segment);
+      if( segment.size() > 2 ){
+        split_contours.push_back(segment);
+
+        // debug segments
+        if(use_debug_image){
+          const cv::Scalar_<int> colors[] = {mRed_color, mBlue_color, mRoyalBlue_color, mYellow_color, mWhite_color, mGreen_color};
+          cv::polylines(debug_image, segment, false, colors[colorIndex], 1, 4);
+          colorIndex++;
+          colorIndex %= 6;
+        }
+      }
+    }
   }
 
-  cv::drawContours(debug_image, approx_contours, -1, mGreen_color, 2);
+  if( split_contours.empty()){
+    result.confidence = 0.0;
+    return result;
+  }
+
+  //removing stubs makes combinatorial search feasable
+  // erase-remove idiom
+
+  split_contours.erase(
+    std::remove_if(split_contours.begin(), split_contours.end(), [](std::vector<cv::Point>& v){ return v.size() <= 3;}), split_contours.end()
+  );
+
+  //finding poential candidates for ellipse seeds that describe the pupil.
+  std::vector<std::vector<cv::Point>> strong_seed_contours;
+  std::vector<std::vector<cv::Point>> week_seed_contours;
+
+
+  auto ellipse_filter = [&](const cv::RotatedRect& ellipse ) -> bool {
+      bool is_centered = padding < ellipse.center.x  < image_width - padding && padding < ellipse.center.y < image_height - padding;
+      if(is_centered){
+
+        float max_radius = ellipse.size.height;
+        float min_radius = ellipse.size.width;
+        if(min_radius > max_radius){
+            std::cout << "Major Minor swizzle" << std::endl; // not happend yet, can we remove it ?
+            min_radius = ellipse.size.height;
+            max_radius = ellipse.size.width;
+        }
+        bool is_round = min_radius/max_radius >= props.ellipse_roundness_ratio;
+        if(is_round){
+            bool right_size = props.pupil_size_min <= max_radius <= props.pupil_size_max;
+            if(right_size) return true;
+        }
+      }
+      return false;
+  };
+
+
+  for(int i=0; i < split_contours.size(); i++){
+
+    auto contour = split_contours.at(i);
+
+    if( contour.size() >= 5 ){ // because fitEllipse needs at least 5 points
+
+      cv::RotatedRect ellipse = cv::fitEllipse(contour);
+      //is this ellipse a plausible candidate for a pupil?
+      if( ellipse_filter(ellipse) ){
+        auto e = toEllipse<double>(ellipse);
+        double point_distances = 0.0;
+        EllipseDistCalculator<double> ellipseDistance(e);
+
+        //std::cout << "Ellipse: "  << ellipse.center  << " " << ellipse.size << " "<< ellipse.angle << std::endl;
+        //std::cout << "Points: ";
+        for(int i=0; i < contour.size(); i++){
+            auto point = contour.at(i);
+            //std::cout << point << ", ";
+            point_distances += std::abs( ellipseDistance( (double)point.x, (double)point.y ) );
+           // std::cout << "d=" << distance << ", " <<std::endl;
+        }
+       // std::cout << std::endl;
+        //double distances = calculate_distances_squared_to_ellipse( contour, e );
+        //float fit_variance = distances  / (float)contour.size();
+        //std::cout << distances << std::endl;
+
+      }
+
+
+    }
+
+
+  }
+
+  //cv::drawContours(debug_image, approx_contours, -1, mGreen_color, 2);
   cv::imshow("debug_image", debug_image);
 
   return result;

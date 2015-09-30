@@ -96,16 +96,16 @@ inline cv::Point toPoint(const Eigen::Matrix<Scalar, 2, 1>& point) {
 template<typename Scalar>
 inline cv::RotatedRect toRotatedRect(const Ellipse2D<Scalar>& ellipse) {
     return cv::RotatedRect(toPoint2f(ellipse.center),
-        cv::Size2f(static_cast<float>(2 * ellipse.major_radius),
-        static_cast<float>(2 * ellipse.minor_radius)),
-        static_cast<float>(ellipse.angle * 180 / M_PI));
+        cv::Size2f(static_cast<float>(2.0 * ellipse.major_radius),
+        static_cast<float>(2.0 * ellipse.minor_radius)),
+        static_cast<float>(ellipse.angle * 180.0 / M_PI));
 }
 template<typename Scalar>
 inline Ellipse2D<Scalar> toEllipse(const cv::RotatedRect& rect) {
     return Ellipse2D<Scalar>(toEigen<Scalar>(rect.center),
-        static_cast<Scalar>(rect.size.width / 2),
-        static_cast<Scalar>(rect.size.height / 2),
-        static_cast<Scalar>(rect.angle*M_PI / 180));
+        static_cast<Scalar>(rect.size.width / 2.0),
+        static_cast<Scalar>(rect.size.height / 2.0),
+        static_cast<Scalar>(rect.angle*M_PI / 180.0));
 }
 
 } //namespace singleeyefitter

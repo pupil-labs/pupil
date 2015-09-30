@@ -46,10 +46,9 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
 
 cdef extern from 'detect_2d.hpp':
 
-
-  cdef struct Result:
+  cdef cppclass Result[T]:
     double confidence
-    Ellipse2D[double] ellipse
+    Ellipse2D[T] ellipse
     double timeStampe
 
   cdef struct DetectProperties:
@@ -63,17 +62,19 @@ cdef extern from 'detect_2d.hpp':
     float strong_perimeter_ratio_range_min
     float strong_perimeter_ratio_range_max
     int contour_size_min
+    float ellipse_roundness_ratio
 
-  cdef cppclass Detector2D:
+  cdef cppclass Detector2D[T]:
 
     Detector2D() except +
     Result detect( DetectProperties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& usr_roi , bint visualize , bint use_debug_image )
+
 cdef class Detector_2D:
 
-    cdef Detector2D* thisptr;
+    cdef Detector2D[double]* thisptr;
 
     def __cinit__(self):
-        self.thisptr = new Detector2D()
+        self.thisptr = new Detector2D[double]()
     def __init__(self):
         pass
 
@@ -104,6 +105,7 @@ cdef class Detector_2D:
         detect_properties["strong_perimeter_ratio_range_min"] = 0.8;
         detect_properties["strong_perimeter_ratio_range_max"] = 1.1;
         detect_properties["contour_size_min"] = 60;
+        detect_properties["ellipse_roundness_ratio"] = 0.3;
 
 
         x = roi.get()[0]
