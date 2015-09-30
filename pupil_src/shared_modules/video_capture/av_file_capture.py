@@ -93,7 +93,7 @@ class File_Capture(object):
             self.video_stream = next(s for s in self.container.streams if s.type=="video")# looking for the first videostream
             logger.debug("loaded videostream: %s"%self.video_stream)
             self.v_packet_iterator = self.container.demux(self.video_stream)
-            self.video_stream.thread_count = 2
+            self.video_stream.thread_count = 4
         except StopIteration:
             self.video_stream = None
             self.v_packet_iterator = None
@@ -263,7 +263,7 @@ if __name__ == '__main__':
     import os
     import cv2
     logging.basicConfig(level=logging.WARNING)
-    file_loc = os.path.expanduser("~/Pupil/pupil_code/recordings/2015_09_30/017/world.mp4")
+    file_loc = os.path.expanduser("~/Pupil/pupil_code/recordings/2015_09_30/019/world.mp4")
     # file_loc = os.path.expanduser("~/Desktop/Marker_Tracking_Demo_Recording/world_viz1443597178.mp4")
     file_loc = os.path.expanduser("~/Desktop/Marker_Tracking_Demo_Recording/world.avi")
     # file_loc = os.path.expanduser("~/Desktop/MAH02282.MP4")
@@ -282,7 +282,7 @@ if __name__ == '__main__':
     t = time.time()
     try:
         while 1:
-            frame = cap.get_frame_nowait().gray
+            frame = cap.get_frame_nowait().img
             # cv2.imshow("test",frame.img)
             # print frame.index, frame.timestamp
             # if cv2.waitKey(30)==27:
