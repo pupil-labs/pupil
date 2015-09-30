@@ -32,8 +32,11 @@ struct DetectProperties{
   int pupil_size_min;
   float strong_perimeter_ratio_range_min;
   float strong_perimeter_ratio_range_max;
+  float strong_area_ratio_range_min;
+  float strong_area_ratio_range_max;
   int contour_size_min;
   float ellipse_roundness_ratio;
+  float initial_ellipse_fit_treshhold;
 
 };
 
@@ -393,12 +396,12 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   );
 
   //finding poential candidates for ellipse seeds that describe the pupil.
-  std::vector<std::vector<cv::Point>> strong_seed_contours;
-  std::vector<std::vector<cv::Point>> week_seed_contours;
+  std::vector<int> strong_seed_contours;
+  std::vector<int> weak_seed_contours;
 
 
   auto ellipse_filter = [&](const cv::RotatedRect& ellipse ) -> bool {
-      bool is_centered = padding < ellipse.center.x  < image_width - padding && padding < ellipse.center.y < image_height - padding;
+      bool is_centered = padding < ellipse.center.x  && ellipse.center.x < (image_width - padding) && padding < ellipse.center.y && ellipse.center.y < (image_height - padding);
       if(is_centered){
 
         float max_radius = ellipse.size.height;
@@ -408,9 +411,9 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
             min_radius = ellipse.size.height;
             max_radius = ellipse.size.width;
         }
-        bool is_round = min_radius/max_radius >= props.ellipse_roundness_ratio;
+        bool is_round = (min_radius/max_radius) >= props.ellipse_roundness_ratio;
         if(is_round){
-            bool right_size = props.pupil_size_min <= max_radius <= props.pupil_size_max;
+            bool right_size = props.pupil_size_min <= max_radius && max_radius <= props.pupil_size_max;
             if(right_size) return true;
         }
       }
@@ -436,21 +439,64 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
         for(int i=0; i < contour.size(); i++){
             auto point = contour.at(i);
             //std::cout << point << ", ";
-            point_distances += std::abs( ellipseDistance( (Scalar)point.x, (Scalar)point.y ) );
+            point_distances += std::pow( std::abs( ellipseDistance( (Scalar)point.x, (Scalar)point.y )), 2 );
            // std::cout << "d=" << distance << ", " <<std::endl;
         }
        // std::cout << std::endl;
-        //double distances = calculate_distances_squared_to_ellipse( contour, e );
-        //float fit_variance = distances  / (float)contour.size();
-        //std::cout << distances << std::endl;
 
+        Scalar fit_variance = point_distances / contour.size();
+        //std::cout << fit_variance << std::endl;
+        if( fit_variance < props.initial_ellipse_fit_treshhold ){
+          // how much ellipse is supported by this contour?
+
+          auto ellipse_contour_support_ratio = []( Ellipse& ellipse, std::vector<cv::Point>& contour ){
+
+                Scalar ellipse_circumference = ellipse.circumference();
+                Scalar ellipse_area = ellipse.area();
+                std::vector<cv::Point> hull;
+                cv::convexHull(contour, hull);
+                Scalar actual_area = cv::contourArea(hull);
+                Scalar actual_length  = cv::arcLength(contour, false);
+                Scalar area_ratio = actual_area / ellipse_area;
+                Scalar perimeter_ratio = actual_length / ellipse_circumference; //we assume here that the contour lies close to the ellipse boundary
+                return std::pair<Scalar,Scalar>(area_ratio,perimeter_ratio);
+          };
+
+          auto ratio = ellipse_contour_support_ratio(e, contour);
+          Scalar area_ratio = ratio.first;
+          Scalar perimeter_ratio = ratio.second;
+          std::cout << area_ratio << ", " << perimeter_ratio << std::endl;
+          if( props.strong_perimeter_ratio_range_min <= perimeter_ratio && perimeter_ratio <= props.strong_perimeter_ratio_range_max &&
+              props.strong_area_ratio_range_min <= area_ratio && area_ratio <= props.strong_area_ratio_range_max ){
+
+            strong_seed_contours.push_back(i);
+            if(use_debug_image){
+              cv::polylines( debug_image, contour, false, mRoyalBlue_color, 4);
+              cv::ellipse( debug_image, ellipse, mBlue_color);
+            }
+
+          }else{
+            weak_seed_contours.push_back(i);
+            if(use_debug_image){
+              cv::polylines( debug_image, contour, false, mBlue_color, 2);
+              cv::ellipse( debug_image, ellipse, mBlue_color);
+            }
+          }
+        }
       }
-
-
     }
-
-
   }
+
+  std::vector<int>& seed_indices = strong_seed_contours;
+
+  if( seed_indices.empty() && !weak_seed_contours.empty() ){
+      seed_indices = weak_seed_contours;
+  }else{
+      result.confidence = 0.0;
+      return result;
+  }
+
+
 
   //cv::drawContours(debug_image, approx_contours, -1, mGreen_color, 2);
   cv::imshow("debug_image", debug_image);

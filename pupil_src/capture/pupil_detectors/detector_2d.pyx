@@ -61,8 +61,11 @@ cdef extern from 'detect_2d.hpp':
     int pupil_size_min
     float strong_perimeter_ratio_range_min
     float strong_perimeter_ratio_range_max
+    float strong_area_ratio_range_min
+    float strong_area_ratio_range_max
     int contour_size_min
     float ellipse_roundness_ratio
+    float initial_ellipse_fit_treshhold
 
   cdef cppclass Detector2D[T]:
 
@@ -104,9 +107,11 @@ cdef class Detector_2D:
         detect_properties["pupil_size_min"] = 40;
         detect_properties["strong_perimeter_ratio_range_min"] = 0.8;
         detect_properties["strong_perimeter_ratio_range_max"] = 1.1;
+        detect_properties["strong_area_ratio_range_min"] = 0.6;
+        detect_properties["strong_area_ratio_range_max"] = 1.1;
         detect_properties["contour_size_min"] = 60;
         detect_properties["ellipse_roundness_ratio"] = 0.3;
-
+        detect_properties["initial_ellipse_fit_treshhold"] = 1.8;
 
         x = roi.get()[0]
         y = roi.get()[1]
