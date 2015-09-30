@@ -71,14 +71,15 @@ void printPoints( std::vector<cv::Point> points){
   std::for_each(points.begin(), points.end(), [](cv::Point& p ){ std::cout << p << std::endl;} );
 }
 
-std::vector<int> find_kink_and_dir_change(std::vector<float>& curvature, float max_angle){
+template<typename Scalar>
+std::vector<int> find_kink_and_dir_change(std::vector<Scalar>& curvature, float max_angle){
 
   std::vector<int> split_indeces;
   if( curvature.empty() ) return split_indeces;
 
   bool currently_positive = curvature.at(0) > 0;
   for(int i=0 ; i < curvature.size(); i++){
-      float angle = curvature.at(i);
+      Scalar angle = curvature.at(i);
       bool is_positive = angle > 0;
       if( std::abs(angle) < max_angle || is_positive != currently_positive ){
         currently_positive = is_positive;
@@ -109,17 +110,17 @@ Detector2D<Scalar>::Detector2D(): mUse_strong_prior(false), mPupil_Size(100){};
 template <typename Scalar>
 std::vector<cv::Point> Detector2D<Scalar>::ellipse_true_support( Ellipse& ellipse, Scalar ellipse_circumference, std::vector<cv::Point>& raw_edges){
 
-  double major_radius = ellipse.major_radius;
-  double minor_radius = ellipse.minor_radius;
+  Scalar major_radius = ellipse.major_radius;
+  Scalar minor_radius = ellipse.minor_radius;
 
   //std::cout << ellipse_circumference << std::endl;
-  std::vector<double> distances;
+  std::vector<Scalar> distances;
   std::vector<cv::Point> support_pixels;
 
   for(auto it = raw_edges.begin(); it != raw_edges.end(); it++){
 
       const cv::Point p = *it;
-      double distance = euclidean_distance( (double)p.x, (double)p.y, ellipse);  // change this one, to approxx ?
+      Scalar distance = euclidean_distance( (Scalar)p.x, (Scalar)p.y, ellipse);  // change this one, to approxx ?
       std::cout << ellipse.center << std::endl;
       if(distance <=  1.3 ){
         support_pixels.push_back(p);
@@ -346,13 +347,13 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   for(auto it = approx_contours.begin(); it != approx_contours.end(); it++ ){
 
     std::vector<cv::Point>& contour  = *it;
-    std::vector<float> curvature;
+    std::vector<Scalar> curvature;
     // closed curves not handled yet
     for(auto point_it = contour.begin(); point_it != contour.end()-2; point_it++){
         cv::Point& first = *point_it;
         cv::Point& second = *(point_it+1);
         cv::Point& third = *(point_it+2);
-        curvature.push_back( math::getAngleABC(first, second, third) );
+        curvature.push_back( math::getAngleABC<Scalar>(first, second, third) );
     }
 
     //we split whenever there is a real kink (abs(curvature)<right angle) or a change in the genreal direction
@@ -426,16 +427,16 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
       cv::RotatedRect ellipse = cv::fitEllipse(contour);
       //is this ellipse a plausible candidate for a pupil?
       if( ellipse_filter(ellipse) ){
-        auto e = toEllipse<double>(ellipse);
-        double point_distances = 0.0;
-        EllipseDistCalculator<double> ellipseDistance(e);
+        auto e = toEllipse<Scalar>(ellipse);
+        Scalar point_distances = 0.0;
+        EllipseDistCalculator<Scalar> ellipseDistance(e);
 
         //std::cout << "Ellipse: "  << ellipse.center  << " " << ellipse.size << " "<< ellipse.angle << std::endl;
         //std::cout << "Points: ";
         for(int i=0; i < contour.size(); i++){
             auto point = contour.at(i);
             //std::cout << point << ", ";
-            point_distances += std::abs( ellipseDistance( (double)point.x, (double)point.y ) );
+            point_distances += std::abs( ellipseDistance( (Scalar)point.x, (Scalar)point.y ) );
            // std::cout << "d=" << distance << ", " <<std::endl;
         }
        // std::cout << std::endl;
