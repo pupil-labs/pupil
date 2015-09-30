@@ -10,6 +10,9 @@
 
 import os,sys
 import av
+
+assert av.__version__ >= '0.2.5'
+
 import numpy as np
 from time import time,sleep
 from fractions import Fraction
@@ -279,7 +282,8 @@ if __name__ == '__main__':
     t = time.time()
     try:
         while 1:
-            frame = cap.get_frame_nowait().gray
+            frame = cap.get_frame_nowait()
+            # print frame.index
             # cv2.imshow("test",frame.img)
             # print frame.index, frame.timestamp
             # if cv2.waitKey(30)==27:
