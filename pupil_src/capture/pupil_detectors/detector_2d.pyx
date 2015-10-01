@@ -111,7 +111,7 @@ cdef class Detector_2D:
         detect_properties["strong_area_ratio_range_max"] = 1.1;
         detect_properties["contour_size_min"] = 60;
         detect_properties["ellipse_roundness_ratio"] = 0.3;
-        detect_properties["initial_ellipse_fit_treshhold"] = 1.8;
+        detect_properties["initial_ellipse_fit_treshhold"] = 1.8 ; #changed this because distance calculation on cpp returns slightly different values
 
         x = roi.get()[0]
         y = roi.get()[1]
