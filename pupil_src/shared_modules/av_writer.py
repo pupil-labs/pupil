@@ -313,7 +313,10 @@ class Audio_Capture(object):
     def stop(self):
         self.should_close.set()
         self.process.join(timeout=1)
-        self.process.terminate()
+        try:
+            self.process.terminate()
+        except:
+            logger.error('Could not joind recording thread.')
         self.process = None
 
     def close(self):
