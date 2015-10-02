@@ -37,6 +37,8 @@ struct DetectProperties{
   int contour_size_min;
   float ellipse_roundness_ratio;
   float initial_ellipse_fit_treshhold;
+  float final_perimeter_ratio_range_min;
+  float final_perimeter_ratio_range_max;
 
 };
 
@@ -119,12 +121,12 @@ std::vector<cv::Point> Detector2D<Scalar>::ellipse_true_support( Ellipse& ellips
   //std::cout << ellipse_circumference << std::endl;
   std::vector<Scalar> distances;
   std::vector<cv::Point> support_pixels;
+  EllipseDistCalculator<Scalar> ellipseDistance(ellipse);
 
   for(auto it = raw_edges.begin(); it != raw_edges.end(); it++){
 
       const cv::Point p = *it;
-      Scalar distance = euclidean_distance( (Scalar)p.x, (Scalar)p.y, ellipse);  // change this one, to approxx ?
-      std::cout << ellipse.center << std::endl;
+      Scalar distance = ellipseDistance( (Scalar)p.x, (Scalar)p.y );  // change this one, to approxx ?
       if(distance <=  1.3 ){
         support_pixels.push_back(p);
       }
@@ -388,12 +390,15 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
     return result;
   }
 
+
+
   //removing stubs makes combinatorial search feasable
   // erase-remove idiom
-
   split_contours.erase(
     std::remove_if(split_contours.begin(), split_contours.end(), [](std::vector<cv::Point>& v){ return v.size() <= 3;}), split_contours.end()
   );
+
+  std::sort(split_contours.begin(), split_contours.end(), [](std::vector<cv::Point> a, std::vector<cv::Point> b){ return a.size() > b.size(); });
 
   //finding poential candidates for ellipse seeds that describe the pupil.
   std::vector<int> strong_seed_contours;
@@ -406,11 +411,11 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
         float max_radius = ellipse.size.height;
         float min_radius = ellipse.size.width;
-        if(min_radius > max_radius){
-            std::cout << "Major Minor swizzle" << std::endl; // not happend yet, can we remove it ?
-            min_radius = ellipse.size.height;
-            max_radius = ellipse.size.width;
-        }
+        // if(min_radius > max_radius){
+        //     std::cout << "Major Minor swizzle" << std::endl; // not happend yet, can we remove it ?
+        //     min_radius = ellipse.size.height;
+        //     max_radius = ellipse.size.width;
+        // }
         bool is_round = (min_radius/max_radius) >= props.ellipse_roundness_ratio;
         if(is_round){
             bool right_size = props.pupil_size_min <= max_radius && max_radius <= props.pupil_size_max;
@@ -437,15 +442,15 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
         //std::cout << "Ellipse: "  << ellipse.center  << " " << ellipse.size << " "<< ellipse.angle << std::endl;
         //std::cout << "Points: ";
         for(int j=0; j < contour.size(); j++){
-            auto point = contour.at(j);
+            auto& point = contour.at(j);
             //std::cout << point << ", ";
             point_distances += std::pow( std::abs( ellipseDistance( (Scalar)point.x, (Scalar)point.y )), 2 );
            // std::cout << "d=" << distance << ", " <<std::endl;
         }
        // std::cout << std::endl;
-
         Scalar fit_variance = point_distances / contour.size();
-        //std::cout  << fit_variance <<std::endl;
+        //std::cout  << "contour index " << i <<std::endl;
+        //std::cout  << "fit var1: " << fit_variance <<std::endl;
         if( fit_variance < props.initial_ellipse_fit_treshhold ){
           // how much ellipse is supported by this contour?
 
@@ -465,10 +470,13 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
           auto ratio = ellipse_contour_support_ratio(e, contour);
           Scalar area_ratio = ratio.first;
           Scalar perimeter_ratio = ratio.second;
+          // same as in original
           //std::cout << area_ratio << ", " << perimeter_ratio << std::endl;
-          if( props.strong_perimeter_ratio_range_min <= perimeter_ratio && perimeter_ratio <= props.strong_perimeter_ratio_range_max &&
-              props.strong_area_ratio_range_min <= area_ratio && area_ratio <= props.strong_area_ratio_range_max ){
-
+          if( props.strong_perimeter_ratio_range_min <= perimeter_ratio &&
+              perimeter_ratio <= props.strong_perimeter_ratio_range_max &&
+              props.strong_area_ratio_range_min <= area_ratio &&
+              area_ratio <= props.strong_area_ratio_range_max ){
+            //std::cout << "add seed: " << i << std::endl;
             strong_seed_contours.push_back(i);
             if(use_debug_image){
               cv::polylines( debug_image, contour, false, mRoyalBlue_color, 4);
@@ -491,12 +499,15 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
   if( seed_indices.empty() && !weak_seed_contours.empty() ){
       seed_indices = weak_seed_contours;
-  }else{
+  }
+
+  // still empty ? --> exits
+  if( seed_indices.empty() ){
       result.confidence = 0.0;
+      std::cout << "EARLY EXIT!!!!!" << std::endl;
       return result;
   }
 
-//  std::cout << seed_indices.size() << std::endl;
 
   auto ellipse_evaluation = [&]( std::vector<cv::Point>& contour) -> bool {
 
@@ -508,7 +519,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
           point_distances += std::pow(std::abs( ellipseDistance( (Scalar)point.x, (Scalar)point.y )), 2);
       }
       Scalar fit_variance = point_distances / float(contour.size());
-      std::cout << fit_variance << std::endl;
+      //std::cout << "fit var2: " << fit_variance << std::endl;
       return fit_variance <= props.initial_ellipse_fit_treshhold;
 
   };
@@ -522,12 +533,20 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
     int n = 0;
     std::generate( unknown.begin(), unknown.end(), [&](){ return Path{n++}; }); // fill with increasing values, starting from 0
 
-    std::vector<int> mapping(contours.size()); // contains all indices, starting with seed_indices
-    mapping.insert(mapping.end(), seed_indices.begin(), seed_indices.end());
+    std::vector<int> mapping; // contains all indices, starting with seed_indices
+    mapping.reserve(contours.size());
+    mapping.insert(mapping.begin(), seed_indices.begin(), seed_indices.end());
+   // std::cout << "mapping size: " << mapping.size() << std::endl;
+
     // add indices which are not used to the end of mapping
     for( int i=0; i < contours.size(); i++){
-      if( seed_indices.find(i) != seed_indices.end() ){ mapping.push_back(i); }
+      if( seed_indices.find(i) == seed_indices.end() ){ mapping.push_back(i); }
     }
+
+    // std::cout << "mapping[";
+    // for(int index : mapping ){ std::cout  << index << ", ";};
+    // std::cout << "]";
+    // std::cout << std::endl;
 
     // contains all the indices for the contours, which altogther fit best
     std::vector<Path> results;
@@ -536,6 +555,13 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
     int eval_count = 0;
     while( !unknown.empty() && eval_count <= max_evals ){
+
+       //  for(auto& u : unknown){
+       //    std::cout << "unknown[";
+       //    for(int index : u ){ std::cout  << index << ", ";};
+       //     std::cout << "]";
+       //  }
+       // std::cout << std::endl;
 
       eval_count++;
       //take a path and combine it with others to see if the fit gets better
@@ -552,28 +578,37 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
           if( !includes_bad_paths ){
               int size = 0;
-              for( int i : current_path ){ size += contours.at(mapping.at(i)).size(); };
-              std::vector<cv::Point> test_contour(size); // reserve size
+              for( int j : current_path ){ size += contours.at(mapping.at(j)).size(); };
+              std::vector<cv::Point> test_contour;
+              test_contour.reserve(size);
+              //std::cout << "reserve contour size:2 " << size << std::endl;
               std::set<int> test_contour_indices;
               //concatenate contours to one contour
-              for( int i : current_path ){
-               std::vector<cv::Point>& c = contours.at(mapping.at(i));
-               test_contour.insert( test_contour.end(), c.begin(), c.end() );
-               test_contour_indices.insert(i);
-              }
-             // std::cout << "evaluate ellipse " << std::endl;
-              std::cout << "amount contours: " << current_path.size() << std::endl;
+              for( int k : current_path ){
+                std::vector<cv::Point>& c = contours.at(mapping.at(k));
+              //std::cout << "singe contour size:2 " << c.size() << std::endl;
 
+               test_contour.insert( test_contour.end(), c.begin(), c.end() );
+               test_contour_indices.insert(mapping.at(k));
+               //std::cout << "test_contour_indices[";
+
+              }
+
+             // std::cout << "evaluate ellipse " << std::endl;
+              //std::cout << "amount contours: " << current_path.size() << std::endl;
+              //std::cout << "contour size:2 " << test_contour.size() << std::endl;
               //we have not tested this and a subset of this was sucessfull before
               if( ellipse_evaluation( test_contour ) ){
 
                 //yes this was good, keep as solution
                 results.push_back( test_contour_indices );
-               // std::cout << "add result" << std::endl;
+                //std::cout << "add result" << std::endl;
                 //lets explore more by creating paths to each remaining node
-                for(int j= (*current_path.rbegin())+1 ; j < mapping.size(); j++  ){
+                for(int l= (*current_path.rbegin())+1 ; l < mapping.size(); l++  ){
                     unknown.push_back( current_path );
-                    unknown.back().insert(j); // add a new path
+                    unknown.back().insert(l); // add a new path
+                    //std::cout << "push new" << std::endl;
+
                 }
 
               }else{
@@ -586,9 +621,11 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   };
 
   std::set<int> seed_indices_set = std::set<int>(seed_indices.begin(),seed_indices.end());
-  std::vector<std::set<int>> solutions = pruning_quick_combine( split_contours, seed_indices_set, 1000, 5);
 
- // std::cout << "solutions: " << solutions.size() << std::endl;
+  //for(int index : seed_indices ){ std::cout << "seed index: " << index << std::endl;};
+  //std::cout << "split size: " << split_contours.size() << std::endl;
+  std::vector<std::set<int>> solutions = pruning_quick_combine( split_contours, seed_indices_set, 1000, 5);
+  //std::cout << "solutions: " << solutions.size() << std::endl;
 
   //find largest sets which contains all previous ones
   auto filter_subset = [](std::vector<std::set<int>>& sets){
@@ -599,37 +636,100 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
         //check if this current_set is a subset of set
         bool isSubset = false;
         for( int j = 0; j < sets.size(); j++){
-          //if(j == i ) continue;// don't compare to itself
+          if(j == i ) continue;// don't compare to itself
           auto& set = sets.at(j);
           // for std::include both containers need to be ordered. std::set guarantees this
           isSubset |= std::includes(set.begin(), set.end(), current_set.begin(), current_set.end());
+
         }
 
         if(!isSubset){
+          //std::cout << "is not subset " << std::endl;
            filtered_set.push_back(current_set);
         }
         i++;
     }
     return filtered_set;
   };
+  //std::cout << "solutions before: " << solutions.size() << std::endl;
+
+  // for(auto& s : solutions){
+  //   std::cout << "[";
+  //   for(int index : s ){ std::cout  << index << ", ";};
+  //   std::cout << "]";
+
+  // }
+  // std::cout << std::endl;
 
   solutions = filter_subset(solutions);
+//  std::cout << "solutions after: " << solutions.size() << std::endl;
 
-  // for( auto& s : solutions){
 
-  //   std::vector<cv::Point> test_contour;
-  //   //concatenate contours to one contour
-  //   for( int i : s ){
-  //    std::vector<cv::Point>& c = split_contours.at(i);
-  //    test_contour.insert( test_contour.end(), c.begin(), c.end() );
-  //   }
-  //   auto ellipse = cv::fitEllipse( test_contour );
+//---------------------------------------------------////
 
-  //   if(use_debug_image ){
-  //       std::cout << "debug "<< std::endl;
-  //       cv::ellipse(debug_image, ellipse , mYellow_color);
-  //   }
-  // }
+  int index_best_Solution = -1;
+  int enum_index = 0;
+  for( auto& s : solutions){
+
+    std::vector<cv::Point> test_contour;
+    //concatenate contours to one contour
+    for( int i : s ){
+     std::vector<cv::Point>& c = split_contours.at(i);
+     test_contour.insert( test_contour.end(), c.begin(), c.end() );
+    }
+    auto cv_ellipse = cv::fitEllipse( test_contour );
+
+    if(use_debug_image ){
+        cv::ellipse(debug_image, cv_ellipse , mRed_color);
+    }
+    Ellipse ellipse = toEllipse<Scalar>(cv_ellipse);
+    Scalar ellipse_circumference = ellipse.circumference();
+    std::vector<cv::Point>  support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
+    Scalar support_ratio = support_pixels.size() / ellipse_circumference;
+    //TODO: refine the selection of final candidate
+
+    if( support_ratio >= props.final_perimeter_ratio_range_min && ellipse_filter(cv_ellipse) ){
+
+      index_best_Solution = enum_index;
+        if( support_ratio >= props.strong_perimeter_ratio_range_min ){
+            ellipse.center[0] += ( pupil_roi.x + usr_roi.x  );
+            ellipse.center[1] += ( pupil_roi.y + usr_roi.y  );
+            mPrior_ellipse = ellipse;
+
+            if(use_debug_image){
+              cv::ellipse(debug_image, cv_ellipse , mGreen_color);
+            }
+        }
+    }
+    enum_index++;
+
+  }
+
+  // select ellipse
+
+  if( index_best_Solution == -1 ){
+      // no good final ellipse found
+      result.confidence = 0.0;
+      //history
+      return result;
+  }
+
+  auto& best_solution = solutions.at( index_best_Solution );
+
+  std::vector<cv::Point> best_contour;
+    //concatenate contours to one contour
+  for( int i : best_solution ){
+   std::vector<cv::Point>& c = split_contours.at(i);
+   best_contour.insert( best_contour.end(), c.begin(), c.end() );
+  }
+  auto cv_ellipse = cv::fitEllipse(best_contour );
+
+  // final calculation of goodness of fit
+  auto ellipse = toEllipse<Scalar>(cv_ellipse);
+  Scalar ellipse_circumference = ellipse.circumference();
+  std::vector<cv::Point>  support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
+  Scalar support_ratio = support_pixels.size() / ellipse_circumference;
+
 
   //cv::drawContours(debug_image, approx_contours, -1, mGreen_color, 2);
   cv::imshow("debug_image", debug_image);

@@ -7,6 +7,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#include <iostream>
+
 #include <Eigen/Core>
 #include <opencv2/core/core.hpp>
 #include "Ellipse.h"
@@ -102,10 +104,17 @@ inline cv::RotatedRect toRotatedRect(const Ellipse2D<Scalar>& ellipse) {
 }
 template<typename Scalar>
 inline Ellipse2D<Scalar> toEllipse(const cv::RotatedRect& rect) {
+
+    // Scalar major = rect.size.height;
+    // Scalar minor = rect.size.width;
+    // if(major < minor ){
+    //     std::cout << "Flip major minor !!" << std::endl;
+    //     std::swap(major,minor);
+    // }
     return Ellipse2D<Scalar>(toEigen<Scalar>(rect.center),
+        static_cast<Scalar>(rect.size.height/ 2.0),
         static_cast<Scalar>(rect.size.width / 2.0),
-        static_cast<Scalar>(rect.size.height / 2.0),
-        static_cast<Scalar>(rect.angle*M_PI / 180.0));
+        static_cast<Scalar>((rect.angle + 90.0)*M_PI / 180.0));
 }
 
 } //namespace singleeyefitter
