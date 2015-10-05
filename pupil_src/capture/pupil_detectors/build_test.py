@@ -52,11 +52,12 @@ if __name__ == '__main__':
       # send to detector
       result = detector.detect(frame, u_r, None )
 
-      cv2.imshow('test',frame.gray)
-      cv2.waitKey(1)
-      print result
+      #cv2.imshow('Color',frame.img)
+      #cv2.imshow('Gray',frame.gray)
+      #cv2.waitKey(1)
+      #print result
 
-      print "Frame {}".format(frameNumber)
+     # print "Frame {}".format(frameNumber)
 
   print "Finished writing Test file."
 

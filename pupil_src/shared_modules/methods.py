@@ -576,16 +576,17 @@ def pruning_quick_combine(l,fn,seed_idx=None,max_evals=1e20,max_depth=5):
         non_seed_idx = [i for i in range(len(l)) if i not in seed_idx]
     else:
         #start from every item
-        seed_idx = range(len(l))
+        seed_idx = range(len(l)) #never happen, because we have an early exit if we have no seeds! patrick
         non_seed_idx = []
     mapping =  seed_idx+non_seed_idx
     unknown = [[node] for node in range(len(seed_idx))]
-    # print mapping
     results = []
     prune = []
+    eval_count = 0
     while unknown and max_evals:
         path = unknown.pop(0)
         max_evals -= 1
+        eval_count +=1
         # print '@idx',[mapping[i] for i in path]
         # print '@content',path
         if not len(path) > max_depth:

@@ -1,5 +1,9 @@
 
+# cython: profile=False
+import cv2
 import numpy as np
+from coarse_pupil cimport center_surround
+from methods import Roi
 
 
 cdef extern from '<opencv2/core/types_c.h>':
@@ -73,7 +77,7 @@ cdef extern from 'detect_2d.hpp':
   cdef cppclass Detector2D[T]:
 
     Detector2D() except +
-    Result detect( DetectProperties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& usr_roi , bint visualize , bint use_debug_image )
+    Result detect( DetectProperties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& usr_roi , Rect_[int]& pupil_roi, bint visualize , bint use_debug_image )
 
 cdef class Detector_2D:
 
@@ -88,7 +92,7 @@ cdef class Detector_2D:
       del self.thisptr
 
 
-    def detect(self, frame, roi, visualization ):
+    def detect(self, frame, usr_roi, visualization ):
         width = frame.width
         height = frame.height
 
@@ -118,11 +122,22 @@ cdef class Detector_2D:
         detect_properties["final_perimeter_ratio_range_min"] = 0.6 ;
         detect_properties["final_perimeter_ratio_range_max"] = 1.2 ;
 
-        x = roi.get()[0]
-        y = roi.get()[1]
-        width  = roi.get()[2] - roi.get()[0]
-        height  = roi.get()[3] - roi.get()[1]
-        result =  self.thisptr.detect(detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), True , True)
+        cdef int scale = 2 # half the integral image. boost up integral
+        # TODO maybe implement our own Inegral so we don't have to half the image
+        cdef int[:,::1] integral = cv2.integral(frame.gray[::scale,::scale])
+        p_x,p_y,p_w,p_response = center_surround( integral, 100/scale , 400/scale )
+        p_x *= scale
+        p_y *= scale
+        p_w *= scale
+        pupil_roi = Roi( (0,0))
+        pupil_roi.set((p_y, p_x, p_y+p_w, p_x+p_w))
+
+        x = usr_roi.get()[0]
+        y = usr_roi.get()[1]
+
+        width  = usr_roi.get()[2] - usr_roi.get()[0]
+        height  = usr_roi.get()[3] - usr_roi.get()[1]
+        result =  self.thisptr.detect(detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_w),  False , False)
 
         e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
         pupil_ellipse = {}
@@ -134,10 +149,10 @@ cdef class Detector_2D:
         pupil_ellipse['minor'] = min(e[1])
         pupil_ellipse['axes'] = e[1]
         pupil_ellipse['angle'] = e[2]
-        #e_img_center =u_r.add_vector(p_r.add_vector(e[0]))
+        e_img_center = usr_roi.add_vector(pupil_roi.add_vector(e[0]))
         #norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
         #pupil_ellipse['norm_pos'] = norm_center
-        #pupil_ellipse['center'] = e_img_center
+        pupil_ellipse['center'] = e_img_center
         #pupil_ellipse['timestamp'] = frame.timestamp
 
 

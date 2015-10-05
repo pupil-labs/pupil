@@ -17,7 +17,7 @@ struct Result{
   typedef singleeyefitter::Ellipse2D<Scalar> Ellipse;
   double confidence =  0.0 ;
   Ellipse ellipse;
-  double timeStampe = 0.0;
+  double timeStamp = 0.0;
 };
 
 // use a struct for all properties and pass it to detect method every time we call it.
@@ -53,7 +53,7 @@ private:
 public:
 
   Detector2D();
-  Result<Scalar> detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , bool visualize, bool use_debug_image);
+  Result<Scalar> detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi ,  cv::Rect& pupil_roi, bool visualize, bool use_debug_image);
   std::vector<cv::Point> ellipse_true_support(Ellipse& ellipse, Scalar ellipse_circumference, std::vector<cv::Point>& raw_edges);
 
 
@@ -135,12 +135,12 @@ std::vector<cv::Point> Detector2D<Scalar>::ellipse_true_support( Ellipse& ellips
   return std::move(support_pixels);
 }
 template<typename Scalar>
-Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , bool visualize, bool use_debug_image ){
+Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , cv::Rect& pupil_roi,bool visualize, bool use_debug_image ){
 
   Result<Scalar> result;
 
   //remove this later
-  debug_image = cv::Scalar(0); //clear debug image
+  //debug_image = cv::Scalar(0); //clear debug image
 
   image = cv::Mat(image, usr_roi);  // image with usr_roi
 
@@ -154,7 +154,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   const int offset = props.intensity_range;
   const int spectral_offset = 5;
 
-  const cv::Rect pupil_roi = usr_roi; // gets changed when coarse detection is on
+  //const cv::Rect pupil_roi = usr_roi; // gets changed when coarse detection is on
 
   image = cv::Mat(image, pupil_roi ); // after coarse detection it in the region of the pupil
 
@@ -249,7 +249,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
     cv::merge(out, 3, overlay);
 
     //draw a frame around the automatic pupil ROI in overlay.
-    auto rect = cv::Rect(pupil_roi.x+2, pupil_roi.y+2, pupil_roi.width-2, pupil_roi.height-2);
+    auto rect = cv::Rect(0, 0, overlay.size().width, overlay.size().height);
     cvx::draw_dotted_rect( overlay, rect, 255);
     //draw a frame around the area we require the pupil center to be.
     rect = cv::Rect(padding, padding, pupil_roi.width-padding, pupil_roi.height-padding);
@@ -257,14 +257,14 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
     //draw size ellipses
     cv::Point center(100, image_height -100);
-    cv::circle( overlay, center, props.pupil_size_min/2.0, mRed_color );
-    cv::circle( overlay, center, mPupil_Size/2.0, mGreen_color );           // real pupil size of this frame is calculated further down, so this size is from the last frame
-    cv::circle( overlay, center, props.pupil_size_max/2.0, mRed_color );
+    cv::circle( color_image, center, props.pupil_size_min/2.0, mRed_color );
+    cv::circle( color_image, center, mPupil_Size/2.0, mGreen_color );           // real pupil size of this frame is calculated further down, so this size is from the last frame
+    cv::circle( color_image, center, props.pupil_size_max/2.0, mRed_color );
 
     auto text_string = std::to_string(mPupil_Size);
     cv::Size text_size = cv::getTextSize( text_string, cv::FONT_HERSHEY_SIMPLEX, 0.4 , 1, 0);
     cv::Point text_pos = { center.x - text_size.width/2 , center.y + text_size.height/2};
-    cv::putText( overlay, text_string, text_pos, cv::FONT_HERSHEY_SIMPLEX, 0.4, mRoyalBlue_color );
+    cv::putText( color_image, text_string, text_pos, cv::FONT_HERSHEY_SIMPLEX, 0.4, mRoyalBlue_color );
 
 
   }
@@ -748,15 +748,16 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
     cv::findNonZero( new_edges, new_contours);
 
       if(use_debug_image){
-          cv::Mat g_channel( color_image.rows, color_image.cols, CV_8UC1 );
-          cv::Mat b_channel( color_image.rows, color_image.cols, CV_8UC1 );
-          cv::Mat r_channel( color_image.rows, color_image.cols, CV_8UC1 );
+          cv::Mat overlay = color_image.colRange(usr_roi.x + pupil_roi.x, usr_roi.x + pupil_roi.x + pupil_roi.width).rowRange(usr_roi.y + pupil_roi.y, usr_roi.y + pupil_roi.y + pupil_roi.height);
+          cv::Mat g_channel( overlay.rows, overlay.cols, CV_8UC1 );
+          cv::Mat b_channel( overlay.rows, overlay.cols, CV_8UC1 );
+          cv::Mat r_channel( overlay.rows, overlay.cols, CV_8UC1 );
           cv::Mat out[] = {b_channel, g_channel,r_channel};
-          cv:split(color_image, out);
+          cv:split(overlay, out);
 
           cv::threshold(new_edges, new_edges, 0, 255,cv::THRESH_BINARY);
-          cv::max(r_channel, new_edges,b_channel);
-          cv::merge(out, 3, color_image);
+          cv::max(r_channel, new_edges,r_channel);
+          cv::merge(out, 3, overlay);
       }
 
       return new_contours;
@@ -776,9 +777,9 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
       }
   }
 
-  cv::imshow("debug_image", debug_image);
+  //cv::imshow("debug_image", debug_image);
 
-
+  mPupil_Size =  cv_final_Ellipse.size.height;
   result.confidence = goodness;
   result.ellipse = toEllipse<Scalar>(cv_final_Ellipse);
 
