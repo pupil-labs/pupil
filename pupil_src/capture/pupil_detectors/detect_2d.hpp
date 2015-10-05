@@ -716,10 +716,12 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
   auto& best_solution = solutions.at( index_best_Solution );
 
-  std::vector<cv::Point> best_contour;
+  std::vector<std::vector<cv::Point>> best_contours;
+  std::vector<cv::Point>best_contour;
     //concatenate contours to one contour
   for( int i : best_solution ){
    std::vector<cv::Point>& c = split_contours.at(i);
+   best_contours.push_back( c );
    best_contour.insert( best_contour.end(), c.begin(), c.end() );
   }
   auto cv_ellipse = cv::fitEllipse(best_contour );
@@ -730,10 +732,57 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   std::vector<cv::Point>  support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
   Scalar support_ratio = support_pixels.size() / ellipse_circumference;
 
+  Scalar goodness = std::min( 1.0, support_ratio);
 
-  //cv::drawContours(debug_image, approx_contours, -1, mGreen_color, 2);
+  //final fitting and return of result
+
+  auto final_fitting = [&](std::vector<std::vector<cv::Point>>& contours, cv::Mat& edges ) -> std::vector<cv::Point> {
+    //use the real edge pixels to fit, not the aproximated contours
+    cv::Mat support_mask(edges.rows, edges.cols, edges.type(), {0,0,0});
+    cv::polylines( support_mask, contours, false, {255,255,255}, 2 );
+
+    //draw into the suport mask with thickness 2
+    cv::Mat new_edges;
+    std::vector<cv::Point> new_contours;
+    cv::min(edges, support_mask, new_edges);
+    cv::findNonZero( new_edges, new_contours);
+
+      if(use_debug_image){
+          cv::Mat g_channel( color_image.rows, color_image.cols, CV_8UC1 );
+          cv::Mat b_channel( color_image.rows, color_image.cols, CV_8UC1 );
+          cv::Mat r_channel( color_image.rows, color_image.cols, CV_8UC1 );
+          cv::Mat out[] = {b_channel, g_channel,r_channel};
+          cv:split(color_image, out);
+
+          cv::threshold(new_edges, new_edges, 0, 255,cv::THRESH_BINARY);
+          cv::max(r_channel, new_edges,b_channel);
+          cv::merge(out, 3, color_image);
+      }
+
+      return new_contours;
+
+  };
+
+
+  std::vector<cv::Point> final_edges =  final_fitting(best_contours, edges );
+  auto cv_final_Ellipse = cv::fitEllipse( final_edges);
+
+  Scalar size_difference  = std::abs( 1.0 - cv_ellipse.size.height / cv_final_Ellipse.size.height );
+
+  if(  ellipse_filter( cv_final_Ellipse ) && size_difference < 0.3 ){
+
+      if( use_debug_image ){
+          cv::ellipse( debug_image, cv_final_Ellipse, mGreen_color );
+      }
+  }
+
   cv::imshow("debug_image", debug_image);
+
+
+  result.confidence = goodness;
+  result.ellipse = toEllipse<Scalar>(cv_final_Ellipse);
 
   return result;
 
 }
+
