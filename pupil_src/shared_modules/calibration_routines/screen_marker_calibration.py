@@ -335,33 +335,22 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         clear_gl_screen()
 
-        # Set Matrix unsing gluOrtho2D to include padding for the marker of radius r
-        #
-        ############################
-        #            r             #
-        # 0,0##################w,h #
-        # #                      # #
-        # #                      # #
-        #r#                      #r#
-        # #                      # #
-        # #                      # #
-        # 0,h##################w,h #
-        #            r             #
-        ############################
-
-
         hdpi_factor = glfwGetFramebufferSize(self._window)[0]/glfwGetWindowSize(self._window)[0]
         r = 110*self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         p_window_size = glfwGetWindowSize(self._window)
-        # compensate for radius of marker
-        gl.glOrtho(-r*.6,p_window_size[0]+r*.6,p_window_size[1]+r*.7,-r*.7 ,-1,1)
+        gl.glOrtho(0,p_window_size[0],p_window_size[1],0 ,-1,1)
         # Switch back to Model View Matrix
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
 
-        screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
+        def map_value(value,in_range=(0,1),out_range=(0,1)):
+            ratio = (out_range[1]-out_range[0])/(in_range[1]-in_range[0])
+            return (value-in_range[0])*ratio+out_range[0]
+
+        pad = .6*r
+        screen_pos = map_value(self.display_pos[0],out_range=(pad,p_window_size[0]-pad)),map_value(self.display_pos[1],out_range=(p_window_size[1]-pad,pad))
         alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
         draw_concentric_circles(screen_pos,r,6,alpha)
@@ -395,3 +384,5 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         if self._window:
             self.close_window()
         self.deinit_gui()
+
+
