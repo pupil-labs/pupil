@@ -1,5 +1,5 @@
 
-cimport numpy as np
+import numpy as np
 
 
 cdef extern from '<opencv2/core/types_c.h>':
@@ -49,7 +49,7 @@ cdef extern from 'detect_2d.hpp':
   cdef cppclass Result[T]:
     double confidence
     Ellipse2D[T] ellipse
-    double timeStampe
+    double timeStamp
 
   cdef struct DetectProperties:
     int intensity_range
@@ -124,8 +124,24 @@ cdef class Detector_2D:
         height  = roi.get()[3] - roi.get()[1]
         result =  self.thisptr.detect(detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), True , True)
 
+        e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
+        pupil_ellipse = {}
+        pupil_ellipse['confidence'] = result.confidence
+        pupil_ellipse['ellipse'] = e
+        pupil_ellipse['pos_in_roi'] = e[0]
+        pupil_ellipse['major'] = max(e[1])
+        pupil_ellipse['diameter'] = max(e[1])
+        pupil_ellipse['minor'] = min(e[1])
+        pupil_ellipse['axes'] = e[1]
+        pupil_ellipse['angle'] = e[2]
+        #e_img_center =u_r.add_vector(p_r.add_vector(e[0]))
+        #norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
+        #pupil_ellipse['norm_pos'] = norm_center
+        #pupil_ellipse['center'] = e_img_center
+        #pupil_ellipse['timestamp'] = frame.timestamp
 
-        #return result
+
+        return pupil_ellipse
 
 
 
