@@ -43,13 +43,15 @@ if __name__ == '__main__':
   #Our detectors we wanna compare
   detector_cpp = detector_2d.Detector_2D()
   detector_py = Canny_Detector(pool)
-
+  # detector_py.coarse_detection= False
 
   def compareEllipse( ellipse_cpp , ellipse_py):
-    return ellipse_cpp['center'] == ellipse_py['center'] and \
-    ellipse_cpp['major'] == ellipse_py['major'] and \
-    ellipse_cpp['minor'] == ellipse_py['minor'] and \
-    ellipse_cpp['angle'] == ellipse_py['angle']
+    return \
+    abs(ellipse_cpp['center'][0] - ellipse_py['center'][0]) <.1 and \
+    abs(ellipse_cpp['center'][1] - ellipse_py['center'][1]) <.1 and \
+    abs(ellipse_cpp['major'] - ellipse_py['major'])<.1 and \
+    abs(ellipse_cpp['minor'] - ellipse_py['minor'])<.1
+    # abs(ellipse_cpp['angle'] - ellipse_py['angle'])<10.1
 
 
   cpp_time = 0

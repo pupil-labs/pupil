@@ -122,6 +122,12 @@ cdef class Detector_2D:
         detect_properties["final_perimeter_ratio_range_min"] = 0.6 ;
         detect_properties["final_perimeter_ratio_range_max"] = 1.2 ;
 
+
+        x = usr_roi.get()[0]
+        y = usr_roi.get()[1]
+        width  = usr_roi.get()[2] - usr_roi.get()[0]
+        height  = usr_roi.get()[3] - usr_roi.get()[1]
+
         cdef int scale = 2 # half the integral image. boost up integral
         # TODO maybe implement our own Inegral so we don't have to half the image
         cdef int[:,::1] integral = cv2.integral(frame.gray[::scale,::scale])
@@ -129,15 +135,19 @@ cdef class Detector_2D:
         p_x *= scale
         p_y *= scale
         p_w *= scale
+        p_h = p_w
+
+        if False:
+            p_x = x
+            p_y = y
+            p_w = width
+            p_h = height
         pupil_roi = Roi( (0,0))
         pupil_roi.set((p_y, p_x, p_y+p_w, p_x+p_w))
 
-        x = usr_roi.get()[0]
-        y = usr_roi.get()[1]
 
-        width  = usr_roi.get()[2] - usr_roi.get()[0]
-        height  = usr_roi.get()[3] - usr_roi.get()[1]
-        result =  self.thisptr.detect(detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_w),  False , False)
+
+        result =  self.thisptr.detect(detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  False , False)
 
         e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
         pupil_ellipse = {}
