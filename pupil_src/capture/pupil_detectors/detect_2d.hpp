@@ -4,7 +4,10 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <iostream>
 
+#include "singleeyefitter/common/types.h"
+#include "singleeyefitter/common/colors.h"
 
+#include "singleeyefitter/fun.h"
 #include "singleeyefitter/utils.h"
 #include "singleeyefitter/cvx.h"
 #include "singleeyefitter/Ellipse.h"  // use ellipse eyefitter
@@ -65,12 +68,7 @@ private:
   int mPupil_Size;
   Ellipse mPrior_ellipse;
 
-  const cv::Scalar_<int> mRed_color = {0,0,255};
-  const cv::Scalar_<int> mGreen_color = {0,255,0};
-  const cv::Scalar_<int> mBlue_color = {255,0,0};
-  const cv::Scalar_<int> mRoyalBlue_color = {255,100,100};
-  const cv::Scalar_<int> mYellow_color = {255,255,0};
-  const cv::Scalar_<int> mWhite_color = {255,255,255};
+
 
 };
 
@@ -78,39 +76,6 @@ void printPoints( std::vector<cv::Point> points){
   std::for_each(points.begin(), points.end(), [](cv::Point& p ){ std::cout << p << std::endl;} );
 }
 
-template<typename Scalar>
-std::vector<int> find_kink_and_dir_change(std::vector<Scalar>& curvature, float max_angle){
-
-  std::vector<int> split_indeces;
-  if( curvature.empty() ) return split_indeces;
-
-  bool currently_positive = curvature.at(0) > 0;
-  for(int i=0 ; i < curvature.size(); i++){
-      Scalar angle = curvature.at(i);
-      bool is_positive = angle > 0;
-      if( std::abs(angle) < max_angle || is_positive != currently_positive ){
-        currently_positive = is_positive;
-        split_indeces.push_back(i);
-      }
-  }
-  return split_indeces;
-}
-std::vector<std::vector<cv::Point>> split_at_corner_index(std::vector<cv::Point>& contour, std::vector<int>& indices){
-
-  std::vector<std::vector<cv::Point>> contour_segments;
-  if(indices.empty()){
-     contour_segments.push_back(contour);
-      return contour_segments;
-  }
-  int startIndex = 0;
-  for(int i=0 ; i < indices.size() + 1 ; i++){
-      int next_Index = i < indices.size() ?  indices.at(i) + 1  : contour.size()-1; // don't forget the last one
-      auto begin = contour.begin();
-      contour_segments.push_back( {begin + startIndex , begin + next_Index + 1} );
-      startIndex = next_Index;
-  }
-  return contour_segments;
-}
 template <typename Scalar>
 Detector2D<Scalar>::Detector2D(): mUse_strong_prior(false), mPupil_Size(100){};
 
@@ -175,11 +140,11 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
   singleeyefitter::detector::calculate_spike_indices_and_max_intenesity( histogram, 40, lowest_spike_index, highest_spike_index, max_intensity);
 
-  if( visualize ){  // if visualize is true, we draw to the color image
+  if( visualize ){
 
       const int scale_x  = 100;
       const int scale_y = 1 ;
-
+      // display the histogram and the spikes
       for(int i = 0; i < histogram.rows; i++){
         const float norm_i  = histogram.ptr<float>(i)[0]/max_intensity ; // normalized intensity
         cv::line( color_image, {image_width, i*scale_y}, { image_width - int(norm_i * scale_x), i * scale_y}, mBlue_color );
@@ -234,15 +199,16 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
     //draw a frame around the automatic pupil ROI in overlay.
     auto rect = cv::Rect(0, 0, overlay.size().width, overlay.size().height);
-    cvx::draw_dotted_rect( overlay, rect, 255);
+    cvx::draw_dotted_rect( overlay, rect, mWhite_color);
     //draw a frame around the area we require the pupil center to be.
     rect = cv::Rect(padding, padding, pupil_roi.width-padding, pupil_roi.height-padding);
-    cvx::draw_dotted_rect( overlay, rect, 255);
+    cvx::draw_dotted_rect( overlay, rect, mWhite_color);
 
     //draw size ellipses
     cv::Point center(100, image_height -100);
     cv::circle( color_image, center, props.pupil_size_min/2.0, mRed_color );
-    cv::circle( color_image, center, mPupil_Size/2.0, mGreen_color );           // real pupil size of this frame is calculated further down, so this size is from the last frame
+    // real pupil size of this frame is calculated further down, so this size is from the last frame
+    cv::circle( color_image, center, mPupil_Size/2.0, mGreen_color );
     cv::circle( color_image, center, props.pupil_size_max/2.0, mRed_color );
 
     auto text_string = std::to_string(mPupil_Size);
@@ -311,63 +277,29 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   ///////////////////////////////
 
   //from edges to contours
-  std::vector<std::vector<cv::Point>> contours, good_contours;
+  Contours_2D contours ;
   cv::findContours(edges, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE );
-  good_contours.resize( contours.size() );
 
-  //first we want to filter out the bad stuff, to short
-  auto min_contour_size_pred = [&]( const std::vector<cv::Point>& contour){
+  //first we want to filter out the bad stuff, to short ones
+  const auto min_contour_size_pred = [&props]( const Contour_2D& contour){
     return contour.size() > props.contour_size_min;
   };
-  auto end = std::copy_if( contours.begin(), contours.end(), good_contours.begin(), min_contour_size_pred); // better way than copy, erase probably not better with vector
-  good_contours.resize(std::distance(good_contours.begin(),end));
+  contours = singleeyefitter::fun::filter( min_contour_size_pred , contours);
 
   //now we learn things about each contour through looking at the curvature.
   //For this we need to simplyfy the contour so that pt to pt angles become more meaningfull
 
-  std::vector<std::vector<cv::Point>> approx_contours;
-  std::for_each(good_contours.begin(), good_contours.end(), [&]( std::vector<cv::Point>& contour){
+  Contours_2D approx_contours;
+  std::for_each(contours.begin(), contours.end(), [&](const Contour_2D& contour){
     std::vector<cv::Point> approx_c;
     cv::approxPolyDP( contour, approx_c, 1.5, false);
-    approx_contours.push_back(approx_c);
+    approx_contours.push_back(std::move(approx_c));
   });
 
-  std::vector<std::vector<cv::Point>> split_contours;
-  for(auto it = approx_contours.begin(); it != approx_contours.end(); it++ ){
+  Contours_2D split_contours;
 
-    std::vector<cv::Point>& contour  = *it;
-    std::vector<Scalar> curvature;
-    // closed curves not handled yet
-    for(auto point_it = contour.begin(); point_it != contour.end()-2; point_it++){
-        cv::Point& first = *point_it;
-        cv::Point& second = *(point_it+1);
-        cv::Point& third = *(point_it+2);
-        curvature.push_back( math::getAngleABC<Scalar>(first, second, third) );
-    }
-
-    //we split whenever there is a real kink (abs(curvature)<right angle) or a change in the genreal direction
-
-    auto kink_indices = find_kink_and_dir_change( curvature, 80);
-    auto contour_segments = split_at_corner_index( contour, kink_indices);
-    //TODO: split at shart inward turns
-    int colorIndex = 0;
-    for( auto seg_it = contour_segments.begin(); seg_it != contour_segments.end(); seg_it++){
-
-      std::vector<cv::Point> segment = *seg_it;
-      //printPoints(segment);
-      if( segment.size() > 2 ){
-        split_contours.push_back(segment);
-
-        // debug segments
-        if(use_debug_image){
-          const cv::Scalar_<int> colors[] = {mRed_color, mBlue_color, mRoyalBlue_color, mYellow_color, mWhite_color, mGreen_color};
-          cv::polylines(debug_image, segment, false, colors[colorIndex], 1, 4);
-          colorIndex++;
-          colorIndex %= 6;
-        }
-      }
-    }
-  }
+  Scalar split_angle = 80;
+  split_contours = singleeyefitter::detector::split_contours(approx_contours, split_angle );
 
   if( split_contours.empty()){
     result.confidence = 0.0;

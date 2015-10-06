@@ -3,7 +3,7 @@
 
 #include <limits>
 
-#include "traits.h"
+#include "common/traits.h"
 
 namespace singleeyefitter {
 

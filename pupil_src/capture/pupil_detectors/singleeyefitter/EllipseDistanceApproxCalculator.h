@@ -3,7 +3,7 @@
 #define singleeyefitter_ellipsedistanceapproxcalculator_h__
 
 
-#include "traits.h"
+#include "common/traits.h"
 #include "mathHelper.h"
 
 // Calculates:
