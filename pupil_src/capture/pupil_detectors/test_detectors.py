@@ -121,7 +121,7 @@ if __name__ == '__main__':
 
         print "Frame {}".format(frameNumber)
 
-    print "Finished writing Test file."
+    print "Finished writing test files py."
 
   def write_test_values_cpp():
 
@@ -153,7 +153,7 @@ if __name__ == '__main__':
 
         print "Frame {}".format(frameNumber)
 
-    print "Finished writing Test file."
+    print "Finished writing test files cpp."
 
   def compare_test_cpp():
     global test_file_Folder
@@ -185,7 +185,7 @@ if __name__ == '__main__':
 
         print "Frame {}".format(frameNumber)
 
-    print "Finished writing Test file."
+    print "Finished compare test cpp."
 
   def compare_test_py():
 
@@ -218,7 +218,7 @@ if __name__ == '__main__':
 
         print "Frame {}".format(frameNumber)
 
-    print "Finished writing Test file."
+    print "Finished compare test py."
 
 
   def compare_cpp_and_py():
@@ -269,6 +269,6 @@ if __name__ == '__main__':
   #compare_test_py()
 
   #write_test_values_cpp()
-  #compare_test_cpp()
+  compare_test_cpp()
 
-  compare_cpp_and_py()
+  #compare_cpp_and_py()
