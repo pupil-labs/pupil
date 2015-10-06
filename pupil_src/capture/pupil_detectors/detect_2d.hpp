@@ -296,27 +296,22 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
     approx_contours.push_back(std::move(approx_c));
   });
 
-  Contours_2D split_contours;
-
+  // split contours looking at curvature and angle
   Scalar split_angle = 80;
+  int min_contour_size = 4;  //removing stubs makes combinatorial search feasable
+
   //split_contours = singleeyefitter::detector::split_contours(approx_contours, split_angle );
-  split_contours = singleeyefitter::detector::split_contours_optimized(approx_contours, split_angle );
-
-
-
+  Contours_2D split_contours = singleeyefitter::detector::split_contours_optimized(approx_contours, split_angle , min_contour_size );
 
   if( split_contours.empty()){
     result.confidence = 0.0;
     return result;
   }
-
-
-
   //removing stubs makes combinatorial search feasable
-  // erase-remove idiom
-  split_contours.erase(
-    std::remove_if(split_contours.begin(), split_contours.end(), [](std::vector<cv::Point>& v){ return v.size() <= 3;}), split_contours.end()
-  );
+  //  MOVED TO split_contours_optimized
+  //split_contours = singleeyefitter::fun::filter( [](std::vector<cv::Point>& v){ return v.size() <= 3;} , split_contours);
+
+
 
   std::sort(split_contours.begin(), split_contours.end(), [](std::vector<cv::Point> a, std::vector<cv::Point> b){ return a.size() > b.size(); });
 

@@ -114,7 +114,7 @@ Contours_2D detector::detail::split_at_corner_index(const Contour_2D& contour,co
 
 
 template< typename Scalar >
-Contours_2D detector::split_contours_optimized( const Contours_2D& contours, const Scalar max_angle ){
+Contours_2D detector::split_contours_optimized( const Contours_2D& contours, const Scalar max_angle, const int min_contour_size ){
 
   Contours_2D split_contours;
 
@@ -141,8 +141,8 @@ Contours_2D detector::split_contours_optimized( const Contours_2D& contours, con
             // we wanna split now
             current_contour_end_position = (point_it-1); // when we recognise a split, the middle point is the split point
 
-            //skip segments shorter than 3 points
-            if( std::distance(last_contour_end_position, current_contour_end_position)  >= 2){
+            //skip segments shorter than min_contour_size points
+            if( std::distance(last_contour_end_position, current_contour_end_position+1)  >= min_contour_size){
                 split_contours.emplace_back(last_contour_end_position,  current_contour_end_position+1); // range is [first, last)
             }
             last_contour_end_position = current_contour_end_position;
@@ -152,7 +152,7 @@ Contours_2D detector::split_contours_optimized( const Contours_2D& contours, con
     }
 
     // this is the last contour we don't capture in the for loop, or the whole contour if we didn't split it
-    if( std::distance( last_contour_end_position, contour.end()) >= 2 )
+    if( std::distance( last_contour_end_position, contour.end()) >= min_contour_size )
       split_contours.emplace_back(last_contour_end_position,  contour.end());
 
 
@@ -168,11 +168,11 @@ Contours_2D detector::split_contours_optimized( const Contours_2D& contours, con
 }
 
 
-// tell the compile to generate these to explicit templates, otherwise it wouldn't know which one to create at comile time
+// tell the compile to generate these explicit templates, otherwise it wouldn't know which one to create at compile time
 template Contours_2D detector::split_contours( const Contours_2D& contours, const float angle );
 template Contours_2D detector::split_contours( const Contours_2D& contours, const double angle );
-template Contours_2D detector::split_contours_optimized( const Contours_2D& contours, const float angle );
-template Contours_2D detector::split_contours_optimized( const Contours_2D& contours, const double angle );
+template Contours_2D detector::split_contours_optimized( const Contours_2D& contours, const float angle, const int min_contour_size );
+template Contours_2D detector::split_contours_optimized( const Contours_2D& contours, const double angle, const int min_contour_size );
 
 
 

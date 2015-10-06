@@ -17,7 +17,7 @@ namespace detector {
   template< typename Scalar >
   Contours_2D split_contours( const Contours_2D& contours, const Scalar angle );
   template< typename Scalar >
-  Contours_2D split_contours_optimized( const Contours_2D& contours, const Scalar angle );
+  Contours_2D split_contours_optimized( const Contours_2D& contours, const Scalar angle , const int min_contour_size);
 
   namespace detail{
 
