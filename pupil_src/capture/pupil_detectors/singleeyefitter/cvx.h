@@ -48,7 +48,7 @@ namespace cvx
         cvx::line(img, center + cv::Point2f(-radius, 0), center + cv::Point2f(radius, 0), colour, thickness, lineType, shift);
     }
 
-    void draw_dotted_rect( cv::Mat& image, cv::Rect& rect , int color );
+    void draw_dotted_rect( cv::Mat& image, const cv::Rect& rect , const cv::Scalar& color );
 
 
     /*inline void cross(cv::Mat& img, cv::Point center, int radius, const cv::Scalar& colour, int thickness = 1, int lineType = 8, int shift = 0)

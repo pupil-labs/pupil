@@ -2,13 +2,16 @@
 #include "mathHelper.h"
 
 
-void singleeyefitter::cvx::draw_dotted_rect( cv::Mat& image, cv::Rect& rect , int color ){
+void singleeyefitter::cvx::draw_dotted_rect( cv::Mat& image, const cv::Rect& rect , const cv::Scalar& color ){
 
   int count = 0;
   auto create_Dotted_Line = [&](cv::Vec3b& pixel){
-      if( count%4 == 0)
-        pixel[0] = pixel[1] = pixel[2] = color;
-      count++;
+    if( count%4 == 0){
+        pixel[0] = color[0];
+        pixel[1] = color[1];
+        pixel[2] = color[2];
+    }
+    count++;
   };
   int x = rect.x;
   int y = rect.y;
