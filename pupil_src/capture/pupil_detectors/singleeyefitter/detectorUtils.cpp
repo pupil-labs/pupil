@@ -121,8 +121,6 @@ Contours_2D detector::split_contours_optimized( const Contours_2D& contours, con
   for(auto it = contours.begin(); it != contours.end(); it++ ){
 
     const Contour_2D& contour  = *it;
-
-    Contour_2D current_contour;
     // what's the orientation of the current contour
     bool currently_positive = true;
     bool first_loop = true; // we don't conside orientation in the first loop
@@ -155,14 +153,6 @@ Contours_2D detector::split_contours_optimized( const Contours_2D& contours, con
     if( std::distance( last_contour_end_position, contour.end()) >= min_contour_size )
       split_contours.emplace_back(last_contour_end_position,  contour.end());
 
-
-        // // debug segments
-        // if(use_debug_image){
-        //   const cv::Scalar_<int> colors[] = {mRed_color, mBlue_color, mRoyalBlue_color, mYellow_color, mWhite_color, mGreen_color};
-        //   cv::polylines(debug_image, segment, false, colors[colorIndex], 1, 4);
-        //   colorIndex++;
-        //   colorIndex %= 6;
-        // }
   }
   return split_contours;
 }

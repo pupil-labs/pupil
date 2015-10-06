@@ -50,7 +50,7 @@ if __name__ == '__main__':
           logger.warning("Video File is done.")
           break
       # send to detector
-      result = detector.detect(frame, u_r, visualize=False, use_debug_image = False  )
+      result = detector.detect(frame, u_r, visualize=True, use_debug_image = False  )
 
       cv2.imshow('Color',frame.img)
       cv2.imshow('Gray',frame.gray)

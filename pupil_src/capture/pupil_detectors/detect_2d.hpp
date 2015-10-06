@@ -15,6 +15,7 @@
 #include "singleeyefitter/mathHelper.h"
 #include "singleeyefitter/detectorUtils.h"
 #include "singleeyefitter/EllipseDistanceApproxCalculator.h"
+#include "singleeyefitter/EllipseEvaluation.h"
 
 
 template<typename Scalar>
@@ -299,7 +300,6 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   // split contours looking at curvature and angle
   Scalar split_angle = 80;
   int min_contour_size = 4;  //removing stubs makes combinatorial search feasable
-
   //split_contours = singleeyefitter::detector::split_contours(approx_contours, split_angle );
   Contours_2D split_contours = singleeyefitter::detector::split_contours_optimized(approx_contours, split_angle , min_contour_size );
 
@@ -311,35 +311,26 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   //  MOVED TO split_contours_optimized
   //split_contours = singleeyefitter::fun::filter( [](std::vector<cv::Point>& v){ return v.size() <= 3;} , split_contours);
 
+  if(use_debug_image ){
+    // debug segments
+    int colorIndex = 0;
+    for(auto& segment : split_contours){
+      const cv::Scalar_<int> colors[] = {mRed_color, mBlue_color, mRoyalBlue_color, mYellow_color, mWhite_color, mGreen_color};
+      cv::polylines(debug_image, segment, false, colors[colorIndex], 1, 4);
+      colorIndex++;
+      colorIndex %= 6;
+    }
+  }
 
-
-  std::sort(split_contours.begin(), split_contours.end(), [](std::vector<cv::Point> a, std::vector<cv::Point> b){ return a.size() > b.size(); });
+  std::sort(split_contours.begin(), split_contours.end(), [](Contour_2D& a, Contour_2D& b){ return a.size() > b.size(); });
 
   //finding poential candidates for ellipse seeds that describe the pupil.
   std::vector<int> strong_seed_contours;
   std::vector<int> weak_seed_contours;
 
 
-  auto ellipse_filter = [&](const cv::RotatedRect& ellipse ) -> bool {
-      bool is_centered = padding < ellipse.center.x  && ellipse.center.x < (pupil_image.size().width - padding) && padding < ellipse.center.y && ellipse.center.y < (pupil_image.size().height - padding);
-      if(is_centered){
-
-        float max_radius = ellipse.size.height;
-        float min_radius = ellipse.size.width;
-        // if(min_radius > max_radius){
-        //     std::cout << "Major Minor swizzle" << std::endl; // not happend yet, can we remove it ?
-        //     min_radius = ellipse.size.height;
-        //     max_radius = ellipse.size.width;
-        // }
-        bool is_round = (min_radius/max_radius) >= props.ellipse_roundness_ratio;
-        if(is_round){
-            bool right_size = props.pupil_size_min <= max_radius && max_radius <= props.pupil_size_max;
-            if(right_size) return true;
-        }
-      }
-      return false;
-  };
-
+  const cv::Rect ellipse_center_varianz = cv::Rect(padding,padding, pupil_image.size().width - 2.0 * padding, pupil_image.size().height - 2.0 *padding);
+  const EllipseEvaluation is_Ellipse( ellipse_center_varianz,props.ellipse_roundness_ratio,props.pupil_size_min, props.pupil_size_max  );
 
   for(int i=0; i < split_contours.size(); i++){
 
@@ -349,7 +340,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
       cv::RotatedRect ellipse = cv::fitEllipse(contour);
       //is this ellipse a plausible candidate for a pupil?
-      if( ellipse_filter(ellipse) ){
+      if( is_Ellipse(ellipse ) ){
         auto e = toEllipse<Scalar>(ellipse);
         Scalar point_distances = 0.0;
         EllipseDistCalculator<Scalar> ellipseDistance(e);
@@ -603,7 +594,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
     Scalar support_ratio = support_pixels.size() / ellipse_circumference;
     //TODO: refine the selection of final candidate
 
-    if( support_ratio >= props.final_perimeter_ratio_range_min && ellipse_filter(cv_ellipse) ){
+    if( support_ratio >= props.final_perimeter_ratio_range_min && is_Ellipse(cv_ellipse) ){
 
       index_best_Solution = enum_index;
         if( support_ratio >= props.strong_perimeter_ratio_range_min ){
@@ -647,7 +638,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   std::vector<cv::Point>  support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
   Scalar support_ratio = support_pixels.size() / ellipse_circumference;
 
-  Scalar goodness = std::min( 1.0, support_ratio);
+  Scalar goodness = std::min( Scalar(1.0), support_ratio);
 
   //final fitting and return of result
 
@@ -685,7 +676,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
   Scalar size_difference  = std::abs( 1.0 - cv_ellipse.size.height / cv_final_Ellipse.size.height );
 
-  if(  ellipse_filter( cv_final_Ellipse ) && size_difference < 0.3 ){
+  if(  is_Ellipse( cv_final_Ellipse ) && size_difference < 0.3 ){
 
       if( use_debug_image ){
           cv::ellipse( debug_image, cv_final_Ellipse, mGreen_color );
