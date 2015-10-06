@@ -92,7 +92,7 @@ cdef class Detector_2D:
       del self.thisptr
 
 
-    def detect(self, frame, usr_roi, visualization ):
+    def detect(self, frame, usr_roi, visualize , use_debug_image):
         width = frame.width
         height = frame.height
 
@@ -147,7 +147,7 @@ cdef class Detector_2D:
 
 
 
-        result =  self.thisptr.detect(detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  False , False)
+        result =  self.thisptr.detect(detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , use_debug_image)
 
         e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
         pupil_ellipse = {}

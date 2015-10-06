@@ -111,7 +111,7 @@ if __name__ == '__main__':
             print "Video File is done."
             break
         # send to detector
-        result,contours = detector_py.detect(frame,user_roi=u_r,visualize=True)
+        result,contours = detector_py.detect(frame,user_roi=u_r,visualize=False)
         for contour in contours: #better way to do this ?
             contour.shape = (-1, 2 )
 
@@ -146,7 +146,7 @@ if __name__ == '__main__':
             print "Video File is done."
             break
         # send to detector
-        result_cpp = detector_cpp.detect(frame, u_r, None )
+        result_cpp = detector_cpp.detect(frame, u_r,  visualize=False, use_debug_image = False  )
 
         #save test values
         save_object( result_cpp, test_file_Folder + 'result_frame_cpp{}'.format(frameNumber))
@@ -173,7 +173,7 @@ if __name__ == '__main__':
             print "Video File is done."
             break
         # send to detector
-        result = detector_cpp.detect(frame, u_r, None )
+        result = detector_cpp.detect(frame, u_r,  visualize=False, use_debug_image = False  )
 
 
         #load corresponding test files
@@ -205,7 +205,7 @@ if __name__ == '__main__':
             print "Video File is done."
             break
         # send to detector
-        result,contours = detector_py.detect(frame,user_roi=u_r,visualize=True)
+        result,contours = detector_py.detect(frame,user_roi=u_r,visualize=False)
         for contour in contours: #better way to do this ?
             contour.shape = (-1, 2 )
 
@@ -240,7 +240,7 @@ if __name__ == '__main__':
             break
         # send to detector
         start_time = time.time()
-        result_cpp = detector_cpp.detect(frame, u_r, None )
+        result_cpp = detector_cpp.detect(frame, u_r, visualize=False, use_debug_image = False )
         end_time = time.time()
         cpp_time += (end_time - start_time)
 
