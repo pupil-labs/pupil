@@ -140,23 +140,22 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   Result<Scalar> result;
 
   //remove this later
-  //debug_image = cv::Scalar(0); //clear debug image
+  debug_image = cv::Scalar(0); //clear debug image
 
-  image = cv::Mat(image, usr_roi);  // image with usr_roi
+  cv::Rect roi = usr_roi & pupil_roi;  // intersect rectangles
+  if( roi.area() < 1.0 )
+    roi = usr_roi;
 
   const int image_width = image.size().width;
   const int image_height = image.size().height;
 
-  const int w = image.size().width/2;
+  const cv::Mat pupil_image = cv::Mat(image, roi);  // image with usr_roi
+  const int w = pupil_image.size().width/2;
   const float coarse_pupil_width = w/2.0f;
   const int padding = int(coarse_pupil_width/4.0f);
 
   const int offset = props.intensity_range;
   const int spectral_offset = 5;
-
-  //const cv::Rect pupil_roi = usr_roi; // gets changed when coarse detection is on
-
-  image = cv::Mat(image, pupil_roi ); // after coarse detection it in the region of the pupil
 
   cv::Mat histogram;
   int histSize;
@@ -165,7 +164,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   float range[] = { 0, 256 } ; //the upper boundary is exclusive
   const float* histRange = { range };
 
-  cv::calcHist( &image, 1 , 0, cv::Mat(), histogram , 1 , &histSize, &histRange, true, false );
+  cv::calcHist( &pupil_image, 1 , 0, cv::Mat(), histogram , 1 , &histSize, &histRange, true, false );
 
 
   std::vector<int> spikes_index;
@@ -210,23 +209,23 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
    //create dark and spectral glint masks
   cv::Mat binary_img;
   cv::Mat kernel;
-  cv::inRange( image, cv::Scalar(0) , cv::Scalar(lowest_spike_index + props.intensity_range), binary_img );  // binary threshold
+  cv::inRange( pupil_image, cv::Scalar(0) , cv::Scalar(lowest_spike_index + props.intensity_range), binary_img );  // binary threshold
   kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, {7,7} );
   cv::dilate( binary_img, binary_img, kernel, {-1,-1}, 2 );
 
   cv::Mat spec_mask;
-  cv::inRange( image, cv::Scalar(0) , cv::Scalar(highest_spike_index - spectral_offset), spec_mask );  // binary threshold
+  cv::inRange( pupil_image, cv::Scalar(0) , cv::Scalar(highest_spike_index - spectral_offset), spec_mask );  // binary threshold
   cv::erode( spec_mask, spec_mask, kernel);
 
   kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, {9,9} );
   //open operation to remove eye lashes
-  cv::morphologyEx( image, image, cv::MORPH_OPEN, kernel);
+  cv::morphologyEx( pupil_image, pupil_image, cv::MORPH_OPEN, kernel);
 
   if( props.blur_size > 1 )
-    cv::medianBlur(image, image, props.blur_size );
+    cv::medianBlur(pupil_image, pupil_image, props.blur_size );
 
   cv::Mat edges;
-  cv::Canny( image, edges, props.canny_treshold, props.canny_treshold * props.canny_ration, props.canny_aperture);
+  cv::Canny( pupil_image, edges, props.canny_treshold, props.canny_treshold * props.canny_ration, props.canny_aperture);
 
   //remove edges in areas not dark enough and where the glint is (spectral refelction from IR leds)
   cv::min(edges, spec_mask, edges);
@@ -235,7 +234,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
   if( visualize ){
     // get sub matrix
-    cv::Mat overlay = color_image.colRange(usr_roi.x + pupil_roi.x, usr_roi.x + pupil_roi.x + pupil_roi.width).rowRange(usr_roi.y + pupil_roi.y, usr_roi.y + pupil_roi.y + pupil_roi.height);
+    cv::Mat overlay = cv::Mat(color_image, roi );
     cv::Mat g_channel( overlay.rows, overlay.cols, CV_8UC1 );
     cv::Mat b_channel( overlay.rows, overlay.cols, CV_8UC1 );
     cv::Mat r_channel( overlay.rows, overlay.cols, CV_8UC1 );
@@ -406,7 +405,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
 
   auto ellipse_filter = [&](const cv::RotatedRect& ellipse ) -> bool {
-      bool is_centered = padding < ellipse.center.x  && ellipse.center.x < (image_width - padding) && padding < ellipse.center.y && ellipse.center.y < (image_height - padding);
+      bool is_centered = padding < ellipse.center.x  && ellipse.center.x < (pupil_image.size().width - padding) && padding < ellipse.center.y && ellipse.center.y < (pupil_image.size().height - padding);
       if(is_centered){
 
         float max_radius = ellipse.size.height;
