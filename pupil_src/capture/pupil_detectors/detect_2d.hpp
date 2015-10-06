@@ -299,7 +299,11 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   Contours_2D split_contours;
 
   Scalar split_angle = 80;
-  split_contours = singleeyefitter::detector::split_contours(approx_contours, split_angle );
+  //split_contours = singleeyefitter::detector::split_contours(approx_contours, split_angle );
+  split_contours = singleeyefitter::detector::split_contours_optimized(approx_contours, split_angle );
+
+
+
 
   if( split_contours.empty()){
     result.confidence = 0.0;

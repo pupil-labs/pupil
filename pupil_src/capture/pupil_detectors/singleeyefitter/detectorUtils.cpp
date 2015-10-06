@@ -46,7 +46,7 @@ Contours_2D detector::split_contours( const Contours_2D& contours, const Scalar 
         const cv::Point& first = *point_it;
         const cv::Point& second = *(point_it+1);
         const cv::Point& third = *(point_it+2);
-        curvature.push_back( math::getAngleABC<float>(first, second, third) );
+        curvature.push_back( math::getAngleABC<Scalar>(first, second, third) );
     }
 
     //we split whenever there is a real kink (abs(curvature)<right angle) or a change in the genreal direction
@@ -74,7 +74,6 @@ Contours_2D detector::split_contours( const Contours_2D& contours, const Scalar 
   }
 
   return split_contours;
-
 }
 
 template<typename Scalar>
@@ -88,9 +87,10 @@ std::vector<int> detector::detail::find_kink_and_dir_change(const std::vector<Sc
       Scalar angle = curvature.at(i);
       bool is_positive = angle > 0;
       if( std::abs(angle) < max_angle || is_positive != currently_positive ){
-        currently_positive = is_positive;
         split_indeces.push_back(i);
       }
+      currently_positive = is_positive;
+
   }
   return split_indeces;
 }
@@ -113,9 +113,66 @@ Contours_2D detector::detail::split_at_corner_index(const Contour_2D& contour,co
 
 
 
+template< typename Scalar >
+Contours_2D detector::split_contours_optimized( const Contours_2D& contours, const Scalar max_angle ){
+
+  Contours_2D split_contours;
+
+  for(auto it = contours.begin(); it != contours.end(); it++ ){
+
+    const Contour_2D& contour  = *it;
+
+    Contour_2D current_contour;
+    // what's the orientation of the current contour
+    bool currently_positive = true;
+    bool first_loop = true; // we don't conside orientation in the first loop
+
+    // closed curves not handled yet
+    auto current_contour_end_position = contour.begin();
+    auto last_contour_end_position = contour.begin();
+    for(auto point_it = contour.begin()+2; point_it != contour.end(); point_it++){
+        const cv::Point& first = *(point_it-2);
+        const cv::Point& second = *(point_it-1);
+        const cv::Point& third = *point_it;
+        Scalar angle =  math::getAngleABC<Scalar>(first, second, third); // angle of the last 3 points
+
+        bool is_positive = angle > 0;
+        if( std::abs(angle) < max_angle || ( !first_loop && is_positive != currently_positive  ) ){
+            // we wanna split now
+            current_contour_end_position = (point_it-1); // when we recognise a split, the middle point is the split point
+
+            //skip segments shorter than 3 points
+            if( std::distance(last_contour_end_position, current_contour_end_position)  >= 2){
+                split_contours.emplace_back(last_contour_end_position,  current_contour_end_position+1); // range is [first, last)
+            }
+            last_contour_end_position = current_contour_end_position;
+        }
+        currently_positive = is_positive;
+        first_loop = false;
+    }
+
+    // this is the last contour we don't capture in the for loop, or the whole contour if we didn't split it
+    if( std::distance( last_contour_end_position, contour.end()) >= 2 )
+      split_contours.emplace_back(last_contour_end_position,  contour.end());
+
+
+        // // debug segments
+        // if(use_debug_image){
+        //   const cv::Scalar_<int> colors[] = {mRed_color, mBlue_color, mRoyalBlue_color, mYellow_color, mWhite_color, mGreen_color};
+        //   cv::polylines(debug_image, segment, false, colors[colorIndex], 1, 4);
+        //   colorIndex++;
+        //   colorIndex %= 6;
+        // }
+  }
+  return split_contours;
+}
+
+
 // tell the compile to generate these to explicit templates, otherwise it wouldn't know which one to create at comile time
 template Contours_2D detector::split_contours( const Contours_2D& contours, const float angle );
 template Contours_2D detector::split_contours( const Contours_2D& contours, const double angle );
+template Contours_2D detector::split_contours_optimized( const Contours_2D& contours, const float angle );
+template Contours_2D detector::split_contours_optimized( const Contours_2D& contours, const double angle );
 
 
 
