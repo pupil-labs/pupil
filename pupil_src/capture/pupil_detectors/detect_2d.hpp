@@ -10,7 +10,9 @@
 #include "singleeyefitter/Ellipse.h"  // use ellipse eyefitter
 #include "singleeyefitter/distance.h"
 #include "singleeyefitter/mathHelper.h"
+#include "singleeyefitter/detectorUtils.h"
 #include "singleeyefitter/EllipseDistanceApproxCalculator.h"
+
 
 template<typename Scalar>
 struct Result{
@@ -167,28 +169,11 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   cv::calcHist( &pupil_image, 1 , 0, cv::Mat(), histogram , 1 , &histSize, &histRange, true, false );
 
 
-  std::vector<int> spikes_index;
-  spikes_index.reserve(histogram.rows);
   int lowest_spike_index = 255;
   int highest_spike_index = 0;
   float max_intensity = 0;
-  //  every intensity seen in more than 40 pixels
-  for(int i = 0; i < histogram.rows; i++ )
-  {
-      const float intensity  = histogram.at<float>(i,0);
 
-      if( intensity > 40 ){
-        max_intensity = std::max(intensity, max_intensity);
-        spikes_index.push_back(i);
-        lowest_spike_index = std::min(lowest_spike_index, i);
-        highest_spike_index = std::max( highest_spike_index, i);
-      }
-  }
-
-  if(spikes_index.size() == 0 ){
-     lowest_spike_index = 200;
-     highest_spike_index = 255;
-  }
+  singleeyefitter::detector::calculate_spike_indices_and_max_intenesity( histogram, 40, lowest_spike_index, highest_spike_index, max_intensity);
 
   if( visualize ){  // if visualize is true, we draw to the color image
 
