@@ -82,17 +82,18 @@ class Plugin(object):
     def on_notify(self,notification):
         """
         this gets called when a plugin want to notify all others.
-        notification is a tuple in the format {'name':'notification_name',['addional_fields':'blah']}
+        notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
         implement this fn if you want to deal with notifications
         """
         pass
 
-    ### if you want a session persistent plugin implement this function:
-    # def get_init_dict(self):
-    #     d = {}
-    #     # add all aguments of your plugin init fn with paramter names as name field
-    #     # do not include g_pool here.
-    #     return d
+    ## if you want a session persistent plugin implement this function:
+    def get_init_dict(self):
+        raise NotImplementedError()
+        # d = {}
+        # # add all aguments of your plugin init fn with paramter names as name field
+        # # do not include g_pool here.
+        # return d
 
     def cleanup(self):
         """
@@ -107,7 +108,7 @@ class Plugin(object):
     def notify_all(self,notification):
         """
         call this to notify all other plugins with a notification:
-        notification is a tuple in the format {'name':'notification_name',['addional_fields':'blah']}
+        notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
         do not overwrite this method
         """
         self.g_pool.notifications.append(notification)
@@ -177,12 +178,12 @@ class Calibration_Plugin(Plugin):
         self.g_pool.active_calibration_plugin = self
 
     def on_notify(self,notification):
-        if notification['name'] is 'cal_should_start':
+        if notification['subject'] is 'cal_should_start':
             if self.active:
                 logger.warning('Calibration already running.')
             else:
                 self.start()
-        elif notification['name'] is 'cal_should_stop':
+        elif notification['subject'] is 'cal_should_stop':
             if self.active:
                 self.stop()
             else:
@@ -269,7 +270,7 @@ class Plugin_List(object):
             try:
                 p_initializer = p.class_name,p.get_init_dict()
                 initializers.append(p_initializer)
-            except AttributeError:
+            except NotImplementedError:
                 #not all plugins want to be savable, they will not have the init dict.
                 # any object without a get_init_dict method will throw this exception.
                 pass

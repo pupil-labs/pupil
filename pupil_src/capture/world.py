@@ -24,12 +24,12 @@ import numpy as np
 #display
 from glfw import *
 from pyglui import ui,graph,cygl
-from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture
+from pyglui.cygl.utils import Named_Texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 
 #check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.5'
+assert pyglui_version >= '0.6'
 
 #monitoring
 import psutil
@@ -51,7 +51,6 @@ from pupil_server import Pupil_Server
 from pupil_sync import Pupil_Sync
 from marker_detector import Marker_Detector
 from log_display import Log_Display
-
 
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
@@ -160,7 +159,6 @@ def world(g_pool,cap_src,cap_size):
 
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
-    g_pool.update_textures = session_settings.get("update_textures",2)
     g_pool.iconified = False
 
     g_pool.capture = cap
@@ -197,16 +195,11 @@ def world(g_pool,cap_src,cap_size):
     general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter=lambda: "Select to load"))
+    general_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
+    general_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
     g_pool.sidebar.append(general_settings)
-    advanced_settings = ui.Growing_Menu('Advanced')
-    advanced_settings.append(ui.Selector('update_textures',g_pool,label="Update display",selection=range(3),labels=('No update','Gray','Color')))
-    advanced_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
-    advanced_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
-    general_settings.append(advanced_settings)
+
     g_pool.calibration_menu = ui.Growing_Menu('Calibration')
-    g_pool.calibration_menu.append(ui.Selector('active_calibration_plugin',getter=lambda: g_pool.active_calibration_plugin.__class__, selection = calibration_plugins,
-                                        labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
-                                        setter= open_plugin,label='Method'))
     g_pool.sidebar.append(g_pool.calibration_menu)
     g_pool.gui.append(g_pool.sidebar)
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
@@ -218,6 +211,10 @@ def world(g_pool,cap_src,cap_size):
     g_pool.notifications = []
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
 
+    #We add the calibration menu selector, after a calibration has been added:
+    g_pool.calibration_menu.insert(0,ui.Selector('active_calibration_plugin',getter=lambda: g_pool.active_calibration_plugin.__class__, selection = calibration_plugins,
+                                        labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
+                                        setter= open_plugin,label='Method'))
 
     # Register callbacks main_window
     glfwSetFramebufferSizeCallback(main_window,on_resize)
@@ -231,8 +228,8 @@ def world(g_pool,cap_src,cap_size):
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.image_tex = create_named_texture()
-    update_named_texture(g_pool.image_tex,frame.img)
+    g_pool.image_tex = Named_Texture()
+    g_pool.image_tex.update_from_frame(frame)
 
     # refresh speed settings
     glfwSwapInterval(0)
@@ -303,7 +300,7 @@ def world(g_pool,cap_src,cap_size):
             pupil_graph.add(p['confidence'])
         events['pupil_positions'] = recent_pupil_positions
 
-        # notify each plugin if there are new notifactions:
+        # notify each plugin if there are new notifications:
         while g_pool.notifications:
             n = g_pool.notifications.pop(0)
             for p in g_pool.plugins:
@@ -320,14 +317,11 @@ def world(g_pool,cap_src,cap_size):
         glfwMakeContextCurrent(main_window)
         if g_pool.iconified:
             pass
-        elif g_pool.update_textures == 2:
-            update_named_texture(g_pool.image_tex,frame.img)
-        elif g_pool.update_textures == 1:
-            update_named_texture(g_pool.image_tex,frame.gray)
+        else:
+            g_pool.image_tex.update_from_frame(frame)
 
         make_coord_system_norm_based()
-        draw_named_texture(g_pool.image_tex)
-
+        g_pool.image_tex.draw()
         make_coord_system_pixel_based((frame.height,frame.width,3))
         # render visual feedback from loaded plugins
         for p in g_pool.plugins:
@@ -351,7 +345,6 @@ def world(g_pool,cap_src,cap_size):
     session_settings['capture_settings'] = g_pool.capture.settings
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
-    session_settings['update_textures'] = g_pool.update_textures
     session_settings['version'] = g_pool.version
     session_settings.close()
 

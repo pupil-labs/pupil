@@ -27,10 +27,11 @@ import audio
 
 from pyglui import ui
 from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA
+
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
-from screen_marker_calibration import draw_marker,on_resize, easeInOutQuad, interp_fn, Screen_Marker_Calibration
+from screen_marker_calibration import Screen_Marker_Calibration
 from calibrate import preprocess_data
 #logging
 import logging
@@ -48,7 +49,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
 
         #result calculation variables:
         self.fov = 90. #taken from c930e specsheet, confirmed though mesurement within ~10deg.
-        self.res =  np.sqrt(self.world_size[0]**2+self.world_size[1]**2)
+        self.res =  np.sqrt(self.g_pool.capture.frame_size[0]**2+self.g_pool.capture.frame_size[1]**2)
         self.outlier_thresh = 5.
         self.accuracy = 0
         self.precision = 0
@@ -103,9 +104,6 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
         submenu = ui.Growing_Menu('Advanced Detector Settings')
         submenu.collapsed = True
         submenu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
-        submenu.append(ui.Switch('show_edges',self,label='show edges'))
-        submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area Threshold'))
-        submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity Threshold'))
         self.menu.append(submenu)
 
 

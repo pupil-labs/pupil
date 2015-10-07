@@ -11,7 +11,7 @@
 import uvc
 from uvc import device_list,is_accessible
 #check versions for our own depedencies as they are fast-changing
-assert uvc.__version__ >= '0.3'
+assert uvc.__version__ >= '0.4'
 
 from fake_capture import Fake_Capture
 
@@ -118,7 +118,7 @@ class Camera_Capture(object):
     def get_now(self):
         return time()
 
-    def get_timestamp():
+    def get_timestamp(self):
         return self.get_now()-self.timebase.value
 
     @property

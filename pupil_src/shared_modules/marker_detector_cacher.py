@@ -11,7 +11,7 @@
 
 
 
-def fill_cache(visited_list,video_file_path,q,seek_idx,run,min_marker_perimeter):
+def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker_perimeter):
     '''
     this function is part of marker_detector it is run as a seperate process.
     it must be kept in a seperate file for namespace sanatisation
@@ -25,8 +25,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run,min_marker_perimeter)
     from square_marker_detect import detect_markers_robust
     aperture = 9
     markers = []
-
-    cap = File_Capture(video_file_path)
+    cap = File_Capture(video_file_path,timestamps=timestamps)
 
     def next_unvisited_idx(frame_idx):
         try:
@@ -66,7 +65,7 @@ def fill_cache(visited_list,video_file_path,q,seek_idx,run,min_marker_perimeter)
             markers[:] = []
 
         try:
-            frame = cap.get_frame()
+            frame = cap.get_frame_nowait()
         except EndofVideoFileError:
             logger.debug("Video File's last frame(s) not accesible")
              #could not read frame

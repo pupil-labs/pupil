@@ -48,6 +48,9 @@ class Frame(object):
     _npy_frame = None
     _gray = None
     _bgr = None
+    #indicate that the frame does not have a native yuv or jpeg buffer
+    yuv_buffer = None
+    jpeg_buffer = None
 
     def __init__(self, timestamp, npy_frame):
         self.timestamp = timestamp
@@ -91,7 +94,7 @@ class Camera_Capture(object):
 
     _is_initialized = False
     _failed_inits = 0
-    
+
     @property
     def settings(self):
         settings = {}
@@ -118,7 +121,7 @@ class Camera_Capture(object):
             return self.stream.listMediaType[self.deviceSettings.indexMediaType].width
         else:
             return self.width
-            
+
     @property
     def actual_height(self):
         if self.uid is not None:
@@ -132,7 +135,7 @@ class Camera_Capture(object):
 
     def __init__(self, uid, size=(640,480), fps=None, timebase=None):
         self.init_capture(uid, size, fps)
-        
+
     def re_init_capture(self, uid, size=(640,480), fps=None):
         if self.sidebar is None:
             self._close_device()
@@ -150,7 +153,7 @@ class Camera_Capture(object):
             # validate parameter UID
             devices = device_list() # TODO: read list only once (initially) to save runtime
             for device in devices:
-                print 
+                print
                 if device['uid'] == uid:
                     break
             if device['uid'] != uid:
@@ -158,7 +161,7 @@ class Camera_Capture(object):
                 logger.error(msg)
                 self.init_capture(None, size, fps, timebase)
                 return
-                
+
             # validate parameter SIZE
             if not len(size) == 2:
                 msg = ERR_INIT_FAIL + "Parameter 'size' must have length 2."
@@ -280,7 +283,7 @@ class Camera_Capture(object):
     @property
     def jpeg_support(self):
         return False
-        
+
     def get_now(self):
         return time()
 

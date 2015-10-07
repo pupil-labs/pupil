@@ -21,11 +21,11 @@ from pyglui.cygl.utils import init as cygl_init
 from pyglui.cygl.utils import draw_points as cygl_draw_points
 from pyglui.cygl.utils import RGBA as cygl_rgba
 from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
-from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture,draw_points_norm
+from pyglui.cygl.utils import Named_Texture
 
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.5'
+assert pyglui_version >= '0.6'
 
 #monitoring
 import psutil
@@ -37,17 +37,11 @@ from OpenGL.GL import GL_LINE_LOOP
 from methods import *
 from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
-from av_writer import JPEG_Writer
-from cv2_writer import CV_Writer
+from av_writer import JPEG_Writer,AV_Writer
 
 # Pupil detectors
 from pupil_detectors import Canny_Detector
-from pupil_detectors import eye_model_3d
-from pupil_detectors.visualizer_cpp import Visualizer
 
-# time
-import time
-import scipy
 
 
 def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
@@ -189,9 +183,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     writer = None
 
     pupil_detector = Canny_Detector(g_pool)
-    focal_length = 879.193
-    eye_model_fitter = eye_model_3d.PyEyeModelFitter(focal_length )
-    visual = Visualizer(focal_length, frame.width, frame.height , "eye model",)
+
 
     # UI callback functions
     def set_scale(new_scale):
@@ -219,8 +211,8 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.image_tex = create_named_texture()
-    update_named_texture(g_pool.image_tex,frame.img)
+    g_pool.image_tex = Named_Texture()
+    g_pool.image_tex.update_from_frame(frame)
     glfwSwapInterval(0)
 
 
@@ -277,7 +269,6 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     fps_graph.update_rate = 5
     fps_graph.label = "%0.0f FPS"
 
-    visual.open_window()
 
     #create a timer to control window update frequency
     window_update_timer = timer(1/60.)
@@ -294,9 +285,9 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
             logger.error("Capture from Camera Failed. Stopping.")
             break
         except EndofVideoFileError:
-            logger.warning("Video File is done. Rewind")
-            cap.seek_to_frame(0)
-            frame = cap.get_frame()
+            logger.warning("Video File is done. Stopping")
+            break
+
 
         #update performace graphs
         t = frame.timestamp
@@ -316,12 +307,12 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
                 record_path = command
                 logger.info("Will save eye video to: %s"%record_path)
                 timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-                if raw_mode and hasattr(frame,'jpeg_buffer') :
+                if raw_mode and frame.jpeg_buffer:
                     video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
                     writer = JPEG_Writer(video_path,cap.frame_rate)
                 else:
-                    video_path = os.path.join(record_path, "eye%s.mkv"%eye_id)
-                    writer = CV_Writer(video_path,float(cap.frame_rate), cap.frame_size)
+                    video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
+                    writer = AV_Writer(video_path,cap.frame_rate)
                 timestamps = []
             else:
                 logger.info("Done recording.")
@@ -336,25 +327,12 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
 
         # pupil ellipse detection
-        result,contours = pupil_detector.detect(frame,user_roi=u_r,visualize=g_pool.display_mode == 'algorithm')
+        result = pupil_detector.detect(frame,user_roi=u_r,visualize=g_pool.display_mode == 'algorithm')
         result['id'] = eye_id
         # stream the result
         g_pool.pupil_queue.put(result)
 
-        for contour in contours: #better way to do this ?
-            contour.shape = (-1, 2 )
-
         # GL drawing
-        #eye sphere fitter adding
-        if result['confidence'] > 0.8:
-            eye_model_fitter.add_pupil_labs_observation(result, contours, (frame.width, frame.height) )
-            if eye_model_fitter.num_observations > 3:
-                eye_model_fitter.update_model() #this calls unproject and initialize
-
-        # show the visualizer
-        visual.update_window(g_pool,contours, eye_model_fitter, frame.width, frame.height)
-        glfwMakeContextCurrent(main_window)
-
         if window_should_update():
             if not g_pool.iconified:
                 glfwMakeContextCurrent(main_window)
@@ -362,14 +340,14 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
                 # switch to work in normalized coordinate space
                 if g_pool.display_mode == 'algorithm':
-                    update_named_texture(g_pool.image_tex,frame.img)
+                    g_pool.image_tex.update_from_ndarray(frame.img)
                 elif g_pool.display_mode in ('camera_image','roi'):
-                    update_named_texture(g_pool.image_tex,frame.gray)
+                    g_pool.image_tex.update_from_ndarray(frame.gray)
                 else:
                     pass
 
                 make_coord_system_norm_based(g_pool.flip)
-                draw_named_texture(g_pool.image_tex)
+                g_pool.image_tex.draw()
                 # switch to work in pixel space
                 make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
 

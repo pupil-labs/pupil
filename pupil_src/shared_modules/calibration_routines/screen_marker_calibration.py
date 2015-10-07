@@ -21,7 +21,7 @@ from circle_detector import get_candidate_ellipses
 import audio
 
 from pyglui import ui
-from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA
+from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA,draw_concentric_circles
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
@@ -32,11 +32,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def draw_marker(pos,r,alpha):
-    black = RGBA(0.,0.,0.,alpha)
-    white = RGBA(1.,1.,1.,alpha)
-    for r,c in zip((r,0.8*r,0.6*r,.4*r,.2*r),(black,white,black,white,black)):
-        draw_points([pos],size=r,color=c,sharpness=0.95)
 
 # window calbacks
 def on_resize(window,w,h):
@@ -94,7 +89,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.candidate_ellipses = []
         self.pos = None
 
-        self.show_edges = 0
         self.dist_threshold = 5
         self.area_threshold = 20
         self.marker_scale = marker_scale
@@ -130,15 +124,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.g_pool.calibration_menu.append(self.menu)
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(self.monitor_names)),labels=self.monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use fullscreen'))
-        self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Pattern scale'))
-
-        submenu = ui.Growing_Menu('Advanced')
-        self.menu.append(submenu)
-        submenu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
-        submenu.append(ui.Switch('show_edges',self,label='show edges'))
-        submenu.append(ui.Slider('area_threshold',self,step=1,min=5,max=50,label='Area threshold'))
-        submenu.append(ui.Slider('dist_threshold',self,step=.5,min=1,max=20,label='Eccetricity threshold'))
-
+        self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
+        self.menu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
 
         self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
@@ -272,7 +259,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                                                             area_threshold=self.area_threshold,
                                                             dist_threshold=self.dist_threshold,
                                                             min_ring_count=4,
-                                                            visual_debug=self.show_edges)
+                                                            visual_debug=False)
 
             if len(self.candidate_ellipses) > 0:
                 self.detected= True
@@ -348,36 +335,25 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         clear_gl_screen()
 
-        # Set Matrix unsing gluOrtho2D to include padding for the marker of radius r
-        #
-        ############################
-        #            r             #
-        # 0,0##################w,h #
-        # #                      # #
-        # #                      # #
-        #r#                      #r#
-        # #                      # #
-        # #                      # #
-        # 0,h##################w,h #
-        #            r             #
-        ############################
-
-
         hdpi_factor = glfwGetFramebufferSize(self._window)[0]/glfwGetWindowSize(self._window)[0]
         r = 110*self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         p_window_size = glfwGetWindowSize(self._window)
-        # compensate for radius of marker
-        gl.glOrtho(-r*.6,p_window_size[0]+r*.6,p_window_size[1]+r*.7,-r*.7 ,-1,1)
+        gl.glOrtho(0,p_window_size[0],p_window_size[1],0 ,-1,1)
         # Switch back to Model View Matrix
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
 
-        screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
+        def map_value(value,in_range=(0,1),out_range=(0,1)):
+            ratio = (out_range[1]-out_range[0])/(in_range[1]-in_range[0])
+            return (value-in_range[0])*ratio+out_range[0]
+
+        pad = .6*r
+        screen_pos = map_value(self.display_pos[0],out_range=(pad,p_window_size[0]-pad)),map_value(self.display_pos[1],out_range=(p_window_size[1]-pad,pad))
         alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
-        draw_marker(screen_pos,r,alpha)
+        draw_concentric_circles(screen_pos,r,6,alpha)
         #some feedback on the detection state
 
         if self.detected and self.on_position:
@@ -408,3 +384,5 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         if self._window:
             self.close_window()
         self.deinit_gui()
+
+

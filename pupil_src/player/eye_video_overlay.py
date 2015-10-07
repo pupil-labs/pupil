@@ -154,7 +154,7 @@ class Eye_Video_Overlay(Plugin):
         #try to load eye video and ts for each eye.
         for video,ts in zip(eye_video_path,eye_timestamps_path):
             try:
-                self.eye_cap.append(File_Capture(glob(video)[0],timestamps=ts))
+                self.eye_cap.append(File_Capture(glob(video)[0],timestamps=np.load(ts)))
             except IndexError,FileCaptureError:
                 pass
             else:

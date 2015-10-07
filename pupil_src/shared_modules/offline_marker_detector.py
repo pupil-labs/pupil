@@ -189,8 +189,8 @@ class Offline_Marker_Detector(Marker_Detector):
         for s,c_map in zip(self.surfaces,results_c_maps):
             heatmap = np.ones((1,1,4),dtype=np.uint8)*125
             heatmap[:,:,:3] = c_map
-            s.metrics_texture = create_named_texture(heatmap.shape)
-            update_named_texture(s.metrics_texture,heatmap)
+            s.metrics_texture = Named_Texture()
+            s.metrics_texture.update_from_ndarray(heatmap)
 
 
     def update(self,frame,events):
@@ -244,13 +244,12 @@ class Offline_Marker_Detector(Marker_Detector):
         forking_enable(0) #for MacOs only
         from marker_detector_cacher import fill_cache
         visited_list = [False if x == False else True for x in self.cache]
-        video_file_path =  os.path.join(self.g_pool.rec_dir,'world.mkv')
-        if not os.path.isfile(video_file_path):
-            video_file_path =  os.path.join(self.g_pool.rec_dir,'world.avi')
+        video_file_path =  self.g_pool.capture.src
+        timestamps = self.g_pool.capture.timestamps
         self.cache_queue = Queue()
         self.cacher_seek_idx = Value('i',0)
         self.cacher_run = Value(c_bool,True)
-        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter))
+        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,timestamps,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter))
         self.cacher.start()
 
     def update_marker_cache(self):

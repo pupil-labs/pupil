@@ -89,7 +89,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     timestamps = np.load(timestamps_path)
 
-    cap = File_Capture(video_path,timestamps=timestamps_path)
+    cap = File_Capture(video_path,timestamps=timestamps)
 
 
     #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
@@ -126,7 +126,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     logger.debug("Will export from frame %s to frame %s. This means I will export %s frames."%(start_frame,start_frame+frames_to_export.value,frames_to_export.value))
 
     #setup of writer
-    writer = AV_Writer(out_file_path)
+    writer = AV_Writer(out_file_path,fps=cap.frame_rate,use_timestamps=True)
 
     cap.seek_to_frame(start_frame)
 

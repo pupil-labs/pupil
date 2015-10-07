@@ -11,9 +11,9 @@
 import os
 import cv2
 import numpy as np
+from file_methods import save_object
 from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 from methods import normalize
-import audio
 
 
 import OpenGL.GL as gl
@@ -77,7 +77,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
         monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
         #primary_monitor = glfwGetPrimaryMonitor()
-        self.info = ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid. Click 'C' to capture a pattern.")
+        self.info = ui.Info_Text("Estimate Camera intrinsics of the world camera. This is only used for 3D marker tracking at the moment. Using an 11x9 asymmetrical circle grid. Click 'C' to capture a pattern.")
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
@@ -109,7 +109,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
     def advance(self,_):
         if self.count ==10:
-            audio.say("Capture 10 calibration patterns.")
+            logger.info("Capture 10 calibration patterns.")
             self.button.status_text = "%i to go" %(self.count)
 
         self.collect_new = True
@@ -174,10 +174,9 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.calculated = True
         rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(np.array(self.obj_points), np.array(self.img_points),self.g_pool.capture.frame_size)
         logger.info("Calibrated Camera, RMS:%s"%rms)
-        np.save(os.path.join(self.g_pool.user_dir,'camera_matrix.npy'), camera_matrix)
-        np.save(os.path.join(self.g_pool.user_dir,"dist_coefs.npy"), dist_coefs)
-        audio.say("Camera calibrated. Calibration saved to user folder")
-        logger.info("Camera calibrated. Calibration saved to user folder")
+        camera_calibration = {'camera_matrix':camera_matrix,'dist_coefs':dist_coefs,'camera_name':self.g_pool.capture.name,'resolution':self.g_pool.capture.frame_size}
+        save_object(camera_calibration,os.path.join(self.g_pool.user_dir,"camera_calibration"))
+        logger.info("Calibration saved to user folder")
 
     def update(self,frame,events):
         if self.collect_new:
@@ -188,8 +187,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
                 self.obj_points.append(self.obj_grid)
                 self.collect_new = False
                 self.count -=1
-                if self.count in range(1,10):
-                    audio.say("%i" %(self.count))
                 self.img_shape = img.shape
                 self.button.status_text = "%i to go"%(self.count)
 
