@@ -137,6 +137,15 @@ namespace singleeyefitter {
         }
 
 
+        template< class Container1, class Container2 >
+        bool isSubset(Container1& c1, Container2& c2){
+            bool is_subset = false;
+            for( auto& c : c2){
+                is_subset |= std::includes(begin(c1), end(c1), begin(c), end(c) );
+            }
+            return is_subset;
+
+        }
 
         /*namespace internal {
             template<class Container, class Function>

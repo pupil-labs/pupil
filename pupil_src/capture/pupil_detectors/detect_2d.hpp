@@ -352,10 +352,12 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
   auto pruning_quick_combine = [&]( std::vector<std::vector<cv::Point>>& contours,  std::set<int>& seed_indices, int max_evals = 1e20, int max_depth = 5  ){
 
+    // describes different combinations of contours
     typedef std::set<int> Path;
 
+    // combinations we wanna test
     std::vector<Path> unknown(seed_indices.size());
-      // init with paths of size 1 == seed indices
+    // init with paths of size 1 == seed indices
     int n = 0;
     std::generate( unknown.begin(), unknown.end(), [&](){ return Path{n++}; }); // fill with increasing values, starting from 0
 
@@ -370,7 +372,8 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
     // contains all the indices for the contours, which altogther fit best
     std::vector<Path> results;
-    // contains bad paths
+    // contains bad paths, we won't test again
+    // even a superset is not tested again, because if a subset is bad, we can't make it better if more contours are adder
     std::vector<Path> prune;
 
     int eval_count = 0;
@@ -382,12 +385,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
       unknown.pop_back();
       if( current_path.size() <= max_depth ){
 
-          bool includes_bad_paths = false;
-          for( Path& bad_path: prune){
-            // check if bad_path is a subset of current_path
-            // for std::include both containers need to be ordered. std::set guarantees this
-            includes_bad_paths |= std::includes(current_path.begin(), current_path.end(), bad_path.begin(), bad_path.end());
-          }
+          bool includes_bad_paths = fun::isSubset( current_path, prune);
 
           if( !includes_bad_paths ){
               int size = 0;
