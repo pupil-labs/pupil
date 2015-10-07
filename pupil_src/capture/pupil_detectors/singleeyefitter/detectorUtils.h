@@ -30,6 +30,11 @@ namespace detector {
 	const float strong_perimeter_ratio_range_min, const float strong_perimeter_ratio_range_max,
 	const float strong_area_ratio_range_min, const float strong_area_ratio_range_max );
 
+
+  //calculates how much ellipse is supported by the contour
+  // return the ratio of area and circumference of the ellipse to the contour
+  std::pair<double,double> ellipse_contour_support_ratio(const Ellipse& ellipse, const Contour_2D& contour);
+
   namespace detail{
 
     template<typename Scalar>

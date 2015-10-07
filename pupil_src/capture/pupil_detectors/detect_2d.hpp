@@ -354,14 +354,10 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   auto ellipse_evaluation = [&]( std::vector<cv::Point>& contour) -> bool {
 
       auto ellipse = cv::fitEllipse(contour);
-      Scalar point_distances = 0.0;
-      EllipseDistCalculator<Scalar> ellipseDistance( toEllipse<Scalar>(ellipse) );
-      for(int i=0; i < contour.size(); i++){
-          auto point = contour.at(i);
-          point_distances += std::pow(std::abs( ellipseDistance( (Scalar)point.x, (Scalar)point.y )), 2);
-      }
-      Scalar fit_variance = point_distances / float(contour.size());
-      //std::cout << "fit var2: " << fit_variance << std::endl;
+      EllipseDistCalculator<Scalar> ellipseDistance( ellipse );
+      double point_distances = fun::sum([&](cv::Point& point){return std::pow(std::abs(ellipseDistance(point.x, point.y)), 2);}, contour );
+
+      double fit_variance = point_distances / double(contour.size());
       return fit_variance <= props.initial_ellipse_fit_treshhold;
 
   };

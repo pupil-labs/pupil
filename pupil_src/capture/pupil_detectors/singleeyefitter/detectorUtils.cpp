@@ -2,6 +2,7 @@
 #include "detectorUtils.h"
 #include "mathHelper.h"
 #include "utils.h"
+#include "fun.h"
 #include "EllipseDistanceApproxCalculator.h"
 
 #include <opencv2/imgproc/imgproc.hpp>
@@ -178,53 +179,25 @@ std::pair<ContourIndices,ContourIndices> detector::divide_strong_and_weak_contou
 			if (is_ellipse(ellipse))
 			{
 				auto e = toEllipse<double>(ellipse);
-				double point_distances = 0.0;
 				EllipseDistCalculator<double> ellipseDistance(e);
+				double point_distances = fun::sum([&](cv::Point& point){return std::pow(std::abs(ellipseDistance(point.x, point.y)), 2);},
+					contour );
 
-				//std::cout << "Ellipse: "  << ellipse.center  << " " << ellipse.size << " "<< ellipse.angle << std::endl;
-				//std::cout << "Points: ";
-				for (int j = 0; j < contour.size(); j++)
-				{
-					auto& point = contour.at(j);
-					//std::cout << point << ", ";
-					point_distances += std::pow(std::abs(ellipseDistance(point.x, point.y)), 2);
-					// std::cout << "d=" << distance << ", " <<std::endl;
-				}
-
-				// std::cout << std::endl;
 				double fit_variance = point_distances / contour.size();
 
-				//std::cout  << "contour index " << i <<std::endl;
-				//std::cout  << "fit var1: " << fit_variance <<std::endl;
 				if (fit_variance < ellipse_fit_treshold)
 				{
-					// how much ellipse is supported by this contour?
-					auto ellipse_contour_support_ratio = [](const Ellipse & ellipse, const Contour_2D& contour)
-					{
-						double ellipse_circumference = ellipse.circumference();
-						double ellipse_area = ellipse.area();
-						std::vector<cv::Point> hull;
-						cv::convexHull(contour, hull);
-						double actual_area = cv::contourArea(hull);
-						double actual_length  = cv::arcLength(contour, false);
-						double area_ratio = actual_area / ellipse_area;
-						double perimeter_ratio = actual_length / ellipse_circumference; //we assume here that the contour lies close to the ellipse boundary
-						return std::pair<double, double>(area_ratio, perimeter_ratio);
-					};
 					auto ratio = ellipse_contour_support_ratio(e, contour);
 					double area_ratio = ratio.first;
 					double perimeter_ratio = ratio.second;
 
 					// same as in original
-					//std::cout << area_ratio << ", " << perimeter_ratio << std::endl;
 					if (strong_perimeter_ratio_range_min <= perimeter_ratio &&
-					        perimeter_ratio <= strong_perimeter_ratio_range_max &&
-					        strong_area_ratio_range_min <= area_ratio &&
-					        area_ratio <= strong_area_ratio_range_max)
+				        strong_perimeter_ratio_range_max > 	perimeter_ratio &&
+				        strong_area_ratio_range_min <= area_ratio &&
+				        strong_area_ratio_range_max >  area_ratio )
 					{
-						//std::cout << "add seed: " << i << std::endl;
 						strong_contours.push_back(index);
-
 						// if (use_debug_image)
 						// {
 						// 	cv::polylines(debug_image, contour, false, mRoyalBlue_color, 4);
@@ -234,7 +207,6 @@ std::pair<ContourIndices,ContourIndices> detector::divide_strong_and_weak_contou
 					else
 					{
 						weak_contours.push_back(index);
-
 						// if (use_debug_image)
 						// {
 						// 	cv::polylines(debug_image, contour, false, mBlue_color, 2);
@@ -250,6 +222,16 @@ std::pair<ContourIndices,ContourIndices> detector::divide_strong_and_weak_contou
 
 }
 
+std::pair<double,double> detector::ellipse_contour_support_ratio(const Ellipse& ellipse, const Contour_2D& contour){
+
+	std::vector<cv::Point> hull;
+	cv::convexHull(contour, hull);
+	double actual_area = cv::contourArea(hull);
+	double actual_length  = cv::arcLength(contour, false);
+	double area_ratio = actual_area / ellipse.area();
+	double perimeter_ratio = actual_length / ellipse.circumference(); //we assume here that the contour lies close to the ellipse boundary
+	return std::pair<double, double>(area_ratio, perimeter_ratio);
+}
 
 
 // tell the compile to generate these explicit templates, otherwise it wouldn't know which one to create at compile time
