@@ -102,7 +102,7 @@ class Canny_Detector(Pupil_Detector):
     def detect(self,frame,user_roi,visualize=False):
 
         def early_exit():
-            return {'norm_pos':(0,0),'diameter':0,'timestamp':frame.timestamp,'confidence':0}, contours
+            return {'norm_pos':(0,0),'diameter':0,'timestamp':frame.timestamp,'confidence':0}
 
         u_r = user_roi
         if self.window_should_open:
@@ -501,13 +501,15 @@ class Canny_Detector(Pupil_Detector):
             lines = np.array([[[2*x,debug_img.shape[0]-int(100*y)],[2*x,debug_img.shape[0]]] for x,y in enumerate(self.confidence_hist)])
             cv2.polylines(debug_img,lines,isClosed=False,color=(255,100,100))
             self.gl_display_in_window(debug_img)
-        # print "rarr"
-        # print contours
-        return pupil_ellipse,contours #also returning contours so visualizer.py can display that data.
+
+        return pupil_ellipse
 
     # Display and interface methods
     def set_final_perimeter_ratio_range(self,val):
         self.final_perimeter_ratio_range[0] = val
+
+    def get_settings(self):
+        return {}
 
     def init_gui(self,sidebar):
         self.menu = ui.Growing_Menu('Pupil Detector')
@@ -526,6 +528,11 @@ class Canny_Detector(Pupil_Detector):
         self.advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
         self.menu.append(self.advanced_controls_menu)
         sidebar.append(self.menu)
+
+
+    def deinit_gui(self):
+        self.g_pool.sidebar.remove(self.menu)
+        self.menu = None
 
     def toggle_window(self):
         if self._window:

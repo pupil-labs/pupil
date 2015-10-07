@@ -28,7 +28,7 @@
 
 #include "mathHelper.h"
 #include "distance.h"
-#include "traits.h"
+#include "common/traits.h"
 
 #include <spii/spii.h>
 #include <spii/term.h>

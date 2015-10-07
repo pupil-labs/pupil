@@ -88,20 +88,18 @@ cdef class Detector_2D:
     cdef dict detect_properties
     cdef bint window_should_open, window_should_close
     cdef object _window
-    cdef object advanced_controls_menu
+    cdef object menu
+    cdef object g_pool
 
     def __cinit__(self):
         self.thisptr = new Detector2D[double]()
     def __init__(self, g_pool = None, settings = {} ):
 
-        # GUI settings
-        self.advanced_controls_menu = None
-
         #debug window
         self._window = None
         self.window_should_open = False
         self.window_should_close = False
-
+        self.g_pool = g_pool
         self.detect_properties = settings
 
         if not self.detect_properties:
@@ -119,7 +117,7 @@ cdef class Detector_2D:
             self.detect_properties["strong_perimeter_ratio_range_max"] = 1.1
             self.detect_properties["strong_area_ratio_range_min"] = 0.6
             self.detect_properties["strong_area_ratio_range_max"] = 1.1
-            self.detect_properties["contour_size_min"] = 60
+            self.detect_properties["contour_size_min"] = 5
             self.detect_properties["ellipse_roundness_ratio"] = 0.3
             self.detect_properties["initial_ellipse_fit_treshhold"] = 1.8
             self.detect_properties["final_perimeter_ratio_range_min"] = 0.6
@@ -203,9 +201,9 @@ cdef class Detector_2D:
         e_img_center = usr_roi.add_vector(pupil_roi.add_vector(e[0]))
         norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
 
-        #pupil_ellipse['norm_pos'] = norm_center
+        pupil_ellipse['norm_pos'] = norm_center
         pupil_ellipse['center'] = e_img_center
-       # pupil_ellipse['timestamp'] = frame.timestamp
+        pupil_ellipse['timestamp'] = frame.timestamp
 
 
         return pupil_ellipse
@@ -214,21 +212,25 @@ cdef class Detector_2D:
 
     def init_gui(self,sidebar):
         self.menu = ui.Growing_Menu('Pupil Detector')
-        self.info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
+        info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
-        self.menu.append(self.info)
+        self.menu.append(info)
         self.menu.append(ui.Slider('intensity_range',self.detect_properties,label='Pupil intensity range',min=0,max=60,step=1))
-        self.menu.append(ui.Slider('pupil_min',self.detect_properties,label='Pupil min',min=1,max=250,step=1))
-        self.menu.append(ui.Slider('pupil_max',self.detect_properties,label='Pupil max',min=50,max=400,step=1))
+        self.menu.append(ui.Slider('pupil_size_min',self.detect_properties,label='Pupil min',min=1,max=250,step=1))
+        self.menu.append(ui.Slider('pupil_size_max',self.detect_properties,label='Pupil max',min=50,max=400,step=1))
 
-        self.advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
-        self.advanced_controls_menu.append(ui.Switch('coarse_detection',self.detect_properties,label='Use coarse detection'))
-        self.advanced_controls_menu.append(ui.Slider('contour_size_min',self.detect_properties,label='Contour min length',min=1,max=200,step=1))
+        advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
+        advanced_controls_menu.append(ui.Switch('coarse_detection',self.detect_properties,label='Use coarse detection'))
+        #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detect_properties,label='Contour min length',min=1,max=200,step=1))
 
-        self.advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
-        self.menu.append(self.advanced_controls_menu)
+        advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
+        self.menu.append(advanced_controls_menu)
         sidebar.append(self.menu)
+
+    def deinit_gui(self):
+        self.g_pool.sidebar.remove(self.menu)
+        self.menu = None
 
     def toggle_window(self):
         if self._window:
@@ -294,3 +296,6 @@ cdef class Detector_2D:
         draw_gl_texture(img,interpolation=False)
         glfw.glfwSwapBuffers(self._window)
         glfw.glfwMakeContextCurrent(active_window)
+
+    def cleanup(self):
+        pass

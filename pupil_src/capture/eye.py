@@ -182,7 +182,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
     writer = None
 
-    pupil_detector = Canny_Detector(g_pool)
+    g_pool.pupil_detector = Canny_Detector(g_pool)
 
 
     # UI callback functions
@@ -195,6 +195,11 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         g_pool.display_mode = val
         g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
 
+    def set_detector(new_detector):
+        g_pool.pupil_detector.cleanup()
+        g_pool.pupil_detector.deinit_gui() #clean gui form old detector
+        g_pool.pupil_detector = new_detector(g_pool)
+        g_pool.pupil_detector.init_gui(g_pool.sidebar)
 
     # Initialize glfw
     glfwInit()
@@ -232,8 +237,11 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
     # let the camera add its GUI
     g_pool.capture.init_gui(g_pool.sidebar)
+
+    general_settings.append(ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Canny_Detector, Detector_2D], label="Detection method") )
+
     # let detector add its GUI
-    pupil_detector.init_gui(g_pool.sidebar)
+    g_pool.pupil_detector.init_gui(g_pool.sidebar)
 
     # Register callbacks main_window
     glfwSetFramebufferSizeCallback(main_window,on_resize)
@@ -327,7 +335,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
 
         # pupil ellipse detection
-        result = pupil_detector.detect(frame,user_roi=u_r,visualize=g_pool.display_mode == 'algorithm')
+        result = g_pool.pupil_detector.detect(frame, u_r, g_pool.display_mode == 'algorithm')
         result['id'] = eye_id
         # stream the result
         g_pool.pupil_queue.put(result)
@@ -397,7 +405,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     session_settings['version'] = g_pool.version
     session_settings.close()
 
-    pupil_detector.cleanup()
+    g_pool.pupil_detector.cleanup()
     g_pool.gui.terminate()
     glfwDestroyWindow(main_window)
     glfwTerminate()

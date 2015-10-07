@@ -282,10 +282,10 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   cv::findContours(edges, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE );
 
   //first we want to filter out the bad stuff, to short ones
-  const auto min_contour_size_pred = [&props]( const Contour_2D& contour){
+  const auto contour_size_min_pred = [&props]( const Contour_2D& contour){
     return contour.size() > props.contour_size_min;
   };
-  contours = singleeyefitter::fun::filter( min_contour_size_pred , contours);
+  contours = singleeyefitter::fun::filter( contour_size_min_pred , contours);
 
   //now we learn things about each contour through looking at the curvature.
   //For this we need to simplyfy the contour so that pt to pt angles become more meaningfull
@@ -299,13 +299,13 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
   // split contours looking at curvature and angle
   Scalar split_angle = 80;
-  int min_contour_size = 4;  //removing stubs makes combinatorial search feasable
+  int split_contour_size_min = 4;  //removing stubs makes combinatorial search feasable
   //split_contours = singleeyefitter::detector::split_rough_contours(approx_contours, split_angle );
   //removing stubs makes combinatorial search feasable
   //  MOVED TO split_contours_optimized
   //split_contours = singleeyefitter::fun::filter( [](std::vector<cv::Point>& v){ return v.size() <= 3;} , split_contours);
 
-  Contours_2D split_contours = singleeyefitter::detector::split_rough_contours_optimized(approx_contours, split_angle , min_contour_size );
+  Contours_2D split_contours = singleeyefitter::detector::split_rough_contours_optimized(approx_contours, split_angle , split_contour_size_min );
 
   if( split_contours.empty()){
     result.confidence = 0.0;
