@@ -35,6 +35,9 @@ namespace detector {
   // return the ratio of area and circumference of the ellipse to the contour
   std::pair<double,double> ellipse_contour_support_ratio(const Ellipse& ellipse, const Contour_2D& contour);
 
+  //calculates how much the contour deviates from the fitted ellipse
+  double contour_ellipse_deviation_variance( Contour_2D& contour);
+
   namespace detail{
 
     template<typename Scalar>

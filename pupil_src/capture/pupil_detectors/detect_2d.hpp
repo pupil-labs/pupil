@@ -350,18 +350,6 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
       return result;
   }
 
-
-  auto ellipse_evaluation = [&]( std::vector<cv::Point>& contour) -> bool {
-
-      auto ellipse = cv::fitEllipse(contour);
-      EllipseDistCalculator<Scalar> ellipseDistance( ellipse );
-      double point_distances = fun::sum([&](cv::Point& point){return std::pow(std::abs(ellipseDistance(point.x, point.y)), 2);}, contour );
-
-      double fit_variance = point_distances / double(contour.size());
-      return fit_variance <= props.initial_ellipse_fit_treshhold;
-
-  };
-
   auto pruning_quick_combine = [&]( std::vector<std::vector<cv::Point>>& contours,  std::set<int>& seed_indices, int max_evals = 1e20, int max_depth = 5  ){
 
     typedef std::set<int> Path;
@@ -374,17 +362,11 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
     std::vector<int> mapping; // contains all indices, starting with seed_indices
     mapping.reserve(contours.size());
     mapping.insert(mapping.begin(), seed_indices.begin(), seed_indices.end());
-   // std::cout << "mapping size: " << mapping.size() << std::endl;
 
     // add indices which are not used to the end of mapping
     for( int i=0; i < contours.size(); i++){
       if( seed_indices.find(i) == seed_indices.end() ){ mapping.push_back(i); }
     }
-
-    // std::cout << "mapping[";
-    // for(int index : mapping ){ std::cout  << index << ", ";};
-    // std::cout << "]";
-    // std::cout << std::endl;
 
     // contains all the indices for the contours, which altogther fit best
     std::vector<Path> results;
@@ -393,13 +375,6 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
     int eval_count = 0;
     while( !unknown.empty() && eval_count <= max_evals ){
-
-       //  for(auto& u : unknown){
-       //    std::cout << "unknown[";
-       //    for(int index : u ){ std::cout  << index << ", ";};
-       //     std::cout << "]";
-       //  }
-       // std::cout << std::endl;
 
       eval_count++;
       //take a path and combine it with others to see if the fit gets better
@@ -419,33 +394,26 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
               for( int j : current_path ){ size += contours.at(mapping.at(j)).size(); };
               std::vector<cv::Point> test_contour;
               test_contour.reserve(size);
-              //std::cout << "reserve contour size:2 " << size << std::endl;
               std::set<int> test_contour_indices;
               //concatenate contours to one contour
               for( int k : current_path ){
                 std::vector<cv::Point>& c = contours.at(mapping.at(k));
-              //std::cout << "singe contour size:2 " << c.size() << std::endl;
 
                test_contour.insert( test_contour.end(), c.begin(), c.end() );
                test_contour_indices.insert(mapping.at(k));
-               //std::cout << "test_contour_indices[";
 
               }
 
-             // std::cout << "evaluate ellipse " << std::endl;
-              //std::cout << "amount contours: " << current_path.size() << std::endl;
-              //std::cout << "contour size:2 " << test_contour.size() << std::endl;
               //we have not tested this and a subset of this was sucessfull before
-              if( ellipse_evaluation( test_contour ) ){
+              double fit_variance = detector::contour_ellipse_deviation_variance( test_contour );
+              if( fit_variance < props.initial_ellipse_fit_treshhold  ){
 
                 //yes this was good, keep as solution
                 results.push_back( test_contour_indices );
-                //std::cout << "add result" << std::endl;
                 //lets explore more by creating paths to each remaining node
                 for(int l= (*current_path.rbegin())+1 ; l < mapping.size(); l++  ){
                     unknown.push_back( current_path );
                     unknown.back().insert(l); // add a new path
-                    //std::cout << "push new" << std::endl;
 
                 }
 
@@ -460,10 +428,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
   std::set<int> seed_indices_set = std::set<int>(seed_indices.begin(),seed_indices.end());
 
-  //for(int index : seed_indices ){ std::cout << "seed index: " << index << std::endl;};
-  //std::cout << "split size: " << split_contours.size() << std::endl;
   std::vector<std::set<int>> solutions = pruning_quick_combine( split_contours, seed_indices_set, 1000, 5);
-  //std::cout << "solutions: " << solutions.size() << std::endl;
 
   //find largest sets which contains all previous ones
   auto filter_subset = [](std::vector<std::set<int>>& sets){

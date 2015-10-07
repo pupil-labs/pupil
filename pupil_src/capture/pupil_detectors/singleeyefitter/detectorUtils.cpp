@@ -180,10 +180,10 @@ std::pair<ContourIndices,ContourIndices> detector::divide_strong_and_weak_contou
 			{
 				auto e = toEllipse<double>(ellipse);
 				EllipseDistCalculator<double> ellipseDistance(e);
-				double point_distances = fun::sum([&](cv::Point& point){return std::pow(std::abs(ellipseDistance(point.x, point.y)), 2);},
-					contour );
+				auto sum_function = [&](cv::Point& point){return std::pow(std::abs(ellipseDistance(point.x, point.y)), 2);};
+				double point_distances = fun::sum( sum_function, contour );
 
-				double fit_variance = point_distances / contour.size();
+				double fit_variance = point_distances / double(contour.size());
 
 				if (fit_variance < ellipse_fit_treshold)
 				{
@@ -193,9 +193,9 @@ std::pair<ContourIndices,ContourIndices> detector::divide_strong_and_weak_contou
 
 					// same as in original
 					if (strong_perimeter_ratio_range_min <= perimeter_ratio &&
-				        strong_perimeter_ratio_range_max > 	perimeter_ratio &&
+				        strong_perimeter_ratio_range_max >=	perimeter_ratio &&
 				        strong_area_ratio_range_min <= area_ratio &&
-				        strong_area_ratio_range_max >  area_ratio )
+				        strong_area_ratio_range_max >=  area_ratio )
 					{
 						strong_contours.push_back(index);
 						// if (use_debug_image)
@@ -232,6 +232,16 @@ std::pair<double,double> detector::ellipse_contour_support_ratio(const Ellipse& 
 	double perimeter_ratio = actual_length / ellipse.circumference(); //we assume here that the contour lies close to the ellipse boundary
 	return std::pair<double, double>(area_ratio, perimeter_ratio);
 }
+
+double detector::contour_ellipse_deviation_variance( Contour_2D& contour)  {
+
+      auto ellipse = cv::fitEllipse(contour);
+      EllipseDistCalculator<double> ellipseDistance( toEllipse<double>(ellipse) );
+      auto sum_function = [&](cv::Point& point){return std::pow(std::abs(ellipseDistance(point.x, point.y)), 2.0);};
+      double point_distances = fun::sum( sum_function, contour );
+      double fit_variance = point_distances / double(contour.size());
+      return fit_variance;
+ };
 
 
 // tell the compile to generate these explicit templates, otherwise it wouldn't know which one to create at compile time

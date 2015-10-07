@@ -24,10 +24,6 @@ namespace singleeyefitter{
     public:
         typedef typename ad_traits<T>::scalar Const;
 
-        EllipseDistCalculator(const cv::RotatedRect& ellipse){
-            EllipseDistCalculator( toEllipse<T>(ellipse) );
-        }
-
         EllipseDistCalculator(const Ellipse2D<T>& ellipse) : r(ellipse.major_radius)
         {
             using std::sin;
