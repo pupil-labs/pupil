@@ -146,7 +146,7 @@ if __name__ == '__main__':
             print "Video File is done."
             break
         # send to detector
-        result_cpp = detector_cpp.detect(frame, u_r,  visualize=False, use_debug_image = False  )
+        result_cpp = detector_cpp.detect(frame, u_r,  visualize=False   )
 
         #save test values
         save_object( result_cpp, test_file_Folder + 'result_frame_cpp{}'.format(frameNumber))
@@ -173,7 +173,7 @@ if __name__ == '__main__':
             print "Video File is done."
             break
         # send to detector
-        result = detector_cpp.detect(frame, u_r,  visualize=False, use_debug_image = False  )
+        result = detector_cpp.detect(frame, u_r,  visualize=False  )
 
 
         #load corresponding test files
@@ -238,9 +238,11 @@ if __name__ == '__main__':
         except EndofVideoFileError:
             print"Video File is done."
             break
+
+        frame.gray # call this here, so the conversion to gray image is not happening during timing of cpp detector
         # send to detector
         start_time = time.time()
-        result_cpp = detector_cpp.detect(frame, u_r, visualize=False, use_debug_image = False )
+        result_cpp = detector_cpp.detect(frame, u_r, visualize=False )
         end_time = time.time()
         cpp_time += (end_time - start_time)
 
@@ -269,6 +271,6 @@ if __name__ == '__main__':
   #compare_test_py()
 
   #write_test_values_cpp()
-  compare_test_cpp()
+  #compare_test_cpp()
 
-  #compare_cpp_and_py()
+  compare_cpp_and_py()
