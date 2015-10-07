@@ -4,6 +4,8 @@
 
 #include <opencv2/core/core.hpp>
 #include "common/types.h"
+#include "EllipseEvaluation.h"
+
 
 namespace singleeyefitter {
 
@@ -15,12 +17,20 @@ namespace detector {
   void calculate_spike_indices_and_max_intenesity( cv::Mat& histogram, int amount_intensity_values, int& lowest_spike_index, int& highest_spike_index, float& max_intensity );
 
   template< typename Scalar >
-  Contours_2D split_contours( const Contours_2D& contours, const Scalar angle );
+  Contours_2D split_rough_contours( const Contours_2D& contours, const Scalar max_angle );
+
+  // splits contours in independent contours, satisfying that all single contours have the same curvature, at least min_contour_size points,
+  // and the maximum angle between three points is max_angle
   template< typename Scalar >
-  Contours_2D split_contours_optimized( const Contours_2D& contours, const Scalar angle , const int min_contour_size);
+  Contours_2D split_rough_contours_optimized( const Contours_2D& contours, const Scalar max_angle , const int min_contour_size);
+
+  // returns the indices to strong and weak contours
+  std::pair<ContourIndices,ContourIndices> divide_strong_and_weak_contours(
+	const Contours_2D& contours, const EllipseEvaluation& is_ellipse, const float ellipse_fit_treshold,
+	const float strong_perimeter_ratio_range_min, const float strong_perimeter_ratio_range_max,
+	const float strong_area_ratio_range_min, const float strong_area_ratio_range_max );
 
   namespace detail{
-
 
     template<typename Scalar>
     std::vector<int> find_kink_and_dir_change(const std::vector<Scalar>& curvature, const Scalar max_angle);

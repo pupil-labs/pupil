@@ -1,7 +1,10 @@
 
 #include "detectorUtils.h"
 #include "mathHelper.h"
+#include "utils.h"
+#include "EllipseDistanceApproxCalculator.h"
 
+#include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
 
 namespace singleeyefitter{
@@ -32,7 +35,7 @@ void detector::calculate_spike_indices_and_max_intenesity(
 }
 
 template< typename Scalar >
-Contours_2D detector::split_contours( const Contours_2D& contours, const Scalar angle ){
+Contours_2D detector::split_rough_contours( const Contours_2D& contours, const Scalar angle ){
 
   Contours_2D split_contours;
 
@@ -114,7 +117,7 @@ Contours_2D detector::detail::split_at_corner_index(const Contour_2D& contour,co
 
 
 template< typename Scalar >
-Contours_2D detector::split_contours_optimized( const Contours_2D& contours, const Scalar max_angle, const int min_contour_size ){
+Contours_2D detector::split_rough_contours_optimized( const Contours_2D& contours, const Scalar max_angle, const int min_contour_size ){
 
   Contours_2D split_contours;
 
@@ -157,12 +160,103 @@ Contours_2D detector::split_contours_optimized( const Contours_2D& contours, con
   return split_contours;
 }
 
+std::pair<ContourIndices,ContourIndices> detector::divide_strong_and_weak_contours(
+	const Contours_2D& contours, const EllipseEvaluation& is_ellipse, const float ellipse_fit_treshold,
+	const float strong_perimeter_ratio_range_min, const float strong_perimeter_ratio_range_max,
+	const float strong_area_ratio_range_min, const float strong_area_ratio_range_max )
+{
+
+	ContourIndices strong_contours, weak_contours;
+
+	int index = 0;
+	for (const auto& contour : contours)
+	{
+		if (contour.size() >= 5) // because fitEllipse needs at least 5 points
+		{
+			cv::RotatedRect ellipse = cv::fitEllipse(contour);
+			//is this ellipse a plausible candidate for a pupil?
+			if (is_ellipse(ellipse))
+			{
+				auto e = toEllipse<double>(ellipse);
+				double point_distances = 0.0;
+				EllipseDistCalculator<double> ellipseDistance(e);
+
+				//std::cout << "Ellipse: "  << ellipse.center  << " " << ellipse.size << " "<< ellipse.angle << std::endl;
+				//std::cout << "Points: ";
+				for (int j = 0; j < contour.size(); j++)
+				{
+					auto& point = contour.at(j);
+					//std::cout << point << ", ";
+					point_distances += std::pow(std::abs(ellipseDistance(point.x, point.y)), 2);
+					// std::cout << "d=" << distance << ", " <<std::endl;
+				}
+
+				// std::cout << std::endl;
+				double fit_variance = point_distances / contour.size();
+
+				//std::cout  << "contour index " << i <<std::endl;
+				//std::cout  << "fit var1: " << fit_variance <<std::endl;
+				if (fit_variance < ellipse_fit_treshold)
+				{
+					// how much ellipse is supported by this contour?
+					auto ellipse_contour_support_ratio = [](const Ellipse & ellipse, const Contour_2D& contour)
+					{
+						double ellipse_circumference = ellipse.circumference();
+						double ellipse_area = ellipse.area();
+						std::vector<cv::Point> hull;
+						cv::convexHull(contour, hull);
+						double actual_area = cv::contourArea(hull);
+						double actual_length  = cv::arcLength(contour, false);
+						double area_ratio = actual_area / ellipse_area;
+						double perimeter_ratio = actual_length / ellipse_circumference; //we assume here that the contour lies close to the ellipse boundary
+						return std::pair<double, double>(area_ratio, perimeter_ratio);
+					};
+					auto ratio = ellipse_contour_support_ratio(e, contour);
+					double area_ratio = ratio.first;
+					double perimeter_ratio = ratio.second;
+
+					// same as in original
+					//std::cout << area_ratio << ", " << perimeter_ratio << std::endl;
+					if (strong_perimeter_ratio_range_min <= perimeter_ratio &&
+					        perimeter_ratio <= strong_perimeter_ratio_range_max &&
+					        strong_area_ratio_range_min <= area_ratio &&
+					        area_ratio <= strong_area_ratio_range_max)
+					{
+						//std::cout << "add seed: " << i << std::endl;
+						strong_contours.push_back(index);
+
+						// if (use_debug_image)
+						// {
+						// 	cv::polylines(debug_image, contour, false, mRoyalBlue_color, 4);
+						// 	cv::ellipse(debug_image, ellipse, mBlue_color);
+						// }
+					}
+					else
+					{
+						weak_contours.push_back(index);
+
+						// if (use_debug_image)
+						// {
+						// 	cv::polylines(debug_image, contour, false, mBlue_color, 2);
+						// 	cv::ellipse(debug_image, ellipse, mBlue_color);
+						// }
+					}
+				}
+			}
+		}
+		index++;
+	}
+	return std::make_pair(std::move(strong_contours), std::move(weak_contours));
+
+}
+
+
 
 // tell the compile to generate these explicit templates, otherwise it wouldn't know which one to create at compile time
-template Contours_2D detector::split_contours( const Contours_2D& contours, const float angle );
-template Contours_2D detector::split_contours( const Contours_2D& contours, const double angle );
-template Contours_2D detector::split_contours_optimized( const Contours_2D& contours, const float angle, const int min_contour_size );
-template Contours_2D detector::split_contours_optimized( const Contours_2D& contours, const double angle, const int min_contour_size );
+template Contours_2D detector::split_rough_contours( const Contours_2D& contours, const float angle );
+template Contours_2D detector::split_rough_contours( const Contours_2D& contours, const double angle );
+template Contours_2D detector::split_rough_contours_optimized( const Contours_2D& contours, const float angle, const int min_contour_size );
+template Contours_2D detector::split_rough_contours_optimized( const Contours_2D& contours, const double angle, const int min_contour_size );
 
 
 

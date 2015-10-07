@@ -300,16 +300,18 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   // split contours looking at curvature and angle
   Scalar split_angle = 80;
   int min_contour_size = 4;  //removing stubs makes combinatorial search feasable
-  //split_contours = singleeyefitter::detector::split_contours(approx_contours, split_angle );
-  Contours_2D split_contours = singleeyefitter::detector::split_contours_optimized(approx_contours, split_angle , min_contour_size );
+  //split_contours = singleeyefitter::detector::split_rough_contours(approx_contours, split_angle );
+  //removing stubs makes combinatorial search feasable
+  //  MOVED TO split_contours_optimized
+  //split_contours = singleeyefitter::fun::filter( [](std::vector<cv::Point>& v){ return v.size() <= 3;} , split_contours);
+
+  Contours_2D split_contours = singleeyefitter::detector::split_rough_contours_optimized(approx_contours, split_angle , min_contour_size );
 
   if( split_contours.empty()){
     result.confidence = 0.0;
     return result;
   }
-  //removing stubs makes combinatorial search feasable
-  //  MOVED TO split_contours_optimized
-  //split_contours = singleeyefitter::fun::filter( [](std::vector<cv::Point>& v){ return v.size() <= 3;} , split_contours);
+
 
   if(use_debug_image ){
     // debug segments
@@ -324,87 +326,21 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
 
   std::sort(split_contours.begin(), split_contours.end(), [](Contour_2D& a, Contour_2D& b){ return a.size() > b.size(); });
 
-  //finding poential candidates for ellipse seeds that describe the pupil.
-  std::vector<int> strong_seed_contours;
-  std::vector<int> weak_seed_contours;
-
 
   const cv::Rect ellipse_center_varianz = cv::Rect(padding,padding, pupil_image.size().width - 2.0 * padding, pupil_image.size().height - 2.0 *padding);
   const EllipseEvaluation is_Ellipse( ellipse_center_varianz,props.ellipse_roundness_ratio,props.pupil_size_min, props.pupil_size_max  );
 
-  for(int i=0; i < split_contours.size(); i++){
+  //finding poential candidates for ellipse seeds that describe the pupil.
+  auto seed_contours  = detector::divide_strong_and_weak_contours(
+      split_contours, is_Ellipse, props.initial_ellipse_fit_treshhold,
+      props.strong_perimeter_ratio_range_min, props.strong_perimeter_ratio_range_max,
+      props.strong_area_ratio_range_min, props.strong_area_ratio_range_max
+      );
 
-    auto contour = split_contours.at(i);
+  std::vector<int> seed_indices = seed_contours.first; // strong contours
 
-    if( contour.size() >= 5 ){ // because fitEllipse needs at least 5 points
-
-      cv::RotatedRect ellipse = cv::fitEllipse(contour);
-      //is this ellipse a plausible candidate for a pupil?
-      if( is_Ellipse(ellipse ) ){
-        auto e = toEllipse<Scalar>(ellipse);
-        Scalar point_distances = 0.0;
-        EllipseDistCalculator<Scalar> ellipseDistance(e);
-
-        //std::cout << "Ellipse: "  << ellipse.center  << " " << ellipse.size << " "<< ellipse.angle << std::endl;
-        //std::cout << "Points: ";
-        for(int j=0; j < contour.size(); j++){
-            auto& point = contour.at(j);
-            //std::cout << point << ", ";
-            point_distances += std::pow( std::abs( ellipseDistance( (Scalar)point.x, (Scalar)point.y )), 2 );
-           // std::cout << "d=" << distance << ", " <<std::endl;
-        }
-       // std::cout << std::endl;
-        Scalar fit_variance = point_distances / contour.size();
-        //std::cout  << "contour index " << i <<std::endl;
-        //std::cout  << "fit var1: " << fit_variance <<std::endl;
-        if( fit_variance < props.initial_ellipse_fit_treshhold ){
-          // how much ellipse is supported by this contour?
-
-          auto ellipse_contour_support_ratio = []( Ellipse& ellipse, std::vector<cv::Point>& contour ){
-
-                Scalar ellipse_circumference = ellipse.circumference();
-                Scalar ellipse_area = ellipse.area();
-                std::vector<cv::Point> hull;
-                cv::convexHull(contour, hull);
-                Scalar actual_area = cv::contourArea(hull);
-                Scalar actual_length  = cv::arcLength(contour, false);
-                Scalar area_ratio = actual_area / ellipse_area;
-                Scalar perimeter_ratio = actual_length / ellipse_circumference; //we assume here that the contour lies close to the ellipse boundary
-                return std::pair<Scalar,Scalar>(area_ratio,perimeter_ratio);
-          };
-
-          auto ratio = ellipse_contour_support_ratio(e, contour);
-          Scalar area_ratio = ratio.first;
-          Scalar perimeter_ratio = ratio.second;
-          // same as in original
-          //std::cout << area_ratio << ", " << perimeter_ratio << std::endl;
-          if( props.strong_perimeter_ratio_range_min <= perimeter_ratio &&
-              perimeter_ratio <= props.strong_perimeter_ratio_range_max &&
-              props.strong_area_ratio_range_min <= area_ratio &&
-              area_ratio <= props.strong_area_ratio_range_max ){
-            //std::cout << "add seed: " << i << std::endl;
-            strong_seed_contours.push_back(i);
-            if(use_debug_image){
-              cv::polylines( debug_image, contour, false, mRoyalBlue_color, 4);
-              cv::ellipse( debug_image, ellipse, mBlue_color);
-            }
-
-          }else{
-            weak_seed_contours.push_back(i);
-            if(use_debug_image){
-              cv::polylines( debug_image, contour, false, mBlue_color, 2);
-              cv::ellipse( debug_image, ellipse, mBlue_color);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  std::vector<int>& seed_indices = strong_seed_contours;
-
-  if( seed_indices.empty() && !weak_seed_contours.empty() ){
-      seed_indices = weak_seed_contours;
+  if( seed_indices.empty() && !seed_contours.second.empty() ){
+      seed_indices = seed_contours.second; // weak contours
   }
 
   // still empty ? --> exits
