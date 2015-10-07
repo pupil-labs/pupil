@@ -40,7 +40,7 @@ from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileErr
 from av_writer import JPEG_Writer,AV_Writer
 
 # Pupil detectors
-from pupil_detectors import Canny_Detector
+from pupil_detectors import Canny_Detector, Detector_2D
 
 
 
