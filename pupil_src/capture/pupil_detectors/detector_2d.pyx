@@ -93,14 +93,14 @@ cdef class Detector_2D:
 
     def __cinit__(self):
         self.thisptr = new Detector2D[double]()
-    def __init__(self, g_pool = None, settings = {} ):
+    def __init__(self, g_pool = None, settings = None ):
 
         #debug window
         self._window = None
         self.window_should_open = False
         self.window_should_close = False
         self.g_pool = g_pool
-        self.detect_properties = settings
+        self.detect_properties = settings or {}
 
         if not self.detect_properties:
             self.detect_properties["coarse_detection"] = True
@@ -128,7 +128,6 @@ cdef class Detector_2D:
 
     def __dealloc__(self):
       del self.thisptr
-
 
     def detect(self, frame, usr_roi, visualize ):
 

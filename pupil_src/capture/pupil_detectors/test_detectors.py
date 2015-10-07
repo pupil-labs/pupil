@@ -247,12 +247,12 @@ if __name__ == '__main__':
         cpp_time += (end_time - start_time)
 
         start_time = time.time()
-        result_py,contours_py = detector_py.detect(frame,user_roi=u_r,visualize=False)
+        result_py = detector_py.detect(frame,user_roi=u_r,visualize=False)
         end_time = time.time()
         py_time += (end_time - start_time)
 
-        for contour in contours_py: #better way to do this ?
-            contour.shape = (-1, 2 )
+        # for contour in contours_py: #better way to do this ?
+        #     contour.shape = (-1, 2 )
 
         if( 'center' in result_cpp.keys() and 'center' in result_py.keys() ):
           if not compareEllipse( result_cpp, result_py):

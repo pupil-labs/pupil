@@ -117,7 +117,7 @@ Result<Scalar> Detector2D<Scalar>::detect( DetectProperties& props, cv::Mat& ima
   const int image_width = image.size().width;
   const int image_height = image.size().height;
 
-  const cv::Mat pupil_image = cv::Mat(image, roi);  // image with usr_roi
+  const cv::Mat pupil_image = cv::Mat(image, roi).clone();  // image with usr_roi, copy the image, since we alter it
   const int w = pupil_image.size().width/2;
   const float coarse_pupil_width = w/2.0f;
   const int padding = int(coarse_pupil_width/4.0f);

@@ -41,7 +41,7 @@ from av_writer import JPEG_Writer,AV_Writer
 
 # Pupil detectors
 from pupil_detectors import Canny_Detector, Detector_2D
-
+pupil_detectors = {Canny_Detector.__name__:Canny_Detector,Detector_2D.__name__:Detector_2D}
 
 
 def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
@@ -182,7 +182,9 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
     writer = None
 
-    g_pool.pupil_detector = Canny_Detector(g_pool)
+    pupil_detector_settings = session_settings.get('pupil_detector_settings',None)
+    last_pupil_detector = pupil_detectors[session_settings.get('last_pupil_detector','Canny_Detector')]
+    g_pool.pupil_detector = last_pupil_detector(g_pool,pupil_detector_settings)
 
 
     # UI callback functions
@@ -238,7 +240,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     # let the camera add its GUI
     g_pool.capture.init_gui(g_pool.sidebar)
 
-    general_settings.append(ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Canny_Detector, Detector_2D], label="Detection method") )
+    general_settings.append(ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Canny_Detector, Detector_2D],labels=['Python 2D detector','C++ 2d detector'], label="Detection method") )
 
     # let detector add its GUI
     g_pool.pupil_detector.init_gui(g_pool.sidebar)
@@ -403,6 +405,8 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     session_settings['window_size'] = glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfwGetWindowPos(main_window)
     session_settings['version'] = g_pool.version
+    session_settings['last_pupil_detector'] = g_pool.pupil_detector.__class__.__name__
+    session_settings['pupil_detector_settings'] = g_pool.pupil_detector.get_settings()
     session_settings.close()
 
     g_pool.pupil_detector.cleanup()

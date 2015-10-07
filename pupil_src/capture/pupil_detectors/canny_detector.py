@@ -46,11 +46,11 @@ logger = logging.getLogger(__name__)
 
 class Canny_Detector(Pupil_Detector):
     """a Pupil detector based on Canny_Edges"""
-    def __init__(self, g_pool):
+    def __init__(self, g_pool,settings=None):
         super(Canny_Detector, self).__init__(g_pool)
 
         # load session persistent settings
-        self.session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_detector') )
+        self.session_settings = settings or {}
 
         # coarse pupil filter params
         self.coarse_detection = self.session_settings.get('coarse_detection',True)
@@ -509,7 +509,13 @@ class Canny_Detector(Pupil_Detector):
         self.final_perimeter_ratio_range[0] = val
 
     def get_settings(self):
-        return {}
+        self.session_settings['intensity_range'] = self.intensity_range
+        self.session_settings['coarse_detection'] = self.coarse_detection
+        self.session_settings['pupil_min'] = self.pupil_min
+        self.session_settings['pupil_max'] = self.pupil_max
+        self.session_settings['min_contour_size'] = self.min_contour_size
+        self.session_settings['final_perimeter_ratio_range'] = self.final_perimeter_ratio_range
+        return self.session_settings
 
     def init_gui(self,sidebar):
         self.menu = ui.Growing_Menu('Pupil Detector')
@@ -600,10 +606,4 @@ class Canny_Detector(Pupil_Detector):
         glfwMakeContextCurrent(active_window)
 
     def cleanup(self):
-        self.session_settings['intensity_range'] = self.intensity_range
-        self.session_settings['coarse_detection'] = self.coarse_detection
-        self.session_settings['pupil_min'] = self.pupil_min
-        self.session_settings['pupil_max'] = self.pupil_max
-        self.session_settings['min_contour_size'] = self.min_contour_size
-        self.session_settings['final_perimeter_ratio_range'] = self.final_perimeter_ratio_range
-        self.session_settings.close()
+        pass
