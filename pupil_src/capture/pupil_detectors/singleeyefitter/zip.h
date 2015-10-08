@@ -8,45 +8,48 @@
 
 namespace singleeyefitter {
 
-    template <typename Tuple>
-    struct iterator_tuple_traits
-    {
-        typedef declval(boost::fusion::for_each((*(Tuple*) 0), deref)) Reference;
-    };
+	template <typename Tuple>
+	struct iterator_tuple_traits {
+		typedef declval(boost::fusion::for_each((*(Tuple*) 0), deref)) Reference;
+	};
 
-    template<typename Tuple>
-    class zip_iterator : boost::iterator_facade<typename zip_iterator<Tuple>, {
-    public:
-        template<typename OtherTuple>
-        zip_iterator(OtherTuple&& iterators, typename std::enable_if<std::is_convertible<OtherTuple, Tuple>::value>::type* = 0)
-            : iterators(std::forward<OtherTuple>(iterators)) {
-        }
+	template<typename Tuple>
+	class zip_iterator : boost::iterator_facade < typename zip_iterator<Tuple>, {
+		public:
+			template<typename OtherTuple>
+			zip_iterator(OtherTuple&& iterators, typename std::enable_if<std::is_convertible<OtherTuple, Tuple>::value>::type* = 0)
+				: iterators(std::forward<OtherTuple>(iterators))
+			{
+			}
 
-        Tuple& operator*() {
-            return iterators;
-        }
-        const Tuple& operator*() const {
-            return iterators;
-        }
-        Tuple& operator*() {
-            return iterators;
-        }
-        const Tuple& operator*() const {
-            return iterators;
-        }
-    private:
-        Tuple iterators;
-    };
+			Tuple& operator*()
+			{
+				return iterators;
+			}
+			const Tuple& operator*() const
+			{
+				return iterators;
+			}
+			Tuple& operator*()
+			{
+				return iterators;
+			}
+			const Tuple& operator*() const
+			{
+				return iterators;
+			}
+		private:
+			Tuple iterators;
+	};
 
 #ifndef BOOST_NO_VARIADIC_TEMPLATES
 
-    template <typename... T>
-    auto zip(const T&... containers) -> boost::iterator_range < boost::zip_iterator<decltype(boost::make_tuple(std::begin(containers)...))> >
-    {
-        auto zip_begin = boost::make_zip_iterator(boost::make_tuple(std::begin(containers)...));
-        auto zip_end = boost::make_zip_iterator(boost::make_tuple(std::end(containers)...));
-        return boost::make_iterator_range(zip_begin, zip_end);
-    }
+	template <typename... T>
+	auto zip(const T& ... containers) -> boost::iterator_range < boost::zip_iterator<decltype(boost::make_tuple(std::begin(containers)...))> > {
+		auto zip_begin = boost::make_zip_iterator(boost::make_tuple(std::begin(containers)...));
+		auto zip_end = boost::make_zip_iterator(boost::make_tuple(std::end(containers)...));
+		return boost::make_iterator_range(zip_begin, zip_end);
+	}
 
 #else
 
