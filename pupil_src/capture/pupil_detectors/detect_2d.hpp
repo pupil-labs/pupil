@@ -86,7 +86,6 @@ std::vector<cv::Point> Detector2D<Scalar>::ellipse_true_support(Ellipse& ellipse
 {
 	Scalar major_radius = ellipse.major_radius;
 	Scalar minor_radius = ellipse.minor_radius;
-	//std::cout << ellipse_circumference << std::endl;
 	std::vector<Scalar> distances;
 	std::vector<cv::Point> support_pixels;
 	EllipseDistCalculator<Scalar> ellipseDistance(ellipse);
@@ -120,6 +119,8 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 	const int padding = int(coarse_pupil_width / 4.0f);
 	const int offset = props.intensity_range;
 	const int spectral_offset = 5;
+
+
 	cv::Mat histogram;
 	int histSize;
 	histSize = 256; //from 0 to 255
@@ -127,6 +128,7 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 	float range[] = { 0, 256 } ; //the upper boundary is exclusive
 	const float* histRange = { range };
 	cv::calcHist(&pupil_image, 1 , 0, cv::Mat(), histogram , 1 , &histSize, &histRange, true, false);
+
 	int lowest_spike_index = 255;
 	int highest_spike_index = 0;
 	float max_intensity = 0;
@@ -149,14 +151,13 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 	}
 
 	//create dark and spectral glint masks
-	cv::Mat binary_img;
-	cv::Mat kernel;
+	cv::Mat binary_img,spec_mask,kernel;
 	cv::inRange(pupil_image, cv::Scalar(0) , cv::Scalar(lowest_spike_index + props.intensity_range), binary_img);    // binary threshold
 	kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, {7, 7});
 	cv::dilate(binary_img, binary_img, kernel, { -1, -1}, 2);
-	cv::Mat spec_mask;
 	cv::inRange(pupil_image, cv::Scalar(0) , cv::Scalar(highest_spike_index - spectral_offset), spec_mask);    // binary threshold
 	cv::erode(spec_mask, spec_mask, kernel);
+
 	kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, {9, 9});
 	//open operation to remove eye lashes
 	cv::morphologyEx(pupil_image, pupil_image, cv::MORPH_OPEN, kernel);
@@ -166,6 +167,7 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 
 	cv::Mat edges;
 	cv::Canny(pupil_image, edges, props.canny_treshold, props.canny_treshold * props.canny_ration, props.canny_aperture);
+
 	//remove edges in areas not dark enough and where the glint is (spectral refelction from IR leds)
 	cv::min(edges, spec_mask, edges);
 	cv::min(edges, binary_img, edges);
@@ -177,20 +179,26 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 		cv::Mat b_channel(overlay.rows, overlay.cols, CV_8UC1);
 		cv::Mat r_channel(overlay.rows, overlay.cols, CV_8UC1);
 		cv::Mat out[] = {b_channel, g_channel, r_channel};
-cv: split(overlay, out);
+
+		cv: split(overlay, out);
+
 		cv::max(g_channel, edges, g_channel);
 		cv::max(b_channel, binary_img, b_channel);
 		cv::min(b_channel, spec_mask, b_channel);
 		cv::merge(out, 3, overlay);
+
 		//draw a frame around the automatic pupil ROI in overlay.
 		auto rect = cv::Rect(0, 0, overlay.size().width, overlay.size().height);
 		cvx::draw_dotted_rect(overlay, rect, mWhite_color);
+
 		//draw a frame around the area we require the pupil center to be.
 		rect = cv::Rect(padding, padding, pupil_roi.width - padding, pupil_roi.height - padding);
 		cvx::draw_dotted_rect(overlay, rect, mWhite_color);
+
 		//draw size ellipses
 		cv::Point center(100, image_height - 100);
 		cv::circle(color_image, center, props.pupil_size_min / 2.0, mRed_color);
+
 		// real pupil size of this frame is calculated further down, so this size is from the last frame
 		cv::circle(color_image, center, mPupil_Size / 2.0, mGreen_color);
 		cv::circle(color_image, center, props.pupil_size_max / 2.0, mRed_color);
@@ -267,9 +275,11 @@ cv: split(overlay, out);
 		cv::approxPolyDP(contour, approx_c, 1.5, false);
 		approx_contours.push_back(std::move(approx_c));
 	});
+
 	// split contours looking at curvature and angle
 	Scalar split_angle = 80;
 	int split_contour_size_min = 4;  //removing stubs makes combinatorial search feasable
+
 	//split_contours = singleeyefitter::detector::split_rough_contours(approx_contours, split_angle );
 	//removing stubs makes combinatorial search feasable
 	//  MOVED TO split_contours_optimized
@@ -296,6 +306,7 @@ cv: split(overlay, out);
 	std::sort(split_contours.begin(), split_contours.end(), [](Contour_2D & a, Contour_2D & b) { return a.size() > b.size(); });
 	const cv::Rect ellipse_center_varianz = cv::Rect(padding, padding, pupil_image.size().width - 2.0 * padding, pupil_image.size().height - 2.0 * padding);
 	const EllipseEvaluation is_Ellipse(ellipse_center_varianz, props.ellipse_roundness_ratio, props.pupil_size_min, props.pupil_size_max);
+
 	//finding poential candidates for ellipse seeds that describe the pupil.
 	auto seed_contours  = detector::divide_strong_and_weak_contours(
 	                          split_contours, is_Ellipse, props.initial_ellipse_fit_treshhold,
@@ -334,6 +345,7 @@ cv: split(overlay, out);
 
 		// contains all the indices for the contours, which altogther fit best
 		std::vector<Path> results;
+
 		// contains bad paths, we won't test again
 		// even a superset is not tested again, because if a subset is bad, we can't make it better if more contours are adder
 		std::vector<Path> prune;
@@ -390,6 +402,7 @@ cv: split(overlay, out);
 	};
 	std::set<int> seed_indices_set = std::set<int>(seed_indices.begin(), seed_indices.end());
 	std::vector<std::set<int>> solutions = pruning_quick_combine(split_contours, seed_indices_set, 1000, 5);
+
 	//find largest sets which contains all previous ones
 	auto filter_subset = [](std::vector<std::set<int>>& sets) {
 		std::vector<std::set<int>> filtered_set;
@@ -408,7 +421,6 @@ cv: split(overlay, out);
 			}
 
 			if (!isSubset) {
-				//std::cout << "is not subset " << std::endl;
 				filtered_set.push_back(current_set);
 			}
 
@@ -417,16 +429,9 @@ cv: split(overlay, out);
 
 		return filtered_set;
 	};
-	//std::cout << "solutions before: " << solutions.size() << std::endl;
-	// for(auto& s : solutions){
-	//   std::cout << "[";
-	//   for(int index : s ){ std::cout  << index << ", ";};
-	//   std::cout << "]";
-	// }
-	// std::cout << std::endl;
+
 	solutions = filter_subset(solutions);
-//  std::cout << "solutions after: " << solutions.size() << std::endl;
-//---------------------------------------------------////
+
 	int index_best_Solution = -1;
 	int enum_index = 0;
 
