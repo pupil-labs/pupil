@@ -139,7 +139,8 @@ cdef class Detector_2D:
 
         cdef unsigned char[:,:,:] img_color
         cdef Mat cv_image_color
-        cdef Mat debug_image
+        cdef Mat cv_debug_image
+        cdef unsigned char[:,:,:] debug_image
 
         if self.window_should_open:
             self.open_window((width,height))
@@ -154,7 +155,9 @@ cdef class Detector_2D:
             cv_image_color = Mat(height, width, CV_8UC3, <void *> &img_color[0,0,0] )
 
         if use_debug_image:
-            debug_image = Mat(height, width, CV_8UC3 )
+            debug_image_array = np.zeros( (height, width, 3 ), dtype = np.uint8 ) #clear image every frame
+            debug_image = debug_image_array
+            cv_debug_image = Mat(height, width, CV_8UC3, <void *> &debug_image[0,0,0] )
 
 
         x = usr_roi.get()[0]
@@ -165,7 +168,7 @@ cdef class Detector_2D:
 
         if self.detect_properties['coarse_detection']:
             scale = 2 # half the integral image. boost up integral
-            # TODO maybe implement our own Inegral so we don't have to half the image
+            # TODO maybe implement our own Integral so we don't have to half the image
             integral = cv2.integral(frame.gray[::scale,::scale])
             coarse_filter_max = self.detect_properties['coarse_filter_max']
             coarse_filter_min = self.detect_properties['coarse_filter_min']
@@ -185,7 +188,12 @@ cdef class Detector_2D:
         pupil_roi.set((p_y, p_x, p_y+p_w, p_x+p_w))
 
 
-        result =  self.thisptr.detect(self.detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , use_debug_image )
+        result =  self.thisptr.detect(self.detect_properties, cv_image, cv_image_color, cv_debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , use_debug_image )
+
+        #display the debug image in the window
+        if self._window:
+            self.gl_display_in_window(debug_image)
+
 
         e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
         pupil_ellipse = {}
@@ -203,7 +211,6 @@ cdef class Detector_2D:
         pupil_ellipse['norm_pos'] = norm_center
         pupil_ellipse['center'] = e_img_center
         pupil_ellipse['timestamp'] = frame.timestamp
-
 
         return pupil_ellipse
 

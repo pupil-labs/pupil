@@ -107,11 +107,6 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 {
 	Result<Scalar> result;
 
-
-	if( use_debug_image ){
-		debug_image = Scalar(0); // clear the debug image first
-	}
-
 	cv::Rect roi = usr_roi & pupil_roi;  // intersect rectangles
 
 	if (roi.area() < 1.0)
