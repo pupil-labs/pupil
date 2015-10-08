@@ -204,50 +204,62 @@ cv: split(overlay, out);
 	//get raw edge pix for later
 	std::vector<cv::Point> raw_edges;
 	cv::findNonZero(edges, raw_edges);
+
 	///////////////////////////////
 	/// Strong Prior Part Begin ///
 	///////////////////////////////
 	//if we had a good ellipse before ,let see if it is still a good first guess:
-	// if( mUse_strong_prior ){
-	//   mUse_strong_prior = false;
-	//   //recalculate center in coords system of ROI views
-	//   Ellipse ellipse = mPrior_ellipse;
-	//   ellipse.center[0] -= ( pupil_roi.x + usr_roi.x  );
-	//   ellipse.center[1] -= ( pupil_roi.y + usr_roi.y  );
-	//   if( !raw_edges.empty() ){
-	//     std::vector<cv::Point> support_pixels;
-	//     double ellipse_circumference = ellipse.circumference();
-	//     support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
-	//     double support_ration = support_pixels.size() / ellipse_circumference;
-	//     if(support_ration >= props.strong_perimeter_ratio_range_min){
-	//       cv::RotatedRect refit_ellipse = cv::fitEllipse(support_pixels);
-	//       if(use_debug_image){
-	//           cv::ellipse(debug_image, toRotatedRect(ellipse), mRoyalBlue_color, 4);
-	//           cv::ellipse(debug_image, refit_ellipse, mRed_color, 1);
-	//       }
-	//       ellipse = toEllipse<double>(refit_ellipse);
-	//       ellipse.center[0] += ( pupil_roi.x + usr_roi.x  );
-	//       ellipse.center[1] += ( pupil_roi.y + usr_roi.y  );
-	//       mPrior_ellipse = ellipse;
-	//       double goodness = std::min(0.1, support_ration);
-	//       result.confidence = goodness;
-	//       result.ellipse = ellipse;
-	//       mPupil_Size = ellipse.major_radius;
-	//       return result;
-	//     }
-	//   }
-	// }
+	if( mUse_strong_prior ){
+
+	  mUse_strong_prior = false;
+	  //recalculate center in coords system of ROI views
+	  Ellipse ellipse = mPrior_ellipse;
+	  ellipse.center[0] -= ( pupil_roi.x + usr_roi.x  );
+	  ellipse.center[1] -= ( pupil_roi.y + usr_roi.y  );
+
+	  if( !raw_edges.empty() ){
+
+	    std::vector<cv::Point> support_pixels;
+	    double ellipse_circumference = ellipse.circumference();
+	    support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
+	    double support_ration = support_pixels.size() / ellipse_circumference;
+
+	    if(support_ration >= props.strong_perimeter_ratio_range_min){
+	      cv::RotatedRect refit_ellipse = cv::fitEllipse(support_pixels);
+
+	      if(use_debug_image){
+	          cv::ellipse(debug_image, toRotatedRect(ellipse), mRoyalBlue_color, 4);
+	          cv::ellipse(debug_image, refit_ellipse, mRed_color, 1);
+	      }
+
+	      ellipse = toEllipse<double>(refit_ellipse);
+	      ellipse.center[0] += ( pupil_roi.x + usr_roi.x  );
+	      ellipse.center[1] += ( pupil_roi.y + usr_roi.y  );
+
+	      mPrior_ellipse = ellipse;
+	  	  mUse_strong_prior = true;
+	      double goodness = std::min(0.1, support_ration);
+	      result.confidence = goodness;
+	      result.ellipse = ellipse;
+	      mPupil_Size = ellipse.major_radius;
+	      return result;
+	    }
+	  }
+	}
 	///////////////////////////////
 	///  Strong Prior Part End  ///
 	///////////////////////////////
+
 	//from edges to contours
 	Contours_2D contours ;
 	cv::findContours(edges, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
+
 	//first we want to filter out the bad stuff, to short ones
 	const auto contour_size_min_pred = [&props](const Contour_2D & contour) {
 		return contour.size() > props.contour_size_min;
 	};
 	contours = singleeyefitter::fun::filter(contour_size_min_pred , contours);
+
 	//now we learn things about each contour through looking at the curvature.
 	//For this we need to simplyfy the contour so that pt to pt angles become more meaningfull
 	Contours_2D approx_contours;
@@ -447,6 +459,7 @@ cv: split(overlay, out);
 				ellipse.center[0] += (pupil_roi.x + usr_roi.x);
 				ellipse.center[1] += (pupil_roi.y + usr_roi.y);
 				mPrior_ellipse = ellipse;
+				mUse_strong_prior = true;
 
 				if (use_debug_image) {
 					cv::ellipse(debug_image, cv_ellipse , mGreen_color);
