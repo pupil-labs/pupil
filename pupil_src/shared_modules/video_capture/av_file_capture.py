@@ -112,7 +112,7 @@ class File_Capture(object):
         # self.av_packet_iterator = self.container.demux(self.selected_streams)
 
         if float(self.video_stream.average_rate)%1 != 0.0:
-            logger.warning('Videofile pts are not evenly spaced, pts to index conversion may fail and be inconsitent.')
+            logger.error('Videofile pts are not evenly spaced, pts to index conversion may fail and be inconsitent.')
 
         #load/generate timestamps.
         if timestamps is None:
@@ -182,18 +182,19 @@ class File_Capture(object):
         return int(idx/self.video_stream.average_rate/self.video_stream.time_base)
 
     def get_frame_nowait(self):
-        while True:
-            frame = self.next_frame.next()
+        frame = None
+        for frame in self.next_frame:
             index = self.pts_to_idx(frame.pts)
             if index == self.target_frame_idx:
                 break
             elif index < self.target_frame_idx:
+                pass
                 # print 'skip frame to seek','now at:',index
-                continue
             else:
                 logger.error('Frame index not consistent.')
                 break
-                # raise FileSeekError()
+        if not frame:
+            raise EndofVideoFileError('Reached end of videofile')
 
         try:
             timestamp = self.timestamps[index]
@@ -264,7 +265,7 @@ if __name__ == '__main__':
     import cv2
     logging.basicConfig(level=logging.DEBUG)
     # file_loc = os.path.expanduser("~/Pupil/pupil_code/recordings/2015_09_30/019/world.mp4")
-    file_loc = os.path.expanduser("~/Desktop/Marker_Tracking_Demo_Recording/world.avi")
+    file_loc = os.path.expanduser("~/Desktop/Marker_Tracking_Demo_Recording/world_viz.mp4")
     # file_loc = os.path.expanduser('~/pupil/recordings/2015_09_30/000/world.mp4')
     # file_loc = os.path.expanduser("~/Desktop/MAH02282.MP4")
     logging.getLogger("libav").setLevel(logging.ERROR)
