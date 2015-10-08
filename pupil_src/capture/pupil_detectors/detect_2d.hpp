@@ -106,8 +106,12 @@ template<typename Scalar>
 Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , cv::Rect& pupil_roi, bool visualize, bool use_debug_image)
 {
 	Result<Scalar> result;
-	//remove this later
-	debug_image = cv::Scalar(0); //clear debug image
+
+
+	if( use_debug_image ){
+		debug_image = Scalar(0); // clear the debug image first
+	}
+
 	cv::Rect roi = usr_roi & pupil_roi;  // intersect rectangles
 
 	if (roi.area() < 1.0)
@@ -509,14 +513,14 @@ cv: split(overlay, out);
 		cv::min(edges, support_mask, new_edges);
 		cv::findNonZero(new_edges, new_contours);
 
-		if (use_debug_image)
+		if (visualize)
 		{
 			cv::Mat overlay = color_image.colRange(usr_roi.x + pupil_roi.x, usr_roi.x + pupil_roi.x + pupil_roi.width).rowRange(usr_roi.y + pupil_roi.y, usr_roi.y + pupil_roi.y + pupil_roi.height);
 			cv::Mat g_channel(overlay.rows, overlay.cols, CV_8UC1);
 			cv::Mat b_channel(overlay.rows, overlay.cols, CV_8UC1);
 			cv::Mat r_channel(overlay.rows, overlay.cols, CV_8UC1);
 			cv::Mat out[] = {b_channel, g_channel, r_channel};
-cv: split(overlay, out);
+			cv: split(overlay, out);
 			cv::threshold(new_edges, new_edges, 0, 255, cv::THRESH_BINARY);
 			cv::max(r_channel, new_edges, r_channel);
 			cv::merge(out, 3, overlay);
