@@ -507,8 +507,9 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 		std::vector<cv::Point> new_contours;
 		cv::min(edges, support_mask, new_edges);
 
-		// add a non zero value to the first pixel
-		new_edges.at<int>(0,0) = 1; // find zero crashes if it doesn't find one. remove if opencv version is 3.0 or above
+		// can't do this here, because final result gets much distorted.
+		// see if it even can crash !!!
+		//new_edges.at<int>(0,0) = 1; // find zero crashes if it doesn't find one. remove if opencv version is 3.0 or above
 		cv::findNonZero(new_edges, new_contours);
 
 		if (visualize)
