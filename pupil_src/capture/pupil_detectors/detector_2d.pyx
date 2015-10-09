@@ -234,4 +234,4 @@ cdef class Detector_2D:
         glfw.glfwMakeContextCurrent(active_window)
 
     def cleanup(self):
-        pass
+        self.close_window() # if we change detectors, be sure debug window is also closed
