@@ -606,4 +606,5 @@ class Canny_Detector(Pupil_Detector):
         glfwMakeContextCurrent(active_window)
 
     def cleanup(self):
-        pass
+        self.close_window() # if we change detectors, be sure debug window is also closed
+
