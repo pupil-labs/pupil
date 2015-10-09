@@ -40,8 +40,8 @@ from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileErr
 from av_writer import JPEG_Writer,AV_Writer
 
 # Pupil detectors
-from pupil_detectors import Canny_Detector, Detector_2D
-pupil_detectors = {Canny_Detector.__name__:Canny_Detector,Detector_2D.__name__:Detector_2D}
+from pupil_detectors import Canny_Detector, Detector_2D, Detector_3D
+pupil_detectors = {Canny_Detector.__name__:Canny_Detector,Detector_2D.__name__:Detector_2D,Detector_3D.__name__:Detector_3D}
 
 
 def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
@@ -240,7 +240,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     # let the camera add its GUI
     g_pool.capture.init_gui(g_pool.sidebar)
 
-    general_settings.append(ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Canny_Detector, Detector_2D],labels=['Python 2D detector','C++ 2d detector'], label="Detection method") )
+    general_settings.append(ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Canny_Detector, Detector_2D, Detector_3D],labels=['Python 2D detector','C++ 2d detector', 'C++ 3d detector'], label="Detection method") )
 
     # let detector add its GUI
     g_pool.pupil_detector.init_gui(g_pool.sidebar)

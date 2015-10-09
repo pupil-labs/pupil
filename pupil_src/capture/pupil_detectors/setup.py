@@ -33,6 +33,16 @@ extensions = [
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-std=c++11",'-w'], #-w hides warnings
         language="c++"),
+     Extension(
+        # configured to Andrew Xia's ubuntu installation location
+        name="detector_3d",
+        sources=['detector_3d.pyx','singleeyefitter/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp'], #I don't need cvx.
+        include_dirs = [ np.get_include() , '/usr/local/include/eigen3'],
+        libraries = ['opencv_highgui','opencv_core','opencv_imgproc'],
+        # library_dirs = ['/usr/local/lib'],
+        extra_link_args=[], #'-WL,-R/usr/local/lib'
+        extra_compile_args=["-std=c++11",'-w'], #-w hides warnings
+        language="c++"),
     Extension(
         # configured to Andrew Xia's ubuntu installation location
         name="eye_model_3d",
