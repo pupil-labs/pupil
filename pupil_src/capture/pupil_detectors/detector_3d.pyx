@@ -8,6 +8,7 @@ from pyglui import ui
 import glfw
 from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
 from pyglui.cygl.utils import draw_gl_texture
+import math
 
 from pupil_detectors.visualizer_3d import Visualizer
 from collections import namedtuple
@@ -90,12 +91,27 @@ cdef class Detector_3D:
         py_result['timestamp'] = frame.timestamp
         return py_result
 
-    cdef Ellipse2D[double] convert_to_3D_Model_Coordinate_System(self,  Ellipse2D[double]& ellipse , image_size ):
+    cdef Ellipse2D[double] convert_to_3D_Model_Coordinate_System(self, py_ellipse , image_size, usr_roi, pupil_roi ):
+
+        cdef Ellipse2D[double] ellipse
+        a,b = py_ellipse['axes']
+        if a > b:
+            major_radius = a/2.0
+            minor_radius = b/2.0
+            angle = -py_ellipse['angle']* math.pi/180
+        else:
+            major_radius = b/2.0
+            minor_radius = a/2.0
+            angle = (py_ellipse['angle']+90)*math.pi/180 # not importing np just for pi constant
 
         # change coord system to centered origin
-        #ellipse.center[0] -= image_size[0]/2.0
-        #ellipse.center[1] = image_size[1]/2.0 - ellipse.center[1]
-        #ellipse.angle = -ellipse.angle #take y axis flip into account
+        x,y = py_ellipse['center']
+        x -= image_size[0]/2.0
+        y = image_size[1]/2.0 - y
+        angle = -angle #take y axis flip into account
+
+        # add cpp ellipse
+        ellipse  =  Ellipse2D[double](x,y, major_radius, minor_radius, angle)
         return ellipse
 
     def detect(self, frame, usr_roi, visualize ):
@@ -149,7 +165,7 @@ cdef class Detector_3D:
         ######### 3D Model Part ############
 
         if py_result['confidence'] > 0.8:
-            self.detector_3d_ptr.add_observation( self.convert_to_3D_Model_Coordinate_System(cpp_result.ellipse, (width, height) )  )
+            self.detector_3d_ptr.add_observation( self.convert_to_3D_Model_Coordinate_System(py_result, (width, height), usr_roi, pupil_roi )  )
             if self.detector_3d_ptr.pupils.size() > 3:
                 pupil_radius = 1
                 eye_z = 20
