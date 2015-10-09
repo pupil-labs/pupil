@@ -316,7 +316,6 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 	// still empty ? --> exits
 	if (seed_indices.empty()) {
 		result.confidence = 0.0;
-		std::cout << "EARLY EXIT!!!!!" << std::endl;
 		return result;
 	}
 

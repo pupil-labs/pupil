@@ -98,7 +98,6 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
 
 
 from collections import namedtuple
-
 PyObservation = namedtuple('Observation' , 'ellipse_center, ellipse_major_radius, ellipse_minor_radius, ellipse_angle,params_theta, params_psi, params_radius, circle_center, circle_normal, circle_radius')
 
 cdef class PyEyeModelFitter:
@@ -224,7 +223,7 @@ cdef class PyEyeModelFitter:
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
             p.circle.radius)
 
-    def get_last_contour(self):
+    def get_last_contours(self):
         if self.thisptr.pupils.size() == 0:
             return []
 
@@ -238,7 +237,7 @@ cdef class PyEyeModelFitter:
 
         return contours
 
-    def get_last_unwrapped_contour(self):
+    def get_last_unwrapped_contours(self):
         if self.thisptr.pupils.size() == 0:
             return []
 

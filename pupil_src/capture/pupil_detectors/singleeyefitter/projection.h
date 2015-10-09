@@ -6,7 +6,7 @@
 #include "Circle.h"
 #include "Conic.h"
 #include "mathHelper.h"
-#include <Conicoid.h>
+#include "Conicoid.h"
 
 namespace singleeyefitter {
 

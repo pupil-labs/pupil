@@ -14,17 +14,17 @@
 #include "singleeyefitter.h"
 #include "EllipseDistanceApproxCalculator.h"
 
-#include <utils.h>
-#include <cvx.h>
-#include <Conic.h>
-#include <Ellipse.h>
-#include <Circle.h>
-#include <Conicoid.h>
-#include <Sphere.h>
-#include <solve.h>
-#include <intersect.h>
-#include <projection.h>
-#include <fun.h>
+#include "utils.h"
+#include "cvx.h"
+#include "Conic.h"
+#include "Ellipse.h"
+#include "Circle.h"
+#include "Conicoid.h"
+#include "Sphere.h"
+#include "solve.h"
+#include "intersect.h"
+#include "projection.h"
+#include "fun.h"
 
 #include "mathHelper.h"
 #include "distance.h"
