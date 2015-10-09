@@ -480,10 +480,11 @@ class Visualizer():
 		return True
 
 	def close_window(self):
-		glfwDestroyWindow(self._window)
-		if self.run_independently:
-			glfwTerminate()
-		self._window = None
+		if self._window:
+			glfwDestroyWindow(self._window)
+			if self.run_independently:
+				glfwTerminate()
+			self._window = None
 
 	############ window callbacks #################
 	def on_resize(self,window,w, h):
