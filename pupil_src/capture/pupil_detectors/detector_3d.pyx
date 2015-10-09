@@ -9,82 +9,14 @@ import glfw
 from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
 from pyglui.cygl.utils import draw_gl_texture
 
-cdef extern from '<opencv2/core/types_c.h>':
-
-  int CV_8UC1
-  int CV_8UC3
-
-
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Mat':
-
-  cdef cppclass Mat :
-      Mat() except +
-      Mat( int height, int width, int type, void* data  ) except+
-      Mat( int height, int width, int type ) except+
-
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Rect':
-
-  cdef cppclass Rect_[T]:
-    Rect_() except +
-    Rect_( T x, T y, T width, T height ) except +
-
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Scalar':
-
-  cdef cppclass Scalar_[T]:
-    Scalar_() except +
-    Scalar_( T x ) except +
-
-cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
-    cdef cppclass Matrix21d "Eigen::Matrix<double,2,1>": # eigen defaults to column major layout
-        Matrix21d() except +
-        double * data()
-        double& operator[](size_t)
-
-
-cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter":
-
-    cdef cppclass Ellipse2D[T]:
-        Ellipse2D()
-        Ellipse2D(T x, T y, T major_radius, T minor_radius, T angle) except +
-        Matrix21d center
-        T major_radius
-        T minor_radius
-        T angle
-
-cdef extern from 'detect_2d.hpp':
-
-  cdef cppclass Result[T]:
-    double confidence
-    Ellipse2D[T] ellipse
-    double timeStamp
-
-  cdef struct DetectProperties:
-    int intensity_range
-    int blur_size
-    float canny_treshold
-    float canny_ration
-    int canny_aperture
-    int pupil_size_max
-    int pupil_size_min
-    float strong_perimeter_ratio_range_min
-    float strong_perimeter_ratio_range_max
-    float strong_area_ratio_range_min
-    float strong_area_ratio_range_max
-    int contour_size_min
-    float ellipse_roundness_ratio
-    float initial_ellipse_fit_treshhold
-    float final_perimeter_ratio_range_min
-    float final_perimeter_ratio_range_max
-
-
-  cdef cppclass Detector2D[T]:
-
-    Detector2D() except +
-    Result detect( DetectProperties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& usr_roi , Rect_[int]& pupil_roi, bint visualize , bint use_debug_image )
+cimport detector
+from detector cimport *
 
 cdef class Detector_3D:
 
-    cdef Detector2D[double]* thisptr
+    cdef Detector2D[double]* detector_2d_ptr
+    cdef EyeModelFitter *detector_3d_ptr
+
     cdef dict detect_properties
     cdef bint window_should_open, window_should_close
     cdef object _window
@@ -92,7 +24,12 @@ cdef class Detector_3D:
     cdef object g_pool
 
     def __cinit__(self):
-        self.thisptr = new Detector2D[double]()
+        self.detector_2d_ptr = new Detector2D[double]()
+        focal_length = 879.193
+        region_band_width = 5
+        region_step_epsilon = 0.5
+        self.detector_3d_ptr = new EyeModelFitter(focal_length, region_band_width, region_step_epsilon)
+
     def __init__(self, g_pool = None, settings = None ):
 
         #debug window
@@ -127,7 +64,29 @@ cdef class Detector_3D:
         return self.detect_properties
 
     def __dealloc__(self):
-      del self.thisptr
+      del self.detector_2d_ptr
+      del self.detector_3d_ptr
+
+    cdef convertToPythonResult(self, Result[double] result, object frame, object usr_roi, object pupil_roi ):
+
+        e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
+        py_result = {}
+        py_result['confidence'] = result.confidence
+        py_result['ellipse'] = e
+        py_result['pos_in_roi'] = e[0]
+        py_result['major'] = max(e[1])
+        py_result['diameter'] = max(e[1])
+        py_result['minor'] = min(e[1])
+        py_result['axes'] = e[1]
+        py_result['angle'] = e[2]
+        e_img_center = usr_roi.add_vector(pupil_roi.add_vector(e[0]))
+        norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
+
+        py_result['norm_pos'] = norm_center
+        py_result['center'] = e_img_center
+        py_result['timestamp'] = frame.timestamp
+        return py_result
+
 
     def detect(self, frame, usr_roi, visualize ):
 
@@ -185,27 +144,20 @@ cdef class Detector_3D:
         pupil_roi.set((p_y, p_x, p_y+p_w, p_x+p_w))
 
 
-        result =  self.thisptr.detect(self.detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , use_debug_image )
+        cpp_result =  self.detector_2d_ptr.detect(self.detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , use_debug_image )
+        py_result = self.convertToPythonResult( cpp_result, frame, usr_roi, pupil_roi )
 
-        e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
-        pupil_ellipse = {}
-        pupil_ellipse['confidence'] = result.confidence
-        pupil_ellipse['ellipse'] = e
-        pupil_ellipse['pos_in_roi'] = e[0]
-        pupil_ellipse['major'] = max(e[1])
-        pupil_ellipse['diameter'] = max(e[1])
-        pupil_ellipse['minor'] = min(e[1])
-        pupil_ellipse['axes'] = e[1]
-        pupil_ellipse['angle'] = e[2]
-        e_img_center = usr_roi.add_vector(pupil_roi.add_vector(e[0]))
-        norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
+        return py_result
 
-        pupil_ellipse['norm_pos'] = norm_center
-        pupil_ellipse['center'] = e_img_center
-        pupil_ellipse['timestamp'] = frame.timestamp
+ # # GL drawing
+   #      #eye sphere fitter adding
+   #      if result['confidence'] > 0.8:
+   #          eye_model_fitter.add_pupil_labs_observation(result, contours, (frame.width, frame.height) )
+   #          if eye_model_fitter.num_observations > 3:
+   #              eye_model_fitter.update_model() #this calls unproject and initialize
 
-        return pupil_ellipse
-
+   #      # show the visualizer
+   #      visual.update_window(g_pool,contours, eye_model_fitter, frame.width, frame.height)
 
 
     def init_gui(self,sidebar):
@@ -297,3 +249,4 @@ cdef class Detector_3D:
 
     def cleanup(self):
         pass
+
