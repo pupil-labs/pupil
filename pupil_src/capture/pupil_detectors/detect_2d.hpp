@@ -60,7 +60,7 @@ class Detector2D {
 
 		Detector2D();
 		Result<Scalar> detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi ,  cv::Rect& pupil_roi, bool visualize, bool use_debug_image);
-		std::vector<cv::Point> ellipse_true_support(Ellipse& ellipse, Scalar ellipse_circumference, std::vector<cv::Point>& raw_edges);
+		std::vector<cv::Point> ellipse_true_support(Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges);
 
 
 	private:
@@ -82,24 +82,18 @@ template <typename Scalar>
 Detector2D<Scalar>::Detector2D(): mUse_strong_prior(false), mPupil_Size(100) {};
 
 template <typename Scalar>
-std::vector<cv::Point> Detector2D<Scalar>::ellipse_true_support(Ellipse& ellipse, Scalar ellipse_circumference, std::vector<cv::Point>& raw_edges)
+std::vector<cv::Point> Detector2D<Scalar>::ellipse_true_support(Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges)
 {
-	Scalar major_radius = ellipse.major_radius;
-	Scalar minor_radius = ellipse.minor_radius;
-	std::vector<Scalar> distances;
 	std::vector<cv::Point> support_pixels;
-	EllipseDistCalculator<Scalar> ellipseDistance(ellipse);
+	EllipseDistCalculator<double> ellipseDistance(ellipse);
 
-	for (auto it = raw_edges.begin(); it != raw_edges.end(); it++) {
-		const cv::Point p = *it;
-		Scalar distance = ellipseDistance((Scalar)p.x, (Scalar)p.y);    // change this one, to approxx ?
-
+	for (auto& p : raw_edges) {
+		double distance = std::abs(ellipseDistance((Scalar)p.x, (Scalar)p.y));
 		if (distance <=  1.3) {
-			support_pixels.push_back(p);
+			support_pixels.emplace_back(p);
 		}
 	}
-
-	return std::move(support_pixels);
+	return support_pixels;
 }
 template<typename Scalar>
 Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , cv::Rect& pupil_roi, bool visualize, bool use_debug_image)
@@ -219,19 +213,19 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 	if( mUse_strong_prior ){
 
 	  mUse_strong_prior = false;
-	  //recalculate center in coords system of ROI views
+	  //recalculate center in coords system of new ROI views! pupil_roi changes every frame
 	  Ellipse ellipse = mPrior_ellipse;
-	  ellipse.center[0] -= ( pupil_roi.x + usr_roi.x  );
-	  ellipse.center[1] -= ( pupil_roi.y + usr_roi.y  );
+	  ellipse.center[0] -= ( pupil_roi.x + usr_roi.x ) ;
+	  ellipse.center[1] -= ( pupil_roi.y + usr_roi.y ) ;
 
 	  if( !raw_edges.empty() ){
 
 	    std::vector<cv::Point> support_pixels;
 	    double ellipse_circumference = ellipse.circumference();
 	    support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
-	    double support_ration = support_pixels.size() / ellipse_circumference;
+	    double support_ratio = support_pixels.size() / ellipse_circumference;
 
-	    if(support_ration >= props.strong_perimeter_ratio_range_min){
+	    if(support_ratio >= props.strong_perimeter_ratio_range_min){
 	      cv::RotatedRect refit_ellipse = cv::fitEllipse(support_pixels);
 
 	      if(use_debug_image){
@@ -245,9 +239,9 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 
 	      mPrior_ellipse = ellipse;
 	  	  mUse_strong_prior = true;
-	      double goodness = std::min(0.1, support_ration);
+	      double goodness = std::min(0.1, support_ratio);
 	      result.confidence = goodness;
-	      result.ellipse = ellipse;
+	      result.ellipse = toEllipse<double>(refit_ellipse);
 	      mPupil_Size = ellipse.major_radius;
 	      return result;
 	    }

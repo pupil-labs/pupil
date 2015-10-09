@@ -273,4 +273,4 @@ if __name__ == '__main__':
   #write_test_values_cpp()
   #compare_test_cpp()
 
-  compare_cpp_and_py()
+  compare_cpp_and_py()  #cpp and py values will slightly differ, because of the different implementation of the ellipse_distance function

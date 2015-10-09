@@ -247,7 +247,6 @@ class Canny_Detector(Pupil_Detector):
                     if self._window:
                         cv2.ellipse(debug_img,e,(255,100,100),thickness=4)
                         cv2.ellipse(debug_img,refit_e,(0,0,255),thickness=1)
-                        cv2.imshow("debug", debug_img)
                     e = refit_e
                     self.strong_prior = u_r.add_vector(p_r.add_vector(e[0])),e[1],e[2]
                     goodness = min(1.,support_ratio)
