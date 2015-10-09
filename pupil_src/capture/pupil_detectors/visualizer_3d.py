@@ -59,11 +59,11 @@ for i in range(0,int(circle_res+1)):
 	circle_xy.append([np.cos(temp),np.sin(temp)])
 
 class Visualizer():
-	def __init__(self,focal_length, image_width, image_height,name = "unnamed", run_independently = False):
+	def __init__(self,focal_length, name = "Debug Visualizer", run_independently = False):
 
 		self.focal_length = focal_length
-		self.image_width = image_width
-		self.image_height = image_height
+		self.image_width = 640 # right values are assigned in update
+		self.image_height = 480
 		# transformation matrices
 		self.anthromorphic_matrix = self.get_anthropomorphic_matrix()
 		self.adjusted_pixel_space_matrix = self.get_adjusted_pixel_space_matrix(1)
@@ -72,10 +72,10 @@ class Visualizer():
 		self.window_size = (640,480)
 		self._window = None
 		self.input = None
-		self.trackball = None
 		self.run_independently = run_independently
 
-		self.window_should_close = False
+		camera_fov = math.degrees(2.0 * math.atan( self.window_size[0] / (2.0 * self.focal_length)))
+		self.trackball = Trackball(camera_fov)
 
 	############## MATRIX FUNCTIONS ##############################
 
@@ -351,13 +351,10 @@ class Visualizer():
 		glViewport(0,0, self.window_size[0], self.window_size[1])
 
 
-	def draw_eye_model_fitter_text(self, eye_model_fitter):
-		if eye_model_fitter.num_observations == 0:
-			return
+	def draw_eye_model_fitter_text(self, eye, pupil ):
 
-		pupil = eye_model_fitter.get_observation(0) #0 is temporary, should be -1 but can't do that in cpp
-		status = 'Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\nGaze vector (currently WRONG): Theta: %.3f Psi %.3f\nPupil Diameter: %.2fmm'%(eye_model_fitter.eye[0][0],
-			eye_model_fitter.eye[0][1],eye_model_fitter.eye[0][2],
+		status = 'Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\nGaze vector (currently WRONG): Theta: %.3f Psi %.3f\nPupil Diameter: %.2fmm'%(eye[0][0],
+			eye[0][1],eye[0][2],
 			pupil.params_theta, pupil.params_psi, pupil.params_radius*2)
 		self.glfont.draw_multi_line_text(5,20,status)
 		self.glfont.draw_multi_line_text(440,20,'View: %.2f %.2f %.2f'%(self.trackball.distance[0],self.trackball.distance[1],self.trackball.distance[2]))
@@ -398,9 +395,6 @@ class Visualizer():
 		if not self._window:
 			self.input = {'button':None, 'mouse':(0,0)}
 
-			camera_fov = math.degrees(2.0 * math.atan( self.image_width / (2.0 * self.focal_length)))
-			self.trackball = Trackball(camera_fov)
-
 			# get glfw started
 			if self.run_independently:
 				glfwInit()
@@ -436,10 +430,8 @@ class Visualizer():
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool, projected_contours, eye_model_fitter, image_width = None , image_height = None ):
+	def update_window(self, g_pool, image_width, image_height,  eye, pupil_observations, last_contours = None, last_unwrapped_contours = None  ):
 
-		if self.window_should_close:
-			self.close_window()
 		if self._window != None:
 			glfwMakeContextCurrent(self._window)
 
@@ -450,22 +442,22 @@ class Visualizer():
 		self.clear_gl_screen()
 		self.trackball.push()
 
-		eye_position = eye_model_fitter.eye[0]
-		eye_radius = eye_model_fitter.eye[1]
-
+		eye_position = eye[0]
+		eye_radius = eye[1]
 		# 1. in anthromorphic space, draw pupil sphere and circles on it
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 
 
 		self.draw_sphere(eye_position,eye_radius)
-		for pupil in eye_model_fitter.get_last_observations(5):
+		pupil = None
+		for pupil in pupil_observations:
 			self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal)
 
 		self.draw_coordinate_system(4)
 
 		#draw unprojecte contours
-		contours =  eye_model_fitter.get_last_contour()
-		self.draw_contours(contours)
+		if last_contours:
+			self.draw_contours(last_contours)
 		#self.draw_contours_on_screen(projected_contours)
 
 		# 1b. draw frustum in pixel scale, but retaining origin
@@ -474,28 +466,24 @@ class Visualizer():
 
 		# 2. in pixel space draw video frame
 		glLoadMatrixf(self.get_image_space_matrix(30))
-
-		draw_named_texture(g_pool.image_tex,quad=((0,480),(640,480),(640,0),(0,0)),alpha=0.5)
+#		draw_named_texture(g_pool.image_tex,quad=((0,480),(640,480),(640,0),(0,0)),alpha=0.5)
 
 
 		self.trackball.pop()
-		unwrapped_contours =  eye_model_fitter.get_last_unwrapped_contour()
-		self.draw_unwrapped_contours_on_screen(unwrapped_contours)
+		if last_unwrapped_contours:
+			self.draw_unwrapped_contours_on_screen(last_unwrapped_contours)
 
-		self.draw_eye_model_fitter_text(eye_model_fitter)
+		self.draw_eye_model_fitter_text(eye, pupil)
 
 		glfwSwapBuffers(self._window)
 		glfwPollEvents()
 		return True
 
 	def close_window(self):
-		if self.window_should_close == True:
-			glfwDestroyWindow(self._window)
-			if self.run_independently:
-				glfwTerminate()
-			self._window = None
-			self.window_should_close = False
-			logger.debug("Process done")
+		glfwDestroyWindow(self._window)
+		if self.run_independently:
+			glfwTerminate()
+		self._window = None
 
 	############ window callbacks #################
 	def on_resize(self,window,w, h):
@@ -534,7 +522,7 @@ class Visualizer():
 		self.trackball.zoom_to(y)
 
 	def on_close(self,window=None):
-		self.window_should_close = True
+		self.close_window()
 
 	def on_iconify(self,window,x,y): pass
 	def on_key(self,window, key, scancode, action, mods): pass

@@ -9,6 +9,10 @@ import glfw
 from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
 from pyglui.cygl.utils import draw_gl_texture
 
+from pupil_detectors.visualizer_3d import Visualizer
+from collections import namedtuple
+PyObservation = namedtuple('Observation' , 'ellipse_center, ellipse_major_radius, ellipse_minor_radius, ellipse_angle,params_theta, params_psi, params_radius, circle_center, circle_normal, circle_radius')
+
 cimport detector
 from detector cimport *
 
@@ -18,10 +22,10 @@ cdef class Detector_3D:
     cdef EyeModelFitter *detector_3d_ptr
 
     cdef dict detect_properties
-    cdef bint window_should_open, window_should_close
-    cdef object _window
     cdef object menu
     cdef object g_pool
+    cdef object debug_visualizer_3d
+
 
     def __cinit__(self):
         self.detector_2d_ptr = new Detector2D[double]()
@@ -33,11 +37,10 @@ cdef class Detector_3D:
     def __init__(self, g_pool = None, settings = None ):
 
         #debug window
-        self._window = None
-        self.window_should_open = False
-        self.window_should_close = False
+        self.debug_visualizer_3d = Visualizer(879.193)
         self.g_pool = g_pool
         self.detect_properties = settings or {}
+
 
         if not self.detect_properties:
             self.detect_properties["coarse_detection"] = True
@@ -87,6 +90,13 @@ cdef class Detector_3D:
         py_result['timestamp'] = frame.timestamp
         return py_result
 
+    cdef Ellipse2D[double] convert_to_3D_Model_Coordinate_System(self,  Ellipse2D[double]& ellipse , image_size ):
+
+        # change coord system to centered origin
+        #ellipse.center[0] -= image_size[0]/2.0
+        #ellipse.center[1] = image_size[1]/2.0 - ellipse.center[1]
+        #ellipse.angle = -ellipse.angle #take y axis flip into account
+        return ellipse
 
     def detect(self, frame, usr_roi, visualize ):
 
@@ -100,20 +110,9 @@ cdef class Detector_3D:
         cdef Mat cv_image_color
         cdef Mat debug_image
 
-        if self.window_should_open:
-            self.open_window((width,height))
-        if self.window_should_close:
-            self.close_window()
-
-
-        use_debug_image = self._window != None
-
         if visualize:
             img_color = frame.img
             cv_image_color = Mat(height, width, CV_8UC3, <void *> &img_color[0,0,0] )
-
-        if use_debug_image:
-            debug_image = Mat(height, width, CV_8UC3 )
 
 
         x = usr_roi.get()[0]
@@ -139,25 +138,40 @@ cdef class Detector_3D:
             p_w = width
             p_h = height
 
-
         pupil_roi = Roi( (0,0))
         pupil_roi.set((p_y, p_x, p_y+p_w, p_x+p_w))
 
 
-        cpp_result =  self.detector_2d_ptr.detect(self.detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , use_debug_image )
+        cpp_result =  self.detector_2d_ptr.detect(self.detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , False ) #we don't use debug image in 3d model
         py_result = self.convertToPythonResult( cpp_result, frame, usr_roi, pupil_roi )
+
+
+        ######### 3D Model Part ############
+
+        if py_result['confidence'] > 0.8:
+            self.detector_3d_ptr.add_observation( self.convert_to_3D_Model_Coordinate_System(cpp_result.ellipse, (width, height) )  )
+            if self.detector_3d_ptr.pupils.size() > 3:
+                pupil_radius = 1
+                eye_z = 20
+                self.detector_3d_ptr.unproject_observations(pupil_radius, eye_z)
+                self.detector_3d_ptr.initialise_model()
+                #now we have an updated eye model
+                #use it to unproject contours
+                #self.detector_3d_ptr.unproject_contours()
+                #calculate uv coords of unprojected contours
+                #self.detector_3d_ptr.unwrap_contours()
+
+        if self.debug_visualizer_3d._window:
+            eye = self.detector_3d_ptr.eye
+            py_eye = ((eye.center[0],eye.center[1],eye.center[2]),eye.radius)
+            self.debug_visualizer_3d.update_window( self.g_pool, width, height, py_eye, self.get_last_observations(5) )
+
 
         return py_result
 
- # # GL drawing
-   #      #eye sphere fitter adding
-   #      if result['confidence'] > 0.8:
-   #          eye_model_fitter.add_pupil_labs_observation(result, contours, (frame.width, frame.height) )
-   #          if eye_model_fitter.num_observations > 3:
-   #              eye_model_fitter.update_model() #this calls unproject and initialize
 
-   #      # show the visualizer
-   #      visual.update_window(g_pool,contours, eye_model_fitter, frame.width, frame.height)
+    def cleanup(self):
+        self.debug_visualizer_3d.close_window() # if we change detectors, be sure debug window is also closed
 
 
     def init_gui(self,sidebar):
@@ -183,70 +197,72 @@ cdef class Detector_3D:
         self.menu = None
 
     def toggle_window(self):
-        if self._window:
-            self.window_should_close = True
+        if not self.debug_visualizer_3d._window:
+            self.debug_visualizer_3d.open_window()
         else:
-            self.window_should_open = True
+            self.debug_visualizer_3d.close_window()
 
-    def open_window(self,size):
-        if not self._window:
-            if 0: #we are not fullscreening
-                monitor = glfw.glfwGetMonitors()[self.monitor_idx]
-                mode = glfw.glfwGetVideoMode(monitor)
-                width, height= mode[0],mode[1]
-            else:
-                monitor = None
-                width, height = size
 
-            active_window = glfw.glfwGetCurrentContext()
-            self._window = glfw.glfwCreateWindow(width, height, "Pupil Detector Debug Window", monitor=monitor, share=active_window)
-            if not 0:
-                glfw.glfwSetWindowPos(self._window,200,0)
+    ### Debug Helper Start ###
 
-            self.on_resize(self._window,width, height)
+    def get_observation(self,index):
+        cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils[index]
+        # returning (Ellipse, Params, Cicle). Ellipse = ([x,y],major,minor,angle). Params = (theta,psi,r)
+        # Circle = (center[x,y,z], normal[x,y,z], radius)
+        return PyObservation( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
+            p.params.theta,p.params.psi,p.params.radius,
+            (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
+            (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
+            p.circle.radius)
 
-            #Register callbacks
-            glfw.glfwSetWindowSizeCallback(self._window,self.on_resize)
-            # glfwSetKeyCallback(self._window,self.on_key)
-            glfw.glfwSetWindowCloseCallback(self._window,self.on_close)
+    def get_last_observations(self,count=1):
+        cdef EyeModelFitter.Pupil p
+        count = min(self.detector_3d_ptr.pupils.size() , count )
+        for i in xrange(self.detector_3d_ptr.pupils.size()-count,self.detector_3d_ptr.pupils.size()):
+            p = self.detector_3d_ptr.pupils[i]
+            yield  PyObservation( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
+            p.params.theta,p.params.psi,p.params.radius,
+            (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
+            (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
+            p.circle.radius)
 
-            # gl_state settings
-            glfw.glfwMakeContextCurrent(self._window)
-            basic_gl_setup()
+    def get_last_contours(self):
+        if self.detector_3d_ptr.pupils.size() == 0:
+            return []
 
-            # refresh speed settings
-            glfw.glfwSwapInterval(0)
+        cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
+        contours = []
+        for contour in p.unprojected_contours:
+            c = []
+            for point in contour:
+                c.append([point[0],point[1],point[2]])
+            contours.append(c)
 
-            glfw.glfwMakeContextCurrent(active_window)
+        return contours
 
-            self.window_should_open = False
+    def get_last_unwrapped_contours(self):
+        if self.detector_3d_ptr.pupils.size() == 0:
+            return []
 
-    # window calbacks
-    def on_resize(self,window,w,h):
-        active_window = glfw.glfwGetCurrentContext()
-        glfw.glfwMakeContextCurrent(window)
-        adjust_gl_view(w,h)
-        glfw.glfwMakeContextCurrent(active_window)
+        cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
+        contours = []
+        for contour in p.unwrapped_contours:
+            c = []
+            for point in contour:
+                c.append([point[0],point[1]])
+            contours.append(c)
 
-    def on_close(self,window):
-        self.window_should_close = True
+        return contours
 
-    def close_window(self):
-        if self._window:
-            glfw.glfwDestroyWindow(self._window)
-            self._window = None
-            self.window_should_close = False
+    def get_all_pupil_observations(self):
+        cdef EyeModelFitter.Pupil p
+        for p in self.detector_3d_ptr.pupils:
+            yield PyObservation( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
+            p.params.theta,p.params.psi,p.params.radius,
+            (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
+            (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
+            p.circle.radius)
 
-    def gl_display_in_window(self,img):
-        active_window = glfw.glfwGetCurrentContext()
-        glfw.glfwMakeContextCurrent(self._window)
-        clear_gl_screen()
-        # gl stuff that will show on your plugin window goes here
-        make_coord_system_norm_based()
-        draw_gl_texture(img,interpolation=False)
-        glfw.glfwSwapBuffers(self._window)
-        glfw.glfwMakeContextCurrent(active_window)
 
-    def cleanup(self):
-        pass
+    ### Debug Helper End ###
 
