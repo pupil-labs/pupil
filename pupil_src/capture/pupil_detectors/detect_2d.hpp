@@ -239,7 +239,7 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 
 	      mPrior_ellipse = ellipse;
 	  	  mUse_strong_prior = true;
-	      double goodness = std::min(0.1, support_ratio);
+	      double goodness = std::min(1.0, support_ratio);
 	      result.confidence = goodness;
 	      result.ellipse = toEllipse<double>(refit_ellipse);
 	      mPupil_Size = ellipse.major_radius;
