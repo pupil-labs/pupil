@@ -165,6 +165,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.window_should_close = True
 
     def close_window(self):
+        self.window_should_close=False
         if self._window:
             glfwDestroyWindow(self._window)
             self._window = None
@@ -197,7 +198,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
         if self.window_should_close:
             self.close_window()
-
 
     def gl_display(self):
 
