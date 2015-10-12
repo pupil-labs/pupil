@@ -17,40 +17,6 @@
 #include "singleeyefitter/EllipseDistanceApproxCalculator.h"
 #include "singleeyefitter/EllipseEvaluation.h"
 
-
-struct Detector_Result {
-	typedef singleeyefitter::Ellipse2D<double> Ellipse;
-	double confidence =  0.0 ;
-	Ellipse ellipse;
-	Contours_2D final_contours;
-	Contours_2D split_contours;
-	std::vector<cv::Point> raw_edges;
-	double timeStamp = 0.0;
-};
-
-// use a struct for all properties and pass it to detect method every time we call it.
-// Thus we don't need to keep track if GUI is updated and cython handles conversion from Dict to struct
-struct DetectProperties {
-	int intensity_range;
-	int blur_size;
-	float canny_treshold;
-	float canny_ration;
-	int canny_aperture;
-	int pupil_size_max;
-	int pupil_size_min;
-	float strong_perimeter_ratio_range_min;
-	float strong_perimeter_ratio_range_max;
-	float strong_area_ratio_range_min;
-	float strong_area_ratio_range_max;
-	int contour_size_min;
-	float ellipse_roundness_ratio;
-	float initial_ellipse_fit_treshhold;
-	float final_perimeter_ratio_range_min;
-	float final_perimeter_ratio_range_max;
-
-};
-
-
 class Detector2D {
 
 	private:
@@ -60,7 +26,7 @@ class Detector2D {
 	public:
 
 		Detector2D();
-		std::shared_ptr<Detector_Result> detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi ,  cv::Rect& pupil_roi, bool visualize, bool use_debug_image);
+		std::shared_ptr<Detector_2D_Results> detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi ,  cv::Rect& pupil_roi, bool visualize, bool use_debug_image);
 		std::vector<cv::Point> ellipse_true_support(Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges);
 
 
@@ -94,9 +60,9 @@ std::vector<cv::Point> Detector2D::ellipse_true_support(Ellipse& ellipse, double
 	}
 	return support_pixels;
 }
-std::shared_ptr<Detector_Result> Detector2D::detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , cv::Rect& pupil_roi, bool visualize, bool use_debug_image)
+std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , cv::Rect& pupil_roi, bool visualize, bool use_debug_image)
 {
-	std::shared_ptr<Detector_Result> result = std::make_shared<Detector_Result>();
+	std::shared_ptr<Detector_2D_Results> result = std::make_shared<Detector_2D_Results>();
 
 	cv::Rect roi = usr_roi & pupil_roi;  // intersect rectangles
 

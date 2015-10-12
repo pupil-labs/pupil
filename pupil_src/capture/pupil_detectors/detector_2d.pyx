@@ -125,7 +125,7 @@ cdef class Detector_2D:
         if self._window:
             self.gl_display_in_window(debug_image)
 
-        cdef Detector_Result result = deref(result_ptr)
+        cdef Detector_2D_Results result = deref(result_ptr)
         e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
         pupil_ellipse = {}
         pupil_ellipse['confidence'] = result.confidence

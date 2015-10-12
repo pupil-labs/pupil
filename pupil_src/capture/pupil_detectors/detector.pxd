@@ -71,7 +71,7 @@ ctypedef vector[vector[Point_[int]]] Contours_2D
 
 cdef extern from 'detect_2d.hpp':
 
-  cdef cppclass Detector_Result:
+  cdef cppclass Detector_2D_Results:
     double confidence
     Ellipse2D[double] ellipse
     Contours_2D final_contours
@@ -79,7 +79,7 @@ cdef extern from 'detect_2d.hpp':
     Mat raw_edges
     double timeStamp
 
-  cdef struct DetectProperties:
+  cdef struct Detector_2D_Properties:
     int intensity_range
     int blur_size
     float canny_treshold
@@ -101,7 +101,7 @@ cdef extern from 'detect_2d.hpp':
   cdef cppclass Detector2D:
 
     Detector2D() except +
-    shared_ptr[Detector_Result] detect( DetectProperties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& usr_roi , Rect_[int]& pupil_roi, bint visualize , bint use_debug_image )
+    shared_ptr[Detector_2D_Results] detect( Detector_2D_Properties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& usr_roi , Rect_[int]& pupil_roi, bint visualize , bint use_debug_image )
 
 
 cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter":

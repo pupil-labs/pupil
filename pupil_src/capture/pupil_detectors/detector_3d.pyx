@@ -73,7 +73,7 @@ cdef class Detector_3D:
       del self.detector_2d_ptr
       del self.detector_3d_ptr
 
-    cdef convertToPythonResult(self, Detector_Result& result, object frame, object usr_roi, object pupil_roi ):
+    cdef convertToPythonResult(self, Detector_2D_Results& result, object frame, object usr_roi, object pupil_roi ):
 
         e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
         py_result = {}
@@ -161,7 +161,7 @@ cdef class Detector_3D:
 
 
         cpp_result_ptr =  self.detector_2d_ptr.detect(self.detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , False ) #we don't use debug image in 3d model
-        cdef Detector_Result cpp_result = deref(cpp_result_ptr)
+        cdef Detector_2D_Results cpp_result = deref(cpp_result_ptr)
 
         py_result = self.convertToPythonResult( cpp_result, frame, usr_roi, pupil_roi )
 
