@@ -73,7 +73,7 @@ cdef class Detector_3D:
       del self.detector_2d_ptr
       del self.detector_3d_ptr
 
-    cdef convertToPythonResult(self, Detector_2D_Results& result, object frame, object usr_roi, object pupil_roi ):
+    cdef convertToPythonResult(self, Detector_2D_Results& result, object frame, object roi ):
 
         e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
         py_result = {}
@@ -85,7 +85,7 @@ cdef class Detector_3D:
         py_result['minor'] = min(e[1])
         py_result['axes'] = e[1]
         py_result['angle'] = e[2]
-        e_img_center = usr_roi.add_vector(pupil_roi.add_vector(e[0]))
+        e_img_center = roi.add_vector(e[0])
         norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
 
         py_result['norm_pos'] = norm_center
@@ -93,36 +93,15 @@ cdef class Detector_3D:
         py_result['timestamp'] = frame.timestamp
         return py_result
 
-    cdef Ellipse2D[double] convert_to_3D_Model_Coordinate_System(self, py_ellipse , image_size, usr_roi, pupil_roi ):
 
-        cdef Ellipse2D[double] ellipse
-        a,b = py_ellipse['axes']
-        if a > b:
-            major_radius = a/2.0
-            minor_radius = b/2.0
-            angle = -py_ellipse['angle']* math.pi/180
-        else:
-            major_radius = b/2.0
-            minor_radius = a/2.0
-            angle = (py_ellipse['angle']+90)*math.pi/180 # not importing np just for pi constant
 
-        # change coord system to centered origin
-        x,y = py_ellipse['center']
-        x -= image_size[0]/2.0
-        y = image_size[1]/2.0 - y
-        angle = -angle #take y axis flip into account
+    def detect(self, frame, user_roi, visualize ):
 
-        # add cpp ellipse
-        ellipse  =  Ellipse2D[double](x,y, major_radius, minor_radius, angle)
-        return ellipse
-
-    def detect(self, frame, usr_roi, visualize ):
-
-        width = frame.width
-        height = frame.height
+        image_width = frame.width
+        image_height = frame.height
 
         cdef unsigned char[:,::1] img = frame.gray
-        cdef Mat cv_image = Mat(height, width, CV_8UC1, <void *> &img[0,0] )
+        cdef Mat cv_image = Mat(image_height, image_width, CV_8UC1, <void *> &img[0,0] )
 
         cdef unsigned char[:,:,:] img_color
         cdef Mat cv_image_color
@@ -130,45 +109,43 @@ cdef class Detector_3D:
 
         if visualize:
             img_color = frame.img
-            cv_image_color = Mat(height, width, CV_8UC3, <void *> &img_color[0,0,0] )
+            cv_image_color = Mat(image_height, image_width, CV_8UC3, <void *> &img_color[0,0,0] )
 
 
-        x = usr_roi.get()[0]
-        y = usr_roi.get()[1]
-        width  = usr_roi.get()[2] - usr_roi.get()[0]
-        height  = usr_roi.get()[3] - usr_roi.get()[1]
+        roi = Roi((0,0))
+        roi.set( user_roi.get() )
+        roi_x = roi.get()[0]
+        roi_y = roi.get()[1]
+        roi_width  = roi.get()[2] - roi.get()[0]
+        roi_height  = roi.get()[3] - roi.get()[1]
         cdef int[:,::1] integral
 
         if self.detect_properties['coarse_detection']:
             scale = 2 # half the integral image. boost up integral
             # TODO maybe implement our own Integral so we don't have to half the image
-            integral = cv2.integral(frame.gray[::scale,::scale])
+            user_roi_image = frame.gray[user_roi.view]
+            integral = cv2.integral(user_roi_image[::scale,::scale])
             coarse_filter_max = self.detect_properties['coarse_filter_max']
             coarse_filter_min = self.detect_properties['coarse_filter_min']
             p_x,p_y,p_w,p_response = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
-            p_x *= scale
-            p_y *= scale
-            p_w *= scale
-            p_h = p_w
-        else:
-            p_x = x
-            p_y = y
-            p_w = width
-            p_h = height
+            roi_x = p_x * scale + roi_x
+            roi_y = p_y * scale + roi_y
+            roi_width = p_w*scale
+            roi_height = p_w*scale
+            roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_width))
 
-        pupil_roi = Roi( (0,0))
-        pupil_roi.set((p_y, p_x, p_y+p_w, p_x+p_w))
+        # every coordinates in the result are relative to the current ROI
+        cpp_result_ptr =  self.detector_2d_ptr.detect(self.detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](roi_x,roi_y,roi_width,roi_height), visualize , False ) #we don't use debug image in 3d model
+        deref(cpp_result_ptr).timestamp = frame.timestamp
 
-
-        cpp_result_ptr =  self.detector_2d_ptr.detect(self.detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , False ) #we don't use debug image in 3d model
         cdef Detector_2D_Results cpp_result = deref(cpp_result_ptr)
 
-        py_result = self.convertToPythonResult( cpp_result, frame, usr_roi, pupil_roi )
+        py_result = self.convertToPythonResult( cpp_result, frame, roi )
 
         ######### 3D Model Part ############
 
         if py_result['confidence'] > 0.8:
-            self.detector_3d_ptr.add_observation( self.convert_to_3D_Model_Coordinate_System(py_result, (width, height), usr_roi, pupil_roi )  )
+            self.detector_3d_ptr.add_observation( cpp_result_ptr, image_width, image_height , True  ) # if true is set, add_conversation converts the data to the coord space of the eye fitter
             if self.detector_3d_ptr.pupils.size() > 3:
                 pupil_radius = 1
                 eye_z = 20
@@ -183,7 +160,7 @@ cdef class Detector_3D:
         if self.debug_visualizer_3d._window:
             eye = self.detector_3d_ptr.eye
             py_eye = ((eye.center[0],eye.center[1],eye.center[2]),eye.radius)
-            self.debug_visualizer_3d.update_window( self.g_pool, width, height, py_eye, self.get_last_observations(5) )
+            self.debug_visualizer_3d.update_window( self.g_pool, image_width, image_height, py_eye, self.get_last_observations(5) )
 
 
         return py_result
@@ -226,9 +203,10 @@ cdef class Detector_3D:
 
     def get_observation(self,index):
         cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils[index]
+        cdef Detector_2D_Results observation = deref(p.observation)
         # returning (Ellipse, Params, Cicle). Ellipse = ([x,y],major,minor,angle). Params = (theta,psi,r)
         # Circle = (center[x,y,z], normal[x,y,z], radius)
-        return PyObservation( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
+        return PyObservation( (observation.ellipse.center[0],observation.ellipse.center[1]), observation.ellipse.major_radius,observation.ellipse.minor_radius,observation.ellipse.angle,
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
@@ -237,9 +215,12 @@ cdef class Detector_3D:
     def get_last_observations(self,count=1):
         cdef EyeModelFitter.Pupil p
         count = min(self.detector_3d_ptr.pupils.size() , count )
+        cdef Detector_2D_Results observation
         for i in xrange(self.detector_3d_ptr.pupils.size()-count,self.detector_3d_ptr.pupils.size()):
             p = self.detector_3d_ptr.pupils[i]
-            yield  PyObservation( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
+            observation = deref(p.observation)
+
+            yield  PyObservation( (observation.ellipse.center[0],observation.ellipse.center[1]), observation.ellipse.major_radius,observation.ellipse.minor_radius,observation.ellipse.angle,
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
@@ -275,8 +256,10 @@ cdef class Detector_3D:
 
     def get_all_pupil_observations(self):
         cdef EyeModelFitter.Pupil p
+        cdef Detector_2D_Results observation
         for p in self.detector_3d_ptr.pupils:
-            yield PyObservation( (p.observation.ellipse.center[0],p.observation.ellipse.center[1]), p.observation.ellipse.major_radius,p.observation.ellipse.minor_radius,p.observation.ellipse.angle,
+            observation = deref(p.observation)
+            yield PyObservation( (observation.ellipse.center[0],observation.ellipse.center[1]), observation.ellipse.major_radius,observation.ellipse.minor_radius,observation.ellipse.angle,
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),

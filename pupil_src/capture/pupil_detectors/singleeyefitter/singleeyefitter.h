@@ -4,6 +4,7 @@
 #include <mutex>
 #include <Eigen/Core>
 #include <opencv2/core/core.hpp>
+#include "common/types.h"
 #include "cvx.h"
 #include "Circle.h"
 #include "Ellipse.h"
@@ -38,13 +39,13 @@ namespace singleeyefitter {
 
             // Index add_observation(cv::Mat image, Ellipse pupil, int n_pseudo_inliers = 0);
             // Index add_observation(cv::Mat image, Ellipse pupil, std::vector<cv::Point2f> pupil_inliers);
-            Index add_observation( Ellipse pupil );
-
+            //Index add_observation( Ellipse pupil );
+            Index add_observation( std::shared_ptr<Detector_2D_Results>& observation , int image_width = 640, int image_height = 480, bool convert_to_eyefitter_space = true );
             /*
                 contours contains pointers to memory location of each contour
                 contour_sizes contains the size of the corresponded contour, so we know how much memory we can claim on the c++ side
             */
-            Index add_observation(Ellipse pupil, std::vector<int32_t*> contour_ptrs ,  std::vector<size_t> contour_sizes);
+            //Index add_observation(Ellipse pupil, std::vector<int32_t*> contour_ptrs ,  std::vector<size_t> contour_sizes);
             void reset();
 
             //
@@ -69,15 +70,16 @@ namespace singleeyefitter {
             void unproject_contours();
             void unwrap_contours();
 
-            struct Observation {
-                //cv::Mat image;
-                Ellipse ellipse;
-                //std::vector<cv::Point2f> inliers;
-                std::vector<std::vector<cv::Point2i>> contours;
-                //std::vector<std::vector<int32_t>> contours;
-                Observation();
-                Observation(/*cv::Mat image,*/ Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/,  std::vector<std::vector<cv::Point2i>> contours);
-            };
+            // struct Observation {
+            //     //cv::Mat image;
+            //     Ellipse ellipse;
+            //     //std::vector<cv::Point2f> inliers;
+            //     std::vector<std::vector<cv::Point2i>> contours;
+            //     //std::vector<std::vector<int32_t>> contours;
+            //     Observation();
+            //     Observation(/*cv::Mat image,*/ Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/,  std::vector<std::vector<cv::Point2i>> contours);
+            //     Observation( std::shared_ptr<Detector_2D_Results> observation, );
+            // };
 
             struct PupilParams {
                 double theta, psi, radius;
@@ -85,7 +87,8 @@ namespace singleeyefitter {
                 PupilParams(double theta, double psi, double radius);
             };
             struct Pupil {
-                Observation observation;
+                //Observation observation;
+                std::shared_ptr<Detector_2D_Results> observation;
                 std::vector<std::vector<Vector3>> unprojected_contours;  // whre to put this ? observations ? keep projected contours ?
                 std::vector<std::vector<Vector2>> unwrapped_contours;
                 Circle circle;
@@ -93,7 +96,7 @@ namespace singleeyefitter {
                 bool init_valid;
                 bool processed; // indicate if this pupil is already processed
                 Pupil();
-                Pupil(Observation observation);
+                Pupil(std::shared_ptr<Detector_2D_Results> observation);
                 //Pupil(Ellipse ellipse);
             };
 

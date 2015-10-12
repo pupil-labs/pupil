@@ -20,6 +20,7 @@ cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Rect':
   cdef cppclass Rect_[T]:
     Rect_() except +
     Rect_( T x, T y, T width, T height ) except +
+    T x, y, width, height
 
 cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Point':
 
@@ -75,9 +76,10 @@ cdef extern from 'detect_2d.hpp':
     double confidence
     Ellipse2D[double] ellipse
     Contours_2D final_contours
-    Contours_2D split_contours
+    Contours_2D contours
     Mat raw_edges
-    double timeStamp
+    Rect_[int] current_roi
+    double timestamp
 
   cdef struct Detector_2D_Properties:
     int intensity_range
@@ -101,7 +103,7 @@ cdef extern from 'detect_2d.hpp':
   cdef cppclass Detector2D:
 
     Detector2D() except +
-    shared_ptr[Detector_2D_Results] detect( Detector_2D_Properties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& usr_roi , Rect_[int]& pupil_roi, bint visualize , bint use_debug_image )
+    shared_ptr[Detector_2D_Results] detect( Detector_2D_Properties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& roi, bint visualize , bint use_debug_image )
 
 
 cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter":
@@ -113,8 +115,9 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         void reset()
         void initialise_model()
         void unproject_observations(double pupil_radius, double eye_z )
-        void add_observation( Ellipse2D[double] ellipse)
-        void add_observation( Ellipse2D[double] ellipse, vector[int32_t*] contours , vector[size_t] sizes )
+        #void add_observation( Ellipse2D[double] ellipse)
+        #void add_observation( Ellipse2D[double] ellipse, vector[int32_t*] contours , vector[size_t] sizes )
+        void add_observation(  shared_ptr[Detector_2D_Results]& results, int width, int height, bint convert_to_eyefitter_space )
 
         #######################
         ## Pubil-Laps addons ##
@@ -130,13 +133,13 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
             float psi
             float radius
 
-        cppclass Observation:
-            Ellipse2D[double] ellipse
-            vector[vector[int32_t]] contours
+       # cppclass Observation:
+        #    Ellipse2D[double] ellipse
+         #   vector[vector[int32_t]] contours
 
         cppclass Pupil:
             Pupil() except +
-            Observation observation
+            shared_ptr[Detector_2D_Results] observation
             vector[vector[Vector3]] unprojected_contours
             vector[vector[Vector2]] unwrapped_contours
             PupilParams params

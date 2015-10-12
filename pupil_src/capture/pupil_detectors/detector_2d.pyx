@@ -60,13 +60,34 @@ cdef class Detector_2D:
     def __dealloc__(self):
       del self.thisptr
 
-    def detect(self, frame, usr_roi, visualize ):
+    cdef convertToPythonResult(self, Detector_2D_Results& result, object frame, object roi ):
 
-        width = frame.width
-        height = frame.height
+        e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
+        py_result = {}
+        py_result['confidence'] = result.confidence
+        py_result['ellipse'] = e
+        py_result['pos_in_roi'] = e[0]
+        py_result['major'] = max(e[1])
+        py_result['diameter'] = max(e[1])
+        py_result['minor'] = min(e[1])
+        py_result['axes'] = e[1]
+        py_result['angle'] = e[2]
+        e_img_center = roi.add_vector(e[0])
+        norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
+
+        py_result['norm_pos'] = norm_center
+        py_result['center'] = e_img_center
+        py_result['timestamp'] = frame.timestamp
+        return py_result
+
+
+    def detect(self, frame, user_roi, visualize ):
+
+        image_width = frame.width
+        image_height = frame.height
 
         cdef unsigned char[:,::1] img = frame.gray
-        cdef Mat cv_image = Mat(height, width, CV_8UC1, <void *> &img[0,0] )
+        cdef Mat cv_image = Mat(image_height, image_width, CV_8UC1, <void *> &img[0,0] )
 
         cdef unsigned char[:,:,:] img_color
         cdef Mat cv_image_color
@@ -74,7 +95,7 @@ cdef class Detector_2D:
         cdef unsigned char[:,:,:] debug_image
 
         if self.window_should_open:
-            self.open_window((width,height))
+            self.open_window((image_width,image_height))
         if self.window_should_close:
             self.close_window()
 
@@ -83,67 +104,48 @@ cdef class Detector_2D:
 
         if visualize:
             img_color = frame.img
-            cv_image_color = Mat(height, width, CV_8UC3, <void *> &img_color[0,0,0] )
+            cv_image_color = Mat(image_height, image_width, CV_8UC3, <void *> &img_color[0,0,0] )
 
         if use_debug_image:
-            debug_image_array = np.zeros( (height, width, 3 ), dtype = np.uint8 ) #clear image every frame
+            debug_image_array = np.zeros( (image_height, image_width, 3 ), dtype = np.uint8 ) #clear image every frame
             debug_image = debug_image_array
-            cv_debug_image = Mat(height, width, CV_8UC3, <void *> &debug_image[0,0,0] )
+            cv_debug_image = Mat(image_height, image_width, CV_8UC3, <void *> &debug_image[0,0,0] )
 
-
-        x = usr_roi.get()[0]
-        y = usr_roi.get()[1]
-        width  = usr_roi.get()[2] - usr_roi.get()[0]
-        height  = usr_roi.get()[3] - usr_roi.get()[1]
+        roi = Roi((0,0))
+        roi.set( user_roi.get() )
+        roi_x = roi.get()[0]
+        roi_y = roi.get()[1]
+        roi_width  = roi.get()[2] - roi.get()[0]
+        roi_height  = roi.get()[3] - roi.get()[1]
         cdef int[:,::1] integral
 
         if self.detect_properties['coarse_detection']:
             scale = 2 # half the integral image. boost up integral
             # TODO maybe implement our own Integral so we don't have to half the image
-            integral = cv2.integral(frame.gray[::scale,::scale])
+            user_roi_image = frame.gray[user_roi.view]
+            integral = cv2.integral(user_roi_image[::scale,::scale])
             coarse_filter_max = self.detect_properties['coarse_filter_max']
             coarse_filter_min = self.detect_properties['coarse_filter_min']
             p_x,p_y,p_w,p_response = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
-            p_x *= scale
-            p_y *= scale
-            p_w *= scale
-            p_h = p_w
-        else:
-            p_x = x
-            p_y = y
-            p_w = width
-            p_h = height
+            roi_x = p_x * scale + roi_x
+            roi_y = p_y * scale + roi_y
+            roi_width = p_w*scale
+            roi_height = p_w*scale
+            roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_width))
 
+        # every coordinates in the result are relative to the current ROI
+        cpp_result_ptr =  self.thisptr.detect(self.detect_properties, cv_image, cv_image_color, cv_debug_image, Rect_[int](roi_x,roi_y,roi_width,roi_height),  visualize , use_debug_image )
 
-        pupil_roi = Roi( (0,0))
-        pupil_roi.set((p_y, p_x, p_y+p_w, p_x+p_w))
-
-
-        result_ptr =  self.thisptr.detect(self.detect_properties, cv_image, cv_image_color, cv_debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , use_debug_image )
-
+        deref(cpp_result_ptr).timestamp = frame.timestamp
         #display the debug image in the window
         if self._window:
             self.gl_display_in_window(debug_image)
 
-        cdef Detector_2D_Results result = deref(result_ptr)
-        e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
-        pupil_ellipse = {}
-        pupil_ellipse['confidence'] = result.confidence
-        pupil_ellipse['ellipse'] = e
-        pupil_ellipse['pos_in_roi'] = e[0]
-        pupil_ellipse['major'] = max(e[1])
-        pupil_ellipse['diameter'] = max(e[1])
-        pupil_ellipse['minor'] = min(e[1])
-        pupil_ellipse['axes'] = e[1]
-        pupil_ellipse['angle'] = e[2]
-        e_img_center = usr_roi.add_vector(pupil_roi.add_vector(e[0]))
-        norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
+        cdef Detector_2D_Results cpp_result = deref(cpp_result_ptr)
+        py_result = self.convertToPythonResult( cpp_result, frame , roi )
 
-        pupil_ellipse['norm_pos'] = norm_center
-        pupil_ellipse['center'] = e_img_center
-        pupil_ellipse['timestamp'] = frame.timestamp
 
-        return pupil_ellipse
+        return py_result
 
 
 

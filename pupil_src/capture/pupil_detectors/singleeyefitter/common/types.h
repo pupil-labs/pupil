@@ -15,14 +15,16 @@ namespace singleeyefitter {
     typedef std::vector<int> ContourIndices;
     typedef singleeyefitter::Ellipse2D<double> Ellipse;
 
+    // every coordinates are relative to the roi
     struct Detector_2D_Results {
         typedef singleeyefitter::Ellipse2D<double> Ellipse;
         double confidence =  0.0 ;
         Ellipse ellipse;
         Contours_2D final_contours;
-        Contours_2D split_contours;
+        Contours_2D contours;
         std::vector<cv::Point> raw_edges;
-        double timeStamp = 0.0;
+        cv::Rect current_roi; // contains the roi for this results
+        double timestamp = 0.0;
     };
 
     // use a struct for all properties and pass it to detect method every time we call it.

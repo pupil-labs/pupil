@@ -26,7 +26,7 @@ class Detector2D {
 	public:
 
 		Detector2D();
-		std::shared_ptr<Detector_2D_Results> detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi ,  cv::Rect& pupil_roi, bool visualize, bool use_debug_image);
+		std::shared_ptr<Detector_2D_Results> detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image);
 		std::vector<cv::Point> ellipse_true_support(Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges);
 
 
@@ -60,24 +60,19 @@ std::vector<cv::Point> Detector2D::ellipse_true_support(Ellipse& ellipse, double
 	}
 	return support_pixels;
 }
-std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , cv::Rect& pupil_roi, bool visualize, bool use_debug_image)
+std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image)
 {
 	std::shared_ptr<Detector_2D_Results> result = std::make_shared<Detector_2D_Results>();
 
-	cv::Rect roi = usr_roi & pupil_roi;  // intersect rectangles
-
-	if (roi.area() < 1.0)
-		roi = usr_roi;
 
 	const int image_width = image.size().width;
 	const int image_height = image.size().height;
-	const cv::Mat pupil_image = cv::Mat(image, roi).clone();  // image with usr_roi, copy the image, since we alter it
+	const cv::Mat pupil_image = cv::Mat(image, roi).clone();  // image with roi, copy the image, since we alter it
 	const int w = pupil_image.size().width / 2;
 	const float coarse_pupil_width = w / 2.0f;
 	const int padding = int(coarse_pupil_width / 4.0f);
 	const int offset = props.intensity_range;
 	const int spectral_offset = 5;
-
 
 	cv::Mat histogram;
 	int histSize;
@@ -150,7 +145,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 		cvx::draw_dotted_rect(overlay, rect, mWhite_color);
 
 		//draw a frame around the area we require the pupil center to be.
-		rect = cv::Rect(padding, padding, pupil_roi.width - padding, pupil_roi.height - padding);
+		rect = cv::Rect(padding, padding, roi.width - padding, roi.height - padding);
 		cvx::draw_dotted_rect(overlay, rect, mWhite_color);
 
 		//draw size ellipses
@@ -179,10 +174,10 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	if( mUse_strong_prior ){
 
 	  mUse_strong_prior = false;
-	  //recalculate center in coords system of new ROI views! pupil_roi changes every frame
+	  //recalculate center in coords system of new ROI views! roi changes every framesub
 	  Ellipse ellipse = mPrior_ellipse;
-	  ellipse.center[0] -= ( pupil_roi.x + usr_roi.x ) ;
-	  ellipse.center[1] -= ( pupil_roi.y + usr_roi.y ) ;
+	  ellipse.center[0] -= roi.x  ;
+	  ellipse.center[1] -= roi.y ;
 
 	  if( !raw_edges.empty() ){
 
@@ -200,8 +195,8 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	      }
 
 	      ellipse = toEllipse<double>(refit_ellipse);
-	      ellipse.center[0] += ( pupil_roi.x + usr_roi.x  );
-	      ellipse.center[1] += ( pupil_roi.y + usr_roi.y  );
+	      ellipse.center[0] += roi.x;
+	      ellipse.center[1] += roi.y;
 
 	      mPrior_ellipse = ellipse;
 	  	  mUse_strong_prior = true;
@@ -255,7 +250,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 		// debug segments
 		int colorIndex = 0;
 
-		for (auto& segment : split_contours) {
+		for (const auto& segment : split_contours) {
 			const cv::Scalar_<int> colors[] = {mRed_color, mBlue_color, mRoyalBlue_color, mYellow_color, mWhite_color, mGreen_color};
 			cv::polylines(debug_image, segment, false, colors[colorIndex], 1, 4);
 			colorIndex++;
@@ -285,7 +280,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 		return result;
 	}
 
-	auto pruning_quick_combine = [&](std::vector<std::vector<cv::Point>>& contours,  std::set<int>& seed_indices, int max_evals = 1e20, int max_depth = 5) {
+	auto pruning_quick_combine = [&](const std::vector<std::vector<cv::Point>>& contours,  std::set<int>& seed_indices, int max_evals = 1e20, int max_depth = 5) {
 		// describes different combinations of contours
 		typedef std::set<int> Path;
 		// combinations we wanna test
@@ -332,7 +327,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 
 					//concatenate contours to one contour
 					for (int k : current_path) {
-						std::vector<cv::Point>& c = contours.at(mapping.at(k));
+						const std::vector<cv::Point>& c = contours.at(mapping.at(k));
 						test_contour.insert(test_contour.end(), c.begin(), c.end());
 						test_contour_indices.insert(mapping.at(k));
 					}
@@ -419,8 +414,8 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 			index_best_Solution = enum_index;
 
 			if (support_ratio >= props.strong_perimeter_ratio_range_min) {
-				ellipse.center[0] += (pupil_roi.x + usr_roi.x);
-				ellipse.center[1] += (pupil_roi.y + usr_roi.y);
+				ellipse.center[0] += roi.x;
+				ellipse.center[1] += roi.y;
 				mPrior_ellipse = ellipse;
 				mUse_strong_prior = true;
 
@@ -478,7 +473,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 
 		if (visualize)
 		{
-			cv::Mat overlay = color_image.colRange(usr_roi.x + pupil_roi.x, usr_roi.x + pupil_roi.x + pupil_roi.width).rowRange(usr_roi.y + pupil_roi.y, usr_roi.y + pupil_roi.y + pupil_roi.height);
+			cv::Mat overlay = color_image.colRange(roi.x, roi.x + roi.width).rowRange(roi.y, roi.y + roi.height);
 			cv::Mat g_channel(overlay.rows, overlay.cols, CV_8UC1);
 			cv::Mat b_channel(overlay.rows, overlay.cols, CV_8UC1);
 			cv::Mat r_channel(overlay.rows, overlay.cols, CV_8UC1);
@@ -509,8 +504,9 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	result->confidence = goodness;
 	result->ellipse = toEllipse<double>(cv_final_Ellipse);
 	result->final_contours = std::move(best_contours);
-	result->split_contours = std::move(split_contours);
+	result->contours = std::move(split_contours);
 	result->raw_edges = std::move(raw_edges);
+	result->current_roi = roi;
 	return result;
 }
 
