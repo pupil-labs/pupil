@@ -473,7 +473,8 @@ class Visualizer():
 		if last_unwrapped_contours:
 			self.draw_unwrapped_contours_on_screen(last_unwrapped_contours)
 
-		self.draw_eye_model_fitter_text(eye, pupil)
+		if pupil:
+			self.draw_eye_model_fitter_text(eye, pupil)
 
 		glfwSwapBuffers(self._window)
 		glfwPollEvents()
@@ -482,8 +483,6 @@ class Visualizer():
 	def close_window(self):
 		if self._window:
 			glfwDestroyWindow(self._window)
-			if self.run_independently:
-				glfwTerminate()
 			self._window = None
 
 	############ window callbacks #################
@@ -523,7 +522,8 @@ class Visualizer():
 		self.trackball.zoom_to(y)
 
 	def on_close(self,window=None):
-		self.close_window()
+		pass
+		#self.close_window()
 
 	def on_iconify(self,window,x,y): pass
 	def on_key(self,window, key, scancode, action, mods): pass
