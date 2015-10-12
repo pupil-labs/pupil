@@ -22,6 +22,9 @@ struct Detector_Result {
 	typedef singleeyefitter::Ellipse2D<double> Ellipse;
 	double confidence =  0.0 ;
 	Ellipse ellipse;
+	Contours_2D final_contours;
+	Contours_2D split_contours;
+	std::vector<cv::Point> raw_edges;
 	double timeStamp = 0.0;
 };
 
@@ -524,19 +527,24 @@ std::shared_ptr<Detector_Result> Detector2D::detect(DetectProperties& props, cv:
 
 	};
 	std::vector<cv::Point> final_edges =  final_fitting(best_contours, edges);
-	auto cv_final_Ellipse = cv::fitEllipse(final_edges);
-	double size_difference  = std::abs(1.0 - cv_ellipse.size.height / cv_final_Ellipse.size.height);
-
-	if (is_Ellipse(cv_final_Ellipse) && size_difference < 0.3) {
+	auto cv_new_Ellipse = cv::fitEllipse(final_edges);
+	double size_difference  = std::abs(1.0 - cv_ellipse.size.height / cv_new_Ellipse.size.height);
+	auto& cv_final_Ellipse = cv_ellipse;
+	if (is_Ellipse(cv_new_Ellipse) && size_difference < 0.3) {
 		if (use_debug_image) {
-			cv::ellipse(debug_image, cv_final_Ellipse, mGreen_color);
+			cv::ellipse(debug_image, cv_new_Ellipse, mGreen_color);
 		}
+
+		cv_final_Ellipse = cv_new_Ellipse;
 	}
 
 	//cv::imshow("debug_image", debug_image);
 	mPupil_Size =  cv_final_Ellipse.size.height;
 	result->confidence = goodness;
 	result->ellipse = toEllipse<double>(cv_final_Ellipse);
+	result->final_contours = std::move(best_contours);
+	result->split_contours = std::move(split_contours);
+	result->raw_edges = std::move(raw_edges);
 	return result;
 }
 

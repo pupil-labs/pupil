@@ -21,6 +21,11 @@ cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Rect':
     Rect_() except +
     Rect_( T x, T y, T width, T height ) except +
 
+cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Point':
+
+  cdef cppclass Point_[T]:
+    Point_() except +
+
 cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Scalar':
 
   cdef cppclass Scalar_[T]:
@@ -62,12 +67,16 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
 #typdefs
 ctypedef Matrix31d Vector3
 ctypedef Matrix21d Vector2
+ctypedef vector[vector[Point_[int]]] Contours_2D
 
 cdef extern from 'detect_2d.hpp':
 
   cdef cppclass Detector_Result:
     double confidence
     Ellipse2D[double] ellipse
+    Contours_2D final_contours
+    Contours_2D split_contours
+    Mat raw_edges
     double timeStamp
 
   cdef struct DetectProperties:
