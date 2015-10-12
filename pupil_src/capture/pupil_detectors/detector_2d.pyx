@@ -11,10 +11,11 @@ from pyglui.cygl.utils import draw_gl_texture
 
 cimport detector
 from detector cimport *
+from cython.operator cimport dereference as deref
 
 cdef class Detector_2D:
 
-    cdef Detector2D[double]* thisptr
+    cdef Detector2D* thisptr
     cdef dict detect_properties
     cdef bint window_should_open, window_should_close
     cdef object _window
@@ -22,7 +23,7 @@ cdef class Detector_2D:
     cdef object g_pool
 
     def __cinit__(self):
-        self.thisptr = new Detector2D[double]()
+        self.thisptr = new Detector2D()
     def __init__(self, g_pool = None, settings = None ):
 
         #debug window
@@ -118,13 +119,13 @@ cdef class Detector_2D:
         pupil_roi.set((p_y, p_x, p_y+p_w, p_x+p_w))
 
 
-        result =  self.thisptr.detect(self.detect_properties, cv_image, cv_image_color, cv_debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , use_debug_image )
+        result_ptr =  self.thisptr.detect(self.detect_properties, cv_image, cv_image_color, cv_debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , use_debug_image )
 
         #display the debug image in the window
         if self._window:
             self.gl_display_in_window(debug_image)
 
-
+        cdef Detector_Result result = deref(result_ptr)
         e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
         pupil_ellipse = {}
         pupil_ellipse['confidence'] = result.confidence

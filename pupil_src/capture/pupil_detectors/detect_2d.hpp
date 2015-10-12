@@ -18,9 +18,8 @@
 #include "singleeyefitter/EllipseEvaluation.h"
 
 
-template<typename Scalar>
-struct Result {
-	typedef singleeyefitter::Ellipse2D<Scalar> Ellipse;
+struct Detector_Result {
+	typedef singleeyefitter::Ellipse2D<double> Ellipse;
 	double confidence =  0.0 ;
 	Ellipse ellipse;
 	double timeStamp = 0.0;
@@ -49,17 +48,16 @@ struct DetectProperties {
 };
 
 
-template< typename Scalar >
 class Detector2D {
 
 	private:
-		typedef singleeyefitter::Ellipse2D<Scalar> Ellipse;
+		typedef singleeyefitter::Ellipse2D<double> Ellipse;
 
 
 	public:
 
 		Detector2D();
-		Result<Scalar> detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi ,  cv::Rect& pupil_roi, bool visualize, bool use_debug_image);
+		std::shared_ptr<Detector_Result> detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi ,  cv::Rect& pupil_roi, bool visualize, bool use_debug_image);
 		std::vector<cv::Point> ellipse_true_support(Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges);
 
 
@@ -78,27 +76,24 @@ void printPoints(std::vector<cv::Point> points)
 	std::for_each(points.begin(), points.end(), [](cv::Point & p) { std::cout << p << std::endl;});
 }
 
-template <typename Scalar>
-Detector2D<Scalar>::Detector2D(): mUse_strong_prior(false), mPupil_Size(100) {};
+Detector2D::Detector2D(): mUse_strong_prior(false), mPupil_Size(100) {};
 
-template <typename Scalar>
-std::vector<cv::Point> Detector2D<Scalar>::ellipse_true_support(Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges)
+std::vector<cv::Point> Detector2D::ellipse_true_support(Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges)
 {
 	std::vector<cv::Point> support_pixels;
 	EllipseDistCalculator<double> ellipseDistance(ellipse);
 
 	for (auto& p : raw_edges) {
-		double distance = std::abs(ellipseDistance((Scalar)p.x, (Scalar)p.y));
+		double distance = std::abs(ellipseDistance((double)p.x, (double)p.y));
 		if (distance <=  1.3) {
 			support_pixels.emplace_back(p);
 		}
 	}
 	return support_pixels;
 }
-template<typename Scalar>
-Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , cv::Rect& pupil_roi, bool visualize, bool use_debug_image)
+std::shared_ptr<Detector_Result> Detector2D::detect(DetectProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& usr_roi , cv::Rect& pupil_roi, bool visualize, bool use_debug_image)
 {
-	Result<Scalar> result;
+	std::shared_ptr<Detector_Result> result = std::make_shared<Detector_Result>();
 
 	cv::Rect roi = usr_roi & pupil_roi;  // intersect rectangles
 
@@ -242,8 +237,8 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 	      mPrior_ellipse = ellipse;
 	  	  mUse_strong_prior = true;
 	      double goodness = std::min(1.0, support_ratio);
-	      result.confidence = goodness;
-	      result.ellipse = toEllipse<double>(refit_ellipse);
+	      result->confidence = goodness;
+	      result->ellipse = toEllipse<double>(refit_ellipse);
 	      mPupil_Size = ellipse.major_radius;
 	      return result;
 	    }
@@ -273,7 +268,7 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 	});
 
 	// split contours looking at curvature and angle
-	Scalar split_angle = 80;
+	double split_angle = 80;
 	int split_contour_size_min = 4;  //removing stubs makes combinatorial search feasable
 
 	//split_contours = singleeyefitter::detector::split_rough_contours(approx_contours, split_angle );
@@ -283,7 +278,7 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 	Contours_2D split_contours = singleeyefitter::detector::split_rough_contours_optimized(approx_contours, split_angle , split_contour_size_min);
 
 	if (split_contours.empty()) {
-		result.confidence = 0.0;
+		result->confidence = 0.0;
 		return result;
 	}
 
@@ -317,7 +312,7 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 
 	// still empty ? --> exits
 	if (seed_indices.empty()) {
-		result.confidence = 0.0;
+		result->confidence = 0.0;
 		return result;
 	}
 
@@ -445,10 +440,10 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 			cv::ellipse(debug_image, cv_ellipse , mRed_color);
 		}
 
-		Ellipse ellipse = toEllipse<Scalar>(cv_ellipse);
-		Scalar ellipse_circumference = ellipse.circumference();
+		Ellipse ellipse = toEllipse<double>(cv_ellipse);
+		double ellipse_circumference = ellipse.circumference();
 		std::vector<cv::Point>  support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
-		Scalar support_ratio = support_pixels.size() / ellipse_circumference;
+		double support_ratio = support_pixels.size() / ellipse_circumference;
 		//TODO: refine the selection of final candidate
 
 		if (support_ratio >= props.final_perimeter_ratio_range_min && is_Ellipse(cv_ellipse)) {
@@ -473,7 +468,7 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 
 	if (index_best_Solution == -1) {
 		// no good final ellipse found
-		result.confidence = 0.0;
+		result->confidence = 0.0;
 		//history
 		return result;
 	}
@@ -491,11 +486,11 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 
 	auto cv_ellipse = cv::fitEllipse(best_contour);
 	// final calculation of goodness of fit
-	auto ellipse = toEllipse<Scalar>(cv_ellipse);
-	Scalar ellipse_circumference = ellipse.circumference();
+	auto ellipse = toEllipse<double>(cv_ellipse);
+	double ellipse_circumference = ellipse.circumference();
 	std::vector<cv::Point>  support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
-	Scalar support_ratio = support_pixels.size() / ellipse_circumference;
-	Scalar goodness = std::min(Scalar(1.0), support_ratio);
+	double support_ratio = support_pixels.size() / ellipse_circumference;
+	double goodness = std::min(double(1.0), support_ratio);
 	//final fitting and return of result
 	auto final_fitting = [&](std::vector<std::vector<cv::Point>>& contours, cv::Mat & edges) -> std::vector<cv::Point> {
 		//use the real edge pixels to fit, not the aproximated contours
@@ -530,7 +525,7 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 	};
 	std::vector<cv::Point> final_edges =  final_fitting(best_contours, edges);
 	auto cv_final_Ellipse = cv::fitEllipse(final_edges);
-	Scalar size_difference  = std::abs(1.0 - cv_ellipse.size.height / cv_final_Ellipse.size.height);
+	double size_difference  = std::abs(1.0 - cv_ellipse.size.height / cv_final_Ellipse.size.height);
 
 	if (is_Ellipse(cv_final_Ellipse) && size_difference < 0.3) {
 		if (use_debug_image) {
@@ -540,8 +535,8 @@ Result<Scalar> Detector2D<Scalar>::detect(DetectProperties& props, cv::Mat& imag
 
 	//cv::imshow("debug_image", debug_image);
 	mPupil_Size =  cv_final_Ellipse.size.height;
-	result.confidence = goodness;
-	result.ellipse = toEllipse<Scalar>(cv_final_Ellipse);
+	result->confidence = goodness;
+	result->ellipse = toEllipse<double>(cv_final_Ellipse);
 	return result;
 }
 

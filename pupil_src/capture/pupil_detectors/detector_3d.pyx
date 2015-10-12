@@ -16,10 +16,12 @@ PyObservation = namedtuple('Observation' , 'ellipse_center, ellipse_major_radius
 
 cimport detector
 from detector cimport *
+from cython.operator cimport dereference as deref
+
 
 cdef class Detector_3D:
 
-    cdef Detector2D[double]* detector_2d_ptr
+    cdef Detector2D* detector_2d_ptr
     cdef EyeModelFitter *detector_3d_ptr
 
     cdef dict detect_properties
@@ -29,7 +31,7 @@ cdef class Detector_3D:
 
 
     def __cinit__(self):
-        self.detector_2d_ptr = new Detector2D[double]()
+        self.detector_2d_ptr = new Detector2D()
         focal_length = 879.193
         region_band_width = 5
         region_step_epsilon = 0.5
@@ -71,7 +73,7 @@ cdef class Detector_3D:
       del self.detector_2d_ptr
       del self.detector_3d_ptr
 
-    cdef convertToPythonResult(self, Result[double] result, object frame, object usr_roi, object pupil_roi ):
+    cdef convertToPythonResult(self, Detector_Result& result, object frame, object usr_roi, object pupil_roi ):
 
         e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
         py_result = {}
@@ -158,9 +160,10 @@ cdef class Detector_3D:
         pupil_roi.set((p_y, p_x, p_y+p_w, p_x+p_w))
 
 
-        cpp_result =  self.detector_2d_ptr.detect(self.detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , False ) #we don't use debug image in 3d model
-        py_result = self.convertToPythonResult( cpp_result, frame, usr_roi, pupil_roi )
+        cpp_result_ptr =  self.detector_2d_ptr.detect(self.detect_properties, cv_image, cv_image_color, debug_image, Rect_[int](x,y,width,height), Rect_[int](p_y,p_x,p_w,p_h),  visualize , False ) #we don't use debug image in 3d model
+        cdef Detector_Result cpp_result = deref(cpp_result_ptr)
 
+        py_result = self.convertToPythonResult( cpp_result, frame, usr_roi, pupil_roi )
 
         ######### 3D Model Part ############
 

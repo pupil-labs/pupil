@@ -1,3 +1,4 @@
+from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
 from libc.stdint cimport int32_t
 
@@ -64,9 +65,9 @@ ctypedef Matrix21d Vector2
 
 cdef extern from 'detect_2d.hpp':
 
-  cdef cppclass Result[T]:
+  cdef cppclass Detector_Result:
     double confidence
-    Ellipse2D[T] ellipse
+    Ellipse2D[double] ellipse
     double timeStamp
 
   cdef struct DetectProperties:
@@ -88,10 +89,10 @@ cdef extern from 'detect_2d.hpp':
     float final_perimeter_ratio_range_max
 
 
-  cdef cppclass Detector2D[T]:
+  cdef cppclass Detector2D:
 
     Detector2D() except +
-    Result detect( DetectProperties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& usr_roi , Rect_[int]& pupil_roi, bint visualize , bint use_debug_image )
+    shared_ptr[Detector_Result] detect( DetectProperties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& usr_roi , Rect_[int]& pupil_roi, bint visualize , bint use_debug_image )
 
 
 cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter":
