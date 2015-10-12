@@ -121,7 +121,7 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
                     best_pos.c = j
                     best_h = h
 
-    x_pos = best_pos.r
-    y_pos = best_pos.c
+    x_pos = best_pos.c
+    y_pos = best_pos.r
     width = best_h*3
     return x_pos,y_pos,width,best_response
