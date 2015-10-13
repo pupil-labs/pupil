@@ -19,11 +19,11 @@ from pyglui import ui
 from methods import denormalize
 
 class Vis_Circle(Plugin):
-    """docstring for DisplayGaze"""
+    uniqueness = "not_unique"
+
     def __init__(self, g_pool,radius=20,color=(0.0,0.7,0.25,0.2),thickness=2,fill=True):
         super(Vis_Circle, self).__init__(g_pool)
         self.order = .9
-        self.uniqueness = "not_unique"
 
         # initialize empty menu
         self.menu = None

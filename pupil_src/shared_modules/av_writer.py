@@ -13,17 +13,25 @@ av_writer module uses PyAV (ffmpeg or libav backend) to write AV files.
 requires:
     -
 """
-import os,sys
+import os,sys,platform
 import av
 from av.packet import Packet
 import numpy as np
 from time import time
 from fractions import Fraction
-import subprocess as sp
 
 #logging
 import logging
 logger = logging.getLogger(__name__)
+
+
+from threading import Thread as Process
+from threading import Event
+
+# if platform.system() == 'Darwin':
+#     from billiard import Process,Event
+# else:
+#     from multiprocessing import Process,Event
 
 
 """
@@ -69,9 +77,11 @@ class AV_Writer(object):
     We are creating a
     """
 
-    def __init__(self, file_loc, video_stream={'codec':'mpeg4','bit_rate': 8000*10e3}, audio_stream=None):
+    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 8000*10e3}, audio_stream=None,use_timestamps=False):
         super(AV_Writer, self).__init__()
-
+        self.use_timestamps = use_timestamps
+        # the approximate capture rate.
+        self.fps = int(fps)
         try:
             file_path,ext = file_loc.rsplit('.', 1)
         except:
@@ -81,82 +91,61 @@ class AV_Writer(object):
         if ext not in ('mp4,mov,mkv'):
             logger.warning("media file container should be mp4 or mov. Using a different container is risky.")
 
-        self.ts_file_loc = file_path+'timestamps.npy'
+        self.ts_file_loc = file_path+'_timestamps_pts.npy'
         self.file_loc = file_loc
         self.container = av.open(self.file_loc,'w')
         logger.debug("Opended '%s' for writing."%self.file_loc)
 
-        self.time_resolution = 1000  # time_base in milliseconds
-        self.time_base = Fraction(1,self.time_resolution)
+        if self.use_timestamps:
+            self.time_base = Fraction(1,65535) #highest resolution for mp4
+        else:
+            self.time_base = Fraction(1000,self.fps*1000) #timebase is fps
 
-
-        self.video_stream = self.container.add_stream(video_stream['codec'],self.time_resolution)
+        self.video_stream = self.container.add_stream(video_stream['codec'],1/self.time_base)
         self.video_stream.bit_rate = video_stream['bit_rate']
-        # self.video_stream.pix_fmt = "yuv420p"#video_stream['format']
+        self.video_stream.bit_rate_tolerance = video_stream['bit_rate']
+        self.video_stream.thread_count = 1
+        # self.video_stream.pix_fmt = "yuv420p"
         self.configured = False
         self.start_time = None
 
-        self.timestamps_list = []
+        self.current_frame_idx = 0
 
     def write_video_frame(self, input_frame):
-        if not self.configured:
-            self.video_stream.height = input_frame.img.shape[0]
-            self.video_stream.width = input_frame.img.shape[1]
-            self.configured = True
-            self.start_time = input_frame.timestamp
-
-        # frame from np.array
-        frame = av.VideoFrame.from_ndarray(input_frame.img, format='bgr24')
-        # here we create a timestamp in ms resolution to be used for the frame pts.
-        # later libav will scale this to stream timebase
-        frame_ts_ms = int((input_frame.timestamp-self.start_time)*self.time_resolution)
-        frame.pts = frame_ts_ms
-        frame.time_base = self.time_base
-        # we keep a version of the timestamp counting from first frame in the codec resoltion (lowest time resolution in toolchain)
-        frame_ts_s = float(frame_ts_ms)/self.time_resolution
-        # we append it to our list to correlate hi-res absolute timestamps with media timstamps
-        self.timestamps_list.append((input_frame.timestamp,frame_ts_s))
-
-        #send frame of to encoder
-        packet = self.video_stream.encode(frame)
-        if packet:
-            # print 'paket',packet.pts
-            self.container.mux(packet)
-
-
-    def write_video_frame_yuv422(self, input_frame):
         if not self.configured:
             self.video_stream.height = input_frame.height
             self.video_stream.width = input_frame.width
             self.configured = True
             self.start_time = input_frame.timestamp
+            if input_frame.yuv_buffer:
+                self.frame = av.VideoFrame(input_frame.width, input_frame.height,'yuv422p')
+            else:
+                self.frame = av.VideoFrame(input_frame.width,input_frame.height,'bgr24')
+            if self.use_timestamps:
+                self.frame.time_base = self.time_base
+            else:
+                self.frame.time_base = Fraction(1,self.fps)
 
-        frame = av.VideoFrame(input_frame.width, input_frame.height,'yuv422p')
-        y,u,v = input_frame.yuv422
-        frame.planes[0].update(y)
-        frame.planes[1].update(u)
-        frame.planes[2].update(v)
+        if input_frame.yuv_buffer:
+            y,u,v = input_frame.yuv422
+            self.frame.planes[0].update(y)
+            self.frame.planes[1].update(u)
+            self.frame.planes[2].update(v)
+        else:
+            self.frame.planes[0].update(input_frame.img)
 
-        # frame = av.VideoFrame(input_frame.width, input_frame.height,'yuv420p')
-        # y,u,v = input_frame.yuv420
-        # frame.planes[0].update(y)
-        # frame.planes[1].update(np.ascontiguousarray(u))
-        # frame.planes[2].update(np.ascontiguousarray(v))
-        # here we create a timestamp in ms resolution to be used for the frame pts.
-        # later libav will scale this to stream timebase
-        frame_ts_ms = int((input_frame.timestamp-self.start_time)*self.time_resolution)
-        frame.pts = frame_ts_ms
-        frame.time_base = self.time_base
-        # we keep a version of the timestamp counting from first frame in the codec resoltion (lowest time resolution in toolchain)
-        frame_ts_s = float(frame_ts_ms)/self.time_resolution
-        # we append it to our list to correlate hi-res absolute timestamps with media timstamps
-        self.timestamps_list.append((input_frame.timestamp,frame_ts_s))
-
+        if self.use_timestamps:
+            self.frame.pts = int( (input_frame.timestamp-self.start_time)/self.time_base )
+        else:
+            # our timebase is 1/30  so a frame idx is the correct pts for an fps recorded video.
+            self.frame.pts = self.current_frame_idx
         #send frame of to encoder
-        packet = self.video_stream.encode(frame)
+        packet = self.video_stream.encode(self.frame)
         if packet:
-            # print 'paket',packet.pts
             self.container.mux(packet)
+        self.current_frame_idx +=1
+
+
 
     def close(self):
         # flush encoder
@@ -170,9 +159,6 @@ class AV_Writer(object):
         self.container.close()
         logger.debug("Closed media container")
 
-        ts_array = np.array(self.timestamps_list)
-        np.save(self.ts_file_loc,ts_array)
-        logger.debug("Saved %s frames"%ts_array.shape[0])
 
     def release(self):
         self.close()
@@ -185,6 +171,9 @@ class JPEG_Writer(object):
 
     def __init__(self, file_loc,fps=30):
         super(JPEG_Writer, self).__init__()
+        # the approximate capture rate.
+        self.fps = int(fps)
+        self.time_base = Fraction(1000,self.fps*1000)
 
         try:
             file_path,ext = file_loc.rsplit('.', 1)
@@ -199,10 +188,12 @@ class JPEG_Writer(object):
         self.container = av.open(self.file_loc,'w')
         logger.debug("Opended '%s' for writing."%self.file_loc)
 
-        self.video_stream = self.container.add_stream('mjpeg',int(10000*fps))
+        self.video_stream = self.container.add_stream('mjpeg',1/self.time_base)
         self.video_stream.pix_fmt = "yuvj422p"
         self.configured = False
         self.frame_count = 0
+
+        self.write_video_frame_compressed = self.write_video_frame
 
     def write_video_frame(self, input_frame):
         if not self.configured:
@@ -212,8 +203,9 @@ class JPEG_Writer(object):
 
         packet = Packet()
         packet.payload = input_frame.jpeg_buffer
-        packet.dts = self.frame_count*10000
-        packet.pts = self.frame_count*10000
+        #we are setting the packet pts manually this uses a different timebase av.frame!
+        packet.dts = int(self.frame_count/self.video_stream.time_base/self.fps)
+        packet.pts = int(self.frame_count/self.video_stream.time_base/self.fps)
         self.frame_count +=1
         self.container.mux(packet)
 
@@ -230,10 +222,64 @@ class JPEG_Writer(object):
 
 
 
-class JPEG_Dumper(object):
-    """simple for JPEG_Dumper"""
-    def __init__(self, file_loc):
-        super(JPEG_Dumper, self).__init__()
+def format_time(time, time_base):
+        if time is None:
+            return 'None'
+        return '%.3fs (%s or %s/%s)' % (time_base * time, time_base * time, time_base.numerator * time, time_base.denominator)
+
+
+def rec_thread(file_loc, audio_src,should_close):
+    import av,platform
+    #create in container
+    if platform.system() == "Darwin":
+        in_container = av.open(':%s'%audio_src,format="avfoundation")
+    elif platform.system() == "Linux":
+        in_container = av.open('hw:%s'%audio_src,format="alsa")
+
+    in_stream = None
+
+    # print len(in_container.streams), 'stream(s):'
+    for i, stream in enumerate(in_container.streams):
+
+        if stream.type == 'audio':
+            # print '\t\taudio:'
+            # print '\t\t\tformat:', stream.format
+            # print '\t\t\tchannels: %s' % stream.channels
+            in_stream = stream
+            break
+
+    if in_stream is None:
+        # logger.error("No input audio stream found.")
+        return
+
+    #create out container
+    out_container = av.open(file_loc,'w')
+    # logger.debug("Opended '%s' for writing."%file_loc)
+    out_stream =  out_container.add_stream(template = in_stream)
+
+
+    for packet in in_container.demux(in_stream):
+        # for frame in packet.decode():
+        #     packet = out_stream.encode(frame)
+        #     if packet:
+        # print '%r' %packet
+        # print '\tduration: %s' % format_time(packet.duration, packet.stream.time_base)
+        # print '\tpts: %s' % format_time(packet.pts, packet.stream.time_base)
+        # print '\tdts: %s' % format_time(packet.dts, packet.stream.time_base)
+        out_container.mux(packet)
+        if should_close.is_set():
+            break
+
+    out_container.close()
+
+
+class Audio_Capture(object):
+    """
+    PyAV based audio capture.
+    """
+
+    def __init__(self, file_loc,audio_src=0):
+        super(Audio_Capture, self).__init__()
 
         try:
             file_path,ext = file_loc.rsplit('.', 1)
@@ -241,75 +287,90 @@ class JPEG_Dumper(object):
             logger.error("'%s' is not a valid media file name."%file_loc)
             raise Exception("Error")
 
-        self.raw_path = file_path+'.raw'
-        self.out_path = file_loc
+        if ext not in ('wav'):
+            logger.error("media file container should be wav. Using a different container is not supported.")
+            raise NotImplementedError()
 
-        self.file_handle = open(self.raw_path, 'wb')
+        self.should_close = Event()
+        self.process = None
+
+        self.start(file_loc,audio_src)
+
+    def start(self,file_loc, audio_src):
+        # from rec_thread import rec_thread
+        try:
+            from billiard import forking_enable
+            forking_enable(0)
+        except ImportError:
+            pass
+        self.should_close.clear()
+        self.process = Process(target=rec_thread, args=(file_loc, audio_src,self.should_close))
+        self.process.start()
+        try:
+            forking_enable(1)
+        except:
+            pass
+
+    def stop(self):
+        self.should_close.set()
+        self.process.join(timeout=1)
+        try:
+            self.process.terminate()
+        except:
+            logger.error('Could not joind recording thread.')
+        self.process = None
+
+    def close(self):
+        self.stop()
+
+    def __del__(self):
+        if self.process:
+            self.stop()
+
+# def test():
+
+#     import os
+#     import cv2
+#     from video_capture import autoCreateCapture
+#     logging.basicConfig(level=logging.DEBUG)
+
+#     writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out.mp4"))
+#     # writer = cv2.VideoWriter(os.path.expanduser("~/Desktop/av_writer_out.avi"),cv2.cv.CV_FOURCC(*"DIVX"),30,(1280,720))
+#     cap = autoCreateCapture(0,(1280,720))
+#     frame = cap.get_frame()
+#     # print writer.video_stream.time_base
+#     # print writer.
+
+#     for x in xrange(300):
+#         frame = cap.get_frame()
+#         writer.write_video_frame(frame)
+#         # writer.write(frame.img)
+#         # print writer.video_stream
+
+#     cap.close()
+#     writer.close()
 
 
-    def write_video_frame(self,frame):
-        self.file_handle.write(frame.jpeg_buffer.view())
-
-    def release(self):
-        self.file_handle.close()
-        cmd_bin = ffmpeg_bin()
-        if cmd_bin:
-            # ffmpeg  -f mjpeg -i world.raw -vcodec copy world.mkv
-            sp.Popen([cmd_bin+' -f mjpeg -i '+self.raw_path +' -vcodec copy '+self.out_path + '&& rm '+ self.raw_path],shell=True)
-            #this should be done programatically but requires a better video backend.
-
-
-def ffmpeg_bin():
-    try:
-        sp.Popen('ffmpeg',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
-    except OSError:
-        pass
-    else:
-        return 'ffmpeg'
-    try:
-        sp.Popen('avconv',stdout=open(os.devnull, 'wb'),stderr=open(os.devnull, 'wb'))
-    except OSError:
-        logger.error("Please install ffmpeg or libav-tools to enable pupil capture to record raw jpeg streams as a readable format.")
-        return None
-    else:
-        return 'avconv'
-
-def test():
-
-    import os
-    import cv2
-    from video_capture import autoCreateCapture
-    logging.basicConfig(level=logging.DEBUG)
-
-    writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out.mp4"))
-    # writer = cv2.VideoWriter(os.path.expanduser("~/Desktop/av_writer_out.avi"),cv2.cv.CV_FOURCC(*"DIVX"),30,(1280,720))
-    cap = autoCreateCapture(0,(1280,720))
-    frame = cap.get_frame()
-    # print writer.video_stream.time_base
-    # print writer.
-
-    for x in xrange(300):
-        frame = cap.get_frame()
-        writer.write_video_frame(frame)
-        # writer.write(frame.img)
-        # print writer.video_stream
-
-    cap.close()
-    writer.close()
 
 
 if __name__ == '__main__':
-
+    try:
+        from billiard import forking_enable
+        forking_enable(0)
+    except ImportError:
+        pass
     logging.basicConfig(level=logging.DEBUG)
 
+    cap = Audio_Capture('test.wav',1)
+
+    import time
+    time.sleep(2)
+    cap.close()
     #mic device
-
-    def format_time(time, time_base):
-        if time is None:
-            return 'None'
-        return '%.3fs (%s or %s/%s)' % (time_base * time, time_base * time, time_base.numerator * time, time_base.denominator)
+    exit()
 
 
+    container = av.open('hw:0',format="alsa")
     container = av.open(':0',format="avfoundation")
     print 'container:', container
     print '\tformat:', container.format
@@ -320,6 +381,7 @@ if __name__ == '__main__':
     print
 
     print len(container.streams), 'stream(s):'
+    audio_stream = None
     for i, stream in enumerate(container.streams):
 
         print '\t%r' % stream
@@ -334,7 +396,8 @@ if __name__ == '__main__':
             print '\t\taudio:'
             print '\t\t\tformat:', stream.format
             print '\t\t\tchannels: %s' % stream.channels
-
+            audio_stream = stream
+            break
         elif stream.type == 'container':
             print '\t\tcontainer:'
             print '\t\t\tformat:', stream.format
@@ -344,20 +407,21 @@ if __name__ == '__main__':
         for k, v in sorted(stream.metadata.iteritems()):
             print '\t\t\t%s: %r' % (k, v)
 
-
+    if not audio_stream:
+        exit()
     #file contianer:
 
     out_container = av.open('test.wav','w')
-    out_stream = out_container.add_stream('pcm_f32le')
+    out_stream = out_container.add_stream(audio_stream.format)
     # out_stream.rate = 44100
-    for i,packet in enumerate(container.demux(container.streams[0])):
+    for i,packet in enumerate(container.demux(audio_stream)):
         # for frame in packet.decode():
         #     packet = out_stream.encode(frame)
         #     if packet:
-        # print '%r' %packet
-        # print '\tduration: %s' % format_time(packet.duration, packet.stream.time_base)
-        # print '\tpts: %s' % format_time(packet.pts, packet.stream.time_base)
-        # print '\tdts: %s' % format_time(packet.dts, packet.stream.time_base)
+        print '%r' %packet
+        print '\tduration: %s' % format_time(packet.duration, packet.stream.time_base)
+        print '\tpts: %s' % format_time(packet.pts, packet.stream.time_base)
+        print '\tdts: %s' % format_time(packet.dts, packet.stream.time_base)
         out_container.mux(packet)
         if i >1000:
             break

@@ -41,7 +41,7 @@ if not os.path.isdir(user_dir):
 import logging
 #set up root logger before other imports
 logger = logging.getLogger()
-logger.setLevel(logging.WARNING) # <-- use this to set verbosity
+logger.setLevel(logging.DEBUG)
 #since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
     if __name__ == '__main__': #clear log if main
@@ -53,7 +53,7 @@ else:
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('Player: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -62,9 +62,10 @@ ch.setFormatter(formatter)
 # add the handlers to the logger
 logger.addHandler(fh)
 logger.addHandler(ch)
-# mute OpenGL logger
-logging.getLogger("OpenGL").propagate = False
-logging.getLogger("OpenGL").addHandler(logging.NullHandler())
+
+logging.getLogger("OpenGL").setLevel(logging.ERROR)
+logging.getLogger("libav").setLevel(logging.ERROR)
+
 logger = logging.getLogger(__name__)
 
 
@@ -84,22 +85,22 @@ from glfw import *
 from pyglui import __version__ as pyglui_version
 assert pyglui_version >= '0.3'
 from pyglui import ui,graph,cygl
-from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_named_texture,destroy_named_texture
+from pyglui.cygl.utils import Named_Texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 from OpenGL.GL import glClearColor
 #capture
-from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
+from video_capture import File_Capture,EndofVideoFileError,FileSeekError
 
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
-from methods import normalize, denormalize
+from methods import normalize, denormalize, delta_t
 from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current
 
 #monitoring
 import psutil
 
 # Plug-ins
-from plugin import Plugin_List
+from plugin import Plugin_List,import_runtime_plugins
 from vis_circle import Vis_Circle
 from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
@@ -117,9 +118,11 @@ from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
+from log_display import Log_Display
 
-system_plugins = Seek_Bar,Trim_Marks
-user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
+system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
+user_launchable_plugins = [Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay] #,Marker_Auto_Trim_Marks
+user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
@@ -173,7 +176,14 @@ def session(rec_dir):
                 logger.error("'%s' is not a valid pupil recording"%new_rec_dir)
 
 
-    video_path = glob(os.path.join(rec_dir,"world.*"))[0]
+
+
+    tick = delta_t()
+    def get_dt():
+        return next(tick)
+
+
+    video_path = [f for f in glob(os.path.join(rec_dir,"world.*")) if f[-3:] in ('mp4','mkv','avi')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
@@ -195,12 +205,9 @@ def session(rec_dir):
         logger.Error("This recording is to old. Sorry.")
         return
 
-
+    timestamps = np.load(timestamps_path)
     # Initialize capture
-    cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-    if isinstance(cap,FakeCapture):
-        logger.error("could not start capture.")
-        return
+    cap = File_Capture(video_path,timestamps=list(timestamps))
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
@@ -225,7 +232,7 @@ def session(rec_dir):
     g_pool.app = 'player'
     g_pool.version = get_version(version_file)
     g_pool.capture = cap
-    g_pool.timestamps = np.load(timestamps_path)
+    g_pool.timestamps = timestamps
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
@@ -257,9 +264,7 @@ def session(rec_dir):
     def open_plugin(plugin):
         if plugin ==  "Select to load":
             return
-        logger.debug('Open Plugin: %s'%plugin)
-        new_plugin = plugin(g_pool)
-        g_pool.plugins.add(new_plugin)
+        g_pool.plugins.add(plugin)
 
     def purge_plugins():
         for p in g_pool.plugins:
@@ -270,7 +275,7 @@ def session(rec_dir):
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.main_menu = ui.Growing_Menu("Settings",pos=(-350,20),size=(300,400))
-    g_pool.main_menu.append(ui.Button("quit",lambda:glfwSetWindowShouldClose(main_window,True)))
+    g_pool.main_menu.append(ui.Button("Close Pupil Player",lambda:glfwSetWindowShouldClose(main_window,True)))
     g_pool.main_menu.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
@@ -291,8 +296,9 @@ def session(rec_dir):
 
     #we always load these plugins
     system_plugins = [('Trim_Marks',{}),('Seek_Bar',{})]
-    default_plugins = [('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Export_Launcher',{})]
+    default_plugins = [('Log_Display',{}),('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Export_Launcher',{})]
     previous_plugins = session_settings.get('loaded_plugins',default_plugins)
+    g_pool.notifications = []
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,system_plugins+previous_plugins)
 
     for p in g_pool.plugins:
@@ -316,12 +322,12 @@ def session(rec_dir):
 
     # gl_state settings
     basic_gl_setup()
-    g_pool.image_tex = create_named_texture((height,width,3))
+    g_pool.image_tex = Named_Texture()
 
     #set up performace graphs:
     pid = os.getpid()
     ps = psutil.Process(pid)
-    ts = cap.get_now()-.03
+    ts = cap.get_timestamp()-.03
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,110)
@@ -356,6 +362,8 @@ def session(rec_dir):
 
         frame = new_frame.copy()
         events = {}
+        #report time between now and the last loop interation
+        events['dt'] = get_dt()
         #new positons we make a deepcopy just like the image is a copy.
         events['gaze_positions'] = deepcopy(g_pool.gaze_positions_by_frame[frame.index])
         events['pupil_positions'] = deepcopy(g_pool.pupil_positions_by_frame[frame.index])
@@ -374,6 +382,11 @@ def session(rec_dir):
         #always update the CPU graph
         cpu_graph.update()
 
+        # notify each plugin if there are new notifactions:
+        while g_pool.notifications:
+            n = g_pool.notifications.pop(0)
+            for p in g_pool.plugins:
+                p.on_notify(n)
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
@@ -385,8 +398,8 @@ def session(rec_dir):
         # render camera image
         glfwMakeContextCurrent(main_window)
         make_coord_system_norm_based()
-        update_named_texture(g_pool.image_tex,frame.img)
-        draw_named_texture(g_pool.image_tex)
+        g_pool.image_tex.update_from_frame(frame)
+        g_pool.image_tex.draw()
         make_coord_system_pixel_based(frame.img.shape)
         # render visual feedback from loaded plugins
         for p in g_pool.plugins:
@@ -420,7 +433,6 @@ def session(rec_dir):
 
     cap.close()
     g_pool.gui.terminate()
-    destroy_named_texture(g_pool.image_tex)
     glfwDestroyWindow(main_window)
 
 

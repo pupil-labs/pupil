@@ -95,43 +95,6 @@ if os_name == "Linux":
                 self[d] = idx
 
 
-    class Audio_Capture(object):
-        """docstring for audio_capture"""
-        def __init__(self,audio_src_idx=0, out_file='out.wav'):
-            super(Audio_Capture, self).__init__()
-            # command = [ ffmpeg_bin,
-            #         '-f', 'alsa',
-            #         '-i', 'hw:0,0',
-            #         '-v', 'error',
-            #         out_file]
-            logger.debug("Recording audio  using 'arecord' device %s to %s"%(audio_src_idx,out_file))
-            command = [ arecord_bin,
-                        '-D', 'plughw:'+str(audio_src_idx)+',0',
-                        '-r', '16000',
-                        '-f', 'S16_LE',
-                        '-c', '2',
-                        '-q', #we use quite because signint will write into stderr and we use this to check for real errors.
-                        out_file]
-            try:
-                self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE)
-            except OSError:
-                logger.debug("Audio module for recording not found. Not recording audio. please do 'sudo apt-get install libav-tools'.")
-                self.process = None
-                return
-            logger.debug("stared recording mic to %s with avconv process, pid: %s"%(out_file,self.process.pid))
-
-        def __del__(self):
-            if self.process:
-                self.process.send_signal(signal.SIGINT)
-                out,err = self.process.communicate()
-                if err:
-                    logger.warning('Audio recording failed. Error:\n %s'%err)
-                if out:
-                    logger.debug('Audio recording. INFO:\n %s'%out)
-                logger.debug("Finished recording mic with avconv process, pid: %s"%(self.process.pid))
-
-
-
 elif os_name == "Darwin":
 
     class Audio_Input_Dict(dict):
@@ -141,39 +104,6 @@ elif os_name == "Darwin":
             self['No Audio'] = -1
             self['Default Mic'] = 0
 
-    # if getattr(sys, 'frozen', False):
-    #     # we are running in a |PyInstaller| bundle
-    #     sox_bin = os.path.join(sys._MEIPASS,'sox')
-    # else:
-    #     # we are running in a normal Python environment
-    sox_bin = "sox"
-
-
-    class Audio_Capture(object):
-        """docstring for audio_capture"""
-        def __init__(self,audio_src_idx=0, out_file='out.wav'):
-            super(Audio_Capture, self).__init__()
-            logger.debug("Recording audio  using 'sox' device %s to %s"%(audio_src_idx,out_file))
-
-            command = [ sox_bin,
-                    '-d','-q', out_file]
-            try:
-                self.process =  sp.Popen(command,stdout=sp.PIPE,stderr=sp.PIPE)
-            except OSError:
-                logger.warning("Audio module for recording not found. Not recording audio. Please do 'brew install sox' ")
-                self.process = None
-                return
-            logger.debug("stared recording mic to %s with SOX process, pid: %s"%(out_file,self.process.pid))
-
-        def __del__(self):
-            if self.process:
-                self.process.send_signal(signal.SIGINT)
-                out,err = self.process.communicate()
-                if err:
-                    logger.warning('Audio recording failed. Error:\n %s'%err)
-                if out:
-                    logger.debug('Audio recording. INFO:\n %s'%out)
-                logger.debug("Finished recording mic with SOX process, pid: %s"%(self.process.pid))
 
 
 
