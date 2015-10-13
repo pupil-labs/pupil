@@ -63,6 +63,7 @@ std::vector<cv::Point> Detector2D::ellipse_true_support(Ellipse& ellipse, double
 std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image)
 {
 	std::shared_ptr<Detector_2D_Results> result = std::make_shared<Detector_2D_Results>();
+	result->current_roi = roi;
 
 
 	const int image_width = image.size().width;
@@ -187,24 +188,27 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	    double support_ratio = support_pixels.size() / ellipse_circumference;
 
 	    if(support_ratio >= props.strong_perimeter_ratio_range_min){
-	      cv::RotatedRect refit_ellipse = cv::fitEllipse(support_pixels);
+	      	cv::RotatedRect refit_ellipse = cv::fitEllipse(support_pixels);
 
-	      if(use_debug_image){
-	          cv::ellipse(debug_image, toRotatedRect(ellipse), mRoyalBlue_color, 4);
-	          cv::ellipse(debug_image, refit_ellipse, mRed_color, 1);
-	      }
+			if(use_debug_image){
+			  cv::ellipse(debug_image, toRotatedRect(ellipse), mRoyalBlue_color, 4);
+			  cv::ellipse(debug_image, refit_ellipse, mRed_color, 1);
+			}
 
-	      ellipse = toEllipse<double>(refit_ellipse);
-	      ellipse.center[0] += roi.x;
-	      ellipse.center[1] += roi.y;
+			ellipse = toEllipse<double>(refit_ellipse);
+			ellipse.center[0] += roi.x;
+			ellipse.center[1] += roi.y;
 
-	      mPrior_ellipse = ellipse;
-	  	  mUse_strong_prior = true;
-	      double goodness = std::min(1.0, support_ratio);
-	      result->confidence = goodness;
-	      result->ellipse = toEllipse<double>(refit_ellipse);
-	      mPupil_Size = ellipse.major_radius;
-	      return result;
+			mPrior_ellipse = ellipse;
+			mUse_strong_prior = true;
+			double goodness = std::min(1.0, support_ratio);
+			mPupil_Size = ellipse.major_radius;
+		 	result->confidence = goodness;
+			result->ellipse = toEllipse<double>(refit_ellipse);
+			//result->final_contours = std::move(best_contours); // no contours when strong prior
+			//result->contours = std::move(split_contours);
+			result->raw_edges = std::move(raw_edges); // do we need it when strong prior ?
+	      	return result;
 	    }
 	  }
 	}
@@ -243,6 +247,11 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 
 	if (split_contours.empty()) {
 		result->confidence = 0.0;
+		// Does it make seens to return anything ?
+		//result->ellipse = toEllipse<double>(refit_ellipse);
+		//result->final_contours = std::move(best_contours);
+		//result->contours = std::move(split_contours);
+		//result->raw_edges = std::move(raw_edges);
 		return result;
 	}
 
@@ -277,6 +286,11 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	// still empty ? --> exits
 	if (seed_indices.empty()) {
 		result->confidence = 0.0;
+		// Does it make seens to return anything ?
+		//result->ellipse = toEllipse<double>(refit_ellipse);
+		//result->final_contours = std::move(best_contours);
+		result->contours = std::move(split_contours);
+		result->raw_edges = std::move(raw_edges);
 		return result;
 	}
 
@@ -433,7 +447,11 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	if (index_best_Solution == -1) {
 		// no good final ellipse found
 		result->confidence = 0.0;
-		//history
+		// Does it make seens to return anything ?
+		//result->ellipse = toEllipse<double>(refit_ellipse);
+		//result->final_contours = std::move(best_contours);
+		result->contours = std::move(split_contours);
+		result->raw_edges = std::move(raw_edges);
 		return result;
 	}
 
@@ -506,7 +524,6 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	result->final_contours = std::move(best_contours);
 	result->contours = std::move(split_contours);
 	result->raw_edges = std::move(raw_edges);
-	result->current_roi = roi;
 	return result;
 }
 
