@@ -21,7 +21,7 @@ class Trim_Marks(Plugin):
     """
     def __init__(self, g_pool, focus=0, sections=[]):
         super(Trim_Marks, self).__init__(g_pool)
-        g_pool.trim_marks = self # attach self for ease of access by others.
+        g_pool.trim_marks = self #attach self for ease of access by others.
         self.order = .8
         self.capture = g_pool.capture
         self.frame_count = self.capture.get_frame_count()
@@ -132,6 +132,8 @@ class Trim_Marks(Plugin):
             x,_ = self.screen_to_bar_space((x,y))
             self.out_mark = x
 
+
+
     def on_click(self,img_pos,button,action):
         """
         gets called when the user clicks in the window screen
@@ -158,8 +160,11 @@ class Trim_Marks(Plugin):
                     self.drag_out=True
 
         elif action == GLFW_RELEASE:
-            self.drag_out = False
-            self.drag_in = False
+            if self.drag_out or self.drag_in:
+                logger.info("Section: "+self.get_string())
+                self.drag_out = False
+                self.drag_in = False
+
 
             # would be great to expand the click area horizontally for big sections
             for s in self.sections:
