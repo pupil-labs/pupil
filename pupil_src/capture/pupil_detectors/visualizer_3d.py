@@ -430,7 +430,7 @@ class Visualizer():
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool, image_width, image_height,  eye, pupil_observations, last_contours = None, last_unwrapped_contours = None  ):
+	def update_window(self, g_pool, image_width, image_height,  eye, pupil_observations, last_unprojected_contours = None  ):
 
 		if self._window != None:
 			glfwMakeContextCurrent(self._window)
@@ -456,8 +456,8 @@ class Visualizer():
 		self.draw_coordinate_system(4)
 
 		#draw unprojecte contours
-		if last_contours:
-			self.draw_contours(last_contours)
+		if last_unprojected_contours:
+			self.draw_contours(last_unprojected_contours)
 		#self.draw_contours_on_screen(projected_contours)
 
 		# 1b. draw frustum in pixel scale, but retaining origin
@@ -470,8 +470,8 @@ class Visualizer():
 
 
 		self.trackball.pop()
-		if last_unwrapped_contours:
-			self.draw_unwrapped_contours_on_screen(last_unwrapped_contours)
+		#if last_unwrapped_contours:
+		#	self.draw_unwrapped_contours_on_screen(last_unwrapped_contours)
 
 		if pupil:
 			self.draw_eye_model_fitter_text(eye, pupil)
