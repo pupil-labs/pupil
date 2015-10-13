@@ -144,8 +144,10 @@ cdef class Detector_3D:
 
         ######### 3D Model Part ############
 
+        self.detector_3d_ptr.add_observation( cpp_result_ptr, image_width, image_height , True  ) # if true is set, add_conversation converts the data to the coord space of the eye fitter
+        self.detector_3d_ptr.unproject_last_contour()
+
         if py_result['confidence'] > 0.8:
-            self.detector_3d_ptr.add_observation( cpp_result_ptr, image_width, image_height , True  ) # if true is set, add_conversation converts the data to the coord space of the eye fitter
             if self.detector_3d_ptr.pupils.size() > 3:
                 pupil_radius = 1
                 eye_z = 20
@@ -153,14 +155,13 @@ cdef class Detector_3D:
                 self.detector_3d_ptr.initialise_model()
                 #now we have an updated eye model
                 #use it to unproject contours
-                #self.detector_3d_ptr.unproject_contours()
                 #calculate uv coords of unprojected contours
                 #self.detector_3d_ptr.unwrap_contours()
 
         if self.debug_visualizer_3d._window:
             eye = self.detector_3d_ptr.eye
             py_eye = ((eye.center[0],eye.center[1],eye.center[2]),eye.radius)
-            self.debug_visualizer_3d.update_window( self.g_pool, image_width, image_height, py_eye, self.get_last_observations(5) )
+            self.debug_visualizer_3d.update_window( self.g_pool, image_width, image_height, py_eye, self.get_last_observations(5), self.get_last_unprojected_contours() )
 
 
         return py_result
@@ -179,7 +180,9 @@ cdef class Detector_3D:
         self.menu.append(ui.Slider('intensity_range',self.detect_properties,label='Pupil intensity range',min=0,max=60,step=1))
         self.menu.append(ui.Slider('pupil_size_min',self.detect_properties,label='Pupil min',min=1,max=250,step=1))
         self.menu.append(ui.Slider('pupil_size_max',self.detect_properties,label='Pupil max',min=50,max=400,step=1))
-
+        self.menu.append(ui.Slider('ellipse_roundness_ratio',self.detect_properties,min=0.01,max=1.0,step=0.01))
+        self.menu.append(ui.Slider('initial_ellipse_fit_treshhold',self.detect_properties,min=0.01,max=3.0,step=0.01))
+        self.menu.append(ui.Button('Reset 3D Model', self.reset_3D_Model ))
         advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
         advanced_controls_menu.append(ui.Switch('coarse_detection',self.detect_properties,label='Use coarse detection'))
         #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detect_properties,label='Contour min length',min=1,max=200,step=1))
@@ -191,6 +194,9 @@ cdef class Detector_3D:
     def deinit_gui(self):
         self.g_pool.sidebar.remove(self.menu)
         self.menu = None
+
+    def reset_3D_Model(self):
+         self.detector_3d_ptr.reset()
 
     def toggle_window(self):
         if not self.debug_visualizer_3d._window:
@@ -226,7 +232,7 @@ cdef class Detector_3D:
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
             p.circle.radius)
 
-    def get_last_contours(self):
+    def get_last_unprojected_contours(self):
         if self.detector_3d_ptr.pupils.size() == 0:
             return []
 
@@ -240,19 +246,19 @@ cdef class Detector_3D:
 
         return contours
 
-    def get_last_unwrapped_contours(self):
-        if self.detector_3d_ptr.pupils.size() == 0:
-            return []
+    # def get_last_unwrapped_contours(self):
+    #     if self.detector_3d_ptr.pupils.size() == 0:
+    #         return []
 
-        cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
-        contours = []
-        for contour in p.unwrapped_contours:
-            c = []
-            for point in contour:
-                c.append([point[0],point[1]])
-            contours.append(c)
+    #     cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
+    #     contours = []
+    #     for contour in p.unwrapped_contours:
+    #         c = []
+    #         for point in contour:
+    #             c.append([point[0],point[1]])
+    #         contours.append(c)
 
-        return contours
+    #     return contours
 
     def get_all_pupil_observations(self):
         cdef EyeModelFitter.Pupil p
