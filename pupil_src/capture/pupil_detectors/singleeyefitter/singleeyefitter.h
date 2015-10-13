@@ -2,6 +2,7 @@
 #define SingleEyeFitter_h__
 
 #include <mutex>
+#include <deque>
 #include <Eigen/Core>
 #include <opencv2/core/core.hpp>
 #include "common/types.h"
@@ -110,7 +111,8 @@ namespace singleeyefitter {
             //void print_single_contrast_metric(Index id) const;
 
             Sphere eye;
-            std::vector<Pupil> pupils;
+            std::deque<Pupil> pupils;
+            size_t max_pupils;   // this are the max pupils we wanna consider for calculations
             std::mutex model_mutex;
             // Model version gets incremented on initialisation/reset, so that long-running background-thread refines don't overwrite the model
             int model_version = 0;

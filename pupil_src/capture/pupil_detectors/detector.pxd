@@ -1,5 +1,6 @@
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
+from libcpp.deque cimport deque
 from libc.stdint cimport int32_t
 
 cdef extern from '<opencv2/core/types_c.h>':
@@ -148,10 +149,8 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         #variables
         float model_version
         float focal_length
-        vector[Pupil] pupils
+        deque[Pupil] pupils
         Sphere[double] eye
-        #Ellipse2D[double] projected_eye #technically only need center, not whole ellipse. can optimize here
-        #float scale
 
 
 

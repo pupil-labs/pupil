@@ -872,10 +872,10 @@ namespace singleeyefitter {
 }
 
 
-singleeyefitter::EyeModelFitter::EyeModelFitter() : region_band_width(5), region_step_epsilon(0.5), region_scale(1)
+singleeyefitter::EyeModelFitter::EyeModelFitter() : region_band_width(5), region_step_epsilon(0.5), region_scale(1), max_pupils(30)
 {
 }
-singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length, double region_band_width, double region_step_epsilon) : focal_length(focal_length), region_band_width(region_band_width), region_step_epsilon(region_step_epsilon), region_scale(1)
+singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length, double region_band_width, double region_step_epsilon) : focal_length(focal_length), region_band_width(region_band_width), region_step_epsilon(region_step_epsilon), region_scale(1), max_pupils(30)
 {
 }
 
@@ -953,6 +953,7 @@ singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length, double regi
 singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_observation( std::shared_ptr<Detector_2D_Results>& observation , int image_width, int image_height, bool convert_to_eyefitter_space )
 {
     std::lock_guard<std::mutex> lock_model(model_mutex);
+    while( pupils.size() >= max_pupils ) pupils.pop_front();
     // uint i = 0;
     // for( auto* contour : contour_ptrs){
     //     uint length = contour_sizes.at(i);
@@ -967,25 +968,23 @@ singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_obse
     cv::Rect roi = observation->current_roi;
     if (convert_to_eyefitter_space)
     {
-        /* code */
 
         for( Contour_2D& c : observation->final_contours ){
             for( cv::Point& p : c ){
-                p.x += roi.x;
+                p += roi.tl();
                 p.x -= image_width * 0.5f;
-                p.y += roi.y;
                 p.y = image_height * 0.5f - p.y;
-
              }
         }
-
         for( Contour_2D& c : observation->contours ){
             for( cv::Point& p : c ){
+                p += roi.tl();
                 p.x -= image_width * 0.5f;
                 p.y = image_height * 0.5f - p.y;
              }
         }
         for( cv::Point& p : observation->raw_edges ){
+                p += roi.tl();
                 p.x -= image_width * 0.5f;
                 p.y = image_height * 0.5f - p.y;
         }
