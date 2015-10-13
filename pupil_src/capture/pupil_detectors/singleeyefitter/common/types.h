@@ -3,6 +3,8 @@
 #define singleeyefitter_types_h__
 
 #include "../Ellipse.h"
+#include "../Circle.h"
+#include "../Sphere.h"
 
 #include <vector>
 #include <opencv2/core/core.hpp>
@@ -10,10 +12,23 @@
 
 namespace singleeyefitter {
 
-    typedef std::vector<std::vector<cv::Point>> Contours_2D;
+
+    //########  2D Detector ############
+    typedef std::vector<std::vector<cv::Point> > Contours_2D;
     typedef std::vector<cv::Point> Contour_2D;
     typedef std::vector<int> ContourIndices;
     typedef singleeyefitter::Ellipse2D<double> Ellipse;
+
+    //########  3D Detector ############
+
+    typedef Eigen::Matrix<double, 2, 1> Vector2;
+    typedef Eigen::Matrix<double, 3, 1> Vector3;
+    typedef Eigen::ParametrizedLine<double, 2> Line;
+    typedef Eigen::ParametrizedLine<double, 3> Line3;
+    typedef singleeyefitter::Circle3D<double> Circle;
+    typedef size_t Index;
+
+
 
     // every coordinates are relative to the roi
     struct Detector_2D_Results {

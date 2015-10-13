@@ -16,15 +16,8 @@ namespace singleeyefitter {
 
     class EyeModelFitter {
         public:
-            // Typedefs
-            typedef Eigen::Matrix<double, 2, 1> Vector2;
-            typedef Eigen::Matrix<double, 3, 1> Vector3;
-            typedef Eigen::ParametrizedLine<double, 2> Line;
-            typedef Eigen::ParametrizedLine<double, 3> Line3;
-            typedef singleeyefitter::Circle3D<double> Circle;
-            typedef singleeyefitter::Ellipse2D<double> Ellipse;
+
             typedef singleeyefitter::Sphere<double> Sphere;
-            typedef size_t Index;
 
             static const Vector3 camera_center;
 
@@ -68,7 +61,7 @@ namespace singleeyefitter {
             // Pubil-Laps addons
             //
 
-            void unproject_contours();
+            void unproject_last_contour();
             void unwrap_contours();
 
             // struct Observation {
@@ -90,7 +83,7 @@ namespace singleeyefitter {
             struct Pupil {
                 //Observation observation;
                 std::shared_ptr<Detector_2D_Results> observation;
-                std::vector<std::vector<Vector3>> unprojected_contours;  // whre to put this ? observations ? keep projected contours ?
+                std::vector<std::vector<Vector3>> unprojected_contours;  // where to put this ? observations ? keep projected contours ?
                 std::vector<std::vector<Vector2>> unwrapped_contours;
                 Circle circle;
                 PupilParams params;

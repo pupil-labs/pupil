@@ -834,7 +834,7 @@ namespace singleeyefitter {
 
     };
 
-    const EyeModelFitter::Vector3 EyeModelFitter::camera_center = EyeModelFitter::Vector3::Zero();
+    const Vector3 EyeModelFitter::camera_center = Vector3::Zero();
 
 
     EyeModelFitter::Pupil::Pupil(std::shared_ptr<Detector_2D_Results> observation) : observation(observation), params(0, 0, 0)
@@ -872,10 +872,10 @@ namespace singleeyefitter {
 }
 
 
-singleeyefitter::EyeModelFitter::EyeModelFitter() : region_band_width(5), region_step_epsilon(0.5), region_scale(1), max_pupils(30)
+singleeyefitter::EyeModelFitter::EyeModelFitter() : region_band_width(5), region_step_epsilon(0.5), region_scale(1), max_pupils(300)
 {
 }
-singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length, double region_band_width, double region_step_epsilon) : focal_length(focal_length), region_band_width(region_band_width), region_step_epsilon(region_step_epsilon), region_scale(1), max_pupils(30)
+singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length, double region_band_width, double region_step_epsilon) : focal_length(focal_length), region_band_width(region_band_width), region_step_epsilon(region_step_epsilon), region_scale(1), max_pupils(300)
 {
 }
 
@@ -950,7 +950,7 @@ singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length, double regi
 // }
 
 
-singleeyefitter::EyeModelFitter::Index singleeyefitter::EyeModelFitter::add_observation( std::shared_ptr<Detector_2D_Results>& observation , int image_width, int image_height, bool convert_to_eyefitter_space )
+singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation( std::shared_ptr<Detector_2D_Results>& observation , int image_width, int image_height, bool convert_to_eyefitter_space )
 {
     std::lock_guard<std::mutex> lock_model(model_mutex);
     while( pupils.size() >= max_pupils ) pupils.pop_front();
@@ -1011,7 +1011,7 @@ void EyeModelFitter::reset()
     model_version++;
 }
 
-singleeyefitter::EyeModelFitter::Circle singleeyefitter::EyeModelFitter::circleFromParams(const Sphere& eye, const PupilParams& params)
+singleeyefitter::Circle singleeyefitter::EyeModelFitter::circleFromParams(const Sphere& eye, const PupilParams& params)
 {
     if (params.radius == 0)
         return Circle::Null;
@@ -1022,7 +1022,7 @@ singleeyefitter::EyeModelFitter::Circle singleeyefitter::EyeModelFitter::circleF
                   params.radius);
 }
 
-singleeyefitter::EyeModelFitter::Circle singleeyefitter::EyeModelFitter::circleFromParams(const PupilParams& params) const
+singleeyefitter::Circle singleeyefitter::EyeModelFitter::circleFromParams(const PupilParams& params) const
 {
     return circleFromParams(eye, params);
 }
@@ -1130,7 +1130,7 @@ singleeyefitter::EyeModelFitter::Circle singleeyefitter::EyeModelFitter::circleF
 //     return refine_single_with_contrast(pupils[id]);
 // }
 
-const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::initialise_single_observation(Pupil& pupil)
+const singleeyefitter::Circle& singleeyefitter::EyeModelFitter::initialise_single_observation(Pupil& pupil)
 {
     // Ignore the pupil circle normal, and intersect the pupil circle
     // center projection line with the eyeball sphere
@@ -1161,7 +1161,7 @@ const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::
     return pupil.circle;
 }
 
-const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::initialise_single_observation(Index id)
+const singleeyefitter::Circle& singleeyefitter::EyeModelFitter::initialise_single_observation(Index id)
 {
     initialise_single_observation(pupils[id]);
     /*if (id > 0 && pupils[id-1].circle) {
@@ -1184,7 +1184,7 @@ const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::
     return pupils[id].circle;
 }
 
-const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::unproject_single_observation(Pupil& pupil, double pupil_radius /*= 1*/) const
+const singleeyefitter::Circle& singleeyefitter::EyeModelFitter::unproject_single_observation(Pupil& pupil, double pupil_radius /*= 1*/) const
 {
     if (eye == Sphere::Null) {
         throw std::runtime_error("Need to get eye center estimate first (by unprojecting multiple observations)");
@@ -1209,7 +1209,7 @@ const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::
     return pupil.circle;
 }
 
-const singleeyefitter::EyeModelFitter::Circle& singleeyefitter::EyeModelFitter::unproject_single_observation(Index id, double pupil_radius /*= 1*/)
+const singleeyefitter::Circle& singleeyefitter::EyeModelFitter::unproject_single_observation(Index id, double pupil_radius /*= 1*/)
 {
     return unproject_single_observation(pupils[id], pupil_radius);
 }
@@ -1639,38 +1639,37 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
 }
 
 
-void singleeyefitter::EyeModelFitter::unproject_contours()
+void singleeyefitter::EyeModelFitter::unproject_last_contour()
 {
     if (eye == Sphere::Null || pupils.size() == 0) {
         return;
     }
 
-    for (auto& pupil : pupils) {
-        //if(pupil.processed)
-        //  continue;
-        auto& contours = pupil.observation->contours;
-        pupil.unprojected_contours.clear();
-        pupil.unprojected_contours.resize(contours.size());
-        int i = 0;
 
-        for (auto& contour : contours) {
-            for (auto& point : contour) {
-                Vector3 point_3d(point.x, point.y , focal_length);
-                Vector3 direction = point_3d - camera_center;
+    auto& pupil = pupils.back();
+    auto& contours = pupil.observation->contours;
+    pupil.unprojected_contours.clear();
+    pupil.unprojected_contours.resize(contours.size());
+    int i = 0;
 
-                try {
-                    // we use the eye properties of the current eye, when ever we call this
-                    const auto& unprojected_point = intersect(Line3(camera_center,  direction.normalized()), eye);
-                    pupil.unprojected_contours.at(i).push_back(std::move(unprojected_point.first));
+    for (auto& contour : contours) {
+        for (auto& point : contour) {
+            Vector3 point_3d(point.x, point.y , focal_length);
+            Vector3 direction = point_3d - camera_center;
 
-                } catch (no_intersection_exception&) {
-                    // if there is no intersection we don't do anything
-                }
+            try {
+                // we use the eye properties of the current eye, when ever we call this
+                const auto& unprojected_point = intersect(Line3(camera_center,  direction.normalized()), eye);
+                pupil.unprojected_contours.at(i).push_back(std::move(unprojected_point.first));
+
+            } catch (no_intersection_exception&) {
+                // if there is no intersection we don't do anything
             }
-
-            i++;
         }
+
+        i++;
     }
+
 }
 void singleeyefitter::EyeModelFitter::unwrap_contours()
 {
