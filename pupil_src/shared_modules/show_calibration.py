@@ -44,10 +44,15 @@ class Show_Calibration(Plugin):
             return
         
         model_n = 7
+        fn_input = cal_pt_cloud[:,0:2].transpose()
         if self.g_pool.binocular:
-            raise NotImplementedError()
+            #model_n = 5
+            #fn_input = (cal_pt_cloud[:,0:2].transpose(), cal_pt_cloud[:,2:5].transpose())
+            logger.warning("Binocuolar is not supported yet.")
+            self.close()
+            return
         map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(width, height),return_inlier_map=True, model_n=model_n)
-        cal_pt_cloud[:,0:2] =  np.array(map_fn(cal_pt_cloud[:,0:2].transpose())).transpose()
+        cal_pt_cloud[:,0:2] =  np.array(map_fn(fn_input)).transpose()
         ref_pts = cal_pt_cloud[inlier_map][:,np.newaxis,2:4]
         ref_pts = np.array(ref_pts,dtype=np.float32)
         logger.debug("calibration ref_pts %s"%ref_pts)

@@ -237,7 +237,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         cal_pt_cloud = np.array(cal_pt_cloud)
         model_n = 7
         if self.g_pool.binocular:
-            model_n = 5
+            model_n = 13
         map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, model_n=model_n)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 

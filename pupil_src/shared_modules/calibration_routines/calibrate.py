@@ -124,6 +124,25 @@ def make_model(cal_pt_cloud,n=7):
         ZX=cal_pt_cloud[:,2]
         ZY=cal_pt_cloud[:,3]
         M=np.array([X,Y,XX,YY,XY,XXYY,XXY,YYX,Ones,ZX,ZY]).transpose()
+        
+    elif n==13:
+        X0=cal_pt_cloud[:,0]
+        Y0=cal_pt_cloud[:,1]
+        X1=cal_pt_cloud[:,2]
+        Y1=cal_pt_cloud[:,3]
+        XX0=X0*X0
+        YY0=Y0*Y0
+        XY0=X0*Y0
+        XXYY0=XX0*YY0
+        XX1=X1*X1
+        YY1=Y1*Y1
+        XY1=X1*Y1
+        XXYY1=XX1*YY1        
+        Ones=np.ones(n_points)
+        ZX=cal_pt_cloud[:,4]
+        ZY=cal_pt_cloud[:,5]
+        M=np.array([X0,Y0,X1,Y1,XX0,YY0,XY0,XXYY0,XX1,YY1,XY1,XXYY1,Ones,ZX,ZY]).transpose()
+        
     else:
         raise Exception("ERROR: Model n needs to be 3, 5, 7 or 9")
     return M
@@ -138,7 +157,7 @@ def make_map_function(cx,cy,n):
 
     elif n==5:
         def fn((X0,Y0),(X1,Y1)):
-            #X0,Y0,X1,Y1,Ones
+            #        X0        Y0        X1        Y1        Ones
             x2 = cx[0]*X0 + cx[1]*Y0 + cx[2]*X1 + cx[3]*Y1 + cx[4]
             y2 = cy[0]*X0 + cy[1]*Y0 + cy[2]*X1 + cy[3]*Y1 + cy[4]
             return x2,y2
@@ -155,6 +174,14 @@ def make_map_function(cx,cy,n):
             x2 = cx[0]*X + cx[1]*Y + cx[2]*X*X + cx[3]*Y*Y + cx[4]*X*Y + cx[5]*Y*Y*X*X + cx[6]*Y*X*X + cx[7]*Y*Y*X + cx[8]
             y2 = cy[0]*X + cy[1]*Y + cy[2]*X*X + cy[3]*Y*Y + cy[4]*X*Y + cy[5]*Y*Y*X*X + cy[6]*Y*X*X + cy[7]*Y*Y*X + cy[8]
             return x2,y2
+    
+    elif n==13:
+        def fn((X0,Y0),(X1,Y1)):
+            #        X0        Y0        X1         Y1            XX0        YY0            XY0            XXYY0                XX1            YY1            XY1            XXYY1        Ones
+            x2 = cx[0]*X0 + cx[1]*Y0 + cx[2]*X1 + cx[3]*Y1 + cx[4]*X0*X0 + cx[5]*Y0*Y0 + cx[6]*X0*Y0 + cx[7]*X0*X0*Y0*Y0 + cx[8]*X1*X1 + cx[9]*Y1*Y1 + cx[10]*X1*Y1 + cx[11]*X1*X1*Y1*Y1 + cx[12]
+            y2 = cy[0]*X0 + cy[1]*Y0 + cy[2]*X1 + cy[3]*Y1 + cy[4]*X0*X0 + cy[5]*Y0*Y0 + cy[6]*X0*Y0 + cy[7]*X0*X0*Y0*Y0 + cy[8]*X1*X1 + cy[9]*Y1*Y1 + cy[10]*X1*Y1 + cy[11]*X1*X1*Y1*Y1 + cy[12]
+            return x2,y2
+        
     else:
         raise Exception("ERROR: Model n needs to be 3, 5, 7 or 9")
 
