@@ -235,12 +235,17 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             return
 
         cal_pt_cloud = np.array(cal_pt_cloud)
-        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True)
+        model_n = 7
+        if self.g_pool.binocular:
+            model_n = 5
+        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, model_n=model_n)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
         #replace current gaze mapper with new
-        #self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
-        self.g_pool.plugins.add(Bilateral_Gaze_Mapper,args={'params':params})
+        if self.g_pool.binocular:
+            self.g_pool.plugins.add(Bilateral_Gaze_Mapper,args={'params':params})
+        else:
+            self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
 
 
     def close_window(self):
