@@ -58,9 +58,9 @@ for i in range(0,int(circle_res+1)):
 	temp =  (i)/circle_res *  math.pi * 2.0
 	circle_xy.append([np.cos(temp),np.sin(temp)])
 
-class Visualizer():
+class Visualizer(object):
 	def __init__(self,focal_length, name = "Debug Visualizer", run_independently = False):
-
+       # super(Visualizer, self).__init__()
 		self.focal_length = focal_length
 		self.image_width = 640 # right values are assigned in update
 		self.image_height = 480
