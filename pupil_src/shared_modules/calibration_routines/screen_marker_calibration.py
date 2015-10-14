@@ -25,7 +25,7 @@ from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
-from gaze_mappers import Simple_Gaze_Mapper
+from gaze_mappers import Simple_Gaze_Mapper, Bilateral_Gaze_Mapper
 
 #logging
 import logging
@@ -151,6 +151,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
     def start(self):
+        # ##############
+        # DEBUG
+        #self.stop()
+        
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
         self.sites = [  (.25, .5), (0,.5),
@@ -221,6 +225,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.close_window()
         self.button.status_text = ''
 
+        #cal_pt_cloud = np.load(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'))
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
 
         logger.info("Collected %s data points." %len(cal_pt_cloud))
@@ -234,7 +239,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
         #replace current gaze mapper with new
-        self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
+        #self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
+        self.g_pool.plugins.add(Bilateral_Gaze_Mapper,args={'params':params})
 
 
     def close_window(self):

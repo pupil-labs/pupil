@@ -20,7 +20,7 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inli
     return the function to map vector
     """
     # fit once using all avaiable data
-    model_n = 7
+    model_n = 0
     cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
     err_dist,err_mean,err_rms = fit_error_screen(err_x,err_y,screen_size)
     if cal_pt_cloud[err_dist<=threshold].shape[0]: #did not disregard all points..
@@ -60,6 +60,7 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inli
 
 def fit_poly_surface(cal_pt_cloud,n=7):
     M = make_model(cal_pt_cloud,n)
+    n = 5
     U,w,Vt = np.linalg.svd(M[:,:n],full_matrices=0)
     V = Vt.transpose()
     Ut = U.transpose()
@@ -82,7 +83,16 @@ def fit_error_screen(err_x,err_y,(screen_x,screen_y)):
 def make_model(cal_pt_cloud,n=7):
     n_points = cal_pt_cloud.shape[0]
 
-    if n==3:
+    if n==0:
+        X0=cal_pt_cloud[:,0]
+        Y0=cal_pt_cloud[:,1]
+        X1=cal_pt_cloud[:,2]
+        Y1=cal_pt_cloud[:,3]
+        Ones=np.ones(n_points)
+        ZX=cal_pt_cloud[:,4]
+        ZY=cal_pt_cloud[:,5]
+        M=np.array([X0,Y0,X1,Y1,Ones,ZX,ZY]).transpose()
+    elif n==3:
         X=cal_pt_cloud[:,0]
         Y=cal_pt_cloud[:,1]
         Ones=np.ones(n_points)
@@ -121,7 +131,13 @@ def make_model(cal_pt_cloud,n=7):
 
 
 def make_map_function(cx,cy,n):
-    if n==3:
+    if n==0:
+        def fn((X0,Y0),(X1,Y1)):
+            #X0,Y0,X1,Y1,Ones
+            x2 = cx[0]*X0 + cx[1]*Y0 + cx[2]*X1 + cx[3]*Y1 + cx[4]
+            y2 = cy[0]*X0 + cy[1]*Y0 + cy[2]*X1 + cy[3]*Y1 + cy[4]
+            return x2,y2
+    elif n==3:
         def fn((X,Y)):
             x2 = cx[0]*X + cx[1]*Y +cx[2]
             y2 = cy[0]*X + cy[1]*Y +cy[2]
