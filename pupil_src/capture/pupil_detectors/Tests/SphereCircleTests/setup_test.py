@@ -34,8 +34,8 @@ extensions = [
         # configured to Andrew Xia's ubuntu installation location
         name="circleFitUtils",
         sources=['circleFitUtils.pyx'], #I don't need cvx.
-        include_dirs = [ '/usr/local/include/eigen3' , pupil_base_dir, pupil_test_dir  ],
-        libraries = [],
+        include_dirs = [ '/usr/local/include/eigen3' ,'/usr/local/include/ceres',  pupil_base_dir, pupil_test_dir  ],
+        libraries = ['ceres'],
         # library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-std=c++11",'-w'], #-w hides warnings

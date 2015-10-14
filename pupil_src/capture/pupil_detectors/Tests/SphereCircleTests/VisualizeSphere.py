@@ -64,7 +64,8 @@ if __name__ == '__main__':
   visualizer.open_window()
   sphere = ( (0,0,0), 1.0 ) # center, radius
 
-  points = get_circle_test_points( (math.pi,math.pi), math.pi/4.0, 20 )
+  points = get_circle_test_points( (-math.pi/4.0,0), math.pi/4.0, 20 )
+  reuslt = testHaversine((-math.pi/4.0,0), math.pi/4.0, 20)
 
   while True:
     visualizer.update_window( sphere , points)

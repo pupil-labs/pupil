@@ -1,5 +1,7 @@
 
 
+#include "../../singleeyefitter/CircleFit/CircleFitHaversine.h"
+
 
 std::vector<singleeyefitter::Vector3> createCirclePointsOnSphere( singleeyefitter::Vector2 center, double opening_angle_alpha,  int amount ){
 
@@ -24,16 +26,24 @@ std::vector<singleeyefitter::Vector3> createCirclePointsOnSphere( singleeyefitte
     for (int i = 0; i < amount; ++i)
     {
 
-        double t = 2.0 * M_PI * i/amount;
+        double t = 2.0 * M_PI * float(i)/amount;
         double cos_t = cos(t);
         double sin_t = sin(t);
         double x = sin_a * cos_b * cos_g * cos_t + sin_a * sin_g * sin_t - cos_a * sin_b * cos_g;
         double y = - sin_a * cos_b * sin_g * cos_t + sin_a * cos_g * sin_t + cos_a * sin_b * sin_g;
         double z = sin_a * sin_b * cos_t + cos_a * cos_b;
-
         points.emplace_back(x,y,z);
     }
 
     return points;
 
+}
+
+
+singleeyefitter::Vector3 test_haversine( singleeyefitter::Vector2 center, double opening_angle_alpha,  int amount  ){
+
+    auto points = createCirclePointsOnSphere(center , opening_angle_alpha, amount);
+    for(auto& p : points)
+        std::cout << p[0] << ", " << p[1] << ", " << p[2] << std::endl;
+    return find_circle(points);
 }
