@@ -149,10 +149,19 @@ def preprocess_data(pupil_pts,ref_pts):
     '''small utility function to deal with timestamped but uncorrelated data
     input must be lists that contain dicts with at least "timestamp" and "norm_pos"
     '''
+
     cal_data = []
 
     if len(ref_pts)<=2:
         return cal_data
+    
+    # check whether incoming data are binocular or not
+    pupil_pts_binocular = [[],[]]
+    for p_pt in pupil_pts:
+        pupil_pts_binocular[p_pt["id"]].append(p_pt)
+    if len(pupil_pts_binocular[0]) > 0 and len(pupil_pts_binocular[1]) > 0:
+        # data are binocular
+        return preprocess_data_binocular(pupil_pts_binocular, ref_pts)
 
     cur_ref_pt = ref_pts.pop(0)
     next_ref_pt = ref_pts.pop(0)
@@ -176,7 +185,59 @@ def preprocess_data(pupil_pts,ref_pts):
             break
     return cal_data
 
-
+def preprocess_data_binocular(pupil_pts_binocular, ref_pts):
+    cal_data = []
+    
+    matched = []
+    cur_ref_pt = ref_pts.pop(0)
+    next_ref_pt = ref_pts.pop(0)
+    while True:
+        match = ([], [], cur_ref_pt)
+        # collect matching samples for both eye cameras
+        for eye_id, pupil_pts in enumerate(pupil_pts_binocular):
+            while pupil_pts:
+                # sort out samples that are too far away, assuming 30fps + slack
+                if abs(pupil_pts[0]['timestamp'] - cur_ref_pt['timestamp']) <= 1/15.:
+                    #select all points past the half-way point between current and next ref data sample
+                    if pupil_pts[0]['timestamp'] <= (cur_ref_pt['timestamp'] + next_ref_pt['timestamp'])/2.:    
+                        match[eye_id].append(pupil_pts.pop(0))
+                    else:
+                        break
+        matched.append(match)
+        
+        # if there are reference samples left -> repeat
+        if ref_pts:
+            cur_ref_pt = next_ref_pt
+            next_ref_pt = ref_pts.pop(0)
+        else:
+            break
+    
+    for pupil_pts_0, pupil_pts_1, ref_pt in matched:
+        # there must be at least one sample for each eye
+        if len(pupil_pts_0) <= 0 or len(pupil_pts_1) <= 0:
+            continue
+        
+        p0 = pupil_pts_0.pop(0)
+        p1 = pupil_pts_1.pop(0)
+        while True:
+            data_pt = p0["norm_pos"][0], p0["norm_pos"][1],p1["norm_pos"][0], p1["norm_pos"][1],ref_pt['norm_pos'][0],ref_pt['norm_pos'][1]
+            cal_data.append(data_pt)
+            
+            # keep sample with higher timestamp and increase the one with lower timestamp
+            if p0['timestamp'] <= p1['timestamp'] and pupil_pts_0:
+                p0 = pupil_pts_0.pop(0)
+                continue
+            elif p1['timestamp'] <= p0['timestamp'] and pupil_pts_1:
+                p1 = pupil_pts_1.pop(0)
+                continue
+            elif pupil_pts_0 and not pupil_pts_1:
+                p0 = pupil_pts_0.pop(0)
+            elif pupil_pts_1 and not pupil_pts_0:
+                p1 = pupil_pts_1.pop(0)
+            else:
+                break
+    return cal_data 
+    
 
 # if __name__ == '__main__':
 #     import matplotlib.pyplot as plt
