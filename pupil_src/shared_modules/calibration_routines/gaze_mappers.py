@@ -78,10 +78,15 @@ class Volumetric_Gaze_Mapper(Gaze_Mapping_Plugin):
         return {'params':self.params}
 
 class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
-    def __init__(self, g_pool,params):
+    def __init__(self, g_pool,params,params_eye0,params_eye1):
         super(Gaze_Mapping_Plugin, self).__init__(g_pool)
         self.params = params
+        self.params_eye0 = params_eye0
+        self.params_eye1 = params_eye1
         self.map_fn = make_map_function(*self.params)
+        self.map_fn_fallback = []
+        self.map_fn_fallback.append(make_map_function(*self.params_eye0))
+        self.map_fn_fallback.append(make_map_function(*self.params_eye1))
 
     def update(self,frame,events):
         
@@ -93,13 +98,26 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
                     pupil_pts_0.append(p)
                 else:
                     pupil_pts_1.append(p)
-                
-        if len(pupil_pts_0) <= 0 or len(pupil_pts_1) <= 0:
-            # TODO: fallback to monocular if possible
-            events['gaze_positions'] = []
-            return
 
-
+        # try binocular mapping (needs at least 1 pupil position in each list)
+        gaze_pts = []
+        if len(pupil_pts_0) > 0 and len(pupil_pts_1) > 0:
+            gaze_pts = self._map_binocular(pupil_pts_0, pupil_pts_1)
+        # fallback to monocular if something went wrong
+        else:
+            for p in pupil_pts_0:
+                gaze_point = self.map_fn_fallback[0](p['norm_pos'])
+                gaze_pts.append({'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
+            for p in pupil_pts_1:
+                gaze_point = self.map_fn_fallback[1](p['norm_pos'])
+                gaze_pts.append({'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
+            
+        events['gaze_positions'] = gaze_pts
+        
+    def _map_binocular(self, pupil_pts_0, pupil_pts_1):
+        # maps gaze with binocular mapping
+        # requires each list to contain at least one item!
+        # returns 1 gaze point at minimum
         gaze_pts = []
         p0 = pupil_pts_0.pop(0)
         p1 = pupil_pts_1.pop(0)
@@ -121,9 +139,9 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
             elif pupil_pts_1 and not pupil_pts_0:
                 p1 = pupil_pts_1.pop(0)
             else:
-                break            
-
-        events['gaze_positions'] = gaze_pts
+                break
+        
+        return gaze_pts
 
     def get_init_dict(self):
-        return {'params':self.params}
+        return {'params':self.params, 'params_eye0':self.params_eye0, 'params_eye1':self.params_eye1}

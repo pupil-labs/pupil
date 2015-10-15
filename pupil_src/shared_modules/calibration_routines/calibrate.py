@@ -14,12 +14,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inlier_map=False,return_params=False, model_n=7):
+def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inlier_map=False,return_params=False, binocular=False):
     """
     we do a simple two pass fitting to a pair of bi-variate polynomials
     return the function to map vector
     """
     # fit once using all avaiable data
+    model_n = 7
+    if binocular:
+        model_n = 13
     cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
     err_dist,err_mean,err_rms = fit_error_screen(err_x,err_y,screen_size)
     if cal_pt_cloud[err_dist<=threshold].shape[0]: #did not disregard all points..
@@ -143,6 +146,31 @@ def make_model(cal_pt_cloud,n=7):
         ZY=cal_pt_cloud[:,5]
         M=np.array([X0,Y0,X1,Y1,XX0,YY0,XY0,XXYY0,XX1,YY1,XY1,XXYY1,Ones,ZX,ZY]).transpose()
         
+    elif n==17:
+        X0=cal_pt_cloud[:,0]
+        Y0=cal_pt_cloud[:,1]
+        X1=cal_pt_cloud[:,2]
+        Y1=cal_pt_cloud[:,3]
+        XX0=X0*X0
+        YY0=Y0*Y0
+        XY0=X0*Y0
+        XXYY0=XX0*YY0
+        XX1=X1*X1
+        YY1=Y1*Y1
+        XY1=X1*Y1
+        XXYY1=XX1*YY1       
+        
+        X0X1 = X0*X1
+        X0Y1 = X0*Y1
+        Y0X1 = Y0*X1
+        Y0Y1 = Y0*Y1
+        
+        Ones=np.ones(n_points)
+        
+        ZX=cal_pt_cloud[:,4]
+        ZY=cal_pt_cloud[:,5]
+        M=np.array([X0,Y0,X1,Y1,XX0,YY0,XY0,XXYY0,XX1,YY1,XY1,XXYY1,X0X1,X0Y1,Y0X1,Y0Y1,Ones,ZX,ZY]).transpose()
+        
     else:
         raise Exception("ERROR: Model n needs to be 3, 5, 7 or 9")
     return M
@@ -182,13 +210,20 @@ def make_map_function(cx,cy,n):
             y2 = cy[0]*X0 + cy[1]*Y0 + cy[2]*X1 + cy[3]*Y1 + cy[4]*X0*X0 + cy[5]*Y0*Y0 + cy[6]*X0*Y0 + cy[7]*X0*X0*Y0*Y0 + cy[8]*X1*X1 + cy[9]*Y1*Y1 + cy[10]*X1*Y1 + cy[11]*X1*X1*Y1*Y1 + cy[12]
             return x2,y2
         
+    elif n==17:
+        def fn((X0,Y0),(X1,Y1)):
+            #        X0        Y0        X1         Y1            XX0        YY0            XY0            XXYY0                XX1            YY1            XY1            XXYY1            X0X1            X0Y1            Y0X1        Y0Y1           Ones
+            x2 = cx[0]*X0 + cx[1]*Y0 + cx[2]*X1 + cx[3]*Y1 + cx[4]*X0*X0 + cx[5]*Y0*Y0 + cx[6]*X0*Y0 + cx[7]*X0*X0*Y0*Y0 + cx[8]*X1*X1 + cx[9]*Y1*Y1 + cx[10]*X1*Y1 + cx[11]*X1*X1*Y1*Y1 + cx[12]*X0*X1 + cx[13]*X0*Y1 + cx[14]*Y0*X1 + cx[15]*Y0*Y1 + cx[16]
+            y2 = cy[0]*X0 + cy[1]*Y0 + cy[2]*X1 + cy[3]*Y1 + cy[4]*X0*X0 + cy[5]*Y0*Y0 + cy[6]*X0*Y0 + cy[7]*X0*X0*Y0*Y0 + cy[8]*X1*X1 + cy[9]*Y1*Y1 + cy[10]*X1*Y1 + cy[11]*X1*X1*Y1*Y1 + cy[12]*X0*X1 + cy[13]*X0*Y1 + cy[14]*Y0*X1 + cy[15]*Y0*Y1 + cy[16]
+            return x2,y2
+        
     else:
         raise Exception("ERROR: Model n needs to be 3, 5, 7 or 9")
 
     return fn
 
 
-def preprocess_data(pupil_pts,ref_pts):
+def preprocess_data(pupil_pts,ref_pts,id_filter=(0,)):
     '''small utility function to deal with timestamped but uncorrelated data
     input must be lists that contain dicts with at least "timestamp" and "norm_pos"
     '''
@@ -198,14 +233,22 @@ def preprocess_data(pupil_pts,ref_pts):
     if len(ref_pts)<=2:
         return cal_data
     
-    # check whether incoming data are binocular or not
+    if len(id_filter) < 1 or len(id_filter) > 2:
+        raise Exception("ERROR: id_filter for data preprocessing must have length 1 or 2")
+    
+    # make one list for each eye
     pupil_pts_binocular = [[],[]]
     for p_pt in pupil_pts:
         pupil_pts_binocular[p_pt["id"]].append(p_pt)
-    if len(pupil_pts_binocular[0]) > 0 and len(pupil_pts_binocular[1]) > 0:
-        # data are binocular
-        # TODO: use separate lists for monocular fallback calibration
-        return preprocess_data_binocular(pupil_pts, ref_pts)
+    
+    # if filter is set to handle binocular data, e.g. (0,1)
+    if 0 in id_filter and 1 in id_filter:
+        if len(pupil_pts_binocular[0]) > 0 and len(pupil_pts_binocular[1]) > 0:
+            return preprocess_data_binocular(pupil_pts, ref_pts)
+        else:
+            return cal_data
+    else:
+        pupil_pts = pupil_pts_binocular[id_filter[0]]
 
     cur_ref_pt = ref_pts.pop(0)
     next_ref_pt = ref_pts.pop(0)
