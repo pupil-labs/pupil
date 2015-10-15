@@ -218,6 +218,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self.stop()
 
     def stop(self):
+        # TODO: redundancy between all gaze mappers -> might be moved to parent class
         audio.say("Stopping Calibration")
         logger.info('Stopping Calibration')
         self.screen_marker_state = 0

@@ -159,6 +159,9 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
         if self.menu:
             self.g_pool.sidebar.remove(self.menu)
             self.menu = None
+            
+    def cleanup(self):
+        self.deinit_gui()
 
     def get_init_dict(self):
         return {'params':self.params, 'params_eye0':self.params_eye0, 'params_eye1':self.params_eye1}
