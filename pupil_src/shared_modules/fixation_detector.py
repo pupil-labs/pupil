@@ -73,10 +73,12 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         self.menu.append(ui.Slider('min_duration',self,min=0.0,step=0.05,max=1.0,label='duration threshold'))
         self.menu.append(ui.Slider('max_dispersion',self,min=0.0,step=0.05,max=3.0,label='dispersion threshold'))
         self.menu.append(ui.Button('Run fixation detector',self._classify))
-        self.menu.append(ui.Button('Export fixations',self.export_fixations))
         self.menu.append(ui.Switch('show_fixations',self,label='Show fixations'))
         self.menu.append(ui.Slider('h_fov',self,min=5,step=1,max=180,label='horizontal FOV of scene camera',setter=set_h_fov))
         self.menu.append(ui.Slider('v_fov',self,min=5,step=1,max=180,label='vertical FOV of scene camera',setter=set_v_fov))
+        self.menu.append(ui.Info_Text('Export fixations.'))
+        self.menu.append(ui.Button('Export current section',self.export_fixations))
+        self.menu.append(ui.Button('Export all sections',self.export_all_sections))
 
     def deinit_gui(self):
         if self.menu:
@@ -228,7 +230,10 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             csv_writer.writerow(('fixation_count',len(fixations_in_section)))
             logger.info("Created 'fixation_report.csv' file.")
 
-
+    def export_all_sections(self):
+        for section in self.g_pool.trim_marks.sections
+            self.g_pool.trim_marks.focus = self.g_pool.trim_marks.sections.index(section)
+            self.export_fixations()
 
     def update(self,frame,events):
         events['fixations'] = self.g_pool.fixations_by_frame[frame.index]
