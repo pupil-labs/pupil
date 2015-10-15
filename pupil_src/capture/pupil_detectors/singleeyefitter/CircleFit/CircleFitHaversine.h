@@ -50,7 +50,7 @@ class DistanceFromCircleCost {
   DistanceFromCircleCost(double xx, double yy) : xx_(xx), yy_(yy) {}
   bool operator()(const double* const x,
                   const double* const y,
-                  const double* const r,  // r = m^2
+                 /* const double* const r, */ // r = m^2
                   double* residual) const {
 
     double sphere_radius = 1.0;
@@ -74,11 +74,11 @@ class DistanceFromCircleCost {
     //residual[0] = r*r - xp*xp - yp*yp;
     double xp = *x;
     double yp = *y;
-
     bg::model::point<double, 2, bg::cs::cartesian> point1(xx_, yy_);
     bg::model::point<double, 2, bg::cs::cartesian> point2(xp, yp);
     double distance = boost::geometry::distance(point1, point2, haversine);
-    residual[0]  = *r - distance;
+    //residual[0]  = *r - distance;
+    residual[0]  = distance;
     return true;
   }
  private:
@@ -94,8 +94,8 @@ singleeyefitter::Vector3 find_circle( std::vector<singleeyefitter::Vector3>&  po
   double x,y,r ,initial_x, initial_y, initial_r;
 
   // initial guess
-  initial_x = x  = 1.5/2.0;
-  initial_y = y  = 1.5/2.0;
+  initial_x = x  = 0.7;
+  initial_y = y  = 0.7;
   initial_r = r  = 1;
 
   for( auto& p : points_on_sphere){
@@ -105,16 +105,16 @@ singleeyefitter::Vector3 find_circle( std::vector<singleeyefitter::Vector3>&  po
     double yp = p[1];
     double zp = p[2];
     double phi, theta;
-    if(std::abs(xp) < 0.0000001  ) xp = 0.0;
-    if(std::abs(yp) < 0.0000001  ) yp = 0.0;
-    if(std::abs(zp) < 0.0000001  ) zp = 0.0;
+    // if(std::abs(xp) < 0.0000001  ) xp = 0.0;
+    // if(std::abs(yp) < 0.0000001  ) yp = 0.0;
+    // if(std::abs(zp) < 0.0000001  ) zp = 0.0;
     phi = std::atan2(zp,xp);
 
     theta = std::acos( yp / std::sqrt(xp*xp + yp*yp + zp*zp) ); //colatitude
 
     std::cout << "theta: " << theta << " phi: " << phi << std::endl;
-    CostFunction *cost = new NumericDiffCostFunction<DistanceFromCircleCost, ceres::CENTRAL, 1, 1, 1, 1>( new DistanceFromCircleCost(theta, phi) );
-    problem.AddResidualBlock(cost, nullptr, &x, &y, &r);
+    CostFunction *cost = new NumericDiffCostFunction<DistanceFromCircleCost, ceres::CENTRAL, 1, 1, 1 >( new DistanceFromCircleCost(theta, phi) );
+    problem.AddResidualBlock(cost, nullptr, &x, &y );
   }
    // Build and solve the problem.
   Solver::Options options;
@@ -122,14 +122,13 @@ singleeyefitter::Vector3 find_circle( std::vector<singleeyefitter::Vector3>&  po
   options.linear_solver_type = ceres::DENSE_QR;
   Solver::Summary summary;
   Solve(options, &problem, &summary);
-
 // Recover r from m.
  // std::cout << summary.BriefReport() << "\n";
   std::cout << summary.FullReport() << "\n";
-  std::cout << "x : " << initial_x << " -> " << x << "\n";
-  std::cout << "y : " << initial_y << " -> " << y << "\n";
-  std::cout << "r : " << initial_r << " -> " << r << "\n";
+  std::cout << "theta : " << initial_x << " -> " << x << "\n";
+  std::cout << "phi : " << initial_y << " -> " << y << "\n";
+ // std::cout << "r : " << initial_r << " -> " << r << "\n";
 
-  return singleeyefitter::Vector3(x,y,r);
+  return singleeyefitter::Vector3(x,y,1.0);
 
 }

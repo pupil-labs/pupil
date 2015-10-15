@@ -300,8 +300,9 @@ class Visualizer(object):
 
 	def draw_circle(self, circle_center, circle_radius, circle_normal):
 		glPushMatrix()
-		glLoadMatrixf(self.get_pupil_transformation_matrix(circle_normal,circle_center))
-		glScalef(circle_radius,circle_radius,1)
+		#glLoadMatrixf(self.get_pupil_transformation_matrix(circle_normal,circle_center))
+		glTranslatef(circle_center[0],circle_center[1],circle_center[2]) #sphere[0] contains center coordinates (x,y,z)
+		glScalef(circle_radius,circle_radius,circle_radius)
 		draw_points(((0,0),),color=RGBA(1.1,0.2,.8))
 		#draw_polyline((circle_xy),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
 		glPopMatrix()

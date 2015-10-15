@@ -18,8 +18,7 @@ from pyglui.cygl.utils import RGBA
 from pyglui.cygl.utils import *
 from pyglui.cygl import utils as glutils
 from trackball import Trackball
-import math
-
+from math import *
 from circleFitUtils import *
 
 class VisualizeSphere(Visualizer):
@@ -27,7 +26,7 @@ class VisualizeSphere(Visualizer):
     def __init__(self):
         super(VisualizeSphere,self).__init__( 800, "Debug Sphere",  True )
 
-    def update_window(self, eye, points ):
+    def update_window(self, eye, points, found_circle ):
 
         if self._window != None:
             glfwMakeContextCurrent(self._window)
@@ -46,6 +45,9 @@ class VisualizeSphere(Visualizer):
         if points:
           draw_points( points, size = 3 , color=RGBA(1.,0,0,1.0), sharpness=1.0 )
 
+
+        self.draw_circle( found_circle[0], found_circle[2], found_circle[1] )
+
         self.trackball.pop()
 
         glfwSwapBuffers(self._window)
@@ -62,10 +64,22 @@ if __name__ == '__main__':
 
 
   visualizer.open_window()
-  sphere = ( (0,0,0), 1.0 ) # center, radius
+  sphere_radius = 1.0
+  sphere = ( (0,0,0),sphere_radius ) # center, radius
 
-  points = get_circle_test_points( (-math.pi/4.0,0), math.pi/4.0, 20 )
-  reuslt = testHaversine((-math.pi/4.0,0), math.pi/4.0, 20)
 
+  theta_circle_center = pi/2
+  phi_circle_center =  pi/4
+
+  points = get_circle_test_points( (theta_circle_center, phi_circle_center), pi/4.0,400, 1.0)
+  result = testHaversine((theta_circle_center, phi_circle_center), pi/4.0, 400, 1.0)
+
+
+  theta = result[0]
+  phi =  result[1]
+  r_circle = result[2]
+  x = sphere_radius * sin(theta) * cos(phi)
+  y = sphere_radius * sin(theta) * sin(phi)
+  z = sphere_radius * cos(theta)
   while True:
-    visualizer.update_window( sphere , points)
+    visualizer.update_window( sphere , points, ( (x,y,z), (x,y,z), r_circle ))
