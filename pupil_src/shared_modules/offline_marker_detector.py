@@ -127,8 +127,12 @@ class Offline_Marker_Detector(Marker_Detector):
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
-        self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statsics_to_file))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
+        # when/if the recalculate button becomes obsolete, there will be no need for such extended description
+        self.menu.append(ui.Info_Text('Export gaze and surface metrics. We recalculate metrics for each section when exporting all sections. Please, press the recalculate button before export the current selected section.'))
+        self.menu.append(ui.Button("Export current section", self.save_surface_statsics_to_file))
+        self.menu.append(ui.Button("Export all sections", self.export_all_sections))
+
         for s in self.surfaces:
             idx = self.surfaces.index(s)
             s_menu = ui.Growing_Menu("Surface %s"%idx)
@@ -351,7 +355,6 @@ class Offline_Marker_Detector(Marker_Detector):
         in_mark = self.g_pool.trim_marks.in_mark
         out_mark = self.g_pool.trim_marks.out_mark
 
-
         """
         between in and out mark
 
@@ -524,6 +527,11 @@ class Offline_Marker_Detector(Marker_Detector):
         # else:
         #     logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
 
+    def export_all_sections(self):
+        for section in self.g_pool.trim_marks.sections
+            self.g_pool.trim_marks.focus = self.g_pool.trim_marks.sections.index(section)
+            self.recalculate()
+            self.save_surface_statsics_to_file()
 
     def get_init_dict(self):
         return {'mode':self.mode}
