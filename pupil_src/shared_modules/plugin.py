@@ -287,8 +287,9 @@ def import_runtime_plugins(plugin_dir):
     once a module is sucessfully imported any classes that are subclasses of Plugin
     are added to the runtime plugins list
 
-    any exceptions that are raised during parsing, import filtering and addion are silently ignored.
+    any exceptions that are raised during parsing, import filtering and addition are silently ignored.
     """
+
     runtime_plugins = []
     if os.path.isdir(plugin_dir):
         # we prepend to give the plugin dir content precendece
