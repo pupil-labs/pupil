@@ -231,7 +231,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             logger.info("Created 'fixation_report.csv' file.")
 
     def export_all_sections(self):
-        for section in self.g_pool.trim_marks.sections
+        for section in self.g_pool.trim_marks.sections:
             self.g_pool.trim_marks.focus = self.g_pool.trim_marks.sections.index(section)
             self.export_fixations()
 

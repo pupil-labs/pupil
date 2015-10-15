@@ -528,7 +528,7 @@ class Offline_Marker_Detector(Marker_Detector):
         #     logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
 
     def export_all_sections(self):
-        for section in self.g_pool.trim_marks.sections
+        for section in self.g_pool.trim_marks.sections:
             self.g_pool.trim_marks.focus = self.g_pool.trim_marks.sections.index(section)
             self.recalculate()
             self.save_surface_statsics_to_file()
