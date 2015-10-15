@@ -20,7 +20,7 @@ import audio
 
 from pyglui import ui
 from plugin import Calibration_Plugin
-from gaze_mappers import Simple_Gaze_Mapper
+from gaze_mappers import Simple_Gaze_Mapper, Binocular_Gaze_Mapper
 
 #logging
 import logging
@@ -89,20 +89,28 @@ class Natural_Features_Calibration(Calibration_Plugin):
         self.button.status_text = ''
 
         cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
+        
         logger.info("Collected %s data points." %len(cal_pt_cloud))
-        if len(cal_pt_cloud) < 20:
+
+        cal_pt_cloud = np.array(cal_pt_cloud)
+        if self.g_pool.binocular:
+            not_enough_data = cal_pt_cloud[cal_pt_cloud[:,4] == 0].shape[0] < 20 or cal_pt_cloud[cal_pt_cloud[:,4] == 1].shape[0] < 20
+        else:
+            not_enough_data = cal_pt_cloud.shape[0] < 20
+        if not_enough_data:
             logger.warning("Did not collect enough data.")
             return
-        cal_pt_cloud = np.array(cal_pt_cloud)
 
         img_size = self.first_img.shape[1],self.first_img.shape[0]
-        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,img_size,return_params=True)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
-
-        #replace gaze mapper
-        self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
-
-
+        if self.g_pool.binocular:
+            map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,img_size,binocular=True,return_params=True)
+            #replace current gaze mapper with new
+            self.g_pool.plugins.add(Binocular_Gaze_Mapper,args={'params':params})
+        else:
+            map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,img_size,return_params=True)    
+            #replace current gaze mapper with new
+            self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
 
     def update(self,frame,events):
         if self.active:

@@ -43,8 +43,15 @@ class Show_Calibration(Plugin):
             self.close()
             return
 
-        map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(width, height),return_inlier_map=True)
-        cal_pt_cloud[:,0:2] =  np.array(map_fn(cal_pt_cloud[:,0:2].transpose())).transpose()
+        if self.g_pool.binocular:
+            map_fns,inlier_map = get_map_from_cloud(cal_pt_cloud,(width, height),binocular=True,return_inlier_map=True)
+            idx_0 = cal_pt_cloud[:,4] == 0
+            idx_1 = cal_pt_cloud[:,4] == 1
+            cal_pt_cloud[idx_0][:,0:2] = np.array(map_fns[0](cal_pt_cloud[idx_0][:,0:2].transpose())).transpose()
+            cal_pt_cloud[idx_1][:,0:2] = np.array(map_fns[1](cal_pt_cloud[idx_1][:,0:2].transpose())).transpose()
+        else:
+            map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(width, height),return_inlier_map=True)
+            cal_pt_cloud[:,0:2] =  np.array(map_fn(cal_pt_cloud[:,0:2].transpose())).transpose()
         ref_pts = cal_pt_cloud[inlier_map][:,np.newaxis,2:4]
         ref_pts = np.array(ref_pts,dtype=np.float32)
         logger.debug("calibration ref_pts %s"%ref_pts)

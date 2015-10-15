@@ -14,47 +14,57 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inlier_map=False,return_params=False):
+def get_map_from_cloud(cal_pt_clouds,screen_size=(2,2),threshold=35,binocular=False,return_inlier_map=False,return_params=False):
     """
     we do a simple two pass fitting to a pair of bi-variate polynomials
     return the function to map vector
     """
-    # fit once using all avaiable data
     model_n = 7
-    cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
-    err_dist,err_mean,err_rms = fit_error_screen(err_x,err_y,screen_size)
-    if cal_pt_cloud[err_dist<=threshold].shape[0]: #did not disregard all points..
-        # fit again disregarding extreme outliers
-        cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)
-        map_fn = make_map_function(cx,cy,model_n)
-        new_err_dist,new_err_mean,new_err_rms = fit_error_screen(new_err_x,new_err_y,screen_size)
 
-        logger.info('first iteration. root-mean-square residuals: %s, in pixel' %err_rms)
-        logger.info('second iteration: ignoring outliers. root-mean-square residuals: %s in pixel',new_err_rms)
+    params = []
+    map_fns = []
+    err_dists = np.repeat(threshold + 1, cal_pt_clouds.shape[0])
+    eye_ids = [0]
+    if binocular:
+        eye_ids = [0, 1]
+    for eye_id in eye_ids:
+        ids = cal_pt_clouds[:,4] == eye_id
+        cal_pt_cloud = cal_pt_clouds[ids]
+        
+        # fit once using all available data
+        cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
+        err_dist,err_mean,err_rms = fit_error_screen(err_x,err_y,screen_size)
+        if cal_pt_cloud[err_dist<=threshold].shape[0]: #did not disregard all points..
+            # fit again disregarding extreme outliers
+            cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)
+            map_fn = make_map_function(cx,cy,model_n)
+            new_err_dist,new_err_mean,new_err_rms = fit_error_screen(new_err_x,new_err_y,screen_size)
+    
+            logger.info('first iteration. root-mean-square residuals: %s, in pixel' %err_rms)
+            logger.info('second iteration: ignoring outliers. root-mean-square residuals: %s in pixel',new_err_rms)
+    
+            logger.info('used %i data points out of the full dataset %i: subset is %i percent' \
+                %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
+                100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0]))
+    
+        else: # did disregard all points. The data cannot be represented by the model in a meaningful way:
+            map_fn = make_map_function(cx,cy,model_n)
+            logger.info('First iteration. root-mean-square residuals: %s in pixel, this is bad!'%err_rms)
+            logger.warning('The data cannot be represented by the model in a meaningfull way.')
+        params.extend([cx,cy,model_n])
+        map_fns.append(map_fn)
+        err_dists[ids] = err_dist
 
-        logger.info('used %i data points out of the full dataset %i: subset is %i percent' \
-            %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
-            100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0]))
-
-        if return_inlier_map and return_params:
-            return map_fn,err_dist<=threshold,(cx,cy,model_n)
-        if return_inlier_map and not return_params:
-            return map_fn,err_dist<=threshold
-        if return_params and not return_inlier_map:
-            return map_fn,(cx,cy,model_n)
-        return map_fn
-    else: # did disregard all points. The data cannot be represented by the model in a meaningful way:
-        map_fn = make_map_function(cx,cy,model_n)
-        logger.info('First iteration. root-mean-square residuals: %s in pixel, this is bad!'%err_rms)
-        logger.warning('The data cannot be represented by the model in a meaningfull way.')
-
-        if return_inlier_map and return_params:
-            return map_fn,err_dist<=threshold,(cx,cy,model_n)
-        if return_inlier_map and not return_params:
-            return map_fn,err_dist<=threshold
-        if return_params and not return_inlier_map:
-            return map_fn,(cx,cy,model_n)
-        return map_fn
+    if not binocular:
+        map_fns = map_fns[0]
+    
+    if return_inlier_map and return_params:
+        return map_fns,err_dist<=threshold,params
+    if return_inlier_map and not return_params:
+        return map_fns,err_dist<=threshold
+    if return_params and not return_inlier_map:
+        return map_fns,params
+    return map_fns
 
 
 
@@ -166,7 +176,7 @@ def preprocess_data(pupil_pts,ref_pts):
                 for p_pt in matched:
                     #only use close points
                     if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                        data_pt = p_pt["norm_pos"][0], p_pt["norm_pos"][1],cur_ref_pt['norm_pos'][0],cur_ref_pt['norm_pos'][1]
+                        data_pt = p_pt["norm_pos"][0], p_pt["norm_pos"][1],cur_ref_pt['norm_pos'][0],cur_ref_pt['norm_pos'][1],p_pt["id"]
                         cal_data.append(data_pt)
                 break
         if ref_pts:
