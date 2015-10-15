@@ -12,6 +12,7 @@ from plugin import Gaze_Mapping_Plugin
 from calibrate import make_map_function
 from copy import deepcopy
 import numpy as np
+from pyglui import ui
 
 
 class Dummy_Gaze_Mapper(Gaze_Mapping_Plugin):
@@ -83,10 +84,16 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.params = params
         self.params_eye0 = params_eye0
         self.params_eye1 = params_eye1
+        self.multivariate = True
         self.map_fn = make_map_function(*self.params)
         self.map_fn_fallback = []
         self.map_fn_fallback.append(make_map_function(*self.params_eye0))
         self.map_fn_fallback.append(make_map_function(*self.params_eye1))
+
+    def init_gui(self):
+        self.menu = ui.Growing_Menu('Binocular Gaze Mapping')
+        self.g_pool.sidebar.insert(3,self.menu)
+        self.menu.append(ui.Switch('multivariate',self,on_val=True,off_val=False,label='Multivariate Mode'))
 
     def update(self,frame,events):
         
@@ -102,7 +109,7 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
         # try binocular mapping (needs at least 1 pupil position in each list)
         gaze_pts = []
         if len(pupil_pts_0) > 0 and len(pupil_pts_1) > 0:
-            gaze_pts = self._map_binocular(pupil_pts_0, pupil_pts_1)
+            gaze_pts = self._map_binocular(pupil_pts_0, pupil_pts_1, self.multivariate)
         # fallback to monocular if something went wrong
         else:
             for p in pupil_pts_0:
@@ -114,7 +121,7 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
             
         events['gaze_positions'] = gaze_pts
         
-    def _map_binocular(self, pupil_pts_0, pupil_pts_1):
+    def _map_binocular(self, pupil_pts_0, pupil_pts_1,multivariate=True):
         # maps gaze with binocular mapping
         # requires each list to contain at least one item!
         # returns 1 gaze point at minimum
@@ -122,7 +129,12 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
         p0 = pupil_pts_0.pop(0)
         p1 = pupil_pts_1.pop(0)
         while True:
-            gaze_point = self.map_fn(p0['norm_pos'], p1['norm_pos'])
+            if multivariate:
+                gaze_point = self.map_fn(p0['norm_pos'], p1['norm_pos'])
+            else:
+                gaze_point_eye0 = self.map_fn_fallback[0](p0['norm_pos'])
+                gaze_point_eye1 = self.map_fn_fallback[1](p1['norm_pos'])
+                gaze_point = (gaze_point_eye0[0] + gaze_point_eye1[0])/2. , (gaze_point_eye0[1] + gaze_point_eye1[1])/2. 
             confidence = (p0['confidence'] + p1['confidence'])/2.
             ts = (p0['timestamp'] + p1['timestamp'])/2.
             gaze_pts.append({'norm_pos':gaze_point,'confidence':confidence,'timestamp':ts,'base':[p0, p1]})
@@ -142,6 +154,11 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
                 break
         
         return gaze_pts
+    
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
 
     def get_init_dict(self):
         return {'params':self.params, 'params_eye0':self.params_eye0, 'params_eye1':self.params_eye1}
