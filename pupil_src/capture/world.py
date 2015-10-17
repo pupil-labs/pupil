@@ -84,7 +84,7 @@ def world(g_pool,cap_src,cap_size):
     plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins
     name_by_index = [p.__name__ for p in plugin_by_index]
     plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-    default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{'filter_active':True}), ('Screen_Marker_Calibration',{}),('Recorder',{})]
+    default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{})]
 
 
 

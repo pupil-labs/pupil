@@ -10,8 +10,36 @@
 
 from plugin import Plugin
 from pyglui.cygl.utils import draw_points_norm,RGBA
-from one_euro_filter import OneEuroFilter
 from pyglui import ui
+
+class Smothing_Filter(object):
+    """docstring for Smothing"""
+    def __init__(self):
+        super(Smothing_Filter, self).__init__()
+        self.prev = None
+        self.prev_ts = None
+        self.smoother = 0.5
+        self.cut_dist = 0.01
+
+
+    def filter(self,vals,ts):
+        self.prev = vals
+        self.pref_ts = ts
+        self.filter = self._filter
+        return vals
+
+
+    def _filter(self,vals,ts):
+        result = []
+        for v,ov in zip(vals,self.prev):
+            if abs(ov-v)>self.cut_dist:
+                self.prev = tuple(vals)
+                return vals
+            else:
+                result.append(ov+self.smoother*(v-ov))
+        self.prev = result
+        return type(vals)(result)
+
 
 class Display_Recent_Gaze(Plugin):
     """
@@ -19,42 +47,33 @@ class Display_Recent_Gaze(Plugin):
     recent gaze position on the screen
     """
 
-    def __init__(self, g_pool, filter_active):
+    def __init__(self, g_pool, filter_active=True):
         super(Display_Recent_Gaze, self).__init__(g_pool)
         self.order = .8
         self.pupil_display_list = []
         self.filter_active = filter_active
-        
-        config = {
-            'freq': 30,        # Hz
-            'mincutoff': 1, # lower values decrease jitter
-            'beta': 5,    # higher values decrease lag
-            'dcutoff': 1.0     # this one should be ok
-        }
-        self._filter_x = OneEuroFilter(**config)
-        self._filter_y = OneEuroFilter(**config)
-        
-    def filter(self, norm_pos):
-        if self.filter_active:
-            return self._filter_x(norm_pos[0]), self._filter_y(norm_pos[1])
-        else:
-            return norm_pos
+        self.filter = Smothing_Filter()
+
+
 
     def update(self,frame,events):
-        for pt in events.get('gaze_positions',[]):
-            self.pupil_display_list.append(self.filter(pt['norm_pos']))
-
+        if self.filter_active:
+            for pt in events.get('gaze_positions',[]):
+                self.pupil_display_list.append(self.filter.filter(pt['norm_pos'],pt['timestamp']))
+        else:
+            for pt in events.get('gaze_positions',[]):
+                self.pupil_display_list.append(pt['norm_pos'])
         self.pupil_display_list[:-3] = []
-        
+
     def init_gui(self):
-        self.filter_switch = ui.Switch('filter_active',self,on_val=True,off_val=False,label='Smooth gaze visualization')
+        self.filter_switch = ui.Switch('filter_active',self,label='Smooth gaze visualization')
         self.g_pool.sidebar[0].insert(-1,self.filter_switch)
-        
+
     def deinit_gui(self):
         if self.filter_switch:
             self.g_pool.sidebar[0].remove(self.filter_switch)
             self.filter_switch = None
-            
+
     def cleanup(self):
         self.deinit_gui()
 
