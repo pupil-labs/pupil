@@ -58,10 +58,9 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
 
     def deinit_gui(self):
-        if self.menu:
-            self.g_pool.calibration_menu.remove(self.menu)
+        if self.info:
             self.g_pool.calibration_menu.remove(self.info)
-            self.menu = None
+            self.info = None
         if self.button:
             self.g_pool.quickbar.remove(self.button)
             self.button = None
