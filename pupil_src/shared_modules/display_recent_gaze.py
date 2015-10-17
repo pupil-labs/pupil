@@ -12,10 +12,9 @@ from plugin import Plugin
 from pyglui.cygl.utils import draw_points_norm,RGBA
 from pyglui import ui
 
-class Smothing_Filter(object):
-    """docstring for Smothing"""
+class Smoothing_Filter(object):
     def __init__(self):
-        super(Smothing_Filter, self).__init__()
+        super(Smoothing_Filter, self).__init__()
         self.prev = None
         self.prev_ts = None
         self.smoother = 0.5
@@ -52,7 +51,7 @@ class Display_Recent_Gaze(Plugin):
         self.order = .8
         self.pupil_display_list = []
         self.filter_active = filter_active
-        self.filter = Smothing_Filter()
+        self.filter = Smoothing_Filter()
 
 
 
