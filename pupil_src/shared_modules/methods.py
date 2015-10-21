@@ -50,24 +50,16 @@ def delta_t():
         dt,ts = t-ts,t
         yield dt
 
-def point2d_to_angular(pts_uv, camera_matrix, dist_coefs):
+def point2d_to_spherical(pts_uv, camera_matrix, dist_coefs):
     """
-    This function converts a set 2D camera coordinates to an angular representation.
+    This function converts a set of 2D image coordinates to the spherical coordinate system.
     Hereby the intrinsics of the camera are taken into account.
-    The 2d point set gets undistorted, then converted to angular representation.
-    pts_2d -> np.array with dtype=np.float32 and shape=(N, 2)
+    The 2d point set gets undistorted, converted to cartesian vertices and then converted to spherical coordinates.
     
-    returns np.array with dtype=np.float32 and shape=(N, 3)
+    @return: ndarray with shape=(n, 3)
     """   
     
-    print pts_uv
-    print ""
-    
     camera_matrix_inv = np.linalg.inv(camera_matrix)
-    denormalize_factor = np.array([camera_matrix[0,0], camera_matrix[1,1]])
-    denormalize_factor.shape = (1,1,2)
-    denormalize_offset = np.array([camera_matrix[0,2], camera_matrix[1,2]])
-    denormalize_offset.shape = (1,1,2)
     num_pts = pts_uv.size / 2
     
     pts_uv.shape = (num_pts, 1, 2)
@@ -75,66 +67,29 @@ def point2d_to_angular(pts_uv, camera_matrix, dist_coefs):
 
     # P = camera_matrix enables denormalization as follows:
     # ```
-    # pts_uv *= denormalize_factor
-    # pts_uv += denormalize_offset
+    # pts_uv *= np.array([camera_matrix[0,0], camera_matrix[1,1]]) # [fx, fy]
+    # pts_uv += np.array([camera_matrix[0,2], camera_matrix[1,2]]) # [cx, cy]
     # ```
     
     pts_h = cv2.convertPointsToHomogeneous(pts_uv)
     pts_h.shape = (num_pts,3)
     
-    pts_3d = np.zeros((num_pts, 3), dtype=np.float32)
+    xyz = np.zeros((num_pts, 3), dtype=np.float32)
     for i in range(num_pts):
-        pts_3d[i] = camera_matrix_inv.dot(pts_h[i])
-    
+        xyz[i]   = camera_matrix_inv.dot(pts_h[i])
+        
     # projectPoints is the inverse of function implemented above --> should map the intermediate result to the original input 
     # res, _ = cv2.projectPoints(pts_3d, np.array([0,0,0], dtype=np.float32), np.array([0,0,0], dtype=np.float32), camera_matrix, dist_coefs)
     
-    # TODO: convert to spherical coordinate system
+    # convert to spherical coordinates
+    # source: http://stackoverflow.com/questions/4116658/faster-numpy-cartesian-to-spherical-coordinate-conversion
+    spherical = np.zeros(xyz.shape)
+    xy = xyz[:,0]**2 + xyz[:,1]**2
+    spherical[:,0] = np.sqrt(xy + xyz[:,2]**2)
+    spherical[:,1] = np.arctan2(np.sqrt(xy), xyz[:,2]) # for elevation angle defined from Z-axis down
+    spherical[:,2] = np.arctan2(xyz[:,1], xyz[:,0])
 
-    # TODO: remove old code
-    """
-    # test with single point
-    
-    #                center    mid,top mid,bottom left,mid right,mid
-    for pt_2d in [[640, 360], [640,50], [50,360], [640,670], [1230,360]]:
-        pt_2d = np.array(pt_2d, dtype=np.float32)
-        pt_2d.shape = (1,1,2)
-        print pt_2d
-        
-        # undistort
-        pt_2d = cv2.undistortPoints(pt_2d, camera_matrix, dist_coefs, P=camera_matrix)
-        
-        #         P = camera_matrix enables denormalization as follows:
-        #         ```
-        #         fx = camera_matrix[0,0]
-        #         fy = camera_matrix[1,1]
-        #         cx = camera_matrix[0,2]
-        #         cy = camera_matrix[1,2]
-        #         pt_2d[0,0,0] = pt_2d[0,0,0] * fx + cx
-        #         pt_2d[0,0,1] = pt_2d[0,0,1] * fy + cy
-        #         ```
-        
-        
-        print pt_2d
-        
-        pt_h = cv2.convertPointsToHomogeneous(pt_2d)
-        print pt_h
-        pt_h.shape = (1,3,1)
-        
-        
-        camera_matrix_inv = np.linalg.inv(camera_matrix)
-        
-        pt_3d = camera_matrix_inv.dot(pt_h)
-        print pt_3d.reshape((1,1,3))
-        pt_3d.shape = (1,3,1)
-        
-        res, _ = cv2.projectPoints(pt_3d, np.array([0,0,0], dtype=np.float32), np.array([0,0,0], dtype=np.float32), camera_matrix, dist_coefs)
-        print res
-        pt_3d *= 15
-        res, _ = cv2.projectPoints(pt_3d, np.array([0,0,0], dtype=np.float32), np.array([0,0,0], dtype=np.float32), camera_matrix, dist_coefs)
-        print res
-        print ""
-    """
+    return spherical
 
 class Roi(object):
     """this is a simple 2D Region of Interest class
