@@ -528,7 +528,7 @@ class Visualizer(object):
 
 	def on_iconify(self,window,x,y): pass
 	def on_key(self,window, key, scancode, action, mods): pass
-	def on_char(window,char): pass
+	def on_char(self,window,char): pass
 
 
 # if __name__ == '__main__':

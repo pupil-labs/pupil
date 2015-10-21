@@ -25,6 +25,7 @@ class VisualizeSphere(Visualizer):
 
     def __init__(self):
         super(VisualizeSphere,self).__init__( 800, "Debug Sphere",  True )
+        self.running = True
 
     def update_window(self, eye, points, found_circle ):
 
@@ -54,6 +55,13 @@ class VisualizeSphere(Visualizer):
         glfwPollEvents()
         return True
 
+    def on_key(self,window, key, scancode, action, mods):
+        # self.gui.update_button(button,action,mods)
+        super(VisualizeSphere, self).on_key(window, key, scancode, action, mods)
+        if key == GLFW_KEY_ESCAPE:
+          self.running = False
+          self.close_window()
+
 
 
 if __name__ == '__main__':
@@ -67,19 +75,27 @@ if __name__ == '__main__':
   sphere_radius = 1.0
   sphere = ( (0,0,0),sphere_radius ) # center, radius
 
+  phi_circle_center = pi/2
+  theta_circle_center =  pi/2
 
-  theta_circle_center = pi/2
-  phi_circle_center =  pi/4
+  right_z = sphere_radius * sin(phi_circle_center) * cos(theta_circle_center)
+  right_x = sphere_radius * sin(phi_circle_center) * sin(theta_circle_center)
+  right_y = sphere_radius * cos(phi_circle_center)
+  print(right_x,right_y,right_z)
 
-  points = get_circle_test_points( (theta_circle_center, phi_circle_center), pi/4.0,400, 1.0)
-  result = testHaversine((theta_circle_center, phi_circle_center), pi/4.0, 400, 1.0)
+  points = get_circle_test_points( (phi_circle_center, theta_circle_center), pi/16,60, 0.4, 0.01)
+  #result = testHaversine((phi_circle_center, theta_circle_center), pi/8, 220, 0.3, initial_guess)
+  result = testPlanFit((phi_circle_center, theta_circle_center), pi/16, 60, 0.4,  0.01 )
 
+  x = result[0]
+  y = result[1]
+  z = result[2]
 
-  theta = result[0]
-  phi =  result[1]
-  r_circle = result[2]
-  x = sphere_radius * sin(theta) * cos(phi)
-  y = sphere_radius * sin(theta) * sin(phi)
-  z = sphere_radius * cos(theta)
-  while True:
-    visualizer.update_window( sphere , points, ( (x,y,z), (x,y,z), r_circle ))
+  if( z < 0 ):
+    x = -x
+    y = -y
+    z = -z
+
+  print (x,y,z)
+  while visualizer.running:
+    visualizer.update_window( sphere , points, ( (x,y,z), (x,y,z), 1 ))

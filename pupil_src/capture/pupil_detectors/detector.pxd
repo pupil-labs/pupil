@@ -124,7 +124,7 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         ## Pubil-Laps addons ##
         #######################
 
-        void unproject_contours();
+        void unproject_last_contour();
         void unwrap_contours();
 
         #######################

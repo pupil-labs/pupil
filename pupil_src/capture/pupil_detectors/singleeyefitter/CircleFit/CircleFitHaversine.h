@@ -22,12 +22,8 @@
 #include <cstdio>
 #include <vector>
 #include <ceres/ceres.h>
-#include <boost/geometry/strategies/spherical/distance_haversine.hpp>
-#include <boost/geometry.hpp>
 #include "../common/types.h"
-
-
-namespace bg = boost::geometry;
+#include "../mathHelper.h"
 
 using ceres::AutoDiffCostFunction;
 using ceres::NumericDiffCostFunction;
@@ -45,40 +41,43 @@ using ceres::Solver;
 // Note that the radius is parameterized as r = m^2 to constrain the radius to
 // positive values.
 
+template<typename T>
+T dist(T phi1, T theta1, T phi2, T theta2 )
+{
+    // using std::sin;
+    // using std::cos;
+    // using std::acos;
+    // using std::asin;
+    // using std::atan2;
+    // using std::sqrt;
+    // using singleeyefitter::math::sq;
+
+    // if (phi1 == phi2 && theta1 == theta2) {
+    //     return T(0);
+    // }
+    // Haversine distance
+    auto dist = T(2) * asin(sqrt( (sin((phi2 - phi1) / T(2))*sin((phi2 - phi1) / T(2))) + cos(phi1) * cos(phi2) * (sin((theta2 - theta1) / T(2))*sin((theta2 - theta1) / T(2))) ));
+    return dist;
+
+
+}
+
+
 class DistanceFromCircleCost {
  public:
-  DistanceFromCircleCost(double xx, double yy) : xx_(xx), yy_(yy) {}
-  bool operator()(const double* const x,
-                  const double* const y,
-                 /* const double* const r, */ // r = m^2
-                  double* residual) const {
+  DistanceFromCircleCost(double phi, double theta) : xx_(phi), yy_(theta) {}
+  template <typename T> bool operator()(const T* const x,
+                  const T* const y,
+                  //const T* const r,  // r = m^2
+                  T* residual) const {
 
-    double sphere_radius = 1.0;
-    boost::geometry::strategy::distance::haversine<double> const haversine(sphere_radius);
 
-    // Since the radius is parameterized as m^2, unpack m to get r.
-    //double r = *m * *m;
-    // Get the position of the sample in the circle's coordinate system.
-    //T xp = xx_ - *x;
-    //T yp = yy_ - *y;
-    // It is tempting to use the following cost:
-    //
-    //   residual[0] = r - sqrt(xp*xp + yp*yp);
-    //
-    // which is the distance of the sample from the circle. This works
-    // reasonably well, but the sqrt() adds strong nonlinearities to the cost
-    // function. Instead, a different cost is used, which while not strictly a
-    // distance in the metric sense (it has units distance^2) it produces more
-    // robust fits when there are outliers. This is because the cost surface is
-    // more convex.
-    //residual[0] = r*r - xp*xp - yp*yp;
-    double xp = *x;
-    double yp = *y;
-    bg::model::point<double, 2, bg::cs::cartesian> point1(xx_, yy_);
-    bg::model::point<double, 2, bg::cs::cartesian> point2(xp, yp);
-    double distance = boost::geometry::distance(point1, point2, haversine);
-    //residual[0]  = *r - distance;
-    residual[0]  = distance;
+    T xp = *x; //phi
+    T yp = *y; //theta
+
+
+    T distance = dist(xp , yp , T(xx_) ,T(yy_) );
+    residual[0]  =  distance*distance;
     return true;
   }
  private:
@@ -86,17 +85,57 @@ class DistanceFromCircleCost {
   double xx_, yy_;
 };
 
+// class DistanceFromCircleCost {
+//  public:
+//   DistanceFromCircleCost( double x, double y , double z) : x(x), y(y), z(z) {}
+//   template <typename T> bool operator()(const T* const p,
+//                   T* residual) const {
+
+//     Eigen::Matrix<T,3,1> pp;
+//     pp << T(x), T(y), T(z);
+
+//     Eigen::Matrix<T,3,1> point = Eigen::Map<const Eigen::Matrix<T,3,1>>(p);
+//     T dotP = pp.dot(point);
+//     Eigen::Matrix<T,3,1> crossP = pp.cross(point);
+//     T crossPNorm = crossP.norm();
+//     T distance = atan( crossPNorm / dotP);
+
+//     // std::cout << "pp:" <<pp[0]<<pp[1]<<pp[2]  << std::endl;
+//     // std::cout << "point:" <<point[0]<<point[1]<<point[2]  << std::endl;
+//     // std::cout << "crossP:" <<crossP[0]<<crossP[1]<<crossP[2]  << std::endl;
+//     // std::cout << "dotP:" <<dotP << std::endl;
+//     // std::cout << "crossPNorm:" <<crossPNorm << std::endl;
+//     // std::cout << "distance:" <<distance << std::endl;
+//     // std::cout << "atanof:" <<atanof << std::endl;
 
 
-singleeyefitter::Vector3 find_circle( std::vector<singleeyefitter::Vector3>&  points_on_sphere ){
+
+//   //  residual[0]  =  abs(r*r - distance*distance);
+//     //std::cout << "xp: " << xp << " yp: " << yp  << std::endl;
+//     //std::cout << "xx: " << xx_ << " yy: " << yy_  << std::endl;
+// //    std::cout << "distance: " << distance << std::endl;
+//     //std::cout << "residual: " << residual[0] << std::endl;
+//     residual[0]  = pp.norm() - distance;
+//     return true;
+//   }
+//  private:
+//   // The measured x,y coordinate that should be on the circle.
+//   double x,y,z;
+// };
+
+
+
+singleeyefitter::Vector3 find_circle( std::vector<singleeyefitter::Vector3>&  points_on_sphere, singleeyefitter::Vector3& initial_guess  ){
+
+
 
   Problem problem;
   double x,y,r ,initial_x, initial_y, initial_r;
 
   // initial guess
-  initial_x = x  = 0.7;
-  initial_y = y  = 0.7;
-  initial_r = r  = 1;
+  initial_x = x  = initial_guess[0];
+  initial_y = y  = initial_guess[1];
+  initial_r = r  = initial_guess[2];
 
   for( auto& p : points_on_sphere){
 
@@ -105,30 +144,40 @@ singleeyefitter::Vector3 find_circle( std::vector<singleeyefitter::Vector3>&  po
     double yp = p[1];
     double zp = p[2];
     double phi, theta;
-    // if(std::abs(xp) < 0.0000001  ) xp = 0.0;
-    // if(std::abs(yp) < 0.0000001  ) yp = 0.0;
-    // if(std::abs(zp) < 0.0000001  ) zp = 0.0;
-    phi = std::atan2(zp,xp);
 
-    theta = std::acos( yp / std::sqrt(xp*xp + yp*yp + zp*zp) ); //colatitude
-
-    std::cout << "theta: " << theta << " phi: " << phi << std::endl;
-    CostFunction *cost = new NumericDiffCostFunction<DistanceFromCircleCost, ceres::CENTRAL, 1, 1, 1 >( new DistanceFromCircleCost(theta, phi) );
+    theta = std::atan(xp/zp);
+    phi = std::acos( yp / std::sqrt(xp*xp + yp*yp + zp*zp) );
+    std::cout << "phi: " << phi << " theta: " << theta << std::endl;
+    CostFunction *cost = new AutoDiffCostFunction<DistanceFromCircleCost , 1, 1, 1 >( new DistanceFromCircleCost(phi,theta ) );
     problem.AddResidualBlock(cost, nullptr, &x, &y );
   }
+   problem.SetParameterLowerBound(&x , 0, 0);
+   problem.SetParameterLowerBound(&y , 0, 0);
+ //  problem.SetParameterLowerBound(&r , 0, 0.0001);
+   problem.SetParameterUpperBound(&x , 0, M_PI);
+   problem.SetParameterUpperBound(&y , 0, M_PI/2.0 );
+ //  problem.SetParameterUpperBound(&r , 0, M_PI/2.0);
+
    // Build and solve the problem.
   Solver::Options options;
   options.max_num_iterations = 500;
   options.linear_solver_type = ceres::DENSE_QR;
+  options.parameter_tolerance = 1e-18;
+  options.function_tolerance = 1e-18;
+  options.gradient_tolerance = 1e-18;
+  options.minimizer_type = ceres::TRUST_REGION;
+  options.minimizer_progress_to_stdout = true;
+  options.check_gradients = true;
   Solver::Summary summary;
   Solve(options, &problem, &summary);
-// Recover r from m.
- // std::cout << summary.BriefReport() << "\n";
-  std::cout << summary.FullReport() << "\n";
-  std::cout << "theta : " << initial_x << " -> " << x << "\n";
-  std::cout << "phi : " << initial_y << " -> " << y << "\n";
- // std::cout << "r : " << initial_r << " -> " << r << "\n";
+// // Recover r from m.
 
-  return singleeyefitter::Vector3(x,y,1.0);
+  // std::cout << summary.BriefReport() << "\n";
+  std::cout << summary.FullReport() << "\n";
+  std::cout << "phi : " << initial_x << " -> " << x << "\n";
+  std::cout << "theta : " << initial_y << " -> " << y << "\n";
+  std::cout << "r : " << initial_r << " -> " << r << "\n";
+
+  return singleeyefitter::Vector3(x,y,r);
 
 }
