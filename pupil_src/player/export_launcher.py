@@ -95,7 +95,7 @@ class Export_Launcher(Plugin):
 
     def _update_gui(self):
         self.menu.elements[:] = []
-
+        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Info_Text('Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.'))
         self.menu.append(ui.Text_Input('rec_name',self,label='export name'))
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar.'))
@@ -110,7 +110,6 @@ class Export_Launcher(Plugin):
             submenu.append(ui.Button('cancel',job.cancel))
             self.menu.append(submenu)
 
-        self.menu.append(ui.Button('close',self.unset_alive))
 
     def deinit_gui(self):
         if self.menu:
