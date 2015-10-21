@@ -229,7 +229,6 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     general_settings.append(g_pool.display_mode_info)
     g_pool.sidebar.append(general_settings)
     g_pool.gui.append(g_pool.sidebar)
-    g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
     # let the camera add its GUI
     g_pool.capture.init_gui(g_pool.sidebar)
     # let detector add its GUI
