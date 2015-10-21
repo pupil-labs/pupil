@@ -32,6 +32,8 @@ namespace singleeyefitter {
 
     int random(int min, int max);
     int random(int min, int max, unsigned int seed);
+    double random(double min, double max);
+    double random(double min, double max, unsigned int seed);
 
     template<typename T>
     std::vector<T> randomSubset(const std::vector<T>& src, typename std::vector<T>::size_type size)

@@ -15,3 +15,14 @@ int singleeyefitter::random(int min, int max, unsigned int seed)
     std::uniform_int_distribution<> distribution(min, max);
     return distribution(gen);
 }
+double singleeyefitter::random(double min, double max)
+{
+    std::uniform_real_distribution<> distribution(min, max);
+    return distribution(static_gen);
+}
+double singleeyefitter::random(double min, double max, unsigned int seed)
+{
+    std::mt19937 gen(seed);
+    std::uniform_real_distribution<> distribution(min, max);
+    return distribution(gen);
+}
