@@ -35,17 +35,7 @@
 #include <spii/function.h>
 #include <spii/solver.h>
 
-namespace ceres {
-    using singleeyefitter::math::sq;
 
-    template<typename T, int N>
-    inline Jet<T, N> sq(Jet<T, N> val)
-    {
-        val.v *= 2 * val.a;
-        val.a *= val.a;
-        return val;
-    }
-}
 
 namespace singleeyefitter {
 
@@ -491,14 +481,6 @@ namespace singleeyefitter {
             // Return difference of mean values
             return mu_outer - mu_inner;
         }
-    }
-
-    template<typename T>
-    Eigen::Matrix<T, 3, 1> sph2cart(T r, T theta, T psi)
-    {
-        using std::sin;
-        using std::cos;
-        return r * Eigen::Matrix<T, 3, 1>(sin(theta) * cos(psi), cos(theta), sin(theta) * sin(psi));
     }
 
     template<typename T>

@@ -138,6 +138,23 @@ namespace singleeyefitter {
             return smootherstep(-epsilon, epsilon, std::forward<T>(val));
         }
 
+        template<typename T>
+        Eigen::Matrix<T, 3, 1> sph2cart(T r, T theta, T psi)
+        {
+            using std::sin;
+            using std::cos;
+            return r * Eigen::Matrix<T, 3, 1>(sin(theta) * cos(psi), cos(theta), sin(theta) * sin(psi));
+        }
+
+        template<typename T, int N>
+        inline ::ceres::Jet<T, N> sq(::ceres::Jet<T, N> val)
+        {
+            val.v *= 2 * val.a;
+            val.a *= val.a;
+            return val;
+        }
+
+
 
     } // math namespace
 
