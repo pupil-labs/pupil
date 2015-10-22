@@ -315,7 +315,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 		std::vector<Path> results;
 
 		// contains bad paths, we won't test again
-		// even a superset is not tested again, because if a subset is bad, we can't make it better if more contours are adder
+		// even a superset is not tested again, because if a subset is bad, we can't make it better if more contours are added
 		std::vector<Path> prune;
 		int eval_count = 0;
 
