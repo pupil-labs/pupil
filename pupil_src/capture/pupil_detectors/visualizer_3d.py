@@ -319,7 +319,7 @@ class Visualizer(object):
 		glPushMatrix()
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		for contour in contours:
-			draw_polyline3d(contour,color=RGBA(0.,0.,0.,.5))
+			draw_polyline(contour,color=RGBA(0.,0.,0.,.5))
 		glPopMatrix()
 
 	def draw_unwrapped_contours_on_screen( self, contours, screen_pos = (20,20), size =(400,400)):
