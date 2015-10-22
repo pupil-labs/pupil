@@ -154,7 +154,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         # ##############
         # DEBUG
         #self.stop()
-        
+
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
         self.sites = [  (.25, .5), (0,.5),
@@ -230,17 +230,15 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             cal_pt_cloud = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,1))
             cal_pt_cloud_eye0 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,))
             cal_pt_cloud_eye1 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(1,))
-        else:
-            cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
-
-        if self.g_pool.binocular:
             logger.info("Collected %s binocular data points." %len(cal_pt_cloud))
             logger.info("Collected %s data points for eye 0." %len(cal_pt_cloud_eye0))
             logger.info("Collected %s data points for eye 1." %len(cal_pt_cloud_eye1))
         else:
+            cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
             logger.info("Collected %s data points." %len(cal_pt_cloud))
 
-        if self.g_pool.binocular and (len(cal_pt_cloud) < 20 or len(cal_pt_cloud_eye0) < 20 or len(cal_pt_cloud_eye1) < 20) or len(cal_pt_cloud) < 20:
+
+        if self.g_pool.binocular and (len(cal_pt_cloud_eye0) < 20 or len(cal_pt_cloud_eye1) < 20) or len(cal_pt_cloud) < 20:
             logger.warning("Did not collect enough data.")
             return
 
