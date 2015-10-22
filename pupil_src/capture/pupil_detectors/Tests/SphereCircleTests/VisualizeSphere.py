@@ -19,6 +19,8 @@ from pyglui.cygl.utils import *
 from pyglui.cygl import utils as glutils
 from trackball import Trackball
 from math import *
+import random
+import time
 from circleFitUtils import *
 
 class VisualizeSphere(Visualizer):
@@ -74,28 +76,47 @@ if __name__ == '__main__':
   visualizer.open_window()
   sphere_radius = 1.0
   sphere = ( (0,0,0),sphere_radius ) # center, radius
-
-  phi_circle_center = pi/2
-  theta_circle_center =  pi/2
-
-  right_z = sphere_radius * sin(phi_circle_center) * cos(theta_circle_center)
-  right_x = sphere_radius * sin(phi_circle_center) * sin(theta_circle_center)
-  right_y = sphere_radius * cos(phi_circle_center)
-  print(right_x,right_y,right_z)
-
-  points = get_circle_test_points( (phi_circle_center, theta_circle_center), pi/16,60, 0.4, 0.01)
-  #result = testHaversine((phi_circle_center, theta_circle_center), pi/8, 220, 0.3, initial_guess)
-  result = testPlanFit((phi_circle_center, theta_circle_center), pi/16, 60, 0.4,  0.01 )
-
-  x = result[0]
-  y = result[1]
-  z = result[2]
-
-  if( z < 0 ):
-    x = -x
-    y = -y
-    z = -z
-
-  print (x,y,z)
+  points = ()
+  circle = ( (0,0,0), (0,0,0), 1 )
+  lastTime = time.clock()
   while visualizer.running:
-    visualizer.update_window( sphere , points, ( (x,y,z), (x,y,z), 1 ))
+
+    if time.clock() - lastTime  >= 1.0:
+
+      phi_circle_center = random.uniform(0, pi)
+      theta_circle_center =   random.uniform(-pi/2, pi/2)
+
+      right_z = sphere_radius * sin(phi_circle_center) * cos(theta_circle_center)
+      right_x = sphere_radius * sin(phi_circle_center) * sin(theta_circle_center)
+      right_y = sphere_radius * cos(phi_circle_center)
+
+
+      circle_distortion =  random.uniform(0, 0.2)
+      circle_segment_amount = random.uniform(0.2, 1.0)
+      circle_point_amount =  random.randint(5, 100)
+      circle_opening = random.uniform(pi/32, pi/1.5 )
+
+      print"Set Position: {}{}{}".format( right_x,right_y,right_z)
+      print"Set Circle Radius: {}".format( sin(circle_opening) )
+      points = get_circle_test_points( (phi_circle_center, theta_circle_center), circle_opening,circle_point_amount, circle_segment_amount, circle_distortion)
+      #result = testHaversine((phi_circle_center, theta_circle_center), pi/8, 220, 0.3, initial_guess)
+      result = testPlanFit((phi_circle_center, theta_circle_center), circle_opening, circle_point_amount, circle_segment_amount,  circle_distortion )
+
+      x = result[0]
+      y = result[1]
+      z = result[2]
+      radius = result[3]
+      residual = result[4]
+
+      if( z < 0 ):
+        x = -x
+        y = -y
+        z = -z
+
+      circle =  ( (x,y,z), (x,y,z), 1 )
+      print "Fit result Position: {} {} {}".format(x,y,z)
+      print "Fit result Radius: {}".format(radius)
+      print "Fit result Residual {}".format(residual)
+      lastTime = time.clock()
+
+    visualizer.update_window( sphere , points, circle )
