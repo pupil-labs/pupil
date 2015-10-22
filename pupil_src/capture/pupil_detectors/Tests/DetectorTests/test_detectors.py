@@ -1,7 +1,4 @@
-if __name__ == '__main__':
-    import subprocess as sp
-    sp.call("python setup.py build_ext --inplace",shell=True)
-print "BUILD COMPLETE ______________________"
+
 
 
 ############# TESTS ##################
@@ -11,6 +8,7 @@ if __name__ == '__main__':
   from os import path as ospath
   loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
   syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
+  syspath.append(ospath.join(loc[0], 'pupil_src', 'capture', 'pupil_detectors'))
   del syspath, ospath
 
   from collections import namedtuple
@@ -48,7 +46,7 @@ if __name__ == '__main__':
   detector_py = Canny_Detector(pool)
   # detector_py.coarse_detection= False
 
-  test_file_Folder = '../../../Pupil_Test_Files/' # write files to the project root folder
+  test_file_Folder = '../../../../../Pupil_Test_Files/' # write files to the project root folder
 
 
   def compareEllipse( ellipse_cpp , ellipse_py):
@@ -111,13 +109,10 @@ if __name__ == '__main__':
             print "Video File is done."
             break
         # send to detector
-        result,contours = detector_py.detect(frame,user_roi=u_r,visualize=False)
-        for contour in contours: #better way to do this ?
-            contour.shape = (-1, 2 )
+        result = detector_py.detect(frame,user_roi=u_r,visualize=False)
 
         #save test values
         save_object( result, test_file_Folder + 'result_frame_py{}'.format(frameNumber))
-        save_object( contours, test_file_Folder + 'contours_frame_py{}'.format(frameNumber))
 
         print "Frame {}".format(frameNumber)
 
@@ -205,16 +200,12 @@ if __name__ == '__main__':
             print "Video File is done."
             break
         # send to detector
-        result,contours = detector_py.detect(frame,user_roi=u_r,visualize=False)
-        for contour in contours: #better way to do this ?
-            contour.shape = (-1, 2 )
+        result = detector_py.detect(frame,user_roi=u_r,visualize=False)
 
         #load corresponding test files
         reference_result = load_object( test_file_Folder + 'result_frame_py{}'.format(frameNumber))
-        reference_contours = load_object(test_file_Folder + 'contours_frame_py{}'.format(frameNumber))
 
         compare_dict(reference_result, result )
-        compare_contours( contours, reference_contours)
 
         print "Frame {}".format(frameNumber)
 
