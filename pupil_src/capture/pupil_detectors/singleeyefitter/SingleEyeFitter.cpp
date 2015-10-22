@@ -506,7 +506,7 @@ namespace singleeyefitter {
     Circle3D<T> circleOnSphere(const Sphere<T>& sphere, T theta, T psi, T circle_radius)
     {
         typedef Eigen::Matrix<T, 3, 1> Vector3;
-        Vector3 radial = sph2cart<T>(T(1), theta, psi);
+        Vector3 radial = math::sph2cart<T>(T(1), theta, psi);
         return Circle3D<T>(sphere.center + sphere.radius * radial,
                            radial,
                            circle_radius);
@@ -998,7 +998,7 @@ singleeyefitter::Circle singleeyefitter::EyeModelFitter::circleFromParams(const 
     if (params.radius == 0)
         return Circle::Null;
 
-    Vector3 radial = sph2cart<double>(double(1), params.theta, params.psi);
+    Vector3 radial = math::sph2cart<double>(double(1), params.theta, params.psi);
     return Circle(eye.center + eye.radius * radial,
                   radial,
                   params.radius);
