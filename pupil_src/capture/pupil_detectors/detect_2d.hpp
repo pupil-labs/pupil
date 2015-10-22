@@ -271,7 +271,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	const cv::Rect ellipse_center_varianz = cv::Rect(padding, padding, pupil_image.size().width - 2.0 * padding, pupil_image.size().height - 2.0 * padding);
 	const EllipseEvaluation is_Ellipse(ellipse_center_varianz, props.ellipse_roundness_ratio, props.pupil_size_min, props.pupil_size_max);
 
-	//finding poential candidates for ellipse seeds that describe the pupil.
+	//finding potential candidates for ellipse seeds that describe the pupil.
 	auto seed_contours  = detector::divide_strong_and_weak_contours(
 	                          split_contours, is_Ellipse, props.initial_ellipse_fit_treshhold,
 	                          props.strong_perimeter_ratio_range_min, props.strong_perimeter_ratio_range_max,
