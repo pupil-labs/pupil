@@ -2,9 +2,9 @@
 #ifndef singleeyefitter_types_h__
 #define singleeyefitter_types_h__
 
-#include "../Ellipse.h"
-#include "../Circle.h"
-#include "../Sphere.h"
+#include "../Geometry/Ellipse.h"
+#include "../Geometry/Circle.h"
+#include "../Geometry/Sphere.h"
 
 #include <vector>
 #include <opencv2/core/core.hpp>

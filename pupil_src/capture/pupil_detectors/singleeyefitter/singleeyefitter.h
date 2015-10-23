@@ -7,9 +7,9 @@
 #include <opencv2/core/core.hpp>
 #include "common/types.h"
 #include "cvx.h"
-#include "Circle.h"
-#include "Ellipse.h"
-#include "Sphere.h"
+#include "Geometry/Circle.h"
+#include "Geometry/Ellipse.h"
+#include "Geometry/Sphere.h"
 
 namespace singleeyefitter {
 

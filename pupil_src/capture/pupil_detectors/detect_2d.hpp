@@ -10,7 +10,7 @@
 #include "singleeyefitter/fun.h"
 #include "singleeyefitter/utils.h"
 #include "singleeyefitter/cvx.h"
-#include "singleeyefitter/Ellipse.h"  // use ellipse eyefitter
+#include "singleeyefitter/Geometry/Ellipse.h"  // use ellipse eyefitter
 #include "singleeyefitter/distance.h"
 #include "singleeyefitter/mathHelper.h"
 #include "singleeyefitter/detectorUtils.h"

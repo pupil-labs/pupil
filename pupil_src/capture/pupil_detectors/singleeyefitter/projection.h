@@ -2,11 +2,11 @@
 #define singleeyefitter_project_h__
 
 #include <Eigen/Core>
-#include "Ellipse.h"
-#include "Circle.h"
-#include "Conic.h"
+#include "Geometry/Ellipse.h"
+#include "Geometry/Circle.h"
+#include "Geometry/Conic.h"
 #include "mathHelper.h"
-#include "Conicoid.h"
+#include "Geometry/Conicoid.h"
 
 namespace singleeyefitter {
 

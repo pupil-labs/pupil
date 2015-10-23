@@ -11,7 +11,7 @@
 
 #include <Eigen/Core>
 #include <opencv2/core/core.hpp>
-#include "Ellipse.h"
+#include "Geometry/Ellipse.h"
 
 
 namespace singleeyefitter {
