@@ -377,9 +377,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         #some feedback on the detection state
 
         if self.detected and self.on_position:
-            draw_points([screen_pos],size=5,color=RGBA(0.,1.,0.,alpha),sharpness=0.95)
+            draw_points([screen_pos],size=5,color=RGBA(0.,.8,0.,alpha),sharpness=0.5)
         else:
-            draw_points([screen_pos],size=5,color=RGBA(1.,0.,0.,alpha),sharpness=0.95)
+            draw_points([screen_pos],size=5,color=RGBA(0.8,0.,0.,alpha),sharpness=0.5)
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))
