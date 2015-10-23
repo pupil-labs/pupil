@@ -4,7 +4,7 @@
 
 #include <opencv2/core/core.hpp>
 #include "common/types.h"
-#include "EllipseEvaluation.h"
+#include "EllipseEvaluation2D.h"
 
 
 namespace singleeyefitter {
@@ -26,7 +26,7 @@ namespace singleeyefitter {
 
         // returns the indices to strong and weak contours
         std::pair<ContourIndices, ContourIndices> divide_strong_and_weak_contours(
-            const Contours_2D& contours, const EllipseEvaluation& is_ellipse, const float ellipse_fit_treshold,
+            const Contours_2D& contours, const EllipseEvaluation2D& is_ellipse, const float ellipse_fit_treshold,
             const float strong_perimeter_ratio_range_min, const float strong_perimeter_ratio_range_max,
             const float strong_area_ratio_range_min, const float strong_area_ratio_range_max);
 

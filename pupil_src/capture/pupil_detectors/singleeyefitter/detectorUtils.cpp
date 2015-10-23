@@ -171,7 +171,7 @@ namespace singleeyefitter {
     }
 
     std::pair<ContourIndices, ContourIndices> detector::divide_strong_and_weak_contours(
-        const Contours_2D& contours, const EllipseEvaluation& is_ellipse, const float ellipse_fit_treshold,
+        const Contours_2D& contours, const EllipseEvaluation2D& is_ellipse, const float ellipse_fit_treshold,
         const float strong_perimeter_ratio_range_min, const float strong_perimeter_ratio_range_max,
         const float strong_area_ratio_range_min, const float strong_area_ratio_range_max)
     {

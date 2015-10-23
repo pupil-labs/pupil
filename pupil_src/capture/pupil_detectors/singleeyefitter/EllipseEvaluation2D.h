@@ -1,14 +1,14 @@
 
 
-#ifndef singleeyefitter_EllipseEvaluation_h__
-#define singleeyefitter_EllipseEvaluation_h__
+#ifndef singleeyefitter_EllipseEvaluation2D_h__
+#define singleeyefitter_EllipseEvaluation2D_h__
 
 namespace singleeyefitter {
 
-    class EllipseEvaluation {
+    class EllipseEvaluation2D {
 
         public:
-            EllipseEvaluation(const cv::Rect& centerVarianz, const float roundness_ratio, const float size_min, const float size_max) :
+            EllipseEvaluation2D(const cv::Rect& centerVarianz, const float roundness_ratio, const float size_min, const float size_max) :
                 centerVarianz(centerVarianz), roundness_ratio(roundness_ratio), size_min(size_min), size_max(size_max)
             {
             };
@@ -42,4 +42,4 @@ namespace singleeyefitter {
 
 } // namespace singleeyefitter
 
-#endif // singleeyefitter_EllipseEvaluation_h__
+#endif // singleeyefitter_EllipseEvaluation2D_h__
