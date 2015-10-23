@@ -25,7 +25,7 @@ namespace singleeyefitter {
 
         public:
 
-            bool fit(const std::vector<Eigen::Matrix<Scalar, 3, 1>>& points )
+            bool fit(const std::vector<Vector3>& points )
             {
 
                 int numPoints = points.size();
