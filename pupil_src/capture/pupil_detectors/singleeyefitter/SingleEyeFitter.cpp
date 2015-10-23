@@ -934,8 +934,8 @@ void singleeyefitter::EyeModelFitter::unproject_last_contour()
 
     auto& pupil = pupils.back();
     auto& contours = pupil.observation->contours;
-    pupil.unprojected_contours.clear();
-    pupil.unprojected_contours.resize(contours.size());
+    pupil.contours.clear();
+    pupil.contours.resize(contours.size());
     int i = 0;
 
     for (auto& contour : contours) {
@@ -946,7 +946,7 @@ void singleeyefitter::EyeModelFitter::unproject_last_contour()
             try {
                 // we use the eye properties of the current eye, when ever we call this
                 const auto& unprojected_point = intersect(Line3(camera_center,  direction.normalized()), eye);
-                pupil.unprojected_contours.at(i).push_back(std::move(unprojected_point.first));
+                pupil.contours.at(i).push_back(std::move(unprojected_point.first));
 
             } catch (no_intersection_exception&) {
                 // if there is no intersection we don't do anything

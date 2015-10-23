@@ -82,7 +82,7 @@ namespace singleeyefitter {
             struct Pupil {
                 //Observation observation;
                 std::shared_ptr<Detector_2D_Results> observation;
-                std::vector<std::vector<Vector3>> unprojected_contours;  // where to put this ? observations ? keep projected contours ?
+                std::vector<std::vector<Vector3>> contours;
                 Circle circle;
                 PupilParams params;
                 bool init_valid;

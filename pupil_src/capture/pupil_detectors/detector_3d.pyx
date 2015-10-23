@@ -238,7 +238,7 @@ cdef class Detector_3D:
 
         cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
         contours = []
-        for contour in p.unprojected_contours:
+        for contour in p.contours:
             c = []
             for point in contour:
                 c.append([point[0],point[1],point[2]])
