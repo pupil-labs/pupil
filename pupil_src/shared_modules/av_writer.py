@@ -25,13 +25,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-from threading import Thread as Process
+from threading import Thread
 from threading import Event
 
-# if platform.system() == 'Darwin':
-#     from billiard import Process,Event
-# else:
-#     from multiprocessing import Process,Event
 
 
 """
@@ -220,21 +216,21 @@ class JPEG_Writer(object):
 
 
 
-
-
 def format_time(time, time_base):
         if time is None:
             return 'None'
         return '%.3fs (%s or %s/%s)' % (time_base * time, time_base * time, time_base.numerator * time, time_base.denominator)
 
 
-def rec_thread(file_loc, audio_src,should_close):
-    import av,platform
-    #create in container
-    if platform.system() == "Darwin":
-        in_container = av.open(':%s'%audio_src,format="avfoundation")
-    elif platform.system() == "Linux":
-        in_container = av.open('hw:%s'%audio_src,format="alsa")
+def rec_thread(file_loc, in_container, audio_src,should_close):
+    # print sys.modules['av']
+    # import av
+    if not in_container:
+        #create in container
+        if platform.system() == "Darwin":
+            in_container = av.open('none:%s'%audio_src,format="avfoundation")
+        elif platform.system() == "Linux":
+            in_container = av.open('hw:%s'%audio_src,format="alsa")
 
     in_stream = None
 
@@ -280,6 +276,7 @@ class Audio_Capture(object):
 
     def __init__(self, file_loc,audio_src=0):
         super(Audio_Capture, self).__init__()
+        self.thread = None
 
         try:
             file_path,ext = file_loc.rsplit('.', 1)
@@ -292,40 +289,39 @@ class Audio_Capture(object):
             raise NotImplementedError()
 
         self.should_close = Event()
-        self.process = None
 
         self.start(file_loc,audio_src)
 
     def start(self,file_loc, audio_src):
-        # from rec_thread import rec_thread
-        try:
-            from billiard import forking_enable
-            forking_enable(0)
-        except ImportError:
-            pass
         self.should_close.clear()
-        self.process = Process(target=rec_thread, args=(file_loc, audio_src,self.should_close))
-        self.process.start()
-        try:
-            forking_enable(1)
-        except:
-            pass
+        if platform.system() == "Darwin" and 0:
+            in_container = av.open(':%s'%audio_src,format="avfoundation")
+        else:
+            in_container = None
+        self.thread = Thread(target=rec_thread, args=(file_loc,in_container, audio_src,self.should_close))
+        self.thread.start()
+
 
     def stop(self):
         self.should_close.set()
-        self.process.join(timeout=1)
-        try:
-            self.process.terminate()
-        except:
-            logger.error('Could not join recording thread.')
-        self.process = None
+        self.thread.join(timeout=1)
+        self.thread = None
 
     def close(self):
         self.stop()
 
     def __del__(self):
-        if self.process:
+        if self.thread:
             self.stop()
+
+
+def mac_pyav_hack():
+    if platform.system() == "Darwin":
+        try:
+            av.open(':0',format="avfoundation")
+        except:
+            pass
+
 
 # def test():
 
@@ -354,24 +350,24 @@ class Audio_Capture(object):
 
 
 if __name__ == '__main__':
-    try:
-        from billiard import forking_enable
-        forking_enable(0)
-    except ImportError:
-        pass
+    # try:
+    #     from billiard import forking_enable
+    #     forking_enable(0)
+    # except ImportError:
+    #     pass
     logging.basicConfig(level=logging.DEBUG)
 
-    cap = Audio_Capture('test.wav',1)
+    cap = Audio_Capture('test.wav','default')
 
     import time
-    time.sleep(2)
+    time.sleep(5)
     cap.close()
     #mic device
     exit()
 
 
-    container = av.open('hw:0',format="alsa")
-    container = av.open(':0',format="avfoundation")
+    # container = av.open('hw:0',format="alsa")
+    container = av.open('1:0',format="avfoundation")
     print 'container:', container
     print '\tformat:', container.format
     print '\tduration:', float(container.duration) / av.time_base
@@ -412,7 +408,7 @@ if __name__ == '__main__':
     #file contianer:
 
     out_container = av.open('test.wav','w')
-    out_stream = out_container.add_stream(audio_stream.format)
+    out_stream = out_container.add_stream(template=audio_stream)
     # out_stream.rate = 44100
     for i,packet in enumerate(container.demux(audio_stream)):
         # for frame in packet.decode():
@@ -428,10 +424,10 @@ if __name__ == '__main__':
 
     out_container.close()
 
-    # import cProfile,subprocess,os
+    # import cProfile,subthread,os
     # cProfile.runctx("test()",{},locals(),"av_writer.pstats")
     # loc = os.path.abspath(_file__).rsplit('pupil_src', 1)
     # gprof2dot_loc = os.path.oin(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-    # subprocess.call("python "+gprof2dot_loc+" -f pstats av_writer.pstats | dot -Tpng -o av_writer.png", shell=True)
-    # print "created cpu time graph for av_writer process. Please check out the png next to the av_writer.py file"
+    # subthread.call("python "+gprof2dot_loc+" -f pstats av_writer.pstats | dot -Tpng -o av_writer.png", shell=True)
+    # print "created cpu time graph for av_writer thread. Please check out the png next to the av_writer.py file"
 
