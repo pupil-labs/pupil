@@ -18,6 +18,7 @@ from pyglui.ui import get_opensans_font_path
 import numpy as np
 import math
 import cv2
+import random
 
 import build_test
 
@@ -190,6 +191,7 @@ class Visualizer(object):
 		H *= scale
 		Z *= scale
 		# draw it
+		glLineWidth(1)
 		glColor4f( 1, 0.5, 0, 0.5 )
 		glBegin( GL_LINE_LOOP )
 		glVertex3f( 0, 0, 0 )
@@ -298,28 +300,34 @@ class Visualizer(object):
 				glPopMatrix()
 
 
-	def draw_circle(self, circle_center, circle_radius, circle_normal):
+	def draw_circle(self, circle_center, circle_radius, circle_normal, color=RGBA(1.1,0.2,.8)):
 		glPushMatrix()
 		#glLoadMatrixf(self.get_pupil_transformation_matrix(circle_normal,circle_center))
 		glTranslatef(circle_center[0],circle_center[1],circle_center[2]) #sphere[0] contains center coordinates (x,y,z)
 		glScalef(circle_radius,circle_radius,circle_radius)
-		draw_points(((0,0),),color=RGBA(1.1,0.2,.8))
+		draw_points(((0,0),),color=color)
 		#draw_polyline((circle_xy),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
 		glPopMatrix()
 
-	def draw_contours_on_screen(self,contours):
+	def draw_contours_on_screen(self,contours, color = RGBA(0.,0.,0.,0.5)):
 		#this function displays the contours on the 2D video stream within the visualizer module
 		glPushMatrix()
 		glLoadMatrixf(self.get_image_space_matrix(30))
 		for contour in contours:
-			draw_polyline(contour,color=RGBA(0,0,0,0.5))
+			draw_polyline(contour,color)
 		glPopMatrix()
 
-	def draw_contours(self, contours):
+	def draw_contours(self, contours, color = RGBA(0.,0.,0.,0.5) ):
 		glPushMatrix()
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		for contour in contours:
-			draw_polyline(contour,color=RGBA(0.,0.,0.,.5))
+			draw_polyline(contour,color = RGBA( random.random(),0.0, random.random(),1.0) )
+		glPopMatrix()
+
+	def draw_contour(self, contour, thickness = 1, color = RGBA(0.,0.,0.,0.5) ):
+		glPushMatrix()
+		glLoadMatrixf(self.get_anthropomorphic_matrix())
+		draw_polyline(contour,thickness, color)
 		glPopMatrix()
 
 	def draw_unwrapped_contours_on_screen( self, contours, screen_pos = (20,20), size =(400,400)):
@@ -431,7 +439,7 @@ class Visualizer(object):
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool, image_width, image_height,  eye, pupil_observations, last_unprojected_contours = None  ):
+	def update_window(self, g_pool, image_width, image_height,  eye, detector_3D  ):
 
 		if self._window != None:
 			glfwMakeContextCurrent(self._window)
@@ -439,6 +447,10 @@ class Visualizer(object):
 		if image_height and image_width:
 			self.image_width = image_width # reassign in case the image size got changed during running
 			self.image_height = image_height
+
+		pupil_observations = detector_3D.get_last_observations(5)
+		last_unprojected_contours =  detector_3D.get_last_pupil_contours()
+		final_circle_contour = detector_3D.get_last_final_circle_contour()
 
 		self.clear_gl_screen()
 		self.trackball.push()
@@ -453,6 +465,7 @@ class Visualizer(object):
 		pupil = None
 		for pupil in pupil_observations:
 			self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal)
+			self.draw_circle( pupil.circle_fitted_center, pupil.circle_fitted_radius, pupil.circle_fitted_normal, RGBA(0.0,1.0,0.0))
 
 		self.draw_coordinate_system(4)
 
@@ -460,6 +473,10 @@ class Visualizer(object):
 		if last_unprojected_contours:
 			self.draw_contours(last_unprojected_contours)
 		#self.draw_contours_on_screen(projected_contours)
+
+		#draw contour used for the final circle fit
+		if final_circle_contour:
+			self.draw_contour(final_circle_contour, 3 , RGBA(0.,1.,0.,1.) )
 
 		# 1b. draw frustum in pixel scale, but retaining origin
 		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))

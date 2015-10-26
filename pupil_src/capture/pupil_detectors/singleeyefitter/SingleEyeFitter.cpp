@@ -17,6 +17,9 @@
 #include "EllipseDistanceResidualFunction.h"
 #include "EllipsePointDistanceFunction.h"
 
+#include "Fit/CircleOnSphereFit.h"
+#include "CircleGoodness3D.h"
+
 #include "PupilContrastTerm.h"
 #include "PupilAnthroTerm.h"
 
@@ -236,10 +239,12 @@ singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length, double regi
 // }
 
 
-singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation( std::shared_ptr<Detector_2D_Results>& observation , int image_width, int image_height, bool convert_to_eyefitter_space )
+singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::shared_ptr<Detector_2D_Results>& observation , int image_width, int image_height, bool convert_to_eyefitter_space)
 {
     std::lock_guard<std::mutex> lock_model(model_mutex);
-    while( pupils.size() >= max_pupils ) pupils.pop_front();
+
+    while (pupils.size() >= max_pupils) pupils.pop_front();
+
     // uint i = 0;
     // for( auto* contour : contour_ptrs){
     //     uint length = contour_sizes.at(i);
@@ -252,39 +257,42 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation( std::sh
 
     // observations are realtive to their ROI !!!
     cv::Rect roi = observation->current_roi;
-    if (convert_to_eyefitter_space)
-    {
 
-        for( Contour_2D& c : observation->final_contours ){
-            for( cv::Point& p : c ){
+    if (convert_to_eyefitter_space) {
+
+        for (Contour_2D& c : observation->final_contours) {
+            for (cv::Point& p : c) {
                 p += roi.tl();
                 p.x -= image_width * 0.5f;
                 p.y = image_height * 0.5f - p.y;
-             }
-        }
-        for( Contour_2D& c : observation->contours ){
-            for( cv::Point& p : c ){
-                p += roi.tl();
-                p.x -= image_width * 0.5f;
-                p.y = image_height * 0.5f - p.y;
-             }
-        }
-        for( cv::Point& p : observation->raw_edges ){
-                p += roi.tl();
-                p.x -= image_width * 0.5f;
-                p.y = image_height * 0.5f - p.y;
+            }
         }
 
-       Ellipse& ellipse = observation->ellipse;
-       ellipse.center[0] += roi.x;
-       ellipse.center[1] += roi.y;
-       ellipse.center[0] -= image_width * 0.5f;
-       ellipse.center[1] = image_height * 0.5f - ellipse.center[1];
-       ellipse.angle = -ellipse.angle; //take y axis flip into account
+        for (Contour_2D& c : observation->contours) {
+            for (cv::Point& p : c) {
+                p += roi.tl();
+                p.x -= image_width * 0.5f;
+                p.y = image_height * 0.5f - p.y;
+            }
+        }
+
+        for (cv::Point& p : observation->raw_edges) {
+            p += roi.tl();
+            p.x -= image_width * 0.5f;
+            p.y = image_height * 0.5f - p.y;
+        }
+
+        Ellipse& ellipse = observation->ellipse;
+        ellipse.center[0] += roi.x;
+        ellipse.center[1] += roi.y;
+        ellipse.center[0] -= image_width * 0.5f;
+        ellipse.center[1] = image_height * 0.5f - ellipse.center[1];
+        ellipse.angle = -ellipse.angle; //take y axis flip into account
     }
+
     pupils.emplace_back(
-       // Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/, std::move(contours))
-         observation
+        // Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/, std::move(contours))
+        observation
     );
     return pupils.size() - 1;
 }
@@ -924,6 +932,132 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
     model_version++;
 }
 
+void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour()
+{
+
+    if( pupils.size() == 0)
+        return;
+
+    auto& pupil = pupils.back();
+
+    // copy the contours
+    auto contours = pupil.contours;
+
+
+    //first we want to filter out the bad stuff, too short ones
+    // const auto contour_size_min_pred = [](const std::vector<Vector3>& contour) {
+    //     return contour.size() > 3;
+    // };
+    // contours = singleeyefitter::fun::filter(contour_size_min_pred , contours);
+
+    if( contours.size() == 0)
+        return;
+
+    // sort the contours so the contour with the most points is at the begining
+    std::sort(contours.begin(), contours.end(), [](const std::vector<Vector3>& a, const std::vector<Vector3>& b) { return a.size() < b.size();});
+
+    // saves the best solution and just the Vector3Ds not every single contour
+    std::vector<Vector3> best_solution;
+    std::vector<Vector3> current_solution;
+    Circle best_circle;
+    double best_goodness = 0.0;
+    //double best_residual = std::numeric_limits<double>::infinity();
+
+    int next_contour_index = 0;
+    int start_contour_index = 0;
+    // start with the first one
+    current_solution.insert(current_solution.end(), contours.at(start_contour_index).begin(), contours.at(start_contour_index).end());
+    start_contour_index++;
+
+    auto circle_fitter = CircleOnSphereFitter<double>(eye);
+
+    // float max_residual = 0.1;
+
+    // float pupil_min_radius = 1; //approximate min pupil diameter is 2mm in light environment
+    // float pupil_max_radius = 4; //approximate max pupil diameter is 8mm in dark environment
+
+    float max_residual = 0.6;
+
+    float pupil_min_radius = 1.5; //approximate min pupil diameter is 2mm in light environment
+    float pupil_max_radius = 3; //approximate max pupil diameter is 8mm in dark environment
+
+    auto circle_goodness = CircleGoodness3D<double>(camera_center, eye, max_residual, pupil_min_radius, pupil_max_radius);
+
+    const auto& start_with_next_candidate = [&](){
+        current_solution.clear();
+        current_solution.insert(current_solution.end(), contours.at(start_contour_index).begin(), contours.at(start_contour_index).end());
+        start_contour_index++;
+        next_contour_index = 0;
+    };
+
+    const auto& add_next_contour = [&]() -> bool {
+
+        // don't add the contour we started with
+        if(next_contour_index != start_contour_index && next_contour_index <  contours.size() - 1){
+            current_solution.insert(current_solution.end(), contours.at(next_contour_index).begin(), contours.at(next_contour_index).end());
+            next_contour_index++;
+            return true;
+        }else if( next_contour_index + 1  <  contours.size() - 1){
+            next_contour_index++; // skip this one
+            current_solution.insert(current_solution.end(), contours.at(next_contour_index).begin(), contours.at(next_contour_index).end());
+            next_contour_index++;
+            return true;
+        }else
+            return false;
+
+
+    };
+
+    while (next_contour_index < contours.size() - 1 && start_contour_index < contours.size() - 1) {
+
+        // need at least 3 points
+        if( !circle_fitter.fit(current_solution)  ){
+            //if we have too little points just add the next one
+            if( !add_next_contour() ){
+                start_with_next_candidate();
+            }
+            continue; // restart fit if we add new one
+
+        }
+
+        Circle current_circle = circle_fitter.getCircle();
+        // we got a circle fit
+        // see if it's a good one
+        double goodness =  circle_goodness(current_circle , current_solution);
+        double residual = circle_fitter.calculateResidual(current_solution);
+        std::cout << "Circle: " << current_circle << std::endl;
+        std::cout << "Current Goodness: " << goodness << std::endl;
+        std::cout << "Current Residual: " << residual << std::endl;
+
+        // if (goodness == 0.0  ) {
+        //     // forget the current_solution and try a new one, with the next start contour
+        //     start_with_next_candidate();
+        //     continue;
+        // }
+
+        // else we have a good fit
+        // if this one is better then the best, change them
+        if (goodness > best_goodness && residual < max_residual) {
+            best_solution = current_solution; // copy them
+            best_goodness = goodness;
+            best_circle = current_circle;
+            std::cout << "Best Solution Goodness: " << best_goodness << std::endl;
+        }
+
+        // add next contour for test
+        // if there are no more try with new start candidate
+        if( !add_next_contour() ){
+            start_with_next_candidate();
+        }
+
+    }
+
+    pupil.circle_fitted = std::move(best_circle);
+    pupil.final_circle_contour = std::move(best_solution); // save this for debuging
+
+
+}
+
 
 void singleeyefitter::EyeModelFitter::unproject_last_contour()
 {
@@ -937,7 +1071,6 @@ void singleeyefitter::EyeModelFitter::unproject_last_contour()
     pupil.contours.clear();
     pupil.contours.resize(contours.size());
     int i = 0;
-
     for (auto& contour : contours) {
         for (auto& point : contour) {
             Vector3 point_3d(point.x, point.y , focal_length);

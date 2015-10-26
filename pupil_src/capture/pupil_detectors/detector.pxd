@@ -125,7 +125,7 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         #######################
 
         void unproject_last_contour();
-        void unwrap_contours();
+        void fit_circle_for_last_contour();
 
         #######################
 
@@ -142,8 +142,11 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
             Pupil() except +
             shared_ptr[Detector_2D_Results] observation
             vector[vector[Vector3]] contours
+            vector[Vector3] final_circle_contour
             PupilParams params
             Circle3D[double] circle
+            Circle3D[double] circle_fitted
+
 
         #variables
         float model_version

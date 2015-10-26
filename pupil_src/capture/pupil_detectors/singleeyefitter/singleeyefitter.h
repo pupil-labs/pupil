@@ -63,6 +63,8 @@ namespace singleeyefitter {
 
             void unproject_last_contour();
 
+            void fit_circle_for_last_contour();
+
             // struct Observation {
             //     //cv::Mat image;
             //     Ellipse ellipse;
@@ -83,7 +85,9 @@ namespace singleeyefitter {
                 //Observation observation;
                 std::shared_ptr<Detector_2D_Results> observation;
                 std::vector<std::vector<Vector3>> contours;
-                Circle circle;
+                std::vector<Vector3> final_circle_contour; // just for visualiziation, contains all points which fit best the circle
+                Circle circle; // this one is the unprojected circle
+                Circle circle_fitted;  // this is the circle fitted form the unprojectd contours
                 PupilParams params;
                 bool init_valid;
                 bool processed; // indicate if this pupil is already processed
