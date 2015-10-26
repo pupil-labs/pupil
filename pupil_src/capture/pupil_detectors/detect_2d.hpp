@@ -15,7 +15,7 @@
 #include "singleeyefitter/mathHelper.h"
 #include "singleeyefitter/detectorUtils.h"
 #include "singleeyefitter/EllipseDistanceApproxCalculator.h"
-#include "singleeyefitter/EllipseEvaluation.h"
+#include "singleeyefitter/EllipseEvaluation2D.h"
 
 class Detector2D {
 
@@ -269,7 +269,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 
 	std::sort(split_contours.begin(), split_contours.end(), [](Contour_2D & a, Contour_2D & b) { return a.size() > b.size(); });
 	const cv::Rect ellipse_center_varianz = cv::Rect(padding, padding, pupil_image.size().width - 2.0 * padding, pupil_image.size().height - 2.0 * padding);
-	const EllipseEvaluation is_Ellipse(ellipse_center_varianz, props.ellipse_roundness_ratio, props.pupil_size_min, props.pupil_size_max);
+	const EllipseEvaluation2D is_Ellipse(ellipse_center_varianz, props.ellipse_roundness_ratio, props.pupil_size_min, props.pupil_size_max);
 
 	//finding potential candidates for ellipse seeds that describe the pupil.
 	auto seed_contours  = detector::divide_strong_and_weak_contours(

@@ -4,16 +4,17 @@
 
 
 #include "../common/types.h"
+#include "../Geometry/Sphere.h"
 #include "PlaneFit3D.h"
 
 
 namespace singleeyefitter {
 
     template<typename Scalar>
-    class CircleFitter3D {
+    class CircleOnSphereFitter {
 
-
-            CircleFitter3D()
+    public:
+            CircleOnSphereFitter( const Sphere<Scalar> sphere ) : mSphere(sphere)
             {
                 mPlaneFitter = PlaneFitter3D<Scalar>();
             }
@@ -28,14 +29,23 @@ namespace singleeyefitter {
                 Vector3 normal = mPlaneFitter.getNormal();
                 Vector3 planePoint = mPlaneFitter.getPlanePoint();
 
-                // calculate circle radius
-                //first calculate distance from sphere center to plane
-                double d = planePoint.dot(normal) / normal.norm();
+                // check if the normal points outwards or inwards
+                // the plane normal must lie in the same direction as the planepoint from sphere center
+                if( (planePoint - mSphere.center).dot(normal) < 0 )
+                    normal *= -1.0;
+
+                // calculate circle radius and circle center
+
+                //first calculate the distance from sphere center to plane
+                double d = std::abs((mSphere.center - planePoint ).dot(normal) /  normal.norm() );
                 // than calculate intersection of normal and plane
-                Vector3 circle_center = d * normal;
+                Vector3 circle_center = mSphere.center + d * normal;
                 // calculate circle radius  r = sqrt(R^2 - d^2) // R is sphere radius
-                double r = sqrt(1 - d * d);
+                double r = sqrt( mSphere.radius*mSphere.radius - d * d);
+
+
                 mCircle = {circle_center, normal, r};
+                return true;
 
             }
 
@@ -43,11 +53,12 @@ namespace singleeyefitter {
             {
                 return  mPlaneFitter.calculateResidual(points);
             }
-            Circle getCircle() { return mCircle;};
+            const Circle& getCircle() { return mCircle;};
 
 
         private:
             Circle mCircle;
+            Sphere<Scalar> mSphere;
             PlaneFitter3D<Scalar> mPlaneFitter;
 
 
