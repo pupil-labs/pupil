@@ -69,6 +69,7 @@ namespace singleeyefitter {
                 // The plane normal is the eigenvector in the direction of smallest
                 // variance of the points.
                 mNormal =  eigen_solver.eigenvectors().col(0);
+                mNormal.normalize();
                 return true;
 
             }
