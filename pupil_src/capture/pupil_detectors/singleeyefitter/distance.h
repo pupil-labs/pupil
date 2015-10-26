@@ -57,6 +57,20 @@ Scalar euclidean_distance(const Eigen::Matrix<Scalar, 2, 1>& point, const std::v
 
     return min_distance;
 }
+template<typename Scalar>
+Scalar euclidean_distance( const std::vector<Eigen::Matrix<Scalar, 3, 1>>& polygon)
+{
+    auto from = polygon.back();
+    Scalar distance = 0.0;
+
+    for (const auto& to : polygon) {
+        distance +=  euclidean_distance(from, to);
+        from = to;
+    }
+
+    return distance;
+}
+
 
 template<typename Scalar>
 Scalar euclidean_distance(const Eigen::Matrix<Scalar, 2, 1>& point, const Ellipse2D<Scalar>& ellipse)
