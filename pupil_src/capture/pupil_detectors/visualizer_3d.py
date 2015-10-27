@@ -375,9 +375,10 @@ class Visualizer(object):
 
 	def draw_eye_model_fitter_text(self, eye, pupil ):
 
-		status = 'Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\nGaze vector (currently WRONG): Theta: %.3f Psi %.3f\nPupil Diameter: %.2fmm'%(eye[0][0],
-			eye[0][1],eye[0][2],
-			pupil.params_theta, pupil.params_psi, pupil.params_radius*2)
+		status = ' Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\n Gaze vector unprojected (currently WRONG):  X%.2f Y%.2f Z%.2f\n Pupil Diameter unprojected: %.2fmm\n Gaze vector fitted (currently WRONG):  X%.2f Y%.2f Z%.2f\n Pupil Diameter fitted: %.2fmm\n ' \
+		%(eye[0][0], eye[0][1],eye[0][2],
+		pupil.circle_normal[0], pupil.circle_normal[1],pupil.circle_normal[2], pupil.params_radius*2,
+		pupil.circle_fitted_normal[0], pupil.circle_fitted_normal[1],pupil.circle_fitted_normal[2], pupil.circle_fitted_radius*2)
 		self.glfont.draw_multi_line_text(5,20,status)
 		self.glfont.draw_multi_line_text(440,20,'View: %.2f %.2f %.2f'%(self.trackball.distance[0],self.trackball.distance[1],self.trackball.distance[2]))
 
@@ -477,7 +478,7 @@ class Visualizer(object):
 		self.draw_sphere(eye_position,eye_radius)
 		pupil = None
 		for pupil in pupil_observations:
-			#self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal, RGBA(1.0,1.0,1.0, 0.4))
+			self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal, RGBA(1.0,1.0,1.0, 0.4))
 			self.draw_circle( pupil.circle_fitted_center, pupil.circle_fitted_radius, pupil.circle_fitted_normal, RGBA(0.0,1.0,1.0,0.4))
 
 		self.draw_coordinate_system(4)
