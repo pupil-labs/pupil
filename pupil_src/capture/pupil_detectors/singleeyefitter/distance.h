@@ -13,7 +13,11 @@ auto euclidean_distance(const Eigen::MatrixBase<Derived1>& p1, const Eigen::Matr
 {
     return (p1 - p2).norm();
 }
-
+template<class Derived1, class Derived2>
+auto euclidean_distance_squared(const Eigen::MatrixBase<Derived1>& p1, const Eigen::MatrixBase<Derived2>& p2) -> decltype((p1 - p2).squaredNorm())
+{
+    return (p1 - p2).squaredNorm();
+}
 template<class Derived>
 auto euclidean_distance(const Eigen::MatrixBase<Derived>& point,
                         const Eigen::ParametrizedLine<typename Derived::Scalar, Derived::SizeAtCompileTime>& line) -> decltype(point.norm())

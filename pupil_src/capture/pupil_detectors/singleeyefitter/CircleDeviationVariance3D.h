@@ -12,10 +12,10 @@
 namespace singleeyefitter {
 
     template<typename Scalar>
-    class CircleGoodness3D {
+    class CircleDeviationVariance3D {
 
         public:
-            CircleGoodness3D(const Vector3 camera_center, const Sphere<Scalar> sphere, const Scalar max_residual, const Scalar circle_radius_min, const Scalar circle_radius_max) :
+            CircleDeviationVariance3D(const Vector3 camera_center, const Sphere<Scalar> sphere, const Scalar max_residual, const Scalar circle_radius_min, const Scalar circle_radius_max) :
                 camera_center(camera_center), sphere(sphere),  max_residual(max_residual), circle_radius_min(circle_radius_min), circle_radius_max(circle_radius_max)
             {
             };
@@ -28,19 +28,27 @@ namespace singleeyefitter {
                 // the goodness actually doesn't really depend on the normal, but it has to face at least the camera
                 if (normalDotPos <= 0 ) {
                     //std::cout << "not facing camera" << std::endl;
-                    return 0.0;
+                    return std::numeric_limits<Scalar>::infinity();
                 }
                 // reject if radius is to small or big
                 if( circle.radius < circle_radius_min || circle.radius > circle_radius_max){
                     //std::cout << "radius not in range" << std::endl;
-                    return 0.0;
+                    return std::numeric_limits<Scalar>::infinity();;
                 }
 
-                Scalar points_length = euclidean_distance(points);
-                //std::cout << "Points length: " << points_length << std::endl;
-                Scalar goodness = points_length / (2.0 * constants::pi * circle.radius);
+                // Scalar residual_sqrt = 0.0;
+                // for( const auto& point : points){
+                //    residual_sqrt +=  std::abs(circle.radius * circle.radius  - euclidean_distance_squared(circle.center, point));
+                // }
+                // Scalar variance =  residual_sqrt / points.size();
 
-               return goodness;
+
+                Scalar points_length = 0.0;
+                points_length = euclidean_distance(points);
+                //std::cout << "Points length: " << points_length << std::endl;
+                Scalar variance = std::abs( 1.0 - points_length/ (2.0 * constants::pi * circle.radius)  );
+
+               return variance;
             }
 
         private:
