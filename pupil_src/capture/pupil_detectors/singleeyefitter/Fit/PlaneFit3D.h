@@ -82,7 +82,7 @@ namespace singleeyefitter {
                     Vector3 diff = point - mPoint;
                     Scalar sqrlen = diff.dot(diff);
                     Scalar dot = diff.dot(mNormal);
-                    error = std::abs(sqrlen - dot * dot);
+                    error += std::abs(sqrlen - dot * dot);
                 }
 
                 error /= points.size();
