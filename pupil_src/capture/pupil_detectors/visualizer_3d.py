@@ -104,7 +104,7 @@ class Visualizer(object):
 		temp[2,3] = -self.focal_length
 		return temp.T
 
-	def get_pupil_transformation_matrix(self,circle_normal,circle_center):
+	def get_pupil_transformation_matrix(self,circle_normal,circle_center, circle_scale = 1.0):
 		"""
 			OpenGL matrix convention for typical GL software
 			with positive Y=up and positive Z=rearward direction
@@ -138,9 +138,12 @@ class Visualizer(object):
 		back[:] /= np.linalg.norm(back)
 		right[:] = get_perpendicular_vector(back)/np.linalg.norm(get_perpendicular_vector(back))
 		up[:] = np.cross(right,back)/np.linalg.norm(np.cross(right,back))
+		right[:] *= circle_scale
+		back[:] *=circle_scale
+		up[:] *=circle_scale
 		translation[:] = np.array(circle_center)
 		translation[2] *= -1
-		return temp.T
+		return   temp.T
 
 	def get_rotated_sphere_matrix(self,circle_normal,sphere_center):
 		"""
@@ -300,14 +303,24 @@ class Visualizer(object):
 				glPopMatrix()
 
 
-	def draw_circle(self, circle_center, circle_radius, circle_normal, color=RGBA(1.1,0.2,.8)):
+	def draw_circle(self, circle_center, circle_radius, circle_normal, color=RGBA(1.1,0.2,.8), num_segments = 20):
+		vertices = []
+		vertices.append( (0,0,0) )  # circle center
+
+		#create circle vertices in the xz plane
+		for i in np.linspace(0.0, 2.0*math.pi , num_segments ):
+			x = math.sin(i)
+			y = math.cos(i)
+			z = 0
+			vertices.append((x,y,z))
+
 		glPushMatrix()
-		#glLoadMatrixf(self.get_pupil_transformation_matrix(circle_normal,circle_center))
-		glTranslatef(circle_center[0],circle_center[1],circle_center[2]) #sphere[0] contains center coordinates (x,y,z)
-		glScalef(circle_radius,circle_radius,circle_radius)
-		draw_points(((0,0),),color=color)
-		#draw_polyline((circle_xy),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
+		glLoadMatrixf(self.get_pupil_transformation_matrix(circle_normal,circle_center, circle_radius))
+		draw_polyline((vertices),color=color, line_type = GL_TRIANGLE_FAN) # circle
+		draw_polyline( [ (0,0,0), (0,0,-4) ] ,color=RGBA(0,0,0), line_type = GL_LINES) #normal
 		glPopMatrix()
+
+
 
 	def draw_contours_on_screen(self,contours, color = RGBA(0.,0.,0.,0.5)):
 		#this function displays the contours on the 2D video stream within the visualizer module
@@ -448,7 +461,7 @@ class Visualizer(object):
 			self.image_width = image_width # reassign in case the image size got changed during running
 			self.image_height = image_height
 
-		pupil_observations = detector_3D.get_last_observations(5)
+		pupil_observations = detector_3D.get_last_observations(1)
 		last_unprojected_contours =  detector_3D.get_last_pupil_contours()
 		final_circle_contour = detector_3D.get_last_final_circle_contour()
 
@@ -464,8 +477,8 @@ class Visualizer(object):
 		self.draw_sphere(eye_position,eye_radius)
 		pupil = None
 		for pupil in pupil_observations:
-			self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal)
-			self.draw_circle( pupil.circle_fitted_center, pupil.circle_fitted_radius, pupil.circle_fitted_normal, RGBA(0.0,1.0,0.0))
+			#self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal, RGBA(1.0,1.0,1.0, 0.4))
+			self.draw_circle( pupil.circle_fitted_center, pupil.circle_fitted_radius, pupil.circle_fitted_normal, RGBA(0.0,1.0,1.0,0.4))
 
 		self.draw_coordinate_system(4)
 
