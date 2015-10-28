@@ -142,7 +142,8 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
             Pupil() except +
             shared_ptr[Detector_2D_Results] observation
             vector[vector[Vector3]] contours
-            vector[Vector3] final_circle_contour
+            vector[vector[Vector3]] final_circle_contours
+            double fit_goodness
             PupilParams params
             Circle3D[double] circle
             Circle3D[double] circle_fitted

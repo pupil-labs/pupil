@@ -257,12 +257,14 @@ cdef class Detector_3D:
             return []
 
         cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
-        contour = []
-        for point in p.final_circle_contour:
-            contour.append([point[0],point[1],point[2]])
+        contours = []
+        for contour in p.final_circle_contours:
+            c = []
+            for point in contour:
+                c.append([point[0],point[1],point[2]])
+            contours.append(c)
 
-        print len(contour)
-        return contour
+        return contours
     # def get_last_unwrapped_contours(self):
     #     if self.detector_3d_ptr.pupils.size() == 0:
     #         return []

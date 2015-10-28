@@ -168,6 +168,22 @@ namespace singleeyefitter {
             return is_subset;
         }
 
+        template<class Container, class Allocator >
+        Container flatten(const std::vector<Container, Allocator>& v)
+        {
+            std::size_t total_size = 0;
+            for (const auto& sub : v)
+                total_size += sub.size(); // I wish there was a transform_accumulate
+
+            Container result;
+            result.reserve(total_size);
+
+            for (const auto& sub : v)
+                result.insert(result.end(), sub.begin(), sub.end());
+
+            return result;
+        }
+
         /*namespace internal {
             template<class Container, class Function>
             struct reduce_helper {

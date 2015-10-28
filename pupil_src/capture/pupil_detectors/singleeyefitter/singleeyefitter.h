@@ -84,10 +84,11 @@ namespace singleeyefitter {
             struct Pupil {
                 //Observation observation;
                 std::shared_ptr<Detector_2D_Results> observation;
-                std::vector<std::vector<Vector3>> contours;
-                std::vector<Vector3> final_circle_contour; // just for visualiziation, contains all points which fit best the circle
+                Contours3D contours;
+                Contours3D final_circle_contours; // just for visualiziation, contains all points which fit best the circle
                 Circle circle; // this one is the unprojected circle
                 Circle circle_fitted;  // this is the circle fitted form the unprojectd contours
+                double fit_goodness;
                 PupilParams params;
                 bool init_valid;
                 bool processed; // indicate if this pupil is already processed

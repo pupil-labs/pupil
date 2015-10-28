@@ -28,6 +28,8 @@ namespace singleeyefitter {
     typedef singleeyefitter::Circle3D<double> Circle;
     typedef size_t Index;
 
+    typedef std::vector<Vector3> Contour3D;
+    typedef std::vector<std::vector<Vector3>> Contours3D;
 
 
     // every coordinates are relative to the roi

@@ -330,11 +330,11 @@ class Visualizer(object):
 			draw_polyline(contour,color)
 		glPopMatrix()
 
-	def draw_contours(self, contours, color = RGBA(0.,0.,0.,0.5) ):
+	def draw_contours(self, contours, thickness = 1, color = RGBA(0.,0.,0.,0.5) ):
 		glPushMatrix()
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		for contour in contours:
-			draw_polyline(contour,color = RGBA( random.random(),0.0, random.random(),1.0) )
+			draw_polyline(contour, thickness, color = color )
 		glPopMatrix()
 
 	def draw_contour(self, contour, thickness = 1, color = RGBA(0.,0.,0.,0.5) ):
@@ -464,7 +464,7 @@ class Visualizer(object):
 
 		pupil_observations = detector_3D.get_last_observations(1)
 		last_unprojected_contours =  detector_3D.get_last_pupil_contours()
-		final_circle_contour = detector_3D.get_last_final_circle_contour()
+		final_circle_contours = detector_3D.get_last_final_circle_contour()
 
 		self.clear_gl_screen()
 		self.trackball.push()
@@ -478,19 +478,19 @@ class Visualizer(object):
 		self.draw_sphere(eye_position,eye_radius)
 		pupil = None
 		for pupil in pupil_observations:
-			self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal, RGBA(1.0,1.0,1.0, 0.4))
+			#self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal, RGBA(1.0,1.0,1.0, 0.4))
 			self.draw_circle( pupil.circle_fitted_center, pupil.circle_fitted_radius, pupil.circle_fitted_normal, RGBA(0.0,1.0,1.0,0.4))
 
 		self.draw_coordinate_system(4)
 
 		#draw unprojecte contours
 		if last_unprojected_contours:
-			self.draw_contours(last_unprojected_contours)
+			self.draw_contours(last_unprojected_contours, 1, RGBA(1.,0.,0.,1.))
 		#self.draw_contours_on_screen(projected_contours)
 
 		#draw contour used for the final circle fit
-		if final_circle_contour:
-			self.draw_contour(final_circle_contour, 3 , RGBA(0.,1.,0.,1.) )
+		if final_circle_contours:
+			self.draw_contours(final_circle_contours, 3 , RGBA(0.,1.,0.,1.) )
 
 		# 1b. draw frustum in pixel scale, but retaining origin
 		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))
