@@ -57,11 +57,10 @@ class Manual_Gaze_Correction(Plugin):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Manual Gaze Correction')
         self.g_pool.gui.append(self.menu)
-
+        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Info_Text('Move gaze horizontally and vertically. Screen width and height are one unit respectively.'))
         self.menu.append(ui.Slider('x_offset',self,min=-1,step=0.01,max=1,setter=self._set_offset_x))
         self.menu.append(ui.Slider('y_offset',self,min=-1,step=0.01,max=1,setter=self._set_offset_y))
-        self.menu.append(ui.Button('remove',self.unset_alive))
 
     def deinit_gui(self):
         if self.menu:

@@ -91,7 +91,7 @@ class Vis_Watermark(Plugin):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Watermark')
         self.g_pool.gui.append(self.menu)
-        self.menu.append(ui.Button('remove',self.unset_alive))
+        self.menu.append(ui.Button('Close',self.unset_alive))
         if self.watermark is None:
             self.menu.append(ui.Info_Text("Please save a .png file in the users settings dir: '%s' in RGBA format. Once this plugin is closed and re-loaded the png will be used as a watermark."%self.g_pool.user_dir))
         else:
