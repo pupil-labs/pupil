@@ -11,7 +11,7 @@ import os,sys
 import logging
 logger = logging.getLogger(__name__)
 import importlib
-
+from time import time
 
 '''
 A simple example Plugin: 'display_recent_gaze.py'
@@ -112,6 +112,16 @@ class Plugin(object):
         do not overwrite this method
         """
         self.g_pool.notifications.append(notification)
+
+    def notify_all_delayed(self,notification,delay = 3.0):
+        """
+        call this to notify all other plugins with a notification.
+        if will be published after a bit of time to allow you to adjust the slider and keep the loop repsonsive
+        notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
+        do not overwrite this method
+        """
+        notification['_notify_time_'] = time()+delay
+        self.g_pool.delayed_notifications[notification['subject']] = notification
 
 
     @property

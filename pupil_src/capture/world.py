@@ -18,6 +18,7 @@ if __name__ == '__main__':
 
 
 import os, sys,platform
+from time import time
 import logging
 import numpy as np
 
@@ -208,6 +209,7 @@ def world(g_pool,cap_src,cap_size):
 
     #plugins that are loaded based on user settings from previous session
     g_pool.notifications = []
+    g_pool.delayed_notifications = {}
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
 
     #We add the calibration menu selector, after a calibration has been added:
@@ -298,6 +300,14 @@ def world(g_pool,cap_src,cap_size):
             recent_pupil_positions.append(p)
             pupil_graph.add(p['confidence'])
         events['pupil_positions'] = recent_pupil_positions
+
+
+        # publish delayed notifiactions when their time has come.
+        for n in g_pool.delayed_notifications.values():
+            if n['_notify_time_'] < time():
+                del n['_notify_time_']
+                del g_pool.delayed_notifications[n['subject']]
+                g_pool.notifications.append(n)
 
         # notify each plugin if there are new notifications:
         while g_pool.notifications:

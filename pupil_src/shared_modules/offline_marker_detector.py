@@ -47,7 +47,7 @@ from math import sqrt
 class Offline_Marker_Detector(Marker_Detector):
     """
     Special version of marker detector for use with videofile source.
-    It uses a seperate process to search all frames in the world.avi file for markers.
+    It uses a seperate process to search all frames in the world video file for markers.
      - self.cache is a list containing marker positions for each frame.
      - self.surfaces[i].cache is a list containing surface positions for each frame
     Both caches are build up over time. The marker cache is also session persistent.
@@ -145,6 +145,10 @@ class Offline_Marker_Detector(Marker_Detector):
             self.menu.append(s_menu)
 
 
+    def on_notify(self,notification):
+        if notification['subject'] == 'gaze_positions_changed':
+            logger.info('Gaze postions changed. Recalculating.')
+            self.recalculate()
 
     def on_window_resize(self,window,w,h):
         self.win_size = w,h

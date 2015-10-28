@@ -42,6 +42,8 @@ class Manual_Gaze_Correction(Plugin):
                 gaze_pos = self.untouched_gaze_positions_by_frame[f][i]['norm_pos']
                 gaze_pos = gaze_pos[0]+x, gaze_pos[1]+y
                 self.g_pool.gaze_positions_by_frame[f][i]['norm_pos'] =  gaze_pos
+        self.notify_all_delayed({'subject':'gaze_positions_changed'})
+
 
     def _set_offset_x(self,offset_x):
         self.x_offset = offset_x
@@ -79,5 +81,6 @@ class Manual_Gaze_Correction(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.g_pool.gaze_positions_by_frame = self.untouched_gaze_positions_by_frame
+        self.notify_all({'subject':'gaze_positions_changed'})
         self.deinit_gui()
 
