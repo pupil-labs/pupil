@@ -61,9 +61,8 @@ class Vis_Light_Points(Plugin):
         self.menu = ui.Scrolling_Menu('Light Points')
         # add menu to the window
         self.g_pool.gui.append(self.menu)
-
+        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Slider('falloff',self,min=1,step=1,max=1000))
-        self.menu.append(ui.Button('remove',self.unset_alive))
 
     def deinit_gui(self):
         if self.menu:

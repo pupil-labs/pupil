@@ -96,9 +96,8 @@ class Scan_Path(Plugin):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Scan Path')
         self.g_pool.gui.append(self.menu)
-
+        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Slider('timeframe',self,min=0,step=0.1,max=5,label="duration in sec"))
-        self.menu.append(ui.Button('remove',self.unset_alive))
 
     def deinit_gui(self):
         if self.menu:

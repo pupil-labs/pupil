@@ -74,6 +74,7 @@ class Batch_Exporter(Plugin):
 
     def _update_gui(self):
         self.menu.elements[:] = []
+        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Text_Input('source_dir',self,label='Recording Source Directory',setter=self.set_src_dir))
         self.menu.append(ui.Text_Input('destination_dir',self,label='Recording Destination Directory',setter=self.set_dest_dir))
         self.menu.append(ui.Button('start export',self.start))
@@ -88,7 +89,6 @@ class Batch_Exporter(Plugin):
         if not self.exports:
             self.menu.append(ui.Info_Text('Please select a Recording Source directory from with to pull all recordings for export.'))
 
-        self.menu.append(ui.Button('close',self.unset_alive))
 
 
     def deinit_gui(self):
