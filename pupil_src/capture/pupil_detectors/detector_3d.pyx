@@ -29,6 +29,8 @@ cdef class Detector_3D:
     cdef object g_pool
     cdef object debug_visualizer_3d
 
+    max_residual = 20
+    max_variance = 0.7
 
     def __cinit__(self):
         self.detector_2d_ptr = new Detector2D()
@@ -43,7 +45,6 @@ cdef class Detector_3D:
         self.debug_visualizer_3d = Visualizer(879.193)
         self.g_pool = g_pool
         self.detect_properties = settings or {}
-
 
         if not self.detect_properties:
             self.detect_properties["coarse_detection"] = True
@@ -156,7 +157,9 @@ cdef class Detector_3D:
 
 
         self.detector_3d_ptr.unproject_last_contour()
-        self.detector_3d_ptr.fit_circle_for_last_contour()
+        min_radius = self.detect_properties['pupil_size_min'] / 10.0/ 2.0
+        max_radius = self.detect_properties['pupil_size_max'] / 10.0/2.0
+        self.detector_3d_ptr.fit_circle_for_last_contour(self.max_residual, self.max_variance, min_radius, max_radius)
 
         if self.debug_visualizer_3d._window:
             eye = self.detector_3d_ptr.eye
@@ -183,6 +186,9 @@ cdef class Detector_3D:
         self.menu.append(ui.Slider('ellipse_roundness_ratio',self.detect_properties,min=0.01,max=1.0,step=0.01))
         self.menu.append(ui.Slider('initial_ellipse_fit_treshhold',self.detect_properties,min=0.01,max=3.0,step=0.01))
         self.menu.append(ui.Button('Reset 3D Model', self.reset_3D_Model ))
+        self.menu.append(ui.Slider('max_residual',self,label='3D fit max residual', min=0.1,max=100.0,step=0.1))
+        self.menu.append(ui.Slider('max_variance',self,label='3D fit max circle variance', min=0.01,max=30.0,step=0.01))
+
         advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
         advanced_controls_menu.append(ui.Switch('coarse_detection',self.detect_properties,label='Use coarse detection'))
         #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detect_properties,label='Contour min length',min=1,max=200,step=1))

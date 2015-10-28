@@ -63,7 +63,8 @@ namespace singleeyefitter {
 
             void unproject_last_contour();
 
-            void fit_circle_for_last_contour();
+           // void fit_circle_for_last_contour();
+            void fit_circle_for_last_contour( float max_residual = 20, float max_variance = 0.7, float min_radius = 2, float max_radius = 4 );
 
             // struct Observation {
             //     //cv::Mat image;

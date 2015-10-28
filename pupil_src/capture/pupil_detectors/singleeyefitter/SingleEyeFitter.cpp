@@ -935,7 +935,7 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
 }
 
 // return the goodness of the current fit
-void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour()
+void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_residual, float max_variance, float min_radius, float max_radius  )
 {
 
     if( pupils.size() == 0)
@@ -959,142 +959,118 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour()
 
     // saves the best solution and just the Vector3Ds not every single contour
     Contours3D best_solution;
-    Contours3D current_solution;
-    Contours3D prev_solution;
     Circle best_circle;
     double best_variance = std::numeric_limits<double>::infinity();
-    double prev_variance = std::numeric_limits<double>::infinity();
     double best_goodness = 0;
-    double prev_goodness = 0;
-    //double best_residual = std::numeric_limits<double>::infinity();
 
-    int next_contour_index = 1;
-    int start_contour_index = 0;
-    // start with the first one
-    current_solution.push_back(contours.at(start_contour_index) ) ;
+    float max_fit_residual = max_residual;
+    float max_circle_variance = max_variance;
 
-
-// float max_residual = 0.1;
-
-    // float pupil_min_radius = 1; //approximate min pupil diameter is 2mm in light environment
-    // float pupil_max_radius = 4; //approximate max pupil diameter is 8mm in dark environment
-
-    float max_residual = 20;
-    float max_circle_variance = 0.7;
-
-    float pupil_min_radius = 2; //approximate min pupil diameter is 2mm in light environment
-    float pupil_max_radius = 4; //approximate max pupil diameter is 8mm in dark environment
+    float pupil_min_radius = min_radius; //approximate min pupil diameter is 2mm in light environment
+    float pupil_max_radius = max_radius; //approximate max pupil diameter is 8mm in dark environment
 
 
     auto circle_fitter = CircleOnSphereFitter<double>(eye);
-    auto circle_evaluation = CircleEvaluation3D<double>(camera_center, eye, max_residual, pupil_min_radius, pupil_max_radius);
+    auto circle_evaluation = CircleEvaluation3D<double>(camera_center, eye, max_fit_residual, pupil_min_radius, pupil_max_radius);
     auto circle_variance = CircleDeviationVariance3D<double>();
     auto circle_goodness = CircleGoodness3D<double>();
 
 
-    const auto& skip_this_contour = [&](){
-         current_solution.pop_back();
-         // don't add the contour we started with
-        if(next_contour_index != start_contour_index && next_contour_index <  contours.size() ){
-            current_solution.push_back(contours.at(next_contour_index) ) ;
-            next_contour_index++;
-            return true;
-        }else if(next_contour_index == start_contour_index && next_contour_index + 1  <  contours.size()){
-            next_contour_index++; // skip this one
-            current_solution.push_back(contours.at(next_contour_index) ) ;
-            next_contour_index++;
-            return true;
-        }else
-            return false;
+    auto pruning_quick_combine = [&](const Contours3D& contours,  int max_evals = 1e20, int max_depth = 5) {
+        // describes different combinations of contours
+        typedef std::set<int> Path;
+        // combinations we wanna test
+        std::vector<Path> unknown(contours.size());
+        // init with paths of size 1 == seed indices
+        int n = 0;
+        std::generate(unknown.begin(), unknown.end(), [&]() { return Path{n++}; }); // fill with increasing values, starting from 0
 
-    };
+        // contains all the indices for the contours, which altogther fit best
+        std::vector<Path> results;
 
-    const auto& start_with_next_candidate = [&](){
-        current_solution.clear();
-        start_contour_index++;
-        current_solution.push_back(contours.at(start_contour_index) ) ;
-        //next_contour_index = start_contour_index + 1 ;
-        next_contour_index = 0;
-    };
+        // contains bad paths, we won't test again
+        // even a superset is not tested again, because if a subset is bad, we can't make it better if more contours are added
+        std::vector<Path> prune;
+        int eval_count = 0;
 
-    const auto& add_next_contour = [&]() -> bool {
+        while (!unknown.empty() && eval_count <= max_evals) {
+            eval_count++;
+            //take a path and combine it with others to see if the fit gets better
+            Path current_path = unknown.back();
+            unknown.pop_back();
 
-        // don't add the contour we started with
-        if(next_contour_index != start_contour_index && next_contour_index <  contours.size() ){
-            current_solution.push_back(contours.at(next_contour_index) ) ;
-            next_contour_index++;
-            return true;
-        }else if(next_contour_index == start_contour_index && next_contour_index + 1  <  contours.size()){
-            next_contour_index++; // skip this one
-            current_solution.push_back(contours.at(next_contour_index) ) ;
-            next_contour_index++;
-            return true;
-        }else
-            return false;
+            if (current_path.size() <= max_depth) {
+                bool includes_bad_paths = fun::isSubset(current_path, prune);
 
+                if (!includes_bad_paths) {
+                    int size = 0;
 
-    };
-    //int combinations_tested = 0;
-    //std::cout << "Possible Combinations: " << contours.size() * contours.size() << std::endl;
-    while (  start_contour_index < contours.size() - 1 ) {
-        //combinations_tested++;
+                    for (int j : current_path) { size += contours.at(j).size(); };
 
-        // need at least 3 points
-        auto current_solution_flat  = singleeyefitter::fun::flatten(current_solution); //better way, maybe
-        if( !circle_fitter.fit(current_solution_flat)  ){
-            //if we have too little points just add the next one
-            if( !add_next_contour() ){
-                start_with_next_candidate();
+                    Contour3D test_contour;
+                    Contours3D test_contours;
+
+                    test_contour.reserve(size);
+
+                    std::set<int> test_contour_indices;
+
+                    //concatenate contours to one contour
+                    for (int k : current_path) {
+                        const Contour3D& c = contours.at(k );
+                        test_contours.push_back(c);
+                        test_contour.insert(test_contour.end(), c.begin(), c.end());
+                        test_contour_indices.insert( k );
+                    }
+
+                    //we have not tested this and a subset of this was sucessfull before
+
+                    // need at least 3 points
+                    if( !circle_fitter.fit(test_contour)  ){
+                        std::cout << "Error! Too little points!" << std::endl; // filter too short ones before
+                    }
+                    double residual = circle_fitter.calculateResidual(test_contour);
+                    // we got a circle fit
+                    Circle current_circle = circle_fitter.getCircle();
+                    // see if it's even a candidate
+                    bool is_candidate = circle_evaluation(current_circle, residual);
+                    double variance =  circle_variance(current_circle , test_contours);
+
+                    if (is_candidate && variance <  max_circle_variance ) {
+                        //yes this was good, keep as solution
+                        //results.push_back(test_contour_indices);
+
+                        //lets explore more by creating paths to each remaining node
+                        for (int l = (*current_path.rbegin()) + 1 ; l < contours.size(); l++) {
+                            unknown.push_back(current_path);
+                            unknown.back().insert(l); // add a new path
+                        }
+
+                         double goodness =  circle_goodness(current_circle , test_contours);
+
+                        //check if this one is better then the best one and swap
+                        if( variance < best_variance && goodness > best_goodness ) {
+                            best_variance = variance;
+                            best_goodness = goodness;
+                            best_circle = current_circle;
+                            best_solution = test_contours;
+                        }
+
+                    } else {
+                        prune.push_back(current_path);
+                    }
+                }
             }
-            continue; // restart fit if we add new one
-
-        }
-        double residual = circle_fitter.calculateResidual(current_solution_flat);
-
-        // we got a circle fit
-        Circle current_circle = circle_fitter.getCircle();
-
-        // see if it's even a candidate
-        if( !circle_evaluation(current_circle, residual) ) {
-            start_with_next_candidate();
-            continue;
         }
 
-        // see if it's a good one
-        double variance =  circle_variance(current_circle , current_solution);
-        double goodness =  circle_goodness(current_circle , current_solution);
-        std::cout << "Circle: " << current_circle << std::endl;
-        std::cout << "Current Variance: " << variance << std::endl;
-        std::cout << "Current Residual: " << residual << std::endl;
-        std::cout << "Current Goodness: " << goodness << std::endl;
+        //return results;
+    };
 
-        if ( variance > max_circle_variance  ) {
-            // forget the current_solution and try a new one, with the next start contour
-            start_with_next_candidate();
-            continue;
-        }
 
-        // else we have a good fit
-        // if this one is better then the best, change them
-        if (goodness > best_goodness ) {
-            best_solution = current_solution; // copy them
-            best_variance = variance;
-            best_goodness = goodness;
-            best_circle = current_circle;
-            std::cout << "Best Solution Goodness: " << best_goodness << std::endl;
-        }
-
-        // add next contour for test
-        // if there are no more try with new start candidate
-        if( !add_next_contour() ){
-            start_with_next_candidate();
-        }
-
-    }
-    //std::cout << "Combinations Tested: " << combinations_tested << std::endl;
+    pruning_quick_combine(contours, 1000, 10);
 
     pupil.circle_fitted = std::move(best_circle);
     pupil.final_circle_contours = std::move(best_solution); // save this for debuging
+
 
 
 }

@@ -173,7 +173,7 @@ namespace singleeyefitter {
         {
             std::size_t total_size = 0;
             for (const auto& sub : v)
-                total_size += sub.size(); // I wish there was a transform_accumulate
+                total_size += sub.size();
 
             Container result;
             result.reserve(total_size);

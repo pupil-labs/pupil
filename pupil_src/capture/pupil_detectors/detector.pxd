@@ -124,8 +124,8 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         ## Pubil-Laps addons ##
         #######################
 
-        void unproject_last_contour();
-        void fit_circle_for_last_contour();
+        void unproject_last_contour()
+        void fit_circle_for_last_contour( float max_residual, float max_variance, float min_radius, float max_radius )
 
         #######################
 
