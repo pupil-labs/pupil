@@ -68,8 +68,8 @@ cdef class Detector_3D:
         if not self.detect_properties_3d:
             self.detect_properties_3d["max_fit_residual"] = 20
             self.detect_properties_3d["max_circle_variance"] = 1.0
-            self.detect_properties_3d["pupil_radius_min"] = 2 # millimeters
-            self.detect_properties_3d["pupil_radius_max"] = 8
+            self.detect_properties_3d["pupil_radius_min"] = 2.0 # millimeters
+            self.detect_properties_3d["pupil_radius_max"] = 4.0
 
     def get_settings(self):
         return {'2D_Settings': self.detect_properties_2d , '3D_Settings' : self.detect_properties_3d }
@@ -196,10 +196,10 @@ cdef class Detector_3D:
         info_3d = ui.Info_Text("Open the debug window to see a visualization of the 3d pupil detection." )
         self.menu_3d.append(info_3d)
         self.menu_3d.append(ui.Button('Reset 3D Model', self.reset_3D_Model ))
-        self.menu_3d.append(ui.Slider('pupil_radius_min',self.detect_properties_3d,label='Pupil min', min=1.0,max= 15.0,step=0.1))
-        self.menu_3d.append(ui.Slider('pupil_radius_max',self.detect_properties_3d,label='Pupil max', min=1.0,max=15.0,step=0.1))
+        self.menu_3d.append(ui.Slider('pupil_radius_min',self.detect_properties_3d,label='Pupil min radius', min=1.0,max= 8.0,step=0.1))
+        self.menu_3d.append(ui.Slider('pupil_radius_max',self.detect_properties_3d,label='Pupil max radius', min=1.0,max=8.0,step=0.1))
         self.menu_3d.append(ui.Slider('max_fit_residual',self.detect_properties_3d,label='3D fit max residual', min=0.1,max=100.0,step=0.1))
-        self.menu_3d.append(ui.Slider('max_circle_variance',self.detect_properties_3d,label='3D fit max circle variance', min=0.01,max=30.0,step=0.01))
+        self.menu_3d.append(ui.Slider('max_circle_variance',self.detect_properties_3d,label='3D fit max circle variance', min=0.01,max=10.0,step=0.01))
 
 
 
