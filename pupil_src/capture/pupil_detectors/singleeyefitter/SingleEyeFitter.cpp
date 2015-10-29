@@ -1107,3 +1107,30 @@ void singleeyefitter::EyeModelFitter::unproject_last_contour()
     }
 
 }
+void singleeyefitter::EyeModelFitter::unproject_last_raw_edges()
+{
+    if (eye == Sphere::Null || pupils.size() == 0) {
+        return;
+    }
+
+
+    auto& pupil = pupils.back();
+    auto& edges = pupil.observation->raw_edges;
+    pupil.edges.clear();
+    pupil.edges.resize(edges.size());
+    int i = 0;
+    for (auto& point : edges) {
+        Vector3 point_3d(point.x, point.y , focal_length);
+        Vector3 direction = point_3d - camera_center;
+
+        try {
+            // we use the eye properties of the current eye, when ever we call this
+            const auto& unprojected_point = intersect(Line3(camera_center,  direction.normalized()), eye);
+            pupil.edges.push_back(std::move(unprojected_point.first));
+
+        } catch (no_intersection_exception&) {
+            // if there is no intersection we don't do anything
+        }
+    }
+
+}

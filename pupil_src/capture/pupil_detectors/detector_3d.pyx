@@ -161,6 +161,7 @@ cdef class Detector_3D:
 
 
         self.detector_3d_ptr.unproject_last_contour()
+        #self.detector_3d_ptr.unproject_last_raw_edges()
         min_radius = self.detect_properties_3d['pupil_radius_min']
         max_radius = self.detect_properties_3d['pupil_radius_max']
         max_residual = self.detect_properties_3d['max_fit_residual']
@@ -274,6 +275,16 @@ cdef class Detector_3D:
             contours.append(c)
 
         return contours
+
+    def get_last_pupil_edges(self):
+        if self.detector_3d_ptr.pupils.size() == 0:
+            return []
+
+        cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
+        edges = []
+        for point in p.edges:
+                edges.append([point[0],point[1],point[2]])
+        return edges
 
     def get_last_final_circle_contour(self):
         if self.detector_3d_ptr.pupils.size() == 0:

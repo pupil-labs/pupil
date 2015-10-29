@@ -465,6 +465,7 @@ class Visualizer(object):
 		pupil_observations = detector_3D.get_last_observations(1)
 		last_unprojected_contours =  detector_3D.get_last_pupil_contours()
 		final_circle_contours = detector_3D.get_last_final_circle_contour()
+		last_pupil_edges = detector_3D.get_last_pupil_edges()
 
 		self.clear_gl_screen()
 		self.trackball.push()
@@ -491,6 +492,10 @@ class Visualizer(object):
 		#draw contour used for the final circle fit
 		if final_circle_contours:
 			self.draw_contours(final_circle_contours, 3 , RGBA(0.,1.,0.,1.) )
+
+		#if last_pupil_edges:
+		#	draw_polyline(last_pupil_edges, 3 , RGBA(0.,0.,0.,1.), line_type = GL_POINTS )
+
 
 		# 1b. draw frustum in pixel scale, but retaining origin
 		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))
