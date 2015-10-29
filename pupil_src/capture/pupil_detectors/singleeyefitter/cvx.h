@@ -50,6 +50,7 @@ namespace singleeyefitter {
 
         void draw_dotted_rect(cv::Mat& image, const cv::Rect& rect , const cv::Scalar& color);
 
+        void thinning_Guo_Hall(cv::Mat& image);
 
         /*inline void cross(cv::Mat& img, cv::Point center, int radius, const cv::Scalar& colour, int thickness = 1, int lineType = 8, int shift = 0)
         {

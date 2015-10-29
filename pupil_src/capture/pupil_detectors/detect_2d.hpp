@@ -215,6 +215,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	///////////////////////////////
 	///  Strong Prior Part End  ///
 	///////////////////////////////
+    cvx::thinning_Guo_Hall(edges);
 
 	//from edges to contours
 	Contours_2D contours ;
