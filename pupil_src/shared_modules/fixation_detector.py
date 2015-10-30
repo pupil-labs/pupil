@@ -67,7 +67,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         def set_v_fov(new_fov):
             self.v_fov = new_fov
             self.pix_per_degree = float(self.g_pool.capture.frame_size[1])/new_fov
-        
+
         self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Info_Text('This plugin detects fixations based on a dispersion threshold in terms of degrees of visual angle. It also uses a min duration threshold.'))
         self.menu.append(ui.Slider('min_duration',self,min=0.0,step=0.05,max=1.0,label='duration threshold'))
@@ -89,7 +89,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         if notification['subject'] == 'gaze_positions_changed':
             logger.info('Gaze postions changed. Recalculating.')
             self._classify()
-        elif notification['subject'] == 'fixations_should_recalculate'
+        elif notification['subject'] == 'fixations_should_recalculate':
             self._classify()
 
 
