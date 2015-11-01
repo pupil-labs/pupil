@@ -50,8 +50,8 @@ cdef class Detector_3D:
             self.detect_properties_2d["coarse_filter_max"] = 400
             self.detect_properties_2d["intensity_range"] = 17
             self.detect_properties_2d["blur_size"] = 1
-            self.detect_properties_2d["canny_treshold"] = 159
-            self.detect_properties_2d["canny_ration"] = 2
+            self.detect_properties_2d["canny_treshold"] = 200
+            self.detect_properties_2d["canny_ration"] = 3
             self.detect_properties_2d["canny_aperture"] = 5
             self.detect_properties_2d["pupil_size_max"] = 150
             self.detect_properties_2d["pupil_size_min"] = 40
@@ -190,7 +190,9 @@ cdef class Detector_3D:
         self.menu_2d.append(ui.Slider('pupil_size_min',self.detect_properties_2d,label='Pupil min',min=1,max=250,step=1))
         self.menu_2d.append(ui.Slider('pupil_size_max',self.detect_properties_2d,label='Pupil max',min=50,max=400,step=1))
         self.menu_2d.append(ui.Slider('ellipse_roundness_ratio',self.detect_properties_2d,min=0.01,max=1.0,step=0.01))
-        self.menu_2d.append(ui.Slider('initial_ellipse_fit_treshhold',self.detect_properties_2d,min=0.01,max=3.0,step=0.01))
+        self.menu_2d.append(ui.Slider('initial_ellipse_fit_treshhold',self.detect_properties_2d,min=0.01,max=6.0,step=0.01))
+        self.menu_2d.append(ui.Slider('canny_treshold',self.detect_properties_2d,min=1,max=1000,step=1))
+        self.menu_2d.append(ui.Slider('canny_ration',self.detect_properties_2d,min=1,max=4,step=1))
 
         self.menu_3d = ui.Growing_Menu('Pupil Detector 3D')
         info_3d = ui.Info_Text("Open the debug window to see a visualization of the 3d pupil detection." )
