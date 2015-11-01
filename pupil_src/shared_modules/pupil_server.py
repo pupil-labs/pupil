@@ -42,10 +42,10 @@ class Pupil_Server(Plugin):
             self.menu = ui.Scrolling_Menu("Pupil Broadcast Server")
             self.g_pool.gui.append(self.menu)
 
+        self.menu.append(ui.Button('Close',self.close))
         help_str = "Pupil Message server: Using ZMQ and the *Publish-Subscribe* scheme"
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Text_Input('address',self,setter=self.set_server,label='Address'))
-        self.menu.append(ui.Button('Close',self.close))
 
 
     def deinit_gui(self):

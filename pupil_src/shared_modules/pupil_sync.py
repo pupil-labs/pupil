@@ -49,8 +49,8 @@ class Pupil_Sync(Plugin):
     def init_gui(self):
         help_str = "Synchonize behaviour of Pupil captures across the local network."
         self.menu = ui.Growing_Menu('Pupil Sync')
+        self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Info_Text(help_str))
-        self.menu.append(ui.Button('close Plugin',self.close))
         self.menu.append(ui.Text_Input('name',self,setter=self.set_name,label='Name'))
         self.menu.append(ui.Text_Input('group',self,setter=self.set_group,label='Group'))
         help_str = "Before starting a recording. Make sure to sync the timebase of all Pupils to one master Pupil by clicking the bottom below. This will apply this Pupil's timebase to all of its group."

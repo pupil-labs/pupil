@@ -42,6 +42,8 @@ class Manual_Gaze_Correction(Plugin):
                 gaze_pos = self.untouched_gaze_positions_by_frame[f][i]['norm_pos']
                 gaze_pos = gaze_pos[0]+x, gaze_pos[1]+y
                 self.g_pool.gaze_positions_by_frame[f][i]['norm_pos'] =  gaze_pos
+        self.notify_all_delayed({'subject':'gaze_positions_changed'})
+
 
     def _set_offset_x(self,offset_x):
         self.x_offset = offset_x
@@ -55,11 +57,10 @@ class Manual_Gaze_Correction(Plugin):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Manual Gaze Correction')
         self.g_pool.gui.append(self.menu)
-
+        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Info_Text('Move gaze horizontally and vertically. Screen width and height are one unit respectively.'))
         self.menu.append(ui.Slider('x_offset',self,min=-1,step=0.01,max=1,setter=self._set_offset_x))
         self.menu.append(ui.Slider('y_offset',self,min=-1,step=0.01,max=1,setter=self._set_offset_y))
-        self.menu.append(ui.Button('remove',self.unset_alive))
 
     def deinit_gui(self):
         if self.menu:
@@ -79,5 +80,6 @@ class Manual_Gaze_Correction(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.g_pool.gaze_positions_by_frame = self.untouched_gaze_positions_by_frame
+        self.notify_all({'subject':'gaze_positions_changed'})
         self.deinit_gui()
 

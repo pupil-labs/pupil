@@ -47,7 +47,7 @@ from math import sqrt
 class Offline_Marker_Detector(Marker_Detector):
     """
     Special version of marker detector for use with videofile source.
-    It uses a seperate process to search all frames in the world.avi file for markers.
+    It uses a seperate process to search all frames in the world video file for markers.
      - self.cache is a list containing marker positions for each frame.
      - self.surfaces[i].cache is a list containing surface positions for each frame
     Both caches are build up over time. The marker cache is also session persistent.
@@ -121,9 +121,9 @@ class Offline_Marker_Detector(Marker_Detector):
     def update_gui_markers(self):
         pass
         self.menu.elements[:] = []
+        self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Info_Text('Please note: Unlike the real-time marker detector the offline marker detector works with a fixed min_marker_perimeter of 20.'))
-        self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
@@ -145,6 +145,10 @@ class Offline_Marker_Detector(Marker_Detector):
             self.menu.append(s_menu)
 
 
+    def on_notify(self,notification):
+        if notification['subject'] == 'gaze_positions_changed':
+            logger.info('Gaze postions changed. Recalculating.')
+            self.recalculate()
 
     def on_window_resize(self,window,w,h):
         self.win_size = w,h
@@ -331,10 +335,10 @@ class Offline_Marker_Detector(Marker_Detector):
         glPushMatrix()
         glLoadIdentity()
 
-        color = RGBA(8.,.6,.2,8.)
+        color = RGBA(.8,.6,.2,.8)
         draw_polyline(cached_ranges,color=color,line_type=GL_LINES,thickness=4)
 
-        color = RGBA(0.,.7,.3,8.)
+        color = RGBA(0,.7,.3,.8)
 
         for s in cached_surfaces:
             glTranslatef(0,.02,0)

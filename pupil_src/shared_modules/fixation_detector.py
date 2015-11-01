@@ -68,8 +68,8 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             self.v_fov = new_fov
             self.pix_per_degree = float(self.g_pool.capture.frame_size[1])/new_fov
 
-        self.menu.append(ui.Info_Text('This plugin detects fixations based on a dispersion threshold in terms of degrees of visual angle. It also uses a min duration threshold.'))
         self.menu.append(ui.Button('Close',self.close))
+        self.menu.append(ui.Info_Text('This plugin detects fixations based on a dispersion threshold in terms of degrees of visual angle. It also uses a min duration threshold.'))
         self.menu.append(ui.Slider('min_duration',self,min=0.0,step=0.05,max=1.0,label='duration threshold'))
         self.menu.append(ui.Slider('max_dispersion',self,min=0.0,step=0.05,max=3.0,label='dispersion threshold'))
         self.menu.append(ui.Button('Run fixation detector',self._classify))
@@ -82,6 +82,16 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
             self.menu = None
+
+    ###todo setters with delay trigger
+
+    def on_notify(self,notification):
+        if notification['subject'] == 'gaze_positions_changed':
+            logger.info('Gaze postions changed. Recalculating.')
+            self._classify()
+        elif notification['subject'] == 'fixations_should_recalculate':
+            self._classify()
+
 
     # def _velocity(self):
     #     """
@@ -106,7 +116,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         sample_threshold = self.min_duration * 3 *.3 #lets assume we need data for at least 30% of the duration
         dispersion_threshold = self.max_dispersion
         duration_threshold = self.min_duration
-
+        self.notify_all({'subject':'fixations_changed'})
 
         def dist_deg(p1,p2):
             return np.sqrt(((p1[0]-p2[0])*self.h_fov)**2+((p1[1]-p2[1])*self.v_fov)**2)

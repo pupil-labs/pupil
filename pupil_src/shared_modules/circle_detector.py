@@ -26,15 +26,15 @@ def get_candidate_ellipses(gray_img,area_threshold,dist_threshold,min_ring_count
     # remove extra encapsulation
     if contours is None or hierarchy is None:
         return []
-        
+
     hierarchy = hierarchy[0]
     # turn outmost list into array
     contours =  np.array(contours)
     # keep only contours                        with parents     and      children
     contained_contours = contours[np.logical_and(hierarchy[:,3]>=0, hierarchy[:,2]>=0)]
     # turn on to debug contours
-    # if visual_debug:
-    #     cv2.drawContours(gray_img, contained_contours,-1, (0,0,255))
+    if visual_debug:
+        cv2.drawContours(gray_img, contained_contours,-1, (0,0,255))
 
     # need at least 5 points to fit ellipse
     contained_contours =  [c for c in contained_contours if len(c) >= 5]

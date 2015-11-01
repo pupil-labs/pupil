@@ -11,6 +11,7 @@
 import sys, os,platform
 from glob import glob
 from copy import deepcopy
+from time import time
 try:
     from billiard import freeze_support
 except:
@@ -299,6 +300,7 @@ def session(rec_dir):
     default_plugins = [('Log_Display',{}),('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Export_Launcher',{})]
     previous_plugins = session_settings.get('loaded_plugins',default_plugins)
     g_pool.notifications = []
+    g_pool.delayed_notifications = {}
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,system_plugins+previous_plugins)
 
     for p in g_pool.plugins:
@@ -381,6 +383,14 @@ def session(rec_dir):
             g_pool.play_button.status_text = str(frame.index)
         #always update the CPU graph
         cpu_graph.update()
+
+
+        # publish delayed notifiactions when their time has come.
+        for n in g_pool.delayed_notifications.values():
+            if n['_notify_time_'] < time():
+                del n['_notify_time_']
+                del g_pool.delayed_notifications[n['subject']]
+                g_pool.notifications.append(n)
 
         # notify each plugin if there are new notifactions:
         while g_pool.notifications:
