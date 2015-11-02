@@ -108,7 +108,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         return self.count
 
     def advance(self,_):
-        if self.count ==10:
+        if self.count == 10:
             logger.info("Capture 10 calibration patterns.")
             self.button.status_text = "%i to go" %(self.count)
 
@@ -165,6 +165,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.window_should_close = True
 
     def close_window(self):
+        self.window_should_close=False
         if self._window:
             glfwDestroyWindow(self._window)
             self._window = None
@@ -177,6 +178,8 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         camera_calibration = {'camera_matrix':camera_matrix,'dist_coefs':dist_coefs,'camera_name':self.g_pool.capture.name,'resolution':self.g_pool.capture.frame_size}
         save_object(camera_calibration,os.path.join(self.g_pool.user_dir,"camera_calibration"))
         logger.info("Calibration saved to user folder")
+        self.count = 10
+
 
     def update(self,frame,events):
         if self.collect_new:
@@ -197,7 +200,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
         if self.window_should_close:
             self.close_window()
-
 
     def gl_display(self):
 

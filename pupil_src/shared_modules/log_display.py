@@ -27,6 +27,9 @@ class Log_to_Callback(logging.Handler):
 def color_from_level(lvl):
     return {"CRITICAL":(.8,0,0,1),"ERROR":(1,0,0,1),"WARNING":(1.0,.8,0,1),"INFO":(1,1,1,1),"DEBUG":(1,1,1,.5),"NOTSET":(.5,.5,.5,.2)}[lvl]
 
+def duration_from_level(lvl):
+    return {"CRITICAL":3,"ERROR":2,"WARNING":1.5,"INFO":1,"DEBUG":1,"NOTSET":1}[lvl]
+
 
 class Log_Display(Plugin):
     """docstring for DisplayGaze"""
@@ -56,11 +59,14 @@ class Log_Display(Plugin):
     def on_log(self,record):
         if self.alpha <= 1.5:
             self.rendered_log = []
-        self.rendered_log.append(record)
-        self.rendered_log = self.rendered_log[-10:]
+            self.alpha = 0
 
         self.should_redraw = True
-        self.alpha = 2.+ len(self.rendered_log)*0.3
+        self.rendered_log.append(record)
+        self.alpha += duration_from_level(record.levelname) + len(str(record.msg))/100.
+
+        self.rendered_log = self.rendered_log[-10:]
+        self.alpha = min(self.alpha,6.)
 
 
     def on_window_resize(self,window,w,h):
@@ -68,7 +74,7 @@ class Log_Display(Plugin):
         self.tex.resize(*self.window_size)
 
     def update(self,frame,events):
-        self.alpha -= events['dt']
+        self.alpha -= min(.2,events['dt'])
 
     def gl_display(self):
         if self.should_redraw:
@@ -80,15 +86,14 @@ class Log_Display(Plugin):
             for record in self.rendered_log:
                 self.glfont.set_color_float((0.,0.,0.,1.))
                 self.glfont.set_blur(10.5)
-                self.glfont.draw_limited_text(self.window_size[0]/2.,y,record.msg,self.window_size[0]*0.8)
+                self.glfont.draw_limited_text(self.window_size[0]/2.,y,str(record.msg),self.window_size[0]*0.8)
                 self.glfont.set_blur(0.96)
                 self.glfont.set_color_float(color_from_level(record.levelname))
-                self.glfont.draw_limited_text(self.window_size[0]/2.,y,record.msg,self.window_size[0]*0.8)
+                self.glfont.draw_limited_text(self.window_size[0]/2.,y,str(record.msg),self.window_size[0]*0.8)
                 y +=lineh
             pop_ortho()
             self.tex.pop()
             self.should_redraw = False
-            self.alpha = 2.
 
         if self.alpha > 0:
             self.tex.draw(min(1.0,self.alpha))

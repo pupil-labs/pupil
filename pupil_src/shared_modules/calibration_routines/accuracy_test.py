@@ -145,6 +145,8 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
             #always save gaze positions as opposed to pupil positons during calibration
             for pt in events.get('gaze_positions',[]):
                 if pt['confidence'] > self.g_pool.pupil_confidence_threshold:
+                    #we add an id for the calibration preprocess data to work as is usually expects pupil data.
+                    pt['id'] = 0
                     self.gaze_list.append(pt)
 
 
@@ -178,11 +180,8 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
             logger.warning("Please run test first!")
             return
 
-        if self.world_size == None:
-            return
-
         pt_cloud = self.pt_cloud.copy()
-        res = self.world_size
+        res = self.g_pool.capture.frame_size
         pt_cloud[:,0:3:2] *= res[0]
         pt_cloud[:,1:4:2] *= res[1]
 

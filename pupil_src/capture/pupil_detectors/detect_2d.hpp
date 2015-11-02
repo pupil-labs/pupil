@@ -55,7 +55,7 @@ std::vector<cv::Point> Detector2D::ellipse_true_support(Ellipse& ellipse, double
 
 	for (auto& p : raw_edges) {
 		double distance = std::abs(ellipseDistance((double)p.x, (double)p.y));
-		if (distance <=  1.3) {
+		if (distance <=  1.5) {
 			support_pixels.emplace_back(p);
 		}
 	}
@@ -242,7 +242,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 
 	// split contours looking at curvature and angle
 	double split_angle = 80;
-	int split_contour_size_min = 4;  //removing stubs makes combinatorial search feasable
+	int split_contour_size_min = 3;  //removing stubs makes combinatorial search feasable
 
 	//split_contours = singleeyefitter::detector::split_rough_contours(approx_contours, split_angle );
 	//removing stubs makes combinatorial search feasable
