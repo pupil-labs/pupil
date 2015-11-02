@@ -1,6 +1,6 @@
 
 #include "cvx.h"
-#include "mathHelper.h"
+#include "../mathHelper.h"
 
 
 void singleeyefitter::cvx::draw_dotted_rect(cv::Mat& image, const cv::Rect& rect , const cv::Scalar& color)
@@ -54,6 +54,98 @@ void singleeyefitter::cvx::getROI(const cv::Mat& src, cv::Mat& dst, const cv::Re
     }
 }
 
+
+/*
+ *\brief   get the bounding box of the non null points of an image
+ *\param   img a monochrome image
+ *\param   roi the resulting bounding box
+ *\return  if we found a boundind box
+ */
+bool singleeyefitter::cvx::roi_no_zero_border(const cv::Mat& img , cv::Rect& roi)
+{
+
+    CV_Assert(img.depth() == CV_8U);
+    CV_Assert(img.isContinuous());
+
+    if (img.total() == 0) return  false;
+
+    int n_rows = img.rows, n_cols = img.cols;
+    int x_min = 0, y_min = 0;
+    int x_max = n_cols - 1, y_max = n_rows - 1;
+
+    const uchar* img_ptr = img.data;
+    const uchar* img_row;
+    bool found = false;
+    bool break_loop = false;
+
+    // find the roi where all pixles outside are zero
+    // instead of iterating through the whole image
+    // we try each side and find the first none zero point
+
+    //from top, find the y where the first non-zero pixel occures in a row
+    for (int i = 0; i < n_rows * n_cols; i++) {
+        if (*img_ptr != 0) {
+            int row = int(i / n_cols);
+            y_min = row;
+            found = true;
+            break;
+        }
+
+        img_ptr++;
+    } // end loop
+
+    if (found == false) return  false; // we can stop here, nothing found
+
+    // from bottom, find the y where the first non-zero pixel occures in a row
+    img_ptr = &img.data[n_rows * n_cols - 1];
+
+    for (int i = n_rows * n_cols - 1; i >= 0; i--) {
+        if (*img_ptr != 0) {
+            int row = int(i / n_cols);
+            y_max = row;
+            break;
+        }
+
+        img_ptr--;
+    } // end loop
+
+    // from left, find the x where the first non-zero pixel occures in a column
+    // ignore y values lower or higher the one we already found
+    for (int i = 0; i < n_cols; i++) {
+        for (int j = y_min; j <= y_max; j++) {
+            img_ptr = &img.data[i +  j * n_cols];
+
+            if (*img_ptr != 0) {
+                x_min = i;
+                break_loop = true;
+            }
+        }
+
+        if (break_loop) break;
+
+    } // end loop
+
+    break_loop = false;
+
+    // // from right, find the x where the first non-zero pixel occures in a column
+    // ignore y values lower or higher the one we already found
+    for (int i = n_cols - 1; i >= 0 ; i--) {
+        for (int j = y_min; j <= y_max; j++) {
+            img_ptr = &img.data[i +  j * n_cols];
+
+            if (*img_ptr != 0) {
+                x_max = i;
+                break_loop = true;
+            }
+        }
+
+        if (break_loop) break;
+
+    } // end loop
+
+    roi =  cv::Rect(x_min, y_min, 1 + (x_max-x_min) , 1 + (y_max-y_min ) );
+    return true;
+}
 
 float singleeyefitter::cvx::histKmeans(const cv::Mat_<float>& hist, int bin_min, int bin_max, int K, float init_centers[], cv::Mat_<uchar>& labels, cv::TermCriteria termCriteria)
 {
@@ -188,18 +280,16 @@ void thinning_Guo_Hall_Iteration(cv::Mat& im, int iter)
 {
     cv::Mat marker = cv::Mat::zeros(im.size(), CV_8UC1);
 
-    for (int i = 1; i < im.rows; i++)
-    {
-        for (int j = 1; j < im.cols; j++)
-        {
-            uchar p2 = im.at<uchar>(i-1, j);
-            uchar p3 = im.at<uchar>(i-1, j+1);
-            uchar p4 = im.at<uchar>(i, j+1);
-            uchar p5 = im.at<uchar>(i+1, j+1);
-            uchar p6 = im.at<uchar>(i+1, j);
-            uchar p7 = im.at<uchar>(i+1, j-1);
-            uchar p8 = im.at<uchar>(i, j-1);
-            uchar p9 = im.at<uchar>(i-1, j-1);
+    for (int i = 1; i < im.rows; i++) {
+        for (int j = 1; j < im.cols; j++) {
+            uchar p2 = im.at<uchar>(i - 1, j);
+            uchar p3 = im.at<uchar>(i - 1, j + 1);
+            uchar p4 = im.at<uchar>(i, j + 1);
+            uchar p5 = im.at<uchar>(i + 1, j + 1);
+            uchar p6 = im.at<uchar>(i + 1, j);
+            uchar p7 = im.at<uchar>(i + 1, j - 1);
+            uchar p8 = im.at<uchar>(i, j - 1);
+            uchar p9 = im.at<uchar>(i - 1, j - 1);
 
             int C  = (!p2 & (p3 | p4)) + (!p4 & (p5 | p6)) +
                      (!p6 & (p7 | p8)) + (!p8 & (p9 | p2));
@@ -209,7 +299,7 @@ void thinning_Guo_Hall_Iteration(cv::Mat& im, int iter)
             int m  = iter == 0 ? ((p6 | p7 | !p9) & p8) : ((p2 | p3 | !p5) & p4);
 
             if (C == 1 && (N >= 2 && N <= 3) & m == 0)
-                marker.at<uchar>(i,j) = 1;
+                marker.at<uchar>(i, j) = 1;
         }
     }
 
@@ -233,8 +323,7 @@ void singleeyefitter::cvx::thinning_Guo_Hall(cv::Mat& im)
         thinning_Guo_Hall_Iteration(im, 1);
         cv::absdiff(im, prev, diff);
         im.copyTo(prev);
-    }
-    while (cv::countNonZero(diff) > 0);
+    } while (cv::countNonZero(diff) > 0);
 
     im *= 255;
 }

@@ -28,7 +28,7 @@
 #include "PupilAnthroTerm.h"
 
 #include "utils.h"
-#include "cvx.h"
+#include "ImageProcessing/cvx.h"
 #include "Geometry/Conic.h"
 #include "Geometry/Ellipse.h"
 #include "Geometry/Circle.h"

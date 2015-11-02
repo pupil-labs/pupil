@@ -6,7 +6,7 @@
 #include <Eigen/Core>
 #include <opencv2/core/core.hpp>
 #include "common/types.h"
-#include "cvx.h"
+#include "ImageProcessing/cvx.h"
 #include "Geometry/Circle.h"
 #include "Geometry/Ellipse.h"
 #include "Geometry/Sphere.h"

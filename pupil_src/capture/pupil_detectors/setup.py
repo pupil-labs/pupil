@@ -26,7 +26,7 @@ extensions = [
     Extension(
         # configured to Andrew Xia's ubuntu installation location
         name="detector_2d",
-        sources=['detector_2d.pyx','singleeyefitter/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp'], #I don't need cvx.
+        sources=['detector_2d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp'], #I don't need cvx.
         include_dirs = [ np.get_include() , '/usr/local/include/eigen3'],
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc'],
         # library_dirs = ['/usr/local/lib'],
@@ -36,7 +36,7 @@ extensions = [
      Extension(
         # configured to Andrew Xia's ubuntu installation location
         name="detector_3d",
-        sources=['detector_3d.pyx','singleeyefitter/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/SingleEyeFitter.cpp'], #I don't need cvx.
+        sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/SingleEyeFitter.cpp'], #I don't need cvx.
         include_dirs = [ np.get_include() , '/usr/local/include/eigen3'],
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc', 'ceres'],
         # library_dirs = ['/usr/local/lib'],
