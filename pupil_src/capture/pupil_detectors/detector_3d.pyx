@@ -39,7 +39,7 @@ cdef class Detector_3D:
     def __init__(self, g_pool = None, settings = None ):
 
         #debug window
-        self.debug_visualizer_3d = Visualizer(879.193)
+        self.debug_visualizer_3d = Visualizer(self.detector_3d_ptr.focal_length)
         self.g_pool = g_pool
         self.detect_properties_2d = settings['2D_Settings'] if settings else {}
         self.detect_properties_3d = settings['3D_Settings'] if settings else {}
