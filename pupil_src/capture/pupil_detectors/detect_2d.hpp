@@ -27,7 +27,7 @@ class Detector2D {
 
 		Detector2D();
 		std::shared_ptr<Detector_2D_Results> detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image);
-		std::vector<cv::Point> ellipse_true_support(Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges);
+		std::vector<cv::Point> ellipse_true_support(Detector_2D_Properties& props, Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges);
 
 
 	private:
@@ -47,14 +47,14 @@ void printPoints(std::vector<cv::Point> points)
 
 Detector2D::Detector2D(): mUse_strong_prior(false), mPupil_Size(100) {};
 
-std::vector<cv::Point> Detector2D::ellipse_true_support(Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges)
+std::vector<cv::Point> Detector2D::ellipse_true_support(Detector_2D_Properties& props,Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges)
 {
 	std::vector<cv::Point> support_pixels;
 	EllipseDistCalculator<double> ellipseDistance(ellipse);
 
 	for (auto& p : raw_edges) {
 		double distance = std::abs(ellipseDistance((double)p.x, (double)p.y));
-		if (distance <=  1.5) {
+		if (distance <=  props.ellipse_true_support_min_dist) {
 			support_pixels.emplace_back(p);
 		}
 	}
@@ -184,7 +184,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 
 	    std::vector<cv::Point> support_pixels;
 	    double ellipse_circumference = ellipse.circumference();
-	    support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
+	    support_pixels = ellipse_true_support(props,ellipse, ellipse_circumference, raw_edges);
 	    double support_ratio = support_pixels.size() / ellipse_circumference;
 
 	    if(support_ratio >= props.strong_perimeter_ratio_range_min){
@@ -221,7 +221,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	cv::findContours(edges, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
 
 	//first we want to filter out the bad stuff, to short ones
-	const auto contour_size_min_pred = [&props](const Contour_2D & contour) {
+	const auto contour_size_min_pred = [props](const Contour_2D & contour) {
 		return contour.size() > props.contour_size_min;
 	};
 	contours = singleeyefitter::fun::filter(contour_size_min_pred , contours);
@@ -420,7 +420,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 
 		Ellipse ellipse = toEllipse<double>(cv_ellipse);
 		double ellipse_circumference = ellipse.circumference();
-		std::vector<cv::Point>  support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
+		std::vector<cv::Point>  support_pixels = ellipse_true_support(props, ellipse, ellipse_circumference, raw_edges);
 		double support_ratio = support_pixels.size() / ellipse_circumference;
 		//TODO: refine the selection of final candidate
 
@@ -470,7 +470,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	// final calculation of goodness of fit
 	auto ellipse = toEllipse<double>(cv_ellipse);
 	double ellipse_circumference = ellipse.circumference();
-	std::vector<cv::Point>  support_pixels = ellipse_true_support(ellipse, ellipse_circumference, raw_edges);
+	std::vector<cv::Point>  support_pixels = ellipse_true_support(props, ellipse, ellipse_circumference, raw_edges);
 	double support_ratio = support_pixels.size() / ellipse_circumference;
 	double goodness = std::min(double(1.0), support_ratio);
 	//final fitting and return of result

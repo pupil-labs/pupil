@@ -38,9 +38,9 @@ cdef class Detector_2D:
             self.detect_properties["coarse_filter_min"] = 100
             self.detect_properties["coarse_filter_max"] = 400
             self.detect_properties["intensity_range"] = 17
-            self.detect_properties["blur_size"] = 1
-            self.detect_properties["canny_treshold"] = 159
-            self.detect_properties["canny_ration"] = 2
+            self.detect_properties["blur_size"] = 3
+            self.detect_properties["canny_treshold"] = 200
+            self.detect_properties["canny_ration"] = 3
             self.detect_properties["canny_aperture"] = 5
             self.detect_properties["pupil_size_max"] = 150
             self.detect_properties["pupil_size_min"] = 40
@@ -49,10 +49,11 @@ cdef class Detector_2D:
             self.detect_properties["strong_area_ratio_range_min"] = 0.6
             self.detect_properties["strong_area_ratio_range_max"] = 1.1
             self.detect_properties["contour_size_min"] = 5
-            self.detect_properties["ellipse_roundness_ratio"] = 0.3
+            self.detect_properties["ellipse_roundness_ratio"] = 0.1
             self.detect_properties["initial_ellipse_fit_treshhold"] = 1.8
             self.detect_properties["final_perimeter_ratio_range_min"] = 0.6
             self.detect_properties["final_perimeter_ratio_range_max"] = 1.2
+            self.detect_properties["ellipse_true_support_min_dist"] = 4.0
 
     def get_settings(self):
         return self.detect_properties
@@ -162,6 +163,7 @@ cdef class Detector_2D:
         advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
         advanced_controls_menu.append(ui.Switch('coarse_detection',self.detect_properties,label='Use coarse detection'))
         #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detect_properties,label='Contour min length',min=1,max=200,step=1))
+        advanced_controls_menu.append(ui.Slider('ellipse_true_support_min_dist',self.detect_properties,label='ellipse_true_support_min_dist',min=0.1,max=7,step=0.1))
 
         advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
         self.menu.append(advanced_controls_menu)

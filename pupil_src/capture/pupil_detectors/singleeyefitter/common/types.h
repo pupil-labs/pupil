@@ -63,6 +63,7 @@ namespace singleeyefitter {
         float initial_ellipse_fit_treshhold;
         float final_perimeter_ratio_range_min;
         float final_perimeter_ratio_range_max;
+        float ellipse_true_support_min_dist;
 
     };
 
