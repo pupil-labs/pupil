@@ -116,7 +116,7 @@ class GuoHallThinner {
         /*! \return true if last thin() stopped because the algo converged,
          * and not because of the max_iters param.
          */
-        inline bool has_converged() const { return _has_converged; }
+        inline bool hasConverged() const { return _has_converged; }
 
         //////////////////////////////////////////////////////////////////////////////
 
@@ -124,7 +124,7 @@ class GuoHallThinner {
          * Call thin() before accessing it.
          * All non zero pixels correspond to the morphological skeleton of the image
          */
-        inline const cv::Mat1b& get_skeleton() const
+        inline const cv::Mat1b& getSkeleton() const
         {
             return skelcontour;
         }
