@@ -54,14 +54,24 @@ class GuoHallThinner {
                   int max_iters = NOLIMIT)
         {
 
-            cv::Rect bbox  = cv::Rect(0, 0, img.cols, img.rows); // init if we find none
-            singleeyefitter::cvx::roi_no_zero_border(img, bbox);
+            cv::Mat subImage = img;
+            if( crop_img_before ){
 
-            cv::Mat croped_img;
-            // skeleton contour ignores a border of one pixel, so let's try to add one
-            cv::Mat(img, bbox).adjustROI(1,1,1,1).copyTo(croped_img); // copy is faster than calculating the right indices for each pixel in from_image_C4
+                cv::Rect bbox  = cv::Rect(0, 0, img.cols, img.rows); // init if we find none
+                singleeyefitter::cvx::getRoiWithoutBorder(img, bbox);
 
-            skelcontour.from_image_C4(croped_img);
+                cv::Mat croped_img;
+                // skeleton contour ignores a border of one pixel, so let's try to add one
+                // skelcontour needs a continues image, so copy it.
+                subImage = cv::Mat(img, bbox).adjustROI(1,1,1,1);
+                subImage.copyTo(croped_img);
+
+                skelcontour.from_image_C4(croped_img);
+
+            }else{
+                 skelcontour.from_image_C4(img);
+
+            }
 
             int cols = skelcontour.cols, rows = skelcontour.rows;
             // clear queues
@@ -79,9 +89,8 @@ class GuoHallThinner {
                     cols_to_set.clear();
 
                     // for each point in skelcontour, check if it needs to be changed
-                    // ignore border of one pixel
-                    for (int row = 1; row < rows - 1; ++row) {
-                        for (int col = 1; col < cols - 1; ++col) {
+                    for (int row = 0; row < rows; ++row) {
+                        for (int col = 0; col < cols; ++col) {
                             if (*skelcontour_ptr++ == ImageContour::CONTOUR &&
                                     need_set_guo_hall(skelcontour_data, iter, col, row, cols)) {
                                 cols_to_set.push_back(col);
@@ -107,6 +116,8 @@ class GuoHallThinner {
                 }
             }
 
+            // copy the skeleton back to the original image region
+            skelcontour.copyTo(subImage);
             _has_converged = !change_made;
             return true;
         }
@@ -117,17 +128,6 @@ class GuoHallThinner {
          * and not because of the max_iters param.
          */
         inline bool hasConverged() const { return _has_converged; }
-
-        //////////////////////////////////////////////////////////////////////////////
-
-        /*! \return the current skeleton
-         * Call thin() before accessing it.
-         * All non zero pixels correspond to the morphological skeleton of the image
-         */
-        inline const cv::Mat1b& getSkeleton() const
-        {
-            return skelcontour;
-        }
 
     protected:
 
