@@ -25,7 +25,7 @@ namespace singleeyefitter {
                 Scalar points_length = 0.0;
 
                 for (const auto& contour : contours) {
-                    points_length = euclidean_distance(contour);
+                    points_length += euclidean_distance(contour);
                 }
 
                 //std::cout << "Points length: " << points_length << std::endl;
