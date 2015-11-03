@@ -6,7 +6,7 @@
 #include <Eigen/Core>
 #include <opencv2/core/core.hpp>
 #include "common/types.h"
-#include "cvx.h"
+#include "ImageProcessing/cvx.h"
 #include "Geometry/Circle.h"
 #include "Geometry/Ellipse.h"
 #include "Geometry/Sphere.h"
@@ -62,6 +62,7 @@ namespace singleeyefitter {
             //
 
             void unproject_last_contour();
+            void unproject_last_raw_edges();
 
            // void fit_circle_for_last_contour();
             void fit_circle_for_last_contour( float max_residual = 20, float max_variance = 0.7, float min_radius = 2, float max_radius = 4 );
@@ -86,6 +87,7 @@ namespace singleeyefitter {
                 //Observation observation;
                 std::shared_ptr<Detector_2D_Results> observation;
                 Contours3D contours;
+                std::vector<Vector3> edges;
                 Contours3D final_circle_contours; // just for visualiziation, contains all points which fit best the circle
                 Circle circle; // this one is the unprojected circle
                 Circle circle_fitted;  // this is the circle fitted form the unprojectd contours

@@ -9,13 +9,14 @@
 
 #include "singleeyefitter/fun.h"
 #include "singleeyefitter/utils.h"
-#include "singleeyefitter/cvx.h"
+#include "singleeyefitter/ImageProcessing/cvx.h"
 #include "singleeyefitter/Geometry/Ellipse.h"  // use ellipse eyefitter
 #include "singleeyefitter/distance.h"
 #include "singleeyefitter/mathHelper.h"
 #include "singleeyefitter/detectorUtils.h"
 #include "singleeyefitter/EllipseDistanceApproxCalculator.h"
 #include "singleeyefitter/EllipseEvaluation2D.h"
+#include "singleeyefitter/ImageProcessing/GuoHallThinner.h"
 
 class Detector2D {
 
@@ -162,11 +163,11 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 		cv::putText(color_image, text_string, text_pos, cv::FONT_HERSHEY_SIMPLEX, 0.4, mRoyalBlue_color);
 	}
 
-	//get raw edge pix for later
+	//get raw edge pixel for later
 	std::vector<cv::Point> raw_edges;
-	// add a non zero value to the first pixel
-	edges.at<int>(0,0) = 1; // find zero crashes if it doesn't find one. remove if opencv version is 3.0 or above
-	cv::findNonZero(edges, raw_edges);
+    // find zero crashes if it doesn't find one. replace with cv implementation if opencv version is 3.0 or above
+	singleeyefitter::cvx::findNonZero(edges, raw_edges);
+
 
 	///////////////////////////////
 	/// Strong Prior Part Begin ///
@@ -215,6 +216,10 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	///////////////////////////////
 	///  Strong Prior Part End  ///
 	///////////////////////////////
+
+
+	GuoHallThinner thinner;
+    thinner.thin(edges, true);
 
 	//from edges to contours
 	Contours_2D contours ;

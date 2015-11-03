@@ -48,8 +48,19 @@ namespace singleeyefitter {
             cvx::line(img, center + cv::Point2f(-radius, 0), center + cv::Point2f(radius, 0), colour, thickness, lineType, shift);
         }
 
+        // find zero crashes if it doesn't find one. remove if opencv version is 3.0 or above
+        inline void findNonZero( cv::Mat& in, cv::OutputArray& out ){
+            // add a non zero value to the first pixel
+            // This is a hack to avoid crash
+            uchar tmp = in.at<uchar>(0,0);
+            in.at<uchar>(0,0) = 1;
+            cv::findNonZero(in, out);
+            in.at<uchar>(0,0) = 0;
+        }
+
         void draw_dotted_rect(cv::Mat& image, const cv::Rect& rect , const cv::Scalar& color);
 
+        void thinning_Guo_Hall(cv::Mat& image);
 
         /*inline void cross(cv::Mat& img, cv::Point center, int radius, const cv::Scalar& colour, int thickness = 1, int lineType = 8, int shift = 0)
         {
@@ -66,6 +77,8 @@ namespace singleeyefitter {
         {
             return cv::Rect(0, 0, img.cols, img.rows);
         }
+
+        bool roi_no_zero_border(const cv::Mat& img, cv::Rect& roi);
 
         void getROI(const cv::Mat& src, cv::Mat& dst, const cv::Rect& roi, int borderType = cv::BORDER_REPLICATE);
 

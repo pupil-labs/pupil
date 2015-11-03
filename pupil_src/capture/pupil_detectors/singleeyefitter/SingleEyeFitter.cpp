@@ -5,6 +5,8 @@
 #include <boost/math/special_functions/sign.hpp>
 #include <Eigen/StdVector>
 
+#include <queue>
+
 #include <ceres/ceres.h>
 #include <ceres/problem.h>
 #include <ceres/autodiff_cost_function.h>
@@ -26,7 +28,7 @@
 #include "PupilAnthroTerm.h"
 
 #include "utils.h"
-#include "cvx.h"
+#include "ImageProcessing/cvx.h"
 #include "Geometry/Conic.h"
 #include "Geometry/Ellipse.h"
 #include "Geometry/Circle.h"
@@ -947,7 +949,7 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_res
 
     //first we want to filter out the bad stuff, too short ones
     const auto contour_size_min_pred = [](const std::vector<Vector3>& contour) {
-        return contour.size() > 3;
+        return contour.size() >= 3;
     };
      contours = singleeyefitter::fun::filter(contour_size_min_pred , contours);
 
@@ -980,10 +982,12 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_res
         // describes different combinations of contours
         typedef std::set<int> Path;
         // combinations we wanna test
-        std::vector<Path> unknown(contours.size());
-        // init with paths of size 1 == seed indices
-        int n = 0;
-        std::generate(unknown.begin(), unknown.end(), [&]() { return Path{n++}; }); // fill with increasing values, starting from 0
+        std::queue<Path> unvisited;
+
+        // enqueue all contours as starting point
+        for(int i=0; i < contours.size(); i++){
+            unvisited.emplace(std::initializer_list<int>{i});
+        }
 
         // contains all the indices for the contours, which altogther fit best
         std::vector<Path> results;
@@ -993,11 +997,11 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_res
         std::vector<Path> prune;
         int eval_count = 0;
 
-        while (!unknown.empty() && eval_count <= max_evals) {
+        while (!unvisited.empty() && eval_count <= max_evals) {
             eval_count++;
             //take a path and combine it with others to see if the fit gets better
-            Path current_path = unknown.back();
-            unknown.pop_back();
+            Path current_path = unvisited.front();
+            unvisited.pop();
 
             if (current_path.size() <= max_depth) {
                 bool includes_bad_paths = fun::isSubset(current_path, prune);
@@ -1028,27 +1032,27 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_res
                     if( !circle_fitter.fit(test_contour)  ){
                         std::cout << "Error! Too little points!" << std::endl; // filter too short ones before
                     }
-                    double residual = circle_fitter.calculateResidual(test_contour);
                     // we got a circle fit
                     Circle current_circle = circle_fitter.getCircle();
                     // see if it's even a candidate
-                    bool is_candidate = circle_evaluation(current_circle, residual);
                     double variance =  circle_variance(current_circle , test_contours);
 
-                    if (is_candidate && variance <  max_circle_variance ) {
+                    if ( variance <  max_circle_variance ) {
                         //yes this was good, keep as solution
                         //results.push_back(test_contour_indices);
 
                         //lets explore more by creating paths to each remaining node
                         for (int l = (*current_path.rbegin()) + 1 ; l < contours.size(); l++) {
-                            unknown.push_back(current_path);
-                            unknown.back().insert(l); // add a new path
+                            unvisited.push(current_path);
+                            unvisited.back().insert(l); // add a new path
                         }
 
-                         double goodness =  circle_goodness(current_circle , test_contours);
+                        double residual = circle_fitter.calculateResidual(test_contour);
+                        bool is_candidate = circle_evaluation(current_circle, residual);
+                        double goodness =  circle_goodness(current_circle , test_contours);
 
                         //check if this one is better then the best one and swap
-                        if( variance < best_variance && goodness > best_goodness ) {
+                        if( is_candidate && goodness > best_goodness ) {
                             best_variance = variance;
                             best_goodness = goodness;
                             best_circle = current_circle;
@@ -1104,6 +1108,33 @@ void singleeyefitter::EyeModelFitter::unproject_last_contour()
         }
 
         i++;
+    }
+
+}
+void singleeyefitter::EyeModelFitter::unproject_last_raw_edges()
+{
+    if (eye == Sphere::Null || pupils.size() == 0) {
+        return;
+    }
+
+
+    auto& pupil = pupils.back();
+    auto& edges = pupil.observation->raw_edges;
+    pupil.edges.clear();
+    pupil.edges.resize(edges.size());
+    int i = 0;
+    for (auto& point : edges) {
+        Vector3 point_3d(point.x, point.y , focal_length);
+        Vector3 direction = point_3d - camera_center;
+
+        try {
+            // we use the eye properties of the current eye, when ever we call this
+            const auto& unprojected_point = intersect(Line3(camera_center,  direction.normalized()), eye);
+            pupil.edges.push_back(std::move(unprojected_point.first));
+
+        } catch (no_intersection_exception&) {
+            // if there is no intersection we don't do anything
+        }
     }
 
 }
