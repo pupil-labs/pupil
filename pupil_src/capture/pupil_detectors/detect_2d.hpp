@@ -226,7 +226,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	cv::findContours(edges, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
 
 	//first we want to filter out the bad stuff, to short ones
-	const auto contour_size_min_pred = [props](const Contour_2D & contour) {
+	const auto contour_size_min_pred = [&props](const Contour_2D & contour) {
 		return contour.size() > props.contour_size_min;
 	};
 	contours = singleeyefitter::fun::filter(contour_size_min_pred , contours);
