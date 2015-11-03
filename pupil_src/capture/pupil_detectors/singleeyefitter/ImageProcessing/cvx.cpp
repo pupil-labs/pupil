@@ -61,7 +61,7 @@ void singleeyefitter::cvx::getROI(const cv::Mat& src, cv::Mat& dst, const cv::Re
  *\param   roi the resulting bounding box
  *\return  if we found a boundind box
  */
-bool singleeyefitter::cvx::roi_no_zero_border(const cv::Mat& img , cv::Rect& roi)
+bool singleeyefitter::cvx::getRoiWithoutBorder(const cv::Mat& img , cv::Rect& roi)
 {
 
     CV_Assert(img.depth() == CV_8U);

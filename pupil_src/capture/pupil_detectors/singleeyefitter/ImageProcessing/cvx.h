@@ -77,7 +77,8 @@ namespace singleeyefitter {
             return cv::Rect(0, 0, img.cols, img.rows);
         }
 
-        bool roi_no_zero_border(const cv::Mat& img, cv::Rect& roi);
+        // get the ROI where the boarder of black pixels is removed
+        bool getRoiWithoutBorder(const cv::Mat& img, cv::Rect& roi);
 
         void getROI(const cv::Mat& src, cv::Mat& dst, const cv::Rect& roi, int borderType = cv::BORDER_REPLICATE);
 
