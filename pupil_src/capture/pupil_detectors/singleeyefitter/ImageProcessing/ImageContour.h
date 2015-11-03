@@ -205,8 +205,8 @@ private:
       printf("Empty image\n");
       return;
     }
-    assert(img.isContinuous());
-    assert(isContinuous());
+    CV_Assert(img.isContinuous());
+    CV_Assert(isContinuous());
     setTo(EMPTY);
     colsm = cols - 1;
     rowsm = rows - 1;
