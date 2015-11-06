@@ -21,6 +21,13 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Build import cythonize
 import numpy as np
+import os
+
+dependencies = []
+# include all header files, to recognize changes
+for dirpath, dirnames, filenames in os.walk("singleeyefitter"):
+    for filename in [f for f in filenames if f.endswith(".h")]:
+        dependencies.append( os.path.join(dirpath, filename) )
 
 extensions = [
     Extension(
@@ -32,6 +39,7 @@ extensions = [
         # library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-std=c++11",'-w'], #-w hides warnings
+        depends= dependencies,
         language="c++"),
      Extension(
         # configured to Andrew Xia's ubuntu installation location
@@ -42,6 +50,7 @@ extensions = [
         # library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-std=c++11",'-w'], #-w hides warnings
+        depends= dependencies,
         language="c++"),
     # Extension(
     #     # configured to Andrew Xia's ubuntu installation location
