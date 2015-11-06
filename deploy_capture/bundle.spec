@@ -69,6 +69,8 @@ elif platform.system() == 'Linux':
     # libc is also not meant to travel with the bundle. Otherwise pyre.helpers with segfault.
     binaries = [b for b in binaries if not "libc.so" in b[0]]
 
+    # libstdc++ is also not meant to travel with the bundle. Otherwise nvideo opengl drivers will fail to load.
+    binaries = [b for b in binaries if not "libstdc++.so" in b[0]]
     coll = COLLECT(exe,
                    binaries,
                    a.zipfiles,

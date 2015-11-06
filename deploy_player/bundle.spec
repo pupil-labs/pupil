@@ -62,8 +62,16 @@ elif platform.system() == 'Linux':
               upx=True,
               console=True)
 
+    # any libX file should be taken from distro else not protable between Ubuntu 12.04 and 14.04
+    binaries = [b for b in a.binaries if not "libX" in b[0] and not "libxcb" in b[0]]
+    # libc is also not meant to travel with the bundle. Otherwise pyre.helpers with segfault.
+    binaries = [b for b in binaries if not "libc.so" in b[0]]
+
+    # libstdc++ is also not meant to travel with the bundle. Otherwise nvideo opengl drivers will fail to load.
+    binaries = [b for b in binaries if not "libstdc++.so" in b[0]]
+
     coll = COLLECT(exe,
-                   [b for b in a.binaries if not "libX" in b[0] and not "libxcb" in b[0]], # any libX file should be taken from distro else not protable between Ubuntu 12.04 and 14.04
+                   binaries,
                    a.zipfiles,
                    a.datas,
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
