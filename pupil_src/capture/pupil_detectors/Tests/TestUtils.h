@@ -1,9 +1,7 @@
 
 
-#include "../../singleeyefitter/CircleFit/CircleFitHaversine.h"
-#include "../../singleeyefitter/CircleFit/PlaneFit3D.h"
 
-#include "../../singleeyefitter/utils.h" // random
+#include "../singleeyefitter/utils.h" // random
 
 
 std::vector<singleeyefitter::Vector3> createCirclePointsOnSphere( singleeyefitter::Vector2 center, double opening_angle_alpha,  int amount, float circle_segment_range, double randomAmount = 0.0 ){
@@ -45,34 +43,4 @@ std::vector<singleeyefitter::Vector3> createCirclePointsOnSphere( singleeyefitte
 
     return points;
 
-}
-
-
-singleeyefitter::Vector3 test_haversine( singleeyefitter::Vector2 center, double opening_angle_alpha,  int amount, float circle_segment_range, singleeyefitter::Vector3 initial_guess ){
-
-    auto points = createCirclePointsOnSphere(center , opening_angle_alpha, amount, circle_segment_range);
-    return find_circle(points, initial_guess);
-}
-
-std::vector<double> test_plan_fit( singleeyefitter::Vector2 center, double opening_angle_alpha,  int amount, float circle_segment_range, double randomAmount ){
-
-    auto points = createCirclePointsOnSphere(center , opening_angle_alpha, amount, circle_segment_range,  randomAmount);
-
-    auto fitter = singleeyefitter::PlaneFitter3D<double>();
-    if( !fitter.fit(points) ){
-        std::cout << "Fit didn't work!";
-        return std::vector<double>();
-    }
-    double residual = fitter.calculateResidual(points);
-    singleeyefitter::Vector3 normal = fitter.getNormal();
-    singleeyefitter::Vector3 planePoint = fitter.getPlanePoint();
-    // calculate circle radius
-    //first calculate distance from sphere center to plane
-    double d = planePoint.dot(normal) / normal.norm();
-    // than calculate intersection of normal and plane
-    singleeyefitter::Vector3 circle_center = d * normal;
-    // calculate circle radius  r = sqrt(R^2 - d^2) // R is sphere radius
-    double r = sqrt( 1 - d*d);
-
-    return { circle_center[0], circle_center[1], circle_center[2], r, residual};
 }

@@ -99,19 +99,13 @@ if __name__ == '__main__':
       print"Set Position: {}{}{}".format( right_x,right_y,right_z)
       print"Set Circle Radius: {}".format( sin(circle_opening) )
       points = get_circle_test_points( (phi_circle_center, theta_circle_center), circle_opening,circle_point_amount, circle_segment_amount, circle_distortion)
-      #result = testHaversine((phi_circle_center, theta_circle_center), pi/8, 220, 0.3, initial_guess)
-      result = testPlanFit((phi_circle_center, theta_circle_center), circle_opening, circle_point_amount, circle_segment_amount,  circle_distortion )
+      result = testPlanFit( sphere,  (phi_circle_center, theta_circle_center), circle_opening, circle_point_amount, circle_segment_amount,  circle_distortion )
 
       x = result[0]
       y = result[1]
       z = result[2]
       radius = result[3]
       residual = result[4]
-
-      if( z < 0 ):
-        x = -x
-        y = -y
-        z = -z
 
       circle =  ( (x,y,z), (x,y,z), 1 )
       print "Fit result Position: {} {} {}".format(x,y,z)
