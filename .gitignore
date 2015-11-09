@@ -34,4 +34,5 @@ settings/
 Pupil_Test_Files
 detector_2d.cpp
 detector_3d.cpp
-circleFitUtils.cpp
+CircleGoodnessTest.cpp
+SphereCircleTest.cpp
