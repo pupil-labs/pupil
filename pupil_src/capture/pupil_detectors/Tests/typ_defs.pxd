@@ -69,3 +69,5 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
 #typdefs
 ctypedef Matrix31d Vector3
 ctypedef Matrix21d Vector2
+ctypedef vector[vector[Vector3]] Contours3D;
+ctypedef Circle3D[double] Circle;
