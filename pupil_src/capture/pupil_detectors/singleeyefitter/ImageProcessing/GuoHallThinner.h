@@ -89,8 +89,8 @@ class GuoHallThinner {
                     cols_to_set.clear();
 
                     // for each point in skelcontour, check if it needs to be changed
-                    for (int row = 0; row < rows; ++row) {
-                        for (int col = 0; col < cols; ++col) {
+                    for (int row = 1; row < rows; ++row) {
+                        for (int col = 1; col < cols; ++col) {
                             if (*skelcontour_ptr++ == ImageContour::CONTOUR &&
                                     need_set_guo_hall(skelcontour_data, iter, col, row, cols)) {
                                 cols_to_set.push_back(col);
@@ -131,7 +131,7 @@ class GuoHallThinner {
 
     protected:
 
-        static bool inline need_set_guo_hall(uchar*  skeldata, int iter, int col, int row, int cols)
+        bool /*inline*/ need_set_guo_hall(uchar*  skeldata, int iter, int col, int row, int cols)
         {
             //uchar
             bool
