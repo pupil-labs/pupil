@@ -80,13 +80,13 @@ namespace singleeyefitter {
                         auto new_point = point_transformation * point;
                         //double r = point.norm();
                         //double theta = acos(point.y() / r);
-                        std::cout << "new point: "  << new_point << std::endl;
+                        //std::cout << "new point: "  << new_point << std::endl;
 
                         double psi = atan2(new_point.z(), new_point.x() );
                         if( psi < 0) psi +=  constants::two_pi; // range [0,2pi]
-                        std::cout << "psi: "  << psi << std::endl;
-                        std::cout << "angel max: "  << angle_max << std::endl;
-                        std::cout << "angel min: "  << angle_min << std::endl;
+                        // std::cout << "psi: "  << psi << std::endl;
+                        // std::cout << "angel max: "  << angle_max << std::endl;
+                        // std::cout << "angel min: "  << angle_min << std::endl;
                         //std::cout << "prev angle : "  << angle_prev_point << std::endl;
 
                         // find wrap arounds ( contours going through 0 )
@@ -100,7 +100,7 @@ namespace singleeyefitter {
                            // start again at 0
                            angle_min = 0.0 ;
                            angle_max = psi;
-                           std::cout << "found positive wrap around" << std::endl;
+                          // std::cout << "found positive wrap around" << std::endl;
                         }
                         if( angle_prev_point != -1 &&  angle_prev_point - psi   < -constants::pi ){ // the line goes from 0 to 2pi
 
@@ -109,7 +109,7 @@ namespace singleeyefitter {
                            // start again at 2pi
                            angle_min = psi ;
                            angle_max = 2.0 * constants::pi;
-                           std::cout << "found negative wrap around" << std::endl;
+                           //std::cout << "found negative wrap around" << std::endl;
                         }
 
 
@@ -132,10 +132,10 @@ namespace singleeyefitter {
                 double current_angle_max = -1 ;
                 double angle_total  = 0;
                 for( const auto&  angles : contours_angles ){
-                    std::cout << "current angle max " <<  current_angle_max << std::endl;
-                    std::cout << "current angle min " <<  current_angle_min << std::endl;
-                    std::cout << "angle first " <<  angles.first << std::endl;
-                    std::cout << "angle second " <<  angles.second << std::endl;
+                    // std::cout << "current angle max " <<  current_angle_max << std::endl;
+                    // std::cout << "current angle min " <<  current_angle_min << std::endl;
+                    // std::cout << "angle first " <<  angles.first << std::endl;
+                    // std::cout << "angle second " <<  angles.second << std::endl;
                     if( angles.first > current_angle_min && angles.second < current_angle_max ){ // contour is smaller ignore it
                        continue;
                     }
@@ -153,7 +153,7 @@ namespace singleeyefitter {
 
                         Scalar a = current_angle_max - current_angle_min;
                         Scalar b = std::abs(constants::two_pi - (current_angle_max - current_angle_min));
-                        std::cout << "add amount " <<  std::min(a,b) << std::endl;
+                       // std::cout << "add amount " <<  std::min(a,b) << std::endl;
                         angle_total += std::min(a,b);
                     }
 
