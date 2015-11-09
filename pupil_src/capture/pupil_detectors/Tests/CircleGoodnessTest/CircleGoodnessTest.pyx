@@ -9,7 +9,9 @@ cdef extern from "../../singleeyefitter/CircleGoodness3D.h" namespace "singleeye
         CircleGoodness3D() except +
         Scalar operator()( Circle& circle, Contours3D contours)
 
+cdef extern from "../TestUtils.h" :
 
+    vector[Vector3] createCirclePointsOnSphere( Vector2 center, double opening_angle_alpha,  int amount, float circle_segment_range, double randomAmount )
 
 
 def test():
