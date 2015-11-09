@@ -1,5 +1,0 @@
-
-
-#add files on which detector_3d depends here, so we recognise changes and rebuild the module
-
-singleeyefitter/*
