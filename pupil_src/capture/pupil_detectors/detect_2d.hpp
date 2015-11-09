@@ -163,6 +163,11 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 		cv::putText(color_image, text_string, text_pos, cv::FONT_HERSHEY_SIMPLEX, 0.4, mRoyalBlue_color);
 	}
 
+
+	GuoHallThinner thinner;
+    thinner.thin(edges, true);
+
+
 	//get raw edge pixel for later
 	std::vector<cv::Point> raw_edges;
     // find zero crashes if it doesn't find one. replace with cv implementation if opencv version is 3.0 or above
@@ -216,10 +221,6 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	///////////////////////////////
 	///  Strong Prior Part End  ///
 	///////////////////////////////
-
-
-	GuoHallThinner thinner;
-    thinner.thin(edges, true);
 
 	//from edges to contours
 	Contours_2D contours ;
