@@ -984,18 +984,46 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_res
         // combinations we wanna test
         std::queue<Path> unvisited;
 
-        // enqueue all contours as starting point
-        for(int i=0; i < contours.size(); i++){
-            unvisited.emplace(std::initializer_list<int>{i});
-        }
-
         // contains all the indices for the contours, which altogther fit best
         std::vector<Path> results;
 
         // contains bad paths, we won't test again
         // even a superset is not tested again, because if a subset is bad, we can't make it better if more contours are added
         std::vector<Path> prune;
+        prune.reserve( std::pow(contours.size() , 3) ); // we gonna prune a lot if we have alot contours, cubic increase or even more ?
         int eval_count = 0;
+        std::cout << "size:" <<  contours.size()  << std::endl;
+        std::cout << "possible combinations: " <<  std::pow(2,contours.size()) + 1<< std::endl;
+
+        // contains the first moment of each contour
+        // we precalculate this inorder to prune contours combinations if the distance of these are to long
+        std::vector<Vector3> moments;
+        moments.reserve( contours.size() );
+
+        // enqueue all contours as starting point
+        // and calculate moment
+        for(int i=0; i < contours.size(); i++){
+            unvisited.emplace(std::initializer_list<int>{i});
+
+            Vector3 m = std::accumulate(contours[i].begin(), contours[i].end(), Vector3(0,0,0), std::plus<Vector3>() );
+            m /= contours[i].size();
+            moments.push_back( m);
+        }
+        // inorder to minimize the search space we already prune combinations, which can't fit ,before the search starts
+        int prune_count = 0;
+        for(int i=0; i < contours.size(); i++){
+            auto& a = moments[i];
+            for(int j=i+1; j < contours.size(); j++){
+                auto& b = moments[j];
+                double distance  =  (a - b).squaredNorm();
+                double pupil_max_diameter = pupil_max_radius * 2.0;
+                if( distance >  std::pow(pupil_max_diameter * 1.3, 2.0 ) ){
+                    prune.emplace_back( std::initializer_list<int>{i,j} );
+                    prune_count++;
+                }
+            }
+        }
+        std::cout << "pruned " << prune_count << std::endl;
 
         while (!unvisited.empty() && eval_count <= max_evals) {
             eval_count++;
@@ -1100,7 +1128,7 @@ void singleeyefitter::EyeModelFitter::unproject_last_contour()
             try {
                 // we use the eye properties of the current eye, when ever we call this
                 const auto& unprojected_point = intersect(Line3(camera_center,  direction.normalized()), eye);
-                pupil.contours.at(i).push_back(std::move(unprojected_point.first));
+                pupil.contours[i].push_back(std::move(unprojected_point.first));
 
             } catch (no_intersection_exception&) {
                 // if there is no intersection we don't do anything
