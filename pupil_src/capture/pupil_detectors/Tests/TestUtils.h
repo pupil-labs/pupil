@@ -29,12 +29,10 @@ std::vector<singleeyefitter::Vector3> createCirclePointsOnSphere( singleeyefitte
         double sin_g = sin(gamma);
         double cos_g = cos(gamma);
 
-        double t = circle_segment_range *  2.0 * M_PI * float(i)/amount;
+        double t = circle_segment_range *  2.0 * M_PI * float(i)/(amount-1);
         double cos_t = cos(t);
         double sin_t = sin(t);
-        // double x = sin_a * cos_b * cos_g * cos_t + sin_a * sin_g * sin_t - cos_a * sin_b * cos_g;
-        // double y = - sin_a * cos_b * sin_g * cos_t + sin_a * cos_g * sin_t + cos_a * sin_b * sin_g;
-        // double z = sin_a * sin_b * cos_t + cos_a * cos_b;
+
         double z = sin_a * cos_b * cos_g * cos_t - sin_a * sin_g * sin_t + cos_a * sin_b * cos_g;
         double x =  sin_a * cos_b * sin_g * cos_t + sin_a * cos_g * sin_t + cos_a * sin_b * sin_g;
         double y = -sin_a * sin_b * cos_t + cos_a * cos_b;
