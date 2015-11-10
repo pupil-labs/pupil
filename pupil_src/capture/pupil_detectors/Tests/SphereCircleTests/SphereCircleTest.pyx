@@ -50,5 +50,6 @@ def testPlanFit(sphere, center , opening_angle_alpha , amount, circle_segment_ra
     cdef Circle circle  = fitter.getCircle()
 
     residual = fitter.calculateResidual(points)
-    #circle_center , radius,  residual
-    return [circle.center[0],circle.center[1],circle.center[2], circle.radius, residual]
+    del fitter
+    #circle_center , normal, radius,  residual
+    return [circle.center[0],circle.center[1],circle.center[2],circle.normal[0],circle.normal[1],circle.normal[2], circle.radius, residual]
