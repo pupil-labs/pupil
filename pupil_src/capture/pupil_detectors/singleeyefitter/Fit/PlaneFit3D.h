@@ -80,9 +80,8 @@ namespace singleeyefitter {
 
                 for (const auto& point : points) {
                     Vector3 diff = point - mPoint;
-                    Scalar sqrlen = diff.dot(diff);
                     Scalar dot = diff.dot(mNormal);
-                    error += std::abs(sqrlen - dot * dot);
+                    error += std::abs( dot * dot);
                 }
 
                 error /= points.size();
@@ -93,9 +92,8 @@ namespace singleeyefitter {
             Scalar calculateResidual(const Vector3& point) const
             {
                 Vector3 diff = point - mPoint;
-                Scalar sqrlen = diff.dot(diff);
                 Scalar dot = diff.dot(mNormal);
-                Scalar error = std::abs(sqrlen - dot * dot);
+                Scalar error = std::abs( dot * dot);
                 return error;
             }
     };
