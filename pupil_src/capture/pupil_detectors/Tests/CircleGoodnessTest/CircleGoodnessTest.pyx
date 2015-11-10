@@ -1,6 +1,7 @@
 
 cimport typ_defs
 from typ_defs cimport *
+from math import *
 
 
 cdef extern from "../../singleeyefitter/CircleGoodness3D.h" namespace "singleeyefitter":
@@ -13,6 +14,9 @@ cdef extern from "../TestUtils.h" :
 
     vector[Vector3] createCirclePointsOnSphere( Vector2 center, double opening_angle_alpha,  int amount, float circle_segment_range, double randomAmount )
 
+
+def almost_equal(a, b, accuracy = 10e-8 ):
+    return abs(a - b) < accuracy
 
 def test():
 
@@ -35,8 +39,8 @@ def test():
     contour.push_back( Vector3(1,0,0) )
     contours.push_back(contour)
 
-   # goodness = circleTest(circle, contours)
-   # assert goodness == 0.25
+    goodness = circleTest(circle, contours)
+    assert goodness == 0.25
 
     contour.clear()
     contours.clear();
@@ -45,8 +49,8 @@ def test():
     contour.push_back( Vector3(-1,0,0) )
     contours.push_back(contour)
 
-   # goodness = circleTest(circle, contours)
-    #assert goodness == 0.5
+    goodness = circleTest(circle, contours)
+    assert goodness == 0.5
 
     #test going through zero
     # we need to add points near zero, because we can't detect wrap arounds if the angle is the same or bigger than pi
@@ -69,7 +73,6 @@ def test():
     contour.push_back( Vector3(0.0,0,-1) )
     contours.push_back(contour)
     goodness = circleTest(circle, contours)
-    print "goodness " , goodness
     assert goodness == 0.5
 
     # if the angle is smaller than pi we can
@@ -103,3 +106,67 @@ def test():
 
     goodness = circleTest(circle, contours)
     assert goodness == 0.5
+
+    #check that the angle between two following points is less than pi/2
+
+    circle_distortion =  0.0
+    circle_segment_amount = 0.8
+    circle_point_amount =  5
+    circle_opening = pi/8
+    #test with random points
+    cdef Vector2 center ##spherical coords
+    center[0] = pi/2
+    center[1] = 0.0
+
+    circle.center = Vector3(0,0,1)
+    circle.normal = Vector3(0,0,1)
+    #radisu doesn't matter
+
+    contour = createCirclePointsOnSphere(  center, circle_opening, circle_point_amount,  circle_segment_amount , circle_distortion )
+
+    contours.clear();
+    contours.push_back(contour)
+    goodness = circleTest(circle, contours)
+    assert almost_equal( goodness, 0.8 );
+
+    #shouldn't change if we add a second one
+    contours.push_back(contour)
+    goodness = circleTest(circle, contours)
+    assert almost_equal( goodness, 0.8 );
+
+    #shouldn't change if we add a smaller one
+    circle_segment_amount = 0.3
+    contour = createCirclePointsOnSphere(  center, circle_opening, circle_point_amount,  circle_segment_amount , circle_distortion )
+    contours.push_back(contour)
+    goodness = circleTest(circle, contours)
+    assert almost_equal( goodness, 0.8 );
+
+    #closed one
+    contours.clear();
+    circle_segment_amount = 1.0
+    contour = createCirclePointsOnSphere(  center, circle_opening, circle_point_amount,  circle_segment_amount , circle_distortion )
+    contours.push_back(contour)
+    goodness = circleTest(circle, contours)
+    assert almost_equal( goodness, 1.0 );
+
+    #distortion shouldn't change goodness much
+    #add more points s error gets smaller
+    contours.clear();
+    circle_segment_amount = 0.5
+    circle_point_amount = 30
+    circle_distortion =  0.01
+    contour = createCirclePointsOnSphere(  center, circle_opening, circle_point_amount,  circle_segment_amount , circle_distortion )
+    contours.push_back(contour)
+    goodness = circleTest(circle, contours)
+    assert almost_equal( goodness, 0.5 , 10e-3 );
+
+    #size shouldn't change goodness
+    contours.clear();
+    circle_segment_amount = 0.96
+    circle_distortion =  0.0
+    circle_opening = pi/4
+    contour = createCirclePointsOnSphere(  center, circle_opening, circle_point_amount,  circle_segment_amount , circle_distortion )
+    contours.push_back(contour)
+    goodness = circleTest(circle, contours)
+    print "goodness " , goodness
+    assert almost_equal( goodness, 0.96 );
