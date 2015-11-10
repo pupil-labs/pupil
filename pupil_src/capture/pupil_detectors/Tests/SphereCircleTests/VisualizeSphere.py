@@ -21,8 +21,7 @@ from trackball import Trackball
 from math import *
 import random
 import time
-from circleFitUtils import *
-
+from SphereCircleTest import *
 class VisualizeSphere(Visualizer):
 
     def __init__(self):
@@ -41,15 +40,13 @@ class VisualizeSphere(Visualizer):
 
         eye_position = eye[0]
         eye_radius = eye[1]
-        # 1. in anthromorphic space, draw pupil sphere and circles on it
-       # glLoadMatrixf(self.get_anthropomorphic_matrix())
 
         self.draw_sphere(eye_position,eye_radius)
         if points:
           draw_points( points, size = 3 , color=RGBA(1.,0,0,1.0), sharpness=1.0 )
 
 
-        self.draw_circle( found_circle[0], found_circle[2], found_circle[1] )
+        self.draw_circle( found_circle[0], found_circle[2], found_circle[1], color=RGBA(1.,1,0,0.5) )
 
         self.trackball.pop()
 
@@ -83,7 +80,7 @@ if __name__ == '__main__':
 
     if time.clock() - lastTime  >= 1.0:
 
-      phi_circle_center = random.uniform(0, pi)
+      phi_circle_center = random.uniform(0, pi/2)
       theta_circle_center =   random.uniform(-pi/2, pi/2)
 
       right_z = sphere_radius * sin(phi_circle_center) * cos(theta_circle_center)
@@ -96,7 +93,13 @@ if __name__ == '__main__':
       circle_point_amount =  random.randint(5, 100)
       circle_opening = random.uniform(pi/32, pi/1.5 )
 
-      print"Set Position: {}{}{}".format( right_x,right_y,right_z)
+
+      circle_distortion =  0.0
+      circle_segment_amount = 1.0
+      circle_point_amount =  200
+      circle_opening = 0.3
+
+      print"Set Position: {} {} {}".format( right_x,right_y,right_z)
       print"Set Circle Radius: {}".format( sin(circle_opening) )
       points = get_circle_test_points( (phi_circle_center, theta_circle_center), circle_opening,circle_point_amount, circle_segment_amount, circle_distortion)
       result = testPlanFit( sphere,  (phi_circle_center, theta_circle_center), circle_opening, circle_point_amount, circle_segment_amount,  circle_distortion )
@@ -104,10 +107,13 @@ if __name__ == '__main__':
       x = result[0]
       y = result[1]
       z = result[2]
-      radius = result[3]
-      residual = result[4]
+      nx = result[3]
+      ny = result[4]
+      nz = result[5]
+      radius = result[6]
+      residual = result[7]
 
-      circle =  ( (x,y,z), (x,y,z), 1 )
+      circle =  ( (x,y,z), (nx,ny,nz), radius )
       print "Fit result Position: {} {} {}".format(x,y,z)
       print "Fit result Radius: {}".format(radius)
       print "Fit result Residual {}".format(residual)

@@ -82,12 +82,10 @@ class Visualizer(object):
 
 	def get_anthropomorphic_matrix(self):
 		temp =  np.identity(4)
-		temp[2,2] *=-1 #consistent with our 3d coord system
 		return temp
 
 	def get_adjusted_pixel_space_matrix(self):
 		temp =  np.identity(4)
-		temp[2,2] *=-1 #consistent with our 3d coord system
 		return temp
 
 	def get_adjusted_pixel_space_matrix(self,scale):
@@ -101,7 +99,7 @@ class Visualizer(object):
 		temp[1,1] *=-1 #image origin is top left
 		temp[0,3] = -self.image_width/2.0
 		temp[1,3] = self.image_height/2.0
-		temp[2,3] = -self.focal_length
+		temp[2,3] = self.focal_length
 		return temp.T
 
 	def get_pupil_transformation_matrix(self,circle_normal,circle_center, circle_scale = 1.0):
@@ -132,8 +130,6 @@ class Visualizer(object):
 		back = temp[:3,2]
 		translation = temp[:3,3]
 		back[:] = np.array(circle_normal)
-		back[-2] *=-1 #our z axis is inverted
-		back[-0] *=-1 #our x axis is inverted
 		# if np.linalg.norm(back) != 0:
 		back[:] /= np.linalg.norm(back)
 		right[:] = get_perpendicular_vector(back)/np.linalg.norm(get_perpendicular_vector(back))
@@ -142,45 +138,7 @@ class Visualizer(object):
 		back[:] *=circle_scale
 		up[:] *=circle_scale
 		translation[:] = np.array(circle_center)
-		translation[2] *= -1
 		return   temp.T
-
-	def get_rotated_sphere_matrix(self,circle_normal,sphere_center):
-		"""
-			OpenGL matrix convention for typical GL software
-			with positive Y=up and positive Z=rearward direction
-			RT = right
-			UP = up
-			BK = back
-			POS = position/translation
-			US = uniform scale
-
-			float transform[16];
-
-			[0] [4] [8 ] [12]
-			[1] [5] [9 ] [13]
-			[2] [6] [10] [14]
-			[3] [7] [11] [15]
-
-			[RT.x] [UP.x] [BK.x] [POS.x]
-			[RT.y] [UP.y] [BK.y] [POS.y]
-			[RT.z] [UP.z] [BK.z] [POS.Z]
-			[    ] [    ] [    ] [US   ]
-		"""
-		temp = self.get_anthropomorphic_matrix()
-		right = temp[:3,0]
-		up = temp[:3,1]
-		back = temp[:3,2]
-		translation = temp[:3,3]
-		back[:] = np.array(circle_normal)
-		back[-2] *=-1 #our z axis is inverted
-		back[-0] *=-1 #our x axis is inverted
-		back[:] /= np.linalg.norm(back)
-		right[:] = get_perpendicular_vector(back)/np.linalg.norm(get_perpendicular_vector(back))
-		up[:] = np.cross(right,back)/np.linalg.norm(np.cross(right,back))
-		translation[:] = np.array(sphere_center)
-		translation[2] *= -1 #not sure if this is correct, maybe depends on camera?
-		return temp.T
 
 	############## DRAWING FUNCTIONS ##############################
 
@@ -307,17 +265,18 @@ class Visualizer(object):
 		vertices = []
 		vertices.append( (0,0,0) )  # circle center
 
-		#create circle vertices in the xz plane
+		#create circle vertices in the xy plane
 		for i in np.linspace(0.0, 2.0*math.pi , num_segments ):
 			x = math.sin(i)
 			y = math.cos(i)
 			z = 0
 			vertices.append((x,y,z))
 
+		glMatrixMode(GL_MODELVIEW )
 		glPushMatrix()
 		glLoadMatrixf(self.get_pupil_transformation_matrix(circle_normal,circle_center, circle_radius))
 		draw_polyline((vertices),color=color, line_type = GL_TRIANGLE_FAN) # circle
-		draw_polyline( [ (0,0,0), (0,0,-4) ] ,color=RGBA(0,0,0), line_type = GL_LINES) #normal
+		draw_polyline( [ (0,0,0), (0,0, 4) ] ,color=RGBA(0,0,0), line_type = GL_LINES) #normal
 		glPopMatrix()
 
 
@@ -369,6 +328,7 @@ class Visualizer(object):
 		glPopMatrix()
 		glMatrixMode(GL_PROJECTION)
 		glPopMatrix()
+		glMatrixMode(GL_MODELVIEW )
 
 		glViewport(0,0, self.window_size[0], self.window_size[1])
 
@@ -466,28 +426,40 @@ class Visualizer(object):
 		last_unprojected_contours =  detector_3D.get_last_pupil_contours()
 		final_circle_contours = detector_3D.get_last_final_circle_contour()
 		last_pupil_edges = detector_3D.get_last_pupil_edges()
+		final_candidate_contours = detector_3D.get_last_final_candidate_contour()
 
 		self.clear_gl_screen()
 		self.trackball.push()
 
 		eye_position = eye[0]
 		eye_radius = eye[1]
-		# 1. in anthromorphic space, draw pupil sphere and circles on it
-		glLoadMatrixf(self.get_anthropomorphic_matrix())
 
+
+		self.draw_coordinate_system(4)
 
 		self.draw_sphere(eye_position,eye_radius)
 		pupil = None
 		for pupil in pupil_observations:
-			#self.draw_circle( pupil.circle_center, pupil.circle_radius, pupil.circle_normal, RGBA(1.0,1.0,1.0, 0.4))
 			self.draw_circle( pupil.circle_fitted_center, pupil.circle_fitted_radius, pupil.circle_fitted_normal, RGBA(0.0,1.0,1.0,0.4))
 
-		self.draw_coordinate_system(4)
 
 		#draw unprojecte contours
 		if last_unprojected_contours:
 			self.draw_contours(last_unprojected_contours, 1, RGBA(1.,0.,0.,1.))
 		#self.draw_contours_on_screen(projected_contours)
+
+		#draw contour which are a candidate
+		colors = [RGBA(0.5,0.5,0.,1.),RGBA(0.5,0.5,1.,1.),RGBA(1.0,0.0,1.,1.),RGBA(0.0,1.0,1.,1.),RGBA(1.0,0.5,0.,1.)]
+		if final_candidate_contours:
+			glPushMatrix()
+			glLoadMatrixf(self.get_anthropomorphic_matrix())
+			i = 0
+			for contours in final_candidate_contours:
+				self.draw_contours(contours, 1, colors[i%len(colors)] )
+				i += 1
+			glPopMatrix()
+
+
 
 		#draw contour used for the final circle fit
 		if final_circle_contours:
@@ -498,12 +470,12 @@ class Visualizer(object):
 
 
 		# 1b. draw frustum in pixel scale, but retaining origin
-		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(30))
+		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(17))
 		self.draw_frustum()
 
 		# 2. in pixel space draw video frame
-		glLoadMatrixf(self.get_image_space_matrix(30))
-#		draw_named_texture(g_pool.image_tex,quad=((0,480),(640,480),(640,0),(0,0)),alpha=0.5)
+		glLoadMatrixf(self.get_image_space_matrix(17))
+		g_pool.image_tex.draw( quad=((0,480),(640,480),(640,0),(0,0)) ,alpha=0.5)
 
 
 		self.trackball.pop()
