@@ -298,6 +298,19 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::sha
         // Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/, std::move(contours))
         observation
     );
+
+    auto& pupil = pupils.back();
+
+    if(eye != Sphere::Null ){
+        unproject_single_observation(pupil, 5);
+        initialise_single_observation(pupil ); // initialise last obeservation to calculate the variance of pupil center
+
+        double psi_variance = std::pow(pupil.params.psi - psi_mean , 2);
+        double theta_variance = std::pow(pupil.params.theta - theta_mean , 2);
+
+        std::cout << "psi variance: " <<  psi_variance<< std::endl;
+        std::cout << "theta variance: " <<  theta_variance<< std::endl;
+    }
     return pupils.size() - 1;
 }
 
@@ -736,9 +749,12 @@ void singleeyefitter::EyeModelFitter::initialise_model()
     eye.radius = 12.0;
     eye.center *= scale;
 
+
     for (auto& pupil : pupils) {
         pupil.params.radius *= scale;
         pupil.circle = circleFromParams(pupil.params);
+        psi_mean = pupil.params.psi;
+        theta_mean = pupil.params.theta;
     }
 
     model_version++;
@@ -936,7 +952,6 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
     model_version++;
 }
 
-// return the goodness of the current fit
 void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_residual, float max_variance, float min_radius, float max_radius  )
 {
 
@@ -963,8 +978,8 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_res
     Contours3D best_solution;
     Circle best_circle;
     double best_variance = std::numeric_limits<double>::infinity();
-    double best_goodness = 0;
-
+    double best_goodness = 0.0;
+    double best_residual = 0.0;
     float max_fit_residual = max_residual;
     float max_circle_variance = max_variance;
 
@@ -992,8 +1007,8 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_res
         std::vector<Path> prune;
         prune.reserve( std::pow(contours.size() , 3) ); // we gonna prune a lot if we have alot contours, cubic increase or even more ?
         int eval_count = 0;
-        std::cout << "size:" <<  contours.size()  << std::endl;
-        std::cout << "possible combinations: " <<  std::pow(2,contours.size()) + 1<< std::endl;
+        // std::cout << "size:" <<  contours.size()  << std::endl;
+        // std::cout << "possible combinations: " <<  std::pow(2,contours.size()) + 1<< std::endl;
 
         // contains the first moment of each contour
         // we precalculate this inorder to prune contours combinations if the distance of these are to long
@@ -1023,7 +1038,7 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_res
                 }
             }
         }
-        std::cout << "pruned " << prune_count << std::endl;
+        // std::cout << "pruned " << prune_count << std::endl;
 
         while (!unvisited.empty() && eval_count <= max_evals) {
             eval_count++;
@@ -1079,8 +1094,13 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_res
                         bool is_candidate = circle_evaluation(current_circle, residual);
                         double goodness =  circle_goodness(current_circle , test_contours);
 
+                        if(is_candidate)
+                            pupil.final_candidate_contours.push_back(test_contours);
+
                         //check if this one is better then the best one and swap
-                        if( is_candidate && goodness > best_goodness ) {
+                        if( is_candidate &&  goodness > best_goodness ) {
+
+                            best_residual = residual;
                             best_variance = variance;
                             best_goodness = goodness;
                             best_circle = current_circle;
@@ -1093,13 +1113,15 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_res
                 }
             }
         }
-
+        //std::cout << "tried: "  << eval_count  << std::endl;
         //return results;
     };
 
-
     pruning_quick_combine(contours, 1000, 10);
 
+   // std::cout << "residual: " <<  best_residual << std::endl;
+   // std::cout << "goodness: " <<  best_goodness << std::endl;
+   // std::cout << "variance: " <<  best_variance << std::endl;
     pupil.circle_fitted = std::move(best_circle);
     pupil.final_circle_contours = std::move(best_solution); // save this for debuging
 

@@ -116,6 +116,11 @@ namespace singleeyefitter {
             // Model version gets incremented on initialisation/reset, so that long-running background-thread refines don't overwrite the model
             int model_version = 0;
 
+            // Mean of all pupil observations, used to calculate variance of a new observation
+            double psi_mean = 0.0;
+            double theta_mean = 0.0;
+
+
             const Circle& unproject_single_observation(Pupil& pupil, double pupil_radius = 1) const;
             const Circle& initialise_single_observation(Pupil& pupil);
             // const Circle& refine_single_with_contrast(Pupil& pupil);
