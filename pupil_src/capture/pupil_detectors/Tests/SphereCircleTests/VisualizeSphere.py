@@ -94,11 +94,6 @@ if __name__ == '__main__':
       circle_opening = random.uniform(pi/32, pi/1.5 )
 
 
-      circle_distortion =  0.0
-      circle_segment_amount = 1.0
-      circle_point_amount =  200
-      circle_opening = 0.3
-
       print"Set Position: {} {} {}".format( right_x,right_y,right_z)
       print"Set Circle Radius: {}".format( sin(circle_opening) )
       points = get_circle_test_points( (phi_circle_center, theta_circle_center), circle_opening,circle_point_amount, circle_segment_amount, circle_distortion)
@@ -114,7 +109,10 @@ if __name__ == '__main__':
       residual = result[7]
 
       circle =  ( (x,y,z), (nx,ny,nz), radius )
-      print "Fit result Position: {} {} {}".format(x,y,z)
+
+      d = sqrt(x*x +y*y + z*z)
+
+      print "Fit result Position: {} {} {}".format(x/d,y/d,z/d)
       print "Fit result Radius: {}".format(radius)
       print "Fit result Residual {}".format(residual)
       lastTime = time.clock()
