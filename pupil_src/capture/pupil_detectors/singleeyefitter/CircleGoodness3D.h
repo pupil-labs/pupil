@@ -96,11 +96,11 @@ namespace singleeyefitter {
                         if( angle_prev_point != -1 &&  angle_prev_point - psi  > constants::pi ){ // the line goes from 2pi to 0
 
                             // split here
-                           contours_angles.push_back( {angle_min, 2.0 * constants::pi} );
+                           contours_angles.push_back( {angle_min,  constants::two_pi} );
                            // start again at 0
                            angle_min = 0.0 ;
                            angle_max = psi;
-                          // std::cout << "found positive wrap around" << std::endl;
+                           // std::cout << "found positive wrap around" << std::endl;
                         }
                         if( angle_prev_point != -1 &&  angle_prev_point - psi   < -constants::pi ){ // the line goes from 0 to 2pi
 
@@ -108,17 +108,16 @@ namespace singleeyefitter {
                            contours_angles.push_back( {0.0, angle_max} );
                            // start again at 2pi
                            angle_min = psi ;
-                           angle_max = 2.0 * constants::pi;
-                           //std::cout << "found negative wrap around" << std::endl;
+                           angle_max = constants::two_pi;
+                           // std::cout << "found negative wrap around" << std::endl;
                         }
-
-
 
                         if( psi > angle_max) angle_max = psi;
                         if (psi < angle_min) angle_min = psi;
 
                         angle_prev_point = psi;
                     }
+                    // std::cout << "add: " <<angle_min << " " << angle_max  << std::endl;
                     contours_angles.push_back( {angle_min,angle_max} );
                 }
 
@@ -145,22 +144,28 @@ namespace singleeyefitter {
                     }
 
                     if( angles.first > current_angle_max ){ // there is one starting outside of current contour
+
+                        // calculate the angle of the previous contour and add it to the total
+
+                        if( current_angle_max != -1 &&  current_angle_min != std::numeric_limits<double>::infinity() ){  // just add the previous one if there is one
+                            Scalar a = current_angle_max - current_angle_min;
+                            // std::cout << "add amount " <<  a << std::endl;
+                            angle_total += a;
+
+                        }
+
                         current_angle_min = angles.first;
                         current_angle_max = angles.second;
-                        // calculate the angle of the previous contour and add it to the toal
-                        // the angle from one point to the other can be the small or the large one
-                        // we wanna have the small one
-
-                        Scalar a = current_angle_max - current_angle_min;
-                        Scalar b = std::abs(constants::two_pi - (current_angle_max - current_angle_min));
-                       // std::cout << "add amount " <<  std::min(a,b) << std::endl;
-                        angle_total += std::min(a,b);
                     }
 
                 }
+                // don't forget to add the last found angles
+                Scalar a = current_angle_max - current_angle_min;
+                // std::cout << "add amount " <<  a << std::endl;
+                angle_total += a;
 
 
-                Scalar goodness =  angle_total / (2.0 * constants::pi );
+                Scalar goodness =  angle_total / constants::two_pi ;
                 return goodness;
             }
     };
