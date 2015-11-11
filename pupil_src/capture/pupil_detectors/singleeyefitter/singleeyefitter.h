@@ -3,9 +3,11 @@
 
 #include <mutex>
 #include <deque>
+#include <unordered_map>
 #include <Eigen/Core>
 #include <opencv2/core/core.hpp>
 #include "common/types.h"
+#include "mathHelper.h"
 #include "ImageProcessing/cvx.h"
 #include "Geometry/Circle.h"
 #include "Geometry/Ellipse.h"
@@ -120,6 +122,15 @@ namespace singleeyefitter {
             double psi_mean = 0.0;
             double theta_mean = 0.0;
 
+
+            // in order to check if new observations are unique  (not in the same area as previous one )
+            // the position on the speher (only x,y coords) are binned  (spatial binning) an inserted into the right bin
+            // !! this is not a correct method to check if they are uniformly distibuted, because if x,y are uniformly distibuted
+            // it doesn't mean points on the spehre are uniformly distibuted
+            // to uniformly distibute points on a sphere you have to check if the area is equal on the sphere of two bins
+            // and we just look on have the sphere, it's like projecting a checkboard grid on the sphere
+            std::unordered_map<Vector2, bool, math::matrix_hash<Vector2>> pupil_position_bins;
+            std::vector<Vector3> bin_positions; // for debuging
 
             const Circle& unproject_single_observation(Pupil& pupil, double pupil_radius = 1) const;
             const Circle& initialise_single_observation(Pupil& pupil);

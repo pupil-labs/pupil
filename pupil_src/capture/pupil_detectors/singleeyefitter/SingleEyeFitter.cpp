@@ -305,12 +305,47 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::sha
         unproject_single_observation(pupil, 5);
         initialise_single_observation(pupil ); // initialise last obeservation to calculate the variance of pupil center
 
-        double psi_variance = std::pow(pupil.params.psi - psi_mean , 2);
-        double theta_variance = std::pow(pupil.params.theta - theta_mean , 2);
+        if( pupil.circle != Circle::Null){ // initialise failed
 
-        std::cout << "psi variance: " <<  psi_variance<< std::endl;
-        std::cout << "theta variance: " <<  theta_variance<< std::endl;
+
+            double psi_variance = std::pow(pupil.params.psi - psi_mean , 2);
+            double theta_variance = std::pow(pupil.params.theta - theta_mean , 2);
+
+            //std::cout << "psi variance: " <<  psi_variance<< std::endl;
+            //std::cout << "theta variance: " <<  theta_variance<< std::endl;
+
+            int bin_amount = 20;
+            Vector3 pupil_pos =  pupil.circle.center - eye.center; // in eye space
+            pupil_pos.normalize(); // on unit sphere
+
+            double bin_width = 1.0 / bin_amount;
+            // calculate bin
+            // values go from -1 to 1
+            double x = pupil_pos.x()+1.0;// map them to [0,2]
+            double y = pupil_pos.y()+1.0;
+            x = math::round( x , bin_width );
+            y = math::round( y , bin_width );
+            std::cout << "bin x: " << x << " y: " << y << std::endl;
+            Vector2 bin(x,y);
+            auto search = pupil_position_bins.find( bin );
+
+            if( search == pupil_position_bins.end() || search->second == false ){
+
+                // there is no bin at this coord or it is empty
+                // so add one
+                pupil_position_bins.emplace( bin, true);
+                double z = std::copysign( std::sqrt(x*x+y*y - 1.0),  pupil_pos.z());
+
+                Vector3 bin_positions_3d( x-1.0 , y-1.0, z);
+                bin_positions_3d.normalize();
+                bin_positions.push_back( bin_positions_3d  );
+            }
+        }
+
+
+
     }
+
     return pupils.size() - 1;
 }
 
@@ -753,9 +788,11 @@ void singleeyefitter::EyeModelFitter::initialise_model()
     for (auto& pupil : pupils) {
         pupil.params.radius *= scale;
         pupil.circle = circleFromParams(pupil.params);
-        psi_mean = pupil.params.psi;
-        theta_mean = pupil.params.theta;
+        psi_mean += pupil.params.psi;
+        theta_mean += pupil.params.theta;
     }
+    psi_mean /= pupils.size();
+    theta_mean /= pupils.size();
 
     model_version++;
     // Try previous circle in case of bad fits
