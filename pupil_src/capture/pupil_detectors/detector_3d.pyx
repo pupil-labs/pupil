@@ -289,6 +289,18 @@ cdef class Detector_3D:
                 edges.append([point[0],point[1],point[2]])
         return edges
 
+    def get_bin_positions(self):
+        if self.detector_3d_ptr.bin_positions.size() == 0:
+            return []
+
+        positions = []
+        eye_position = self.detector_3d_ptr.eye.center
+        eye_radius = self.detector_3d_ptr.eye.radius
+        #bins are on a unit sphere
+        for point in self.detector_3d_ptr.bin_positions:
+            positions.append([point[0]*eye_radius+eye_position[0],point[1]*eye_radius+eye_position[1],point[2]*eye_radius+eye_position[2]])
+        return positions
+
     def get_last_final_circle_contour(self):
         if self.detector_3d_ptr.pupils.size() == 0:
             return []
@@ -302,6 +314,23 @@ cdef class Detector_3D:
             contours.append(c)
 
         return contours
+
+    def get_last_final_candidate_contour(self):
+        if self.detector_3d_ptr.pupils.size() == 0:
+            return []
+
+        cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
+        list_contours = []
+        for contours in p.final_candidate_contours:
+            cc = []
+            for contour in contours:
+                c = []
+                for point in contour:
+                    c.append([point[0],point[1],point[2]])
+                cc.append(c)
+            list_contours.append(cc)
+
+        return list_contours
     # def get_last_unwrapped_contours(self):
     #     if self.detector_3d_ptr.pupils.size() == 0:
     #         return []

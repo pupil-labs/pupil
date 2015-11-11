@@ -425,8 +425,9 @@ class Visualizer(object):
 		pupil_observations = detector_3D.get_last_observations(1)
 		last_unprojected_contours =  detector_3D.get_last_pupil_contours()
 		final_circle_contours = detector_3D.get_last_final_circle_contour()
-		last_pupil_edges = detector_3D.get_last_pupil_edges()
+		#last_pupil_edges = detector_3D.get_last_pupil_edges()
 		final_candidate_contours = detector_3D.get_last_final_candidate_contour()
+		bin_positions = detector_3D.get_bin_positions()
 
 		self.clear_gl_screen()
 		self.trackball.push()
@@ -469,13 +470,16 @@ class Visualizer(object):
 		#	draw_polyline(last_pupil_edges, 3 , RGBA(0.,0.,0.,1.), line_type = GL_POINTS )
 
 
+		if bin_positions:
+			draw_points(bin_positions, 5 , RGBA(0.,1.,0.,1.) )
+
 		# 1b. draw frustum in pixel scale, but retaining origin
 		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(17))
 		self.draw_frustum()
 
 		# 2. in pixel space draw video frame
-		glLoadMatrixf(self.get_image_space_matrix(17))
-		g_pool.image_tex.draw( quad=((0,480),(640,480),(640,0),(0,0)) ,alpha=0.5)
+		#glLoadMatrixf(self.get_image_space_matrix(17))
+		#g_pool.image_tex.draw( quad=((0,480),(640,480),(640,0),(0,0)) ,alpha=0.5)
 
 
 		self.trackball.pop()

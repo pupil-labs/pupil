@@ -157,6 +157,8 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         float focal_length
         deque[Pupil] pupils
         Sphere[double] eye
+        vector[Vector3] bin_positions
+
 
 
 
