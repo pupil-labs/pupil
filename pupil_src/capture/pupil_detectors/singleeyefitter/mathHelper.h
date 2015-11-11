@@ -28,6 +28,12 @@ namespace singleeyefitter {
 
 #undef MAKE_STD_SQ
 
+        template<typename T>
+        inline T round(T value, T precision)  {
+            T factor = T(1) / precision;
+            return floor( value * factor + 0.5 ) / factor;
+        }
+
         template<typename T, typename TMin, typename TMax>
         inline T clamp(T val, TMin min_val = std::numeric_limits<T>::min(), TMax max_val = std::numeric_limits<T>::max())
         {
