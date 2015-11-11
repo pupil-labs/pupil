@@ -321,11 +321,11 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::sha
             double bin_width = 1.0 / bin_amount;
             // calculate bin
             // values go from -1 to 1
-            double x = pupil_pos.x()+1.0;// map them to [0,2]
-            double y = pupil_pos.y()+1.0;
+            double x = pupil_pos.x();//+1.0;// map them to [0,2]
+            double y = pupil_pos.y();//+1.0;
             x = math::round( x , bin_width );
             y = math::round( y , bin_width );
-            std::cout << "bin x: " << x << " y: " << y << std::endl;
+
             Vector2 bin(x,y);
             auto search = pupil_position_bins.find( bin );
 
@@ -334,10 +334,10 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::sha
                 // there is no bin at this coord or it is empty
                 // so add one
                 pupil_position_bins.emplace( bin, true);
-                double z = std::copysign( std::sqrt(x*x+y*y - 1.0),  pupil_pos.z());
+                double z = std::copysign( std::sqrt(1.0 - x*x-y*y ),  pupil_pos.z());
 
-                Vector3 bin_positions_3d( x-1.0 , y-1.0, z);
-                bin_positions_3d.normalize();
+                Vector3 bin_positions_3d( x , y, z);
+                //bin_positions_3d.normalize();
                 bin_positions.push_back( bin_positions_3d  );
             }
         }
