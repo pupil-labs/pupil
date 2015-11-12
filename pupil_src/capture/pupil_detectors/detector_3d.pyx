@@ -32,7 +32,13 @@ cdef class Detector_3D:
 
     def __cinit__(self):
         self.detector_2d_ptr = new Detector2D()
-        focal_length = 879.193
+        focal_length = 620.
+        '''
+        K for 30hz eye cam:
+        [ 634.16873016    0.          343.40537637]
+        [   0.          605.57862234  252.3924477 ]
+        [   0.            0.            1.        ]
+        '''
         region_band_width = 5
         region_step_epsilon = 0.5
         self.detector_3d_ptr = new EyeModelFitter(focal_length, region_band_width, region_step_epsilon)
