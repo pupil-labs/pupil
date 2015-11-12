@@ -82,7 +82,7 @@ cdef class Detector_2D:
         return py_result
 
 
-    def detect(self, frame, user_roi, visualize ):
+    def detect(self, frame, user_roi, visualize, pause_video = False ):
 
         image_width = frame.width
         image_height = frame.height

@@ -99,7 +99,7 @@ class Canny_Detector(Pupil_Detector):
         #debug settings
         self.should_sleep = False
 
-    def detect(self,frame,user_roi,visualize=False):
+    def detect(self,frame,user_roi,visualize=False, pause_video = False):
 
         def early_exit():
             return {'norm_pos':(0,0),'diameter':0,'timestamp':frame.timestamp,'confidence':0}

@@ -125,9 +125,9 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         ## Pubil-Laps addons ##
         #######################
 
-        void unproject_last_contour()
+        void unproject_last_observation_contours()
         void unproject_last_raw_edges()
-        void fit_circle_for_last_contour( float max_residual, float max_variance, float min_radius, float max_radius )
+        void fit_circle_for_eye_contours( float max_residual, float max_variance, float min_radius, float max_radius )
 
         #######################
 
@@ -146,10 +146,10 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
             vector[vector[Vector3]] contours
             vector[Vector3] edges
             vector[vector[Vector3]] final_circle_contours
+            vector[vector[vector[Vector3]]] final_candidate_contours
             double fit_goodness
             PupilParams params
             Circle3D[double] circle
-            Circle3D[double] circle_fitted
 
 
         #variables
@@ -158,6 +158,13 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         deque[Pupil] pupils
         Sphere[double] eye
         vector[Vector3] bin_positions
+        vector[vector[Vector3]] eye_contours
+        vector[Vector3] edges
+        vector[vector[Vector3]] final_circle_contours
+        vector[vector[vector[Vector3]]] final_candidate_contours
+        Circle3D[double] circle_fitted
+
+
 
 
 

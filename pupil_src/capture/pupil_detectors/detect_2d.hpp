@@ -27,7 +27,7 @@ class Detector2D {
 	public:
 
 		Detector2D();
-		std::shared_ptr<Detector_2D_Results> detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image);
+		std::shared_ptr<Detector_2D_Results> detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image, bool pause_video);
 		std::vector<cv::Point> ellipse_true_support(Detector_2D_Properties& props, Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges);
 
 
@@ -61,7 +61,7 @@ std::vector<cv::Point> Detector2D::ellipse_true_support(Detector_2D_Properties& 
 	}
 	return support_pixels;
 }
-std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image)
+std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image, bool pause_video = false)
 {
 	std::shared_ptr<Detector_2D_Results> result = std::make_shared<Detector_2D_Results>();
 	result->current_roi = roi;
@@ -135,7 +135,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 		cv::Mat r_channel(overlay.rows, overlay.cols, CV_8UC1);
 		cv::Mat out[] = {b_channel, g_channel, r_channel};
 
-		cv: split(overlay, out);
+		cv::split(overlay, out);
 
 		cv::max(g_channel, edges, g_channel);
 		cv::max(b_channel, binary_img, b_channel);
@@ -178,7 +178,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	/// Strong Prior Part Begin ///
 	///////////////////////////////
 	//if we had a good ellipse before ,let see if it is still a good first guess:
-	if( mUse_strong_prior ){
+	if( /*mUse_strong_prior*/ false ){
 
 	  mUse_strong_prior = false;
 	  //recalculate center in coords system of new ROI views! roi changes every framesub
@@ -502,7 +502,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 			cv::Mat b_channel(overlay.rows, overlay.cols, CV_8UC1);
 			cv::Mat r_channel(overlay.rows, overlay.cols, CV_8UC1);
 			cv::Mat out[] = {b_channel, g_channel, r_channel};
-			cv: split(overlay, out);
+			cv::split(overlay, out);
 			cv::threshold(new_edges, new_edges, 0, 255, cv::THRESH_BINARY);
 			cv::max(r_channel, new_edges, r_channel);
 			cv::merge(out, 3, overlay);

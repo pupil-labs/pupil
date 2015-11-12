@@ -44,6 +44,8 @@ from pupil_detectors import Canny_Detector, Detector_2D, Detector_3D
 pupil_detectors = {Canny_Detector.__name__:Canny_Detector,Detector_2D.__name__:Detector_2D,Detector_3D.__name__:Detector_3D}
 
 
+pause_video = False
+
 def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     """
     Creates a window, gl context.
@@ -72,7 +74,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 
-
+    pause_video = False
     #UI Platform tweaks
     if platform.system() == 'Linux':
         scroll_factor = 10.0
@@ -99,6 +101,9 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         g_pool.gui.update_key(key,scancode,action,mods)
 
     def on_char(window,char):
+        if char == ord('p'):
+            global pause_video
+            pause_video = not pause_video
         g_pool.gui.update_char(char)
 
     def on_iconify(window,iconified):
@@ -288,14 +293,18 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     # Event loop
     while not g_pool.quit.value:
         # Get an image from the grabber
-        try:
-            frame = cap.get_frame()
-        except CameraCaptureError:
-            logger.error("Capture from Camera Failed. Stopping.")
-            break
-        except EndofVideoFileError:
-            logger.warning("Video File is done. Stopping")
-            break
+        global pause_video
+        if not pause_video:
+            try:
+                frame = cap.get_frame()
+            except CameraCaptureError:
+                logger.error("Capture from Camera Failed. Stopping.")
+                break
+            except EndofVideoFileError:
+                cap.seek_to_frame(0)
+                frame = cap.get_frame()
+                logger.warning("Video File is done. Stopping")
+                #break
 
 
         #update performace graphs
@@ -336,7 +345,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
 
         # pupil ellipse detection
-        result = g_pool.pupil_detector.detect(frame, u_r, g_pool.display_mode == 'algorithm')
+        result = g_pool.pupil_detector.detect(frame, u_r, g_pool.display_mode == 'algorithm', pause_video)
         result['id'] = eye_id
         # stream the result
         g_pool.pupil_queue.put(result)

@@ -294,16 +294,15 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::sha
         ellipse.angle = -ellipse.angle; //take y axis flip into account
     }
 
-    pupils.emplace_back(
-        // Observation(/*std::move(image), */std::move(pupil)/*, std::move(pupil_inliers)*/, std::move(contours))
-        observation
-    );
 
-    auto& pupil = pupils.back();
+
+    auto pupil = Pupil(observation);
+
+    // we decide here if the observation will be added
 
     if(eye != Sphere::Null ){
         unproject_single_observation(pupil, 5);
-        initialise_single_observation(pupil ); // initialise last obeservation to calculate the variance of pupil center
+        initialise_single_observation(pupil ); // initialise last observation to calculate the variance of pupil center
 
         if( pupil.circle != Circle::Null){ // initialise failed
 
@@ -315,14 +314,13 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::sha
             //std::cout << "theta variance: " <<  theta_variance<< std::endl;
 
             int bin_amount = 20;
-            Vector3 pupil_pos =  pupil.circle.center - eye.center; // in eye space
-            pupil_pos.normalize(); // on unit sphere
+            Vector3 pupil_normal =  pupil.circle.normal; // the same as a vector from unit sphere center to the pupil center
 
             double bin_width = 1.0 / bin_amount;
             // calculate bin
             // values go from -1 to 1
-            double x = pupil_pos.x();//+1.0;// map them to [0,2]
-            double y = pupil_pos.y();//+1.0;
+            double x = pupil_normal.x();//+1.0;// map them to [0,2]
+            double y = pupil_normal.y();//+1.0;
             x = math::round( x , bin_width );
             y = math::round( y , bin_width );
 
@@ -334,17 +332,22 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::sha
                 // there is no bin at this coord or it is empty
                 // so add one
                 pupil_position_bins.emplace( bin, true);
-                double z = std::copysign( std::sqrt(1.0 - x*x-y*y ),  pupil_pos.z());
+                double z = std::copysign( std::sqrt(1.0 - x*x-y*y ),  pupil_normal.z());
 
                 Vector3 bin_positions_3d( x , y, z);
                 //bin_positions_3d.normalize();
                 bin_positions.push_back( bin_positions_3d  );
+
+              //  pupils.push_back( pupil );
+
             }
         }
 
-
+    }else{
+        //pupils.push_back( pupil );
 
     }
+    pupils.push_back( pupil );
 
     return pupils.size() - 1;
 }
@@ -822,7 +825,7 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
     std::lock_guard<std::mutex> lock_model(model_mutex);
 
     if (pupils.size() < 2) {
-        throw std::runtime_error("Need at least two observations");
+        return;
     }
 
     std::vector<std::pair<Circle, Circle>> pupil_unprojection_pairs;
@@ -989,15 +992,15 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
     model_version++;
 }
 
-void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_residual, float max_variance, float min_radius, float max_radius  )
+void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours( float max_residual, float max_variance, float min_radius, float max_radius  )
 {
 
-    if( pupils.size() == 0)
+    if( eye_contours.size() == 0)
         return;
 
-    auto& pupil = pupils.back();
+    final_candidate_contours.clear(); // otherwise we fill this infinitly
     // copy the contours
-    auto contours = pupil.contours;
+    auto& contours = eye_contours;
 
     //first we want to filter out the bad stuff, too short ones
     const auto contour_size_min_pred = [](const std::vector<Vector3>& contour) {
@@ -1132,7 +1135,7 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_res
                         double goodness =  circle_goodness(current_circle , test_contours);
 
                         if(is_candidate)
-                            pupil.final_candidate_contours.push_back(test_contours);
+                            final_candidate_contours.push_back(test_contours);
 
                         //check if this one is better then the best one and swap
                         if( is_candidate &&  goodness > best_goodness ) {
@@ -1159,15 +1162,15 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_last_contour( float max_res
    // std::cout << "residual: " <<  best_residual << std::endl;
    // std::cout << "goodness: " <<  best_goodness << std::endl;
    // std::cout << "variance: " <<  best_variance << std::endl;
-    pupil.circle_fitted = std::move(best_circle);
-    pupil.final_circle_contours = std::move(best_solution); // save this for debuging
+    circle_fitted = std::move(best_circle);
+    final_circle_contours = std::move(best_solution); // save this for debuging
 
 
 
 }
 
 
-void singleeyefitter::EyeModelFitter::unproject_last_contour()
+void singleeyefitter::EyeModelFitter::unproject_last_observation_contours()
 {
     if (eye == Sphere::Null || pupils.size() == 0) {
         return;
@@ -1176,8 +1179,8 @@ void singleeyefitter::EyeModelFitter::unproject_last_contour()
 
     auto& pupil = pupils.back();
     auto& contours = pupil.observation->contours;
-    pupil.contours.clear();
-    pupil.contours.resize(contours.size());
+    eye_contours.clear();
+    eye_contours.resize(contours.size());
     int i = 0;
     for (auto& contour : contours) {
         for (auto& point : contour) {
@@ -1187,7 +1190,7 @@ void singleeyefitter::EyeModelFitter::unproject_last_contour()
             try {
                 // we use the eye properties of the current eye, when ever we call this
                 const auto& unprojected_point = intersect(Line3(camera_center,  direction.normalized()), eye);
-                pupil.contours[i].push_back(std::move(unprojected_point.first));
+                eye_contours[i].push_back(std::move(unprojected_point.first));
 
             } catch (no_intersection_exception&) {
                 // if there is no intersection we don't do anything
@@ -1206,18 +1209,18 @@ void singleeyefitter::EyeModelFitter::unproject_last_raw_edges()
 
 
     auto& pupil = pupils.back();
-    auto& edges = pupil.observation->raw_edges;
-    pupil.edges.clear();
-    pupil.edges.resize(edges.size());
+    auto& raw_edges = pupil.observation->raw_edges;
+    edges.clear();
+    edges.resize(edges.size());
     int i = 0;
-    for (auto& point : edges) {
+    for (auto& point : raw_edges) {
         Vector3 point_3d(point.x, point.y , focal_length);
         Vector3 direction = point_3d - camera_center;
 
         try {
             // we use the eye properties of the current eye, when ever we call this
             const auto& unprojected_point = intersect(Line3(camera_center,  direction.normalized()), eye);
-            pupil.edges.push_back(std::move(unprojected_point.first));
+            edges.push_back(std::move(unprojected_point.first));
 
         } catch (no_intersection_exception&) {
             // if there is no intersection we don't do anything

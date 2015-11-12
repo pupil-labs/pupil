@@ -63,11 +63,11 @@ namespace singleeyefitter {
             // Pubil-Laps addons
             //
 
-            void unproject_last_contour();
+            void unproject_last_observation_contours();
             void unproject_last_raw_edges();
 
            // void fit_circle_for_last_contour();
-            void fit_circle_for_last_contour( float max_residual = 20, float max_variance = 0.7, float min_radius = 2, float max_radius = 4 );
+            void fit_circle_for_eye_contours( float max_residual = 20, float max_variance = 0.7, float min_radius = 2, float max_radius = 4 );
 
             // struct Observation {
             //     //cv::Mat image;
@@ -88,11 +88,7 @@ namespace singleeyefitter {
             struct Pupil {
                 //Observation observation;
                 std::shared_ptr<Detector_2D_Results> observation;
-                Contours3D contours;
-                std::vector<Vector3> edges;
-                Contours3D final_circle_contours; // just for visualiziation, contains all points which fit best the circle
                 Circle circle; // this one is the unprojected circle
-                Circle circle_fitted;  // this is the circle fitted form the unprojectd contours
                 double fit_goodness;
                 PupilParams params;
                 bool init_valid;
@@ -121,6 +117,13 @@ namespace singleeyefitter {
             // Mean of all pupil observations, used to calculate variance of a new observation
             double psi_mean = 0.0;
             double theta_mean = 0.0;
+
+            // data we get each frame
+            Contours3D eye_contours;
+            Circle circle_fitted;  // this is the circle fitted form the unprojected contours
+            std::vector<Vector3> edges; // just for visualization
+            Contours3D final_circle_contours; // just for visualiziation, contains all points which fit best the circle
+            std::vector<Contours3D> final_candidate_contours; // just for visualiziation, contains all contours which are a candidate for the fit
 
 
             // in order to check if new observations are unique  (not in the same area as previous one )

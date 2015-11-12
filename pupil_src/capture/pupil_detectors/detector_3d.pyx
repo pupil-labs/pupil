@@ -12,7 +12,8 @@ import math
 
 from pupil_detectors.visualizer_3d import Visualizer
 from collections import namedtuple
-PyObservation = namedtuple('Observation' , 'ellipse_center, ellipse_major_radius, ellipse_minor_radius, ellipse_angle,params_theta, params_psi, params_radius, circle_center, circle_normal, circle_radius,  circle_fitted_center, circle_fitted_normal, circle_fitted_radius')
+PyObservation = namedtuple('Observation' , 'ellipse_center, ellipse_major_radius, ellipse_minor_radius, ellipse_angle,params_theta, params_psi, params_radius, circle_center, circle_normal, circle_radius ')
+
 
 cimport detector
 from detector cimport *
@@ -101,10 +102,11 @@ cdef class Detector_3D:
 
 
 
-    def detect(self, frame, user_roi, visualize ):
+    def detect(self, frame, user_roi, visualize, pause = False ):
 
         image_width = frame.width
         image_height = frame.height
+
 
         cdef unsigned char[:,::1] img = frame.gray
         cdef Mat cv_image = Mat(image_height, image_width, CV_8UC1, <void *> &img[0,0] )
@@ -150,24 +152,24 @@ cdef class Detector_3D:
 
         ######### 3D Model Part ############
 
-        self.detector_3d_ptr.add_observation( cpp_result_ptr, image_width, image_height , True  ) # if true is set, add_conversation converts the data to the coord space of the eye fitter
-        if py_result['confidence'] > 0.5:
-            if self.detector_3d_ptr.pupils.size() > 3:
-                pupil_radius = 1
-                eye_z = 20
-                self.detector_3d_ptr.unproject_observations(pupil_radius, eye_z)
-                self.detector_3d_ptr.initialise_model()
-                #now we have an updated eye model
-                #use it to unproject contours
+        if py_result['confidence'] > 0.9 and not pause:
+
+            self.detector_3d_ptr.add_observation( cpp_result_ptr, image_width, image_height , True  ) # if true is set, add_conversation converts the data to the coord space of the eye fitter
+            pupil_radius = 5
+            eye_z = 57
+            self.detector_3d_ptr.unproject_observations(pupil_radius, eye_z)
+            self.detector_3d_ptr.initialise_model()
+            #now we have an updated eye model
+            #use it to unproject contours
 
 
-        self.detector_3d_ptr.unproject_last_contour()
+        self.detector_3d_ptr.unproject_last_observation_contours()
         #self.detector_3d_ptr.unproject_last_raw_edges()
         min_radius = self.detect_properties_3d['pupil_radius_min']
         max_radius = self.detect_properties_3d['pupil_radius_max']
         max_residual = self.detect_properties_3d['max_fit_residual']
         max_variance = self.detect_properties_3d['max_circle_variance']
-        self.detector_3d_ptr.fit_circle_for_last_contour(max_residual, max_variance, min_radius, max_radius)
+        self.detector_3d_ptr.fit_circle_for_eye_contours(max_residual, max_variance, min_radius, max_radius)
 
         if self.debug_visualizer_3d._window:
             eye = self.detector_3d_ptr.eye
@@ -202,7 +204,7 @@ cdef class Detector_3D:
         self.menu_3d.append(ui.Button('Reset 3D Model', self.reset_3D_Model ))
         self.menu_3d.append(ui.Slider('pupil_radius_min',self.detect_properties_3d,label='Pupil min radius', min=1.0,max= 8.0,step=0.1))
         self.menu_3d.append(ui.Slider('pupil_radius_max',self.detect_properties_3d,label='Pupil max radius', min=1.0,max=8.0,step=0.1))
-        self.menu_3d.append(ui.Slider('max_fit_residual',self.detect_properties_3d,label='3D fit max residual', min=0.1,max=100.0,step=0.1))
+        self.menu_3d.append(ui.Slider('max_fit_residual',self.detect_properties_3d,label='3D fit max residual', min=0.01,max=1.0,step=0.01))
         self.menu_3d.append(ui.Slider('max_circle_variance',self.detect_properties_3d,label='3D fit max circle variance', min=0.01,max=10.0,step=0.01))
 
 
@@ -234,6 +236,12 @@ cdef class Detector_3D:
 
     ### Debug Helper Start ###
 
+    def get_circle_fitted(self):
+        center = self.detector_3d_ptr.circle_fitted.center
+        radius = self.detector_3d_ptr.circle_fitted.radius
+        normal = self.detector_3d_ptr.circle_fitted.normal
+        return [ [center[0],center[1],center[2]], radius,  [normal[0],normal[1],normal[2]] ]
+
     def get_observation(self,index):
         cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils[index]
         cdef Detector_2D_Results observation = deref(p.observation)
@@ -243,10 +251,7 @@ cdef class Detector_3D:
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
-            p.circle.radius,
-            (p.circle_fitted.center[0],p.circle_fitted.center[1],p.circle_fitted.center[2]),
-            (p.circle_fitted.normal[0],p.circle_fitted.normal[1],p.circle_fitted.normal[2]),
-            p.circle_fitted.radius)
+            p.circle.radius )
 
     def get_last_observations(self,count=1):
         cdef EyeModelFitter.Pupil p
@@ -260,18 +265,11 @@ cdef class Detector_3D:
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
-            p.circle.radius,
-            (p.circle_fitted.center[0],p.circle_fitted.center[1],p.circle_fitted.center[2]),
-            (p.circle_fitted.normal[0],p.circle_fitted.normal[1],p.circle_fitted.normal[2]),
-            p.circle_fitted.radius)
-
+            p.circle.radius )
     def get_last_pupil_contours(self):
-        if self.detector_3d_ptr.pupils.size() == 0:
-            return []
 
-        cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
         contours = []
-        for contour in p.contours:
+        for contour in self.detector_3d_ptr.eye_contours:
             c = []
             for point in contour:
                 c.append([point[0],point[1],point[2]])
@@ -280,12 +278,8 @@ cdef class Detector_3D:
         return contours
 
     def get_last_pupil_edges(self):
-        if self.detector_3d_ptr.pupils.size() == 0:
-            return []
-
-        cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
         edges = []
-        for point in p.edges:
+        for point in self.detector_3d_ptr.edges:
                 edges.append([point[0],point[1],point[2]])
         return edges
 
@@ -302,12 +296,8 @@ cdef class Detector_3D:
         return positions
 
     def get_last_final_circle_contour(self):
-        if self.detector_3d_ptr.pupils.size() == 0:
-            return []
-
-        cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
         contours = []
-        for contour in p.final_circle_contours:
+        for contour in self.detector_3d_ptr.final_circle_contours:
             c = []
             for point in contour:
                 c.append([point[0],point[1],point[2]])
@@ -316,12 +306,9 @@ cdef class Detector_3D:
         return contours
 
     def get_last_final_candidate_contour(self):
-        if self.detector_3d_ptr.pupils.size() == 0:
-            return []
 
-        cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
         list_contours = []
-        for contours in p.final_candidate_contours:
+        for contours in self.detector_3d_ptr.final_candidate_contours:
             cc = []
             for contour in contours:
                 c = []
@@ -354,10 +341,6 @@ cdef class Detector_3D:
             p.params.theta,p.params.psi,p.params.radius,
             (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
-            p.circle.radius,
-            (p.circle_fitted.center[0],p.circle_fitted.center[1],p.circle_fitted.center[2]),
-            (p.circle_fitted.normal[0],p.circle_fitted.normal[1],p.circle_fitted.normal[2]),
-            p.circle_fitted.radius)
-
+            p.circle.radius )
 
     ### Debug Helper End ###
