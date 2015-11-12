@@ -163,7 +163,7 @@ cdef class Detector_3D:
             #use it to unproject contours
 
 
-        self.detector_3d_ptr.unproject_last_observation_contours()
+        self.detector_3d_ptr.unproject_observation_contours( deref(cpp_result_ptr).contours )
         #self.detector_3d_ptr.unproject_last_raw_edges()
         min_radius = self.detect_properties_3d['pupil_radius_min']
         max_radius = self.detect_properties_3d['pupil_radius_max']

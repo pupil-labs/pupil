@@ -63,7 +63,7 @@ namespace singleeyefitter {
             // Pubil-Laps addons
             //
 
-            void unproject_last_observation_contours();
+            void unproject_observation_contours( const Contours_2D& contours);
             void unproject_last_raw_edges();
 
            // void fit_circle_for_last_contour();

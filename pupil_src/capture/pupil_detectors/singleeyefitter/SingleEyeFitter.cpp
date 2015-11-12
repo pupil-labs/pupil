@@ -338,16 +338,15 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::sha
                 //bin_positions_3d.normalize();
                 bin_positions.push_back( bin_positions_3d  );
 
-              //  pupils.push_back( pupil );
+                pupils.push_back( pupil );
 
             }
         }
 
     }else{
-        //pupils.push_back( pupil );
+        pupils.push_back( pupil );
 
     }
-    pupils.push_back( pupil );
 
     return pupils.size() - 1;
 }
@@ -1170,15 +1169,13 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours( float max_res
 }
 
 
-void singleeyefitter::EyeModelFitter::unproject_last_observation_contours()
+void singleeyefitter::EyeModelFitter::unproject_observation_contours( const Contours_2D& contours)
 {
-    if (eye == Sphere::Null || pupils.size() == 0) {
+    if (eye == Sphere::Null ) {
         return;
     }
 
 
-    auto& pupil = pupils.back();
-    auto& contours = pupil.observation->contours;
     eye_contours.clear();
     eye_contours.resize(contours.size());
     int i = 0;
