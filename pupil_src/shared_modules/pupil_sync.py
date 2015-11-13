@@ -215,8 +215,7 @@ class Pupil_Sync(Plugin):
                 #     uid,name,headers,ip = cmds
                 #     logger.warning((uid,'name',headers,ip))
 
-            else:
-                print items
+            elif not items:
                 #timeout events are used for pupil sync.
                 if self.sync_master is self:
                     if self.sync_nodes:
@@ -230,6 +229,9 @@ class Pupil_Sync(Plugin):
                 elif self.sync_master:
                     t0 = self.g_pool.capture.get_timestamp()
                     n.whispers(uuid.UUID(bytes=self.sync_master),sync_time_request+'%s'%t0)
+
+            else:
+                pass
 
         logger.debug('thread_loop closing.')
         self.thread_pipe = None
