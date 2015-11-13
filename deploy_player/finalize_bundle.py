@@ -60,6 +60,11 @@ if platform.system() == 'Darwin':
     bundle_name = 'Pupil Player %s MacOS'%dpkg_deb_version()
     bundle_dmg_name = 'Install Pupil Player'
     src_dir = 'dist'
+    bundle_app_dir = os.path.join(src_dir,'Pupil Player.app/' )
+    print "Codesigning now"
+    call("codesign -s 'Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)' --deep '%s'"%bundle_app_dir,shell=True)
+    if call("spctl --assess --type execute '%s'"%bundle_app_dir,shell=True) != 0:
+        raise Exception("Codesinging  failed")
     call("ln -s /Applications/ %s/Applications"%src_dir,shell=True)
     call("hdiutil create -volname '%s' -srcfolder %s -format UDZO '%s.dmg'"%(bundle_dmg_name,src_dir,bundle_name),shell=True)
 
