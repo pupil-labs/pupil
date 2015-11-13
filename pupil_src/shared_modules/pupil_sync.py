@@ -32,8 +32,8 @@ user_event = "USREVENT:"
 
 
 # Pipe signals:
-exit_thread = "EXIT_THREAD"
-init_master_sync = "INIT_SYNC"
+exit_thread = "EXIT_THREAD".encode('utf_8')
+init_master_sync = "INIT_SYNC".encode('utf_8')
 
 '''
 Time synchonization scheme:
@@ -110,7 +110,7 @@ class Pupil_Sync(Plugin):
     def set_name(self,new_name):
         self.name = new_name
         if self.thread_pipe:
-            self.thread_pipe.send("EXIT_THREAD".encode('utf_8'))
+            self.thread_pipe.send(exit_thread)
             while self.thread_pipe:
                 sleep(.01)
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
@@ -118,7 +118,7 @@ class Pupil_Sync(Plugin):
     def set_group(self,new_name):
         self.group = new_name
         if self.thread_pipe:
-            self.thread_pipe.send("EXIT_THREAD".encode('utf_8'))
+            self.thread_pipe.send(exit_thread)
             while self.thread_pipe:
                 sleep(.01)
         self.group_members = {}
@@ -216,6 +216,7 @@ class Pupil_Sync(Plugin):
                 #     logger.warning((uid,'name',headers,ip))
 
             else:
+                print items
                 #timeout events are used for pupil sync.
                 if self.sync_master is self:
                     if self.sync_nodes:
@@ -226,7 +227,7 @@ class Pupil_Sync(Plugin):
                         self.timeout = None
                         self.sync_master = None
                         logger.info("All other Pupil nodes are sycronized.")
-                else:
+                elif self.sync_master:
                     t0 = self.g_pool.capture.get_timestamp()
                     n.whispers(uuid.UUID(bytes=self.sync_master),sync_time_request+'%s'%t0)
 
@@ -316,7 +317,7 @@ class Pupil_Sync(Plugin):
            This happens either volunatily or forced.
         """
         self.deinit_gui()
-        self.thread_pipe.send("EXIT_THREAD".encode('utf_8'))
+        self.thread_pipe.send(exit_thread)
         while self.thread_pipe:
             sleep(.01)
         self.context.destroy()
