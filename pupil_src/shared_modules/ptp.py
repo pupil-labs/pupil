@@ -42,7 +42,7 @@ class PTP_Slave(PTP_Base):
       return float(t4) - float(t3)
 
     def recv(self):
-        msg = self.server_socket.recv(self.port)
+        msg = self.server_socket.recv(4096)
         t = self.get_time()
         return (t, msg)
 
@@ -83,6 +83,7 @@ class PTP_Slave(PTP_Base):
             self.server_socket.close()
             return -1
         if(resp == "ready"):
+            logger.debug("start sync with %s:%s"%(self.master_ip,self.port))
             time.sleep(0.1) #to allow for server to get ready
             try:
                 for i in range(self.sample_count):
@@ -105,9 +106,9 @@ class PTP_Slave(PTP_Base):
             self.server_socket.close()
             return -1
 
-        print "\n\nAVG OFFSET: %sms" % str(sum(OFFSETS) * 1000 / len(OFFSETS)) + "\nAVG DELAY: %sms"% str(sum(DELAYS) * 1000 / len(DELAYS))
-        print "\n\nMIN OFFSET: %sms" % str(min(OFFSETS) * 1000) + "\nMIN DELAY: %sms"% str(min(DELAYS) * 1000)
-        print "\n\nMAX OFFSET: %sms" % str(max(OFFSETS) * 1000) + "\nMAX DELAY: %sms"% str(max(DELAYS) * 1000)
+        print "\n\nAVG OFFSET: %sms" % str(sum(offsets) * 1000 / len(offsets)) + "\nAVG DELAY: %sms"% str(sum(delays) * 1000 / len(delays))
+        print "\n\nMIN OFFSET: %sms" % str(min(offsets) * 1000) + "\nMIN DELAY: %sms"% str(min(delays) * 1000)
+        print "\n\nMAX OFFSET: %sms" % str(max(offsets) * 1000) + "\nMAX DELAY: %sms"% str(max(delays) * 1000)
         print "\nDone!"
         return 0
 
@@ -137,18 +138,18 @@ class PTP_Source(PTP_Base):
 
         logger.debug("Source binding to port: "+str(self.port))
         try:
-            self.server_socket.connect(('', self.port))
+            self.server_socket.connect(('192.168.0.105', self.port))
         except socket.error as e:
             logger.error("Error connecting to socket: " + e + ".")
             self.server_socket.close()
             return -1
 
-        self.server_socket.settimeout(2.0)
+        self.server_socket.settimeout(10.0)
 
         try:
             while self.active:
                 logger.debug("Ready to receive requests on port " + str(self.port) + "...")
-                data, addr = self.server_socket.recvfrom(self.port)
+                data, addr = self.server_socket.recvfrom(4096)
                 logger.debug("Sync request from " + addr[0])
                 if("sync" == data):
                     self.server_socket.sendto("ready", addr)
@@ -189,7 +190,7 @@ class PTP_Source(PTP_Base):
       self.send(get_time(), addr)
 
     def recv(self):
-        request = self.server_socket.recvfrom(self.port)
+        request = self.server_socket.recvfrom(4096)
         t = get_time()
         return (t, request)
 
@@ -202,8 +203,9 @@ class PTP_Source(PTP_Base):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    source = PTP_Source()
-    source.start()
-    slave = PTP_Slave('192.168.0.107')
+    # source = PTP_Source()
+    # source.start()
+    slave = PTP_Slave('192.168.1.107')
     slave.start()
     source = None
+    time.sleep(20)
