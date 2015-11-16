@@ -89,7 +89,7 @@ class Offline_Marker_Detector(Marker_Detector):
         self.img = None
 
     def init_surfaces(self):
-        self.surface_definitions = Persistent_Dict(os.path.join(g_pool.rec_dir,'surface_definitions'))
+        self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'surface_definitions'))
         if self.surface_definitions.get('offline_square_marker_surfaces',[]) != []:
             logger.debug("Found ref surfaces defined or copied in previous session.")
             self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('offline_square_marker_surfaces',[]) if isinstance(d,dict)]
