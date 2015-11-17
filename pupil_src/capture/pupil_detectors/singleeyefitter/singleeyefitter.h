@@ -105,7 +105,7 @@ namespace singleeyefitter {
             //
             // Local (single pupil) calculations
             //
-            const Circle& unproject_single_observation(Index id, double pupil_radius = 1);
+            const Circle& unproject_single_observation(Index id, double pupil_radius = 5);
             const Circle& initialise_single_observation(Index id);
             //const Circle& refine_single_with_contrast(Index id);
             //double single_contrast_metric(Index id) const;

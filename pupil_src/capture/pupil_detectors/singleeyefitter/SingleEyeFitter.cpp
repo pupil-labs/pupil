@@ -323,10 +323,21 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::sha
     // we decide here if the observation will be added
 
     if (eye != Sphere::Null) {
-        unproject_single_observation(pupil, 5);
-        initialise_single_observation(pupil);  // initialise last observation to calculate the variance of pupil center
 
-        if (pupil.circle != Circle::Null) { // initialise failed
+
+        Circle unprojected_circle = unproject_single_observation(pupil, 5); // unproject circle in 3D space, doesn't consider current eye model (cone unprojection of ellipse)
+        Circle initialised_circle = initialise_single_observation(pupil);  // initialised circle. circle parameters addapted to our current eye model
+
+        if (unprojected_circle != Circle::Null && initialised_circle != Circle::Null ) { // initialise failed
+
+            // the angle between the unprojected and the initialised circle normal tell us how good the current observation supports our current model
+            // if our model is good and the camera didn't change the perspective or so, these normals should align pretty well
+            double normals_angle = std::acos(unprojected_circle.normal.dot(initialised_circle.normal));
+
+            if(normals_angle >  0.2 ){ // detected camera slip
+                return pupils.size() - 1;
+                std::cout << "slip detected"  << std::endl;
+            }
 
 
             double psi_variance = std::pow(pupil.params.psi - psi_mean , 2);
@@ -363,9 +374,13 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::sha
                 pupils.push_back(pupil);
 
             }
+        }else{
+            std::cout << "no valid circles"  << std::endl;
         }
 
+
     } else {
+        std::cout << "add without check" << std::endl;
         pupils.push_back(pupil);
 
     }
@@ -377,8 +392,9 @@ void EyeModelFitter::reset()
 {
     std::lock_guard<std::mutex> lock_model(model_mutex);
     pupils.clear();
+    pupil_position_bins.clear();
     eye = Sphere::Null;
-    model_version++;
+    model_version = 0;
 }
 
 singleeyefitter::Circle singleeyefitter::EyeModelFitter::circleFromParams(const Sphere& eye, const PupilParams& params)
