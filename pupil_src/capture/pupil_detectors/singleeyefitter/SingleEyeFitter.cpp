@@ -249,7 +249,7 @@ void singleeyefitter::EyeModelFitter::update(std::shared_ptr<Detector_2D_Results
 
     bool should_add_observation = false;
 
-     // observations are realtive to their ROI !!!
+    // observations are realtive to their ROI !!!
     cv::Rect roi = observation->current_roi;
     int image_height = observation->image_height;
     int image_width = observation->image_width;
@@ -289,66 +289,73 @@ void singleeyefitter::EyeModelFitter::update(std::shared_ptr<Detector_2D_Results
 
 
     //check first if the observations is even strong enough to be added
-    if (observation->confidence  >=  0.9){
+    if (observation->confidence  >=  0.9) {
 
-            //if the observation is strong enough, check for other properties if it's a candidate we can use
-            if (eye != Sphere::Null) {
+        //if the observation is strong enough, check for other properties if it's a candidate we can use
+        if (eye != Sphere::Null) {
 
 
-                Circle unprojected_circle = unproject_single_observation(pupil, 5); // unproject circle in 3D space, doesn't consider current eye model (cone unprojection of ellipse)
-                Circle initialised_circle = initialise_single_observation(pupil);  // initialised circle. circle parameters addapted to our current eye model
+            Circle unprojected_circle = unproject_single_observation(pupil, 5); // unproject circle in 3D space, doesn't consider current eye model (cone unprojection of ellipse)
+            Circle initialised_circle = initialise_single_observation(pupil);  // initialised circle. circle parameters addapted to our current eye model
 
-                if (unprojected_circle != Circle::Null && initialised_circle != Circle::Null ) { // initialise failed
+            if (unprojected_circle != Circle::Null && initialised_circle != Circle::Null) {  // initialise failed
 
-                    if ( !model_support_check(unprojected_circle, initialised_circle) )
-                    {
-                       std::cout << "doesn't support current model"  << std::endl;
-                       should_add_observation = false;
-                    }
+                if (model_support_check(unprojected_circle, initialised_circle)  ) {
 
-                    if( spatial_variance_check(initialised_circle) ){
-                        std::cout << "add" << std::endl;
+                    if (  spatial_variance_check(initialised_circle)) {
                         should_add_observation = true;
+                    } else {
+                        //std::cout << " spatial check failed"  << std::endl;
                     }
 
-                }else{
-                    std::cout << "no valid circles"  << std::endl;
+                } else {
+                    std::cout << "doesn't support current model "  << std::endl;
                 }
 
+
             } else {
-                std::cout << "add without check" << std::endl;
-                should_add_observation = true;
+                std::cout << "no valid circles"  << std::endl;
             }
 
+        } else {
+            std::cout << "add without check" << std::endl;
+            should_add_observation = true;
+        }
 
-            if (should_add_observation)
-            {
+
+        if (should_add_observation) {
+            std::cout << "add" << std::endl;
 
 
-                //if the observation passed all tests we can add it
-                add_observation(observation);
-                // when ever we add a new observation we need to rebuild the eye model
-                unproject_observations();
-                initialise_model();
-            }
-    }else{ // if it's too weak we wanna try to find a better one in 3D
+            //if the observation passed all tests we can add it
+            add_observation(observation);
+            // when ever we add a new observation we need to rebuild the eye model
+            unproject_observations();
+            initialise_model();
+        }else{
 
-        unproject_observation_contours( observation->contours );
+            // if we don't add a new one we still wanna have the lates pupil parameters
+            latest_pupil_circle = std::move(pupil.circle);
+        }
+
+    } else { // if it's too weak we wanna try to find a better one in 3D
+
+        unproject_observation_contours(observation->contours);
         float min_radius = props.pupil_radius_min;
         float max_radius = props.pupil_radius_max;
         float max_residual = props.max_fit_residual;
         float max_variance = props.max_circle_variance;
         fit_circle_for_eye_contours(max_residual, max_variance, min_radius, max_radius);
-        gaze_vector = latest_pupil.normal; // need to calibrate
     }
 
 
+    gaze_vector = latest_pupil_circle.normal; // need to calibrate
 
 
 }
 
 
-singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation( const Pupil& pupil)
+singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(const Pupil& pupil)
 {
     std::lock_guard<std::mutex> lock_model(model_mutex);
     pupils.push_back(pupil);
@@ -356,7 +363,8 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation( const P
     return pupils.size() - 1;
 }
 
-bool EyeModelFitter::spatial_variance_check(const Circle&  circle){
+bool EyeModelFitter::spatial_variance_check(const Circle&  circle)
+{
 
     /* In order to check if new observations are unique (not in the same area as previous one ),
      the position on the sphere (only x,y coords) are binned  (spatial binning) an inserted into the right bin.
@@ -380,12 +388,12 @@ bool EyeModelFitter::spatial_variance_check(const Circle&  circle){
 
     Vector2 bin(x, y);
     auto search = pupil_position_bins.find(bin);
+
     if (search == pupil_position_bins.end() || search->second == false) {
 
         // there is no bin at this coord or it is empty
         // so add one
         pupil_position_bins.emplace(bin, true);
-
         double z = std::copysign(std::sqrt(1.0 - x * x - y * y),  pupil_normal.z());
         Vector3 bin_positions_3d(x , y, z); // for visualization
         bin_positions.push_back(bin_positions_3d);
@@ -396,7 +404,8 @@ bool EyeModelFitter::spatial_variance_check(const Circle&  circle){
 
 }
 
-bool EyeModelFitter::model_support_check( const Circle&  unprojected_circle, const Circle& initialised_circle ){
+bool EyeModelFitter::model_support_check(const Circle&  unprojected_circle, const Circle& initialised_circle)
+{
 
     // the angle between the unprojected and the initialised circle normal tells us how good the current observation supports our current model
     // if our model is good and the camera didn't change the perspective or so, these normals should align pretty well
@@ -404,7 +413,9 @@ bool EyeModelFitter::model_support_check( const Circle&  unprojected_circle, con
     auto n2 = initialised_circle.normal.normalized();
     double normals_angle = n1.dot(n2);
     const float support_min = 0.95;
-    if( normals_angle <  support_min ) std::cout << "n angle: " << normals_angle << std::endl;
+
+    if (normals_angle <  support_min) std::cout << "n angle: " << normals_angle << std::endl;
+
     return normals_angle >=  support_min;
 
 }
@@ -858,7 +869,7 @@ void singleeyefitter::EyeModelFitter::initialise_model()
     theta_mean /= pupils.size();
 
 
-    latest_pupil = pupils.back().circle;
+    latest_pupil_circle = pupils.back().circle;
     model_version++;
     // Try previous circle in case of bad fits
     /*EllipseGoodnessFunction<double> goodnessFunction;
@@ -1232,7 +1243,7 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours(float max_resi
     // std::cout << "residual: " <<  best_residual << std::endl;
     // std::cout << "goodness: " <<  best_goodness << std::endl;
     // std::cout << "variance: " <<  best_variance << std::endl;
-    latest_pupil = std::move(best_circle);
+    latest_pupil_circle = std::move(best_circle);
     final_circle_contours = std::move(best_solution); // save this for debuging
 
 

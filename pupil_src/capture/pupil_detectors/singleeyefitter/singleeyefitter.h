@@ -117,7 +117,7 @@ namespace singleeyefitter {
 
             // data we get each frame
             Contours3D eye_contours;
-            Circle latest_pupil;
+            Circle latest_pupil_circle;
             std::vector<Vector3> edges; // just for visualization
             Contours3D final_circle_contours; // just for visualiziation, contains all points which fit best the circle
             std::vector<Contours3D> final_candidate_contours; // just for visualiziation, contains all contours which are a candidate for the fit

@@ -154,7 +154,7 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         vector[Vector3] edges
         vector[vector[Vector3]] final_circle_contours
         vector[vector[vector[Vector3]]] final_candidate_contours
-        Circle3D[double] latest_pupil
+        Circle3D[double] latest_pupil_circle
         Vector3 gaze_vector
 
 

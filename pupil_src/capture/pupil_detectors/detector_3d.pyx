@@ -228,9 +228,9 @@ cdef class Detector_3D:
     ### Debug Helper Start ###
 
     def get_latest_pupil(self):
-        center = self.detector_3d_ptr.latest_pupil.center
-        radius = self.detector_3d_ptr.latest_pupil.radius
-        normal = self.detector_3d_ptr.latest_pupil.normal
+        center = self.detector_3d_ptr.latest_pupil_circle.center
+        radius = self.detector_3d_ptr.latest_pupil_circle.radius
+        normal = self.detector_3d_ptr.latest_pupil_circle.normal
         return [ [center[0],center[1],center[2]], radius,  [normal[0],normal[1],normal[2]] ]
 
     def get_gaze_vector(self):
