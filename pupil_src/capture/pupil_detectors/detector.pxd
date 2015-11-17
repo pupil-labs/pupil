@@ -81,6 +81,8 @@ cdef extern from 'detect_2d.hpp':
     Mat raw_edges
     Rect_[int] current_roi
     double timestamp
+    int image_width;
+    int image_height;
 
   cdef struct Detector_2D_Properties:
     int intensity_range

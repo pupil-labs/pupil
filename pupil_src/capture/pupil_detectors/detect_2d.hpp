@@ -65,7 +65,8 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 {
 	std::shared_ptr<Detector_2D_Results> result = std::make_shared<Detector_2D_Results>();
 	result->current_roi = roi;
-
+	result->image_width =  image.size().width;
+	result->image_height =  image.size().height;
 
 	const int image_width = image.size().width;
 	const int image_height = image.size().height;

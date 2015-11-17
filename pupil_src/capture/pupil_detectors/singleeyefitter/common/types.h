@@ -42,6 +42,9 @@ namespace singleeyefitter {
         std::vector<cv::Point> raw_edges;
         cv::Rect current_roi; // contains the roi for this results
         double timestamp = 0.0;
+        int image_width;
+        int image_height;
+
     };
 
     // use a struct for all properties and pass it to detect method every time we call it.

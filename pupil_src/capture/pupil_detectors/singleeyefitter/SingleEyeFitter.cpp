@@ -261,50 +261,48 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::sha
 
     // observations are realtive to their ROI !!!
     cv::Rect roi = observation->current_roi;
+    int image_height = observation->image_height;
+    int image_width = observation->image_width;
 
-    if (convert_to_eyefitter_space) {
-
-        for (Contour_2D& c : observation->final_contours) {
-            for (cv::Point& p : c) {
-                p += roi.tl();
-                p.x -= image_width * 0.5f;
-                p.y = image_height * 0.5f - p.y;
-            }
-        }
-
-        for (Contour_2D& c : observation->contours) {
-            for (cv::Point& p : c) {
-                p += roi.tl();
-                p.x -= image_width * 0.5f;
-                p.y = image_height * 0.5f - p.y;
-            }
-        }
-
-        for (cv::Point& p : observation->raw_edges) {
+    for (Contour_2D& c : observation->final_contours) {
+        for (cv::Point& p : c) {
             p += roi.tl();
             p.x -= image_width * 0.5f;
             p.y = image_height * 0.5f - p.y;
         }
-
-        Ellipse& ellipse = observation->ellipse;
-        ellipse.center[0] += roi.x;
-        ellipse.center[1] += roi.y;
-        ellipse.center[0] -= image_width * 0.5f;
-        ellipse.center[1] = image_height * 0.5f - ellipse.center[1];
-        ellipse.angle = -ellipse.angle; //take y axis flip into account
     }
 
+    for (Contour_2D& c : observation->contours) {
+        for (cv::Point& p : c) {
+            p += roi.tl();
+            p.x -= image_width * 0.5f;
+            p.y = image_height * 0.5f - p.y;
+        }
+    }
+
+    for (cv::Point& p : observation->raw_edges) {
+        p += roi.tl();
+        p.x -= image_width * 0.5f;
+        p.y = image_height * 0.5f - p.y;
+    }
+
+    Ellipse& ellipse = observation->ellipse;
+    ellipse.center[0] += roi.x;
+    ellipse.center[1] += roi.y;
+    ellipse.center[0] -= image_width * 0.5f;
+    ellipse.center[1] = image_height * 0.5f - ellipse.center[1];
+    ellipse.angle = -ellipse.angle; //take y axis flip into account
 
 
     auto pupil = Pupil(observation);
 
     // we decide here if the observation will be added
 
-    if(eye != Sphere::Null ){
+    if (eye != Sphere::Null) {
         unproject_single_observation(pupil, 5);
-        initialise_single_observation(pupil ); // initialise last observation to calculate the variance of pupil center
+        initialise_single_observation(pupil);  // initialise last observation to calculate the variance of pupil center
 
-        if( pupil.circle != Circle::Null){ // initialise failed
+        if (pupil.circle != Circle::Null) { // initialise failed
 
 
             double psi_variance = std::pow(pupil.params.psi - psi_mean , 2);
