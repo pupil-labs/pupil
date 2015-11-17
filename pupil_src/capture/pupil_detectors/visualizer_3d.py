@@ -333,12 +333,11 @@ class Visualizer(object):
 		glViewport(0,0, self.window_size[0], self.window_size[1])
 
 
-	def draw_eye_model_fitter_text(self, eye, pupil, circle_fitted ):
+	def draw_eye_model_fitter_text(self, eye, gaze_vector, pupil_radius  ):
 
-		status = ' Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\n Gaze vector unprojected (currently WRONG):  X%.2f Y%.2f Z%.2f\n Pupil Diameter unprojected: %.2fmm\n Gaze vector fitted (currently WRONG):  X%.2f Y%.2f Z%.2f\n Pupil Diameter fitted: %.2fmm\n ' \
+		status = ' Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\n Gaze vector (currently WRONG):  X%.2f Y%.2f Z%.2f\n Pupil Diameter: %.2fmm\n  ' \
 		%(eye[0][0], eye[0][1],eye[0][2],
-		pupil.circle_normal[0], pupil.circle_normal[1],pupil.circle_normal[2], pupil.params_radius*2,
-		circle_fitted[2][0], circle_fitted[2][1],circle_fitted[2][2], circle_fitted[1]*2)
+		gaze_vector[0], gaze_vector[1],gaze_vector[2], pupil_radius*2)
 		self.glfont.draw_multi_line_text(5,20,status)
 		self.glfont.draw_multi_line_text(440,20,'View: %.2f %.2f %.2f'%(self.trackball.distance[0],self.trackball.distance[1],self.trackball.distance[2]))
 
@@ -422,8 +421,7 @@ class Visualizer(object):
 			self.image_width = image_width # reassign in case the image size got changed during running
 			self.image_height = image_height
 
-		pupil_observations = detector_3D.get_last_observations(1)
-		circle_fitted = detector_3D.get_circle_fitted()
+		latest_pupil = detector_3D.get_latest_pupil()
 		last_unprojected_contours =  detector_3D.get_last_pupil_contours()
 		final_circle_contours = detector_3D.get_last_final_circle_contour()
 		#last_pupil_edges = detector_3D.get_last_pupil_edges()
@@ -441,7 +439,7 @@ class Visualizer(object):
 
 		self.draw_sphere(eye_position,eye_radius)
 
-		self.draw_circle( circle_fitted[0], circle_fitted[1], circle_fitted[2], RGBA(0.0,1.0,1.0,0.4))
+		self.draw_circle( latest_pupil[0], latest_pupil[1], latest_pupil[2], RGBA(0.0,1.0,1.0,0.4))
 
 
 		#draw unprojecte contours
@@ -485,10 +483,9 @@ class Visualizer(object):
 		self.trackball.pop()
 		#if last_unwrapped_contours:
 		#	self.draw_unwrapped_contours_on_screen(last_unwrapped_contours)
-
-		pupil = pupil_observations.next()
-		if pupil:
-			self.draw_eye_model_fitter_text(eye, pupil,circle_fitted)
+		gaze_vector = detector_3D.get_gaze_vector()
+		pupil_radius = latest_pupil[1]
+		self.draw_eye_model_fitter_text(eye, gaze_vector,pupil_radius)
 
 		glfwSwapBuffers(self._window)
 		glfwPollEvents()

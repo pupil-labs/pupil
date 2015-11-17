@@ -37,9 +37,9 @@ namespace singleeyefitter {
         typedef singleeyefitter::Ellipse2D<double> Ellipse;
         double confidence =  0.0 ;
         Ellipse ellipse;
-        Contours_2D final_contours;
+        //Contours_2D final_contours;
         Contours_2D contours;
-        std::vector<cv::Point> raw_edges;
+        //std::vector<cv::Point> raw_edges;
         cv::Rect current_roi; // contains the roi for this results
         double timestamp = 0.0;
         int image_width;
@@ -67,6 +67,13 @@ namespace singleeyefitter {
         float final_perimeter_ratio_range_min;
         float final_perimeter_ratio_range_max;
         float ellipse_true_support_min_dist;
+
+    };
+    struct Detector_3D_Properties {
+        float max_fit_residual;
+        float max_circle_variance;
+        float pupil_radius_min;
+        float pupil_radius_max;
 
     };
 

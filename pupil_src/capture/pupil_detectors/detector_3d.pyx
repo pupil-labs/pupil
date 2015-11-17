@@ -158,15 +158,9 @@ cdef class Detector_3D:
 
         ######### 3D Model Part ############
 
-        self.detector_3d_ptr.update( cpp_result_ptr )
+        self.detector_3d_ptr.update( cpp_result_ptr , self.detect_properties_3d)
 
-        self.detector_3d_ptr.unproject_observation_contours( deref(cpp_result_ptr).contours )
         #self.detector_3d_ptr.unproject_last_raw_edges()
-        min_radius = self.detect_properties_3d['pupil_radius_min']
-        max_radius = self.detect_properties_3d['pupil_radius_max']
-        max_residual = self.detect_properties_3d['max_fit_residual']
-        max_variance = self.detect_properties_3d['max_circle_variance']
-        self.detector_3d_ptr.fit_circle_for_eye_contours(max_residual, max_variance, min_radius, max_radius)
 
         if self.debug_visualizer_3d._window:
             eye = self.detector_3d_ptr.eye
@@ -233,11 +227,15 @@ cdef class Detector_3D:
 
     ### Debug Helper Start ###
 
-    def get_circle_fitted(self):
-        center = self.detector_3d_ptr.circle_fitted.center
-        radius = self.detector_3d_ptr.circle_fitted.radius
-        normal = self.detector_3d_ptr.circle_fitted.normal
+    def get_latest_pupil(self):
+        center = self.detector_3d_ptr.latest_pupil.center
+        radius = self.detector_3d_ptr.latest_pupil.radius
+        normal = self.detector_3d_ptr.latest_pupil.normal
         return [ [center[0],center[1],center[2]], radius,  [normal[0],normal[1],normal[2]] ]
+
+    def get_gaze_vector(self):
+        gaze = self.detector_3d_ptr.gaze_vector
+        return [gaze[0],gaze[1],gaze[2]]
 
     def get_observation(self,index):
         cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils[index]
@@ -250,19 +248,21 @@ cdef class Detector_3D:
             (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
             p.circle.radius )
 
-    def get_last_observations(self,count=1):
+    def get_last_observation(self ):
         cdef EyeModelFitter.Pupil p
-        count = min(self.detector_3d_ptr.pupils.size() , count )
-        cdef Detector_2D_Results observation
-        for i in xrange(self.detector_3d_ptr.pupils.size()-count,self.detector_3d_ptr.pupils.size()):
-            p = self.detector_3d_ptr.pupils[i]
-            observation = deref(p.observation)
+        if self.detector_3d_ptr.pupils.size() == 0:
+            return []
 
-            yield  PyObservation( (observation.ellipse.center[0],observation.ellipse.center[1]), observation.ellipse.major_radius,observation.ellipse.minor_radius,observation.ellipse.angle,
-            p.params.theta,p.params.psi,p.params.radius,
-            (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
-            (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
-            p.circle.radius )
+        cdef Detector_2D_Results observation
+        p = self.detector_3d_ptr.pupils.back()
+        observation = deref(p.observation)
+
+        PyObservation( (observation.ellipse.center[0],observation.ellipse.center[1]), observation.ellipse.major_radius,observation.ellipse.minor_radius,observation.ellipse.angle,
+        p.params.theta,p.params.psi,p.params.radius,
+        (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
+        (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
+        p.circle.radius )
+
     def get_last_pupil_contours(self):
 
         contours = []

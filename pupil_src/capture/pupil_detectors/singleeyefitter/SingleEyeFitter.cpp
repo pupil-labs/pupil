@@ -242,59 +242,26 @@ singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length, double regi
 //     return pupils.size() - 1;
 // }
 
-void singleeyefitter::EyeModelFitter::update(std::shared_ptr<Detector_2D_Results>& observation)
+void singleeyefitter::EyeModelFitter::update(std::shared_ptr<Detector_2D_Results>& observation, Detector_3D_Properties& props)
 {
 
 
-    //check first if the observations is even strong enough to be added
-    if (observation->confidence  <  0.9)
-        return; // too weak
 
+    bool should_add_observation = false;
 
-    //if the observation is strong enough, check for other properties if it's a candidate we can you
-
-
-
-
-    //if the observation passed all tests we can add it
-    add_observation(observation);
-    // when ever we add a new observation we need to rebuild the eye model
-    unproject_observations();
-    initialise_model();
-
-
-
-}
-
-
-singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::shared_ptr<Detector_2D_Results>& observation)
-{
-    std::lock_guard<std::mutex> lock_model(model_mutex);
-
-    while (pupils.size() >= max_pupils) pupils.pop_front();
-
-    // uint i = 0;
-    // for( auto* contour : contour_ptrs){
-    //     uint length = contour_sizes.at(i);
-    //     for( int k = 0; k<length; k+=2){
-    //         std::cout << "[" << contour[k] << ","<< contour[k+1] << "] " ;
-    //     }
-    //     std::cout << std::endl;
-    //     i++;
-    // }
-
-    // observations are realtive to their ROI !!!
+     // observations are realtive to their ROI !!!
     cv::Rect roi = observation->current_roi;
     int image_height = observation->image_height;
     int image_width = observation->image_width;
 
-    for (Contour_2D& c : observation->final_contours) {
-        for (cv::Point& p : c) {
-            p += roi.tl();
-            p.x -= image_width * 0.5f;
-            p.y = image_height * 0.5f - p.y;
-        }
-    }
+    // for the beginning it's enought to convert just the ellipse
+    // if the tests are passed the contours are also converted
+    Ellipse& ellipse = observation->ellipse;
+    ellipse.center[0] += roi.x;
+    ellipse.center[1] += roi.y;
+    ellipse.center[0] -= image_width * 0.5f;
+    ellipse.center[1] = image_height * 0.5f - ellipse.center[1];
+    ellipse.angle = -ellipse.angle; //take y axis flip into account
 
     for (Contour_2D& c : observation->contours) {
         for (cv::Point& p : c) {
@@ -304,88 +271,142 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(std::sha
         }
     }
 
-    for (cv::Point& p : observation->raw_edges) {
-        p += roi.tl();
-        p.x -= image_width * 0.5f;
-        p.y = image_height * 0.5f - p.y;
-    }
+    // for (Contour_2D& c : observation->final_contours) {
+    //     for (cv::Point& p : c) {
+    //         p += roi.tl();
+    //         p.x -= image_width * 0.5f;
+    //         p.y = image_height * 0.5f - p.y;
+    //     }
+    // }
 
-    Ellipse& ellipse = observation->ellipse;
-    ellipse.center[0] += roi.x;
-    ellipse.center[1] += roi.y;
-    ellipse.center[0] -= image_width * 0.5f;
-    ellipse.center[1] = image_height * 0.5f - ellipse.center[1];
-    ellipse.angle = -ellipse.angle; //take y axis flip into account
-
+    // for (cv::Point& p : observation->raw_edges) {
+    //     p += roi.tl();
+    //     p.x -= image_width * 0.5f;
+    //     p.y = image_height * 0.5f - p.y;
+    // }
 
     auto pupil = Pupil(observation);
 
-    // we decide here if the observation will be added
 
-    if (eye != Sphere::Null) {
+    //check first if the observations is even strong enough to be added
+    if (observation->confidence  >=  0.9){
+
+            //if the observation is strong enough, check for other properties if it's a candidate we can use
+            if (eye != Sphere::Null) {
 
 
-        Circle unprojected_circle = unproject_single_observation(pupil, 5); // unproject circle in 3D space, doesn't consider current eye model (cone unprojection of ellipse)
-        Circle initialised_circle = initialise_single_observation(pupil);  // initialised circle. circle parameters addapted to our current eye model
+                Circle unprojected_circle = unproject_single_observation(pupil, 5); // unproject circle in 3D space, doesn't consider current eye model (cone unprojection of ellipse)
+                Circle initialised_circle = initialise_single_observation(pupil);  // initialised circle. circle parameters addapted to our current eye model
 
-        if (unprojected_circle != Circle::Null && initialised_circle != Circle::Null ) { // initialise failed
+                if (unprojected_circle != Circle::Null && initialised_circle != Circle::Null ) { // initialise failed
 
-            // the angle between the unprojected and the initialised circle normal tell us how good the current observation supports our current model
-            // if our model is good and the camera didn't change the perspective or so, these normals should align pretty well
-            double normals_angle = std::acos(unprojected_circle.normal.dot(initialised_circle.normal));
+                    if ( !model_support_check(unprojected_circle, initialised_circle) )
+                    {
+                       std::cout << "doesn't support current model"  << std::endl;
+                       should_add_observation = false;
+                    }
 
-            if(normals_angle >  0.2 ){ // detected camera slip
-                return pupils.size() - 1;
-                std::cout << "slip detected"  << std::endl;
+                    if( spatial_variance_check(initialised_circle) ){
+                        std::cout << "add" << std::endl;
+                        should_add_observation = true;
+                    }
+
+                }else{
+                    std::cout << "no valid circles"  << std::endl;
+                }
+
+            } else {
+                std::cout << "add without check" << std::endl;
+                should_add_observation = true;
             }
 
 
-            double psi_variance = std::pow(pupil.params.psi - psi_mean , 2);
-            double theta_variance = std::pow(pupil.params.theta - theta_mean , 2);
+            if (should_add_observation)
+            {
 
-            //std::cout << "psi variance: " <<  psi_variance<< std::endl;
-            //std::cout << "theta variance: " <<  theta_variance<< std::endl;
 
-            int bin_amount = 20;
-            Vector3 pupil_normal =  pupil.circle.normal; // the same as a vector from unit sphere center to the pupil center
-
-            double bin_width = 1.0 / bin_amount;
-            // calculate bin
-            // values go from -1 to 1
-            double x = pupil_normal.x();//+1.0;// map them to [0,2]
-            double y = pupil_normal.y();//+1.0;
-            x = math::round(x , bin_width);
-            y = math::round(y , bin_width);
-
-            Vector2 bin(x, y);
-            auto search = pupil_position_bins.find(bin);
-
-            if (search == pupil_position_bins.end() || search->second == false) {
-
-                // there is no bin at this coord or it is empty
-                // so add one
-                pupil_position_bins.emplace(bin, true);
-                double z = std::copysign(std::sqrt(1.0 - x * x - y * y),  pupil_normal.z());
-
-                Vector3 bin_positions_3d(x , y, z);
-                //bin_positions_3d.normalize();
-                bin_positions.push_back(bin_positions_3d);
-
-                pupils.push_back(pupil);
-
+                //if the observation passed all tests we can add it
+                add_observation(observation);
+                // when ever we add a new observation we need to rebuild the eye model
+                unproject_observations();
+                initialise_model();
             }
-        }else{
-            std::cout << "no valid circles"  << std::endl;
-        }
+    }else{ // if it's too weak we wanna try to find a better one in 3D
 
-
-    } else {
-        std::cout << "add without check" << std::endl;
-        pupils.push_back(pupil);
-
+        unproject_observation_contours( observation->contours );
+        float min_radius = props.pupil_radius_min;
+        float max_radius = props.pupil_radius_max;
+        float max_residual = props.max_fit_residual;
+        float max_variance = props.max_circle_variance;
+        fit_circle_for_eye_contours(max_residual, max_variance, min_radius, max_radius);
+        gaze_vector = latest_pupil.normal; // need to calibrate
     }
 
+
+
+
+}
+
+
+singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation( const Pupil& pupil)
+{
+    std::lock_guard<std::mutex> lock_model(model_mutex);
+    pupils.push_back(pupil);
+    std::cout << "pupil size: " << pupils.size() << std::endl;
     return pupils.size() - 1;
+}
+
+bool EyeModelFitter::spatial_variance_check(const Circle&  circle){
+
+    /* In order to check if new observations are unique (not in the same area as previous one ),
+     the position on the sphere (only x,y coords) are binned  (spatial binning) an inserted into the right bin.
+     !! This is not a correct method to check if they are uniformly distibuted, because if x,y are uniformly distibuted
+     it doesn't mean points on the spehre are uniformly distibuted.
+     To uniformly distribute points on a sphere you have to check if the area is equal on the sphere of two bins.
+     We just look on half of the sphere, it's like projecting a checkboard grid on the sphere, thus the bins are more dense in the projection center,
+     and less dense further back.
+     Still it gives good results an works for our purpose
+    */
+    const int BIN_AMOUNTS = 20;
+    Vector3 pupil_normal =  circle.normal; // the same as a vector from unit sphere center to the pupil center
+
+    const double bin_width = 1.0 / BIN_AMOUNTS;
+    // calculate bin
+    // values go from -1 to 1
+    double x = pupil_normal.x();
+    double y = pupil_normal.y();
+    x = math::round(x , bin_width);
+    y = math::round(y , bin_width);
+
+    Vector2 bin(x, y);
+    auto search = pupil_position_bins.find(bin);
+    if (search == pupil_position_bins.end() || search->second == false) {
+
+        // there is no bin at this coord or it is empty
+        // so add one
+        pupil_position_bins.emplace(bin, true);
+
+        double z = std::copysign(std::sqrt(1.0 - x * x - y * y),  pupil_normal.z());
+        Vector3 bin_positions_3d(x , y, z); // for visualization
+        bin_positions.push_back(bin_positions_3d);
+        return true;
+    }
+
+    return false;
+
+}
+
+bool EyeModelFitter::model_support_check( const Circle&  unprojected_circle, const Circle& initialised_circle ){
+
+    // the angle between the unprojected and the initialised circle normal tells us how good the current observation supports our current model
+    // if our model is good and the camera didn't change the perspective or so, these normals should align pretty well
+    auto n1 = unprojected_circle.normal.normalized();
+    auto n2 = initialised_circle.normal.normalized();
+    double normals_angle = n1.dot(n2);
+    const float support_min = 0.95;
+    if( normals_angle <  support_min ) std::cout << "n angle: " << normals_angle << std::endl;
+    return normals_angle >=  support_min;
+
 }
 
 void EyeModelFitter::reset()
@@ -393,6 +414,7 @@ void EyeModelFitter::reset()
     std::lock_guard<std::mutex> lock_model(model_mutex);
     pupils.clear();
     pupil_position_bins.clear();
+    bin_positions.clear();
     eye = Sphere::Null;
     model_version = 0;
 }
@@ -835,6 +857,8 @@ void singleeyefitter::EyeModelFitter::initialise_model()
     psi_mean /= pupils.size();
     theta_mean /= pupils.size();
 
+
+    latest_pupil = pupils.back().circle;
     model_version++;
     // Try previous circle in case of bad fits
     /*EllipseGoodnessFunction<double> goodnessFunction;
@@ -1208,7 +1232,7 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours(float max_resi
     // std::cout << "residual: " <<  best_residual << std::endl;
     // std::cout << "goodness: " <<  best_goodness << std::endl;
     // std::cout << "variance: " <<  best_variance << std::endl;
-    circle_fitted = std::move(best_circle);
+    latest_pupil = std::move(best_circle);
     final_circle_contours = std::move(best_solution); // save this for debuging
 
 
@@ -1246,31 +1270,31 @@ void singleeyefitter::EyeModelFitter::unproject_observation_contours(const Conto
     }
 
 }
-void singleeyefitter::EyeModelFitter::unproject_last_raw_edges()
-{
-    if (eye == Sphere::Null || pupils.size() == 0) {
-        return;
-    }
+// void singleeyefitter::EyeModelFitter::unproject_last_raw_edges()
+// {
+//     if (eye == Sphere::Null || pupils.size() == 0) {
+//         return;
+//     }
 
 
-    auto& pupil = pupils.back();
-    auto& raw_edges = pupil.observation->raw_edges;
-    edges.clear();
-    edges.resize(edges.size());
-    int i = 0;
+//     auto& pupil = pupils.back();
+//     auto& raw_edges = pupil.observation->raw_edges;
+//     edges.clear();
+//     edges.resize(edges.size());
+//     int i = 0;
 
-    for (auto& point : raw_edges) {
-        Vector3 point_3d(point.x, point.y , focal_length);
-        Vector3 direction = point_3d - camera_center;
+//     for (auto& point : raw_edges) {
+//         Vector3 point_3d(point.x, point.y , focal_length);
+//         Vector3 direction = point_3d - camera_center;
 
-        try {
-            // we use the eye properties of the current eye, when ever we call this
-            const auto& unprojected_point = intersect(Line3(camera_center,  direction.normalized()), eye);
-            edges.push_back(std::move(unprojected_point.first));
+//         try {
+//             // we use the eye properties of the current eye, when ever we call this
+//             const auto& unprojected_point = intersect(Line3(camera_center,  direction.normalized()), eye);
+//             edges.push_back(std::move(unprojected_point.first));
 
-        } catch (no_intersection_exception&) {
-            // if there is no intersection we don't do anything
-        }
-    }
+//         } catch (no_intersection_exception&) {
+//             // if there is no intersection we don't do anything
+//         }
+//     }
 
-}
+// }

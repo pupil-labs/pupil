@@ -29,6 +29,24 @@ namespace singleeyefitter {
             double region_step_epsilon;
             double region_scale;
 
+            struct PupilParams {
+                double theta, psi, radius;
+                PupilParams();
+                PupilParams(double theta, double psi, double radius);
+            };
+            struct Pupil {
+                //Observation observation;
+                std::shared_ptr<Detector_2D_Results> observation;
+                Circle circle; // this one is the unprojected circle
+                double fit_goodness;
+                PupilParams params;
+                bool init_valid;
+                bool processed; // indicate if this pupil is already processed
+                Pupil();
+                Pupil(std::shared_ptr<Detector_2D_Results> observation);
+                //Pupil(Ellipse ellipse);
+            };
+
             // Constructors
             EyeModelFitter();
             EyeModelFitter(double focal_length, double region_band_width, double region_step_epsilon);
@@ -36,7 +54,7 @@ namespace singleeyefitter {
             // Index add_observation(cv::Mat image, Ellipse pupil, int n_pseudo_inliers = 0);
             // Index add_observation(cv::Mat image, Ellipse pupil, std::vector<cv::Point2f> pupil_inliers);
             //Index add_observation( Ellipse pupil );
-            Index add_observation( std::shared_ptr<Detector_2D_Results>& observation  );
+            Index add_observation( const Pupil& pupil );
             /*
                 contours contains pointers to memory location of each contour
                 contour_sizes contains the size of the corresponded contour, so we know how much memory we can claim on the c++ side
@@ -65,42 +83,17 @@ namespace singleeyefitter {
 
             // this is called with new observations from the 2D detector
             // it decides what happens ,since not all observations are added
-            void update( std::shared_ptr<Detector_2D_Results>& observation );
+            void update( std::shared_ptr<Detector_2D_Results>& observation, Detector_3D_Properties& props );
 
-            void unproject_observation_contours( const Contours_2D& contours);
-            void unproject_last_raw_edges();
+            //void unproject_last_raw_edges();
 
            // void fit_circle_for_last_contour();
-            void fit_circle_for_eye_contours( float max_residual = 20, float max_variance = 0.7, float min_radius = 2, float max_radius = 4 );
 
-            // struct Observation {
-            //     //cv::Mat image;
-            //     Ellipse ellipse;
-            //     //std::vector<cv::Point2f> inliers;
-            //     std::vector<std::vector<cv::Point2i>> contours;
-            //     //std::vector<std::vector<int32_t>> contours;
-            //     Observation();
-            //     Observation(/*cv::Mat image,*/ Ellipse ellipse/*, std::vector<cv::Point2f> inliers*/,  std::vector<std::vector<cv::Point2i>> contours);
-            //     Observation( std::shared_ptr<Detector_2D_Results> observation, );
-            // };
+        //private:
 
-            struct PupilParams {
-                double theta, psi, radius;
-                PupilParams();
-                PupilParams(double theta, double psi, double radius);
-            };
-            struct Pupil {
-                //Observation observation;
-                std::shared_ptr<Detector_2D_Results> observation;
-                Circle circle; // this one is the unprojected circle
-                double fit_goodness;
-                PupilParams params;
-                bool init_valid;
-                bool processed; // indicate if this pupil is already processed
-                Pupil();
-                Pupil(std::shared_ptr<Detector_2D_Results> observation);
-                //Pupil(Ellipse ellipse);
-            };
+            bool spatial_variance_check( const Circle&  circle );
+            bool model_support_check( const Circle&  unprojected_circle, const Circle& initialised_circle );
+
 
             //
             // Local (single pupil) calculations
@@ -124,20 +117,19 @@ namespace singleeyefitter {
 
             // data we get each frame
             Contours3D eye_contours;
-            Circle circle_fitted;  // this is the circle fitted form the unprojected contours
+            Circle latest_pupil;
             std::vector<Vector3> edges; // just for visualization
             Contours3D final_circle_contours; // just for visualiziation, contains all points which fit best the circle
             std::vector<Contours3D> final_candidate_contours; // just for visualiziation, contains all contours which are a candidate for the fit
+            Vector3 gaze_vector;
+
+            void unproject_observation_contours( const Contours_2D& contours);
+            //void unproject_last_raw_edges();
+            void fit_circle_for_eye_contours( float max_residual = 20, float max_variance = 0.7, float min_radius = 2, float max_radius = 4 );
 
 
-            // in order to check if new observations are unique  (not in the same area as previous one )
-            // the position on the speher (only x,y coords) are binned  (spatial binning) an inserted into the right bin
-            // !! this is not a correct method to check if they are uniformly distibuted, because if x,y are uniformly distibuted
-            // it doesn't mean points on the spehre are uniformly distibuted
-            // to uniformly distibute points on a sphere you have to check if the area is equal on the sphere of two bins
-            // and we just look on have the sphere, it's like projecting a checkboard grid on the sphere
             std::unordered_map<Vector2, bool, math::matrix_hash<Vector2>> pupil_position_bins;
-            std::vector<Vector3> bin_positions; // for debuging
+            std::vector<Vector3> bin_positions; // for visualization
 
             const Circle& unproject_single_observation(Pupil& pupil, double pupil_radius = 1) const;
             const Circle& initialise_single_observation(Pupil& pupil);
