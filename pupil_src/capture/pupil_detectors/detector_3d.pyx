@@ -152,16 +152,7 @@ cdef class Detector_3D:
 
         ######### 3D Model Part ############
 
-        if py_result['confidence'] > 0.9 and not pause:
-
-            self.detector_3d_ptr.add_observation( cpp_result_ptr, image_width, image_height , True  ) # if true is set, add_conversation converts the data to the coord space of the eye fitter
-            pupil_radius = 5
-            eye_z = 57
-            self.detector_3d_ptr.unproject_observations(pupil_radius, eye_z)
-            self.detector_3d_ptr.initialise_model()
-            #now we have an updated eye model
-            #use it to unproject contours
-
+        self.detector_3d_ptr.update( cpp_result_ptr )
 
         self.detector_3d_ptr.unproject_observation_contours( deref(cpp_result_ptr).contours )
         #self.detector_3d_ptr.unproject_last_raw_edges()

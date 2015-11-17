@@ -115,13 +115,14 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
 
     cdef cppclass EyeModelFitter:
         EyeModelFitter(double focal_length, double x_disp, double y_disp)
+        void update(  shared_ptr[Detector_2D_Results]& results )
         # EyeModelFitter(double focal_length)
         void reset()
-        void initialise_model()
-        void unproject_observations(double pupil_radius, double eye_z )
+        #void initialise_model()
+        #void unproject_observations(double pupil_radius, double eye_z )
         #void add_observation( Ellipse2D[double] ellipse)
         #void add_observation( Ellipse2D[double] ellipse, vector[int32_t*] contours , vector[size_t] sizes )
-        void add_observation(  shared_ptr[Detector_2D_Results]& results, int width, int height, bint convert_to_eyefitter_space )
+        #void add_observation(  shared_ptr[Detector_2D_Results]& results, int width, int height, bint convert_to_eyefitter_space )
 
         #######################
         ## Pubil-Laps addons ##

@@ -36,7 +36,7 @@ namespace singleeyefitter {
             // Index add_observation(cv::Mat image, Ellipse pupil, int n_pseudo_inliers = 0);
             // Index add_observation(cv::Mat image, Ellipse pupil, std::vector<cv::Point2f> pupil_inliers);
             //Index add_observation( Ellipse pupil );
-            Index add_observation( std::shared_ptr<Detector_2D_Results>& observation , int image_width = 640, int image_height = 480, bool convert_to_eyefitter_space = true );
+            Index add_observation( std::shared_ptr<Detector_2D_Results>& observation  );
             /*
                 contours contains pointers to memory location of each contour
                 contour_sizes contains the size of the corresponded contour, so we know how much memory we can claim on the c++ side
@@ -48,7 +48,7 @@ namespace singleeyefitter {
             // Global (eye+pupils) calculations
             //
 
-            void unproject_observations(double pupil_radius = 1, double eye_z = 20, bool use_ransac = true);
+            void unproject_observations(double pupil_radius = 5, double eye_z = 57, bool use_ransac = true);
 
             void initialise_model();
 
@@ -62,6 +62,10 @@ namespace singleeyefitter {
             //
             // Pubil-Laps addons
             //
+
+            // this is called with new observations from the 2D detector
+            // it decides what happens ,since not all observations are added
+            void update( std::shared_ptr<Detector_2D_Results>& observation );
 
             void unproject_observation_contours( const Contours_2D& contours);
             void unproject_last_raw_edges();
