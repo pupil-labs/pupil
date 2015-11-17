@@ -25,6 +25,13 @@ auto euclidean_distance(const Eigen::MatrixBase<Derived>& point,
     return ((line.origin() - point) - ((line.origin() - point).dot(line.direction())) * line.direction()).norm();
 }
 
+template<class Derived>
+auto euclidean_distance_squared(const Eigen::MatrixBase<Derived>& point,
+                        const Eigen::ParametrizedLine<typename Derived::Scalar, Derived::SizeAtCompileTime>& line) -> decltype(point.norm())
+{
+    return ((line.origin() - point) - ((line.origin() - point).dot(line.direction())) * line.direction()).squaredNorm();
+}
+
 template<typename Scalar, int Dim>
 Scalar euclidean_distance(const Eigen::Matrix<Scalar, Dim, 1>& p, const Eigen::Matrix<Scalar, Dim, 1>& v, const Eigen::Matrix<Scalar, Dim, 1>& w)
 {

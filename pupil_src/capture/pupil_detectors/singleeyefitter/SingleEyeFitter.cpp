@@ -857,13 +857,19 @@ void singleeyefitter::EyeModelFitter::initialise_model()
     eye.radius = 12.0;
     eye.center *= scale;
 
-
+    double center_distance_variance = 0;
     for (auto& pupil : pupils) {
         pupil.params.radius *= scale;
         pupil.circle = circleFromParams(pupil.params);
         psi_mean += pupil.params.psi;
         theta_mean += pupil.params.theta;
+
+         // calculate the center variance of the projected gaze vectors to the current eye center
+        center_distance_variance += euclidean_distance_squared( eye.center, Line3(pupil.circle.center, pupil.unprojected_circle.normal ) );
     }
+
+    center_distance_variance /= eye_radius_count;
+    std::cout << "center distance variance " << center_distance_variance << std::endl;
 
     psi_mean /= pupils.size();
     theta_mean /= pupils.size();
@@ -1049,7 +1055,15 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
             } else {
                 pupils[i].circle = std::move(pupil_pair.second);
             }
+
+             pupils[i].unprojected_circle = pupils[i].circle; // keep track of the unprojected one
+
+            // calculate the center variance of the projected gaze vectors to the current eye center
+          //  center_distance_variance += euclidean_distance_squared( eye.center, Line3(pupils[i].circle.center, pupils[i].circle.normal ) );
+
         }
+        //center_distance_variance /= pupils.size();
+        //std::cout << "center distance variance " << center_distance_variance << std::endl;
 
     } else {
         // No inliers, so no eye
