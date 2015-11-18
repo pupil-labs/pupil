@@ -215,6 +215,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 			//result->final_contours = std::move(best_contours); // no contours when strong prior
 			//result->contours = std::move(split_contours);
 			//result->raw_edges = std::move(raw_edges); // do we need it when strong prior ?
+			result->final_edges = std::move(support_pixels);
 	      	return result;
 	    }
 	  }
@@ -530,6 +531,7 @@ std::shared_ptr<Detector_2D_Results> Detector2D::detect(Detector_2D_Properties& 
 	result->ellipse = toEllipse<double>(cv_final_Ellipse);
 	//result->final_contours = std::move(best_contours);
 	result->contours = std::move(split_contours);
+	result->final_edges = std::move(final_edges);
 	//result->raw_edges = std::move(raw_edges);
 	return result;
 }

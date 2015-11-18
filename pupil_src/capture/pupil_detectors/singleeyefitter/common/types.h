@@ -39,6 +39,7 @@ namespace singleeyefitter {
         Ellipse ellipse;
         //Contours_2D final_contours;
         Contours_2D contours;
+        std::vector<cv::Point> final_edges; // edges used to fit the final ellipse in 2D
         //std::vector<cv::Point> raw_edges;
         cv::Rect current_roi; // contains the roi for this results
         double timestamp = 0.0;
