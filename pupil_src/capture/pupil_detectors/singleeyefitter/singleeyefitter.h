@@ -74,9 +74,9 @@ namespace singleeyefitter {
 
             typedef std::function<void(const Sphere&, const std::vector<Circle>&)> CallbackFunction;
 
-            void refine_with_region_contrast(const CallbackFunction& callback = CallbackFunction());
+            //void refine_with_region_contrast(const CallbackFunction& callback = CallbackFunction());
 
-            void refine_with_inliers(const CallbackFunction& callback = CallbackFunction());
+            void refine_with_edges(const CallbackFunction& callback = CallbackFunction());
 
             //
             // Pubil-Laps addons

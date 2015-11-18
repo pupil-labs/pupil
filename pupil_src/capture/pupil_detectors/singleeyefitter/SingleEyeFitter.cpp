@@ -285,6 +285,12 @@ void singleeyefitter::EyeModelFitter::update(std::shared_ptr<Detector_2D_Results
     //     p.y = image_height * 0.5f - p.y;
     // }
 
+    for (cv::Point& p : observation->final_edges) {
+        p += roi.tl();
+        p.x -= image_width * 0.5f;
+        p.y = image_height * 0.5f - p.y;
+    }
+
     auto pupil = Pupil(observation);
 
 
@@ -301,7 +307,7 @@ void singleeyefitter::EyeModelFitter::update(std::shared_ptr<Detector_2D_Results
             if (unprojected_circle != Circle::Null && initialised_circle != Circle::Null) {  // initialise failed
 
                 double support = model_support(unprojected_circle, initialised_circle);
-                //std::cout << "support: " << support  << std::endl;
+                std::cout << "support: " << support  << std::endl;
                 if ( support > 0.97  ) {
 
                     if (  spatial_variance_check(initialised_circle)) {
@@ -326,7 +332,7 @@ void singleeyefitter::EyeModelFitter::update(std::shared_ptr<Detector_2D_Results
 
 
         if (should_add_observation) {
-            std::cout << "add" << std::endl;
+            //std::cout << "add" << std::endl;
 
 
             //if the observation passed all tests we can add it
@@ -334,6 +340,16 @@ void singleeyefitter::EyeModelFitter::update(std::shared_ptr<Detector_2D_Results
             // when ever we add a new observation we need to rebuild the eye model
             unproject_observations();
             initialise_model();
+
+            // update model every 50 new pupils
+            if(model_version % 50  == 0){
+                std::cout << "-----------refine model"  << std::endl;
+                std::cout << "-----------prev eye: " << eye << std::endl;
+                refine_with_edges();
+                std::cout << "-----------new eye: " << eye << std::endl;
+
+            }
+
         }else{
 
             // if we don't add a new one we still wanna have the lates pupil parameters
@@ -361,7 +377,7 @@ singleeyefitter::Index singleeyefitter::EyeModelFitter::add_observation(const Pu
 {
     std::lock_guard<std::mutex> lock_model(model_mutex);
     pupils.push_back(pupil);
-    std::cout << "pupil size: " << pupils.size() << std::endl;
+    //std::cout << "pupil size: " << pupils.size() << std::endl;
     return pupils.size() - 1;
 }
 
@@ -631,92 +647,92 @@ const singleeyefitter::Circle& singleeyefitter::EyeModelFitter::unproject_single
     return unproject_single_observation(pupils[id], pupil_radius);
 }
 
-// void singleeyefitter::EyeModelFitter::refine_with_inliers(const CallbackFunction& callback /*= CallbackFunction()*/)
-// {
-//     int current_model_version;
-//     Eigen::Matrix<double, Eigen::Dynamic, 1> x;
-//     {
-//         std::lock_guard<std::mutex> lock_model(model_mutex);
+void singleeyefitter::EyeModelFitter::refine_with_edges(const CallbackFunction& callback /*= CallbackFunction()*/)
+{
+    int current_model_version;
+    Eigen::Matrix<double, Eigen::Dynamic, 1> x;
+    {
+        std::lock_guard<std::mutex> lock_model(model_mutex);
 
-//         current_model_version = model_version;
+        current_model_version = model_version;
 
-//         x = Eigen::Matrix<double, Eigen::Dynamic, 1>(3 + 3 * pupils.size());
-//         x.segment<3>(0) = eye.center;
-//         for (int i = 0; i < pupils.size(); ++i) {
-//             const PupilParams& pupil_params = pupils[i].params;
-//             x.segment<3>(3 + 3 * i)[0] = pupil_params.theta;
-//             x.segment<3>(3 + 3 * i)[1] = pupil_params.psi;
-//             x.segment<3>(3 + 3 * i)[2] = pupil_params.radius;
-//         }
-//     }
+        x = Eigen::Matrix<double, Eigen::Dynamic, 1>(3 + 3 * pupils.size());
+        x.segment<3>(0) = eye.center;
+        for (int i = 0; i < pupils.size(); ++i) {
+            const PupilParams& pupil_params = pupils[i].params;
+            x.segment<3>(3 + 3 * i)[0] = pupil_params.theta;
+            x.segment<3>(3 + 3 * i)[1] = pupil_params.psi;
+            x.segment<3>(3 + 3 * i)[2] = pupil_params.radius;
+        }
+    }
 
-//     ceres::Problem problem;
-//     for (int i = 0; i < pupils.size(); ++i) {
-//         const cv::Mat& eye_image = pupils[i].observation.image;
-//         const auto& pupil_inliers = pupils[i].observation.inliers;
+    ceres::Problem problem;
+    for (int i = 0; i < pupils.size(); ++i) {
+       /* const cv::Mat& eye_image = pupils[i].observation.image;*/
+        const auto& pupil_inliers = pupils[i].observation->final_edges;
 
-//         problem.AddResidualBlock(
-//             new ceres::AutoDiffCostFunction<EllipseDistanceResidualFunction<double>, ceres::DYNAMIC, 3, 3>(
-//             new EllipseDistanceResidualFunction<double>(eye_image, pupil_inliers, eye.radius, focal_length),
-//             pupil_inliers.size()
-//             ),
-//             NULL, &x[0], &x[3 + 3 * i]);
-//     }
+        problem.AddResidualBlock(
+            new ceres::AutoDiffCostFunction<EllipseDistanceResidualFunction<double>, ceres::DYNAMIC, 3, 3>(
+            new EllipseDistanceResidualFunction<double>(/*eye_image,*/ pupil_inliers, eye.radius, focal_length),
+            pupil_inliers.size()
+            ),
+            NULL, &x[0], &x[3 + 3 * i]);
+    }
 
-//     ceres::Solver::Options options;
-//     options.linear_solver_type = ceres::DENSE_SCHUR;
-//     options.max_num_iterations = 1000;
-//     options.function_tolerance = 1e-10;
-//     options.minimizer_progress_to_stdout = true;
-//     options.update_state_every_iteration = true;
-//     if (callback) {
-//         struct CallCallbackWrapper : public ceres::IterationCallback
-//         {
-//             double eye_radius;
-//             const CallbackFunction& callback;
-//             const Eigen::Matrix<double, Eigen::Dynamic, 1>& x;
+    ceres::Solver::Options options;
+    options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.max_num_iterations = 1000;
+    options.function_tolerance = 1e-10;
+    options.minimizer_progress_to_stdout = true;
+    options.update_state_every_iteration = true;
+    if (callback) {
+        struct CallCallbackWrapper : public ceres::IterationCallback
+        {
+            double eye_radius;
+            const CallbackFunction& callback;
+            const Eigen::Matrix<double, Eigen::Dynamic, 1>& x;
 
-//             CallCallbackWrapper(const EyeModelFitter& fitter, const CallbackFunction& callback, const Eigen::Matrix<double, Eigen::Dynamic, 1>& x)
-//                 : eye_radius(fitter.eye.radius), callback(callback), x(x) {}
+            CallCallbackWrapper(const EyeModelFitter& fitter, const CallbackFunction& callback, const Eigen::Matrix<double, Eigen::Dynamic, 1>& x)
+                : eye_radius(fitter.eye.radius), callback(callback), x(x) {}
 
-//             virtual ceres::CallbackReturnType operator() (const ceres::IterationSummary& summary) {
-//                 Eigen::Matrix<double, 3, 1> eye_pos(x[0], x[1], x[2]);
-//                 Sphere eye(eye_pos, eye_radius);
+            virtual ceres::CallbackReturnType operator() (const ceres::IterationSummary& summary) {
+                Eigen::Matrix<double, 3, 1> eye_pos(x[0], x[1], x[2]);
+                Sphere eye(eye_pos, eye_radius);
 
-//                 std::vector<Circle> pupils;
-//                 for (int i = 0; i < (x.size() - 3)/3; ++i) {
-//                     auto&& pupil_param_v = x.segment<3>(3 + 3 * i);
-//                     pupils.push_back(EyeModelFitter::circleFromParams(eye, PupilParams(pupil_param_v[0], pupil_param_v[1], pupil_param_v[2])));
-//                 }
+                std::vector<Circle> pupils;
+                for (int i = 0; i < (x.size() - 3)/3; ++i) {
+                    auto&& pupil_param_v = x.segment<3>(3 + 3 * i);
+                    pupils.push_back(EyeModelFitter::circleFromParams(eye, PupilParams(pupil_param_v[0], pupil_param_v[1], pupil_param_v[2])));
+                }
 
-//                 callback(eye, pupils);
+                callback(eye, pupils);
 
-//                 return ceres::SOLVER_CONTINUE;
-//             }
-//         };
-//         options.callbacks.push_back(new CallCallbackWrapper(*this, callback, x));
-//     }
-//     ceres::Solver::Summary summary;
-//     ceres::Solve(options, &problem, &summary);
-//     std::cout << summary.BriefReport() << "\n";
+                return ceres::SOLVER_CONTINUE;
+            }
+        };
+        options.callbacks.push_back(new CallCallbackWrapper(*this, callback, x));
+    }
+    ceres::Solver::Summary summary;
+    ceres::Solve(options, &problem, &summary);
+    //std::cout << summary.BriefReport() << "\n";
 
-//     {
-//         std::lock_guard<std::mutex> lock_model(model_mutex);
+    {
+        std::lock_guard<std::mutex> lock_model(model_mutex);
 
-//         if (current_model_version != model_version)    {
-//             std::cout << "Old model, not applying refined parameters" << std::endl;
-//             return;
-//         }
+        if (current_model_version != model_version)    {
+            std::cout << "Old model, not applying refined parameters" << std::endl;
+            return;
+        }
 
-//         eye.center = x.segment<3>(0);
+        eye.center = x.segment<3>(0);
 
-//         for (int i = 0; i < pupils.size(); ++i) {
-//             auto&& pupil_param = x.segment<3>(3 + 3 * i);
-//             pupils[i].params = PupilParams(pupil_param[0], pupil_param[1], pupil_param[2]);
-//             pupils[i].circle = circleFromParams(eye, pupils[i].params);
-//         }
-//     }
-// }
+        for (int i = 0; i < pupils.size(); ++i) {
+            auto&& pupil_param = x.segment<3>(3 + 3 * i);
+            pupils[i].params = PupilParams(pupil_param[0], pupil_param[1], pupil_param[2]);
+            pupils[i].circle = circleFromParams(eye, pupils[i].params);
+        }
+    }
+}
 
 // void singleeyefitter::EyeModelFitter::refine_with_region_contrast(const CallbackFunction& callback /*= CallbackFunction()*/)
 // {
