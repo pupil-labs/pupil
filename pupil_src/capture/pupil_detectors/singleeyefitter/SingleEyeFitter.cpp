@@ -861,8 +861,6 @@ void singleeyefitter::EyeModelFitter::initialise_model()
     for (auto& pupil : pupils) {
         pupil.params.radius *= scale;
         pupil.circle = circleFromParams(pupil.params);
-        psi_mean += pupil.params.psi;
-        theta_mean += pupil.params.theta;
 
          // calculate the center variance of the projected gaze vectors to the current eye center
         center_distance_variance += euclidean_distance_squared( eye.center, Line3(pupil.circle.center, pupil.unprojected_circle.normal ) );
@@ -870,10 +868,6 @@ void singleeyefitter::EyeModelFitter::initialise_model()
 
     center_distance_variance /= eye_radius_count;
     std::cout << "center distance variance " << center_distance_variance << std::endl;
-
-    psi_mean /= pupils.size();
-    theta_mean /= pupils.size();
-
 
     latest_pupil_circle = pupils.back().circle;
     model_version++;

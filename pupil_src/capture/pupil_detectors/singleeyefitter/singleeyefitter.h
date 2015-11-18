@@ -112,10 +112,6 @@ namespace singleeyefitter {
             // Model version gets incremented on initialisation/reset, so that long-running background-thread refines don't overwrite the model
             int model_version = 0;
 
-            // Mean of all pupil observations, used to calculate variance of a new observation
-            double psi_mean = 0.0;
-            double theta_mean = 0.0;
-
             // data we get each frame
             Contours3D eye_contours;
             Circle latest_pupil_circle;
