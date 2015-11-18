@@ -130,7 +130,7 @@ namespace singleeyefitter {
     const Vector3 EyeModelFitter::camera_center = Vector3::Zero();
 
 
-    EyeModelFitter::Pupil::Pupil(std::shared_ptr<Detector_2D_Results> observation) : observation(observation), params(0, 0, 0)
+    EyeModelFitter::Pupil::Pupil(std::shared_ptr<Detector_2D_Result> observation) : observation(observation), params(0, 0, 0)
     {
     }
 

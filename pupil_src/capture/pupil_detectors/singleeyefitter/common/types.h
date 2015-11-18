@@ -33,7 +33,7 @@ namespace singleeyefitter {
 
 
     // every coordinates are relative to the roi
-    struct Detector_2D_Results {
+    struct Detector_2D_Result {
         typedef singleeyefitter::Ellipse2D<double> Ellipse;
         double confidence =  0.0 ;
         Ellipse ellipse;

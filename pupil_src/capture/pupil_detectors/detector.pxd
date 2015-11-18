@@ -74,7 +74,7 @@ ctypedef vector[vector[Point_[int]]] Contours_2D
 cdef extern from 'singleeyefitter/common/types.h':
 
 
-  cdef struct Detector_2D_Results:
+  cdef struct Detector_2D_Result:
     double confidence
     Ellipse2D[double] ellipse
     Contours_2D final_contours
@@ -116,7 +116,7 @@ cdef extern from 'detect_2d.hpp':
   cdef cppclass Detector2D:
 
     Detector2D() except +
-    shared_ptr[Detector_2D_Results] detect( Detector_2D_Properties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& roi, bint visualize , bint use_debug_image )
+    shared_ptr[Detector_2D_Result] detect( Detector_2D_Properties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& roi, bint visualize , bint use_debug_image )
 
 
 cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter":
@@ -124,7 +124,7 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
 
     cdef cppclass EyeModelFitter:
         EyeModelFitter(double focal_length, double x_disp, double y_disp)
-        void update(  shared_ptr[Detector_2D_Results]& results,  Detector_3D_Properties& prop )
+        void update(  shared_ptr[Detector_2D_Result]& results,  Detector_3D_Properties& prop )
         void reset()
 
         cppclass PupilParams:
@@ -134,7 +134,7 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
 
         cppclass Pupil:
             Pupil() except +
-            shared_ptr[Detector_2D_Results] observation
+            shared_ptr[Detector_2D_Result] observation
             vector[vector[Vector3]] contours
             vector[Vector3] edges
             vector[vector[Vector3]] final_circle_contours

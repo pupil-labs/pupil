@@ -36,7 +36,7 @@ namespace singleeyefitter {
             };
             struct Pupil {
                 //Observation observation;
-                std::shared_ptr<Detector_2D_Results> observation;
+                std::shared_ptr<Detector_2D_Result> observation;
                 Circle circle;
                 Circle unprojected_circle; // we gonna keep track of the unprojected circle, because we need these parameters later
                 double fit_goodness;
@@ -44,7 +44,7 @@ namespace singleeyefitter {
                 bool init_valid;
                 bool processed; // indicate if this pupil is already processed
                 Pupil();
-                Pupil(std::shared_ptr<Detector_2D_Results> observation);
+                Pupil(std::shared_ptr<Detector_2D_Result> observation);
                 //Pupil(Ellipse ellipse);
             };
 

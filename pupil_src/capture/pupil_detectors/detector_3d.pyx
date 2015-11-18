@@ -86,7 +86,7 @@ cdef class Detector_3D:
       del self.detector_2d_ptr
       del self.detector_3d_ptr
 
-    cdef convertToPythonResult(self, Detector_2D_Results& result, object frame, object roi ):
+    cdef convertToPythonResult(self, Detector_2D_Result& result, object frame, object roi ):
 
         e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
         py_result = {}
@@ -152,7 +152,7 @@ cdef class Detector_3D:
         cpp_result_ptr =  self.detector_2d_ptr.detect(self.detect_properties_2d, cv_image, cv_image_color, debug_image, Rect_[int](roi_x,roi_y,roi_width,roi_height), visualize , False ) #we don't use debug image in 3d model
         deref(cpp_result_ptr).timestamp = frame.timestamp
 
-        cdef Detector_2D_Results cpp_result = deref(cpp_result_ptr)
+        cdef Detector_2D_Result cpp_result = deref(cpp_result_ptr)
 
         py_result = self.convertToPythonResult( cpp_result, frame, roi )
 
@@ -239,7 +239,7 @@ cdef class Detector_3D:
 
     def get_observation(self,index):
         cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils[index]
-        cdef Detector_2D_Results observation = deref(p.observation)
+        cdef Detector_2D_Result observation = deref(p.observation)
         # returning (Ellipse, Params, Cicle). Ellipse = ([x,y],major,minor,angle). Params = (theta,psi,r)
         # Circle = (center[x,y,z], normal[x,y,z], radius)
         return PyObservation( (observation.ellipse.center[0],observation.ellipse.center[1]), observation.ellipse.major_radius,observation.ellipse.minor_radius,observation.ellipse.angle,
@@ -253,7 +253,7 @@ cdef class Detector_3D:
         if self.detector_3d_ptr.pupils.size() == 0:
             return []
 
-        cdef Detector_2D_Results observation
+        cdef Detector_2D_Result observation
         p = self.detector_3d_ptr.pupils.back()
         observation = deref(p.observation)
 
@@ -331,7 +331,7 @@ cdef class Detector_3D:
 
     def get_all_pupil_observations(self):
         cdef EyeModelFitter.Pupil p
-        cdef Detector_2D_Results observation
+        cdef Detector_2D_Result observation
         for p in self.detector_3d_ptr.pupils:
             observation = deref(p.observation)
             yield PyObservation( (observation.ellipse.center[0],observation.ellipse.center[1]), observation.ellipse.major_radius,observation.ellipse.minor_radius,observation.ellipse.angle,

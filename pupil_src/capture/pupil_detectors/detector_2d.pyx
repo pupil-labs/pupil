@@ -61,7 +61,7 @@ cdef class Detector_2D:
     def __dealloc__(self):
       del self.thisptr
 
-    cdef convertToPythonResult(self, Detector_2D_Results& result, object frame, object roi ):
+    cdef convertToPythonResult(self, Detector_2D_Result& result, object frame, object roi ):
 
         e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
         py_result = {}
@@ -142,7 +142,7 @@ cdef class Detector_2D:
         if self._window:
             self.gl_display_in_window(debug_image)
 
-        cdef Detector_2D_Results cpp_result = deref(cpp_result_ptr)
+        cdef Detector_2D_Result cpp_result = deref(cpp_result_ptr)
         py_result = self.convertToPythonResult( cpp_result, frame , roi )
 
 
