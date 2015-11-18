@@ -25,9 +25,9 @@ namespace singleeyefitter {
 
             // Public fields
             double focal_length;
-            double region_band_width;
-            double region_step_epsilon;
-            double region_scale;
+            // double region_band_width;
+            // double region_step_epsilon;
+            // double region_scale;
 
             struct PupilParams {
                 double theta, psi, radius;
@@ -50,17 +50,12 @@ namespace singleeyefitter {
 
             // Constructors
             EyeModelFitter();
-            EyeModelFitter(double focal_length, double region_band_width, double region_step_epsilon);
+            EyeModelFitter(double focal_length/*, double region_band_width, double region_step_epsilon*/);
 
             // Index add_observation(cv::Mat image, Ellipse pupil, int n_pseudo_inliers = 0);
             // Index add_observation(cv::Mat image, Ellipse pupil, std::vector<cv::Point2f> pupil_inliers);
             //Index add_observation( Ellipse pupil );
             Index add_observation( const Pupil& pupil );
-            /*
-                contours contains pointers to memory location of each contour
-                contour_sizes contains the size of the corresponded contour, so we know how much memory we can claim on the c++ side
-            */
-            //Index add_observation(Ellipse pupil, std::vector<int32_t*> contour_ptrs ,  std::vector<size_t> contour_sizes);
             void reset();
 
             //
@@ -84,7 +79,7 @@ namespace singleeyefitter {
 
             // this is called with new observations from the 2D detector
             // it decides what happens ,since not all observations are added
-            void update( std::shared_ptr<Detector_2D_Results>& observation, Detector_3D_Properties& props );
+            Detector_3D_Result update_and_detect( std::shared_ptr<Detector_2D_Result>& observation, Detector_3D_Properties& props );
 
             //void unproject_last_raw_edges();
 
@@ -107,7 +102,7 @@ namespace singleeyefitter {
 
             Sphere eye;
             std::deque<Pupil> pupils;
-            size_t max_pupils;   // this are the max pupils we wanna consider for calculations
+            //size_t max_pupils;   // this are the max pupils we wanna consider for calculations
             std::mutex model_mutex;
             // Model version gets incremented on initialisation/reset, so that long-running background-thread refines don't overwrite the model
             int model_version = 0;

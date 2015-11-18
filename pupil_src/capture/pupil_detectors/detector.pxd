@@ -85,6 +85,13 @@ cdef extern from 'singleeyefitter/common/types.h':
     int image_width;
     int image_height;
 
+  cdef struct Detector_3D_Result:
+    double confidence
+    Ellipse2D[double] ellipse
+    Vector3 gaze_vector
+    double timestamp
+
+
   cdef struct Detector_2D_Properties:
     int intensity_range
     int blur_size
@@ -123,8 +130,8 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
 
 
     cdef cppclass EyeModelFitter:
-        EyeModelFitter(double focal_length, double x_disp, double y_disp)
-        void update(  shared_ptr[Detector_2D_Result]& results,  Detector_3D_Properties& prop )
+        EyeModelFitter(double focal_length )
+        Detector_3D_Result update_and_detect(  shared_ptr[Detector_2D_Result]& results,  Detector_3D_Properties& prop )
         void reset()
 
         cppclass PupilParams:

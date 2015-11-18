@@ -34,17 +34,24 @@ namespace singleeyefitter {
 
     // every coordinates are relative to the roi
     struct Detector_2D_Result {
-        typedef singleeyefitter::Ellipse2D<double> Ellipse;
         double confidence =  0.0 ;
-        Ellipse ellipse;
+        Ellipse ellipse = Ellipse::Null;
         //Contours_2D final_contours;
         Contours_2D contours;
         std::vector<cv::Point> final_edges; // edges used to fit the final ellipse in 2D
         //std::vector<cv::Point> raw_edges;
         cv::Rect current_roi; // contains the roi for this results
         double timestamp = 0.0;
-        int image_width;
-        int image_height;
+        int image_width = 0;
+        int image_height = 0;
+
+    };
+
+    struct Detector_3D_Result {
+        double confidence =  0.0 ;
+        Ellipse ellipse = Ellipse::Null;
+        Vector3 gaze_vector = Vector3(0,0,0);
+        double timestamp = 0.0;
 
     };
 

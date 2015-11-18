@@ -39,9 +39,9 @@ cdef class Detector_3D:
         [   0.          605.57862234  252.3924477 ]
         [   0.            0.            1.        ]
         '''
-        region_band_width = 5
-        region_step_epsilon = 0.5
-        self.detector_3d_ptr = new EyeModelFitter(focal_length, region_band_width, region_step_epsilon)
+        #region_band_width = 5
+        #region_step_epsilon = 0.5
+        self.detector_3d_ptr = new EyeModelFitter(focal_length)
 
     def __init__(self, g_pool = None, settings = None ):
 
@@ -158,7 +158,7 @@ cdef class Detector_3D:
 
         ######### 3D Model Part ############
 
-        self.detector_3d_ptr.update( cpp_result_ptr , self.detect_properties_3d)
+        self.detector_3d_ptr.update_and_detect( cpp_result_ptr , self.detect_properties_3d)
 
         #self.detector_3d_ptr.unproject_last_raw_edges()
 

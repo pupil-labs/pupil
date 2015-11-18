@@ -165,10 +165,10 @@ namespace singleeyefitter {
 }
 
 
-singleeyefitter::EyeModelFitter::EyeModelFitter() : region_band_width(5), region_step_epsilon(0.5), region_scale(1), max_pupils(300)
+singleeyefitter::EyeModelFitter::EyeModelFitter() /*: region_band_width(5), region_step_epsilon(0.5), region_scale(1), max_pupils(300)*/
 {
 }
-singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length, double region_band_width, double region_step_epsilon) : focal_length(focal_length), region_band_width(region_band_width), region_step_epsilon(region_step_epsilon), region_scale(1), max_pupils(300)
+singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length/*, double region_band_width, double region_step_epsilon*/) : focal_length(focal_length)/*, region_band_width(region_band_width), region_step_epsilon(region_step_epsilon), region_scale(1), max_pupils(300)*/
 {
 }
 
@@ -242,10 +242,10 @@ singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length, double regi
 //     return pupils.size() - 1;
 // }
 
-void singleeyefitter::EyeModelFitter::update(std::shared_ptr<Detector_2D_Results>& observation, Detector_3D_Properties& props)
+Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::shared_ptr<Detector_2D_Result>& observation, Detector_3D_Properties& props)
 {
 
-
+    Detector_3D_Result result;
 
     bool should_add_observation = false;
 
@@ -367,8 +367,9 @@ void singleeyefitter::EyeModelFitter::update(std::shared_ptr<Detector_2D_Results
     }
 
 
-    gaze_vector = latest_pupil_circle.normal; // need to calibrate
 
+    result.gaze_vector = latest_pupil_circle.normal; // need to calibrate
+    return result;
 
 }
 
