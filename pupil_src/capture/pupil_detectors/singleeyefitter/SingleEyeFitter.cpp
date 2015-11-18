@@ -340,7 +340,7 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
             // when ever we add a new observation we need to rebuild the eye model
             unproject_observations();
             initialise_model();
-
+            std::cout << "model version " << model_version << std::endl;
             // update model every 50 new pupils
             if(model_version % 50  == 0){
                 std::cout << "-----------refine model"  << std::endl;
@@ -355,6 +355,8 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
             // if we don't add a new one we still wanna have the lates pupil parameters
             latest_pupil_circle = std::move(pupil.circle);
         }
+        //std::cout << "2d ellipse " << observation->ellipse << std::endl;
+
 
     } else { // if it's too weak we wanna try to find a better one in 3D
 
@@ -364,8 +366,12 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
         float max_residual = props.max_fit_residual;
         float max_variance = props.max_circle_variance;
         fit_circle_for_eye_contours(max_residual, max_variance, min_radius, max_radius);
-    }
 
+        // project the circle back to 2D
+        // need for some calculations in 2D late (calibration)
+        result.ellipse = Ellipse(project(latest_pupil_circle, focal_length));
+        //std::cout << "3D proj ellipse " <<  ellipse << std::endl;
+    }
 
 
     result.gaze_vector = latest_pupil_circle.normal; // need to calibrate
@@ -394,7 +400,7 @@ bool EyeModelFitter::spatial_variance_check(const Circle&  circle)
      and less dense further back.
      Still it gives good results an works for our purpose
     */
-    const int BIN_AMOUNTS = 20;
+    const int BIN_AMOUNTS = 50;
     Vector3 pupil_normal =  circle.normal; // the same as a vector from unit sphere center to the pupil center
 
     const double bin_width = 1.0 / BIN_AMOUNTS;
@@ -1085,7 +1091,6 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
         }
     }
 
-    model_version++;
 }
 
 void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours(float max_residual, float max_variance, float min_radius, float max_radius)
