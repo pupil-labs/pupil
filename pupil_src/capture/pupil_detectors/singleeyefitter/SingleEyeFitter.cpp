@@ -300,7 +300,9 @@ void singleeyefitter::EyeModelFitter::update(std::shared_ptr<Detector_2D_Results
 
             if (unprojected_circle != Circle::Null && initialised_circle != Circle::Null) {  // initialise failed
 
-                if (model_support_check(unprojected_circle, initialised_circle)  ) {
+                double support = model_support(unprojected_circle, initialised_circle);
+                //std::cout << "support: " << support  << std::endl;
+                if ( support > 0.97  ) {
 
                     if (  spatial_variance_check(initialised_circle)) {
                         should_add_observation = true;
@@ -404,7 +406,7 @@ bool EyeModelFitter::spatial_variance_check(const Circle&  circle)
 
 }
 
-bool EyeModelFitter::model_support_check(const Circle&  unprojected_circle, const Circle& initialised_circle)
+double EyeModelFitter::model_support(const Circle&  unprojected_circle, const Circle& initialised_circle)
 {
 
     // the angle between the unprojected and the initialised circle normal tells us how good the current observation supports our current model
@@ -412,11 +414,7 @@ bool EyeModelFitter::model_support_check(const Circle&  unprojected_circle, cons
     auto n1 = unprojected_circle.normal.normalized();
     auto n2 = initialised_circle.normal.normalized();
     double normals_angle = n1.dot(n2);
-    const float support_min = 0.95;
-
-    if (normals_angle <  support_min) std::cout << "n angle: " << normals_angle << std::endl;
-
-    return normals_angle >=  support_min;
+    return normals_angle;
 
 }
 

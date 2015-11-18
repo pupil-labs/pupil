@@ -93,7 +93,7 @@ namespace singleeyefitter {
         //private:
 
             bool spatial_variance_check( const Circle&  circle );
-            bool model_support_check( const Circle&  unprojected_circle, const Circle& initialised_circle );
+            double model_support( const Circle&  unprojected_circle, const Circle& initialised_circle );
 
 
             //
