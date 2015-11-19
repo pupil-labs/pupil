@@ -2,11 +2,14 @@
 #define singleeyefitter_project_h__
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 #include "Geometry/Ellipse.h"
 #include "Geometry/Circle.h"
 #include "Geometry/Conic.h"
-#include "mathHelper.h"
+#include "Geometry/Sphere.h"
 #include "Geometry/Conicoid.h"
+#include "mathHelper.h"
+#include "solve.h"
 
 namespace singleeyefitter {
 
@@ -135,7 +138,8 @@ namespace singleeyefitter {
     std::pair<Circle3D<Scalar>, Circle3D<Scalar>> unproject(const Ellipse2D<Scalar>& ellipse, Scalar circle_radius, Scalar focal_length)
     {
         using std::sqrt;
-        using boost::math::sign;
+        using std::abs;
+        using math::sign;
         using math::sq;
         typedef Conic<Scalar> Conic;
         typedef Conicoid<Scalar> Conicoid;
