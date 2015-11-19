@@ -229,7 +229,7 @@ cdef class Detector_3D:
         center = self.detector_3d_ptr.latest_pupil_circle.center
         radius = self.detector_3d_ptr.latest_pupil_circle.radius
         normal = self.detector_3d_ptr.latest_pupil_circle.normal
-        return [ [center[0],center[1],center[2]], radius,  [normal[0],normal[1],normal[2]] ]
+        return [ [center[0],center[1],center[2]], [normal[0],normal[1],normal[2]], radius ]
 
     def get_gaze_vector(self):
         gaze = self.detector_3d_ptr.gaze_vector

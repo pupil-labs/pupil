@@ -261,7 +261,7 @@ class Visualizer(object):
 				glPopMatrix()
 
 
-	def draw_circle(self, circle_center, circle_radius, circle_normal, color=RGBA(1.1,0.2,.8), num_segments = 20):
+	def draw_circle(self, circle_center, circle_normal, circle_radius, color=RGBA(1.1,0.2,.8), num_segments = 20):
 		vertices = []
 		vertices.append( (0,0,0) )  # circle center
 
@@ -484,7 +484,7 @@ class Visualizer(object):
 		#if last_unwrapped_contours:
 		#	self.draw_unwrapped_contours_on_screen(last_unwrapped_contours)
 		gaze_vector = detector_3D.get_gaze_vector()
-		pupil_radius = latest_pupil[1]
+		pupil_radius = latest_pupil[2]
 		self.draw_eye_model_fitter_text(eye, gaze_vector,pupil_radius)
 
 		glfwSwapBuffers(self._window)
