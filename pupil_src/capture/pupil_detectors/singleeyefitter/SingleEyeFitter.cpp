@@ -299,13 +299,13 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
         if (eye != Sphere::Null) {
 
 
-            Circle unprojected_circle = unproject_single_observation(pupil, 5); // unproject circle in 3D space, doesn't consider current eye model (cone unprojection of ellipse)
+            Circle unprojected_circle = unproject_single_observation(pupil ); // unproject circle in 3D space, doesn't consider current eye model (cone unprojection of ellipse)
             Circle initialised_circle = initialise_single_observation(pupil);  // initialised circle. circle parameters addapted to our current eye model
 
             if (unprojected_circle != Circle::Null && initialised_circle != Circle::Null) {  // initialise failed
 
                 double support = model_support(unprojected_circle, initialised_circle);
-                std::cout << "support: " << support  << std::endl;
+                //std::cout << "support: " << support  << std::endl;
                 if ( support > 0.97  ) {
 
                     if (  spatial_variance_check(initialised_circle)) {
@@ -334,23 +334,23 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
 
 
             //if the observation passed all tests we can add it
-            add_observation(observation);
+            add_observation(Pupil(observation));
             // when ever we add a new observation we need to rebuild the eye model
             unproject_observations();
             initialise_model();
-            std::cout << "model version " << model_version << std::endl;
+            //std::cout << "model version " << model_version << std::endl;
             // update model every 50 new pupils
-            if(model_version % 50  == 0){
-                std::cout << "-----------refine model"  << std::endl;
-                std::cout << "-----------prev eye: " << eye << std::endl;
-                refine_with_edges();
-                std::cout << "-----------new eye: " << eye << std::endl;
+            // if(model_version % 50  == 0){
+            //     std::cout << "-----------refine model"  << std::endl;
+            //     std::cout << "-----------prev eye: " << eye << std::endl;
+            //     refine_with_edges();
+            //     std::cout << "-----------new eye: " << eye << std::endl;
 
-            }
+            // }
 
         }else{
 
-            // if we don't add a new one we still wanna have the lates pupil parameters
+            // if we don't add a new one we still wanna have the latest pupil parameters
             latest_pupil_circle = std::move(pupil.circle);
         }
         //std::cout << "2d ellipse " << observation->ellipse << std::endl;
