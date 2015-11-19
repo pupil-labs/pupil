@@ -159,6 +159,12 @@ namespace singleeyefitter {
             val.a *= val.a;
             return val;
         }
+        template <typename T>
+        inline int sign(const T& z)
+        {
+           return (z == 0) ? 0 : (z < 0) ? -1 : 1;
+        }
+
 
         // Hash function for Eigen matrix and vector.
         // The code is from `hash_combine` function of the Boost library. See
