@@ -257,8 +257,6 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
     // for the beginning it's enought to convert just the ellipse
     // if the tests are passed the contours are also converted
     Ellipse& ellipse = observation->ellipse;
-    ellipse.center[0] += roi.x;
-    ellipse.center[1] += roi.y;
     ellipse.center[0] -= image_width * 0.5f;
     ellipse.center[1] = image_height * 0.5f - ellipse.center[1];
     ellipse.angle = -ellipse.angle; //take y axis flip into account

@@ -211,7 +211,8 @@ std::shared_ptr<Detector_2D_Result> Detector2D::detect(Detector_2D_Properties& p
 			double goodness = std::min(1.0, support_ratio);
 			mPupil_Size = ellipse.major_radius;
 		 	result->confidence = goodness;
-			result->ellipse = toEllipse<double>(refit_ellipse);
+			result->ellipse = ellipse;
+
 			//result->final_contours = std::move(best_contours); // no contours when strong prior
 			//result->contours = std::move(split_contours);
 			//result->raw_edges = std::move(raw_edges); // do we need it when strong prior ?
@@ -529,6 +530,8 @@ std::shared_ptr<Detector_2D_Result> Detector2D::detect(Detector_2D_Properties& p
 	mPupil_Size =  cv_final_Ellipse.size.height;
 	result->confidence = goodness;
 	result->ellipse = toEllipse<double>(cv_final_Ellipse);
+	result->ellipse.center[0] += roi.x;
+	result->ellipse.center[1] += roi.y;
 	//result->final_contours = std::move(best_contours);
 	result->contours = std::move(split_contours);
 	result->final_edges = std::move(final_edges);

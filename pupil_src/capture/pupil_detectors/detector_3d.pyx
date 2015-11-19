@@ -92,17 +92,15 @@ cdef class Detector_3D:
         py_result = {}
         py_result['confidence'] = result.confidence
         py_result['ellipse'] = e
-        py_result['pos_in_roi'] = e[0]
         py_result['major'] = max(e[1])
         py_result['diameter'] = max(e[1])
         py_result['minor'] = min(e[1])
         py_result['axes'] = e[1]
         py_result['angle'] = e[2]
-        e_img_center = roi.add_vector(e[0])
-        norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
 
+        norm_center = normalize(e[0],(frame.width, frame.height),flip_y=True)
         py_result['norm_pos'] = norm_center
-        py_result['center'] = e_img_center
+        py_result['center'] = e[0]
         py_result['timestamp'] = frame.timestamp
         return py_result
 
