@@ -82,10 +82,12 @@ class Visualizer(object):
 
 	def get_anthropomorphic_matrix(self):
 		temp =  np.identity(4)
+		temp[2,2] *= -1
 		return temp
 
 	def get_adjusted_pixel_space_matrix(self):
 		temp =  np.identity(4)
+		temp[2,2] *= -1
 		return temp
 
 	def get_adjusted_pixel_space_matrix(self,scale):
@@ -130,6 +132,8 @@ class Visualizer(object):
 		back = temp[:3,2]
 		translation = temp[:3,3]
 		back[:] = np.array(circle_normal)
+		back[2] *=-1 #our z axis is inverted
+
 		# if np.linalg.norm(back) != 0:
 		back[:] /= np.linalg.norm(back)
 		right[:] = get_perpendicular_vector(back)/np.linalg.norm(get_perpendicular_vector(back))
@@ -138,6 +142,7 @@ class Visualizer(object):
 		back[:] *=circle_scale
 		up[:] *=circle_scale
 		translation[:] = np.array(circle_center)
+		translation[2] *= -1
 		return   temp.T
 
 	############## DRAWING FUNCTIONS ##############################
@@ -186,7 +191,7 @@ class Visualizer(object):
 		glEnd( )
 
 		# Draw z-axis line. BLUE
-		glColor3f( 0, 0,1 )
+		glColor3f( 0, 0, 1 )
 		glBegin( GL_LINES )
 		glVertex3f( 0, 0, 0 )
 		glVertex3f( 0, 0, l )
@@ -272,8 +277,8 @@ class Visualizer(object):
 			z = 0
 			vertices.append((x,y,z))
 
-		glMatrixMode(GL_MODELVIEW )
 		glPushMatrix()
+		glMatrixMode(GL_MODELVIEW )
 		glLoadMatrixf(self.get_pupil_transformation_matrix(circle_normal,circle_center, circle_radius))
 		draw_polyline((vertices),color=color, line_type = GL_TRIANGLE_FAN) # circle
 		draw_polyline( [ (0,0,0), (0,0, 4) ] ,color=RGBA(0,0,0), line_type = GL_LINES) #normal
@@ -434,7 +439,7 @@ class Visualizer(object):
 		eye_position = eye[0]
 		eye_radius = eye[1]
 
-
+		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		self.draw_coordinate_system(4)
 
 		self.draw_sphere(eye_position,eye_radius)
@@ -469,7 +474,7 @@ class Visualizer(object):
 
 
 		if bin_positions:
-			draw_points(bin_positions, 5 , RGBA(0.,1.,0.,1.) )
+			draw_points(bin_positions, 5 , RGBA(0.,0.6,0.,0.6) )
 
 		# 1b. draw frustum in pixel scale, but retaining origin
 		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(17))
