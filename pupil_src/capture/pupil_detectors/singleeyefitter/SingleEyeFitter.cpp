@@ -1144,7 +1144,7 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours(float max_resi
         // contains bad paths, we won't test again
         // even a superset is not tested again, because if a subset is bad, we can't make it better if more contours are added
         std::vector<Path> prune;
-        prune.reserve(std::pow(contours.size() , 3));   // we gonna prune a lot if we have alot contours, cubic increase or even more ?
+        prune.reserve(std::pow(contours.size() , 3));   // we gonna prune a lot if we have alot contours
         int eval_count = 0;
         // std::cout << "size:" <<  contours.size()  << std::endl;
         // std::cout << "possible combinations: " <<  std::pow(2,contours.size()) + 1<< std::endl;
@@ -1166,16 +1166,14 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours(float max_resi
 
         // inorder to minimize the search space we already prune combinations, which can't fit ,before the search starts
         int prune_count = 0;
-
         for (int i = 0; i < contours.size(); i++) {
             auto& a = moments[i];
-
             for (int j = i + 1; j < contours.size(); j++) {
                 auto& b = moments[j];
-                double distance  = (a - b).squaredNorm();
+                double distance_squared  = (a - b).squaredNorm();
                 double pupil_max_diameter = pupil_max_radius * 2.0;
 
-                if (distance >  std::pow(pupil_max_diameter * 1.3, 2.0)) {
+                if (distance_squared >  std::pow(pupil_max_diameter * 1.5, 2.0)) {
                     prune.emplace_back(std::initializer_list<int> {i, j});
                     prune_count++;
                 }
