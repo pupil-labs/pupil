@@ -101,7 +101,7 @@ class Visualizer(object):
 		temp[1,1] *=-1 #image origin is top left
 		temp[0,3] = -self.image_width/2.0
 		temp[1,3] = self.image_height/2.0
-		temp[2,3] = self.focal_length
+		temp[2,3] = -self.focal_length
 		return temp.T
 
 	def get_pupil_transformation_matrix(self,circle_normal,circle_center, circle_scale = 1.0):
@@ -147,15 +147,12 @@ class Visualizer(object):
 
 	############## DRAWING FUNCTIONS ##############################
 
-	def draw_frustum(self, scale=1):
+	def draw_frustum(self ):
 
 		W = self.image_width/2.0
 		H = self.image_height/2.0
 		Z = self.focal_length
-		# scale the pyramid
-		W *= scale
-		H *= scale
-		Z *= scale
+		glPushMatrix()
 		# draw it
 		glLineWidth(1)
 		glColor4f( 1, 0.5, 0, 0.5 )
@@ -173,6 +170,7 @@ class Visualizer(object):
 		glVertex3f( -W, -H, Z )
 		glVertex3f( -W, H, Z )
 		glEnd( )
+		glPopMatrix()
 
 	def draw_coordinate_system(self,l=1):
 		# Draw x-axis line. RED
@@ -474,15 +472,14 @@ class Visualizer(object):
 
 
 		if bin_positions:
-			draw_points(bin_positions, 5 , RGBA(0.,0.6,0.,0.6) )
+			draw_points(bin_positions, 3 , RGBA(0.6,0.0,0.6,0.5) )
 
 		# 1b. draw frustum in pixel scale, but retaining origin
-		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(17))
 		self.draw_frustum()
 
 		# 2. in pixel space draw video frame
-		#glLoadMatrixf(self.get_image_space_matrix(17))
-		#g_pool.image_tex.draw( quad=((0,480),(640,480),(640,0),(0,0)) ,alpha=0.5)
+		glLoadMatrixf(self.get_image_space_matrix())
+		g_pool.image_tex.draw( quad=((0,self.image_height),(self.image_width,self.image_height),(self.image_width,0),(0,0)) ,alpha=0.5)
 
 
 		self.trackball.pop()
