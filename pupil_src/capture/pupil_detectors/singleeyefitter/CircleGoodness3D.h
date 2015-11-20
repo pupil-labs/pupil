@@ -36,7 +36,7 @@ namespace singleeyefitter {
                 // Working in 2D we used the real raw edges too calculate the goodness, but for the 3D case we need something different.
 
                 // Considering that the contours lie near the fitted circle border we wanna calculate the min and max opening angle of the contour arc.
-                // For this we create a Sphere with Spehere center == circle center and Spehere radius = circle radius, further all contour points are
+                // For this we create a Sphere with Sphere center == circle center and Sphere radius = circle radius, further all contour points are
                 // mapped to spherical coordinates.
 
                 // Thus all contour points are represented with two angles and the radius. Where the interesting angle is the azimuth.
@@ -78,7 +78,16 @@ namespace singleeyefitter {
                     for(auto& point : contour){
 
                         auto new_point = point_transformation * point;
-                        //double r = point.norm();
+                        double point_distance_squared = new_point.squaredNorm();
+
+                        //skip point which are to far away form the circle boarder
+                        // happens if a contour has a kink in it
+                        // doesn't take into account if the contour get's nearer again
+                        // but acctually shouldn't happen
+                        double circle_radius_squared = circle.radius*circle.radius;
+                        if( std::abs(point_distance_squared - circle_radius_squared )  > circle_radius_squared * 0.1 )
+                            continue;
+
                         //double theta = acos(point.y() / r);
                         //std::cout << "new point: "  << new_point << std::endl;
 
