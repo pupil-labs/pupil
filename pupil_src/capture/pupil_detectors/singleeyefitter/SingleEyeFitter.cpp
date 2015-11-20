@@ -335,18 +335,24 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
 
             //if the observation passed all tests we can add it
             add_observation(Pupil(observation));
-            // when ever we add a new observation we need to rebuild the eye model
-            unproject_observations();
-            initialise_model();
-            //std::cout << "model version " << model_version << std::endl;
-            // update model every 50 new pupils
-            // if(model_version % 50  == 0){
-            //     std::cout << "-----------refine model"  << std::endl;
-            //     std::cout << "-----------prev eye: " << eye << std::endl;
-            //     refine_with_edges();
-            //     std::cout << "-----------new eye: " << eye << std::endl;
 
-            // }
+            std::cout << "pupil size " << pupils.size() << std::endl;
+            //refine model every 50 new pupils
+            if(pupils.size() > 50 && pupils.size() % 50  == 0){
+
+                unproject_observations();
+                initialise_model();
+
+                std::cout << "-----------refine model"  << std::endl;
+                std::cout << "-----------prev eye: " << eye << std::endl;
+                refine_with_edges();
+                std::cout << "-----------new eye: " << eye << std::endl;
+
+            }else if(pupils.size() <= 50){
+
+                unproject_observations();
+                initialise_model();
+            }
 
         }else{
 
@@ -356,7 +362,7 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
         //std::cout << "2d ellipse " << observation->ellipse << std::endl;
 
 
-    } else { // if it's too weak we wanna try to find a better one in 3D
+    }// else { // if it's too weak we wanna try to find a better one in 3D
 
         unproject_observation_contours(observation->contours);
         float min_radius = props.pupil_radius_min;
@@ -369,7 +375,7 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
         // need for some calculations in 2D late (calibration)
         result.ellipse = Ellipse(project(latest_pupil_circle, focal_length));
         //std::cout << "3D proj ellipse " <<  ellipse << std::endl;
-    }
+   // }
 
 
     result.gaze_vector = latest_pupil_circle.normal; // need to calibrate
@@ -886,7 +892,7 @@ void singleeyefitter::EyeModelFitter::initialise_model()
     }
 
     center_distance_variance /= eye_radius_count;
-    std::cout << "center distance variance " << center_distance_variance << std::endl;
+    //std::cout << "center distance variance " << center_distance_variance << std::endl;
 
     latest_pupil_circle = pupils.back().circle;
     model_version++;
@@ -1096,6 +1102,7 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours(float max_resi
 
     if (eye_contours.size() == 0)
         return;
+    std::cout << "fit" << std::endl;
 
     final_candidate_contours.clear(); // otherwise we fill this infinitly
     // copy the contours
@@ -1230,6 +1237,13 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours(float max_resi
 
                         //lets explore more by creating paths to each remaining node
                         for (int l = (*current_path.rbegin()) + 1 ; l < contours.size(); l++) {
+                            // if a new contour is to far away from the current circle center, we can also ignore it
+                            // Vector3 contour_moment = moments.at(l);
+                            // double distance_squared = (current_circle.center - contour_moment).squaredNorm();
+                            // if( distance_squared <   std::pow(pupil_max_radius * 1.5, 2.0) ){
+                            //     unvisited.push(current_path);
+                            //     unvisited.back().insert(l); // add a new path
+                            // }
                             unvisited.push(current_path);
                             unvisited.back().insert(l); // add a new path
                         }
@@ -1262,11 +1276,11 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours(float max_resi
         //return results;
     };
 
-    pruning_quick_combine(contours, 1000, 10);
+    pruning_quick_combine(contours, 10000, 20);
 
-    // std::cout << "residual: " <<  best_residual << std::endl;
-    // std::cout << "goodness: " <<  best_goodness << std::endl;
-    // std::cout << "variance: " <<  best_variance << std::endl;
+    std::cout << "residual: " <<  best_residual << std::endl;
+    std::cout << "goodness: " <<  best_goodness << std::endl;
+    std::cout << "variance: " <<  best_variance << std::endl;
     latest_pupil_circle = std::move(best_circle);
     final_circle_contours = std::move(best_solution); // save this for debuging
 
