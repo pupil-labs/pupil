@@ -510,6 +510,12 @@ class Visualizer(object):
 		self.adjust_gl_view(w,h)
 		glfwMakeContextCurrent(active_window)
 
+	def on_char(self,window,char):
+		if char == ord('r'):
+			self.trackball.distance = [0,0,-0.1]
+			self.trackball.pitch = 0
+			self.trackball.roll = 0
+
 	def on_button(self,window,button, action, mods):
 		# self.gui.update_button(button,action,mods)
 		if action == GLFW_PRESS:
@@ -540,7 +546,6 @@ class Visualizer(object):
 
 	def on_iconify(self,window,x,y): pass
 	def on_key(self,window, key, scancode, action, mods): pass
-	def on_char(self,window,char): pass
 
 
 # if __name__ == '__main__':
