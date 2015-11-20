@@ -533,6 +533,16 @@ std::shared_ptr<Detector_2D_Result> Detector2D::detect(Detector_2D_Properties& p
 	result->ellipse.center[0] += roi.x;
 	result->ellipse.center[1] += roi.y;
 	//result->final_contours = std::move(best_contours);
+
+	// TODO optimize
+	// just do this if we really need it
+	std::for_each(contours.begin(), contours.end(), [&](const Contour_2D & contour) {
+		std::vector<cv::Point> approx_c;
+		cv::approxPolyDP(contour, approx_c, 1.0, false);
+		approx_contours.push_back(std::move(approx_c));
+	});
+	split_contours = singleeyefitter::detector::split_rough_contours_optimized(approx_contours, 150.0 , split_contour_size_min);
+
 	result->contours = std::move(split_contours);
 	result->final_edges = std::move(final_edges);
 	//result->raw_edges = std::move(raw_edges);
