@@ -193,8 +193,8 @@ cdef class Detector_3D:
         self.menu_3d.append(ui.Button('Reset 3D Model', self.reset_3D_Model ))
         self.menu_3d.append(ui.Slider('pupil_radius_min',self.detect_properties_3d,label='Pupil min radius', min=1.0,max= 8.0,step=0.1))
         self.menu_3d.append(ui.Slider('pupil_radius_max',self.detect_properties_3d,label='Pupil max radius', min=1.0,max=8.0,step=0.1))
-        self.menu_3d.append(ui.Slider('max_fit_residual',self.detect_properties_3d,label='3D fit max residual', min=0.01,max=1.0,step=0.01))
-        self.menu_3d.append(ui.Slider('max_circle_variance',self.detect_properties_3d,label='3D fit max circle variance', min=0.01,max=10.0,step=0.01))
+        self.menu_3d.append(ui.Slider('max_fit_residual',self.detect_properties_3d,label='3D fit max residual', min=0.00,max=0.1,step=0.0001))
+        self.menu_3d.append(ui.Slider('max_circle_variance',self.detect_properties_3d,label='3D fit max circle variance', min=0.01,max=2.0,step=0.001))
 
 
 
