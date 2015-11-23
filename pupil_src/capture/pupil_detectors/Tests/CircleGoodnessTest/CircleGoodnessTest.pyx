@@ -79,7 +79,7 @@ def test():
     contour.clear()
     contours.clear();
     contour.push_back( Vector3(0.0,0,-1) )
-    contour.push_back( Vector3(0.7,0,0.7) )
+    contour.push_back( Vector3(sin(pi/4),0,cos(pi/4)) )
     contours.push_back(contour)
     goodness = circleTest(circle, contours)
     assert goodness == 0.375
@@ -94,9 +94,9 @@ def test():
     contours.push_back(contour)
 
     contour.clear()
-    contour.push_back( Vector3(-0.7,0,0.7) )
+    contour.push_back( Vector3(-sin(pi/4),0,cos(pi/4)) )
     contour.push_back( Vector3(-1.0,0,0) )
-    contour.push_back( Vector3(-0.7,0,-0.7) )
+    contour.push_back( Vector3(-sin(pi/4),0,-cos(pi/4)) )
 
     #reverse an overlapping contour
     contour.clear()
@@ -107,23 +107,41 @@ def test():
     goodness = circleTest(circle, contours)
     assert goodness == 0.5
 
-    #check that the angle between two following points is less than pi/2
 
+    #if points are too far away from the circle we won't consider it for goodness
+    contour.clear()
+    contours.clear();
+    contour.push_back( Vector3(0.0,0,-1) )
+    contour.push_back( Vector3(sin(pi/4),0,cos(pi/4)) )
+    contour.push_back( Vector3(sin(pi/5),0,cos(pi/5)+ 0.3) ) # bad point not considerd for goodness
+    contour.push_back( Vector3(sin(pi/5),0,cos(pi/5)- 0.3) ) # bad point not considerd for goodness
+    contour.push_back( Vector3(sin(pi/5)+0.3,0,cos(pi/5)) ) # bad point not considerd for goodness
+    contours.push_back(contour)
+    goodness = circleTest(circle, contours)
+    assert goodness == 0.375
+
+    #check that the angle between two following points is less than pi/2
     circle_distortion =  0.0
     circle_segment_amount = 0.8
-    circle_point_amount =  5
-    circle_opening = pi/8
+    circle_point_amount =  4
+    circle_opening = pi/4.0
     #test with random points
     cdef Vector2 center ##spherical coords
-    center[0] = pi/2
-    center[1] = 0.0
 
-    circle.center = Vector3(0,0,1)
-    circle.normal = Vector3(0,0,1)
-    #radisu doesn't matter
+    phi_circle_center = center[0] = pi/2.0
+    theta_circle_center = center[1] = 0.0
+
+    sphere_radius = 1.0
+    circle_z = sphere_radius * sin(phi_circle_center) * cos(theta_circle_center)*cos(circle_opening)
+    circle_x = sphere_radius * sin(phi_circle_center) * sin(theta_circle_center)*cos(circle_opening)
+    circle_y = sphere_radius * cos(phi_circle_center)*cos(circle_opening)
+
+    circle.center = Vector3(circle_x,circle_y,circle_z)
+    norm = circle.center.norm()
+    circle.normal = Vector3(circle.center[0]/norm, circle.center[1]/norm,circle.center[2]/norm)
+    circle.radius = sin(circle_opening)
 
     contour = createCirclePointsOnSphere(  center, circle_opening, circle_point_amount,  circle_segment_amount , circle_distortion )
-
     contours.clear();
     contours.push_back(contour)
     goodness = circleTest(circle, contours)
