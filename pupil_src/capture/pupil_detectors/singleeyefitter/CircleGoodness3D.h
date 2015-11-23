@@ -89,7 +89,7 @@ namespace singleeyefitter {
                         // doesn't take into account if the contour get's nearer again
                         // but acctually shouldn't happen
                         const double ratio = point_distance_squared/circle_radius_squared;
-                        const double ratio_factor = 0.15;
+                        const double ratio_factor = 0.075;
                         const double ratio_factor_max = 1 + ratio_factor;
                         const double ratio_factor_min = 1 - ratio_factor;
 
