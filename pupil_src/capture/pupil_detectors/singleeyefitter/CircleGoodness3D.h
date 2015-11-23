@@ -99,7 +99,7 @@ namespace singleeyefitter {
                         //double theta = acos(point.y() / r);
                         //std::cout << "new point: "  << new_point << std::endl;
 
-                        const double psi = atan2(new_point.z(), new_point.x() );
+                        double psi = atan2(new_point.z(), new_point.x() );
                         if( psi < 0) psi +=  constants::two_pi; // range [0,2pi]
                         // std::cout << "psi: "  << psi << std::endl;
                         // std::cout << "angel max: "  << angle_max << std::endl;
