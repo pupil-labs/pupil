@@ -108,13 +108,12 @@ class Clock_Sync_Follower(threading.Thread):
     '''
     ms = 1/1000.
     us = ms*ms
+    tolerance = 0.1*ms
     max_slew = 500*us
     min_jump = 10*ms
     slew_iterations = int(min_jump/max_slew)
-    min_delay = 5*ms
-    retry_interval = 1
+    retry_interval = 1.0
     slew_interval = 0.1
-    tolerance = 0.1*ms
 
     def __init__(self,host,port,interval,time_fn,jump_fn,slew_fn):
         threading.Thread.__init__(self)
@@ -125,7 +124,6 @@ class Clock_Sync_Follower(threading.Thread):
         self.get_time = time_fn
         self.jump_time = jump_fn
         self.slew_time = slew_fn
-
 
         # the avg variance of time probes from the last sample run (offset jitter)
         # this error can come from application_runtime jitter, network_jitter,master_clock_jitter and slave_clock_jitter
@@ -141,8 +139,9 @@ class Clock_Sync_Follower(threading.Thread):
 
     def run(self):
         while self.running:
-            offset,jitter = self._get_offset()
-            if jitter:
+            result = self._get_offset()
+            if result:
+                offset,jitter = result
                 self.sync_jitter = jitter
                 if abs(offset) > max(jitter,self.tolerance):
                     if abs(offset) > self.min_jump:
@@ -199,12 +198,7 @@ class Clock_Sync_Follower(threading.Thread):
                 t1 = float(message)
                 times.append((t0,t1,t2))
 
-                # if  t2-t0 < self.min_delay:
-                #     times.append(t2-t0)
-                #     offsets.append(t0-(t1+(t2-t0)/2)))
             server_socket.close()
-            # print sum(offsets)/len(offsets)*1000, min(offsets)*1000,max(offsets)*1000
-            # print sum(times)/len(times)*1000, min(times)*1000,max(times)*1000
 
             times.sort(key=lambda (t0,t1,t2): t2-t0)
             times = times[:int(len(times)*0.69)]
@@ -220,7 +214,7 @@ class Clock_Sync_Follower(threading.Thread):
 
         except socket.error as e:
             logger.debug(str(e))
-            return 0,0
+            return None
         # except Exception as e:
         #     logger.error(str(e))
         #     return 0,0
@@ -274,7 +268,7 @@ if __name__ == '__main__':
     slave = Clock_Sync_Follower('',port=port,interval=10,time_fn=get_time,jump_fn=jump_time,slew_fn=slew_time)
     for x in range(4):
         sleep(2)
-        print slave.offset_remains
+        print slave
         # print "offset:%f, jitter: %f"%(epoch,slave.sync_jitter)
     print 'shutting down'
     slave.stop()
