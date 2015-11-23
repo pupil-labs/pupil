@@ -170,10 +170,11 @@ class Pupil_Sync(Plugin):
         poller.register(back, zmq.POLLIN)
         def wake_up():
             #on app close this timer calls a closed socket. We simply catch it here.
+
             try:
                 front.send('wake_up')
             except Exception as e:
-                logger.error(e)
+                logger.debug('Orphaned timer thread raised error: %s'%e)
 
         t = Timer(self.time_sync_announce_interval, wake_up)
         t.daemon = True
@@ -348,7 +349,7 @@ class Pupil_Sync(Plugin):
            This happens either volunatily or forced.
         """
         if self.sync_node:
-            self.sync_node.stop()
+            self.sync_node.terminate()
         self.deinit_gui()
         self.thread_pipe.send(exit_thread)
         while self.thread_pipe:

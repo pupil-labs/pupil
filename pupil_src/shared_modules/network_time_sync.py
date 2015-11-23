@@ -93,6 +93,8 @@ class Clock_Sync_Master(threading.Thread):
         self.server.socket.close()
         logger.debug("Server Thread closed")
 
+    def terminate(self):
+        self.stop()
 
     @property
     def port(self):
