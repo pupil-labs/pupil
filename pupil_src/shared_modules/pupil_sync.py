@@ -219,10 +219,8 @@ class Pupil_Sync(Plugin):
                 # message to quit
                 if message.decode('utf-8') == exit_thread:
                     break
-                elif message.decode('utf-8') == init_master_sync:
-                    self.timeout = 3000
                 else:
-                    logger.debug("Emitting to '%s' to '%s' " %(message,self.group))
+                    logger.debug("Shout '%s' to '%s' " %(message,self.group))
                     n.shouts(self.group, message)
             if n.socket() in items and items[n.socket()] == zmq.POLLIN:
                 cmds = n.recv()

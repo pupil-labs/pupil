@@ -146,9 +146,15 @@ class Clock_Sync_Follower(threading.Thread):
                 self.sync_jitter = jitter
                 if abs(offset) > max(jitter,self.tolerance):
                     if abs(offset) > self.min_jump:
-                        self.in_sync = self.jump_time(offset)
-                        self.offset_remains = not self.in_sync
-                        logger.debug('Time adjusted by %sms.'%(offset/self.ms))
+                        if self.jump_time(offset):
+                            self.in_sync = True
+                            self.offset_remains = False
+                            logger.debug('Time adjusted by %sms.'%(offset/self.ms))
+                        else:
+                            self.in_sync = True
+                            self.offset_remains = True
+                            sleep(self.retry_interval)
+                            continue
                     else:
                         # print 'time slewed required  %sms.'%(offset/self.ms)
                         for x in range(self.slew_iterations):
