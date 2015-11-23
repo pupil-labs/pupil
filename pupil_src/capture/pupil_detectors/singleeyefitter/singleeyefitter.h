@@ -79,7 +79,7 @@ namespace singleeyefitter {
 
             // this is called with new observations from the 2D detector
             // it decides what happens ,since not all observations are added
-            Detector_3D_Result update_and_detect( std::shared_ptr<Detector_2D_Result>& observation, Detector_3D_Properties& props );
+            Detector_3D_Result update_and_detect( std::shared_ptr<Detector_2D_Result>& observation,const Detector_3D_Properties& props );
 
             //void unproject_last_raw_edges();
 
@@ -114,10 +114,11 @@ namespace singleeyefitter {
             Contours3D final_circle_contours; // just for visualiziation, contains all points which fit best the circle
             std::vector<Contours3D> final_candidate_contours; // just for visualiziation, contains all contours which are a candidate for the fit
             Vector3 gaze_vector;
+            double prev_pupil_radius = 0.0;
 
             void unproject_observation_contours( const Contours_2D& contours);
             //void unproject_last_raw_edges();
-            void fit_circle_for_eye_contours( const Detector_3D_Properties& props);
+            double fit_circle_for_eye_contours( const Detector_3D_Properties& props);
 
 
             std::unordered_map<Vector2, bool, math::matrix_hash<Vector2>> pupil_position_bins;

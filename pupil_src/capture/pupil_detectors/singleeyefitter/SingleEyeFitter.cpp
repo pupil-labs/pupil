@@ -6,6 +6,7 @@
 #include <Eigen/StdVector>
 
 #include <queue>
+#include <algorithm>
 
 #include <ceres/ceres.h>
 #include <ceres/problem.h>
@@ -242,7 +243,7 @@ singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length/*, double re
 //     return pupils.size() - 1;
 // }
 
-Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::shared_ptr<Detector_2D_Result>& observation, Detector_3D_Properties& props)
+Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::shared_ptr<Detector_2D_Result>& observation,const Detector_3D_Properties& props)
 {
 
     Detector_3D_Result result;
@@ -253,54 +254,61 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
     cv::Rect roi = observation->current_roi;
     int image_height = observation->image_height;
     int image_width = observation->image_width;
+    int image_height_half = image_height/2.0;
+    int image_width_half = image_width/2.0;
 
     // for the beginning it's enought to convert just the ellipse
     // if the tests are passed the contours are also converted
     Ellipse& ellipse = observation->ellipse;
-    ellipse.center[0] -= image_width * 0.5f;
-    ellipse.center[1] = image_height * 0.5f - ellipse.center[1];
+    ellipse.center[0] -= image_width_half;
+    ellipse.center[1] = image_height_half - ellipse.center[1];
     ellipse.angle = -ellipse.angle; //take y axis flip into account
 
     for (Contour_2D& c : observation->contours) {
         for (cv::Point& p : c) {
             p += roi.tl();
-            p.x -= image_width * 0.5f;
-            p.y = image_height * 0.5f - p.y;
+            p.x -= image_width_half;
+            p.y = image_height_half - p.y;
         }
     }
 
     // for (Contour_2D& c : observation->final_contours) {
     //     for (cv::Point& p : c) {
     //         p += roi.tl();
-    //         p.x -= image_width * 0.5f;
-    //         p.y = image_height * 0.5f - p.y;
+    //         p.x -= image_width_half;
+    //         p.y = image_height_half - p.y;
     //     }
     // }
 
     // for (cv::Point& p : observation->raw_edges) {
     //     p += roi.tl();
-    //     p.x -= image_width * 0.5f;
-    //     p.y = image_height * 0.5f - p.y;
+    //     p.x -= image_width_half;
+    //     p.y = image_height_half - p.y;
     // }
 
     for (cv::Point& p : observation->final_edges) {
         p += roi.tl();
-        p.x -= image_width * 0.5f;
-        p.y = image_height * 0.5f - p.y;
+        p.x -= image_width_half;
+        p.y = image_height_half - p.y;
     }
 
     auto pupil = Pupil(observation);
 
+    Circle unprojected_circle;
+    Circle initialised_circle;
+
+    if (eye != Sphere::Null){
+        // let's do this every time, since we need the pupil values anyway
+        unprojected_circle = unproject_single_observation(pupil ); // unproject circle in 3D space, doesn't consider current eye model (cone unprojection of ellipse)
+        initialised_circle = initialise_single_observation(pupil);  // initialised circle. circle parameters addapted to our current eye model
+
+    }
 
     //check first if the observations is even strong enough to be added
     if (observation->confidence  >=  0.9) {
 
         //if the observation is strong enough, check for other properties if it's a candidate we can use
         if (eye != Sphere::Null) {
-
-
-            Circle unprojected_circle = unproject_single_observation(pupil ); // unproject circle in 3D space, doesn't consider current eye model (cone unprojection of ellipse)
-            Circle initialised_circle = initialise_single_observation(pupil);  // initialised circle. circle parameters addapted to our current eye model
 
             if (unprojected_circle != Circle::Null && initialised_circle != Circle::Null) {  // initialise failed
 
@@ -323,7 +331,7 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
                 std::cout << "no valid circles"  << std::endl;
             }
 
-        } else {
+        } else { // no valid sphere yet
             std::cout << "add without check" << std::endl;
             should_add_observation = true;
         }
@@ -331,7 +339,6 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
 
         if (should_add_observation) {
             //std::cout << "add" << std::endl;
-
 
             //if the observation passed all tests we can add it
             add_observation(Pupil(observation));
@@ -365,13 +372,19 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
     }// else { // if it's too weak we wanna try to find a better one in 3D
 
         unproject_observation_contours(observation->contours);
-        fit_circle_for_eye_contours( props);
+        double goodness = fit_circle_for_eye_contours(props);
+        result.confidence = goodness;
 
         // project the circle back to 2D
-        // need for some calculations in 2D late (calibration)
+        // need for some calculations in 2D later (calibration)
         result.ellipse = Ellipse(project(latest_pupil_circle, focal_length));
-        //std::cout << "3D proj ellipse " <<  ellipse << std::endl;
    // }
+
+
+    if(result.confidence >= 0.9 || observation->confidence >= 0.9 ){ // either way we get a new circle
+        prev_pupil_radius = latest_pupil_circle.radius;
+        std::cout << "prev_radius: " << prev_pupil_radius << std::endl;
+    }
 
 
     result.gaze_vector = latest_pupil_circle.normal; // need to calibrate
@@ -400,7 +413,7 @@ bool EyeModelFitter::spatial_variance_check(const Circle&  circle)
      and less dense further back.
      Still it gives good results an works for our purpose
     */
-    const int BIN_AMOUNTS = 50;
+    const int BIN_AMOUNTS = 20;
     Vector3 pupil_normal =  circle.normal; // the same as a vector from unit sphere center to the pupil center
 
     const double bin_width = 1.0 / BIN_AMOUNTS;
@@ -1093,18 +1106,28 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
 
 }
 
-void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours( const Detector_3D_Properties& props)
+double singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours( const Detector_3D_Properties& props)
 {
 
     if (eye_contours.size() == 0)
-        return;
+        return 0.0;
 
-    float min_radius = props.pupil_radius_min;
-    float max_radius = props.pupil_radius_max;
+    double min_radius = props.pupil_radius_min;
+    double max_radius = props.pupil_radius_max;
     float max_residual = props.max_fit_residual;
     float max_variance = props.max_circle_variance;
     int   combine_evaluation_max = props.combine_evaluation_max;
     int   combine_depth_max = props.combine_depth_max;
+
+    if( prev_pupil_radius != 0.0){
+
+        min_radius = std::max(prev_pupil_radius * 0.85, static_cast<double>(props.pupil_radius_min) );
+        max_radius = std::min(prev_pupil_radius * 1.25, static_cast<double>(props.pupil_radius_max) );
+    }else{
+        min_radius = props.pupil_radius_min;
+        max_radius = props.pupil_radius_max;
+
+    }
 
     final_candidate_contours.clear(); // otherwise we fill this infinitly
     // copy the contours
@@ -1117,7 +1140,7 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours( const Detecto
     contours = singleeyefitter::fun::filter(contour_size_min_pred , contours);
 
     if (contours.size() == 0)
-        return;
+        return 0.0;
 
     // sort the contours so the contour with the most points is at the begining
     std::sort(contours.begin(), contours.end(), [](const std::vector<Vector3>& a, const std::vector<Vector3>& b) { return a.size() < b.size();});
@@ -1155,8 +1178,8 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours( const Detecto
         std::vector<Path> prune;
         prune.reserve(std::pow(contours.size() , 3));   // we gonna prune a lot if we have alot contours
         int eval_count = 0;
-        // std::cout << "size:" <<  contours.size()  << std::endl;
-        // std::cout << "possible combinations: " <<  std::pow(2,contours.size()) + 1<< std::endl;
+         //std::cout << "size:" <<  contours.size()  << std::endl;
+         //std::cout << "possible combinations: " <<  std::pow(2,contours.size()) + 1<< std::endl;
 
         // contains the first moment of each contour
         // we precalculate this inorder to prune contours combinations if the distance of these are to long
@@ -1274,7 +1297,7 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours( const Detecto
             }
         }
 
-        //std::cout << "tried: "  << eval_count  << std::endl;
+        std::cout << "tried: "  << eval_count  << std::endl;
         //return results;
     };
 
@@ -1285,7 +1308,7 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours( const Detecto
     std::cout << "variance: " <<  best_variance << std::endl;
     latest_pupil_circle = std::move(best_circle);
     final_circle_contours = std::move(best_solution); // save this for debuging
-
+    return best_goodness;
 
 
 }
