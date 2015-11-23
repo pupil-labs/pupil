@@ -78,6 +78,8 @@ cdef class Detector_3D:
             self.detect_properties_3d["max_circle_variance"] = 1.0
             self.detect_properties_3d["pupil_radius_min"] = 2.0 # millimeters
             self.detect_properties_3d["pupil_radius_max"] = 4.0
+            self.detect_properties_3d["combine_evaluation_max"] = 10000
+            self.detect_properties_3d["combine_depth_max"] = 20
 
     def get_settings(self):
         return {'2D_Settings': self.detect_properties_2d , '3D_Settings' : self.detect_properties_3d }
@@ -195,7 +197,8 @@ cdef class Detector_3D:
         self.menu_3d.append(ui.Slider('pupil_radius_max',self.detect_properties_3d,label='Pupil max radius', min=1.0,max=8.0,step=0.1))
         self.menu_3d.append(ui.Slider('max_fit_residual',self.detect_properties_3d,label='3D fit max residual', min=0.00,max=0.1,step=0.0001))
         self.menu_3d.append(ui.Slider('max_circle_variance',self.detect_properties_3d,label='3D fit max circle variance', min=0.01,max=2.0,step=0.001))
-
+        self.menu_3d.append(ui.Slider('combine_evaluation_max',self.detect_properties_3d,label='3D fit max combinations eval', min=500,max=50000,step=5000))
+        self.menu_3d.append(ui.Slider('combine_depth_max',self.detect_properties_3d,label='3D fit max combination depth', min=10,max=5000,step=20))
 
 
         advanced_controls_menu = ui.Growing_Menu('Advanced Controls')

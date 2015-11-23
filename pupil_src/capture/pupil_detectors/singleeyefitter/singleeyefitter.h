@@ -117,7 +117,7 @@ namespace singleeyefitter {
 
             void unproject_observation_contours( const Contours_2D& contours);
             //void unproject_last_raw_edges();
-            void fit_circle_for_eye_contours( float max_residual = 20, float max_variance = 0.7, float min_radius = 2, float max_radius = 4 );
+            void fit_circle_for_eye_contours( const Detector_3D_Properties& props);
 
 
             std::unordered_map<Vector2, bool, math::matrix_hash<Vector2>> pupil_position_bins;

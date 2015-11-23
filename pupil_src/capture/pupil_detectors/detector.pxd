@@ -116,6 +116,8 @@ cdef extern from 'singleeyefitter/common/types.h':
     float max_circle_variance
     float pupil_radius_min
     float pupil_radius_max
+    int   combine_evaluation_max
+    int   combine_depth_max
 
 cdef extern from 'detect_2d.hpp':
 

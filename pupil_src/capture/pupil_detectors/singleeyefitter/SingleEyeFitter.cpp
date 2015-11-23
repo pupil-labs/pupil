@@ -365,11 +365,7 @@ Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::share
     }// else { // if it's too weak we wanna try to find a better one in 3D
 
         unproject_observation_contours(observation->contours);
-        float min_radius = props.pupil_radius_min;
-        float max_radius = props.pupil_radius_max;
-        float max_residual = props.max_fit_residual;
-        float max_variance = props.max_circle_variance;
-        fit_circle_for_eye_contours(max_residual, max_variance, min_radius, max_radius);
+        fit_circle_for_eye_contours( props);
 
         // project the circle back to 2D
         // need for some calculations in 2D late (calibration)
@@ -1097,12 +1093,18 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
 
 }
 
-void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours(float max_residual, float max_variance, float min_radius, float max_radius)
+void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours( const Detector_3D_Properties& props)
 {
 
     if (eye_contours.size() == 0)
         return;
-    std::cout << "fit" << std::endl;
+
+    float min_radius = props.pupil_radius_min;
+    float max_radius = props.pupil_radius_max;
+    float max_residual = props.max_fit_residual;
+    float max_variance = props.max_circle_variance;
+    int   combine_evaluation_max = props.combine_evaluation_max;
+    int   combine_depth_max = props.combine_depth_max;
 
     final_candidate_contours.clear(); // otherwise we fill this infinitly
     // copy the contours
@@ -1276,7 +1278,7 @@ void singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours(float max_resi
         //return results;
     };
 
-    pruning_quick_combine(contours, 10000, 20);
+    pruning_quick_combine(contours, combine_evaluation_max, combine_depth_max);
 
     std::cout << "residual: " <<  best_residual << std::endl;
     std::cout << "goodness: " <<  best_goodness << std::endl;
