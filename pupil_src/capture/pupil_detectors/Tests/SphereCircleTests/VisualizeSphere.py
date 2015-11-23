@@ -36,6 +36,7 @@ class VisualizeSphere(Visualizer):
         self.clear_gl_screen()
         self.trackball.push()
 
+        glLoadMatrixf(self.get_anthropomorphic_matrix())
         self.draw_coordinate_system(4)
 
         eye_position = eye[0]
@@ -46,7 +47,7 @@ class VisualizeSphere(Visualizer):
           draw_points( points, size = 3 , color=RGBA(1.,0,0,1.0), sharpness=1.0 )
 
 
-        self.draw_circle( found_circle[0], found_circle[2], found_circle[1], color=RGBA(1.,1,0,0.5) )
+        self.draw_circle( found_circle[0], found_circle[1], found_circle[2], color=RGBA(1.,1,0,0.5) )
 
         self.trackball.pop()
 
