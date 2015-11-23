@@ -81,19 +81,17 @@ if __name__ == '__main__':
 
     if time.clock() - lastTime  >= 1.0:
 
-      phi_circle_center = random.uniform(0, pi/2)
-      theta_circle_center =   random.uniform(-pi/2, pi/2)
-
-      right_z = sphere_radius * sin(phi_circle_center) * cos(theta_circle_center)
-      right_x = sphere_radius * sin(phi_circle_center) * sin(theta_circle_center)
-      right_y = sphere_radius * cos(phi_circle_center)
-
+      phi_circle_center = random.uniform(0, pi/2.0)
+      theta_circle_center =   random.uniform(-pi/2.0, pi/2.0)
 
       circle_distortion =  random.uniform(0, 0.2)
       circle_segment_amount = random.uniform(0.2, 1.0)
       circle_point_amount =  random.randint(5, 100)
       circle_opening = random.uniform(pi/32, pi/1.5 )
 
+      right_z = sphere_radius * sin(phi_circle_center) * cos(theta_circle_center)*cos(circle_opening)
+      right_x = sphere_radius * sin(phi_circle_center) * sin(theta_circle_center)*cos(circle_opening)
+      right_y = sphere_radius * cos(phi_circle_center)*cos(circle_opening)
 
       print"Set Position: {} {} {}".format( right_x,right_y,right_z)
       print"Set Circle Radius: {}".format( sin(circle_opening) )
@@ -111,9 +109,7 @@ if __name__ == '__main__':
 
       circle =  ( (x,y,z), (nx,ny,nz), radius )
 
-      d = sqrt(x*x +y*y + z*z)
-
-      print "Fit result Position: {} {} {}".format(x/d,y/d,z/d)
+      print "Fit result Position: {} {} {}".format(x,y,z)
       print "Fit result Radius: {}".format(radius)
       print "Fit result Residual {}".format(residual)
       lastTime = time.clock()
