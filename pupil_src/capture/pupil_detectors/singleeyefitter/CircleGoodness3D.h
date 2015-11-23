@@ -45,7 +45,7 @@ namespace singleeyefitter {
                 // This allows us to calculate the real coverage of the circumeference of the fitted circle, which tells us how much the contours support the current circle.
 
 
-                // this matrix transforms the contour points from camera space to circle space
+                // This matrix transforms the contour points from camera space to circle space
                 // where the circle normal is alinged with the up vector , in our case the y is up
                 Vector3 up_vector(0,1,0);
                 Eigen::Affine3d point_transformation;
@@ -57,7 +57,9 @@ namespace singleeyefitter {
                     point_transformation =   Eigen::AngleAxisd( angle, rotationAxis ) * point_transformation;
 
                 }
-                // visualize transformed circle and contours, remove const in function parameters
+                //visualize transformed circle and contours, remove const in function parameters
+                // CircleGoodness get invalid if you uncomment this
+                // To make it work again remove new_point transformation further down, otherwise it happens twice
                 // circle.normal = point_transformation.linear() * circle.normal;
                 // circle.center = point_transformation * circle.center;
                 // for ( auto& contour : contours) {
@@ -70,28 +72,34 @@ namespace singleeyefitter {
                 // theta and r are already contained in the residual of the plane fit (theta) and the circle variance (r)
 
                 std::vector<std::pair<Scalar,Scalar>> contours_angles;
+                const double circle_radius_squared = circle.radius*circle.radius;
+
                  for ( auto& contour : contours) {
 
                     double angle_min = std::numeric_limits<double>::infinity();
                     double angle_max = -1 ;
                     double angle_prev_point = -1;
-                    for(auto& point : contour){
+                    for(const auto& point : contour){
 
-                        auto new_point = point_transformation * point;
-                        double point_distance_squared = new_point.squaredNorm();
+                        const auto new_point = point_transformation * point;
+                        const double point_distance_squared = new_point.squaredNorm();
 
                         //skip point which are to far away form the circle boarder
                         // happens if a contour has a kink in it
                         // doesn't take into account if the contour get's nearer again
                         // but acctually shouldn't happen
-                        double circle_radius_squared = circle.radius*circle.radius;
-                        if( std::abs(point_distance_squared - circle_radius_squared )  > circle_radius_squared * 0.1 )
-                            continue;
+                        const double ratio = point_distance_squared/circle_radius_squared;
+                        const double ratio_factor = 0.15;
+                        const double ratio_factor_max = 1 + ratio_factor;
+                        const double ratio_factor_min = 1 - ratio_factor;
+
+                         if( ratio > ratio_factor_max || ratio < ratio_factor_min )
+                             continue;
 
                         //double theta = acos(point.y() / r);
                         //std::cout << "new point: "  << new_point << std::endl;
 
-                        double psi = atan2(new_point.z(), new_point.x() );
+                        const double psi = atan2(new_point.z(), new_point.x() );
                         if( psi < 0) psi +=  constants::two_pi; // range [0,2pi]
                         // std::cout << "psi: "  << psi << std::endl;
                         // std::cout << "angel max: "  << angle_max << std::endl;
@@ -169,9 +177,10 @@ namespace singleeyefitter {
 
                 }
                 // don't forget to add the last found angles
-                Scalar a = current_angle_max - current_angle_min;
-                // std::cout << "add amount " <<  a << std::endl;
-                angle_total += a;
+                if( current_angle_max != -1 &&  current_angle_min != std::numeric_limits<double>::infinity() ){
+                    Scalar a = current_angle_max - current_angle_min;
+                    angle_total += a;
+                }
 
 
                 Scalar goodness =  angle_total / constants::two_pi ;
