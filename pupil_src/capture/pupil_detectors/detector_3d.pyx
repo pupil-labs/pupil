@@ -14,9 +14,9 @@ from pupil_detectors.visualizer_3d import Visualizer
 from collections import namedtuple
 PyObservation = namedtuple('Observation' , 'ellipse_center, ellipse_major_radius, ellipse_minor_radius, ellipse_angle,params_theta, params_psi, params_radius, circle_center, circle_normal, circle_radius ')
 
-
-cimport detector
 from detector cimport *
+from detector_utils cimport *
+
 from cython.operator cimport dereference as deref
 
 
@@ -88,26 +88,6 @@ cdef class Detector_3D:
       del self.detector_2d_ptr
       del self.detector_3d_ptr
 
-    cdef convertToPythonResult(self, Detector_2D_Result& result, object frame, object roi ):
-
-        e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / np.pi - 90 )
-        py_result = {}
-        py_result['confidence'] = result.confidence
-        py_result['ellipse'] = e
-        py_result['major'] = max(e[1])
-        py_result['diameter'] = max(e[1])
-        py_result['minor'] = min(e[1])
-        py_result['axes'] = e[1]
-        py_result['angle'] = e[2]
-
-        norm_center = normalize(e[0],(frame.width, frame.height),flip_y=True)
-        py_result['norm_pos'] = norm_center
-        py_result['center'] = e[0]
-        py_result['timestamp'] = frame.timestamp
-        return py_result
-
-
-
     def detect(self, frame, user_roi, visualize, pause = False ):
 
         image_width = frame.width
@@ -154,7 +134,7 @@ cdef class Detector_3D:
 
         cdef Detector_2D_Result cpp_result = deref(cpp_result_ptr)
 
-        py_result = self.convertToPythonResult( cpp_result, frame, roi )
+        py_result = convertToPythonResult( cpp_result, frame, roi )
 
         ######### 3D Model Part ############
 
