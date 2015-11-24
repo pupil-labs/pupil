@@ -66,6 +66,7 @@ class Offline_Marker_Detector(Marker_Detector):
         if g_pool.app == 'capture':
            raise Exception('For Player only.')
         #in player we load from the rec_dir: but we have a couple options:
+        self.surface_definitions = None
         self.surfaces = None
         self.init_surfaces()
 
