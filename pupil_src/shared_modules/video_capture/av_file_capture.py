@@ -66,9 +66,7 @@ class Frame(object):
 
     @property
     def bgr(self):
-        if self._img is None:
-            self._img = self._av_frame.to_nd_array(format='bgr24')
-        return self._img
+        return self.img
 
     @property
     def gray(self):

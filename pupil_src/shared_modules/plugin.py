@@ -320,5 +320,5 @@ def import_runtime_plugins(plugin_dir):
                         logger.info('Added: %s'%member)
                         runtime_plugins.append(member)
             except Exception as e:
-                logger.warning("Failed to load '%s'. Reason: '%s' "%(d,e))
+                logger.debug("Failed to load '%s'. Reason: '%s' "%(d,e))
     return runtime_plugins
