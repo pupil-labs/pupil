@@ -672,11 +672,7 @@ void singleeyefitter::EyeModelFitter::refine_with_edges(const CallbackFunction& 
     int current_model_version;
     Eigen::Matrix<double, Eigen::Dynamic, 1> x;
     {
-        std::lock_guard<std::mutex> lock_model(model_mutex);
-
-        current_model_version = model_version;
-
-        x = Eigen::Matrix<double, Eigen::Dynamic, 1>(3 + 3 * pupils.size());
+        std::lock_guar ::Dynamic, 1>(3 + 3 * pupils.size());
         x.segment<3>(0) = eye.center;
         for (int i = 0; i < pupils.size(); ++i) {
             const PupilParams& pupil_params = pupils[i].params;
@@ -686,6 +682,7 @@ void singleeyefitter::EyeModelFitter::refine_with_edges(const CallbackFunction& 
         }
     }
 
+    // Shouldn't this be included in the mutex ????
     ceres::Problem problem;
     for (int i = 0; i < pupils.size(); ++i) {
        /* const cv::Mat& eye_image = pupils[i].observation.image;*/
@@ -746,11 +743,11 @@ void singleeyefitter::EyeModelFitter::refine_with_edges(const CallbackFunction& 
 
         eye.center = x.segment<3>(0);
 
-        for (int i = 0; i < pupils.size(); ++i) {
-            auto&& pupil_param = x.segment<3>(3 + 3 * i);
-            pupils[i].params = PupilParams(pupil_param[0], pupil_param[1], pupil_param[2]);
-            pupils[i].circle = circleFromParams(eye, pupils[i].params);
-        }
+        // for (int i = 0; i < pupils.size(); ++i) {
+        //     auto&& pupil_param = x.segment<3>(3 + 3 * i);
+        //     pupils[i].params = PupilParams(pupil_param[0], pupil_param[1], pupil_param[2]);
+        //     pupils[i].circle = circleFromParams(eye, pupils[i].params);
+        // }
     }
 }
 
@@ -935,7 +932,7 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
         return;
     }
 
-    std::vector<std::pair<Circle, Circle>> pupil_unprojection_pairs;
+    //std::vector<std::pair<Circle, Circle>> pupil_unprojection_pairs;
     std::vector<Line> pupil_gazelines_proj;
 
     for (const auto& pupil : pupils) {
@@ -1297,15 +1294,15 @@ double singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours( const Detec
             }
         }
 
-        std::cout << "tried: "  << eval_count  << std::endl;
+        //std::cout << "tried: "  << eval_count  << std::endl;
         //return results;
     };
 
     pruning_quick_combine(contours, combine_evaluation_max, combine_depth_max);
 
-    std::cout << "residual: " <<  best_residual << std::endl;
-    std::cout << "goodness: " <<  best_goodness << std::endl;
-    std::cout << "variance: " <<  best_variance << std::endl;
+    //std::cout << "residual: " <<  best_residual << std::endl;
+    //std::cout << "goodness: " <<  best_goodness << std::endl;
+    //std::cout << "variance: " <<  best_variance << std::endl;
     latest_pupil_circle = std::move(best_circle);
     final_circle_contours = std::move(best_solution); // save this for debuging
     return best_goodness;

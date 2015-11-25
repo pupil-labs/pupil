@@ -34,19 +34,20 @@ namespace singleeyefitter {
                 PupilParams();
                 PupilParams(double theta, double psi, double radius);
             };
-            struct Pupil {
-                //Observation observation;
-                std::shared_ptr<Detector_2D_Result> observation;
-                Circle circle;
-                Circle unprojected_circle; // we gonna keep track of the unprojected circle, because we need these parameters later
-                double fit_goodness;
-                PupilParams params;
-                bool init_valid;
-                bool processed; // indicate if this pupil is already processed
-                Pupil();
-                Pupil(std::shared_ptr<Detector_2D_Result> observation);
-                //Pupil(Ellipse ellipse);
+            struct Observation {
+                std::shared_ptr<const Detector_2D_Result> mObservation2D;
+                std::pair<Circle, Circle> mUnprojectedCirclePair
+                //Circle mUnprojectedCircle; // do it once and never again
+                Observation();
+                Observation(std::shared_ptr<Detector_2D_Result> observation)
+                unproject
             };
+
+            struct {}
+
+            Circle circle;
+            PupilParams params;
+            bool init_valid;
 
             // Constructors
             EyeModelFitter();
@@ -94,14 +95,20 @@ namespace singleeyefitter {
             //
             // Local (single pupil) calculations
             //
-            const Circle& unproject_single_observation(Index id, double pupil_radius = 5);
-            const Circle& initialise_single_observation(Index id);
+            //const Circle& unproject_single_observation(Index id, double pupil_radius = 5);
+            //const Circle& initialise_single_observation(Index id);
+
+            const Circle& selectUnprojectedCircle( sphere, focal_length, std::pair<Circle,Circle> );
+            const Circle& getIntersectedCircle(sphere, camera, unprojectedCircle  );
+
+
             //const Circle& refine_single_with_contrast(Index id);
             //double single_contrast_metric(Index id) const;
             //void print_single_contrast_metric(Index id) const;
 
             Sphere eye;
-            std::deque<Pupil> pupils;
+            std::vector<Pupil> pupils;
+            //std::deque<Pupil> pupils;
             //size_t max_pupils;   // this are the max pupils we wanna consider for calculations
             std::mutex model_mutex;
             // Model version gets incremented on initialisation/reset, so that long-running background-thread refines don't overwrite the model
@@ -124,8 +131,8 @@ namespace singleeyefitter {
             std::unordered_map<Vector2, bool, math::matrix_hash<Vector2>> pupil_position_bins;
             std::vector<Vector3> bin_positions; // for visualization
 
-            const Circle& unproject_single_observation(Pupil& pupil, double pupil_radius = 1) const;
-            const Circle& initialise_single_observation(Pupil& pupil);
+            //const Circle& unproject_single_observation(Pupil& pupil, double pupil_radius = 1) const;
+            //const Circle& initialise_single_observation(Pupil& pupil);
             // const Circle& refine_single_with_contrast(Pupil& pupil);
             // double single_contrast_metric(const Pupil& pupil) const;
             // void print_single_contrast_metric(const Pupil& pupil) const;

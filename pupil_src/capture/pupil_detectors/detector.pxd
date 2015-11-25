@@ -1,6 +1,6 @@
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
-from libcpp.deque cimport deque
+from libcpp.pair cimport pair
 from libc.stdint cimport int32_t
 
 cdef extern from '<opencv2/core/types_c.h>':
@@ -47,7 +47,7 @@ cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
         double& operator[](size_t)
 
 
-cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter":
+cdef extern from 'singleeyefitter/common/types.h':
 
     cdef cppclass Ellipse2D[T]:
         Ellipse2D()
@@ -66,58 +66,59 @@ cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter"
         Matrix31d normal
         float radius
 
-#typdefs
-ctypedef Matrix31d Vector3
-ctypedef Matrix21d Vector2
-ctypedef vector[vector[Point_[int]]] Contours_2D
+        #typdefs
+    ctypedef Matrix31d Vector3
+    ctypedef Matrix21d Vector2
+    ctypedef vector[vector[Point_[int]]] Contours_2D
+    ctypedef Circle3D[double] Circle
+    ctypedef Ellipse2D[double] Ellipse
 
-cdef extern from 'singleeyefitter/common/types.h':
+    cdef struct Detector_2D_Result:
+        double confidence
+        Ellipse ellipse
+        Contours_2D final_contours
+        Contours_2D contours
+        Mat raw_edges
+        Rect_[int] current_roi
+        double timestamp
+        int image_width;
+        int image_height;
+
+    cdef struct Detector_3D_Result:
+        double confidence
+        Ellipse ellipse
+        Vector3 gaze_vector
+        double timestamp
 
 
-  cdef struct Detector_2D_Result:
-    double confidence
-    Ellipse2D[double] ellipse
-    Contours_2D final_contours
-    Contours_2D contours
-    Mat raw_edges
-    Rect_[int] current_roi
-    double timestamp
-    int image_width;
-    int image_height;
+    cdef struct Detector_2D_Properties:
+        int intensity_range
+        int blur_size
+        float canny_treshold
+        float canny_ration
+        int canny_aperture
+        int pupil_size_max
+        int pupil_size_min
+        float strong_perimeter_ratio_range_min
+        float strong_perimeter_ratio_range_max
+        float strong_area_ratio_range_min
+        float strong_area_ratio_range_max
+        int contour_size_min
+        float ellipse_roundness_ratio
+        float initial_ellipse_fit_treshhold
+        float final_perimeter_ratio_range_min
+        float final_perimeter_ratio_range_max
+        float ellipse_true_support_min_dist
 
-  cdef struct Detector_3D_Result:
-    double confidence
-    Ellipse2D[double] ellipse
-    Vector3 gaze_vector
-    double timestamp
+    cdef struct Detector_3D_Properties:
+        float max_fit_residual
+        float max_circle_variance
+        float pupil_radius_min
+        float pupil_radius_max
+        int   combine_evaluation_max
+        int   combine_depth_max
 
 
-  cdef struct Detector_2D_Properties:
-    int intensity_range
-    int blur_size
-    float canny_treshold
-    float canny_ration
-    int canny_aperture
-    int pupil_size_max
-    int pupil_size_min
-    float strong_perimeter_ratio_range_min
-    float strong_perimeter_ratio_range_max
-    float strong_area_ratio_range_min
-    float strong_area_ratio_range_max
-    int contour_size_min
-    float ellipse_roundness_ratio
-    float initial_ellipse_fit_treshhold
-    float final_perimeter_ratio_range_min
-    float final_perimeter_ratio_range_max
-    float ellipse_true_support_min_dist
-
-  cdef struct Detector_3D_Properties:
-    float max_fit_residual
-    float max_circle_variance
-    float pupil_radius_min
-    float pupil_radius_max
-    int   combine_evaluation_max
-    int   combine_depth_max
 
 cdef extern from 'detect_2d.hpp':
 
@@ -128,42 +129,38 @@ cdef extern from 'detect_2d.hpp':
     shared_ptr[Detector_2D_Result] detect( Detector_2D_Properties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& roi, bint visualize , bint use_debug_image )
 
 
-cdef extern from "singleeyefitter/singleeyefitter.h" namespace "singleeyefitter":
+cdef extern from "singleeyefitter/EyeModelFitter.h" namespace "singleeyefitter":
 
 
     cdef cppclass EyeModelFitter:
-        EyeModelFitter(double focal_length )
-        Detector_3D_Result update_and_detect(  shared_ptr[Detector_2D_Result]& results,  Detector_3D_Properties& prop )
-        void reset()
 
         cppclass PupilParams:
             float theta
             float psi
             float radius
 
-        cppclass Pupil:
-            Pupil() except +
-            shared_ptr[Detector_2D_Result] observation
-            vector[vector[Vector3]] contours
-            vector[Vector3] edges
-            vector[vector[Vector3]] final_circle_contours
-            vector[vector[vector[Vector3]]] final_candidate_contours
-            double fit_goodness
-            PupilParams params
-            Circle3D[double] circle
+        cppclass Observation:
+            shared_ptr[const Detector_2D_Result] mObservation2D;
+            pair[Circle, Circle] mUnprojectedCirclePair
+            Observation( shared_ptr[const Detector_2D_Result] observation, double focalLength)
 
 
+        EyeModelFitter(double focalLength )
+
+        Detector_3D_Result update_and_detect(  shared_ptr[Detector_2D_Result]& results,  Detector_3D_Properties& prop )
+
+        void reset()
+        double getFocalLength()
+        Sphere[double] getSphere()
         #variables
-        float model_version
-        float focal_length
-        deque[Pupil] pupils
-        Sphere[double] eye
-        vector[Vector3] bin_positions
+        double mFocalLength
+        Sphere[double] mCurrentSphere
+        Circle mLatestPupil
+
         vector[vector[Vector3]] eye_contours
         vector[Vector3] edges
         vector[vector[Vector3]] final_circle_contours
         vector[vector[vector[Vector3]]] final_candidate_contours
-        Circle3D[double] latest_pupil_circle
         Vector3 gaze_vector
 
 

@@ -31,9 +31,8 @@ for dirpath, dirnames, filenames in os.walk("singleeyefitter"):
 
 extensions = [
     Extension(
-        # configured to Andrew Xia's ubuntu installation location
         name="detector_2d",
-        sources=['detector_2d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp'], #I don't need cvx.
+        sources=['detector_2d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp' ],
         include_dirs = [ np.get_include() , '/usr/local/include/eigen3'],
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc'],
         # library_dirs = ['/usr/local/lib'],
@@ -42,9 +41,8 @@ extensions = [
         depends= dependencies,
         language="c++"),
      Extension(
-        # configured to Andrew Xia's ubuntu installation location
         name="detector_3d",
-        sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/SingleEyeFitter.cpp'], #I don't need cvx.
+        sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/EyeModelFitter.cpp','singleeyefitter/EyeModel.cpp'],
         include_dirs = [ np.get_include() , '/usr/local/include/eigen3'],
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc', 'ceres'],
         # library_dirs = ['/usr/local/lib'],
@@ -52,18 +50,6 @@ extensions = [
         extra_compile_args=["-std=c++11",'-w'], #-w hides warnings
         depends= dependencies,
         language="c++"),
-    # Extension(
-    #     # configured to Andrew Xia's ubuntu installation location
-    #     name="eye_model_3d",
-    #     sources=['eye_model_3d.pyx','singleeyefitter/SingleEyeFitter.cpp','singleeyefitter/utils.cpp'],#,'cvx.cpp'], #I don't need cvx.
-    #     include_dirs = [ 'singleeyefitter/', '/usr/local/include/eigen3','/usr/local/include/ceres' , np.get_include()
-    #     #'usr/local/include/spii',#'/home/ceres-solver',
-    #     ],
-    #     libraries = ['spii','opencv_highgui','opencv_core','opencv_imgproc','ceres'],
-    #     # library_dirs = ['/usr/local/lib'],
-    #     extra_link_args=[], #'-WL,-R/usr/local/lib'
-    #     extra_compile_args=["-std=c++11",'-w'], #-w hides warnings
-    #     language="c++")
 ]
 
 setup(

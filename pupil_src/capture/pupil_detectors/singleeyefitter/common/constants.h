@@ -2,6 +2,7 @@
 #ifndef CONSTANTS_H__
 #define CONSTANTS_H__
 
+#include <cmath>
 namespace singleeyefitter {
 
     namespace constants {
