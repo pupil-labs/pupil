@@ -208,13 +208,13 @@ class Offline_Marker_Detector(Marker_Detector):
             self.markers = []
             self.seek_marker_cacher(frame.index) # tell precacher that it better have every thing from here on analyzed
 
-        # locate surfaces
-        for s in self.surfaces:
-            if not s.locate_from_cache(frame.index):
-                s.locate(self.markers)
-            if s.detected:
-                pass
-                # events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp,'gaze_on_srf':s.gaze_on_srf})
+        # # locate surfaces
+        # for s in self.surfaces:
+        #     if not s.locate_from_cache(frame.index):
+        #         s.locate(self.markers)
+        #     if s.detected:
+        #         pass
+        #         # events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp,'gaze_on_srf':s.gaze_on_srf})
 
         if self.mode == "Show marker IDs":
             draw_markers(frame.img,self.markers)
