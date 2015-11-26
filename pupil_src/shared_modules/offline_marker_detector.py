@@ -68,7 +68,7 @@ class Offline_Marker_Detector(Marker_Detector):
         #in player we load from the rec_dir: but we have a couple options:
         self.surface_definitions = None
         self.surfaces = None
-        self.init_surfaces()
+        self.load_surface_definitions_from_file()
 
         # ui mode settings
         self.mode = mode
@@ -89,7 +89,7 @@ class Offline_Marker_Detector(Marker_Detector):
         self.img_shape = None
         self.img = None
 
-    def init_surfaces(self):
+    def load_surface_definitions_from_file(self):
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'surface_definitions'))
         if self.surface_definitions.get('offline_square_marker_surfaces',[]) != []:
             logger.debug("Found ref surfaces defined or copied in previous session.")
