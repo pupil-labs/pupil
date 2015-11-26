@@ -672,7 +672,11 @@ void singleeyefitter::EyeModelFitter::refine_with_edges(const CallbackFunction& 
     int current_model_version;
     Eigen::Matrix<double, Eigen::Dynamic, 1> x;
     {
-        std::lock_guar ::Dynamic, 1>(3 + 3 * pupils.size());
+        std::lock_guard<std::mutex> lock_model(model_mutex);
+
+        current_model_version = model_version;
+
+        x = Eigen::Matrix<double, Eigen::Dynamic, 1>(3 + 3 * pupils.size());
         x.segment<3>(0) = eye.center;
         for (int i = 0; i < pupils.size(); ++i) {
             const PupilParams& pupil_params = pupils[i].params;

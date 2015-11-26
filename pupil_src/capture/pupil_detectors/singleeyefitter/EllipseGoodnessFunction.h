@@ -448,16 +448,16 @@ namespace singleeyefitter {
             // have gone all the way around, so just return worst case (i.e as bad
             // as radialDotEye == -1) with additional penalty for how far out we
             // are, again to push the gradient back inwards.
-            if (theta < Const(0) || theta > Const(PI) || psi < Const(-PI) || psi > Const(0)) {
+            if (theta < Const(0) || theta > Const(constants::PI) || psi < Const(-constants::PI) || psi > Const(0)) {
                 T ret = Const(-255.0) - (camera_center - pupil_circle.center).norm();
 
                 if (theta < Const(0))
                     ret -= (Const(0) - theta);
-                else if (theta > Const(PI))
-                    ret -= (theta - Const(PI));
+                else if (theta > Const(constants::PI))
+                    ret -= (theta - Const(constants::PI));
 
-                if (psi < Const(-PI))
-                    ret -= (Const(-PI) - psi);
+                if (psi < Const(-constants::PI))
+                    ret -= (Const(-constants::PI) - psi);
                 else if (psi > Const(0))
                     ret -= (psi - Const(0));
             }

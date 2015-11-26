@@ -415,7 +415,7 @@ class Visualizer(object):
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool, image_width, image_height,  eye, detector_3D  ):
+	def update_window(self, g_pool, image_width, image_height,  result  ):
 
 		if self._window != None:
 			glfwMakeContextCurrent(self._window)
@@ -424,18 +424,20 @@ class Visualizer(object):
 			self.image_width = image_width # reassign in case the image size got changed during running
 			self.image_height = image_height
 
-		latest_pupil = detector_3D.get_latest_pupil()
-		last_unprojected_contours =  detector_3D.get_last_pupil_contours()
-		final_circle_contours = detector_3D.get_last_final_circle_contour()
+		latest_pupil = result['circle']
+		last_unprojected_contours =  result['contours']
+		print last_unprojected_contours
+
+		final_circle_contours = result['fittedContours']
 		#last_pupil_edges = detector_3D.get_last_pupil_edges()
 		#final_candidate_contours = detector_3D.get_last_final_candidate_contour()
-		bin_positions = detector_3D.get_bin_positions()
-
+		bin_positions = result['binPositions']
+		sphere = result['sphere']
 		self.clear_gl_screen()
 		self.trackball.push()
 
-		eye_position = eye[0]
-		eye_radius = eye[1]
+		eye_position = sphere[0]
+		eye_radius = sphere[1]
 
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		self.draw_coordinate_system(4)
@@ -485,9 +487,9 @@ class Visualizer(object):
 		self.trackball.pop()
 		#if last_unwrapped_contours:
 		#	self.draw_unwrapped_contours_on_screen(last_unwrapped_contours)
-		gaze_vector = detector_3D.get_gaze_vector()
+		look_direction = latest_pupil[1]
 		pupil_radius = latest_pupil[2]
-		self.draw_eye_model_fitter_text(eye, gaze_vector,pupil_radius)
+		self.draw_eye_model_fitter_text(sphere, look_direction,pupil_radius)
 
 		glfwSwapBuffers(self._window)
 		glfwPollEvents()

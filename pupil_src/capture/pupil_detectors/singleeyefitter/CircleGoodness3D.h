@@ -100,7 +100,7 @@ namespace singleeyefitter {
                         //std::cout << "new point: "  << new_point << std::endl;
 
                         double psi = atan2(new_point.z(), new_point.x() );
-                        if( psi < 0) psi +=  constants::two_pi; // range [0,2pi]
+                        if( psi < 0) psi +=  constants::TWO_PI; // range [0,2pi]
                         // std::cout << "psi: "  << psi << std::endl;
                         // std::cout << "angel max: "  << angle_max << std::endl;
                         // std::cout << "angel min: "  << angle_min << std::endl;
@@ -110,22 +110,22 @@ namespace singleeyefitter {
                         // if we find these, we split them
                         // we take some asumptions, one of them is that two consecutive points can't have a big angle, can't be the same or bigger than pi
 
-                        if( angle_prev_point != -1 &&  angle_prev_point - psi  > constants::pi ){ // the line goes from 2pi to 0
+                        if( angle_prev_point != -1 &&  angle_prev_point - psi  > constants::PI ){ // the line goes from 2pi to 0
 
                             // split here
-                           contours_angles.push_back( {angle_min,  constants::two_pi} );
+                           contours_angles.push_back( {angle_min,  constants::TWO_PI} );
                            // start again at 0
                            angle_min = 0.0 ;
                            angle_max = psi;
                            // std::cout << "found positive wrap around" << std::endl;
                         }
-                        if( angle_prev_point != -1 &&  angle_prev_point - psi   < -constants::pi ){ // the line goes from 0 to 2pi
+                        if( angle_prev_point != -1 &&  angle_prev_point - psi   < -constants::PI ){ // the line goes from 0 to 2pi
 
                             // split here
                            contours_angles.push_back( {0.0, angle_max} );
                            // start again at 2pi
                            angle_min = psi ;
-                           angle_max = constants::two_pi;
+                           angle_max = constants::TWO_PI;
                            // std::cout << "found negative wrap around" << std::endl;
                         }
 
@@ -183,7 +183,7 @@ namespace singleeyefitter {
                 }
 
 
-                Scalar goodness =  angle_total / constants::two_pi ;
+                Scalar goodness =  angle_total / constants::TWO_PI ;
                 return goodness;
             }
     };

@@ -69,7 +69,9 @@ cdef extern from 'singleeyefitter/common/types.h':
         #typdefs
     ctypedef Matrix31d Vector3
     ctypedef Matrix21d Vector2
+    ctypedef vector[vector[Vector3]] Contours3D
     ctypedef vector[vector[Point_[int]]] Contours_2D
+    ctypedef vector[Point_[int]] Contour_2D
     ctypedef Circle3D[double] Circle
     ctypedef Ellipse2D[double] Ellipse
 
@@ -85,10 +87,15 @@ cdef extern from 'singleeyefitter/common/types.h':
         int image_height;
 
     cdef struct Detector_3D_Result:
-        double confidence
+        Circle circle
         Ellipse ellipse
-        Vector3 gaze_vector
+        double fitGoodness
         double timestamp
+        Contours3D contours
+        Contours3D fittedCircleContours
+        Sphere[double] sphere
+        vector[Vector3] binPositions
+
 
 
     cdef struct Detector_2D_Properties:
@@ -151,18 +158,10 @@ cdef extern from "singleeyefitter/EyeModelFitter.h" namespace "singleeyefitter":
 
         void reset()
         double getFocalLength()
-        Sphere[double] getSphere()
-        #variables
+
+
         double mFocalLength
         Sphere[double] mCurrentSphere
-        Circle mLatestPupil
-
-        vector[vector[Vector3]] eye_contours
-        vector[Vector3] edges
-        vector[vector[Vector3]] final_circle_contours
-        vector[vector[vector[Vector3]]] final_candidate_contours
-        Vector3 gaze_vector
-
 
 
 

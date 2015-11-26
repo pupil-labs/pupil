@@ -21,3 +21,53 @@ cdef inline convertToPythonResult( Detector_2D_Result& result, object frame, obj
     py_result['center'] = e[0]
     py_result['timestamp'] = frame.timestamp
     return py_result
+
+cdef inline prepareForVisualization3D(  Detector_3D_Result& result ):
+
+    py_visualizationResult = {}
+
+    py_visualizationResult['binPositions'] = getBinPositions(result);
+    py_visualizationResult['circle'] = getCircle(result);
+    py_visualizationResult['contours'] = getContours(result.contours);
+    py_visualizationResult['fittedContours'] = getContours(result.fittedCircleContours);
+    py_visualizationResult['sphere'] = getSphere(result);
+
+
+    return py_visualizationResult
+
+
+cdef inline getBinPositions( Detector_3D_Result& result ):
+    if result.binPositions.size() == 0:
+        return []
+    positions = []
+    eyePosition = result.sphere.center
+    eyeRadius = result.sphere.radius
+    #bins are on a unit sphere
+    for point in result.binPositions:
+        positions.append([point[0]*eyeRadius+eyePosition[0],point[1]*eyeRadius+eyePosition[1],point[2]*eyeRadius+eyePosition[2]])
+    return positions
+
+
+cdef inline getCircle(const Detector_3D_Result& result):
+    center = result.circle.center
+    radius = result.circle.radius
+    normal = result.circle.normal
+    return [ [center[0],center[1],center[2]], [normal[0],normal[1],normal[2]], radius ]
+
+
+cdef inline getContours( Contours3D con):
+
+    contours = []
+    for contour in con:
+        c = []
+        for point in contour:
+            c.append([point[0],point[1],point[2]])
+        print c
+        contours.append(c)
+
+    return contours
+
+
+cdef inline getSphere(const Detector_3D_Result& result ):
+    sphere = result.sphere
+    return [ [sphere.center[0],sphere.center[1],sphere.center[2]],sphere.radius]

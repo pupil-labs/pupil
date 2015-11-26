@@ -164,23 +164,18 @@ namespace singleeyefitter {
 
         }// else { // if it's too weak we wanna try to find a better one in 3D
 
-            unproject_observation_contours(observation2D->contours);
-            double goodness = fit_circle_for_eye_contours(props);
-            result.confidence = goodness;
-
+            fitCircle(observation2D->contours, props, result );
             // project the circle back to 2D
             // need for some calculations in 2D later (calibration)
-            result.ellipse = Ellipse(project(mLatestPupil, mFocalLength));
         // }
 
 
-        if (result.confidence >= 0.9 || observation2D->confidence >= 0.9) { // either way we get a new circle
-            mPreviousPupilRadius = mLatestPupil.radius;
+        if (result.confidence >= 0.9 /*|| observation2D->confidence >= 0.9*/ ) { // either way we get a new circle
+            mPreviousPupilRadius = result.circle.radius;
             std::cout << "prev_radius: " << mPreviousPupilRadius << std::endl;
         }
-
-
-        result.gaze_vector = mLatestPupil.normal; // need to calibrate
+        result.sphere = mCurrentSphere;
+        result.binPositions = mEyeModels.back().getBinPositions();
         return result;
 
     }
@@ -190,19 +185,19 @@ namespace singleeyefitter {
 
     void EyeModelFitter::reset()
     {
-        // std::lock_guard<std::mutex> lock_model(model_mutex);
-        // pupils.clear();
-        // pupil_position_bins.clear();
-        // bin_positions.clear();
-        // eye = Sphere::Null;
-        // model_version = 0;
+        mEyeModels.clear();
+        mEyeModels.emplace_back( mFocalLength, mCameraCenter);   // There should be at least one eye-model
+        mCurrentSphere = Sphere::Null;
+        mPreviousPupilRadius = 0.0;
     }
 
-    double EyeModelFitter::fit_circle_for_eye_contours(const Detector_3D_Properties& props)
+    void  EyeModelFitter::fitCircle(const Contours_2D& contours2D , const Detector_3D_Properties& props,  Detector_3D_Result& result)
     {
 
-        if (mContoursOnSphere.size() == 0)
-            return 0.0;
+        if (contours2D.size() == 0)
+            return;
+
+        Contours3D contoursOnSphere  = unprojectObservationContours( contours2D );
 
 
         double minRadius = props.pupil_radius_min;
@@ -215,19 +210,19 @@ namespace singleeyefitter {
         }
         const double maxDiameter = maxRadius * 2.0;
 
-        final_candidate_contours.clear(); // otherwise we fill this infinitly
+        //final_candidate_contours.clear(); // otherwise we fill this infinitly
 
         //first we want to filter out the bad stuff, too short ones
         const auto contour_size_min_pred = [](const std::vector<Vector3>& contour) {
             return contour.size() >= 3;
         };
-        mContoursOnSphere = singleeyefitter::fun::filter(contour_size_min_pred , mContoursOnSphere);
+        contoursOnSphere = singleeyefitter::fun::filter(contour_size_min_pred , contoursOnSphere);
 
-        if (mContoursOnSphere.size() == 0)
-            return 0.0;
+        if (contoursOnSphere.size() == 0)
+            return ;
 
         // sort the contours so the contour with the most points is at the begining
-        std::sort(mContoursOnSphere.begin(), mContoursOnSphere.end(), [](const std::vector<Vector3>& a, const std::vector<Vector3>& b) { return a.size() < b.size();});
+        std::sort(contoursOnSphere.begin(), contoursOnSphere.end(), [](const std::vector<Vector3>& a, const std::vector<Vector3>& b) { return a.size() < b.size();});
 
         // saves the best solution and just the Vector3Ds not every single contour
         Contours3D bestSolution;
@@ -356,8 +351,8 @@ namespace singleeyefitter {
                             bool isCandidate = circleEvaluation(current_circle, residual);
                             double goodness =  circleGoodness(current_circle , test_contours);
 
-                            if (isCandidate)
-                                final_candidate_contours.push_back(test_contours);
+                            // if (isCandidate)
+                            //     final_candidate_contours.push_back(test_contours);
 
                             //check if this one is better then the best one and swap
                             if (isCandidate &&  goodness > bestGoodness) {
@@ -380,26 +375,25 @@ namespace singleeyefitter {
             //return results;
         };
 
-        pruning_quick_combine(mContoursOnSphere, props.combine_evaluation_max, props.combine_depth_max);
+        pruning_quick_combine(contoursOnSphere, props.combine_evaluation_max, props.combine_depth_max);
 
         //std::cout << "residual: " <<  bestResidual << std::endl;
         //std::cout << "goodness: " <<  bestGoodness << std::endl;
         //std::cout << "variance: " <<  bestVariance << std::endl;
-        mLatestPupil = std::move(bestCircle);
-        final_circle_contours = std::move(bestSolution); // save this for debuging
-        return bestGoodness;
-
+        result.circle = std::move(bestCircle);
+        result.fittedCircleContours = std::move(bestSolution); // save this for debuging
+        result.fitGoodness = bestGoodness;
+        result.contours = std::move( contoursOnSphere );
+        // project the circle back to 2D
+        // need for some calculations in 2D later (calibration)
+        result.ellipse = Ellipse(project(bestCircle, mFocalLength));
 
     }
 
-    void EyeModelFitter::unproject_observation_contours(const Contours_2D& contours)
+    Contours3D EyeModelFitter::unprojectObservationContours(const Contours_2D& contours)
     {
-        if (mCurrentSphere == Sphere::Null) {
-            return;
-        }
-
-        mContoursOnSphere.clear();
-        mContoursOnSphere.resize(contours.size());
+        Contours3D contoursOnSphere;
+        contoursOnSphere.resize(contours.size());
         int i = 0;
         //TODO handle contours with no intersection points, because they get closed
         for (auto& contour : contours) {
@@ -409,8 +403,8 @@ namespace singleeyefitter {
 
                 try {
                     // we use the eye properties of the current eye, when ever we call this
-                    const auto& unprojected_point = intersect(Line3(mCameraCenter,  direction.normalized()), mCurrentSphere);
-                    mContoursOnSphere[i].push_back(std::move(unprojected_point.first));
+                    const auto& unprojectedPoint = intersect(Line3(mCameraCenter,  direction.normalized()), mCurrentSphere);
+                    contoursOnSphere[i].push_back(std::move(unprojectedPoint.first));
 
                 } catch (no_intersection_exception&) {
                     // if there is no intersection we don't do anything
@@ -418,6 +412,7 @@ namespace singleeyefitter {
             }
             i++;
         }
+        return contoursOnSphere;
 
     }
 

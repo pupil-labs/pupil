@@ -19,7 +19,7 @@ namespace singleeyefitter {
     typedef std::vector<std::vector<cv::Point> > Contours_2D;
     typedef std::vector<cv::Point> Contour_2D;
     typedef std::vector<int> ContourIndices;
-    typedef singleeyefitter::Ellipse2D<double> Ellipse;
+    typedef Ellipse2D<double> Ellipse;
 
     //########  3D Detector ############
 
@@ -27,7 +27,7 @@ namespace singleeyefitter {
     typedef Eigen::Matrix<double, 3, 1> Vector3;
     typedef Eigen::ParametrizedLine<double, 2> Line;
     typedef Eigen::ParametrizedLine<double, 3> Line3;
-    typedef singleeyefitter::Circle3D<double> Circle;
+    typedef Circle3D<double> Circle;
     typedef size_t Index;
 
     typedef std::vector<Vector3> Contour3D;
@@ -51,10 +51,16 @@ namespace singleeyefitter {
 
     struct Detector_3D_Result {
         double confidence =  0.0 ;
-        Ellipse ellipse = Ellipse::Null;
-        Vector3 gaze_vector = Vector3(0,0,0);
+        Circle circle  = Circle::Null;
+        Ellipse ellipse = Ellipse::Null; // the circle projected back to 2D
+        double fitGoodness =  -1.0;
         double timestamp = 0.0;
-
+        //-------- For visualization ----------------
+        // just valid if we want it for visualization
+        Contours3D contours;
+        Contours3D fittedCircleContours;
+        Sphere<double> sphere;
+        std::vector<Vector3> binPositions;
     };
 
     // use a struct for all properties and pass it to detect method every time we call it.

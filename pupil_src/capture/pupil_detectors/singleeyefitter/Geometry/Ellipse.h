@@ -62,11 +62,11 @@ namespace singleeyefitter {
 
                 if (major_radius < minor_radius) {
                     std::swap(major_radius, minor_radius);
-                    angle = angle + constants::pi / 2;
+                    angle = angle + constants::PI / 2;
                 }
 
-                if (angle > constants::pi)
-                    angle = angle - constants::pi;
+                if (angle > constants::PI )
+                    angle = angle - constants::PI ;
             }
 
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW_IF((sizeof(Vector) % 16) == 0)
@@ -89,13 +89,13 @@ namespace singleeyefitter {
                 using std::abs;
                 using std::sqrt;
                 using std::pow;
-                return constants::pi * abs(3.0 * (major_radius + minor_radius) -
+                return constants::PI * abs(3.0 * (major_radius + minor_radius) -
                                   sqrt(10.0 * major_radius * minor_radius + 3.0 *
                                        (pow(major_radius, 2) + pow(minor_radius, 2))));
             }
             Scalar area() const
             {
-                return constants::pi * major_radius * minor_radius;
+                return constants::PI * major_radius * minor_radius;
             }
 
 
@@ -134,7 +134,7 @@ namespace singleeyefitter {
     std::ostream& operator<< (std::ostream& os, const Ellipse2D<T>& ellipse)
     {
         return os << "Ellipse { center: (" << ellipse.center[0] << "," << ellipse.center[1] << "), a: " <<
-               ellipse.major_radius << ", b: " << ellipse.minor_radius << ", theta: " << (ellipse.angle / constants::pi) << "pi }";
+               ellipse.major_radius << ", b: " << ellipse.minor_radius << ", theta: " << (ellipse.angle / constants::PI) << "pi }";
     }
 
     template<typename T, typename U>

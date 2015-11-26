@@ -26,8 +26,6 @@ namespace singleeyefitter {
 
 
             double getFocalLength(){ return mFocalLength; };
-            Sphere getSphere(){ return mCurrentSphere; };
-
             void reset();
 
             // this is called with new observations from the 2D detector
@@ -46,23 +44,19 @@ namespace singleeyefitter {
             std::vector<EyeModel> mEyeModels;
 
             Sphere mCurrentSphere;
-            Circle mLatestPupil;
             double mPreviousPupilRadius;
 
             // data we get each frame
-            Contours3D mContoursOnSphere;
-            std::vector<Vector3> edges; // just for visualization
-            Contours3D final_circle_contours; // just for visualiziation, contains all points which fit best the circle
-            std::vector<Contours3D> final_candidate_contours; // just for visualiziation, contains all contours which are a candidate for the fit
-            Vector3 gaze_vector;
+            //std::vector<Vector3> edges; // just for visualization
+            //Contours3D final_circle_contours; // just for visualiziation, contains all points which fit best the circle
+            //std::vector<Contours3D> final_candidate_contours; // just for visualiziation, contains all contours which are a candidate for the fit
+            //Vector3 gaze_vector;
 
-            void unproject_observation_contours( const Contours_2D& contours);
+            Contours3D unprojectObservationContours( const Contours_2D& contours);
             //void unproject_last_raw_edges();
-            double fit_circle_for_eye_contours( const Detector_3D_Properties& props);
+            void fitCircle(const Contours_2D& contours2D , const Detector_3D_Properties& props,  Detector_3D_Result& result);
 
 
-            Circle circleFromParams(const PupilParams& params) const;
-            static Circle circleFromParams(const Sphere& eye, const PupilParams& params);
     };
 
 }

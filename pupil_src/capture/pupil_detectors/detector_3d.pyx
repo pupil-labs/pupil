@@ -138,14 +138,12 @@ cdef class Detector_3D:
 
         ######### 3D Model Part ############
 
-        self.detector_3d_ptr.update_and_detect( cpp_result_ptr , self.detect_properties_3d)
+        cdef Detector_3D_Result cpp3DResult  = self.detector_3d_ptr.update_and_detect( cpp_result_ptr , self.detect_properties_3d)
 
-        #self.detector_3d_ptr.unproject_last_raw_edges()
 
         if self.debug_visualizer_3d._window:
-            sphere = self.detector_3d_ptr.getSphere()
-            py_sphere = ((sphere.center[0],sphere.center[1],sphere.center[2]),sphere.radius)
-            self.debug_visualizer_3d.update_window( self.g_pool, image_width, image_height, py_sphere, self )
+            py_visualizationResult = prepareForVisualization3D(cpp3DResult)
+            self.debug_visualizer_3d.update_window( self.g_pool, image_width, image_height, py_visualizationResult  )
 
 
         return py_result
@@ -214,36 +212,6 @@ cdef class Detector_3D:
     #     normal = self.detector_3d_ptr.latest_pupil_circle.normal
     #     return [ [center[0],center[1],center[2]], [normal[0],normal[1],normal[2]], radius ]
 
-    # def get_gaze_vector(self):
-    #     gaze = self.detector_3d_ptr.gaze_vector
-    #     return [gaze[0],gaze[1],gaze[2]]
-
-    # def get_observation(self,index):
-    #     cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils[index]
-    #     cdef Detector_2D_Result observation = deref(p.observation)
-    #     # returning (Ellipse, Params, Cicle). Ellipse = ([x,y],major,minor,angle). Params = (theta,psi,r)
-    #     # Circle = (center[x,y,z], normal[x,y,z], radius)
-    #     return PyObservation( (observation.ellipse.center[0],observation.ellipse.center[1]), observation.ellipse.major_radius,observation.ellipse.minor_radius,observation.ellipse.angle,
-    #         p.params.theta,p.params.psi,p.params.radius,
-    #         (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
-    #         (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
-    #         p.circle.radius )
-
-    # def get_last_observation(self ):
-    #     cdef EyeModelFitter.Pupil p
-    #     if self.detector_3d_ptr.pupils.size() == 0:
-    #         return []
-
-    #     cdef Detector_2D_Result observation
-    #     p = self.detector_3d_ptr.pupils.back()
-    #     observation = deref(p.observation)
-
-    #     PyObservation( (observation.ellipse.center[0],observation.ellipse.center[1]), observation.ellipse.major_radius,observation.ellipse.minor_radius,observation.ellipse.angle,
-    #     p.params.theta,p.params.psi,p.params.radius,
-    #     (p.circle.center[0],p.circle.center[1],p.circle.center[2]),
-    #     (p.circle.normal[0],p.circle.normal[1],p.circle.normal[2]),
-    #     p.circle.radius )
-
     # def get_last_pupil_contours(self):
 
     #     contours = []
@@ -255,11 +223,11 @@ cdef class Detector_3D:
 
     #     return contours
 
-    # def get_last_pupil_edges(self):
-    #     edges = []
-    #     for point in self.detector_3d_ptr.edges:
-    #             edges.append([point[0],point[1],point[2]])
-    #     return edges
+    # # def get_last_pupil_edges(self):
+    # #     edges = []
+    # #     for point in self.detector_3d_ptr.edges:
+    # #             edges.append([point[0],point[1],point[2]])
+    # #     return edges
 
     # def get_bin_positions(self):
     #     if self.detector_3d_ptr.bin_positions.size() == 0:
@@ -296,19 +264,19 @@ cdef class Detector_3D:
     #         list_contours.append(cc)
 
     #     return list_contours
-    # # def get_last_unwrapped_contours(self):
-    # #     if self.detector_3d_ptr.pupils.size() == 0:
-    # #         return []
+    # def get_last_unwrapped_contours(self):
+    #     if self.detector_3d_ptr.pupils.size() == 0:
+    #         return []
 
-    # #     cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
-    # #     contours = []
-    # #     for contour in p.unwrapped_contours:
-    # #         c = []
-    # #         for point in contour:
-    # #             c.append([point[0],point[1]])
-    # #         contours.append(c)
+    #     cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
+    #     contours = []
+    #     for contour in p.unwrapped_contours:
+    #         c = []
+    #         for point in contour:
+    #             c.append([point[0],point[1]])
+    #         contours.append(c)
 
-    # #     return contours
+    #     return contours
 
     # def get_all_pupil_observations(self):
     #     cdef EyeModelFitter.Pupil p

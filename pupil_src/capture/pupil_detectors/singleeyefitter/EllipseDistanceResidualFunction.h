@@ -1,3 +1,12 @@
+#ifndef ELLIPSEDISTANCERESIDUALFUNCTION_H__
+#define ELLIPSEDISTANCERESIDUALFUNCTION_H__
+
+
+#include "projection.h"
+#include "Geometry/Sphere.h"
+#include "Geometry/Ellipse.h"
+#include "EllipseDistanceApproxCalculator.h"
+#include "utils.h"
 
 namespace singleeyefitter{
 
@@ -31,3 +40,6 @@ class EllipseDistanceResidualFunction {
         const Scalar& focal_length;
 };
 } // namespace singleeyefitter
+
+
+#endif /* end of include guard: ELLIPSEDISTANCERESIDUALFUNCTION_H__ */

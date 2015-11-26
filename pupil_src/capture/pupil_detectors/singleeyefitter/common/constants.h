@@ -6,8 +6,8 @@
 namespace singleeyefitter {
 
     namespace constants {
-        const double pi = std::acos(-1);
-        const double two_pi = 2.0 * std::acos(-1);
+        const double PI = std::acos(-1);
+        const double TWO_PI = 2.0 * std::acos(-1);
 
     } // constants
 
