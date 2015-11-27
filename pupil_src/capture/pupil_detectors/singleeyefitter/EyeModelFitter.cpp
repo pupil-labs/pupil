@@ -99,69 +99,6 @@ namespace singleeyefitter {
                 model.presentObservation(observation3DPtr);
             }
 
-            // //if the observation is strong enough, check for other properties if it's a candidate we can use
-            // if (eye != Sphere::Null) {
-
-            //     if (unprojected_circle != Circle::Null && initialised_circle != Circle::Null) {  // initialise failed
-
-            //         double support = model_support(unprojected_circle, initialised_circle);
-            //         //std::cout << "support: " << support  << std::endl;
-            //         if ( support > 0.97  ) {
-
-            //             if (  spatial_variance_check(initialised_circle)) {
-            //                 should_add_observation = true;
-            //             } else {
-            //                 //std::cout << " spatial check failed"  << std::endl;
-            //             }
-
-            //         } else {
-            //             std::cout << "doesn't support current model "  << std::endl;
-            //         }
-
-
-            //     } else {
-            //         std::cout << "no valid circles"  << std::endl;
-            //     }
-
-            // } else { // no valid sphere yet
-            //     std::cout << "add without check" << std::endl;
-            //     should_add_observation = true;
-            // }
-
-
-            // if (should_add_observation) {
-            //     //std::cout << "add" << std::endl;
-
-            //     //if the observation passed all tests we can add it
-            //     add_observation(Pupil(observation2D));
-
-            //     std::cout << "pupil size " << pupils.size() << std::endl;
-            //     //refine model every 50 new pupils
-            //     if(pupils.size() > 50 && pupils.size() % 50  == 0){
-
-            //         unproject_observations();
-            //         initialise_model();
-
-            //         std::cout << "-----------refine model"  << std::endl;
-            //         std::cout << "-----------prev eye: " << eye << std::endl;
-            //         refine_with_edges();
-            //         std::cout << "-----------new eye: " << eye << std::endl;
-
-            //     }else if(pupils.size() <= 50){
-
-            //         unproject_observations();
-            //         initialise_model();
-            //     }
-
-            // } else {
-
-            //     // if we don't add a new one we still wanna have the latest pupil parameters
-            //     mLatestPupil = std::move(pupil.circle);
-            // }
-
-            //std::cout << "2d ellipse " << observation->ellipse << std::endl;
-
-
         }// else { // if it's too weak we wanna try to find a better one in 3D
 
             fitCircle(observation2D->contours, props, result );
@@ -174,6 +111,7 @@ namespace singleeyefitter {
             mPreviousPupilRadius = result.circle.radius;
             std::cout << "prev_radius: " << mPreviousPupilRadius << std::endl;
         }
+        mCurrentSphere = mEyeModels.back().getSphere();
         result.sphere = mCurrentSphere;
         result.binPositions = mEyeModels.back().getBinPositions();
         return result;

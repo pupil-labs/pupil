@@ -426,7 +426,6 @@ class Visualizer(object):
 
 		latest_pupil = result['circle']
 		last_unprojected_contours =  result['contours']
-		print last_unprojected_contours
 
 		final_circle_contours = result['fittedContours']
 		#last_pupil_edges = detector_3D.get_last_pupil_edges()

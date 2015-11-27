@@ -62,7 +62,6 @@ cdef inline getContours( Contours3D con):
         c = []
         for point in contour:
             c.append([point[0],point[1],point[2]])
-        print c
         contours.append(c)
 
     return contours

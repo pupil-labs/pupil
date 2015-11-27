@@ -95,26 +95,6 @@ namespace singleeyefitter {
 
     };
 
-    struct PupilParams {
-        double theta, psi, radius;
-        PupilParams();
-        PupilParams(double theta, double psi, double radius);
-    };
-    struct Observation {
-        std::shared_ptr<const Detector_2D_Result> mObservation2D;
-        std::pair<const Circle,const Circle> mUnprojectedCirclePair;
-        Observation(std::shared_ptr<const Detector_2D_Result> observation, double focalLength) :
-            mObservation2D(observation), mUnprojectedCirclePair(unproject(mObservation2D->ellipse, 1.0 , focalLength))
-        {}
-        Observation( const Observation& that ) = delete; // forbid copying
-        Observation( Observation&& that ) = delete; // forbid moving
-        Observation() = delete; // forbid default construction
-
-
-    };
-    typedef std::shared_ptr<const Observation> ObservationPtr;
-
-
 } // singleeyefitter namespace
 
 #endif //singleeyefitter_types_h__
