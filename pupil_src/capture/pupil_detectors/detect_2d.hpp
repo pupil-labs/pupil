@@ -165,8 +165,8 @@ std::shared_ptr<Detector_2D_Result> Detector2D::detect(Detector_2D_Properties& p
 	}
 
 
-	GuoHallThinner thinner;
-    thinner.thin(edges, true);
+	//GuoHallThinner thinner;
+    //thinner.thin(edges, true);
 
 
 	//get raw edge pixel for later
@@ -179,7 +179,7 @@ std::shared_ptr<Detector_2D_Result> Detector2D::detect(Detector_2D_Properties& p
 	/// Strong Prior Part Begin ///
 	///////////////////////////////
 	//if we had a good ellipse before ,let see if it is still a good first guess:
-	if( /*mUse_strong_prior*/ false ){
+	if(  mUse_strong_prior ){
 
 	  mUse_strong_prior = false;
 	  //recalculate center in coords system of new ROI views! roi changes every framesub
