@@ -56,8 +56,8 @@ class EyeModel {
         typedef singleeyefitter::Sphere<double> Sphere;
     public:
 
-        EyeModel(double focalLength, Vector3 cameraCenter):
-            mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)) {};
+        EyeModel( double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 10):
+            mInitialUncheckedPupils(initialUncheckedPupils), mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)) {};
 
         EyeModel(const EyeModel&) = delete;
         EyeModel(EyeModel&&); // we need a explicit Move constructor because of the mutex
@@ -118,12 +118,17 @@ class EyeModel {
         double mPerformance; // Average model support
         double mMaturity; // bin amounts
 
+        const int mInitialUncheckedPupils;
+
         // Thread sensitive variables
         const double mFocalLength;
         const Vector3 mCameraCenter;
         Sphere mSphere;
         Sphere mInitialSphere;
         std::vector<Pupil> mSupportingPupils;
+
+        std::atomic<int> mPupilSize; // use this to get the SupportedPupil size
+
         // observations are saved here and only if needed transfered to mObservation
         // since mObservations needs a mutex
         std::vector<Pupil> mSupportingPupilsToAdd;

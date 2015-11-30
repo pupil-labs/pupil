@@ -35,7 +35,7 @@ namespace singleeyefitter {
 
 
 
-EyeModel::EyeModel(EyeModel&& that) : mFocalLength(that.mFocalLength), mCameraCenter(that.mCameraCenter)
+EyeModel::EyeModel(EyeModel&& that) : mInitialUncheckedPupils(that.mInitialUncheckedPupils), mFocalLength(that.mFocalLength), mCameraCenter(that.mCameraCenter)
 {
     std::lock_guard<std::mutex> lock(that.mModelMutex);
     mSupportingPupils = std::move(that.mSupportingPupils);
@@ -53,7 +53,7 @@ EyeModel::~EyeModel(){
 
     // wait for thread ?
     //TODO reset when thread is running
-    // see what happen :)
+    // see what happens :)
 }
 
 
@@ -65,7 +65,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
     bool should_add_observation = false;
 
     //Check for properties if it's a candidate we can use
-    if (mSphere != Sphere::Null) {
+    if (mSphere != Sphere::Null && mPupilSize > mInitialUncheckedPupils ) {
 
         // select the right circle depending on the current model
         const Circle& unprojectedCircle = selectUnprojectedCircle(mSphere, newObservationPtr->getUnprojectedCirclePair() );
@@ -378,10 +378,10 @@ void EyeModel::refineWithEdges(Sphere& sphere )
 
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
-    options.max_num_iterations = 1000;
+    options.max_num_iterations = 400;
     options.function_tolerance = 1e-10;
     options.minimizer_progress_to_stdout = true;
-    options.update_state_every_iteration = true;
+    options.update_state_every_iteration = false;
     // if (callback) {
     //     struct CallCallbackWrapper : public ceres::IterationCallback
     //     {
@@ -431,6 +431,7 @@ bool EyeModel::tryTransferNewObservations(){
         }
         mSupportingPupilsToAdd.clear();
         mPupilMutex.unlock();
+        mPupilSize = mSupportingPupils.size();
         return true;
     }else{
         return false;
