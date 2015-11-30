@@ -72,28 +72,34 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
         // initialised circle. circle parameters addapted to our current eye model
         intersectedCircle = getIntersectedCircle(mSphere, unprojectedCircle);
 
-
-        if (unprojectedCircle != Circle::Null && intersectedCircle != Circle::Null) {  // initialise failed
-
-            double support = getModelSupport(unprojectedCircle, intersectedCircle);
-
-            //std::cout << "support: " << support  << std::endl;
-            if (support > 0.97) {
-
-                if (isSpatialRelevant(intersectedCircle)) {
-                    should_add_observation = true;
-                } else {
-                    //std::cout << " spatial check failed"  << std::endl;
-                }
-
-            } else {
-                std::cout << "doesn't support current model "  << std::endl;
-            }
-
-
+        if (isSpatialRelevant(unprojectedCircle)) {
+            should_add_observation = true;
         } else {
-            std::cout << "no valid circles"  << std::endl;
+            std::cout << " spatial check failed"  << std::endl;
         }
+
+
+        // if (unprojectedCircle != Circle::Null && intersectedCircle != Circle::Null) {  // initialise failed
+
+        //     double support = getModelSupport(unprojectedCircle, intersectedCircle);
+
+        //     //std::cout << "support: " << support  << std::endl;
+        //     if (support > 0.97) {
+
+        //         if (isSpatialRelevant(intersectedCircle)) {
+        //             should_add_observation = true;
+        //         } else {
+        //             //std::cout << " spatial check failed"  << std::endl;
+        //         }
+
+        //     } else {
+        //         std::cout << "doesn't support current model "  << std::endl;
+        //     }
+
+
+        // } else {
+        //     std::cout << "no valid circles"  << std::endl;
+        // }
 
     } else { // no valid sphere yet
         std::cout << "add without check" << std::endl;
