@@ -25,7 +25,7 @@ namespace singleeyefitter {
 
 
     EyeModelFitter::EyeModelFitter(double focalLength, Vector3 cameraCenter) :
-        mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)), mCurrentSphere(Sphere::Null), mPreviousPupilRadius(0)
+        mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)), mCurrentSphere(Sphere::Null), mCurrentInitialSphere(Sphere::Null), mPreviousPupilRadius(0)
     {
         mEyeModels.emplace_back( mFocalLength, mCameraCenter);   // There should be at least one eye-model
     }
@@ -99,12 +99,12 @@ namespace singleeyefitter {
                 model.presentObservation(observation3DPtr);
             }
 
-        }// else { // if it's too weak we wanna try to find a better one in 3D
+        }else { // if it's too weak we wanna try to find a better one in 3D
 
             fitCircle(observation2D->contours, props, result );
             // project the circle back to 2D
             // need for some calculations in 2D later (calibration)
-        // }
+        }
 
 
         if (result.confidence >= 0.9 /*|| observation2D->confidence >= 0.9*/ ) { // either way we get a new circle

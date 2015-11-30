@@ -394,6 +394,8 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
                 glfwSwapBuffers(main_window)
             glfwPollEvents()
 
+            g_pool.pupil_detector.visualize() #detector decides if we visualize or not
+
     # END while running
 
     # in case eye recording was still runnnig: Save&close

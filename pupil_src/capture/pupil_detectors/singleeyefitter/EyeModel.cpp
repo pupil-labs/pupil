@@ -114,15 +114,19 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
             if(tryTransferNewObservations() ) {
 
                 auto work = [&](){
-                    std::cout << "start thread"  << std::endl;
                     std::lock_guard<std::mutex> lockPupil(mPupilMutex);
-                    auto sphere = initialiseModel();
-                    //mSphere = sphere;
+                    auto sphere  = initialiseModel();
+                    auto sphere2 = sphere;
                     refineWithEdges(sphere);
-                    std::lock_guard<std::mutex> lockModel(mModelMutex);
-                    mSphere = sphere;
+                    {
+                        std::lock_guard<std::mutex> lockModel(mModelMutex);
+                        mInitialSphere = sphere2;
+                        mSphere = sphere;
+                    }
                  };
-                std::async(std::launch::async, work);
+                std::thread t(work);
+                t.detach();
+                //work();
             }
      }
 
@@ -130,7 +134,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
     return intersectedCircle;
 }
 
-EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= false*/)
+EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= true*/)
 {
     using math::sq;
 
@@ -443,7 +447,10 @@ EyeModel::Sphere EyeModel::getSphere(){
     return mSphere;
 };
 
-
+EyeModel::Sphere EyeModel::getInitialSphere(){
+    std::lock_guard<std::mutex> lockModel(mModelMutex);
+    return mInitialSphere;
+};
 bool EyeModel::isSpatialRelevant(const Circle& circle){
 
  /* In order to check if new observations are unique (not in the same area as previous one ),
@@ -526,8 +533,15 @@ void EyeModel::initialiseSingleObservation( const Sphere& sphere, Pupil& pupil) 
         pupil.mCircle = circleFromParams(sphere,  pupil.mParams );
 
     } catch (no_intersection_exception&) {
-        pupil.mCircle =  Circle::Null;
-        pupil.mParams = PupilParams();
+        // pupil.mCircle =  Circle::Null;
+        // pupil.mParams = PupilParams();
+        auto pupil_radius_at_1 = pupil.mCircle.radius / pupil.mCircle.center.z();
+        auto new_pupil_radius = pupil_radius_at_1 * sphere.center.z();
+        pupil.mParams.radius = new_pupil_radius;
+        pupil.mParams.theta = acos(pupil.mCircle.normal[1] / sphere.radius);
+        pupil.mParams.psi = atan2(pupil.mCircle.normal[2], pupil.mCircle.normal[0]);
+        // Update pupil circle to match parameters
+        pupil.mCircle = circleFromParams(sphere,  pupil.mParams );
     }
 
 
