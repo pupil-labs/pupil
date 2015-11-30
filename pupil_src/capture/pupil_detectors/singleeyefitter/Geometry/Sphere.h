@@ -25,14 +25,7 @@ namespace singleeyefitter {
             static const Sphere Null;
 
         private:
-            // Safe bool stuff
-            typedef void (Sphere::*safe_bool_type)() const;
-            void this_type_does_not_support_comparisons() const {}
-        public:
-            operator safe_bool_type() const
-            {
-                return *this != Null ? &Sphere::this_type_does_not_support_comparisons : 0;
-            }
+
     };
 
     template<typename Scalar>
@@ -59,37 +52,5 @@ namespace singleeyefitter {
     }
 
 }
-
-/*namespace matlab {
-    template<typename T>
-    struct matlab_traits<typename Sphere<T>, typename std::enable_if<
-        matlab::internal::mxHelper<T>::exists
-    >::type>
-    {
-        static Sphere<T> fromMxArray(mxArray* arr) {
-            auto arr_size = mxGetNumberOfElements(arr);
-            auto arr_ndims = mxGetNumberOfDimensions(arr);
-            auto arr_dims = mxGetDimensions(arr);
-
-            if (!mxIsStruct(arr)) {
-                throw std::exception("Conversion requires struct");
-            }
-
-            mxArray* center_arr = mxGetField(arr, 0, "center");
-            if (!center_arr)  {
-                throw std::exception("No 'center' field on struct");
-            }
-
-            mxArray* radius_arr = mxGetField(arr, 0, "radius");
-            if (!radius_arr)  {
-                throw std::exception("No 'radius' field on struct");
-            }
-
-            return Sphere<T>(matlab::matlab_traits<Sphere<T>::Vector>::fromMxArray(center_arr),
-                matlab::matlab_traits<Sphere<T>::Scalar>::fromMxArray(radius_arr));
-        }
-
-    };
-}*/
 
 #endif//_SPHERE_H_

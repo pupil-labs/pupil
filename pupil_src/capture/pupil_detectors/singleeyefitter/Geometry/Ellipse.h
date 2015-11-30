@@ -102,14 +102,7 @@ namespace singleeyefitter {
             static const Ellipse2D Null;
 
         private:
-            // Safe bool stuff
-            typedef void (Ellipse2D::*safe_bool_type)() const;
-            void this_type_does_not_support_comparisons() const {}
-        public:
-            operator safe_bool_type() const
-            {
-                return *this != Null ? &Ellipse2D::this_type_does_not_support_comparisons : 0;
-            }
+
     };
 
     template<typename Scalar>
@@ -159,26 +152,5 @@ namespace singleeyefitter {
     }
 
 }
-
-/*namespace matlab {
-template<typename T>
-struct matlab_traits<typename Ellipse<T>, typename std::enable_if<
-    matlab::internal::mxHelper<T>::exists
->::type>
-{
-    static std::unique_ptr<mxArray, decltype(&mxDestroyArray)> createMxArray(const Ellipse<T>& ellipse) throw() {
-        std::unique_ptr<mxArray, decltype(&mxDestroyArray)> arr(
-            internal::mxHelper<T>::createMatrix(1, 5),
-            mxDestroyArray);
-        T* data = (T*)mxGetData(arr.get());
-        data[0] = ellipse.center[0];
-        data[1] = ellipse.center[1];
-        data[2] = ellipse.major_radius;
-        data[3] = ellipse.minor_radius;
-        data[4] = ellipse.angle;
-        return arr;
-    }
-};
-}*/
 
 #endif
