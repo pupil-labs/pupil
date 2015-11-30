@@ -112,7 +112,9 @@ namespace singleeyefitter {
             std::cout << "prev_radius: " << mPreviousPupilRadius << std::endl;
         }
         mCurrentSphere = mEyeModels.back().getSphere();
+        mCurrentInitialSphere = mEyeModels.back().getInitialSphere();
         result.sphere = mCurrentSphere;
+        result.initialSphere = mCurrentInitialSphere;
         result.binPositions = mEyeModels.back().getBinPositions();
         return result;
 
@@ -126,6 +128,7 @@ namespace singleeyefitter {
         mEyeModels.clear();
         mEyeModels.emplace_back( mFocalLength, mCameraCenter);   // There should be at least one eye-model
         mCurrentSphere = Sphere::Null;
+        mCurrentInitialSphere = Sphere::Null;
         mPreviousPupilRadius = 0.0;
     }
 

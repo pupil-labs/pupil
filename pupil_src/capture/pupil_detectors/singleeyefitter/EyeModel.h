@@ -65,6 +65,7 @@ class EyeModel {
 
         Circle presentObservation(const ObservationPtr);
         Sphere getSphere();
+        Sphere getInitialSphere();
         void reset();
 
         // ----- Visualization --------
@@ -88,7 +89,7 @@ class EyeModel {
         };
 
 
-        Sphere findSphereCenter( bool use_ransac = false);
+        Sphere findSphereCenter( bool use_ransac = true);
         Sphere initialiseModel();
         void refineWithEdges( Sphere& sphere  );
         bool tryTransferNewObservations();
@@ -121,6 +122,7 @@ class EyeModel {
         const double mFocalLength;
         const Vector3 mCameraCenter;
         Sphere mSphere;
+        Sphere mInitialSphere;
         std::vector<Pupil> mSupportingPupils;
         // observations are saved here and only if needed transfered to mObservation
         // since mObservations needs a mutex

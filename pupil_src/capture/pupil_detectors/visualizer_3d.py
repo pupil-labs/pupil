@@ -195,7 +195,7 @@ class Visualizer(object):
 		glVertex3f( 0, 0, l )
 		glEnd( )
 
-	def draw_sphere(self,sphere_position, sphere_radius,contours = 45):
+	def draw_sphere(self,sphere_position, sphere_radius,contours = 45, color =RGBA(.2,.5,0.5,.5) ):
 		# this function draws the location of the eye sphere
 		glPushMatrix()
 
@@ -208,7 +208,7 @@ class Visualizer(object):
 			draw_radius = np.sqrt(sphere_radius**2 - position**2)
 			glPushMatrix()
 			glScalef(draw_radius,draw_radius,1)
-			draw_polyline((circle_xy),2,color=RGBA(.2,.5,0.5,.5))
+			draw_polyline((circle_xy),2,color)
 			glPopMatrix()
 
 		glPopMatrix()
@@ -415,14 +415,13 @@ class Visualizer(object):
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool, image_width, image_height,  result  ):
+	def update_window(self, g_pool, result  ):
 
 		if self._window != None:
 			glfwMakeContextCurrent(self._window)
 
-		if image_height and image_width:
-			self.image_width = image_width # reassign in case the image size got changed during running
-			self.image_height = image_height
+
+		self.image_width , self.image_height = g_pool.capture.frame_size
 
 		latest_pupil = result['circle']
 		last_unprojected_contours =  result['contours']
@@ -432,16 +431,23 @@ class Visualizer(object):
 		#final_candidate_contours = detector_3D.get_last_final_candidate_contour()
 		bin_positions = result['binPositions']
 		sphere = result['sphere']
+		initial_sphere = result['initialSphere']
 		self.clear_gl_screen()
 		self.trackball.push()
 
-		eye_position = sphere[0]
-		eye_radius = sphere[1]
+
+
+		# 2. in pixel space draw video frame
+		glLoadMatrixf(self.get_image_space_matrix())
+		g_pool.image_tex.draw( quad=((0,self.image_height),(self.image_width,self.image_height),(self.image_width,0),(0,0)) ,alpha=0.5)
 
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
-		self.draw_coordinate_system(4)
 
-		self.draw_sphere(eye_position,eye_radius)
+		self.draw_frustum()
+
+
+		self.draw_sphere(initial_sphere[0],initial_sphere[1], color = RGBA( 0,147/255.,147/255.,0.2) )
+		self.draw_sphere(sphere[0],sphere[1],  color = RGBA( 0,88/255.,95/255.,0.4) )
 
 		self.draw_circle( latest_pupil[0], latest_pupil[1], latest_pupil[2], RGBA(0.0,1.0,1.0,0.4))
 
@@ -475,13 +481,10 @@ class Visualizer(object):
 		if bin_positions:
 			draw_points(bin_positions, 3 , RGBA(0.6,0.0,0.6,0.5) )
 
-		# 1b. draw frustum in pixel scale, but retaining origin
-		self.draw_frustum()
 
-		# 2. in pixel space draw video frame
-		glLoadMatrixf(self.get_image_space_matrix())
-		g_pool.image_tex.draw( quad=((0,self.image_height),(self.image_width,self.image_height),(self.image_width,0),(0,0)) ,alpha=0.5)
 
+		glLoadMatrixf(self.get_anthropomorphic_matrix())
+		self.draw_coordinate_system(4)
 
 		self.trackball.pop()
 		#if last_unwrapped_contours:

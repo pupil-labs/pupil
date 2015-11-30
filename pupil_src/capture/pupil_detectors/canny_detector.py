@@ -608,3 +608,5 @@ class Canny_Detector(Pupil_Detector):
     def cleanup(self):
         self.close_window() # if we change detectors, be sure debug window is also closed
 
+    def visualize(self):
+        pass

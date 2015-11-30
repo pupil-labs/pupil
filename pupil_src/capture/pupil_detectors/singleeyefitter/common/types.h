@@ -60,6 +60,7 @@ namespace singleeyefitter {
         Contours3D contours;
         Contours3D fittedCircleContours;
         Sphere<double> sphere;
+        Sphere<double> initialSphere;
         std::vector<Vector3> binPositions;
     };
 

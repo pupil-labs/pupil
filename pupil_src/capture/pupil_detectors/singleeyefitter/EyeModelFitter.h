@@ -44,6 +44,8 @@ namespace singleeyefitter {
             std::vector<EyeModel> mEyeModels;
 
             Sphere mCurrentSphere;
+            Sphere mCurrentInitialSphere;
+
             double mPreviousPupilRadius;
 
             // data we get each frame

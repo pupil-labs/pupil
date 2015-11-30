@@ -31,6 +31,7 @@ cdef inline prepareForVisualization3D(  Detector_3D_Result& result ):
     py_visualizationResult['contours'] = getContours(result.contours);
     py_visualizationResult['fittedContours'] = getContours(result.fittedCircleContours);
     py_visualizationResult['sphere'] = getSphere(result);
+    py_visualizationResult['initialSphere'] = getInitialSphere(result);
 
 
     return py_visualizationResult
@@ -69,4 +70,8 @@ cdef inline getContours( Contours3D con):
 
 cdef inline getSphere(const Detector_3D_Result& result ):
     sphere = result.sphere
+    return [ [sphere.center[0],sphere.center[1],sphere.center[2]],sphere.radius]
+
+cdef inline getInitialSphere(const Detector_3D_Result& result ):
+    sphere = result.initialSphere
     return [ [sphere.center[0],sphere.center[1],sphere.center[2]],sphere.radius]

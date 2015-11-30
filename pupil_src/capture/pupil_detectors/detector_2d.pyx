@@ -18,6 +18,8 @@ from cython.operator cimport dereference as deref
 cdef class Detector_2D:
 
     cdef Detector2D* thisptr
+    cdef unsigned char[:,:,:] debug_image
+
     cdef dict detect_properties
     cdef bint window_should_open, window_should_close
     cdef object _window
@@ -74,7 +76,6 @@ cdef class Detector_2D:
         cdef unsigned char[:,:,:] img_color
         cdef Mat cv_image_color
         cdef Mat cv_debug_image
-        cdef unsigned char[:,:,:] debug_image
 
         if self.window_should_open:
             self.open_window((image_width,image_height))
@@ -91,7 +92,7 @@ cdef class Detector_2D:
         if use_debug_image:
             debug_image_array = np.zeros( (image_height, image_width, 3 ), dtype = np.uint8 ) #clear image every frame
             debug_image = debug_image_array
-            cv_debug_image = Mat(image_height, image_width, CV_8UC3, <void *> &debug_image[0,0,0] )
+            cv_debug_image = Mat(image_height, image_width, CV_8UC3, <void *> &self.debug_image[0,0,0] )
 
         roi = Roi((0,0))
         roi.set( user_roi.get() )
@@ -119,13 +120,9 @@ cdef class Detector_2D:
         cpp_result_ptr =  self.thisptr.detect(self.detect_properties, cv_image, cv_image_color, cv_debug_image, Rect_[int](roi_x,roi_y,roi_width,roi_height),  visualize , use_debug_image )
 
         deref(cpp_result_ptr).timestamp = frame.timestamp
-        #display the debug image in the window
-        if self._window:
-            self.gl_display_in_window(debug_image)
 
         cdef Detector_2D_Result cpp_result = deref(cpp_result_ptr)
         py_result = convertToPythonResult( cpp_result, frame , roi )
-
 
         return py_result
 
@@ -221,3 +218,8 @@ cdef class Detector_2D:
 
     def cleanup(self):
         self.close_window() # if we change detectors, be sure debug window is also closed
+
+    def visualize(self):
+        #display the debug image in the window
+        if self._window:
+            self.gl_display_in_window(self.debug_image)

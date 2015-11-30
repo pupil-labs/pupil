@@ -94,6 +94,7 @@ cdef extern from 'singleeyefitter/common/types.h':
         Contours3D contours
         Contours3D fittedCircleContours
         Sphere[double] sphere
+        Sphere[double] initialSphere
         vector[Vector3] binPositions
 
 

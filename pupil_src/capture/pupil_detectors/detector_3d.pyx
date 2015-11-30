@@ -29,6 +29,7 @@ cdef class Detector_3D:
     cdef object menu_2d, menu_3d
     cdef object g_pool
     cdef object debug_visualizer_3d
+    cdef object py_result3D
 
     def __cinit__(self):
         self.detector_2d_ptr = new Detector2D()
@@ -140,11 +141,7 @@ cdef class Detector_3D:
 
         cdef Detector_3D_Result cpp3DResult  = self.detector_3d_ptr.update_and_detect( cpp_result_ptr , self.detect_properties_3d)
 
-
-        if self.debug_visualizer_3d._window:
-            py_visualizationResult = prepareForVisualization3D(cpp3DResult)
-            self.debug_visualizer_3d.update_window( self.g_pool, image_width, image_height, py_visualizationResult  )
-
+        self.py_result3D = prepareForVisualization3D(cpp3DResult)
 
         return py_result
 
@@ -202,6 +199,11 @@ cdef class Detector_3D:
             self.debug_visualizer_3d.open_window()
         else:
             self.debug_visualizer_3d.close_window()
+
+    def visualize(self):
+        if self.debug_visualizer_3d._window:
+            self.debug_visualizer_3d.update_window( self.g_pool, self.py_result3D  )
+
 
 
     ### Debug Helper Start ###
