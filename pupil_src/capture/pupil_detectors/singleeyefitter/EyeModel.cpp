@@ -65,7 +65,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
     bool should_add_observation = false;
 
     //Check for properties if it's a candidate we can use
-    if (mSphere != Sphere::Null && mPupilSize > mInitialUncheckedPupils ) {
+    if (mSphere != Sphere::Null && (mPupilSize + mSupportingPupilsToAdd.size()) > mInitialUncheckedPupils ) {
 
         // select the right circle depending on the current model
         const Circle& unprojectedCircle = selectUnprojectedCircle(mSphere, newObservationPtr->getUnprojectedCirclePair() );
