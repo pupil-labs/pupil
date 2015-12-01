@@ -50,10 +50,9 @@ EyeModel::EyeModel(EyeModel&& that) : mInitialUncheckedPupils(that.mInitialUnche
 
 EyeModel::~EyeModel(){
 
-
-    // wait for thread ?
-    //TODO reset when thread is running
-    // see what happens :)
+    //wait for thread to finish before we dealloc
+    if( mWorker.joinable() )
+        mWorker.join();
 }
 
 
@@ -130,8 +129,11 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
                         mSphere = sphere;
                     }
                  };
-                std::thread t(work);
-                t.detach();
+                // needed in order to assign a new thread
+                if( mWorker.joinable() )
+                    mWorker.join(); // we should never wait here because tryTransferNewObservations is false if the work isn't finished
+
+                mWorker = std::thread(work);
                 //work();
             }
      }

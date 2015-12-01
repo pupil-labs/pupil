@@ -111,6 +111,7 @@ class EyeModel {
 
         std::mutex mModelMutex;
         std::mutex mPupilMutex;
+        std::thread mWorker;
 
 
         // Factors which describe how good certain properties of the model are
