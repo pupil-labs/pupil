@@ -91,7 +91,7 @@ cdef class Detector_2D:
 
         if use_debug_image:
             debug_image_array = np.zeros( (image_height, image_width, 3 ), dtype = np.uint8 ) #clear image every frame
-            debug_image = debug_image_array
+            self.debug_image = debug_image_array
             cv_debug_image = Mat(image_height, image_width, CV_8UC3, <void *> &self.debug_image[0,0,0] )
 
         roi = Roi((0,0))
