@@ -57,11 +57,11 @@ class EyeModel {
         typedef singleeyefitter::Sphere<double> Sphere;
     public:
 
-        EyeModel( double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 10, int totalBins = 20, int filterwindowSize = 200): //TODO should the filter size depend on the framerate ?
-           mFilterWindowSize(filterwindowSize), mTotalBins(totalBins), mInitialUncheckedPupils(initialUncheckedPupils), mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)) { };
+        EyeModel( double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 10, double binResolution = 0.05 , int filterwindowSize = 200): //TODO should the filter size depend on the framerate ?
+           mTotalBins(std::pow(std::floor(1.0/binResolution), 2 ) * 4 ),  mFilterWindowSize(filterwindowSize), mBinResolution(binResolution), mInitialUncheckedPupils(initialUncheckedPupils), mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)) { };
 
         EyeModel(const EyeModel&) = delete;
-        EyeModel(EyeModel&&); // we need a explicit Move constructor because of the mutex
+        EyeModel(EyeModel&&); // we need a explicit 1/Move constructor because of the mutex
         ~EyeModel();
 
         Circle presentObservation(const ObservationPtr);
@@ -128,6 +128,7 @@ class EyeModel {
         double mMaturity; // bin amounts
 
         const int mInitialUncheckedPupils;
+        const double mBinResolution;
         const int mTotalBins;
         const int mFilterWindowSize; // Window size of the average moving filter for mPerformance
         std::list<double> mModelSupports; // values to calculat the average

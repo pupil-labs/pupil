@@ -37,7 +37,7 @@ namespace singleeyefitter {
 
 EyeModel::EyeModel(EyeModel&& that) :
     mInitialUncheckedPupils(that.mInitialUncheckedPupils), mFocalLength(that.mFocalLength), mCameraCenter(that.mCameraCenter),
-    mTotalBins(that.mTotalBins), mFilterWindowSize(that.mFilterWindowSize)
+    mTotalBins(that.mTotalBins), mBinResolution(that.mBinResolution), mFilterWindowSize(that.mFilterWindowSize)
 {
     std::lock_guard<std::mutex> lock(that.mModelMutex);
     mSupportingPupils = std::move(that.mSupportingPupils);
@@ -425,6 +425,8 @@ double EyeModel::getMaturity() const {
     // Our bins are just on half of the sphere and by observing different models, it turned out
     // that if a quarter of half the sphere is filled it gives a good maturity.
     // Thus we scale it that a the maturity will be 1 if a quarter is filled
+    using std::floor;
+    using std::pow;
     return  mSpatialBins.size()/(mTotalBins/4.0);
 }
 
@@ -472,13 +474,12 @@ bool EyeModel::isSpatialRelevant(const Circle& circle){
     */
     Vector3 pupil_normal =  circle.normal; // the same as a vector from unit sphere center to the pupil center
 
-    const double bin_width = 1.0 / mTotalBins;
     // calculate bin
     // values go from -1 to 1
     double x = pupil_normal.x();
     double y = pupil_normal.y();
-    x = math::round(x , bin_width);
-    y = math::round(y , bin_width);
+    x = math::round(x , mBinResolution);
+    y = math::round(y , mBinResolution);
 
     Vector2 bin(x, y);
     auto search = mSpatialBins.find(bin);

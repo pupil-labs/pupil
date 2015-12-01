@@ -112,6 +112,7 @@ namespace singleeyefitter {
             std::cout << "prev_radius: " << mPreviousPupilRadius << std::endl;
         }
         mCurrentSphere = mEyeModels.back().getSphere();
+        std::cout << "current maturity: " << mEyeModels.back().getMaturity() << std::endl;
         mCurrentInitialSphere = mEyeModels.back().getInitialSphere();
         result.sphere = mCurrentSphere;
         result.initialSphere = mCurrentInitialSphere;
