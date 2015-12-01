@@ -209,7 +209,7 @@ std::shared_ptr<Detector_2D_Result> Detector2D::detect(Detector_2D_Properties& p
 			mPrior_ellipse = ellipse;
 			mUse_strong_prior = true;
 			double goodness = std::min(1.0, support_ratio);
-			mPupil_Size = ellipse.major_radius;
+			mPupil_Size = ellipse.major_radius * 2.0;
 		 	result->confidence = goodness;
 			result->ellipse = ellipse;
 
