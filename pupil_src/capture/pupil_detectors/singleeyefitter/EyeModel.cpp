@@ -35,17 +35,23 @@ namespace singleeyefitter {
 
 
 
-EyeModel::EyeModel(EyeModel&& that) : mInitialUncheckedPupils(that.mInitialUncheckedPupils), mFocalLength(that.mFocalLength), mCameraCenter(that.mCameraCenter)
+EyeModel::EyeModel(EyeModel&& that) :
+    mInitialUncheckedPupils(that.mInitialUncheckedPupils), mFocalLength(that.mFocalLength), mCameraCenter(that.mCameraCenter),
+    mTotalBins(that.mTotalBins), mFilterWindowSize(that.mFilterWindowSize)
 {
     std::lock_guard<std::mutex> lock(that.mModelMutex);
     mSupportingPupils = std::move(that.mSupportingPupils);
     mSupportingPupilsToAdd = std::move(that.mSupportingPupilsToAdd);
     mSphere = std::move(that.mSphere);
+    mInitialSphere = std::move(that.mInitialSphere);
     mSpatialBins = std::move(that.mSpatialBins);
     mBinPositions = std::move(that.mBinPositions);
     mResidual = std::move(that.mResidual);
     mPerformance = std::move(that.mPerformance);
     mMaturity = std::move(that.mMaturity);
+    mModelSupports = std::move(that.mModelSupports);
+    mPupilSize = mSupportingPupils.size();
+    std::cout << "MOVE EYE MODEL" << std::endl;
 }
 
 EyeModel::~EyeModel(){
@@ -68,47 +74,24 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
 
         // select the right circle depending on the current model
         const Circle& unprojectedCircle = selectUnprojectedCircle(mSphere, newObservationPtr->getUnprojectedCirclePair() );
-        // initialised circle. circle parameters addapted to our current eye model
-        intersectedCircle = getIntersectedCircle(mSphere, unprojectedCircle);
 
         if (isSpatialRelevant(unprojectedCircle)) {
             should_add_observation = true;
         } else {
-            std::cout << " spatial check failed"  << std::endl;
+            //std::cout << " spatial check failed"  << std::endl;
         }
 
-
-        // if (unprojectedCircle != Circle::Null && intersectedCircle != Circle::Null) {  // initialise failed
-
-        //     double support = getModelSupport(unprojectedCircle, intersectedCircle);
-
-        //     //std::cout << "support: " << support  << std::endl;
-        //     if (support > 0.97) {
-
-        //         if (isSpatialRelevant(intersectedCircle)) {
-        //             should_add_observation = true;
-        //         } else {
-        //             //std::cout << " spatial check failed"  << std::endl;
-        //         }
-
-        //     } else {
-        //         std::cout << "doesn't support current model "  << std::endl;
-        //     }
-
-
-        // } else {
-        //     std::cout << "no valid circles"  << std::endl;
-        // }
+        // initialised circle. circle parameters addapted to our current eye model
+        intersectedCircle = getIntersectedCircle(mSphere, unprojectedCircle);
+        calculatePerformance( unprojectedCircle, intersectedCircle );
 
     } else { // no valid sphere yet
         std::cout << "add without check" << std::endl;
         should_add_observation = true;
     }
 
-
     if (should_add_observation) {
         //std::cout << "add" << std::endl;
-
         //if the observation passed all tests we can add it
         mSupportingPupilsToAdd.emplace_back( newObservationPtr );
 
@@ -382,7 +365,7 @@ void EyeModel::refineWithEdges(Sphere& sphere )
     options.linear_solver_type = ceres::DENSE_SCHUR;
     options.max_num_iterations = 400;
     options.function_tolerance = 1e-10;
-    options.minimizer_progress_to_stdout = true;
+    options.minimizer_progress_to_stdout = false;
     options.update_state_every_iteration = false;
     // if (callback) {
     //     struct CallCallbackWrapper : public ceres::IterationCallback
@@ -413,7 +396,8 @@ void EyeModel::refineWithEdges(Sphere& sphere )
     // }
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
-    std::cout << summary.BriefReport() << "\n";
+    //std::cout << summary.BriefReport() << "\n";
+    std::cout << "Optimized" << std::endl;
 
     {
         sphere.center = x.segment<3>(0);
@@ -424,6 +408,30 @@ void EyeModel::refineWithEdges(Sphere& sphere )
         // }
     }
 }
+
+EyeModel::Sphere EyeModel::getSphere(){
+    std::lock_guard<std::mutex> lockModel(mModelMutex);
+    return mSphere;
+};
+
+EyeModel::Sphere EyeModel::getInitialSphere(){
+    std::lock_guard<std::mutex> lockModel(mModelMutex);
+    return mInitialSphere;
+};
+
+double EyeModel::getMaturity() const {
+
+    //Spatial variance
+    // Our bins are just on half of the sphere and by observing different models, it turned out
+    // that if a quarter of half the sphere is filled it gives a good maturity.
+    // Thus we scale it that a the maturity will be 1 if a quarter is filled
+    return  mSpatialBins.size()/(mTotalBins/4.0);
+}
+
+double EyeModel::getPerformance() const {
+    return mPerformance;
+}
+
 
 bool EyeModel::tryTransferNewObservations(){
     bool ownPupil = mPupilMutex.try_lock();
@@ -451,15 +459,6 @@ double EyeModel::getModelSupport(const Circle&  unprojectedCircle, const Circle&
     return normals_angle;
 }
 
-EyeModel::Sphere EyeModel::getSphere(){
-    std::lock_guard<std::mutex> lockModel(mModelMutex);
-    return mSphere;
-};
-
-EyeModel::Sphere EyeModel::getInitialSphere(){
-    std::lock_guard<std::mutex> lockModel(mModelMutex);
-    return mInitialSphere;
-};
 bool EyeModel::isSpatialRelevant(const Circle& circle){
 
  /* In order to check if new observations are unique (not in the same area as previous one ),
@@ -471,10 +470,9 @@ bool EyeModel::isSpatialRelevant(const Circle& circle){
      and less dense further back.
      Still it gives good results an works for our purpose
     */
-    const int BIN_AMOUNTS = 20;
     Vector3 pupil_normal =  circle.normal; // the same as a vector from unit sphere center to the pupil center
 
-    const double bin_width = 1.0 / BIN_AMOUNTS;
+    const double bin_width = 1.0 / mTotalBins;
     // calculate bin
     // values go from -1 to 1
     double x = pupil_normal.x();
@@ -584,6 +582,7 @@ Circle EyeModel::getIntersectedCircle( const Sphere& sphere, const Circle& circl
 
 }
 
+
 Circle EyeModel::circleFromParams(const Sphere& eye, const PupilParams& params) const
 {
     if (params.radius == 0)
@@ -594,6 +593,33 @@ Circle EyeModel::circleFromParams(const Sphere& eye, const PupilParams& params) 
                   radial,
                   params.radius);
 }
+
+
+void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle){
+
+    double support = 0.0;
+    if (unprojectedCircle != Circle::Null && intersectedCircle != Circle::Null) {  // initialise failed
+        support = getModelSupport(unprojectedCircle, intersectedCircle);
+    }
+    mModelSupports.push_back( support );
+    // calculate moving average of support
+    if( mModelSupports.size() <=  mFilterWindowSize){
+        mPerformance = 0.0;
+        for(auto& element : mModelSupports){
+            mPerformance += element;
+        }
+        mPerformance /= mModelSupports.size();
+    }else{
+        // we can optimize if the wanted window size is reached
+        double first = mModelSupports.front();
+        mModelSupports.pop_front();
+        mPerformance += support/mFilterWindowSize - first/mFilterWindowSize;
+    }
+    std::cout << "current model support: " << support  << std::endl;
+    std::cout << "average model support: " << mPerformance << std::endl;
+
+}
+
 
 
 } // singleeyefitter

@@ -7,6 +7,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <vector>
+#include <list>
 #include <atomic>
 
 namespace singleeyefitter {
@@ -56,8 +57,8 @@ class EyeModel {
         typedef singleeyefitter::Sphere<double> Sphere;
     public:
 
-        EyeModel( double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 10):
-            mInitialUncheckedPupils(initialUncheckedPupils), mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)) {};
+        EyeModel( double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 10, int totalBins = 20, int filterwindowSize = 200): //TODO should the filter size depend on the framerate ?
+           mFilterWindowSize(filterwindowSize), mTotalBins(totalBins), mInitialUncheckedPupils(initialUncheckedPupils), mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)) { };
 
         EyeModel(const EyeModel&) = delete;
         EyeModel(EyeModel&&); // we need a explicit Move constructor because of the mutex
@@ -66,6 +67,12 @@ class EyeModel {
         Circle presentObservation(const ObservationPtr);
         Sphere getSphere();
         Sphere getInitialSphere();
+
+        // Describing how good different properties of the Eye are
+        double getMaturity() const ; // How much spatial variance there is
+        double getPerformance() const; // The average of the model support
+        double getFit() const ; // The residual of the sphere calculation
+
         void reset();
 
         // ----- Visualization --------
@@ -104,6 +111,7 @@ class EyeModel {
         //Circle circleFromParams( CircleParams& params) const;
         Circle circleFromParams(const Sphere& eye,const  PupilParams& params) const;
 
+        void calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle);
 
 
         std::unordered_map<Vector2, bool, math::matrix_hash<Vector2>> mSpatialBins;
@@ -120,6 +128,9 @@ class EyeModel {
         double mMaturity; // bin amounts
 
         const int mInitialUncheckedPupils;
+        const int mTotalBins;
+        const int mFilterWindowSize; // Window size of the average moving filter for mPerformance
+        std::list<double> mModelSupports; // values to calculat the average
 
         // Thread sensitive variables
         const double mFocalLength;
