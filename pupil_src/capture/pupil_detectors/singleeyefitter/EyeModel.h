@@ -57,7 +57,7 @@ class EyeModel {
         typedef singleeyefitter::Sphere<double> Sphere;
     public:
 
-        EyeModel( double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 10, double binResolution = 0.05 , int filterwindowSize = 200): //TODO should the filter size depend on the framerate ?
+        EyeModel( double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 3, double binResolution = 0.05 , int filterwindowSize = 200): //TODO should the filter size depend on the framerate ?
            mTotalBins(std::pow(std::floor(1.0/binResolution), 2 ) * 4 ),  mFilterWindowSize(filterwindowSize), mBinResolution(binResolution), mInitialUncheckedPupils(initialUncheckedPupils), mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)) { };
 
         EyeModel(const EyeModel&) = delete;

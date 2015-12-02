@@ -26,6 +26,7 @@ cdef inline prepareForVisualization3D(  Detector_3D_Result& result ):
 
     py_visualizationResult = {}
 
+    py_visualizationResult['edges'] = getEdges(result);
     py_visualizationResult['binPositions'] = getBinPositions(result);
     py_visualizationResult['circle'] = getCircle(result);
     py_visualizationResult['contours'] = getContours(result.contours);
@@ -47,6 +48,14 @@ cdef inline getBinPositions( Detector_3D_Result& result ):
     for point in result.binPositions:
         positions.append([point[0]*eyeRadius+eyePosition[0],point[1]*eyeRadius+eyePosition[1],point[2]*eyeRadius+eyePosition[2]])
     return positions
+
+cdef inline getEdges( Detector_3D_Result& result ):
+    if result.edges.size() == 0:
+        return []
+    edges = []
+    for point in result.edges:
+        edges.append([point[0],point[1],point[2]])
+    return edges
 
 
 cdef inline getCircle(const Detector_3D_Result& result):

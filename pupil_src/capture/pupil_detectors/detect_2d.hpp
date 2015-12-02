@@ -215,8 +215,8 @@ std::shared_ptr<Detector_2D_Result> Detector2D::detect(Detector_2D_Properties& p
 
 			//result->final_contours = std::move(best_contours); // no contours when strong prior
 			//result->contours = std::move(split_contours);
-			//result->raw_edges = std::move(raw_edges); // do we need it when strong prior ?
-			result->final_edges = std::move(support_pixels);
+			result->raw_edges = std::move(raw_edges); // do we need it when strong prior ?
+			result->final_edges = std::move(support_pixels);  // need for optimisation
 	      	return result;
 	    }
 	  }
@@ -298,8 +298,8 @@ std::shared_ptr<Detector_2D_Result> Detector2D::detect(Detector_2D_Properties& p
 		// Does it make seens to return anything ?
 		//result->ellipse = toEllipse<double>(refit_ellipse);
 		//result->final_contours = std::move(best_contours);
-		result->contours = std::move(split_contours);
-		//result->raw_edges = std::move(raw_edges);
+		//result->contours = std::move(split_contours);
+		result->raw_edges = std::move(raw_edges);
 		return result;
 	}
 
@@ -459,8 +459,8 @@ std::shared_ptr<Detector_2D_Result> Detector2D::detect(Detector_2D_Properties& p
 		// Does it make seens to return anything ?
 		//result->ellipse = toEllipse<double>(refit_ellipse);
 		//result->final_contours = std::move(best_contours);
-		result->contours = std::move(split_contours);
-		//result->raw_edges = std::move(raw_edges);
+		//result->contours = std::move(split_contours);
+		result->raw_edges = std::move(raw_edges);
 		return result;
 	}
 
@@ -481,7 +481,7 @@ std::shared_ptr<Detector_2D_Result> Detector2D::detect(Detector_2D_Properties& p
 	double ellipse_circumference = ellipse.circumference();
 	std::vector<cv::Point>  support_pixels = ellipse_true_support(props, ellipse, ellipse_circumference, raw_edges);
 	double support_ratio = support_pixels.size() / ellipse_circumference;
-	double goodness = std::min(double(1.0), support_ratio);
+	double goodness = std::min(double(0.99), support_ratio);
 	//final fitting and return of result
 	auto final_fitting = [&](std::vector<std::vector<cv::Point>>& contours, cv::Mat & edges) -> std::vector<cv::Point> {
 		//use the real edge pixels to fit, not the aproximated contours
@@ -536,16 +536,17 @@ std::shared_ptr<Detector_2D_Result> Detector2D::detect(Detector_2D_Properties& p
 
 	// TODO optimize
 	// just do this if we really need it
-	std::for_each(contours.begin(), contours.end(), [&](const Contour_2D & contour) {
-		std::vector<cv::Point> approx_c;
-		cv::approxPolyDP(contour, approx_c, 1.0, false);
-		approx_contours.push_back(std::move(approx_c));
-	});
-	split_contours = singleeyefitter::detector::split_rough_contours_optimized(approx_contours, 150.0 , split_contour_size_min);
+	// std::for_each(contours.begin(), contours.end(), [&](const Contour_2D & contour) {
+	// 	std::vector<cv::Point> approx_c;
+	// 	cv::approxPolyDP(contour, approx_c, 1.0, false);
+	// 	approx_contours.push_back(std::move(approx_c));
+	// });
+	// split_contours = singleeyefitter::detector::split_rough_contours_optimized(approx_contours, 150.0 , split_contour_size_min);
 
-	result->contours = std::move(split_contours);
-	result->final_edges = std::move(final_edges);
-	//result->raw_edges = std::move(raw_edges);
+	// result->contours = std::move(split_contours);
+	 result->final_edges = std::move(final_edges);// need for optimisation
+
+	result->raw_edges = std::move(raw_edges);
 	return result;
 }
 

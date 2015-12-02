@@ -430,6 +430,7 @@ class Visualizer(object):
 		#last_pupil_edges = detector_3D.get_last_pupil_edges()
 		#final_candidate_contours = detector_3D.get_last_final_candidate_contour()
 		bin_positions = result['binPositions']
+		edges = result['edges']
 		sphere = result['sphere']
 		initial_sphere = result['initialSphere']
 		self.clear_gl_screen()
@@ -481,7 +482,8 @@ class Visualizer(object):
 		if bin_positions:
 			draw_points(bin_positions, 3 , RGBA(0.6,0.0,0.6,0.5) )
 
-
+		if edges:
+			draw_points(edges, 2 , RGBA(1.0,0.0,0.6,0.5) )
 
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		self.draw_coordinate_system(4)

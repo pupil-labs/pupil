@@ -70,6 +70,7 @@ cdef extern from 'singleeyefitter/common/types.h':
     ctypedef Matrix31d Vector3
     ctypedef Matrix21d Vector2
     ctypedef vector[vector[Vector3]] Contours3D
+    ctypedef vector[Vector3] Edges3D
     ctypedef vector[vector[Point_[int]]] Contours_2D
     ctypedef vector[Point_[int]] Contour_2D
     ctypedef Circle3D[double] Circle
@@ -96,7 +97,7 @@ cdef extern from 'singleeyefitter/common/types.h':
         Sphere[double] sphere
         Sphere[double] initialSphere
         vector[Vector3] binPositions
-
+        Edges3D edges
 
 
     cdef struct Detector_2D_Properties:

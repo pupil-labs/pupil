@@ -16,6 +16,7 @@
 
 #include "mathHelper.h"
 #include "distance.h"
+#include "common/constants.h"
 
 #include <Eigen/StdVector>
 #include <algorithm>
@@ -66,11 +67,11 @@ namespace singleeyefitter {
         //     }
         // }
 
-        // for (cv::Point& p : observation2D->raw_edges) {
-        //     p += roi.tl();
-        //     p.x -= image_width_half;
-        //     p.y = image_height_half - p.y;
-        // }
+        for (cv::Point& p : observation2D->raw_edges) {
+            p += roi.tl();
+            p.x -= image_width_half;
+            p.y = image_height_half - p.y;
+        }
 
         for (cv::Point& p : observation2D->final_edges) {
             p += roi.tl();
@@ -91,17 +92,27 @@ namespace singleeyefitter {
         // }
 
         //check first if the observations is even strong enough to be added
-        if (observation2D->confidence  >=  0.9) {
+        if (observation2D->confidence  >  0.99) {
 
 
 
-            for (auto& model : mEyeModels) {
-                model.presentObservation(observation3DPtr);
-            }
+            // for (auto& model : mEyeModels) {
+            //     model.presentObservation(observation3DPtr);
+            // }
+            auto circle = mEyeModels.back().presentObservation(observation3DPtr);
+
+            if(circle != Circle::Null)
+                mPreviousPupil = circle;
+
+
 
         }else { // if it's too weak we wanna try to find a better one in 3D
 
-            fitCircle(observation2D->contours, props, result );
+            //fitCircle(observation2D->contours, props, result );
+            filterCircle(observation2D->raw_edges, props, result );
+
+            if(result.circle != Circle::Null)
+                mPreviousPupil = result.circle;
             // project the circle back to 2D
             // need for some calculations in 2D later (calibration)
         }
@@ -114,6 +125,8 @@ namespace singleeyefitter {
         mCurrentSphere = mEyeModels.back().getSphere();
         std::cout << "current maturity: " << mEyeModels.back().getMaturity() << std::endl;
         mCurrentInitialSphere = mEyeModels.back().getInitialSphere();
+
+
         result.sphere = mCurrentSphere;
         result.initialSphere = mCurrentInitialSphere;
         result.binPositions = mEyeModels.back().getBinPositions();
@@ -133,7 +146,7 @@ namespace singleeyefitter {
         mPreviousPupilRadius = 0.0;
     }
 
-    void  EyeModelFitter::fitCircle(const Contours_2D& contours2D , const Detector_3D_Properties& props,  Detector_3D_Result& result)
+    void  EyeModelFitter::fitCircle(const Contours_2D& contours2D , const Detector_3D_Properties& props,  Detector_3D_Result& result) const
     {
 
         if (contours2D.size() == 0)
@@ -332,7 +345,7 @@ namespace singleeyefitter {
 
     }
 
-    Contours3D EyeModelFitter::unprojectObservationContours(const Contours_2D& contours)
+    Contours3D EyeModelFitter::unprojectObservationContours(const Contours_2D& contours) const
     {
         Contours3D contoursOnSphere;
         contoursOnSphere.resize(contours.size());
@@ -357,5 +370,131 @@ namespace singleeyefitter {
         return contoursOnSphere;
 
     }
+
+    Edges3D EyeModelFitter::unprojectEdges(const Edges2D& edges) const
+    {
+        Edges3D edgesOnSphere;
+        edgesOnSphere.reserve(edges.size());
+        for (auto& edge : edges) {
+            Vector3 point3D(edge.x, edge.y , mFocalLength);
+            Vector3 direction = point3D - mCameraCenter;
+
+            try {
+                // we use the eye properties of the current eye, when ever we call this
+                const auto& unprojectedPoint = intersect(Line3(mCameraCenter,  direction.normalized()), mCurrentSphere);
+                edgesOnSphere.push_back(std::move(unprojectedPoint.first));
+
+            } catch (no_intersection_exception&) {
+                // if there is no intersection we don't do anything
+            }
+        }
+        return edgesOnSphere;
+
+    }
+
+    void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector_3D_Properties& props,  Detector_3D_Result& result) const {
+
+        if(rawEdges.size() == 0 )
+            return;
+
+        if( mPreviousPupil == Circle::Null)
+            return;
+
+        Edges3D edgesOnSphere = unprojectEdges(rawEdges);
+
+        // working just with spherical coords
+        std::vector<Vector2> edgesSphericalCoords;
+        for( const auto& e : edgesOnSphere){
+            Vector3 p  = e - mCurrentSphere.center;
+            edgesSphericalCoords.emplace_back( math::cart2sph(p) );
+        }
+
+        //const double maxAngularVelocity = constants::PI / 15.0;  // defines the filter space
+        const double maxAngularVelocity = 0.2;  // defines the filter space
+        const double radiusAngle = std::asin( mPreviousPupil.radius / mCurrentSphere.radius );
+
+        Vector3 c  = mPreviousPupil.center - mCurrentSphere.center;
+        Vector2 previousPupilCenter  = math::cart2sph( c );
+        double maxTheta = previousPupilCenter.x() + maxAngularVelocity ;
+        double maxPsi = previousPupilCenter.y() + maxAngularVelocity ;
+        double minTheta = previousPupilCenter.x() - maxAngularVelocity;
+        double minPsi = previousPupilCenter.y() - maxAngularVelocity;
+        std::cout << "maxtheta: " << maxTheta << std::endl;
+        std::cout << "minTheta: " << minTheta << std::endl;
+
+        auto regionFilter = [&]( const Vector2& point ){
+            return  point.x() <=  maxTheta + radiusAngle &&
+                    point.x() >=  minTheta - radiusAngle&&
+                    point.y() <=  maxPsi + radiusAngle &&
+                    point.y() >=  minPsi - radiusAngle;
+        };
+
+        edgesSphericalCoords = fun::filter( regionFilter, edgesSphericalCoords);
+
+        edgesOnSphere.clear();
+        for( const auto& e : edgesSphericalCoords){
+            edgesOnSphere.emplace_back(mCurrentSphere.center + math::sph2cart(mCurrentSphere.radius, e.x(), e.y()) );
+        }
+        result.edges = edgesOnSphere;
+        // now we got all edges in the surrounding of the previous pupil, depending on the angular velocity
+        // let find the circle where most edges support the circle including a certain region around the circle border
+
+        const double stepSizeAngle = 0.01;
+        const double bandWidthAngle = 0.01;
+        const double bandWidthAngleHalf = bandWidthAngle/2.0;
+
+
+        std::cout << "stepsize: " << stepSizeAngle << std::endl;
+        std::cout << "bandwidthangle: " << bandWidthAngle << std::endl;
+        std::cout << "mintheta: " << minTheta << std::endl;
+        std::cout << "maxTheta: " << maxTheta << std::endl;
+        std::cout << "minPsi: " << minPsi << std::endl;
+        std::cout << "maxPsi: " << maxPsi << std::endl;
+        std::cout << "radiusAngle: " << radiusAngle << std::endl;
+        int maxEdgeCount = 0;
+        Vector2 bestCircleCenter(0,0);
+
+        for (double i = minTheta; i <= maxTheta; i += stepSizeAngle)
+        {
+              for (double j = minPsi; j <=  maxPsi; j += stepSizeAngle )
+              {
+                int  edgeCount = 0;
+                //count all edges which fall into this current circle
+                for( const auto& e : edgesSphericalCoords){
+
+                    //double angelFromCenter = math::haversine(e.x(), e.y(), i , j ); // could we just use pythagoras ? for simpicity
+                    // TODO make squared
+                    double angelFromCenter = (e - Vector2(i,j)).norm(); // could we just use pythagoras ? for simpicity
+
+                    //std::cout << "angelFromCenter: " << angelFromCenter << std::endl;
+
+                    if( angelFromCenter < radiusAngle+bandWidthAngleHalf  &&
+                        angelFromCenter > radiusAngle-bandWidthAngleHalf   ) {
+
+                        edgeCount++;
+
+                    }
+                }
+
+                if( edgeCount > maxEdgeCount ){
+                    bestCircleCenter = Vector2(i,j);
+                    maxEdgeCount = edgeCount;
+                }
+
+              }
+        }
+
+
+        if(maxEdgeCount != 0 ){
+            result.circle = circleOnSphere( mCurrentSphere, bestCircleCenter.x() , bestCircleCenter.y(), mPreviousPupil.radius );
+            std::cout << "edge count: " << maxEdgeCount << std::endl;
+            std::cout << "found circle: " << result.circle << std::endl;
+        }
+
+    }
+
+
+
+
 
 } // singleeyefitter

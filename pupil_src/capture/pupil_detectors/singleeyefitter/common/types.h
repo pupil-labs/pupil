@@ -18,6 +18,7 @@ namespace singleeyefitter {
     //########  2D Detector ############
     typedef std::vector<std::vector<cv::Point> > Contours_2D;
     typedef std::vector<cv::Point> Contour_2D;
+    typedef std::vector<cv::Point> Edges2D;
     typedef std::vector<int> ContourIndices;
     typedef Ellipse2D<double> Ellipse;
 
@@ -31,6 +32,7 @@ namespace singleeyefitter {
     typedef size_t Index;
 
     typedef std::vector<Vector3> Contour3D;
+    typedef std::vector<Vector3> Edges3D;
     typedef std::vector<std::vector<Vector3>> Contours3D;
 
 
@@ -41,7 +43,7 @@ namespace singleeyefitter {
         //Contours_2D final_contours;
         Contours_2D contours;
         std::vector<cv::Point> final_edges; // edges used to fit the final ellipse in 2D
-        //std::vector<cv::Point> raw_edges;
+        std::vector<cv::Point> raw_edges;
         cv::Rect current_roi; // contains the roi for this results
         double timestamp = 0.0;
         int image_width = 0;
@@ -62,6 +64,7 @@ namespace singleeyefitter {
         Sphere<double> sphere;
         Sphere<double> initialSphere;
         std::vector<Vector3> binPositions;
+        Edges3D edges;
     };
 
     // use a struct for all properties and pass it to detect method every time we call it.

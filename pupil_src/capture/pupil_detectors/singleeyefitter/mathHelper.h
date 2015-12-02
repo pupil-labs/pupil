@@ -152,6 +152,23 @@ namespace singleeyefitter {
             return r * Eigen::Matrix<T, 3, 1>(sin(theta) * cos(psi), cos(theta), sin(theta) * sin(psi));
         }
 
+        template<typename T>
+        Eigen::Matrix<T, 2, 1> cart2sph(T x, T y, T z)
+        {
+            using std::sin;
+            using std::cos;
+            using std::sqrt;
+            double r =  sqrt( x*x + y*y + z*z);
+            double theta = acos( y / r);
+            double psi = atan2(z, x );
+            return Eigen::Matrix<T, 2, 1>(theta,psi);
+        }
+         template<typename T>
+        Eigen::Matrix<T, 2, 1> cart2sph(const Eigen::Matrix<T, 3, 1>& m )
+        {
+                return cart2sph<T>( m.x(), m.y(), m.z());
+        }
+
         template<typename T, int N>
         inline ::ceres::Jet<T, N> sq(::ceres::Jet<T, N> val)
         {
@@ -164,6 +181,27 @@ namespace singleeyefitter {
         {
            return (z == 0) ? 0 : (z < 0) ? -1 : 1;
         }
+
+        template<typename T>
+        T haversine(T theta1, T psi1, T theta2, T psi2 )
+        {
+            using std::sin;
+            using std::cos;
+            using std::acos;
+            using std::asin;
+            using std::atan2;
+            using std::sqrt;
+            using singleeyefitter::math::sq;
+
+            if (theta1 == theta2 && psi1 == psi2) {
+                return T(0);
+            }
+            // Haversine distance
+            auto dist = T(2) * asin(sqrt( (sin((theta2 - theta1) / T(2))*sin((theta2 - theta1) / T(2))) + cos(theta1) * cos(theta2) * (sin((psi2 - psi1) / T(2))*sin((psi2 - psi1) / T(2))) ));
+            return dist;
+
+        }
+
 
 
         // Hash function for Eigen matrix and vector.
