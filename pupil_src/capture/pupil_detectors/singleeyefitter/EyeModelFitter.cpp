@@ -110,6 +110,7 @@ namespace singleeyefitter {
 
             //fitCircle(observation2D->contours, props, result );
             filterCircle(observation2D->raw_edges, props, result );
+            //filterCircle2(observation2D->raw_edges, props, result );
 
             if(result.circle != Circle::Null)
                 mPreviousPupil = result.circle;
@@ -123,7 +124,7 @@ namespace singleeyefitter {
             std::cout << "prev_radius: " << mPreviousPupilRadius << std::endl;
         }
         mCurrentSphere = mEyeModels.back().getSphere();
-        std::cout << "current maturity: " << mEyeModels.back().getMaturity() << std::endl;
+        //std::cout << "current maturity: " << mEyeModels.back().getMaturity() << std::endl;
         mCurrentInitialSphere = mEyeModels.back().getInitialSphere();
 
 
@@ -394,104 +395,95 @@ namespace singleeyefitter {
 
     void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector_3D_Properties& props,  Detector_3D_Result& result) const {
 
-        if(rawEdges.size() == 0 )
-            return;
-
-        if( mPreviousPupil == Circle::Null)
-            return;
-
-        Edges3D edgesOnSphere = unprojectEdges(rawEdges);
-
-        // working just with spherical coords
-        std::vector<Vector2> edgesSphericalCoords;
-        for( const auto& e : edgesOnSphere){
-            Vector3 p  = e - mCurrentSphere.center;
-            edgesSphericalCoords.emplace_back( math::cart2sph(p) );
-        }
-
-        //const double maxAngularVelocity = constants::PI / 15.0;  // defines the filter space
-        const double maxAngularVelocity = 0.2;  // defines the filter space
-        const double radiusAngle = std::asin( mPreviousPupil.radius / mCurrentSphere.radius );
-
-        Vector3 c  = mPreviousPupil.center - mCurrentSphere.center;
-        Vector2 previousPupilCenter  = math::cart2sph( c );
-        double maxTheta = previousPupilCenter.x() + maxAngularVelocity ;
-        double maxPsi = previousPupilCenter.y() + maxAngularVelocity ;
-        double minTheta = previousPupilCenter.x() - maxAngularVelocity;
-        double minPsi = previousPupilCenter.y() - maxAngularVelocity;
-        std::cout << "maxtheta: " << maxTheta << std::endl;
-        std::cout << "minTheta: " << minTheta << std::endl;
-
-        auto regionFilter = [&]( const Vector2& point ){
-            return  point.x() <=  maxTheta + radiusAngle &&
-                    point.x() >=  minTheta - radiusAngle&&
-                    point.y() <=  maxPsi + radiusAngle &&
-                    point.y() >=  minPsi - radiusAngle;
-        };
-
-        edgesSphericalCoords = fun::filter( regionFilter, edgesSphericalCoords);
-
-        edgesOnSphere.clear();
-        for( const auto& e : edgesSphericalCoords){
-            edgesOnSphere.emplace_back(mCurrentSphere.center + math::sph2cart(mCurrentSphere.radius, e.x(), e.y()) );
-        }
-        result.edges = edgesOnSphere;
-        // now we got all edges in the surrounding of the previous pupil, depending on the angular velocity
-        // let find the circle where most edges support the circle including a certain region around the circle border
-
-        const double stepSizeAngle = 0.01;
-        const double bandWidthAngle = 0.01;
-        const double bandWidthAngleHalf = bandWidthAngle/2.0;
+            if(rawEdges.size() == 0 || mPreviousPupil == Circle::Null)
+                return;
 
 
-        std::cout << "stepsize: " << stepSizeAngle << std::endl;
-        std::cout << "bandwidthangle: " << bandWidthAngle << std::endl;
-        std::cout << "mintheta: " << minTheta << std::endl;
-        std::cout << "maxTheta: " << maxTheta << std::endl;
-        std::cout << "minPsi: " << minPsi << std::endl;
-        std::cout << "maxPsi: " << maxPsi << std::endl;
-        std::cout << "radiusAngle: " << radiusAngle << std::endl;
-        int maxEdgeCount = 0;
-        Vector2 bestCircleCenter(0,0);
+            Edges3D edgesOnSphere = unprojectEdges(rawEdges);
 
-        for (double i = minTheta; i <= maxTheta; i += stepSizeAngle)
-        {
-              for (double j = minPsi; j <=  maxPsi; j += stepSizeAngle )
-              {
-                int  edgeCount = 0;
-                //count all edges which fall into this current circle
-                for( const auto& e : edgesSphericalCoords){
+            //Inorder to filter the edges depending on the distance of the previous Pupil center
+            // imagine a Sphere with center equals previous pupil center (pupilcenters are always on the sphere )
+            // and sphere radius equal the distance from sphere center to pupil border
+            double h =  mCurrentSphere.radius - std::sqrt(mCurrentSphere.radius*mCurrentSphere.radius - mPreviousPupil.radius*mPreviousPupil.radius );
+            double pupilSphereRadiusSquared =  2.0 * mCurrentSphere.radius  * h;
+            double pupilSphereRadius = std::sqrt( pupilSphereRadiusSquared );
+            Vector3 pupilSphereCenter = mPreviousPupil.center;
 
-                    //double angelFromCenter = math::haversine(e.x(), e.y(), i , j ); // could we just use pythagoras ? for simpicity
-                    // TODO make squared
-                    double angelFromCenter = (e - Vector2(i,j)).norm(); // could we just use pythagoras ? for simpicity
+            double pointIndex = 0;
+            const double delta = std::pow(1.5, 2);
+            const double maxFilterDistanceSquared = pupilSphereRadiusSquared * delta;
+            auto regionFilter = [&]( const Vector3& point ){
+                double distanceSquared = (point - pupilSphereCenter ).squaredNorm();
+                return  distanceSquared < maxFilterDistanceSquared;
+            };
 
-                    //std::cout << "angelFromCenter: " << angelFromCenter << std::endl;
+            auto filteredEdges = fun::filter( regionFilter, edgesOnSphere);
 
-                    if( angelFromCenter < radiusAngle+bandWidthAngleHalf  &&
-                        angelFromCenter > radiusAngle-bandWidthAngleHalf   ) {
 
-                        edgeCount++;
+            result.edges = filteredEdges;  // visualize
 
+            // now we got all edges in the surrounding of the previous pupil
+            // let find the circle where most edges support the circle including a certain region around the circle border
+
+            const double maxAngularVelocity = 0.1;  // defines the filter space
+
+            Vector3 c  = mPreviousPupil.center - mCurrentSphere.center;
+            // search space is in spehrical coordinates
+            Vector2 previousPupilCenter  = math::cart2sph( c );
+            double maxTheta = previousPupilCenter.x() + maxAngularVelocity ;
+            double maxPsi = previousPupilCenter.y() + maxAngularVelocity ;
+            double minTheta = previousPupilCenter.x() - maxAngularVelocity;
+            double minPsi = previousPupilCenter.y() - maxAngularVelocity;
+
+            const double stepSizeAngle = 0.01; // in radian
+            // euclidian length. here the segment length with this stepsize is calculated
+            // it's just an approximation, actually it should be the chor length
+            // since the step size is pretty small we can ignore this
+            const double bandWidth = mCurrentSphere.radius * stepSizeAngle;
+            const double bandWidthHalf = bandWidth/2.0;
+            const double maxDistanceSquared  = std::pow(pupilSphereRadius+bandWidthHalf, 2 ) ;
+            const double minDistanceSquared  = std::pow(pupilSphereRadius-bandWidthHalf, 2 ) ;
+
+            int maxEdgeCount = 0;
+            Vector3 bestCircleCenter(0,0,0);
+
+            for (double i = minTheta; i <= maxTheta; i += stepSizeAngle)
+            {
+                  for (double j = minPsi; j <=  maxPsi; j += stepSizeAngle )
+                  {
+
+                    // from here in cartesian again
+                    // if we use cartesian we can just compare the distances from the pupil sphere center
+                    // all this happens in world coordinates
+                    Vector3 newPupilCenter  = mCurrentSphere.center + math::sph2cart(mCurrentSphere.radius, i, j );
+
+                    int  edgeCount = 0;
+                    //count all edges which fall into this current circle
+                    for( const auto& e : filteredEdges){
+
+                        double distanceSquared = (e - newPupilCenter ).squaredNorm();
+                        if( distanceSquared < maxDistanceSquared  &&
+                            distanceSquared > minDistanceSquared   ) {
+                            edgeCount++;
+                        }
                     }
-                }
 
-                if( edgeCount > maxEdgeCount ){
-                    bestCircleCenter = Vector2(i,j);
-                    maxEdgeCount = edgeCount;
-                }
+                    if( edgeCount > maxEdgeCount ){
+                        bestCircleCenter = newPupilCenter;
+                        maxEdgeCount = edgeCount;
+                    }
 
-              }
+                  }
+            }
+
+            if(maxEdgeCount != 0 ){
+                result.circle.center = bestCircleCenter;
+                result.circle.normal = (bestCircleCenter - mCurrentSphere.center).normalized() ;
+                result.circle.radius = mPreviousPupil.radius;
+
+            }
+
         }
-
-
-        if(maxEdgeCount != 0 ){
-            result.circle = circleOnSphere( mCurrentSphere, bestCircleCenter.x() , bestCircleCenter.y(), mPreviousPupil.radius );
-            std::cout << "edge count: " << maxEdgeCount << std::endl;
-            std::cout << "found circle: " << result.circle << std::endl;
-        }
-
-    }
 
 
 

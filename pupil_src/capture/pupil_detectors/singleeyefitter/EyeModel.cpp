@@ -616,8 +616,8 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
         mModelSupports.pop_front();
         mPerformance += support/mFilterWindowSize - first/mFilterWindowSize;
     }
-    std::cout << "current model support: " << support  << std::endl;
-    std::cout << "average model support: " << mPerformance << std::endl;
+    //std::cout << "current model support: " << support  << std::endl;
+    //std::cout << "average model support: " << mPerformance << std::endl;
 
 }
 

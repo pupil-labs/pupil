@@ -35,9 +35,6 @@ namespace singleeyefitter {
 
 
         private:
-            //const Circle& selectUnprojectedCircle( sphere, focal_length, std::pair<Circle,Circle> );
-            //const Circle& getIntersectedCircle(sphere, camera, unprojectedCircle  );
-
 
             const Vector3 mCameraCenter;
             const double mFocalLength;
@@ -49,20 +46,13 @@ namespace singleeyefitter {
 
             double mPreviousPupilRadius;
             Circle mPreviousPupil;
-            // data we get each frame
-            //std::vector<Vector3> edges; // just for visualization
-            //Contours3D final_circle_contours; // just for visualiziation, contains all points which fit best the circle
-            //std::vector<Contours3D> final_candidate_contours; // just for visualiziation, contains all contours which are a candidate for the fit
-            //Vector3 gaze_vector;
+
 
             Contours3D unprojectObservationContours( const Contours_2D& contours) const;
             Edges3D unprojectEdges(const Edges2D& edges) const;
 
-            //void unproject_last_raw_edges();
             void fitCircle(const Contours_2D& contours2D , const Detector_3D_Properties& props,  Detector_3D_Result& result) const;
-
             void filterCircle(const Edges2D& rawEdge, const Detector_3D_Properties& props,  Detector_3D_Result& result) const;
-
 
     };
 
