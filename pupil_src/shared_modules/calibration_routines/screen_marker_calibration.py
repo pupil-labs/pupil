@@ -25,7 +25,7 @@ from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
-from gaze_mappers import Simple_Gaze_Mapper
+from gaze_mappers import Simple_Gaze_Mapper, Bilateral_Gaze_Mapper
 
 #logging
 import logging
@@ -151,6 +151,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
     def start(self):
+        # ##############
+        # DEBUG
+        #self.stop()
+
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
         self.sites = [  (.25, .5), (0,.5),
@@ -214,6 +218,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self.stop()
 
     def stop(self):
+        # TODO: redundancy between all gaze mappers -> might be moved to parent class
         audio.say("Stopping Calibration")
         logger.info('Stopping Calibration')
         self.screen_marker_state = 0
@@ -221,20 +226,35 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.close_window()
         self.button.status_text = ''
 
-        cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
+        if self.g_pool.binocular:
+            cal_pt_cloud = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,1))
+            cal_pt_cloud_eye0 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,))
+            cal_pt_cloud_eye1 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(1,))
+            logger.info("Collected %s binocular data points." %len(cal_pt_cloud))
+            logger.info("Collected %s data points for eye 0." %len(cal_pt_cloud_eye0))
+            logger.info("Collected %s data points for eye 1." %len(cal_pt_cloud_eye1))
+        else:
+            cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
+            logger.info("Collected %s data points." %len(cal_pt_cloud))
 
-        logger.info("Collected %s data points." %len(cal_pt_cloud))
 
-        if len(cal_pt_cloud) < 20:
+        if self.g_pool.binocular and (len(cal_pt_cloud_eye0) < 20 or len(cal_pt_cloud_eye1) < 20) or len(cal_pt_cloud) < 20:
             logger.warning("Did not collect enough data.")
             return
 
         cal_pt_cloud = np.array(cal_pt_cloud)
-        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True)
+        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, binocular=self.g_pool.binocular)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
-
         #replace current gaze mapper with new
-        self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
+        if self.g_pool.binocular:
+            # get monocular models for fallback (if only one pupil is detected)
+            cal_pt_cloud_eye0 = np.array(cal_pt_cloud_eye0)
+            cal_pt_cloud_eye1 = np.array(cal_pt_cloud_eye1)
+            _,params_eye0 = calibrate.get_map_from_cloud(cal_pt_cloud_eye0,self.g_pool.capture.frame_size,return_params=True)
+            _,params_eye1 = calibrate.get_map_from_cloud(cal_pt_cloud_eye1,self.g_pool.capture.frame_size,return_params=True)
+            self.g_pool.plugins.add(Bilateral_Gaze_Mapper,args={'params':params, 'params_eye0':params_eye0, 'params_eye1':params_eye1})
+        else:
+            self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
 
 
     def close_window(self):
@@ -335,42 +355,31 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         clear_gl_screen()
 
-        # Set Matrix unsing gluOrtho2D to include padding for the marker of radius r
-        #
-        ############################
-        #            r             #
-        # 0,0##################w,h #
-        # #                      # #
-        # #                      # #
-        #r#                      #r#
-        # #                      # #
-        # #                      # #
-        # 0,h##################w,h #
-        #            r             #
-        ############################
-
-
         hdpi_factor = glfwGetFramebufferSize(self._window)[0]/glfwGetWindowSize(self._window)[0]
         r = 110*self.marker_scale * hdpi_factor
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         p_window_size = glfwGetWindowSize(self._window)
-        # compensate for radius of marker
-        gl.glOrtho(-r*.6,p_window_size[0]+r*.6,p_window_size[1]+r*.7,-r*.7 ,-1,1)
+        gl.glOrtho(0,p_window_size[0],p_window_size[1],0 ,-1,1)
         # Switch back to Model View Matrix
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
 
-        screen_pos = denormalize(self.display_pos,p_window_size,flip_y=True)
+        def map_value(value,in_range=(0,1),out_range=(0,1)):
+            ratio = (out_range[1]-out_range[0])/(in_range[1]-in_range[0])
+            return (value-in_range[0])*ratio+out_range[0]
+
+        pad = .6*r
+        screen_pos = map_value(self.display_pos[0],out_range=(pad,p_window_size[0]-pad)),map_value(self.display_pos[1],out_range=(p_window_size[1]-pad,pad))
         alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
         draw_concentric_circles(screen_pos,r,6,alpha)
         #some feedback on the detection state
 
         if self.detected and self.on_position:
-            draw_points([screen_pos],size=5,color=RGBA(0.,1.,0.,alpha),sharpness=0.95)
+            draw_points([screen_pos],size=5,color=RGBA(0.,.8,0.,alpha),sharpness=0.5)
         else:
-            draw_points([screen_pos],size=5,color=RGBA(1.,0.,0.,alpha),sharpness=0.95)
+            draw_points([screen_pos],size=5,color=RGBA(0.8,0.,0.,alpha),sharpness=0.5)
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))
@@ -395,3 +404,5 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         if self._window:
             self.close_window()
         self.deinit_gui()
+
+

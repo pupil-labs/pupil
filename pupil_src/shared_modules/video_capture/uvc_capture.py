@@ -11,7 +11,7 @@
 import uvc
 from uvc import device_list,is_accessible
 #check versions for our own depedencies as they are fast-changing
-assert uvc.__version__ >= '0.4'
+assert uvc.__version__ >= '0.5'
 
 from fake_capture import Fake_Capture
 
@@ -89,14 +89,19 @@ class Camera_Capture(object):
             pass
 
         if "Pupil Cam1" in self.capture.name or "USB2.0 Camera" in self.capture.name:
-            self.capture.bandwidth_factor = 1.3
+            self.capture.bandwidth_factor = 1.8
             if "ID0" in self.capture.name or "ID1" in self.capture.name:
+                self.capture.bandwidth_factor = 1.3
                 try:
                     controls_dict['Auto Exposure Priority'].value = 1
                 except KeyError:
                     pass
                 try:
-                    controls_dict['Absolute Exposure Time'].value = 59
+                    controls_dict['Saturation'].value = 0
+                except KeyError:
+                    pass
+                try:
+                    controls_dict['Absolute Exposure Time'].value = 63
                 except KeyError:
                     pass
             try:
@@ -116,9 +121,9 @@ class Camera_Capture(object):
         return frame
 
     def get_now(self):
-        return time()
+        return uvc.get_time_monotonic()
 
-    def get_timestamp():
+    def get_timestamp(self):
         return self.get_now()-self.timebase.value
 
     @property

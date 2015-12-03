@@ -154,7 +154,7 @@ class Eye_Video_Overlay(Plugin):
         #try to load eye video and ts for each eye.
         for video,ts in zip(eye_video_path,eye_timestamps_path):
             try:
-                self.eye_cap.append(File_Capture(glob(video)[0],timestamps=ts))
+                self.eye_cap.append(File_Capture(glob(video)[0],timestamps=np.load(ts)))
             except IndexError,FileCaptureError:
                 pass
             else:
@@ -187,6 +187,7 @@ class Eye_Video_Overlay(Plugin):
 
     def update_gui(self):
         self.menu.elements[:] = []
+        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Info_Text('Show the eye video overlaid on top of the world video. Eye1 is usually the right eye'))
         self.menu.append(ui.Slider('alpha',self,min=0.0,step=0.05,max=1.0,label='Opacity'))
         self.menu.append(ui.Slider('eye_scale_factor',self,min=0.2,step=0.1,max=1.0,label='Video Scale'))
@@ -199,7 +200,7 @@ class Eye_Video_Overlay(Plugin):
         if 1 in self.showeyes:
             self.menu.append(ui.Switch('1',self.mirror,label="Eye 2: Horiz Flip"))
             self.menu.append(ui.Switch('1',self.flip,label="Eye 2: Vert Flip"))
-        self.menu.append(ui.Button('close',self.unset_alive))
+        
 
     def set_showeyes(self,new_mode):
         #everytime we choose eye setting (either use eye 1, 2, or both, updates the gui menu to remove certain options from list)

@@ -70,12 +70,13 @@ class Vis_Watermark(Plugin):
 
         if self.watermark is not None:
             #keep in image bounds, do this even when not dragging because the image sizes could change.
-            self.pos[1] = min(frame.img.shape[0]-self.watermark.shape[0],max(self.pos[1],0))
-            self.pos[0] = min(frame.img.shape[1]-self.watermark.shape[1],max(self.pos[0],0))
+            self.pos[1] = max(0,min(frame.img.shape[0]-self.watermark.shape[0],max(self.pos[1],0)))
+            self.pos[0] = max(0,min(frame.img.shape[1]-self.watermark.shape[1],max(self.pos[0],0)))
             pos = int(self.pos[0]),int(self.pos[1])
             img  = frame.img
             roi = slice(pos[1],pos[1]+self.watermark.shape[0]),slice(pos[0],pos[0]+self.watermark.shape[1])
-            img[roi] = self.watermark*self.alpha_mask + img[roi]*(1-self.alpha_mask)
+            w_roi = slice(0,img.shape[0]-pos[1]),slice(0,img.shape[1]-pos[0])
+            img[roi] = self.watermark[w_roi]*self.alpha_mask[w_roi] + img[roi]*(1-self.alpha_mask[w_roi])
 
 
     def on_click(self,pos,button,action):
@@ -90,7 +91,7 @@ class Vis_Watermark(Plugin):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Watermark')
         self.g_pool.gui.append(self.menu)
-        self.menu.append(ui.Button('remove',self.unset_alive))
+        self.menu.append(ui.Button('Close',self.unset_alive))
         if self.watermark is None:
             self.menu.append(ui.Info_Text("Please save a .png file in the users settings dir: '%s' in RGBA format. Once this plugin is closed and re-loaded the png will be used as a watermark."%self.g_pool.user_dir))
         else:

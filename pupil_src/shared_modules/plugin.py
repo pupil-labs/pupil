@@ -11,7 +11,7 @@ import os,sys
 import logging
 logger = logging.getLogger(__name__)
 import importlib
-
+from time import time
 
 '''
 A simple example Plugin: 'display_recent_gaze.py'
@@ -82,17 +82,18 @@ class Plugin(object):
     def on_notify(self,notification):
         """
         this gets called when a plugin want to notify all others.
-        notification is a tuple in the format {'name':'notification_name',['addional_fields':'blah']}
+        notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
         implement this fn if you want to deal with notifications
         """
         pass
 
-    ### if you want a session persistent plugin implement this function:
-    # def get_init_dict(self):
-    #     d = {}
-    #     # add all aguments of your plugin init fn with paramter names as name field
-    #     # do not include g_pool here.
-    #     return d
+    ## if you want a session persistent plugin implement this function:
+    def get_init_dict(self):
+        raise NotImplementedError()
+        # d = {}
+        # # add all aguments of your plugin init fn with paramter names as name field
+        # # do not include g_pool here.
+        # return d
 
     def cleanup(self):
         """
@@ -107,10 +108,20 @@ class Plugin(object):
     def notify_all(self,notification):
         """
         call this to notify all other plugins with a notification:
-        notification is a tuple in the format {'name':'notification_name',['addional_fields':'blah']}
+        notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
         do not overwrite this method
         """
         self.g_pool.notifications.append(notification)
+
+    def notify_all_delayed(self,notification,delay = 3.0):
+        """
+        call this to notify all other plugins with a notification.
+        if will be published after a bit of time to allow you to adjust the slider and keep the loop repsonsive
+        notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
+        do not overwrite this method
+        """
+        notification['_notify_time_'] = time()+delay
+        self.g_pool.delayed_notifications[notification['subject']] = notification
 
 
     @property
@@ -177,12 +188,12 @@ class Calibration_Plugin(Plugin):
         self.g_pool.active_calibration_plugin = self
 
     def on_notify(self,notification):
-        if notification['name'] is 'cal_should_start':
+        if notification['subject'] is 'cal_should_start':
             if self.active:
                 logger.warning('Calibration already running.')
             else:
                 self.start()
-        elif notification['name'] is 'cal_should_stop':
+        elif notification['subject'] is 'cal_should_stop':
             if self.active:
                 self.stop()
             else:
@@ -213,6 +224,11 @@ class Plugin_List(object):
         self._plugins = []
         self.g_pool = g_pool
 
+        #add self as g_pool.plguins object to allow plugins to call the plugins list during init.
+        #this will be done again when the init returns but is kept there for readablitly.
+        self.g_pool.plugins = self
+
+        #now add plugins to plugin list.
         for initializer in plugin_initializers:
             name, args = initializer
             logger.debug("Loading plugin: %s with settings %s"%(name, args))
@@ -269,7 +285,7 @@ class Plugin_List(object):
             try:
                 p_initializer = p.class_name,p.get_init_dict()
                 initializers.append(p_initializer)
-            except AttributeError:
+            except NotImplementedError:
                 #not all plugins want to be savable, they will not have the init dict.
                 # any object without a get_init_dict method will throw this exception.
                 pass
@@ -286,8 +302,9 @@ def import_runtime_plugins(plugin_dir):
     once a module is sucessfully imported any classes that are subclasses of Plugin
     are added to the runtime plugins list
 
-    any exceptions that are raised during parsing, import filtering and addion are silently ignored.
+    any exceptions that are raised during parsing, import filtering and addition are silently ignored.
     """
+
     runtime_plugins = []
     if os.path.isdir(plugin_dir):
         # we prepend to give the plugin dir content precendece
@@ -308,5 +325,5 @@ def import_runtime_plugins(plugin_dir):
                         logger.info('Added: %s'%member)
                         runtime_plugins.append(member)
             except Exception as e:
-                logger.warning("Failed to load '%s'. Reason: '%s' "%(d,e))
+                logger.debug("Failed to load '%s'. Reason: '%s' "%(d,e))
     return runtime_plugins

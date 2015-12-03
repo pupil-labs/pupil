@@ -37,8 +37,7 @@ from OpenGL.GL import GL_LINE_LOOP
 from methods import *
 from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
-from av_writer import JPEG_Writer
-from cv2_writer import CV_Writer
+from av_writer import JPEG_Writer,AV_Writer
 
 # Pupil detectors
 from pupil_detectors import Canny_Detector
@@ -230,7 +229,6 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     general_settings.append(g_pool.display_mode_info)
     g_pool.sidebar.append(general_settings)
     g_pool.gui.append(g_pool.sidebar)
-    g_pool.gui.append(ui.Hot_Key("quit",setter=on_close,getter=lambda:True,label="X",hotkey=GLFW_KEY_ESCAPE))
     # let the camera add its GUI
     g_pool.capture.init_gui(g_pool.sidebar)
     # let detector add its GUI
@@ -308,12 +306,12 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
                 record_path = command
                 logger.info("Will save eye video to: %s"%record_path)
                 timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-                if raw_mode and hasattr(frame,'jpeg_buffer') :
+                if raw_mode and frame.jpeg_buffer:
                     video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
                     writer = JPEG_Writer(video_path,cap.frame_rate)
                 else:
-                    video_path = os.path.join(record_path, "eye%s.mkv"%eye_id)
-                    writer = CV_Writer(video_path,float(cap.frame_rate), cap.frame_size)
+                    video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
+                    writer = AV_Writer(video_path,cap.frame_rate)
                 timestamps = []
             else:
                 logger.info("Done recording.")

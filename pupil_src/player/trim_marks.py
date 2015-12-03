@@ -21,7 +21,7 @@ class Trim_Marks(Plugin):
     """
     def __init__(self, g_pool):
         super(Trim_Marks, self).__init__(g_pool)
-        g_pool.trim_marks = self #attach self for ease of acces by others.
+        g_pool.trim_marks = self #attach self for ease of access by others.
         self.order = .8
         self.capture = g_pool.capture
         self.frame_count = self.capture.get_frame_count()

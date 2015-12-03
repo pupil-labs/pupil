@@ -31,7 +31,6 @@ class Frame(object):
         self.bgr = img
         self.height,self.width,_ = img.shape
         self._gray = None
-        self._yuv = None
         self.index = index
         #indicate that the frame does not have a native yuv or jpeg buffer
         self.yuv_buffer = None

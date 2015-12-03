@@ -54,8 +54,8 @@ class Seek_Bar(Plugin):
             if abs(seek_pos-self.current_frame_index) >=.002*self.frame_count:
                 seek_pos = int(min(seek_pos,self.frame_count-5)) #the last frames can be problematic to seek to
                 try:
-                    self.cap.seek_to_frame(seek_pos)
-                    self.current_frame_index = seek_pos
+                    self.cap.seek_to_frame_fast(seek_pos)
+                    self.current_frame_index = self.cap.get_frame_index()
                 except:
                     pass
                 self.g_pool.new_seek = True

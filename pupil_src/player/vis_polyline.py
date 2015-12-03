@@ -40,6 +40,7 @@ class Vis_Polyline(Plugin):
         # initialize the menu
         self.menu = ui.Scrolling_Menu('Gaze Polyline')
         self.g_pool.gui.append(self.menu)
+        self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Slider('thickness',self,min=1,step=1,max=15,label='Line thickness'))
 
         color_menu = ui.Growing_Menu('Color')
@@ -50,7 +51,6 @@ class Vis_Polyline(Plugin):
         color_menu.append(ui.Slider('b',self,min=0.0,step=0.05,max=1.0,label='Blue'))
         self.menu.append(color_menu)
 
-        self.menu.append(ui.Button('remove',self.unset_alive))
 
     def deinit_gui(self):
         if self.menu:
