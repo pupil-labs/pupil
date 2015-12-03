@@ -12,6 +12,14 @@
 
 namespace singleeyefitter {
 
+
+    /*
+        Observation class
+
+        Hold data which is precalculated for every new observation
+        Every observation is shared between different models
+
+    */
     class Observation {
         std::shared_ptr<const Detector2DResult> mObservation2D;
         std::pair<Circle,Circle> mUnprojectedCirclePair;
