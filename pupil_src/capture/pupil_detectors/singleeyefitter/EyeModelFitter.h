@@ -31,7 +31,7 @@ namespace singleeyefitter {
 
             // this is called with new observations from the 2D detector
             // it decides what happens ,since not all observations are added
-            Detector_3D_Result update_and_detect( std::shared_ptr<Detector_2D_Result>& observation,const Detector_3D_Properties& props );
+            Detector3DResult updateAndDetect( std::shared_ptr<Detector2DResult>& observation,const Detector3DProperties& props, bool debug = false );
 
 
         private:
@@ -39,20 +39,20 @@ namespace singleeyefitter {
             const Vector3 mCameraCenter;
             const double mFocalLength;
 
+            bool mDebug;
+
             std::vector<EyeModel> mEyeModels;
 
             Sphere mCurrentSphere;
             Sphere mCurrentInitialSphere;
 
-            double mPreviousPupilRadius;
             Circle mPreviousPupil;
 
-
-            Contours3D unprojectObservationContours( const Contours_2D& contours) const;
+            //Contours3D unprojectContours( const Contours_2D& contours) const;
             Edges3D unprojectEdges(const Edges2D& edges) const;
 
-            void fitCircle(const Contours_2D& contours2D , const Detector_3D_Properties& props,  Detector_3D_Result& result) const;
-            void filterCircle(const Edges2D& rawEdge, const Detector_3D_Properties& props,  Detector_3D_Result& result) const;
+            //void fitCircle(const Contours_2D& contours2D , const Detector3DProperties& props,  Detector3DResult& result) const;
+            void filterCircle(const Edges2D& rawEdge, const Detector3DProperties& props,  Detector3DResult& result) const;
 
     };
 

@@ -22,17 +22,17 @@ from cython.operator cimport dereference as deref
 
 cdef class Detector_3D:
 
-    cdef Detector2D* detector_2d_ptr
-    cdef EyeModelFitter *detector_3d_ptr
+    cdef Detector2D* detector2DPtr
+    cdef EyeModelFitter *detector3DPtr
 
-    cdef dict detect_properties_2d, detect_properties_3d
-    cdef object menu_2d, menu_3d
-    cdef object g_pool
-    cdef object debug_visualizer_3d
-    cdef object py_result3D
+    cdef dict detectProperties2D, detectProperties3D
+    cdef object menu2D, menu3D
+    cdef object gPool
+    cdef object debugVisualizer3D
+    cdef object pyResult3D
 
     def __cinit__(self):
-        self.detector_2d_ptr = new Detector2D()
+        self.detector2DPtr = new Detector2D()
         focal_length = 620.
         '''
         K for 30hz eye cam:
@@ -42,52 +42,52 @@ cdef class Detector_3D:
         '''
         #region_band_width = 5
         #region_step_epsilon = 0.5
-        self.detector_3d_ptr = new EyeModelFitter(focal_length)
+        self.detector3DPtr = new EyeModelFitter(focal_length)
 
-    def __init__(self, g_pool = None, settings = None ):
+    def __init__(self, gPool = None, settings = None ):
 
         #debug window
-        self.debug_visualizer_3d = Visualizer(self.detector_3d_ptr.getFocalLength() )
-        self.g_pool = g_pool
-        self.detect_properties_2d = settings['2D_Settings'] if settings else {}
-        self.detect_properties_3d = settings['3D_Settings'] if settings else {}
+        self.debugVisualizer3D = Visualizer(self.detector3DPtr.getFocalLength() )
+        self.gPool = gPool
+        self.detectProperties2D = settings['2D_Settings'] if settings else {}
+        self.detectProperties3D = settings['3D_Settings'] if settings else {}
 
-        if not self.detect_properties_2d:
-            self.detect_properties_2d["coarse_detection"] = True
-            self.detect_properties_2d["coarse_filter_min"] = 100
-            self.detect_properties_2d["coarse_filter_max"] = 400
-            self.detect_properties_2d["intensity_range"] = 17
-            self.detect_properties_2d["blur_size"] = 3
-            self.detect_properties_2d["canny_treshold"] = 200
-            self.detect_properties_2d["canny_ration"] = 3
-            self.detect_properties_2d["canny_aperture"] = 5
-            self.detect_properties_2d["pupil_size_max"] = 150
-            self.detect_properties_2d["pupil_size_min"] = 40
-            self.detect_properties_2d["strong_perimeter_ratio_range_min"] = 0.8
-            self.detect_properties_2d["strong_perimeter_ratio_range_max"] = 1.1
-            self.detect_properties_2d["strong_area_ratio_range_min"] = 0.6
-            self.detect_properties_2d["strong_area_ratio_range_max"] = 1.1
-            self.detect_properties_2d["contour_size_min"] = 5
-            self.detect_properties_2d["ellipse_roundness_ratio"] = 0.1
-            self.detect_properties_2d["initial_ellipse_fit_treshhold"] = 1.8
-            self.detect_properties_2d["final_perimeter_ratio_range_min"] = 0.6
-            self.detect_properties_2d["final_perimeter_ratio_range_max"] = 1.2
-            self.detect_properties_2d["ellipse_true_support_min_dist"] = 4.0
+        if not self.detectProperties2D:
+            self.detectProperties2D["coarse_detection"] = True
+            self.detectProperties2D["coarse_filter_min"] = 100
+            self.detectProperties2D["coarse_filter_max"] = 400
+            self.detectProperties2D["intensity_range"] = 17
+            self.detectProperties2D["blur_size"] = 3
+            self.detectProperties2D["canny_treshold"] = 200
+            self.detectProperties2D["canny_ration"] = 3
+            self.detectProperties2D["canny_aperture"] = 5
+            self.detectProperties2D["pupil_size_max"] = 150
+            self.detectProperties2D["pupil_size_min"] = 40
+            self.detectProperties2D["strong_perimeter_ratio_range_min"] = 0.8
+            self.detectProperties2D["strong_perimeter_ratio_range_max"] = 1.1
+            self.detectProperties2D["strong_area_ratio_range_min"] = 0.6
+            self.detectProperties2D["strong_area_ratio_range_max"] = 1.1
+            self.detectProperties2D["contour_size_min"] = 5
+            self.detectProperties2D["ellipse_roundness_ratio"] = 0.1
+            self.detectProperties2D["initial_ellipse_fit_treshhold"] = 1.8
+            self.detectProperties2D["final_perimeter_ratio_range_min"] = 0.6
+            self.detectProperties2D["final_perimeter_ratio_range_max"] = 1.2
+            self.detectProperties2D["ellipse_true_support_min_dist"] = 4.0
 
-        if not self.detect_properties_3d:
-            self.detect_properties_3d["max_fit_residual"] = 20.0
-            self.detect_properties_3d["max_circle_variance"] = 1.0
-            self.detect_properties_3d["pupil_radius_min"] = 2.0 # millimeters
-            self.detect_properties_3d["pupil_radius_max"] = 4.0
-            self.detect_properties_3d["combine_evaluation_max"] = 10000
-            self.detect_properties_3d["combine_depth_max"] = 20
+        if not self.detectProperties3D:
+            self.detectProperties3D["max_fit_residual"] = 20.0
+            self.detectProperties3D["max_circle_variance"] = 1.0
+            self.detectProperties3D["pupil_radius_min"] = 2.0 # millimeters
+            self.detectProperties3D["pupil_radius_max"] = 4.0
+            self.detectProperties3D["combine_evaluation_max"] = 10000
+            self.detectProperties3D["combine_depth_max"] = 20
 
     def get_settings(self):
-        return {'2D_Settings': self.detect_properties_2d , '3D_Settings' : self.detect_properties_3d }
+        return {'2D_Settings': self.detectProperties2D , '3D_Settings' : self.detectProperties3D }
 
     def __dealloc__(self):
-      del self.detector_2d_ptr
-      del self.detector_3d_ptr
+      del self.detector2DPtr
+      del self.detector3DPtr
 
     def detect(self, frame, user_roi, visualize, pause = False ):
 
@@ -115,13 +115,13 @@ cdef class Detector_3D:
         roi_height  = roi.get()[3] - roi.get()[1]
         cdef int[:,::1] integral
 
-        if self.detect_properties_2d['coarse_detection']:
+        if self.detectProperties2D['coarse_detection']:
             scale = 2 # half the integral image. boost up integral
             # TODO maybe implement our own Integral so we don't have to half the image
             user_roi_image = frame.gray[user_roi.view]
             integral = cv2.integral(user_roi_image[::scale,::scale])
-            coarse_filter_max = self.detect_properties_2d['coarse_filter_max']
-            coarse_filter_min = self.detect_properties_2d['coarse_filter_min']
+            coarse_filter_max = self.detectProperties2D['coarse_filter_max']
+            coarse_filter_min = self.detectProperties2D['coarse_filter_min']
             p_x,p_y,p_w,p_response = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
             roi_x = p_x * scale + roi_x
             roi_y = p_y * scale + roi_y
@@ -130,94 +130,95 @@ cdef class Detector_3D:
             roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_width))
 
         # every coordinates in the result are relative to the current ROI
-        cpp_result_ptr =  self.detector_2d_ptr.detect(self.detect_properties_2d, cv_image, cv_image_color, debug_image, Rect_[int](roi_x,roi_y,roi_width,roi_height), visualize , False ) #we don't use debug image in 3d model
-        deref(cpp_result_ptr).timestamp = frame.timestamp
+        cppResultPtr =  self.detector2DPtr.detect(self.detectProperties2D, cv_image, cv_image_color, debug_image, Rect_[int](roi_x,roi_y,roi_width,roi_height), visualize , False ) #we don't use debug image in 3d model
+        deref(cppResultPtr).timestamp = frame.timestamp
 
-        cdef Detector_2D_Result cpp_result = deref(cpp_result_ptr)
+        cdef Detector2DResult cppResult = deref(cppResultPtr)
 
-        py_result = convertToPythonResult( cpp_result, frame, roi )
+        pyResult = convertToPythonResult( cppResult, frame, roi )
 
         ######### 3D Model Part ############
+        debugDetector =  self.debugVisualizer3D._window
+        cdef Detector3DResult cpp3DResult  = self.detector3DPtr.updateAndDetect( cppResultPtr , self.detectProperties3D, debugDetector)
 
-        cdef Detector_3D_Result cpp3DResult  = self.detector_3d_ptr.update_and_detect( cpp_result_ptr , self.detect_properties_3d)
+        if debugDetector:
+            self.pyResult3D = prepareForVisualization3D(cpp3DResult)
 
-        self.py_result3D = prepareForVisualization3D(cpp3DResult)
-
-        return py_result
+        return pyResult
 
 
     def cleanup(self):
-        self.debug_visualizer_3d.close_window() # if we change detectors, be sure debug window is also closed
+        self.debugVisualizer3D.close_window() # if we change detectors, be sure debug window is also closed
 
 
     def init_gui(self,sidebar):
-        self.menu_2d = ui.Growing_Menu('Pupil Detector 2D')
+        self.menu2D = ui.Growing_Menu('Pupil Detector 2D')
         info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
-        self.menu_2d.append(info)
-        self.menu_2d.append(ui.Slider('intensity_range',self.detect_properties_2d,label='Pupil intensity range',min=0,max=60,step=1))
-        self.menu_2d.append(ui.Slider('pupil_size_min',self.detect_properties_2d,label='Pupil min',min=1,max=250,step=1))
-        self.menu_2d.append(ui.Slider('pupil_size_max',self.detect_properties_2d,label='Pupil max',min=50,max=400,step=1))
-        self.menu_2d.append(ui.Slider('ellipse_roundness_ratio',self.detect_properties_2d,min=0.01,max=1.0,step=0.01))
-        self.menu_2d.append(ui.Slider('initial_ellipse_fit_treshhold',self.detect_properties_2d,min=0.01,max=6.0,step=0.01))
-        self.menu_2d.append(ui.Slider('canny_treshold',self.detect_properties_2d,min=1,max=1000,step=1))
-        self.menu_2d.append(ui.Slider('canny_ration',self.detect_properties_2d,min=1,max=4,step=1))
+        self.menu2D.append(info)
+        self.menu2D.append(ui.Slider('intensity_range',self.detectProperties2D,label='Pupil intensity range',min=0,max=60,step=1))
+        self.menu2D.append(ui.Slider('pupil_size_min',self.detectProperties2D,label='Pupil min',min=1,max=250,step=1))
+        self.menu2D.append(ui.Slider('pupil_size_max',self.detectProperties2D,label='Pupil max',min=50,max=400,step=1))
+        self.menu2D.append(ui.Slider('ellipse_roundness_ratio',self.detectProperties2D,min=0.01,max=1.0,step=0.01))
+        self.menu2D.append(ui.Slider('initial_ellipse_fit_treshhold',self.detectProperties2D,min=0.01,max=6.0,step=0.01))
+        self.menu2D.append(ui.Slider('canny_treshold',self.detectProperties2D,min=1,max=1000,step=1))
+        self.menu2D.append(ui.Slider('canny_ration',self.detectProperties2D,min=1,max=4,step=1))
 
-        self.menu_3d = ui.Growing_Menu('Pupil Detector 3D')
+        self.menu3D = ui.Growing_Menu('Pupil Detector 3D')
         info_3d = ui.Info_Text("Open the debug window to see a visualization of the 3d pupil detection." )
-        self.menu_3d.append(info_3d)
-        self.menu_3d.append(ui.Button('Reset 3D Model', self.reset_3D_Model ))
-        self.menu_3d.append(ui.Slider('pupil_radius_min',self.detect_properties_3d,label='Pupil min radius', min=1.0,max= 8.0,step=0.1))
-        self.menu_3d.append(ui.Slider('pupil_radius_max',self.detect_properties_3d,label='Pupil max radius', min=1.0,max=8.0,step=0.1))
-        self.menu_3d.append(ui.Slider('max_fit_residual',self.detect_properties_3d,label='3D fit max residual', min=0.00,max=0.1,step=0.0001))
-        self.menu_3d.append(ui.Slider('max_circle_variance',self.detect_properties_3d,label='3D fit max circle variance', min=0.01,max=2.0,step=0.001))
-        self.menu_3d.append(ui.Slider('combine_evaluation_max',self.detect_properties_3d,label='3D fit max combinations eval', min=500,max=50000,step=5000))
-        self.menu_3d.append(ui.Slider('combine_depth_max',self.detect_properties_3d,label='3D fit max combination depth', min=10,max=5000,step=20))
+        self.menu3D.append(info_3d)
+        self.menu3D.append(ui.Button('Reset 3D Model', self.reset_3D_Model ))
+        self.menu3D.append(ui.Slider('pupil_radius_min',self.detectProperties3D,label='Pupil min radius', min=1.0,max= 8.0,step=0.1))
+        self.menu3D.append(ui.Slider('pupil_radius_max',self.detectProperties3D,label='Pupil max radius', min=1.0,max=8.0,step=0.1))
+        self.menu3D.append(ui.Slider('max_fit_residual',self.detectProperties3D,label='3D fit max residual', min=0.00,max=0.1,step=0.0001))
+        self.menu3D.append(ui.Slider('max_circle_variance',self.detectProperties3D,label='3D fit max circle variance', min=0.01,max=2.0,step=0.001))
+        self.menu3D.append(ui.Slider('combine_evaluation_max',self.detectProperties3D,label='3D fit max combinations eval', min=500,max=50000,step=5000))
+        self.menu3D.append(ui.Slider('combine_depth_max',self.detectProperties3D,label='3D fit max combination depth', min=10,max=5000,step=20))
 
 
         advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
-        advanced_controls_menu.append(ui.Switch('coarse_detection',self.detect_properties_2d,label='Use coarse detection'))
-        #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detect_properties_2d,label='Contour min length',min=1,max=200,step=1))
+        advanced_controls_menu.append(ui.Switch('coarse_detection',self.detectProperties2D,label='Use coarse detection'))
+        #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detectProperties2D,label='Contour min length',min=1,max=200,step=1))
 
         advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
-        self.menu_3d.append(advanced_controls_menu)
-        sidebar.append(self.menu_2d)
-        sidebar.append(self.menu_3d)
+        self.menu3D.append(advanced_controls_menu)
+        sidebar.append(self.menu2D)
+        sidebar.append(self.menu3D)
 
     def deinit_gui(self):
-        self.g_pool.sidebar.remove(self.menu_2d)
-        self.g_pool.sidebar.remove(self.menu_3d)
-        self.menu_2d = None
-        self.menu_3d = None
+        self.gPool.sidebar.remove(self.menu2D)
+        self.gPool.sidebar.remove(self.menu3D)
+        self.menu2D = None
+        self.menu3D = None
 
     def reset_3D_Model(self):
-         self.detector_3d_ptr.reset()
+         self.detector3DPtr.reset()
 
     def toggle_window(self):
-        if not self.debug_visualizer_3d._window:
-            self.debug_visualizer_3d.open_window()
+        if not self.debugVisualizer3D._window:
+            self.debugVisualizer3D.open_window()
         else:
-            self.debug_visualizer_3d.close_window()
+            self.debugVisualizer3D.close_window()
 
     def visualize(self):
-        if self.debug_visualizer_3d._window:
-            self.debug_visualizer_3d.update_window( self.g_pool, self.py_result3D  )
+        if self.debugVisualizer3D._window:
+            self.debugVisualizer3D.update_window( self.gPool, self.pyResult3D  )
 
 
 
     ### Debug Helper Start ###
 
     # def get_latest_pupil(self):
-    #     center = self.detector_3d_ptr.latest_pupil_circle.center
-    #     radius = self.detector_3d_ptr.latest_pupil_circle.radius
-    #     normal = self.detector_3d_ptr.latest_pupil_circle.normal
+    #     center = self.detector3DPtr.latest_pupil_circle.center
+    #     radius = self.detector3DPtr.latest_pupil_circle.radius
+    #     normal = self.detector3DPtr.latest_pupil_circle.normal
     #     return [ [center[0],center[1],center[2]], [normal[0],normal[1],normal[2]], radius ]
 
     # def get_last_pupil_contours(self):
 
     #     contours = []
-    #     for contour in self.detector_3d_ptr.eye_contours:
+    #     for contour in self.detector3DPtr.eye_contours:
     #         c = []
     #         for point in contour:
     #             c.append([point[0],point[1],point[2]])
@@ -227,25 +228,25 @@ cdef class Detector_3D:
 
     # # def get_last_pupil_edges(self):
     # #     edges = []
-    # #     for point in self.detector_3d_ptr.edges:
+    # #     for point in self.detector3DPtr.edges:
     # #             edges.append([point[0],point[1],point[2]])
     # #     return edges
 
     # def get_bin_positions(self):
-    #     if self.detector_3d_ptr.bin_positions.size() == 0:
+    #     if self.detector3DPtr.bin_positions.size() == 0:
     #         return []
 
     #     positions = []
-    #     eye_position = self.detector_3d_ptr.eye.center
-    #     eye_radius = self.detector_3d_ptr.eye.radius
+    #     eye_position = self.detector3DPtr.eye.center
+    #     eye_radius = self.detector3DPtr.eye.radius
     #     #bins are on a unit sphere
-    #     for point in self.detector_3d_ptr.bin_positions:
+    #     for point in self.detector3DPtr.bin_positions:
     #         positions.append([point[0]*eye_radius+eye_position[0],point[1]*eye_radius+eye_position[1],point[2]*eye_radius+eye_position[2]])
     #     return positions
 
     # def get_last_final_circle_contour(self):
     #     contours = []
-    #     for contour in self.detector_3d_ptr.final_circle_contours:
+    #     for contour in self.detector3DPtr.final_circle_contours:
     #         c = []
     #         for point in contour:
     #             c.append([point[0],point[1],point[2]])
@@ -256,7 +257,7 @@ cdef class Detector_3D:
     # def get_last_final_candidate_contour(self):
 
     #     list_contours = []
-    #     for contours in self.detector_3d_ptr.final_candidate_contours:
+    #     for contours in self.detector3DPtr.final_candidate_contours:
     #         cc = []
     #         for contour in contours:
     #             c = []
@@ -267,10 +268,10 @@ cdef class Detector_3D:
 
     #     return list_contours
     # def get_last_unwrapped_contours(self):
-    #     if self.detector_3d_ptr.pupils.size() == 0:
+    #     if self.detector3DPtr.pupils.size() == 0:
     #         return []
 
-    #     cdef EyeModelFitter.Pupil p = self.detector_3d_ptr.pupils.back()
+    #     cdef EyeModelFitter.Pupil p = self.detector3DPtr.pupils.back()
     #     contours = []
     #     for contour in p.unwrapped_contours:
     #         c = []
@@ -282,8 +283,8 @@ cdef class Detector_3D:
 
     # def get_all_pupil_observations(self):
     #     cdef EyeModelFitter.Pupil p
-    #     cdef Detector_2D_Result observation
-    #     for p in self.detector_3d_ptr.pupils:
+    #     cdef Detector2DResult observation
+    #     for p in self.detector3DPtr.pupils:
     #         observation = deref(p.observation)
     #         yield PyObservation( (observation.ellipse.center[0],observation.ellipse.center[1]), observation.ellipse.major_radius,observation.ellipse.minor_radius,observation.ellipse.angle,
     #         p.params.theta,p.params.psi,p.params.radius,

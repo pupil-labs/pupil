@@ -76,7 +76,7 @@ cdef extern from 'singleeyefitter/common/types.h':
     ctypedef Circle3D[double] Circle
     ctypedef Ellipse2D[double] Ellipse
 
-    cdef struct Detector_2D_Result:
+    cdef struct Detector2DResult:
         double confidence
         Ellipse ellipse
         Contours_2D final_contours
@@ -87,20 +87,29 @@ cdef extern from 'singleeyefitter/common/types.h':
         int image_width;
         int image_height;
 
-    cdef struct Detector_3D_Result:
+    cdef struct ModelDebugProperties:
+        Sphere[double] sphere;
+        Sphere[double] initialSphere;
+        vector[Vector3] binPositions;
+        double maturity;
+        double fit;
+        double performance;
+
+    cdef struct Detector3DResult:
         Circle circle
         Ellipse ellipse
         double fitGoodness
         double timestamp
+        #-------- For visualization ----------------
         Contours3D contours
         Contours3D fittedCircleContours
-        Sphere[double] sphere
-        Sphere[double] initialSphere
-        vector[Vector3] binPositions
         Edges3D edges
+        vector[ModelDebugProperties] models
 
 
-    cdef struct Detector_2D_Properties:
+
+
+    cdef struct Detector2DProperties:
         int intensity_range
         int blur_size
         float canny_treshold
@@ -119,7 +128,7 @@ cdef extern from 'singleeyefitter/common/types.h':
         float final_perimeter_ratio_range_max
         float ellipse_true_support_min_dist
 
-    cdef struct Detector_3D_Properties:
+    cdef struct Detector3DProperties:
         float max_fit_residual
         float max_circle_variance
         float pupil_radius_min
@@ -135,7 +144,7 @@ cdef extern from 'detect_2d.hpp':
   cdef cppclass Detector2D:
 
     Detector2D() except +
-    shared_ptr[Detector_2D_Result] detect( Detector_2D_Properties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& roi, bint visualize , bint use_debug_image )
+    shared_ptr[Detector2DResult] detect( Detector2DProperties& prop, Mat& image, Mat& color_image, Mat& debug_image, Rect_[int]& roi, bint visualize , bint use_debug_image )
 
 
 cdef extern from "singleeyefitter/EyeModelFitter.h" namespace "singleeyefitter":
@@ -149,14 +158,14 @@ cdef extern from "singleeyefitter/EyeModelFitter.h" namespace "singleeyefitter":
             float radius
 
         cppclass Observation:
-            shared_ptr[const Detector_2D_Result] mObservation2D;
+            shared_ptr[const Detector2DResult] mObservation2D;
             pair[Circle, Circle] mUnprojectedCirclePair
-            Observation( shared_ptr[const Detector_2D_Result] observation, double focalLength)
+            Observation( shared_ptr[const Detector2DResult] observation, double focalLength)
 
 
         EyeModelFitter(double focalLength )
 
-        Detector_3D_Result update_and_detect(  shared_ptr[Detector_2D_Result]& results,  Detector_3D_Properties& prop )
+        Detector3DResult updateAndDetect( shared_ptr[Detector2DResult]& results, const Detector3DProperties& prop, bint fillDebugResult )
 
         void reset()
         double getFocalLength()

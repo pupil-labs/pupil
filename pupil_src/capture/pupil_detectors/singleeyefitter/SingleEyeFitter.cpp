@@ -131,7 +131,7 @@ namespace singleeyefitter {
     const Vector3 EyeModelFitter::camera_center = Vector3::Zero();
 
 
-    EyeModelFitter::Pupil::Pupil(std::shared_ptr<Detector_2D_Result> observation) : observation(observation), params(0, 0, 0)
+    EyeModelFitter::Pupil::Pupil(std::shared_ptr<Detector2DResult> observation) : observation(observation), params(0, 0, 0)
     {
     }
 
@@ -243,10 +243,10 @@ singleeyefitter::EyeModelFitter::EyeModelFitter(double focal_length/*, double re
 //     return pupils.size() - 1;
 // }
 
-Detector_3D_Result singleeyefitter::EyeModelFitter::update_and_detect(std::shared_ptr<Detector_2D_Result>& observation,const Detector_3D_Properties& props)
+Detector3DResult singleeyefitter::EyeModelFitter::update_and_detect(std::shared_ptr<Detector2DResult>& observation,const Detector3DProperties& props)
 {
 
-    Detector_3D_Result result;
+    Detector3DResult result;
 
     bool should_add_observation = false;
 
@@ -1107,7 +1107,7 @@ void singleeyefitter::EyeModelFitter::unproject_observations(double pupil_radius
 
 }
 
-double singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours( const Detector_3D_Properties& props)
+double singleeyefitter::EyeModelFitter::fit_circle_for_eye_contours( const Detector3DProperties& props)
 {
 
     if (eye_contours.size() == 0)

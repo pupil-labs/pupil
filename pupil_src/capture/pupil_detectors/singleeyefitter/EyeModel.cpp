@@ -46,7 +46,7 @@ EyeModel::EyeModel(EyeModel&& that) :
     mInitialSphere = std::move(that.mInitialSphere);
     mSpatialBins = std::move(that.mSpatialBins);
     mBinPositions = std::move(that.mBinPositions);
-    mResidual = std::move(that.mResidual);
+    mFit = std::move(that.mFit);
     mPerformance = std::move(that.mPerformance);
     mMaturity = std::move(that.mMaturity);
     mModelSupports = std::move(that.mModelSupports);
@@ -67,7 +67,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
 
 
     Circle intersectedCircle;
-    bool should_add_observation = false;
+    bool shouldAddObservation = false;
 
     //Check for properties if it's a candidate we can use
     if (mSphere != Sphere::Null && (mPupilSize + mSupportingPupilsToAdd.size()) > mInitialUncheckedPupils ) {
@@ -76,7 +76,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
         const Circle& unprojectedCircle = selectUnprojectedCircle(mSphere, newObservationPtr->getUnprojectedCirclePair() );
 
         if (isSpatialRelevant(unprojectedCircle)) {
-            should_add_observation = true;
+            shouldAddObservation = true;
         } else {
             //std::cout << " spatial check failed"  << std::endl;
         }
@@ -87,10 +87,10 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
 
     } else { // no valid sphere yet
         std::cout << "add without check" << std::endl;
-        should_add_observation = true;
+        shouldAddObservation = true;
     }
 
-    if (should_add_observation) {
+    if (shouldAddObservation) {
         //std::cout << "add" << std::endl;
         //if the observation passed all tests we can add it
         mSupportingPupilsToAdd.emplace_back( newObservationPtr );
@@ -105,11 +105,12 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
                     std::lock_guard<std::mutex> lockPupil(mPupilMutex);
                     auto sphere  = initialiseModel();
                     auto sphere2 = sphere;
-                    refineWithEdges(sphere);
+                    double fit = refineWithEdges(sphere);
                     {
                         std::lock_guard<std::mutex> lockModel(mModelMutex);
                         mInitialSphere = sphere2;
                         mSphere = sphere;
+                        mFit = fit;
                     }
                  };
                 // needed in order to assign a new thread
@@ -134,13 +135,12 @@ EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= true*/)
     if (mSupportingPupils.size() < 2) {
         return Sphere::Null;
     }
-    const double pupil_radius = 1;
-    const double eye_z = 57;
+    const double eyeZ = 57; // could be any value
 
     // should we save them some where else ?
-    std::vector<const Line> pupil_gazelines_proj;
+    std::vector<const Line> pupilGazelinesProjected;
     for (const auto& pupil : mSupportingPupils) {
-        pupil_gazelines_proj.push_back( pupil.mObservationPtr->getProjectedCircleGaze() );
+        pupilGazelinesProjected.push_back( pupil.mObservationPtr->getProjectedCircleGaze() );
     }
 
     // Get eyeball center
@@ -153,25 +153,25 @@ EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= true*/)
     //
     // (This has to be done here because it's used by the pupil circle
     // disambiguation)
-    Vector2 eye_center_proj;
-    bool valid_eye;
+    Vector2 eyeCenterProjected;
+    bool validEye;
 
     if ( use_ransac ) {
-        auto indices = fun::range_<std::vector<size_t>>(pupil_gazelines_proj.size());
+        auto indices = fun::range_<std::vector<size_t>>(pupilGazelinesProjected.size());
         const int n = 2;
         double w = 0.3;
         double p = 0.9999;
         int k = ceil(log(1 - p) / log(1 - pow(w, n)));
         double epsilon = 10;
-        auto huber_error = [&](const Vector2 & point, const Line & line) {
-            double dist = euclidean_distance(point, line);
+        // auto huber_error = [&](const Vector2 & point, const Line & line) {
+        //     double dist = euclidean_distance(point, line);
 
-            if (sq(dist) < sq(epsilon))
-                return sq(dist) / 2;
-            else
-                return epsilon * (abs(dist) - epsilon / 2);
-        };
-        auto m_error = [&](const Vector2 & point, const Line & line) {
+        //     if (sq(dist) < sq(epsilon))
+        //         return sq(dist) / 2;
+        //     else
+        //         return epsilon * (abs(dist) - epsilon / 2);
+        // };
+        auto error = [&](const Vector2 & point, const Line & line) {
             double dist = euclidean_distance(point, line);
 
             if (sq(dist) < sq(epsilon))
@@ -179,58 +179,57 @@ EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= true*/)
             else
                 return sq(epsilon);
         };
-        auto error = m_error;
-        auto best_inlier_indices = decltype(indices)();
-        Vector2 best_eye_center_proj;// = nearest_intersect(pupil_gazelines_proj);
-        double best_line_distance_error = std::numeric_limits<double>::infinity();// = fun::sum(LAMBDA(const Line& line)(error(best_eye_center_proj,line)), pupil_gazelines_proj);
+        auto bestInlierIndices = decltype(indices)();
+        Vector2 bestEyeCenterProjected;// = nearest_intersect(pupilGazelinesProjected);
+        double bestLineDistanceError = std::numeric_limits<double>::infinity();// = fun::sum(LAMBDA(const Line& line)(error(bestEyeCenterProjected,line)), pupilGazelinesProjected);
 
         for (int i = 0; i < k; ++i) {
-            auto index_sample = singleeyefitter::randomSubset(indices, n);
-            auto sample = fun::map([&](size_t i) { return pupil_gazelines_proj[i]; }, index_sample);
-            auto sample_center_proj = nearest_intersect(sample);
-            auto index_inliers = fun::filter(
-            [&](size_t i) { return euclidean_distance(sample_center_proj, pupil_gazelines_proj[i]) < epsilon; },
+            auto indexSample = singleeyefitter::randomSubset(indices, n);
+            auto sample = fun::map([&](size_t i) { return pupilGazelinesProjected[i]; }, indexSample);
+            auto sampleCenterProjected = nearest_intersect(sample);
+            auto indexInliers = fun::filter(
+            [&](size_t i) { return euclidean_distance(sampleCenterProjected, pupilGazelinesProjected[i]) < epsilon; },
             indices);
-            auto inliers = fun::map([&](size_t i) { return pupil_gazelines_proj[i]; }, index_inliers);
+            auto inliers = fun::map([&](size_t i) { return pupilGazelinesProjected[i]; }, indexInliers);
 
-            if (inliers.size() <= w * pupil_gazelines_proj.size()) {
+            if (inliers.size() <= w * pupilGazelinesProjected.size()) {
                 continue;
             }
 
-            auto inlier_center_proj = nearest_intersect(inliers);
-            double line_distance_error = fun::sum(
-            [&](size_t i) { return error(inlier_center_proj, pupil_gazelines_proj[i]); },
+            auto inlierCenterProj = nearest_intersect(inliers);
+            double lineDistanceError = fun::sum(
+            [&](size_t i) { return error(inlierCenterProj, pupilGazelinesProjected[i]); },
             indices);
 
-            if (line_distance_error < best_line_distance_error) {
-                best_eye_center_proj = inlier_center_proj;
-                best_line_distance_error = line_distance_error;
-                best_inlier_indices = std::move(index_inliers);
+            if (lineDistanceError < bestLineDistanceError) {
+                bestEyeCenterProjected = inlierCenterProj;
+                bestLineDistanceError = lineDistanceError;
+                bestInlierIndices = std::move(indexInliers);
             }
         }
 
-        // std::cout << "Inliers: " << best_inlier_indices.size()
-        //     << " (" << (100.0*best_inlier_indices.size() / pupil_gazelines_proj.size()) << "%)"
-        //     << " = " << best_line_distance_error
+        // std::cout << "Inliers: " << bestInlierIndices.size()
+        //     << " (" << (100.0*bestInlierIndices.size() / pupilGazelinesProjected.size()) << "%)"
+        //     << " = " << bestLineDistanceError
         //     << std::endl;
 
-        if (best_inlier_indices.size() > 0) {
-            eye_center_proj = best_eye_center_proj;
-            valid_eye = true;
+        if (bestInlierIndices.size() > 0) {
+            eyeCenterProjected = bestEyeCenterProjected;
+            validEye = true;
 
         } else {
-            valid_eye = false;
+            validEye = false;
         }
 
     } else {
 
-        eye_center_proj = nearest_intersect(pupil_gazelines_proj);
-        valid_eye = true;
+        eyeCenterProjected = nearest_intersect(pupilGazelinesProjected);
+        validEye = true;
     }
 
-    if (valid_eye) {
-        sphere.center << eye_center_proj* eye_z / mFocalLength,
-                   eye_z;
+    if (validEye) {
+        sphere.center << eyeCenterProjected* eyeZ / mFocalLength,
+                   eyeZ;
         sphere.radius = 1;
 
         // Disambiguate pupil circles using projected eyeball center
@@ -240,20 +239,20 @@ EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= true*/)
         // solution which satisfies this assumption
 
         for (size_t i = 0; i < mSupportingPupils.size(); ++i) {
-            const auto& pupil_pair = mSupportingPupils[i].mObservationPtr->getUnprojectedCirclePair();
+            const auto& pupilPair = mSupportingPupils[i].mObservationPtr->getUnprojectedCirclePair();
             const auto& line = mSupportingPupils[i].mObservationPtr->getProjectedCircleGaze();
-            const auto& c_proj = line.origin();
-            const auto& v_proj = line.direction();
+            const auto& originProjected = line.origin();
+            const auto& directionProjected = line.direction();
 
-            // Check if v_proj going away from est eye center. If it is, then
+            // Check if directionProjected going away from est eye center. If it is, then
             // the first circle was correct. Otherwise, take the second one.
             // The two normals will point in opposite directions, so only need
             // to check one.
-            if ((c_proj - eye_center_proj).dot(v_proj) >= 0) {
-                mSupportingPupils[i].mCircle =  pupil_pair.first;
+            if ((originProjected - eyeCenterProjected).dot(directionProjected) >= 0) {
+                mSupportingPupils[i].mCircle =  pupilPair.first;
 
             } else {
-                mSupportingPupils[i].mCircle = pupil_pair.second;
+                mSupportingPupils[i].mCircle = pupilPair.second;
             }
 
             // calculate the center variance of the projected gaze vectors to the current eye center
@@ -288,8 +287,8 @@ EyeModel::Sphere EyeModel::initialiseModel(){
     // circle given the eyeball sphere estimate and gaze vector. Re-estimate
     // the gaze vector to be consistent with this position.
     // First estimate of pupil center, used only to get an estimate of eye radius
-    double eye_radius_acc = 0;
-    int eye_radius_count = 0;
+    double eyeRadiusAcc = 0;
+    int eyeRadiusCount = 0;
 
     for (const auto& pupil : mSupportingPupils) {
 
@@ -297,15 +296,15 @@ EyeModel::Sphere EyeModel::initialiseModel(){
         // center projection line (with perfect estimates of gaze, eye
         // center and pupil circle center, these should intersect,
         // otherwise find the nearest point to both lines)
-        Vector3 pupil_center = nearest_intersect(Line3(sphere.center, pupil.mCircle.normal),
+        Vector3 pupilCenter = nearest_intersect(Line3(sphere.center, pupil.mCircle.normal),
                                Line3(mCameraCenter, pupil.mCircle.center.normalized()));
-        auto distance = (pupil_center - sphere.center).norm();
-        eye_radius_acc += distance;
-        ++eye_radius_count;
+        auto distance = (pupilCenter - sphere.center).norm();
+        eyeRadiusAcc += distance;
+        ++eyeRadiusCount;
     }
 
     // Set the eye radius as the mean distance from pupil centers to eye center
-    sphere.radius = eye_radius_acc / eye_radius_count;
+    sphere.radius = eyeRadiusAcc / eyeRadiusCount;
 
     // Second estimate of pupil radius, used to get position of pupil on eye
 
@@ -326,23 +325,23 @@ EyeModel::Sphere EyeModel::initialiseModel(){
         //center_distance_variance += euclidean_distance_squared( sphere.center, Line3(pupil.circle.center, pupil.unprojected_circle.normal ) );
     }
 
-    //center_distance_variance /= eye_radius_count;
+    //center_distance_variance /= eyeRadiusCount;
     //std::cout << "center distance variance " << center_distance_variance << std::endl;
     return sphere;
 
 }
 
-void EyeModel::refineWithEdges(Sphere& sphere )
+double EyeModel::refineWithEdges(Sphere& sphere )
 {
     int current_model_version;
     Eigen::Matrix<double, Eigen::Dynamic, 1> x;
     x = Eigen::Matrix<double, Eigen::Dynamic, 1>(3 + 3 * mSupportingPupils.size());
     x.segment<3>(0) = sphere.center;
     for (int i = 0; i < mSupportingPupils.size(); ++i) {
-        const PupilParams& pupil_params = mSupportingPupils[i].mParams;
-        x.segment<3>(3 + 3 * i)[0] = pupil_params.theta;
-        x.segment<3>(3 + 3 * i)[1] = pupil_params.psi;
-        x.segment<3>(3 + 3 * i)[2] = pupil_params.radius;
+        const PupilParams& pupilParams = mSupportingPupils[i].mParams;
+        x.segment<3>(3 + 3 * i)[0] = pupilParams.theta;
+        x.segment<3>(3 + 3 * i)[1] = pupilParams.psi;
+        x.segment<3>(3 + 3 * i)[2] = pupilParams.radius;
     }
 
 
@@ -350,12 +349,12 @@ void EyeModel::refineWithEdges(Sphere& sphere )
     {
         for (int i = 0; i < mSupportingPupils.size(); ++i) {
            /* const cv::Mat& eye_image = pupils[i].observation.image;*/
-            const auto& pupil_inliers = mSupportingPupils[i].mObservationPtr->getObservation2D()->final_edges;
+            const auto& pupilInliers = mSupportingPupils[i].mObservationPtr->getObservation2D()->final_edges;
 
             problem.AddResidualBlock(
                 new ceres::AutoDiffCostFunction<EllipseDistanceResidualFunction<double>, ceres::DYNAMIC, 3, 3>(
-                new EllipseDistanceResidualFunction<double>(/*eye_image,*/ pupil_inliers, sphere.radius, mFocalLength),
-                pupil_inliers.size()
+                new EllipseDistanceResidualFunction<double>(/*eye_image,*/ pupilInliers, sphere.radius, mFocalLength),
+                pupilInliers.size()
                 ),
                 NULL, &x[0], &x[3 + 3 * i]);
         }
@@ -399,22 +398,30 @@ void EyeModel::refineWithEdges(Sphere& sphere )
     //std::cout << summary.BriefReport() << "\n";
     std::cout << "Optimized" << std::endl;
 
-    {
-        sphere.center = x.segment<3>(0);
-        // for (int i = 0; i < pupils.size(); ++i) {
-        //     auto&& pupil_param = x.segment<3>(3 + 3 * i);
-        //     pupils[i].params = PupilParams(pupil_param[0], pupil_param[1], pupil_param[2]);
-        //     pupils[i].circle = circleFromParams(eye, pupils[i].params);
-        // }
+    double fit = 0;
+    sphere.center = x.segment<3>(0);
+
+     for (int i = 0; i < mSupportingPupils.size(); ++i) {
+        const auto& pupil = mSupportingPupils[i];
+        const Circle& unprojectedCircle = selectUnprojectedCircle(sphere, pupil.mObservationPtr->getUnprojectedCirclePair() );
+        auto&& pupilParam = x.segment<3>(3 + 3 * i);
+        Circle optimizedCircle = circleFromParams(sphere, PupilParams(pupilParam[0], pupilParam[1], pupilParam[2]) );
+        fit += getModelSupport( unprojectedCircle , optimizedCircle );
     }
+
+    fit /= mSupportingPupils.size();
+
+
+    return fit;
+
 }
 
-EyeModel::Sphere EyeModel::getSphere(){
+EyeModel::Sphere EyeModel::getSphere() const {
     std::lock_guard<std::mutex> lockModel(mModelMutex);
     return mSphere;
 };
 
-EyeModel::Sphere EyeModel::getInitialSphere(){
+EyeModel::Sphere EyeModel::getInitialSphere() const {
     std::lock_guard<std::mutex> lockModel(mModelMutex);
     return mInitialSphere;
 };
@@ -434,6 +441,9 @@ double EyeModel::getPerformance() const {
     return mPerformance;
 }
 
+double EyeModel::getFit() const {
+    return mFit;
+}
 
 bool EyeModel::tryTransferNewObservations(){
     bool ownPupil = mPupilMutex.try_lock();
@@ -457,8 +467,8 @@ double EyeModel::getModelSupport(const Circle&  unprojectedCircle, const Circle&
     // if our model is good and the camera didn't change the perspective or so, these normals should align pretty well
     const auto& n1 = unprojectedCircle.normal;
     const auto& n2 = initialisedCircle.normal;
-    const double normals_angle = n1.dot(n2);
-    return normals_angle;
+    const double normalsAngle = n1.dot(n2);
+    return normalsAngle;
 }
 
 bool EyeModel::isSpatialRelevant(const Circle& circle){
@@ -472,12 +482,12 @@ bool EyeModel::isSpatialRelevant(const Circle& circle){
      and less dense further back.
      Still it gives good results an works for our purpose
     */
-    Vector3 pupil_normal =  circle.normal; // the same as a vector from unit sphere center to the pupil center
+    Vector3 pupilNormal =  circle.normal; // the same as a vector from unit sphere center to the pupil center
 
     // calculate bin
     // values go from -1 to 1
-    double x = pupil_normal.x();
-    double y = pupil_normal.y();
+    double x = pupilNormal.x();
+    double y = pupilNormal.y();
     x = math::round(x , mBinResolution);
     y = math::round(y , mBinResolution);
 
@@ -489,9 +499,9 @@ bool EyeModel::isSpatialRelevant(const Circle& circle){
         // there is no bin at this coord or it is empty
         // so add one
         mSpatialBins.emplace(bin, true);
-        double z = std::copysign(std::sqrt(1.0 - x * x - y * y),  pupil_normal.z());
-        Vector3 bin_positions_3d(x , y, z); // for visualization
-        mBinPositions.push_back(std::move(bin_positions_3d));
+        double z = std::copysign(std::sqrt(1.0 - x * x - y * y),  pupilNormal.z());
+        Vector3 binPositions3D(x , y, z); // for visualization
+        mBinPositions.push_back(std::move(binPositions3D));
         return true;
     }
 
@@ -505,12 +515,12 @@ const Circle& EyeModel::selectUnprojectedCircle( const Sphere& sphere,  const st
 {
     const Vector3& c = circles.first.center;
     const Vector3& v = circles.first.normal;
-    Vector2 c_proj = project(c, mFocalLength);
-    Vector2 v_proj = project(v + c, mFocalLength) - c_proj;
-    v_proj.normalize();
-    Vector2 eye_center_proj = project(sphere.center, mFocalLength);
+    Vector2 centerProjected = project(c, mFocalLength);
+    Vector2 directionProjected = project(v + c, mFocalLength) - centerProjected;
+    directionProjected.normalize();
+    Vector2 eyeCenterProjected = project(sphere.center, mFocalLength);
 
-    if ((c_proj - eye_center_proj).dot(v_proj) >= 0) {
+    if ((centerProjected - eyeCenterProjected).dot(directionProjected) >= 0) {
         return circles.first;
 
     } else {

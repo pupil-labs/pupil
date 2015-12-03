@@ -417,6 +417,9 @@ class Visualizer(object):
 
 	def update_window(self, g_pool, result  ):
 
+		if not result:
+			return
+
 		if self._window != None:
 			glfwMakeContextCurrent(self._window)
 
@@ -424,15 +427,14 @@ class Visualizer(object):
 		self.image_width , self.image_height = g_pool.capture.frame_size
 
 		latest_pupil = result['circle']
-		last_unprojected_contours =  result['contours']
+		#last_unprojected_contours =  result['contours']
+		edges =  result['edges']
 
-		final_circle_contours = result['fittedContours']
+		#final_circle_contours = result['fittedContours']
 		#last_pupil_edges = detector_3D.get_last_pupil_edges()
 		#final_candidate_contours = detector_3D.get_last_final_candidate_contour()
-		bin_positions = result['binPositions']
-		edges = result['edges']
-		sphere = result['sphere']
-		initial_sphere = result['initialSphere']
+		sphere_models = result['models']
+
 		self.clear_gl_screen()
 		self.trackball.push()
 
@@ -447,43 +449,24 @@ class Visualizer(object):
 		self.draw_frustum()
 
 
-		self.draw_sphere(initial_sphere[0],initial_sphere[1], color = RGBA( 0,147/255.,147/255.,0.2) )
-		self.draw_sphere(sphere[0],sphere[1],  color = RGBA( 0,88/255.,95/255.,0.4) )
+		for model in sphere_models:
+			bin_positions = model['binPositions']
+			sphere = model['sphere']
+			initial_sphere = model['initialSphere']
+			maturity = model['maturity']
+			fit = model['fit']
+			performance = model['performance']
+
+			self.draw_sphere(initial_sphere[0],initial_sphere[1], color = RGBA( 0,147/255.,147/255.,0.2) )
+			self.draw_sphere(sphere[0],sphere[1],  color = RGBA( 0,88/255.,95/255.,0.4) )
+
+			draw_points(bin_positions, 3 , RGBA(0.6,0.0,0.6,0.5) )
+
+
 
 		self.draw_circle( latest_pupil[0], latest_pupil[1], latest_pupil[2], RGBA(0.0,1.0,1.0,0.4))
 
-
-		#draw unprojecte contours
-		if last_unprojected_contours:
-			self.draw_contours(last_unprojected_contours, 1, RGBA(1.,0.,0.,1.))
-		#self.draw_contours_on_screen(projected_contours)
-
-		#draw contour which are a candidate
-		colors = [RGBA(0.5,0.5,0.,1.),RGBA(0.5,0.5,1.,1.),RGBA(1.0,0.0,1.,1.),RGBA(0.0,1.0,1.,1.),RGBA(1.0,0.5,0.,1.)]
-		# if final_candidate_contours:
-		# 	glPushMatrix()
-		# 	glLoadMatrixf(self.get_anthropomorphic_matrix())
-		# 	i = 0
-		# 	for contours in final_candidate_contours:
-		# 		self.draw_contours(contours, 1, colors[i%len(colors)] )
-		# 		i += 1
-		# 	glPopMatrix()
-
-
-
-		#draw contour used for the final circle fit
-		if final_circle_contours:
-			self.draw_contours(final_circle_contours, 3 , RGBA(0.,1.,0.,1.) )
-
-		#if last_pupil_edges:
-		#	draw_polyline(last_pupil_edges, 3 , RGBA(0.,0.,0.,1.), line_type = GL_POINTS )
-
-
-		if bin_positions:
-			draw_points(bin_positions, 3 , RGBA(0.6,0.0,0.6,0.5) )
-
-		if edges:
-			draw_points(edges, 2 , RGBA(1.0,0.0,0.6,0.5) )
+		draw_points(edges, 2 , RGBA(1.0,0.0,0.6,0.5) )
 
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		self.draw_coordinate_system(4)

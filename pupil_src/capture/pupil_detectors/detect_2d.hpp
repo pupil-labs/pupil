@@ -27,8 +27,8 @@ class Detector2D {
 	public:
 
 		Detector2D();
-		std::shared_ptr<Detector_2D_Result> detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image, bool pause_video);
-		std::vector<cv::Point> ellipse_true_support(Detector_2D_Properties& props, Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges);
+		std::shared_ptr<Detector2DResult> detect(Detector2DProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image, bool pause_video);
+		std::vector<cv::Point> ellipse_true_support(Detector2DProperties& props, Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges);
 
 
 	private:
@@ -48,7 +48,7 @@ void printPoints(std::vector<cv::Point> points)
 
 Detector2D::Detector2D(): mUse_strong_prior(false), mPupil_Size(100) {};
 
-std::vector<cv::Point> Detector2D::ellipse_true_support(Detector_2D_Properties& props,Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges)
+std::vector<cv::Point> Detector2D::ellipse_true_support(Detector2DProperties& props,Ellipse& ellipse, double ellipse_circumference, std::vector<cv::Point>& raw_edges)
 {
 	std::vector<cv::Point> support_pixels;
 	EllipseDistCalculator<double> ellipseDistance(ellipse);
@@ -61,9 +61,9 @@ std::vector<cv::Point> Detector2D::ellipse_true_support(Detector_2D_Properties& 
 	}
 	return support_pixels;
 }
-std::shared_ptr<Detector_2D_Result> Detector2D::detect(Detector_2D_Properties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image, bool pause_video = false)
+std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props, cv::Mat& image, cv::Mat& color_image, cv::Mat& debug_image, cv::Rect& roi, bool visualize, bool use_debug_image, bool pause_video = false)
 {
-	std::shared_ptr<Detector_2D_Result> result = std::make_shared<Detector_2D_Result>();
+	std::shared_ptr<Detector2DResult> result = std::make_shared<Detector2DResult>();
 	result->current_roi = roi;
 	result->image_width =  image.size().width;
 	result->image_height =  image.size().height;

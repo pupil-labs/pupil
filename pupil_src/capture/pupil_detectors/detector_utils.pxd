@@ -3,7 +3,7 @@
 from detector cimport *
 from methods import  normalize
 
-cdef inline convertToPythonResult( Detector_2D_Result& result, object frame, object roi ):
+cdef inline convertToPythonResult( Detector2DResult& result, object frame, object roi ):
 
     cdef float pi = 3.14159265359
     e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / pi - 90 )
@@ -22,23 +22,32 @@ cdef inline convertToPythonResult( Detector_2D_Result& result, object frame, obj
     py_result['timestamp'] = frame.timestamp
     return py_result
 
-cdef inline prepareForVisualization3D(  Detector_3D_Result& result ):
+cdef inline prepareForVisualization3D(  Detector3DResult& result ):
 
     py_visualizationResult = {}
 
-    py_visualizationResult['edges'] = getEdges(result);
-    py_visualizationResult['binPositions'] = getBinPositions(result);
+    py_visualizationResult['edges'] = getEdges(result)
+    py_visualizationResult['contours'] = getContours(result.contours)
+    py_visualizationResult['fittedContours'] = getContours(result.fittedCircleContours)
     py_visualizationResult['circle'] = getCircle(result);
-    py_visualizationResult['contours'] = getContours(result.contours);
-    py_visualizationResult['fittedContours'] = getContours(result.fittedCircleContours);
-    py_visualizationResult['sphere'] = getSphere(result);
-    py_visualizationResult['initialSphere'] = getInitialSphere(result);
 
+    models = []
+    for model in result.models:
+        props = {}
+        props['binPositions'] = getBinPositions(model)
+        props['sphere'] = getSphere(model)
+        props['initialSphere'] = getInitialSphere(model)
+        props['maturity'] = model.maturity
+        props['fit'] = model.fit
+        props['performance'] = model.performance
+        models.append(props)
+
+    py_visualizationResult['models'] = models;
 
     return py_visualizationResult
 
 
-cdef inline getBinPositions( Detector_3D_Result& result ):
+cdef inline getBinPositions( ModelDebugProperties& result ):
     if result.binPositions.size() == 0:
         return []
     positions = []
@@ -49,7 +58,7 @@ cdef inline getBinPositions( Detector_3D_Result& result ):
         positions.append([point[0]*eyeRadius+eyePosition[0],point[1]*eyeRadius+eyePosition[1],point[2]*eyeRadius+eyePosition[2]])
     return positions
 
-cdef inline getEdges( Detector_3D_Result& result ):
+cdef inline getEdges( Detector3DResult& result ):
     if result.edges.size() == 0:
         return []
     edges = []
@@ -58,7 +67,7 @@ cdef inline getEdges( Detector_3D_Result& result ):
     return edges
 
 
-cdef inline getCircle(const Detector_3D_Result& result):
+cdef inline getCircle(const Detector3DResult& result):
     center = result.circle.center
     radius = result.circle.radius
     normal = result.circle.normal
@@ -77,10 +86,10 @@ cdef inline getContours( Contours3D con):
     return contours
 
 
-cdef inline getSphere(const Detector_3D_Result& result ):
+cdef inline getSphere(const ModelDebugProperties& result ):
     sphere = result.sphere
     return [ [sphere.center[0],sphere.center[1],sphere.center[2]],sphere.radius]
 
-cdef inline getInitialSphere(const Detector_3D_Result& result ):
+cdef inline getInitialSphere(const ModelDebugProperties& result ):
     sphere = result.initialSphere
     return [ [sphere.center[0],sphere.center[1],sphere.center[2]],sphere.radius]

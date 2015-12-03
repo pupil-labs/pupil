@@ -37,7 +37,7 @@ namespace singleeyefitter {
 
 
     // every coordinates are relative to the roi
-    struct Detector_2D_Result {
+    struct Detector2DResult {
         double confidence =  0.0 ;
         Ellipse ellipse = Ellipse::Null;
         //Contours_2D final_contours;
@@ -51,7 +51,16 @@ namespace singleeyefitter {
 
     };
 
-    struct Detector_3D_Result {
+    struct ModelDebugProperties{
+        Sphere<double> sphere;
+        Sphere<double> initialSphere;
+        std::vector<Vector3> binPositions;
+        double maturity;
+        double fit;
+        double performance;
+    };
+
+    struct Detector3DResult {
         double confidence =  0.0 ;
         Circle circle  = Circle::Null;
         Ellipse ellipse = Ellipse::Null; // the circle projected back to 2D
@@ -61,15 +70,13 @@ namespace singleeyefitter {
         // just valid if we want it for visualization
         Contours3D contours;
         Contours3D fittedCircleContours;
-        Sphere<double> sphere;
-        Sphere<double> initialSphere;
-        std::vector<Vector3> binPositions;
         Edges3D edges;
+        std::vector<ModelDebugProperties> models;
     };
 
     // use a struct for all properties and pass it to detect method every time we call it.
     // Thus we don't need to keep track if GUI is updated and cython handles conversion from Dict to struct
-    struct Detector_2D_Properties {
+    struct Detector2DProperties {
         int intensity_range;
         int blur_size;
         float canny_treshold;
@@ -89,7 +96,7 @@ namespace singleeyefitter {
         float ellipse_true_support_min_dist;
 
     };
-    struct Detector_3D_Properties {
+    struct Detector3DProperties {
         float max_fit_residual;
         float max_circle_variance;
         float pupil_radius_min;

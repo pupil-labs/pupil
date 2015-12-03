@@ -13,13 +13,13 @@
 namespace singleeyefitter {
 
     class Observation {
-        std::shared_ptr<const Detector_2D_Result> mObservation2D;
+        std::shared_ptr<const Detector2DResult> mObservation2D;
         std::pair<Circle,Circle> mUnprojectedCirclePair;
         Line mProjectedCircleGaze;
 
 
     public:
-        Observation(std::shared_ptr<const Detector_2D_Result> observation, double focalLength) :
+        Observation(std::shared_ptr<const Detector2DResult> observation, double focalLength) :
             mObservation2D(observation)
         {
                 const double circleRadius = 1.0;
@@ -44,7 +44,7 @@ namespace singleeyefitter {
         Observation( const Observation& that ) = delete; // forbid copying
         Observation( Observation&& that ) = delete; // forbid moving
         Observation() = delete; // forbid default construction
-        const std::shared_ptr<const Detector_2D_Result> getObservation2D() const { return mObservation2D;};
+        const std::shared_ptr<const Detector2DResult> getObservation2D() const { return mObservation2D;};
         const std::pair<Circle,Circle>& getUnprojectedCirclePair() const { return mUnprojectedCirclePair; };
         const Line& getProjectedCircleGaze() const { return mProjectedCircleGaze; };
 
@@ -65,8 +65,8 @@ class EyeModel {
         ~EyeModel();
 
         Circle presentObservation(const ObservationPtr);
-        Sphere getSphere();
-        Sphere getInitialSphere();
+        Sphere getSphere() const;
+        Sphere getInitialSphere() const;
 
         // Describing how good different properties of the Eye are
         double getMaturity() const ; // How much spatial variance there is
@@ -76,7 +76,7 @@ class EyeModel {
         void reset();
 
         // ----- Visualization --------
-        std::vector<Vector3> getBinPositions(){return mBinPositions;};
+        std::vector<Vector3> getBinPositions() const {return mBinPositions;};
         // ----- Visualization END --------
 
     private:
@@ -98,7 +98,7 @@ class EyeModel {
 
         Sphere findSphereCenter( bool use_ransac = true);
         Sphere initialiseModel();
-        void refineWithEdges( Sphere& sphere  );
+        double refineWithEdges( Sphere& sphere  );
         bool tryTransferNewObservations();
 
         double getModelSupport(const Circle&  unprojectedCircle, const Circle& initialisedCircle) const;
@@ -117,13 +117,13 @@ class EyeModel {
         std::unordered_map<Vector2, bool, math::matrix_hash<Vector2>> mSpatialBins;
         std::vector<Vector3> mBinPositions; // for visualization
 
-        std::mutex mModelMutex;
+        mutable std::mutex mModelMutex;
         std::mutex mPupilMutex;
         std::thread mWorker;
 
 
         // Factors which describe how good certain properties of the model are
-        double mResidual; // Residual of Ceres sovler
+        double mFit; // Residual of Ceres sovler
         double mPerformance; // Average model support
         double mMaturity; // bin amounts
 
@@ -131,7 +131,7 @@ class EyeModel {
         const double mBinResolution;
         const int mTotalBins;
         const int mFilterWindowSize; // Window size of the average moving filter for mPerformance
-        std::list<double> mModelSupports; // values to calculat the average
+        std::list<double> mModelSupports; // values to calculate the average
 
         // Thread sensitive variables
         const double mFocalLength;

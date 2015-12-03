@@ -20,47 +20,47 @@ cdef class Detector_2D:
     cdef Detector2D* thisptr
     cdef unsigned char[:,:,:] debug_image
 
-    cdef dict detect_properties
-    cdef bint window_should_open, window_should_close
+    cdef dict detectProperties
+    cdef bint windowShouldOpen, windowShouldClose
     cdef object _window
     cdef object menu
-    cdef object g_pool
+    cdef object gPool
 
     def __cinit__(self):
         self.thisptr = new Detector2D()
-    def __init__(self, g_pool = None, settings = None ):
+    def __init__(self, gPool = None, settings = None ):
 
         #debug window
         self._window = None
-        self.window_should_open = False
-        self.window_should_close = False
-        self.g_pool = g_pool
-        self.detect_properties = settings or {}
+        self.windowShouldOpen = False
+        self.windowShouldClose = False
+        self.gPool = gPool
+        self.detectProperties = settings or {}
 
-        if not self.detect_properties:
-            self.detect_properties["coarse_detection"] = True
-            self.detect_properties["coarse_filter_min"] = 100
-            self.detect_properties["coarse_filter_max"] = 400
-            self.detect_properties["intensity_range"] = 17
-            self.detect_properties["blur_size"] = 3
-            self.detect_properties["canny_treshold"] = 200
-            self.detect_properties["canny_ration"] = 3
-            self.detect_properties["canny_aperture"] = 5
-            self.detect_properties["pupil_size_max"] = 150
-            self.detect_properties["pupil_size_min"] = 40
-            self.detect_properties["strong_perimeter_ratio_range_min"] = 0.8
-            self.detect_properties["strong_perimeter_ratio_range_max"] = 1.1
-            self.detect_properties["strong_area_ratio_range_min"] = 0.6
-            self.detect_properties["strong_area_ratio_range_max"] = 1.1
-            self.detect_properties["contour_size_min"] = 5
-            self.detect_properties["ellipse_roundness_ratio"] = 0.1
-            self.detect_properties["initial_ellipse_fit_treshhold"] = 1.8
-            self.detect_properties["final_perimeter_ratio_range_min"] = 0.6
-            self.detect_properties["final_perimeter_ratio_range_max"] = 1.2
-            self.detect_properties["ellipse_true_support_min_dist"] = 4.0
+        if not self.detectProperties:
+            self.detectProperties["coarse_detection"] = True
+            self.detectProperties["coarse_filter_min"] = 100
+            self.detectProperties["coarse_filter_max"] = 400
+            self.detectProperties["intensity_range"] = 17
+            self.detectProperties["blur_size"] = 3
+            self.detectProperties["canny_treshold"] = 200
+            self.detectProperties["canny_ration"] = 3
+            self.detectProperties["canny_aperture"] = 5
+            self.detectProperties["pupil_size_max"] = 150
+            self.detectProperties["pupil_size_min"] = 40
+            self.detectProperties["strong_perimeter_ratio_range_min"] = 0.8
+            self.detectProperties["strong_perimeter_ratio_range_max"] = 1.1
+            self.detectProperties["strong_area_ratio_range_min"] = 0.6
+            self.detectProperties["strong_area_ratio_range_max"] = 1.1
+            self.detectProperties["contour_size_min"] = 5
+            self.detectProperties["ellipse_roundness_ratio"] = 0.1
+            self.detectProperties["initial_ellipse_fit_treshhold"] = 1.8
+            self.detectProperties["final_perimeter_ratio_range_min"] = 0.6
+            self.detectProperties["final_perimeter_ratio_range_max"] = 1.2
+            self.detectProperties["ellipse_true_support_min_dist"] = 4.0
 
     def get_settings(self):
-        return self.detect_properties
+        return self.detectProperties
 
     def __dealloc__(self):
       del self.thisptr
@@ -77,9 +77,9 @@ cdef class Detector_2D:
         cdef Mat cv_image_color
         cdef Mat cv_debug_image
 
-        if self.window_should_open:
+        if self.windowShouldOpen:
             self.open_window((image_width,image_height))
-        if self.window_should_close:
+        if self.windowShouldClose:
             self.close_window()
 
 
@@ -102,13 +102,13 @@ cdef class Detector_2D:
         roi_height  = roi.get()[3] - roi.get()[1]
         cdef int[:,::1] integral
 
-        if self.detect_properties['coarse_detection']:
+        if self.detectProperties['coarse_detection']:
             scale = 2 # half the integral image. boost up integral
             # TODO maybe implement our own Integral so we don't have to half the image
             user_roi_image = frame.gray[user_roi.view]
             integral = cv2.integral(user_roi_image[::scale,::scale])
-            coarse_filter_max = self.detect_properties['coarse_filter_max']
-            coarse_filter_min = self.detect_properties['coarse_filter_min']
+            coarse_filter_max = self.detectProperties['coarse_filter_max']
+            coarse_filter_min = self.detectProperties['coarse_filter_min']
             p_x,p_y,p_w,p_response = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
             roi_x = p_x * scale + roi_x
             roi_y = p_y * scale + roi_y
@@ -121,7 +121,7 @@ cdef class Detector_2D:
 
         deref(cpp_result_ptr).timestamp = frame.timestamp
 
-        cdef Detector_2D_Result cpp_result = deref(cpp_result_ptr)
+        cdef Detector2DResult cpp_result = deref(cpp_result_ptr)
         py_result = convertToPythonResult( cpp_result, frame , roi )
 
         return py_result
@@ -134,28 +134,28 @@ cdef class Detector_2D:
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
         self.menu.append(info)
-        self.menu.append(ui.Slider('intensity_range',self.detect_properties,label='Pupil intensity range',min=0,max=60,step=1))
-        self.menu.append(ui.Slider('pupil_size_min',self.detect_properties,label='Pupil min',min=1,max=250,step=1))
-        self.menu.append(ui.Slider('pupil_size_max',self.detect_properties,label='Pupil max',min=50,max=400,step=1))
+        self.menu.append(ui.Slider('intensity_range',self.detectProperties,label='Pupil intensity range',min=0,max=60,step=1))
+        self.menu.append(ui.Slider('pupil_size_min',self.detectProperties,label='Pupil min',min=1,max=250,step=1))
+        self.menu.append(ui.Slider('pupil_size_max',self.detectProperties,label='Pupil max',min=50,max=400,step=1))
 
         advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
-        advanced_controls_menu.append(ui.Switch('coarse_detection',self.detect_properties,label='Use coarse detection'))
-        #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detect_properties,label='Contour min length',min=1,max=200,step=1))
-        advanced_controls_menu.append(ui.Slider('ellipse_true_support_min_dist',self.detect_properties,label='ellipse_true_support_min_dist',min=0.1,max=7,step=0.1))
+        advanced_controls_menu.append(ui.Switch('coarse_detection',self.detectProperties,label='Use coarse detection'))
+        #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detectProperties,label='Contour min length',min=1,max=200,step=1))
+        advanced_controls_menu.append(ui.Slider('ellipse_true_support_min_dist',self.detectProperties,label='ellipse_true_support_min_dist',min=0.1,max=7,step=0.1))
 
         advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
         self.menu.append(advanced_controls_menu)
         sidebar.append(self.menu)
 
     def deinit_gui(self):
-        self.g_pool.sidebar.remove(self.menu)
+        self.gPool.sidebar.remove(self.menu)
         self.menu = None
 
     def toggle_window(self):
         if self._window:
-            self.window_should_close = True
+            self.windowShouldClose = True
         else:
-            self.window_should_open = True
+            self.windowShouldOpen = True
 
     def open_window(self,size):
         if not self._window:
@@ -188,7 +188,7 @@ cdef class Detector_2D:
 
             glfw.glfwMakeContextCurrent(active_window)
 
-            self.window_should_open = False
+            self.windowShouldOpen = False
 
     # window calbacks
     def on_resize(self,window,w,h):
@@ -198,13 +198,13 @@ cdef class Detector_2D:
         glfw.glfwMakeContextCurrent(active_window)
 
     def on_close(self,window):
-        self.window_should_close = True
+        self.windowShouldClose = True
 
     def close_window(self):
         if self._window:
             glfw.glfwDestroyWindow(self._window)
             self._window = None
-            self.window_should_close = False
+            self.windowShouldClose = False
 
     def gl_display_in_window(self,img):
         active_window = glfw.glfwGetCurrentContext()
