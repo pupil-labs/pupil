@@ -10,6 +10,7 @@
 #include "EyeModel.h"
 
 #include <vector>
+#include <memory>
 #include <Eigen/Core>
 
 
@@ -20,6 +21,7 @@ namespace singleeyefitter {
         public:
 
             typedef singleeyefitter::Sphere<double> Sphere;
+            typedef std::unique_ptr<EyeModel> EyeModelPtr;
 
             // Constructors
             EyeModelFitter(double focalLength, Vector3 cameraCenter = Vector3::Zero() );
@@ -41,12 +43,20 @@ namespace singleeyefitter {
 
             bool mDebug;
 
-            std::vector<EyeModel> mEyeModels;
+            Clock::time_point mLastTimeModelAdded;
+            int mPerformancePenalties;
+
+            int mNextModelID;
+            std::unique_ptr<EyeModel> mActiveModelPtr;
+            std::list<EyeModelPtr> mAlternativeModelsPtrs;
 
             Sphere mCurrentSphere;
             Sphere mCurrentInitialSphere;
 
             Circle mPreviousPupil;
+
+
+            void checkModels();
 
             //Contours3D unprojectContours( const Contours_2D& contours) const;
             Edges3D unprojectEdges(const Edges2D& edges) const;

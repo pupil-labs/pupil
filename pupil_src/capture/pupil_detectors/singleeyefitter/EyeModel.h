@@ -57,6 +57,7 @@ namespace singleeyefitter {
         const Line& getProjectedCircleGaze() const { return mProjectedCircleGaze; };
 
     };
+
     typedef std::shared_ptr<const Observation> ObservationPtr;
 
 
@@ -65,12 +66,14 @@ class EyeModel {
         typedef singleeyefitter::Sphere<double> Sphere;
     public:
 
-        EyeModel( double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 3, double binResolution = 0.05 , int filterwindowSize = 200): //TODO should the filter size depend on the framerate ?
-           mTotalBins(std::pow(std::floor(1.0/binResolution), 2 ) * 4 ),  mFilterWindowSize(filterwindowSize), mBinResolution(binResolution), mInitialUncheckedPupils(initialUncheckedPupils), mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)) { };
+        EyeModel( int modelId, Clock::time_point timestamp,  double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 3, double binResolution = 0.05 , int filterwindowSize = 200): //TODO should the filter size depend on the framerate ?
+           mModelID(modelId), mTimestamp(timestamp), mTotalBins(std::pow(std::floor(1.0/binResolution), 2 ) * 4 ),  mFilterWindowSize(filterwindowSize), mBinResolution(binResolution), mInitialUncheckedPupils(initialUncheckedPupils), mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)) { };
 
         EyeModel(const EyeModel&) = delete;
-        EyeModel(EyeModel&&); // we need a explicit 1/Move constructor because of the mutex
+        //EyeModel(EyeModel&&); // we need a explicit 1/Move constructor because of the mutex
         ~EyeModel();
+
+
 
         Circle presentObservation(const ObservationPtr);
         Sphere getSphere() const;
@@ -80,12 +83,12 @@ class EyeModel {
         double getMaturity() const ; // How much spatial variance there is
         double getPerformance() const; // The average of the model support
         double getFit() const ; // The residual of the sphere calculation
-
-        void reset();
-
+        int    getSupportingPupilSize() const {return mSupportingPupilSize; };
+        Clock::time_point getTimestamp() const { return mTimestamp; };
         // ----- Visualization --------
         std::vector<Vector3> getBinPositions() const {return mBinPositions;};
         // ----- Visualization END --------
+
 
     private:
 
@@ -135,20 +138,23 @@ class EyeModel {
         double mPerformance; // Average model support
         double mMaturity; // bin amounts
 
+        const double mFocalLength;
+        const Vector3 mCameraCenter;
         const int mInitialUncheckedPupils;
         const double mBinResolution;
         const int mTotalBins;
         const int mFilterWindowSize; // Window size of the average moving filter for mPerformance
+        const int mModelID;
+        const Clock::time_point mTimestamp;
+
         std::list<double> mModelSupports; // values to calculate the average
 
         // Thread sensitive variables
-        const double mFocalLength;
-        const Vector3 mCameraCenter;
         Sphere mSphere;
         Sphere mInitialSphere;
         std::vector<Pupil> mSupportingPupils;
 
-        std::atomic<int> mPupilSize; // use this to get the SupportedPupil size
+        std::atomic<int> mSupportingPupilSize; // use this to get the SupportedPupil size
 
         // observations are saved here and only if needed transfered to mObservation
         // since mObservations needs a mutex

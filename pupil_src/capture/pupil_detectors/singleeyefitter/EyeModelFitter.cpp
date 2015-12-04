@@ -26,9 +26,11 @@ namespace singleeyefitter {
 
 
 EyeModelFitter::EyeModelFitter(double focalLength, Vector3 cameraCenter) :
-    mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)), mCurrentSphere(Sphere::Null), mCurrentInitialSphere(Sphere::Null)
+    mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)),
+    mCurrentSphere(Sphere::Null), mCurrentInitialSphere(Sphere::Null) , mNextModelID(0),
+    mActiveModelPtr(new EyeModel(mNextModelID, Clock::now(), mFocalLength, mCameraCenter)),
+    mLastTimeModelAdded( Clock::now() ), mPerformancePenalties(0)
 {
-    mEyeModels.emplace_back(mFocalLength, mCameraCenter);    // There should be at least one eye-model
 }
 
 
@@ -51,6 +53,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     ellipse.center[0] -= image_width_half;
     ellipse.center[1] = image_height_half - ellipse.center[1];
     ellipse.angle = -ellipse.angle; //take y axis flip into account
+
 
     // for (Contour_2D& c : observation2D->contours) {
     //     for (cv::Point& p : c) {
@@ -77,28 +80,21 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 
     auto observation3DPtr = std::make_shared<const Observation>(observation2D, mFocalLength);
 
-    // Circle unprojected_circle;
-    // Circle initialised_circle;
-
-    // if (eye != Sphere::Null){
-    //     // let's do this every time, since we need the pupil values anyway
-    //     unprojected_circle = selectUnprojectedCircle(pupil ); // unproject circle in 3D space, doesn't consider current eye model (cone unprojection of ellipse)
-    //     initialised_circle = initialise_single_observation(pupil);  // initialised circle. circle parameters addapted to our current eye model
-
-    // }
 
     //check first if the observations is even strong enough to be added
     if (observation2D->confidence  >  0.99) {
 
 
 
-        // for (auto& model : mEyeModels) {
-        //     model.presentObservation(observation3DPtr);
-        // }
-        auto circle = mEyeModels.back().presentObservation(observation3DPtr);
-
+        auto circle = mActiveModelPtr->presentObservation(observation3DPtr);
         if (circle != Circle::Null)
             mPreviousPupil = circle;
+
+        for (auto& modelPtr : mAlternativeModelsPtrs) {
+             modelPtr->presentObservation(observation3DPtr);
+        }
+
+
 
 
 
@@ -124,26 +120,46 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 
 
 
-    mCurrentSphere = mEyeModels.back().getSphere();
-    std::cout << "current maturity: " << mEyeModels.back().getMaturity() << std::endl;
-    std::cout << "current fit: " << mEyeModels.back().getFit() << std::endl;
-    std::cout << "current performance: " << mEyeModels.back().getPerformance() << std::endl;
+    mCurrentSphere = mActiveModelPtr->getSphere();
+    mCurrentInitialSphere = mActiveModelPtr->getInitialSphere();
 
-    mCurrentInitialSphere = mEyeModels.back().getInitialSphere();
+    std::cout << "active model maturity: " << mActiveModelPtr->getMaturity() << std::endl;
+    std::cout << "active model fit: " << mActiveModelPtr->getFit() << std::endl;
+    std::cout << "active model performance: " << mActiveModelPtr->getPerformance() << std::endl;
 
+    int index = 0;
+    for (const auto& modelPtr : mAlternativeModelsPtrs) {
+
+        std::cout << "model " << index << " maturity: " << modelPtr->getMaturity() << std::endl;
+        std::cout << "model " << index << " fit: " << modelPtr->getFit() << std::endl;
+        std::cout << "model  " << index << "performance: " << modelPtr->getPerformance() << std::endl;
+        index++;
+
+    }
+
+    checkModels();
 
     if (mDebug) {
-        result.models.reserve(mEyeModels.size());
+        result.models.reserve(mAlternativeModelsPtrs.size() + 1);
 
-        for (const auto& model : mEyeModels) {
+        ModelDebugProperties props;
+        props.sphere = mActiveModelPtr->getSphere();
+        props.initialSphere = mActiveModelPtr->getInitialSphere();
+        props.binPositions = mActiveModelPtr->getBinPositions();
+        props.maturity = mActiveModelPtr->getMaturity();
+        props.fit = mActiveModelPtr->getFit();
+        props.performance = mActiveModelPtr->getPerformance();
+        result.models.push_back(std::move(props));
+
+        for (const auto& modelPtr : mAlternativeModelsPtrs) {
 
             ModelDebugProperties props;
-            props.sphere = model.getSphere();
-            props.initialSphere = model.getInitialSphere();
-            props.binPositions = model.getBinPositions();
-            props.maturity = model.getMaturity();
-            props.fit = model.getFit();
-            props.performance = model.getPerformance();
+            props.sphere = modelPtr->getSphere();
+            props.initialSphere = modelPtr->getInitialSphere();
+            props.binPositions = modelPtr->getBinPositions();
+            props.maturity = modelPtr->getMaturity();
+            props.fit = modelPtr->getFit();
+            props.performance = modelPtr->getPerformance();
             result.models.push_back(std::move(props));
 
         }
@@ -154,14 +170,77 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 }
 
 
+void EyeModelFitter::checkModels()
+{
 
+    static const int minPupils  = 10;
+
+
+    // our current model needs at least some pupils
+    if(mActiveModelPtr->getSupportingPupilSize() < minPupils)
+        return;
+
+
+    static const double minPerformance = 0.995;
+    // whenever our current models performance is below the threshold we start building a new model
+    if( mActiveModelPtr->getMaturity() > 0.1 && mActiveModelPtr->getPerformance() < minPerformance ){
+
+        mPerformancePenalties++;
+        auto lastTimeAdded =  Clock::now() - mLastTimeModelAdded;
+        if(std::chrono::duration_cast<std::chrono::seconds>(lastTimeAdded).count() > 10.0 )
+        {
+            mAlternativeModelsPtrs.emplace_back(  new EyeModel(mNextModelID , Clock::now(), mFocalLength, mCameraCenter ) );
+            mLastTimeModelAdded = Clock::now();
+        }
+
+
+    }
+
+
+    // when ever the performance penalty is to high we wanna replace the current model with the best alternative
+    static const int maxPenalty  = 10 * 30; // should depend on the actual framerate
+    std::cout << "current performance penalty: " << mPerformancePenalties << std::endl;
+    if( mPerformancePenalties > maxPenalty ){
+
+        // sort the model with increasing fit
+        const auto sortFit = [](const EyeModelPtr&  a , const EyeModelPtr& b){
+            return a->getFit() < b->getFit();
+        };
+        mAlternativeModelsPtrs.sort(sortFit);
+
+        // now get the first alternative model where the performance is higher then the one form the current one
+        for( auto& modelptr : mAlternativeModelsPtrs){
+
+            if( mActiveModelPtr->getFit() < modelptr->getFit() ){
+                mActiveModelPtr.reset( modelptr.release() );
+                mPerformancePenalties = 0;
+                mAlternativeModelsPtrs.clear(); // we got a better one, let's remove others
+                break;
+            }
+            // TODO cleanup old model
+            // we  don't wanna keep models never used and to old
+        }
+
+
+    }
+
+
+
+
+
+
+}
 
 void EyeModelFitter::reset()
 {
-    mEyeModels.clear();
-    mEyeModels.emplace_back(mFocalLength, mCameraCenter);    // There should be at least one eye-model
+    mNextModelID = 0;
+    mAlternativeModelsPtrs.clear();
+    mActiveModelPtr = EyeModelPtr( new EyeModel(mNextModelID , Clock::now(), mFocalLength, mCameraCenter ));
+    mLastTimeModelAdded =  Clock::now();
+    mPerformancePenalties = 0;
     mCurrentSphere = Sphere::Null;
     mCurrentInitialSphere = Sphere::Null;
+    mPreviousPupil = Circle::Null;
 
 }
 

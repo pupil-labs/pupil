@@ -9,6 +9,8 @@
 
 #include <vector>
 #include <memory>
+#include <chrono>
+
 #include <opencv2/core/core.hpp>
 
 
@@ -34,6 +36,9 @@ namespace singleeyefitter {
     typedef std::vector<Vector3> Contour3D;
     typedef std::vector<Vector3> Edges3D;
     typedef std::vector<std::vector<Vector3>> Contours3D;
+
+    // general time
+    typedef std::chrono::steady_clock Clock;
 
 
     // every coordinates are relative to the roi

@@ -35,24 +35,43 @@ namespace singleeyefitter {
 
 
 
-EyeModel::EyeModel(EyeModel&& that) :
-    mInitialUncheckedPupils(that.mInitialUncheckedPupils), mFocalLength(that.mFocalLength), mCameraCenter(that.mCameraCenter),
-    mTotalBins(that.mTotalBins), mBinResolution(that.mBinResolution), mFilterWindowSize(that.mFilterWindowSize)
-{
-    std::lock_guard<std::mutex> lock(that.mModelMutex);
-    mSupportingPupils = std::move(that.mSupportingPupils);
-    mSupportingPupilsToAdd = std::move(that.mSupportingPupilsToAdd);
-    mSphere = std::move(that.mSphere);
-    mInitialSphere = std::move(that.mInitialSphere);
-    mSpatialBins = std::move(that.mSpatialBins);
-    mBinPositions = std::move(that.mBinPositions);
-    mFit = std::move(that.mFit);
-    mPerformance = std::move(that.mPerformance);
-    mMaturity = std::move(that.mMaturity);
-    mModelSupports = std::move(that.mModelSupports);
-    mPupilSize = mSupportingPupils.size();
-    std::cout << "MOVE EYE MODEL" << std::endl;
-}
+// EyeModel::EyeModel(EyeModel&& that) :
+//     mInitialUncheckedPupils(that.mInitialUncheckedPupils), mFocalLength(that.mFocalLength), mCameraCenter(that.mCameraCenter),
+//     mTotalBins(that.mTotalBins), mBinResolution(that.mBinResolution), mFilterWindowSize(that.mFilterWindowSize), mTimestamp(that.mTimestamp ),
+//     mModelID(that.mModelID)
+// {
+//     std::lock_guard<std::mutex> lock(that.mModelMutex);
+//     mSupportingPupils = std::move(that.mSupportingPupils);
+//     mSupportingPupilsToAdd = std::move(that.mSupportingPupilsToAdd);
+//     mSphere = std::move(that.mSphere);
+//     mInitialSphere = std::move(that.mInitialSphere);
+//     mSpatialBins = std::move(that.mSpatialBins);
+//     mBinPositions = std::move(that.mBinPositions);
+//     mFit = std::move(that.mFit);
+//     mPerformance = std::move(that.mPerformance);
+//     mMaturity = std::move(that.mMaturity);
+//     mModelSupports = std::move(that.mModelSupports);
+//     mSupportingPupilSize = mSupportingPupils.size();
+//     std::cout << "MOVE EYE MODEL" << std::endl;
+// }
+
+// EyeModel& EyeModel::operator=(EyeModel&& that){
+
+//     std::lock_guard<std::mutex> lock(that.mModelMutex);
+//     mSupportingPupils = std::move(that.mSupportingPupils);
+//     mSupportingPupilsToAdd = std::move(that.mSupportingPupilsToAdd);
+//     mSphere = std::move(that.mSphere);
+//     mInitialSphere = std::move(that.mInitialSphere);
+//     mSpatialBins = std::move(that.mSpatialBins);
+//     mBinPositions = std::move(that.mBinPositions);
+//     mFit = std::move(that.mFit);
+//     mPerformance = std::move(that.mPerformance);
+//     mMaturity = std::move(that.mMaturity);
+//     mModelSupports = std::move(that.mModelSupports);
+//     mSupportingPupilSize = mSupportingPupils.size();
+//     std::cout << "MOVE ASSGINE EYE MODEL" << std::endl;
+//     return *this;
+// }
 
 EyeModel::~EyeModel(){
 
@@ -66,11 +85,11 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
 {
 
 
-    Circle intersectedCircle;
+    Circle circle;
     bool shouldAddObservation = false;
 
     //Check for properties if it's a candidate we can use
-    if (mSphere != Sphere::Null && (mPupilSize + mSupportingPupilsToAdd.size()) > mInitialUncheckedPupils ) {
+    if (mSphere != Sphere::Null && (mSupportingPupilSize + mSupportingPupilsToAdd.size()) > mInitialUncheckedPupils ) {
 
         // select the right circle depending on the current model
         const Circle& unprojectedCircle = selectUnprojectedCircle(mSphere, newObservationPtr->getUnprojectedCirclePair() );
@@ -82,8 +101,14 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
         }
 
         // initialised circle. circle parameters addapted to our current eye model
-        intersectedCircle = getIntersectedCircle(mSphere, unprojectedCircle);
-        calculatePerformance( unprojectedCircle, intersectedCircle );
+        circle = getIntersectedCircle(mSphere, unprojectedCircle);
+        calculatePerformance( unprojectedCircle, circle );
+
+        if (circle == Circle::Null)
+            circle = unprojectedCircle; // at least return the unprojected circle
+
+
+
 
     } else { // no valid sphere yet
         std::cout << "add without check" << std::endl;
@@ -123,7 +148,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
      }
 
 
-    return intersectedCircle;
+    return circle;
 }
 
 EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= true*/)
@@ -453,7 +478,7 @@ bool EyeModel::tryTransferNewObservations(){
         }
         mSupportingPupilsToAdd.clear();
         mPupilMutex.unlock();
-        mPupilSize = mSupportingPupils.size();
+        mSupportingPupilSize = mSupportingPupils.size();
         return true;
     }else{
         return false;

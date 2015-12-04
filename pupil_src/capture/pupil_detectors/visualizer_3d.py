@@ -449,6 +449,13 @@ class Visualizer(object):
 		self.draw_frustum()
 
 
+		model_count = 0;
+		sphere_color = RGBA( 0,147/255.,147/255.,0.2)
+		initial_sphere_color = RGBA( 0,147/255.,147/255.,0.2)
+
+		alternative_sphere_color = RGBA( 1,0,0,0.2)
+		alternative_initial_sphere_color = RGBA( 1,0.3,0.3,0.2)
+
 		for model in sphere_models:
 			bin_positions = model['binPositions']
 			sphere = model['sphere']
@@ -457,11 +464,15 @@ class Visualizer(object):
 			fit = model['fit']
 			performance = model['performance']
 
-			self.draw_sphere(initial_sphere[0],initial_sphere[1], color = RGBA( 0,147/255.,147/255.,0.2) )
-			self.draw_sphere(sphere[0],sphere[1],  color = RGBA( 0,88/255.,95/255.,0.4) )
+			if model_count == 0:
+				self.draw_sphere(initial_sphere[0],initial_sphere[1], color = sphere_color )
+				self.draw_sphere(sphere[0],sphere[1],  color = initial_sphere_color )
+			else:
+				self.draw_sphere(initial_sphere[0],initial_sphere[1], color = alternative_sphere_color )
+				self.draw_sphere(sphere[0],sphere[1],  color = alternative_initial_sphere_color )
 
 			draw_points(bin_positions, 3 , RGBA(0.6,0.0,0.6,0.5) )
-
+			model_count += 1
 
 
 		self.draw_circle( latest_pupil[0], latest_pupil[1], latest_pupil[2], RGBA(0.0,1.0,1.0,0.4))
