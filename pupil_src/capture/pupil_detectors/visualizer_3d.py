@@ -213,56 +213,6 @@ class Visualizer(object):
 
 		glPopMatrix()
 
-	def draw_all_ellipses(self,eye_model_fitter,number = 0):
-		# draws all ellipses in model. numder determines last x amt of ellipses to show
-		glPushMatrix()
-		if number == 0 or number > eye_model_fitter.num_observations: #print everything. or statement in case try to access too many
-			for pupil in eye_model_fitter.get_all_pupil_observations():
-				#ellipse is pupil[0]. ellipse is ([x,y], major, minor, angle)
-				glColor3f(0.0, 1.0, 0.0)  #set color to green
-				pts = cv2.ellipse2Poly( (int(pupil.ellipse_center[0]),int(pupil.ellipse_center[1])),
-	                              (int(pupil.ellipse_major_radius), int(pupil.ellipse_minor_radius) ),
-	                              int(pupil.ellipse_angle*180/math.pi),
-	                              0,360,15)
-
-				draw_polyline(pts,4,color = RGBA(0,1,1,.5))
-		else:
-			for pupil in eye_model_fitter.get_last_pupil_observations(number):
-				#ellipse is pupil[0]. ellipse is ([x,y], major, minor, angle)
-				glColor3f(0.0, 1.0, 0.0)  #set color to green
-				pts = cv2.ellipse2Poly( (int(pupil.ellipse_center[0]),int(pupil.ellipse_center[1])),
-	                              (int(pupil.ellipse_major_radius), int(pupil.ellipse_minor_radius) ),
-	                              int(pupil.ellipse_angle*180/math.pi),
-	                              0,360,15)
-				draw_polyline(pts,4,color = RGBA(0,1,1,.5))
-		glPopMatrix()
-
-	def draw_all_circles(self,eye_model_fitter,number = 0):
-		if number == 0 or number > eye_model_fitter.num_observations: #print everything. or statement in case try to access too many
-			for pupil in eye_model_fitter.get_all_pupil_observations():
-				#circle is pupil[2]. circle is (center[x,y,z], normal[x,y,z], radius)
-				glPushMatrix()
-				glLoadMatrixf(self.get_pupil_transformation_matrix(pupil[2][1],pupil[2][0])) #circle normal, center
-				draw_points(((0,0),),color=RGBA(1.1,0.2,.8))
-				glScalef(pupil[2][2],pupil[2][2],1) #scale by pupil radius
-				draw_polyline((circle_xy),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
-				glColor4f(0.0, 0.0, 0.0,0.5)  #set color to green
-				glBegin(GL_POLYGON) #draw circle
-				glEnd()
-				glPopMatrix()
-		else:
-			for pupil in eye_model_fitter.get_last_pupil_observations(number):
-				#circle is pupil[2]. circle is (center[x,y,z], normal[x,y,z], radius)
-				glPushMatrix()
-				glLoadMatrixf(self.get_pupil_transformation_matrix(pupil[2][1],pupil[2][0])) #circle normal, center
-				draw_points(((0,0),),color=RGBA(1.1,0.2,.8))
-				glScalef(pupil[2][2],pupil[2][2],1) #scale by pupil radius
-				draw_polyline((circle_xy),color=RGBA(0.,0.,0.,.5), line_type = GL_POLYGON)
-				glColor4f(0.0, 0.0, 0.0,0.5)  #set color to green
-				glBegin(GL_POLYGON) #draw circle
-				glEnd()
-				glPopMatrix()
-
 
 	def draw_circle(self, circle_center, circle_normal, circle_radius, color=RGBA(1.1,0.2,.8), num_segments = 20):
 		vertices = []
@@ -304,36 +254,6 @@ class Visualizer(object):
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		draw_polyline(contour,thickness, color)
 		glPopMatrix()
-
-	def draw_unwrapped_contours_on_screen( self, contours, screen_pos = (20,20), size =(400,400)):
-
-		glViewport(screen_pos[0],screen_pos[1], size[0], size[1])
-		glMatrixMode(GL_PROJECTION)
-		glPushMatrix()
-		glLoadIdentity()
-		glOrtho(0,1, 1,0, -1 , 1 )
-		glMatrixMode(GL_MODELVIEW)
-		glPushMatrix()
-		glLoadIdentity()
-
-		bottom_left = (0,0);
-		top_left = (0,1)
-		top_right = (1,1)
-		bottom_right = (1,0)
-
-		#draw lines around the current viewport, to show border
-		quad = [bottom_left, top_left, top_right, bottom_right]
-		draw_polyline( quad,color=RGBA(0.,0.,0.,1.0), line_type= GL_LINE_LOOP)
-
-		for contour in contours:
-			draw_polyline(contour,color=RGBA(0.,0.,0.,1.0))
-
-		glPopMatrix()
-		glMatrixMode(GL_PROJECTION)
-		glPopMatrix()
-		glMatrixMode(GL_MODELVIEW )
-
-		glViewport(0,0, self.window_size[0], self.window_size[1])
 
 
 	def draw_eye_model_fitter_text(self, eye, gaze_vector, pupil_radius  ):
@@ -535,45 +455,3 @@ class Visualizer(object):
 
 	def on_iconify(self,window,x,y): pass
 	def on_key(self,window, key, scancode, action, mods): pass
-
-
-# if __name__ == '__main__':
-# 	print "done"
-
-# 	huding = build_test.eye_model_fitter_3d.PyEyeModelFitter(focal_length=879.193, x_disp = 320, y_disp = 240)
-# 	# print model
-# 	huding.add_observation([422.255,255.123],40.428,30.663,1.116)
-# 	huding.add_observation([442.257,365.003],44.205,32.146,1.881)
-# 	huding.add_observation([307.473,178.163],41.29,22.765,0.2601)
-# 	huding.add_observation([411.339,290.978],51.663,41.082,1.377)
-# 	huding.add_observation([198.128,223.905],46.852,34.949,2.659)
-# 	huding.add_observation([299.641,177.639],40.133,24.089,0.171)
-# 	huding.add_observation([211.669,212.248],46.885,33.538,2.738)
-# 	huding.add_observation([196.43,236.69],47.094,38.258,2.632)
-# 	huding.add_observation([317.584,189.71],42.599,27.721,0.3)
-# 	huding.add_observation([482.762,315.186],38.397,23.238,1.519)
-# 	huding.update_model()
-
-# 	# print huding.print_eye()
-# 	# for pupil in huding.get_all_pupil_observations():
-# 	# 		#circle is pupil[2]. circle is (center[x,y,z], normal[x,y,z], radius)
-# 	# 		print pupil[2]
-
-# 	# contours = [[[[38, 78]], [[39, 78]]],
-# 	# 	[[[ 65, 40]], [[ 66, 39]], [[ 67, 40]], [[ 68, 40]], [[ 69, 41]], [[ 70, 41]], [[ 71, 40]], [[ 72, 41]], [[ 73, 41]], [[ 74, 41]], [[ 75, 42]], [[ 76, 42]], [[ 77, 42]], [[ 78, 42]], [[ 79, 43]], [[ 80, 44]], [[ 81, 45]], [[ 82, 45]], [[ 83, 45]], [[ 84, 46]], [[ 85, 46]], [[ 86, 47]], [[ 87, 47]], [[ 88, 48]], [[ 89, 49]], [[ 90, 50]], [[ 90, 51]],[[ 91, 52]],[[ 92, 53]],[[ 93, 53]],[[ 94, 54]],[[ 95, 55]],[[ 96, 56]],[[ 96, 57]],[[ 97, 58]],[[ 98, 59]],[[ 99, 60]],[[ 99, 61]],[[100, 62]],[[100, 63]],[[100, 64]], [[101, 65]],[[101, 66]],[[102, 67]],[[102, 68]],[[103, 69]], [[103, 70]],[[103, 71]], [[104, 72]],[[104, 73]],[[104, 74]],[[104, 75]],[[104, 76]],[[104, 77]],[[104, 78]],[[104, 79]], [[104, 80]],[[104, 81]],[[104, 82]],[[104, 83]],[[104, 84]],[[104, 85]], [[103, 86]],[[103, 87]],[[103, 88]], [[103, 89]],[[103, 90]],[[103, 91]],[[102, 92]], [[101, 93]],[[101, 94]],[[100, 95]], [[100, 96]],[[ 99, 97]],[[ 98, 98]],[[ 97, 99]], [[ 96, 100]],[[ 95, 101]],[[ 94, 101]],[[ 93, 102]],[[ 92, 103]],[[ 91, 103]], [[ 90, 104]],[[ 89, 104]],[[ 88, 104]],[[ 87, 104]],[[ 86, 104]],[[ 85, 105]],[[ 84, 105]],[[ 83, 105]],[[ 82, 105]],[[ 81, 105]],[[ 80, 106]],[[ 79, 106]],[[ 78, 106]],[[ 77, 106]],[[ 76, 106]],[[ 75, 105]],[[ 74, 105]],[[ 73, 105]],[[ 72, 105]],[[ 71, 104]],[[ 70, 104]],[[ 69, 104]],[[ 68, 104]],[[ 67, 103]],[[ 66, 103]],[[ 65, 102]],[[ 64, 101]],[[ 63, 100]],[[ 62, 100]], [[ 61, 99]],[[ 60, 99]],[[ 59, 98]],[[ 58, 97]],[[ 57, 97]], [[ 56, 96]],[[ 55, 95]],[[ 54, 94]],[[ 53, 93]],[[ 52, 92]],[[ 51, 91]],[[ 51, 90]], [[ 50, 89]], [[ 49, 88]],[[ 48, 87]],[[ 47, 86]],[[ 47, 85]],[[ 47, 84]], [[ 46, 83]], [[ 45, 82]],[[ 45, 81]],[[ 45, 80]],[[ 45, 79]],[[ 44, 78]],[[ 44, 77]],[[ 43, 76]],[[ 43, 75]],[[ 43, 74]],[[ 42, 73]],[[ 42, 72]],[[ 42, 71]], [[ 42, 70]],[[ 41, 69]],[[ 41, 68]],[[ 41, 67]],[[ 41, 66]],[[ 41, 65]], [[ 41, 64]],[[ 41, 63]],[[ 41, 62]], [[ 41, 61]],[[ 41, 60]], [[ 41, 59]], [[ 41, 58]],[[ 42, 57]],[[ 42, 56]],[[ 43, 55]],[[ 43, 54]],[[ 44, 53]],[[ 44, 52]],[[ 45, 51]],[[ 45, 50]],[[ 46, 49]],[[ 47, 48]],[[ 48, 47]],[[ 49, 47]],[[ 50, 46]],[[ 51, 45]],[[ 52, 45]],[[ 53, 44]],[[ 54, 43]],[[ 55, 42]],[[ 56, 42]],[[ 57, 41]],[[ 58, 41]],[[ 59, 41]],[[ 60, 41]],[[ 61, 41]],[[ 62, 40]],[[ 63, 40]],[[ 64, 40]]]
-# 	# 	[[[ 66, 39]],[[ 65, 40]],[[ 64, 40]],[[ 63, 40]],[[ 62, 40]],[[ 61, 41]],[[ 60, 41]],[[ 59, 41]],[[ 58, 41]],[[ 57, 41]],[[ 56, 42]],[[ 55, 42]],[[ 54, 42]],[[ 53, 43]],[[ 52, 44]],[[ 51, 45]],[[ 50, 45]],[[ 49, 46]],[[ 48, 47]],[[ 47, 47]],[[ 46, 48]],[[ 45, 49]],[[ 45, 50]],[[ 44, 51]],[[ 44, 52]],[[ 43, 53]],[[ 43, 54]],[[ 42, 55]],[[ 42, 56]],[[ 42, 57]],[[ 41, 58]],[[ 41, 59]],[[ 41, 60]],[[ 41, 61]],[[ 41, 62]],[[ 41, 63]],[[ 41, 64]],[[ 41, 65]],[[ 41, 66]],[[ 41, 67]],[[ 41, 68]],[[ 41, 69]],[[ 42, 70]],[[ 42, 71]], [[ 42, 72]],[[ 42, 73]],[[ 43, 74]],[[ 43, 75]],[[ 43, 76]],[[ 44, 77]],[[ 44, 78]],[[ 44, 79]],[[ 45, 80]],[[ 45, 81]],[[ 45, 82]],[[ 46, 83]],[[ 46, 84]],[[ 47, 85]],[[ 47, 86]],[[ 48, 87]],[[ 48, 88]],[[ 49, 89]],[[ 50, 90]],[[ 51, 91]],[[ 51, 92]],[[ 52, 93]],[[ 53, 94]],[[ 54, 95]],[[ 55, 96]],[[ 56, 97]],[[ 57, 97]],[[ 58, 98]],[[ 59, 99]],[[ 60, 99]],[[ 61, 100]],[[ 62, 100]],[[ 63, 101]],[[ 64, 102]],[[ 65, 103]],[[ 66, 103]],[[ 67, 103]],[[ 68, 104]],[[ 69, 104]],[[ 70, 104]],[[ 71, 104]],[[ 72, 105]],[[ 73, 105]],[[ 74, 105]],[[ 75, 105]],[[ 76, 106]],[[ 77, 106]],[[ 78, 106]],[[ 79, 106]],[[ 80, 106]],[[ 81, 105]], [[ 82, 105]],[[ 83, 105]],[[ 84, 105]],[[ 85, 105]],[[ 86, 104]],[[ 87, 104]],[[ 88, 104]],[[ 89, 104]],[[ 90, 104]],[[ 91, 103]],[[ 92, 103]],[[ 93, 103]],[[ 94, 102]],[[ 95, 101]],[[ 96, 101]],[[ 97, 100]],[[ 98, 99]],[[ 99, 98]],[[100, 97]],[[100, 96]],[[101, 95]],[[101, 94]],[[102, 93]],[[103, 92]],[[103, 91]],[[103, 90]],[[103, 89]],[[103, 88]],[[103, 87]],[[103, 86]],[[104, 85]],[[104, 84]],[[104, 83]],[[104, 82]],[[104, 81]],[[104, 80]],[[104, 79]],[[104, 78]],[[104, 77]],[[104, 76]],[[104, 75]], [[104, 74]],[[104, 73]],[[104, 72]],[[103, 71]],[[103, 70]],[[103, 69]],[[102, 68]],[[102, 67]],[[102, 66]],[[101, 65]],[[101, 64]],[[100, 63]],[[100, 62]],[[ 99, 61]],[[ 99, 60]],[[ 99, 59]],[[ 98, 58]],[[ 97, 57]],[[ 96, 56]],[[ 96, 55]],[[ 95, 54]],[[ 94, 53]],[[ 93, 53]],[[ 92, 52]],[[ 91, 51]],[[ 90, 50]],[[ 90, 49]],[[ 89, 48]],[[ 88, 47]],[[ 87, 47]],[[ 86, 46]],[[ 85, 46]],[[ 84, 45]],[[ 83, 45]],[[ 82, 44]],[[ 81, 44]],[[ 80, 43]],[[ 79, 42]],[[ 78, 42]],[[ 77, 42]], [[ 76, 42]],[[ 75, 42]],[[ 74, 41]],[[ 73, 41]],[[ 72, 41]],[[ 71, 40]],[[ 70, 41]],[[ 69, 41]],[[ 68, 40]],[[ 67, 40]]]]
-# 	contours = [[[[20,20]],[[21,20]],[[22,23]]]]
-
-# 	intrinsics = np.matrix('879.193 0 320; 0 -879.193 240; 0 0 1')
-# 	visualhuding = Visualizer("huding", run_independently = True, intrinsics = intrinsics)
-
-# 	# print visualhuding.sphere_intersect([320,240],((0,0,49),12))
-
-# 	visualhuding.open_window()
-# 	a = 0
-# 	while visualhuding.update_window(eye_model_fitter = huding, contours = contours):
-# 	# while visualhuding.update_window(eye_model_fitter = huding):
-# 		a += 1
-# 	# visualhuding.update_window(eye_model_fitter = huding)
-# 	visualhuding.close_window()
-# 	print a
