@@ -173,24 +173,21 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 void EyeModelFitter::checkModels()
 {
 
-    static const int minPupils  = 10;
+    static const double minMaturity  = 0.2;
 
-
-    // our current model needs at least some pupils
-    if(mActiveModelPtr->getSupportingPupilSize() < minPupils)
-        return;
-
+    Clock::time_point  now( Clock::now() );
 
     static const double minPerformance = 0.995;
-    // whenever our current models performance is below the threshold we start building a new model
-    if( mActiveModelPtr->getMaturity() > 0.1 && mActiveModelPtr->getPerformance() < minPerformance ){
+    // whenever our current model's performance is below the threshold we start counting penalties
+    if(  mActiveModelPtr->getPerformance() < minPerformance ){
 
         mPerformancePenalties++;
-        auto lastTimeAdded =  Clock::now() - mLastTimeModelAdded;
-        if(std::chrono::duration_cast<std::chrono::seconds>(lastTimeAdded).count() > 10.0 )
+        mLastTimePerformancePenalty = now;
+        auto lastTimeAdded =  now - mLastTimeModelAdded;
+        if( mActiveModelPtr->getMaturity() > 0.01 && std::chrono::duration_cast<std::chrono::seconds>(lastTimeAdded).count() > 10.0 )
         {
-            mAlternativeModelsPtrs.emplace_back(  new EyeModel(mNextModelID , Clock::now(), mFocalLength, mCameraCenter ) );
-            mLastTimeModelAdded = Clock::now();
+            mAlternativeModelsPtrs.emplace_back(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ) );
+            mLastTimeModelAdded = now;
         }
 
 
@@ -208,24 +205,37 @@ void EyeModelFitter::checkModels()
         };
         mAlternativeModelsPtrs.sort(sortFit);
 
-        // now get the first alternative model where the performance is higher then the one form the current one
+        bool foundNew = false;
+        // now get the first alternative model where the performance is higher then the one from the current one
         for( auto& modelptr : mAlternativeModelsPtrs){
 
             if( mActiveModelPtr->getFit() < modelptr->getFit() ){
                 mActiveModelPtr.reset( modelptr.release() );
                 mPerformancePenalties = 0;
                 mAlternativeModelsPtrs.clear(); // we got a better one, let's remove others
+                foundNew = true;
                 break;
             }
-            // TODO cleanup old model
-            // we  don't wanna keep models never used and to old
         }
 
+        // if we didn't find a better one after repeatedly looking for one we remove all of them and start new
+        if( !foundNew && mPerformancePenalties > 3 * maxPenalty ){
+
+            mAlternativeModelsPtrs.clear(); // we got a better one, let's remove others
+            mPerformancePenalties = 0;
+            mActiveModelPtr.reset(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ));
+
+        }
 
     }
 
-
-
+    std::chrono::seconds lastPenalty =  std::chrono::duration_cast<std::chrono::seconds>(now - mLastTimePerformancePenalty);
+    // when ever we don't get new penalties for sometime, we assume our current model is good enough and the alternatives are removed
+    if( lastPenalty.count() > 20.0  )
+    {
+        mPerformancePenalties = 0;
+        mAlternativeModelsPtrs.clear();
+    }
 
 
 
