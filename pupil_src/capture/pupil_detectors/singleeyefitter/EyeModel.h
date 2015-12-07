@@ -83,7 +83,7 @@ class EyeModel {
         double getMaturity() const ; // How much spatial variance there is
         double getPerformance() const; // The average of the model support
         double getFit() const ; // The residual of the sphere calculation
-        int    getSupportingPupilSize() const {return mSupportingPupilSize; };
+
         Clock::time_point getTimestamp() const { return mTimestamp; };
         // ----- Visualization --------
         std::vector<Vector3> getBinPositions() const {return mBinPositions;};
