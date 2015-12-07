@@ -7,19 +7,24 @@
 #include "distance.h"
 #include "common/constants.h"
 #include "Geometry/Sphere.h"
+#include "fun.h"
+
 #include <iostream>
 
 namespace singleeyefitter {
 
-    template<typename Scalar>
     class CircleGoodness3D {
+        typedef singleeyefitter::Sphere<double> Sphere;
+
+        const double mFocalLength;
+        const Sphere mSphere;
 
         public:
-            CircleGoodness3D()
+            CircleGoodness3D( double focalLength , Sphere sphere) : mFocalLength(focalLength), mSphere(sphere)
             {
             };
 
-            Scalar operator()(const Circle& circle, const Contours3D& contours) const
+            double operator()(const Circle& circle, const Contours3D& contours) const
             {
 
 
@@ -47,31 +52,31 @@ namespace singleeyefitter {
 
                 // This matrix transforms the contour points from camera space to circle space
                 // where the circle normal is alinged with the up vector , in our case the y is up
-                Vector3 up_vector(0,1,0);
-                Eigen::Affine3d point_transformation;
-                point_transformation = Eigen::Translation<double,3>( -circle.center );
+                Vector3 upVector(0,1,0);
+                Eigen::Affine3d pointTransformation;
+                pointTransformation = Eigen::Translation<double,3>( -circle.center );
 
-                if( circle.normal != up_vector){
-                    Vector3 rotationAxis = circle.normal.cross(up_vector).normalized();
-                    double angle = std::acos(circle.normal.dot( up_vector)); // angle in radians
-                    point_transformation =   Eigen::AngleAxisd( angle, rotationAxis ) * point_transformation;
+                if( circle.normal != upVector){
+                    Vector3 rotationAxis = circle.normal.cross(upVector).normalized();
+                    double angle = std::acos(circle.normal.dot( upVector)); // angle in radians
+                    pointTransformation =   Eigen::AngleAxisd( angle, rotationAxis ) * pointTransformation;
 
                 }
                 //visualize transformed circle and contours, remove const in function parameters
                 // CircleGoodness get invalid if you uncomment this
                 // To make it work again remove new_point transformation further down, otherwise it happens twice
-                // circle.normal = point_transformation.linear() * circle.normal;
-                // circle.center = point_transformation * circle.center;
+                // circle.normal = pointTransformation.linear() * circle.normal;
+                // circle.center = pointTransformation * circle.center;
                 // for ( auto& contour : contours) {
                 //     for(auto& point : contour){
-                //         point = point_transformation * point;
+                //         point = pointTransformation * point;
                 //     }
                 // }
 
                 // Let's keep min and max of the azimuth (psi ) for every contour and ignore theta and r
                 // theta and r are already contained in the residual of the plane fit (theta) and the circle variance (r)
 
-                std::vector<std::pair<Scalar,Scalar>> contours_angles;
+                std::vector<std::pair<double,double>> contours_angles;
                 const double circle_radius_squared = circle.radius*circle.radius;
 
                  for ( auto& contour : contours) {
@@ -81,7 +86,7 @@ namespace singleeyefitter {
                     double angle_prev_point = -1;
                     for(const auto& point : contour){
 
-                        const auto new_point = point_transformation * point;
+                        const auto new_point = pointTransformation * point;
                         const double point_distance_squared = new_point.squaredNorm();
 
                         //skip point which are to far away form the circle boarder
@@ -165,7 +170,7 @@ namespace singleeyefitter {
                         // calculate the angle of the previous contour and add it to the total
 
                         if( current_angle_max != -1 &&  current_angle_min != std::numeric_limits<double>::infinity() ){  // just add the previous one if there is one
-                            Scalar a = current_angle_max - current_angle_min;
+                            double a = current_angle_max - current_angle_min;
                             // std::cout << "add amount " <<  a << std::endl;
                             angle_total += a;
 
@@ -178,13 +183,49 @@ namespace singleeyefitter {
                 }
                 // don't forget to add the last found angles
                 if( current_angle_max != -1 &&  current_angle_min != std::numeric_limits<double>::infinity() ){
-                    Scalar a = current_angle_max - current_angle_min;
+                    double a = current_angle_max - current_angle_min;
                     angle_total += a;
                 }
 
 
-                Scalar goodness =  angle_total / constants::TWO_PI ;
+                double goodness =  angle_total / constants::TWO_PI ;
                 return goodness;
+            }
+
+
+            double operator()(const Circle& circle,  Edges3D& edges ) const
+            {
+
+
+                // We go the same way as in 2D and compare the amount of edges with circumference of the ellipse
+
+                // project the circle back on the image plane
+                Ellipse ellipse = Ellipse(project( circle, mFocalLength ));
+
+                // filter edges
+                // just use the edges on the plane created by the circle
+                // and within a certain radius error
+                const double radiusTolerance = 0.1;
+                const Vector3 circleCenter = circle.center - mSphere.center; // in coord system of the sphere
+                const Vector3 planeNormal = circle.normal;
+                const double planePointLength  = std::sqrt( mSphere.radius * mSphere.radius - circle.radius * circle.radius);
+                const Vector3 planePoint = mSphere.center +  planePointLength * planeNormal; // real circle center in the sphere
+
+                auto circleFilter = [&]( const Vector3& e ){
+                    Vector3 point = e - planePoint;
+                    double length = point.norm();
+                    Vector3 pointNormalized = point/ length;
+                    double angleError = std::abs(pointNormalized.dot(planeNormal));
+                    double radiusError = std::abs(1.0 - circle.radius / length );
+                    return angleError <= 0.02 && radiusError <= 0.05;
+                };
+
+                edges = fun::filter( circleFilter , edges);
+
+                const double circumference = ellipse.circumference();
+
+                const double goodness  = edges.size() / circumference;
+                return std::min(goodness, 1.0);
             }
     };
 
