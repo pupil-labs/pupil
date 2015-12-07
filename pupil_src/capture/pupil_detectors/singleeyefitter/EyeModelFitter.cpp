@@ -123,19 +123,19 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     mCurrentSphere = mActiveModelPtr->getSphere();
     mCurrentInitialSphere = mActiveModelPtr->getInitialSphere();
 
-    std::cout << "active model maturity: " << mActiveModelPtr->getMaturity() << std::endl;
-    std::cout << "active model fit: " << mActiveModelPtr->getFit() << std::endl;
-    std::cout << "active model performance: " << mActiveModelPtr->getPerformance() << std::endl;
+    // std::cout << "active model maturity: " << mActiveModelPtr->getMaturity() << std::endl;
+    // std::cout << "active model fit: " << mActiveModelPtr->getFit() << std::endl;
+    // std::cout << "active model performance: " << mActiveModelPtr->getPerformance() << std::endl;
 
     int index = 0;
-    for (const auto& modelPtr : mAlternativeModelsPtrs) {
+    // for (const auto& modelPtr : mAlternativeModelsPtrs) {
 
-        std::cout << "model " << index << " maturity: " << modelPtr->getMaturity() << std::endl;
-        std::cout << "model " << index << " fit: " << modelPtr->getFit() << std::endl;
-        std::cout << "model  " << index << "performance: " << modelPtr->getPerformance() << std::endl;
-        index++;
+    //     std::cout << "model " << index << " maturity: " << modelPtr->getMaturity() << std::endl;
+    //     std::cout << "model " << index << " fit: " << modelPtr->getFit() << std::endl;
+    //     std::cout << "model  " << index << "performance: " << modelPtr->getPerformance() << std::endl;
+    //     index++;
 
-    }
+    // }
 
     checkModels();
 
@@ -177,7 +177,7 @@ void EyeModelFitter::checkModels()
 
     Clock::time_point  now( Clock::now() );
 
-    static const double minPerformance = 0.995;
+    static const double minPerformance = 0.997;
     // whenever our current model's performance is below the threshold we start counting penalties
     if(  mActiveModelPtr->getPerformance() < minPerformance ){
 
@@ -193,41 +193,42 @@ void EyeModelFitter::checkModels()
 
     }
 
-
     // when ever the performance penalty is to high we wanna replace the current model with the best alternative
     static const int maxPenalty  = 10 * 30; // should depend on the actual framerate
-    std::cout << "current performance penalty: " << mPerformancePenalties << std::endl;
-    if( mPerformancePenalties > maxPenalty ){
+    //std::cout << "current performance penalty: " << mPerformancePenalties << std::endl;
 
-        // sort the model with increasing fit
-        const auto sortFit = [](const EyeModelPtr&  a , const EyeModelPtr& b){
-            return a->getFit() < b->getFit();
-        };
-        mAlternativeModelsPtrs.sort(sortFit);
 
-        bool foundNew = false;
-        // now get the first alternative model where the performance is higher then the one from the current one
-        for( auto& modelptr : mAlternativeModelsPtrs){
+    if(mAlternativeModelsPtrs.size() == 0)
+        return; // early exit
 
-            if( mActiveModelPtr->getFit() < modelptr->getFit() ){
-                mActiveModelPtr.reset( modelptr.release() );
-                mPerformancePenalties = 0;
-                mAlternativeModelsPtrs.clear(); // we got a better one, let's remove others
-                foundNew = true;
-                break;
-            }
-        }
+    // sort the model with increasing fit
+    const auto sortFit = [](const EyeModelPtr&  a , const EyeModelPtr& b){
+        return a->getFit() < b->getFit();
+    };
+    mAlternativeModelsPtrs.sort(sortFit);
 
-        // if we didn't find a better one after repeatedly looking for one we remove all of them and start new
-        if( !foundNew && mPerformancePenalties > 3 * maxPenalty ){
+    bool foundNew = false;
+    // now get the first alternative model where the performance is higher then the one from the current one
+    for( auto& modelptr : mAlternativeModelsPtrs){
 
-            mAlternativeModelsPtrs.clear(); // we got a better one, let's remove others
+        if(modelptr->getMaturity() > 0.05 &&  mActiveModelPtr->getPerformance() < modelptr->getPerformance() ){
+            mActiveModelPtr.reset( modelptr.release() );
             mPerformancePenalties = 0;
-            mActiveModelPtr.reset(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ));
-
+            mAlternativeModelsPtrs.clear(); // we got a better one, let's remove others
+            foundNew = true;
+            break;
         }
+    }
+
+    // if we didn't find a better one after repeatedly looking for one we remove all of them and start new
+    if( !foundNew && mPerformancePenalties > 3 * maxPenalty ){
+
+        mAlternativeModelsPtrs.clear(); // we got a better one, let's remove others
+        mPerformancePenalties = 0;
+        mActiveModelPtr.reset(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ));
 
     }
+
 
     std::chrono::seconds lastPenalty =  std::chrono::duration_cast<std::chrono::seconds>(now - mLastTimePerformancePenalty);
     // when ever we don't get new penalties for sometime, we assume our current model is good enough and the alternatives are removed
@@ -542,18 +543,17 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
     double minTheta = previousPupilCenter.x() - maxAngularVelocity;
     double minPsi = previousPupilCenter.y() - maxAngularVelocity;
 
-    const double stepSizeAngle = 0.01; // in radian
+    const double stepSizeAngle = 0.001; // in radian
     // euclidian length. here the segment length with this stepsize is calculated
     // it's just an approximation, actually it should be the chor length
     // since the step size is pretty small we can ignore this
-    const double bandWidth = mCurrentSphere.radius * stepSizeAngle;
-    const double bandWidthHalf = bandWidth / 2.0;
-    const double maxDistanceSquared  = std::pow(pupilSphereRadius + bandWidthHalf, 2) ;
-    const double minDistanceSquared  = std::pow(pupilSphereRadius - bandWidthHalf, 2) ;
+    const int bandWidthPixel =  4 ;
+
 
     int maxEdgeCount = 0;
     Vector3 bestCircleCenter(0, 0, 0);
-
+    Edges3D inliers;
+    Edges3D finalInliers;
     for (double i = minTheta; i <= maxTheta; i += stepSizeAngle) {
         for (double j = minPsi; j <=  maxPsi; j += stepSizeAngle) {
 
@@ -562,9 +562,16 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
             // all this happens in world coordinates
             Vector3 newPupilCenter  = mCurrentSphere.center + math::sph2cart(mCurrentSphere.radius, i, j);
 
-            int  edgeCount = 0;
+            const double bandWidth =  bandWidthPixel * newPupilCenter.z() / mFocalLength ;
+            const double bandWidthHalf = bandWidth / 2.0 ;
+            const double maxDistanceSquared  = std::pow(pupilSphereRadius + bandWidthHalf, 2) ;
+            const double minDistanceSquared  = std::pow(pupilSphereRadius - bandWidthHalf, 2) ;
 
             //count all edges which fall into this current circle
+            int  edgeCount = 0;
+            if(mDebug)
+                inliers.clear();
+
             for (const auto& e : filteredEdges) {
 
                 double distanceSquared = (e - newPupilCenter).squaredNorm();
@@ -572,12 +579,16 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
                 if (distanceSquared < maxDistanceSquared  &&
                         distanceSquared > minDistanceSquared) {
                     edgeCount++;
+                    if(mDebug)
+                        inliers.push_back(e);
                 }
             }
 
             if (edgeCount > maxEdgeCount) {
                 bestCircleCenter = newPupilCenter;
                 maxEdgeCount = edgeCount;
+                if(mDebug)
+                    finalInliers = std::move(inliers);
             }
 
         }
@@ -588,10 +599,13 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
         result.circle.normal = (bestCircleCenter - mCurrentSphere.center).normalized() ;
         result.circle.radius = mPreviousPupil.radius;
 
+        double circumference = Ellipse(project(result.circle,mFocalLength)).circumference();
+        result.fitGoodness =  std::min(maxEdgeCount / circumference, 1.0 ) ;
     }
 
+
     if( mDebug )
-      result.edges = std::move(filteredEdges);  // visualize
+      result.edges = std::move(finalInliers);  // visualize
 
 }
 
