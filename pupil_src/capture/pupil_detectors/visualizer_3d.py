@@ -423,22 +423,14 @@ class Visualizer(object):
 		if self._window != None:
 			glfwMakeContextCurrent(self._window)
 
-
 		self.image_width , self.image_height = g_pool.capture.frame_size
 
 		latest_pupil = result['circle']
-		#last_unprojected_contours =  result['contours']
 		edges =  result['edges']
-
-		#final_circle_contours = result['fittedContours']
-		#last_pupil_edges = detector_3D.get_last_pupil_edges()
-		#final_candidate_contours = detector_3D.get_last_final_candidate_contour()
 		sphere_models = result['models']
 
 		self.clear_gl_screen()
 		self.trackball.push()
-
-
 
 		# 2. in pixel space draw video frame
 		glLoadMatrixf(self.get_image_space_matrix())
@@ -447,7 +439,6 @@ class Visualizer(object):
 		glLoadMatrixf(self.get_anthropomorphic_matrix())
 
 		self.draw_frustum()
-
 
 		model_count = 0;
 		sphere_color = RGBA( 0,147/255.,147/255.,0.2)
@@ -483,8 +474,6 @@ class Visualizer(object):
 		self.draw_coordinate_system(4)
 
 		self.trackball.pop()
-		#if last_unwrapped_contours:
-		#	self.draw_unwrapped_contours_on_screen(last_unwrapped_contours)
 		look_direction = latest_pupil[1]
 		pupil_radius = latest_pupil[2]
 		self.draw_eye_model_fitter_text(sphere, look_direction,pupil_radius)

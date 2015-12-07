@@ -84,7 +84,9 @@ class EyeModel {
         double getPerformance() const; // The average of the model support
         double getFit() const ; // The residual of the sphere calculation
 
+        int getModelID() const { return mModelID; };
         Clock::time_point getTimestamp() const { return mTimestamp; };
+
         // ----- Visualization --------
         std::vector<Vector3> getBinPositions() const {return mBinPositions;};
         // ----- Visualization END --------

@@ -71,6 +71,7 @@ cdef extern from 'singleeyefitter/common/types.h':
     ctypedef Matrix21d Vector2
     ctypedef vector[vector[Vector3]] Contours3D
     ctypedef vector[Vector3] Edges3D
+    ctypedef vector[Point_[int]] Edges2D
     ctypedef vector[vector[Point_[int]]] Contours_2D
     ctypedef vector[Point_[int]] Contour_2D
     ctypedef Circle3D[double] Circle
@@ -79,9 +80,8 @@ cdef extern from 'singleeyefitter/common/types.h':
     cdef struct Detector2DResult:
         double confidence
         Ellipse ellipse
-        Contours_2D final_contours
-        Contours_2D contours
-        Mat raw_edges
+        Edges2D final_edges
+        Edges2D raw_edges
         Rect_[int] current_roi
         double timestamp
         int image_width;
@@ -98,16 +98,13 @@ cdef extern from 'singleeyefitter/common/types.h':
     cdef struct Detector3DResult:
         Circle circle
         Ellipse ellipse
-        double fitGoodness
+        double confidence
+        double modelConfidence
+        int modelID
         double timestamp
         #-------- For visualization ----------------
-        Contours3D contours
-        Contours3D fittedCircleContours
         Edges3D edges
         vector[ModelDebugProperties] models
-
-
-
 
     cdef struct Detector2DProperties:
         int intensity_range
@@ -129,12 +126,9 @@ cdef extern from 'singleeyefitter/common/types.h':
         float ellipse_true_support_min_dist
 
     cdef struct Detector3DProperties:
-        float max_fit_residual
-        float max_circle_variance
-        float pupil_radius_min
-        float pupil_radius_max
-        int   combine_evaluation_max
-        int   combine_depth_max
+        pass
+        #no used for now
+
 
 
 

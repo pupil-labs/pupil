@@ -45,10 +45,8 @@ namespace singleeyefitter {
     struct Detector2DResult {
         double confidence =  0.0 ;
         Ellipse ellipse = Ellipse::Null;
-        //Contours_2D final_contours;
-        Contours_2D contours;
-        std::vector<cv::Point> final_edges; // edges used to fit the final ellipse in 2D
-        std::vector<cv::Point> raw_edges;
+        Edges2D final_edges; // edges used to fit the final ellipse in 2D
+        Edges2D raw_edges;
         cv::Rect current_roi; // contains the roi for this results
         double timestamp = 0.0;
         int image_width = 0;
@@ -67,14 +65,13 @@ namespace singleeyefitter {
 
     struct Detector3DResult {
         double confidence =  0.0 ;
+        double modelConfidence = 0.0;
         Circle circle  = Circle::Null;
         Ellipse ellipse = Ellipse::Null; // the circle projected back to 2D
-        double fitGoodness =  -1.0;
+        int modelID = 0;
         double timestamp = 0.0;
         //-------- For visualization ----------------
         // just valid if we want it for visualization
-        Contours3D contours;
-        Contours3D fittedCircleContours;
         Edges3D edges;
         std::vector<ModelDebugProperties> models;
     };
@@ -101,14 +98,9 @@ namespace singleeyefitter {
         float ellipse_true_support_min_dist;
 
     };
-    struct Detector3DProperties {
-        float max_fit_residual;
-        float max_circle_variance;
-        float pupil_radius_min;
-        float pupil_radius_max;
-        int   combine_evaluation_max;
-        int   combine_depth_max;
 
+    struct Detector3DProperties {
+            //no used for now
     };
 
 } // singleeyefitter namespace

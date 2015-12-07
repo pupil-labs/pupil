@@ -108,8 +108,6 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
             circle = unprojectedCircle; // at least return the unprojected circle
 
 
-
-
     } else { // no valid sphere yet
         std::cout << "add without check" << std::endl;
         shouldAddObservation = true;
@@ -146,7 +144,6 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
                 //work();
             }
      }
-
 
     return circle;
 }

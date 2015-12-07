@@ -47,31 +47,13 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     int image_height_half = image_height / 2.0;
     int image_width_half = image_width / 2.0;
 
-    // For the beginning it's enought to convert just the ellipse
-    // If the tests are passed the contours are also converted
     Ellipse& ellipse = observation2D->ellipse;
     ellipse.center[0] -= image_width_half;
     ellipse.center[1] = image_height_half - ellipse.center[1];
     ellipse.angle = -ellipse.angle; //take y axis flip into account
 
-
-    // for (Contour_2D& c : observation2D->contours) {
-    //     for (cv::Point& p : c) {
-    //         p += roi.tl();
-    //         p.x -= image_width_half;
-    //         p.y = image_height_half - p.y;
-    //     }
-    // }
-
-    // for (Contour_2D& c : observation2D->final_contours) {
-    //     for (cv::Point& p : c) {
-    //         p += roi.tl();
-    //         p.x -= image_width_half;
-    //         p.y = image_height_half - p.y;
-    //     }
-    // }
-
-
+    //put the edges int or coordinate system
+    // edges are needed for every optimisation step
     for (cv::Point& p : observation2D->final_edges) {
         p += roi.tl();
         p.x -= image_width_half;
@@ -80,46 +62,40 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 
     auto observation3DPtr = std::make_shared<const Observation>(observation2D, mFocalLength);
 
-
-    //check first if the observations is even strong enough to be added
+    //check first if the observations is strong enough to build the eye model ontop of it
     if (observation2D->confidence  >  0.99) {
 
-
-
+        // allow each model to decide by themself if the new observation support the model or not
         auto circle = mActiveModelPtr->presentObservation(observation3DPtr);
-        if (circle != Circle::Null)
+        if (circle != Circle::Null){
             mPreviousPupil = circle;
+            result.circle = circle;
+        }
 
         for (auto& modelPtr : mAlternativeModelsPtrs) {
              modelPtr->presentObservation(observation3DPtr);
         }
 
-
-
-
-
     } else if (mCurrentSphere != Sphere::Null) { // if it's too weak we wanna try to find a better one in 3D
 
+        // since the raw edges are used to find a better circle fit
+        // they need to be converted in the out coordinate system
         for (cv::Point& p : observation2D->raw_edges) {
             p += roi.tl();
             p.x -= image_width_half;
             p.y = image_height_half - p.y;
         }
 
-
         //fitCircle(observation2D->contours, props, result );
         filterCircle(observation2D->raw_edges, props, result);
-        //filterCircle2(observation2D->raw_edges, props, result );
 
         if (result.circle != Circle::Null)
             mPreviousPupil = result.circle;
 
-        // project the circle back to 2D
-        // need for some calculations in 2D later (calibration)
     }
 
-
-
+    // getSphere contains a mutex and blocks if optimisation is running
+    // thus we just wanna call it once and save the results
     mCurrentSphere = mActiveModelPtr->getSphere();
     mCurrentInitialSphere = mActiveModelPtr->getInitialSphere();
 
@@ -127,7 +103,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     // std::cout << "active model fit: " << mActiveModelPtr->getFit() << std::endl;
     // std::cout << "active model performance: " << mActiveModelPtr->getPerformance() << std::endl;
 
-    int index = 0;
+    //int index = 0;
     // for (const auto& modelPtr : mAlternativeModelsPtrs) {
 
     //     std::cout << "model " << index << " maturity: " << modelPtr->getMaturity() << std::endl;
@@ -137,7 +113,9 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 
     // }
 
+    // contains the logic for building alternative models if the current one is bad
     checkModels();
+    result.modelID = mActiveModelPtr->getModelID();
 
     if (mDebug) {
         result.models.reserve(mAlternativeModelsPtrs.size() + 1);
@@ -173,30 +151,31 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 void EyeModelFitter::checkModels()
 {
 
-    static const double minMaturity  = 0.2;
+    using namespace std::chrono;
+
+    static const double minMaturity  = 0.02;
+    static const double minPerformance = 0.997;
+    static const int maxPenalty  = 10 * 30; //TODO should depend on the actual framerate
+    static const seconds altModelExpirationTime(20);
+    static const seconds minNewModelTime(10);
 
     Clock::time_point  now( Clock::now() );
 
-    static const double minPerformance = 0.997;
     // whenever our current model's performance is below the threshold we start counting penalties
     if(  mActiveModelPtr->getPerformance() < minPerformance ){
 
         mPerformancePenalties++;
         mLastTimePerformancePenalty = now;
-        auto lastTimeAdded =  now - mLastTimeModelAdded;
-        if( mActiveModelPtr->getMaturity() > 0.01 && std::chrono::duration_cast<std::chrono::seconds>(lastTimeAdded).count() > 10.0 )
+        auto lastTimeAdded =  duration_cast<seconds>(now - mLastTimeModelAdded);
+
+        if( mActiveModelPtr->getMaturity() > minMaturity && lastTimeAdded  > minNewModelTime )
         {
             mAlternativeModelsPtrs.emplace_back(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ) );
+            mNextModelID++;
             mLastTimeModelAdded = now;
         }
 
-
     }
-
-    // when ever the performance penalty is to high we wanna replace the current model with the best alternative
-    static const int maxPenalty  = 10 * 30; // should depend on the actual framerate
-    //std::cout << "current performance penalty: " << mPerformancePenalties << std::endl;
-
 
     if(mAlternativeModelsPtrs.size() == 0)
         return; // early exit
@@ -208,10 +187,10 @@ void EyeModelFitter::checkModels()
     mAlternativeModelsPtrs.sort(sortFit);
 
     bool foundNew = false;
-    // now get the first alternative model where the performance is higher then the one from the current one
+    // now get the first alternative model where the performance is higher then the current one
     for( auto& modelptr : mAlternativeModelsPtrs){
 
-        if(modelptr->getMaturity() > 0.05 &&  mActiveModelPtr->getPerformance() < modelptr->getPerformance() ){
+        if(modelptr->getMaturity() > minMaturity &&  mActiveModelPtr->getPerformance() < modelptr->getPerformance() ){
             mActiveModelPtr.reset( modelptr.release() );
             mPerformancePenalties = 0;
             mAlternativeModelsPtrs.clear(); // we got a better one, let's remove others
@@ -220,25 +199,23 @@ void EyeModelFitter::checkModels()
         }
     }
 
-    // if we didn't find a better one after repeatedly looking for one we remove all of them and start new
+    // if we didn't find a better one after repeatedly looking, remove all of them and start new
     if( !foundNew && mPerformancePenalties > 3 * maxPenalty ){
 
-        mAlternativeModelsPtrs.clear(); // we got a better one, let's remove others
+        mAlternativeModelsPtrs.clear();
         mPerformancePenalties = 0;
         mActiveModelPtr.reset(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ));
+        mNextModelID++;
 
     }
 
-
-    std::chrono::seconds lastPenalty =  std::chrono::duration_cast<std::chrono::seconds>(now - mLastTimePerformancePenalty);
+    auto lastPenalty =  duration_cast<seconds>(now - mLastTimePerformancePenalty);
     // when ever we don't get new penalties for sometime, we assume our current model is good enough and the alternatives are removed
-    if( lastPenalty.count() > 20.0  )
+    if( lastPenalty > altModelExpirationTime  )
     {
         mPerformancePenalties = 0;
         mAlternativeModelsPtrs.clear();
     }
-
-
 
 }
 
@@ -512,8 +489,8 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
 
     Edges3D edgesOnSphere = unprojectEdges(rawEdges);
 
-    //Inorder to filter the edges depending on the distance of the previous Pupil center
-    // imagine a Sphere with center equals previous pupil center (pupilcenters are always on the sphere )
+    //Inorder to filter the edges depending on the distance of the previous pupil center
+    // imagine a sphere with center equal to the previous pupil center (pupilcenters are always on the sphere )
     // and sphere radius equal the distance from sphere center to pupil border
     double h =  mCurrentSphere.radius - std::sqrt(mCurrentSphere.radius * mCurrentSphere.radius - mPreviousPupil.radius * mPreviousPupil.radius);
     double pupilSphereRadiusSquared =  2.0 * mCurrentSphere.radius  * h;
@@ -533,51 +510,49 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
     // now we got all edges in the surrounding of the previous pupil
     // let find the circle where most edges support the circle including a certain region around the circle border
 
-    const double maxAngularVelocity = 0.1;  // defines the filter space
+    const double maxAngularVelocity = 0.1;  //TODO this should depend on the realy velocity calculated per frame
 
     Vector3 c  = mPreviousPupil.center - mCurrentSphere.center;
     // search space is in spehrical coordinates
     Vector2 previousPupilCenter  = math::cart2sph(c);
-    double maxTheta = previousPupilCenter.x() + maxAngularVelocity ;
-    double maxPsi = previousPupilCenter.y() + maxAngularVelocity ;
-    double minTheta = previousPupilCenter.x() - maxAngularVelocity;
-    double minPsi = previousPupilCenter.y() - maxAngularVelocity;
+    const double maxTheta = previousPupilCenter.x() + maxAngularVelocity ;
+    const double maxPsi = previousPupilCenter.y() + maxAngularVelocity ;
+    const double minTheta = previousPupilCenter.x() - maxAngularVelocity;
+    const double minPsi = previousPupilCenter.y() - maxAngularVelocity;
 
     const double stepSizeAngle = 0.001; // in radian
-    // euclidian length. here the segment length with this stepsize is calculated
-    // it's just an approximation, actually it should be the chor length
-    // since the step size is pretty small we can ignore this
-    const int bandWidthPixel =  4 ;
 
+    // defined in pixel space and recalculated for 3D space further down
+    const int bandWidthPixel =  4 ;
 
     int maxEdgeCount = 0;
     Vector3 bestCircleCenter(0, 0, 0);
     Edges3D inliers;
     Edges3D finalInliers;
+
     for (double i = minTheta; i <= maxTheta; i += stepSizeAngle) {
         for (double j = minPsi; j <=  maxPsi; j += stepSizeAngle) {
 
             // from here in cartesian again
             // if we use cartesian we can just compare the distances from the pupil sphere center
             // all this happens in world coordinates
-            Vector3 newPupilCenter  = mCurrentSphere.center + math::sph2cart(mCurrentSphere.radius, i, j);
+            const Vector3 newPupilCenter  = mCurrentSphere.center + math::sph2cart(mCurrentSphere.radius, i, j);
 
             const double bandWidth =  bandWidthPixel * newPupilCenter.z() / mFocalLength ;
             const double bandWidthHalf = bandWidth / 2.0 ;
             const double maxDistanceSquared  = std::pow(pupilSphereRadius + bandWidthHalf, 2) ;
             const double minDistanceSquared  = std::pow(pupilSphereRadius - bandWidthHalf, 2) ;
 
-            //count all edges which fall into this current circle
-            int  edgeCount = 0;
             if(mDebug)
                 inliers.clear();
 
+            int  edgeCount = 0;
+            //count all edges which fall into this current circle
             for (const auto& e : filteredEdges) {
 
                 double distanceSquared = (e - newPupilCenter).squaredNorm();
 
-                if (distanceSquared < maxDistanceSquared  &&
-                        distanceSquared > minDistanceSquared) {
+                if (distanceSquared < maxDistanceSquared && distanceSquared > minDistanceSquared) {
                     edgeCount++;
                     if(mDebug)
                         inliers.push_back(e);
@@ -599,8 +574,12 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
         result.circle.normal = (bestCircleCenter - mCurrentSphere.center).normalized() ;
         result.circle.radius = mPreviousPupil.radius;
 
-        double circumference = Ellipse(project(result.circle,mFocalLength)).circumference();
-        result.fitGoodness =  std::min(maxEdgeCount / circumference, 1.0 ) ;
+        // project the circle back to 2D
+        // needed for some calculations in 2D later (calibration)
+        result.ellipse  = Ellipse(project(result.circle,mFocalLength));
+
+        double circumference = result.ellipse.circumference();
+        result.confidence =  std::min(maxEdgeCount / circumference, 1.0 ) ;
     }
 
 

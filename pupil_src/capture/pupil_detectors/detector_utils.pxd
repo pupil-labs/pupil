@@ -22,13 +22,33 @@ cdef inline convertToPythonResult( Detector2DResult& result, object frame, objec
     py_result['timestamp'] = frame.timestamp
     return py_result
 
+# cdef inline convertToPythonResult( Detector3DResult& result, object frame, object roi ):
+
+#     cdef float pi = 3.14159265359
+#     e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / pi - 90 )
+#     py_result = {}
+#     py_result['confidence'] = result.confidence
+#     py_result['ellipse'] = e
+
+#     #py_result['ellipse'] = e
+
+#     #py_result['major'] = max(e[1])
+#     py_result['diameter'] = max(e[1])
+#     #py_result['minor'] = min(e[1])
+#     #py_result['axes'] = e[1]
+#     #py_result['angle'] = e[2]
+
+#     norm_center = normalize(e[0],(frame.width, frame.height),flip_y=True)
+#     py_result['norm_pos'] = norm_center
+#     #py_result['center'] = e[0]
+#     py_result['timestamp'] = frame.timestamp
+#     return py_result
+
 cdef inline prepareForVisualization3D(  Detector3DResult& result ):
 
     py_visualizationResult = {}
 
     py_visualizationResult['edges'] = getEdges(result)
-    py_visualizationResult['contours'] = getContours(result.contours)
-    py_visualizationResult['fittedContours'] = getContours(result.fittedCircleContours)
     py_visualizationResult['circle'] = getCircle(result);
 
     models = []
@@ -72,18 +92,6 @@ cdef inline getCircle(const Detector3DResult& result):
     radius = result.circle.radius
     normal = result.circle.normal
     return [ [center[0],center[1],center[2]], [normal[0],normal[1],normal[2]], radius ]
-
-
-cdef inline getContours( Contours3D con):
-
-    contours = []
-    for contour in con:
-        c = []
-        for point in contour:
-            c.append([point[0],point[1],point[2]])
-        contours.append(c)
-
-    return contours
 
 
 cdef inline getSphere(const ModelDebugProperties& result ):

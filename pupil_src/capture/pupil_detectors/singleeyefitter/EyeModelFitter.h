@@ -1,7 +1,6 @@
 #ifndef SingleEyeFitter_h__
 #define SingleEyeFitter_h__
 
-//#include <opencv2/core/core.hpp>
 #include "common/types.h"
 #include "ImageProcessing/cvx.h"
 #include "Geometry/Circle.h"
