@@ -455,11 +455,11 @@ double EyeModel::getMaturity() const {
 
     //Spatial variance
     // Our bins are just on half of the sphere and by observing different models, it turned out
-    // that if a quarter of half the sphere is filled it gives a good maturity.
-    // Thus we scale it that a the maturity will be 1 if a quarter is filled
+    // that if a eighth of half the sphere is filled it gives a good maturity.
+    // Thus we scale it that a the maturity will be 1 if a eighth is filled
     using std::floor;
     using std::pow;
-    return  mSpatialBins.size()/(mTotalBins/4.0);
+    return  mSpatialBins.size()/(mTotalBins/8.0);
 }
 
 double EyeModel::getPerformance() const {
