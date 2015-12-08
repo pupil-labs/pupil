@@ -71,7 +71,7 @@ cdef class Detector_3D:
             self.detectProperties2D["initial_ellipse_fit_treshhold"] = 1.8
             self.detectProperties2D["final_perimeter_ratio_range_min"] = 0.6
             self.detectProperties2D["final_perimeter_ratio_range_max"] = 1.2
-            self.detectProperties2D["ellipse_true_support_min_dist"] = 4.0
+            self.detectProperties2D["ellipse_true_support_min_dist"] = 2.5
 
         # if not self.detectProperties3D:
         #     self.detectProperties3D["max_fit_residual"] = 20.0
@@ -140,6 +140,8 @@ cdef class Detector_3D:
         debugDetector =  self.debugVisualizer3D._window
         cdef Detector3DResult cpp3DResult  = self.detector3DPtr.updateAndDetect( cppResultPtr , self.detectProperties3D, debugDetector)
 
+
+        add3DResult(cpp3DResult , pyResult, frame )
         if debugDetector:
             self.pyResult3D = prepareForVisualization3D(cpp3DResult)
 

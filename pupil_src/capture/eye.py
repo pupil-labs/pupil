@@ -370,12 +370,12 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
                 make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
 
                 if result['confidence'] >0:
-                    if result.has_key('axes'):
-                        pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
-                                                (int(result['axes'][0]/2),int(result['axes'][1]/2)),
-                                                int(result['angle']),0,360,15)
+                    if result.has_key('ellipse'):
+                        pts = cv2.ellipse2Poly( (int(result['ellipse']['center'][0]),int(result['ellipse']['center'][1])),
+                                                (int(result['ellipse']['axes'][0]/2),int(result['ellipse']['axes'][1]/2)),
+                                                int(result['ellipse']['angle']),0,360,15)
                         cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
-                    cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
+                    cygl_draw_points([result['ellipse']['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
 
                 # render graphs
                 graph.push_view()

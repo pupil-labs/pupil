@@ -250,19 +250,19 @@ class Canny_Detector(Pupil_Detector):
                     e = refit_e
                     self.strong_prior = u_r.add_vector(p_r.add_vector(e[0])),e[1],e[2]
                     goodness = min(1.,support_ratio)
+
+                    ellipse = {}
+                    ellipse['center'] = u_r.add_vector(p_r.add_vector(e[0]))
+                    ellipse['axes'] =  e[1]
+                    ellipse['angle'] = e[2]
+
                     pupil_ellipse = {}
                     pupil_ellipse['confidence'] = goodness
-                    pupil_ellipse['ellipse'] = e
-                    pupil_ellipse['roi_center'] = e[0]
-                    pupil_ellipse['major'] = max(e[1])
-                    pupil_ellipse['minor'] = min(e[1])
+                    pupil_ellipse['ellipse'] = ellipse
                     pupil_ellipse['diameter'] = max(e[1])
-                    pupil_ellipse['axes'] = e[1]
-                    pupil_ellipse['angle'] = e[2]
-                    e_img_center =u_r.add_vector(p_r.add_vector(e[0]))
-                    norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
+
+                    norm_center = normalize(ellipse['center'],(frame.width, frame.height),flip_y=True)
                     pupil_ellipse['norm_pos'] = norm_center
-                    pupil_ellipse['center'] = e_img_center
                     pupil_ellipse['timestamp'] = frame.timestamp
 
                     self.target_size = max(e[1])
@@ -474,19 +474,19 @@ class Canny_Detector(Pupil_Detector):
             e = new_e
 
 
+
+        ellipse = {}
+        ellipse['center'] = u_r.add_vector(p_r.add_vector(e[0]))
+        ellipse['axes'] =  e[1]
+        ellipse['angle'] = e[2]
+
         pupil_ellipse = {}
         pupil_ellipse['confidence'] = goodness
-        pupil_ellipse['ellipse'] = e
-        pupil_ellipse['pos_in_roi'] = e[0]
-        pupil_ellipse['major'] = max(e[1])
+        pupil_ellipse['ellipse'] = ellipse
         pupil_ellipse['diameter'] = max(e[1])
-        pupil_ellipse['minor'] = min(e[1])
-        pupil_ellipse['axes'] = e[1]
-        pupil_ellipse['angle'] = e[2]
-        e_img_center =u_r.add_vector(p_r.add_vector(e[0]))
-        norm_center = normalize(e_img_center,(frame.width, frame.height),flip_y=True)
+
+        norm_center = normalize(ellipse['center'],(frame.width, frame.height),flip_y=True)
         pupil_ellipse['norm_pos'] = norm_center
-        pupil_ellipse['center'] = e_img_center
         pupil_ellipse['timestamp'] = frame.timestamp
 
         self.target_size = max(e[1])

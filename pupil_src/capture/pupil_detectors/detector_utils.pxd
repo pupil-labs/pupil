@@ -2,47 +2,65 @@
 # cython: profile=False
 from detector cimport *
 from methods import  normalize
+from numpy.math cimport PI
+
+cdef extern from 'singleeyefitter/mathHelper.h' namespace 'singleeyefitter::math':
+
+    Matrix21d cart2sph( Matrix31d& m )
+
 
 cdef inline convertToPythonResult( Detector2DResult& result, object frame, object roi ):
 
-    cdef float pi = 3.14159265359
-    e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / pi - 90 )
+
+    ellipse = {}
+    ellipse['center'] = (result.ellipse.center[0],result.ellipse.center[1])
+    ellipse['axes'] =  (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0)
+    ellipse['angle'] = result.ellipse.angle * 180.0 / PI - 90.0
+
     py_result = {}
     py_result['confidence'] = result.confidence
-    py_result['ellipse'] = e
-    py_result['major'] = max(e[1])
-    py_result['diameter'] = max(e[1])
-    py_result['minor'] = min(e[1])
-    py_result['axes'] = e[1]
-    py_result['angle'] = e[2]
+    py_result['ellipse'] = ellipse
+    py_result['diameter'] = max(ellipse['axes'])
 
-    norm_center = normalize(e[0],(frame.width, frame.height),flip_y=True)
+    norm_center = normalize( ellipse['center'] , (frame.width, frame.height),flip_y=True)
     py_result['norm_pos'] = norm_center
-    py_result['center'] = e[0]
     py_result['timestamp'] = frame.timestamp
+    py_result['method'] = '2D c++'
+
     return py_result
 
-# cdef inline convertToPythonResult( Detector3DResult& result, object frame, object roi ):
+cdef inline add3DResult( Detector3DResult& result, object py_2D_result, object frame    ):
 
-#     cdef float pi = 3.14159265359
-#     e = ((result.ellipse.center[0],result.ellipse.center[1]), (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0) , result.ellipse.angle * 180 / pi - 90 )
-#     py_result = {}
-#     py_result['confidence'] = result.confidence
-#     py_result['ellipse'] = e
+    circle = {}
+    circle['center'] =  (result.circle.center[0],result.circle.center[1], result.circle.center[2])
+    circle['normal'] =  (result.circle.normal[0],result.circle.normal[1], result.circle.normal[1])
+    circle['radius'] =  result.circle.radius
+    py_2D_result['circle3D'] = circle
 
-#     #py_result['ellipse'] = e
+    py_2D_result['confidence'] = result.confidence
 
-#     #py_result['major'] = max(e[1])
-#     py_result['diameter'] = max(e[1])
-#     #py_result['minor'] = min(e[1])
-#     #py_result['axes'] = e[1]
-#     #py_result['angle'] = e[2]
+    if result.ellipse.minor_radius != 0.0 and result.ellipse.major_radius != 0.0 :
+        ellipse = {}
+        ellipse['center'] = (result.ellipse.center[0] + frame.width / 2.0 ,frame.height / 2.0  -  result.ellipse.center[1])
+        ellipse['axes'] =  (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0)
+        ellipse['angle'] = - (result.ellipse.angle * 180.0 / PI - 90.0)
 
-#     norm_center = normalize(e[0],(frame.width, frame.height),flip_y=True)
-#     py_result['norm_pos'] = norm_center
-#     #py_result['center'] = e[0]
-#     py_result['timestamp'] = frame.timestamp
-#     return py_result
+        py_2D_result['ellipse'] = ellipse
+        norm_center = normalize( ellipse['center'] , (frame.width, frame.height),flip_y=True)
+        py_2D_result['norm_pos'] = norm_center
+
+
+    py_2D_result['modelConfidence'] = result.modelConfidence
+    py_2D_result['modelID'] = result.modelID
+
+    py_2D_result['diameter_mm'] = result.circle.radius * 2.0
+
+    coords = cart2sph(result.circle.center)
+    py_2D_result['theta'] = coords[0]
+    py_2D_result['phi'] = coords[1]
+    py_2D_result['method'] = '3D c++'
+
+
 
 cdef inline prepareForVisualization3D(  Detector3DResult& result ):
 

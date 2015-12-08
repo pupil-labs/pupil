@@ -40,6 +40,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 
     mDebug = debug;
     Detector3DResult result;
+    result.confidence = observation2D->confidence; // if we don't fit we want to take the 2D confidence
 
     // Observations are realtive to their ROI
     cv::Rect roi = observation2D->current_roi;
@@ -71,6 +72,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         if (circle != Circle::Null){
             mPreviousPupil = circle;
             result.circle = circle;
+
         }
 
         for (auto& modelPtr : mAlternativeModelsPtrs) {
@@ -157,7 +159,7 @@ void EyeModelFitter::checkModels()
     using namespace std::chrono;
 
     static const int maxAltAmountModels  = 3;
-    static const double minMaturity  = 0.05;
+    static const double minMaturity  = 0.1;
     static const double minPerformance = 0.997;
     static const int maxPenalty  = 10 * 30; //TODO should depend on the actual framerate
     static const seconds altModelExpirationTime(20);
@@ -532,6 +534,7 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
 
     int maxEdgeCount = 0;
     Vector3 bestCircleCenter(0, 0, 0);
+    double bestDistanceVariance = std::numeric_limits<double>::max();
     Edges3D inliers;
     Edges3D finalInliers;
 
@@ -556,7 +559,6 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
             for (const auto& e : filteredEdges) {
 
                 double distanceSquared = (e - newPupilCenter).squaredNorm();
-
                 if (distanceSquared < maxDistanceSquared && distanceSquared > minDistanceSquared) {
                     edgeCount++;
                     if(mDebug)
@@ -564,7 +566,7 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
                 }
             }
 
-            if (edgeCount > maxEdgeCount) {
+            if (edgeCount > maxEdgeCount  ) {
                 bestCircleCenter = newPupilCenter;
                 maxEdgeCount = edgeCount;
                 if(mDebug)
