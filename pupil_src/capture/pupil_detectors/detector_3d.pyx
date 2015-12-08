@@ -165,9 +165,11 @@ cdef class Detector_3D:
         self.menu2D.append(ui.Slider('canny_ration',self.detectProperties2D,min=1,max=4,step=1))
 
         self.menu3D = ui.Growing_Menu('Pupil Detector 3D')
-        info_3d = ui.Info_Text("Open the debug window to see a visualization of the 3d pupil detection." )
+        info_3d = ui.Info_Text("Open the debug window to see a visualization of the 3D pupil detection." )
         self.menu3D.append(info_3d)
-        self.menu3D.append(ui.Button('Reset 3D Model', self.reset_3D_Model ))
+        self.menu3D.append(ui.Button('Reset 3D model', self.reset_3D_Model ))
+        self.menu3D.append(ui.Button('Open debug window',self.toggle_window))
+
         # self.menu3D.append(ui.Slider('pupil_radius_min',self.detectProperties3D,label='Pupil min radius', min=1.0,max= 8.0,step=0.1))
         # self.menu3D.append(ui.Slider('pupil_radius_max',self.detectProperties3D,label='Pupil max radius', min=1.0,max=8.0,step=0.1))
         # self.menu3D.append(ui.Slider('max_fit_residual',self.detectProperties3D,label='3D fit max residual', min=0.00,max=0.1,step=0.0001))
@@ -179,8 +181,6 @@ cdef class Detector_3D:
         advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
         advanced_controls_menu.append(ui.Switch('coarse_detection',self.detectProperties2D,label='Use coarse detection'))
         #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detectProperties2D,label='Contour min length',min=1,max=200,step=1))
-
-        advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
         self.menu3D.append(advanced_controls_menu)
         sidebar.append(self.menu2D)
         sidebar.append(self.menu3D)
