@@ -181,9 +181,9 @@ cdef class Detector_3D:
         advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
         advanced_controls_menu.append(ui.Switch('coarse_detection',self.detectProperties2D,label='Use coarse detection'))
         #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detectProperties2D,label='Contour min length',min=1,max=200,step=1))
-        self.menu3D.append(advanced_controls_menu)
         sidebar.append(self.menu2D)
         sidebar.append(self.menu3D)
+        sidebar.append(advanced_controls_menu)
 
     def deinit_gui(self):
         self.gPool.sidebar.remove(self.menu2D)
