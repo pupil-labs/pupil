@@ -205,8 +205,8 @@ namespace singleeyefitter {
                 // filter edges
                 // just use the edges on the plane created by the circle
                 // and within a certain radius error
-                const double radiusTolerance = 0.1;
-                const Vector3 circleCenter = circle.center - mSphere.center; // in coord system of the sphere
+                //const double radiusTolerance = 0.1;
+                //const Vector3 circleCenter = circle.center - mSphere.center; // in coord system of the sphere
                 const Vector3 planeNormal = circle.normal;
                 const double planePointLength  = std::sqrt( mSphere.radius * mSphere.radius - circle.radius * circle.radius);
                 const Vector3 planePoint = mSphere.center +  planePointLength * planeNormal; // real circle center in the sphere

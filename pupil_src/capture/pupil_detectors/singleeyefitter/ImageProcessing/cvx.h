@@ -52,7 +52,6 @@ namespace singleeyefitter {
         inline void findNonZero( cv::Mat& in, cv::OutputArray& out ){
             // add a non zero value to the first pixel
             // This is a hack to avoid crash
-            uchar tmp = in.at<uchar>(0,0);
             in.at<uchar>(0,0) = 1;
             cv::findNonZero(in, out);
             in.at<uchar>(0,0) = 0;

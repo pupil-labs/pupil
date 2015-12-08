@@ -16,8 +16,8 @@ namespace singleeyefitter {
 
         public:
             PlaneFitter3D() {};
-            Vector3 getNormal() {return mNormal; } const ;
-            Vector3 getPlanePoint() {return mPoint; } const ;
+            Vector3 getNormal() const {return mNormal; };
+            Vector3 getPlanePoint() const {return mPoint; };
 
         private:
             Vector3 mNormal;

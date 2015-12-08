@@ -58,7 +58,7 @@ namespace singleeyefitter {
             auto kink_indices = detail::find_kink_and_dir_change(curvature, angle);
             auto contour_segments = detail::split_at_corner_index(contour, kink_indices);
             //TODO: split at shart inward turns
-            int colorIndex = 0;
+            //int colorIndex = 0;
 
             for (auto seg_it = contour_segments.begin(); seg_it != contour_segments.end(); seg_it++) {
                 std::vector<cv::Point> segment = *seg_it;

@@ -339,23 +339,17 @@ EyeModel::Sphere EyeModel::initialiseModel(){
     auto scale = 12.0 / sphere.radius;
     sphere.radius = 12.0;
     sphere.center *= scale;
-    double center_distance_variance = 0;
     for ( auto& pupil : mSupportingPupils) {
         pupil.mParams.radius *= scale;
         pupil.mCircle = circleFromParams(sphere, pupil.mParams);
-         // calculate the center variance of the projected gaze vectors to the current eye center
-        //center_distance_variance += euclidean_distance_squared( sphere.center, Line3(pupil.circle.center, pupil.unprojected_circle.normal ) );
     }
 
-    //center_distance_variance /= eyeRadiusCount;
-    //std::cout << "center distance variance " << center_distance_variance << std::endl;
     return sphere;
 
 }
 
 double EyeModel::refineWithEdges(Sphere& sphere )
 {
-    int current_model_version;
     Eigen::Matrix<double, Eigen::Dynamic, 1> x;
     x = Eigen::Matrix<double, Eigen::Dynamic, 1>(3 + 3 * mSupportingPupils.size());
     x.segment<3>(0) = sphere.center;

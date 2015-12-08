@@ -67,7 +67,15 @@ class EyeModel {
     public:
 
         EyeModel( int modelId, Clock::time_point timestamp,  double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 3, double binResolution = 0.05 , int filterwindowSize = 200): //TODO should the filter size depend on the framerate ?
-           mModelID(modelId), mTimestamp(timestamp), mTotalBins(std::pow(std::floor(1.0/binResolution), 2 ) * 4 ),  mFilterWindowSize(filterwindowSize), mBinResolution(binResolution), mInitialUncheckedPupils(initialUncheckedPupils), mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)) { };
+            mModelID(modelId),
+            mTimestamp(timestamp),
+            mFocalLength(std::move(focalLength)),
+            mCameraCenter(std::move(cameraCenter)),
+            mInitialUncheckedPupils(initialUncheckedPupils),
+            mTotalBins(std::pow(std::floor(1.0/binResolution), 2 ) * 4 ),
+            mFilterWindowSize(filterwindowSize),
+            mBinResolution(binResolution)
+            { };
 
         EyeModel(const EyeModel&) = delete;
         //EyeModel(EyeModel&&); // we need a explicit 1/Move constructor because of the mutex
@@ -138,7 +146,6 @@ class EyeModel {
         // Factors which describe how good certain properties of the model are
         double mFit; // Residual of Ceres sovler
         double mPerformance; // Average model support
-        double mMaturity; // bin amounts
 
         const double mFocalLength;
         const Vector3 mCameraCenter;

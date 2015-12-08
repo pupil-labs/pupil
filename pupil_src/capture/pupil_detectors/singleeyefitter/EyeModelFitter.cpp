@@ -503,7 +503,6 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
     double pupilSphereRadius = std::sqrt(pupilSphereRadiusSquared);
     Vector3 pupilSphereCenter = mPreviousPupil.center;
 
-    double pointIndex = 0;
     const double delta = std::pow(1.5, 2);
     const double maxFilterDistanceSquared = pupilSphereRadiusSquared * delta;
     auto regionFilter = [&](const Vector3 & point) {

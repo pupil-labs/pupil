@@ -162,7 +162,7 @@ namespace singleeyefitter {
         auto u = pupil_cone.U;
         auto v = pupil_cone.V;
         auto w = pupil_cone.W;
-        auto d = pupil_cone.D;
+        //auto d = pupil_cone.D;
         // Get canonical conic form:
         //     lambda(1) X^2 + lambda(2) Y^2 + lambda(3) Z^2 = mu
         // Safaee-Rad 1992 eq (6)
@@ -243,7 +243,7 @@ namespace singleeyefitter {
                 0, 0, 1;
 
             } else {
-                auto sgnl = sign(l);
+                //auto sgnl = sign(l);
                 T3 << 0, -n* sign(l), l,
                 sign(l), 0, 0,
                 0, abs(l), n;

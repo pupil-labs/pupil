@@ -64,7 +64,7 @@ namespace singleeyefitter {
         typedef typename boost::range_value<Range>::type::VectorType Vector;
         typedef typename Eigen::Matrix<typename Vector::Scalar, Vector::RowsAtCompileTime, Vector::RowsAtCompileTime> Matrix;
         static_assert(Vector::ColsAtCompileTime == 1, "Requires column vector");
-        size_t N = lines.size();
+        //size_t N = lines.size();
         std::vector<Matrix> Ivv;
         Matrix A = Matrix::Zero();
         Vector b = Vector::Zero();

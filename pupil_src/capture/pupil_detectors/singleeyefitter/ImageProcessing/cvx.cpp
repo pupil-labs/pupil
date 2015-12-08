@@ -74,7 +74,6 @@ bool singleeyefitter::cvx::getRoiWithoutBorder(const cv::Mat& img , cv::Rect& ro
     int x_max = n_cols - 1, y_max = n_rows - 1;
 
     const uchar* img_ptr = img.data;
-    const uchar* img_row;
     bool found = false;
     bool break_loop = false;
 

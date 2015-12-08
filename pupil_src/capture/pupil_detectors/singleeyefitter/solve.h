@@ -41,7 +41,7 @@ namespace singleeyefitter {
         if (det < 0)
             throw std::runtime_error("No solution");
 
-        auto sqrtdet = sqrt(det);
+        //auto sqrtdet = sqrt(det);
         auto q = -0.5 * (b + (b >= 0 ? 1 : -1) * sqrt(det));
         return std::tuple<T, T>(q / a, c / q);
     }
