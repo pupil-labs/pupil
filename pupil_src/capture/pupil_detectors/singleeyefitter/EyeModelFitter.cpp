@@ -27,10 +27,11 @@ namespace singleeyefitter {
 
 EyeModelFitter::EyeModelFitter(double focalLength, Vector3 cameraCenter) :
     mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)),
-    mCurrentSphere(Sphere::Null), mCurrentInitialSphere(Sphere::Null) , mNextModelID(0),
+    mCurrentSphere(Sphere::Null), mCurrentInitialSphere(Sphere::Null) , mNextModelID(1),
     mActiveModelPtr(new EyeModel(mNextModelID, Clock::now(), mFocalLength, mCameraCenter)),
     mLastTimeModelAdded( Clock::now() ), mPerformancePenalties(0)
 {
+    mNextModelID++;
 }
 
 
@@ -127,6 +128,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         props.maturity = mActiveModelPtr->getMaturity();
         props.fit = mActiveModelPtr->getFit();
         props.performance = mActiveModelPtr->getPerformance();
+        props.modelID = mActiveModelPtr->getModelID();
         result.models.push_back(std::move(props));
 
         for (const auto& modelPtr : mAlternativeModelsPtrs) {
@@ -138,6 +140,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
             props.maturity = modelPtr->getMaturity();
             props.fit = modelPtr->getFit();
             props.performance = modelPtr->getPerformance();
+            props.modelID = modelPtr->getModelID();
             result.models.push_back(std::move(props));
 
         }
@@ -153,11 +156,12 @@ void EyeModelFitter::checkModels()
 
     using namespace std::chrono;
 
-    static const double minMaturity  = 0.02;
+    static const int maxAltAmountModels  = 3;
+    static const double minMaturity  = 0.05;
     static const double minPerformance = 0.997;
     static const int maxPenalty  = 10 * 30; //TODO should depend on the actual framerate
     static const seconds altModelExpirationTime(20);
-    static const seconds minNewModelTime(10);
+    static const seconds minNewModelTime(3);
 
     Clock::time_point  now( Clock::now() );
 
@@ -168,7 +172,9 @@ void EyeModelFitter::checkModels()
         mLastTimePerformancePenalty = now;
         auto lastTimeAdded =  duration_cast<seconds>(now - mLastTimeModelAdded);
 
-        if( mActiveModelPtr->getMaturity() > minMaturity && lastTimeAdded  > minNewModelTime )
+        if( mAlternativeModelsPtrs.size() <= maxAltAmountModels &&
+            mActiveModelPtr->getMaturity() > minMaturity &&
+            lastTimeAdded  > minNewModelTime )
         {
             mAlternativeModelsPtrs.emplace_back(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ) );
             mNextModelID++;
@@ -221,7 +227,7 @@ void EyeModelFitter::checkModels()
 
 void EyeModelFitter::reset()
 {
-    mNextModelID = 0;
+    mNextModelID = 1;
     mAlternativeModelsPtrs.clear();
     mActiveModelPtr = EyeModelPtr( new EyeModel(mNextModelID , Clock::now(), mFocalLength, mCameraCenter ));
     mLastTimeModelAdded =  Clock::now();

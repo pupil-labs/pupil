@@ -61,6 +61,7 @@ namespace singleeyefitter {
         double maturity;
         double fit;
         double performance;
+        int modelID;
     };
 
     struct Detector3DResult {
