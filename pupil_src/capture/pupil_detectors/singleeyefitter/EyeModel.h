@@ -32,7 +32,7 @@ namespace singleeyefitter {
         {
                 const double circleRadius = 1.0;
                 // Do a per-image unprojection of the pupil ellipse into the two fixed
-                // size circles that would project onto it. The size of the circles
+                // sized circles that would project onto it. The size of the circles
                 // doesn't matter here, only their center and normal does.
                 mUnprojectedCirclePair = unproject(mObservation2D->ellipse, circleRadius , focalLength);
                  // Get projected circles and gaze vectors
