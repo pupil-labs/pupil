@@ -256,13 +256,37 @@ class Visualizer(object):
 		glPopMatrix()
 
 
-	def draw_eye_model_fitter_text(self, eye, gaze_vector, pupil_radius  ):
+	def draw_debug_info(self, result  ):
+		models = result['models']
+		eye = models[0]['sphere'];
+		direction = result['circle'][1];
+		pupil_radius = result['circle'][2];
 
-		status = ' Eyeball center : X%.2fmm Y%.2fmm Z%.2fmm\n Gaze vector (currently WRONG):  X%.2f Y%.2f Z%.2f\n Pupil Diameter: %.2fmm\n  ' \
+		status = ' Eyeball center : X: %.2fmm Y: %.2fmm Z: %.2fmm\n Pupil direction:  X: %.2f Y: %.2f Z: %.2f\n Pupil Diameter: %.2fmm\n  ' \
 		%(eye[0][0], eye[0][1],eye[0][2],
-		gaze_vector[0], gaze_vector[1],gaze_vector[2], pupil_radius*2)
+		direction[0], direction[1],direction[2], pupil_radius*2)
+
+		self.glfont.push_state()
+		self.glfont.set_color_float( (0,0,0,1) )
+
 		self.glfont.draw_multi_line_text(5,20,status)
-		self.glfont.draw_multi_line_text(440,20,'View: %.2f %.2f %.2f'%(self.trackball.distance[0],self.trackball.distance[1],self.trackball.distance[2]))
+
+
+		#draw model info for each model
+		delta_y = 20
+		for model in models:
+			modelStatus =	('Model: %d \n ' %  model['modelID'] ,
+							'    maturity: %.3f\n' % model['maturity'] ,
+							'    fit: %.6f\n' % model['fit'] ,
+							'    performance: %.6f\n' % model['performance'] ,
+							)
+			modeltext = ''.join( modelStatus )
+			self.glfont.draw_multi_line_text(self.window_size[0] - 200 ,delta_y, modeltext)
+
+			delta_y += 100
+
+		self.glfont.pop_state()
+
 
 	########## Setup functions I don't really understand ############
 
@@ -394,9 +418,8 @@ class Visualizer(object):
 		self.draw_coordinate_system(4)
 
 		self.trackball.pop()
-		look_direction = latest_pupil[1]
-		pupil_radius = latest_pupil[2]
-		self.draw_eye_model_fitter_text(sphere, look_direction,pupil_radius)
+
+		self.draw_debug_info(result)
 
 		glfwSwapBuffers(self._window)
 		glfwPollEvents()
@@ -450,7 +473,8 @@ class Visualizer(object):
 		self.trackball.zoom_to(y)
 
 	def on_close(self,window=None):
-		self.close_window()
+		pass
+		#self.close_window() // causes crash if application is closed with CMD+Q
 
 	def on_iconify(self,window,x,y): pass
 	def on_key(self,window, key, scancode, action, mods): pass
