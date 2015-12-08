@@ -450,8 +450,7 @@ class Visualizer(object):
 		self.trackball.zoom_to(y)
 
 	def on_close(self,window=None):
-		pass
-		#self.close_window()
+		self.close_window()
 
 	def on_iconify(self,window,x,y): pass
 	def on_key(self,window, key, scancode, action, mods): pass
