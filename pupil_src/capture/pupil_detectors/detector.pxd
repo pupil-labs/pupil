@@ -84,16 +84,17 @@ cdef extern from 'singleeyefitter/common/types.h':
         Edges2D raw_edges
         Rect_[int] current_roi
         double timestamp
-        int image_width;
-        int image_height;
+        int image_width
+        int image_height
 
     cdef struct ModelDebugProperties:
-        Sphere[double] sphere;
-        Sphere[double] initialSphere;
-        vector[Vector3] binPositions;
-        double maturity;
-        double fit;
-        double performance;
+        Sphere[double] sphere
+        Sphere[double] initialSphere
+        vector[Vector3] binPositions
+        double maturity
+        double fit
+        double performance
+        int modelID
 
     cdef struct Detector3DResult:
         Circle circle
