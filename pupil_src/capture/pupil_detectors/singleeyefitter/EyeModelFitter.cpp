@@ -520,7 +520,7 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
     const double minTheta = previousPupilCenter.x() - maxAngularVelocity;
     const double minPsi = previousPupilCenter.y() - maxAngularVelocity;
 
-    const double stepSizeAngle = 0.001; // in radian
+    const double stepSizeAngle = 0.01; // in radian
 
     // defined in pixel space and recalculated for 3D space further down
     const int bandWidthPixel =  4 ;
