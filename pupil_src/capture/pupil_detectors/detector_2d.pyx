@@ -18,7 +18,7 @@ from cython.operator cimport dereference as deref
 cdef class Detector_2D:
 
     cdef Detector2D* thisptr
-    cdef unsigned char[:,:,:] debug_image
+    cdef unsigned char[:,:,:] debugImage
 
     cdef dict detectProperties
     cdef bint windowShouldOpen, windowShouldClose
@@ -65,17 +65,17 @@ cdef class Detector_2D:
     def __dealloc__(self):
       del self.thisptr
 
-    def detect(self, frame, user_roi, visualize, pause_video = False ):
+    def detect(self, frame_, user_roi, visualize, pause_video = False ):
 
-        image_width = frame.width
-        image_height = frame.height
+        image_width = frame_.width
+        image_height = frame_.height
 
-        cdef unsigned char[:,::1] img = frame.gray
-        cdef Mat cv_image = Mat(image_height, image_width, CV_8UC1, <void *> &img[0,0] )
+        cdef unsigned char[:,::1] img = frame_.gray
+        cdef Mat frame = Mat(image_height, image_width, CV_8UC1, <void *> &img[0,0] )
 
         cdef unsigned char[:,:,:] img_color
-        cdef Mat cv_image_color
-        cdef Mat cv_debug_image
+        cdef Mat frameColor
+        cdef Mat debugImage
 
         if self.windowShouldOpen:
             self.open_window((image_width,image_height))
@@ -83,16 +83,16 @@ cdef class Detector_2D:
             self.close_window()
 
 
-        use_debug_image = self._window != None
+        use_debugImage = self._window != None
 
         if visualize:
-            img_color = frame.img
-            cv_image_color = Mat(image_height, image_width, CV_8UC3, <void *> &img_color[0,0,0] )
+            img_color = frame_.img
+            frameColor = Mat(image_height, image_width, CV_8UC3, <void *> &img_color[0,0,0] )
 
-        if use_debug_image:
-            debug_image_array = np.zeros( (image_height, image_width, 3 ), dtype = np.uint8 ) #clear image every frame
-            self.debug_image = debug_image_array
-            cv_debug_image = Mat(image_height, image_width, CV_8UC3, <void *> &self.debug_image[0,0,0] )
+        if use_debugImage:
+            debugImage_array = np.zeros( (image_height, image_width, 3 ), dtype = np.uint8 ) #clear image every frame
+            self.debugImage = debugImage_array
+            debugImage = Mat(image_height, image_width, CV_8UC3, <void *> &self.debugImage[0,0,0] )
 
         roi = Roi((0,0))
         roi.set( user_roi.get() )
@@ -105,7 +105,7 @@ cdef class Detector_2D:
         if self.detectProperties['coarse_detection']:
             scale = 2 # half the integral image. boost up integral
             # TODO maybe implement our own Integral so we don't have to half the image
-            user_roi_image = frame.gray[user_roi.view]
+            user_roi_image = frame_.gray[user_roi.view]
             integral = cv2.integral(user_roi_image[::scale,::scale])
             coarse_filter_max = self.detectProperties['coarse_filter_max']
             coarse_filter_min = self.detectProperties['coarse_filter_min']
@@ -117,12 +117,12 @@ cdef class Detector_2D:
             roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_width))
 
         # every coordinates in the result are relative to the current ROI
-        cpp_result_ptr =  self.thisptr.detect(self.detect_properties, cv_image, cv_image_color, cv_debug_image, Rect_[int](roi_x,roi_y,roi_width,roi_height),  visualize , use_debug_image )
+        cppResultPtr =  self.thisptr.detect(self.detectProperties, frame, frameColor, debugImage, Rect_[int](roi_x,roi_y,roi_width,roi_height),  visualize , use_debugImage )
+        cdef Detector2DResult cppResult = deref(cppResultPtr)
 
-        deref(cpp_result_ptr).timestamp = frame.timestamp
+        cppResult.timestamp = frame_.timestamp
 
-        cdef Detector2DResult cpp_result = deref(cpp_result_ptr)
-        py_result = convertToPythonResult( cpp_result, frame , roi )
+        py_result = convertToPythonResult( cppResult, frame_ , roi )
 
         return py_result
 
@@ -222,4 +222,4 @@ cdef class Detector_2D:
     def visualize(self):
         #display the debug image in the window
         if self._window:
-            self.gl_display_in_window(self.debug_image)
+            self.gl_display_in_window(self.debugImage)
