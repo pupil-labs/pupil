@@ -120,7 +120,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
 
     }
 
-   if( mSupportingPupilsToAdd.size() > 3  ){
+   if( mSupportingPupilsToAdd.size() > 3  ){ //TODO optimize after some time
 
             if(tryTransferNewObservations() ) {
 
