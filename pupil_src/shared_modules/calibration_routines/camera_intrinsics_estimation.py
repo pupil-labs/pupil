@@ -206,7 +206,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         save_object(camera_calibration,os.path.join(self.g_pool.user_dir,"camera_calibration"))
         logger.info("Calibration saved to user folder")
         self.count = 10
-        self.camera_intrinsics = camera_matrix,dist_coefs,resolution
+        self.camera_intrinsics = camera_matrix,dist_coefs,self.g_pool.capture.frame_size
         self.show_undistortion_switch.read_only=False
 
     def update(self,frame,events):
@@ -229,7 +229,9 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             self.close_window()
 
         if self.show_undistortion:
-            self.undist_img = cv2.undistort(frame.img, self.camera_intrinsics[0], self.camera_intrinsics[1])
+
+            adjusted_k,roi = cv2.getOptimalNewCameraMatrix(cameraMatrix= self.camera_intrinsics[0], distCoeffs=self.camera_intrinsics[1], imageSize=self.camera_intrinsics[2], alpha=0.5,newImgSize=self.camera_intrinsics[2],centerPrincipalPoint=1)
+            self.undist_img = cv2.undistort(frame.img, self.camera_intrinsics[0], self.camera_intrinsics[1],newCameraMatrix=adjusted_k)
 
     def gl_display(self):
 
