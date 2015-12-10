@@ -98,6 +98,54 @@ class Roi(object):
 
 
 
+def undistort_unproject_pts(pts_uv, camera_matrix, dist_coefs):
+    """
+    This function converts a set of 2D image coordinates to the spherical coordinate system.
+    Hereby the intrinsics of the camera are taken into account.
+    The 2d point set gets undistorted, converted to cartesian vertices and then converted to spherical coordinates.
+
+    @return: ndarray with shape=(n, 3)
+
+    """
+
+    camera_matrix_inv = np.linalg.inv(camera_matrix)
+    num_pts = pts_uv.size / 2
+
+    pts_uv.shape = (num_pts, 1, 2)
+    pts_uv = cv2.undistortPoints(pts_uv, camera_matrix, dist_coefs, P=camera_matrix)
+    # return pts_uv
+    # P = camera_matrix enables denormalization as follows:
+    # ```
+    # pts_uv *= np.array([camera_matrix[0,0], camera_matrix[1,1]]) # [fx, fy]
+    # pts_uv += np.array([camera_matrix[0,2], camera_matrix[1,2]]) # [cx, cy]
+    # ```
+
+    pts_h = cv2.convertPointsToHomogeneous(np.float32(pts_uv))
+    pts_h.shape = (num_pts,3)
+
+    xyz = np.zeros((num_pts, 3), dtype=np.float32)
+    for i in range(num_pts):
+        xyz[i]   = camera_matrix_inv.dot(pts_h[i])
+    return xyz
+
+
+def project_distort_pts(pts_xyz,camera_matrix, dist_coefs):
+
+    # projectPoints is the inverse of function implemented above --> should map the intermediate result to the original input
+    pts2d, _ = cv2.projectPoints(pts_xyz, np.array([0,0,0], dtype=np.float32), np.array([0,0,0], dtype=np.float32), camera_matrix, dist_coefs)
+    return pts2d.reshape(-1,2)
+
+def cart_to_spherical(xyz):
+    # convert to spherical coordinates
+    # source: http://stackoverflow.com/questions/4116658/faster-numpy-cartesian-to-spherical-coordinate-conversion
+    spherical = np.zeros(xyz.shape)
+    xy = xyz[:,0]**2 + xyz[:,1]**2
+    spherical[:,0] = np.sqrt(xy + xyz[:,2]**2)
+    spherical[:,1] = np.arctan2(np.sqrt(xy), xyz[:,2]) # for elevation angle defined from Z-axis down
+    spherical[:,2] = np.arctan2(xyz[:,1], xyz[:,0])
+
+    return spherical
+
 def bin_thresholding(image, image_lower=0, image_upper=256):
     binary_img = cv2.inRange(image, np.asarray(image_lower),
                 np.asarray(image_upper))
