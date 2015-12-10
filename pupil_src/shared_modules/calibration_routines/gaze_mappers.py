@@ -9,7 +9,9 @@
 '''
 
 from plugin import Gaze_Mapping_Plugin
+import cv2
 from calibrate import make_map_function
+from methods import project_distort_pts , normalize
 from copy import deepcopy
 import numpy as np
 from pyglui import ui
@@ -64,6 +66,46 @@ class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
     #     gaze_pts = filter(lambda g: g['confidence']> min_confidence,gaze_pts)
     #     return gaze_pts
 
+class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
+    """docstring for Simple_Gaze_Mapper"""
+    def __init__(self, g_pool, transformation_matrix , camera_intrinsics):
+        super(Vector_Gaze_Mapper, self).__init__(g_pool)
+        self.transformation_matrix  =  np.matrix(transformation_matrix )
+        self.camera_matrix = camera_intrinsics[0]
+        self.dist_coefs = camera_intrinsics[1]
+
+    def update(self,frame,events):
+        gaze_pts = []
+
+
+        for p in events['pupil_positions']:
+            if p['confidence'] > self.g_pool.pupil_confidence_threshold:
+                #point = np.array( [p['circle3D']['normal']] )
+                ##gaze_point =  project_distort_pts(point,self.camera_matrix, self.dist_coefs,  self.rotation_vector , self.translation_vector )
+
+                point = self.transformation_matrix  *  np.transpose(np.matrix( p['circle3D']['normal'] + (1,)  ) )
+                #print point
+                gaze_point =  project_distort_pts(np.array([point]),self.camera_matrix, self.dist_coefs )
+                #print gaze_point
+                gaze_point = normalize( gaze_point[0], (frame.width, frame.height) , flip_y = True)
+                gaze_pts.append({'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
+
+        events['gaze_positions'] = gaze_pts
+
+    #def get_init_dict(self):
+     #   return {'params':self.params}
+
+
+    # def map_gaze_offline(self,pupil_positions):
+    #     min_confidence = self.g_pool.pupil_confidence_threshold
+    #     gaze_pts = deepcopy(pupil_positions)
+    #     norm_pos = np.array([p['norm_pos'] for p in gaze_pts])
+    #     norm_pos = self.map_fn(norm_pos.T)
+    #     for n in range(len(gaze_pts)):
+    #         gaze_pts[n]['norm_pos'] = norm_pos[0][n],norm_pos[1][n]
+    #         gaze_pts[n]['base'] = [pupil_positions[n]]
+    #     gaze_pts = filter(lambda g: g['confidence']> min_confidence,gaze_pts)
+    #     return gaze_pts
 
 class Volumetric_Gaze_Mapper(Gaze_Mapping_Plugin):
     def __init__(self,g_pool,params):
@@ -96,7 +138,7 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.menu.append(ui.Switch('multivariate',self,on_val=True,off_val=False,label='Multivariate Mode'))
 
     def update(self,frame,events):
-        
+
         pupil_pts_0 = []
         pupil_pts_1 = []
         for p in events['pupil_positions']:
@@ -118,9 +160,9 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
             for p in pupil_pts_1:
                 gaze_point = self.map_fn_fallback[1](p['norm_pos'])
                 gaze_pts.append({'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
-            
+
         events['gaze_positions'] = gaze_pts
-        
+
     def _map_binocular(self, pupil_pts_0, pupil_pts_1,multivariate=True):
         # maps gaze with binocular mapping
         # requires each list to contain at least one item!
@@ -134,11 +176,11 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
             else:
                 gaze_point_eye0 = self.map_fn_fallback[0](p0['norm_pos'])
                 gaze_point_eye1 = self.map_fn_fallback[1](p1['norm_pos'])
-                gaze_point = (gaze_point_eye0[0] + gaze_point_eye1[0])/2. , (gaze_point_eye0[1] + gaze_point_eye1[1])/2. 
+                gaze_point = (gaze_point_eye0[0] + gaze_point_eye1[0])/2. , (gaze_point_eye0[1] + gaze_point_eye1[1])/2.
             confidence = (p0['confidence'] + p1['confidence'])/2.
             ts = (p0['timestamp'] + p1['timestamp'])/2.
             gaze_pts.append({'norm_pos':gaze_point,'confidence':confidence,'timestamp':ts,'base':[p0, p1]})
-            
+
             # keep sample with higher timestamp and increase the one with lower timestamp
             if p0['timestamp'] <= p1['timestamp'] and pupil_pts_0:
                 p0 = pupil_pts_0.pop(0)
@@ -152,14 +194,14 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
                 p1 = pupil_pts_1.pop(0)
             else:
                 break
-        
+
         return gaze_pts
-    
+
     def deinit_gui(self):
         if self.menu:
             self.g_pool.sidebar.remove(self.menu)
             self.menu = None
-            
+
     def cleanup(self):
         self.deinit_gui()
 

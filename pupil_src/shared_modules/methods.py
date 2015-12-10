@@ -107,7 +107,7 @@ def undistort_unproject_pts(pts_uv, camera_matrix, dist_coefs):
     @return: ndarray with shape=(n, 3)
 
     """
-
+    pts_uv = np.array(pts_uv)
     camera_matrix_inv = np.linalg.inv(camera_matrix)
     num_pts = pts_uv.size / 2
 
@@ -129,10 +129,10 @@ def undistort_unproject_pts(pts_uv, camera_matrix, dist_coefs):
     return xyz
 
 
-def project_distort_pts(pts_xyz,camera_matrix, dist_coefs):
+def project_distort_pts(pts_xyz,camera_matrix, dist_coefs,  rvec = np.array([0,0,0], dtype=np.float32), tvec = np.array([0,0,0], dtype=np.float32) ):
 
     # projectPoints is the inverse of function implemented above --> should map the intermediate result to the original input
-    pts2d, _ = cv2.projectPoints(pts_xyz, np.array([0,0,0], dtype=np.float32), np.array([0,0,0], dtype=np.float32), camera_matrix, dist_coefs)
+    pts2d, _ = cv2.projectPoints(pts_xyz, rvec , tvec, camera_matrix, dist_coefs)
     return pts2d.reshape(-1,2)
 
 def cart_to_spherical(xyz):

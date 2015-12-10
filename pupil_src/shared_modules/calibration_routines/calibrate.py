@@ -9,6 +9,9 @@
 '''
 
 import numpy as np
+import cv2
+
+from methods import undistort_unproject_pts
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -59,6 +62,13 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inli
         return map_fn
 
 
+def get_transformation_from_point_set( cal_pt_cloud ):
+
+    src = np.array(cal_pt_cloud[:,0])
+    dst = np.array(cal_pt_cloud[:,1])
+    result =  cv2.estimateAffine3D(src, dst)
+    #print result
+    return result[1]
 
 def fit_poly_surface(cal_pt_cloud,n=7):
     M = make_model(cal_pt_cloud,n)
@@ -265,6 +275,65 @@ def preprocess_data_monocular(pupil_pts,ref_pts):
             break
     return cal_data
 
+def preprocess_vector_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics = None):
+    '''small utility function to deal with timestamped but uncorrelated data
+    input must be lists that contain dicts with at least "timestamp" and "norm_pos" and "id:
+    filter id must be (0,) or (1,) or (0,1).
+    '''
+    assert id_filter in ( (0,),(1,),(0,1) )
+
+    if len(ref_pts)<=2:
+        return []
+
+    pupil_pts = [p for p in pupil_pts if p['id'] in id_filter]
+
+    if id_filter == (0,1) and  pupil_pts[0]['method'] is '3D c++':
+        ##return preprocess_data_binocular(pupil_pts, ref_pts)
+        print "not implemente yet"
+    else:
+        return preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics)
+
+    # if filter is set to handle binocular data, e.g. (0,1)
+    if id_filter == (0,1):
+        print "binocular mapping not implemente yet"
+        #return preprocess_data_binocular(pupil_pts, ref_pts)
+    else:
+        return preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics)
+
+
+
+def preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics):
+    cal_data = []
+
+    #unproject ref_pts
+    camera_matrix = camera_intrinsics[0]
+    dist_coefs = camera_intrinsics[1]
+
+    cur_ref_pt = ref_pts.pop(0)
+    next_ref_pt = ref_pts.pop(0)
+    while True:
+        matched = []
+        while pupil_pts:
+            #select all points past the half-way point between current and next ref data sample
+            if pupil_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
+                matched.append(pupil_pts.pop(0))
+            else:
+                for p_pt in matched:
+                    #only use close points
+                    if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
+                        vector_pupil = p_pt['circle3D']['normal']
+                        vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
+                        data_pt = vector_pupil, vector_ref / np.linalg.norm(vector_ref)
+                        #print "data_pt  " , data_pt
+                        cal_data.append(data_pt)
+                break
+        if ref_pts:
+            cur_ref_pt = next_ref_pt
+            next_ref_pt = ref_pts.pop(0)
+        else:
+            break
+    return cal_data
+
 def preprocess_data_binocular(pupil_pts, ref_pts):
     matches = []
 
@@ -316,6 +385,114 @@ def preprocess_data_binocular(pupil_pts, ref_pts):
                 break
 
     return cal_data
+
+def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
+    """Return affine transform matrix to register two point sets.
+
+    v0 and v1 are shape (ndims, \*) arrays of at least ndims non-homogeneous
+    coordinates, where ndims is the dimensionality of the coordinate space.
+
+    If shear is False, a similarity transformation matrix is returned.
+    If also scale is False, a rigid/Euclidean transformation matrix
+    is returned.
+
+    By default the algorithm by Hartley and Zissermann [15] is used.
+    If usesvd is True, similarity and Euclidean transformation matrices
+    are calculated by minimizing the weighted sum of squared deviations
+    (RMSD) according to the algorithm by Kabsch [8].
+    Otherwise, and if ndims is 3, the quaternion based algorithm by Horn [9]
+    is used, which is slower when using this Python implementation.
+
+    The returned matrix performs rotation, translation and uniform scaling
+    (if specified).
+
+    >>> v0 = [[0, 1031, 1031, 0], [0, 0, 1600, 1600]]
+    >>> v1 = [[675, 826, 826, 677], [55, 52, 281, 277]]
+    >>> affine_matrix_from_points(v0, v1)
+    array([[   0.14549,    0.00062,  675.50008],
+           [   0.00048,    0.14094,   53.24971],
+           [   0.     ,    0.     ,    1.     ]])
+    >>> T = translation_matrix(numpy.random.random(3)-0.5)
+    >>> R = random_rotation_matrix(numpy.random.random(3))
+    >>> S = scale_matrix(random.random())
+    >>> M = concatenate_matrices(T, R, S)
+    >>> v0 = (numpy.random.rand(4, 100) - 0.5) * 20
+    >>> v0[3] = 1
+    >>> v1 = numpy.dot(M, v0)
+    >>> v0[:3] += numpy.random.normal(0, 1e-8, 300).reshape(3, -1)
+    >>> M = affine_matrix_from_points(v0[:3], v1[:3])
+    >>> numpy.allclose(v1, numpy.dot(M, v0))
+    True
+
+    More examples in superimposition_matrix()
+
+    """
+    v0 = numpy.array(v0, dtype=numpy.float64, copy=True)
+    v1 = numpy.array(v1, dtype=numpy.float64, copy=True)
+
+    ndims = v0.shape[0]
+    if ndims < 2 or v0.shape[1] < ndims or v0.shape != v1.shape:
+        raise ValueError("input arrays are of wrong shape or type")
+
+    # move centroids to origin
+    t0 = -numpy.mean(v0, axis=1)
+    M0 = numpy.identity(ndims+1)
+    M0[:ndims, ndims] = t0
+    v0 += t0.reshape(ndims, 1)
+    t1 = -numpy.mean(v1, axis=1)
+    M1 = numpy.identity(ndims+1)
+    M1[:ndims, ndims] = t1
+    v1 += t1.reshape(ndims, 1)
+
+    if shear:
+        # Affine transformation
+        A = numpy.concatenate((v0, v1), axis=0)
+        u, s, vh = numpy.linalg.svd(A.T)
+        vh = vh[:ndims].T
+        B = vh[:ndims]
+        C = vh[ndims:2*ndims]
+        t = numpy.dot(C, numpy.linalg.pinv(B))
+        t = numpy.concatenate((t, numpy.zeros((ndims, 1))), axis=1)
+        M = numpy.vstack((t, ((0.0,)*ndims) + (1.0,)))
+    elif usesvd or ndims != 3:
+        # Rigid transformation via SVD of covariance matrix
+        u, s, vh = numpy.linalg.svd(numpy.dot(v1, v0.T))
+        # rotation matrix from SVD orthonormal bases
+        R = numpy.dot(u, vh)
+        if numpy.linalg.det(R) < 0.0:
+            # R does not constitute right handed system
+            R -= numpy.outer(u[:, ndims-1], vh[ndims-1, :]*2.0)
+            s[-1] *= -1.0
+        # homogeneous transformation matrix
+        M = numpy.identity(ndims+1)
+        M[:ndims, :ndims] = R
+    else:
+        # Rigid transformation matrix via quaternion
+        # compute symmetric matrix N
+        xx, yy, zz = numpy.sum(v0 * v1, axis=1)
+        xy, yz, zx = numpy.sum(v0 * numpy.roll(v1, -1, axis=0), axis=1)
+        xz, yx, zy = numpy.sum(v0 * numpy.roll(v1, -2, axis=0), axis=1)
+        N = [[xx+yy+zz, 0.0,      0.0,      0.0],
+             [yz-zy,    xx-yy-zz, 0.0,      0.0],
+             [zx-xz,    xy+yx,    yy-xx-zz, 0.0],
+             [xy-yx,    zx+xz,    yz+zy,    zz-xx-yy]]
+        # quaternion: eigenvector corresponding to most positive eigenvalue
+        w, V = numpy.linalg.eigh(N)
+        q = V[:, numpy.argmax(w)]
+        q /= vector_norm(q)  # unit quaternion
+        # homogeneous transformation matrix
+        M = quaternion_matrix(q)
+
+    if scale and not shear:
+        # Affine transformation; scale is ratio of RMS deviations from centroid
+        v0 *= v0
+        v1 *= v1
+        M[:ndims, :ndims] *= math.sqrt(numpy.sum(v1) / numpy.sum(v0))
+
+    # move centroids back
+    M = numpy.dot(numpy.linalg.inv(M1), numpy.dot(M, M0))
+    M /= M[ndims, ndims]
+    return M
 
 
 # if __name__ == '__main__':
