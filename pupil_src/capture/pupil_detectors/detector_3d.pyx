@@ -140,8 +140,9 @@ cdef class Detector_3D:
         debugDetector =  self.debugVisualizer3D._window
         cdef Detector3DResult cpp3DResult  = self.detector3DPtr.updateAndDetect( cppResultPtr , self.detectProperties3D, debugDetector)
 
+        if not cpp3DResult.circle.center.isZero() and not cpp3DResult.circle.normal.isZero():
+            add3DResult(cpp3DResult , pyResult, frame )
 
-        add3DResult(cpp3DResult , pyResult, frame )
         if debugDetector:
             self.pyResult3D = prepareForVisualization3D(cpp3DResult)
 

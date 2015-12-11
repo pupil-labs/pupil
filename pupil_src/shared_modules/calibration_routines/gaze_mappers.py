@@ -11,7 +11,7 @@
 from plugin import Gaze_Mapping_Plugin
 import cv2
 from calibrate import make_map_function
-from methods import project_distort_pts , normalize
+from methods import project_distort_pts , normalize, spherical_to_cart
 from copy import deepcopy
 import numpy as np
 from pyglui import ui
@@ -65,6 +65,51 @@ class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
     #         gaze_pts[n]['base'] = [pupil_positions[n]]
     #     gaze_pts = filter(lambda g: g['confidence']> min_confidence,gaze_pts)
     #     return gaze_pts
+
+class Angle_Gaze_Mapper(Gaze_Mapping_Plugin):
+    """docstring for Simple_Gaze_Mapper"""
+    def __init__(self, g_pool,params, camera_intrinsics):
+        super(Angle_Gaze_Mapper, self).__init__(g_pool)
+        self.params = params
+        self.map_fn = make_map_function(*self.params)
+        self.camera_matrix = camera_intrinsics[0]
+        self.dist_coefs = camera_intrinsics[1]
+
+    def update(self,frame,events):
+        gaze_pts = []
+
+        for p in events['pupil_positions']:
+            if p['confidence'] > self.g_pool.pupil_confidence_threshold  and p['method'] == '3D c++':
+                print "1: " , p['theta'], p['phi']
+
+                angles = self.map_fn( (p['theta'], p['phi'] ) )
+                print "2: " , angles
+
+                gaze_point = spherical_to_cart(1, angles[0], angles[1] )
+                gaze_point =  project_distort_pts(np.array([gaze_point]),self.camera_matrix, self.dist_coefs )
+                #print gaze_point
+                gaze_point = normalize( gaze_point[0], (frame.width, frame.height) , flip_y = True)
+                print gaze_point
+                gaze_pts.append({'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
+            else:
+                print p
+        events['gaze_positions'] = gaze_pts
+
+    def get_init_dict(self):
+        return {'params':self.params}
+
+
+    # def map_gaze_offline(self,pupil_positions):
+    #     min_confidence = self.g_pool.pupil_confidence_threshold
+    #     gaze_pts = deepcopy(pupil_positions)
+    #     norm_pos = np.array([p['norm_pos'] for p in gaze_pts])
+    #     norm_pos = self.map_fn(norm_pos.T)
+    #     for n in range(len(gaze_pts)):
+    #         gaze_pts[n]['norm_pos'] = norm_pos[0][n],norm_pos[1][n]
+    #         gaze_pts[n]['base'] = [pupil_positions[n]]
+    #     gaze_pts = filter(lambda g: g['confidence']> min_confidence,gaze_pts)
+    #     return gaze_pts
+
 
 class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Simple_Gaze_Mapper"""

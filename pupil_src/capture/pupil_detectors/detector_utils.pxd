@@ -55,7 +55,7 @@ cdef inline add3DResult( Detector3DResult& result, object py_2D_result, object f
 
     py_2D_result['diameter_mm'] = result.circle.radius * 2.0
 
-    coords = cart2sph(result.circle.center)
+    coords = cart2sph(result.circle.normal)
     py_2D_result['theta'] = coords[0]
     py_2D_result['phi'] = coords[1]
     py_2D_result['method'] = '3D c++'

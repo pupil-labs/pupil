@@ -11,7 +11,7 @@
 import numpy as np
 import cv2
 
-from methods import undistort_unproject_pts
+from methods import undistort_unproject_pts , cart_to_spherical
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -33,6 +33,51 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inli
         cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)
         map_fn = make_map_function(cx,cy,model_n)
         new_err_dist,new_err_mean,new_err_rms = fit_error_screen(new_err_x,new_err_y,screen_size)
+
+        logger.info('first iteration. root-mean-square residuals: %s, in pixel' %err_rms)
+        logger.info('second iteration: ignoring outliers. root-mean-square residuals: %s in pixel',new_err_rms)
+
+        logger.info('used %i data points out of the full dataset %i: subset is %i percent' \
+            %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
+            100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0]))
+
+        if return_inlier_map and return_params:
+            return map_fn,err_dist<=threshold,(cx,cy,model_n)
+        if return_inlier_map and not return_params:
+            return map_fn,err_dist<=threshold
+        if return_params and not return_inlier_map:
+            return map_fn,(cx,cy,model_n)
+        return map_fn
+    else: # did disregard all points. The data cannot be represented by the model in a meaningful way:
+        map_fn = make_map_function(cx,cy,model_n)
+        logger.info('First iteration. root-mean-square residuals: %s in pixel, this is bad!'%err_rms)
+        logger.warning('The data cannot be represented by the model in a meaningfull way.')
+
+        if return_inlier_map and return_params:
+            return map_fn,err_dist<=threshold,(cx,cy,model_n)
+        if return_inlier_map and not return_params:
+            return map_fn,err_dist<=threshold
+        if return_params and not return_inlier_map:
+            return map_fn,(cx,cy,model_n)
+        return map_fn
+
+def get_map_from_angles(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inlier_map=False,return_params=False, binocular=False):
+    """
+    we do a simple two pass fitting to a pair of bi-variate polynomials
+    return the function to map vector
+    """
+    # fit once using all avaiable data
+    model_n = 7
+    if binocular:
+        model_n = 13
+    cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
+    err_dist,err_mean,err_rms = fit_error_angle(err_x,err_y)
+    print 'error dist: ' , err_dist
+    if cal_pt_cloud[err_dist<=threshold].shape[0]: #did not disregard all points..
+        #fit again disregarding extreme outliers
+        cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)
+        map_fn = make_map_function(cx,cy,model_n)
+        new_err_dist,new_err_mean,new_err_rms = fit_error_angle(new_err_x,new_err_y )
 
         logger.info('first iteration. root-mean-square residuals: %s, in pixel' %err_rms)
         logger.info('second iteration: ignoring outliers. root-mean-square residuals: %s in pixel',new_err_rms)
@@ -86,6 +131,14 @@ def fit_poly_surface(cal_pt_cloud,n=7):
 def fit_error_screen(err_x,err_y,(screen_x,screen_y)):
     err_x *= screen_x/2.
     err_y *= screen_y/2.
+    err_dist=np.sqrt(err_x*err_x + err_y*err_y)
+    err_mean=np.sum(err_dist)/len(err_dist)
+    err_rms=np.sqrt(np.sum(err_dist*err_dist)/len(err_dist))
+    return err_dist,err_mean,err_rms
+
+def fit_error_angle(err_x,err_y ) :
+    err_x *= 2. * np.pi
+    err_y *= 2. * np.pi
     err_dist=np.sqrt(err_x*err_x + err_y*err_y)
     err_mean=np.sum(err_dist)/len(err_dist)
     err_rms=np.sqrt(np.sum(err_dist*err_dist)/len(err_dist))
@@ -289,14 +342,7 @@ def preprocess_vector_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics 
 
     if id_filter == (0,1) and  pupil_pts[0]['method'] is '3D c++':
         ##return preprocess_data_binocular(pupil_pts, ref_pts)
-        print "not implemente yet"
-    else:
-        return preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics)
-
-    # if filter is set to handle binocular data, e.g. (0,1)
-    if id_filter == (0,1):
         print "binocular mapping not implemente yet"
-        #return preprocess_data_binocular(pupil_pts, ref_pts)
     else:
         return preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics)
 
@@ -324,6 +370,60 @@ def preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics):
                         vector_pupil = p_pt['circle3D']['normal']
                         vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
                         data_pt = vector_pupil, vector_ref / np.linalg.norm(vector_ref)
+                        #print "data_pt  " , data_pt
+                        cal_data.append(data_pt)
+                break
+        if ref_pts:
+            cur_ref_pt = next_ref_pt
+            next_ref_pt = ref_pts.pop(0)
+        else:
+            break
+    return cal_data
+
+
+def preprocess_angle_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics = None):
+    '''small utility function to deal with timestamped but uncorrelated data
+    input must be lists that contain dicts with at least "timestamp" and "norm_pos" and "id:
+    filter id must be (0,) or (1,) or (0,1).
+    '''
+    assert id_filter in ( (0,),(1,),(0,1) )
+
+    if len(ref_pts)<=2:
+        return []
+
+    pupil_pts = [p for p in pupil_pts if p['id'] in id_filter]
+
+    if id_filter == (0,1) and  pupil_pts[0]['method'] is '3D c++':
+        ##return preprocess_data_binocular(pupil_pts, ref_pts)
+        print "binocular mapping not implemente yet"
+    else:
+        return preprocess_angle_data_monocular(pupil_pts,ref_pts, camera_intrinsics)
+
+
+def preprocess_angle_data_monocular(pupil_pts,ref_pts, camera_intrinsics):
+    cal_data = []
+
+    #unproject ref_pts
+    camera_matrix = camera_intrinsics[0]
+    dist_coefs = camera_intrinsics[1]
+
+    cur_ref_pt = ref_pts.pop(0)
+    next_ref_pt = ref_pts.pop(0)
+    while True:
+        matched = []
+        while pupil_pts:
+            #select all points past the half-way point between current and next ref data sample
+            if pupil_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
+                matched.append(pupil_pts.pop(0))
+            else:
+                for p_pt in matched:
+                    #only use close points
+                    if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
+                        angle_pupil = (p_pt['theta'], p_pt['phi'])
+                        vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
+                        vector_ref = vector_ref / np.linalg.norm(vector_ref)
+                        sph = cart_to_spherical( vector_ref )
+                        data_pt = angle_pupil[0],angle_pupil[1],  sph[1], sph[2]
                         #print "data_pt  " , data_pt
                         cal_data.append(data_pt)
                 break

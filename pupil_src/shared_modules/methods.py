@@ -135,16 +135,19 @@ def project_distort_pts(pts_xyz,camera_matrix, dist_coefs,  rvec = np.array([0,0
     pts2d, _ = cv2.projectPoints(pts_xyz, rvec , tvec, camera_matrix, dist_coefs)
     return pts2d.reshape(-1,2)
 
-def cart_to_spherical(xyz):
+def cart_to_spherical( (x,y, z) ):
     # convert to spherical coordinates
     # source: http://stackoverflow.com/questions/4116658/faster-numpy-cartesian-to-spherical-coordinate-conversion
-    spherical = np.zeros(xyz.shape)
-    xy = xyz[:,0]**2 + xyz[:,1]**2
-    spherical[:,0] = np.sqrt(xy + xyz[:,2]**2)
-    spherical[:,1] = np.arctan2(np.sqrt(xy), xyz[:,2]) # for elevation angle defined from Z-axis down
-    spherical[:,2] = np.arctan2(xyz[:,1], xyz[:,0])
+    r = np.sqrt(x**2 + y**2 + z**2)
+    theta = np.arccos( y /  r ) # for elevation angle defined from Z-axis down
+    psi = np.arctan2(z, x)
+    return r, theta, psi
 
-    return spherical
+def spherical_to_cart( r, theta , phi ):
+    x = r * np.sin(theta) * np.cos(phi)
+    y = r * np.cos(theta) * np.sin(phi)
+    z = r * np.sin(theta) * np.sin(phi)
+    return x,y,z
 
 def bin_thresholding(image, image_lower=0, image_upper=256):
     binary_img = cv2.inRange(image, np.asarray(image_lower),

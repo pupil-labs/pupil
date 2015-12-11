@@ -45,6 +45,7 @@ cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
         Matrix31d(double x, double y, double z)
         double * data()
         double& operator[](size_t)
+        bint isZero()
 
 
 cdef extern from 'singleeyefitter/common/types.h':
