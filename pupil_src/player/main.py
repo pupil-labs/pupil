@@ -69,6 +69,12 @@ logging.getLogger("libav").setLevel(logging.ERROR)
 
 logger = logging.getLogger(__name__)
 
+if 'binocular' in sys.argv:
+    binocular = True
+    logger.debug("Starting in binocular mode")
+else:
+    binocular = False
+    logger.debug("Starting in single eye cam mode")
 
 #Linux scrolling is scaled differently
 if platform.system() == 'Linux':
@@ -243,7 +249,8 @@ def session(rec_dir):
     g_pool.pupil_positions_by_frame = correlate_data(pupil_list,g_pool.timestamps)
     g_pool.gaze_positions_by_frame = correlate_data(gaze_list,g_pool.timestamps)
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps] #populated by the fixation detector plugin
-
+    g_pool.binocular = binocular
+    
     def next_frame(_):
         try:
             cap.seek_to_frame(cap.get_frame_index())
