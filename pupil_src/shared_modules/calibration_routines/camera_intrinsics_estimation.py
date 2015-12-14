@@ -11,14 +11,14 @@
 import os
 import cv2
 import numpy as np
-from file_methods import save_object
-from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
+from file_methods import save_object,load_object
+from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup,make_coord_system_pixel_based,make_coord_system_norm_based
 from methods import normalize
 
 
 import OpenGL.GL as gl
 from pyglui import ui
-from pyglui.cygl.utils import draw_polyline,draw_points,RGBA
+from pyglui.cygl.utils import draw_polyline,draw_points,RGBA,draw_gl_texture
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from glfw import *
@@ -51,8 +51,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.img_points = []
         self.obj_points = []
         self.count = 10
-        self.img_shape = None
-
         self.display_grid = _make_grid()
 
         self._window = None
@@ -73,6 +71,31 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
 
 
+        self.undist_img = None
+        self.show_undistortion = False
+        self.show_undistortion_switch = None
+
+
+        try:
+            camera_calibration = load_object(os.path.join(self.g_pool.user_dir,'camera_calibration'))
+        except:
+            self.camera_intrinsics = None
+        else:
+            logger.info('Loaded camera calibration. Click show undistortion to verify.')
+            logger.info('Hint: Lines in the real world should be straigt in the image.')
+            same_name = camera_calibration['camera_name'] == self.g_pool.capture.name
+            same_resolution =  camera_calibration['resolution'] == self.g_pool.capture.frame_size
+            if not (same_name and same_resolution):
+                logger.warning('Loaded camera calibration but camera name and/or resolution has changed. Please re-calibrate.')
+
+            K = camera_calibration['camera_matrix']
+            dist_coefs = camera_calibration['dist_coefs']
+            resolution = camera_calibration['resolution']
+            self.camera_intrinsics = K,dist_coefs,resolution
+
+
+
+
     def init_gui(self):
 
         monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
@@ -84,6 +107,10 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.menu.append(ui.Button('show Pattern',self.open_window))
         self.menu.append(ui.Selector('monitor_idx',self,selection = range(len(monitor_names)),labels=monitor_names,label='Monitor'))
         self.menu.append(ui.Switch('fullscreen',self,label='Use Fullscreen'))
+        self.show_undistortion_switch = ui.Switch('show_undistortion',self,label='show undistorted image')
+        self.menu.append(self.show_undistortion_switch)
+        if not self.camera_intrinsics:
+            self.show_undistortion_switch.read_only=True
         self.g_pool.calibration_menu.append(self.menu)
 
         self.button = ui.Thumb('collect_new',self,setter=self.advance,label='Capture',hotkey='c')
@@ -179,7 +206,8 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         save_object(camera_calibration,os.path.join(self.g_pool.user_dir,"camera_calibration"))
         logger.info("Calibration saved to user folder")
         self.count = 10
-
+        self.camera_intrinsics = camera_matrix,dist_coefs,self.g_pool.capture.frame_size
+        self.show_undistortion_switch.read_only=False
 
     def update(self,frame,events):
         if self.collect_new:
@@ -190,7 +218,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
                 self.obj_points.append(self.obj_grid)
                 self.collect_new = False
                 self.count -=1
-                self.img_shape = img.shape
                 self.button.status_text = "%i to go"%(self.count)
 
 
@@ -201,6 +228,11 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         if self.window_should_close:
             self.close_window()
 
+        if self.show_undistortion:
+
+            adjusted_k,roi = cv2.getOptimalNewCameraMatrix(cameraMatrix= self.camera_intrinsics[0], distCoeffs=self.camera_intrinsics[1], imageSize=self.camera_intrinsics[2], alpha=0.5,newImgSize=self.camera_intrinsics[2],centerPrincipalPoint=1)
+            self.undist_img = cv2.undistort(frame.img, self.camera_intrinsics[0], self.camera_intrinsics[1],newCameraMatrix=adjusted_k)
+
     def gl_display(self):
 
         for grid_points in self.img_points:
@@ -210,6 +242,11 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         if self._window:
             self.gl_display_in_window()
 
+        if self.show_undistortion:
+            gl.glPushMatrix()
+            make_coord_system_norm_based()
+            draw_gl_texture(self.undist_img)
+            gl.glPopMatrix()
     def gl_display_in_window(self):
         active_window = glfwGetCurrentContext()
         glfwMakeContextCurrent(self._window)
