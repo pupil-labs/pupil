@@ -102,6 +102,8 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     mCurrentSphere = mActiveModelPtr->getSphere();
     mCurrentInitialSphere = mActiveModelPtr->getInitialSphere();
 
+    result.sphere = mCurrentSphere;
+
     // std::cout << "active model maturity: " << mActiveModelPtr->getMaturity() << std::endl;
     // std::cout << "active model fit: " << mActiveModelPtr->getFit() << std::endl;
     // std::cout << "active model performance: " << mActiveModelPtr->getPerformance() << std::endl;

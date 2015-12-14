@@ -107,13 +107,17 @@ def get_map_from_angles(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inl
         return map_fn
 
 
-def get_transformation_from_point_set( cal_pt_cloud ):
+def get_transformation_from_point_set( cal_pt_cloud, camera_matrix , dist_coefs ):
 
-    src = np.array(cal_pt_cloud[:,0])
-    dst = np.array(cal_pt_cloud[:,1])
-    result =  cv2.estimateAffine3D(src, dst)
-    #print result
-    return result[1]
+    object_points = np.array(cal_pt_cloud[:,0].tolist(), dtype=np.float32)
+    image_points =  np.array(cal_pt_cloud[:,1].tolist(), dtype=np.float32)
+    image_points = image_points.reshape(-1,1,2)
+    #result =  cv2.estimateAffine3D(src, dst)
+    print object_points
+    print image_points
+    result = cv2.solvePnP( object_points , image_points, camera_matrix, dist_coefs, flags=cv2.CV_EPNP)
+    print result
+    return  result[1], result[2]
 
 def fit_poly_surface(cal_pt_cloud,n=7):
     M = make_model(cal_pt_cloud,n)
@@ -328,7 +332,7 @@ def preprocess_data_monocular(pupil_pts,ref_pts):
             break
     return cal_data
 
-def preprocess_vector_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics = None):
+def preprocess_vector_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics = None , calibration_distance = 600):
     '''small utility function to deal with timestamped but uncorrelated data
     input must be lists that contain dicts with at least "timestamp" and "norm_pos" and "id:
     filter id must be (0,) or (1,) or (0,1).
@@ -340,15 +344,15 @@ def preprocess_vector_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics 
 
     pupil_pts = [p for p in pupil_pts if p['id'] in id_filter]
 
-    if id_filter == (0,1) and  pupil_pts[0]['method'] is '3D c++':
+    if id_filter == (0,1):
         ##return preprocess_data_binocular(pupil_pts, ref_pts)
         print "binocular mapping not implemente yet"
     else:
-        return preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics)
+        return preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics, calibration_distance)
 
 
 
-def preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics):
+def preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics , calibration_distance):
     cal_data = []
 
     #unproject ref_pts
@@ -367,9 +371,12 @@ def preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics):
                 for p_pt in matched:
                     #only use close points
                     if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                        vector_pupil = p_pt['circle3D']['normal']
-                        vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
-                        data_pt = vector_pupil, vector_ref / np.linalg.norm(vector_ref)
+                        sphere_pos  = np.array(p_pt['sphere']['center'])
+
+                        vector_pupil = np.array(p_pt['circle3D']['normal']) * np.array([1,-1,1]) * calibration_distance # - sphere_pos
+
+                        #vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
+                        data_pt = tuple(vector_pupil) , cur_ref_pt['screen_pos']
                         #print "data_pt  " , data_pt
                         cal_data.append(data_pt)
                 break

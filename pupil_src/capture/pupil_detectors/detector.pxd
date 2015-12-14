@@ -100,6 +100,7 @@ cdef extern from 'singleeyefitter/common/types.h':
     cdef struct Detector3DResult:
         Circle circle
         Ellipse ellipse
+        Sphere[double] sphere
         double confidence
         double modelConfidence
         int modelID

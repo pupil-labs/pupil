@@ -112,28 +112,30 @@ class Angle_Gaze_Mapper(Gaze_Mapping_Plugin):
 
 
 class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
-    """docstring for Simple_Gaze_Mapper"""
-    def __init__(self, g_pool, transformation_matrix , camera_intrinsics):
+    """docstring for Vector_Gaze_Mapper"""
+    def __init__(self, g_pool, transformation , camera_intrinsics):
         super(Vector_Gaze_Mapper, self).__init__(g_pool)
-        self.transformation_matrix  =  np.matrix(transformation_matrix )
+        self.transformation  =  transformation
         self.camera_matrix = camera_intrinsics[0]
         self.dist_coefs = camera_intrinsics[1]
 
     def update(self,frame,events):
         gaze_pts = []
 
+        focus_distance  = 600 # in millimeter
 
         for p in events['pupil_positions']:
-            if p['confidence'] > self.g_pool.pupil_confidence_threshold:
-                #point = np.array( [p['circle3D']['normal']] )
-                ##gaze_point =  project_distort_pts(point,self.camera_matrix, self.dist_coefs,  self.rotation_vector , self.translation_vector )
+            if p['method'] == '3D c++' and p['confidence'] > self.g_pool.pupil_confidence_threshold:
 
-                point = self.transformation_matrix  *  np.transpose(np.matrix( p['circle3D']['normal'] + (1,)  ) )
-                #print point
-                gaze_point =  project_distort_pts(np.array([point]),self.camera_matrix, self.dist_coefs )
-                #print gaze_point
-                gaze_point = normalize( gaze_point[0], (frame.width, frame.height) , flip_y = True)
-                gaze_pts.append({'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
+                gaze_point =  np.array(p['circle3D']['normal'] ) * np.array([1,-1,1]) * focus_distance # - np.array( p['sphere']['center'] )
+
+                rotation_vector = self.transformation[0]
+                translation_vector  = self.transformation[1]
+                image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , rotation_vector, translation_vector , self.camera_matrix , self.dist_coefs )
+                image_point = image_point.reshape(-1,2)
+                print image_point
+                image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
+                gaze_pts.append({'norm_pos':image_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
 
         events['gaze_positions'] = gaze_pts
 
