@@ -127,7 +127,7 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         for p in events['pupil_positions']:
             if p['method'] == '3D c++' and p['confidence'] > self.g_pool.pupil_confidence_threshold:
 
-                gaze_point =  np.array(p['circle3D']['normal'] ) * np.array([1,-1,1]) * focus_distance # - np.array( p['sphere']['center'] )
+                gaze_point =  np.array(p['circle3D']['normal'] ) * np.array([1,1,-1]) * focus_distance # - np.array( p['sphere']['center'] )
 
                 rotation_vector = self.transformation[0]
                 translation_vector  = self.transformation[1]

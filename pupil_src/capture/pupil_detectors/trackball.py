@@ -16,7 +16,7 @@ class Trackball(object):
     def __init__(self, fov = 30):
         super(Trackball, self).__init__()
 
-        self.distance = [0,0,-0.1]
+        self.distance = [0,0,0.1]
         self.pitch = 0
         self.roll = 0
         self.aspect = 1.

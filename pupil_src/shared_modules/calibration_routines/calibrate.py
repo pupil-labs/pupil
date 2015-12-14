@@ -115,7 +115,7 @@ def get_transformation_from_point_set( cal_pt_cloud, camera_matrix , dist_coefs 
     #result =  cv2.estimateAffine3D(src, dst)
     print object_points
     print image_points
-    result = cv2.solvePnP( object_points , image_points, camera_matrix, dist_coefs, flags=cv2.CV_EPNP)
+    result = cv2.solvePnP( object_points , image_points, camera_matrix, dist_coefs, flags=cv2.CV_ITERATIVE)
     print result
     return  result[1], result[2]
 
@@ -373,7 +373,7 @@ def preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics , cali
                     if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
                         sphere_pos  = np.array(p_pt['sphere']['center'])
 
-                        vector_pupil = np.array(p_pt['circle3D']['normal']) * np.array([1,-1,1]) * calibration_distance # - sphere_pos
+                        vector_pupil = np.array(p_pt['circle3D']['normal']) * np.array([1,1,-1]) * calibration_distance # - sphere_pos
 
                         #vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
                         data_pt = tuple(vector_pupil) , cur_ref_pt['screen_pos']
