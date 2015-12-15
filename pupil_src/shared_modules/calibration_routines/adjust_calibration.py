@@ -26,7 +26,7 @@ from gaze_mappers import Simple_Gaze_Mapper, Bilateral_Gaze_Mapper
 import logging
 logger = logging.getLogger(__name__)
 
-class Manual_Marker_Calibration(Calibration_Plugin):
+class Adjust_Calibration(Calibration_Plugin):
     """Detector looks for a white ring on a black background.
         Using at least 9 positions/points within the FOV
         Ref detector will direct one to good positions with audio cues
@@ -38,7 +38,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             Fit ellipses
     """
     def __init__(self, g_pool):
-        super(Manual_Marker_Calibration, self).__init__(g_pool)
+        super(Adjust_Calibration, self).__init__(g_pool)
         self.active = False
         self.detected = False
         self.pos = None
@@ -64,7 +64,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
     def init_gui(self):
 
-        self.info = ui.Info_Text("Calibrate gaze parameters using a handheld marker.")
+        self.info = ui.Info_Text("Touch up gaze mapping parameters using a marker.")
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
@@ -94,7 +94,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             self.start()
 
     def start(self):
-        audio.say("Starting Calibration")
+        # audio.say("Starting Calibration")
         logger.info("Starting Calibration")
         self.active = True
         self.ref_list = []
@@ -103,32 +103,24 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
     def stop(self):
         # TODO: redundancy between all gaze mappers -> might be moved to parent class
-        audio.say("Stopping Calibration")
+        # audio.say("Stopping Calibration")
         logger.info("Stopping Calibration")
         self.smooth_pos = 0,0
         self.counter = 0
         self.active = False
         self.button.status_text = ''
+        cal_pt_cloud =
+
+        cal_pt_cloud = np.load(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'))
 
         if self.g_pool.binocular:
-            cal_pt_cloud = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,1))
-            cal_pt_cloud_eye0 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,))
-            cal_pt_cloud_eye1 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(1,))
-        else:
-            cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
+            cal_pt_cloud_eye0 = np.load(os.path.join(self.g_pool.user_dir,'cal_pt_cloud_eye0.npy'))
+            cal_pt_cloud_eye1 = np.load(os.path.join(self.g_pool.user_dir,'cal_pt_cloud_eye1.npy'))
 
         if self.g_pool.binocular:
-            logger.info("Collected %s binocular data points." %len(cal_pt_cloud))
-            logger.info("Collected %s data points for eye 0." %len(cal_pt_cloud_eye0))
-            logger.info("Collected %s data points for eye 1." %len(cal_pt_cloud_eye1))
         else:
-            logger.info("Collected %s data points." %len(cal_pt_cloud))
 
-        if self.g_pool.binocular and (len(cal_pt_cloud) < 20 or len(cal_pt_cloud_eye0) < 20 or len(cal_pt_cloud_eye1) < 20) or len(cal_pt_cloud) < 20:
-            logger.warning("Did not collect enough data.")
-            return
 
-        cal_pt_cloud = np.array(cal_pt_cloud)
         map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, binocular=self.g_pool.binocular)
         np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
         #replace current gaze mapper with new
