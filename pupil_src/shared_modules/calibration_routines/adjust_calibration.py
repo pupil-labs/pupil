@@ -27,15 +27,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Adjust_Calibration(Calibration_Plugin):
-    """Detector looks for a white ring on a black background.
-        Using at least 9 positions/points within the FOV
-        Ref detector will direct one to good positions with audio cues
-        Calibration only collects data at the good positions
-
-        Steps:
-            Adaptive threshold to obtain robust edge-based image of marker
-            Find contours and filter into 2 level list using RETR_CCOMP
-            Fit ellipses
+    """
     """
     def __init__(self, g_pool):
         super(Adjust_Calibration, self).__init__(g_pool)
@@ -64,7 +56,7 @@ class Adjust_Calibration(Calibration_Plugin):
 
     def init_gui(self):
 
-        self.info = ui.Info_Text("Touch up gaze mapping parameters using a marker.")
+        self.info = ui.Info_Text("Touch up gaze mapping parameters using a single hand held marker.")
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')
