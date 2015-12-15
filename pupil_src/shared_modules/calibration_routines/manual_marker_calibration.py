@@ -291,7 +291,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             if self.counter:
                 # lets draw an indicator on the count
-                e = self.candidate_ellipses[2]
+                e = self.candidate_ellipses[3]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360/self.counter_max)
@@ -300,7 +300,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             if self.auto_stop:
                 # lets draw an indicator on the autostop count
-                e = self.candidate_ellipses[2]
+                e = self.candidate_ellipses[3]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360/self.auto_stop_max)
