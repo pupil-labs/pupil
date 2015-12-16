@@ -77,18 +77,17 @@ class Visualizer(object):
 
 		camera_fov = math.degrees(2.0 * math.atan( self.window_size[0] / (2.0 * self.focal_length)))
 		self.trackball = Trackball(camera_fov)
-		self.trackball.distance = [0,0,-0.1]
-		self.trackball.pitch = 0
-		self.trackball.roll = 180
 
 	############## MATRIX FUNCTIONS ##############################
 
 	def get_anthropomorphic_matrix(self):
 		temp =  np.identity(4)
+		temp[2,2] *= -1
 		return temp
 
 	def get_adjusted_pixel_space_matrix(self):
 		temp =  np.identity(4)
+		temp[2,2] *= -1
 		return temp
 
 	def get_adjusted_pixel_space_matrix(self,scale):
@@ -102,7 +101,7 @@ class Visualizer(object):
 		temp[1,1] *=-1 #image origin is top left
 		temp[0,3] = -self.image_width/2.0
 		temp[1,3] = self.image_height/2.0
-		temp[2,3] = self.focal_length
+		temp[2,3] = -self.focal_length
 		return temp.T
 
 	def get_pupil_transformation_matrix(self,circle_normal,circle_center, circle_scale = 1.0):
@@ -133,6 +132,7 @@ class Visualizer(object):
 		back = temp[:3,2]
 		translation = temp[:3,3]
 		back[:] = np.array(circle_normal)
+		back[2] *=-1 #our z axis is inverted
 
 		# if np.linalg.norm(back) != 0:
 		back[:] /= np.linalg.norm(back)
@@ -142,6 +142,7 @@ class Visualizer(object):
 		back[:] *=circle_scale
 		up[:] *=circle_scale
 		translation[:] = np.array(circle_center)
+		translation[2] *= -1
 		return   temp.T
 
 	############## DRAWING FUNCTIONS ##############################
@@ -285,6 +286,9 @@ class Visualizer(object):
 			delta_y += 100
 
 		self.glfont.pop_state()
+
+
+	########## Setup functions I don't really understand ############
 
 	def basic_gl_setup(self):
 		glEnable(GL_POINT_SPRITE )
@@ -442,7 +446,7 @@ class Visualizer(object):
 		if char == ord('r'):
 			self.trackball.distance = [0,0,-0.1]
 			self.trackball.pitch = 0
-			self.trackball.roll = 180
+			self.trackball.roll = 0
 
 	def on_button(self,window,button, action, mods):
 		# self.gui.update_button(button,action,mods)
