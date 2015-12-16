@@ -231,7 +231,7 @@ def world(g_pool,cap_src,cap_size):
     basic_gl_setup()
     g_pool.image_tex = Named_Texture()
     g_pool.image_tex.update_from_frame(frame)
-
+    g_pool.main_window = main_window
     # refresh speed settings
     glfwSwapInterval(0)
 

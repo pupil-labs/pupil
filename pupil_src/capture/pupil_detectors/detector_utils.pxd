@@ -49,7 +49,7 @@ cdef inline add3DResult( Detector3DResult& result, object py_2D_result, object f
         norm_center = normalize( ellipse['center'] , (frame.width, frame.height),flip_y=True)
         py_2D_result['norm_pos'] = norm_center
 
-    if not result.sphere.center.isZero() and result.sphere.radius != 0.0:
+    if result.sphere.radius != 0.0:
         sphere = {}
         sphere['center'] =  (result.sphere.center[0],result.sphere.center[1], result.sphere.center[2])
         sphere['radius'] =  result.sphere.radius

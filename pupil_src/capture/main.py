@@ -62,7 +62,7 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-logging.getLogger("OpenGL").setLevel(logging.ERROR)
+logging.getLogger("OpenGL").setLevel(logging.INFO)
 logging.getLogger("libav").setLevel(logging.ERROR)
 
 
@@ -144,3 +144,5 @@ def main():
 if __name__ == '__main__':
     freeze_support()
     main()
+
+

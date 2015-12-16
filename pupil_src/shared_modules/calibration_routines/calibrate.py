@@ -114,10 +114,17 @@ def get_transformation_from_point_set( cal_pt_cloud, camera_matrix , dist_coefs 
     image_points = image_points.reshape(-1,1,2)
     #result =  cv2.estimateAffine3D(src, dst)
     print object_points
-    print image_points
+    #print image_points
+
     result = cv2.solvePnP( object_points , image_points, camera_matrix, dist_coefs, flags=cv2.CV_ITERATIVE)
-    print result
     return  result[1], result[2]
+
+    # print image_points.size
+    # print image_points
+    # result = cv2.solvePnPRansac( object_points , image_points, camera_matrix, dist_coefs , iterationsCount = 10000, reprojectionError = 3, minInliersCount = int(image_points.size * 0.7) )
+    # print 'got inliers: ' , result[2].size
+    # return  result[0], result[1]
+
 
 def fit_poly_surface(cal_pt_cloud,n=7):
     M = make_model(cal_pt_cloud,n)
@@ -332,7 +339,7 @@ def preprocess_data_monocular(pupil_pts,ref_pts):
             break
     return cal_data
 
-def preprocess_vector_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics = None , calibration_distance = 600):
+def preprocess_vector_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics = None , calibration_distance = 200):
     '''small utility function to deal with timestamped but uncorrelated data
     input must be lists that contain dicts with at least "timestamp" and "norm_pos" and "id:
     filter id must be (0,) or (1,) or (0,1).
@@ -371,14 +378,16 @@ def preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics , cali
                 for p_pt in matched:
                     #only use close points
                     if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                        sphere_pos  = np.array(p_pt['sphere']['center'])
-
-                        vector_pupil = np.array(p_pt['circle3D']['normal']) * np.array([1,1,-1]) * calibration_distance # - sphere_pos
-
-                        #vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
-                        data_pt = tuple(vector_pupil) , cur_ref_pt['screen_pos']
-                        #print "data_pt  " , data_pt
-                        cal_data.append(data_pt)
+                        try:
+                            sphere_pos  = np.array(p_pt['sphere']['center'])
+                            vector_pupil = np.array(p_pt['circle3D']['normal']) * calibration_distance - sphere_pos
+                            vector_pupil *= 1.,-1.,1.
+                            #vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
+                            data_pt = tuple(vector_pupil) , cur_ref_pt['screen_pos']
+                            #print "data_pt  " , data_pt
+                            cal_data.append(data_pt)
+                        except KeyError as e:
+                            pass
                 break
         if ref_pts:
             cur_ref_pt = next_ref_pt

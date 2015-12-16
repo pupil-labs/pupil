@@ -110,34 +110,49 @@ class Angle_Gaze_Mapper(Gaze_Mapping_Plugin):
     #     gaze_pts = filter(lambda g: g['confidence']> min_confidence,gaze_pts)
     #     return gaze_pts
 
+from visualizer_calibration import *
 
 class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Vector_Gaze_Mapper"""
-    def __init__(self, g_pool, transformation , camera_intrinsics):
+    def __init__(self, g_pool, transformation , camera_intrinsics , calibration_points_3d = [], calibration_points_2d = []  ):
         super(Vector_Gaze_Mapper, self).__init__(g_pool)
+        print 'INIT MAPPER'
         self.transformation  =  transformation
         self.camera_matrix = camera_intrinsics[0]
         self.dist_coefs = camera_intrinsics[1]
+        self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics , transformation , calibration_points_3d , calibration_points_2d)
+        self.g_pool = g_pool
+        self.visualizer.open_window()
+        self.gaze_pts_debug = []
+        self.sphere = None
 
     def update(self,frame,events):
         gaze_pts = []
-
-        focus_distance  = 600 # in millimeter
-
+        focus_distance  = 200 # in millimeter
+        sphere = None
         for p in events['pupil_positions']:
             if p['method'] == '3D c++' and p['confidence'] > self.g_pool.pupil_confidence_threshold:
 
-                gaze_point =  np.array(p['circle3D']['normal'] ) * np.array([1,1,-1]) * focus_distance # - np.array( p['sphere']['center'] )
+                gaze_point =  np.array(p['circle3D']['normal'] ) * focus_distance  - np.array( p['sphere']['center'] )
 
+                gaze_point *= 1,-1,1
+                self.gaze_pts_debug.append( gaze_point )
                 rotation_vector = self.transformation[0]
                 translation_vector  = self.transformation[1]
                 image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , rotation_vector, translation_vector , self.camera_matrix , self.dist_coefs )
                 image_point = image_point.reshape(-1,2)
-                print image_point
                 image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
                 gaze_pts.append({'norm_pos':image_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
 
+                self.sphere = p['sphere']
+
+
         events['gaze_positions'] = gaze_pts
+
+    def gl_display(self):
+
+        self.visualizer.update_window( self.g_pool , self.gaze_pts_debug , self.sphere)
+        self.gaze_pts_debug = []
 
     #def get_init_dict(self):
      #   return {'params':self.params}

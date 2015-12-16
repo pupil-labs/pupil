@@ -17,6 +17,7 @@ import OpenGL.GL as gl
 from glfw import *
 import calibrate
 from circle_detector import get_candidate_ellipses
+from file_methods import load_object
 
 import audio
 
@@ -25,7 +26,7 @@ from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
-from gaze_mappers import Simple_Gaze_Mapper, Bilateral_Gaze_Mapper
+from gaze_mappers import Simple_Gaze_Mapper, Vector_Gaze_Mapper, Bilateral_Gaze_Mapper
 
 #logging
 import logging
@@ -226,35 +227,81 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.close_window()
         self.button.status_text = ''
 
-        if self.g_pool.binocular:
-            cal_pt_cloud = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,1))
-            cal_pt_cloud_eye0 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,))
-            cal_pt_cloud_eye1 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(1,))
-            logger.info("Collected %s binocular data points." %len(cal_pt_cloud))
-            logger.info("Collected %s data points for eye 0." %len(cal_pt_cloud_eye0))
-            logger.info("Collected %s data points for eye 1." %len(cal_pt_cloud_eye1))
+
+        try:
+            camera_calibration = load_object(os.path.join(self.g_pool.user_dir,'camera_calibration'))
+        except OSError:
+            camera_intrinsics = None
+            logger.warning('No camera calibration.')
+
         else:
-            cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
-            logger.info("Collected %s data points." %len(cal_pt_cloud))
+            same_name = camera_calibration['camera_name'] == self.g_pool.capture.name
+            same_resolution =  camera_calibration['resolution'] == self.g_pool.capture.frame_size
+            if same_name and same_resolution:
+                logger.info('Loaded camera calibration. 3D marker tracking enabled.')
+                K = camera_calibration['camera_matrix']
+                dist_coefs = camera_calibration['dist_coefs']
+                resolution = camera_calibration['resolution']
+                camera_intrinsics = K,dist_coefs,resolution
+            else:
+                logger.info('Loaded camera calibration but camera name and/or resolution has changed. Please re-calibrate.')
+                camera_intrinsics = None
 
 
-        if self.g_pool.binocular and (len(cal_pt_cloud_eye0) < 20 or len(cal_pt_cloud_eye1) < 20) or len(cal_pt_cloud) < 20:
-            logger.warning("Did not collect enough data.")
-            return
 
-        cal_pt_cloud = np.array(cal_pt_cloud)
-        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, binocular=self.g_pool.binocular)
-        np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
-        #replace current gaze mapper with new
-        if self.g_pool.binocular:
-            # get monocular models for fallback (if only one pupil is detected)
-            cal_pt_cloud_eye0 = np.array(cal_pt_cloud_eye0)
-            cal_pt_cloud_eye1 = np.array(cal_pt_cloud_eye1)
-            _,params_eye0 = calibrate.get_map_from_cloud(cal_pt_cloud_eye0,self.g_pool.capture.frame_size,return_params=True)
-            _,params_eye1 = calibrate.get_map_from_cloud(cal_pt_cloud_eye1,self.g_pool.capture.frame_size,return_params=True)
-            self.g_pool.plugins.add(Bilateral_Gaze_Mapper,args={'params':params, 'params_eye0':params_eye0, 'params_eye1':params_eye1})
+          # do we have data from 3D detector
+        if self.pupil_list[0] and self.pupil_list[0]['method'] == '3D c++':
+            cal_pt_cloud = calibrate.preprocess_vector_data(self.pupil_list,self.ref_list, camera_intrinsics = camera_intrinsics)
+            cal_pt_cloud = np.array(cal_pt_cloud)
+
+            # np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
+            camera_matrix = camera_intrinsics[0]
+            dist_coefs = camera_intrinsics[1]
+            transformation = calibrate.get_transformation_from_point_set(cal_pt_cloud, camera_matrix, dist_coefs)
+            print 'transformation: ' , transformation
+            self.g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'calibration_points_3d': cal_pt_cloud[:,0].tolist(), 'calibration_points_2d': cal_pt_cloud[:,1].tolist()})
+
+            ## ---- ANGLE APPROACH -----------
+            # cal_pt_cloud = calibrate.preprocess_angle_data(self.pupil_list,self.ref_list, camera_intrinsics = camera_intrinsics)
+            # cal_pt_cloud = np.array(cal_pt_cloud)
+            # np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
+
+            # map_fn,params = calibrate.get_map_from_angles(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, binocular=self.g_pool.binocular)
+
+            # self.g_pool.plugins.add(Angle_Gaze_Mapper,args={'params':params , 'camera_intrinsics': camera_intrinsics})
+
         else:
-            self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
+
+
+            if self.g_pool.binocular:
+                cal_pt_cloud = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,1))
+                cal_pt_cloud_eye0 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,))
+                cal_pt_cloud_eye1 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(1,))
+                logger.info("Collected %s binocular data points." %len(cal_pt_cloud))
+                logger.info("Collected %s data points for eye 0." %len(cal_pt_cloud_eye0))
+                logger.info("Collected %s data points for eye 1." %len(cal_pt_cloud_eye1))
+            else:
+                cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
+                logger.info("Collected %s data points." %len(cal_pt_cloud))
+
+
+            if self.g_pool.binocular and (len(cal_pt_cloud_eye0) < 20 or len(cal_pt_cloud_eye1) < 20) or len(cal_pt_cloud) < 20:
+                logger.warning("Did not collect enough data.")
+                return
+
+            cal_pt_cloud = np.array(cal_pt_cloud)
+            map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, binocular=self.g_pool.binocular)
+            np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
+            #replace current gaze mapper with new
+            if self.g_pool.binocular:
+                # get monocular models for fallback (if only one pupil is detected)
+                cal_pt_cloud_eye0 = np.array(cal_pt_cloud_eye0)
+                cal_pt_cloud_eye1 = np.array(cal_pt_cloud_eye1)
+                _,params_eye0 = calibrate.get_map_from_cloud(cal_pt_cloud_eye0,self.g_pool.capture.frame_size,return_params=True)
+                _,params_eye1 = calibrate.get_map_from_cloud(cal_pt_cloud_eye1,self.g_pool.capture.frame_size,return_params=True)
+                self.g_pool.plugins.add(Bilateral_Gaze_Mapper,args={'params':params, 'params_eye0':params_eye0, 'params_eye1':params_eye1})
+            else:
+                self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
 
 
     def close_window(self):
@@ -297,6 +344,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             if on_position and self.detected:
                 ref = {}
                 ref["norm_pos"] = self.pos
+                ref["screen_pos"] = marker_pos
                 ref["timestamp"] = frame.timestamp
                 self.ref_list.append(ref)
 
