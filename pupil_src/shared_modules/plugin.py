@@ -32,15 +32,21 @@ class Plugin(object):
     # uniqueness = 'not_unique'
     # uniqueness = 'by_base_class'
 
+
+
+    # between 0 and 1 this indicated where in the plugin excecution order you plugin lives:
+    # <.5  are things that add/mofify information that will be used by other plugins and rely on untouched data.
+    # You should not edit frame if you are here!
+    # == .5 is the default.
+    # >.5 are things that depend on other plugins work like display , saving and streaming
+    #you can change this in __init__ for your instance or in the class definition
+    order = .5
+
     def __init__(self,g_pool):
         self._alive = True
         self.g_pool = g_pool
-        self.order = .5
-        # between 0 and 1 this indicated where in the plugin excecution order you plugin lives:
-        # <.5  are things that add/mofify information that will be used by other plugins and rely on untouched data.
-        # You should not edit frame if you are here!
-        # == .5 is the default.
-        # >.5 are things that depend on other plugins work like display , saving and streaming
+
+
 
     def init_gui(self):
         '''
@@ -209,9 +215,10 @@ class Calibration_Plugin(Plugin):
 class Gaze_Mapping_Plugin(Plugin):
     '''base class for all calibration routines'''
     uniqueness = 'by_base_class'
+    order = 0.1
     def __init__(self,g_pool):
         super(Gaze_Mapping_Plugin, self).__init__(g_pool)
-        self.order = 0.1
+
 
 
 # Plugin manager classes and fns

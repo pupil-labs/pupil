@@ -187,7 +187,6 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
 
         field_of_view = self.fov
         px_per_degree = self.res/field_of_view
-        print px_per_degree
         # Accuracy is calculated as the average angular
         # offset (distance) (in degrees of visual angle)
         # between fixations locations and the corresponding

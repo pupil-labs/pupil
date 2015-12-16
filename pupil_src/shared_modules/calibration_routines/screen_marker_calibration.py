@@ -253,6 +253,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             _,params_eye0 = calibrate.get_map_from_cloud(cal_pt_cloud_eye0,self.g_pool.capture.frame_size,return_params=True)
             _,params_eye1 = calibrate.get_map_from_cloud(cal_pt_cloud_eye1,self.g_pool.capture.frame_size,return_params=True)
             self.g_pool.plugins.add(Bilateral_Gaze_Mapper,args={'params':params, 'params_eye0':params_eye0, 'params_eye1':params_eye1})
+            np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud_eye0.npy'),cal_pt_cloud_eye0)
+            np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud_eye1.npy'),cal_pt_cloud_eye1)
+
         else:
             self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
 
