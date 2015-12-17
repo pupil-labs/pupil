@@ -109,7 +109,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
 
 
     } else { // no valid sphere yet
-        std::cout << "add without check" << std::endl;
+        //std::cout << "add without check" << std::endl;
         shouldAddObservation = true;
     }
 
@@ -301,7 +301,7 @@ EyeModel::Sphere EyeModel::initialiseModel(){
     if (sphere == Sphere::Null) {
         return sphere;
     }
-    std::cout << "init model" << std::endl;
+    //std::cout << "init model" << std::endl;
 
     // Find pupil positions on eyeball to get radius
     //
@@ -412,7 +412,7 @@ double EyeModel::refineWithEdges(Sphere& sphere )
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
     //std::cout << summary.BriefReport() << "\n";
-    std::cout << "Optimized" << std::endl;
+    //std::cout << "Optimized" << std::endl;
 
     double fit = 0;
     sphere.center = x.segment<3>(0);

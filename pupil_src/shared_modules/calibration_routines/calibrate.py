@@ -368,7 +368,7 @@ def preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics):
                     #only use close points
                     if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
                         vector_pupil = p_pt['circle3D']['normal']
-                        vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
+                        vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs*0.0).tolist()[0]
                         data_pt = vector_pupil, vector_ref / np.linalg.norm(vector_ref)
                         #print "data_pt  " , data_pt
                         cal_data.append(data_pt)

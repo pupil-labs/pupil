@@ -80,19 +80,19 @@ class Angle_Gaze_Mapper(Gaze_Mapping_Plugin):
 
         for p in events['pupil_positions']:
             if p['confidence'] > self.g_pool.pupil_confidence_threshold  and p['method'] == '3D c++':
-                print "1: " , p['theta'], p['phi']
+                #print "1: " , p['theta'], p['phi']
 
                 angles = self.map_fn( (p['theta'], p['phi'] ) )
-                print "2: " , angles
 
                 gaze_point = spherical_to_cart(1, angles[0], angles[1] )
-                gaze_point =  project_distort_pts(np.array([gaze_point]),self.camera_matrix, self.dist_coefs )
+                gaze_point =  project_distort_pts(np.array([gaze_point]),self.camera_matrix, self.dist_coefs*0.0 )
                 #print gaze_point
                 gaze_point = normalize( gaze_point[0], (frame.width, frame.height) , flip_y = True)
-                print gaze_point
+
                 gaze_pts.append({'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
             else:
-                print p
+                pass
+                #print p
         events['gaze_positions'] = gaze_pts
 
     def get_init_dict(self):
