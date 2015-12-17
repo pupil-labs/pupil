@@ -128,12 +128,12 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
     def update(self,frame,events):
         gaze_pts = []
-        focus_distance  = 200 # in millimeter
+        focus_distance  = 600 # in millimeter
         sphere = None
         for p in events['pupil_positions']:
             if p['method'] == '3D c++' and p['confidence'] > self.g_pool.pupil_confidence_threshold:
 
-                gaze_point =  np.array(p['circle3D']['normal'] ) * focus_distance  - np.array( p['sphere']['center'] )
+                gaze_point =  np.array(p['circle3D']['normal'] ) * focus_distance  + np.array( p['sphere']['center'] )
 
                 gaze_point *= 1,-1,1
                 self.gaze_pts_debug.append( gaze_point )

@@ -141,7 +141,14 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             # np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
             camera_matrix = camera_intrinsics[0]
             dist_coefs = camera_intrinsics[1]
-            transformation = calibrate.get_transformation_from_point_set(cal_pt_cloud, camera_matrix, dist_coefs)
+            #transformation = calibrate.get_transformation_from_point_set(cal_pt_cloud, camera_matrix, dist_coefs)
+            a = cal_pt_cloud[:,0]
+            b = cal_pt_cloud[:,1]
+            print 'aaa: '  ,a
+            print 'bbb: ' , b
+            r,t = calibrate.rigid_transform_3D( np.matrix(a), np.matrix(b) )
+            transformation = cv2.Rodrigues( r)[0] , t
+
             print 'transformation: ' , transformation
             self.g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'calibration_points_3d': cal_pt_cloud[:,0].tolist(), 'calibration_points_2d': cal_pt_cloud[:,1].tolist()})
 
