@@ -13,12 +13,14 @@ The software is open and the hardware is very accessible and modifiable because 
 ------------------------------------------------------------------------------------------
 Software
 
-All source code written by us is open source according to CC BY-NC-SA license < http://creativecommons.org/licenses/by-nc-sa/3.0/legalcode >. We want you to change and improve the code. All software is distributed in the hope that it will be useful, but without any warranty. Just make sure to credit us, and we hope that you will share your work with the Pupil community.
+All source code written by us is open source according to GNU Lesser General Public License (LGPL v3.0) license < http://www.gnu.org/licenses/lgpl-3.0.en.html >. 
+
+We want you to change and improve the code. All software is distributed in the hope that it will be useful, but without any warranty. Just make sure to credit us, and we hope that you will share your work with the Pupil community.
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Documentation
 
-All content of the documentation written by Pupil Labs UG is open source, according to CC BY-NC-SA license.  See < http://creativecommons.org/licenses/by-nc-sa/3.0/legalcode >
+All content of the documentation written by Pupil Labs UG is open source, according to GNU Lesser General Public License (LGPL v3.0) license.  See < http://www.gnu.org/licenses/lgpl-3.0.en.html >
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Using PUPIL in your research and work
