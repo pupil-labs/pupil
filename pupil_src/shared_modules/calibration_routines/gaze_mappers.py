@@ -85,6 +85,7 @@ class Angle_Gaze_Mapper(Gaze_Mapping_Plugin):
                 angles = self.map_fn( (p['theta'], p['phi'] ) )
 
                 gaze_point = spherical_to_cart(1, angles[0], angles[1] )
+                ## model distortion with the polynome for now
                 gaze_point =  project_distort_pts(np.array([gaze_point]),self.camera_matrix, self.dist_coefs*0.0 )
                 #print gaze_point
                 gaze_point = normalize( gaze_point[0], (frame.width, frame.height) , flip_y = True)

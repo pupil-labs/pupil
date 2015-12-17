@@ -216,7 +216,7 @@ void EyeModelFitter::checkModels()
         mPerformancePenalties = 0;
         mActiveModelPtr.reset(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ));
         mNextModelID++;
-        std::cout << "Reset all models"   << std::endl;
+        std::cout << "Reset all models."   << std::endl;
     }
 
     auto lastPenalty =  duration_cast<seconds>(now - mLastTimePerformancePenalty);
