@@ -33,7 +33,7 @@ cdef inline add3DResult( Detector3DResult& result, object py_2D_result, object f
 
     circle = {}
     circle['center'] =  (result.circle.center[0],result.circle.center[1], result.circle.center[2])
-    circle['normal'] =  (result.circle.normal[0],result.circle.normal[1], result.circle.normal[1])
+    circle['normal'] =  (result.circle.normal[0],result.circle.normal[1], result.circle.normal[2])
     circle['radius'] =  result.circle.radius
     py_2D_result['circle3D'] = circle
 
