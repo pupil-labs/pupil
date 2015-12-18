@@ -16,6 +16,38 @@ from methods import undistort_unproject_pts , cart_to_spherical
 import logging
 logger = logging.getLogger(__name__)
 
+def rigid_transform_3D(A, B):
+    assert len(A) == len(B)
+
+    N = A.shape[0]; # total points
+
+    centroid_A = np.mean(A, axis=0)
+    centroid_B = np.mean(B, axis=0)
+
+    # centre the points
+    AA = A - np.tile(centroid_A, (N, 1))
+    BB = B - np.tile(centroid_B, (N, 1))
+
+    # dot is matrix multiplication for array
+
+    H = np.transpose(AA) * BB
+
+    U, S, Vt = np.linalg.svd(H)
+
+    R = Vt.T * U.T
+
+    # special reflection case
+    if np.linalg.det(R) < 0:
+       print "Reflection detected"
+       Vt[2,:] *= -1
+       R = Vt.T * U.T
+
+    t = -R*centroid_A.T + centroid_B.T
+
+    print t
+
+    return R, t
+
 
 def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inlier_map=False,return_params=False, binocular=False):
     """
@@ -107,13 +139,24 @@ def get_map_from_angles(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inl
         return map_fn
 
 
-def get_transformation_from_point_set( cal_pt_cloud ):
+def get_transformation_from_point_set( cal_pt_cloud, camera_matrix , dist_coefs ):
 
-    src = np.array(cal_pt_cloud[:,0])
-    dst = np.array(cal_pt_cloud[:,1])
-    result =  cv2.estimateAffine3D(src, dst)
-    #print result
-    return result[1]
+    object_points = np.array(cal_pt_cloud[:,0].tolist(), dtype=np.float32)
+    image_points =  np.array(cal_pt_cloud[:,1].tolist(), dtype=np.float32)
+    image_points = image_points.reshape(-1,1,2)
+    #result =  cv2.estimateAffine3D(src, dst)
+    print object_points
+    #print image_points
+
+    result = cv2.solvePnP( object_points , image_points, camera_matrix, dist_coefs, flags=cv2.CV_ITERATIVE)
+    return  result[1], result[2]
+
+    # print image_points.size
+    # print image_points
+    # result = cv2.solvePnPRansac( object_points , image_points, camera_matrix, dist_coefs , iterationsCount = 10000, reprojectionError = 3, minInliersCount = int(image_points.size * 0.7) )
+    # print 'got inliers: ' , result[2].size
+    # return  result[0], result[1]
+
 
 def fit_poly_surface(cal_pt_cloud,n=7):
     M = make_model(cal_pt_cloud,n)
@@ -328,7 +371,7 @@ def preprocess_data_monocular(pupil_pts,ref_pts):
             break
     return cal_data
 
-def preprocess_vector_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics = None):
+def preprocess_vector_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics = None , calibration_distance = 600):
     '''small utility function to deal with timestamped but uncorrelated data
     input must be lists that contain dicts with at least "timestamp" and "norm_pos" and "id:
     filter id must be (0,) or (1,) or (0,1).
@@ -340,15 +383,14 @@ def preprocess_vector_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics 
 
     pupil_pts = [p for p in pupil_pts if p['id'] in id_filter]
 
-    if id_filter == (0,1) and  pupil_pts[0]['method'] is '3D c++':
+    if id_filter == (0,1):
         ##return preprocess_data_binocular(pupil_pts, ref_pts)
         print "binocular mapping not implemente yet"
     else:
-        return preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics)
+       # return preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics, calibration_distance)
+       return preprocess_vector_data_monocular_3D(pupil_pts,ref_pts, camera_intrinsics, calibration_distance)
 
-
-
-def preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics):
+def preprocess_vector_data_monocular_3D(pupil_pts,ref_pts, camera_intrinsics , calibration_distance):
     cal_data = []
 
     #unproject ref_pts
@@ -367,12 +409,56 @@ def preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics):
                 for p_pt in matched:
                     #only use close points
                     if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                        vector_pupil = p_pt['circle3D']['normal']
-                        ## model distortion with the polynome for now
-                        vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs*0.0).tolist()[0]
-                        data_pt = vector_pupil, vector_ref / np.linalg.norm(vector_ref)
-                        #print "data_pt  " , data_pt
-                        cal_data.append(data_pt)
+                        try:
+                            sphere_pos  = np.array(p_pt['sphere']['center'])
+                            vector_pupil = np.array(p_pt['circle3D']['normal']) * calibration_distance + sphere_pos
+                            vector_pupil *= 1.,-1.,1.
+                            vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
+                            vector_ref = vector_ref / np.linalg.norm(vector_ref)
+                            vector_ref *= calibration_distance
+
+                            data_pt = tuple(vector_pupil) , vector_ref
+                            #print "data_pt  " , data_pt
+                            cal_data.append(data_pt)
+                        except KeyError as e:
+                            pass
+                break
+        if ref_pts:
+            cur_ref_pt = next_ref_pt
+            next_ref_pt = ref_pts.pop(0)
+        else:
+            break
+    return cal_data
+
+def preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics , calibration_distance):
+    cal_data = []
+
+    #unproject ref_pts
+    camera_matrix = camera_intrinsics[0]
+    dist_coefs = camera_intrinsics[1]
+
+    cur_ref_pt = ref_pts.pop(0)
+    next_ref_pt = ref_pts.pop(0)
+    while True:
+        matched = []
+        while pupil_pts:
+            #select all points past the half-way point between current and next ref data sample
+            if pupil_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
+                matched.append(pupil_pts.pop(0))
+            else:
+                for p_pt in matched:
+                    #only use close points
+                    if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
+                        try:
+                            sphere_pos  = np.array(p_pt['sphere']['center'])
+                            vector_pupil = np.array(p_pt['circle3D']['normal']) * calibration_distance + sphere_pos
+                            vector_pupil *= 1.,-1.,1.
+                            #vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
+                            data_pt = tuple(vector_pupil) , cur_ref_pt['screen_pos']
+                            #print "data_pt  " , data_pt
+                            cal_data.append(data_pt)
+                        except KeyError as e:
+                            pass
                 break
         if ref_pts:
             cur_ref_pt = next_ref_pt

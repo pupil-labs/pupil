@@ -224,6 +224,11 @@ class Plugin_List(object):
         self._plugins = []
         self.g_pool = g_pool
 
+        #add self as g_pool.plguins object to allow plugins to call the plugins list during init.
+        #this will be done again when the init returns but is kept there for readablitly.
+        self.g_pool.plugins = self
+
+        #now add plugins to plugin list.
         for initializer in plugin_initializers:
             name, args = initializer
             logger.debug("Loading plugin: %s with settings %s"%(name, args))
@@ -320,5 +325,5 @@ def import_runtime_plugins(plugin_dir):
                         logger.info('Added: %s'%member)
                         runtime_plugins.append(member)
             except Exception as e:
-                logger.warning("Failed to load '%s'. Reason: '%s' "%(d,e))
+                logger.debug("Failed to load '%s'. Reason: '%s' "%(d,e))
     return runtime_plugins

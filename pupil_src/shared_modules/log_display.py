@@ -57,17 +57,15 @@ class Log_Display(Plugin):
         self.log_handler.setLevel(logging.INFO)
 
     def on_log(self,record):
-        if self.alpha <= 1.5:
+        if self.alpha < 1.0:
             self.rendered_log = []
             self.alpha = 0
-
         self.should_redraw = True
         self.rendered_log.append(record)
         self.alpha += duration_from_level(record.levelname) + len(str(record.msg))/100.
 
         self.rendered_log = self.rendered_log[-10:]
         self.alpha = min(self.alpha,6.)
-
 
     def on_window_resize(self,window,w,h):
         self.window_size = w,h

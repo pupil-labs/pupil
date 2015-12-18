@@ -66,17 +66,9 @@ class Offline_Marker_Detector(Marker_Detector):
         if g_pool.app == 'capture':
            raise Exception('For Player only.')
         #in player we load from the rec_dir: but we have a couple options:
-        self.surface_definitions = Persistent_Dict(os.path.join(g_pool.rec_dir,'surface_definitions'))
-        if self.surface_definitions.get('offline_square_marker_surfaces',[]) != []:
-            logger.debug("Found ref surfaces defined or copied in previous session.")
-            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('offline_square_marker_surfaces',[]) if isinstance(d,dict)]
-        elif self.surface_definitions.get('realtime_square_marker_surfaces',[]) != []:
-            logger.debug("Did not find ref surfaces def created or used by the user in player from earlier session. Loading surfaces defined during capture.")
-            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
-        else:
-            logger.debug("No surface defs found. Please define using GUI.")
-            self.surfaces = []
-
+        self.surface_definitions = None
+        self.surfaces = None
+        self.load_surface_definitions_from_file()
 
         # ui mode settings
         self.mode = mode
@@ -97,7 +89,17 @@ class Offline_Marker_Detector(Marker_Detector):
         self.img_shape = None
         self.img = None
 
-
+    def load_surface_definitions_from_file(self):
+        self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'surface_definitions'))
+        if self.surface_definitions.get('offline_square_marker_surfaces',[]) != []:
+            logger.debug("Found ref surfaces defined or copied in previous session.")
+            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('offline_square_marker_surfaces',[]) if isinstance(d,dict)]
+        elif self.surface_definitions.get('realtime_square_marker_surfaces',[]) != []:
+            logger.debug("Did not find ref surfaces def created or used by the user in player from earlier session. Loading surfaces defined during capture.")
+            self.surfaces = [Offline_Reference_Surface(self.g_pool,saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+        else:
+            logger.debug("No surface defs found. Please define using GUI.")
+            self.surfaces = []
 
     def init_gui(self):
         self.menu = ui.Scrolling_Menu('Offline Marker Tracker')

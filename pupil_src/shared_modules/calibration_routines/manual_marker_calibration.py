@@ -105,10 +105,10 @@ class Manual_Marker_Calibration(Calibration_Plugin):
     def stop(self):
         # TODO: redundancy between all gaze mappers -> might be moved to parent class
         audio.say("Stopping Calibration")
-        logger.info("Stopping Calibration")
-        self.smooth_pos = 0,0
-        self.counter = 0
+        logger.info('Stopping Calibration')
+        self.screen_marker_state = 0
         self.active = False
+        #self.close_window()
         self.button.status_text = ''
 
 
@@ -132,40 +132,51 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 camera_intrinsics = None
 
 
-        # did we have data form 3D detector
+
+          # do we have data from 3D detector
         if self.pupil_list[0] and self.pupil_list[0]['method'] == '3D c++':
-            # cal_pt_cloud = calibrate.preprocess_vector_data(self.pupil_list,self.ref_list, camera_intrinsics = camera_intrinsics)
+            cal_pt_cloud = calibrate.preprocess_vector_data(self.pupil_list,self.ref_list, camera_intrinsics = camera_intrinsics)
+            cal_pt_cloud = np.array(cal_pt_cloud)
+
+            # np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
+            camera_matrix = camera_intrinsics[0]
+            dist_coefs = camera_intrinsics[1]
+            #transformation = calibrate.get_transformation_from_point_set(cal_pt_cloud, camera_matrix, dist_coefs)
+            a = cal_pt_cloud[:,0]
+            b = cal_pt_cloud[:,1]
+            print 'aaa: '  ,a
+            print 'bbb: ' , b
+            r,t = calibrate.rigid_transform_3D( np.matrix(a), np.matrix(b) )
+            transformation = cv2.Rodrigues( r)[0] , t
+
+            print 'transformation: ' , transformation
+            self.g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'calibration_points_3d': cal_pt_cloud[:,0].tolist(), 'calibration_points_2d': cal_pt_cloud[:,1].tolist()})
+
+            ## ---- ANGLE APPROACH -----------
+            # cal_pt_cloud = calibrate.preprocess_angle_data(self.pupil_list,self.ref_list, camera_intrinsics = camera_intrinsics)
             # cal_pt_cloud = np.array(cal_pt_cloud)
             # np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
 
-            # transformation_matrix = calibrate.get_map_from_angles(cal_pt_cloud)
-            # print 'transformation matrix: ' , transformation_matrix
-            # self.g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation_matrix':transformation_matrix , 'camera_intrinsics': camera_intrinsics})
-            cal_pt_cloud = calibrate.preprocess_angle_data(self.pupil_list,self.ref_list, camera_intrinsics = camera_intrinsics)
-            cal_pt_cloud = np.array(cal_pt_cloud)
-            np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
+            # map_fn,params = calibrate.get_map_from_angles(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, binocular=self.g_pool.binocular)
 
-            map_fn,params = calibrate.get_map_from_angles(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, binocular=self.g_pool.binocular)
-
-            self.g_pool.plugins.add(Angle_Gaze_Mapper,args={'params':params , 'camera_intrinsics': camera_intrinsics})
+            # self.g_pool.plugins.add(Angle_Gaze_Mapper,args={'params':params , 'camera_intrinsics': camera_intrinsics})
 
         else:
+
 
             if self.g_pool.binocular:
                 cal_pt_cloud = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,1))
                 cal_pt_cloud_eye0 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,))
                 cal_pt_cloud_eye1 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(1,))
-            else:
-                cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
-
-            if self.g_pool.binocular:
                 logger.info("Collected %s binocular data points." %len(cal_pt_cloud))
                 logger.info("Collected %s data points for eye 0." %len(cal_pt_cloud_eye0))
                 logger.info("Collected %s data points for eye 1." %len(cal_pt_cloud_eye1))
             else:
+                cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
                 logger.info("Collected %s data points." %len(cal_pt_cloud))
 
-            if self.g_pool.binocular and (len(cal_pt_cloud) < 20 or len(cal_pt_cloud_eye0) < 20 or len(cal_pt_cloud_eye1) < 20) or len(cal_pt_cloud) < 20:
+
+            if self.g_pool.binocular and (len(cal_pt_cloud_eye0) < 20 or len(cal_pt_cloud_eye1) < 20) or len(cal_pt_cloud) < 20:
                 logger.warning("Did not collect enough data.")
                 return
 
@@ -182,7 +193,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 self.g_pool.plugins.add(Bilateral_Gaze_Mapper,args={'params':params, 'params_eye0':params_eye0, 'params_eye1':params_eye1})
             else:
                 self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
-
 
     def update(self,frame,events):
         """

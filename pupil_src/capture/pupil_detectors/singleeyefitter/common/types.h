@@ -69,6 +69,7 @@ namespace singleeyefitter {
         double modelConfidence = 0.0;
         Circle circle  = Circle::Null;
         Ellipse ellipse = Ellipse::Null; // the circle projected back to 2D
+        Sphere<double> sphere = Sphere<double>::Null;
         int modelID = 0;
         double timestamp = 0.0;
         //-------- For visualization ----------------
