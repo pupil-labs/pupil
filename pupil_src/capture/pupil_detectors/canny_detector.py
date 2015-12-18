@@ -26,7 +26,6 @@ from c_methods import eye_filter
 from glfw import *
 from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
 from pyglui.cygl.utils import draw_gl_texture
-from template import Pupil_Detector
 
 # gui
 from pyglui import ui
@@ -44,11 +43,12 @@ logger = logging.getLogger(__name__)
 
 
 
-class Canny_Detector(Pupil_Detector):
+class Canny_Detector(object):
     """a Pupil detector based on Canny_Edges"""
     def __init__(self, g_pool):
-        super(Canny_Detector, self).__init__(g_pool)
+        super(Canny_Detector, self).__init__()
 
+        self.g_pool = g_pool
         # load session persistent settings
         self.session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_detector') )
 
