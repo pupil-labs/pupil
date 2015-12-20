@@ -117,7 +117,6 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Vector_Gaze_Mapper"""
     def __init__(self, g_pool, transformation , camera_intrinsics , calibration_points_3d = [], calibration_points_2d = []  ):
         super(Vector_Gaze_Mapper, self).__init__(g_pool)
-        print 'INIT MAPPER'
         self.transformation  =  transformation
         self.camera_matrix = camera_intrinsics[0]
         self.dist_coefs = camera_intrinsics[1]
@@ -157,6 +156,9 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
     #def get_init_dict(self):
      #   return {'params':self.params}
+
+    def cleanup(self):
+        self.visualizer.close_window()
 
 
     # def map_gaze_offline(self,pupil_positions):
