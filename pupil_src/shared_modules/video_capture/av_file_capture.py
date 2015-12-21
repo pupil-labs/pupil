@@ -237,8 +237,8 @@ class File_Capture(object):
 
     def get_now(self):
         try:
-            timestamp = self.timestamps[self.get_frame_index()]
-            logger.warning("Filecapture is not a realtime source. -NOW- will be the current timestamp")
+            timestamp = self.timestamps[self.get_frame_index()-1]
+            logger.debug("Filecapture is not a realtime source. -NOW- will be the current timestamp")
         except IndexError:
             logger.warning("timestamp not found.")
             timestamp = 0
