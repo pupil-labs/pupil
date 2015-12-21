@@ -10,7 +10,7 @@
 import os
 from pyglui import ui
 from plugin import Plugin
-from file_methods import save_object, load_object
+from file_methods import load_object,save_object
 
 import numpy as np
 from OpenGL.GL import *
@@ -37,14 +37,15 @@ class Annotation_Capture(Plugin):
         self.new_annotation_name = 'new annotation name'
         self.new_annotation_hotkey = 'e'
 
+        self.current_frame = -1
 
     def init_gui(self):
         #lets make a menu entry in the sidebar
-        self.menu = ui.Growing_Menu('User Defined Events')
+        self.menu = ui.Growing_Menu('Add annoations')
         self.g_pool.sidebar.append(self.menu)
 
         #add a button to close the plugin
-        self.menu.append(ui.Button('close User_Events',self.close))
+        self.menu.append(ui.Button('close',self.close))
         self.menu.append(ui.Text_Input('new_annotation_name',self))
         self.menu.append(ui.Text_Input('new_annotation_hotkey',self))
         self.menu.append(ui.Button('add annotation type',self.add_annotation))
@@ -98,7 +99,7 @@ class Annotation_Capture(Plugin):
     def fire_annotation(self,annotation_label):
         t = self.g_pool.capture.get_timestamp()
         logger.info('"%s"@%s'%(annotation_label,t))
-        notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','network_propagate':True} #you may add more field to this dictionary if you want.
+        notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','network_propagate':True,'record':True} #you may add more field to this dictionary if you want.
         self.notify_all(notification)
 
 
@@ -113,17 +114,18 @@ class Annotation_Capture(Plugin):
         self.deinit_gui()
 
 
-class User_Event_Player(Plugin):
+class Annotation_Player(Annotation_Capture):
     """Describe your plugin here
-    When captured file is played, event tags (straight line pertruding
-         from bar) should appear along the video bar
+    View,edit and add Annotations.
     """
-    def __init__(self,g_pool):
-        super(User_Event_Player, self).__init__(g_pool)
+    def __init__(self,g_pool,annotations=None):
+        if annotations:
+            super(Annotation_Player, self).__init__(g_pool,annotations)
+        else:
+            super(Annotation_Player, self).__init__(g_pool)
+
         from player_methods import correlate_data
 
-
-        self.menu = None
         self.frame_count = len(self.g_pool.timestamps)
 
         #display layout
@@ -131,20 +133,40 @@ class User_Event_Player(Plugin):
         self.window_size = 0,0
 
 
-        self.events_list = load_object(os.path.join(self.g_pool.rec_dir, "user_events"))
-        correlate_data(self.events_list, self.g_pool.timestamps)
+        #first we try to load annoations previously saved with pupil player
+        try:
+            annotations_list = load_object(os.path.join(self.g_pool.rec_dir, "annotations"))
+        except IOError as e:
+            #if that fails we assume this is the first time this recording is played and we load annotations from pupil_data
+            try:
+                notifications_list = load_object(os.path.join(self.g_pool.rec_dir, "pupil_data"))['notifications']
+                annotations_list = [n for n in notifications_list if n['subject']=='annotation']
+            except (KeyError,IOError) as e:
+                annotations_list = []
+                logger.debug('No annotations found in pupil_data file.')
+            else:
+                logger.debug('loaded %s annotations from pupil_data file'%len(annotations_list))
+        else:
+            logger.debug('loaded %s annotations from annotations file'%len(annotations_list))
 
-        self.event_by_timestamp = dict( [(i['timestamp'],i) for i in self.events_list])
-        self.event_by_index = dict( [(i['index'],i) for i in self.events_list])
-
+        self.annotations_by_frame = correlate_data(annotations_list, self.g_pool.timestamps)
+        self.annotations_list = annotations_list
 
     def init_gui(self):
-        # initialize the menu
-        self.menu = ui.Scrolling_Menu('Event Player')
-
-        # add menu to the window
+        #lets make a menu entry in the sidebar
+        self.menu = ui.Scrolling_Menu('view add edit annoations')
         self.g_pool.gui.append(self.menu)
-        self.menu.append(ui.Button('remove',self.unset_alive))
+
+        #add a button to close the plugin
+        self.menu.append(ui.Button('close',self.close))
+        self.menu.append(ui.Text_Input('new_annotation_name',self))
+        self.menu.append(ui.Text_Input('new_annotation_hotkey',self))
+        self.menu.append(ui.Button('add annotation type',self.add_annotation))
+        self.sub_menu = ui.Growing_Menu('Events - click to remove')
+        self.menu.append(self.sub_menu)
+        self.update_buttons()
+
+
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 
         self.glfont = fontstash.Context()
@@ -159,11 +181,20 @@ class User_Event_Player(Plugin):
         self.h_pad = self.padding * self.frame_count/float(w)
         self.v_pad = self.padding * 1./h
 
+    def fire_annotation(self,annotation_label):
+        t = self.g_pool.capture.get_timestamp()
+        logger.info('"%s"@%s'%(annotation_label,t))
+        notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','added_in_player':True,'index':self.g_pool.capture.get_frame_index()-1} #you may add more field to this dictionary if you want.
+        self.annotations_list.append(notification)
+        self.annotations_by_frame[notification['index']].append(notification)
+
 
     def update(self,frame,events):
-        event = self.event_by_index.get(frame.index,None)
-        if event:
-            logger.info(event['user_event_name'])
+        if frame.index != self.current_frame:
+            self.current_frame = frame.index
+            events = self.annotations_by_frame[frame.index]
+            for e in events:
+                logger.info(str(e))
 
     def deinit_gui(self):
         if self.menu:
@@ -176,41 +207,8 @@ class User_Event_Player(Plugin):
 
 
     def gl_display(self):
-
-        glMatrixMode(GL_PROJECTION)
-        glPushMatrix()
-        glLoadIdentity()
-        glOrtho(-self.h_pad, (self.frame_count)+self.h_pad, -self.v_pad, 1+self.v_pad,-1,1) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
-        glLoadIdentity()
-
-        event_tick_color = (1.,0.,0.,.8)
-
-
-        for e in self.events_list:
-            logger.info(str(e['index']))
-
-            draw_polyline(verts=[(e['index'],0),(e['index'],.02)],
-                    color=RGBA(*event_tick_color))
-            self.glfont.set_color_float((1.,0.,0.,.8))
-            #self.glfont.set_blur(0.96)
-            self.glfont.draw_text(e['index'],0.02,e['user_event_name'])
-
-
-        # draw_polyline(verts=[(0,0),(self.current_frame_index,0)],color=RGBA(*color1))
-        # draw_polyline(verts=[(self.current_frame_index,0),(self.frame_count,0)],color=RGBA(.5,.5,.5,.5))
-        # draw_points([(self.current_frame_index,0)],color=RGBA(*color1),size=40)
-        # draw_points([(self.current_frame_index,0)],color=RGBA(*color2),size=10)
-
-        glMatrixMode(GL_PROJECTION)
-        glPopMatrix()
-        glMatrixMode(GL_MODELVIEW)
-        glPopMatrix()
-
-    def get_init_dict(self):
-        return {}
-
+        #TODO: implement this
+        pass
 
     def cleanup(self):
         """called when the plugin gets terminated.
@@ -218,3 +216,4 @@ class User_Event_Player(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
+        save_object(self.annotations_list,os.path.join(self.g_pool.rec_dir, "annotations"))
