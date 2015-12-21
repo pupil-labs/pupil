@@ -19,8 +19,8 @@ from file_methods import save_object
 
 def correlate_data(data,timestamps):
     '''
-    data:  dict of data :
-        will have at least:
+    data:  list of data :
+        each datum is a dict with at least:
             timestamp: float
 
     timestamps: timestamps list to correlate  data to
@@ -29,7 +29,7 @@ def correlate_data(data,timestamps):
     with the length of the number of timestamps.
     Each slot contains a list that will have 0, 1 or more assosiated data points.
 
-    Finally we add an index field to the data_point with the assosiated index
+    Finally we add an index field to the datum with the associated index
     '''
     timestamps = list(timestamps)
     data_by_frame = [[] for i in timestamps]
@@ -37,6 +37,7 @@ def correlate_data(data,timestamps):
     frame_idx = 0
     data_index = 0
 
+    data.sort(key=lambda d: d['timestamp'])
 
     while True:
         try:
