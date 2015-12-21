@@ -170,8 +170,12 @@ class Recorder(Plugin):
             self.start()
 
     def on_notify(self,notification):
-        if notification['subject'] == 'annotation' and self.running:
-            self.data['annotations']+=notification
+
+        # notification wants to be recorded
+        if notification.get('record',False) and self.running:
+            self.data['notifications'].append(notification)
+
+
         # Remote has started recording, we should start as well.
         elif notification['subject'] == 'rec_started' and notification.get('source','local') != 'local':
             if self.running:
@@ -193,7 +197,7 @@ class Recorder(Plugin):
 
     def start(self,network_propagate=True):
         self.timestamps = []
-        self.data = {'pupil_positions':[],'gaze_positions':[],'annotations':[]}
+        self.data = {'pupil_positions':[],'gaze_positions':[],'notifications':[]}
         self.pupil_pos_list = []
         self.gaze_pos_list = []
 
