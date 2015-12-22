@@ -185,6 +185,8 @@ def world(g_pool,cap_src,cap_size):
     glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfwMakeContextCurrent(main_window)
     cygl.utils.init()
+    g_pool.main_window = main_window
+
 
     #setup GUI
     g_pool.gui = ui.UI()
@@ -231,7 +233,6 @@ def world(g_pool,cap_src,cap_size):
     basic_gl_setup()
     g_pool.image_tex = Named_Texture()
     g_pool.image_tex.update_from_frame(frame)
-    g_pool.main_window = main_window
     # refresh speed settings
     glfwSwapInterval(0)
 
