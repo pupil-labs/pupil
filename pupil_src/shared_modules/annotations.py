@@ -66,7 +66,7 @@ class Annotation_Capture(Plugin):
                 return lambda _ : self.fire_annotation(e_name)
 
             def make_remove(e_name,hotkey):
-                return lambda: self.remove_event((e_name,hotkey))
+                return lambda: self.remove_annotation((e_name,hotkey))
 
             thumb = ui.Thumb(e_name,setter=make_fire(e_name,hotkey), getter=lambda: False,
             label=hotkey,hotkey=hotkey)
@@ -89,7 +89,7 @@ class Annotation_Capture(Plugin):
         self.annotations.append((self.new_annotation_name,self.new_annotation_hotkey))
         self.update_buttons()
 
-    def remove_annotations(self,annotation):
+    def remove_annotation(self,annotation):
         self.annotations.remove(annotation)
         self.update_buttons()
 
