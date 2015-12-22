@@ -232,6 +232,7 @@ def session(rec_dir):
     # create container for globally scoped vars
     g_pool = Global_Container()
     g_pool.app = 'player'
+    g_pool.binocular = meta_info.get('Eye Mode','monocular') == 'binocular'
     g_pool.version = get_version(version_file)
     g_pool.capture = cap
     g_pool.timestamps = timestamps
