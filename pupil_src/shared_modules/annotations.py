@@ -201,6 +201,10 @@ class Annotation_Player(Annotation_Capture):
             self.g_pool.gui.remove(self.menu)
             self.menu = None
 
+        if self.buttons:
+            for b in self.buttons:
+                self.g_pool.quickbar.remove(b)
+            self.buttons = []
 
     def unset_alive(self):
         self.alive = False
