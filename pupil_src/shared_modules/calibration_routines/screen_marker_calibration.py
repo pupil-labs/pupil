@@ -249,7 +249,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 logger.info('Loaded camera calibration but camera name and/or resolution has changed. Please re-calibrate.')
                 camera_intrinsics = None
 
-          # do we have data from 3D detector
+
+        # do we have data from 3D detector
         if self.pupil_list[0] and self.pupil_list[0]['method'] == '3D c++':
             cal_pt_cloud = calibrate.preprocess_vector_data(self.pupil_list,self.ref_list, camera_intrinsics = camera_intrinsics)
             cal_pt_cloud = np.array(cal_pt_cloud)
@@ -257,18 +258,16 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             # np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
             camera_matrix = camera_intrinsics[0]
             dist_coefs = camera_intrinsics[1]
-            transformation = calibrate.get_transformation_from_point_set(cal_pt_cloud, camera_matrix, dist_coefs)
+            #transformation = calibrate.get_transformation_from_point_set(cal_pt_cloud, camera_matrix, dist_coefs)
+            a = cal_pt_cloud[:,0]
+            b = cal_pt_cloud[:,1]
+            print 'aaa: '  ,a
+            print 'bbb: ' , b
+            r,t = calibrate.rigid_transform_3D( np.matrix(a), np.matrix(b) )
+            transformation = cv2.Rodrigues( r)[0] , t
+
             print 'transformation: ' , transformation
             self.g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'calibration_points_3d': cal_pt_cloud[:,0].tolist(), 'calibration_points_2d': cal_pt_cloud[:,1].tolist()})
-
-            ## ---- ANGLE APPROACH -----------
-            # cal_pt_cloud = calibrate.preprocess_angle_data(self.pupil_list,self.ref_list, camera_intrinsics = camera_intrinsics)
-            # cal_pt_cloud = np.array(cal_pt_cloud)
-            # np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
-
-            # map_fn,params = calibrate.get_map_from_angles(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, binocular=self.g_pool.binocular)
-
-            # self.g_pool.plugins.add(Angle_Gaze_Mapper,args={'params':params , 'camera_intrinsics': camera_intrinsics})
 
         else:
 

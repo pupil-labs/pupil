@@ -22,7 +22,7 @@ import audio
 
 from pyglui import ui
 from plugin import Calibration_Plugin
-from gaze_mappers import Simple_Gaze_Mapper, Vector_Gaze_Mapper,Angle_Gaze_Mapper, Bilateral_Gaze_Mapper
+from gaze_mappers import Simple_Gaze_Mapper, Vector_Gaze_Mapper, Bilateral_Gaze_Mapper
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -133,7 +133,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
 
 
-          # do we have data from 3D detector
+        # do we have data from 3D detector
         if self.pupil_list[0] and self.pupil_list[0]['method'] == '3D c++':
             cal_pt_cloud = calibrate.preprocess_vector_data(self.pupil_list,self.ref_list, camera_intrinsics = camera_intrinsics)
             cal_pt_cloud = np.array(cal_pt_cloud)
@@ -151,15 +151,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             print 'transformation: ' , transformation
             self.g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'calibration_points_3d': cal_pt_cloud[:,0].tolist(), 'calibration_points_2d': cal_pt_cloud[:,1].tolist()})
-
-            ## ---- ANGLE APPROACH -----------
-            # cal_pt_cloud = calibrate.preprocess_angle_data(self.pupil_list,self.ref_list, camera_intrinsics = camera_intrinsics)
-            # cal_pt_cloud = np.array(cal_pt_cloud)
-            # np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
-
-            # map_fn,params = calibrate.get_map_from_angles(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, binocular=self.g_pool.binocular)
-
-            # self.g_pool.plugins.add(Angle_Gaze_Mapper,args={'params':params , 'camera_intrinsics': camera_intrinsics})
 
         else:
 
