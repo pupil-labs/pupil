@@ -114,7 +114,17 @@ class Plugin(object):
     def notify_all(self,notification):
         """
         call this to notify all other plugins with a notification:
-        notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
+        notification is a dict in the format {'subject':'notification_name',['addional_field':'foo']}
+
+            adding 'record':True will make recorder save the notification during recording
+            adding 'network_propagate':True will send the event to other pupil sync nodes in the same group
+
+            if you want recording and network propagation to work make sure that the notification
+            is pickalable and can be recreated though repr+eval.
+
+            You may add more fields as you like.
+
+
         do not overwrite this method
         """
         self.g_pool.notifications.append(notification)
@@ -123,7 +133,6 @@ class Plugin(object):
         """
         call this to notify all other plugins with a notification.
         if will be published after a bit of time to allow you to adjust the slider and keep the loop repsonsive
-        notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
         do not overwrite this method
         """
         notification['_notify_time_'] = time()+delay
