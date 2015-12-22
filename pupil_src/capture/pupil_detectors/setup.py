@@ -37,7 +37,7 @@ extensions = [
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc'],
         # library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
-        extra_compile_args=["-std=c++11",'-w'], #-w hides warnings
+        extra_compile_args=["-std=c++11",'-w','-O3'], #-w hides warnings
         depends= dependencies,
         language="c++"),
      Extension(
@@ -47,7 +47,7 @@ extensions = [
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc', 'ceres'],
         # library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
-        extra_compile_args=["-std=c++11",'-w'], #-w hides warnings
+        extra_compile_args=["-std=c++11",'-w','-O3'], #-w hides warnings
         depends= dependencies,
         language="c++"),
 ]
