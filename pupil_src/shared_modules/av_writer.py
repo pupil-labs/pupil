@@ -73,7 +73,7 @@ class AV_Writer(object):
     We are creating a
     """
 
-    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 8000*10e3}, audio_stream=None,use_timestamps=False):
+    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 10000*10e3}, audio_stream=None,use_timestamps=False):
         super(AV_Writer, self).__init__()
         self.use_timestamps = use_timestamps
         # the approximate capture rate.
@@ -99,7 +99,7 @@ class AV_Writer(object):
 
         self.video_stream = self.container.add_stream(video_stream['codec'],1/self.time_base)
         self.video_stream.bit_rate = video_stream['bit_rate']
-        self.video_stream.bit_rate_tolerance = video_stream['bit_rate']
+        self.video_stream.bit_rate_tolerance = video_stream['bit_rate']/10
         self.video_stream.thread_count = 1
         # self.video_stream.pix_fmt = "yuv420p"
         self.configured = False
