@@ -294,8 +294,8 @@ class Audio_Capture(object):
 
     def start(self,file_loc, audio_src):
         self.should_close.clear()
-        if platform.system() == "Darwin" and 0:
-            in_container = av.open(':%s'%audio_src,format="avfoundation")
+        if platform.system() == "Darwin":
+            in_container = av.open('none:%s'%audio_src,format="avfoundation")
         else:
             in_container = None
         self.thread = Thread(target=rec_thread, args=(file_loc,in_container, audio_src,self.should_close))
