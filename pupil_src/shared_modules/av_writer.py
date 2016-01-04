@@ -73,7 +73,7 @@ class AV_Writer(object):
     We are creating a
     """
 
-    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 10000*10e3}, audio_stream=None,use_timestamps=False):
+    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 15000*10e3}, audio_stream=None,use_timestamps=False):
         super(AV_Writer, self).__init__()
         self.use_timestamps = use_timestamps
         # the approximate capture rate.
