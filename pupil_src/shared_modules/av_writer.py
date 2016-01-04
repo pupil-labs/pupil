@@ -99,7 +99,7 @@ class AV_Writer(object):
 
         self.video_stream = self.container.add_stream(video_stream['codec'],1/self.time_base)
         self.video_stream.bit_rate = video_stream['bit_rate']
-        self.video_stream.bit_rate_tolerance = video_stream['bit_rate']/10
+        self.video_stream.bit_rate_tolerance = video_stream['bit_rate']/20
         self.video_stream.thread_count = 1
         # self.video_stream.pix_fmt = "yuv420p"
         self.configured = False
