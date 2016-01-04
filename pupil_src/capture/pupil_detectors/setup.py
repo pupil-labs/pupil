@@ -33,27 +33,26 @@ extensions = [
     Extension(
         name="detector_2d",
         sources=['detector_2d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp' ],
-        include_dirs = [ np.get_include() , '/usr/local/include/eigen3', '/usr/include/eigen3'],
+        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3'],
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc'],
         # library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
-        extra_compile_args=["-std=c++11",'-w'], #-w hides warnings
+        extra_compile_args=["-std=c++11",'-w','-O2'], #-w hides warnings
         depends= dependencies,
         language="c++"),
      Extension(
         name="detector_3d",
         sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/EyeModelFitter.cpp','singleeyefitter/EyeModel.cpp'],
-        include_dirs = [ np.get_include() , '/usr/local/include/eigen3', '/usr/include/eigen3'],
+        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3'],
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc', 'ceres'],
         # library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
-        extra_compile_args=["-std=c++11",'-w'], #-w hides warnings
+        extra_compile_args=["-std=c++11",'-w','-O2'], #-w hides warnings
         depends= dependencies,
         language="c++"),
 ]
 # import os
-# os.environ["CC"] = "clang-3.5" 
-# os.environ["CXX"] = "clang-3.5" 
+# os.environ["CC"] = "clang" 
 
 setup(
     name="eye_model_3d",
