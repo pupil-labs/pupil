@@ -8,48 +8,133 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os,platform
-from time import sleep
-from file_methods import Persistent_Dict
-import logging
-import numpy as np
-
-#display
-from glfw import *
-from pyglui import ui,graph
-from pyglui.cygl.utils import init as cygl_init
-from pyglui.cygl.utils import draw_points as cygl_draw_points
-from pyglui.cygl.utils import RGBA as cygl_rgba
-from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
-from pyglui.cygl.utils import Named_Texture
-
-# check versions for our own depedencies as they are fast-changing
-from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.6'
-
-#monitoring
-import psutil
-
-# helpers/utils
-from version_utils import VersionFormat
-from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based
-from OpenGL.GL import GL_LINE_LOOP
-from methods import *
-from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
-
-from av_writer import JPEG_Writer,AV_Writer
-
-# Pupil detectors
-from pupil_detectors import Canny_Detector
 
 
 
-def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
+
+def eye(g_pool,cap_src,pipe_to_world,eye_id):
     """
     Creates a window, gl context.
     Grabs images from a capture.
     Streams Pupil coordinates into g_pool.pupil_queue
     """
+
+    print 'dir',dir(),'globals',globals(),'locals',locals()
+
+    import os,platform
+    from file_methods import Persistent_Dict
+    import logging
+    import numpy as np
+
+    #display
+    import glfw
+    from pyglui import ui,graph
+    from pyglui.cygl.utils import init as cygl_init
+    from pyglui.cygl.utils import draw_points as cygl_draw_points
+    from pyglui.cygl.utils import RGBA as cygl_rgba
+    from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
+    from pyglui.cygl.utils import Named_Texture
+
+
+    #monitoring
+    import psutil
+
+    # helpers/utils
+    from version_utils import VersionFormat
+    from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based
+    from OpenGL.GL import GL_LINE_LOOP
+    from methods import normalize,denormalize,Roi, timer
+    from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
+
+    from av_writer import JPEG_Writer,AV_Writer
+
+    # Pupil detectors
+    from pupil_detectors import Canny_Detector
+
+
+
+    from methods import Roi
+    class UIRoi(Roi):
+        """
+        this object inherits from ROI and adds some UI helper functions
+        """
+        def __init__(self,array_shape):
+            super(UIRoi, self).__init__(array_shape)
+            self.max_x = array_shape[1]-1
+            self.min_x = 1
+            self.max_y = array_shape[0]-1
+            self.min_y = 1
+
+            #enforce contraints
+            self.lX = max(self.min_x,self.lX)
+            self.uX = min(self.max_x,self.uX)
+            self.lY = max(self.min_y,self.lY)
+            self.uY = min(self.max_y,self.uY)
+
+
+            self.handle_size = 45
+            self.active_edit_pt = False
+            self.active_pt_idx = None
+            self.handle_color = cygl_rgba(.5,.5,.9,.9)
+            self.handle_color_selected = cygl_rgba(.5,.9,.9,.9)
+            self.handle_color_shadow = cygl_rgba(.0,.0,.0,.5)
+
+        @property
+        def rect(self):
+            return [[self.lX,self.lY],
+                    [self.uX,self.lY],
+                    [self.uX,self.uY],
+                    [self.lX,self.uY]]
+
+        def move_vertex(self,vert_idx,(x,y)):
+            x,y = int(x),int(y)
+            x,y = min(self.max_x,x),min(self.max_y,y)
+            x,y = max(self.min_x,x),max(self.min_y,y)
+            thresh = 45
+            if vert_idx == 0:
+                x = min(x,self.uX-thresh)
+                y = min(y,self.uY-thresh)
+                self.lX,self.lY = x,y
+            if vert_idx == 1:
+                x = max(x,self.lX+thresh)
+                y = min(y,self.uY-thresh)
+                self.uX,self.lY = x,y
+            if vert_idx == 2:
+                x = max(x,self.lX+thresh)
+                y = max(y,self.lY+thresh)
+                self.uX,self.uY = x,y
+            if vert_idx == 3:
+                x = min(x,self.uX-thresh)
+                y = max(y,self.lY+thresh)
+                self.lX,self.uY = x,y
+
+        def mouse_over_center(self,edit_pt,mouse_pos,w,h):
+            return edit_pt[0]-w/2 <= mouse_pos[0] <=edit_pt[0]+w/2 and edit_pt[1]-h/2 <= mouse_pos[1] <=edit_pt[1]+h/2
+
+        def mouse_over_edit_pt(self,mouse_pos,w,h):
+            for p,i in zip(self.rect,range(4)):
+                if self.mouse_over_center(p,mouse_pos,w,h):
+                    self.active_pt_idx = i
+                    self.active_edit_pt = True
+                    return True
+
+        def draw(self,ui_scale=1):
+            cygl_draw_polyline(self.rect,color=cygl_rgba(.8,.8,.8,0.9),thickness=2,line_type=GL_LINE_LOOP)
+            if self.active_edit_pt:
+                inactive_pts = self.rect[:self.active_pt_idx]+self.rect[self.active_pt_idx+1:]
+                active_pt = [self.rect[self.active_pt_idx]]
+                cygl_draw_points(inactive_pts,size=(self.handle_size+10)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
+                cygl_draw_points(inactive_pts,size=self.handle_size*ui_scale,color=self.handle_color,sharpness=0.9)
+                cygl_draw_points(active_pt,size=(self.handle_size+30)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
+                cygl_draw_points(active_pt,size=(self.handle_size+10)*ui_scale,color=self.handle_color_selected,sharpness=0.9)
+            else:
+                cygl_draw_points(self.rect,size=(self.handle_size+10)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
+                cygl_draw_points(self.rect,size=self.handle_size*ui_scale,color=self.handle_color,sharpness=0.9)
+
+
+
+
+
 
     # modify the root logger for this process
     logger = logging.getLogger()
@@ -88,12 +173,12 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     # Callback functions
     def on_resize(window,w, h):
         if not g_pool.iconified:
-            active_window = glfwGetCurrentContext()
-            glfwMakeContextCurrent(window)
+            active_window = glfw.glfwGetCurrentContext()
+            glfw.glfwMakeContextCurrent(window)
             g_pool.gui.update_window(w,h)
             graph.adjust_size(w,h)
             adjust_gl_view(w,h)
-            glfwMakeContextCurrent(active_window)
+            glfw.glfwMakeContextCurrent(active_window)
 
     def on_key(window, key, scancode, action, mods):
         g_pool.gui.update_key(key,scancode,action,mods)
@@ -106,12 +191,12 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
     def on_button(window,button, action, mods):
         if g_pool.display_mode == 'roi':
-            if action == GLFW_RELEASE and u_r.active_edit_pt:
+            if action == glfw.GLFW_RELEASE and u_r.active_edit_pt:
                 u_r.active_edit_pt = False
                 return # if the roi interacts we dont what the gui to interact as well
-            elif action == GLFW_PRESS:
-                pos = glfwGetCursorPos(window)
-                pos = normalize(pos,glfwGetWindowSize(main_window))
+            elif action == glfw.GLFW_PRESS:
+                pos = glfw.glfwGetCursorPos(window)
+                pos = normalize(pos,glfw.glfwGetWindowSize(main_window))
                 if g_pool.flip:
                     pos = 1-pos[0],1-pos[1]
                 pos = denormalize(pos,(frame.width,frame.height)) # Position in img pixels
@@ -123,11 +208,11 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
 
     def on_pos(window,x, y):
-        hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
+        hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0]/glfw.glfwGetWindowSize(window)[0])
         g_pool.gui.update_mouse(x*hdpi_factor,y*hdpi_factor)
 
         if u_r.active_edit_pt:
-            pos = normalize((x,y),glfwGetWindowSize(main_window))
+            pos = normalize((x,y),glfw.glfwGetWindowSize(main_window))
             if g_pool.flip:
                 pos = 1-pos[0],1-pos[1]
             pos = denormalize(pos,(frame.width,frame.height) )
@@ -148,7 +233,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         session_settings.clear()
     # Initialize capture
     cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
-    default_settings = {'frame_size':cap_size,'frame_rate':30}
+    default_settings = {'frame_size':(640,480),'frame_rate':30}
     previous_settings = session_settings.get('capture_settings',None)
     if previous_settings and previous_settings['name'] == cap.name:
         cap.settings = previous_settings
@@ -164,7 +249,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         return
 
     #signal world that we are ready to go
-    pipe_to_world.send('eye%s process ready'%eye_id)
+    # pipe_to_world.send('eye%s process ready'%eye_id)
 
     # any object we attach to the g_pool object *from now on* will only be visible to this process!
     # vars should be declared here to make them visible to the code reader.
@@ -196,24 +281,21 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
 
 
-    # Initialize glfw
-    glfwInit()
-    if g_pool.binocular:
-        title = "Binocular eye %s"%eye_id
-    else:
-        title = 'Eye'
+    # Initialize glfw.glfw
+    glfw.glfwInit()
+    title = "eye %s"%eye_id
     width,height = session_settings.get('window_size',(frame.width, frame.height))
-    main_window = glfwCreateWindow(width,height, title, None, None)
+    main_window = glfw.glfwCreateWindow(width,height, title, None, None)
     window_pos = session_settings.get('window_position',window_position_default)
-    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
-    glfwMakeContextCurrent(main_window)
+    glfw.glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
+    glfw.glfwMakeContextCurrent(main_window)
     cygl_init()
 
     # gl_state settings
     basic_gl_setup()
     g_pool.image_tex = Named_Texture()
     g_pool.image_tex.update_from_frame(frame)
-    glfwSwapInterval(0)
+    glfw.glfwSwapInterval(0)
 
 
     #setup GUI
@@ -222,7 +304,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-300,0),size=(0,0),header_pos='left')
     general_settings = ui.Growing_Menu('General')
     general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
-    general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
+    general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,frame.width,frame.height)) )
     general_settings.append(ui.Selector('display_mode',g_pool,setter=set_display_mode_info,selection=['camera_image','roi','algorithm'], labels=['Camera Image', 'ROI', 'Algorithm'], label="Mode") )
     general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
     g_pool.display_mode_info = ui.Info_Text(g_pool.display_mode_info_text[g_pool.display_mode])
@@ -235,17 +317,17 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     pupil_detector.init_gui(g_pool.sidebar)
 
     # Register callbacks main_window
-    glfwSetFramebufferSizeCallback(main_window,on_resize)
-    glfwSetWindowCloseCallback(main_window,on_close)
-    glfwSetWindowIconifyCallback(main_window,on_iconify)
-    glfwSetKeyCallback(main_window,on_key)
-    glfwSetCharCallback(main_window,on_char)
-    glfwSetMouseButtonCallback(main_window,on_button)
-    glfwSetCursorPosCallback(main_window,on_pos)
-    glfwSetScrollCallback(main_window,on_scroll)
+    glfw.glfwSetFramebufferSizeCallback(main_window,on_resize)
+    glfw.glfwSetWindowCloseCallback(main_window,on_close)
+    glfw.glfwSetWindowIconifyCallback(main_window,on_iconify)
+    glfw.glfwSetKeyCallback(main_window,on_key)
+    glfw.glfwSetCharCallback(main_window,on_char)
+    glfw.glfwSetMouseButtonCallback(main_window,on_button)
+    glfw.glfwSetCursorPosCallback(main_window,on_pos)
+    glfw.glfwSetScrollCallback(main_window,on_scroll)
 
     #set the last saved window size
-    on_resize(main_window, *glfwGetWindowSize(main_window))
+    on_resize(main_window, *glfw.glfwGetWindowSize(main_window))
 
 
     # load last gui configuration
@@ -277,6 +359,15 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
     # Event loop
     while not g_pool.quit.value:
+
+        if pipe_to_world.poll():
+            command = pipe_to_world.recv()
+            if command == 'Shut_Down':
+                break
+        else:
+            command = None
+
+
         # Get an image from the grabber
         try:
             frame = cap.get_frame()
@@ -300,25 +391,24 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
 
         ###  RECORDING of Eye Video (on demand) ###
         # Setup variables and lists for recording
-        if pipe_to_world.poll():
-            command,raw_mode = pipe_to_world.recv()
-            if command is not None:
-                record_path = command
-                logger.info("Will save eye video to: %s"%record_path)
-                timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-                if raw_mode and frame.jpeg_buffer:
-                    video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
-                    writer = JPEG_Writer(video_path,cap.frame_rate)
-                else:
-                    video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
-                    writer = AV_Writer(video_path,cap.frame_rate)
-                timestamps = []
+
+        if command is not None:
+            record_path,raw_mode = command
+            logger.info("Will save eye video to: %s"%record_path)
+            timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
+            if raw_mode and frame.jpeg_buffer:
+                video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
+                writer = JPEG_Writer(video_path,cap.frame_rate)
             else:
-                logger.info("Done recording.")
-                writer.release()
-                writer = None
-                np.save(timestamps_path,np.asarray(timestamps))
-                del timestamps
+                video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
+                writer = AV_Writer(video_path,cap.frame_rate)
+            timestamps = []
+        elif None:
+            logger.info("Done recording.")
+            writer.release()
+            writer = None
+            np.save(timestamps_path,np.asarray(timestamps))
+            del timestamps
 
         if writer:
             writer.write_video_frame(frame)
@@ -334,7 +424,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         # GL drawing
         if window_should_update():
             if not g_pool.iconified:
-                glfwMakeContextCurrent(main_window)
+                glfw.glfwMakeContextCurrent(main_window)
                 clear_gl_screen()
 
                 # switch to work in normalized coordinate space
@@ -372,8 +462,8 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
                     u_r.draw(g_pool.gui.scale)
 
                 #update screen
-                glfwSwapBuffers(main_window)
-            glfwPollEvents()
+                glfw.glfwSwapBuffers(main_window)
+            glfw.glfwPollEvents()
 
     # END while running
 
@@ -383,7 +473,7 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
         writer = None
         np.save(timestamps_path,np.asarray(timestamps))
 
-    glfwRestoreWindow(main_window) #need to do this for windows os
+    glfw.glfwRestoreWindow(main_window) #need to do this for windows os
     # save session persistent settings
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['roi'] = u_r.get()
@@ -391,21 +481,16 @@ def eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     session_settings['display_mode'] = g_pool.display_mode
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['capture_settings'] = g_pool.capture.settings
-    session_settings['window_size'] = glfwGetWindowSize(main_window)
-    session_settings['window_position'] = glfwGetWindowPos(main_window)
+    session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
+    session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
     session_settings['version'] = g_pool.version
     session_settings.close()
 
     pupil_detector.cleanup()
     g_pool.gui.terminate()
-    glfwDestroyWindow(main_window)
-    glfwTerminate()
+    glfw.glfwDestroyWindow(main_window)
+    glfw.glfwTerminate()
     cap.close()
-
-    #flushing queue in case world process did not exit gracefully
-    while not g_pool.pupil_queue.empty():
-        g_pool.pupil_queue.get()
-    g_pool.pupil_queue.close()
 
     logger.debug("Process done")
 
@@ -418,82 +503,4 @@ def eye_profiled(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye%s.pstats | dot -Tpng -o eye%s_cpu_time.png"%(eye_id,eye_id), shell=True)
     print "created cpu time graph for eye%s process. Please check out the png next to the eye.py file"%eye_id
 
-
-
-class UIRoi(Roi):
-    """
-    this object inherits from ROI and adds some UI helper functions
-    """
-    def __init__(self,array_shape):
-        super(UIRoi, self).__init__(array_shape)
-        self.max_x = array_shape[1]-1
-        self.min_x = 1
-        self.max_y = array_shape[0]-1
-        self.min_y = 1
-
-        #enforce contraints
-        self.lX = max(self.min_x,self.lX)
-        self.uX = min(self.max_x,self.uX)
-        self.lY = max(self.min_y,self.lY)
-        self.uY = min(self.max_y,self.uY)
-
-
-        self.handle_size = 45
-        self.active_edit_pt = False
-        self.active_pt_idx = None
-        self.handle_color = cygl_rgba(.5,.5,.9,.9)
-        self.handle_color_selected = cygl_rgba(.5,.9,.9,.9)
-        self.handle_color_shadow = cygl_rgba(.0,.0,.0,.5)
-
-    @property
-    def rect(self):
-        return [[self.lX,self.lY],
-                [self.uX,self.lY],
-                [self.uX,self.uY],
-                [self.lX,self.uY]]
-
-    def move_vertex(self,vert_idx,(x,y)):
-        x,y = int(x),int(y)
-        x,y = min(self.max_x,x),min(self.max_y,y)
-        x,y = max(self.min_x,x),max(self.min_y,y)
-        thresh = 45
-        if vert_idx == 0:
-            x = min(x,self.uX-thresh)
-            y = min(y,self.uY-thresh)
-            self.lX,self.lY = x,y
-        if vert_idx == 1:
-            x = max(x,self.lX+thresh)
-            y = min(y,self.uY-thresh)
-            self.uX,self.lY = x,y
-        if vert_idx == 2:
-            x = max(x,self.lX+thresh)
-            y = max(y,self.lY+thresh)
-            self.uX,self.uY = x,y
-        if vert_idx == 3:
-            x = min(x,self.uX-thresh)
-            y = max(y,self.lY+thresh)
-            self.lX,self.uY = x,y
-
-    def mouse_over_center(self,edit_pt,mouse_pos,w,h):
-        return edit_pt[0]-w/2 <= mouse_pos[0] <=edit_pt[0]+w/2 and edit_pt[1]-h/2 <= mouse_pos[1] <=edit_pt[1]+h/2
-
-    def mouse_over_edit_pt(self,mouse_pos,w,h):
-        for p,i in zip(self.rect,range(4)):
-            if self.mouse_over_center(p,mouse_pos,w,h):
-                self.active_pt_idx = i
-                self.active_edit_pt = True
-                return True
-
-    def draw(self,ui_scale=1):
-        cygl_draw_polyline(self.rect,color=cygl_rgba(.8,.8,.8,0.9),thickness=2,line_type=GL_LINE_LOOP)
-        if self.active_edit_pt:
-            inactive_pts = self.rect[:self.active_pt_idx]+self.rect[self.active_pt_idx+1:]
-            active_pt = [self.rect[self.active_pt_idx]]
-            cygl_draw_points(inactive_pts,size=(self.handle_size+10)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
-            cygl_draw_points(inactive_pts,size=self.handle_size*ui_scale,color=self.handle_color,sharpness=0.9)
-            cygl_draw_points(active_pt,size=(self.handle_size+30)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
-            cygl_draw_points(active_pt,size=(self.handle_size+10)*ui_scale,color=self.handle_color_selected,sharpness=0.9)
-        else:
-            cygl_draw_points(self.rect,size=(self.handle_size+10)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
-            cygl_draw_points(self.rect,size=self.handle_size*ui_scale,color=self.handle_color,sharpness=0.9)
 

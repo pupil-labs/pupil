@@ -8,75 +8,137 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-if __name__ == '__main__':
-    # make shared modules available across pupil_src
-    from sys import path as syspath
-    from os import path as ospath
-    loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
-    syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
-    del syspath, ospath
-
-
 import os, sys,platform
-from time import time
-import logging
-import numpy as np
-
-#display
-from glfw import *
-from pyglui import ui,graph,cygl
-from pyglui.cygl.utils import Named_Texture
-from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
-
-#check versions for our own depedencies as they are fast-changing
-from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.6'
-
-#monitoring
-import psutil
-
-# helpers/utils
-from file_methods import Persistent_Dict
-from version_utils import VersionFormat
-from methods import normalize, denormalize, delta_t
-from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
-
-
-# Plug-ins
-from plugin import Plugin_List,import_runtime_plugins
-from calibration_routines import calibration_plugins, gaze_mapping_plugins
-from recorder import Recorder
-from show_calibration import Show_Calibration
-from display_recent_gaze import Display_Recent_Gaze
-from pupil_server import Pupil_Server
-from pupil_sync import Pupil_Sync
-from marker_detector import Marker_Detector
-from log_display import Log_Display
-from annotations import Annotation_Capture
-# create logger for the context of this function
-logger = logging.getLogger(__name__)
-
-
-
-#UI Platform tweaks
-if platform.system() == 'Linux':
-    scroll_factor = 10.0
-    window_position_default = (0,0)
-elif platform.system() == 'Windows':
-    scroll_factor = 1.0
-    window_position_default = (8,31)
+if platform.system() == 'Darwin':
+    from billiard import Process, Pipe, Queue, Value, freeze_support,forking_enable
+    forking_enable(0)
 else:
-    scroll_factor = 1.0
-    window_position_default = (0,0)
+    from multiprocessing import Process, Pipe, Queue, Value, freeze_support
+    forking_enable = lambda _: _ #dummy fn
 
 
-def world(g_pool,cap_src,cap_size):
+
+class Global_Container(object):
+    pass
+
+
+def world(video_sources,profiled=False):
     """world
     Creates a window, gl context.
     Grabs images from a capture.
     Receives Pupil coordinates from eye process[es]
     Can run various plug-ins.
     """
+
+    if getattr(sys, 'frozen', False):
+        # Specifiy user dirs.
+        user_dir = os.path.expanduser(os.path.join('~','pupil_capture_settings'))
+        version_file = os.path.join(sys._MEIPASS,'_version_string_')
+    else:
+        pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
+        sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
+        # Specifiy user dir.
+        user_dir = os.path.join(pupil_base_dir,'capture_settings')
+        version_file = None
+
+    # create folder for user settings, tmp data
+    if not os.path.isdir(user_dir):
+        os.mkdir(user_dir)
+
+    print "WORLD WAS CALLED"
+    import logging
+    # Set up root logger for the main process before doing imports of logged modules.
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    # create file handler which logs even debug messages
+    fh = logging.FileHandler(os.path.join(user_dir,'world.log'),mode='w')
+    fh.setLevel(logger.level)
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(logger.level+10)
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter('World Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    formatter = logging.Formatter('WORLD Process [%(levelname)s] %(name)s : %(message)s')
+    ch.setFormatter(formatter)
+    # add the handlers to the logger
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+
+    logging.getLogger("OpenGL").setLevel(logging.ERROR)
+    logging.getLogger("libav").setLevel(logging.ERROR)
+
+    logger = logging.getLogger(__name__)
+
+
+    #general imports
+    from time import time
+    import numpy as np
+    from ctypes import c_bool, c_double
+
+
+    #display
+    import glfw
+    from pyglui import ui,graph,cygl
+    from pyglui.cygl.utils import Named_Texture
+    from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
+
+    #check versions for our own depedencies as they are fast-changing
+    from pyglui import __version__ as pyglui_version
+    assert pyglui_version >= '0.6'
+
+    #monitoring
+    import psutil
+
+    # helpers/utils
+    from file_methods import Persistent_Dict
+    from version_utils import VersionFormat,get_version
+    from methods import normalize, denormalize, delta_t
+    from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
+
+
+    # Plug-ins
+    from plugin import Plugin_List,import_runtime_plugins
+    from calibration_routines import calibration_plugins, gaze_mapping_plugins
+    from recorder import Recorder
+    from show_calibration import Show_Calibration
+    from display_recent_gaze import Display_Recent_Gaze
+    from pupil_server import Pupil_Server
+    from pupil_sync import Pupil_Sync
+    from marker_detector import Marker_Detector
+    from log_display import Log_Display
+    from annotations import Annotation_Capture
+    # create logger for the context of this function
+
+
+
+    #UI Platform tweaks
+    if platform.system() == 'Linux':
+        scroll_factor = 10.0
+        window_position_default = (0,0)
+    elif platform.system() == 'Windows':
+        scroll_factor = 1.0
+        window_position_default = (8,31)
+    else:
+        scroll_factor = 1.0
+        window_position_default = (0,0)
+
+
+
+    #g_pool holds variables for the world process
+    g_pool = Global_Container()
+
+    # Create and initialize IPC
+    g_pool.pupil_queue = Queue()
+    g_pool.quit = Value(c_bool,0)
+    g_pool.timebase = Value(c_double,0)
+    g_pool.eye0_process = None
+    g_pool.eye1_process = None
+    # make some constants avaiable
+    g_pool.user_dir = user_dir
+    g_pool.version = get_version(version_file)
+    g_pool.app = 'capture'
+
 
     #manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
@@ -110,14 +172,14 @@ def world(g_pool,cap_src,cap_size):
 
     def on_button(window,button, action, mods):
         g_pool.gui.update_button(button,action,mods)
-        pos = glfwGetCursorPos(window)
-        pos = normalize(pos,glfwGetWindowSize(main_window))
+        pos = glfw.glfwGetCursorPos(window)
+        pos = normalize(pos,glfw.glfwGetWindowSize(main_window))
         pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
         for p in g_pool.plugins:
             p.on_click(pos,button,action)
 
     def on_pos(window,x, y):
-        hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
+        hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0]/glfw.glfwGetWindowSize(window)[0])
         x,y = x*hdpi_factor,y*hdpi_factor
         g_pool.gui.update_mouse(x,y)
 
@@ -141,8 +203,8 @@ def world(g_pool,cap_src,cap_size):
         session_settings.clear()
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
-    default_settings = {'frame_size':cap_size,'frame_rate':24}
+    cap = autoCreateCapture(video_sources['world'], timebase=g_pool.timebase)
+    default_settings = {'frame_size':(1280,720),'frame_rate':30}
     previous_settings = session_settings.get('capture_settings',None)
     if previous_settings and previous_settings['name'] == cap.name:
         cap.settings = previous_settings
@@ -176,14 +238,68 @@ def world(g_pool,cap_src,cap_size):
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
 
+    def launch_eye_process(eye_id):
+
+        if profiled:
+            from eye import eye_profiled as eye
+        else:
+            from eye import eye
+
+        eye_end,world_end = Pipe(True)
+        eye_pool = Global_Container()
+        eye_pool.pupil_queue = g_pool.pupil_queue
+        eye_pool.quit = g_pool.quit
+        eye_pool.timebase = g_pool.timebase
+        # make some constants avaiable
+        eye_pool.user_dir = g_pool.user_dir
+        eye_pool.version = g_pool.version
+        eye_pool.app = g_pool.app
+
+        p_eye = Process(target=eye, args=(eye_pool,video_sources['eye%s'%eye_id],eye_end,eye_id) )
+        p_eye.start()
+        p_eye.tx = world_end
+        #wait for ready message from eye to sequentialize startup
+        # logger.debug(p_eye.tx.recv())
+        if eye_id == 0:
+            g_pool.eye0_process = p_eye
+        else:
+            g_pool.eye1_process = p_eye
+        logger.warning('eye started')
+
+
+    def stop_eye_process(eye_id):
+        if eye_id == 0:
+            p_eye = g_pool.eye0_process
+            g_pool.eye0_process = None
+        else:
+            p_eye = g_pool.eye1_process
+            g_pool.eye1_process = None
+
+        if p_eye is not None and p_eye.is_alive():
+            p_eye.tx.send('Shut_Down')
+            p_eye.join()
+
+
+    def start_stop_eye0(active):
+        if active and not g_pool.eye0_process:
+            launch_eye_process(0)
+        elif not active and g_pool.eye0_process:
+            stop_eye_process(0)
+
+    def start_stop_eye1(active):
+        if active and not g_pool.eye1_process:
+            launch_eye_process(1)
+        if not active and g_pool.eye1_process:
+            stop_eye_process(1)
+
 
     #window and gl setup
-    glfwInit()
+    glfw.glfwInit()
     width,height = session_settings.get('window_size',(frame.width, frame.height))
-    main_window = glfwCreateWindow(width,height, "World")
+    main_window = glfw.glfwCreateWindow(width,height, "World")
     window_pos = session_settings.get('window_position',window_position_default)
-    glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
-    glfwMakeContextCurrent(main_window)
+    glfw.glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
+    glfw.glfwMakeContextCurrent(main_window)
     cygl.utils.init()
 
     #setup GUI
@@ -192,7 +308,9 @@ def world(g_pool,cap_src,cap_size):
     g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-350,0),size=(0,0),header_pos='left')
     general_settings = ui.Growing_Menu('General')
     general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface size'))
-    general_settings.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,frame.width,frame.height)) )
+    general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,frame.width,frame.height)) )
+    general_settings.append(ui.Switch('eye0_process',label='eye 0',setter=start_stop_eye0,getter=lambda: bool(g_pool.eye0_process)))
+    general_settings.append(ui.Switch('eye1_process',label='eye 1',setter=start_stop_eye1,getter=lambda: bool(g_pool.eye1_process)))
     general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter=lambda: "Select to load"))
@@ -218,14 +336,14 @@ def world(g_pool,cap_src,cap_size):
                                         setter= open_plugin,label='Method'))
 
     # Register callbacks main_window
-    glfwSetFramebufferSizeCallback(main_window,on_resize)
-    glfwSetWindowCloseCallback(main_window,on_close)
-    glfwSetWindowIconifyCallback(main_window,on_iconify)
-    glfwSetKeyCallback(main_window,on_key)
-    glfwSetCharCallback(main_window,on_char)
-    glfwSetMouseButtonCallback(main_window,on_button)
-    glfwSetCursorPosCallback(main_window,on_pos)
-    glfwSetScrollCallback(main_window,on_scroll)
+    glfw.glfwSetFramebufferSizeCallback(main_window,on_resize)
+    glfw.glfwSetWindowCloseCallback(main_window,on_close)
+    glfw.glfwSetWindowIconifyCallback(main_window,on_iconify)
+    glfw.glfwSetKeyCallback(main_window,on_key)
+    glfw.glfwSetCharCallback(main_window,on_char)
+    glfw.glfwSetMouseButtonCallback(main_window,on_button)
+    glfw.glfwSetCursorPosCallback(main_window,on_pos)
+    glfw.glfwSetScrollCallback(main_window,on_scroll)
 
     # gl_state settings
     basic_gl_setup()
@@ -233,10 +351,10 @@ def world(g_pool,cap_src,cap_size):
     g_pool.image_tex.update_from_frame(frame)
 
     # refresh speed settings
-    glfwSwapInterval(0)
+    glfw.glfwSwapInterval(0)
 
     #trigger setup of window and gl sizes
-    on_resize(main_window, *glfwGetFramebufferSize(main_window))
+    on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
     #now the we have  aproper window we can load the last gui configuration
     g_pool.gui.configuration = session_settings.get('ui_config',{})
@@ -323,7 +441,7 @@ def world(g_pool,cap_src,cap_size):
         g_pool.plugins.clean()
 
         # render camera image
-        glfwMakeContextCurrent(main_window)
+        glfw.glfwMakeContextCurrent(main_window)
         if g_pool.iconified:
             pass
         else:
@@ -343,17 +461,17 @@ def world(g_pool,cap_src,cap_size):
             pupil_graph.draw()
             graph.pop_view()
             g_pool.gui.update()
-            glfwSwapBuffers(main_window)
-        glfwPollEvents()
+            glfw.glfwSwapBuffers(main_window)
+        glfw.glfwPollEvents()
 
-    glfwRestoreWindow(main_window) #need to do this for windows os
+    glfw.glfwRestoreWindow(main_window) #need to do this for windows os
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['capture_settings'] = g_pool.capture.settings
-    session_settings['window_size'] = glfwGetWindowSize(main_window)
-    session_settings['window_position'] = glfwGetWindowPos(main_window)
+    session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
+    session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
     session_settings['version'] = g_pool.version
     session_settings.close()
 
@@ -362,16 +480,16 @@ def world(g_pool,cap_src,cap_size):
         p.alive = False
     g_pool.plugins.clean()
     g_pool.gui.terminate()
-    glfwDestroyWindow(main_window)
-    glfwTerminate()
+    glfw.glfwDestroyWindow(main_window)
+    glfw.glfwTerminate()
     cap.close()
 
-    logger.debug("Process done")
+    logger.debug("world process done")
 
-def world_profiled(g_pool,cap_src,cap_size):
+def world_profiled(video_sources,profiled=True):
     import cProfile,subprocess,os
     from world import world
-    cProfile.runctx("world(g_pool,cap_src,cap_size)",{"g_pool":g_pool,'cap_src':cap_src,'cap_size':cap_size},locals(),"world.pstats")
+    cProfile.runctx("world(video_sources,profiled)",{"video_sources":video_sources,'profiled':profiled},locals(),"world.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
