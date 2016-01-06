@@ -7,22 +7,13 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
-import os, sys,platform
-if platform.system() == 'Darwin':
-    from billiard import Process, Pipe, Queue, Value, freeze_support,forking_enable
-    forking_enable(0)
-else:
-    from multiprocessing import Process, Pipe, Queue, Value, freeze_support
-    forking_enable = lambda _: _ #dummy fn
-
+import os, sys, platform
 
 
 class Global_Container(object):
     pass
 
-
-def world(video_sources,profiled=False):
+def world(user_dir,version_file,video_sources,profiled=False):
     """world
     Creates a window, gl context.
     Grabs images from a capture.
@@ -30,24 +21,8 @@ def world(video_sources,profiled=False):
     Can run various plug-ins.
     """
 
-    if getattr(sys, 'frozen', False):
-        # Specifiy user dirs.
-        user_dir = os.path.expanduser(os.path.join('~','pupil_capture_settings'))
-        version_file = os.path.join(sys._MEIPASS,'_version_string_')
-    else:
-        pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
-        sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
-        # Specifiy user dir.
-        user_dir = os.path.join(pupil_base_dir,'capture_settings')
-        version_file = None
-
-    # create folder for user settings, tmp data
-    if not os.path.isdir(user_dir):
-        os.mkdir(user_dir)
-
-    print "WORLD WAS CALLED"
     import logging
-    # Set up root logger for the main process before doing imports of logged modules.
+    # Set up root logger for this process before doing imports of logged modules.
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     # create file handler which logs even debug messages
@@ -64,18 +39,23 @@ def world(video_sources,profiled=False):
     # add the handlers to the logger
     logger.addHandler(fh)
     logger.addHandler(ch)
-
+    #silence noisy modules
     logging.getLogger("OpenGL").setLevel(logging.ERROR)
     logging.getLogger("libav").setLevel(logging.ERROR)
-
+    # create logger for the context of this function
     logger = logging.getLogger(__name__)
+    if profiled:
+        logger.warning("Pupil Capture will be profiled.")
 
+
+    # We deferr the imports becasue of multiprocessing.
+    # Otherwise the world process each process also loads the other imports.
+    # This is not harmfull but unnessasary.
 
     #general imports
     from time import time
     import numpy as np
     from ctypes import c_bool, c_double
-
 
     #display
     import glfw
@@ -96,6 +76,18 @@ def world(video_sources,profiled=False):
     from methods import normalize, denormalize, delta_t
     from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
+    #multiprocessing
+    if platform.system() == 'Darwin':
+        from billiard import Process, Pipe, Queue, Value
+    else:
+        from multiprocessing import Process, Pipe, Queue, Value
+
+    #eye process fn
+    if profiled:
+        from eye import eye_profiled as eye
+    else:
+        from eye import eye
+
 
     # Plug-ins
     from plugin import Plugin_List,import_runtime_plugins
@@ -109,7 +101,6 @@ def world(video_sources,profiled=False):
     from log_display import Log_Display
     from annotations import Annotation_Capture
     # create logger for the context of this function
-
 
 
     #UI Platform tweaks
@@ -128,17 +119,16 @@ def world(video_sources,profiled=False):
     #g_pool holds variables for the world process
     g_pool = Global_Container()
 
-    # Create and initialize IPC
-    g_pool.pupil_queue = Queue()
-    g_pool.quit = Value(c_bool,0)
-    g_pool.timebase = Value(c_double,0)
-    g_pool.eye0_process = None
-    g_pool.eye1_process = None
     # make some constants avaiable
     g_pool.user_dir = user_dir
     g_pool.version = get_version(version_file)
     g_pool.app = 'capture'
-
+    # Create and initialize IPC
+    g_pool.pupil_queue = Queue()
+    g_pool.timebase = Value(c_double,0)
+    # dummy eye processes, will be replaced when needed.
+    g_pool.eye0_process = Process()
+    g_pool.eye1_process = Process()
 
     #manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
@@ -187,11 +177,6 @@ def world(video_sources,profiled=False):
         g_pool.gui.update_scroll(x,y*scroll_factor)
 
 
-    def on_close(window):
-        g_pool.quit.value = True
-        logger.info('Process closing from window')
-
-
     tick = delta_t()
     def get_dt():
         return next(tick)
@@ -220,10 +205,8 @@ def world(video_sources,profiled=False):
         return
 
 
-    # any object we attach to the g_pool object *from now on* will only be visible to this process!
-    # vars should be declared here to make them visible to the code reader.
-    g_pool.iconified = False
 
+    g_pool.iconified = False
     g_pool.capture = cap
     g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
     g_pool.active_calibration_plugin = None
@@ -238,59 +221,54 @@ def world(video_sources,profiled=False):
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
 
-    def launch_eye_process(eye_id):
-
-        if profiled:
-            from eye import eye_profiled as eye
+    def launch_eye_process(eye_id,blocking=False):
+        if eye_id == 0:
+            if g_pool.eye0_process.is_alive():
+                logger.error("Eye Process already running")
+                return
         else:
-            from eye import eye
+            if g_pool.eye1_process.is_alive():
+                logger.error("Eye Process already running")
+                return
 
         eye_end,world_end = Pipe(True)
         eye_pool = Global_Container()
         eye_pool.pupil_queue = g_pool.pupil_queue
-        eye_pool.quit = g_pool.quit
         eye_pool.timebase = g_pool.timebase
-        # make some constants avaiable
         eye_pool.user_dir = g_pool.user_dir
         eye_pool.version = g_pool.version
         eye_pool.app = g_pool.app
 
         p_eye = Process(target=eye, args=(eye_pool,video_sources['eye%s'%eye_id],eye_end,eye_id) )
         p_eye.start()
-        p_eye.tx = world_end
-        #wait for ready message from eye to sequentialize startup
-        # logger.debug(p_eye.tx.recv())
+        p_eye.control_pipe = world_end
+        if blocking:
+            #wait for ready message from eye to sequentialize startup
+            p_eye.control_pipe.send('Ping')
+            p_eye.control_pipe.recv()
+
         if eye_id == 0:
             g_pool.eye0_process = p_eye
         else:
             g_pool.eye1_process = p_eye
-        logger.warning('eye started')
+        logger.warning('Eye %s process started.'%eye_id)
 
 
-    def stop_eye_process(eye_id):
+    def stop_eye_process(eye_id,blocking=False):
         if eye_id == 0:
             p_eye = g_pool.eye0_process
-            g_pool.eye0_process = None
         else:
             p_eye = g_pool.eye1_process
-            g_pool.eye1_process = None
+        if p_eye.is_alive():
+            p_eye.control_pipe.send('Shut_Down')
+            if blocking:
+                p_eye.join()
 
-        if p_eye is not None and p_eye.is_alive():
-            p_eye.tx.send('Shut_Down')
-            p_eye.join()
-
-
-    def start_stop_eye0(active):
-        if active and not g_pool.eye0_process:
-            launch_eye_process(0)
-        elif not active and g_pool.eye0_process:
-            stop_eye_process(0)
-
-    def start_stop_eye1(active):
-        if active and not g_pool.eye1_process:
-            launch_eye_process(1)
-        if not active and g_pool.eye1_process:
-            stop_eye_process(1)
+    def start_stop_eye(eye_id,make_alive):
+        if make_alive:
+            launch_eye_process(eye_id)
+        else:
+            stop_eye_process(eye_id)
 
 
     #window and gl setup
@@ -309,8 +287,8 @@ def world(video_sources,profiled=False):
     general_settings = ui.Growing_Menu('General')
     general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,frame.width,frame.height)) )
-    general_settings.append(ui.Switch('eye0_process',label='eye 0',setter=start_stop_eye0,getter=lambda: bool(g_pool.eye0_process)))
-    general_settings.append(ui.Switch('eye1_process',label='eye 1',setter=start_stop_eye1,getter=lambda: bool(g_pool.eye1_process)))
+    general_settings.append(ui.Switch('eye0_process',label='detect eye 0',setter=lambda alive: start_stop_eye(0,alive),getter=lambda: g_pool.eye0_process.is_alive() ))
+    general_settings.append(ui.Switch('eye1_process',label='detect eye 1',setter=lambda alive: start_stop_eye(1,alive),getter=lambda: g_pool.eye1_process.is_alive() ))
     general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter=lambda: "Select to load"))
@@ -337,7 +315,6 @@ def world(video_sources,profiled=False):
 
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window,on_resize)
-    glfw.glfwSetWindowCloseCallback(main_window,on_close)
     glfw.glfwSetWindowIconifyCallback(main_window,on_iconify)
     glfw.glfwSetKeyCallback(main_window,on_key)
     glfw.glfwSetCharCallback(main_window,on_char)
@@ -382,8 +359,15 @@ def world(video_sources,profiled=False):
     pupil_graph.update_rate = 5
     pupil_graph.label = "Confidence: %0.2f"
 
+
+    if session_settings.get('eye1_process_alive',False):
+        launch_eye_process(1,blocking=True)
+    if session_settings.get('eye0_process_alive',True):
+        launch_eye_process(0,blocking=False)
+
+
     # Event loop
-    while not g_pool.quit.value:
+    while not glfw.glfwWindowShouldClose(main_window):
 
         # Get an image from the grabber
         try:
@@ -473,6 +457,8 @@ def world(video_sources,profiled=False):
     session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
     session_settings['version'] = g_pool.version
+    session_settings['eye0_process_alive'] = g_pool.eye0_process.is_alive()
+    session_settings['eye1_process_alive'] = g_pool.eye1_process.is_alive()
     session_settings.close()
 
     # de-init all running plugins
@@ -484,12 +470,16 @@ def world(video_sources,profiled=False):
     glfw.glfwTerminate()
     cap.close()
 
+    #shut down eye processes:
+    stop_eye_process(0,blocking=True)
+    stop_eye_process(1,blocking=True)
+
     logger.debug("world process done")
 
-def world_profiled(video_sources,profiled=True):
+def world_profiled(user_dir,version_file,video_sources,profiled=True):
     import cProfile,subprocess,os
     from world import world
-    cProfile.runctx("world(video_sources,profiled)",{"video_sources":video_sources,'profiled':profiled},locals(),"world.pstats")
+    cProfile.runctx("world(user_dir,version_file,video_sources,profiled)",{"user_dir":user_dir,"version_file":version_file,"video_sources":video_sources,'profiled':profiled},locals(),"world.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)

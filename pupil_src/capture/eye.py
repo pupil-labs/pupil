@@ -7,10 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
-
-
-
+import os, sys, platform
 
 def eye(g_pool,cap_src,pipe_to_world,eye_id):
     """
@@ -19,125 +16,10 @@ def eye(g_pool,cap_src,pipe_to_world,eye_id):
     Streams Pupil coordinates into g_pool.pupil_queue
     """
 
-    print 'dir',dir(),'globals',globals(),'locals',locals()
-
-    import os,platform
-    from file_methods import Persistent_Dict
     import logging
-    import numpy as np
-
-    #display
-    import glfw
-    from pyglui import ui,graph
-    from pyglui.cygl.utils import init as cygl_init
-    from pyglui.cygl.utils import draw_points as cygl_draw_points
-    from pyglui.cygl.utils import RGBA as cygl_rgba
-    from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
-    from pyglui.cygl.utils import Named_Texture
-
-
-    #monitoring
-    import psutil
-
-    # helpers/utils
-    from version_utils import VersionFormat
-    from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based
-    from OpenGL.GL import GL_LINE_LOOP
-    from methods import normalize,denormalize,Roi, timer
-    from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
-
-    from av_writer import JPEG_Writer,AV_Writer
-
-    # Pupil detectors
-    from pupil_detectors import Canny_Detector
-
-
-
-    from methods import Roi
-    class UIRoi(Roi):
-        """
-        this object inherits from ROI and adds some UI helper functions
-        """
-        def __init__(self,array_shape):
-            super(UIRoi, self).__init__(array_shape)
-            self.max_x = array_shape[1]-1
-            self.min_x = 1
-            self.max_y = array_shape[0]-1
-            self.min_y = 1
-
-            #enforce contraints
-            self.lX = max(self.min_x,self.lX)
-            self.uX = min(self.max_x,self.uX)
-            self.lY = max(self.min_y,self.lY)
-            self.uY = min(self.max_y,self.uY)
-
-
-            self.handle_size = 45
-            self.active_edit_pt = False
-            self.active_pt_idx = None
-            self.handle_color = cygl_rgba(.5,.5,.9,.9)
-            self.handle_color_selected = cygl_rgba(.5,.9,.9,.9)
-            self.handle_color_shadow = cygl_rgba(.0,.0,.0,.5)
-
-        @property
-        def rect(self):
-            return [[self.lX,self.lY],
-                    [self.uX,self.lY],
-                    [self.uX,self.uY],
-                    [self.lX,self.uY]]
-
-        def move_vertex(self,vert_idx,(x,y)):
-            x,y = int(x),int(y)
-            x,y = min(self.max_x,x),min(self.max_y,y)
-            x,y = max(self.min_x,x),max(self.min_y,y)
-            thresh = 45
-            if vert_idx == 0:
-                x = min(x,self.uX-thresh)
-                y = min(y,self.uY-thresh)
-                self.lX,self.lY = x,y
-            if vert_idx == 1:
-                x = max(x,self.lX+thresh)
-                y = min(y,self.uY-thresh)
-                self.uX,self.lY = x,y
-            if vert_idx == 2:
-                x = max(x,self.lX+thresh)
-                y = max(y,self.lY+thresh)
-                self.uX,self.uY = x,y
-            if vert_idx == 3:
-                x = min(x,self.uX-thresh)
-                y = max(y,self.lY+thresh)
-                self.lX,self.uY = x,y
-
-        def mouse_over_center(self,edit_pt,mouse_pos,w,h):
-            return edit_pt[0]-w/2 <= mouse_pos[0] <=edit_pt[0]+w/2 and edit_pt[1]-h/2 <= mouse_pos[1] <=edit_pt[1]+h/2
-
-        def mouse_over_edit_pt(self,mouse_pos,w,h):
-            for p,i in zip(self.rect,range(4)):
-                if self.mouse_over_center(p,mouse_pos,w,h):
-                    self.active_pt_idx = i
-                    self.active_edit_pt = True
-                    return True
-
-        def draw(self,ui_scale=1):
-            cygl_draw_polyline(self.rect,color=cygl_rgba(.8,.8,.8,0.9),thickness=2,line_type=GL_LINE_LOOP)
-            if self.active_edit_pt:
-                inactive_pts = self.rect[:self.active_pt_idx]+self.rect[self.active_pt_idx+1:]
-                active_pt = [self.rect[self.active_pt_idx]]
-                cygl_draw_points(inactive_pts,size=(self.handle_size+10)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
-                cygl_draw_points(inactive_pts,size=self.handle_size*ui_scale,color=self.handle_color,sharpness=0.9)
-                cygl_draw_points(active_pt,size=(self.handle_size+30)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
-                cygl_draw_points(active_pt,size=(self.handle_size+10)*ui_scale,color=self.handle_color_selected,sharpness=0.9)
-            else:
-                cygl_draw_points(self.rect,size=(self.handle_size+10)*ui_scale,color=self.handle_color_shadow,sharpness=0.3)
-                cygl_draw_points(self.rect,size=self.handle_size*ui_scale,color=self.handle_color,sharpness=0.9)
-
-
-
-
-
-
-    # modify the root logger for this process
+    # Set up root logger for this process before doing imports of logged modules.
     logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
     # remove inherited handlers
     logger.handlers = []
     # create file handler which logs even debug messages
@@ -154,8 +36,41 @@ def eye(g_pool,cap_src,pipe_to_world,eye_id):
     # add the handlers to the logger
     logger.addHandler(fh)
     logger.addHandler(ch)
+    #silence noisy modules
+    logging.getLogger("OpenGL").setLevel(logging.ERROR)
+    logging.getLogger("libav").setLevel(logging.ERROR)
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
+
+
+    # We deferr the imports becasue of multiprocessing.
+    # Otherwise the world process each process also loads the other imports.
+    # This is not harmfull but unnessasary.
+
+    #general imports
+    import numpy as np
+    import cv2
+
+    #display
+    import glfw
+    from pyglui import ui,graph,cygl
+    from pyglui.cygl.utils import draw_points,RGBA,draw_polyline,Named_Texture
+    from OpenGL.GL import GL_LINE_LOOP
+    from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based
+    from ui_roi import UIRoi
+    #monitoring
+    import psutil
+
+    # helpers/utils
+    from file_methods import Persistent_Dict
+    from version_utils import VersionFormat
+    from methods import normalize, denormalize, Roi, timer
+    from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
+    from av_writer import JPEG_Writer,AV_Writer
+
+    # Pupil detectors
+    from pupil_detectors import Canny_Detector
+
 
 
     #UI Platform tweaks
@@ -221,10 +136,6 @@ def eye(g_pool,cap_src,pipe_to_world,eye_id):
     def on_scroll(window,x,y):
         g_pool.gui.update_scroll(x,y*scroll_factor)
 
-    def on_close(window):
-        g_pool.quit.value = True
-        logger.info('Process closing from window')
-
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye%s'%eye_id))
@@ -289,7 +200,7 @@ def eye(g_pool,cap_src,pipe_to_world,eye_id):
     window_pos = session_settings.get('window_position',window_position_default)
     glfw.glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfw.glfwMakeContextCurrent(main_window)
-    cygl_init()
+    cygl.utils.init()
 
     # gl_state settings
     basic_gl_setup()
@@ -318,7 +229,6 @@ def eye(g_pool,cap_src,pipe_to_world,eye_id):
 
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window,on_resize)
-    glfw.glfwSetWindowCloseCallback(main_window,on_close)
     glfw.glfwSetWindowIconifyCallback(main_window,on_iconify)
     glfw.glfwSetKeyCallback(main_window,on_key)
     glfw.glfwSetCharCallback(main_window,on_char)
@@ -358,12 +268,15 @@ def eye(g_pool,cap_src,pipe_to_world,eye_id):
 
 
     # Event loop
-    while not g_pool.quit.value:
+    while not glfw.glfwWindowShouldClose(main_window):
 
         if pipe_to_world.poll():
             command = pipe_to_world.recv()
             if command == 'Shut_Down':
                 break
+            elif command == "Ping":
+                pipe_to_world.send("Pong")
+                command = None
         else:
             command = None
 
@@ -392,23 +305,24 @@ def eye(g_pool,cap_src,pipe_to_world,eye_id):
         ###  RECORDING of Eye Video (on demand) ###
         # Setup variables and lists for recording
 
-        if command is not None:
-            record_path,raw_mode = command
-            logger.info("Will save eye video to: %s"%record_path)
-            timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-            if raw_mode and frame.jpeg_buffer:
-                video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
-                writer = JPEG_Writer(video_path,cap.frame_rate)
-            else:
-                video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
-                writer = AV_Writer(video_path,cap.frame_rate)
-            timestamps = []
-        elif None:
-            logger.info("Done recording.")
-            writer.release()
-            writer = None
-            np.save(timestamps_path,np.asarray(timestamps))
-            del timestamps
+        if command:
+            if 'Rec_Start:' in command:
+                record_path,raw_mode = command
+                logger.info("Will save eye video to: %s"%record_path)
+                timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
+                if raw_mode and frame.jpeg_buffer:
+                    video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
+                    writer = JPEG_Writer(video_path,cap.frame_rate)
+                else:
+                    video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
+                    writer = AV_Writer(video_path,cap.frame_rate)
+                timestamps = []
+            elif 'Rec_Stop:' in command:
+                logger.info("Done recording.")
+                writer.release()
+                writer = None
+                np.save(timestamps_path,np.asarray(timestamps))
+                del timestamps
 
         if writer:
             writer.write_video_frame(frame)
@@ -445,8 +359,8 @@ def eye(g_pool,cap_src,pipe_to_world,eye_id):
                         pts = cv2.ellipse2Poly( (int(result['center'][0]),int(result['center'][1])),
                                                 (int(result['axes'][0]/2),int(result['axes'][1]/2)),
                                                 int(result['angle']),0,360,15)
-                        cygl_draw_polyline(pts,1,cygl_rgba(1.,0,0,.5))
-                    cygl_draw_points([result['center']],size=20,color=cygl_rgba(1.,0.,0.,.5),sharpness=1.)
+                        draw_polyline(pts,1,RGBA(1.,0,0,.5))
+                    draw_points([result['center']],size=20,color=RGBA(1.,0.,0.,.5),sharpness=1.)
 
                 # render graphs
                 graph.push_view()
@@ -494,13 +408,12 @@ def eye(g_pool,cap_src,pipe_to_world,eye_id):
 
     logger.debug("Process done")
 
-def eye_profiled(g_pool,cap_src,cap_size,pipe_to_world,eye_id=0):
+def eye_profiled(g_pool,cap_src,pipe_to_world,eye_id):
     import cProfile,subprocess,os
     from eye import eye
-    cProfile.runctx("eye(g_pool,cap_src,cap_size,pipe_to_world,eye_id)",{"g_pool":g_pool,'cap_src':cap_src,'cap_size':cap_size,'pipe_to_world':pipe_to_world,'eye_id':eye_id},locals(),"eye%s.pstats"%eye_id)
+    cProfile.runctx("eye(g_pool,cap_src,pipe_to_world,eye_id)",{"g_pool":g_pool,'cap_src':cap_src,'pipe_to_world':pipe_to_world,'eye_id':eye_id},locals(),"eye%s.pstats"%eye_id)
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye%s.pstats | dot -Tpng -o eye%s_cpu_time.png"%(eye_id,eye_id), shell=True)
     print "created cpu time graph for eye%s process. Please check out the png next to the eye.py file"%eye_id
-
 

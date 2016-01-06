@@ -8,15 +8,36 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import sys
+import os, sys, platform
+
+
+if getattr(sys, 'frozen', False):
+    # Specifiy user dirs.
+    user_dir = os.path.expanduser(os.path.join('~','pupil_capture_settings'))
+    version_file = os.path.join(sys._MEIPASS,'_version_string_')
+else:
+    pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
+    sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
+    # Specifiy user dir.
+    user_dir = os.path.join(pupil_base_dir,'capture_settings')
+    version_file = None
+
+# create folder for user settings, tmp data
+if not os.path.isdir(user_dir):
+    os.mkdir(user_dir)
+
+
+if platform.system() == 'Darwin':
+    from billiard import freeze_support,forking_enable
+    forking_enable(0)
+else:
+    from multiprocessing import freeze_support
 
 if 'profiled' in sys.argv:
-    logger.debug("Capture processes will be profiled.")
     from world import world_profiled as world
 else:
     from world import world
 
-from world import freeze_support
 
 def main():
 
@@ -35,7 +56,7 @@ def main():
 
 
     #start the world fn
-    world(video_sources)
+    world(user_dir,version_file,video_sources)
 
 if __name__ == '__main__':
     freeze_support()
