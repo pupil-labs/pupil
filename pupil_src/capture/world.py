@@ -20,6 +20,48 @@ def world(user_dir,version_file,video_sources,profiled=False):
     Receives Pupil coordinates from eye process[es]
     Can run various plug-ins.
     """
+    #multiprocessing
+    if platform.system() in ('Darwin','Linux1'):
+        from billiard import Process, Pipe, Queue, Value, forking_enable
+        forking_enable(0)
+
+    else:
+        from multiprocessing import Process, Pipe, Queue, Value
+
+    #eye process fn
+    if profiled:
+        from eye import eye_profiled as eye
+    else:
+        from eye import eye
+
+    from version_utils import VersionFormat,get_version
+    from ctypes import c_bool, c_double
+
+
+    #g_pool holds variables for the world process
+    g_pool = Global_Container()
+
+    # make some constants avaiable
+    g_pool.user_dir = user_dir
+    g_pool.version = get_version(version_file)
+    g_pool.app = 'capture'
+    # Create and initialize IPC
+    g_pool.pupil_queue = Queue()
+    g_pool.timebase = Value(c_double,0)
+
+
+    eye_id = 0
+    eye_end,world_end = Pipe(True)
+    eye_pool = Global_Container()
+    eye_pool.pupil_queue = g_pool.pupil_queue
+    eye_pool.timebase = g_pool.timebase
+    eye_pool.user_dir = g_pool.user_dir
+    eye_pool.version = g_pool.version
+    eye_pool.app = g_pool.app
+    p_eye = Process(target=eye, args=(eye_pool,video_sources['eye%s'%eye_id],eye_end,eye_id) )
+    p_eye.start()
+    p_eye.control_pipe = world_end
+    g_pool.eye0_process = p_eye
 
     import logging
     # Set up root logger for this process before doing imports of logged modules.
@@ -55,7 +97,6 @@ def world(user_dir,version_file,video_sources,profiled=False):
     #general imports
     from time import time
     import numpy as np
-    from ctypes import c_bool, c_double
 
     #display
     import glfw
@@ -72,23 +113,8 @@ def world(user_dir,version_file,video_sources,profiled=False):
 
     # helpers/utils
     from file_methods import Persistent_Dict
-    from version_utils import VersionFormat,get_version
     from methods import normalize, denormalize, delta_t
     from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
-
-    #multiprocessing
-    if platform.system() in ('Darwin','Linux1'):
-        from billiard import Process, Pipe, Queue, Value, forking_enable
-        forking_enable(0)
-
-    else:
-        from multiprocessing import Process, Pipe, Queue, Value
-
-    #eye process fn
-    if profiled:
-        from eye import eye_profiled as eye
-    else:
-        from eye import eye
 
 
     # Plug-ins
@@ -118,18 +144,8 @@ def world(user_dir,version_file,video_sources,profiled=False):
 
 
 
-    #g_pool holds variables for the world process
-    g_pool = Global_Container()
-
-    # make some constants avaiable
-    g_pool.user_dir = user_dir
-    g_pool.version = get_version(version_file)
-    g_pool.app = 'capture'
-    # Create and initialize IPC
-    g_pool.pupil_queue = Queue()
-    g_pool.timebase = Value(c_double,0)
+    
     # dummy eye processes, will be replaced when needed.
-    g_pool.eye0_process = Process()
     g_pool.eye1_process = Process()
 
     #manage plugins
@@ -233,17 +249,7 @@ def world(user_dir,version_file,video_sources,profiled=False):
                 logger.error("Eye Process already running")
                 return
 
-        eye_end,world_end = Pipe(True)
-        eye_pool = Global_Container()
-        eye_pool.pupil_queue = g_pool.pupil_queue
-        eye_pool.timebase = g_pool.timebase
-        eye_pool.user_dir = g_pool.user_dir
-        eye_pool.version = g_pool.version
-        eye_pool.app = g_pool.app
-        p_eye = Process(target=eye, args=(eye_pool,video_sources['eye%s'%eye_id],eye_end,eye_id) )
-        p_eye.start()
-
-        p_eye.control_pipe = world_end
+       
         if blocking:
             #wait for ready message from eye to sequentialize startup
             p_eye.control_pipe.send('Ping')
@@ -271,10 +277,6 @@ def world(user_dir,version_file,video_sources,profiled=False):
             launch_eye_process(eye_id)
         else:
             stop_eye_process(eye_id)
-
-    launch_eye_process(1,blocking=False)
-    launch_eye_process(0,blocking=False)
-
 
     def start_eye0():
         g_pool.eye0_process.control_pipe.send('Start')
