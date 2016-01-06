@@ -27,9 +27,8 @@ if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
 
-if platform.system() == 'Darwin':
-    from billiard import freeze_support,forking_enable
-    forking_enable(0)
+if platform.system() in ('Darwin','Linux'):
+    from billiard import freeze_support
 else:
     from multiprocessing import freeze_support
 

@@ -60,6 +60,9 @@ def eye(g_pool,cap_src,pipe_to_world,eye_id):
     from ui_roi import UIRoi
     #monitoring
     import psutil
+    reload(glfw)
+    reload(cygl)
+
 
     # helpers/utils
     from file_methods import Persistent_Dict
@@ -192,11 +195,14 @@ def eye(g_pool,cap_src,pipe_to_world,eye_id):
         g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
 
 
-    # Initialize glfw.glfw
+    # Initialize glfw
     glfw.glfwInit()
     title = "eye %s"%eye_id
+    print 'pre_window'
     width,height = session_settings.get('window_size',(frame.width, frame.height))
     main_window = glfw.glfwCreateWindow(width,height, title, None, None)
+    print 'post_window'
+
     window_pos = session_settings.get('window_position',window_position_default)
     glfw.glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfw.glfwMakeContextCurrent(main_window)

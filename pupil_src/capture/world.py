@@ -77,8 +77,10 @@ def world(user_dir,version_file,video_sources,profiled=False):
     from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
     #multiprocessing
-    if platform.system() == 'Darwin':
-        from billiard import Process, Pipe, Queue, Value
+    if platform.system() in ('Darwin','Linux'):
+        from billiard import Process, Pipe, Queue, Value, forking_enable
+        forking_enable(0)
+
     else:
         from multiprocessing import Process, Pipe, Queue, Value
 
@@ -238,9 +240,9 @@ def world(user_dir,version_file,video_sources,profiled=False):
         eye_pool.user_dir = g_pool.user_dir
         eye_pool.version = g_pool.version
         eye_pool.app = g_pool.app
-
         p_eye = Process(target=eye, args=(eye_pool,video_sources['eye%s'%eye_id],eye_end,eye_id) )
         p_eye.start()
+
         p_eye.control_pipe = world_end
         if blocking:
             #wait for ready message from eye to sequentialize startup
@@ -270,6 +272,11 @@ def world(user_dir,version_file,video_sources,profiled=False):
         else:
             stop_eye_process(eye_id)
 
+    if session_settings.get('eye1_process_alive',False) or 1:
+        launch_eye_process(1,blocking=True)
+    if session_settings.get('eye0_process_alive',True) or 1:
+        launch_eye_process(0,blocking=False)
+
 
     #window and gl setup
     glfw.glfwInit()
@@ -279,6 +286,8 @@ def world(user_dir,version_file,video_sources,profiled=False):
     glfw.glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfw.glfwMakeContextCurrent(main_window)
     cygl.utils.init()
+
+
 
     #setup GUI
     g_pool.gui = ui.UI()
@@ -360,10 +369,7 @@ def world(user_dir,version_file,video_sources,profiled=False):
     pupil_graph.label = "Confidence: %0.2f"
 
 
-    if session_settings.get('eye1_process_alive',False):
-        launch_eye_process(1,blocking=True)
-    if session_settings.get('eye0_process_alive',True):
-        launch_eye_process(0,blocking=False)
+
 
 
     # Event loop
