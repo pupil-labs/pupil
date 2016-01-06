@@ -9,7 +9,19 @@
 '''
 import os, sys, platform
 
+
+
 def eye(g_pool,cap_src,pipe_to_world,eye_id):
+    while 1:
+        cmd = pipe_to_world.recv()
+        if cmd == 'Stop':
+            break
+        elif cmd == 'Start':
+            eye_loop(g_pool,cap_src,pipe_to_world,eye_id)
+        else:
+            print cmd
+
+def eye_loop(g_pool,cap_src,pipe_to_world,eye_id):
     """
     Creates a window, gl context.
     Grabs images from a capture.
@@ -278,7 +290,7 @@ def eye(g_pool,cap_src,pipe_to_world,eye_id):
 
         if pipe_to_world.poll():
             command = pipe_to_world.recv()
-            if command == 'Shut_Down':
+            if command == 'Stop':
                 break
             elif command == "Ping":
                 pipe_to_world.send("Pong")

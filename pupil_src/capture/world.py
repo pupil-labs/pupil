@@ -77,7 +77,7 @@ def world(user_dir,version_file,video_sources,profiled=False):
     from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
 
     #multiprocessing
-    if platform.system() in ('Darwin','Linux'):
+    if platform.system() in ('Darwin','Linux1'):
         from billiard import Process, Pipe, Queue, Value, forking_enable
         forking_enable(0)
 
@@ -272,10 +272,15 @@ def world(user_dir,version_file,video_sources,profiled=False):
         else:
             stop_eye_process(eye_id)
 
-    if session_settings.get('eye1_process_alive',False) or 1:
-        launch_eye_process(1,blocking=True)
-    if session_settings.get('eye0_process_alive',True) or 1:
-        launch_eye_process(0,blocking=False)
+    launch_eye_process(1,blocking=False)
+    launch_eye_process(0,blocking=False)
+
+
+    def start_eye0():
+        g_pool.eye0_process.control_pipe.send('Start')
+
+    def stop_eye0():
+        g_pool.eye0_process.control_pipe.send('Stop')
 
 
     #window and gl setup
@@ -288,7 +293,6 @@ def world(user_dir,version_file,video_sources,profiled=False):
     cygl.utils.init()
 
 
-
     #setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
@@ -297,6 +301,11 @@ def world(user_dir,version_file,video_sources,profiled=False):
     general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,frame.width,frame.height)) )
     general_settings.append(ui.Switch('eye0_process',label='detect eye 0',setter=lambda alive: start_stop_eye(0,alive),getter=lambda: g_pool.eye0_process.is_alive() ))
+    general_settings.append(ui.Switch('eye1_process',label='detect eye 1',setter=lambda alive: start_stop_eye(1,alive),getter=lambda: g_pool.eye1_process.is_alive() ))
+
+    general_settings.append(ui.Button('start',start_eye0))
+    general_settings.append(ui.Button('stop',stop_eye0))
+
     general_settings.append(ui.Switch('eye1_process',label='detect eye 1',setter=lambda alive: start_stop_eye(1,alive),getter=lambda: g_pool.eye1_process.is_alive() ))
     general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],

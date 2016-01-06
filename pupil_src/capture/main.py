@@ -27,7 +27,7 @@ if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
 
-if platform.system() in ('Darwin','Linux'):
+if platform.system() in ('Darwin','Linux1'):
     from billiard import freeze_support
 else:
     from multiprocessing import freeze_support
