@@ -33,10 +33,10 @@ app_version = get_version(version_file)
 
 
 if platform.system() == 'Darwin' and  getattr(sys, 'frozen', False):
-    from billiard import Process, Pipe, Queue, Value,freeze_support, forking_enable
+    from billiard import Process, Pipe, Queue, Value,freeze_support,active_children, forking_enable
     forking_enable(0)
 else:
-    from multiprocessing import Process, Pipe, Queue, Value, freeze_support
+    from multiprocessing import Process, Pipe, Queue, Value,active_children, freeze_support
 
 from ctypes import c_double,c_bool
 
@@ -101,7 +101,7 @@ def main():
                                             video_sources['eye%s'%eye_id] ))
             p_eye.start()
 
-    p_world.join()
+    for p in active_children(): p.join()
     logger.debug('Laucher exit')
 
 if __name__ == '__main__':
