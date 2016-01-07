@@ -484,7 +484,7 @@ double EyeModel::getModelSupport(const Circle&  unprojectedCircle, const Circle&
     const auto& n1 = unprojectedCircle.normal;
     const auto& n2 = initialisedCircle.normal;
     const double normalsAngle = n1.dot(n2);
-    return normalsAngle;
+    return normalsAngle; //TODO return also certainty of the support // include 2D confidence and add special case if we look into the camera
 }
 
 bool EyeModel::isSpatialRelevant(const Circle& circle){
