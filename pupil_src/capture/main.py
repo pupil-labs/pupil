@@ -32,7 +32,7 @@ from version_utils import get_version
 app_version = get_version(version_file)
 
 
-if platform.system() in ('Darwin1','Linux'):
+if platform.system() == 'Darwin' and  getattr(sys, 'frozen', False):
     from billiard import Process, Pipe, Queue, Value,freeze_support, forking_enable
     forking_enable(0)
 else:
