@@ -9,7 +9,8 @@
 '''
 
 import os, sys, platform
-
+import logging
+logger = logging.getLogger()
 
 if getattr(sys, 'frozen', False):
     # Specifiy user dirs.
@@ -26,36 +27,82 @@ else:
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
+#app version
+from version_utils import get_version
+app_version = get_version(version_file)
 
-if platform.system() in ('Darwin','Linux1'):
-    from billiard import freeze_support
+
+if platform.system() in ('Darwin1','Linux'):
+    from billiard import Process, Pipe, Queue, Value,freeze_support, forking_enable
+    forking_enable(0)
 else:
-    from multiprocessing import freeze_support
+    from multiprocessing import Process, Pipe, Queue, Value, freeze_support
+
+from ctypes import c_double,c_bool
 
 if 'profiled' in sys.argv:
     from world import world_profiled as world
+    from eye import eye_profiles as eye
+    logger.warning("Profiling active.")
 else:
     from world import world
+    from eye import eye
 
+# To assign camera by name: put string(s) in list
+world_src = ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
+eye0_src = ["Pupil Cam1 ID0","HD-6000","Integrated Camera","HD USB Camera","USB 2.0 Camera"]
+eye1_src = ["Pupil Cam1 ID1","HD-6000","Integrated Camera"]
+
+# to use a pre-recorded video.
+# Use a string to specify the path to your video file as demonstrated below
+# world_src = "/Users/mkassner/Downloads/000/world.mkv"
+# eye0_src = '/Users/mkassner/Downloads/eye0.mkv'
+# eye1_src =  '/Users/mkassner/Downloads/eye.avi'
+
+video_sources = {'world':world_src,'eye0':eye0_src,'eye1':eye1_src}
 
 def main():
 
-    # To assign camera by name: put string(s) in list
-    default_world = ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
-    default_eye0 = ["Pupil Cam1 ID0","HD-6000","Integrated Camera","HD USB Camera","USB 2.0 Camera"]
-    default_eye1 = ["Pupil Cam1 ID1","HD-6000","Integrated Camera"]
+    #IPC
+    pupil_queue = Queue()
+    timebase = Value(c_double,0)
 
-    # to use a pre-recorded video.
-    # Use a string to specify the path to your video file as demonstrated below
-    # default_world_src = "/Users/mkassner/Downloads/000/world.mkv"
-    # default_eye0 = '/Users/mkassner/Downloads/eye0.mkv'
-    # default_eye1 =  '/Users/mkassner/Downloads/eye.avi'
-
-    video_sources = {'world':default_world,'eye0':default_eye0,'eye1':default_eye1}
+    cmd_world_end,cmd_launcher_end = Pipe()
+    com0 = Pipe(True)
+    eyes_are_alive = Value(c_bool,0),Value(c_bool,0)
+    com1 = Pipe(True)
+    com_world_ends = com0[0],com1[0]
+    com_eye_ends = com0[1],com1[1]
 
 
-    #start the world fn
-    world(user_dir,version_file,video_sources)
+    p_world = Process(target=world,args=(pupil_queue,
+                                        timebase,
+                                        cmd_world_end,
+                                        com_world_ends,
+                                        eyes_are_alive,
+                                        user_dir,
+                                        app_version,
+                                        video_sources['world'] ))
+    p_world.start()
+
+    while True:
+        cmd = cmd_launcher_end.recv()
+        if cmd == "Exit":
+            break
+        else:
+            eye_id = cmd
+            p_eye = Process(target=eye,args=(pupil_queue,
+                                            timebase,
+                                            com_eye_ends[eye_id],
+                                            eyes_are_alive[eye_id],
+                                            user_dir,
+                                            app_version,
+                                            eye_id,
+                                            video_sources['eye%s'%eye_id] ))
+            p_eye.start()
+
+    p_world.join()
+    logger.debug('Laucher exit')
 
 if __name__ == '__main__':
     freeze_support()

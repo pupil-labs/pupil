@@ -13,55 +13,13 @@ import os, sys, platform
 class Global_Container(object):
     pass
 
-def world(user_dir,version_file,video_sources,profiled=False):
+def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src):
     """world
     Creates a window, gl context.
     Grabs images from a capture.
     Receives Pupil coordinates from eye process[es]
     Can run various plug-ins.
     """
-    #multiprocessing
-    if platform.system() in ('Darwin','Linux1'):
-        from billiard import Process, Pipe, Queue, Value, forking_enable
-        forking_enable(0)
-
-    else:
-        from multiprocessing import Process, Pipe, Queue, Value
-
-    #eye process fn
-    if profiled:
-        from eye import eye_profiled as eye
-    else:
-        from eye import eye
-
-    from version_utils import VersionFormat,get_version
-    from ctypes import c_bool, c_double
-
-
-    #g_pool holds variables for the world process
-    g_pool = Global_Container()
-
-    # make some constants avaiable
-    g_pool.user_dir = user_dir
-    g_pool.version = get_version(version_file)
-    g_pool.app = 'capture'
-    # Create and initialize IPC
-    g_pool.pupil_queue = Queue()
-    g_pool.timebase = Value(c_double,0)
-
-
-    eye_id = 0
-    eye_end,world_end = Pipe(True)
-    eye_pool = Global_Container()
-    eye_pool.pupil_queue = g_pool.pupil_queue
-    eye_pool.timebase = g_pool.timebase
-    eye_pool.user_dir = g_pool.user_dir
-    eye_pool.version = g_pool.version
-    eye_pool.app = g_pool.app
-    p_eye = Process(target=eye, args=(eye_pool,video_sources['eye%s'%eye_id],eye_end,eye_id) )
-    p_eye.start()
-    p_eye.control_pipe = world_end
-    g_pool.eye0_process = p_eye
 
     import logging
     # Set up root logger for this process before doing imports of logged modules.
@@ -86,8 +44,6 @@ def world(user_dir,version_file,video_sources,profiled=False):
     logging.getLogger("libav").setLevel(logging.ERROR)
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
-    if profiled:
-        logger.warning("Pupil Capture will be profiled.")
 
 
     # We deferr the imports becasue of multiprocessing.
@@ -115,7 +71,7 @@ def world(user_dir,version_file,video_sources,profiled=False):
     from file_methods import Persistent_Dict
     from methods import normalize, denormalize, delta_t
     from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
-
+    from version_utils import VersionFormat
 
     # Plug-ins
     from plugin import Plugin_List,import_runtime_plugins
@@ -144,9 +100,19 @@ def world(user_dir,version_file,video_sources,profiled=False):
 
 
 
-    
-    # dummy eye processes, will be replaced when needed.
-    g_pool.eye1_process = Process()
+    #g_pool holds variables for this process
+    g_pool = Global_Container()
+
+    # make some constants avaiable
+    g_pool.user_dir = user_dir
+    g_pool.version = version
+    g_pool.app = 'capture'
+    g_pool.pupil_queue = pupil_queue
+    g_pool.timebase = timebase
+    # g_pool.lauchner_pipe = lauchner_pipe
+    # g_pool.eye_pipes = eye_pipes
+    # g_pool.eyes_are_alive = eyes_are_alive
+
 
     #manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
@@ -206,7 +172,7 @@ def world(user_dir,version_file,video_sources,profiled=False):
         session_settings.clear()
 
     # Initialize capture
-    cap = autoCreateCapture(video_sources['world'], timebase=g_pool.timebase)
+    cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
     default_settings = {'frame_size':(1280,720),'frame_rate':30}
     previous_settings = session_settings.get('capture_settings',None)
     if previous_settings and previous_settings['name'] == cap.name:
@@ -240,49 +206,29 @@ def world(user_dir,version_file,video_sources,profiled=False):
         g_pool.gui.collect_menus()
 
     def launch_eye_process(eye_id,blocking=False):
-        if eye_id == 0:
-            if g_pool.eye0_process.is_alive():
-                logger.error("Eye Process already running")
-                return
-        else:
-            if g_pool.eye1_process.is_alive():
-                logger.error("Eye Process already running")
-                return
+        if eyes_are_alive[eye_id].value:
+            logger.error("Eye%s process already running."%eye_id)
+            return
+        lauchner_pipe.send(eye_id)
 
-       
         if blocking:
             #wait for ready message from eye to sequentialize startup
-            p_eye.control_pipe.send('Ping')
-            p_eye.control_pipe.recv()
+            eye_pipes[eye_id].send('Ping')
+            eye_pipes[eye_id].recv()
 
-        if eye_id == 0:
-            g_pool.eye0_process = p_eye
-        else:
-            g_pool.eye1_process = p_eye
         logger.warning('Eye %s process started.'%eye_id)
 
-
     def stop_eye_process(eye_id,blocking=False):
-        if eye_id == 0:
-            p_eye = g_pool.eye0_process
-        else:
-            p_eye = g_pool.eye1_process
-        if p_eye.is_alive():
-            p_eye.control_pipe.send('Shut_Down')
+        if eyes_are_alive[eye_id].value:
+            eye_pipes[eye_id].send('Exit')
             if blocking:
-                p_eye.join()
+                raise NotImplementedError()
 
     def start_stop_eye(eye_id,make_alive):
         if make_alive:
             launch_eye_process(eye_id)
         else:
             stop_eye_process(eye_id)
-
-    def start_eye0():
-        g_pool.eye0_process.control_pipe.send('Start')
-
-    def stop_eye0():
-        g_pool.eye0_process.control_pipe.send('Stop')
 
 
     #window and gl setup
@@ -302,13 +248,8 @@ def world(user_dir,version_file,video_sources,profiled=False):
     general_settings = ui.Growing_Menu('General')
     general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,frame.width,frame.height)) )
-    general_settings.append(ui.Switch('eye0_process',label='detect eye 0',setter=lambda alive: start_stop_eye(0,alive),getter=lambda: g_pool.eye0_process.is_alive() ))
-    general_settings.append(ui.Switch('eye1_process',label='detect eye 1',setter=lambda alive: start_stop_eye(1,alive),getter=lambda: g_pool.eye1_process.is_alive() ))
-
-    general_settings.append(ui.Button('start',start_eye0))
-    general_settings.append(ui.Button('stop',stop_eye0))
-
-    general_settings.append(ui.Switch('eye1_process',label='detect eye 1',setter=lambda alive: start_stop_eye(1,alive),getter=lambda: g_pool.eye1_process.is_alive() ))
+    general_settings.append(ui.Switch('eye0_process',label='detect eye 0',setter=lambda alive: start_stop_eye(0,alive),getter=lambda: eyes_are_alive[0].value ))
+    general_settings.append(ui.Switch('eye1_process',label='detect eye 1',setter=lambda alive: start_stop_eye(1,alive),getter=lambda: eyes_are_alive[1].value ))
     general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter=lambda: "Select to load"))
@@ -380,8 +321,10 @@ def world(user_dir,version_file,video_sources,profiled=False):
     pupil_graph.label = "Confidence: %0.2f"
 
 
-
-
+    if session_settings.get('eye1_process_alive',False):
+        launch_eye_process(1,blocking=True)
+    if session_settings.get('eye0_process_alive',True):
+        launch_eye_process(0,blocking=False)
 
     # Event loop
     while not glfw.glfwWindowShouldClose(main_window):
@@ -474,8 +417,8 @@ def world(user_dir,version_file,video_sources,profiled=False):
     session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
     session_settings['version'] = g_pool.version
-    session_settings['eye0_process_alive'] = g_pool.eye0_process.is_alive()
-    session_settings['eye1_process_alive'] = g_pool.eye1_process.is_alive()
+    session_settings['eye0_process_alive'] = eyes_are_alive[0].value
+    session_settings['eye1_process_alive'] = eyes_are_alive[1].value
     session_settings.close()
 
     # de-init all running plugins
@@ -488,8 +431,11 @@ def world(user_dir,version_file,video_sources,profiled=False):
     cap.close()
 
     #shut down eye processes:
-    stop_eye_process(0,blocking=True)
-    stop_eye_process(1,blocking=True)
+    stop_eye_process(0)
+    stop_eye_process(1)
+
+    #shut down laucher
+    lauchner_pipe.send("Exit")
 
     logger.debug("world process done")
 
