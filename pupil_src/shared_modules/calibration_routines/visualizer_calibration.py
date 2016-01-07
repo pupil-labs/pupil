@@ -400,6 +400,7 @@ class Calibration_Visualizer(object):
 			self.glfont.set_size(22)
 			self.glfont.set_color_float((0.2,0.5,0.9,1.0))
 			self.on_resize(self._window,*glfwGetFramebufferSize(self._window))
+			glfwMakeContextCurrent(self.g_pool.main_window)
 
 			# self.gui = ui.UI()
 
@@ -450,7 +451,6 @@ class Calibration_Visualizer(object):
 
 
 		glPopMatrix()
-
 
 
 		#---------------------

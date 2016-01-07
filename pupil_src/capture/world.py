@@ -52,7 +52,6 @@ from pupil_server import Pupil_Server
 from pupil_sync import Pupil_Sync
 from marker_detector import Marker_Detector
 from log_display import Log_Display
-from osc_client import Osc_Client
 
 # create logger for the context of this function
 logger = logging.getLogger(__name__)
@@ -81,7 +80,7 @@ def world(g_pool,cap_src,cap_size):
 
     #manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
-    user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Sync,Marker_Detector, Osc_Client]+runtime_plugins
+    user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Sync,Marker_Detector]+runtime_plugins
     system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder]
     plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins
     name_by_index = [p.__name__ for p in plugin_by_index]
@@ -186,6 +185,8 @@ def world(g_pool,cap_src,cap_size):
     glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfwMakeContextCurrent(main_window)
     cygl.utils.init()
+    g_pool.main_window = main_window
+
 
     #setup GUI
     g_pool.gui = ui.UI()
@@ -232,7 +233,6 @@ def world(g_pool,cap_src,cap_size):
     basic_gl_setup()
     g_pool.image_tex = Named_Texture()
     g_pool.image_tex.update_from_frame(frame)
-    g_pool.main_window = main_window
     # refresh speed settings
     glfwSwapInterval(0)
 

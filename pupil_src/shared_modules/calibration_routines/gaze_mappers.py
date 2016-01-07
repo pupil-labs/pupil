@@ -16,6 +16,7 @@ from copy import deepcopy
 import numpy as np
 from pyglui import ui
 
+from visualizer_calibration import *
 
 class Dummy_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Dummy_Gaze_Mapper"""
@@ -55,72 +56,16 @@ class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
         return {'params':self.params}
 
 
-    # def map_gaze_offline(self,pupil_positions):
-    #     min_confidence = self.g_pool.pupil_confidence_threshold
-    #     gaze_pts = deepcopy(pupil_positions)
-    #     norm_pos = np.array([p['norm_pos'] for p in gaze_pts])
-    #     norm_pos = self.map_fn(norm_pos.T)
-    #     for n in range(len(gaze_pts)):
-    #         gaze_pts[n]['norm_pos'] = norm_pos[0][n],norm_pos[1][n]
-    #         gaze_pts[n]['base'] = [pupil_positions[n]]
-    #     gaze_pts = filter(lambda g: g['confidence']> min_confidence,gaze_pts)
-    #     return gaze_pts
 
-class Angle_Gaze_Mapper(Gaze_Mapping_Plugin):
-    """docstring for Simple_Gaze_Mapper"""
-    def __init__(self, g_pool,params, camera_intrinsics):
-        super(Angle_Gaze_Mapper, self).__init__(g_pool)
-        self.params = params
-        self.map_fn = make_map_function(*self.params)
-        self.camera_matrix = camera_intrinsics[0]
-        self.dist_coefs = camera_intrinsics[1]
-
-    def update(self,frame,events):
-        gaze_pts = []
-
-        for p in events['pupil_positions']:
-            if p['confidence'] > self.g_pool.pupil_confidence_threshold  and p['method'] == '3D c++':
-                #print "1: " , p['theta'], p['phi']
-
-                angles = self.map_fn( (p['theta'], p['phi'] ) )
-
-                gaze_point = spherical_to_cart(1, angles[0], angles[1] )
-                ## model distortion with the polynome for now
-                gaze_point =  project_distort_pts(np.array([gaze_point]),self.camera_matrix, self.dist_coefs*0.0 )
-                #print gaze_point
-                gaze_point = normalize( gaze_point[0], (frame.width, frame.height) , flip_y = True)
-
-                gaze_pts.append({'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
-            else:
-                pass
-                #print p
-        events['gaze_positions'] = gaze_pts
-
-    def get_init_dict(self):
-        return {'params':self.params}
-
-
-    # def map_gaze_offline(self,pupil_positions):
-    #     min_confidence = self.g_pool.pupil_confidence_threshold
-    #     gaze_pts = deepcopy(pupil_positions)
-    #     norm_pos = np.array([p['norm_pos'] for p in gaze_pts])
-    #     norm_pos = self.map_fn(norm_pos.T)
-    #     for n in range(len(gaze_pts)):
-    #         gaze_pts[n]['norm_pos'] = norm_pos[0][n],norm_pos[1][n]
-    #         gaze_pts[n]['base'] = [pupil_positions[n]]
-    #     gaze_pts = filter(lambda g: g['confidence']> min_confidence,gaze_pts)
-    #     return gaze_pts
-
-from visualizer_calibration import *
 
 class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Vector_Gaze_Mapper"""
     def __init__(self, g_pool, transformation , camera_intrinsics , calibration_points_3d = [], calibration_points_2d = []  ):
         super(Vector_Gaze_Mapper, self).__init__(g_pool)
-        print 'INIT MAPPER'
         self.transformation  =  transformation
         self.camera_matrix = camera_intrinsics[0]
         self.dist_coefs = camera_intrinsics[1]
+        self.camera_intrinsics = camera_intrinsics
         self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics , transformation , calibration_points_3d , calibration_points_2d)
         self.g_pool = g_pool
         self.visualizer.open_window()
@@ -151,12 +96,14 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         events['gaze_positions'] = gaze_pts
 
     def gl_display(self):
-
         self.visualizer.update_window( self.g_pool , self.gaze_pts_debug , self.sphere)
         self.gaze_pts_debug = []
 
-    #def get_init_dict(self):
-     #   return {'params':self.params}
+    def get_init_dict(self):
+       return {'transformation':self.transformation , "camera_intrinsics":self.camera_intrinsics}
+
+    def cleanup(self):
+        self.visualizer.close_window()
 
 
     # def map_gaze_offline(self,pupil_positions):

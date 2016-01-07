@@ -12,3 +12,6 @@ from canny_detector import Canny_Detector
 from detector_2d import Detector_2D
 from detector_3d import Detector_3D
 
+#explict import here for pyinstaller because it will not search .pyx source files.
+import visualizer_3d
+

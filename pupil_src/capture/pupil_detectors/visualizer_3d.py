@@ -12,7 +12,7 @@ from pyglui.cygl.utils import init
 from pyglui.cygl.utils import RGBA
 from pyglui.cygl.utils import *
 from pyglui.cygl import utils as glutils
-from trackball import Trackball
+from gl_utils.trackball import Trackball
 from pyglui.pyfontstash import fontstash as fs
 from pyglui.ui import get_opensans_font_path
 import numpy as np
@@ -20,7 +20,7 @@ import math
 import cv2
 import random
 
-import build_test
+
 
 def convert_fov(fov,width):
 	fov = fov* math.pi/180
