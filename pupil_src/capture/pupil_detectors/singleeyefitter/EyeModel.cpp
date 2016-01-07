@@ -146,7 +146,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
      }
 
     return circle;
-}
+}   
 
 EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= true*/)
 {
@@ -160,7 +160,7 @@ EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= true*/)
     const double eyeZ = 57; // could be any value
 
     // should we save them some where else ?
-    std::vector<const Line> pupilGazelinesProjected;
+    std::vector<Line> pupilGazelinesProjected;
     for (const auto& pupil : mSupportingPupils) {
         pupilGazelinesProjected.push_back( pupil.mObservationPtr->getProjectedCircleGaze() );
     }
