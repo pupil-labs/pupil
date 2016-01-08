@@ -54,6 +54,8 @@ namespace singleeyefitter {
 
             Circle mPreviousPupil;
 
+            double mLastFrameTimestamp; //needed to calculate framerate
+            int mApproximatedFramerate;
 
             void checkModels();
 

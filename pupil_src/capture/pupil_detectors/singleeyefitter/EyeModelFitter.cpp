@@ -26,10 +26,15 @@ namespace singleeyefitter {
 
 
 EyeModelFitter::EyeModelFitter(double focalLength, Vector3 cameraCenter) :
-    mFocalLength(std::move(focalLength)), mCameraCenter(std::move(cameraCenter)),
-    mCurrentSphere(Sphere::Null), mCurrentInitialSphere(Sphere::Null) , mNextModelID(1),
+    mFocalLength(std::move(focalLength)),
+    mCameraCenter(std::move(cameraCenter)),
+    mCurrentSphere(Sphere::Null), mCurrentInitialSphere(Sphere::Null),
+    mNextModelID(1),
     mActiveModelPtr(new EyeModel(mNextModelID, Clock::now(), mFocalLength, mCameraCenter)),
-    mLastTimeModelAdded( Clock::now() ), mPerformancePenalties(0)
+    mLastTimeModelAdded( Clock::now() ),
+    mPerformancePenalties(0),
+    mApproximatedFramerate(30),
+    mLastFrameTimestamp(0)
 {
     mNextModelID++;
 }
@@ -41,6 +46,12 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     mDebug = debug;
     Detector3DResult result;
     result.confidence = observation2D->confidence; // if we don't fit we want to take the 2D confidence
+    result.timestamp = observation2D->timestamp;
+
+    if( mLastFrameTimestamp != 0.0 ){
+        mApproximatedFramerate =  static_cast<int>(1.0 / (  observation2D->timestamp - mLastFrameTimestamp ));
+    }
+    mLastFrameTimestamp = observation2D->timestamp;
 
     // Observations are realtive to their ROI
     cv::Rect roi = observation2D->current_roi;
@@ -163,7 +174,7 @@ void EyeModelFitter::checkModels()
     static const int maxAltAmountModels  = 3;
     static const double minMaturity  = 0.1;
     static const double minPerformance = 0.996;
-    static const int maxPenalty  = 10 * 30; //TODO should depend on the actual framerate
+    static const int maxPenalty  = 10 * mApproximatedFramerate;
     static const seconds altModelExpirationTime(20);
     static const seconds minNewModelTime(3);
     static const double gradientChangeThreshold = -2.0e-06; // with this we are also sensitive to changes even if the performance is still above the threshold
