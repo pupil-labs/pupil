@@ -75,10 +75,10 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 
     auto observation3DPtr = std::make_shared<const Observation>(observation2D, mFocalLength);
 
-    //check first if the observations is strong enough to build the eye model ontop of it
-    if (observation2D->confidence  >  0.99) {
+    // decide if we do 3D search or not
+    if (observation2D->confidence >= 0.8) {
 
-        // allow each model to decide by themself if the new observation support the model or not
+        // allow each model to decide by themself if the new observation supports the model or not
         auto circle = mActiveModelPtr->presentObservation(observation3DPtr);
         if (circle != Circle::Null){
             mPreviousPupil = circle;

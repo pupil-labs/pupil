@@ -94,18 +94,21 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
         // select the right circle depending on the current model
         const Circle& unprojectedCircle = selectUnprojectedCircle(mSphere, newObservationPtr->getUnprojectedCirclePair() );
 
-        if (isSpatialRelevant(unprojectedCircle)) {
-            shouldAddObservation = true;
-        } else {
-            //std::cout << " spatial check failed"  << std::endl;
-        }
-
         // initialised circle. circle parameters addapted to our current eye model
         circle = getIntersectedCircle(mSphere, unprojectedCircle);
         calculatePerformance( unprojectedCircle, circle );
 
         if (circle == Circle::Null)
             circle = unprojectedCircle; // at least return the unprojected circle
+
+        //check first if the observations is strong enough to build the eye model ontop of it
+        // the confidence is above 0.99 only if we have a strong prior.
+        // also binchecking
+        if (newObservationPtr->getObservation2D()->confidence > 0.99 && isSpatialRelevant(unprojectedCircle)) {
+            shouldAddObservation = true;
+        } else {
+            //std::cout << " spatial check failed"  << std::endl;
+        }
 
 
     } else { // no valid sphere yet
@@ -146,7 +149,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
      }
 
     return circle;
-}   
+}
 
 EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= true*/)
 {
