@@ -1,21 +1,21 @@
 
-# # monkey-patch for parallel compilation
-# def parallelCCompile(self, sources, output_dir=None, macros=None, include_dirs=None, debug=0, extra_preargs=None, extra_postargs=None, depends=None):
-#     # those lines are copied from distutils.ccompiler.CCompiler directly
-#     macros, objects, extra_postargs, pp_opts, build = self._setup_compile(output_dir, macros, include_dirs, sources, depends, extra_postargs)
-#     cc_args = self._get_cc_args(pp_opts, debug, extra_preargs)
-#     # parallel code
-#     N=4 # number of parallel compilations
-#     import multiprocessing.pool
-#     def _single_compile(obj):
-#         try: src, ext = build[obj]
-#         except KeyError: return
-#         self._compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
-#     # convert to list, imap is evaluated on-demand
-#     list(multiprocessing.pool.ThreadPool(N).imap(_single_compile,objects))
-#     return objects
-# import distutils.ccompiler
-# distutils.ccompiler.CCompiler.compile=parallelCCompile
+# monkey-patch for parallel compilation
+def parallelCCompile(self, sources, output_dir=None, macros=None, include_dirs=None, debug=0, extra_preargs=None, extra_postargs=None, depends=None):
+    # those lines are copied from distutils.ccompiler.CCompiler directly
+    macros, objects, extra_postargs, pp_opts, build = self._setup_compile(output_dir, macros, include_dirs, sources, depends, extra_postargs)
+    cc_args = self._get_cc_args(pp_opts, debug, extra_preargs)
+    # parallel code
+    N=4 # number of parallel compilations
+    import multiprocessing.pool
+    def _single_compile(obj):
+        try: src, ext = build[obj]
+        except KeyError: return
+        self._compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
+    # convert to list, imap is evaluated on-demand
+    list(multiprocessing.pool.ThreadPool(N).imap(_single_compile,objects))
+    return objects
+import distutils.ccompiler
+distutils.ccompiler.CCompiler.compile=parallelCCompile
 
 from distutils.core import setup
 from distutils.extension import Extension
@@ -24,10 +24,6 @@ import numpy as np
 import os, platform
 
 
-if platform.system() == 'Linux':
-    #we need to run a compiler toolchain that has c++11 stdlib.
-    #os.environ["CC"] = "gcc-4.9" 
-    pass
 
 dependencies = []
 # include all header files, to recognize changes
@@ -53,12 +49,10 @@ extensions = [
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc', 'ceres' ],
         # library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
-        extra_compile_args=["-std=c++11",'-w','-O2' ], #-w hides warnings
+        extra_compile_args=["-std=c++11",'-w','-O2'], #-w hides warnings
         depends= dependencies,
         language="c++"),
 ]
-
-# os.environ["CC"] = "gcc-4.9" 
 
 setup(
     name="eye_model_3d",
