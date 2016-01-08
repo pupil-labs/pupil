@@ -74,7 +74,11 @@ class EyeModel {
             mInitialUncheckedPupils(initialUncheckedPupils),
             mTotalBins(std::pow(std::floor(1.0/binResolution), 2 ) * 4 ),
             mFilterWindowSize(filterwindowSize),
-            mBinResolution(binResolution)
+            mBinResolution(binResolution),
+            mFit(0),
+            mPerformance(0),
+            mPerformanceGradient(0),
+            mLastPerformanceCalculationTime()
             { };
 
         EyeModel(const EyeModel&) = delete;
