@@ -26,8 +26,8 @@ import os, platform
 
 if platform.system() == 'Linux':
     #we need to run a compiler toolchain that has c++11 stdlib.
-    os.environ["CC"] = "gcc-4.9" 
-
+    #os.environ["CC"] = "gcc-4.9" 
+    pass
 
 dependencies = []
 # include all header files, to recognize changes
@@ -41,7 +41,7 @@ extensions = [
         sources=['detector_2d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp' ],
         include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3'],
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc'],
-        # library_dirs = ['/usr/local/lib'],
+        #library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-std=c++11",'-w','-O2'], #-w hides warnings
         depends= dependencies,
@@ -50,10 +50,10 @@ extensions = [
         name="detector_3d",
         sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/EyeModelFitter.cpp','singleeyefitter/EyeModel.cpp'],
         include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3'],
-        libraries = ['opencv_highgui','opencv_core','opencv_imgproc', 'ceres'],
+        libraries = ['opencv_highgui','opencv_core','opencv_imgproc', 'ceres' ],
         # library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
-        extra_compile_args=["-std=c++11",'-w','-O2'], #-w hides warnings
+        extra_compile_args=["-std=c++11",'-w','-O2' ], #-w hides warnings
         depends= dependencies,
         language="c++"),
 ]

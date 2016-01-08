@@ -281,7 +281,7 @@ std::shared_ptr<Detector2DResult> Detector2D::detect(Detector2DProperties& props
 		}
 	}
 
-	std::sort(split_contours.begin(), split_contours.end(), [](Contour_2D & a, Contour_2D & b) { return a.size() > b.size(); });
+	std::sort(split_contours.begin(), split_contours.end(), [](const Contour_2D & a,const Contour_2D & b) { return a.size() > b.size(); });
 	const cv::Rect ellipse_center_varianz = cv::Rect(padding, padding, pupil_image.size().width - 2.0 * padding, pupil_image.size().height - 2.0 * padding);
 	const EllipseEvaluation2D is_Ellipse(ellipse_center_varianz, props.ellipse_roundness_ratio, props.pupil_size_min, props.pupil_size_max);
 
