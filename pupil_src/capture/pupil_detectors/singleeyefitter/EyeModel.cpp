@@ -456,7 +456,9 @@ double EyeModel::getMaturity() const {
 double EyeModel::getPerformance() const {
     return mPerformance;
 }
-
+double EyeModel::getPerformanceGradient() const {
+    return mPerformanceGradient;
+}
 double EyeModel::getFit() const {
     return mFit;
 }
@@ -628,6 +630,8 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
     if (unprojectedCircle != Circle::Null && intersectedCircle != Circle::Null) {  // initialise failed
         support = getModelSupport(unprojectedCircle, intersectedCircle);
     }
+    const double previousPerformance = mPerformance;
+
     mModelSupports.push_back( support );
     // calculate moving average of support
     if( mModelSupports.size() <=  mFilterWindowSize){
@@ -642,9 +646,18 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
         mModelSupports.pop_front();
         mPerformance += support/mFilterWindowSize - first/mFilterWindowSize;
     }
-    //std::cout << "current model support: " << support  << std::endl;
-    //std::cout << "average model support: " << mPerformance << std::endl;
 
+    using namespace std::chrono;
+
+    Clock::time_point now( Clock::now() );
+    duration<double, std::milli> deltaTimeMs = now - mLastPerformanceCalculationTime;
+    // calculate performance gradient (backward difference )
+    mPerformanceGradient =  (mPerformance - previousPerformance) / deltaTimeMs.count();
+    mLastPerformanceCalculationTime =  now;
+
+    // std::cout << "current model support: " << support  << std::endl;
+    // std::cout << "average model support: " << mPerformance << std::endl;
+    // std::cout << "performance gradient: " <<  mPerformanceGradient << std::endl;
 }
 
 

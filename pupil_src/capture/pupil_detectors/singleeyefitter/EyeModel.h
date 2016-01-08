@@ -94,6 +94,7 @@ class EyeModel {
         // Describing how good different properties of the Eye are
         double getMaturity() const ; // How much spatial variance there is
         double getPerformance() const; // The average of the model support
+        double getPerformanceGradient() const; // The average of the model support
         double getFit() const ; // The residual of the sphere calculation
 
         int getModelID() const { return mModelID; };
@@ -150,6 +151,7 @@ class EyeModel {
         // Factors which describe how good certain properties of the model are
         double mFit; // Residual of Ceres sovler
         double mPerformance; // Average model support
+        double mPerformanceGradient;
 
         const double mFocalLength;
         const Vector3 mCameraCenter;
