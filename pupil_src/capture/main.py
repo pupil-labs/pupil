@@ -32,7 +32,7 @@ from version_utils import get_version
 app_version = get_version(version_file)
 
 
-if platform.system() == 'Darwin' and  getattr(sys, 'frozen', False):
+if platform.system() == 'Darwin' and getattr(sys, 'frozen', False):
     from billiard import Process, Pipe, Queue, Value,freeze_support,active_children, forking_enable
     forking_enable(0)
 else:
@@ -86,6 +86,7 @@ def main():
     p_world.start()
 
     while True:
+        #block and listen for commands from world process.
         cmd = cmd_launcher_end.recv()
         if cmd == "Exit":
             break
