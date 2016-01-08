@@ -162,15 +162,18 @@ void EyeModelFitter::checkModels()
 
     static const int maxAltAmountModels  = 3;
     static const double minMaturity  = 0.1;
-    static const double minPerformance = 0.997;
+    static const double minPerformance = 0.996;
     static const int maxPenalty  = 10 * 30; //TODO should depend on the actual framerate
     static const seconds altModelExpirationTime(20);
     static const seconds minNewModelTime(3);
+    static const double gradientChangeThreshold = -2.0e-06; // with this we are also sensitive to changes even if the perfomance is still above the threshold
 
     Clock::time_point  now( Clock::now() );
 
     // whenever our current model's performance is below the threshold we start counting penalties
-    if(  mActiveModelPtr->getPerformance() < minPerformance ){
+    // or the performance decreases rapidly (performance gradient)
+    std::cout << "current performance gradient: " << mActiveModelPtr->getPerformanceGradient() << std::endl;
+    if(  mActiveModelPtr->getPerformance() < minPerformance || mActiveModelPtr->getPerformanceGradient() <= gradientChangeThreshold){
 
         mPerformancePenalties++;
         mLastTimePerformancePenalty = now;
@@ -186,6 +189,9 @@ void EyeModelFitter::checkModels()
             mLastTimeModelAdded = now;
         }
 
+    }else if( mActiveModelPtr->getPerformance() > minPerformance && mActiveModelPtr->getPerformanceGradient() >  0.0 ) {
+        // kill other models whenever the performance is good enough AND the performance doesn't decrease
+        mAlternativeModelsPtrs.clear();
     }
 
     if(mAlternativeModelsPtrs.size() == 0)
