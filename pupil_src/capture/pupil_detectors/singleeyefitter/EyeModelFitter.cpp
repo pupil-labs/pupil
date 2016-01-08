@@ -166,13 +166,14 @@ void EyeModelFitter::checkModels()
     static const int maxPenalty  = 10 * 30; //TODO should depend on the actual framerate
     static const seconds altModelExpirationTime(20);
     static const seconds minNewModelTime(3);
-    static const double gradientChangeThreshold = -2.0e-06; // with this we are also sensitive to changes even if the perfomance is still above the threshold
+    static const double gradientChangeThreshold = -2.0e-06; // with this we are also sensitive to changes even if the performance is still above the threshold
 
     Clock::time_point  now( Clock::now() );
 
-    // whenever our current model's performance is below the threshold we start counting penalties
-    // or the performance decreases rapidly (performance gradient)
-    std::cout << "current performance gradient: " << mActiveModelPtr->getPerformanceGradient() << std::endl;
+    /* whenever our current model's performance is below the threshold or the performance decreases rapidly (performance gradient)
+       we try to create an alternative model
+    */
+    //std::cout << "current performance gradient: " << mActiveModelPtr->getPerformanceGradient() << std::endl;
     if(  mActiveModelPtr->getPerformance() < minPerformance || mActiveModelPtr->getPerformanceGradient() <= gradientChangeThreshold){
 
         mPerformancePenalties++;
@@ -183,7 +184,6 @@ void EyeModelFitter::checkModels()
             mActiveModelPtr->getMaturity() > minMaturity &&
             lastTimeAdded  > minNewModelTime )
         {
-            std::cout << "Create alternative model!"   << std::endl;
             mAlternativeModelsPtrs.emplace_back(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ) );
             mNextModelID++;
             mLastTimeModelAdded = now;
@@ -208,7 +208,6 @@ void EyeModelFitter::checkModels()
     for( auto& modelptr : mAlternativeModelsPtrs){
 
         if(modelptr->getMaturity() > minMaturity &&  mActiveModelPtr->getPerformance() < modelptr->getPerformance() ){
-            std::cout << "Replace active model with new one." << std::endl;
             mActiveModelPtr.reset( modelptr.release() );
             mPerformancePenalties = 0;
             mAlternativeModelsPtrs.clear(); // we got a better one, let's remove others
@@ -224,7 +223,6 @@ void EyeModelFitter::checkModels()
         mPerformancePenalties = 0;
         mActiveModelPtr.reset(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ));
         mNextModelID++;
-        std::cout << "Reset all models."   << std::endl;
     }
 
     auto lastPenalty =  duration_cast<seconds>(now - mLastTimePerformancePenalty);
