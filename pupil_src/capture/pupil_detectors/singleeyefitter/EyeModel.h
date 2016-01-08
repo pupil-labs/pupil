@@ -149,9 +149,11 @@ class EyeModel {
 
 
         // Factors which describe how good certain properties of the model are
-        double mFit; // Residual of Ceres sovler
+        std::list<double> mModelSupports; // values to calculate the average
+        double mFit; // Residual of Ceres sovler , Thread sensitive
         double mPerformance; // Average model support
         double mPerformanceGradient;
+        Clock::time_point mLastPerformanceCalculationTime; // for the gradient calculation when need keep track of the time
 
         const double mFocalLength;
         const Vector3 mCameraCenter;
@@ -162,14 +164,12 @@ class EyeModel {
         const int mModelID;
         const Clock::time_point mTimestamp;
 
-        std::list<double> mModelSupports; // values to calculate the average
 
-        // Thread sensitive variables
-        Sphere mSphere;
-        Sphere mInitialSphere;
-        std::vector<Pupil> mSupportingPupils;
+        Sphere mSphere;   // Thread sensitive
+        Sphere mInitialSphere;    // Thread sensitive
+        std::vector<Pupil> mSupportingPupils; // just used within the worker thread, Thread sensitive
 
-        std::atomic<int> mSupportingPupilSize; // use this to get the SupportedPupil size
+        std::atomic<int> mSupportingPupilSize; // Thread sensitive, use this to get the SupportedPupil size
 
         // observations are saved here and only if needed transfered to mObservation
         // since mObservations needs a mutex
