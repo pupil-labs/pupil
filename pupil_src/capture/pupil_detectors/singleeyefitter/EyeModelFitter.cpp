@@ -203,6 +203,7 @@ void EyeModelFitter::checkModels()
     }else if( mActiveModelPtr->getPerformance() > minPerformance && mActiveModelPtr->getPerformanceGradient() >  0.0 ) {
         // kill other models whenever the performance is good enough AND the performance doesn't decrease
         mAlternativeModelsPtrs.clear();
+        mPerformancePenalties = 0;
     }
 
     if(mAlternativeModelsPtrs.size() == 0)
