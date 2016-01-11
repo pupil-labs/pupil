@@ -81,7 +81,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     if (observation2D->confidence >= 0.8) {
 
         // allow each model to decide by themself if the new observation supports the model or not
-        auto circle = mActiveModelPtr->presentObservation(observation3DPtr);
+        auto circle = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() );
         if (circle != Circle::Null){
             mPreviousPupil = circle;
             result.circle = circle;
@@ -89,7 +89,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         }
 
         for (auto& modelPtr : mAlternativeModelsPtrs) {
-             modelPtr->presentObservation(observation3DPtr);
+             modelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() );
         }
 
     } else if (mCurrentSphere != Sphere::Null) { // if it's too weak we wanna try to find a better one in 3D

@@ -81,7 +81,7 @@ EyeModel::~EyeModel(){
 }
 
 
-Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
+Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, double averageFramerate)
 {
 
 
@@ -98,7 +98,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
 
         // initialised circle. circle parameters addapted to our current eye model
         circle = getIntersectedCircle(mSphere, unprojectedCircle);
-        calculatePerformance( unprojectedCircle, circle , newObservationPtr->getObservation2D()->confidence);
+        calculatePerformance( unprojectedCircle, circle , newObservationPtr->getObservation2D()->confidence, averageFramerate);
 
         if (circle == Circle::Null)
             circle = unprojectedCircle; // at least return the unprojected circle
@@ -657,7 +657,7 @@ Circle EyeModel::circleFromParams(const Sphere& eye, const PupilParams& params) 
 }
 
 
-void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle, const double confidence){
+void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle, double confidence, double averageFramerate){
 
     double supportGoodness = 0.0;
     double supportConfidence = 0.0;
@@ -674,6 +674,16 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
 
 
     const double previousPerformance = mPerformance.getAverage();
+
+    static const double windowSizeFactor = 1.0;
+
+    // whenever there is a change in framerate bigger than 1, change the window size
+    // window size linearly depends on the framerate
+    // the average frame rate changes slowly to compensate onetime big changes
+    if( std::abs(averageFramerate  - mPerformance.getWindowSize()/windowSizeFactor) > 1 ){
+        int newWindowSize = std::round(  averageFramerate * windowSizeFactor );
+        mPerformance.changeWindowSize(newWindowSize);
+    }
 
     mPerformance.addValue(supportGoodness);
 

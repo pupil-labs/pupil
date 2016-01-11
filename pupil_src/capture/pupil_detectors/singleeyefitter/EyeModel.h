@@ -66,7 +66,7 @@ class EyeModel {
         typedef singleeyefitter::Sphere<double> Sphere;
     public:
 
-        EyeModel( int modelId, Clock::time_point timestamp,  double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 3, double binResolution = 0.05 , int filterwindowSize = 200): //TODO should the filter size depend on the framerate ?
+        EyeModel( int modelId, Clock::time_point timestamp,  double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 3, double binResolution = 0.05  ): //TODO should the filter size depend on the framerate ?
             mModelID(modelId),
             mTimestamp(timestamp),
             mFocalLength(std::move(focalLength)),
@@ -75,7 +75,7 @@ class EyeModel {
             mTotalBins(std::pow(std::floor(1.0/binResolution), 2 ) * 4 ),
             mBinResolution(binResolution),
             mFit(0),
-            mPerformance(filterwindowSize),
+            mPerformance(30),
             mPerformanceGradient(0),
             mLastPerformanceCalculationTime()
             { };
@@ -86,14 +86,14 @@ class EyeModel {
 
 
 
-        Circle presentObservation(const ObservationPtr);
+        Circle presentObservation(const ObservationPtr observation, double averageFramerate );
         Sphere getSphere() const;
         Sphere getInitialSphere() const;
 
         // Describing how good different properties of the Eye are
         double getMaturity() const ; // How much spatial variance there is
         double getPerformance() const; // The average of the model support
-        double getPerformanceGradient() const; // The average of the model support
+        double getPerformanceGradient() const;
         double getFit() const ; // The residual of the sphere calculation
 
         int getModelID() const { return mModelID; };
@@ -137,7 +137,7 @@ class EyeModel {
         //Circle circleFromParams( CircleParams& params) const;
         Circle circleFromParams(const Sphere& eye,const  PupilParams& params) const;
 
-        void calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle , double confidence);
+        void calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle , double confidence , double averageFramerate);
 
 
         std::unordered_map<Vector2, bool, math::matrix_hash<Vector2>> mSpatialBins;
