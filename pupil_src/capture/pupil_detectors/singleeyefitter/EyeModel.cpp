@@ -126,7 +126,13 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
 
     }
 
-   if( mSupportingPupilsToAdd.size() > 3  ){ //TODO optimize after some time
+    using namespace std::chrono;
+
+    Clock::time_point now( Clock::now() );
+    seconds pastSecondsRefinement = duration_cast<seconds>(now - mLastModelRefinementTime);
+
+    int amountNewObservations = mSupportingPupilsToAdd.size();
+   if( amountNewObservations > 1 &&  pastSecondsRefinement.count() + amountNewObservations > 10   ){
 
             if(tryTransferNewObservations() ) {
 
@@ -146,6 +152,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
                 if( mWorker.joinable() )
                     mWorker.join(); // we should never wait here because tryTransferNewObservations is false if the work isn't finished
 
+                mLastModelRefinementTime =  Clock::now() ;
                 mWorker = std::thread(work);
                 //work();
             }

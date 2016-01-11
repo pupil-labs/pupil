@@ -147,6 +147,7 @@ class EyeModel {
         mutable std::mutex mModelMutex;
         std::mutex mPupilMutex;
         std::thread mWorker;
+        Clock::time_point mLastModelRefinementTime;
 
 
         // Factors which describe how good certain properties of the model are
