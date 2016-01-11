@@ -73,10 +73,9 @@ class EyeModel {
             mCameraCenter(std::move(cameraCenter)),
             mInitialUncheckedPupils(initialUncheckedPupils),
             mTotalBins(std::pow(std::floor(1.0/binResolution), 2 ) * 4 ),
-            mFilterWindowSize(filterwindowSize),
             mBinResolution(binResolution),
             mFit(0),
-            mPerformance(0),
+            mPerformance(filterwindowSize),
             mPerformanceGradient(0),
             mLastPerformanceCalculationTime()
             { };
@@ -151,9 +150,9 @@ class EyeModel {
 
 
         // Factors which describe how good certain properties of the model are
-        std::list<double> mModelSupports; // values to calculate the average
+        //std::list<double> mModelSupports; // values to calculate the average
         double mFit; // Residual of Ceres sovler , Thread sensitive
-        double mPerformance; // Average model support
+        math::SMA<double> mPerformance; // moving Average of model support
         double mPerformanceGradient;
         Clock::time_point mLastPerformanceCalculationTime; // for the gradient calculation when need keep track of the time
 
@@ -162,7 +161,6 @@ class EyeModel {
         const int mInitialUncheckedPupils;
         const double mBinResolution;
         const int mTotalBins;
-        const int mFilterWindowSize; // Window size of the average moving filter for mPerformance
         const int mModelID;
         const Clock::time_point mTimestamp;
 

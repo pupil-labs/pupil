@@ -37,7 +37,7 @@ namespace singleeyefitter {
 
 // EyeModel::EyeModel(EyeModel&& that) :
 //     mInitialUncheckedPupils(that.mInitialUncheckedPupils), mFocalLength(that.mFocalLength), mCameraCenter(that.mCameraCenter),
-//     mTotalBins(that.mTotalBins), mBinResolution(that.mBinResolution), mFilterWindowSize(that.mFilterWindowSize), mTimestamp(that.mTimestamp ),
+//     mTotalBins(that.mTotalBins), mBinResolution(that.mBinResolution), mTimestamp(that.mTimestamp ),
 //     mModelID(that.mModelID)
 // {
 //     std::lock_guard<std::mutex> lock(that.mModelMutex);
@@ -467,7 +467,7 @@ double EyeModel::getMaturity() const {
 }
 
 double EyeModel::getPerformance() const {
-    return mPerformance;
+    return mPerformance.getAverage();
 }
 double EyeModel::getPerformanceGradient() const {
     return mPerformanceGradient;
@@ -673,29 +673,16 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
         return;
 
 
-    const double previousPerformance = mPerformance;
+    const double previousPerformance = mPerformance.getAverage();
 
-    mModelSupports.push_back( supportGoodness );
-    // calculate moving average of supportGoodness
-    if( mModelSupports.size() <=  mFilterWindowSize){
-        mPerformance = 0.0;
-        for(auto& element : mModelSupports){
-            mPerformance += element;
-        }
-        mPerformance /= mModelSupports.size();
-    }else{
-        // we can optimize if the wanted window size is reached
-        double first = mModelSupports.front();
-        mModelSupports.pop_front();
-        mPerformance += supportGoodness/mFilterWindowSize - first/mFilterWindowSize;
-    }
+    mPerformance.addValue(supportGoodness);
 
     using namespace std::chrono;
 
     Clock::time_point now( Clock::now() );
     duration<double, std::milli> deltaTimeMs = now - mLastPerformanceCalculationTime;
     // calculate performance gradient (backward difference )
-    mPerformanceGradient =  (mPerformance - previousPerformance) / deltaTimeMs.count();
+    mPerformanceGradient =  (mPerformance.getAverage() - previousPerformance) / deltaTimeMs.count();
     mLastPerformanceCalculationTime =  now;
 
     // std::cout << "current model support: " << support  << std::endl;
