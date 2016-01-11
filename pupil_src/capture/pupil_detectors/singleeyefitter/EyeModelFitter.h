@@ -56,6 +56,7 @@ namespace singleeyefitter {
 
             double mLastFrameTimestamp; //needed to calculate framerate
             int mApproximatedFramerate;
+            math::SMA<double> mAverageFramerate;
 
             void checkModels();
 

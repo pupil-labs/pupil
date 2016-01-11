@@ -34,6 +34,7 @@ EyeModelFitter::EyeModelFitter(double focalLength, Vector3 cameraCenter) :
     mLastTimeModelAdded( Clock::now() ),
     mPerformancePenalties(0),
     mApproximatedFramerate(30),
+    mAverageFramerate(400), // windowsize is 400, let this be slow to changes to better ompensate jumps
     mLastFrameTimestamp(0)
 {
     mNextModelID++;
@@ -50,6 +51,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 
     if( mLastFrameTimestamp != 0.0 ){
         mApproximatedFramerate =  static_cast<int>(1.0 / (  observation2D->timestamp - mLastFrameTimestamp ));
+        mAverageFramerate.addValue(mApproximatedFramerate);
     }
     mLastFrameTimestamp = observation2D->timestamp;
 
