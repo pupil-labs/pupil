@@ -127,7 +127,8 @@ class EyeModel {
         double refineWithEdges( Sphere& sphere  );
         bool tryTransferNewObservations();
 
-        double getModelSupport(const Circle&  unprojectedCircle, const Circle& initialisedCircle) const;
+        std::pair<double,double> calculateModelSupport(const Circle&  unprojectedCircle, const Circle& initialisedCircle, double confidence) const;
+        double calculateModelFit(const Circle&  unprojectedCircle, const Circle& optimizedCircle) const;
         bool isSpatialRelevant(const Circle& circle);
 
         const Circle& selectUnprojectedCircle(const Sphere& sphere, const std::pair<const Circle, const Circle>& circles) const;
@@ -137,7 +138,7 @@ class EyeModel {
         //Circle circleFromParams( CircleParams& params) const;
         Circle circleFromParams(const Sphere& eye,const  PupilParams& params) const;
 
-        void calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle);
+        void calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle , double confidence);
 
 
         std::unordered_map<Vector2, bool, math::matrix_hash<Vector2>> mSpatialBins;

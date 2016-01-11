@@ -98,7 +98,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
 
         // initialised circle. circle parameters addapted to our current eye model
         circle = getIntersectedCircle(mSphere, unprojectedCircle);
-        calculatePerformance( unprojectedCircle, circle );
+        calculatePerformance( unprojectedCircle, circle , newObservationPtr->getObservation2D()->confidence);
 
         if (circle == Circle::Null)
             circle = unprojectedCircle; // at least return the unprojected circle
@@ -428,7 +428,7 @@ double EyeModel::refineWithEdges(Sphere& sphere )
         const Circle& unprojectedCircle = selectUnprojectedCircle(sphere, pupil.mObservationPtr->getUnprojectedCirclePair() );
         auto&& pupilParam = x.segment<3>(3 + 3 * i);
         Circle optimizedCircle = circleFromParams(sphere, PupilParams(pupilParam[0], pupilParam[1], pupilParam[2]) );
-        fit += getModelSupport( unprojectedCircle , optimizedCircle );
+        fit += calculateModelFit( unprojectedCircle , optimizedCircle );
     }
 
     fit /= mSupportingPupils.size();
@@ -486,14 +486,33 @@ bool EyeModel::tryTransferNewObservations(){
 
 }
 
-double EyeModel::getModelSupport(const Circle&  unprojectedCircle, const Circle& initialisedCircle) const {
+std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojectedCircle, const Circle& initialisedCircle, double confidence) const {
 
     // the angle between the unprojected and the initialised circle normal tells us how good the current observation supports our current model
-    // if our model is good and the camera didn't change the perspective or so, these normals should align pretty well
+    // if our model is good and the camera didn't change perspective or so, these normals should align pretty well
     const auto& n1 = unprojectedCircle.normal;
     const auto& n2 = initialisedCircle.normal;
+    const double goodness = n1.dot(n2);
+
+    const Vector3 sphereToCameraDirection = (mCameraCenter - mSphere.center).normalized()   ;
+    //because of the depth uncertainty when unprojection the 2D ellipse, the goodness isn't very meaningfull when looking directly into the camera.
+    const double depthUncertainty =  sphereToCameraDirection.dot(initialisedCircle.normal);
+    static const double depthUncertaintyThreshold =  0.92;
+    //std::cout << "depthUncertainty: " <<  depthUncertainty << std::endl;
+
+    const double goodnessConfidence =  depthUncertainty < depthUncertaintyThreshold ? confidence : 0.0;
+
+    return {goodness, goodnessConfidence}; //TODO return also certainty of the support // include 2D confidence and add special case if we look into the camera
+}
+
+double EyeModel::calculateModelFit(const Circle&  unprojectedCircle, const Circle& optimizedCircle) const {
+
+    // the angle between the unprojected and the initialised circle normal tells us how good the current observation supports our current model
+    // if our model is good and the camera didn't change perspective or so, these normals should align pretty well
+    const auto& n1 = unprojectedCircle.normal;
+    const auto& n2 = optimizedCircle.normal;
     const double normalsAngle = n1.dot(n2);
-    return normalsAngle; //TODO return also certainty of the support // include 2D confidence and add special case if we look into the camera
+    return normalsAngle;
 }
 
 bool EyeModel::isSpatialRelevant(const Circle& circle){
@@ -631,16 +650,19 @@ Circle EyeModel::circleFromParams(const Sphere& eye, const PupilParams& params) 
 }
 
 
-void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle){
+void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle, const double confidence){
 
-    double support = 0.0;
+    double supportGoodness = 0.0;
+    double supportConfidence = 0.0;
     if (unprojectedCircle != Circle::Null && intersectedCircle != Circle::Null) {  // initialise failed
-        support = getModelSupport(unprojectedCircle, intersectedCircle);
+        auto support = calculateModelSupport(unprojectedCircle, intersectedCircle , confidence);
+        supportGoodness = support.first;
+        supportConfidence = support.second;
     }
     const double previousPerformance = mPerformance;
 
-    mModelSupports.push_back( support );
-    // calculate moving average of support
+    mModelSupports.push_back( supportGoodness );
+    // calculate moving average of supportGoodness
     if( mModelSupports.size() <=  mFilterWindowSize){
         mPerformance = 0.0;
         for(auto& element : mModelSupports){
@@ -651,7 +673,7 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
         // we can optimize if the wanted window size is reached
         double first = mModelSupports.front();
         mModelSupports.pop_front();
-        mPerformance += support/mFilterWindowSize - first/mFilterWindowSize;
+        mPerformance += supportGoodness/mFilterWindowSize - first/mFilterWindowSize;
     }
 
     using namespace std::chrono;
