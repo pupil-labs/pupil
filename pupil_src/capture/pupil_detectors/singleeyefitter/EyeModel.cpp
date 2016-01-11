@@ -88,6 +88,8 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
     Circle circle;
     bool shouldAddObservation = false;
 
+    // unlock when done
+    mModelMutex.lock(); // needed for mSphere and mSupportingPupilSize
     //Check for properties if it's a candidate we can use
     if (mSphere != Sphere::Null && (mSupportingPupilSize + mSupportingPupilsToAdd.size()) >= mInitialUncheckedPupils ) {
 
@@ -115,6 +117,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr)
         //std::cout << "add without check" << std::endl;
         shouldAddObservation = true;
     }
+     mModelMutex.unlock();
 
     if (shouldAddObservation) {
         //std::cout << "add" << std::endl;
@@ -474,6 +477,7 @@ bool EyeModel::tryTransferNewObservations(){
         }
         mSupportingPupilsToAdd.clear();
         mPupilMutex.unlock();
+        std::lock_guard<std::mutex> lockModel(mModelMutex);
         mSupportingPupilSize = mSupportingPupils.size();
         return true;
     }else{

@@ -168,8 +168,7 @@ class EyeModel {
         Sphere mSphere;   // Thread sensitive
         Sphere mInitialSphere;    // Thread sensitive
         std::vector<Pupil> mSupportingPupils; // just used within the worker thread, Thread sensitive
-
-        std::atomic<int> mSupportingPupilSize; // Thread sensitive, use this to get the SupportedPupil size
+        int mSupportingPupilSize; // Thread sensitive, use this to get the SupportedPupil size
 
         // observations are saved here and only if needed transfered to mObservation
         // since mObservations needs a mutex
