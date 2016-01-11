@@ -497,7 +497,7 @@ std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojec
     const Vector3 sphereToCameraDirection = (mCameraCenter - mSphere.center).normalized()   ;
     //because of the depth uncertainty when unprojection the 2D ellipse, the goodness isn't very meaningfull when looking directly into the camera.
     const double depthUncertainty =  sphereToCameraDirection.dot(initialisedCircle.normal);
-    static const double depthUncertaintyThreshold =  0.92;
+    static const double depthUncertaintyThreshold =  0.95;
     //std::cout << "depthUncertainty: " <<  depthUncertainty << std::endl;
 
     const double goodnessConfidence =  depthUncertainty < depthUncertaintyThreshold ? confidence : 0.0;
@@ -659,6 +659,13 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
         supportGoodness = support.first;
         supportConfidence = support.second;
     }
+
+    // ignore values where the confidence of the support is not good
+    static const double supportConfidenceThreshold = 0.85;
+    if( supportConfidence < supportConfidenceThreshold )
+        return;
+
+
     const double previousPerformance = mPerformance;
 
     mModelSupports.push_back( supportGoodness );
