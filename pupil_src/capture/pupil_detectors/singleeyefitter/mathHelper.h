@@ -2,6 +2,7 @@
 #define singleeyefitter_math_h__
 
 #include <limits>
+#include <list>
 
 #include "common/traits.h"
 
@@ -221,6 +222,54 @@ namespace singleeyefitter {
                 }
                 return seed;
             }
+        };
+
+        template<typename T>
+        class SMA{
+
+            public:
+
+                SMA( int windowSize ) : mWindowSize(windowSize)
+                {};
+
+                void addValue( T value ){
+                    mValues.push_back( value );
+                    // calculate moving average of value
+                    if( mValues.size() <=  mWindowSize){
+                        mAverage = 0.0;
+                        for(auto& element : mValues){
+                            mAverage += element;
+                        }
+                        mAverage /= mValues.size();
+                    }else{
+                        // we can optimize if the wanted window size is reached
+                        T first = mValues.front();
+                        mValues.pop_front();
+                        mAverage += value/mWindowSize - first/mWindowSize;
+                    }
+                }
+
+                double getAverage() const { return mAverage; };
+
+                void changeWindowSize( int windowSize){
+
+                    if( windowSize < mWindowSize){
+                        while( mValues.size() > windowSize){
+                            mValues.pop_front();
+                        }
+
+                    }
+                    mWindowSize = windowSize;
+
+                }
+
+            private:
+
+            SMA(){};
+
+            std::list<T> mValues;
+            int mWindowSize;
+            double mAverage;
         };
 
 
