@@ -677,7 +677,7 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
 
     const double previousPerformance = mPerformance.getAverage();
 
-    static const double windowSizeFactor = 1.0;
+    static const double windowSizeFactor = 1.0; // TODO use this for the senisitvity
 
     // whenever there is a change in framerate bigger than 1, change the window size
     // window size linearly depends on the framerate
