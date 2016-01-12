@@ -32,7 +32,6 @@ EyeModelFitter::EyeModelFitter(double focalLength, Vector3 cameraCenter) :
     mNextModelID(1),
     mActiveModelPtr(new EyeModel(mNextModelID, Clock::now(), mFocalLength, mCameraCenter)),
     mLastTimeModelAdded( Clock::now() ),
-    mPerformancePenalties(0),
     mApproximatedFramerate(30),
     mAverageFramerate(400), // windowsize is 400, let this be slow to changes to better ompensate jumps
     mLastFrameTimestamp(0)
@@ -178,20 +177,18 @@ void EyeModelFitter::checkModels()
     static const int maxAltAmountModels  = 3;
     static const double minMaturity  = 0.1;
     static const double minPerformance = 0.996;
-    static const int maxPenalty  = 10 * mApproximatedFramerate;
-    static const seconds altModelExpirationTime(20);
+    static const seconds altModelExpirationTime(10);
     static const seconds minNewModelTime(3);
-    static const double gradientChangeThreshold = -2.0e-06; // with this we are also sensitive to changes even if the performance is still above the threshold
+    static const double gradientChangeThreshold = -2.0e-05; // with this we are also sensitive to changes even if the performance is still above the threshold
 
     Clock::time_point  now( Clock::now() );
 
     /* whenever our current model's performance is below the threshold or the performance decreases rapidly (performance gradient)
        we try to create an alternative model
     */
-    //std::cout << "current performance gradient: " << mActiveModelPtr->getPerformanceGradient() << std::endl;
+    std::cout << "current performance gradient: " << mActiveModelPtr->getPerformanceGradient() << std::endl;
     if(  mActiveModelPtr->getPerformance() < minPerformance || mActiveModelPtr->getPerformanceGradient() <= gradientChangeThreshold){
 
-        mPerformancePenalties++;
         mLastTimePerformancePenalty = now;
         auto lastTimeAdded =  duration_cast<seconds>(now - mLastTimeModelAdded);
 
@@ -207,7 +204,7 @@ void EyeModelFitter::checkModels()
     }else if( mActiveModelPtr->getPerformance() > minPerformance /*&& mActiveModelPtr->getPerformanceGradient() >  0.0*/ ) {
         // kill other models whenever the performance is good enough AND the performance doesn't decrease
         mAlternativeModelsPtrs.clear();
-        mPerformancePenalties = 0;
+        mLastTimeModelAdded = now - minNewModelTime - seconds(1); // so we can add a new model right away
     }
 
     if(mAlternativeModelsPtrs.size() == 0)
@@ -220,34 +217,26 @@ void EyeModelFitter::checkModels()
     mAlternativeModelsPtrs.sort(sortFit);
 
     bool foundNew = false;
-    // now get the first alternative model where the performance is higher then the current one
+    // now get the first alternative model where the performance and maturity is higher then the current one
     for( auto& modelptr : mAlternativeModelsPtrs){
 
         if(modelptr->getMaturity() > minMaturity &&  mActiveModelPtr->getPerformance() < modelptr->getPerformance() ){
             mActiveModelPtr.reset( modelptr.release() );
-            mPerformancePenalties = 0;
             mAlternativeModelsPtrs.clear(); // we got a better one, let's remove others
             foundNew = true;
             break;
         }
     }
 
+    auto lastPenalty =  duration_cast<seconds>(now - mLastTimePerformancePenalty);
     // if we didn't find a better one after repeatedly looking, remove all of them and start new
-    if( !foundNew && mPerformancePenalties > 3 * maxPenalty ){
+    if( !foundNew && lastPenalty > altModelExpirationTime ){
 
         mAlternativeModelsPtrs.clear();
-        mPerformancePenalties = 0;
         mActiveModelPtr.reset(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ));
         mNextModelID++;
     }
 
-    auto lastPenalty =  duration_cast<seconds>(now - mLastTimePerformancePenalty);
-    // when ever we don't get new penalties for sometime, we assume our current model is good enough and the alternatives are removed
-    if( lastPenalty > altModelExpirationTime  )
-    {
-        mPerformancePenalties = 0;
-        mAlternativeModelsPtrs.clear();
-    }
 
 }
 
@@ -257,7 +246,6 @@ void EyeModelFitter::reset()
     mAlternativeModelsPtrs.clear();
     mActiveModelPtr = EyeModelPtr( new EyeModel(mNextModelID , Clock::now(), mFocalLength, mCameraCenter ));
     mLastTimeModelAdded =  Clock::now();
-    mPerformancePenalties = 0;
     mCurrentSphere = Sphere::Null;
     mCurrentInitialSphere = Sphere::Null;
     mPreviousPupil = Circle::Null;

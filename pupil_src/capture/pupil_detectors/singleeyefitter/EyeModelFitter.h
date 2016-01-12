@@ -43,7 +43,6 @@ namespace singleeyefitter {
             bool mDebug;
 
             Clock::time_point mLastTimeModelAdded, mLastTimePerformancePenalty;
-            int mPerformancePenalties;
 
             int mNextModelID;
             std::unique_ptr<EyeModel> mActiveModelPtr;
