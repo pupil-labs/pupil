@@ -667,8 +667,8 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
         supportConfidence = support.second;
     }
 
-    // ignore values where the confidence of the support is not good
-    static const double supportConfidenceThreshold = 0.85;
+    // // ignore values where the confidence of the support is not good
+    static const double supportConfidenceThreshold = 0.80;
     if( supportConfidence < supportConfidenceThreshold )
         return;
 
@@ -685,7 +685,7 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
         mPerformance.changeWindowSize(newWindowSize);
     }
 
-    mPerformance.addValue(supportGoodness);
+    mPerformance.addValue(supportGoodness * supportConfidence); // weighted average
 
     using namespace std::chrono;
 
