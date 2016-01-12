@@ -396,9 +396,6 @@ class Visualizer(object):
 			bin_positions = model['binPositions']
 			sphere = model['sphere']
 			initial_sphere = model['initialSphere']
-			maturity = model['maturity']
-			fit = model['fit']
-			performance = model['performance']
 
 			if model_count == 0:
 				self.draw_sphere(initial_sphere[0],initial_sphere[1], color = sphere_color )
