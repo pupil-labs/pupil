@@ -225,7 +225,7 @@ namespace singleeyefitter {
         };
 
         template<typename T>
-        class SMA{
+        class SMA{ //simple moving average
 
             public:
 
@@ -278,7 +278,70 @@ namespace singleeyefitter {
             bool mAverageDirty; // when we change the window size we need to recalculate from ground up
         };
 
+        template<typename T>
+        class WMA{ //weighted moving average
 
+            public:
+
+                WMA( int windowSize ) : mWindowSize(windowSize)
+                {};
+
+                void addValue( T value , T weight ){
+                    mValues.emplace_back( value, weight );
+                    // calculate weighted moving average of value
+
+                    if( mValues.size() <=  mWindowSize || mAverageDirty){
+                        mAverageDirty = false;
+                        mDenominator = 0.0;
+                        mNumerator = 0.0;
+                        for(auto& element : mValues){
+                            mNumerator += element.first * element.second;
+                            mDenominator += element.second;
+                        }
+                        mAverage = mNumerator / mDenominator;
+                    }else{
+                        // we can optimize if the wanted window size is reached
+                        auto observation = mValues.front();
+                        mValues.pop_front();
+                        mDenominator -= observation.second;
+                        mDenominator += weight;
+
+                        mNumerator -= observation.first * observation.second;
+                        mNumerator += value * weight;
+                        mAverage = mNumerator / mDenominator;
+                    }
+
+                }
+
+                double getAverage() const { return mAverage; };
+                int getWindowSize() const { return mWindowSize; };
+
+                void changeWindowSize( int windowSize){
+
+                    if( windowSize < mWindowSize){
+
+                        if( mValues.size() > windowSize )
+                            mAverageDirty  = true;
+                        while( mValues.size() > windowSize){
+                            mValues.pop_front();
+                        }
+
+                    }
+                    mWindowSize = windowSize;
+
+                }
+
+            private:
+
+            WMA(){};
+
+            std::list<std::pair<T,T>> mValues;
+            int mWindowSize;
+            T mDenominator;
+            T mNumerator;
+            T mAverage;
+            bool mAverageDirty;
+        };
 
     } // math namespace
 
