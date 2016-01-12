@@ -152,7 +152,7 @@ class EyeModel {
         // Factors which describe how good certain properties of the model are
         //std::list<double> mModelSupports; // values to calculate the average
         double mFit; // Residual of Ceres sovler , Thread sensitive
-        math::SMA<double> mPerformance; // moving Average of model support
+        math::WMA<double> mPerformance; // moving Average of model support
         double mPerformanceGradient;
         Clock::time_point mLastPerformanceCalculationTime; // for the gradient calculation when need keep track of the time
 

@@ -687,7 +687,7 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
         mPerformance.changeWindowSize(newWindowSize);
     }
 
-    mPerformance.addValue(supportGoodness * supportConfidence); // weighted average
+    mPerformance.addValue(supportGoodness , supportConfidence); // weighted average
 
     using namespace std::chrono;
 
