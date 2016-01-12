@@ -145,6 +145,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         props.maturity = mActiveModelPtr->getMaturity();
         props.fit = mActiveModelPtr->getFit();
         props.performance = mActiveModelPtr->getPerformance();
+        props.performanceGradient = mActiveModelPtr->getPerformanceGradient();
         props.modelID = mActiveModelPtr->getModelID();
         result.models.push_back(std::move(props));
 
@@ -157,6 +158,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
             props.maturity = modelPtr->getMaturity();
             props.fit = modelPtr->getFit();
             props.performance = modelPtr->getPerformance();
+            props.performanceGradient = modelPtr->getPerformanceGradient();
             props.modelID = modelPtr->getModelID();
             result.models.push_back(std::move(props));
 

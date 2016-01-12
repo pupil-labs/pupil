@@ -96,6 +96,7 @@ cdef extern from 'singleeyefitter/common/types.h':
         double maturity
         double fit
         double performance
+        double performanceGradient
         int modelID
 
     cdef struct Detector3DResult:

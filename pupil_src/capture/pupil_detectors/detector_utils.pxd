@@ -84,6 +84,7 @@ cdef inline prepareForVisualization3D(  Detector3DResult& result ):
         props['maturity'] = model.maturity
         props['fit'] = model.fit
         props['performance'] = model.performance
+        props['performanceGradient'] = model.performanceGradient
         props['modelID'] = model.modelID
         models.append(props)
 

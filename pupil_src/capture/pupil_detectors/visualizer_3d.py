@@ -279,6 +279,7 @@ class Visualizer(object):
 							'    maturity: %.3f\n' % model['maturity'] ,
 							'    fit: %.6f\n' % model['fit'] ,
 							'    performance: %.6f\n' % model['performance'] ,
+							'    perf.Grad.: %.3e\n' % model['performanceGradient'] ,
 							)
 			modeltext = ''.join( modelStatus )
 			self.glfont.draw_multi_line_text(self.window_size[0] - 200 ,delta_y, modeltext)

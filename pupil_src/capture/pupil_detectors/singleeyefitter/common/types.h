@@ -61,6 +61,7 @@ namespace singleeyefitter {
         double maturity;
         double fit;
         double performance;
+        double performanceGradient;
         int modelID;
     };
 
