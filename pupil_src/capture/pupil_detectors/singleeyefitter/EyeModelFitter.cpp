@@ -186,7 +186,7 @@ void EyeModelFitter::checkModels()
     /* whenever our current model's performance is below the threshold or the performance decreases rapidly (performance gradient)
        we try to create an alternative model
     */
-    std::cout << "current performance gradient: " << mActiveModelPtr->getPerformanceGradient() << std::endl;
+    //std::cout << "current performance gradient: " << mActiveModelPtr->getPerformanceGradient() << std::endl;
     if(  mActiveModelPtr->getPerformance() < minPerformance || mActiveModelPtr->getPerformanceGradient() <= gradientChangeThreshold){
 
         mLastTimePerformancePenalty = now;

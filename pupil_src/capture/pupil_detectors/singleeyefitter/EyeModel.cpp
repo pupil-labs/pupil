@@ -507,11 +507,11 @@ std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojec
     // we take this into account be calculation a confidence which depends on the angle between the normal and the direction from the sphere to the camera
     const double inaccuracy = sphereToCameraDirection.dot(initialisedCircle.normal);
     static const double inaccuracyThreshold =  0.95;
-    std::cout << "inaccuracy: " <<  inaccuracy << std::endl;
+    //std::cout << "inaccuracy: " <<  inaccuracy << std::endl;
 
     const double goodnessConfidence =  inaccuracy < inaccuracyThreshold ? confidence2D: 0.0;
 
-    return {goodness, goodnessConfidence}; //TODO return also certainty of the support // include 2D confidence and add special case if we look into the camera
+    return {goodness, goodnessConfidence};
 }
 
 double EyeModel::calculateModelFit(const Circle&  unprojectedCircle, const Circle& optimizedCircle) const {
