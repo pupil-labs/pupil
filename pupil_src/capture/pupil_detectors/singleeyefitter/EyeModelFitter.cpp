@@ -175,8 +175,8 @@ void EyeModelFitter::checkModels()
     using namespace std::chrono;
 
     static const int maxAltAmountModels  = 3;
-    static const double minMaturity  = 0.1;
-    static const double minPerformance = 0.996;
+    static const double minMaturity  = 0.15;
+    static const double minPerformance = 0.997;
     static const seconds altModelExpirationTime(10);
     static const seconds minNewModelTime(3);
     static const double gradientChangeThreshold = -2.0e-05; // with this we are also sensitive to changes even if the performance is still above the threshold
