@@ -493,7 +493,7 @@ bool EyeModel::tryTransferNewObservations(){
 
 }
 
-std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojectedCircle, const Circle& initialisedCircle, double confidence) const {
+std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojectedCircle, const Circle& initialisedCircle, double confidence2D) const {
 
     // the angle between the unprojected and the initialised circle normal tells us how good the current observation supports our current model
     // if our model is good and the camera didn't change perspective or so, these normals should align pretty well
@@ -501,13 +501,15 @@ std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojec
     const auto& n2 = initialisedCircle.normal;
     const double goodness = n1.dot(n2);
 
-    const Vector3 sphereToCameraDirection = (mCameraCenter - mSphere.center).normalized()   ;
-    //because of the depth uncertainty when unprojection the 2D ellipse, the goodness isn't very meaningfull when looking directly into the camera.
-    const double depthUncertainty =  sphereToCameraDirection.dot(initialisedCircle.normal);
-    static const double depthUncertaintyThreshold =  0.95;
-    //std::cout << "depthUncertainty: " <<  depthUncertainty << std::endl;
+    const Vector3 sphereToCameraDirection = (mCameraCenter - mSphere.center).normalized();
+    // if the 2d pupil is almost a circle the unprojection gets inaccurate, thus the normal doesn't align well with the initialised circle
+    // this is the case when looking directly into the camera.
+    // we take this into account be calculation a confidence which depends on the angle between the normal and the direction from the sphere to the camera
+    const double inaccuracy = sphereToCameraDirection.dot(initialisedCircle.normal);
+    static const double inaccuracyThreshold =  0.95;
+    std::cout << "inaccuracy: " <<  inaccuracy << std::endl;
 
-    const double goodnessConfidence =  depthUncertainty < depthUncertaintyThreshold ? confidence : 0.0;
+    const double goodnessConfidence =  inaccuracy < inaccuracyThreshold ? confidence2D: 0.0;
 
     return {goodness, goodnessConfidence}; //TODO return also certainty of the support // include 2D confidence and add special case if we look into the camera
 }
