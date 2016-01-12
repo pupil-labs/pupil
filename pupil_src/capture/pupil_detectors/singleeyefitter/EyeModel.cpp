@@ -505,11 +505,15 @@ std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojec
     // if the 2d pupil is almost a circle the unprojection gets inaccurate, thus the normal doesn't align well with the initialised circle
     // this is the case when looking directly into the camera.
     // we take this into account be calculation a confidence which depends on the angle between the normal and the direction from the sphere to the camera
-    const double inaccuracy = sphereToCameraDirection.dot(initialisedCircle.normal);
-    static const double inaccuracyThreshold =  0.95;
+    // const double inaccuracy = sphereToCameraDirection.dot(initialisedCircle.normal);
+    // static const double inaccuracyThreshold =  0.95;
     //std::cout << "inaccuracy: " <<  inaccuracy << std::endl;
+    // const double goodnessConfidence =  inaccuracy < inaccuracyThreshold ? confidence2D: 0.0;
 
-    const double goodnessConfidence =  inaccuracy < inaccuracyThreshold ? confidence2D: 0.0;
+    // alternative approach make this continous with Confidence dropping drasically when inaccuracy approches 1.
+    // this needs testing and might not be better than doing it with a threshold.
+    const double inaccuracy = sphereToCameraDirection.dot(initialisedCircle.normal);
+    const double goodnessConfidence =  (1-pow(inaccuracy,6)) * confidence2D;
 
     return {goodness, goodnessConfidence};
 }
@@ -669,21 +673,22 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
         supportConfidence = support.second;
     }
 
-    // // ignore values where the confidence of the support is not good
-    static const double supportConfidenceThreshold = 0.80;
-    if( supportConfidence < supportConfidenceThreshold )
+
+    // dont add values with 0.0 confidence.
+    if( supportConfidence <= 0.0 )
         return;
+
 
 
     const double previousPerformance = mPerformance.getAverage();
 
-    static const double windowSizeFactor = 1.0; // TODO use this for the senisitvity
+    static const double windowSize_Seconds = 3.0; // TODO use this for the senisitvity
 
     // whenever there is a change in framerate bigger than 1, change the window size
     // window size linearly depends on the framerate
     // the average frame rate changes slowly to compensate onetime big changes
-    if( std::abs(averageFramerate  - mPerformance.getWindowSize()/windowSizeFactor) > 1 ){
-        int newWindowSize = std::round(  averageFramerate * windowSizeFactor );
+    if( std::abs(averageFramerate  - mPerformance.getWindowSize()/windowSize_Seconds) > 1 ){
+        int newWindowSize = std::round(  averageFramerate * windowSize_Seconds );
         mPerformance.changeWindowSize(newWindowSize);
     }
 
