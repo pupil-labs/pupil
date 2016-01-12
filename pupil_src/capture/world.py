@@ -186,6 +186,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     except CameraCaptureError:
         logger.error("Could not retrieve image from capture")
         cap.close()
+        lauchner_pipe.send("Exit")
         return
 
 
