@@ -250,6 +250,7 @@ namespace singleeyefitter {
                 }
 
                 double getAverage() const { return mAverage; };
+                int getWindowSize() const { return mWindowSize; };
 
                 void changeWindowSize( int windowSize){
 
