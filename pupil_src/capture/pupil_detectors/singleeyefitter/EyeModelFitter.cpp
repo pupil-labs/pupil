@@ -179,7 +179,7 @@ void EyeModelFitter::checkModels()
     static const double minPerformance = 0.996;
     static const seconds altModelExpirationTime(10);
     static const seconds minNewModelTime(3);
-    static const double gradientChangeThreshold = -1.0e-05; // with this we are also sensitive to changes even if the performance is still above the threshold
+    static const double gradientChangeThreshold = -2.0e-05; // with this we are also sensitive to changes even if the performance is still above the threshold
 
     Clock::time_point  now( Clock::now() );
 
