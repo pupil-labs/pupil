@@ -235,7 +235,8 @@ namespace singleeyefitter {
                 void addValue( T value ){
                     mValues.push_back( value );
                     // calculate moving average of value
-                    if( mValues.size() <=  mWindowSize){
+                    if( mValues.size() <=  mWindowSize || mAverageDirty ){
+                        mAverageDirty = false;
                         mAverage = 0.0;
                         for(auto& element : mValues){
                             mAverage += element;
@@ -255,6 +256,9 @@ namespace singleeyefitter {
                 void changeWindowSize( int windowSize){
 
                     if( windowSize < mWindowSize){
+
+                        if( mValues.size() > windowSize )
+                            mAverageDirty  = true;
                         while( mValues.size() > windowSize){
                             mValues.pop_front();
                         }
@@ -270,7 +274,8 @@ namespace singleeyefitter {
 
             std::list<T> mValues;
             int mWindowSize;
-            double mAverage;
+            T mAverage;
+            bool mAverageDirty; // when we change the window size we need to recalculate from ground up
         };
 
 
