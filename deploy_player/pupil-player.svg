@@ -1,40 +1,20 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 16.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 width="300px" height="300px" viewBox="0 0 300 300" enable-background="new 0 0 300 300" xml:space="preserve">
-<g>
-	<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="271.6484" y1="149.999" x2="39.2588" y2="149.999">
-		<stop  offset="0" style="stop-color:#DCDDDE"/>
-		<stop  offset="0.2024" style="stop-color:#D8DCDC"/>
-		<stop  offset="0.365" style="stop-color:#D1DAD9"/>
-		<stop  offset="0.5137" style="stop-color:#C6D7D5"/>
-		<stop  offset="0.6543" style="stop-color:#B6D3CF"/>
-		<stop  offset="0.7891" style="stop-color:#9ECEC8"/>
-		<stop  offset="0.9177" style="stop-color:#7DC7BF"/>
-		<stop  offset="1" style="stop-color:#61C5BA"/>
-	</linearGradient>
-	<path fill="url(#SVGID_1_)" d="M39.259,44.08c0-22,15.589-31,34.641-20L257.359,130c19.052,11,19.052,29,0,40L73.899,275.92
-		c-19.052,11-34.641,2-34.641-20V44.08z"/>
-</g>
-<g opacity="0.95">
-	<path d="M78.09,88.312c0-11,7.794-15.5,17.32-10L202.256,140c9.526,5.5,9.526,14.5,0,20L95.41,221.688c-9.526,5.5-17.32,1-17.32-10
-		V88.312z"/>
-</g>
-<g>
-	<path opacity="0.9" fill="#FFFFFF" d="M95.668,150.122h-4.919v8.679c0,1.199-1,2.199-2.239,2.199c-1.2,0-2.2-1-2.2-2.199v-23.597
-		c0-1.239,1-2.199,2.2-2.199h0.039h7.119c4.76,0,8.599,3.839,8.599,8.599C104.267,146.282,100.428,150.122,95.668,150.122z
-		 M90.749,145.683h4.919c2.319,0,4.119-1.84,4.159-4.079c-0.04-2.32-1.84-4.159-4.159-4.159h-4.919V145.683z"/>
-	<path opacity="0.9" fill="#FFFFFF" d="M118.828,161c-6.439,0-11.559-5.199-11.559-11.558v-14.238c0-1.239,0.96-2.199,2.199-2.199
-		c1.2,0,2.24,0.96,2.24,2.199v14.238c0,3.919,3.199,7.118,7.119,7.118c3.959,0,7.118-3.199,7.118-7.118v-14.238
-		c0-1.239,1-2.199,2.24-2.199c1.239,0,2.199,0.96,2.199,2.199v14.238C130.386,155.801,125.227,161,118.828,161z"/>
-	<path opacity="0.9" fill="#FFFFFF" d="M146.747,150.122h-4.919v8.679c0,1.199-1,2.199-2.239,2.199c-1.2,0-2.2-1-2.2-2.199v-23.597
-		c0-1.239,1-2.199,2.2-2.199h0.04h7.118c4.76,0,8.599,3.839,8.599,8.599C155.346,146.282,151.507,150.122,146.747,150.122z
-		 M141.828,145.683h4.919c2.319,0,4.119-1.84,4.159-4.079c-0.04-2.32-1.84-4.159-4.159-4.159h-4.919V145.683z"/>
-	<path opacity="0.9" fill="#FFFFFF" d="M158.589,135.204c0-1.239,0.96-2.199,2.199-2.199c1.2,0,2.24,0.96,2.24,2.199v23.597
-		c0,1.239-1.04,2.199-2.24,2.199c-1.239,0-2.199-0.96-2.199-2.199V135.204z"/>
-	<path opacity="0.9" fill="#FFFFFF" d="M168.108,158.801v-23.597c0-1.199,0.96-2.199,2.2-2.199c1.239,0,2.239,1,2.239,2.199v21.356
-		h10.838c1.16,0,2.2,1,2.2,2.24c0,1.199-1.04,2.199-2.2,2.199h-12.958c-0.08,0-0.08,0-0.08,0c-0.039,0-0.039,0-0.039,0
-		C169.068,161,168.108,160,168.108,158.801z"/>
-</g>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="272px" height="272px" viewBox="0 0 272 272" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketch="http://www.bohemiancoding.com/sketch/ns">
+    <!-- Generator: Sketch 3.4.4 (17249) - http://www.bohemiancoding.com/sketch -->
+    <title>pp-03</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <linearGradient x1="78.9520334%" y1="50%" x2="0%" y2="50%" id="linearGradient-1">
+            <stop stop-color="#A1DEF0" offset="0%"></stop>
+            <stop stop-color="#38EA92" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage">
+        <g id="pp-03" sketch:type="MSArtboardGroup">
+            <g id="pp-iris-+-pp=pupil-copy-2" sketch:type="MSLayerGroup" transform="translate(12.000000, 5.000000)">
+                <path d="M91.405,249.286 C41.131,277.705 0.207,253.707 0.207,195.957 L0.207,66.207 C0.207,8.457 41.205,-15.671 91.566,12.589 L209.945,79.072 C260.308,107.332 260.433,153.706 210.16,182.125 L91.405,249.286 L91.405,249.286 Z" id="pp-iris" fill="url(#linearGradient-1)" sketch:type="MSShapeGroup"></path>
+                <path d="M67.641,208.751 C57.968,208.751 48.207,201.61 48.207,185.658 L48.207,76.506 C48.207,60.527 58.001,53.374 67.708,53.374 C72.139,53.374 76.741,54.753 81.389,57.472 L173.693,111.484 C181.832,116.248 186.505,123.287 186.517,130.796 C186.53,138.306 181.878,145.358 173.758,150.145 L81.365,204.609 C76.702,207.356 72.085,208.751 67.641,208.751 L67.641,208.751 Z" id="pp-pupil" stroke="#FFFFFF" stroke-width="12" fill="#080707" sketch:type="MSShapeGroup"></path>
+            </g>
+        </g>
+    </g>
 </svg>
