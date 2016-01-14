@@ -48,8 +48,9 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     result.confidence = observation2D->confidence; // if we don't fit we want to take the 2D confidence
     result.timestamp = observation2D->timestamp;
 
+    double deltaTime = observation2D->timestamp - mLastFrameTimestamp;
     if( mLastFrameTimestamp != 0.0 ){
-        mApproximatedFramerate =  static_cast<int>(1.0 / (  observation2D->timestamp - mLastFrameTimestamp ));
+        mApproximatedFramerate =  static_cast<int>(1.0 / (  deltaTime ));
         mAverageFramerate.addValue(mApproximatedFramerate);
     }
     mLastFrameTimestamp = observation2D->timestamp;
@@ -80,15 +81,18 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     if (observation2D->confidence >= 0.8) {
 
         // allow each model to decide by themself if the new observation supports the model or not
-        auto circle = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() );
+        auto circle = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() ,deltaTime );
         if (circle != Circle::Null){
             mPreviousPupil = circle;
             result.circle = circle;
 
         }
-
+        mActiveModelPtr->predictCircle( deltaTime );
+        if (mDebug) {
+            result.predictedCircle = mActiveModelPtr->getPredictedCircle();
+        }
         for (auto& modelPtr : mAlternativeModelsPtrs) {
-             modelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() );
+             modelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage(), deltaTime );
         }
 
     } else if (mCurrentSphere != Sphere::Null) { // if it's too weak we wanna try to find a better one in 3D
@@ -101,6 +105,12 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
             p.y = image_height_half - p.y;
         }
 
+        // whenever we don't have a good 2D fit we use the model's state to predict the new pupil
+        // and us this as as starting point for the search
+        // mActiveModelPtr->predictCircle( deltaTime );
+        // if (mDebug) {
+        //     result.predictedCircle = mActiveModelPtr->getPredictedCircle();
+        // }
         //fitCircle(observation2D->contours, props, result );
         filterCircle(observation2D->raw_edges, props, result);
 
@@ -175,7 +185,7 @@ void EyeModelFitter::checkModels()
     using namespace std::chrono;
 
     static const int maxAltAmountModels  = 3;
-    static const double minMaturity  = 0.15;
+    static const double minMaturity  = 0.10;
     static const double minPerformance = 0.997;
     static const seconds altModelExpirationTime(10);
     static const seconds minNewModelTime(3);
