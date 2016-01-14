@@ -1,9 +1,9 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2015  Pupil Labs
+ Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the CC BY-NC-SA License.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -170,15 +170,23 @@ class Recorder(Plugin):
             self.start()
 
     def on_notify(self,notification):
-        if notification['subject'] == 'rec_should_start':
+
+        # notification wants to be recorded
+        if notification.get('record',False) and self.running:
+            self.data['notifications'].append(notification)
+
+
+        # Remote has started recording, we should start as well.
+        elif notification['subject'] == 'rec_started' and notification.get('source','local') != 'local':
             if self.running:
                 logger.warning('Recording is already running!')
             else:
                 self.set_session_name(notification["session_name"])
-                self.start(network_propagate=notification.get('network_propagate',True))
-        elif notification['subject'] == 'rec_should_stop':
+                self.start(network_propagate=False)
+        # Remote has stopped recording, we should stop as well.
+        elif notification['subject'] == 'rec_stopped' and notification.get('source','local') != 'local':
             if self.running:
-                self.stop(network_propagate=notification.get('network_propagate',True))
+                self.stop(network_propagate=False)
             else:
                 logger.warning('Recording is already stopped!')
 
@@ -189,7 +197,7 @@ class Recorder(Plugin):
 
     def start(self,network_propagate=True):
         self.timestamps = []
-        self.data = {'pupil_positions':[],'gaze_positions':[]}
+        self.data = {'pupil_positions':[],'gaze_positions':[],'notifications':[]}
         self.pupil_pos_list = []
         self.gaze_pos_list = []
 
@@ -275,7 +283,7 @@ class Recorder(Plugin):
     def update(self,frame,events):
         if self.running:
             self.data['pupil_positions'] += events['pupil_positions']
-            self.data['gaze_positions'] += events['gaze_positions']
+            self.data['gaze_positions'] += events.get('gaze_positions',[])
             self.timestamps.append(frame.timestamp)
             self.writer.write_video_frame(frame)
             self.frame_count += 1

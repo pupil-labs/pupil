@@ -1,5 +1,0 @@
-#!/bin/sh
-cd $(dirname $0)/pupil_src/capture
-echo "starting PUPIL capture python script"
-python main.py
-exit 0

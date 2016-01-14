@@ -1,9 +1,9 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2015  Pupil Labs
+ Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the CC BY-NC-SA License.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -120,9 +120,10 @@ from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
 from log_display import Log_Display
+from annotations import Annotation_Player
 
 system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
-user_launchable_plugins = [Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay] #,Marker_Auto_Trim_Marks
+user_launchable_plugins = [Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay,Annotation_Player] #,Marker_Auto_Trim_Marks
 user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
@@ -231,6 +232,7 @@ def session(rec_dir):
     # create container for globally scoped vars
     g_pool = Global_Container()
     g_pool.app = 'player'
+    g_pool.binocular = meta_info.get('Eye Mode','monocular') == 'binocular'
     g_pool.version = get_version(version_file)
     g_pool.capture = cap
     g_pool.timestamps = timestamps

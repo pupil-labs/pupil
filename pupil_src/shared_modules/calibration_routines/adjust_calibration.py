@@ -1,0 +1,292 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2016  Pupil Labs
+
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
+
+import os
+import cv2
+import numpy as np
+from methods import normalize,denormalize
+from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
+from OpenGL.GL import GL_POLYGON
+from circle_detector import get_candidate_ellipses
+import calibrate
+
+import audio
+
+from pyglui import ui
+from plugin import Calibration_Plugin
+from gaze_mappers import Simple_Gaze_Mapper, Bilateral_Gaze_Mapper
+#logging
+import logging
+logger = logging.getLogger(__name__)
+
+class Adjust_Calibration(Calibration_Plugin):
+    """
+    """
+    def __init__(self, g_pool):
+        super(Adjust_Calibration, self).__init__(g_pool)
+        self.active = False
+        self.detected = False
+        self.pos = None
+        self.smooth_pos = 0.,0.
+        self.smooth_vel = 0.
+        self.sample_site = (-2,-2)
+        self.counter = 0
+        self.counter_max = 30
+        self.candidate_ellipses = []
+        self.show_edges = 0
+        self.aperture = 7
+        self.dist_threshold = 10
+        self.area_threshold = 30
+        self.world_size = None
+
+        self.stop_marker_found = False
+        self.auto_stop = 0
+        self.auto_stop_max = 30
+
+        self.menu = None
+        self.button = None
+
+
+    def init_gui(self):
+
+        self.info = ui.Info_Text("Touch up gaze mapping parameters using a single hand held marker.")
+        self.g_pool.calibration_menu.append(self.info)
+
+        self.menu = ui.Growing_Menu('Controls')
+        self.g_pool.calibration_menu.append(self.menu)
+
+        self.menu.append(ui.Slider('aperture',self,min=3,step=2,max=11,label='filter aperture'))
+        self.menu.append(ui.Switch('show_edges',self,label='show edges'))
+
+        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button.on_color[:] = (.3,.2,1.,.9)
+        self.g_pool.quickbar.insert(0,self.button)
+
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.calibration_menu.remove(self.menu)
+            self.g_pool.calibration_menu.remove(self.info)
+            self.menu = None
+        if self.button:
+            self.g_pool.quickbar.remove(self.button)
+            self.button = None
+
+
+    def toggle(self,_=None):
+        if self.active:
+            self.stop()
+        else:
+            self.start()
+
+    def start(self):
+        logger.info("Starting Touchup")
+        self.active = True
+        self.ref_list = []
+        self.gaze_list = []
+
+
+    def stop(self):
+        logger.info("Stopping Touchup")
+        self.smooth_pos = 0.,0.
+        self.sample_site = -2,-2
+        self.counter = 0
+        self.active = False
+        self.button.status_text = ''
+
+
+        offset_pt_clound = np.array(calibrate.preprocess_data(self.gaze_list,self.ref_list))
+        if len(offset_pt_clound)<3:
+            logger.error('Did not sample enough data for touchup please retry.')
+            return
+
+        #Calulate the offset for gaze to target
+        offset =  offset_pt_clound[:,:2]-offset_pt_clound[:,2:]
+        mean_offset  = np.mean(offset,axis=0)
+
+        cal_pt_cloud = np.load(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'))
+        #deduct the offset from the old calibration ref point position. Thus shifiting the calibtation.
+        # p["norm_pos"][0], p["norm_pos"][1],ref_pt['norm_pos'][0],ref_pt['norm_pos'][1]
+
+        cal_pt_cloud[:,-2::] -= mean_offset
+
+        if self.g_pool.binocular:
+            cal_pt_cloud_eye0 = np.load(os.path.join(self.g_pool.user_dir,'cal_pt_cloud_eye0.npy'))
+            cal_pt_cloud_eye1 = np.load(os.path.join(self.g_pool.user_dir,'cal_pt_cloud_eye1.npy'))
+            #Do the same for the individual eye in binocular
+            #p0["norm_pos"][0], p0["norm_pos"][1],p1["norm_pos"][0], p1["norm_pos"][1],ref_pt['norm_pos'][0],ref_pt['norm_pos'][1]
+            cal_pt_cloud_eye0[:,-2::] -= mean_offset
+            cal_pt_cloud_eye1[:,-2::] -= mean_offset
+
+
+
+        #then recalibtate the with old but shifted data.
+        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, binocular=self.g_pool.binocular)
+        np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
+        #replace current gaze mapper with new
+        if self.g_pool.binocular:
+            # get monocular models for fallback (if only one pupil is detected)
+            cal_pt_cloud_eye0 = np.array(cal_pt_cloud_eye0)
+            cal_pt_cloud_eye1 = np.array(cal_pt_cloud_eye1)
+            _,params_eye0 = calibrate.get_map_from_cloud(cal_pt_cloud_eye0,self.g_pool.capture.frame_size,return_params=True)
+            _,params_eye1 = calibrate.get_map_from_cloud(cal_pt_cloud_eye1,self.g_pool.capture.frame_size,return_params=True)
+            self.g_pool.plugins.add(Bilateral_Gaze_Mapper,args={'params':params, 'params_eye0':params_eye0, 'params_eye1':params_eye1})
+            np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud_eye0.npy'),cal_pt_cloud_eye0)
+            np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud_eye1.npy'),cal_pt_cloud_eye1)
+
+        else:
+            self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
+
+
+    def update(self,frame,events):
+        """
+        gets called once every frame.
+        reference positon need to be published to shared_pos
+        if no reference was found, publish 0,0
+        """
+        if self.active:
+            recent_pupil_positions = events['pupil_positions']
+
+            gray_img  = frame.gray
+
+            if self.world_size is None:
+                self.world_size = frame.width,frame.height
+
+            self.candidate_ellipses = get_candidate_ellipses(gray_img,
+                                                            area_threshold=self.area_threshold,
+                                                            dist_threshold=self.dist_threshold,
+                                                            min_ring_count=5,
+                                                            visual_debug=self.show_edges)
+
+            if len(self.candidate_ellipses) > 0:
+                self.detected = True
+                marker_pos = self.candidate_ellipses[0][0]
+                self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
+
+
+            else:
+                self.detected = False
+                self.pos = None #indicate that no reference is detected
+
+
+            self.auto_stop +=1
+            self.stop_marker_found = True
+
+
+            #tracking logic
+            if self.detected:
+                # calculate smoothed manhattan velocity
+                smoother = 0.3
+                smooth_pos = np.array(self.smooth_pos)
+                pos = np.array(self.pos)
+                new_smooth_pos = smooth_pos + smoother*(pos-smooth_pos)
+                smooth_vel_vec = new_smooth_pos - smooth_pos
+                smooth_pos = new_smooth_pos
+                self.smooth_pos = list(smooth_pos)
+                #manhattan distance for velocity
+                new_vel = abs(smooth_vel_vec[0])+abs(smooth_vel_vec[1])
+                self.smooth_vel = self.smooth_vel + smoother*(new_vel-self.smooth_vel)
+
+                #distance to last sampled site
+                sample_ref_dist = smooth_pos-np.array(self.sample_site)
+                sample_ref_dist = abs(sample_ref_dist[0])+abs(sample_ref_dist[1])
+
+                # start counter if ref is resting in place and not at last sample site
+                if not self.counter:
+
+                    if self.smooth_vel < 0.01 and sample_ref_dist > 0.1:
+                        self.sample_site = self.smooth_pos
+                        audio.beep()
+                        logger.debug("Steady marker found. Starting to sample %s datapoints" %self.counter_max)
+                        self.counter = self.counter_max
+
+                if self.counter:
+                    if self.smooth_vel > 0.01:
+                        audio.tink()
+                        logger.debug("Marker moved to quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
+                        self.counter = 0
+                    else:
+                        self.counter -= 1
+                        ref = {}
+                        ref["norm_pos"] = self.pos
+                        ref["timestamp"] = frame.timestamp
+                        self.ref_list.append(ref)
+                        if self.counter == 0:
+                            #last sample before counter done and moving on
+                            audio.tink()
+                            logger.debug("Sampled %s datapoints. Stopping to sample. Looking for steady marker again."%self.counter_max)
+
+            #always save pupil positions
+            for pt in events.get('gaze_positions',[]):
+                if pt['confidence'] > self.g_pool.pupil_confidence_threshold:
+                    #we add an id for the calibration preprocess data to work as is usually expects pupil data.
+                    pt['id'] = 0
+                    self.gaze_list.append(pt)
+
+            if self.counter:
+                if self.detected:
+                    self.button.status_text = 'Sampling Gaze Data'
+                else:
+                    self.button.status_text = 'Marker Lost'
+            else:
+                self.button.status_text = 'Looking for Marker'
+
+
+
+            #stop if autostop condition is satisfied:
+            if self.auto_stop >=self.auto_stop_max:
+                self.auto_stop = 0
+                self.stop()
+
+
+        else:
+            pass
+
+
+    def get_init_dict(self):
+        return {}
+
+    def gl_display(self):
+        """
+        use gl calls to render
+        at least:
+            the published position of the reference
+        better:
+            show the detected postion even if not published
+        """
+
+        if self.active:
+            draw_points_norm([self.smooth_pos],size=15,color=RGBA(1.,1.,0.,.5))
+
+        if self.active and self.detected:
+            for e in self.candidate_ellipses:
+                pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                    (int(e[1][0]/2),int(e[1][1]/2)),
+                                    int(e[-1]),0,360,15)
+                draw_polyline(pts,color=RGBA(0.,1.,0,1.))
+
+
+            # lets draw an indicator on the autostop count
+            e = self.candidate_ellipses[3]
+            pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
+                                (int(e[1][0]/2),int(e[1][1]/2)),
+                                int(e[-1]),0,360,360/self.auto_stop_max)
+            indicator = [e[0]] + pts[self.auto_stop:].tolist() + [e[0]]
+            draw_polyline(indicator,color=RGBA(8.,0.1,0.1,.8),line_type=GL_POLYGON)
+        else:
+            pass
+
+    def cleanup(self):
+        """gets called when the plugin get terminated.
+        This happens either voluntarily or forced.
+        if you have an atb bar or glfw window destroy it here.
+        """
+        if self.active:
+            self.stop()
+        self.deinit_gui()
