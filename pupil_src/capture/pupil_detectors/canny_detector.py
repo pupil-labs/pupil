@@ -1,9 +1,9 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2015  Pupil Labs
+ Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the CC BY-NC-SA License.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -537,8 +537,9 @@ class Canny_Detector(Pupil_Detector):
 
 
     def deinit_gui(self):
-        self.g_pool.sidebar.remove(self.menu)
-        self.menu = None
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
 
     def toggle_window(self):
         if self._window:
@@ -607,6 +608,7 @@ class Canny_Detector(Pupil_Detector):
 
     def cleanup(self):
         self.close_window() # if we change detectors, be sure debug window is also closed
+        self.deinit_gui()
 
     def visualize(self):
         pass

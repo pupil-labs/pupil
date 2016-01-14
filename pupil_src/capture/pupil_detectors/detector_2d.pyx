@@ -218,6 +218,7 @@ cdef class Detector_2D:
 
     def cleanup(self):
         self.close_window() # if we change detectors, be sure debug window is also closed
+        self.deinit_gui()
 
     def visualize(self):
         #display the debug image in the window

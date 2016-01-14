@@ -1,9 +1,9 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2015  Pupil Labs
+ Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the CC BY-NC-SA License.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -111,6 +111,13 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         #self.close_window()
         self.button.status_text = ''
 
+        if self.g_pool.binocular:
+            cal_pt_cloud = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,1))
+            cal_pt_cloud_eye0 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,))
+            cal_pt_cloud_eye1 = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(1,))
+        else:
+            cal_pt_cloud = calibrate.preprocess_data(self.pupil_list,self.ref_list)
+
 
         try:
             camera_calibration = load_object(os.path.join(self.g_pool.user_dir,'camera_calibration'))
@@ -132,7 +139,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 camera_intrinsics = None
 
 
-
         # do we have data from 3D detector
         if self.pupil_list[0] and self.pupil_list[0]['method'] == '3D c++':
             cal_pt_cloud = calibrate.preprocess_vector_data(self.pupil_list,self.ref_list, camera_intrinsics = camera_intrinsics)
@@ -151,9 +157,13 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             print 'transformation: ' , transformation
             self.g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'calibration_points_3d': cal_pt_cloud[:,0].tolist(), 'calibration_points_2d': cal_pt_cloud[:,1].tolist()})
+            return
+
+        if self.g_pool.binocular and (len(cal_pt_cloud) < 20 or len(cal_pt_cloud_eye0) < 20 or len(cal_pt_cloud_eye1) < 20) or len(cal_pt_cloud) < 20:
+            logger.warning("Did not collect enough data.")
+            return
 
         else:
-
 
             if self.g_pool.binocular:
                 cal_pt_cloud = calibrate.preprocess_data(list(self.pupil_list),list(self.ref_list),id_filter=(0,1))
@@ -331,7 +341,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             if self.counter:
                 # lets draw an indicator on the count
-                e = self.candidate_ellipses[2]
+                e = self.candidate_ellipses[3]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360/self.counter_max)
@@ -340,7 +350,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             if self.auto_stop:
                 # lets draw an indicator on the autostop count
-                e = self.candidate_ellipses[2]
+                e = self.candidate_ellipses[3]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360/self.auto_stop_max)

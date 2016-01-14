@@ -151,7 +151,7 @@ cdef class Detector_3D:
 
     def cleanup(self):
         self.debugVisualizer3D.close_window() # if we change detectors, be sure debug window is also closed
-
+        self.deinit_gui()
 
     def init_gui(self,sidebar):
         self.menu2D = ui.Growing_Menu('Pupil Detector 2D')

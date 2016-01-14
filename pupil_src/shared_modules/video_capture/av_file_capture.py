@@ -1,9 +1,9 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2014  Pupil Labs
+ Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the CC BY-NC-SA License.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -237,8 +237,8 @@ class File_Capture(object):
 
     def get_now(self):
         try:
-            timestamp = self.timestamps[self.get_frame_index()]
-            logger.warning("Filecapture is not a realtime source. -NOW- will be the current timestamp")
+            timestamp = self.timestamps[self.get_frame_index()-1]
+            logger.debug("Filecapture is not a realtime source. -NOW- will be the current timestamp")
         except IndexError:
             logger.warning("timestamp not found.")
             timestamp = 0

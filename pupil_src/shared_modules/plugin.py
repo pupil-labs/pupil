@@ -1,9 +1,9 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2015  Pupil Labs
+ Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the CC BY-NC-SA License.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -32,15 +32,21 @@ class Plugin(object):
     # uniqueness = 'not_unique'
     # uniqueness = 'by_base_class'
 
+
+
+    # between 0 and 1 this indicated where in the plugin excecution order you plugin lives:
+    # <.5  are things that add/mofify information that will be used by other plugins and rely on untouched data.
+    # You should not edit frame if you are here!
+    # == .5 is the default.
+    # >.5 are things that depend on other plugins work like display , saving and streaming
+    #you can change this in __init__ for your instance or in the class definition
+    order = .5
+
     def __init__(self,g_pool):
         self._alive = True
         self.g_pool = g_pool
-        self.order = .5
-        # between 0 and 1 this indicated where in the plugin excecution order you plugin lives:
-        # <.5  are things that add/mofify information that will be used by other plugins and rely on untouched data.
-        # You should not edit frame if you are here!
-        # == .5 is the default.
-        # >.5 are things that depend on other plugins work like display , saving and streaming
+
+
 
     def init_gui(self):
         '''
@@ -108,7 +114,17 @@ class Plugin(object):
     def notify_all(self,notification):
         """
         call this to notify all other plugins with a notification:
-        notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
+        notification is a dict in the format {'subject':'notification_name',['addional_field':'foo']}
+
+            adding 'record':True will make recorder save the notification during recording
+            adding 'network_propagate':True will send the event to other pupil sync nodes in the same group
+
+            if you want recording and network propagation to work make sure that the notification
+            is pickalable and can be recreated though repr+eval.
+
+            You may add more fields as you like.
+
+
         do not overwrite this method
         """
         self.g_pool.notifications.append(notification)
@@ -117,7 +133,6 @@ class Plugin(object):
         """
         call this to notify all other plugins with a notification.
         if will be published after a bit of time to allow you to adjust the slider and keep the loop repsonsive
-        notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
         do not overwrite this method
         """
         notification['_notify_time_'] = time()+delay
@@ -209,9 +224,10 @@ class Calibration_Plugin(Plugin):
 class Gaze_Mapping_Plugin(Plugin):
     '''base class for all calibration routines'''
     uniqueness = 'by_base_class'
+    order = 0.1
     def __init__(self,g_pool):
         super(Gaze_Mapping_Plugin, self).__init__(g_pool)
-        self.order = 0.1
+
 
 
 # Plugin manager classes and fns
