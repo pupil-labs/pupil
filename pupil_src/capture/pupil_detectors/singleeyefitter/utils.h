@@ -103,6 +103,19 @@ namespace singleeyefitter {
                          static_cast<int>(point[1]));
     }
     template<typename Scalar>
+    inline cv::Mat toMat(const Eigen::Matrix<Scalar, 3, 1>& point)
+    {
+        return (cv::Mat_<Scalar>(3,1) << point[0],
+                                         point[1],
+                                         point[2]);
+    }
+    template<typename Scalar>
+    inline cv::Mat toMat(const Eigen::Matrix<Scalar, 2, 1>& point)
+    {
+        return (cv::Mat_<Scalar>(2,1) << point[0],
+                                         point[1]);
+    }
+    template<typename Scalar>
     inline cv::RotatedRect toRotatedRect(const Ellipse2D<Scalar>& ellipse)
     {
         return cv::RotatedRect(toPoint2f(ellipse.center),
@@ -194,6 +207,14 @@ namespace singleeyefitter {
         return Circle3D<T>(sphere.center + sphere.radius * radial,
                            radial,
                            circle_radius);
+    }
+    template<typename T>
+    Eigen::Matrix<T, 2, 1> paramsOnSphere(const Sphere<T>& sphere, Circle3D<T> circle )
+    {
+        typedef Eigen::Matrix<T, 3, 1> Vector3;
+        Vector3 centerOnSphere = circle.center - sphere.center;
+        return math::cart2sph<T>(centerOnSphere);
+
     }
 
 } //namespace singleeyefitter
