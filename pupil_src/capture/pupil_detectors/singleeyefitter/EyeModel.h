@@ -79,9 +79,10 @@ class EyeModel {
         Sphere getSphere() const;
         Sphere getInitialSphere() const;
 
-        // whenever the 2dD fit is bad we wanna call this and predict an new circle to use for findCircle
+        // whenever the 2D fit is bad we wanna call this and predict an new circle to use for findCircle
         void predictCircle( double deltaTime );
         Circle getPredictedCircle() const { return mPredictedCircle; };
+        void correctPupilState( const Circle& circle );
 
         // Describing how good different properties of the Eye are
         double getMaturity() const ; // How much spatial variance there is

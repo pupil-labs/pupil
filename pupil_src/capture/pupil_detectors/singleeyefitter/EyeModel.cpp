@@ -250,9 +250,16 @@ void EyeModel::predictCircle( double deltaTime ){
     double theta = pupilStatePrediction.at<double>(0);
     double psi = pupilStatePrediction.at<double>(1);
     double radius = pupilStatePrediction.at<double>(6);
+    mPredictedCircle = circleOnSphere( getSphere() , theta, psi, radius );
 
-    mPredictedCircle = circleOnSphere( mSphere, theta, psi, radius );
+}
 
+void EyeModel::correctPupilState( const Circle& circle){
+
+    Vector2 params = paramsOnSphere(getSphere(), circle);
+    double radius = circle.radius;
+    cv::Mat meausurement = (cv::Mat_<double>(3,1) << params[0], params[1], radius );
+    mPupilState.correct( meausurement );
 
 }
 
