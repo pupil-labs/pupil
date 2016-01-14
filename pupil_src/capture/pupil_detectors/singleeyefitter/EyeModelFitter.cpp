@@ -107,10 +107,10 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 
         // whenever we don't have a good 2D fit we use the model's state to predict the new pupil
         // and us this as as starting point for the search
-        // mActiveModelPtr->predictCircle( deltaTime );
-        // if (mDebug) {
-        //     result.predictedCircle = mActiveModelPtr->getPredictedCircle();
-        // }
+        mActiveModelPtr->predictCircle( deltaTime );
+        if (mDebug) {
+            result.predictedCircle = mActiveModelPtr->getPredictedCircle();
+        }
         //fitCircle(observation2D->contours, props, result );
         filterCircle(observation2D->raw_edges, props, result);
 

@@ -87,13 +87,25 @@ EyeModel::EyeModel( int modelId, Clock::time_point timestamp,  double focalLengt
     mLastPerformanceCalculationTime(),
     mPupilState(7,3,0, CV_64F)
 {
+
+    // our model
+    // x,y are phi and theta
+    // 1x + 0y + deltaTime*vx + 0vy + 0.5*deltaTime^2*ax + 0ay + 0size = x
+    // 0x + 1y + 0vx + deltaTime*vy + 0ax + 0.5*deltaTime^2*ay + 0size = y
+    // 0x + 0y + 1vx + 0vy + deltaTime*ax + 0ay + 0size= vx
+    // 0x + 0y + 0vx + 1vy + 0ax + deltaTime*ay + 0size= vy
+    // 0x + 0y + 0vx + 0vy + 1ax + 0ay + 0size= ax
+    // 0x + 0y + 0vx + 0vy + 0ax + 1ay + 0size= ay
+    // 0x + 0y + 0vx + 0vy + 0ax + 0ay + 1size  = size
+
     mPupilState.measurementMatrix = (cv::Mat_<double>(3, 7) <<  1, 0, 0, 0, 0, 0, 0,
                                                                 0, 1, 0, 0, 0, 0, 0,
                                                                 0, 0, 0, 0, 0, 0, 1);
 
-    //cv::setIdentity(mPupilState.measurementMatrix);
     cv::setIdentity(mPupilState.processNoiseCov, cv::Scalar::all(1e-4));
     cv::setIdentity(mPupilState.measurementNoiseCov, cv::Scalar::all(1e-5));
+    mPupilState.measurementNoiseCov.at<double>(2,2) =  0.9; // circle size has a different variance
+
     cv::setIdentity(mPupilState.errorCovPost, cv::Scalar::all(1));
 };
 
@@ -128,7 +140,6 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, doub
             circle = unprojectedCircle; // at least return the unprojected circle
 
 
-        // correlates position and velocity
         // x,y are phi and theta
         // 1x + 0y + deltaTime*vx + 0vy + 0.5*deltaTime^2*ax + 0ay + 0size = x
         // 0x + 1y + 0vx + deltaTime*vy + 0ax + 0.5*deltaTime^2*ay + 0size = y
@@ -137,7 +148,6 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, doub
         // 0x + 0y + 0vx + 0vy + 1ax + 0ay + 0size= ax
         // 0x + 0y + 0vx + 0vy + 0ax + 1ay + 0size= ay
         // 0x + 0y + 0vx + 0vy + 0ax + 0ay + 1size  = size
-        deltaTime  = 1.0;
         mPupilState.transitionMatrix = (cv::Mat_<double>(7, 7) << 1, 0, deltaTime, 0, 0.5*deltaTime*deltaTime , 0, 0,
                                                                   0, 1, 0, deltaTime, 0 , 0.5*deltaTime*deltaTime, 0,
                                                                   0, 0, 1, 0, deltaTime, 0,0,
@@ -228,8 +238,6 @@ void EyeModel::predictCircle( double deltaTime ){
     // 0x + 0y + 0vx + 1vy + 0ax + deltaTime*ay = vy
     // 0x + 0y + 0vx + 0vy + 1ax + 0ay = ax
     // 0x + 0y + 0vx + 0vy + 0ax + 1ay = ay
-            deltaTime  = 1.0;
-
    mPupilState.transitionMatrix = (cv::Mat_<double>(7, 7) << 1, 0, deltaTime, 0, 0.5*deltaTime*deltaTime , 0, 0,
                                                           0, 1, 0, deltaTime, 0 , 0.5*deltaTime*deltaTime, 0,
                                                           0, 0, 1, 0, deltaTime, 0,0,
