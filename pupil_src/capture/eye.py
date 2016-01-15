@@ -214,7 +214,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         writer = None
 
         pupil_detector_settings = session_settings.get('pupil_detector_settings',None)
-        last_pupil_detector = pupil_detectors[session_settings.get('last_pupil_detector','Canny_Detector')]
+        last_pupil_detector = pupil_detectors[session_settings.get('last_pupil_detector',Detector_2D.__name__)]
         g_pool.pupil_detector = last_pupil_detector(g_pool,pupil_detector_settings)
 
 
