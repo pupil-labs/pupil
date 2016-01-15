@@ -11,45 +11,13 @@
 import numpy as np
 import cv2
 
-from methods import undistort_unproject_pts , cart_to_spherical
+from methods import undistort_unproject_pts
 #logging
 import logging
 logger = logging.getLogger(__name__)
 
-def rigid_transform_3D(A, B):
-    assert len(A) == len(B)
 
-    N = A.shape[0]; # total points
-
-    centroid_A = np.mean(A, axis=0)
-    centroid_B = np.mean(B, axis=0)
-
-    # centre the points
-    AA = A - np.tile(centroid_A, (N, 1))
-    BB = B - np.tile(centroid_B, (N, 1))
-
-    # dot is matrix multiplication for array
-
-    H = np.transpose(AA) * BB
-
-    U, S, Vt = np.linalg.svd(H)
-
-    R = Vt.T * U.T
-
-    # special reflection case
-    if np.linalg.det(R) < 0:
-       print "Reflection detected"
-       Vt[2,:] *= -1
-       R = Vt.T * U.T
-
-    t = -R*centroid_A.T + centroid_B.T
-
-    print t
-
-    return R, t
-
-
-def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inlier_map=False,return_params=False, binocular=False):
+def calibrate_2d_polynomial(cal_pt_cloud,screen_size=(2,2),threshold = 35, binocular=False):
     """
     we do a simple two pass fitting to a pair of bi-variate polynomials
     return the function to map vector
@@ -58,6 +26,9 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inli
     model_n = 7
     if binocular:
         model_n = 13
+
+    cal_pt_cloud = np.array(cal_pt_cloud)
+
     cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
     err_dist,err_mean,err_rms = fit_error_screen(err_x,err_y,screen_size)
     if cal_pt_cloud[err_dist<=threshold].shape[0]: #did not disregard all points..
@@ -73,58 +44,8 @@ def get_map_from_cloud(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inli
             %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
             100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0]))
 
-        if return_inlier_map and return_params:
-            return map_fn,err_dist<=threshold,(cx,cy,model_n)
-        if return_inlier_map and not return_params:
-            return map_fn,err_dist<=threshold
-        if return_params and not return_inlier_map:
-            return map_fn,(cx,cy,model_n)
-        return map_fn
-    else: # did disregard all points. The data cannot be represented by the model in a meaningful way:
-        map_fn = make_map_function(cx,cy,model_n)
-        logger.info('First iteration. root-mean-square residuals: %s in pixel, this is bad!'%err_rms)
-        logger.warning('The data cannot be represented by the model in a meaningfull way.')
+        return map_fn,err_dist<=threshold,(cx,cy,model_n)
 
-        if return_inlier_map and return_params:
-            return map_fn,err_dist<=threshold,(cx,cy,model_n)
-        if return_inlier_map and not return_params:
-            return map_fn,err_dist<=threshold
-        if return_params and not return_inlier_map:
-            return map_fn,(cx,cy,model_n)
-        return map_fn
-
-def get_map_from_angles(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inlier_map=False,return_params=False, binocular=False):
-    """
-    we do a simple two pass fitting to a pair of bi-variate polynomials
-    return the function to map vector
-    """
-    # fit once using all avaiable data
-    model_n = 7
-    if binocular:
-        model_n = 13
-    cx,cy,err_x,err_y = fit_poly_surface(cal_pt_cloud,model_n)
-    err_dist,err_mean,err_rms = fit_error_angle(err_x,err_y)
-    print 'error dist: ' , err_dist
-    if cal_pt_cloud[err_dist<=threshold].shape[0]: #did not disregard all points..
-        #fit again disregarding extreme outliers
-        cx,cy,new_err_x,new_err_y = fit_poly_surface(cal_pt_cloud[err_dist<=threshold],model_n)
-        map_fn = make_map_function(cx,cy,model_n)
-        new_err_dist,new_err_mean,new_err_rms = fit_error_angle(new_err_x,new_err_y )
-
-        logger.info('first iteration. root-mean-square residuals: %s, in pixel' %err_rms)
-        logger.info('second iteration: ignoring outliers. root-mean-square residuals: %s in pixel',new_err_rms)
-
-        logger.info('used %i data points out of the full dataset %i: subset is %i percent' \
-            %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
-            100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0]))
-
-        if return_inlier_map and return_params:
-            return map_fn,err_dist<=threshold,(cx,cy,model_n)
-        if return_inlier_map and not return_params:
-            return map_fn,err_dist<=threshold
-        if return_params and not return_inlier_map:
-            return map_fn,(cx,cy,model_n)
-        return map_fn
     else: # did disregard all points. The data cannot be represented by the model in a meaningful way:
         map_fn = make_map_function(cx,cy,model_n)
         logger.info('First iteration. root-mean-square residuals: %s in pixel, this is bad!'%err_rms)
@@ -139,23 +60,6 @@ def get_map_from_angles(cal_pt_cloud,screen_size=(2,2),threshold = 35,return_inl
         return map_fn
 
 
-def get_transformation_from_point_set( cal_pt_cloud, camera_matrix , dist_coefs ):
-
-    object_points = np.array(cal_pt_cloud[:,0].tolist(), dtype=np.float32)
-    image_points =  np.array(cal_pt_cloud[:,1].tolist(), dtype=np.float32)
-    image_points = image_points.reshape(-1,1,2)
-    #result =  cv2.estimateAffine3D(src, dst)
-    print object_points
-    #print image_points
-
-    result = cv2.solvePnP( object_points , image_points, camera_matrix, dist_coefs, flags=cv2.CV_ITERATIVE)
-    return  result[1], result[2]
-
-    # print image_points.size
-    # print image_points
-    # result = cv2.solvePnPRansac( object_points , image_points, camera_matrix, dist_coefs , iterationsCount = 10000, reprojectionError = 3, minInliersCount = int(image_points.size * 0.7) )
-    # print 'got inliers: ' , result[2].size
-    # return  result[0], result[1]
 
 
 def fit_poly_surface(cal_pt_cloud,n=7):
@@ -329,250 +233,203 @@ def make_map_function(cx,cy,n):
     return fn
 
 
-def preprocess_data(pupil_pts,ref_pts,id_filter=(0,)):
-    '''small utility function to deal with timestamped but uncorrelated data
-    input must be lists that contain dicts with at least "timestamp" and "norm_pos" and "id:
-    filter id must be (0,) or (1,) or (0,1).
+def closest_matches_binocular(ref_pts, pupil_pts,max_dispersion=1/15.):
     '''
-    assert id_filter in ( (0,),(1,),(0,1) )
+    get pupil positions closest in time to ref points.
+    return list of dict with matching ref, pupil0 and pupil1 data triplets.
+    '''
+    ref = ref_pts
 
-    if len(ref_pts)<=2:
-        return []
+    pupil0 = [p for p in pupil_pts if p['id']==0]
+    pupil1 = [p for p in pupil_pts if p['id']==1]
 
-    pupil_pts = [p for p in pupil_pts if p['id'] in id_filter]
+    pupil0_ts = np.array([p['timestamp'] for p in pupil0])
+    pupil1_ts = np.array([p['timestamp'] for p in pupil1])
 
-    # if filter is set to handle binocular data, e.g. (0,1)
-    if id_filter == (0,1):
-        return preprocess_data_binocular(pupil_pts, ref_pts)
-    else:
-        return preprocess_data_monocular(pupil_pts,ref_pts)
 
-def preprocess_data_monocular(pupil_pts,ref_pts):
-    cal_data = []
-    cur_ref_pt = ref_pts.pop(0)
-    next_ref_pt = ref_pts.pop(0)
-    while True:
-        matched = []
-        while pupil_pts:
-            #select all points past the half-way point between current and next ref data sample
-            if pupil_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
-                matched.append(pupil_pts.pop(0))
+    def find_nearest_idx(array,value):
+        idx = np.searchsorted(array, value, side="left")
+        try:
+            if abs(value - array[idx-1]) < abs(value - array[idx]):
+                return idx-1
             else:
-                for p_pt in matched:
-                    #only use close points
-                    if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                        data_pt = p_pt["norm_pos"][0], p_pt["norm_pos"][1],cur_ref_pt['norm_pos'][0],cur_ref_pt['norm_pos'][1]
-                        cal_data.append(data_pt)
-                break
-        if ref_pts:
-            cur_ref_pt = next_ref_pt
-            next_ref_pt = ref_pts.pop(0)
-        else:
-            break
+                return idx
+        except IndexError:
+            return idx-1
+
+    matched = []
+
+    if pupil0 and pupil1:
+        for r in ref_pts:
+            closest_p0_idx = find_nearest_idx(pupil0_ts,r['timestamp'])
+            closest_p0 = pupil0[closest_p0_idx]
+            closest_p1_idx = find_nearest_idx(pupil1_ts,r['timestamp'])
+            closest_p1 = pupil1[closest_p1_idx]
+
+            dispersion = max(closest_p0['timestamp'],closest_p1['timestamp'],r['timestamp']) - min(closest_p0['timestamp'],closest_p1['timestamp'],r['timestamp'])
+            if dispersion < max_dispersion:
+                matched.append({'ref':r,'pupil0':closest_p0, 'pupil1':closest_p1})
+            else:
+                print "to far."
+    return matched
+
+
+def closest_matches_monocular(ref_pts, pupil_pts,max_dispersion=1/15.):
+    '''
+
+    get pupil positions closest in time to ref points.
+    return list of dict with matching ref and pupil datum.
+
+    if your data is binocular use:
+    pupil0 = [p for p in pupil_pts if p['id']==0]
+    pupil1 = [p for p in pupil_pts if p['id']==1]
+    to get the desired eye and pass it as pupil_pts
+    '''
+
+    ref = ref_pts
+    pupil0 = pupil_pts
+    pupil0_ts = np.array([p['timestamp'] for p in pupil0])
+
+    def find_nearest_idx(array,value):
+        idx = np.searchsorted(array, value, side="left")
+        try:
+            if abs(value - array[idx-1]) < abs(value - array[idx]):
+                return idx-1
+            else:
+                return idx
+        except IndexError:
+            return idx-1
+
+    matched = []
+    if pupil0:
+        for r in ref_pts:
+            closest_p0_idx = find_nearest_idx(pupil0_ts,r['timestamp'])
+            closest_p0 = pupil0[closest_p0_idx]
+            dispersion = max(closest_p0['timestamp'],r['timestamp']) - min(closest_p0['timestamp'],r['timestamp'])
+            if dispersion < max_dispersion:
+                matched.append({'ref':r,'pupil':closest_p0})
+            else:
+                pass
+    return matched
+
+
+def preprocess_2d_data_monocular(matched_data):
+    cal_data = []
+    for pair in matched_data:
+        ref,pupil = pair['ref'],pair['pupil']
+        cal_data.append( (pupil["norm_pos"][0], pupil["norm_pos"][1],ref['norm_pos'][0],ref['norm_pos'][1]) )
     return cal_data
 
-def preprocess_vector_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics = None , calibration_distance = 600):
-    '''small utility function to deal with timestamped but uncorrelated data
-    input must be lists that contain dicts with at least "timestamp" and "norm_pos" and "id:
-    filter id must be (0,) or (1,) or (0,1).
-    '''
-    assert id_filter in ( (0,),(1,),(0,1) )
-
-    if len(ref_pts)<=2:
-        return []
-
-    pupil_pts = [p for p in pupil_pts if p['id'] in id_filter]
-
-    if id_filter == (0,1):
-        ##return preprocess_data_binocular(pupil_pts, ref_pts)
-        print "binocular mapping not implemente yet"
-    else:
-       # return preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics, calibration_distance)
-       return preprocess_vector_data_monocular_3D(pupil_pts,ref_pts, camera_intrinsics, calibration_distance)
-
-def preprocess_vector_data_monocular_3D(pupil_pts,ref_pts, camera_intrinsics , calibration_distance):
+def preprocess_2d_data_binocular(matched_data):
     cal_data = []
+    for triplet in matched_data:
+        ref,p0,p1 = triplet['ref'],triplet['pupil0'],triplet['pupil1']
+        data_pt = p0["norm_pos"][0], p0["norm_pos"][1],p1["norm_pos"][0], p1["norm_pos"][1],ref['norm_pos'][0],ref['norm_pos'][1]
+        cal_data.append( data_pt )
+    return cal_data
 
-    #unproject ref_pts
+def preprocess_3d_data_monocular(matched_data, camera_intrinsics , calibration_distance):
     camera_matrix = camera_intrinsics[0]
     dist_coefs = camera_intrinsics[1]
 
-    cur_ref_pt = ref_pts.pop(0)
-    next_ref_pt = ref_pts.pop(0)
-    while True:
-        matched = []
-        while pupil_pts:
-            #select all points past the half-way point between current and next ref data sample
-            if pupil_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
-                matched.append(pupil_pts.pop(0))
-            else:
-                for p_pt in matched:
-                    #only use close points
-                    if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                        try:
-                            sphere_pos  = np.array(p_pt['sphere']['center'])
-                            vector_pupil = np.array(p_pt['circle3D']['normal']) * calibration_distance + sphere_pos
-                            vector_pupil *= 1.,-1.,1.
-                            vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
-                            vector_ref = vector_ref / np.linalg.norm(vector_ref)
-                            vector_ref *= calibration_distance
+    cal_data = []
+    for pair in matched_data:
+        ref,pupil = pair['ref'],pair['pupil']
+        try:
+            # taking the pupil normal as line of sight vector
+            # we multiply by a fixed (assumed) distace and
+            # add the sphere pos to get the 3d gaze point in eye camera 3d coords
+            sphere_pos  = np.array(pupil['sphere']['center'])
+            gaze_pt_3d = np.array(pupil['circle3D']['normal']) * calibration_distance + sphere_pos
+            # we convert from our custom coord system to the opencv convention.
+            gaze_pt_3d *= 1.,-1.,1.
 
-                            data_pt = tuple(vector_pupil) , vector_ref
-                            #print "data_pt  " , data_pt
-                            cal_data.append(data_pt)
-                        except KeyError as e:
-                            pass
-                break
-        if ref_pts:
-            cur_ref_pt = next_ref_pt
-            next_ref_pt = ref_pts.pop(0)
-        else:
-            break
+            # projected point uv to normal ray vector of camera
+            ref_vector =  undistort_unproject_pts(ref['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
+            ref_vector = vector_ref / np.linalg.norm(vector_ref)
+            # assuming a fixed (assumed) distace we get a 3d point in world camera 3d coords.
+            ref_pt_3d *= calibration_distance
+
+            point_pair_3d = tuple(gaze_pt_3d) , ref_pt_3d
+            cal_data.append(point_pair_3d)
+        except KeyError as e:
+            # this pupil data point did not have 3d detected data.
+            pass
+
     return cal_data
 
-def preprocess_vector_data_monocular(pupil_pts,ref_pts, camera_intrinsics , calibration_distance):
-    cal_data = []
 
-    #unproject ref_pts
+def preprocess_3d_data_binocular(matched_data, camera_intrinsics , calibration_distance):
+    raise NotImplementedError()
+
     camera_matrix = camera_intrinsics[0]
     dist_coefs = camera_intrinsics[1]
 
-    cur_ref_pt = ref_pts.pop(0)
-    next_ref_pt = ref_pts.pop(0)
-    while True:
-        matched = []
-        while pupil_pts:
-            #select all points past the half-way point between current and next ref data sample
-            if pupil_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
-                matched.append(pupil_pts.pop(0))
-            else:
-                for p_pt in matched:
-                    #only use close points
-                    if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                        try:
-                            sphere_pos  = np.array(p_pt['sphere']['center'])
-                            vector_pupil = np.array(p_pt['circle3D']['normal']) * calibration_distance + sphere_pos
-                            vector_pupil *= 1.,-1.,1.
-                            #vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
-                            data_pt = tuple(vector_pupil) , cur_ref_pt['screen_pos']
-                            #print "data_pt  " , data_pt
-                            cal_data.append(data_pt)
-                        except KeyError as e:
-                            pass
-                break
-        if ref_pts:
-            cur_ref_pt = next_ref_pt
-            next_ref_pt = ref_pts.pop(0)
-        else:
-            break
+    cal_data = []
+    for triplet in matched_data:
+        ref,p0,p1 = triplet['ref'],triplet['pupil0'],triplet['pupil1']
+
     return cal_data
 
+def rigid_transform_3D(A, B):
+    assert len(A) == len(B)
 
-def preprocess_angle_data(pupil_pts,ref_pts,id_filter=(0,) , camera_intrinsics = None):
-    '''small utility function to deal with timestamped but uncorrelated data
-    input must be lists that contain dicts with at least "timestamp" and "norm_pos" and "id:
-    filter id must be (0,) or (1,) or (0,1).
+    N = A.shape[0]; # total points
+
+    centroid_A = np.mean(A, axis=0)
+    centroid_B = np.mean(B, axis=0)
+
+    # centre the points
+    AA = A - np.tile(centroid_A, (N, 1))
+    BB = B - np.tile(centroid_B, (N, 1))
+
+    # dot is matrix multiplication for array
+
+    H = np.transpose(AA) * BB
+
+    U, S, Vt = np.linalg.svd(H)
+
+    R = Vt.T * U.T
+
+    # special reflection case
+    if np.linalg.det(R) < 0:
+       print "Reflection detected"
+       Vt[2,:] *= -1
+       R = Vt.T * U.T
+
+    t = -R*centroid_A.T + centroid_B.T
+
+    print t
+
+    return R, t
+
+
+
+def get_transformation_from_point_set( cal_pt_cloud, camera_matrix , dist_coefs ):
     '''
-    assert id_filter in ( (0,),(1,),(0,1) )
-
-    if len(ref_pts)<=2:
-        return []
-
-    pupil_pts = [p for p in pupil_pts if p['id'] in id_filter]
-
-    if id_filter == (0,1) and  pupil_pts[0]['method'] is '3D c++':
-        ##return preprocess_data_binocular(pupil_pts, ref_pts)
-        print "binocular mapping not implemente yet"
-    else:
-        return preprocess_angle_data_monocular(pupil_pts,ref_pts, camera_intrinsics)
+    this does not yield good results. Instead we set a fixed distance and use a rigit 3d transform.
+    '''
 
 
-def preprocess_angle_data_monocular(pupil_pts,ref_pts, camera_intrinsics):
-    cal_data = []
+    object_points = np.array(cal_pt_cloud[:,0].tolist(), dtype=np.float32)
+    image_points =  np.array(cal_pt_cloud[:,1].tolist(), dtype=np.float32)
+    image_points = image_points.reshape(-1,1,2)
+    #result =  cv2.estimateAffine3D(src, dst)
+    print object_points
+    #print image_points
 
-    #unproject ref_pts
-    camera_matrix = camera_intrinsics[0]
-    dist_coefs = camera_intrinsics[1]
+    result = cv2.solvePnP( object_points , image_points, camera_matrix, dist_coefs, flags=cv2.CV_ITERATIVE)
+    return  result[1], result[2]
 
-    cur_ref_pt = ref_pts.pop(0)
-    next_ref_pt = ref_pts.pop(0)
-    while True:
-        matched = []
-        while pupil_pts:
-            #select all points past the half-way point between current and next ref data sample
-            if pupil_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
-                matched.append(pupil_pts.pop(0))
-            else:
-                for p_pt in matched:
-                    #only use close points
-                    if abs(p_pt['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                        angle_pupil = (p_pt['theta'], p_pt['phi'])
-                        vector_ref =  undistort_unproject_pts(cur_ref_pt['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
-                        vector_ref = vector_ref / np.linalg.norm(vector_ref)
-                        sph = cart_to_spherical( vector_ref )
-                        data_pt = angle_pupil[0],angle_pupil[1],  sph[1], sph[2]
-                        #print "data_pt  " , data_pt
-                        cal_data.append(data_pt)
-                break
-        if ref_pts:
-            cur_ref_pt = next_ref_pt
-            next_ref_pt = ref_pts.pop(0)
-        else:
-            break
-    return cal_data
+    # print image_points.size
+    # print image_points
+    # result = cv2.solvePnPRansac( object_points , image_points, camera_matrix, dist_coefs , iterationsCount = 10000, reprojectionError = 3, minInliersCount = int(image_points.size * 0.7) )
+    # print 'got inliers: ' , result[2].size
+    # return  result[0], result[1]
 
-def preprocess_data_binocular(pupil_pts, ref_pts):
-    matches = []
 
-    cur_ref_pt = ref_pts.pop(0)
-    next_ref_pt = ref_pts.pop(0)
-    while True:
-        matched = [[], [], cur_ref_pt]
-        while pupil_pts:
-            #select all points past the half-way point between current and next ref data sample
-            if pupil_pts[0]['timestamp'] <=(cur_ref_pt['timestamp']+next_ref_pt['timestamp'])/2.:
-                if abs(pupil_pts[0]['timestamp']-cur_ref_pt['timestamp']) <= 1/15.: #assuming 30fps + slack
-                    eye_id = pupil_pts[0]['id']
-                    matched[eye_id].append(pupil_pts.pop(0))
-                else:
-                    pupil_pts.pop(0)
-            else:
-                matches.append(matched)
-                break
-        if ref_pts:
-            cur_ref_pt = next_ref_pt
-            next_ref_pt = ref_pts.pop(0)
-        else:
-            break
 
-    cal_data = []
-    for pupil_pts_0, pupil_pts_1, ref_pt in matches:
-        # there must be at least one sample for each eye
-        if len(pupil_pts_0) <= 0 or len(pupil_pts_1) <= 0:
-            continue
-
-        p0 = pupil_pts_0.pop(0)
-        p1 = pupil_pts_1.pop(0)
-        while True:
-            data_pt = p0["norm_pos"][0], p0["norm_pos"][1],p1["norm_pos"][0], p1["norm_pos"][1],ref_pt['norm_pos'][0],ref_pt['norm_pos'][1]
-            cal_data.append(data_pt)
-
-            # keep sample with higher timestamp and increase the one with lower timestamp
-            if p0['timestamp'] <= p1['timestamp'] and pupil_pts_0:
-                p0 = pupil_pts_0.pop(0)
-                continue
-            elif p1['timestamp'] <= p0['timestamp'] and pupil_pts_1:
-                p1 = pupil_pts_1.pop(0)
-                continue
-            elif pupil_pts_0 and not pupil_pts_1:
-                p0 = pupil_pts_0.pop(0)
-            elif pupil_pts_1 and not pupil_pts_0:
-                p1 = pupil_pts_1.pop(0)
-            else:
-                break
-
-    return cal_data
-
+#NOTUSED
 def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
     """Return affine transform matrix to register two point sets.
 
