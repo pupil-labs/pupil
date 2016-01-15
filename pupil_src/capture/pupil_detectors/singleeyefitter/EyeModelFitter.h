@@ -51,7 +51,6 @@ namespace singleeyefitter {
             Sphere mCurrentSphere;
             Sphere mCurrentInitialSphere;
 
-            Circle mPreviousPupil;
 
             double mLastFrameTimestamp; //needed to calculate framerate
             int mApproximatedFramerate;

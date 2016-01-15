@@ -83,7 +83,6 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         // allow each model to decide by themself if the new observation supports the model or not
         auto circle = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() ,deltaTime );
         if (circle != Circle::Null){
-            mPreviousPupil = circle;
             result.circle = circle;
 
         }
@@ -117,8 +116,8 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 
         if (result.circle != Circle::Null){
 
-            mActiveModelPtr->correctPupilState( result.circle );
-            mPreviousPupil = result.circle;
+            auto estimatedCircle = mActiveModelPtr->correctPupilState( result.circle );
+            result.circle = estimatedCircle;
         }
 
     }
@@ -262,7 +261,6 @@ void EyeModelFitter::reset()
     mLastTimeModelAdded =  Clock::now();
     mCurrentSphere = Sphere::Null;
     mCurrentInitialSphere = Sphere::Null;
-    mPreviousPupil = Circle::Null;
 
 }
 
