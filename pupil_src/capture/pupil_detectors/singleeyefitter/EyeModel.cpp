@@ -256,7 +256,20 @@ void EyeModel::predictCircle( double deltaTime ){
 
 }
 
-void EyeModel::correctPupilState( const Circle& circle){
+Circle EyeModel::correctPupilState( const Circle& circle){
+
+    auto sphere = getSphere();
+    Vector2 params = paramsOnSphere(sphere, circle);
+    cv::Mat meausurement = (cv::Mat_<double>(3,1) << params[0], params[1], circle.radius );
+    auto estimated = mPupilState.correct( meausurement );
+
+    double theta = estimated.at<double>(0);
+    double psi = estimated.at<double>(1);
+    double radius = estimated.at<double>(6);
+    auto estimatedCircle = circleOnSphere( sphere , theta, psi, radius );
+    return estimatedCircle;
+}
+
 double EyeModel::getPupilPositionErrorVar() const {
 
     // error variance

@@ -82,7 +82,7 @@ class EyeModel {
         // whenever the 2D fit is bad we wanna call this and predict an new circle to use for findCircle
         void predictCircle( double deltaTime );
         Circle getPredictedCircle() const { return mPredictedCircle; };
-        void correctPupilState( const Circle& circle );
+        Circle correctPupilState( const Circle& circle );
         double getPupilPositionErrorVar () const;
         double getPupilSizeErrorVar() const;
 
