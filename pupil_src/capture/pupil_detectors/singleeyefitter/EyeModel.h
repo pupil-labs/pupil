@@ -83,6 +83,8 @@ class EyeModel {
         void predictCircle( double deltaTime );
         Circle getPredictedCircle() const { return mPredictedCircle; };
         void correctPupilState( const Circle& circle );
+        double getPupilPositionErrorVar () const;
+        double getPupilSizeErrorVar() const;
 
         // Describing how good different properties of the Eye are
         double getMaturity() const ; // How much spatial variance there is

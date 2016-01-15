@@ -255,11 +255,23 @@ void EyeModel::predictCircle( double deltaTime ){
 }
 
 void EyeModel::correctPupilState( const Circle& circle){
+double EyeModel::getPupilPositionErrorVar() const {
 
-    Vector2 params = paramsOnSphere(getSphere(), circle);
-    double radius = circle.radius;
-    cv::Mat meausurement = (cv::Mat_<double>(3,1) << params[0], params[1], radius );
-    mPupilState.correct( meausurement );
+    // error variance
+    double thetaError = mPupilState.errorCovPost.at<double>(0,0);
+    double psiError = mPupilState.errorCovPost.at<double>(1,1);
+    std::cout << "te: " << thetaError << std::endl;
+    std::cout << "pE: " << psiError << std::endl;
+    // for now let's just use the average from both values
+    return (thetaError + psiError) * 0.5;
+
+}
+
+double EyeModel::getPupilSizeErrorVar() const {
+
+    // error variance
+    double sizeError = mPupilState.errorCovPost.at<double>(6,6);
+    return sizeError;
 
 }
 
