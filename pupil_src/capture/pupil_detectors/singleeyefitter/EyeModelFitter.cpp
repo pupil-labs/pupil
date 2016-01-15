@@ -48,8 +48,9 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     result.confidence = observation2D->confidence; // if we don't fit we want to take the 2D confidence
     result.timestamp = observation2D->timestamp;
 
+    double deltaTime = observation2D->timestamp - mLastFrameTimestamp;
     if( mLastFrameTimestamp != 0.0 ){
-        mApproximatedFramerate =  static_cast<int>(1.0 / (  observation2D->timestamp - mLastFrameTimestamp ));
+        mApproximatedFramerate =  static_cast<int>(1.0 / (  deltaTime ));
         mAverageFramerate.addValue(mApproximatedFramerate);
     }
     mLastFrameTimestamp = observation2D->timestamp;
@@ -80,15 +81,18 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     if (observation2D->confidence >= 0.8) {
 
         // allow each model to decide by themself if the new observation supports the model or not
-        auto circle = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() );
+        auto circle = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() ,deltaTime );
         if (circle != Circle::Null){
             mPreviousPupil = circle;
             result.circle = circle;
 
         }
-
+        mActiveModelPtr->predictCircle( deltaTime );
+        if (mDebug) {
+            result.predictedCircle = mActiveModelPtr->getPredictedCircle();
+        }
         for (auto& modelPtr : mAlternativeModelsPtrs) {
-             modelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() );
+             modelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage(), deltaTime );
         }
 
     } else if (mCurrentSphere != Sphere::Null) { // if it's too weak we wanna try to find a better one in 3D
@@ -101,11 +105,21 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
             p.y = image_height_half - p.y;
         }
 
+        // whenever we don't have a good 2D fit we use the model's state to predict the new pupil
+        // and us this as as starting point for the search
+        mActiveModelPtr->predictCircle( deltaTime );
+        if (mDebug) {
+            result.predictedCircle = mActiveModelPtr->getPredictedCircle();
+        }
         //fitCircle(observation2D->contours, props, result );
-        filterCircle(observation2D->raw_edges, props, result);
+        //filterCircle(observation2D->raw_edges, props, result);
+        filterCircle2(mActiveModelPtr->getPredictedCircle(), observation2D->raw_edges, props, result);
 
-        if (result.circle != Circle::Null)
+        if (result.circle != Circle::Null){
+
+            mActiveModelPtr->correctPupilState( result.circle );
             mPreviousPupil = result.circle;
+        }
 
     }
 
@@ -175,7 +189,7 @@ void EyeModelFitter::checkModels()
     using namespace std::chrono;
 
     static const int maxAltAmountModels  = 3;
-    static const double minMaturity  = 0.15;
+    static const double minMaturity  = 0.10;
     static const double minPerformance = 0.997;
     static const seconds altModelExpirationTime(10);
     static const seconds minNewModelTime(3);
@@ -605,6 +619,112 @@ void  EyeModelFitter::filterCircle(const Edges2D& rawEdges , const Detector3DPro
     if( mDebug )
       result.edges = std::move(finalInliers);  // visualize
 
+}
+
+void  EyeModelFitter::filterCircle2( const Circle& predictedCircle, const Edges2D& rawEdges , const Detector3DProperties& props,  Detector3DResult& result) const
+{
+
+    if (rawEdges.size() == 0 )
+        return;
+
+
+    Edges3D edgesOnSphere = unprojectEdges(rawEdges);
+
+    //Inorder to filter the edges depending on the distance of the predicted pupil center
+    // imagine a sphere with center equal to the predicted pupil center (pupilcenters are always on the sphere )
+    // and sphere radius equal the distance from sphere center to pupil border
+    double h =  mCurrentSphere.radius - std::sqrt(mCurrentSphere.radius * mCurrentSphere.radius - predictedCircle.radius * predictedCircle.radius);
+    double pupilSphereRadiusSquared =  2.0 * mCurrentSphere.radius  * h;
+    double pupilSphereRadius = std::sqrt(pupilSphereRadiusSquared);
+    Vector3 pupilSphereCenter = predictedCircle.center;
+
+    const double delta = std::pow(1.5, 2);
+    const double maxFilterDistanceSquared = pupilSphereRadiusSquared * delta;
+    auto regionFilter = [&](const Vector3 & point) {
+        double distanceSquared = (point - pupilSphereCenter).squaredNorm();
+        return  distanceSquared < maxFilterDistanceSquared;
+    };
+
+    auto filteredEdges = fun::filter(regionFilter, edgesOnSphere);
+
+    // now we got all edges in the surrounding of the predicted pupil
+    // let find the circle where most edges support the circle including a certain region around the circle border
+
+    const double maxAngularVelocity = 0.03;  //TODO this should depend on the realy velocity calculated per frame
+
+    Vector3 c  = predictedCircle.center - mCurrentSphere.center;
+    // search space is in spehrical coordinates
+    Vector2 predictedPupilCenter  = math::cart2sph(c);
+    const double maxTheta = predictedPupilCenter.x() + maxAngularVelocity ;
+    const double maxPsi = predictedPupilCenter.y() + maxAngularVelocity ;
+    const double minTheta = predictedPupilCenter.x() - maxAngularVelocity;
+    const double minPsi = predictedPupilCenter.y() - maxAngularVelocity;
+
+    const double stepSizeAngle = 0.005; // in radian
+
+    // defined in pixel space and recalculated for 3D space further down
+    const int bandWidthPixel =  4 ;
+
+    int maxEdgeCount = 0;
+    Vector3 bestCircleCenter(0, 0, 0);
+    double bestDistanceVariance = std::numeric_limits<double>::max();
+    Edges3D inliers;
+    Edges3D finalInliers;
+
+    for (double i = minTheta; i <= maxTheta; i += stepSizeAngle) {
+        for (double j = minPsi; j <=  maxPsi; j += stepSizeAngle) {
+
+            // from here in cartesian again
+            // if we use cartesian we can just compare the distances from the pupil sphere center
+            // all this happens in world coordinates
+            const Vector3 newPupilCenter  = mCurrentSphere.center + math::sph2cart(mCurrentSphere.radius, i, j);
+
+            const double bandWidth =  bandWidthPixel * newPupilCenter.z() / mFocalLength ;
+            const double bandWidthHalf = bandWidth / 2.0 ;
+            const double maxDistanceSquared  = std::pow(pupilSphereRadius + bandWidthHalf, 2) ;
+            const double minDistanceSquared  = std::pow(pupilSphereRadius - bandWidthHalf, 2) ;
+
+            if(mDebug)
+                inliers.clear();
+
+            int  edgeCount = 0;
+            //count all edges which fall into this current circle
+            for (const auto& e : filteredEdges) {
+
+                double distanceSquared = (e - newPupilCenter).squaredNorm();
+                if (distanceSquared < maxDistanceSquared && distanceSquared > minDistanceSquared) {
+                    edgeCount++;
+                    if(mDebug)
+                        inliers.push_back(e);
+                }
+            }
+
+            if (edgeCount > maxEdgeCount  ) {
+                bestCircleCenter = newPupilCenter;
+                maxEdgeCount = edgeCount;
+                if(mDebug)
+                    finalInliers = std::move(inliers);
+            }
+
+        }
+    }
+
+    if (maxEdgeCount != 0) {
+        result.circle.center = bestCircleCenter;
+        result.circle.normal = (bestCircleCenter - mCurrentSphere.center).normalized() ;
+        result.circle.radius = predictedCircle.radius;
+
+        // project the circle back to 2D
+        // needed for some calculations in 2D later (calibration)
+        result.ellipse  = Ellipse(project(result.circle,mFocalLength));
+
+        double circumference = result.ellipse.circumference();
+        result.confidence =  std::min(maxEdgeCount / circumference, 1.0 ) ;
+    }
+
+
+    if( mDebug )
+      result.edges = std::move(finalInliers);  // visualize
 }
 
 

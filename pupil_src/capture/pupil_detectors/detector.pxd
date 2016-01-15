@@ -109,6 +109,7 @@ cdef extern from 'singleeyefitter/common/types.h':
         double timestamp
         #-------- For visualization ----------------
         Edges3D edges
+        Circle predictedCircle
         vector[ModelDebugProperties] models
 
     cdef struct Detector2DProperties:

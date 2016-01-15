@@ -76,6 +76,7 @@ namespace singleeyefitter {
         //-------- For visualization ----------------
         // just valid if we want it for visualization
         Edges3D edges;
+        Circle predictedCircle = Circle::Null;
         std::vector<ModelDebugProperties> models;
     };
 

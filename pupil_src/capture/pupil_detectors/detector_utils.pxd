@@ -74,6 +74,7 @@ cdef inline prepareForVisualization3D(  Detector3DResult& result ):
 
     py_visualizationResult['edges'] = getEdges(result)
     py_visualizationResult['circle'] = getCircle(result);
+    py_visualizationResult['predictedCircle'] = getPredictedCircle(result);
 
     models = []
     for model in result.models:
@@ -117,6 +118,12 @@ cdef inline getCircle(const Detector3DResult& result):
     center = result.circle.center
     radius = result.circle.radius
     normal = result.circle.normal
+    return [ [center[0],center[1],center[2]], [normal[0],normal[1],normal[2]], radius ]
+
+cdef inline getPredictedCircle(const Detector3DResult& result):
+    center = result.predictedCircle.center
+    radius = result.predictedCircle.radius
+    normal = result.predictedCircle.normal
     return [ [center[0],center[1],center[2]], [normal[0],normal[1],normal[2]], radius ]
 
 

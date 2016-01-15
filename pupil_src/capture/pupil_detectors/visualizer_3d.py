@@ -370,7 +370,8 @@ class Visualizer(object):
 
 		self.image_width , self.image_height = g_pool.capture.frame_size
 
-		latest_pupil = result['circle']
+		latest_circle = result['circle']
+		predicted_circle = result['predictedCircle']
 		edges =  result['edges']
 		sphere_models = result['models']
 
@@ -408,7 +409,8 @@ class Visualizer(object):
 			model_count += 1
 
 
-		self.draw_circle( latest_pupil[0], latest_pupil[1], latest_pupil[2], RGBA(0.0,1.0,1.0,0.4))
+		self.draw_circle( latest_circle[0], latest_circle[1], latest_circle[2], RGBA(0.0,1.0,1.0,0.4))
+		self.draw_circle( predicted_circle[0], predicted_circle[1], predicted_circle[2], RGBA(1.0,0.0,0.0,0.4))
 
 		draw_points(edges, 2 , RGBA(1.0,0.0,0.6,0.5) )
 

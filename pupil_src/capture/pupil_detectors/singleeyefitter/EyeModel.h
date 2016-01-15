@@ -3,6 +3,8 @@
 #define EYEMODEL_H__
 
 #include "common/types.h"
+#include "mathHelper.h"
+#include "opencv2/video/tracking.hpp" // Kalaman Filter
 #include <thread>
 #include <mutex>
 #include <unordered_map>
@@ -66,29 +68,21 @@ class EyeModel {
         typedef singleeyefitter::Sphere<double> Sphere;
     public:
 
-        EyeModel( int modelId, Clock::time_point timestamp,  double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 3, double binResolution = 0.05  ): //TODO should the filter size depend on the framerate ?
-            mModelID(modelId),
-            mTimestamp(timestamp),
-            mFocalLength(std::move(focalLength)),
-            mCameraCenter(std::move(cameraCenter)),
-            mInitialUncheckedPupils(initialUncheckedPupils),
-            mTotalBins(std::pow(std::floor(1.0/binResolution), 2 ) * 4 ),
-            mBinResolution(binResolution),
-            mFit(0),
-            mPerformance(30),
-            mPerformanceGradient(0),
-            mLastPerformanceCalculationTime()
-            { };
-
+        EyeModel( int modelId, Clock::time_point timestamp,  double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 3, double binResolution = 0.05  );
         EyeModel(const EyeModel&) = delete;
         //EyeModel(EyeModel&&); // we need a explicit 1/Move constructor because of the mutex
         ~EyeModel();
 
 
 
-        Circle presentObservation(const ObservationPtr observation, double averageFramerate );
+        Circle presentObservation(const ObservationPtr observation, double averageFramerate, double deltaTime );
         Sphere getSphere() const;
         Sphere getInitialSphere() const;
+
+        // whenever the 2D fit is bad we wanna call this and predict an new circle to use for findCircle
+        void predictCircle( double deltaTime );
+        Circle getPredictedCircle() const { return mPredictedCircle; };
+        void correctPupilState( const Circle& circle );
 
         // Describing how good different properties of the Eye are
         double getMaturity() const ; // How much spatial variance there is
@@ -163,6 +157,10 @@ class EyeModel {
         const int mTotalBins;
         const int mModelID;
         const Clock::time_point mTimestamp;
+
+
+        cv::KalmanFilter mPupilState;
+        Circle mPredictedCircle;
 
 
         Sphere mSphere;   // Thread sensitive

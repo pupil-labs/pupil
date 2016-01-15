@@ -64,6 +64,7 @@ namespace singleeyefitter {
 
             //void fitCircle(const Contours_2D& contours2D , const Detector3DProperties& props,  Detector3DResult& result) const;
             void filterCircle(const Edges2D& rawEdge, const Detector3DProperties& props,  Detector3DResult& result) const;
+            void filterCircle2( const Circle& predictedCircle, const Edges2D& rawEdge, const Detector3DProperties& props,  Detector3DResult& result) const;
 
     };
 
