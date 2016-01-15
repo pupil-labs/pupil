@@ -317,12 +317,13 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         while not glfw.glfwWindowShouldClose(main_window):
 
             if pipe_to_world.poll():
-                command = pipe_to_world.recv()
-                if command == 'Exit':
+                cmd = pipe_to_world.recv()
+                if cmd == 'Exit':
                     break
-                elif command == "Ping":
+                elif cmd == "Ping":
                     pipe_to_world.send("Pong")
-                    command = None
+                else:
+                    command,payload = cmd
             else:
                 command = None
 
@@ -350,25 +351,23 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
 
             ###  RECORDING of Eye Video (on demand) ###
             # Setup variables and lists for recording
-
-            if command:
-                if 'Rec_Start:' in command:
-                    record_path,raw_mode = command
-                    logger.info("Will save eye video to: %s"%record_path)
-                    timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-                    if raw_mode and frame.jpeg_buffer:
-                        video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
-                        writer = JPEG_Writer(video_path,cap.frame_rate)
-                    else:
-                        video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
-                        writer = AV_Writer(video_path,cap.frame_rate)
-                    timestamps = []
-                elif 'Rec_Stop:' in command:
-                    logger.info("Done recording.")
-                    writer.release()
-                    writer = None
-                    np.save(timestamps_path,np.asarray(timestamps))
-                    del timestamps
+            if 'Rec_Start' == command:
+                record_path,raw_mode = payload
+                logger.info("Will save eye video to: %s"%record_path)
+                timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
+                if raw_mode and frame.jpeg_buffer:
+                    video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
+                    writer = JPEG_Writer(video_path,cap.frame_rate)
+                else:
+                    video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
+                    writer = AV_Writer(video_path,cap.frame_rate)
+                timestamps = []
+            elif 'Rec_Stop' == command:
+                logger.info("Done recording.")
+                writer.release()
+                writer = None
+                np.save(timestamps_path,np.asarray(timestamps))
+                del timestamps
 
             if writer:
                 writer.write_video_frame(frame)

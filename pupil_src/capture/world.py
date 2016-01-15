@@ -110,8 +110,8 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     g_pool.pupil_queue = pupil_queue
     g_pool.timebase = timebase
     # g_pool.lauchner_pipe = lauchner_pipe
-    # g_pool.eye_pipes = eye_pipes
-    # g_pool.eyes_are_alive = eyes_are_alive
+    g_pool.eye_pipes = eye_pipes
+    g_pool.eyes_are_alive = eyes_are_alive
 
 
     #manage plugins
