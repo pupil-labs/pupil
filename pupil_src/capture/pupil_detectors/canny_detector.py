@@ -102,7 +102,7 @@ class Canny_Detector(Pupil_Detector):
     def detect(self,frame,user_roi,visualize=False, pause_video = False):
 
         def early_exit():
-            return {'norm_pos':(0,0),'diameter':0,'timestamp':frame.timestamp,'confidence':0}
+            return {'norm_pos':(0,0),'diameter':0,'timestamp':frame.timestamp,'confidence':0,'method':"2D Python"}
 
         u_r = user_roi
         if self.window_should_open:
@@ -264,6 +264,7 @@ class Canny_Detector(Pupil_Detector):
                     norm_center = normalize(ellipse['center'],(frame.width, frame.height),flip_y=True)
                     pupil_ellipse['norm_pos'] = norm_center
                     pupil_ellipse['timestamp'] = frame.timestamp
+                    pupil_ellipse['method'] = "2D Python"
 
                     self.target_size = max(e[1])
 
@@ -488,7 +489,7 @@ class Canny_Detector(Pupil_Detector):
         norm_center = normalize(ellipse['center'],(frame.width, frame.height),flip_y=True)
         pupil_ellipse['norm_pos'] = norm_center
         pupil_ellipse['timestamp'] = frame.timestamp
-
+        pupil_ellipse['method'] = "2D Python"
         self.target_size = max(e[1])
 
         self.confidence = goodness
