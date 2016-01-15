@@ -328,12 +328,10 @@ class Recorder(Plugin):
             copy2(os.path.join(self.g_pool.user_dir,"surface_definitions"),os.path.join(self.rec_path,"surface_definitions"))
         except:
             logger.info("No surface_definitions data found. You may want this if you do marker tracking.")
-
         try:
-            copy2(os.path.join(self.g_pool.user_dir,"cal_pt_cloud.npy"),os.path.join(self.rec_path,"cal_pt_cloud.npy"))
+            copy2(os.path.join(self.g_pool.user_dir,"user_calibration_data"),os.path.join(self.rec_path,"user_calibration_data"))
         except:
-            logger.warning("No calibration data found. Please calibrate first.")
-
+            logger.warning("No user calibration data found. Please calibrate first.")
         try:
             copy2(os.path.join(self.g_pool.user_dir,"camera_calibration"),os.path.join(self.rec_path,"camera_calibration"))
         except:

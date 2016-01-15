@@ -17,7 +17,7 @@ import OpenGL.GL as gl
 from glfw import *
 import calibrate
 from circle_detector import get_candidate_ellipses
-from file_methods import load_object
+from file_methods import load_object,save_object
 
 import audio
 
@@ -289,7 +289,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             transformation = cv2.Rodrigues( R)[0] , t
             print 'transformation: ' , transformation
             self.g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'calibration_points_3d': cal_pt_cloud[:,0].tolist(), 'calibration_points_2d': cal_pt_cloud[:,1].tolist()})
-            return
 
         else:
             if matched_binocular_data:
@@ -309,6 +308,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             else:
                 logger.error('Did not collect data during calibration.')
 
+
+        user_calibration_data = {'pupil_list':self.pupil_list,'ref_list':self.ref_list}
+        save_object(user_calibration_data,os.path.join(self.g_pool.user_dir, "user_calibration_data"))
 
 
     def close_window(self):
