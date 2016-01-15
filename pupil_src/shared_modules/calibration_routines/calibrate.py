@@ -346,9 +346,9 @@ def preprocess_3d_data_monocular(matched_data, camera_intrinsics , calibration_d
 
             # projected point uv to normal ray vector of camera
             ref_vector =  undistort_unproject_pts(ref['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
-            ref_vector = vector_ref / np.linalg.norm(vector_ref)
+            ref_vector = ref_vector / np.linalg.norm(ref_vector)
             # assuming a fixed (assumed) distace we get a 3d point in world camera 3d coords.
-            ref_pt_3d *= calibration_distance
+            ref_pt_3d = ref_vector*calibration_distance
 
             point_pair_3d = tuple(gaze_pt_3d) , ref_pt_3d
             cal_data.append(point_pair_3d)
