@@ -103,10 +103,12 @@ EyeModel::EyeModel( int modelId, Clock::time_point timestamp,  double focalLengt
                                                                 0, 0, 0, 0, 0, 0, 1);
 
     cv::setIdentity(mPupilState.processNoiseCov, cv::Scalar::all(1e-4));
+    cv::setIdentity(mPupilState.errorCovPost, cv::Scalar::all(1));
+
     cv::setIdentity(mPupilState.measurementNoiseCov, cv::Scalar::all(1e-5));
     mPupilState.measurementNoiseCov.at<double>(2,2) =  0.9; // circle size has a different variance
 
-    cv::setIdentity(mPupilState.errorCovPost, cv::Scalar::all(1));
+    mPupilState.statePost.at<double>(6) = 2.0;  //initialise the size value with the average pupil radius
 };
 
 EyeModel::~EyeModel(){
