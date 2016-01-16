@@ -891,7 +891,7 @@ void  EyeModelFitter::filterCircle3( const Circle& predictedCircle, const Edges2
 
     };
 
-    double positionVariance = 0.5;
+    double positionVariance = 0.2;
     double searchStep = 0.05;
     int bandWidthPixel = 6;
 
