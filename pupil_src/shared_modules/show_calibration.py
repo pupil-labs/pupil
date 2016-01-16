@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 from plugin import Plugin
 from calibration_routines.calibrate import calibrate_2d_polynomial
+from file_methods import load_object
 
 from pyglui import ui
 from pyglui.cygl.utils import RGBA
@@ -33,18 +34,16 @@ class Show_Calibration(Plugin):
         width,height = self.g_pool.capture.frame_size
 
         if g_pool.app == 'capture':
-            cal_pt_path =  os.path.join(g_pool.user_dir,"cal_pt_cloud.npy")
+            cal_pt_path =  os.path.join(g_pool.user_dir,"user_calibration_data")
         else:
-            cal_pt_path =  os.path.join(g_pool.rec_dir,"cal_pt_cloud.npy")
+            cal_pt_path =  os.path.join(g_pool.rec_dir,"user_calibration_data")
 
         try:
-            cal_pt_cloud = np.load(cal_pt_path)
+            user_calibration_data = load_object(cal_pt_path)
         except:
             logger.warning("Please calibrate first")
             self.close()
             return
-
-        map_fn,inlier_map = calibrate_2d_polynomial(cal_pt_cloud,(width, height),return_inlier_map=True, binocular=self.g_pool.binocular)
 
         if self.g_pool.binocular:
             fn_input_eye0 = cal_pt_cloud[:,0:2].transpose()

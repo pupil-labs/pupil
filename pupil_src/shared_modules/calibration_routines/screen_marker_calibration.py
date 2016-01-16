@@ -229,6 +229,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.active = False
         self.button.status_text = ''
 
+
+
         try:
             camera_calibration = load_object(os.path.join(self.g_pool.user_dir,'camera_calibration'))
         except IOError:
@@ -246,7 +248,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             else:
                 logger.info('Loaded camera calibration but camera name and/or resolution has changed. Please re-calibrate.')
                 camera_intrinsics = None
-
 
 
         # do we have data from 3D detector?
@@ -273,25 +274,29 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
         if use_3d:
-
-            if not matched_monocular_data:
+            if matched_binocular_data:
+                method = 'binocular 3d model'
+                logger.error("Notimplemented")
+            elif matched_monocular_data:
+                method = 'monocular 3d model'
+                cal_pt_cloud = calibrate.preprocess_3d_data_monocular(matched_monocular_data,
+                                                camera_intrinsics = camera_intrinsics,
+                                                calibration_distance=500)
+                cal_pt_cloud = np.array(cal_pt_cloud)
+                gaze_3d = cal_pt_cloud[:,0]
+                ref_3d = cal_pt_cloud[:,1]
+                print 'gaze: ' , gaze_3d
+                print 'ref points: ' , ref_3d
+                R,t = calibrate.rigid_transform_3D( np.matrix(gaze_3d), np.matrix(ref_3d) )
+                transformation = cv2.Rodrigues( R)[0] , t
+                print 'transformation: ' , transformation
+                self.g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'calibration_points_3d': cal_pt_cloud[:,0].tolist(), 'calibration_points_2d': cal_pt_cloud[:,1].tolist()})
+            else:
                 logger.error('Did not collect data during calibration.')
-                return
-            cal_pt_cloud = calibrate.preprocess_3d_data_monocular(matched_monocular_data,
-                                            camera_intrinsics = camera_intrinsics,
-                                            calibration_distance=500)
-            cal_pt_cloud = np.array(cal_pt_cloud)
-            gaze_3d = cal_pt_cloud[:,0]
-            ref_3d = cal_pt_cloud[:,1]
-            print 'gaze: ' , gaze_3d
-            print 'ref points: ' , ref_3d
-            R,t = calibrate.rigid_transform_3D( np.matrix(gaze_3d), np.matrix(ref_3d) )
-            transformation = cv2.Rodrigues( R)[0] , t
-            print 'transformation: ' , transformation
-            self.g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'calibration_points_3d': cal_pt_cloud[:,0].tolist(), 'calibration_points_2d': cal_pt_cloud[:,1].tolist()})
 
         else:
             if matched_binocular_data:
+                method = 'binocular polynomial regression'
                 cal_pt_cloud_binocular = calibrate.preprocess_2d_data_binocular(matched_binocular_data)
                 cal_pt_cloud0 = calibrate.preprocess_2d_data_monocular(matched_pupil0_data)
                 cal_pt_cloud1 = calibrate.preprocess_2d_data_monocular(matched_pupil1_data)
@@ -302,6 +307,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
             elif matched_monocular_data:
+                method = 'monocular polynomial regression'
                 cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_monocular_data)
                 map_fn,inliers,params = calibrate.calibrate_2d_polynomial(cal_pt_cloud,self.g_pool.capture.frame_size,binocular=False)
                 self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
@@ -309,7 +315,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 logger.error('Did not collect data during calibration.')
 
 
-        user_calibration_data = {'pupil_list':self.pupil_list,'ref_list':self.ref_list}
+        user_calibration_data = {'pupil_list':self.pupil_list,'ref_list':self.ref_list,'calibration_method':method}
         save_object(user_calibration_data,os.path.join(self.g_pool.user_dir, "user_calibration_data"))
 
 
