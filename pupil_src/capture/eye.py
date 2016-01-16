@@ -336,7 +336,9 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                 break
             except EndofVideoFileError:
                 logger.warning("Video File is done. Stopping")
-                break
+                cap.seek_to_frame(0)
+                frame = cap.get_frame()
+
 
 
             #update performace graphs
