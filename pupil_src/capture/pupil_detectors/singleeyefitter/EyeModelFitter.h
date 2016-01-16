@@ -1,6 +1,12 @@
 #ifndef SingleEyeFitter_h__
 #define SingleEyeFitter_h__
 
+#include <opencv2/video/tracking.hpp> // Kalaman Filter
+
+#include <vector>
+#include <memory>
+#include <Eigen/Core>
+
 #include "common/types.h"
 #include "ImageProcessing/cvx.h"
 #include "Geometry/Circle.h"
@@ -8,9 +14,6 @@
 #include "Geometry/Sphere.h"
 #include "EyeModel.h"
 
-#include <vector>
-#include <memory>
-#include <Eigen/Core>
 
 
 namespace singleeyefitter {
@@ -51,6 +54,7 @@ namespace singleeyefitter {
             Sphere mCurrentSphere;
             Sphere mCurrentInitialSphere;
 
+            cv::KalmanFilter mPupilState;
 
             double mLastFrameTimestamp; //needed to calculate framerate
             int mApproximatedFramerate;
@@ -60,6 +64,13 @@ namespace singleeyefitter {
 
             //Contours3D unprojectContours( const Contours_2D& contours) const;
             Edges3D unprojectEdges(const Edges2D& edges) const;
+
+            // whenever the 2D fit is bad we wanna call this and predict an new circle to use for findCircle
+            Circle predictPupilState( double deltaTime );
+            Circle correctPupilState( const Circle& circle );
+            double getPupilPositionErrorVar () const;
+            double getPupilSizeErrorVar() const;
+
 
             //void fitCircle(const Contours_2D& contours2D , const Detector3DProperties& props,  Detector3DResult& result) const;
             void filterCircle(const Edges2D& rawEdge, const Detector3DProperties& props,  Detector3DResult& result) const;

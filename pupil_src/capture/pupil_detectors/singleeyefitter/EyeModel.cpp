@@ -84,32 +84,9 @@ EyeModel::EyeModel( int modelId, Clock::time_point timestamp,  double focalLengt
     mFit(0),
     mPerformance(30),
     mPerformanceGradient(0),
-    mLastPerformanceCalculationTime(),
-    mPupilState(7,3,0, CV_64F)
-{
-
-    // our model
-    // x,y are phi and theta
-    // 1x + 0y + deltaTime*vx + 0vy + 0.5*deltaTime^2*ax + 0ay + 0size = x
-    // 0x + 1y + 0vx + deltaTime*vy + 0ax + 0.5*deltaTime^2*ay + 0size = y
-    // 0x + 0y + 1vx + 0vy + deltaTime*ax + 0ay + 0size= vx
-    // 0x + 0y + 0vx + 1vy + 0ax + deltaTime*ay + 0size= vy
-    // 0x + 0y + 0vx + 0vy + 1ax + 0ay + 0size= ax
-    // 0x + 0y + 0vx + 0vy + 0ax + 1ay + 0size= ay
-    // 0x + 0y + 0vx + 0vy + 0ax + 0ay + 1size  = size
-
-    mPupilState.measurementMatrix = (cv::Mat_<double>(3, 7) <<  1, 0, 0, 0, 0, 0, 0,
-                                                                0, 1, 0, 0, 0, 0, 0,
-                                                                0, 0, 0, 0, 0, 0, 1);
-
-    cv::setIdentity(mPupilState.processNoiseCov, cv::Scalar::all(1e-4));
-    cv::setIdentity(mPupilState.errorCovPost, cv::Scalar::all(1));
-
-    cv::setIdentity(mPupilState.measurementNoiseCov, cv::Scalar::all(1e-5));
-    mPupilState.measurementNoiseCov.at<double>(2,2) =  0.9; // circle size has a different variance
-
-    mPupilState.statePost.at<double>(6) = 2.0;  //initialise the size value with the average pupil radius
-};
+    mLastPerformanceCalculationTime()
+    {
+    };
 
 EyeModel::~EyeModel(){
 
@@ -119,7 +96,7 @@ EyeModel::~EyeModel(){
 }
 
 
-Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, double averageFramerate , double deltaTime)
+Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, double averageFramerate )
 {
 
 
@@ -140,36 +117,6 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, doub
 
         if (circle == Circle::Null)
             circle = unprojectedCircle; // at least return the unprojected circle
-
-
-        // x,y are phi and theta
-        // 1x + 0y + deltaTime*vx + 0vy + 0.5*deltaTime^2*ax + 0ay + 0size = x
-        // 0x + 1y + 0vx + deltaTime*vy + 0ax + 0.5*deltaTime^2*ay + 0size = y
-        // 0x + 0y + 1vx + 0vy + deltaTime*ax + 0ay + 0size= vx
-        // 0x + 0y + 0vx + 1vy + 0ax + deltaTime*ay + 0size= vy
-        // 0x + 0y + 0vx + 0vy + 1ax + 0ay + 0size= ax
-        // 0x + 0y + 0vx + 0vy + 0ax + 1ay + 0size= ay
-        // 0x + 0y + 0vx + 0vy + 0ax + 0ay + 1size  = size
-        mPupilState.transitionMatrix = (cv::Mat_<double>(7, 7) << 1, 0, deltaTime, 0, 0.5*deltaTime*deltaTime , 0, 0,
-                                                                  0, 1, 0, deltaTime, 0 , 0.5*deltaTime*deltaTime, 0,
-                                                                  0, 0, 1, 0, deltaTime, 0,0,
-                                                                  0, 0, 0, 1, 0, deltaTime,0,
-                                                                  0, 0, 0, 0, 1, 0,0,
-                                                                  0, 0, 0, 0, 0, 1,0,
-                                                                  0, 0, 0, 0, 0, 0,1);
-
-
-        mPupilState.predict();
-        Vector2 params = paramsOnSphere(mSphere, circle);
-        double radius = circle.radius;
-        cv::Mat meausurement = (cv::Mat_<double>(3,1) << params[0], params[1], radius );
-
-
-        cv::Mat estimated = mPupilState.correct( meausurement );
-
-        std::cout << "circle angles: " << params << std::endl;
-        std::cout << "circle angles est: " << estimated  << std::endl;
-
 
         //check first if the observations is strong enough to build the eye model ontop of it
         // the confidence is above 0.99 only if we have a strong prior.
@@ -227,67 +174,6 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, doub
      }
 
     return circle;
-}
-
-void EyeModel::predictCircle( double deltaTime ){
-
-
-    // correlates position and velocity
-    // x,y are phi and theta
-    // 1x + 0y + deltaTime*vx + 0vy + 0.5*deltaTime^2*ax + 0ay  = x
-    // 0x + 1y + 0vx + deltaTime*vy + 0ax + 0.5*deltaTime^2*ay  = y
-    // 0x + 0y + 1vx + 0vy + deltaTime*ax + 0ay = vx
-    // 0x + 0y + 0vx + 1vy + 0ax + deltaTime*ay = vy
-    // 0x + 0y + 0vx + 0vy + 1ax + 0ay = ax
-    // 0x + 0y + 0vx + 0vy + 0ax + 1ay = ay
-   mPupilState.transitionMatrix = (cv::Mat_<double>(7, 7) << 1, 0, deltaTime, 0, 0.5*deltaTime*deltaTime , 0, 0,
-                                                          0, 1, 0, deltaTime, 0 , 0.5*deltaTime*deltaTime, 0,
-                                                          0, 0, 1, 0, deltaTime, 0,0,
-                                                          0, 0, 0, 1, 0, deltaTime,0,
-                                                          0, 0, 0, 0, 1, 0,0,
-                                                          0, 0, 0, 0, 0, 1,0,
-                                                          0, 0, 0, 0, 0, 0,1);
-
-    cv::Mat pupilStatePrediction = mPupilState.predict();
-    double theta = pupilStatePrediction.at<double>(0);
-    double psi = pupilStatePrediction.at<double>(1);
-    double radius = pupilStatePrediction.at<double>(6);
-    mPredictedCircle = circleOnSphere( getSphere() , theta, psi, radius );
-
-}
-
-Circle EyeModel::correctPupilState( const Circle& circle){
-
-    auto sphere = getSphere();
-    Vector2 params = paramsOnSphere(sphere, circle);
-    cv::Mat meausurement = (cv::Mat_<double>(3,1) << params[0], params[1], circle.radius );
-    auto estimated = mPupilState.correct( meausurement );
-
-    double theta = estimated.at<double>(0);
-    double psi = estimated.at<double>(1);
-    double radius = estimated.at<double>(6);
-    auto estimatedCircle = circleOnSphere( sphere , theta, psi, radius );
-    return estimatedCircle;
-}
-
-double EyeModel::getPupilPositionErrorVar() const {
-
-    // error variance
-    double thetaError = mPupilState.errorCovPost.at<double>(0,0);
-    double psiError = mPupilState.errorCovPost.at<double>(1,1);
-    std::cout << "te: " << thetaError << std::endl;
-    std::cout << "pE: " << psiError << std::endl;
-    // for now let's just use the average from both values
-    return (thetaError + psiError) * 0.5;
-
-}
-
-double EyeModel::getPupilSizeErrorVar() const {
-
-    // error variance
-    double sizeError = mPupilState.errorCovPost.at<double>(6,6);
-    return sizeError;
-
 }
 
 EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= true*/)

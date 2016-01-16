@@ -4,7 +4,6 @@
 
 #include "common/types.h"
 #include "mathHelper.h"
-#include "opencv2/video/tracking.hpp" // Kalaman Filter
 #include <thread>
 #include <mutex>
 #include <unordered_map>
@@ -75,16 +74,10 @@ class EyeModel {
 
 
 
-        Circle presentObservation(const ObservationPtr observation, double averageFramerate, double deltaTime );
+        Circle presentObservation(const ObservationPtr observation, double averageFramerate  );
         Sphere getSphere() const;
         Sphere getInitialSphere() const;
 
-        // whenever the 2D fit is bad we wanna call this and predict an new circle to use for findCircle
-        void predictCircle( double deltaTime );
-        Circle getPredictedCircle() const { return mPredictedCircle; };
-        Circle correctPupilState( const Circle& circle );
-        double getPupilPositionErrorVar () const;
-        double getPupilSizeErrorVar() const;
 
         // Describing how good different properties of the Eye are
         double getMaturity() const ; // How much spatial variance there is
@@ -159,11 +152,6 @@ class EyeModel {
         const int mTotalBins;
         const int mModelID;
         const Clock::time_point mTimestamp;
-
-
-        cv::KalmanFilter mPupilState;
-        Circle mPredictedCircle;
-
 
         Sphere mSphere;   // Thread sensitive
         Sphere mInitialSphere;    // Thread sensitive
