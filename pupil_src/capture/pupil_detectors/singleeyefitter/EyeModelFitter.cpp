@@ -60,7 +60,7 @@ EyeModelFitter::EyeModelFitter(double focalLength, Vector3 cameraCenter) :
     cv::setIdentity(mPupilState.errorCovPost, cv::Scalar::all(1));
 
     cv::setIdentity(mPupilState.measurementNoiseCov, cv::Scalar::all(1e-5));
-    mPupilState.measurementNoiseCov.at<double>(2,2) =  0.9; // circle size has a different variance
+    mPupilState.measurementNoiseCov.at<double>(2,2) =  0.1; // circle size has a different variance
 
     mPupilState.statePost.at<double>(6) = 2.0;  //initialise the size value with the average pupil radius
 
@@ -105,7 +105,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     auto observation3DPtr = std::make_shared<const Observation>(observation2D, mFocalLength);
     bool do3DSearch = false;
     // decide if we do 3D search or not
-    if (observation2D->confidence >= 0.9) {
+    if (observation2D->confidence >= 0.7) {
 
         // allow each model to decide by themself if the new observation supports the model or not
         auto circleAndSupport = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage()  );
