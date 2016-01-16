@@ -102,6 +102,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, doub
 
     Circle circle;
     bool shouldAddObservation = false;
+    double confidence2D = newObservationPtr->getObservation2D()->confidence;
 
     // unlock when done
     mModelMutex.lock(); // needed for mSphere and mSupportingPupilSize
@@ -113,7 +114,13 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, doub
 
         // initialised circle. circle parameters addapted to our current eye model
         circle = getIntersectedCircle(mSphere, unprojectedCircle);
-        calculatePerformance( unprojectedCircle, circle , newObservationPtr->getObservation2D()->confidence, averageFramerate);
+
+        if (unprojectedCircle != Circle::Null && circle != Circle::Null) {  // initialise failed
+            auto support = calculateModelSupport(unprojectedCircle, circle , confidence2D);
+            calculatePerformance( support, averageFramerate);
+        }
+
+
 
         if (circle == Circle::Null)
             circle = unprojectedCircle; // at least return the unprojected circle
@@ -121,7 +128,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, doub
         //check first if the observations is strong enough to build the eye model ontop of it
         // the confidence is above 0.99 only if we have a strong prior.
         // also binchecking
-        if (newObservationPtr->getObservation2D()->confidence > 0.99 && isSpatialRelevant(unprojectedCircle)) {
+        if (confidence2D > 0.99 && isSpatialRelevant(unprojectedCircle)) {
             shouldAddObservation = true;
         } else {
             //std::cout << " spatial check failed"  << std::endl;
@@ -533,15 +540,10 @@ std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojec
     return {goodness, goodnessConfidence};
 }
 
-void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle, double confidence, double averageFramerate){
+void EyeModel::calculatePerformance( const std::pair<double,double>& modelSupport, double averageFramerate ){
 
-    double supportGoodness = 0.0;
-    double supportConfidence = 0.0;
-    if (unprojectedCircle != Circle::Null && intersectedCircle != Circle::Null) {  // initialise failed
-        auto support = calculateModelSupport(unprojectedCircle, intersectedCircle , confidence);
-        supportGoodness = support.first;
-        supportConfidence = support.second;
-    }
+    double supportGoodness = modelSupport.first;
+    double supportConfidence = modelSupport.second;
 
     // dont add values with 0.0 confidence.
     if( supportConfidence <= 0.0 )
@@ -554,7 +556,7 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
     // whenever there is a change in framerate bigger than 1, change the window size
     // window size linearly depends on the framerate
     // the average frame rate changes slowly to compensate onetime big changes
-    if( std::abs(averageFramerate  - mPerformance.getWindowSize()/windowSize_Seconds) > 1 ){
+    if( std::abs(averageFramerate  - mPerformance.getWindowSize()/windowSizeSeconds) > 1 ){
         int newWindowSize = std::round(  averageFramerate * windowSizeSeconds );
         mPerformance.changeWindowSize(newWindowSize);
     }

@@ -116,6 +116,8 @@ class EyeModel {
         bool tryTransferNewObservations();
 
         std::pair<double,double> calculateModelSupport(const Circle&  unprojectedCircle, const Circle& initialisedCircle, double confidence) const;
+        void calculatePerformance( const std::pair<double,double>& modelSupport,  double averageFramerate);
+
         double calculateModelFit(const Circle&  unprojectedCircle, const Circle& optimizedCircle) const;
         bool isSpatialRelevant(const Circle& circle);
 
@@ -126,7 +128,6 @@ class EyeModel {
         //Circle circleFromParams( CircleParams& params) const;
         Circle circleFromParams(const Sphere& eye,const  PupilParams& params) const;
 
-        void calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle , double confidence , double averageFramerate);
 
 
         std::unordered_map<Vector2, bool, math::matrix_hash<Vector2>> mSpatialBins;
