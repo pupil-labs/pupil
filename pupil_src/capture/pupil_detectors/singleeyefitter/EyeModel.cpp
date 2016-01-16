@@ -525,13 +525,51 @@ std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojec
     //std::cout << "inaccuracy: " <<  inaccuracy << std::endl;
     // const double goodnessConfidence =  inaccuracy < inaccuracyThreshold ? confidence2D: 0.0;
 
-    // alternative approach make this continous with Confidence dropping drasically when inaccuracy approches 1.
+    // alternative approach make this continous with Confidence dropping drastically when inaccuracy approches 1.
     // this needs testing and might not be better than doing it with a threshold.
     const double inaccuracy = sphereToCameraDirection.dot(initialisedCircle.normal);
     const double goodnessConfidence =  (1-pow(inaccuracy,6)) * confidence2D;
 
     return {goodness, goodnessConfidence};
 }
+
+void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle, double confidence, double averageFramerate){
+
+    double supportGoodness = 0.0;
+    double supportConfidence = 0.0;
+    if (unprojectedCircle != Circle::Null && intersectedCircle != Circle::Null) {  // initialise failed
+        auto support = calculateModelSupport(unprojectedCircle, intersectedCircle , confidence);
+        supportGoodness = support.first;
+        supportConfidence = support.second;
+    }
+
+    // dont add values with 0.0 confidence.
+    if( supportConfidence <= 0.0 )
+        return;
+
+    const double previousPerformance = mPerformance.getAverage();
+
+    static const double windowSize_Seconds = 3.0; // TODO use this for the sensitivity
+
+    // whenever there is a change in framerate bigger than 1, change the window size
+    // window size linearly depends on the framerate
+    // the average frame rate changes slowly to compensate onetime big changes
+    if( std::abs(averageFramerate  - mPerformance.getWindowSize()/windowSize_Seconds) > 1 ){
+        int newWindowSize = std::round(  averageFramerate * windowSize_Seconds );
+        mPerformance.changeWindowSize(newWindowSize);
+    }
+
+    mPerformance.addValue(supportGoodness , supportConfidence); // weighted average
+
+    using namespace std::chrono;
+
+    Clock::time_point now( Clock::now() );
+    duration<double, std::milli> deltaTimeMs = now - mLastPerformanceCalculationTime;
+    // calculate performance gradient (backward difference )
+    mPerformanceGradient =  (mPerformance.getAverage() - previousPerformance) / deltaTimeMs.count();
+    mLastPerformanceCalculationTime =  now;
+}
+
 
 double EyeModel::calculateModelFit(const Circle&  unprojectedCircle, const Circle& optimizedCircle) const {
 
@@ -676,52 +714,6 @@ Circle EyeModel::circleFromParams(const Sphere& eye, const PupilParams& params) 
                   radial,
                   params.radius);
 }
-
-
-void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Circle& intersectedCircle, double confidence, double averageFramerate){
-
-    double supportGoodness = 0.0;
-    double supportConfidence = 0.0;
-    if (unprojectedCircle != Circle::Null && intersectedCircle != Circle::Null) {  // initialise failed
-        auto support = calculateModelSupport(unprojectedCircle, intersectedCircle , confidence);
-        supportGoodness = support.first;
-        supportConfidence = support.second;
-    }
-
-
-    // dont add values with 0.0 confidence.
-    if( supportConfidence <= 0.0 )
-        return;
-
-
-
-    const double previousPerformance = mPerformance.getAverage();
-
-    static const double windowSize_Seconds = 3.0; // TODO use this for the senisitvity
-
-    // whenever there is a change in framerate bigger than 1, change the window size
-    // window size linearly depends on the framerate
-    // the average frame rate changes slowly to compensate onetime big changes
-    if( std::abs(averageFramerate  - mPerformance.getWindowSize()/windowSize_Seconds) > 1 ){
-        int newWindowSize = std::round(  averageFramerate * windowSize_Seconds );
-        mPerformance.changeWindowSize(newWindowSize);
-    }
-
-    mPerformance.addValue(supportGoodness , supportConfidence); // weighted average
-
-    using namespace std::chrono;
-
-    Clock::time_point now( Clock::now() );
-    duration<double, std::milli> deltaTimeMs = now - mLastPerformanceCalculationTime;
-    // calculate performance gradient (backward difference )
-    mPerformanceGradient =  (mPerformance.getAverage() - previousPerformance) / deltaTimeMs.count();
-    mLastPerformanceCalculationTime =  now;
-
-    // std::cout << "current model support: " << support  << std::endl;
-    // std::cout << "average model support: " << mPerformance << std::endl;
-    // std::cout << "performance gradient: " <<  mPerformanceGradient << std::endl;
-}
-
 
 
 } // singleeyefitter
