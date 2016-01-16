@@ -12,7 +12,7 @@ import os
 import cv2
 import numpy as np
 from plugin import Plugin
-from calibration_routines.calibrate import get_map_from_cloud
+from calibration_routines.calibrate import calibrate_2d_polynomial
 
 from pyglui import ui
 from pyglui.cygl.utils import RGBA
@@ -27,6 +27,7 @@ class Show_Calibration(Plugin):
     """Calibration results visualization plugin"""
     def __init__(self,g_pool):
         super(Show_Calibration, self).__init__(g_pool)
+        raise NotImplementedError()
         self.menu=None
 
         width,height = self.g_pool.capture.frame_size
@@ -42,9 +43,9 @@ class Show_Calibration(Plugin):
             logger.warning("Please calibrate first")
             self.close()
             return
-        
-        map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(width, height),return_inlier_map=True, binocular=self.g_pool.binocular)
-        
+
+        map_fn,inlier_map = calibrate_2d_polynomial(cal_pt_cloud,(width, height),return_inlier_map=True, binocular=self.g_pool.binocular)
+
         if self.g_pool.binocular:
             fn_input_eye0 = cal_pt_cloud[:,0:2].transpose()
             fn_input_eye1 = cal_pt_cloud[:,2:4].transpose()
@@ -53,10 +54,10 @@ class Show_Calibration(Plugin):
         else:
             fn_input = cal_pt_cloud[:,0:2].transpose()
             cal_pt_cloud[:,0:2] =  np.array(map_fn(fn_input)).transpose()
-        
+
         ref_pts = cal_pt_cloud[inlier_map][:,np.newaxis,2:4]
         ref_pts = np.array(ref_pts,dtype=np.float32)
-        
+
         logger.debug("calibration ref_pts %s"%ref_pts)
         if len(ref_pts)== 0:
             logger.warning("Calibration is bad. Please re-calibrate")
@@ -112,7 +113,7 @@ class Show_Calibration(Plugin):
 
 if __name__ == '__main__':
     cal_pt_cloud = np.load("cal_pt_cloud.npy")
-    map_fn,inlier_map = get_map_from_cloud(cal_pt_cloud,(1280,720),return_inlier_map=True)
+    map_fn,inlier_map = calibrate_2d_polynomial(cal_pt_cloud,(1280,720),return_inlier_map=True)
     # print cal_pt_cloud[inlier_map][:,0:2].shape
     # print cal_pt_cloud[inlier_map][0,2:4]
     inlier = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1)

@@ -246,10 +246,12 @@ class Recorder(Plugin):
         else:
             self.video_path = os.path.join(self.rec_path, "world.mp4")
             self.writer = AV_Writer(self.video_path,fps=self.g_pool.capture.frame_rate)
+
         # positions path to eye process
         if self.record_eye:
-            for tx in self.g_pool.eye_tx:
-                tx.send((self.rec_path,self.raw_jpeg))
+            for alive, pipe in zip(self.g_pool.eyes_are_alive,self.g_pool.eye_pipes):
+                if alive.value:
+                    pipe.send( ('Rec_Start',(self.rec_path,self.raw_jpeg) ) )
 
         if self.show_info_menu:
             self.open_info_menu()
@@ -305,11 +307,9 @@ class Recorder(Plugin):
         self.writer = None
 
         if self.record_eye:
-            for tx in self.g_pool.eye_tx:
-                try:
-                    tx.send((None,None))
-                except:
-                    logger.warning("Could not stop eye-recording. Please report this bug!")
+            for alive, pipe in zip(self.g_pool.eyes_are_alive,self.g_pool.eye_pipes):
+                if alive.value:
+                    pipe.send(('Rec_Stop',None))
 
         save_object(self.data,os.path.join(self.rec_path, "pupil_data"))
 
@@ -328,12 +328,10 @@ class Recorder(Plugin):
             copy2(os.path.join(self.g_pool.user_dir,"surface_definitions"),os.path.join(self.rec_path,"surface_definitions"))
         except:
             logger.info("No surface_definitions data found. You may want this if you do marker tracking.")
-
         try:
-            copy2(os.path.join(self.g_pool.user_dir,"cal_pt_cloud.npy"),os.path.join(self.rec_path,"cal_pt_cloud.npy"))
+            copy2(os.path.join(self.g_pool.user_dir,"user_calibration_data"),os.path.join(self.rec_path,"user_calibration_data"))
         except:
-            logger.warning("No calibration data found. Please calibrate first.")
-
+            logger.warning("No user calibration data found. Please calibrate first.")
         try:
             copy2(os.path.join(self.g_pool.user_dir,"camera_calibration"),os.path.join(self.rec_path,"camera_calibration"))
         except:
@@ -341,11 +339,6 @@ class Recorder(Plugin):
 
         try:
             with open(self.meta_info_path, 'a') as f:
-                f.write("Duration Time\t"+ self.get_rec_time_str()+ "\n")
-                if self.g_pool.binocular:
-                    f.write("Eye Mode\tbinocular\n")
-                else:
-                    f.write("Eye Mode\tmonocular\n")
                 f.write("Duration Time\t"+ self.get_rec_time_str()+ "\n")
                 f.write("World Camera Frames\t"+ str(self.frame_count)+ "\n")
                 f.write("World Camera Resolution\t"+ str(self.g_pool.capture.frame_size[0])+"x"+str(self.g_pool.capture.frame_size[1])+"\n")
