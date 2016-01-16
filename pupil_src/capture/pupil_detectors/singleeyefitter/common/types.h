@@ -36,7 +36,8 @@ namespace singleeyefitter {
     typedef std::vector<Vector3> Contour3D;
     typedef std::vector<Vector3> Edges3D;
     typedef std::vector<std::vector<Vector3>> Contours3D;
-
+    // goodness and confidence of the modelsupport
+    typedef std::pair<double,double> ModelSupport;
     // general time
     typedef std::chrono::steady_clock Clock;
 

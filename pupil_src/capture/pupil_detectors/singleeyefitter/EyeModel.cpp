@@ -96,13 +96,14 @@ EyeModel::~EyeModel(){
 }
 
 
-Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, double averageFramerate )
+std::pair<Circle,ModelSupport> EyeModel::presentObservation(const ObservationPtr newObservationPtr, double averageFramerate )
 {
 
 
     Circle circle;
     bool shouldAddObservation = false;
     double confidence2D = newObservationPtr->getObservation2D()->confidence;
+    ModelSupport support = {0,0};
 
     // unlock when done
     mModelMutex.lock(); // needed for mSphere and mSupportingPupilSize
@@ -116,7 +117,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, doub
         circle = getIntersectedCircle(mSphere, unprojectedCircle);
 
         if (unprojectedCircle != Circle::Null && circle != Circle::Null) {  // initialise failed
-            auto support = calculateModelSupport(unprojectedCircle, circle , confidence2D);
+            support = calculateModelSupport(unprojectedCircle, circle , confidence2D);
             calculatePerformance( support, averageFramerate);
         }
 
@@ -180,7 +181,7 @@ Circle EyeModel::presentObservation(const ObservationPtr newObservationPtr, doub
             }
      }
 
-    return circle;
+    return {circle, support};
 }
 
 EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= true*/)

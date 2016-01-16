@@ -73,8 +73,7 @@ class EyeModel {
         ~EyeModel();
 
 
-
-        Circle presentObservation(const ObservationPtr observation, double averageFramerate  );
+        std::pair<Circle,ModelSupport> presentObservation(const ObservationPtr observation, double averageFramerate  );
         Sphere getSphere() const;
         Sphere getInitialSphere() const;
 
@@ -109,13 +108,12 @@ class EyeModel {
             Pupil( const ObservationPtr observationPtr ) : mObservationPtr( observationPtr ){};
         };
 
-
         Sphere findSphereCenter( bool use_ransac = true);
         Sphere initialiseModel();
         double refineWithEdges( Sphere& sphere  );
         bool tryTransferNewObservations();
 
-        std::pair<double,double> calculateModelSupport(const Circle&  unprojectedCircle, const Circle& initialisedCircle, double confidence) const;
+        ModelSupport calculateModelSupport(const Circle&  unprojectedCircle, const Circle& initialisedCircle, double confidence) const;
         void calculatePerformance( const std::pair<double,double>& modelSupport,  double averageFramerate);
 
         double calculateModelFit(const Circle&  unprojectedCircle, const Circle& optimizedCircle) const;
