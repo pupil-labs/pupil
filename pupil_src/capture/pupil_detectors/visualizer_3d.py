@@ -399,7 +399,7 @@ class Visualizer(object):
 			initial_sphere = model['initialSphere']
 
 			if model_count == 0:
-				self.draw_sphere(initial_sphere[0],initial_sphere[1], color = sphere_color )
+				# self.draw_sphere(initial_sphere[0],initial_sphere[1], color = sphere_color )
 				self.draw_sphere(sphere[0],sphere[1],  color = initial_sphere_color )
 			else:
 				#self.draw_sphere(initial_sphere[0],initial_sphere[1], color = alternative_sphere_color )
