@@ -549,13 +549,13 @@ void EyeModel::calculatePerformance( const Circle& unprojectedCircle , const Cir
 
     const double previousPerformance = mPerformance.getAverage();
 
-    static const double windowSize_Seconds = 3.0; // TODO use this for the sensitivity
+    static const double windowSizeSeconds = 3.0; // TODO use this for the sensitivity
 
     // whenever there is a change in framerate bigger than 1, change the window size
     // window size linearly depends on the framerate
     // the average frame rate changes slowly to compensate onetime big changes
     if( std::abs(averageFramerate  - mPerformance.getWindowSize()/windowSize_Seconds) > 1 ){
-        int newWindowSize = std::round(  averageFramerate * windowSize_Seconds );
+        int newWindowSize = std::round(  averageFramerate * windowSizeSeconds );
         mPerformance.changeWindowSize(newWindowSize);
     }
 
