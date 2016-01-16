@@ -401,11 +401,12 @@ class Visualizer(object):
 			if model_count == 0:
 				# self.draw_sphere(initial_sphere[0],initial_sphere[1], color = sphere_color )
 				self.draw_sphere(sphere[0],sphere[1],  color = initial_sphere_color )
+				draw_points(bin_positions, 3 , RGBA(0.6,0.0,0.6,0.5) )
+
 			else:
 				#self.draw_sphere(initial_sphere[0],initial_sphere[1], color = alternative_sphere_color )
 				self.draw_sphere(sphere[0],sphere[1],  color = alternative_initial_sphere_color )
 
-			draw_points(bin_positions, 3 , RGBA(0.6,0.0,0.6,0.5) )
 			model_count += 1
 
 
