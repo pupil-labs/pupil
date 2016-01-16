@@ -103,7 +103,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     }
 
     auto observation3DPtr = std::make_shared<const Observation>(observation2D, mFocalLength);
-
+    bool do3DSearch = false;
     // decide if we do 3D search or not
     if (observation2D->confidence >= 0.9) {
 
@@ -114,7 +114,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         double observationFit  = modelSupport.first;
         std::cout << "modelgoodness: " << modelSupport.first << std::endl;
         std::cout << "modelconfidence: " << modelSupport.second << std::endl;
-        if (circle != Circle::Null && observationFit > 0.9 ){
+        if (circle != Circle::Null && observationFit > 0.99 ){
 
             result.circle = circle;
             predictPupilState( deltaTime );
@@ -124,12 +124,20 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
             // }
 
         }
+        else {
+            do3DSearch = true;
+        }
 
         for (auto& modelPtr : mAlternativeModelsPtrs) {
              modelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() );
         }
 
-    } else if (mCurrentSphere != Sphere::Null) { // if it's too weak we wanna try to find a better one in 3D
+    }
+    else {
+        do3DSearch = true;
+    }
+
+    if (do3DSearch  && mCurrentSphere != Sphere::Null) { // if it's too weak we wanna try to find a better one in 3D
 
         // since the raw edges are used to find a better circle fit
         // they need to be converted in the out coordinate system
@@ -238,7 +246,7 @@ void EyeModelFitter::checkModels()
     using namespace std::chrono;
 
     static const int maxAltAmountModels  = 3;
-    static const double minMaturity  = 0.10;
+    static const double minMaturity  = 0.15;
     static const double minPerformance = 0.997;
     static const seconds altModelExpirationTime(10);
     static const seconds minNewModelTime(3);
