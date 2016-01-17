@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 from gaze_mappers import *
 
-def finish_calibration(g_pool,pupil_list,ref_list):
+def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500):
     try:
         camera_calibration = load_object(os.path.join(g_pool.user_dir,'camera_calibration'))
     except IOError:
@@ -60,7 +60,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             method = 'monocular 3d model'
             cal_pt_cloud = calibrate.preprocess_3d_data_monocular(matched_monocular_data,
                                             camera_intrinsics = camera_intrinsics,
-                                            calibration_distance=500)
+                                            calibration_distance=calibration_distance_3d)
             cal_pt_cloud = np.array(cal_pt_cloud)
             gaze_3d = cal_pt_cloud[:,0]
             ref_3d = cal_pt_cloud[:,1]
