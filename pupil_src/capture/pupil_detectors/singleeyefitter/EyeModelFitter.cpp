@@ -112,8 +112,9 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         auto circle = circleAndSupport.first;
         auto modelSupport = circleAndSupport.second;
         double observationFit  = modelSupport.first;
-        std::cout << "modelgoodness: " << modelSupport.first << std::endl;
-        std::cout << "modelconfidence: " << modelSupport.second << std::endl;
+        // std::cout << "modelgoodness: " << modelSupport.first << std::endl;
+        // std::cout << "modelconfidence: " << modelSupport.second << std::endl;
+        // only if the detected 2d pupil fits our model well we trust it to update the Kalman filter.
         if (circle != Circle::Null && observationFit > 0.99 ){
             result.circle = circle;
             predictPupilState( deltaTime );
