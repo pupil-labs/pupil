@@ -524,19 +524,19 @@ std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojec
     const auto& n2 = initialisedCircle.normal;
     const double goodness = n1.dot(n2);
 
-    const Vector3 sphereToCameraDirection = (mCameraCenter - mSphere.center).normalized();
     // if the 2d pupil is almost a circle the unprojection gets inaccurate, thus the normal doesn't align well with the initialised circle
     // this is the case when looking directly into the camera.
     // we take this into account be calculation a confidence which depends on the angle between the normal and the direction from the sphere to the camera
-    // const double inaccuracy = sphereToCameraDirection.dot(initialisedCircle.normal);
-    // static const double inaccuracyThreshold =  0.95;
+    const Vector3 sphereToCameraDirection = (mCameraCenter - mSphere.center).normalized();
+    const double eccentricity = sphereToCameraDirection.dot(initialisedCircle.normal);
     //std::cout << "inaccuracy: " <<  inaccuracy << std::endl;
-    // const double goodnessConfidence =  inaccuracy < inaccuracyThreshold ? confidence2D: 0.0;
 
-    // alternative approach make this continous with Confidence dropping drastically when inaccuracy approches 1.
-    // this needs testing and might not be better than doing it with a threshold.
-    const double inaccuracy = sphereToCameraDirection.dot(initialisedCircle.normal);
-    const double goodnessConfidence =  (1-pow(inaccuracy,6)) * confidence2D;
+    // the we calculate a how much we believe the 2d data by merging the 2d confidence with eccentriciy.
+    // we do this using a function with parameters that are tweaked through experimentation.
+    // a plot of the fn can be found here:
+    // http://www.livephysics.com/tools/mathematical-tools/online-3-d-function-grapher/?xmin=0&xmax=1&ymin=0&ymax=1&zmin=Auto&zmax=Auto&f=x%5E10%2A%281-y%5E20%29
+
+    const double goodnessConfidence =  (1-pow(eccentricity,20)) * pow(confidence2D,10);
 
     return {goodness, goodnessConfidence};
 }
