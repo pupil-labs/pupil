@@ -104,7 +104,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 
     auto observation3DPtr = std::make_shared<const Observation>(observation2D, mFocalLength);
     bool do3DSearch = false;
-    // decide if we do 3D search or not
+    // 2d observation good enough to show to models?
     if (observation2D->confidence >= 0.7) {
 
         // allow each model to decide by themself if the new observation supports the model or not
