@@ -536,7 +536,7 @@ std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojec
     // a plot of the fn can be found here:
     // http://www.livephysics.com/tools/mathematical-tools/online-3-d-function-grapher/?xmin=0&xmax=1&ymin=0&ymax=1&zmin=Auto&zmax=Auto&f=x%5E10%2A%281-y%5E20%29
 
-    const double goodnessConfidence =  (1-pow(eccentricity,20)) * pow(confidence2D,10);
+    const double goodnessConfidence =  (1-pow(eccentricity,20)) * pow(confidence2D,15);
 
     return {goodness, goodnessConfidence};
 }
