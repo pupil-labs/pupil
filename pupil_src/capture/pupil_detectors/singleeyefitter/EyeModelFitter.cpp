@@ -115,14 +115,12 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         std::cout << "modelgoodness: " << modelSupport.first << std::endl;
         std::cout << "modelconfidence: " << modelSupport.second << std::endl;
         if (circle != Circle::Null && observationFit > 0.99 ){
-
             result.circle = circle;
             predictPupilState( deltaTime );
             auto cc  = correctPupilState( circle );
             // if (mDebug) {
             //     result.predictedCircle = cc;
             // }
-
         }
         else {
             do3DSearch = true;
