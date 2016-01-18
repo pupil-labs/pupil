@@ -138,13 +138,11 @@ std::pair<Circle,ModelSupport> EyeModel::presentObservation(const ObservationPtr
 
 
     } else { // no valid sphere yet
-        //std::cout << "add without check" << std::endl;
         shouldAddObservation = true;
     }
      mModelMutex.unlock();
 
     if (shouldAddObservation) {
-        //std::cout << "add" << std::endl;
         //if the observation passed all tests we can add it
         mSupportingPupilsToAdd.emplace_back( newObservationPtr );
 
@@ -401,12 +399,11 @@ double EyeModel::refineWithEdges(Sphere& sphere )
     ceres::Problem problem;
     {
         for (int i = 0; i < mSupportingPupils.size(); ++i) {
-           /* const cv::Mat& eye_image = pupils[i].observation.image;*/
             const auto& pupilInliers = mSupportingPupils[i].mObservationPtr->getObservation2D()->final_edges;
 
             problem.AddResidualBlock(
                 new ceres::AutoDiffCostFunction<EllipseDistanceResidualFunction<double>, ceres::DYNAMIC, 3, 3>(
-                new EllipseDistanceResidualFunction<double>(/*eye_image,*/ pupilInliers, sphere.radius, mFocalLength),
+                new EllipseDistanceResidualFunction<double>( pupilInliers, sphere.radius, mFocalLength),
                 pupilInliers.size()
                 ),
                 NULL, &x[0], &x[3 + 3 * i]);
@@ -448,8 +445,7 @@ double EyeModel::refineWithEdges(Sphere& sphere )
     // }
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
-    //std::cout << summary.BriefReport() << "\n";
-    //std::cout << "Optimized" << std::endl;
+
 
     double fit = 0;
     sphere.center = x.segment<3>(0);
@@ -475,7 +471,6 @@ void EyeModel::setSensitivity( float sensitivity ){
     static const float maxWindowSize = 20.0;
     // sensitivity could influence other values too
     mPerformanceWindowSize  = math::lerp(minWindowSize, maxWindowSize, sensitivity);
-    std::cout << "mPerformanceWindowSize: " << mPerformanceWindowSize << std::endl;
 }
 
 EyeModel::Sphere EyeModel::getSphere() const {
