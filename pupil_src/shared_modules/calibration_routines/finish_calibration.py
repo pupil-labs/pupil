@@ -72,7 +72,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500)
             g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'calibration_points_3d': cal_pt_cloud[:,0].tolist(), 'calibration_points_2d': cal_pt_cloud[:,1].tolist()})
         else:
             logger.error('Did not collect data during calibration.')
-
+            return
     else:
         if matched_binocular_data:
             method = 'binocular polynomial regression'
@@ -92,7 +92,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500)
             g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
         else:
             logger.error('Did not collect data during calibration.')
-
+            return
 
     user_calibration_data = {'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
     save_object(user_calibration_data,os.path.join(g_pool.user_dir, "user_calibration_data"))
