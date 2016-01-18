@@ -123,14 +123,13 @@ class Calibration_Visualizer(object):
 		self.focal_length = 620
 		self.image_height = 480
 
-		self.world_camera_intrinsics = world_camera_intrinsics
 		self.mapping_transformation = mapping_transformation
 		self.calibration_points_3d = calibration_points_3d
 		self.calibration_points_2d = calibration_points_2d
 
-		self.world_camera_width = self.world_camera_intrinsics[2][0]
-		self.world_camera_height = self.world_camera_intrinsics[2][1]
-		self.world_camera_focal = (self.world_camera_intrinsics[0][0][0] +  self.world_camera_intrinsics[0][1][1] ) / 2.0
+		self.world_camera_width = world_camera_intrinsics['resolution'][0]
+		self.world_camera_height = world_camera_intrinsics['resolution'][1]
+		self.world_camera_focal = (world_camera_intrinsics['camera_matrix'][0][0] +  world_camera_intrinsics['camera_matrix'][1][1] ) / 2.0
 
 		self.world_camera_matrix = np.identity(4)
 		rotation_matrix, _ = cv2.Rodrigues(mapping_transformation[0])
@@ -448,12 +447,9 @@ class Calibration_Visualizer(object):
 		draw_points( self.calibration_points_2d , 4 , RGBA( 1, 1, 1, 1 ) )
 
 
-
-
 		glPopMatrix()
 
 
-		#---------------------
 		glPushMatrix()
 		glLoadIdentity()
 		glMultMatrixf( camera_matrix.T )

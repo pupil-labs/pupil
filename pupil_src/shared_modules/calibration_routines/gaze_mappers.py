@@ -151,8 +151,8 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     def __init__(self, g_pool, transformation , camera_intrinsics , calibration_points_3d = [], calibration_points_2d = [], gaze_distance = 500  ):
         super(Vector_Gaze_Mapper, self).__init__(g_pool)
         self.transformation  =  transformation
-        self.camera_matrix = camera_intrinsics[0]
-        self.dist_coefs = camera_intrinsics[1]
+        self.camera_matrix = camera_intrinsics['camera_matrix']
+        self.dist_coefs = camera_intrinsics['dist_coefs']
         self.camera_intrinsics = camera_intrinsics
         self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics , transformation , calibration_points_3d , calibration_points_2d)
         self.g_pool = g_pool

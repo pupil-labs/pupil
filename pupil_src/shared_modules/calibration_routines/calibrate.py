@@ -329,8 +329,8 @@ def preprocess_2d_data_binocular(matched_data):
     return cal_data
 
 def preprocess_3d_data_monocular(matched_data, camera_intrinsics , calibration_distance):
-    camera_matrix = camera_intrinsics[0]
-    dist_coefs = camera_intrinsics[1]
+    camera_matrix = camera_intrinsics["camera_matrix"]
+    dist_coefs = camera_intrinsics["dist_coefs"]
 
     cal_data = []
     for pair in matched_data:
