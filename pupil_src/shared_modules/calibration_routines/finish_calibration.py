@@ -69,6 +69,9 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             R,t = calibrate.rigid_transform_3D( np.matrix(gaze_3d), np.matrix(ref_3d) )
             transformation = cv2.Rodrigues( R)[0] , t
             print 'transformation: ' , transformation
+            avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_3d, R , t )
+            print 'avg distance: ' , avg_distance
+            print 'var distance: ' , dist_var
             g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': cal_pt_cloud[:,0].tolist()})
         else:
             logger.error('Did not collect data during calibration.')

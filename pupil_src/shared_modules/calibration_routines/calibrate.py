@@ -404,10 +404,34 @@ def rigid_transform_3D(A, B):
     return R, t
 
 
+def calculate_residual_3D_Points( ref_points, gaze_points, rotation , translation ):
+
+    average_distance = 0.0
+    distance_variance = 0.0
+    transformed_gaze_points = []
+    translation  = translation.reshape(1,3)
+    for p in gaze_points:
+        s =    np.dot(p, rotation.T)
+        transformed_gaze_points.append(s )
+
+    for p in transformed_gaze_points:
+        p += translation
+
+    for(a,b) in zip( ref_points, transformed_gaze_points):
+        average_distance += np.linalg.norm(a-b)
+
+    average_distance /= len(ref_points)
+
+    for(a,b) in zip( ref_points, transformed_gaze_points):
+        distance_variance += (np.linalg.norm(a-b) - average_distance)**2
+
+    distance_variance /= len(ref_points)
+
+    return average_distance, distance_variance
 
 def get_transformation_from_point_set( cal_pt_cloud, camera_matrix , dist_coefs ):
     '''
-    this does not yield good results. Instead we set a fixed distance and use a rigit 3d transform.
+    this does not yield good results. Instead we set a fixed distance and use a rigid 3d transform.
     '''
 
 
