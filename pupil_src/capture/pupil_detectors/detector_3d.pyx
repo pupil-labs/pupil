@@ -74,7 +74,7 @@ cdef class Detector_3D:
             self.detectProperties2D["ellipse_true_support_min_dist"] = 2.5
 
         if not self.detectProperties3D:
-            self.detectProperties3D["model_sensitivity"] = 0.8
+            self.detectProperties3D["model_sensitivity"] = 0.997
 
     def get_settings(self):
         return {'2D_Settings': self.detectProperties2D , '3D_Settings' : self.detectProperties3D }
@@ -167,8 +167,8 @@ cdef class Detector_3D:
         self.menu3D.append(info_3d)
         self.menu3D.append(ui.Button('Reset 3D model', self.reset_3D_Model ))
         self.menu3D.append(ui.Button('Open debug window',self.toggle_window))
-        self.menu3D.append(ui.Slider('model_sensitivity',self.detectProperties3D,label='Model sensitivity',min=0.0,max=1.0,step=0.001))
-
+        self.menu3D.append(ui.Slider('model_sensitivity',self.detectProperties3D,label='Model sensitivity',min=0.990,max=1.0,step=0.0001))
+        self.menu3D[-1].display_format = '%0.4f'
         # self.menu3D.append(ui.Slider('pupil_radius_min',self.detectProperties3D,label='Pupil min radius', min=1.0,max= 8.0,step=0.1))
         # self.menu3D.append(ui.Slider('pupil_radius_max',self.detectProperties3D,label='Pupil max radius', min=1.0,max=8.0,step=0.1))
         # self.menu3D.append(ui.Slider('max_fit_residual',self.detectProperties3D,label='3D fit max residual', min=0.00,max=0.1,step=0.0001))
