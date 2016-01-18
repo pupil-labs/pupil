@@ -60,7 +60,7 @@ namespace singleeyefitter {
             int mApproximatedFramerate;
             math::SMA<double> mAverageFramerate;
 
-            void checkModels();
+            void checkModels( float sensitivity);
 
             //Contours3D unprojectContours( const Contours_2D& contours) const;
             Edges3D unprojectEdges(const Edges2D& edges) const;

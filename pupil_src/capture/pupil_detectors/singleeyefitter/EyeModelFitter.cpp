@@ -109,7 +109,6 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     // 2d observation good enough to show to models?
     if (observation2D->confidence >= 0.7) {
 
-        mActiveModelPtr->setSensitivity( modelSensitivity );
         // allow each model to decide by themself if the new observation supports the model or not
         auto circleAndSupport = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage()  );
         auto circle = circleAndSupport.first;
@@ -136,7 +135,6 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         }
 
         for (auto& modelPtr : mAlternativeModelsPtrs) {
-             modelPtr->setSensitivity( modelSensitivity );
              modelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() );
         }
 
@@ -210,7 +208,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     // }
 
     // contains the logic for building alternative models if the current one is bad
-    checkModels();
+    checkModels(modelSensitivity );
     result.modelID = mActiveModelPtr->getModelID();
 
     if (mDebug) {
@@ -248,14 +246,14 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 }
 
 
-void EyeModelFitter::checkModels()
+void EyeModelFitter::checkModels( float sensitivity )
 {
 
     using namespace std::chrono;
 
     static const int maxAltAmountModels  = 3;
     static const double minMaturity  = 0.15;
-    static const double minPerformance = 0.997;
+    const double minPerformance = sensitivity;
     static const seconds altModelExpirationTime(10);
     static const seconds minNewModelTime(3);
     static const double gradientChangeThreshold = -2.0e-05; // with this we are also sensitive to changes even if the performance is still above the threshold
