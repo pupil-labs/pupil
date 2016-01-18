@@ -104,7 +104,7 @@ std::pair<Circle,ModelSupport> EyeModel::presentObservation(const ObservationPtr
     Circle circle;
     bool shouldAddObservation = false;
     double confidence2D = newObservationPtr->getObservation2D()->confidence;
-    ModelSupport support = {0,0};
+    ModelSupport support = {0,1};
 
     // unlock when done
     mModelMutex.lock(); // needed for mSphere and mSupportingPupilSize
@@ -122,10 +122,9 @@ std::pair<Circle,ModelSupport> EyeModel::presentObservation(const ObservationPtr
             calculatePerformance( support, averageFramerate);
         }
 
-
-
-        if (circle == Circle::Null)
+        if (circle == Circle::Null){
             circle = unprojectedCircle; // at least return the unprojected circle
+        }
 
         //check first if the observations is strong enough to build the eye model ontop of it
         // the confidence is above 0.99 only if we have a strong prior.
