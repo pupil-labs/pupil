@@ -42,7 +42,6 @@ from vis_watermark import Vis_Watermark
 from scan_path import Scan_Path
 from manual_gaze_correction import Manual_Gaze_Correction
 from eye_video_overlay import Eye_Video_Overlay
-from calibration_routines.gaze_mappers import Dummy_Gaze_Mapper,Simple_Gaze_Mapper,Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper
 from fixation_detector import Dispersion_Duration_Fixation_Detector
 
 
@@ -50,8 +49,6 @@ available_plugins = Vis_Circle,Vis_Cross, Vis_Polyline, \
                     Vis_Light_Points, Vis_Watermark, \
                     Scan_Path, \
                     Manual_Gaze_Correction,Eye_Video_Overlay, \
-                    Dummy_Gaze_Mapper,Simple_Gaze_Mapper, \
-                    Volumetric_Gaze_Mapper,Bilateral_Gaze_Mapper, \
                     Dispersion_Duration_Fixation_Detector
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
