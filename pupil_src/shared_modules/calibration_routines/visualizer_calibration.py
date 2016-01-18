@@ -115,7 +115,7 @@ for i in range(0,int(circle_res+1)):
 	circle_xy.append([np.cos(temp),np.sin(temp)])
 
 class Calibration_Visualizer(object):
-	def __init__(self, g_pool, world_camera_intrinsics , mapping_transformation, calibration_points_3d, calibration_points_2d,  name = "Debug Calibration Visualizer", run_independently = False):
+	def __init__(self, g_pool, world_camera_intrinsics , mapping_transformation, cal_ref_points_3d, cal_gaze_points_3d,  name = "Debug Calibration Visualizer", run_independently = False):
        # super(Visualizer, self).__init__()
 
 		self.g_pool = g_pool
@@ -125,8 +125,8 @@ class Calibration_Visualizer(object):
 
 		self.world_camera_intrinsics = world_camera_intrinsics
 		self.mapping_transformation = mapping_transformation
-		self.calibration_points_3d = calibration_points_3d
-		self.calibration_points_2d = calibration_points_2d
+		self.cal_ref_points_3d = cal_ref_points_3d
+		self.cal_gaze_points_3d = cal_gaze_points_3d
 
 		self.world_camera_width = self.world_camera_intrinsics[2][0]
 		self.world_camera_height = self.world_camera_intrinsics[2][1]
@@ -420,7 +420,7 @@ class Calibration_Visualizer(object):
 		glMatrixMode( GL_MODELVIEW )
 
 
-			# world camera
+		# world camera
 		camera_matrix = np.identity(4)
 		camera_matrix[:3,:3] = self.world_camera_rotation_matrix[:3,:3]
 		camera_matrix[:3, 3] = self.world_camera_translation
@@ -434,21 +434,15 @@ class Calibration_Visualizer(object):
 		glMatrixMode(GL_MODELVIEW )
 		glPushMatrix()
 		glLoadIdentity()
-		# glTranslatef( translation[0],  translation[1] , translation[2])
-		# glRotatef(eulers[0], 1, 0, 0)
-		# glRotatef(eulers[1], 0, 1, 0)
-		# glRotatef(eulers[2], 0, 0, 1)
-		#glMultMatrixf( self.world_camera_rotation_matrix.T )
-		#glMultMatrixf( camera_matrix.T )
+
 
 		self.draw_coordinate_system(400)
 		self.draw_frustum( self.world_camera_width/ 10.0 , self.world_camera_height/ 10.0 , self.world_camera_focal / 10.0)
 
-		glMultMatrixf( self.get_image_space_matrix( scale = 10. ) )
-		draw_points( self.calibration_points_2d , 4 , RGBA( 1, 1, 1, 1 ) )
-
-
-
+		for p in self.cal_ref_points_3d:
+			draw_polyline( [ (0,0,0), p]  , 1 , RGBA(0.5,0.5,0.5,0.1), line_type = GL_LINES)
+		#calibration points
+		draw_points( self.cal_ref_points_3d , 4 , RGBA( 0, 1, 1, 1 ) )
 
 		glPopMatrix()
 
@@ -456,6 +450,7 @@ class Calibration_Visualizer(object):
 		#---------------------
 		glPushMatrix()
 		glLoadIdentity()
+
 		glMultMatrixf( camera_matrix.T )
 
 		sphere_center = list(sphere['center'])
@@ -463,17 +458,14 @@ class Calibration_Visualizer(object):
 
 		self.draw_sphere(sphere_center,sphere['radius'],  color = RGBA(1,1,0,1))
 
-		for p in self.calibration_points_3d:
-			draw_polyline( [ camera_pos, p]  , 1 , RGBA(0.5,0.5,0.5,0.1), line_type = GL_LINES)
+		for p in self.cal_gaze_points_3d:
+			draw_polyline( [ sphere_center, p]  , 1 , RGBA(0.5,0.5,0.5,0.1), line_type = GL_LINES)
+		#calibration points
+		draw_points( self.cal_gaze_points_3d , 4 , RGBA( 1, 0, 1, 1 ) )
+
 		# eye camera
 		self.draw_coordinate_system(200)
 		self.draw_frustum( self.image_width / 10.0, self.image_height / 10.0, self.focal_length /10.)
-
-
-		#calibration points
-		draw_points( self.calibration_points_3d , 4 , RGBA( 0, 1, 1, 1 ) )
-		for p in self.calibration_points_3d:
-			draw_polyline( [sphere_center, p]  , 1 , RGBA(0,0,0,0.1), line_type = GL_LINES)
 
 		draw_points( gaze_points , 2 , RGBA( 1, 0, 0, 1 ) )
 		for p in gaze_points:
