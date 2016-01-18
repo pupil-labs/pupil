@@ -30,6 +30,71 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+#these are calibration we recorded. They are estimates and generalize our setup. Its always better to calibrate each camera.
+pre_recorded_calibrations = {
+                            'Pupil Cam1 ID2':{
+                                (1280, 720):{
+                                'dist_coefs': np.array([[-0.6746215 ,  0.46527537,  0.01448595, -0.00070578, -0.17128751]]),
+                                'camera_name': 'Pupil Cam1 ID2',
+                                'resolution': (1280, 720),
+                                'camera_matrix': np.array([[  1.08891909e+03,   0.00000000e+00,   6.67944178e+02],
+                                                             [  0.00000000e+00,   1.03230180e+03,   3.52772854e+02],
+                                                             [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
+                                    }
+                                },
+                            'Logitech Webcam C930e':{
+                                (1280, 720):{
+                                    'dist_coefs': np.array([[ 0.06330768, -0.17328079,  0.00074967,  0.000353  ,  0.07648477]]),
+                                    'camera_name': 'Logitech Webcam C930e',
+                                    'resolution': (1280, 720),
+                                    'camera_matrix': np.array([[ 739.72227378,    0.        ,  624.44490772],
+                                                                [   0.        ,  717.84832227,  350.46000651],
+                                                                [   0.        ,    0.        ,    1.        ]])
+                                    }
+                                },
+                            }
+
+
+def load_camera_calibration(g_pool):
+    if g_pool.app == 'capture':
+        try:
+            camera_calibration = load_object(os.path.join(g_pool.user_dir,'camera_calibration'))
+        except:
+            camera_calibration = None
+        else:
+            same_name = camera_calibration['camera_name'] == g_pool.capture.name
+            same_resolution =  camera_calibration['resolution'] == g_pool.capture.frame_size
+            if not (same_name and same_resolution):
+                logger.warning('Loaded camera calibration but camera name and/or resolution has changed.')
+                camera_calibration = None
+            else:
+                logger.info("Loaded user calibrated calibration for %s@%s."%(g_pool.capture.name,g_pool.capture.frame_size))
+
+        if not camera_calibration:
+            logger.debug("Trying to load pre recorded calibration.")
+            try:
+                camera_calibration = pre_recorded_calibrations[g_pool.capture.name][g_pool.capture.frame_size]
+            except KeyError:
+                logger.info("Pre recorded calibration for %s@%s not found."%(g_pool.capture.name,g_pool.capture.frame_size))
+            else:
+                logger.info("Loaded pre recorded calibration for %s@%s."%(g_pool.capture.name,g_pool.capture.frame_size))
+
+
+        if not camera_calibration:
+            logger.warning("Camera calibration not found please run Camera_Intrinsics_Estimation to calibrate camera.")
+
+
+        return camera_calibration
+
+    else:
+        raise NotImplementedError()
+
+
+
+
+
+
+
 # window calbacks
 def on_resize(window,w, h):
     active_window = glfwGetCurrentContext()
@@ -41,7 +106,6 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
     """Camera_Intrinsics_Calibration
         This method is not a gaze calibration.
         This method is used to calculate camera intrinsics.
-
     """
     def __init__(self,g_pool,fullscreen = False):
         super(Camera_Intrinsics_Estimation, self).__init__(g_pool)
@@ -76,31 +140,20 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         self.show_undistortion_switch = None
 
 
-        try:
-            camera_calibration = load_object(os.path.join(self.g_pool.user_dir,'camera_calibration'))
-        except:
-            self.camera_intrinsics = None
-        else:
+        self.camera_calibration = load_camera_calibration(self.g_pool)
+        if self.camera_calibration:
             logger.info('Loaded camera calibration. Click show undistortion to verify.')
-            logger.info('Hint: Lines in the real world should be straigt in the image.')
-            same_name = camera_calibration['camera_name'] == self.g_pool.capture.name
-            same_resolution =  camera_calibration['resolution'] == self.g_pool.capture.frame_size
-            if not (same_name and same_resolution):
-                logger.warning('Loaded camera calibration but camera name and/or resolution has changed. Please re-calibrate.')
-
-            K = camera_calibration['camera_matrix']
-            dist_coefs = camera_calibration['dist_coefs']
-            resolution = camera_calibration['resolution']
-            self.camera_intrinsics = K,dist_coefs,resolution
-
-
+            logger.info('Hint: Straight lines in the real world should be straigt in the image.')
+            self.camera_intrinsics = self.camera_calibration['camera_matrix'],self.camera_calibration['dist_coefs'],self.camera_calibration['resolution']
+        else:
+            self.camera_intrinsics = None
 
 
     def init_gui(self):
 
         monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
         #primary_monitor = glfwGetPrimaryMonitor()
-        self.info = ui.Info_Text("Estimate Camera intrinsics of the world camera. This is only used for 3D marker tracking at the moment. Using an 11x9 asymmetrical circle grid. Click 'C' to capture a pattern.")
+        self.info = ui.Info_Text("Estimate Camera intrinsics of the world camera. Using an 11x9 asymmetrical circle grid. Click 'C' to capture a pattern.")
         self.g_pool.calibration_menu.append(self.info)
 
         self.menu = ui.Growing_Menu('Controls')

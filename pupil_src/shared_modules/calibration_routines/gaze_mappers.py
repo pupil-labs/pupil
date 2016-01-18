@@ -56,81 +56,7 @@ class Simple_Gaze_Mapper(Gaze_Mapping_Plugin):
         return {'params':self.params}
 
 
-
-
-class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
-    """docstring for Vector_Gaze_Mapper"""
-    def __init__(self, g_pool, transformation , camera_intrinsics , cal_ref_points_3d = [], cal_gaze_points_3d = []  ):
-        super(Vector_Gaze_Mapper, self).__init__(g_pool)
-        self.transformation  =  transformation
-        self.camera_matrix = camera_intrinsics[0]
-        self.dist_coefs = camera_intrinsics[1]
-        self.camera_intrinsics = camera_intrinsics
-        self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics , transformation , cal_ref_points_3d , cal_gaze_points_3d)
-        self.g_pool = g_pool
-        self.visualizer.open_window()
-        self.gaze_pts_debug = []
-        self.sphere = None
-
-    def update(self,frame,events):
-        gaze_pts = []
-        focus_distance  = 600 # in millimeter
-        sphere = None
-        for p in events['pupil_positions']:
-            if p['method'] == '3D c++' and p['confidence'] > self.g_pool.pupil_confidence_threshold:
-
-                gaze_point =  np.array(p['circle3D']['normal'] ) * focus_distance  + np.array( p['sphere']['center'] )
-
-                gaze_point *= 1,-1,1
-                self.gaze_pts_debug.append( gaze_point )
-                rotation_vector = self.transformation[0]
-                translation_vector  = self.transformation[1]
-                image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , rotation_vector, translation_vector , self.camera_matrix , self.dist_coefs )
-                image_point = image_point.reshape(-1,2)
-                image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
-                gaze_pts.append({'norm_pos':image_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
-
-                self.sphere = p['sphere']
-
-
-        events['gaze_positions'] = gaze_pts
-
-    def gl_display(self):
-        self.visualizer.update_window( self.g_pool , self.gaze_pts_debug , self.sphere)
-        self.gaze_pts_debug = []
-
-    def get_init_dict(self):
-       return {'transformation':self.transformation , "camera_intrinsics":self.camera_intrinsics}
-
-    def cleanup(self):
-        self.visualizer.close_window()
-
-
-    # def map_gaze_offline(self,pupil_positions):
-    #     min_confidence = self.g_pool.pupil_confidence_threshold
-    #     gaze_pts = deepcopy(pupil_positions)
-    #     norm_pos = np.array([p['norm_pos'] for p in gaze_pts])
-    #     norm_pos = self.map_fn(norm_pos.T)
-    #     for n in range(len(gaze_pts)):
-    #         gaze_pts[n]['norm_pos'] = norm_pos[0][n],norm_pos[1][n]
-    #         gaze_pts[n]['base'] = [pupil_positions[n]]
-    #     gaze_pts = filter(lambda g: g['confidence']> min_confidence,gaze_pts)
-    #     return gaze_pts
-
-class Volumetric_Gaze_Mapper(Gaze_Mapping_Plugin):
-    def __init__(self,g_pool,params):
-        super(Volumetric_Gaze_Mapper, self).__init__(g_pool)
-        self.params = params
-
-    def update(self,frame,events):
-        gaze_pts = []
-        raise NotImplementedError()
-        events['gaze_positions'] = gaze_pts
-
-    def get_init_dict(self):
-        return {'params':self.params}
-
-class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
+class Binocular_Gaze_Mapper(Gaze_Mapping_Plugin):
     def __init__(self, g_pool,params,params_eye0,params_eye1):
         super(Gaze_Mapping_Plugin, self).__init__(g_pool)
         self.params = params
@@ -217,3 +143,54 @@ class Bilateral_Gaze_Mapper(Gaze_Mapping_Plugin):
 
     def get_init_dict(self):
         return {'params':self.params, 'params_eye0':self.params_eye0, 'params_eye1':self.params_eye1}
+
+
+
+class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
+    """docstring for Vector_Gaze_Mapper"""
+    def __init__(self, g_pool, transformation , camera_intrinsics , cal_ref_points_3d = [], cal_gaze_points_3d = [] , gaze_distance = 500 ):
+        super(Vector_Gaze_Mapper, self).__init__(g_pool)
+        self.transformation  =  transformation
+        self.camera_matrix = camera_intrinsics['camera_matrix']
+        self.dist_coefs = camera_intrinsics['dist_coefs']
+        self.camera_intrinsics = camera_intrinsics
+        self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics , transformation , cal_ref_points_3d , cal_gaze_points_3d)
+        self.g_pool = g_pool
+        self.visualizer.open_window()
+        self.gaze_pts_debug = []
+        self.sphere = None
+        self.gaze_distance = gaze_distance
+
+    def update(self,frame,events):
+        gaze_pts = []
+        sphere = None
+        for p in events['pupil_positions']:
+            if p['method'] == '3D c++' and p['confidence'] > self.g_pool.pupil_confidence_threshold:
+
+                gaze_point =  np.array(p['circle3D']['normal'] ) * self.gaze_distance  + np.array( p['sphere']['center'] )
+
+                gaze_point *= 1,-1,1
+                self.gaze_pts_debug.append( gaze_point )
+                rotation_vector = self.transformation[0]
+                translation_vector  = self.transformation[1]
+                image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , rotation_vector, translation_vector , self.camera_matrix , self.dist_coefs )
+                image_point = image_point.reshape(-1,2)
+                image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
+                gaze_pts.append({'norm_pos':image_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
+
+                self.sphere = p['sphere']
+
+
+        events['gaze_positions'] = gaze_pts
+
+    def gl_display(self):
+        self.visualizer.update_window( self.g_pool , self.gaze_pts_debug , self.sphere)
+        self.gaze_pts_debug = []
+
+    def get_init_dict(self):
+       return {'transformation':self.transformation , "camera_intrinsics":self.camera_intrinsics,'gaze_distance':self.gaze_distance}
+
+    def cleanup(self):
+        self.visualizer.close_window()
+
+

@@ -329,8 +329,8 @@ def preprocess_2d_data_binocular(matched_data):
     return cal_data
 
 def preprocess_3d_data_monocular(matched_data, camera_intrinsics , calibration_distance_ref_points, calibration_distance_gaze_points):
-    camera_matrix = camera_intrinsics[0]
-    dist_coefs = camera_intrinsics[1]
+    camera_matrix = camera_intrinsics["camera_matrix"]
+    dist_coefs = camera_intrinsics["dist_coefs"]
 
     cal_data = []
     for pair in matched_data:
@@ -349,6 +349,7 @@ def preprocess_3d_data_monocular(matched_data, camera_intrinsics , calibration_d
             ref_vector = ref_vector / np.linalg.norm(ref_vector)
             # assuming a fixed (assumed) distance we get a 3d point in world camera 3d coords.
             ref_pt_3d = ref_vector*calibration_distance_ref_points
+
 
             point_pair_3d = tuple(gaze_pt_3d) , ref_pt_3d
             cal_data.append(point_pair_3d)
@@ -429,9 +430,11 @@ def calculate_residual_3D_Points( ref_points, gaze_points, rotation , translatio
 
     return average_distance, distance_variance
 
+
+
 def get_transformation_from_point_set( cal_pt_cloud, camera_matrix , dist_coefs ):
     '''
-    this does not yield good results. Instead we set a fixed distance and use a rigid 3d transform.
+    this does not yield good results. Instead we set a fixed distance and use a rigit 3d transform.
     '''
 
 

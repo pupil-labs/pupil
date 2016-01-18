@@ -22,7 +22,6 @@ import audio
 
 from pyglui import ui
 from plugin import Calibration_Plugin
-from gaze_mappers import Simple_Gaze_Mapper, Vector_Gaze_Mapper, Bilateral_Gaze_Mapper
 #logging
 import logging
 logger = logging.getLogger(__name__)
