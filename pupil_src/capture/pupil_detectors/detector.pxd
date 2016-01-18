@@ -132,8 +132,7 @@ cdef extern from 'singleeyefitter/common/types.h':
         float ellipse_true_support_min_dist
 
     cdef struct Detector3DProperties:
-        pass
-        #no used for now
+        float model_sensitivity
 
 
 

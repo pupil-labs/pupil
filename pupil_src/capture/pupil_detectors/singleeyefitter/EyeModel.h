@@ -77,6 +77,9 @@ class EyeModel {
         Sphere getSphere() const;
         Sphere getInitialSphere() const;
 
+        // how sensitive the model is for wrong observations
+        // if we have to many wring observation new models are created
+        void setSensitivity( float sensitivity );
 
         // Describing how good different properties of the Eye are
         double getMaturity() const ; // How much spatial variance there is
@@ -141,6 +144,7 @@ class EyeModel {
         //std::list<double> mModelSupports; // values to calculate the average
         double mFit; // Residual of Ceres sovler , Thread sensitive
         math::WMA<double> mPerformance; // moving Average of model support
+        float mPerformanceWindowSize;  // in seconds
         double mPerformanceGradient;
         Clock::time_point mLastPerformanceCalculationTime; // for the gradient calculation when need keep track of the time
 

@@ -84,7 +84,8 @@ EyeModel::EyeModel( int modelId, Clock::time_point timestamp,  double focalLengt
     mFit(0),
     mPerformance(30),
     mPerformanceGradient(0),
-    mLastPerformanceCalculationTime()
+    mLastPerformanceCalculationTime(),
+    mPerformanceWindowSize(3.0)
     {
     };
 
@@ -468,6 +469,15 @@ double EyeModel::refineWithEdges(Sphere& sphere )
 
 }
 
+void EyeModel::setSensitivity( float sensitivity ){
+
+    static const float minWindowSize = 0.01;
+    static const float maxWindowSize = 20.0;
+    // sensitivity could influence other values too
+    mPerformanceWindowSize  = math::lerp(minWindowSize, maxWindowSize, sensitivity);
+    std::cout << "mPerformanceWindowSize: " << mPerformanceWindowSize << std::endl;
+}
+
 EyeModel::Sphere EyeModel::getSphere() const {
     std::lock_guard<std::mutex> lockModel(mModelMutex);
     return mSphere;
@@ -552,13 +562,11 @@ void EyeModel::calculatePerformance( const std::pair<double,double>& modelSuppor
 
     const double previousPerformance = mPerformance.getAverage();
 
-    static const double windowSizeSeconds = 3.0; // TODO use this for the sensitivity
-
     // whenever there is a change in framerate bigger than 1, change the window size
     // window size linearly depends on the framerate
     // the average frame rate changes slowly to compensate onetime big changes
-    if( std::abs(averageFramerate  - mPerformance.getWindowSize()/windowSizeSeconds) > 1 ){
-        int newWindowSize = std::round(  averageFramerate * windowSizeSeconds );
+    if( std::abs(averageFramerate  - mPerformance.getWindowSize()/mPerformanceWindowSize) > 1 ){
+        int newWindowSize = std::round(  averageFramerate * mPerformanceWindowSize );
         mPerformance.changeWindowSize(newWindowSize);
     }
 

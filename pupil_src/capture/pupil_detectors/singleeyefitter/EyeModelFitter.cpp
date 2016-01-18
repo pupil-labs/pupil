@@ -75,6 +75,8 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     result.confidence = observation2D->confidence; // if we don't fit we want to take the 2D confidence
     result.timestamp = observation2D->timestamp;
 
+    float modelSensitivity = props.model_sensitivity;
+
     double deltaTime = observation2D->timestamp - mLastFrameTimestamp;
     if( mLastFrameTimestamp != 0.0 ){
         mApproximatedFramerate =  static_cast<int>(1.0 / (  deltaTime ));
@@ -107,6 +109,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     // 2d observation good enough to show to models?
     if (observation2D->confidence >= 0.7) {
 
+        mActiveModelPtr->setSensitivity( modelSensitivity );
         // allow each model to decide by themself if the new observation supports the model or not
         auto circleAndSupport = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage()  );
         auto circle = circleAndSupport.first;
@@ -134,6 +137,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         }
 
         for (auto& modelPtr : mAlternativeModelsPtrs) {
+             modelPtr->setSensitivity( modelSensitivity );
              modelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage() );
         }
 
