@@ -405,15 +405,19 @@ def rigid_transform_3D(A, B):
     return R, t
 
 
-def calculate_residual_3D_Points( ref_points, gaze_points, rotation , translation ):
+def calculate_residual_3D_Points( ref_points, gaze_points, eye_to_world_matrix ):
 
     average_distance = 0.0
     distance_variance = 0.0
     transformed_gaze_points = []
-    translation  = translation.reshape(1,3)
 
-    transformed_gaze_points = [np.dot(p, rotation.T) for p in gaze_points]
-    transformed_gaze_points = [p+translation for p in transformed_gaze_points]
+    for p in gaze_points:
+        point = np.zeros(4)
+        point[:3] = p
+        point[3] = 1.0
+        point = eye_to_world_matrix.dot(point)
+        point = np.squeeze(np.asarray(point))
+        transformed_gaze_points.append( point[:3] )
 
     for(a,b) in zip( ref_points, transformed_gaze_points):
         average_distance += np.linalg.norm(a-b)

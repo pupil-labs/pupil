@@ -148,13 +148,63 @@ class Binocular_Gaze_Mapper(Gaze_Mapping_Plugin):
 
 class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Vector_Gaze_Mapper"""
-    def __init__(self, g_pool, transformation , camera_intrinsics , cal_ref_points_3d = [], cal_gaze_points_3d = [] , gaze_distance = 500 ):
+    def __init__(self, g_pool, eye_to_world_matrix , camera_intrinsics , cal_ref_points_3d = [], cal_gaze_points_3d = [] , gaze_distance = 500 ):
         super(Vector_Gaze_Mapper, self).__init__(g_pool)
-        self.transformation  =  transformation
+        self.eye_to_world_matrix  =  eye_to_world_matrix
+        self.rotation_vector = cv2.Rodrigues( self.eye_to_world_matrix[:3,:3]  )[0]
+        self.translation_vector  = self.eye_to_world_matrix[:3,3]
         self.camera_matrix = camera_intrinsics['camera_matrix']
         self.dist_coefs = camera_intrinsics['dist_coefs']
         self.camera_intrinsics = camera_intrinsics
-        self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics , transformation , cal_ref_points_3d , cal_gaze_points_3d)
+        self.cal_ref_points_3d = cal_ref_points_3d
+        self.cal_gaze_points_3d = cal_gaze_points_3d
+        self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics , cal_ref_points_3d,eye_to_world_matrix, cal_gaze_points_3d)
+        self.g_pool = g_pool
+        self.visualizer.open_window()
+        self.gaze_pts_debug = []
+        self.sphere = None
+        self.gaze_distance = gaze_distance
+
+    def update(self,frame,events):
+        gaze_pts = []
+        for p in events['pupil_positions']:
+            if p['method'] == '3D c++' and p['confidence'] > self.g_pool.pupil_confidence_threshold:
+
+                gaze_point =  np.array(p['circle3D']['normal'] ) * self.gaze_distance  + np.array( p['sphere']['center'] )
+
+                gaze_point *= 1,-1,1
+                self.gaze_pts_debug.append( gaze_point )
+                image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , self.rotation_vector, self.translation_vector , self.camera_matrix , self.dist_coefs )
+                image_point = image_point.reshape(-1,2)
+                image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
+                gaze_pts.append({'norm_pos':image_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
+
+                self.sphere = p['sphere']
+
+
+        events['gaze_positions'] = gaze_pts
+
+    def gl_display(self):
+        self.visualizer.update_window( self.g_pool , self.gaze_pts_debug , self.sphere)
+        self.gaze_pts_debug = []
+
+    def get_init_dict(self):
+       return {'eye_to_world_matrix':self.eye_to_world_matrix ,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points_3d':self.cal_gaze_points_3d,  "camera_intrinsics":self.camera_intrinsics,'gaze_distance':self.gaze_distance}
+
+    def cleanup(self):
+        self.visualizer.close_window()
+
+
+class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
+    """docstring for Vector_Gaze_Mapper"""
+    def __init__(self, g_pool, transformation0, transformation1 , camera_intrinsics , cal_ref_points_3d = [], cal_gaze_points0_3d = [], cal_gaze_points1_3d = [], gaze_distance = 500 ):
+        super(Vector_Gaze_Mapper, self).__init__(g_pool)
+        self.transformation0  =  transformation0
+        self.transformation1  =  transformatio1
+        self.camera_matrix = camera_intrinsics['camera_matrix']
+        self.dist_coefs = camera_intrinsics['dist_coefs']
+        self.camera_intrinsics = camera_intrinsics
+        self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics ,cal_ref_points_3d, transformation0, cal_gaze_points0_3d, transformation1,  cal_gaze_points1_3d)
         self.g_pool = g_pool
         self.visualizer.open_window()
         self.gaze_pts_debug = []

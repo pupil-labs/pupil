@@ -54,16 +54,20 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500)
             cal_pt_cloud = np.array(cal_pt_cloud)
             gaze_3d = cal_pt_cloud[:,0]
             ref_3d = cal_pt_cloud[:,1]
-            print 'gaze: ' , gaze_3d
-            print 'ref points: ' , ref_3d
-            R,t = calibrate.rigid_transform_3D( np.matrix(gaze_3d), np.matrix(ref_3d) )
-            transformation = cv2.Rodrigues( R)[0] , t
-            print 'transformation: ' , transformation
-            avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_3d, R , t )
-            print 'avg distance: ' , avg_distance
-            print 'var distance: ' , dist_var
 
-            g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': cal_pt_cloud[:,0].tolist()})
+            #calculate transformation form eye camera to world camera
+            R,t = calibrate.rigid_transform_3D( np.matrix(gaze_3d), np.matrix(ref_3d) )
+
+            eye_to_world_matrix  = np.matrix(np.eye(4))
+            eye_to_world_matrix[:3,:3] = R
+            eye_to_world_matrix[:3,3:4] = t
+
+            avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_3d, eye_to_world_matrix )
+            print 'calibration average distance: ' , avg_distance
+            print 'calibration distance variance: ' , dist_var
+
+            g_pool.plugins.add(Vector_Gaze_Mapper,args={'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': cal_pt_cloud[:,0].tolist()})
+
         else:
             logger.error('Did not collect data during calibration.')
             return
