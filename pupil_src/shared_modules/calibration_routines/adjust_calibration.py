@@ -12,16 +12,18 @@ import os
 import cv2
 import numpy as np
 from methods import normalize,denormalize
+from file_methods import load_object
 from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
 from OpenGL.GL import GL_POLYGON
 from circle_detector import get_candidate_ellipses
+from finish_calibration import finish_calibration
 import calibrate
 
 import audio
 
 from pyglui import ui
 from plugin import Calibration_Plugin
-from gaze_mappers import Simple_Gaze_Mapper, Binocular_Gaze_Mapper
+
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -101,47 +103,31 @@ class Adjust_Calibration(Calibration_Plugin):
         self.button.status_text = ''
 
 
-        offset_pt_clound = np.array(calibrate.preprocess_data(self.gaze_list,self.ref_list))
+        offset_pt_clound = calibrate.preprocess_2d_data_monocular(calibrate.closest_matches_monocular(self.ref_list,self.gaze_list) )
         if len(offset_pt_clound)<3:
             logger.error('Did not sample enough data for touchup please retry.')
             return
 
         #Calulate the offset for gaze to target
+        offset_pt_clound = np.array(offset_pt_clound)
         offset =  offset_pt_clound[:,:2]-offset_pt_clound[:,2:]
         mean_offset  = np.mean(offset,axis=0)
 
-        cal_pt_cloud = np.load(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'))
-        #deduct the offset from the old calibration ref point position. Thus shifiting the calibtation.
-        # p["norm_pos"][0], p["norm_pos"][1],ref_pt['norm_pos'][0],ref_pt['norm_pos'][1]
+        user_calibration = load_object(os.path.join(self.g_pool.user_dir, "user_calibration_data"))
 
-        cal_pt_cloud[:,-2::] -= mean_offset
+        self.pupil_list = user_calibration['pupil_list']
+        self.ref_list = user_calibration['ref_list']
+        calibration_method = user_calibration['calibration_method']
 
-        if self.g_pool.binocular:
-            cal_pt_cloud_eye0 = np.load(os.path.join(self.g_pool.user_dir,'cal_pt_cloud_eye0.npy'))
-            cal_pt_cloud_eye1 = np.load(os.path.join(self.g_pool.user_dir,'cal_pt_cloud_eye1.npy'))
-            #Do the same for the individual eye in binocular
-            #p0["norm_pos"][0], p0["norm_pos"][1],p1["norm_pos"][0], p1["norm_pos"][1],ref_pt['norm_pos'][0],ref_pt['norm_pos'][1]
-            cal_pt_cloud_eye0[:,-2::] -= mean_offset
-            cal_pt_cloud_eye1[:,-2::] -= mean_offset
+        if '3d' in calibration_method:
+            logger.error('adjust calibration is not supported for 3d calibration.')
+            return
 
+        for r in self.ref_list:
+            r['norm_pos'] = [ r['norm_pos'][0]-mean_offset[0],r['norm_pos'][1]-mean_offset[1] ]
 
 
-        #then recalibtate the with old but shifted data.
-        map_fn,params = calibrate.get_map_from_cloud(cal_pt_cloud,self.g_pool.capture.frame_size,return_params=True, binocular=self.g_pool.binocular)
-        np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud.npy'),cal_pt_cloud)
-        #replace current gaze mapper with new
-        if self.g_pool.binocular:
-            # get monocular models for fallback (if only one pupil is detected)
-            cal_pt_cloud_eye0 = np.array(cal_pt_cloud_eye0)
-            cal_pt_cloud_eye1 = np.array(cal_pt_cloud_eye1)
-            _,params_eye0 = calibrate.get_map_from_cloud(cal_pt_cloud_eye0,self.g_pool.capture.frame_size,return_params=True)
-            _,params_eye1 = calibrate.get_map_from_cloud(cal_pt_cloud_eye1,self.g_pool.capture.frame_size,return_params=True)
-            self.g_pool.plugins.add(Binocular_Gaze_Mapper,args={'params':params, 'params_eye0':params_eye0, 'params_eye1':params_eye1})
-            np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud_eye0.npy'),cal_pt_cloud_eye0)
-            np.save(os.path.join(self.g_pool.user_dir,'cal_pt_cloud_eye1.npy'),cal_pt_cloud_eye1)
-
-        else:
-            self.g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
+        finish_calibration(self.g_pool,self.pupil_list,self.ref_list,force_2d=True)
 
 
     def update(self,frame,events):
@@ -170,17 +156,18 @@ class Adjust_Calibration(Calibration_Plugin):
                 self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
 
+
             else:
                 self.detected = False
                 self.pos = None #indicate that no reference is detected
 
 
-            self.auto_stop +=1
-            self.stop_marker_found = True
-
 
             #tracking logic
             if self.detected:
+                self.auto_stop +=1
+                self.stop_marker_found = True
+
                 # calculate smoothed manhattan velocity
                 smoother = 0.3
                 smooth_pos = np.array(self.smooth_pos)
@@ -209,12 +196,13 @@ class Adjust_Calibration(Calibration_Plugin):
                 if self.counter:
                     if self.smooth_vel > 0.01:
                         audio.tink()
-                        logger.debug("Marker moved to quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
+                        logger.warning("Marker moved to quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
                         self.counter = 0
                     else:
                         self.counter -= 1
                         ref = {}
                         ref["norm_pos"] = self.pos
+                        ref["screen_pos"] =  denormalize(self.pos,(frame.width,frame.height),flip_y=True)
                         ref["timestamp"] = frame.timestamp
                         self.ref_list.append(ref)
                         if self.counter == 0:
