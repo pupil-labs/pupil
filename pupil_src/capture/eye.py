@@ -178,7 +178,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
             session_settings.clear()
         # Initialize capture
         cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
-        default_settings = {'frame_size':(640,480),'frame_rate':30}
+        default_settings = {'frame_size':(640,480),'frame_rate':60}
         previous_settings = session_settings.get('capture_settings',None)
         if previous_settings and previous_settings['name'] == cap.name:
             cap.settings = previous_settings
