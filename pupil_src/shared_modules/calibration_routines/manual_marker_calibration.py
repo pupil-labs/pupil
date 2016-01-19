@@ -193,7 +193,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 if self.counter:
                     if self.smooth_vel > 0.01:
                         audio.tink()
-                        logger.debug("Marker moved to quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
+                        logger.warning("Marker moved to quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
                         self.counter = 0
                     else:
                         self.counter -= 1

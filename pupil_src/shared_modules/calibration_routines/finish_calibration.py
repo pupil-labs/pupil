@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 from gaze_mappers import *
 
-def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500):
+def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500, force_2d= False):
 
 
     camera_intrinsics = load_camera_calibration(g_pool)
@@ -24,7 +24,10 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500)
         else:
             logger.warning("Please calibrate your world camera using 'camera intrinsics estimation' for 3d gaze mapping.")
     else:
-        logger.warning("Enable 3D")
+        logger.warning("Enable 3D pupil detection to do 3d calibration.")
+
+    if force_2d:
+        use_3d = False
 
     # match eye data and check if biocular and or monocular
     pupil0 = [p for p in pupil_list if p['id']==0]
