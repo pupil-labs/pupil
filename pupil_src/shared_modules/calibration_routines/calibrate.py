@@ -411,12 +411,9 @@ def calculate_residual_3D_Points( ref_points, gaze_points, rotation , translatio
     distance_variance = 0.0
     transformed_gaze_points = []
     translation  = translation.reshape(1,3)
-    for p in gaze_points:
-        s =    np.dot(p, rotation.T)
-        transformed_gaze_points.append(s )
 
-    for p in transformed_gaze_points:
-        p += translation
+    transformed_gaze_points = [np.dot(p, rotation.T) for p in gaze_points]
+    transformed_gaze_points = [p+translation for p in transformed_gaze_points]
 
     for(a,b) in zip( ref_points, transformed_gaze_points):
         average_distance += np.linalg.norm(a-b)
