@@ -191,6 +191,10 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
         if self.count == 10:
             logger.info("Capture 10 calibration patterns.")
             self.button.status_text = "%i to go" %(self.count)
+            self.calculated = False
+            self.img_points = []
+            self.obj_points = []
+
 
         self.collect_new = True
 
@@ -253,12 +257,12 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
     def calculate(self):
         self.calculated = True
+        self.count = 10
         rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(np.array(self.obj_points), np.array(self.img_points),self.g_pool.capture.frame_size)
         logger.info("Calibrated Camera, RMS:%s"%rms)
         camera_calibration = {'camera_matrix':camera_matrix,'dist_coefs':dist_coefs,'camera_name':self.g_pool.capture.name,'resolution':self.g_pool.capture.frame_size}
         save_object(camera_calibration,os.path.join(self.g_pool.user_dir,"camera_calibration"))
         logger.info("Calibration saved to user folder")
-        self.count = 10
         self.camera_intrinsics = camera_matrix,dist_coefs,self.g_pool.capture.frame_size
         self.show_undistortion_switch.read_only=False
 

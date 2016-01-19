@@ -50,7 +50,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500)
             method = 'monocular 3d model'
             cal_pt_cloud = calibrate.preprocess_3d_data_monocular(matched_monocular_data,
                                             camera_intrinsics = camera_intrinsics,
-                                            calibration_distance=calibration_distance_3d)
+                                            calibration_distance_ref_points=400,calibration_distance_gaze_points=500 )
             cal_pt_cloud = np.array(cal_pt_cloud)
             gaze_3d = cal_pt_cloud[:,0]
             ref_3d = cal_pt_cloud[:,1]
@@ -59,7 +59,11 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500)
             R,t = calibrate.rigid_transform_3D( np.matrix(gaze_3d), np.matrix(ref_3d) )
             transformation = cv2.Rodrigues( R)[0] , t
             print 'transformation: ' , transformation
-            g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'calibration_points_3d': cal_pt_cloud[:,0].tolist(), 'calibration_points_2d': cal_pt_cloud[:,1].tolist()})
+            avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_3d, R , t )
+            print 'avg distance: ' , avg_distance
+            print 'var distance: ' , dist_var
+
+            g_pool.plugins.add(Vector_Gaze_Mapper,args={'transformation':transformation , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': cal_pt_cloud[:,0].tolist()})
         else:
             logger.error('Did not collect data during calibration.')
             return

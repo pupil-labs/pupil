@@ -328,7 +328,7 @@ def preprocess_2d_data_binocular(matched_data):
         cal_data.append( data_pt )
     return cal_data
 
-def preprocess_3d_data_monocular(matched_data, camera_intrinsics , calibration_distance):
+def preprocess_3d_data_monocular(matched_data, camera_intrinsics , calibration_distance_ref_points, calibration_distance_gaze_points):
     camera_matrix = camera_intrinsics["camera_matrix"]
     dist_coefs = camera_intrinsics["dist_coefs"]
 
@@ -340,15 +340,16 @@ def preprocess_3d_data_monocular(matched_data, camera_intrinsics , calibration_d
             # we multiply by a fixed (assumed) distace and
             # add the sphere pos to get the 3d gaze point in eye camera 3d coords
             sphere_pos  = np.array(pupil['sphere']['center'])
-            gaze_pt_3d = np.array(pupil['circle3D']['normal']) * calibration_distance + sphere_pos
+            gaze_pt_3d = np.array(pupil['circle3D']['normal']) * calibration_distance_gaze_points + sphere_pos
             # we convert from our custom coord system to the opencv convention.
             gaze_pt_3d *= 1.,-1.,1.
 
             # projected point uv to normal ray vector of camera
             ref_vector =  undistort_unproject_pts(ref['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
             ref_vector = ref_vector / np.linalg.norm(ref_vector)
-            # assuming a fixed (assumed) distace we get a 3d point in world camera 3d coords.
-            ref_pt_3d = ref_vector*calibration_distance
+            # assuming a fixed (assumed) distance we get a 3d point in world camera 3d coords.
+            ref_pt_3d = ref_vector*calibration_distance_ref_points
+
 
             point_pair_3d = tuple(gaze_pt_3d) , ref_pt_3d
             cal_data.append(point_pair_3d)
@@ -402,6 +403,32 @@ def rigid_transform_3D(A, B):
     print t
 
     return R, t
+
+
+def calculate_residual_3D_Points( ref_points, gaze_points, rotation , translation ):
+
+    average_distance = 0.0
+    distance_variance = 0.0
+    transformed_gaze_points = []
+    translation  = translation.reshape(1,3)
+    for p in gaze_points:
+        s =    np.dot(p, rotation.T)
+        transformed_gaze_points.append(s )
+
+    for p in transformed_gaze_points:
+        p += translation
+
+    for(a,b) in zip( ref_points, transformed_gaze_points):
+        average_distance += np.linalg.norm(a-b)
+
+    average_distance /= len(ref_points)
+
+    for(a,b) in zip( ref_points, transformed_gaze_points):
+        distance_variance += (np.linalg.norm(a-b) - average_distance)**2
+
+    distance_variance /= len(ref_points)
+
+    return average_distance, distance_variance
 
 
 
