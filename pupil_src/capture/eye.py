@@ -322,6 +322,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                     break
                 elif cmd == "Ping":
                     pipe_to_world.send("Pong")
+                    command = None
                 else:
                     command,payload = cmd
             else:
