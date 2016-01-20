@@ -45,7 +45,38 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500)
     if use_3d:
         if matched_binocular_data:
             method = 'binocular 3d model'
-            logger.error("Notimplemented")
+            cal_pt_cloud = calibrate.preprocess_3d_data_binocular(matched_binocular_data,
+                                        camera_intrinsics = camera_intrinsics,
+                                        calibration_distance_ref_points=400,calibration_distance_gaze_points=500 )
+            cal_pt_cloud = np.array(cal_pt_cloud)
+            gaze_pt0_3d = cal_pt_cloud[:,0]
+            gaze_pt1_3d = cal_pt_cloud[:,1]
+            ref_3d = cal_pt_cloud[:,2]
+            print 'gaze0: ' , gaze_pt0_3d
+            print 'gaze1: ' , gaze_pt1_3d
+            print 'ref points: ' , ref_3d
+
+
+            R0,t0 = calibrate.rigid_transform_3D( np.matrix(gaze_pt0_3d), np.matrix(ref_3d) )
+            R1,t1 = calibrate.rigid_transform_3D( np.matrix(gaze_pt1_3d), np.matrix(ref_3d) )
+
+            eye_to_world_matrix0  = np.matrix(np.eye(4))
+            eye_to_world_matrix0[:3,:3] = R0
+            eye_to_world_matrix0[:3,3:4] = t0
+
+            eye_to_world_matrix1  = np.matrix(np.eye(4))
+            eye_to_world_matrix1[:3,:3] = R1
+            eye_to_world_matrix1[:3,3:4] = t1
+
+            avg_distance0, dist_var0 = calibrate.calculate_residual_3D_Points( ref_3d, gaze_pt0_3d, eye_to_world_matrix0 )
+            avg_distance1, dist_var1 = calibrate.calculate_residual_3D_Points( ref_3d, gaze_pt1_3d, eye_to_world_matrix1 )
+            print 'calibration average distance eye0: ' , avg_distance0
+            print 'calibration distance variance eye0: ' , dist_var0
+            print 'calibration average distance eye1: ' , avg_distance1
+            print 'calibration distance variance eye1: ' , dist_var1
+
+            g_pool.plugins.add(Binocular_Vector_Gaze_Mapper,args={'eye_to_world_matrix0':eye_to_world_matrix0,'eye_to_world_matrix1':eye_to_world_matrix1 , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_3d.tolist(), 'cal_gaze_points0_3d': gaze_pt0_3d.tolist(), 'cal_gaze_points1_3d': gaze_pt1_3d.tolist() })
+
         elif matched_monocular_data:
             method = 'monocular 3d model'
             cal_pt_cloud = calibrate.preprocess_3d_data_monocular(matched_monocular_data,

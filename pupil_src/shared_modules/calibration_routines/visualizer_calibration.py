@@ -404,7 +404,7 @@ class Calibration_Visualizer(object):
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool , gaze_points0 , sphere0 , gaze_points1 = [] , sphere1 = None  ):
+	def update_window(self, g_pool , gaze_points0 , sphere0 , gaze_points1 = [] , sphere1 = None, intersection_points = []  ):
 
 		if not sphere0:
 			return
@@ -423,12 +423,14 @@ class Calibration_Visualizer(object):
 		glPushMatrix()
 		glLoadIdentity()
 
+		calibration_points_line_color = RGBA(0.5,0.5,0.5,0.05);
+
 
 		self.draw_coordinate_system(400)
 		self.draw_frustum( self.world_camera_width/ 10.0 , self.world_camera_height/ 10.0 , self.world_camera_focal / 10.0)
 
 		for p in self.cal_ref_points_3d:
-			draw_polyline( [ (0,0,0), p]  , 1 , RGBA(0.5,0.5,0.5,0.1), line_type = GL_LINES)
+			draw_polyline( [ (0,0,0), p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
 		#calibration points
 		draw_points( self.cal_ref_points_3d , 4 , RGBA( 0, 1, 1, 1 ) )
 
@@ -445,7 +447,7 @@ class Calibration_Visualizer(object):
 		self.draw_sphere(sphere_center0,sphere_radius0,  color = RGBA(1,1,0,1))
 
 		for p in self.cal_gaze_points0_3d:
-			draw_polyline( [ sphere_center0, p]  , 1 , RGBA(0.5,0.5,0.5,0.1), line_type = GL_LINES)
+			draw_polyline( [ sphere_center0, p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
 		#calibration points
 		draw_points( self.cal_gaze_points0_3d , 4 , RGBA( 1, 0, 1, 1 ) )
 
@@ -458,6 +460,40 @@ class Calibration_Visualizer(object):
 			draw_polyline( [sphere_center0, p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
 
 		glPopMatrix()
+
+
+		# if we have a second eye
+		if sphere1:
+			# draw things in second eye oordinate system
+			glPushMatrix()
+			glLoadMatrixf( self.eye_to_world_matrix1.T )
+
+			sphere_center1 = list(sphere1['center'])
+			#sphere_center1[1] *= -1. #not for the second cam
+			sphere_radius1 = sphere1['radius']
+
+			self.draw_sphere(sphere_center1,sphere_radius1,  color = RGBA(1,1,0,1))
+
+			for p in self.cal_gaze_points1_3d:
+				draw_polyline( [ sphere_center1, p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
+			#calibration points
+			draw_points( self.cal_gaze_points1_3d , 4 , RGBA( 1, 0, 1, 1 ) )
+
+			# eye camera
+			self.draw_coordinate_system(200)
+			self.draw_frustum( self.image_width / 10.0, self.image_height / 10.0, self.focal_length /10.)
+
+			draw_points( gaze_points1 , 2 , RGBA( 1, 0, 0, 1 ) )
+			for p in gaze_points1:
+				draw_polyline( [sphere_center1, p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
+
+			glPopMatrix()
+
+		#intersection points in world coordinate system
+		if len(intersection_points) > 0:
+			draw_points( intersection_points , 2 , RGBA( 1, 0.5, 0.5, 1 ) )
+			for p in intersection_points:
+				draw_polyline( [(0,0,0), p]  , 1 , RGBA(0.3,0.3,0.9,1), line_type = GL_LINES)
 
 		self.trackball.pop()
 
