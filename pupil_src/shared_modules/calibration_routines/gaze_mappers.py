@@ -304,26 +304,34 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
             gaze_line_world1[0] = np.squeeze(np.asarray( self.eye_to_world_matrix1.dot(gaze_line1[0])))[:3]
             gaze_line_world1[1] = np.squeeze(np.asarray( self.eye_to_world_matrix1.dot(gaze_line1[1])))[:3]
 
-            nearest_intersection_point = self.nearest_intersection( gaze_line_world0, gaze_line_world1 )
+                # for debug
+            self.gaze_pts_debug0.append(  gaze_line0[1][:3] )
+            self.gaze_pts_debug1.append(  gaze_line1[1][:3] )
 
-            self.last_gaze_distance = np.sqrt( nearest_intersection_point.dot( nearest_intersection_point ) )
-            print 'last_gaze_distance: ' , self.last_gaze_distance
+            nearest_intersection_point , intersection_distance = self.nearest_intersection( gaze_line_world0, gaze_line_world1 )
 
-            image_point, _  =  cv2.projectPoints( np.array([nearest_intersection_point]) ,  np.array([0.0,0.0,0.0]) ,  np.array([0.0,0.0,0.0]) , self.camera_matrix , self.dist_coefs )
-            image_point = image_point.reshape(-1,2)
-            image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
+            if nearest_intersection_point is not None :
 
-            confidence = (p0['confidence'] + p1['confidence'])/2.
-            ts = (p0['timestamp'] + p1['timestamp'])/2.
-            gaze_pts.append({'norm_pos':image_point,'confidence':confidence,'timestamp':ts,'base':[p0, p1]})
+                self.intersection_points_debug.append( nearest_intersection_point )
+
+                self.last_gaze_distance = np.sqrt( nearest_intersection_point.dot( nearest_intersection_point ) )
+                #print 'last_gaze_distance: ' , self.last_gaze_distance
+
+                image_point, _  =  cv2.projectPoints( np.array([nearest_intersection_point]) ,  np.array([0.0,0.0,0.0]) ,  np.array([0.0,0.0,0.0]) , self.camera_matrix , self.dist_coefs )
+                image_point = image_point.reshape(-1,2)
+                image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
+
+                confidence = (p0['confidence'] + p1['confidence'])/2.
+                ts = (p0['timestamp'] + p1['timestamp'])/2.
+                gaze_pts.append({'norm_pos':image_point,'confidence':confidence,'timestamp':ts,'base':[p0, p1]})
+
+            else:
+                print 'no intersection point found'
 
             self.sphere0 = p0['sphere']
             self.sphere1 = p1['sphere']
 
-            # for debug
-            self.gaze_pts_debug0.append(  gaze_line0[1][:3] )
-            self.gaze_pts_debug1.append(  gaze_line1[1][:3] )
-            self.intersection_points_debug.append( nearest_intersection_point )
+
             # keep sample with higher timestamp and increase the one with lower timestamp
             if p0['timestamp'] <= p1['timestamp'] and pupil_pts_0:
                 p0 = pupil_pts_0.pop(0)
@@ -355,18 +363,47 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
     def nearest_intersection( self, line0 , line1 ):
 
-        A1 = line0[0]
-        A2 = line0[1]
-        B1 = line1[0]
-        B2 = line1[1]
+        p1 = line0[0]
+        p2 = line0[1]
+        p3 = line1[0]
+        p4 = line1[1]
 
-        nA = np.dot(np.cross(B2-B1,A1-B1),np.cross(A2-A1,B2-B1));
-        nB = np.dot(np.cross(A2-A1,A1-B1),np.cross(A2-A1,B2-B1));
-        d = np.dot(np.cross(A2-A1,B2-B1),np.cross(A2-A1,B2-B1));
-        A0 = A1 + (nA/d)*(A2-A1);
-        B0 = B1 + (nB/d)*(B2-B1);
+        def mag(p):
+            return np.sqrt( p.dot(p) )
 
-        nAB = A0 - B0;
-        return B0 + nAB * 0.5
+        def normalise(p1, p2):
+            p = p2 - p1
+            m = mag(p)
+            if m == 0:
+                return [0.0, 0.0, 0.0]
+            else:
+                return p/m
+
+        # Check for parallel lines
+        magnitude = mag (np.cross(normalise(p1, p2), normalise(p3, p4 )) )
+
+        if round(magnitude, 6) != 0.0:
+
+            A = p1-p3
+            B = p2-p1
+            C = p4-p3
+
+            ma = ((np.dot(A, C)*np.dot(C, B)) - (np.dot(A, B)*np.dot(C, C)))/ \
+                 ((np.dot(B, B)*np.dot(C, C)) - (np.dot(C, B)*np.dot(C, B)))
+            mb = (ma*np.dot(C, B) + np.dot(A, C))/ np.dot(C, C)
+
+            # Calculate the point on line 1 that is the closest point to line 2
+            Pa = p1 + B*ma
+
+            # Calculate the point on line 2 that is the closest point to line 1
+            Pb = p3 + C* mb
+
+            nPoint = Pa - Pb
+            # Distance between lines
+            intersection_dist = np.sqrt( nPoint.dot( nPoint ))
+
+            return Pb + nPoint * 0.5 , intersection_dist
+        else:
+            return None,None  # parallel lines
 
 
