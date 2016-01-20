@@ -197,7 +197,7 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
 class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Vector_Gaze_Mapper"""
-    def __init__(self, g_pool, eye_to_world_matrix0, eye_to_world_matrix1 , camera_intrinsics , cal_ref_points_3d = [], cal_gaze_points0_3d = [], cal_gaze_points1_3d = [], gaze_distance = 500 ):
+    def __init__(self, g_pool, eye_to_world_matrix0, eye_to_world_matrix1 , camera_intrinsics , cal_ref_points_3d = [], cal_gaze_points0_3d = [], cal_gaze_points1_3d = [] ):
         super(Binocular_Vector_Gaze_Mapper, self).__init__(g_pool)
 
         self.eye_to_world_matrix0  =  eye_to_world_matrix0
@@ -224,7 +224,7 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.intersection_points_debug = []
         self.sphere0 = None
         self.sphere1 = None
-        self.gaze_distance = gaze_distance
+        self.last_gaze_distance = 0.0
 
     def update(self,frame,events):
 
@@ -242,15 +242,30 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         if len(pupil_pts_0) > 0 and len(pupil_pts_1) > 0:
             gaze_pts = self.map_binocular(pupil_pts_0, pupil_pts_1 ,frame )
         # fallback to monocular if something went wrong
-        else:
-            print 'not implemented yet'
-            #raise NotImplementedError()
-            # for p in pupil_pts_0:
-            #     gaze_point = self.map_fn_fallback[0](p['norm_pos'])
-            #     gaze_pts.append({'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
-            # for p in pupil_pts_1:
-            #     gaze_point = self.map_fn_fallback[1](p['norm_pos'])
-            #     gaze_pts.append({'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
+        # use the last gaze distance as approximation
+        elif self.last_gaze_distance != 0.0:
+            for p in pupil_pts_0:
+
+                gaze_point =  np.array(p['circle3D']['normal'] ) * self.last_gaze_distance  + np.array( p['sphere']['center'] )
+                gaze_point *= 1.0,-1.0,1.0
+                self.gaze_pts_debug0.append( gaze_point )
+                image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , self.rotation_vector0, self.translation_vector0 , self.camera_matrix , self.dist_coefs )
+                image_point = image_point.reshape(-1,2)
+                image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
+                gaze_pts.append({'norm_pos':image_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
+                self.sphere0 = p['sphere']
+
+            for p in pupil_pts_1:
+
+                gaze_point =  np.array(p['circle3D']['normal'] ) * self.last_gaze_distance  + np.array( p['sphere']['center'] )
+                gaze_point *= 1.0,-1.0,1.0
+                self.gaze_pts_debug1.append( gaze_point )
+                image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , self.rotation_vector1, self.translation_vector1 , self.camera_matrix , self.dist_coefs )
+                image_point = image_point.reshape(-1,2)
+                image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
+                gaze_pts.append({'norm_pos':image_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
+                self.sphere1 = p['sphere']
+
 
         events['gaze_positions'] = gaze_pts
 
@@ -291,6 +306,9 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
             nearest_intersection_point = self.nearest_intersection( gaze_line_world0, gaze_line_world1 )
 
+            self.last_gaze_distance = np.sqrt( nearest_intersection_point.dot( nearest_intersection_point ) )
+            print 'last_gaze_distance: ' , self.last_gaze_distance
+
             image_point, _  =  cv2.projectPoints( np.array([nearest_intersection_point]) ,  np.array([0.0,0.0,0.0]) ,  np.array([0.0,0.0,0.0]) , self.camera_matrix , self.dist_coefs )
             image_point = image_point.reshape(-1,2)
             image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
@@ -330,7 +348,7 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.intersection_points_debug = []
 
     def get_init_dict(self):
-       return {'eye_to_world_matrix0':self.eye_to_world_matrix0 ,'eye_to_world_matrix1':self.eye_to_world_matrix1 ,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points0_3d':self.cal_gaze_points0_3d, 'cal_gaze_points1_3d':self.cal_gaze_points1_3d,  "camera_intrinsics":self.camera_intrinsics,'gaze_distance':self.gaze_distance}
+       return {'eye_to_world_matrix0':self.eye_to_world_matrix0 ,'eye_to_world_matrix1':self.eye_to_world_matrix1 ,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points0_3d':self.cal_gaze_points0_3d, 'cal_gaze_points1_3d':self.cal_gaze_points1_3d,  "camera_intrinsics":self.camera_intrinsics }
 
     def cleanup(self):
         self.visualizer.close_window()
