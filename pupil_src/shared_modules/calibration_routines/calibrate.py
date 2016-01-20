@@ -360,15 +360,40 @@ def preprocess_3d_data_monocular(matched_data, camera_intrinsics , calibration_d
     return cal_data
 
 
-def preprocess_3d_data_binocular(matched_data, camera_intrinsics , calibration_distance):
-    raise NotImplementedError()
+def preprocess_3d_data_binocular(matched_data, camera_intrinsics , calibration_distance_ref_points, calibration_distance_gaze_points):
 
-    camera_matrix = camera_intrinsics[0]
-    dist_coefs = camera_intrinsics[1]
+    camera_matrix = camera_intrinsics["camera_matrix"]
+    dist_coefs = camera_intrinsics["dist_coefs"]
 
     cal_data = []
     for triplet in matched_data:
         ref,p0,p1 = triplet['ref'],triplet['pupil0'],triplet['pupil1']
+        try:
+            # taking the pupil normal as line of sight vector
+            # we multiply by a fixed (assumed) distance and
+            # add the sphere pos to get the 3d gaze point in eye camera 3d coords
+            sphere_pos0 = np.array(p0['sphere']['center'])
+            gaze_pt0 = np.array(p0['circle3D']['normal']) * calibration_distance_gaze_points + sphere_pos0
+            # we convert from our custom coord system to the opencv convention.
+            gaze_pt0 *= 1.,-1.,1.
+
+            sphere_pos1 = np.array(p1['sphere']['center'])
+            gaze_pt1 = np.array(p1['circle3D']['normal']) * calibration_distance_gaze_points + sphere_pos1
+            # we convert from our custom coord system to the opencv convention.
+            gaze_pt1 *= 1.,-1.,1.
+
+            # projected point uv to normal ray vector of camera
+            ref_vector =  undistort_unproject_pts(ref['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
+            ref_vector = ref_vector / np.linalg.norm(ref_vector)
+            # assuming a fixed (assumed) distance we get a 3d point in world camera 3d coords.
+            ref_pt_3d = ref_vector*calibration_distance_ref_points
+
+
+            point_triple_3d = tuple(gaze_pt0), tuple(gaze_pt1) , ref_pt_3d
+            cal_data.append(point_triple_3d)
+        except KeyError as e:
+            # this pupil data point did not have 3d detected data.
+            pass
 
     return cal_data
 
@@ -405,18 +430,19 @@ def rigid_transform_3D(A, B):
     return R, t
 
 
-def calculate_residual_3D_Points( ref_points, gaze_points, rotation , translation ):
+def calculate_residual_3D_Points( ref_points, gaze_points, eye_to_world_matrix ):
 
     average_distance = 0.0
     distance_variance = 0.0
     transformed_gaze_points = []
-    translation  = translation.reshape(1,3)
-    for p in gaze_points:
-        s =    np.dot(p, rotation.T)
-        transformed_gaze_points.append(s )
 
-    for p in transformed_gaze_points:
-        p += translation
+    for p in gaze_points:
+        point = np.zeros(4)
+        point[:3] = p
+        point[3] = 1.0
+        point = eye_to_world_matrix.dot(point)
+        point = np.squeeze(np.asarray(point))
+        transformed_gaze_points.append( point[:3] )
 
     for(a,b) in zip( ref_points, transformed_gaze_points):
         average_distance += np.linalg.norm(a-b)

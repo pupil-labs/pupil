@@ -44,16 +44,15 @@ cdef inline add3DResult( Detector3DResult& result, object py_2D_result, object f
         ellipse['center'] = (result.ellipse.center[0] + frame.width / 2.0 ,frame.height / 2.0  -  result.ellipse.center[1])
         ellipse['axes'] =  (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0)
         ellipse['angle'] = - (result.ellipse.angle * 180.0 / PI - 90.0)
-
         py_2D_result['ellipse'] = ellipse
         norm_center = normalize( ellipse['center'] , (frame.width, frame.height),flip_y=True)
         py_2D_result['norm_pos'] = norm_center
 
-    if result.sphere.radius != 0.0:
-        sphere = {}
-        sphere['center'] =  (result.sphere.center[0],result.sphere.center[1], result.sphere.center[2])
-        sphere['radius'] =  result.sphere.radius
-        py_2D_result['sphere'] = sphere
+    #if result.sphere.radius != 0.0:
+    sphere = {}
+    sphere['center'] =  (result.sphere.center[0],result.sphere.center[1], result.sphere.center[2])
+    sphere['radius'] =  result.sphere.radius
+    py_2D_result['sphere'] = sphere
 
 
     py_2D_result['modelConfidence'] = result.modelConfidence

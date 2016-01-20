@@ -77,6 +77,16 @@ def R_axis_angle(matrix, axis, angle):
     matrix[2, 2] = z*zC + ca
 
 
+def invert_rigid_transformation_matrix( matrix ):
+
+	rotation_matrix = np.matrix(matrix[:3,:3])
+	translation_matrix = np.matrix(matrix[:3,3:4])
+	inverted_matrix = np.eye(4)
+	inverted_matrix[:3,:3 ] = rotation_matrix.T
+	inverted_matrix[:3,3:4] = -rotation_matrix.T * translation_matrix
+
+	return inverted_matrix
+
 def convert_fov(fov,width):
 	fov = fov* math.pi/180
 	focal_length = (width/2)/np.tan(fov/2)
@@ -115,7 +125,7 @@ for i in range(0,int(circle_res+1)):
 	circle_xy.append([np.cos(temp),np.sin(temp)])
 
 class Calibration_Visualizer(object):
-	def __init__(self, g_pool, world_camera_intrinsics , mapping_transformation, cal_ref_points_3d, cal_gaze_points_3d,  name = "Debug Calibration Visualizer", run_independently = False):
+	def __init__(self, g_pool, world_camera_intrinsics , cal_ref_points_3d, eye_to_world_matrix0 , cal_gaze_points0_3d, eye_to_world_matrix1 = np.eye(4) , cal_gaze_points1_3d = [],   name = "Debug Calibration Visualizer", run_independently = False):
        # super(Visualizer, self).__init__()
 
 		self.g_pool = g_pool
@@ -123,25 +133,16 @@ class Calibration_Visualizer(object):
 		self.focal_length = 620
 		self.image_height = 480
 
-		self.mapping_transformation = mapping_transformation
+		self.eye_to_world_matrix0 = eye_to_world_matrix0
+		self.eye_to_world_matrix1 = eye_to_world_matrix1
+
 		self.cal_ref_points_3d = cal_ref_points_3d
-		self.cal_gaze_points_3d = cal_gaze_points_3d
+		self.cal_gaze_points0_3d = cal_gaze_points0_3d
+		self.cal_gaze_points1_3d = cal_gaze_points1_3d
 
 		self.world_camera_width = world_camera_intrinsics['resolution'][0]
 		self.world_camera_height = world_camera_intrinsics['resolution'][1]
 		self.world_camera_focal = (world_camera_intrinsics['camera_matrix'][0][0] +  world_camera_intrinsics['camera_matrix'][1][1] ) / 2.0
-
-		self.world_camera_matrix = np.identity(4)
-		rotation_matrix, _ = cv2.Rodrigues(mapping_transformation[0])
-
-		self.world_camera_rotation_matrix = np.identity(4)
-		self.world_camera_rotation_matrix[:3,:3] = rotation_matrix
-		self.world_camera_translation = mapping_transformation[1].reshape(1,3)[0]
-		self.wct = mapping_transformation[1]
-		# R_axis_angle( self.world_camera_rotation_matrix, (0,1,0) , 3.0*  np.pi / 4.0 )
-		#self.world_camera_translation = np.zeros((3))
-		# self.world_camera_translation[0] = -100
-
 
 		# transformation matrices
 		self.anthromorphic_matrix = self.get_anthropomorphic_matrix()
@@ -403,9 +404,9 @@ class Calibration_Visualizer(object):
 
 			# self.gui = ui.UI()
 
-	def update_window(self, g_pool , gaze_points, sphere  ):
+	def update_window(self, g_pool , gaze_points0 , sphere0 , gaze_points1 = [] , sphere1 = None, intersection_points = []  ):
 
-		if not sphere:
+		if not sphere0:
 			return
 		active_window = glfwGetCurrentContext()
 		glfwMakeContextCurrent(self._window)
@@ -418,58 +419,81 @@ class Calibration_Visualizer(object):
 		#glScalef( 1. ,-1. , -1. )
 		glMatrixMode( GL_MODELVIEW )
 
-
-		# world camera
-		camera_matrix = np.identity(4)
-		camera_matrix[:3,:3] = self.world_camera_rotation_matrix[:3,:3]
-		camera_matrix[:3, 3] = self.world_camera_translation
-
-		camera_pos = -np.matrix(self.world_camera_rotation_matrix[:3,:3]).T *  np.matrix( self.wct )
-		#translation = translation[0]
-		#print translation
-		#camera_matrix[:3, 3] = translation[0]
-		#eulers  = cv2.decomposeProjectionMatrix(camera_matrix)[-1]
-
-		glMatrixMode(GL_MODELVIEW )
+		# draw things in world camera coordinate system
 		glPushMatrix()
 		glLoadIdentity()
+
+		calibration_points_line_color = RGBA(0.5,0.5,0.5,0.05);
 
 
 		self.draw_coordinate_system(400)
 		self.draw_frustum( self.world_camera_width/ 10.0 , self.world_camera_height/ 10.0 , self.world_camera_focal / 10.0)
 
 		for p in self.cal_ref_points_3d:
-			draw_polyline( [ (0,0,0), p]  , 1 , RGBA(0.5,0.5,0.5,0.1), line_type = GL_LINES)
+			draw_polyline( [ (0,0,0), p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
 		#calibration points
 		draw_points( self.cal_ref_points_3d , 4 , RGBA( 0, 1, 1, 1 ) )
 
 		glPopMatrix()
 
-
+		# draw things in first eye oordinate system
 		glPushMatrix()
-		glLoadIdentity()
+		glLoadMatrixf( self.eye_to_world_matrix0.T )
 
-		glMultMatrixf( camera_matrix.T )
+		sphere_center0 = list(sphere0['center'])
+		sphere_center0[1] *= -1.
+		sphere_radius0 = sphere0['radius']
 
-		sphere_center = list(sphere['center'])
-		sphere_center[1] *= -1.
+		self.draw_sphere(sphere_center0,sphere_radius0,  color = RGBA(1,1,0,1))
 
-		self.draw_sphere(sphere_center,sphere['radius'],  color = RGBA(1,1,0,1))
-
-		for p in self.cal_gaze_points_3d:
-			draw_polyline( [ sphere_center, p]  , 1 , RGBA(0.5,0.5,0.5,0.1), line_type = GL_LINES)
+		for p in self.cal_gaze_points0_3d:
+			draw_polyline( [ sphere_center0, p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
 		#calibration points
-		draw_points( self.cal_gaze_points_3d , 4 , RGBA( 1, 0, 1, 1 ) )
+		draw_points( self.cal_gaze_points0_3d , 4 , RGBA( 1, 0, 1, 1 ) )
 
 		# eye camera
 		self.draw_coordinate_system(200)
 		self.draw_frustum( self.image_width / 10.0, self.image_height / 10.0, self.focal_length /10.)
 
-		draw_points( gaze_points , 2 , RGBA( 1, 0, 0, 1 ) )
-		for p in gaze_points:
-			draw_polyline( [sphere_center, p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
+		draw_points( gaze_points0 , 2 , RGBA( 1, 0, 0, 1 ) )
+		for p in gaze_points0:
+			draw_polyline( [sphere_center0, p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
 
 		glPopMatrix()
+
+
+		# if we have a second eye
+		if sphere1:
+			# draw things in second eye oordinate system
+			glPushMatrix()
+			glLoadMatrixf( self.eye_to_world_matrix1.T )
+
+			sphere_center1 = list(sphere1['center'])
+			#sphere_center1[1] *= -1. #not for the second cam
+			sphere_radius1 = sphere1['radius']
+
+			self.draw_sphere(sphere_center1,sphere_radius1,  color = RGBA(1,1,0,1))
+
+			for p in self.cal_gaze_points1_3d:
+				draw_polyline( [ sphere_center1, p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
+			#calibration points
+			draw_points( self.cal_gaze_points1_3d , 4 , RGBA( 1, 0, 1, 1 ) )
+
+			# eye camera
+			self.draw_coordinate_system(200)
+			self.draw_frustum( self.image_width / 10.0, self.image_height / 10.0, self.focal_length /10.)
+
+			draw_points( gaze_points1 , 2 , RGBA( 1, 0, 0, 1 ) )
+			for p in gaze_points1:
+				draw_polyline( [sphere_center1, p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
+
+			glPopMatrix()
+
+		#intersection points in world coordinate system
+		if len(intersection_points) > 0:
+			draw_points( intersection_points , 2 , RGBA( 1, 0.5, 0.5, 1 ) )
+			for p in intersection_points:
+				draw_polyline( [(0,0,0), p]  , 1 , RGBA(0.3,0.3,0.9,1), line_type = GL_LINES)
 
 		self.trackball.pop()
 
