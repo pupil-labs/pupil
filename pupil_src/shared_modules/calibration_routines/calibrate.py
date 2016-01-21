@@ -425,7 +425,7 @@ def rigid_transform_3D(A, B):
 
     t = -R*centroid_A.T + centroid_B.T
 
-    print t
+    # print t
 
     return R, t
 
@@ -468,7 +468,7 @@ def get_transformation_from_point_set( cal_pt_cloud, camera_matrix , dist_coefs 
     image_points =  np.array(cal_pt_cloud[:,1].tolist(), dtype=np.float32)
     image_points = image_points.reshape(-1,1,2)
     #result =  cv2.estimateAffine3D(src, dst)
-    print object_points
+    #print object_points
     #print image_points
 
     result = cv2.solvePnP( object_points , image_points, camera_matrix, dist_coefs, flags=cv2.CV_ITERATIVE)
