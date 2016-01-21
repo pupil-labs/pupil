@@ -140,8 +140,8 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
 
         def on_button(window,button, action, mods):
             if g_pool.display_mode == 'roi':
-                if action == glfw.GLFW_RELEASE and u_r.active_edit_pt:
-                    u_r.active_edit_pt = False
+                if action == glfw.GLFW_RELEASE and g_pool.u_r.active_edit_pt:
+                    g_pool.u_r.active_edit_pt = False
                     return # if the roi interacts we dont what the gui to interact as well
                 elif action == glfw.GLFW_PRESS:
                     pos = glfw.glfwGetCursorPos(window)
@@ -149,7 +149,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                     if g_pool.flip:
                         pos = 1-pos[0],1-pos[1]
                     pos = denormalize(pos,(frame.width,frame.height)) # Position in img pixels
-                    if u_r.mouse_over_edit_pt(pos,u_r.handle_size+40,u_r.handle_size+40):
+                    if g_pool.u_r.mouse_over_edit_pt(pos,g_pool.u_r.handle_size+40,g_pool.u_r.handle_size+40):
                         return # if the roi interacts we dont what the gui to interact as well
 
             g_pool.gui.update_button(button,action,mods)
@@ -160,12 +160,12 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
             hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0]/glfw.glfwGetWindowSize(window)[0])
             g_pool.gui.update_mouse(x*hdpi_factor,y*hdpi_factor)
 
-            if u_r.active_edit_pt:
+            if g_pool.u_r.active_edit_pt:
                 pos = normalize((x,y),glfw.glfwGetWindowSize(main_window))
                 if g_pool.flip:
                     pos = 1-pos[0],1-pos[1]
                 pos = denormalize(pos,(frame.width,frame.height) )
-                u_r.move_vertex(u_r.active_pt_idx,pos)
+                g_pool.u_r.move_vertex(g_pool.u_r.active_pt_idx,pos)
 
         def on_scroll(window,x,y):
             g_pool.gui.update_scroll(x,y*scroll_factor)
@@ -206,10 +206,16 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         g_pool.display_mode_info_text = {'camera_image': "Raw eye camera image. This uses the least amount of CPU power",
                                     'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be a small as possible but big enough to capture to pupil in its movements",
                                     'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters with in the Pupil Detection menu below."}
-        # g_pool.draw_pupil = session_settings.get('draw_pupil',True)
 
-        u_r = UIRoi(frame.img.shape)
-        u_r.set(session_settings.get('roi',u_r.get()))
+
+        g_pool.u_r = UIRoi(frame.img.shape)
+        g_pool.u_r.set(session_settings.get('roi',g_pool.u_r.get()))
+
+
+        def on_frame_size_change(new_size):
+            g_pool.u_r = UIRoi((new_size[1],new_size[0]))
+
+        cap.on_frame_size_change = on_frame_size_change
 
         writer = None
 
@@ -341,7 +347,6 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                 frame = cap.get_frame()
 
 
-
             #update performace graphs
             t = frame.timestamp
             dt,ts = t-ts,t
@@ -378,7 +383,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
 
 
             # pupil ellipse detection
-            result = g_pool.pupil_detector.detect(frame, u_r, g_pool.display_mode == 'algorithm')
+            result = g_pool.pupil_detector.detect(frame, g_pool.u_r, g_pool.display_mode == 'algorithm')
             result['id'] = eye_id
             # stream the result
             g_pool.pupil_queue.put(result)
@@ -421,7 +426,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
 
                     #render the ROI
                     if g_pool.display_mode == 'roi':
-                        u_r.draw(g_pool.gui.scale)
+                        g_pool.u_r.draw(g_pool.gui.scale)
 
                     #update screen
                     glfw.glfwSwapBuffers(main_window)
@@ -440,7 +445,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         glfw.glfwRestoreWindow(main_window) #need to do this for windows os
         # save session persistent settings
         session_settings['gui_scale'] = g_pool.gui.scale
-        session_settings['roi'] = u_r.get()
+        session_settings['roi'] = g_pool.u_r.get()
         session_settings['flip'] = g_pool.flip
         session_settings['display_mode'] = g_pool.display_mode
         session_settings['ui_config'] = g_pool.gui.configuration
