@@ -1,6 +1,3 @@
-// SingleEyeFitter.cpp : Defines the entry point for the console application.
-//
-
 
 #include "EyeModelFitter.h"
 #include "Fit/CircleOnSphereFit.h"
@@ -194,20 +191,6 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     mCurrentInitialSphere = mActiveModelPtr->getInitialSphere();
 
     result.sphere = mCurrentSphere;
-
-    // std::cout << "active model maturity: " << mActiveModelPtr->getMaturity() << std::endl;
-    // std::cout << "active model fit: " << mActiveModelPtr->getFit() << std::endl;
-    // std::cout << "active model performance: " << mActiveModelPtr->getPerformance() << std::endl;
-
-    //int index = 0;
-    // for (const auto& modelPtr : mAlternativeModelsPtrs) {
-
-    //     std::cout << "model " << index << " maturity: " << modelPtr->getMaturity() << std::endl;
-    //     std::cout << "model " << index << " fit: " << modelPtr->getFit() << std::endl;
-    //     std::cout << "model  " << index << "performance: " << modelPtr->getPerformance() << std::endl;
-    //     index++;
-
-    // }
     // project the circle back to 2D
     // needed for some calculations in 2D later (calibration)
     if(result.circle != Circle::Null){
