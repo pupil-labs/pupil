@@ -12,13 +12,17 @@ logger = logging.getLogger(__name__)
 from gaze_mappers import *
 
 def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500, force_2d= False):
-
+    if pupil_list and ref_list:
+        pass
+    else:
+        logger.error("Did not collect calibration data. Please retry.")
+        return
 
     camera_intrinsics = load_camera_calibration(g_pool)
 
     use_3d = False
     # do we have data from 3D detector?
-    if pupil_list[0] and pupil_list[0]['method'] == '3D c++':
+    if pupil_list[0]['method'] == '3D c++':
         if camera_intrinsics:
             use_3d = True
         else:
