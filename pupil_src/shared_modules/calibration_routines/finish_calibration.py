@@ -50,7 +50,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             method = 'binocular 3d model'
             cal_pt_cloud = calibrate.preprocess_3d_data_binocular(matched_binocular_data,
                                         camera_intrinsics = camera_intrinsics,
-                                        calibration_distance_ref_points=400,calibration_distance_gaze_points=500 )
+                                        calibration_distance_ref_points=470,calibration_distance_gaze_points=500 )
             cal_pt_cloud = np.array(cal_pt_cloud)
             gaze_pt0_3d = cal_pt_cloud[:,0]
             gaze_pt1_3d = cal_pt_cloud[:,1]
@@ -60,16 +60,25 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             print 'ref points: ' , ref_3d
 
 
-            R0,t0 = calibrate.rigid_transform_3D( np.matrix(gaze_pt0_3d), np.matrix(ref_3d) )
-            R1,t1 = calibrate.rigid_transform_3D( np.matrix(gaze_pt1_3d), np.matrix(ref_3d) )
+            R0,t0 = calibrate.rigid_transform_3D( np.matrix(gaze_pt0_3d) ,np.matrix(ref_3d) )
+            R1,t1 = calibrate.rigid_transform_3D( np.matrix(gaze_pt1_3d) ,np.matrix(ref_3d) )
+
+
+            sphere0 = pupil0[-1]['sphere']['center']
+            sphere1 = pupil1[-1]['sphere']['center']
+
 
             eye_to_world_matrix0  = np.matrix(np.eye(4))
             eye_to_world_matrix0[:3,:3] = R0
-            eye_to_world_matrix0[:3,3:4] = t0
+            eye_to_world_matrix0[:3,3:4] =  t0
+            # eye_to_world_matrix0[:3,3:4] =  np.array((20,10,-20)).reshape(3,1)
+            # eye_to_world_matrix0[:3,3:4] -=  R0 * (np.array(sphere0)*(1,-1,1)).reshape(3,1)
 
             eye_to_world_matrix1  = np.matrix(np.eye(4))
             eye_to_world_matrix1[:3,:3] = R1
-            eye_to_world_matrix1[:3,3:4] = t1
+            eye_to_world_matrix1[:3,3:4] =  t1
+            # eye_to_world_matrix1[:3,3:4] =  np.array((-40,10,-20)).reshape(3,1)
+            # eye_to_world_matrix1[:3,3:4] -=  R1 * (np.array(sphere1)*(1,-1,1)).reshape(3,1)
 
             avg_distance0, dist_var0 = calibrate.calculate_residual_3D_Points( ref_3d, gaze_pt0_3d, eye_to_world_matrix0 )
             avg_distance1, dist_var1 = calibrate.calculate_residual_3D_Points( ref_3d, gaze_pt1_3d, eye_to_world_matrix1 )
@@ -84,7 +93,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             method = 'monocular 3d model'
             cal_pt_cloud = calibrate.preprocess_3d_data_monocular(matched_monocular_data,
                                             camera_intrinsics = camera_intrinsics,
-                                            calibration_distance_ref_points=400,calibration_distance_gaze_points=500 )
+                                            calibration_distance_ref_points=470,calibration_distance_gaze_points=500 )
             cal_pt_cloud = np.array(cal_pt_cloud)
             gaze_3d = cal_pt_cloud[:,0]
             ref_3d = cal_pt_cloud[:,1]
