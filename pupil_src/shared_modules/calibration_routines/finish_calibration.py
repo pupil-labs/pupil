@@ -20,18 +20,6 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
 
     camera_intrinsics = load_camera_calibration(g_pool)
 
-    use_3d = False
-    # do we have data from 3D detector?
-    if pupil_list[0]['method'] == '3D c++':
-        if camera_intrinsics:
-            use_3d = True
-        else:
-            logger.warning("Please calibrate your world camera using 'camera intrinsics estimation' for 3d gaze mapping.")
-    else:
-        logger.warning("Enable 3D pupil detection to do 3d calibration.")
-
-    if force_2d:
-        use_3d = False
 
     # match eye data and check if biocular and or monocular
     pupil0 = [p for p in pupil_list if p['id']==0]
@@ -47,6 +35,20 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
         matched_monocular_data = matched_pupil1_data
     logger.info('Collected %s monocular calibration data.'%len(matched_monocular_data))
     logger.info('Collected %s binocular calibration data.'%len(matched_binocular_data))
+
+
+    use_3d = False
+    # do we have data from 3D detector on the eyes we collected data on?
+    if (pupil0 and pupil0[0]['method'] != '3D c++') or (pupil1 and pupil1[0]['method'] != '3D c++') :
+        logger.warning("Enable 3D pupil detection to do 3d calibration.")
+    else:
+        if camera_intrinsics:
+            use_3d = True
+        else:
+            logger.warning("Please calibrate your world camera using 'camera intrinsics estimation' for 3d gaze mapping.")
+
+    if force_2d:
+        use_3d = False
 
 
     if use_3d:
