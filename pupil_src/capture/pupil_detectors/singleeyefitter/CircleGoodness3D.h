@@ -16,11 +16,8 @@ namespace singleeyefitter {
     class CircleGoodness3D {
         typedef singleeyefitter::Sphere<double> Sphere;
 
-        const double mFocalLength;
-        const Sphere mSphere;
-
         public:
-            CircleGoodness3D( double focalLength , Sphere sphere) : mFocalLength(focalLength), mSphere(sphere)
+            CircleGoodness3D( )
             {
             };
 
@@ -193,23 +190,23 @@ namespace singleeyefitter {
             }
 
 
-            double operator()(const Circle& circle,  Edges3D& edges ) const
+            double operator()(const Circle& circle,  Edges3D& edges, double focalLength , Sphere sphere ) const
             {
 
 
                 // We go the same way as in 2D and compare the amount of edges with circumference of the ellipse
 
                 // project the circle back on the image plane
-                Ellipse ellipse = Ellipse(project( circle, mFocalLength ));
+                Ellipse ellipse = Ellipse(project( circle, focalLength ));
 
                 // filter edges
                 // just use the edges on the plane created by the circle
                 // and within a certain radius error
                 //const double radiusTolerance = 0.1;
-                //const Vector3 circleCenter = circle.center - mSphere.center; // in coord system of the sphere
+                //const Vector3 circleCenter = circle.center - sphere.center; // in coord system of the sphere
                 const Vector3 planeNormal = circle.normal;
-                const double planePointLength  = std::sqrt( mSphere.radius * mSphere.radius - circle.radius * circle.radius);
-                const Vector3 planePoint = mSphere.center +  planePointLength * planeNormal; // real circle center in the sphere
+                const double planePointLength  = std::sqrt( sphere.radius * sphere.radius - circle.radius * circle.radius);
+                const Vector3 planePoint = sphere.center +  planePointLength * planeNormal; // real circle center in the sphere
 
                 auto circleFilter = [&]( const Vector3& e ){
                     Vector3 point = e - planePoint;
