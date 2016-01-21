@@ -99,8 +99,8 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
 
             avg_distance0, dist_var0 = calibrate.calculate_residual_3D_Points( ref_3d, gaze_pt0_3d, eye_to_world_matrix0 )
             avg_distance1, dist_var1 = calibrate.calculate_residual_3D_Points( ref_3d, gaze_pt1_3d, eye_to_world_matrix1 )
-            print 'calibration average distance eye0: ' , avg_distance0
-            print 'calibration average distance eye1: ' , avg_distance1
+            logger.info('calibration average distance eye0: %s'%avg_distance0)
+            logger.info('calibration average distance eye1: %s'%avg_distance1)
 
             g_pool.plugins.add(Binocular_Vector_Gaze_Mapper,args={'eye_to_world_matrix0':eye_to_world_matrix0,'eye_to_world_matrix1':eye_to_world_matrix1 , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_3d.tolist(), 'cal_gaze_points0_3d': gaze_pt0_3d.tolist(), 'cal_gaze_points1_3d': gaze_pt1_3d.tolist() })
 
