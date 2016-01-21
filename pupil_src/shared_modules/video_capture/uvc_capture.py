@@ -172,6 +172,9 @@ class Camera_Capture(object):
             logger.warning("%s resolution capture mode not available. Selected %s."%(new_size,size))
         self.capture.frame_size = size
 
+        if hasattr(self,'on_frame_size_change'):
+            self.on_frame_size_change(size)
+
     @property
     def name(self):
         return self.capture.name
