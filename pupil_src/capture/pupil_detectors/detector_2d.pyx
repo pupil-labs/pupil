@@ -118,11 +118,8 @@ cdef class Detector_2D:
 
         # every coordinates in the result are relative to the current ROI
         cppResultPtr =  self.thisptr.detect(self.detectProperties, frame, frameColor, debugImage, Rect_[int](roi_x,roi_y,roi_width,roi_height),  visualize , use_debugImage )
-        cdef Detector2DResult cppResult = deref(cppResultPtr)
 
-        cppResult.timestamp = frame_.timestamp
-
-        py_result = convertToPythonResult( cppResult, frame_ , roi )
+        py_result = convertTo2DPythonResult( deref(cppResultPtr), frame_ , roi )
 
         return py_result
 

@@ -124,19 +124,13 @@ cdef class Detector_3D:
             roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_width))
 
         # every coordinates in the result are relative to the current ROI
-        cppResultPtr =  self.detector2DPtr.detect(self.detectProperties2D, cv_image, cv_image_color, debug_image, Rect_[int](roi_x,roi_y,roi_width,roi_height), visualize , False ) #we don't use debug image in 3d model
-        deref(cppResultPtr).timestamp = frame.timestamp
-
-        cdef Detector2DResult cppResult = deref(cppResultPtr)
-
-        pyResult = convertToPythonResult( cppResult, frame, roi )
+        cpp2DResultPtr =  self.detector2DPtr.detect(self.detectProperties2D, cv_image, cv_image_color, debug_image, Rect_[int](roi_x,roi_y,roi_width,roi_height), visualize , False ) #we don't use debug image in 3d model
 
         ######### 3D Model Part ############
         debugDetector =  self.debugVisualizer3D._window
-        cdef Detector3DResult cpp3DResult  = self.detector3DPtr.updateAndDetect( cppResultPtr , self.detectProperties3D, debugDetector)
+        cdef Detector3DResult cpp3DResult  = self.detector3DPtr.updateAndDetect( cpp2DResultPtr , self.detectProperties3D, debugDetector)
 
-        #if not cpp3DResult.circle.center.isZero() and not cpp3DResult.circle.normal.isZero():
-        add3DResult(cpp3DResult , pyResult, frame )
+        pyResult = convertTo3DPythonResult(cpp3DResult , frame )
 
         if debugDetector:
             self.pyResult3D = prepareForVisualization3D(cpp3DResult)

@@ -116,6 +116,8 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         auto supportGoodness = modelSupport.first;
         auto supportGoodnessConfidence = modelSupport.second;
 
+        result.modelConfidence = mActiveModelPtr->getPerformance();
+
         // recalculate confidence based on 3D observation
         double confidence2D = observation2D->confidence;
         result.confidence = confidence2D * (1.0 - supportGoodnessConfidence)  + supportGoodness * supportGoodnessConfidence;
@@ -206,6 +208,15 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     //     index++;
 
     // }
+    // project the circle back to 2D
+    // needed for some calculations in 2D later (calibration)
+    if(result.circle != Circle::Null){
+        result.ellipse  = Ellipse(project(result.circle,mFocalLength));
+    }
+    else{
+        result.confidence = 0.0;
+        result.ellipse = Ellipse::Null;
+   }
 
     // contains the logic for building alternative models if the current one is bad
     checkModels(modelSensitivity );
