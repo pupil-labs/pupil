@@ -229,7 +229,7 @@ namespace singleeyefitter {
 
             public:
 
-                SMA( int windowSize ) : mWindowSize(windowSize)
+                SMA( int windowSize ) : mWindowSize(windowSize), mAverage(0.0), mAverageDirty(true)
                 {};
 
                 void addValue( T value ){
@@ -283,7 +283,7 @@ namespace singleeyefitter {
 
             public:
 
-                WMA( int windowSize ) : mWindowSize(windowSize)
+                WMA( int windowSize ) : mWindowSize(windowSize) , mDenominator(1.0), mNumerator(0.0), mAverage(0.0), mAverageDirty(true)
                 {};
 
                 void addValue( T value , T weight ){
