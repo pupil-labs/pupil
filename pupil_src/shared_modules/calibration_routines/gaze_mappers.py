@@ -172,7 +172,6 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
                 gaze_point =  np.array(p['circle3D']['normal'] ) * self.gaze_distance  + np.array( p['sphere']['center'] )
 
-                gaze_point *= 1.0,-1.0,1.0
                 self.gaze_pts_debug.append( gaze_point )
                 image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , self.rotation_vector, self.translation_vector , self.camera_matrix , self.dist_coefs )
                 image_point = image_point.reshape(-1,2)
@@ -248,7 +247,7 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
             for p in pupil_pts_0:
 
                 gaze_point =  np.array(p['circle3D']['normal'] ) * self.last_gaze_distance  + np.array( p['sphere']['center'] )
-                gaze_point *= 1.0,-1.0,1.0
+
                 self.gaze_pts_debug0.append( gaze_point )
                 image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , self.rotation_vector0, self.translation_vector0 , self.camera_matrix , self.dist_coefs )
                 image_point = image_point.reshape(-1,2)
@@ -259,7 +258,7 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
             for p in pupil_pts_1:
 
                 gaze_point =  np.array(p['circle3D']['normal'] ) * self.last_gaze_distance  + np.array( p['sphere']['center'] )
-                gaze_point *= 1.0,-1.0,1.0
+
                 self.gaze_pts_debug1.append( gaze_point )
                 image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , self.rotation_vector1, self.translation_vector1 , self.camera_matrix , self.dist_coefs )
                 image_point = image_point.reshape(-1,2)
@@ -290,12 +289,6 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
             gaze_line1 = [np.zeros(4), np.zeros(4)]
             gaze_line1[0][:3] =   np.array( p1['sphere']['center'] )
             gaze_line1[1][:3] = np.array( p1['sphere']['center'] ) + np.array( p1['circle3D']['normal'] ) * self.manual_gaze_distance
-
-
-            gaze_line0[0][1] *= -1.0
-            gaze_line0[1][1] *= -1.0
-            gaze_line1[0][1] *= -1.0
-            gaze_line1[1][1] *= -1.0
 
             #transform lines to world-coordinate system
             gaze_line_world0 = [np.zeros(3), np.zeros(3)]

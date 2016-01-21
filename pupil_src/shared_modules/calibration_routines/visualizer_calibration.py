@@ -411,7 +411,6 @@ class Calibration_Visualizer(object):
 			glLoadMatrixf( self.eye_to_world_matrix0.T )
 
 			sphere_center0 = list(sphere0['center'])
-			sphere_center0[1] *= -1.
 			sphere_radius0 = sphere0['radius']
 
 			self.draw_sphere(sphere_center0,sphere_radius0,  color = RGBA(1,1,0,1))
@@ -448,7 +447,7 @@ class Calibration_Visualizer(object):
 			glLoadMatrixf( self.eye_to_world_matrix1.T )
 
 			sphere_center1 = list(sphere1['center'])
-			#sphere_center1[1] *= -1. #not for the second cam
+			sphere_center1[1] *= -1.
 			sphere_radius1 = sphere1['radius']
 
 			self.draw_sphere(sphere_center1,sphere_radius1,  color = RGBA(1,1,0,1))

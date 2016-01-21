@@ -341,8 +341,6 @@ def preprocess_3d_data_monocular(matched_data, camera_intrinsics , calibration_d
             # add the sphere pos to get the 3d gaze point in eye camera 3d coords
             sphere_pos  = np.array(pupil['sphere']['center'])
             gaze_pt_3d = np.array(pupil['circle3D']['normal']) * calibration_distance + sphere_pos
-            # we convert from our custom coord system to the opencv convention.
-            gaze_pt_3d *= 1.,-1.,1.
 
             # projected point uv to normal ray vector of camera
             ref_vector =  undistort_unproject_pts(ref['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
@@ -374,13 +372,11 @@ def preprocess_3d_data_binocular(matched_data, camera_intrinsics , calibration_d
             # add the sphere pos to get the 3d gaze point in eye camera 3d coords
             sphere_pos0 = np.array(p0['sphere']['center'])
             gaze_pt0 = np.array(p0['circle3D']['normal']) * calibration_distance + sphere_pos0
-            # we convert from our custom coord system to the opencv convention.
-            gaze_pt0 *= 1.,-1.,1.
+
 
             sphere_pos1 = np.array(p1['sphere']['center'])
             gaze_pt1 = np.array(p1['circle3D']['normal']) * calibration_distance + sphere_pos1
-            # we convert from our custom coord system to the opencv convention.
-            gaze_pt1 *= 1.,-1.,1.
+
 
             # projected point uv to normal ray vector of camera
             ref_vector =  undistort_unproject_pts(ref['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
