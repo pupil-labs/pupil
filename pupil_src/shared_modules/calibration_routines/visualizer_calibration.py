@@ -424,7 +424,7 @@ class Calibration_Visualizer(object):
 		glLoadIdentity()
 
 		calibration_points_line_color = RGBA(0.5,0.5,0.5,0.05);
-
+		error_line_color = RGBA(1.0,0.0,0.0,0.5)
 
 		self.draw_coordinate_system(400)
 		self.draw_frustum( self.world_camera_width/ 10.0 , self.world_camera_height/ 10.0 , self.world_camera_focal / 10.0)
@@ -461,6 +461,15 @@ class Calibration_Visualizer(object):
 
 		glPopMatrix()
 
+		#draw error lines form eye gaze points to world camera ref points
+		for(cal_gaze_point,ref_point) in zip(self.cal_gaze_points0_3d, self.cal_ref_points_3d):
+			point = np.zeros(4)
+			point[:3] = cal_gaze_point
+			point[3] = 1.0
+			point =  self.eye_to_world_matrix0.dot( point )
+			point = np.squeeze(np.asarray(point))
+			draw_polyline( [ point[:3], ref_point]  , 1 , error_line_color, line_type = GL_LINES)
+
 
 		# if we have a second eye
 		if sphere1:
@@ -488,6 +497,17 @@ class Calibration_Visualizer(object):
 				draw_polyline( [sphere_center1, p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
 
 			glPopMatrix()
+
+
+			#draw error lines form eye gaze points to world camera ref points
+			for(cal_gaze_point,ref_point) in zip(self.cal_gaze_points1_3d, self.cal_ref_points_3d):
+				point = np.zeros(4)
+				point[:3] = cal_gaze_point
+				point[3] = 1.0
+				point =  self.eye_to_world_matrix1.dot( point )
+				point = np.squeeze(np.asarray(point))
+				draw_polyline( [ point[:3], ref_point]  , 1 , error_line_color, line_type = GL_LINES)
+
 
 		#intersection points in world coordinate system
 		if len(intersection_points) > 0:
