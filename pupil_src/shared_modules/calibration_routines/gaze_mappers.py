@@ -225,6 +225,7 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.sphere0 = None
         self.sphere1 = None
         self.last_gaze_distance = 0.0
+        self.manual_gaze_distance = 500
 
     def update(self,frame,events):
 
@@ -242,8 +243,8 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         if len(pupil_pts_0) > 0 and len(pupil_pts_1) > 0:
             gaze_pts = self.map_binocular(pupil_pts_0, pupil_pts_1 ,frame )
         # fallback to monocular if something went wrong
-        # use the last gaze distance as approximation
-        elif self.last_gaze_distance != 0.0:
+        else:
+            self.last_gaze_distance = self.manual_gaze_distance
             for p in pupil_pts_0:
 
                 gaze_point =  np.array(p['circle3D']['normal'] ) * self.last_gaze_distance  + np.array( p['sphere']['center'] )
@@ -284,11 +285,12 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
             # a line is defined by two point
             gaze_line0 = [np.zeros(4), np.zeros(4)]
             gaze_line0[0][:3] =  np.array( p0['sphere']['center'] )
-            gaze_line0[1][:3] =  np.array( p0['sphere']['center'] ) + np.array(p0['circle3D']['normal'] ) * 10000.0
+            gaze_line0[1][:3] =  np.array( p0['sphere']['center'] ) + np.array(p0['circle3D']['normal'] ) * self.manual_gaze_distance
 
             gaze_line1 = [np.zeros(4), np.zeros(4)]
             gaze_line1[0][:3] =   np.array( p1['sphere']['center'] )
-            gaze_line1[1][:3] = np.array( p1['sphere']['center'] ) + np.array( p1['circle3D']['normal'] ) * 10000.0
+            gaze_line1[1][:3] = np.array( p1['sphere']['center'] ) + np.array( p1['circle3D']['normal'] ) * self.manual_gaze_distance
+
 
             gaze_line0[0][1] *= -1.0
             gaze_line0[1][1] *= -1.0
@@ -310,10 +312,17 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
             nearest_intersection_point , intersection_distance = self.nearest_intersection( gaze_line_world0, gaze_line_world1 )
 
-            if nearest_intersection_point is not None :
+            if False and nearest_intersection_point is not None :
+                pass
+            else:
+                #for now we are overwriting the gaze poinr tthough intersection.
+                nearest_intersection_point = gaze_line_world0[1] - gaze_line_world1[1]
+                nearest_intersection_point /=2.
+                nearest_intersection_point += gaze_line_world1[1]
 
                 self.intersection_points_debug.append( nearest_intersection_point )
 
+                # print nearest_intersection_point,gaze_line0[1][:3] ,gaze_line1[1][:3]
                 self.last_gaze_distance = np.sqrt( nearest_intersection_point.dot( nearest_intersection_point ) )
                 #print 'last_gaze_distance: ' , self.last_gaze_distance
 
@@ -325,8 +334,10 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
                 ts = (p0['timestamp'] + p1['timestamp'])/2.
                 gaze_pts.append({'norm_pos':image_point,'confidence':confidence,'timestamp':ts,'base':[p0, p1]})
 
-            else:
-                print 'no intersection point found'
+            # else:
+            #     print 'no intersection point found'
+
+
 
             self.sphere0 = p0['sphere']
             self.sphere1 = p1['sphere']

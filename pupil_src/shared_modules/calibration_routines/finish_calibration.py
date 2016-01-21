@@ -50,33 +50,57 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             method = 'binocular 3d model'
             cal_pt_cloud = calibrate.preprocess_3d_data_binocular(matched_binocular_data,
                                         camera_intrinsics = camera_intrinsics,
-                                        calibration_distance_ref_points=400,calibration_distance_gaze_points=500 )
+                                        calibration_distance=calibration_distance_3d )
             cal_pt_cloud = np.array(cal_pt_cloud)
             gaze_pt0_3d = cal_pt_cloud[:,0]
             gaze_pt1_3d = cal_pt_cloud[:,1]
             ref_3d = cal_pt_cloud[:,2]
-            print 'gaze0: ' , gaze_pt0_3d
-            print 'gaze1: ' , gaze_pt1_3d
-            print 'ref points: ' , ref_3d
 
 
-            R0,t0 = calibrate.rigid_transform_3D( np.matrix(gaze_pt0_3d), np.matrix(ref_3d) )
-            R1,t1 = calibrate.rigid_transform_3D( np.matrix(gaze_pt1_3d), np.matrix(ref_3d) )
+            best_distance = 1000
+            best_scale = 100
+            for scale_percent in range(50,150,10):
+                R0,t0 = calibrate.rigid_transform_3D( np.matrix(gaze_pt0_3d) ,np.matrix(ref_3d*(scale_percent/100.)) )
+                R1,t1 = calibrate.rigid_transform_3D( np.matrix(gaze_pt1_3d) ,np.matrix(ref_3d*(scale_percent/100.)) )
+                eye_to_world_matrix0  = np.matrix(np.eye(4))
+                eye_to_world_matrix0[:3,:3] = R0
+                eye_to_world_matrix0[:3,3:4] =  t0
+
+                eye_to_world_matrix1  = np.matrix(np.eye(4))
+                eye_to_world_matrix1[:3,:3] = R1
+                eye_to_world_matrix1[:3,3:4] =  t1
+
+                avg_distance0, dist_var0 = calibrate.calculate_residual_3D_Points( ref_3d*(scale_percent/100.), gaze_pt0_3d, eye_to_world_matrix0 )
+                avg_distance1, dist_var1 = calibrate.calculate_residual_3D_Points( ref_3d*(scale_percent/100.), gaze_pt1_3d, eye_to_world_matrix1 )
+                avg_distance = (avg_distance0+avg_distance1)/2.
+                if avg_distance < best_distance:
+                    best_distance = avg_distance
+                    best_scale = scale_percent
+
+            ref_3d *= best_scale/100.
+            R0,t0 = calibrate.rigid_transform_3D( np.matrix(gaze_pt0_3d) ,np.matrix(ref_3d) )
+            R1,t1 = calibrate.rigid_transform_3D( np.matrix(gaze_pt1_3d) ,np.matrix(ref_3d) )
+
+            sphere0 = pupil0[-1]['sphere']['center']
+            sphere1 = pupil1[-1]['sphere']['center']
+
 
             eye_to_world_matrix0  = np.matrix(np.eye(4))
             eye_to_world_matrix0[:3,:3] = R0
-            eye_to_world_matrix0[:3,3:4] = t0
+            eye_to_world_matrix0[:3,3:4] =  t0
+            # eye_to_world_matrix0[:3,3:4] =  np.array((20,10,-20)).reshape(3,1)
+            # eye_to_world_matrix0[:3,3:4] -=  R0 * (np.array(sphere0)*(1,-1,1)).reshape(3,1)
 
             eye_to_world_matrix1  = np.matrix(np.eye(4))
             eye_to_world_matrix1[:3,:3] = R1
-            eye_to_world_matrix1[:3,3:4] = t1
+            eye_to_world_matrix1[:3,3:4] =  t1
+            # eye_to_world_matrix1[:3,3:4] =  np.array((-40,10,-20)).reshape(3,1)
+            # eye_to_world_matrix1[:3,3:4] -=  R1 * (np.array(sphere1)*(1,-1,1)).reshape(3,1)
 
             avg_distance0, dist_var0 = calibrate.calculate_residual_3D_Points( ref_3d, gaze_pt0_3d, eye_to_world_matrix0 )
             avg_distance1, dist_var1 = calibrate.calculate_residual_3D_Points( ref_3d, gaze_pt1_3d, eye_to_world_matrix1 )
-            print 'calibration average distance eye0: ' , avg_distance0
-            print 'calibration distance variance eye0: ' , dist_var0
-            print 'calibration average distance eye1: ' , avg_distance1
-            print 'calibration distance variance eye1: ' , dist_var1
+            logger.info('calibration average distance eye0: %s'%avg_distance0)
+            logger.info('calibration average distance eye1: %s'%avg_distance1)
 
             g_pool.plugins.add(Binocular_Vector_Gaze_Mapper,args={'eye_to_world_matrix0':eye_to_world_matrix0,'eye_to_world_matrix1':eye_to_world_matrix1 , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_3d.tolist(), 'cal_gaze_points0_3d': gaze_pt0_3d.tolist(), 'cal_gaze_points1_3d': gaze_pt1_3d.tolist() })
 
@@ -84,10 +108,29 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             method = 'monocular 3d model'
             cal_pt_cloud = calibrate.preprocess_3d_data_monocular(matched_monocular_data,
                                             camera_intrinsics = camera_intrinsics,
-                                            calibration_distance_ref_points=400,calibration_distance_gaze_points=500 )
+                                            calibration_distance=calibration_distance_3d )
             cal_pt_cloud = np.array(cal_pt_cloud)
             gaze_3d = cal_pt_cloud[:,0]
             ref_3d = cal_pt_cloud[:,1]
+
+            best_distance = 1000
+            best_scale = 100
+            for scale_percent in range(50,150,10):
+                #calculate transformation form eye camera to world camera
+                R,t = calibrate.rigid_transform_3D( np.matrix(gaze_3d), np.matrix(ref_3d*(scale_percent/100.)) )
+
+                eye_to_world_matrix  = np.matrix(np.eye(4))
+                eye_to_world_matrix[:3,:3] = R
+                eye_to_world_matrix[:3,3:4] = t
+
+                avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d*(scale_percent/100.), gaze_3d, eye_to_world_matrix )
+
+                if avg_distance < best_distance:
+                    best_distance = avg_distance
+                    best_scale = scale_percent
+
+
+            ref_3d *= best_scale/100.
 
             #calculate transformation form eye camera to world camera
             R,t = calibrate.rigid_transform_3D( np.matrix(gaze_3d), np.matrix(ref_3d) )
@@ -95,10 +138,9 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             eye_to_world_matrix  = np.matrix(np.eye(4))
             eye_to_world_matrix[:3,:3] = R
             eye_to_world_matrix[:3,3:4] = t
-
             avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_3d, eye_to_world_matrix )
-            print 'calibration average distance: ' , avg_distance
-            print 'calibration distance variance: ' , dist_var
+            print 'best calibration average distance: ' , avg_distance
+            # print 'best calibration distance variance: ' , dist_var
 
             g_pool.plugins.add(Vector_Gaze_Mapper,args={'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': cal_pt_cloud[:,0].tolist()})
 
