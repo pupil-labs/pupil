@@ -31,9 +31,9 @@ include_path = [  pupil_base_dir,pupil_test_dir ]
 
 extensions = [
     Extension(
-        # configured to Andrew Xia's ubuntu installation location
+
         name="CircleGoodnessTest",
-        sources=['CircleGoodnessTest.pyx' , '../../singleeyefitter/utils.cpp'], #I don't need cvx.
+        sources=['CircleGoodnessTest.pyx' , '../../singleeyefitter/utils.cpp'],
         include_dirs = [ '/usr/local/include/eigen3' ,  pupil_base_dir, pupil_test_dir  ],
         libraries = ['ceres'],
         # library_dirs = ['/usr/local/lib'],
