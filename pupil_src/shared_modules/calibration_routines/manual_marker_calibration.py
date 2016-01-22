@@ -128,7 +128,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             self.candidate_ellipses = get_candidate_ellipses(gray_img,
                                                             area_threshold=self.area_threshold,
                                                             dist_threshold=self.dist_threshold,
-                                                            min_ring_count=5,
+                                                            min_ring_count=4,
                                                             visual_debug=self.show_edges)
 
             if len(self.candidate_ellipses) > 0:
