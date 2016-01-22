@@ -40,7 +40,8 @@ logger = logging.getLogger(__name__)
 class Canny_Detector(object):
     """a Pupil detector based on Canny_Edges"""
     def __init__(self, g_pool,settings=None):
-        super(Canny_Detector, self).__init__(g_pool)
+        super(Canny_Detector, self).__init__()
+        self.g_pool = g_pool
 
         # load session persistent settings
         self.session_settings = settings or {}
