@@ -6,7 +6,7 @@ cdef extern from "../TestUtils.h" :
 
     vector[Vector3] createCirclePointsOnSphere( Vector2 center, double opening_angle_alpha,  int amount, float circle_segment_range, double randomAmount )
 
-cdef extern from "../../singleeyefitter/Fit/CircleonSphereFit.h" namespace "singleeyefitter":
+cdef extern from "../../singleeyefitter/Fit/CircleOnSphereFit.h" namespace "singleeyefitter":
 
     cdef cppclass CircleOnSphereFitter[Scalar]:
             CircleOnSphereFitter( const Sphere[Scalar] sphere )  except +

@@ -12,9 +12,7 @@
 #include <ceres/jet.h>
 
 #include "EllipseDistanceApproxCalculator.h"
-#include "EllipseGoodnessFunction.h"
 #include "EllipseDistanceResidualFunction.h"
-#include "EllipsePointDistanceFunction.h"
 
 #include "CircleDeviationVariance3D.h"
 #include "CircleEvaluation3D.h"

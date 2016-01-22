@@ -6,9 +6,9 @@ from math import *
 
 cdef extern from "../../singleeyefitter/CircleGoodness3D.h" namespace "singleeyefitter":
 
-    cdef cppclass CircleGoodness3D[Scalar]:
+    cdef cppclass CircleGoodness3D:
         CircleGoodness3D() except +
-        Scalar operator()( Circle& circle, Contours3D contours)
+        double operator()( Circle& circle, Contours3D contours)
 
 cdef extern from "../TestUtils.h" :
 
@@ -20,7 +20,7 @@ def almost_equal(a, b, accuracy = 10e-8 ):
 
 def test():
 
-    cdef CircleGoodness3D[double] circleTest
+    cdef CircleGoodness3D circleTest
 
     #create test contours and a test circle
 
@@ -186,5 +186,6 @@ def test():
     contour = createCirclePointsOnSphere(  center, circle_opening, circle_point_amount,  circle_segment_amount , circle_distortion )
     contours.push_back(contour)
     goodness = circleTest(circle, contours)
-    print "goodness " , goodness
     assert almost_equal( goodness, 0.96 );
+
+    print 'passed'
