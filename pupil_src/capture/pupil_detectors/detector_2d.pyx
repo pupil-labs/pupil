@@ -199,9 +199,11 @@ cdef class Detector_2D:
 
     def close_window(self):
         if self._window:
+            active_window = glfw.glfwGetCurrentContext()
             glfw.glfwDestroyWindow(self._window)
             self._window = None
             self.windowShouldClose = False
+            glfw.glfwMakeContextCurrent(active_window)
 
     def gl_display_in_window(self,img):
         active_window = glfw.glfwGetCurrentContext()

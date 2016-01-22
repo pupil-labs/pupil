@@ -587,9 +587,11 @@ class Canny_Detector(Pupil_Detector):
 
     def close_window(self):
         if self._window:
+            active_window = glfwGetCurrentContext()
             glfwDestroyWindow(self._window)
             self._window = None
             self.window_should_close = False
+            glfwMakeContextCurrent(active_window)
 
     def gl_display_in_window(self,img):
         active_window = glfwGetCurrentContext()

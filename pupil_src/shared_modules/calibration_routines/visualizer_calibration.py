@@ -346,6 +346,7 @@ class Calibration_Visualizer(object):
 			if self.run_independently:
 				glfwInit()
 			self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None, share=self.g_pool.main_window )
+			active_window = glfwGetCurrentContext();
 			glfwMakeContextCurrent(self.window)
 
 			glfwSetWindowPos(self.window,0,0)
@@ -368,7 +369,7 @@ class Calibration_Visualizer(object):
 			self.glfont.set_size(22)
 			self.glfont.set_color_float((0.2,0.5,0.9,1.0))
 			self.on_resize(self.window,*glfwGetFramebufferSize(self.window))
-			glfwMakeContextCurrent(self.g_pool.main_window)
+			glfwMakeContextCurrent(active_window)
 
 			# self.gui = ui.UI()
 
@@ -496,9 +497,10 @@ class Calibration_Visualizer(object):
 
 	def close_window(self):
 		if self.window:
+			active_window = glfwGetCurrentContext();
 			glfwDestroyWindow(self.window)
 			self.window = None
-			glfwMakeContextCurrent(self.g_pool.main_window)
+			glfwMakeContextCurrent(active_window)
 
 	############ window callbacks #################
 	def on_resize(self,window,w, h):
