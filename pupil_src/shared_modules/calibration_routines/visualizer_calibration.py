@@ -447,7 +447,6 @@ class Calibration_Visualizer(object):
 			glLoadMatrixf( self.eye_to_world_matrix1.T )
 
 			sphere_center1 = list(sphere1['center'])
-			#sphere_center1[1] *= -1.
 			sphere_radius1 = sphere1['radius']
 
 			self.draw_sphere(sphere_center1,sphere_radius1,  color = RGBA(1,1,0,1))
