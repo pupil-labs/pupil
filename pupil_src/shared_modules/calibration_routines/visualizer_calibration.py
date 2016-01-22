@@ -544,6 +544,6 @@ class Calibration_Visualizer(object):
 	def on_scroll(self,window,x,y):
 		self.trackball.zoom_to(y)
 
-	def on_iconify(self,iconified): pass
+	def on_iconify(self,window,iconified): pass
 
 	def on_key(self,window, key, scancode, action, mods): pass

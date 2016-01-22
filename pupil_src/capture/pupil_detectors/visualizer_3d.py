@@ -479,5 +479,5 @@ class Visualizer(object):
 		pass
 		#self.close_window() // causes crash if application is closed with CMD+Q
 
-	def on_iconify(self,window,x,y): pass
+	def on_iconify(self,window,iconified): pass
 	def on_key(self,window, key, scancode, action, mods): pass
