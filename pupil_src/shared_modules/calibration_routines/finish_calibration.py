@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 from gaze_mappers import *
 
-def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500, force_2d= False):
+def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500, force=None):
     if pupil_list and ref_list:
         pass
     else:
@@ -37,31 +37,32 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
     logger.info('Collected %s binocular calibration data.'%len(matched_binocular_data))
 
 
-    use_3d = False
-    # do we have data from 3D detector on the eyes we collected data on?
-    if (pupil0 and pupil0[0]['method'] != '3D c++') or (pupil1 and pupil1[0]['method'] != '3D c++') :
-        logger.warning("Enable 3D pupil detection to do 3d calibration.")
+
+    if force:
+        mode = force
     else:
-        if camera_intrinsics:
-            use_3d = True
-        else:
-            logger.warning("Please calibrate your world camera using 'camera intrinsics estimation' for 3d gaze mapping.")
+        mode = g_pool.detection_mapping_mode
 
-    if force_2d:
-        use_3d = False
+    if mode == '3d' and not camera_intrinsics:
+        mode = '2d'
+        logger.warning("Please calibrate your world camera using 'camera intrinsics estimation' for 3d gaze mapping.")
 
 
-    if use_3d:
+
+    if mode == '3d':
         if matched_binocular_data:
             method = 'binocular 3d model'
             cal_pt_cloud = calibrate.preprocess_3d_data_binocular(matched_binocular_data,
                                         camera_intrinsics = camera_intrinsics,
                                         calibration_distance=calibration_distance_3d )
             cal_pt_cloud = np.array(cal_pt_cloud)
-            gaze_pt0_3d = cal_pt_cloud[:,0]
-            gaze_pt1_3d = cal_pt_cloud[:,1]
-            ref_3d = cal_pt_cloud[:,2]
-
+            try:
+                gaze_pt0_3d = cal_pt_cloud[:,0]
+                gaze_pt1_3d = cal_pt_cloud[:,1]
+                ref_3d = cal_pt_cloud[:,2]
+            except:
+                logger.error('Did not collect enoug data please retry')
+                return
 
             best_distance = 1000
             best_scale = 100
@@ -116,8 +117,12 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                                             camera_intrinsics = camera_intrinsics,
                                             calibration_distance=calibration_distance_3d )
             cal_pt_cloud = np.array(cal_pt_cloud)
-            gaze_3d = cal_pt_cloud[:,0]
-            ref_3d = cal_pt_cloud[:,1]
+            try:
+                gaze_3d = cal_pt_cloud[:,0]
+                ref_3d = cal_pt_cloud[:,1]
+            except:
+                logger.error('Did not collect enoug data please retry')
+                return
 
             best_distance = 1000
             best_scale = 100
@@ -153,7 +158,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
         else:
             logger.error('Did not collect data during calibration.')
             return
-    else:
+    elif mode == '2d':
         if matched_binocular_data:
             method = 'binocular polynomial regression'
             cal_pt_cloud_binocular = calibrate.preprocess_2d_data_binocular(matched_binocular_data)

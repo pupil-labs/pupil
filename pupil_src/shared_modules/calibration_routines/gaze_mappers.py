@@ -160,12 +160,28 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.cal_gaze_points_3d = cal_gaze_points_3d
         self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics , cal_ref_points_3d,eye_to_world_matrix, cal_gaze_points_3d)
         self.g_pool = g_pool
-        self.visualizer.open_window()
         self.gaze_pts_debug = []
         self.sphere = None
         self.gaze_distance = gaze_distance
 
+        self.visualizer.open_window()
+
+    def open_close_window(self,new_state):
+        if new_state:
+            self.visualizer.open_window()
+        else:
+            self.visualizer.close_window()
+
+
+    def init_gui(self):
+        self.menu = ui.Growing_Menu('Monocular 3D gaze mapper')
+        self.g_pool.sidebar.insert(3,self.menu)
+        self.menu.append(ui.Switch('debug window',setter=self.open_close_window, getter=lambda: bool(self.visualizer.window) ))
+        self.menu.append(ui.Slider('gaze_distance',self,min=300,max=5000,label='gaze distance mm'))
+
+
     def update(self,frame,events):
+
         gaze_pts = []
         for p in events['pupil_positions']:
             if p['method'] == '3D c++' and p['confidence'] > self.g_pool.pupil_confidence_threshold:
@@ -187,10 +203,16 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.visualizer.update_window( self.g_pool , self.gaze_pts_debug , self.sphere)
         self.gaze_pts_debug = []
 
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
+
     def get_init_dict(self):
        return {'eye_to_world_matrix':self.eye_to_world_matrix ,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points_3d':self.cal_gaze_points_3d,  "camera_intrinsics":self.camera_intrinsics,'gaze_distance':self.gaze_distance}
 
     def cleanup(self):
+        self.deinit_gui()
         self.visualizer.close_window()
 
 
@@ -225,6 +247,21 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.sphere1 = None
         self.last_gaze_distance = 0.0
         self.manual_gaze_distance = 500
+
+
+
+    def open_close_window(self,new_state):
+        if new_state:
+            self.visualizer.open_window()
+        else:
+            self.visualizer.close_window()
+
+
+    def init_gui(self):
+        self.menu = ui.Growing_Menu('Binocular 3D gaze mapper')
+        self.g_pool.sidebar.insert(3,self.menu)
+        self.menu.append(ui.Switch('debug window',setter=self.open_close_window, getter=lambda: bool(self.visualizer.window) ))
+
 
     def update(self,frame,events):
 
@@ -362,7 +399,15 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     def get_init_dict(self):
        return {'eye_to_world_matrix0':self.eye_to_world_matrix0 ,'eye_to_world_matrix1':self.eye_to_world_matrix1 ,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points0_3d':self.cal_gaze_points0_3d, 'cal_gaze_points1_3d':self.cal_gaze_points1_3d,  "camera_intrinsics":self.camera_intrinsics }
 
+
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
+
+
     def cleanup(self):
+        self.deinit_gui()
         self.visualizer.close_window()
 
     def nearest_intersection( self, line0 , line1 ):
