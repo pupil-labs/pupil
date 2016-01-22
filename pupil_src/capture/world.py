@@ -194,6 +194,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     g_pool.iconified = False
     g_pool.capture = cap
     g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
+    g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode','2d')
     g_pool.active_calibration_plugin = None
 
 
@@ -211,6 +212,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
             logger.error("Eye%s process already running."%eye_id)
             return
         lauchner_pipe.send(eye_id)
+        eye_pipes[eye_id].send( ('Set_Detection_Mapping_Mode',g_pool.detection_mapping_mode) )
 
         if blocking:
             #wait for ready message from eye to sequentialize startup
@@ -230,6 +232,18 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
             launch_eye_process(eye_id)
         else:
             stop_eye_process(eye_id)
+
+    def set_detection_mapping_mode(new_mode):
+        if new_mode == '2d':
+            for p in g_pool.plugins:
+                if "Vector_Gaze_Mapper" in p.class_name:
+                    logger.warning("The gaze mapper is not supported in 2d mode. Please recalibrate.")
+                    p.alive = False
+            g_pool.plugins.clean()
+        for alive, pipe in zip(g_pool.eyes_are_alive,g_pool.eye_pipes):
+            if alive.value:
+                pipe.send( ('Set_Detection_Mapping_Mode',new_mode) )
+        g_pool.detection_mapping_mode = new_mode
 
 
     #window and gl setup
@@ -251,6 +265,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     general_settings = ui.Growing_Menu('General')
     general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,frame.width,frame.height)) )
+    general_settings.append(ui.Selector('detection_mapping_mode',g_pool,label='detection & mapping mode',setter=set_detection_mapping_mode,selection=['2d','3d']))
     general_settings.append(ui.Switch('eye0_process',label='detect eye 0',setter=lambda alive: start_stop_eye(0,alive),getter=lambda: eyes_are_alive[0].value ))
     general_settings.append(ui.Switch('eye1_process',label='detect eye 1',setter=lambda alive: start_stop_eye(1,alive),getter=lambda: eyes_are_alive[1].value ))
     general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
@@ -421,6 +436,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     session_settings['version'] = g_pool.version
     session_settings['eye0_process_alive'] = eyes_are_alive[0].value
     session_settings['eye1_process_alive'] = eyes_are_alive[1].value
+    session_settings['detection_mapping_mode'] = g_pool.detection_mapping_mode
     session_settings.close()
 
     # de-init all running plugins

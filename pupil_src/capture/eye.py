@@ -223,7 +223,6 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         last_pupil_detector = pupil_detectors[session_settings.get('last_pupil_detector',Detector_2D.__name__)]
         g_pool.pupil_detector = last_pupil_detector(g_pool,pupil_detector_settings)
 
-
         # UI callback functions
         def set_scale(new_scale):
             g_pool.gui.scale = new_scale
@@ -271,7 +270,8 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         general_settings.append(g_pool.display_mode_info)
         g_pool.sidebar.append(general_settings)
         g_pool.gui.append(g_pool.sidebar)
-        general_settings.append(ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Canny_Detector, Detector_2D, Detector_3D],labels=['Python 2D detector','C++ 2d detector', 'C++ 3d detector'], label="Detection method") )
+        detector_selector = ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Canny_Detector, Detector_2D, Detector_3D],labels=['Python 2D detector','C++ 2d detector', 'C++ 3d detector'], label="Detection method")
+        general_settings.append(detector_selector)
 
         # let detector add its GUI
         g_pool.pupil_detector.init_gui(g_pool.sidebar)
@@ -331,8 +331,18 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                     command = None
                 else:
                     command,payload = cmd
+                if command == 'Set_Detection_Mapping_Mode':
+                    if payload == '3d':
+                        if not isinstance(g_pool.pupil_detector,Detector_3D):
+                            set_detector(Detector_3D)
+                        detector_selector.read_only  = True
+                    else:
+                        set_detector(Detector_2D)
+                        detector_selector.read_only = False
+
             else:
                 command = None
+
 
 
             # Get an image from the grabber
