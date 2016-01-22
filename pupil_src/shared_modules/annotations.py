@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class Annotation_Capture(Plugin):
     """Describe your plugin here
     """
-    def __init__(self,g_pool,annotations=[('My annoation','e')]):
+    def __init__(self,g_pool,annotations=[('My annoation','E')]):
         super(Annotation_Capture, self).__init__(g_pool)
         self.menu = None
         self.sub_menu = None

@@ -85,6 +85,8 @@ class File_Capture(object):
         self.display_time = 0.
         self.target_frame_idx = 0
 
+
+        self.slowdown = 0.0
         assert os.path.isfile(src)
         self.src = src
 
@@ -212,6 +214,7 @@ class File_Capture(object):
             if 1 > wait_time > 0 :
                 sleep(wait_time)
         self.display_time = frame.timestamp - time()
+        sleep(self.slowdown)
 
     def get_frame(self):
         frame = self.get_frame_nowait()
@@ -250,6 +253,7 @@ class File_Capture(object):
     def init_gui(self,sidebar):
         self.menu = ui.Growing_Menu(label='File Capture Settings')
         self.menu.append(ui.Info_Text("Running Capture with '%s' as src"%self.src))
+        self.menu.append(ui.Slider('slowdown',self,min=0,max=1.0))
         self.sidebar = sidebar
         self.sidebar.append(self.menu)
 

@@ -28,8 +28,13 @@ class Show_Calibration(Plugin):
     """Calibration results visualization plugin"""
     def __init__(self,g_pool):
         super(Show_Calibration, self).__init__(g_pool)
-        raise NotImplementedError()
+
         self.menu=None
+
+        logger.error("This will be implemented as part of gaze mapper soon.")
+        self.alive= False
+        return
+
 
         width,height = self.g_pool.capture.frame_size
 
@@ -46,7 +51,7 @@ class Show_Calibration(Plugin):
             return
 
         if self.g_pool.binocular:
-            fn_input_eye0 = cal_pt_cloud[:,0:2].transpose()
+
             fn_input_eye1 = cal_pt_cloud[:,2:4].transpose()
             cal_pt_cloud[:,0:2] =  np.array(map_fn(fn_input_eye0, fn_input_eye1)).transpose()
             cal_pt_cloud[:,2:4] = cal_pt_cloud[:,4:6]
