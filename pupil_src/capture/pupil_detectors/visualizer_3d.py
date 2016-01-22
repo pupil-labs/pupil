@@ -344,7 +344,6 @@ class Visualizer(object):
 			glfwSetMouseButtonCallback(self._window,self.on_button)
 			glfwSetCursorPosCallback(self._window,self.on_pos)
 			glfwSetScrollCallback(self._window,self.on_scroll)
-			glfwSetWindowCloseCallback(self._window,self.on_close)
 
 			# get glfw started
 			if self.run_independently:
@@ -478,10 +477,6 @@ class Visualizer(object):
 
 	def on_scroll(self,window,x,y):
 		self.trackball.zoom_to(y)
-
-	def on_close(self,window=None):
-		pass
-		#self.close_window() // causes crash if application is closed with CMD+Q
 
 	def on_iconify(self,window,iconified): pass
 	def on_key(self,window, key, scancode, action, mods): pass
