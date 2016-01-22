@@ -206,7 +206,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def on_key(self,window, key, scancode, action, mods):
         if action == GLFW_PRESS:
             if key == GLFW_KEY_ESCAPE:
-                self.stop()
+                self.clicks_to_close = 0
 
     def on_button(self,window,button, action, mods):
         if action ==GLFW_PRESS:
