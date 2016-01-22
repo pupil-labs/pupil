@@ -365,6 +365,10 @@ class Visualizer(object):
 		if not result:
 			return
 
+		if glfwWindowShouldClose(self._window):
+			self.close_window()
+			return
+
 		if self._window != None:
 			glfwMakeContextCurrent(self._window)
 
