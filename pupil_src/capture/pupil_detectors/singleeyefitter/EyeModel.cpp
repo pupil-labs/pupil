@@ -646,9 +646,12 @@ void EyeModel::initialiseSingleObservation( const Sphere& sphere, Pupil& pupil) 
 {
     // Ignore the circle normal, and intersect the circle
     // center projection line with the sphere
-    try {
-        auto pupil_center_sphere_intersect = intersect(Line3(mCameraCenter, pupil.mCircle.center.normalized()),
-                                             sphere);
+
+    std::pair<Vector3,Vector3> pupil_center_sphere_intersect;
+    bool didIntersect =  intersect(Line3(mCameraCenter, pupil.mCircle.center.normalized()), sphere, pupil_center_sphere_intersect);
+
+    if(didIntersect){
+
         auto new_pupil_center = pupil_center_sphere_intersect.first;
         // Now that we have 3D positions for the pupil (rather than just a
         // projection line), recalculate the pupil radius at that position.
@@ -663,7 +666,8 @@ void EyeModel::initialiseSingleObservation( const Sphere& sphere, Pupil& pupil) 
         // Update pupil circle to match parameters
         pupil.mCircle = circleFromParams(sphere,  pupil.mParams );
 
-    } catch (no_intersection_exception&) {
+
+    } else {
         // pupil.mCircle =  Circle::Null;
         // pupil.mParams = PupilParams();
         auto pupil_radius_at_1 = pupil.mCircle.radius / pupil.mCircle.center.z();
@@ -682,9 +686,11 @@ Circle EyeModel::getIntersectedCircle( const Sphere& sphere, const Circle& circl
 {
     // Ignore the circle normal, and intersect the circle
     // center projection line with the sphere
-    try {
-        auto pupil_center_sphere_intersect = intersect(Line3(mCameraCenter, circle.center.normalized()),
-                                             sphere);
+    std::pair<Vector3,Vector3> pupil_center_sphere_intersect;
+    bool didIntersect =  intersect(Line3(mCameraCenter, circle.center.normalized()), sphere, pupil_center_sphere_intersect);
+
+    if(didIntersect){
+
         auto new_pupil_center = pupil_center_sphere_intersect.first;
         // Now that we have 3D positions for the pupil (rather than just a
         // projection line), recalculate the pupil radius at that position.
@@ -700,7 +706,7 @@ Circle EyeModel::getIntersectedCircle( const Sphere& sphere, const Circle& circl
         auto pupilParams = PupilParams(theta, psi, radius);
         return  circleFromParams(sphere,  pupilParams);
 
-    } catch (no_intersection_exception&) {
+    } else {
         return Circle::Null;
     }
 

@@ -91,18 +91,9 @@ namespace singleeyefitter {
         return x;
     }
 
-    class no_intersection_exception : public std::runtime_error {
-        public:
-            template<typename Scalar>
-            no_intersection_exception(const Eigen::ParametrizedLine<Scalar, 3>& line, const Sphere<Scalar>& sphere)
-                : std::runtime_error("Line and sphere do not intersect")
-            {
-            }
-    };
-
 // Finds the intersection of a line and a sphere
     template<typename Scalar>
-    std::pair<Eigen::Matrix<Scalar, 3, 1>, Eigen::Matrix<Scalar, 3, 1>> intersect(const Eigen::ParametrizedLine<Scalar, 3>& line, const Sphere<Scalar>& sphere)
+    bool intersect(const Eigen::ParametrizedLine<Scalar, 3>& line, const Sphere<Scalar>& sphere, std::pair<Eigen::Matrix<Scalar, 3, 1>, Eigen::Matrix<Scalar, 3, 1>>& intersected_points )
     {
         using std::sqrt;
         using math::sq;
@@ -117,14 +108,16 @@ namespace singleeyefitter {
         Scalar vcvc_cc_rr = sq(v.dot(c)) - c.dot(c) + sq(r);
 
         if (vcvc_cc_rr < 0) {
-            throw no_intersection_exception(line, sphere);
+            return false;
         }
 
         Scalar s1 = v.dot(c) - sqrt(vcvc_cc_rr);
         Scalar s2 = v.dot(c) + sqrt(vcvc_cc_rr);
         Vector p1 = p + s1 * v;
         Vector p2 = p + s2 * v;
-        return std::make_pair(p1, p2);
+        intersected_points.first = p1;
+        intersected_points.second = p2;
+        return true;
     }
 
 }

@@ -556,14 +556,13 @@ Edges3D EyeModelFitter::unprojectEdges(const Edges2D& edges) const
         Vector3 point3D(edge.x, edge.y , mFocalLength);
         Vector3 direction = point3D - mCameraCenter;
 
-        try {
-            // we use the eye properties of the current eye, when ever we call this
-            const auto& unprojectedPoint = intersect(Line3(mCameraCenter,  direction.normalized()), mCurrentSphere);
-            edgesOnSphere.push_back(std::move(unprojectedPoint.first));
+        std::pair<Vector3, Vector3> unprojectedPoints;
+        // we use the eye properties of the current eye, when ever we call this
+        bool didIntersect = intersect(Line3(mCameraCenter,  direction.normalized()), mCurrentSphere, unprojectedPoints);
 
-        } catch (no_intersection_exception&) {
-            // if there is no intersection we don't do anything
-        }
+        if( didIntersect)
+            edgesOnSphere.push_back(std::move(unprojectedPoints.first));
+
     }
 
     return edgesOnSphere;
