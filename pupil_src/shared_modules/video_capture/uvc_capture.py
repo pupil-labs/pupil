@@ -227,7 +227,7 @@ class Camera_Capture(object):
         cameras = uvc.device_list()
         camera_names = ['Fake Capture']+[c['name'] for c in cameras]
         camera_ids = [None]+[c['uid'] for c in cameras]
-        self.menu.append(ui.Selector('uid',self,selection=camera_ids,labels=camera_names,label='Capture Device', setter=gui_init_cam_by_uid) )
+        self.menu.append(ui.Selector('uid',self,selection=camera_ids,labels=camera_names,label='Capture device', setter=gui_init_cam_by_uid) )
 
         sensor_control = ui.Growing_Menu(label='Sensor Settings')
         sensor_control.append(ui.Info_Text("Do not change these during calibration or recording!"))
@@ -236,7 +236,7 @@ class Camera_Capture(object):
         image_processing.collapsed=True
 
         sensor_control.append(ui.Selector('frame_size',self,setter=set_size, selection=self.capture.frame_sizes,label='Resolution' ) )
-        sensor_control.append(ui.Selector('frame_rate',self, selection=self.capture.frame_rates,label='Framerate' ) )
+        sensor_control.append(ui.Selector('frame_rate',self, selection=self.capture.frame_rates,label='Frame rate' ) )
 
 
         for control in self.capture.controls:

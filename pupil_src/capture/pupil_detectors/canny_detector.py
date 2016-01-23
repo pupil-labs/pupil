@@ -518,16 +518,15 @@ class Canny_Detector(object):
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
         self.menu.append(self.info)
+        self.menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
         self.menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=60,step=1))
         self.menu.append(ui.Slider('pupil_min',self,label='Pupil min',min=1,max=250,step=1))
         self.menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=50,max=400,step=1))
+        self.menu.append(ui.Button('Open debug window',self.toggle_window))
 
-        self.advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
-        self.advanced_controls_menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
-        self.advanced_controls_menu.append(ui.Slider('min_contour_size',self,label='Contour min length',min=1,max=200,step=1))
-
-        self.advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
-        self.menu.append(self.advanced_controls_menu)
+        # self.advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
+        # self.advanced_controls_menu.append(ui.Slider('min_contour_size',self,label='Contour min length',min=1,max=200,step=1))
+        # self.menu.append(self.advanced_controls_menu)
         sidebar.append(self.menu)
 
 
