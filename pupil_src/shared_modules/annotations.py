@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class Annotation_Capture(Plugin):
     """Describe your plugin here
     """
-    def __init__(self,g_pool,annotations=[('My annoation','E')]):
+    def __init__(self,g_pool,annotations=[('My annotation','E')]):
         super(Annotation_Capture, self).__init__(g_pool)
         self.menu = None
         self.sub_menu = None
@@ -41,7 +41,7 @@ class Annotation_Capture(Plugin):
 
     def init_gui(self):
         #lets make a menu entry in the sidebar
-        self.menu = ui.Growing_Menu('Add annoations')
+        self.menu = ui.Growing_Menu('Add annotations')
         self.g_pool.sidebar.append(self.menu)
 
         #add a button to close the plugin
@@ -154,7 +154,7 @@ class Annotation_Player(Annotation_Capture):
 
     def init_gui(self):
         #lets make a menu entry in the sidebar
-        self.menu = ui.Scrolling_Menu('view add edit annoations')
+        self.menu = ui.Scrolling_Menu('view add edit annotations')
         self.g_pool.gui.append(self.menu)
 
         #add a button to close the plugin
