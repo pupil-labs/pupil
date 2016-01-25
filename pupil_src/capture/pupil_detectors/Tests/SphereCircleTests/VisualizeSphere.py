@@ -17,7 +17,7 @@ from pyglui.cygl.utils import init
 from pyglui.cygl.utils import RGBA
 from pyglui.cygl.utils import *
 from pyglui.cygl import utils as glutils
-from trackball import Trackball
+from gl_utils import Trackball
 from math import *
 import random
 import time
