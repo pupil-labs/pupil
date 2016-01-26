@@ -462,13 +462,13 @@ double EyeModel::refineWithEdges(Sphere& sphere )
 
 }
 
-void EyeModel::setSensitivity( float sensitivity ){
+// void EyeModel::setSensitivity( float sensitivity ){
 
-    static const float minWindowSize = 0.01;
-    static const float maxWindowSize = 20.0;
-    // sensitivity could influence other values too
-    mPerformanceWindowSize  = math::lerp(minWindowSize, maxWindowSize, sensitivity);
-}
+//     static const float minWindowSize = 0.01;
+//     static const float maxWindowSize = 20.0;
+//     // sensitivity could influence other values too
+//     mPerformanceWindowSize  = math::lerp(minWindowSize, maxWindowSize, sensitivity);
+// }
 
 EyeModel::Sphere EyeModel::getSphere() const {
     std::lock_guard<std::mutex> lockModel(mModelMutex);
