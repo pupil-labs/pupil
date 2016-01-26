@@ -126,6 +126,8 @@ cdef class Detector_3D:
         # every coordinates in the result are relative to the current ROI
         cpp2DResultPtr =  self.detector2DPtr.detect(self.detectProperties2D, cv_image, cv_image_color, debug_image, Rect_[int](roi_x,roi_y,roi_width,roi_height), visualize , False ) #we don't use debug image in 3d model
 
+        deref(cpp2DResultPtr).timestamp = frame.timestamp #timestamp doesn't get set elsewhere and it is needt in detector3D
+
         ######### 3D Model Part ############
         debugDetector =  self.debugVisualizer3D._window
         cdef Detector3DResult cpp3DResult  = self.detector3DPtr.updateAndDetect( cpp2DResultPtr , self.detectProperties3D, debugDetector)
