@@ -370,6 +370,8 @@ class Visualizer(object):
 
 		if self._window != None:
 			glfwMakeContextCurrent(self._window)
+		else:
+			return
 
 		self.image_width , self.image_height = g_pool.capture.frame_size
 
