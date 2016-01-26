@@ -143,10 +143,10 @@ class Recorder(Plugin):
         self.menu.append(ui.Text_Input('rec_dir',self,setter=self.set_rec_dir,label='Path to recordings'))
         self.menu.append(ui.Text_Input('session_name',self,setter=self.set_session_name,label='Recording session name'))
         self.menu.append(ui.Switch('show_info_menu',self,on_val=True,off_val=False,label='Request additional user info'))
-        self.menu.append(ui.Selector('raw_jpeg',self,selection = [True,False], labels=["bigger file, less CPU", "smaller file, more CPU"],label='compression'))
+        self.menu.append(ui.Selector('raw_jpeg',self,selection = [True,False], labels=["bigger file, less CPU", "smaller file, more CPU"],label='Compression'))
         self.menu.append(ui.Info_Text('Recording the raw eye video is optional. We use it for debugging.'))
         self.menu.append(ui.Switch('record_eye',self,on_val=True,off_val=False,label='Record eye'))
-        self.menu.append(ui.Selector('audio_src',self, selection=self.audio_devices_dict.keys()))
+        self.menu.append(ui.Selector('audio_src',self, selection=self.audio_devices_dict.keys(),label='Audio Source'))
 
         self.button = ui.Thumb('running',self,setter=self.toggle,label='Record',hotkey='r')
         self.button.on_color[:] = (1,.0,.0,.8)

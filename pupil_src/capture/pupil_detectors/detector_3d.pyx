@@ -150,14 +150,14 @@ cdef class Detector_3D:
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
         self.menu2D.append(info)
+        self.menu2D.append(ui.Switch('coarse_detection',self.detectProperties2D,label='Use coarse detection'))
         self.menu2D.append(ui.Slider('intensity_range',self.detectProperties2D,label='Pupil intensity range',min=0,max=60,step=1))
         self.menu2D.append(ui.Slider('pupil_size_min',self.detectProperties2D,label='Pupil min',min=1,max=250,step=1))
         self.menu2D.append(ui.Slider('pupil_size_max',self.detectProperties2D,label='Pupil max',min=50,max=400,step=1))
-        self.menu2D.append(ui.Slider('ellipse_roundness_ratio',self.detectProperties2D,min=0.01,max=1.0,step=0.01))
-        self.menu2D.append(ui.Slider('initial_ellipse_fit_treshhold',self.detectProperties2D,min=0.01,max=6.0,step=0.01))
-        self.menu2D.append(ui.Slider('canny_treshold',self.detectProperties2D,min=1,max=1000,step=1))
-        self.menu2D.append(ui.Slider('canny_ration',self.detectProperties2D,min=1,max=4,step=1))
-
+        #self.menu2D.append(ui.Slider('ellipse_roundness_ratio',self.detectProperties2D,min=0.01,max=1.0,step=0.01))
+        #self.menu2D.append(ui.Slider('initial_ellipse_fit_treshhold',self.detectProperties2D,min=0.01,max=6.0,step=0.01))
+        #self.menu2D.append(ui.Slider('canny_treshold',self.detectProperties2D,min=1,max=1000,step=1))
+        #self.menu2D.append(ui.Slider('canny_ration',self.detectProperties2D,min=1,max=4,step=1))
         self.menu3D = ui.Growing_Menu('Pupil Detector 3D')
         info_3d = ui.Info_Text("Open the debug window to see a visualization of the 3D pupil detection." )
         self.menu3D.append(info_3d)
@@ -171,14 +171,11 @@ cdef class Detector_3D:
         # self.menu3D.append(ui.Slider('max_circle_variance',self.detectProperties3D,label='3D fit max circle variance', min=0.01,max=2.0,step=0.001))
         # self.menu3D.append(ui.Slider('combine_evaluation_max',self.detectProperties3D,label='3D fit max combinations eval', min=500,max=50000,step=5000))
         # self.menu3D.append(ui.Slider('combine_depth_max',self.detectProperties3D,label='3D fit max combination depth', min=10,max=5000,step=20))
-
-
-        advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
-        advanced_controls_menu.append(ui.Switch('coarse_detection',self.detectProperties2D,label='Use coarse detection'))
-        #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detectProperties2D,label='Contour min length',min=1,max=200,step=1))
         sidebar.append(self.menu2D)
         sidebar.append(self.menu3D)
-        sidebar.append(advanced_controls_menu)
+        #advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
+        #advanced_controls_menu.append(ui.Slider('contour_size_min',self.detectProperties2D,label='Contour min length',min=1,max=200,step=1))
+        #sidebar.append(advanced_controls_menu)
 
     def deinit_gui(self):
         self.gPool.sidebar.remove(self.menu2D)

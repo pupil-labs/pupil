@@ -188,7 +188,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             #Register callbacks
             glfwSetFramebufferSizeCallback(self._window,on_resize)
             glfwSetKeyCallback(self._window,self.on_key)
-            glfwSetWindowCloseCallback(self._window,self.on_close)
             glfwSetMouseButtonCallback(self._window,self.on_button)
             on_resize(self._window,*glfwGetFramebufferSize(self._window))
 
@@ -207,15 +206,12 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def on_key(self,window, key, scancode, action, mods):
         if action == GLFW_PRESS:
             if key == GLFW_KEY_ESCAPE:
-                self.stop()
+                self.clicks_to_close = 0
 
     def on_button(self,window,button, action, mods):
         if action ==GLFW_PRESS:
             self.clicks_to_close -=1
 
-    def on_close(self,window=None):
-        if self.active:
-            self.stop()
 
     def stop(self):
         # TODO: redundancy between all gaze mappers -> might be moved to parent class
@@ -232,9 +228,11 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     def close_window(self):
         if self._window:
             # enable mouse display
+            active_window = glfwGetCurrentContext();
             glfwSetInputMode(self._window,GLFW_CURSOR,GLFW_CURSOR_NORMAL)
             glfwDestroyWindow(self._window)
             self._window = None
+            glfwMakeContextCurrent(active_window)
 
 
     def update(self,frame,events):
@@ -324,6 +322,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
     def gl_display_in_window(self):
         active_window = glfwGetCurrentContext()
+        if glfwWindowShouldClose(self._window):
+            self.close_window()
+            return
+
         glfwMakeContextCurrent(self._window)
 
         clear_gl_screen()

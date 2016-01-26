@@ -26,7 +26,6 @@ from c_methods import eye_filter
 from glfw import *
 from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_system_norm_based,make_coord_system_pixel_based
 from pyglui.cygl.utils import draw_gl_texture
-from template import Pupil_Detector
 
 # gui
 from pyglui import ui
@@ -38,10 +37,11 @@ logger = logging.getLogger(__name__)
 
 
 
-class Canny_Detector(Pupil_Detector):
+class Canny_Detector(object):
     """a Pupil detector based on Canny_Edges"""
     def __init__(self, g_pool,settings=None):
-        super(Canny_Detector, self).__init__(g_pool)
+        super(Canny_Detector, self).__init__()
+        self.g_pool = g_pool
 
         # load session persistent settings
         self.session_settings = settings or {}
@@ -518,16 +518,15 @@ class Canny_Detector(Pupil_Detector):
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
         self.menu.append(self.info)
+        self.menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
         self.menu.append(ui.Slider('intensity_range',self,label='Pupil intensity range',min=0,max=60,step=1))
         self.menu.append(ui.Slider('pupil_min',self,label='Pupil min',min=1,max=250,step=1))
         self.menu.append(ui.Slider('pupil_max',self,label='Pupil max',min=50,max=400,step=1))
+        self.menu.append(ui.Button('Open debug window',self.toggle_window))
 
-        self.advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
-        self.advanced_controls_menu.append(ui.Switch('coarse_detection',self,label='Use coarse detection'))
-        self.advanced_controls_menu.append(ui.Slider('min_contour_size',self,label='Contour min length',min=1,max=200,step=1))
-
-        self.advanced_controls_menu.append(ui.Button('Open debug window',self.toggle_window))
-        self.menu.append(self.advanced_controls_menu)
+        # self.advanced_controls_menu = ui.Growing_Menu('Advanced Controls')
+        # self.advanced_controls_menu.append(ui.Slider('min_contour_size',self,label='Contour min length',min=1,max=200,step=1))
+        # self.menu.append(self.advanced_controls_menu)
         sidebar.append(self.menu)
 
 
