@@ -40,7 +40,7 @@ cdef class Detector_2D:
         if not self.detectProperties:
             self.detectProperties["coarse_detection"] = True
             self.detectProperties["coarse_filter_min"] = 100
-            self.detectProperties["coarse_filter_max"] = 400
+            self.detectProperties["coarse_filter_max"] = 800
             self.detectProperties["intensity_range"] = 17
             self.detectProperties["blur_size"] = 3
             self.detectProperties["canny_treshold"] = 200
@@ -109,7 +109,21 @@ cdef class Detector_2D:
             integral = cv2.integral(user_roi_image[::scale,::scale])
             coarse_filter_max = self.detectProperties['coarse_filter_max']
             coarse_filter_min = self.detectProperties['coarse_filter_min']
-            p_x,p_y,p_w,p_response = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
+            #p_x,p_y,p_w,p_response = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
+            results = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
+
+            ## draw the candidates
+            for r in results:
+                p_x,p_y,p_w,p_response = r
+
+                x = p_x * scale + roi_x
+                y = p_y * scale + roi_y
+                width = p_w*scale
+                print p_response
+                cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (255,255,0)  )
+            #take the best one
+            p_x,p_y,p_w,p_response = results[-1]
+
             roi_x = p_x * scale + roi_x
             roi_y = p_y * scale + roi_y
             roi_width = p_w*scale

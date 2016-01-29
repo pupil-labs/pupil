@@ -79,6 +79,7 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
     cdef float a,c,
     cdef point_t b,d,e,f
 
+    cdef list results = []
 
     #for h in prange(min_h,max_h,h_step):
     for h from min_h <= h < max_h by h_step:
@@ -97,31 +98,33 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
             best_pos.r = i
             best_pos.c = j
             best_h = h
+            results.append( (j ,i, h * 3 ,  response) )
+            if len(results) > 40:
+                results.pop(0)
+
+    # cdef point_t window_lower
+    # window_lower.r = max(0,best_pos.r-step+1)
+    # window_lower.c = max(0,best_pos.c-step+1)
 
 
-    cdef point_t window_lower
-    window_lower.r = max(0,best_pos.r-step+1)
-    window_lower.c = max(0,best_pos.c-step+1)
+    # cdef point_t window_upper
+    # window_upper.r = min(img_size.r,best_pos.r+step)
+    # window_upper.c = min(img_size.c,best_pos.c+step)
 
+    # for h in range(max(3,best_h-h_step+1),best_h+h_step):
+    #     eye = make_eye(h)
+    #     for i in range(window_lower.r,min(window_upper.r,img_size.r-eye.w)) :
+    #         for j in range(window_lower.c,min(window_upper.c,img_size.c-eye.w)):
+    #             offset.r = i
+    #             offset.c = j
+    #             response = eye.outer.f*area(img,img_size,eye.outer.s,eye.outer.e,offset) + eye.inner.f*area(img,img_size,eye.inner.s,eye.inner.e,offset)
+    #             if(response > best_response):
+    #                 best_response = response
+    #                 best_pos.r = i
+    #                 best_pos.c = j
+    #                 best_h = h
 
-    cdef point_t window_upper
-    window_upper.r = min(img_size.r,best_pos.r+step)
-    window_upper.c = min(img_size.c,best_pos.c+step)
-
-    for h in range(max(3,best_h-h_step+1),best_h+h_step):
-        eye = make_eye(h)
-        for i in range(window_lower.r,min(window_upper.r,img_size.r-eye.w)) :
-            for j in range(window_lower.c,min(window_upper.c,img_size.c-eye.w)):
-                offset.r = i
-                offset.c = j
-                response = eye.outer.f*area(img,img_size,eye.outer.s,eye.outer.e,offset) + eye.inner.f*area(img,img_size,eye.inner.s,eye.inner.e,offset)
-                if(response > best_response):
-                    best_response = response
-                    best_pos.r = i
-                    best_pos.c = j
-                    best_h = h
-
-    x_pos = best_pos.c
-    y_pos = best_pos.r
-    width = best_h*3
-    return x_pos,y_pos,width,best_response
+    # x_pos = best_pos.c
+    # y_pos = best_pos.r
+    # width = best_h*3
+    return results
