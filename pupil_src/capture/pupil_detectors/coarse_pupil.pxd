@@ -99,7 +99,7 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
             best_pos.c = j
             best_h = h
             results.append( (j ,i, h * 3 ,  response) )
-            if len(results) > 40:
+            if len(results) > 20:
                 results.pop(0)
 
     # cdef point_t window_lower

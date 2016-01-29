@@ -26,6 +26,8 @@ cdef class Detector_2D:
     cdef object menu
     cdef object gPool
 
+    cdef int coarseDetectionPreviousWidth
+
     def __cinit__(self):
         self.thisptr = new Detector2D()
     def __init__(self, gPool = None, settings = None ):
@@ -36,7 +38,7 @@ cdef class Detector_2D:
         self.windowShouldClose = False
         self.gPool = gPool
         self.detectProperties = settings or {}
-
+        self.coarseDetectionPreviousWidth = -1
         if not self.detectProperties:
             self.detectProperties["coarse_detection"] = True
             self.detectProperties["coarse_filter_min"] = 100
@@ -125,6 +127,19 @@ cdef class Detector_2D:
 
             #take the best one
             p_x,p_y,p_w,p_response = results[-1]
+
+            #choose the one where the changes are not to big
+            if self.coarseDetectionPreviousWidth != -1:
+                for r in results[::-1]:
+                    ww = r[2]
+                    differenceRatio = float(ww )/ self.coarseDetectionPreviousWidth
+                    print 'ratio: ' , differenceRatio
+                    if differenceRatio <= 1.1:
+                        p_x,p_y,p_w,p_response = r
+                        break
+
+
+            self.coarseDetectionPreviousWidth  = p_w
 
             roi_x = p_x * scale + roi_x
             roi_y = p_y * scale + roi_y
