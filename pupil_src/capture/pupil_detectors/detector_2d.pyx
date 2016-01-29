@@ -14,6 +14,7 @@ from detector_utils cimport *
 from coarse_pupil cimport center_surround
 
 from cython.operator cimport dereference as deref
+import math
 
 cdef class Detector_2D:
 
@@ -43,7 +44,7 @@ cdef class Detector_2D:
         self.coarseDetectionPreviousPosition =  (0,0)
         if not self.detectProperties:
             self.detectProperties["coarse_detection"] = True
-            self.detectProperties["coarse_filter_min"] = 150
+            self.detectProperties["coarse_filter_min"] = 200
             self.detectProperties["coarse_filter_max"] = 400
             self.detectProperties["intensity_range"] = 17
             self.detectProperties["blur_size"] = 3
@@ -116,7 +117,7 @@ cdef class Detector_2D:
             #p_x,p_y,p_w,p_response = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
             results = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
 
-            ## draw the candidates
+            # draw the candidates
             for r in results:
                 p_x,p_y,p_w,p_response = r
 
@@ -133,42 +134,31 @@ cdef class Detector_2D:
             p_w = 0
             p_response = 0.0
             bestResponse = 0.0
+
             #choose the one where the changes are not to big
-            print '-------------------'
             if self.coarseDetectionPreviousWidth != -1:
                 for r in results[::-1]:
                     r_x,r_y,r_w,r_response = r
                     r_x = r_x * scale + roi_x
                     r_y = r_y * scale + roi_y
-                    sizeRatio = float(r_w)/ self.coarseDetectionPreviousWidth
-                    print self.coarseDetectionPreviousPosition
-                    print (r_x,r_y)
+                    #sizeRatio = float(r_w)/ self.coarseDetectionPreviousWidth
                     distanceChange = cv2.norm( self.coarseDetectionPreviousPosition, (r_x,r_y) )
                     #print 'distanceChange: ' , distanceChange
-                    import sys
-                    distanceChangeRatio =  1.0 / distanceChange if distanceChange > 0.0  else  sys.float_info.max
                     #print 'ratio: ' , (1.0 - abs( sizeRatio - 1.0 ))
-                    print 'distance: ' , distanceChangeRatio
-                    response = r_response  * (1.0 - abs( sizeRatio - 1.0 )) * distanceChangeRatio
-                    print 'response: ' , response
+                    #print 'distance: ' , distanceChangeRatio
+
+                    #start punish response if distance is bigger than nearDistance
+                    # this let's us find the best response within nearDistance
+                    nearDistance = 50.0
+                    distanceFactor = min(1.0 , math.exp(nearDistance - distanceChange) )
+                    response = r_response   * distanceFactor
+
                     if response > bestResponse:
-                        print 'use other'
                         p_x,p_y,p_w,p_response = r
                         r_x = p_x * scale + roi_x
                         r_y = p_y * scale + roi_y
                         bestResponse = response
 
-                    # if sizeRatio <= 1.1 and distanceChange <= 20.0 :
-                    #     p_x,p_y,p_w,p_response = r
-                    #     break
-
-                    # if  distanceChange <= 10.0  and r_response > bestResponse:
-                    #     p_x,p_y,p_w,p_response = r
-                    #     r_x = p_x * scale + roi_x
-                    #     r_y = p_y * scale + roi_y
-                    #     self.coarseDetectionPreviousWidth  = p_w
-                    #     self.coarseDetectionPreviousPosition = (r_x , r_y )
-                    #     bestResponse = r_response
 
             if p_response == 0.0 :
                 p_x,p_y,p_w,p_response = results[-1]
