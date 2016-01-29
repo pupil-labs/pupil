@@ -27,6 +27,7 @@ cdef class Detector_2D:
     cdef object gPool
 
     cdef int coarseDetectionPreviousWidth
+    cdef object coarseDetectionPreviousPosition
 
     def __cinit__(self):
         self.thisptr = new Detector2D()
@@ -39,10 +40,11 @@ cdef class Detector_2D:
         self.gPool = gPool
         self.detectProperties = settings or {}
         self.coarseDetectionPreviousWidth = -1
+        self.coarseDetectionPreviousPosition =  (0,0)
         if not self.detectProperties:
             self.detectProperties["coarse_detection"] = True
-            self.detectProperties["coarse_filter_min"] = 100
-            self.detectProperties["coarse_filter_max"] = 800
+            self.detectProperties["coarse_filter_min"] = 150
+            self.detectProperties["coarse_filter_max"] = 400
             self.detectProperties["intensity_range"] = 17
             self.detectProperties["blur_size"] = 3
             self.detectProperties["canny_treshold"] = 200
@@ -115,37 +117,70 @@ cdef class Detector_2D:
             results = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
 
             ## draw the candidates
-            for r in results:
-                p_x,p_y,p_w,p_response = r
+            # for r in results:
+            #     p_x,p_y,p_w,p_response = r
 
-                x = p_x * scale + roi_x
-                y = p_y * scale + roi_y
-                width = p_w*scale
-                cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (255,255,0)  )
-                responseText = '{:2f}'.format(p_response)
-                cv2.putText(frame_.img, responseText,(int(x+width*0.5) , int(y+width*0.5)), cv2.FONT_HERSHEY_PLAIN,0.7,(0,0,255) , 1 )
+            #     x = p_x * scale + roi_x
+            #     y = p_y * scale + roi_y
+            #     width = p_w*scale
+            #     cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (255,255,0)  )
+            #     responseText = '{:2f}'.format(p_response)
+            #     cv2.putText(frame_.img, responseText,(int(x+width*0.5) , int(y+width*0.5)), cv2.FONT_HERSHEY_PLAIN,0.7,(0,0,255) , 1 )
 
             #take the best one
-            p_x,p_y,p_w,p_response = results[-1]
-
+            p_x = 0
+            p_y = 0
+            p_w = 0
+            p_response = 0.0
+            bestResponse = 0.0
             #choose the one where the changes are not to big
+            print '-------------------'
             if self.coarseDetectionPreviousWidth != -1:
                 for r in results[::-1]:
-                    ww = r[2]
-                    differenceRatio = float(ww )/ self.coarseDetectionPreviousWidth
-                    print 'ratio: ' , differenceRatio
-                    if differenceRatio <= 1.1:
+                    r_x,r_y,r_w,r_response = r
+                    r_x = r_x * scale + roi_x
+                    r_y = r_y * scale + roi_y
+                    sizeRatio = float(r_w)/ self.coarseDetectionPreviousWidth
+
+                    distanceChange = cv2.norm( self.coarseDetectionPreviousPosition, (r_x,r_y) )
+                    print 'distanceChange: ' , distanceChange
+                    # import sys
+                    # distanceChangeRatio =  1.0 / distanceChange if distanceChange > 0.0  else  sys.float_info.max
+                    # print 'ratio: ' , (1.0 - abs( sizeRatio - 1.0 ))
+                    # print 'distance: ' , distanceChangeRatio
+                    # response = r_response * (1.0 - abs( sizeRatio - 1.0 )) *distanceChangeRatio
+
+                    # if response > bestResponse:
+                    #     print 'use other'
+                    #     p_x,p_y,p_w,p_response = r
+                    #     bestResponse = response
+                    # if sizeRatio <= 1.1 and distanceChange <= 20.0 :
+                    #     p_x,p_y,p_w,p_response = r
+                    #     break
+                    if  distanceChange <= 10.0  and r_response > bestResponse:
                         p_x,p_y,p_w,p_response = r
-                        break
+                        r_x = p_x * scale + roi_x
+                        r_y = p_y * scale + roi_y
+                        self.coarseDetectionPreviousWidth  = p_w
+                        self.coarseDetectionPreviousPosition = (r_x , r_y )
+                        bestResponse = r_response
 
-
-            self.coarseDetectionPreviousWidth  = p_w
+            if p_response == 0.0 :
+                p_x,p_y,p_w,p_response = results[-1]
+                r_x = p_x * scale + roi_x
+                r_y = p_y * scale + roi_y
+                self.coarseDetectionPreviousWidth  = p_w
+                self.coarseDetectionPreviousPosition = (r_x , r_y )
 
             roi_x = p_x * scale + roi_x
             roi_y = p_y * scale + roi_y
             roi_width = p_w*scale
             roi_height = p_w*scale
             roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_width))
+
+
+
+
 
         # every coordinates in the result are relative to the current ROI
         cppResultPtr =  self.thisptr.detect(self.detectProperties, frame, frameColor, debugImage, Rect_[int](roi_x,roi_y,roi_width,roi_height),  visualize , use_debugImage )
