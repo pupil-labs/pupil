@@ -119,8 +119,10 @@ cdef class Detector_2D:
                 x = p_x * scale + roi_x
                 y = p_y * scale + roi_y
                 width = p_w*scale
-                print p_response
                 cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (255,255,0)  )
+                responseText = '{:2f}'.format(p_response)
+                cv2.putText(frame_.img, responseText,(int(x+width*0.5) , int(y+width*0.5)), cv2.FONT_HERSHEY_PLAIN,0.7,(0,0,255) , 1 )
+
             #take the best one
             p_x,p_y,p_w,p_response = results[-1]
 
