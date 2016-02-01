@@ -6,6 +6,8 @@ import calibrate
 from file_methods import load_object,save_object
 from camera_intrinsics_estimation import load_camera_calibration
 
+from optimization_calibration import point_line_calibration
+
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -113,47 +115,52 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
 
         elif matched_monocular_data:
             method = 'monocular 3d model'
-            cal_pt_cloud = calibrate.preprocess_3d_data_monocular(matched_monocular_data,
+            cal_pt_cloud = calibrate.preprocess_3d_data_monocular_gaze_direction(matched_monocular_data,
                                             camera_intrinsics = camera_intrinsics,
                                             calibration_distance=calibration_distance_3d )
             cal_pt_cloud = np.array(cal_pt_cloud)
             try:
-                gaze_3d = cal_pt_cloud[:,0]
+                gaze_direction_3d = cal_pt_cloud[:,0]
                 ref_3d = cal_pt_cloud[:,1]
             except:
                 logger.error('Did not collect enough data. Please retry.')
                 return
 
-            best_distance = 1000
-            best_scale = 100
-            for scale_percent in range(50,150,10):
-                #calculate transformation form eye camera to world camera
-                R,t = calibrate.rigid_transform_3D( np.matrix(gaze_3d), np.matrix(ref_3d*(scale_percent/100.)) )
+            # best_distance = 1000
+            # best_scale = 100
+            # for scale_percent in range(50,150,10):
+            #     #calculate transformation form eye camera to world camera
+            #     R,t = calibrate.rigid_transform_3D( np.matrix(gaze_3d), np.matrix(ref_3d*(scale_percent/100.)) )
 
-                eye_to_world_matrix  = np.matrix(np.eye(4))
-                eye_to_world_matrix[:3,:3] = R
-                eye_to_world_matrix[:3,3:4] = t
+            #     eye_to_world_matrix  = np.matrix(np.eye(4))
+            #     eye_to_world_matrix[:3,:3] = R
+            #     eye_to_world_matrix[:3,3:4] = t
 
-                avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d*(scale_percent/100.), gaze_3d, eye_to_world_matrix )
+            #     avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d*(scale_percent/100.), gaze_3d, eye_to_world_matrix )
 
-                if avg_distance < best_distance:
-                    best_distance = avg_distance
-                    best_scale = scale_percent
+            #     if avg_distance < best_distance:
+            #         best_distance = avg_distance
+            #         best_scale = scale_percent
 
 
-            ref_3d *= best_scale/100.
+            # ref_3d *= best_scale/100.
 
-            #calculate transformation form eye camera to world camera
-            R,t = calibrate.rigid_transform_3D( np.matrix(gaze_3d), np.matrix(ref_3d) )
+            # #calculate transformation form eye camera to world camera
+            # R,t = calibrate.rigid_transform_3D( np.matrix(gaze_3d), np.matrix(ref_3d) )
 
-            eye_to_world_matrix  = np.matrix(np.eye(4))
-            eye_to_world_matrix[:3,:3] = R
-            eye_to_world_matrix[:3,3:4] = t
+            # eye_to_world_matrix  = np.matrix(np.eye(4))
+            # eye_to_world_matrix[:3,:3] = R
+            # eye_to_world_matrix[:3,3:4] = t
+            sphere = pupil0[-1]['sphere']['center']
+
+            eye_to_world_matrix , gaze_3d = point_line_calibration(sphere, ref_3d,  gaze_direction_3d)
+            print 'matrix' , eye_to_world_matrix
+
             avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_3d, eye_to_world_matrix )
             print 'best calibration average distance: ' , avg_distance
             # print 'best calibration distance variance: ' , dist_var
 
-            g_pool.plugins.add(Vector_Gaze_Mapper,args={'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': cal_pt_cloud[:,0].tolist()})
+            g_pool.plugins.add(Vector_Gaze_Mapper,args={'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': gaze_3d})
 
         else:
             logger.error('Did not collect data during calibration.')

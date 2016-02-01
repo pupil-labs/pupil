@@ -12,6 +12,7 @@
 
 import sys
 if not getattr(sys, 'frozen', False):
-    from optimization_calibration.build import build_cpp_extension
+    from build import build_cpp_extension
     build_cpp_extension()
 
+from calibration_methods import point_line_calibration

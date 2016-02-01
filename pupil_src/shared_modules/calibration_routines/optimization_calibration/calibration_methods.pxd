@@ -25,7 +25,7 @@ cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
 
     cdef cppclass Matrix4d "Eigen::Matrix<double,4,4>": # eigen defaults to column major layout
         Matrix4d() except +
-        double& operator[](size_t,size_t)
+        double& operator()(size_t,size_t)
 
 cdef extern from 'common.h':
 
@@ -37,4 +37,4 @@ cdef extern from 'common.h':
 cdef extern from 'pointLineCalibration.h':
 
 
-    Matrix4d pointLineCalibration( vector[Vector3] points, vector[Vector3] lines  )
+    Matrix4d pointLineCalibration( Vector3 spherePosition,const vector[Vector3]& points,const vector[Vector3]& lines, vector[Vector3]& gazePoints  )

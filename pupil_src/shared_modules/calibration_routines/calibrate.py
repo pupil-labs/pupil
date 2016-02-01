@@ -349,6 +349,34 @@ def preprocess_3d_data_monocular(matched_data, camera_intrinsics , calibration_d
 
     return cal_data
 
+def preprocess_3d_data_monocular_gaze_direction(matched_data, camera_intrinsics , calibration_distance):
+    camera_matrix = camera_intrinsics["camera_matrix"]
+    dist_coefs = camera_intrinsics["dist_coefs"]
+
+    cal_data = []
+    for pair in matched_data:
+        ref,pupil = pair['ref'],pair['pupil']
+        try:
+            # taking the pupil normal as line of sight vector
+            # we multiply by a fixed (assumed) distace and
+            # add the sphere pos to get the 3d gaze point in eye camera 3d coords
+            sphere_pos  = np.array(pupil['sphere']['center'])
+            gaze_pt_3d = np.array(pupil['circle3D']['normal'])
+
+            # projected point uv to normal ray vector of camera
+            ref_vector =  undistort_unproject_pts(ref['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
+            ref_vector = ref_vector / np.linalg.norm(ref_vector)
+            # assuming a fixed (assumed) distance we get a 3d point in world camera 3d coords.
+            ref_pt_3d = ref_vector*calibration_distance
+
+
+            point_pair_3d = tuple(gaze_pt_3d) , ref_pt_3d
+            cal_data.append(point_pair_3d)
+        except KeyError as e:
+            # this pupil data point did not have 3d detected data.
+            pass
+
+    return cal_data
 
 def preprocess_3d_data_binocular(matched_data, camera_intrinsics , calibration_distance):
 
