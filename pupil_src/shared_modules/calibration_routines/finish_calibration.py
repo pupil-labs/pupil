@@ -61,7 +61,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                 gaze_pt1_3d = cal_pt_cloud[:,1]
                 ref_3d = cal_pt_cloud[:,2]
             except:
-                logger.error('Did not collect enoug data please retry')
+                logger.error('Did not collect enough data. Please retry.')
                 return
 
             best_distance = 1000
@@ -121,7 +121,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                 gaze_3d = cal_pt_cloud[:,0]
                 ref_3d = cal_pt_cloud[:,1]
             except:
-                logger.error('Did not collect enoug data please retry')
+                logger.error('Did not collect enough data. Please retry.')
                 return
 
             best_distance = 1000
