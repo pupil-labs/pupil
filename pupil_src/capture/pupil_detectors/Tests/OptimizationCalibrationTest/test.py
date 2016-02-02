@@ -75,9 +75,9 @@ if __name__ == '__main__':
         [0.0,0.0,200.0]
     ]
     gaze_directions_3D = [
-        [0.0,1.0,0.01],
-        [0.0,1.0,0.01],
-        [0.0,1.0,0.01]
+        [0.0,1.0,0.1],
+        [0.0,1.0,0.1],
+        [0.0,1.0,0.1]
     ]
     transformation, _ = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D )
     angle_axis = R_to_axis_angle(transformation)
