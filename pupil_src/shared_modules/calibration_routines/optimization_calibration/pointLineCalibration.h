@@ -56,7 +56,7 @@ struct TransformationError {
         Eigen::Matrix<T, 3, 1> ep2;
         ep2 << T(p2[0]) , T(p2[1]) , T(p2[2]);
         // now calculate the distance between the observed point and the nearest point on the line
-        residuals[0] = (refP - ep1).cross(refP - ep2).norm() / (ep2 - ep1).norm();
+        residuals[0] = (refP - ep1).cross(refP - ep2).squaredNorm() / (ep2 - ep1).squaredNorm();
         return true;
     }
 
@@ -73,10 +73,10 @@ Eigen::Matrix4d pointLineCalibration(Vector3 spherePosition, const std::vector<V
 
     Problem problem;
 
-    double angle_axis[3] = {0.0,0,0.0};
+    double angle_axis[3] = {0.0,0.0,0.0};
     double rotation[4];
     ceres::AngleAxisToQuaternion(  angle_axis ,rotation );
-    double translation[3] = { 0.0 , 0.0  , 0.0 };
+    double translation[3] = { 0 , 0  , 0};
 
 
     ceres::LocalParameterization* quaternion_parameterization = new ceres::QuaternionParameterization;
@@ -86,7 +86,7 @@ Eigen::Matrix4d pointLineCalibration(Vector3 spherePosition, const std::vector<V
     for (auto& p : refPoints) {
         auto g = gazeDirections.at(i);
         i++;
-        CostFunction* cost = new AutoDiffCostFunction<TransformationError , 1, 4, 3 >(new TransformationError(p , g , spherePosition));
+        CostFunction* cost = new AutoDiffCostFunction<TransformationError , 1, 4, 3 >(new TransformationError(p , spherePosition , g ));
         problem.AddResidualBlock(cost, nullptr, &rotation[0],  &translation[0]);
     }
 
