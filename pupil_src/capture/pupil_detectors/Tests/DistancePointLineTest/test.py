@@ -44,3 +44,12 @@ if __name__ == '__main__':
     ref_point = np.array([ 0.0,0.0,0.0])
     distance =  distance_point_line( ref_point , (line_p1, line_p2) )
     assert distance == 0.0
+
+    line_p1 = np.array([0.0,0.0,0.0 ])
+    line_p2 = np.array([0.0,1.0,0.0 ])
+
+    #find nearest point on line for ref point
+    ref_point = np.array([0.0,0.0,100.0])
+    distance =  distance_point_line( ref_point , (line_p1, line_p2) )
+    print distance
+    assert distance == 100.0
