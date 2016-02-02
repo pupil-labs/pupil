@@ -55,9 +55,26 @@ struct TransformationError {
 
         Eigen::Matrix<T, 3, 1> ep2;
         ep2 << T(p2[0]) , T(p2[1]) , T(p2[2]);
-        // now calculate the distance between the observed point and the nearest point on the line
-        residuals[0] = (refP - ep1).cross(refP - ep2).squaredNorm() / (ep2 - ep1).squaredNorm();
-        return true;
+
+        // delta tells us if the point lies in direction from p1 to p2 or from p2 to p1
+        //T delta = -(ep1 - refP ).dot(ep2 - ep1) / (ep2 - ep1).squaredNorm();
+        // just interested in the sign so remove denominator
+        T delta = -(ep1 - refP ).dot(ep2 - ep1) ;
+
+        // in our case out point should alway lay on the ray from p1 to p2
+        // we punish if it's the other way
+        if( delta >= 0.0 ){
+            // now calculate the distance between the observed point and the nearest point on the line
+            residuals[0] = (refP - ep1).cross(refP - ep2).squaredNorm() / (ep2 - ep1).squaredNorm();
+            return true;
+
+        }
+        return false;
+        //else{
+        //     //residuals[0] = T(999999999.9);
+        //     return true;
+        // }
+
     }
 
     const Vector3 referencePoint;
