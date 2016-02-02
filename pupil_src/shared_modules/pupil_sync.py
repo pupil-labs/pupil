@@ -1,9 +1,9 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2015  Pupil Labs
+ Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0) License.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -21,12 +21,8 @@ logger = logging.getLogger(__name__)
 
 from network_time_sync import Clock_Sync_Master,Clock_Sync_Follower
 
-start_rec = "START_REC:"
-stop_rec = "STOP_REC:"
-start_cal = "START_CAL"
-stop_cal = "STOP_CAL"
-sync_time_master_announce = "SYNC_TIME_MASTER:"
-user_event = "USREVENT:"
+SYNC_TIME_MASTER_ANNOUNCE = "SYNC_TIME_MASTER:"
+NOTIFICATION = "REMOTE_NOTIFICATION:"
 msg_delimeter  = '::'
 
 
@@ -194,21 +190,21 @@ class Pupil_Sync(Plugin):
                 #timeout events are used for pupil sync.
                 #annouce masterhood every interval time:
                 if isinstance(self.sync_node,Clock_Sync_Master):
-                    n.shouts(self.group, sync_time_master_announce+"%s"%self.clock_master_worthiness()+msg_delimeter+'%s'%self.sync_node.port)
+                    n.shouts(self.group, SYNC_TIME_MASTER_ANNOUNCE+"%s"%self.clock_master_worthiness()+msg_delimeter+'%s'%self.sync_node.port)
 
                 # synced slave: see if we should become master if we dont hear annoncement within time.
                 elif isinstance(self.sync_node,Clock_Sync_Follower) and not self.sync_node.offset_remains:
                     if self.get_monotonic_time()-self.last_master_announce > self.time_sync_wait_interval_short:
                         self.sync_node.terminate()
                         self.sync_node = Clock_Sync_Master(time_fn=self.get_time)
-                        n.shouts(self.group, sync_time_master_announce+"%s"%self.clock_master_worthiness()+msg_delimeter+'%s'%self.sync_node.port)
+                        n.shouts(self.group, SYNC_TIME_MASTER_ANNOUNCE+"%s"%self.clock_master_worthiness()+msg_delimeter+'%s'%self.sync_node.port)
 
                 # unsynced slave or none should wait longer but eventually take over
                 elif self.get_monotonic_time()-self.last_master_announce > self.time_sync_wait_interval_long:
                     if self.sync_node:
                         self.sync_node.terminate()
                     self.sync_node = Clock_Sync_Master(time_fn=self.get_time)
-                    n.shouts(self.group, sync_time_master_announce+"%s"%self.clock_master_worthiness()+msg_delimeter+'%s'%self.sync_node.port)
+                    n.shouts(self.group, SYNC_TIME_MASTER_ANNOUNCE+"%s"%self.clock_master_worthiness()+msg_delimeter+'%s'%self.sync_node.port)
 
                 t = Timer(self.time_sync_announce_interval, wake_up)
                 t.daemon = True
@@ -269,11 +265,11 @@ class Pupil_Sync(Plugin):
     def handle_msg(self,uuid,name,msg,n):
 
         #Clock Sync master announce logic
-        if sync_time_master_announce in msg:
+        if SYNC_TIME_MASTER_ANNOUNCE in msg:
 
             self.last_master_announce = self.get_monotonic_time()
 
-            worthiness,port = msg.replace(sync_time_master_announce,'').split(msg_delimeter)
+            worthiness,port = msg.replace(SYNC_TIME_MASTER_ANNOUNCE,'').split(msg_delimeter)
             foreign_master_worthiness = float(worthiness)
             foreign_master_port = int(port)
             forein_master_uuid = UUID(bytes=uuid)
@@ -298,7 +294,7 @@ class Pupil_Sync(Plugin):
                     self.sync_node = Clock_Sync_Follower(foreign_master_ip,port=foreign_master_port,interval=10,time_fn=self.get_time,jump_fn=self.jump_time,slew_fn=self.set_time)
                 else:
                     logger.warning("Dominate as Clock_Sync_Master")
-                    n.shouts(self.group, sync_time_master_announce+"%s"%self.clock_master_worthiness()+msg_delimeter+'%s'%self.sync_node.port)
+                    n.shouts(self.group, SYNC_TIME_MASTER_ANNOUNCE+"%s"%self.clock_master_worthiness()+msg_delimeter+'%s'%self.sync_node.port)
 
             elif isinstance(self.sync_node,Clock_Sync_Follower):
                 self.sync_node.host = foreign_master_ip
@@ -307,39 +303,32 @@ class Pupil_Sync(Plugin):
                 self.sync_node = Clock_Sync_Follower(foreign_master_ip,port=foreign_master_port,interval=10,time_fn=self.get_time,jump_fn=self.jump_time,slew_fn=self.set_time)
                 logger.debug("Clock synced with %s"%foreign_master_ip)
 
-        elif start_rec in msg :
-            session_name = msg.replace(start_rec,'')
-            self.notify_all({'subject':'rec_should_start','session_name':session_name,'network_propagate':False})
-        elif stop_rec in msg:
-            self.notify_all({'subject':'rec_should_stop','network_propagate':False})
-        elif start_cal in msg:
-            self.notify_all({'subject':'cal_should_start'})
-        elif stop_cal in msg:
-            self.notify_all({'subject':'cal_should_stop'})
-        elif user_event in msg:
-            payload = msg.replace(user_event,'')
-            user_event_name,timestamp = payload.split('@')
-            self.notify_all({'subject':'remote_user_event','user_event_name':user_event_name,'timestamp':float(timestamp),'network_propagate':False,'sender':name,'received_timestamp':self.g_pool.capture.get_timestamp()})
+        elif NOTIFICATION in msg :
+            notification_str = msg.replace(NOTIFICATION,'')
+            try:
+                notification = eval(notification_str)
+            except Exception as e:
+                logger.error('Recevied mal-formed remote notification. Payload:"%s"'%notification_str)
+            else:
+                # This remote notification does not need to be network propagated again.
+                notification['network_propagate'] = False
+                # We also add some info on where it came from.
+                notification['source'] = 'pupil_sync'
+                notification['sync_node_name'] = name
+                notification['sync_node_uuid'] = uuid
+                # Finally we fire it.
+                self.notify_all(notification)
+        else:
+            logger.warning('Received unknown message pattern. Payload:"%s"'%msg)
 
     def handle_msg_whisper(self,peer,name,msg,node):
         logger.warning('%s %s %s %s'%(peer,name,msg,node))
 
 
     def on_notify(self,notification):
-        # if we get a rec event that was not triggered though pupil_sync it will carry network_propage=True
-        # then we should tell other Pupils to mirror this action
-        # this msg has come because rec was triggered through pupil sync,
-        # we dont need to echo this action out again.
-        # otherwise we create a feedback loop and bad things happen.
-        if notification['subject'] == 'rec_started' and notification['network_propagate']:
-            self.thread_pipe.send(start_rec+notification['session_name'])
-        elif notification['subject'] == 'rec_stopped' and notification['network_propagate']:
-            self.thread_pipe.send(stop_rec)
-
-        #userevents are also sycronized
-        elif notification['subject'] == 'local_user_event':
-            self.thread_pipe.send('%s%s@%s'%(user_event,notification['user_event_name'],notification['timestamp']))
-
+        # notifications that carry 'network_porpagate':True are turned into a string and sent to all peers.
+        if notification.get('network_propagate',False):
+            self.thread_pipe.send(NOTIFICATION+repr(notification))
 
     def get_init_dict(self):
         return {'name':self.name,'group':self.group}

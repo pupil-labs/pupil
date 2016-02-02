@@ -1,26 +1,26 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2015  Pupil Labs
+ Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0) License.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
 
-# make shared modules available across pupil_src
-if __name__ == '__main__':
-    from sys import path as syspath
-    from os import path as ospath
-    loc = ospath.abspath(__file__).rsplit('pupil_src', 1)
-    syspath.append(ospath.join(loc[0], 'pupil_src', 'shared_modules'))
-    del syspath, ospath
 
-import cv2
-import numpy as np
-from methods import *
-import logging
-logger = logging.getLogger(__name__)
+#when running from source compile cpp extension if nessesary.
+import sys
+if not getattr(sys, 'frozen', False):
+    from build import build_cpp_extension
+    build_cpp_extension()
 
 from canny_detector import Canny_Detector
+from detector_2d import Detector_2D
+from detector_3d import Detector_3D
+
+
+#explict import here for pyinstaller because it will not search .pyx source files.
+import visualizer_3d
+
 

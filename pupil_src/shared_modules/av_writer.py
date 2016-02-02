@@ -1,9 +1,9 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2015  Pupil Labs
+ Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0) License.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -73,7 +73,7 @@ class AV_Writer(object):
     We are creating a
     """
 
-    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 8000*10e3}, audio_stream=None,use_timestamps=False):
+    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 15000*10e3}, audio_stream=None,use_timestamps=False):
         super(AV_Writer, self).__init__()
         self.use_timestamps = use_timestamps
         # the approximate capture rate.
@@ -99,7 +99,7 @@ class AV_Writer(object):
 
         self.video_stream = self.container.add_stream(video_stream['codec'],1/self.time_base)
         self.video_stream.bit_rate = video_stream['bit_rate']
-        self.video_stream.bit_rate_tolerance = video_stream['bit_rate']
+        self.video_stream.bit_rate_tolerance = video_stream['bit_rate']/20
         self.video_stream.thread_count = 1
         # self.video_stream.pix_fmt = "yuv420p"
         self.configured = False
@@ -294,8 +294,8 @@ class Audio_Capture(object):
 
     def start(self,file_loc, audio_src):
         self.should_close.clear()
-        if platform.system() == "Darwin" and 0:
-            in_container = av.open(':%s'%audio_src,format="avfoundation")
+        if platform.system() == "Darwin":
+            in_container = av.open('none:%s'%audio_src,format="avfoundation")
         else:
             in_container = None
         self.thread = Thread(target=rec_thread, args=(file_loc,in_container, audio_src,self.should_close))

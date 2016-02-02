@@ -1,9 +1,9 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2015  Pupil Labs
+ Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0) License.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -32,7 +32,7 @@ from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
 from screen_marker_calibration import Screen_Marker_Calibration
-from calibrate import preprocess_data
+import calibrate
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -157,8 +157,8 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
         self.active = False
         self.close_window()
 
-        pt_cloud = preprocess_data(self.gaze_list,self.ref_list)
-
+        matched_data = calibrate.closest_matches_monocular(self.gaze_list,self.ref_list)
+        pt_cloud = calibrate.preprocess_2d_data_monocular(matched_data)
         logger.info("Collected %s data points." %len(pt_cloud))
 
         if len(pt_cloud) < 20:

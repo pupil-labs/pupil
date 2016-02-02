@@ -1,5 +1,5 @@
 # Pupil
-Open source eye tracking software platform that started as a thesis project at MIT. Pupil is a project in active, community driven development. Pupil mobile eye tracking hardware is accessible, hackable, and affordable. The software is open source and written in `Python` and `C` when speed is an issue.
+Open source eye tracking software platform that started as a thesis project at MIT. Pupil is a project in active, community driven development. Pupil mobile eye tracking hardware is accessible, hackable, and affordable. The software is open source and written in `Python` and `C++` when speed is an issue.
 
 Our vision is to create tools for a diverse group of people interested in learning about eye tracking and conducting their eye tracking projects.
 
@@ -33,4 +33,4 @@ For an intro to the Pupil mobile eye tracking platform have a look at the [Pupil
 
 
 ## License
-All source code written by Pupil Labs is open source for noncommercial uses as specified the [CC BY-NC-SA license](http://creativecommons.org/licenses/by-nc-sa/3.0/ "CC BY-NC-SA license"). We want you to change and improve the code -- make a fork!  Just make sure to credit us and share your work with the Pupil community.  See the wiki for more info on the [license](https://github.com/pupil-labs/pupil/wiki/License "License").  For commercial use and licencing [contact us!](https://github.com/pupil-labs/pupil/wiki/Community#email "email us")
+All source code written by Pupil Labs is open for use in compliance with the [GNU Lesser General Public License (LGPL v3.0)](http://www.gnu.org/licenses/lgpl-3.0.en.html). We want you to change and improve the code -- make a fork! Make sure to share your work with the community! See the wiki for more info on the [license](https://github.com/pupil-labs/pupil/wiki/License "License"). For support and custom licencing [contact us!](https://github.com/pupil-labs/pupil/wiki/Community#email "email us")

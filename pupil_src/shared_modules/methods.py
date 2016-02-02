@@ -1,9 +1,9 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2015  Pupil Labs
+ Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0) License.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
@@ -89,10 +89,7 @@ class Roi(object):
 
     def set(self,vals):
         if vals is not None and len(vals) is 5:
-            if vals[-1] == self.array_shape:
-                self.lX,self.lY,self.uX,self.uY,_ = vals
-            else:
-                logger.info('Image size has changed: Region of Interest has been reset')
+            self.lX,self.lY,self.uX,self.uY,self.array_shape = vals
         elif vals is not None and len(vals) is 4:
             self.lX,self.lY,self.uX,self.uY= vals
 
@@ -100,6 +97,57 @@ class Roi(object):
         return self.lX,self.lY,self.uX,self.uY,self.array_shape
 
 
+
+def undistort_unproject_pts(pts_uv, camera_matrix, dist_coefs):
+    """
+    This function converts a set of 2D image coordinates to the spherical coordinate system.
+    Hereby the intrinsics of the camera are taken into account.
+    The 2d point set gets undistorted, converted to cartesian vertices and then converted to spherical coordinates.
+
+    @return: ndarray with shape=(n, 3)
+
+    """
+    pts_uv = np.array(pts_uv)
+    camera_matrix_inv = np.linalg.inv(camera_matrix)
+    num_pts = pts_uv.size / 2
+
+    pts_uv.shape = (num_pts, 1, 2)
+    pts_uv = cv2.undistortPoints(pts_uv, camera_matrix, dist_coefs, P=camera_matrix)
+    # return pts_uv
+    # P = camera_matrix enables denormalization as follows:
+    # ```
+    # pts_uv *= np.array([camera_matrix[0,0], camera_matrix[1,1]]) # [fx, fy]
+    # pts_uv += np.array([camera_matrix[0,2], camera_matrix[1,2]]) # [cx, cy]
+    # ```
+
+    pts_h = cv2.convertPointsToHomogeneous(np.float32(pts_uv))
+    pts_h.shape = (num_pts,3)
+
+    xyz = np.zeros((num_pts, 3), dtype=np.float32)
+    for i in range(num_pts):
+        xyz[i]   = camera_matrix_inv.dot(pts_h[i])
+    return xyz
+
+
+def project_distort_pts(pts_xyz,camera_matrix, dist_coefs,  rvec = np.array([0,0,0], dtype=np.float32), tvec = np.array([0,0,0], dtype=np.float32) ):
+
+    # projectPoints is the inverse of function implemented above --> should map the intermediate result to the original input
+    pts2d, _ = cv2.projectPoints(pts_xyz, rvec , tvec, camera_matrix, dist_coefs)
+    return pts2d.reshape(-1,2)
+
+def cart_to_spherical( (x,y, z) ):
+    # convert to spherical coordinates
+    # source: http://stackoverflow.com/questions/4116658/faster-numpy-cartesian-to-spherical-coordinate-conversion
+    r = np.sqrt(x**2 + y**2 + z**2)
+    theta = np.arccos( y /  r ) # for elevation angle defined from Z-axis down
+    psi = np.arctan2(z, x)
+    return r, theta, psi
+
+def spherical_to_cart( r, theta , phi ):
+    x = r * np.sin(theta) * np.cos(phi)
+    y = r * np.cos(theta) * np.sin(phi)
+    z = r * np.sin(theta) * np.sin(phi)
+    return x,y,z
 
 def bin_thresholding(image, image_lower=0, image_upper=256):
     binary_img = cv2.inRange(image, np.asarray(image_lower),
@@ -319,11 +367,11 @@ def find_kink_and_dir_change(curvature,angle):
     split = []
     if curvature.shape[0] == 0:
         return split
-    curv_pos = curvature > 0
-    currently_pos = curv_pos[0]
-    for idx,c, is_pos in zip(range(curvature.shape[0]),curvature,curv_pos):
-        if (is_pos !=currently_pos) or abs(c) < angle:
-            currently_pos = is_pos
+    curv_positive = curvature > 0
+    currently_positive = curv_positive[0]
+    for idx,c, is_posisitve in zip(range(curvature.shape[0]),curvature,curv_positive):
+        if (is_posisitve !=currently_positive) or abs(c) < angle:
+            currently_positive = is_posisitve
             split.append(idx)
     return split
 
@@ -576,16 +624,17 @@ def pruning_quick_combine(l,fn,seed_idx=None,max_evals=1e20,max_depth=5):
         non_seed_idx = [i for i in range(len(l)) if i not in seed_idx]
     else:
         #start from every item
-        seed_idx = range(len(l))
+        seed_idx = range(len(l)) #never happen, because we have an early exit if we have no seeds! patrick
         non_seed_idx = []
     mapping =  seed_idx+non_seed_idx
     unknown = [[node] for node in range(len(seed_idx))]
-    # print mapping
     results = []
     prune = []
+    eval_count = 0
     while unknown and max_evals:
         path = unknown.pop(0)
         max_evals -= 1
+        eval_count +=1
         # print '@idx',[mapping[i] for i in path]
         # print '@content',path
         if not len(path) > max_depth:

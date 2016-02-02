@@ -30,4 +30,11 @@ settings/
 *.sublime-project
 *.sublime-workspace
 
-
+#directory for test file will be ignored
+Pupil_Test_Files
+detector_2d.cpp
+detector_3d.cpp
+CircleGoodnessTest.cpp
+SphereCircleTest.cpp
+*.mp4
+*.mkv
