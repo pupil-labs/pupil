@@ -100,103 +100,176 @@ def almost_equal(a, b, accuracy = 10e-6 ):
 
 if __name__ == '__main__':
 
-#     initial_orientation = angle_axis2quat( 0 , (0.0,1.0,0.0) )
-#     initial_translation = (0,0,0)
+    initial_orientation = angle_axis2quat( 0 , (0.0,1.0,0.0) )
+    initial_translation = (0,0,0)
 
 
-#     sphere_position = [0.0,0.0,0.0]
-#     ref_points_3D = [
-#         [0.0,0.0,200.0],
-#         ]
-#     gaze_directions_3D = [
-#         [0.0,1.0,1.0],
-#    ]
-#     orientation, translation = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation)
-#     angle_axis =  quat2angle_axis(orientation)
-#     print angle_axis
-#     assert (angle_axis[1] == [1,0,0,]).all() and almost_equal(angle_axis[0] , radians(45) )
+    sphere_position = [0.0,0.0,0.0]
+    ref_points_3D = [
+        [0.0,0.0,200.0],
+        ]
+    gaze_directions_3D = [
+        [0.0,1.0,1.0],
+   ]
+    orientation, translation = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation)
+    angle_axis =  quat2angle_axis(orientation)
+    print angle_axis
+    assert (angle_axis[1] == [1,0,0,]).all() and almost_equal(angle_axis[0] , radians(45) )
 
 
 # ##################
 
 
-#     sphere_position = [0.0,0.0,0.0]
-#     ref_points_3D = [
-#         [0.0,0.0,100.0],
-#         [0.0,0.0,100.0],
-#         [0.0,0.0,100.0]
-#     ]
-#     gaze_directions_3D = [
-#         [-0.0,0.5,0.5],
-#         [0.0,0.5,0.5],
-#         [+0.0,0.5,0.5]
-#     ]
-#     orientation, translation = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation)
-#     angle_axis =  quat2angle_axis(orientation)
-#     assert (angle_axis[1] == [1,0,0,]).all() and almost_equal(angle_axis[0] , radians(45) )
+    sphere_position = [0.0,0.0,0.0]
+    ref_points_3D = [
+        [0.0,0.0,100.0],
+        [0.0,0.0,100.0],
+        [0.0,0.0,100.0]
+    ]
+    gaze_directions_3D = [
+        [-0.0,0.5,0.5],
+        [0.0,0.5,0.5],
+        [+0.0,0.5,0.5]
+    ]
+    orientation, translation = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation)
+    angle_axis =  quat2angle_axis(orientation)
+    assert (angle_axis[1] == [1,0,0,]).all() and almost_equal(angle_axis[0] , radians(45) )
 
 
 # # ######################
 
 
-#     sphere_position = [0.0,0.0,0.0]
-#     ref_points_3D = [
-#         [0.0,0.0,100.0],
-#         [0.0,0.0,100.0],
-#         [0.0,0.0,100.0]
-#     ]
-#     gaze_directions_3D = [
-#         [-0.5,0.5,0.5],
-#         [0.0,0.5,0.5],
-#         [+0.5,0.5,0.5]
-#     ]
-#     orientation, translation = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation)
-#     angle_axis =  quat2angle_axis(orientation)
-#     assert almost_equal(angle_axis[1] , [1,0,0,]).all() and almost_equal(angle_axis[0] , radians(45) )
+    sphere_position = [0.0,0.0,0.0]
+    ref_points_3D = [
+        [0.0,0.0,100.0],
+        [0.0,0.0,100.0],
+        [0.0,0.0,100.0]
+    ]
+    gaze_directions_3D = [
+        [-0.5,0.5,0.5],
+        [0.0,0.5,0.5],
+        [+0.5,0.5,0.5]
+    ]
+    orientation, translation = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation)
+    angle_axis =  quat2angle_axis(orientation)
+    assert almost_equal(angle_axis[1] , [1,0,0,]).all() and almost_equal(angle_axis[0] , radians(45) )
 
 
 # # ######################
 
 
-#     sphere_position = [0.0,0.0,0.0]
-#     ##different distance shouln't make any difference
-#     ref_points_3D = [
-#         [0.0,0.0,10.0],
-#         [0.0,0.0,100.0],
-#         [0.0,0.0,1.0]
-#     ]
-#     gaze_directions_3D = [
-#         [-0.5,0.5,0.5],
-#         [0.0,0.5,0.5],
-#         [+0.5,0.5,0.5]
-#     ]
-#     orientation, translation = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation)
-#     angle_axis =  quat2angle_axis(orientation)
-#     assert almost_equal(angle_axis[1] , [1,0,0,]).all() and almost_equal(angle_axis[0] , radians(45) )
+    sphere_position = [0.0,0.0,0.0]
+    ##different distance shouln't make any difference
+    ref_points_3D = [
+        [0.0,0.0,10.0],
+        [0.0,0.0,100.0],
+        [0.0,0.0,1.0]
+    ]
+    gaze_directions_3D = [
+        [-0.5,0.5,0.5],
+        [0.0,0.5,0.5],
+        [+0.5,0.5,0.5]
+    ]
+    orientation, translation = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation)
+    angle_axis =  quat2angle_axis(orientation)
+    assert almost_equal(angle_axis[1] , [1,0,0,]).all() and almost_equal(angle_axis[0] , radians(45) )
 
 
-######################
+#####################
 
-    initial_orientation = angle_axis2quat( 0.0 , (0.0,-1.0,0.0) )
+    initial_orientation = angle_axis2quat( -0.01 , (0.0,1.0,0.0) )
     print initial_orientation
     initial_translation = (0,0,0)
 
     sphere_position = [0.0,0.0,0.0]
     ref_points_3D = [
-        [0.0,0.0,1.0],
-        #[0.0,0.0,1.0],
-        #[0.0,0.0,1.0]
+        [0.0,0.0,10.0],
+        [0.0,0.0,10.0],
+        [0.0,0.0,10.0]
     ]
     gaze_directions_3D = [
         [ 1.0,0.0, 0.0],
-        #[-1.0,0.0,0.0],
-        #[-1.0,0.0,0.0]
+        [ 1.0,0.0,0.0],
+        [ 1.0,0.0,0.0]
     ]
     orientation, translation = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation)
     print orientation
     angle_axis =  quat2angle_axis(orientation)
     print angle_axis
-    assert almost_equal(angle_axis[1] , [1,0,0,]).all() and almost_equal(angle_axis[0] , radians(45) )
+    assert almost_equal(angle_axis[1] , [0,-1,0,]).all() and almost_equal(angle_axis[0] , radians(90) )
+
+
+#####################
+
+
+    initial_orientation = angle_axis2quat( np.pi * 0.51 , (0.0,1.0,0.0) )
+    print initial_orientation
+    initial_translation = (0,0,0)
+
+    sphere_position = [0.0,0.0,0.0]
+    ref_points_3D = [
+        [0.0,0.0,10.0],
+        [0.0,0.0,10.0],
+        [0.0,0.0,10.0]
+    ]
+    gaze_directions_3D = [
+        [ 0.0,0.0,-1.0],
+        [ 0.0,0.0,-1.0],
+        [ 0.0,0.0,-1.0]
+    ]
+    orientation, translation = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation)
+    print orientation
+    angle_axis =  quat2angle_axis(orientation)
+    print angle_axis
+    assert almost_equal(angle_axis[1] , [0,1,0,]).all() and almost_equal(angle_axis[0] , radians(180) )
+
+#####################
+
+    initial_orientation = angle_axis2quat( np.pi * 0.55 , (0.0,1.0,0.0) )
+    print initial_orientation
+    initial_translation = (0,0,0)
+
+    sphere_position = [0.0,0.0,0.0]
+    ref_points_3D = [
+        [0.0,0.5,1.0],
+        [0.0,0.0,1.0],
+        [0.0,-0.5,1.0]
+    ]
+    gaze_directions_3D = [
+        [ 0.0,0.5,-1.0],
+        [ 0.0,0.0,-1.0],
+        [ 0.0,-0.5,-1.0]
+    ]
+    orientation, translation = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation)
+    print orientation
+    angle_axis =  quat2angle_axis(orientation)
+    print angle_axis
+    assert almost_equal(angle_axis[1] , [0,1,0,]).all() and almost_equal(angle_axis[0] , radians(180) )
+
+#####################
+
+    initial_orientation = angle_axis2quat( np.pi * 0.55 , (0.0,1.0,0.0) )
+    print initial_orientation
+    initial_translation = (0,0,0)
+
+    sphere_position = [0.0,0.0,0.0]
+    ref_points_3D = [
+        [0.0,0.5,1.0],
+        [0.0,0.0,-1.0],
+        [0.0,0.0,-1.0],
+        [0.0,-0.5,1.0]
+    ]
+    gaze_directions_3D = [
+        [ 0.0,0.6,-1.0],
+        [ 0.0,0.1,-1.0],
+        [ 0.0,-0.1,-1.0],
+        [ 0.0,-0.6,-1.0]
+    ]
+    orientation, translation = point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation)
+    print orientation
+    angle_axis =  quat2angle_axis(orientation)
+    print angle_axis
+    assert almost_equal(angle_axis[1] , [0,1,0,]).all() and almost_equal(angle_axis[0] , radians(180) )
 
     print 'Test Ended'
 

@@ -74,3 +74,14 @@ if __name__ == '__main__':
     distance, delta =  distance_point_line( ref_point , (line_p1, line_p2) )
     print distance, delta
     assert distance == 0.0 and delta == -1.0
+
+    ## check for the right direction
+    line_p1 = np.array([0.0,0.0,0.0 ])
+    line_p2 = np.array([1.0,1.5,0.5 ])
+
+    #find nearest point on line for ref point
+    ref_point = np.array([0.0,0.0,100.0])
+    distance, delta =  distance_point_line( ref_point , (line_p1, line_p2/np.linalg.norm(line_p2)) )
+    print distance, delta
+    print distance/delta
+    assert distance == 0.0 and delta == -1.0
