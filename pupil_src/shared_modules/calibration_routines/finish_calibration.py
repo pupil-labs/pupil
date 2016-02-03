@@ -99,10 +99,11 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             eye_to_world_matrix0[:3,3:4] =  t0
             # eye_to_world_matrix0[:3,3:4] =  np.array((20,10,-20)).reshape(3,1)
             # eye_to_world_matrix0[:3,3:4] -=  R0 * (np.array(sphere0)*(1,-1,1)).reshape(3,1)
-
+            #print eye_to_world_matrix0
             eye_to_world_matrix1  = np.matrix(np.eye(4))
             eye_to_world_matrix1[:3,:3] = R1
             eye_to_world_matrix1[:3,3:4] =  t1
+            #print eye_to_world_matrix1
             # eye_to_world_matrix1[:3,3:4] =  np.array((-40,10,-20)).reshape(3,1)
             # eye_to_world_matrix1[:3,3:4] -=  R1 * (np.array(sphere1)*(1,-1,1)).reshape(3,1)
 
@@ -153,7 +154,19 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             # eye_to_world_matrix[:3,3:4] = t
             sphere = pupil0[-1]['sphere']['center']
 
-            eye_to_world_matrix , gaze_3d = point_line_calibration(sphere, ref_3d,  gaze_direction_3d)
+            gaze_3d = ()
+
+            initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033]
+            #initial_orientation = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
+
+            initial_translation = (30, 30,-20)
+
+            orientation, translation  = point_line_calibration(sphere, ref_3d,  gaze_direction_3d, initial_orientation, initial_translation)
+            translation = np.ndarray(shape=(3,1), buffer=np.array(translation))
+            rotation_matrix = calibrate.quat2mat(orientation)
+            eye_to_world_matrix  = np.matrix(np.eye(4))
+            eye_to_world_matrix[:3,:3] = rotation_matrix
+            eye_to_world_matrix[:3,3:4] = translation
             print 'matrix' , eye_to_world_matrix
 
             avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_3d, eye_to_world_matrix )

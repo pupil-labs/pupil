@@ -135,7 +135,7 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
 
     // Build and solve the problem.
     Solver::Options options;
-    options.max_num_iterations = 10000;
+    options.max_num_iterations = 1000;
     options.linear_solver_type = ceres::DENSE_QR;
     //options.parameter_tolerance = 1e-14;
     options.function_tolerance = 1e-10;
