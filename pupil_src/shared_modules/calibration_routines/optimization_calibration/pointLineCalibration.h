@@ -110,8 +110,10 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
         // do a check to handle parameters we can't solve
         // First: the length of the line must be greater zero
         // Second: the angle between line direction and reference point direction must not be greater 90 degrees, considering the initial orientation
-        auto v = spherePosition - g;
+        auto v = g - spherePosition ;
         auto v2 = q*v;
+        std::cout << "v2: " << v2 << std::endl;
+        std::cout << "dot: " << v2.dot(p) << std::endl;
         if( v.norm() >= std::numeric_limits<double>::epsilon() && v2.dot(p) > 0.0   ){
             CostFunction* cost = new AutoDiffCostFunction<TransformationError , 1, 4, 3 >(new TransformationError(p , spherePosition , g ));
             problem.AddResidualBlock(cost, nullptr, orientation,  translation);
