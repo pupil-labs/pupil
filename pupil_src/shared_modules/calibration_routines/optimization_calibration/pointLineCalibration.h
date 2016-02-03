@@ -94,7 +94,7 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
 
     ceres::LocalParameterization* quaternion_parameterization = new ceres::QuaternionParameterization;
 
-    // don't use Constructor 'Quaternion (const Scalar *data)' because the internal layout for wxyz is different from the one we use.
+    // don't use Constructor 'Quaternion (const Scalar *data)' because the internal layout for coefficients is different from the one we use.
     // Memory Layout EIGEN: xyzw
     // Memory Layout CERES and the one we use: wxyz
     Eigen::Quaterniond q(orientation[0],orientation[1],orientation[2],orientation[3]);
