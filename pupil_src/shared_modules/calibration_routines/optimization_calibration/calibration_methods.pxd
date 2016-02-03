@@ -37,4 +37,4 @@ cdef extern from 'common.h':
 cdef extern from 'pointLineCalibration.h':
 
 
-    Matrix4d pointLineCalibration( Vector3 spherePosition,const vector[Vector3]& points,const vector[Vector3]& lines, vector[Vector3]& gazePoints  )
+    Matrix4d pointLineCalibration( Vector3 spherePosition,const vector[Vector3]& points,const vector[Vector3]& lines,  double[4]& orientation , double[3]& translation  )
