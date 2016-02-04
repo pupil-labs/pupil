@@ -25,9 +25,8 @@ struct TransformationError {
 
     template <typename T>
     bool operator()(
-        const T* const R,  // Rotation denoted by quaternion
-        const T* const t,
-        // followed with translation
+        const T* const R,  // orientation denoted by quaternion
+        const T* const t,  // followed by translation
         T* residuals) const
     {
 
@@ -156,13 +155,14 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
     }
 
 
+    //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
     Eigen::Matrix<double, 3, 3, Eigen::RowMajor> r;
-    Eigen::Matrix<double, 3, 3> rc;
     ceres::QuaternionToRotation( orientation , r.data() );
-    std::cout << "r: " << r << std::endl;
-    std::cout << "det: " << r.determinant() << std::endl; // be sure we get a valid rotation matrix, det(R) == 1
-    rc = Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> >(r.data());
-
+    // ceres should always return a valid quaternion
+    std::cout << "det:: " << r.determinant()  << std::endl;
+    if( r.determinant() != 1.0){
+        std::cout << "Error: No valid rotation matrix."   << std::endl;
+    }
 
     // we need to take the sphere position into account
     // thus the actual translation is not right, because the local cordinate frame of the eye need to be translated in the opposite direction
@@ -170,7 +170,7 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
 
     // since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
     Eigen::Matrix4d eyeToWorld =  Eigen::Matrix4d::Identity();
-    eyeToWorld.block<3,3>(0,0) = rc;
+    eyeToWorld.block<3,3>(0,0) = Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> >(r.data());
     eyeToWorld(0, 3) = translation[0];
     eyeToWorld(1, 3) = translation[1];
     eyeToWorld(2, 3) = translation[2];
@@ -184,8 +184,7 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
     translation[1] = actualtranslation[1];
     translation[2] = actualtranslation[2];
 
-    // Eigen::Matrix4d tt = Eigen::Map<Eigen::Matrix<double,4,4,Eigen::RowMajor> >(t.data());
-    // std::cout << "transformation: "  << tt  << std::endl;
+
 
 }
 
