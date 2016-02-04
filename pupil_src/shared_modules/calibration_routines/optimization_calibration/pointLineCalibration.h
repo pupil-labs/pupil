@@ -146,26 +146,21 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
     // // Recover r from m.
 
     // std::cout << summary.BriefReport() << "\n";
-    std::cout << summary.FullReport() << "\n";
-   for (int i = 0; i < 4; i++) {
-        std::cout << "," << orientation[i] << std::endl;
-    }
-    for (int i = 0; i < 3; i++) {
-        std::cout << "," << translation[i] << std::endl;
-    }
+    //std::cout << summary.FullReport() << "\n";
 
 
     //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
     Eigen::Matrix<double, 3, 3, Eigen::RowMajor> r;
     ceres::QuaternionToRotation( orientation , r.data() );
     // ceres should always return a valid quaternion
-    std::cout << "det:: " << r.determinant()  << std::endl;
-    if( r.determinant() != 1.0){
-        std::cout << "Error: No valid rotation matrix."   << std::endl;
-    }
+    // double det = r.determinant();
+    // std::cout << "det:: " << det << std::endl;
+    // if(  det == 1 ){
+    //     std::cout << "Error: No valid rotation matrix."   << std::endl;
+    // }
 
     // we need to take the sphere position into account
-    // thus the actual translation is not right, because the local cordinate frame of the eye need to be translated in the opposite direction
+    // thus the actual translation is not right, because the local coordinate frame of the eye need to be translated in the opposite direction
     // of the sphere coordinates
 
     // since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
@@ -174,10 +169,10 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
     eyeToWorld(0, 3) = translation[0];
     eyeToWorld(1, 3) = translation[1];
     eyeToWorld(2, 3) = translation[2];
-    std::cout << "eyeToWorld: "  << eyeToWorld  << std::endl;
+    //std::cout << "eyeToWorld: "  << eyeToWorld  << std::endl;
 
     Eigen::Vector4d sphereWorld = eyeToWorld * Eigen::Vector4d(spherePosition[0],spherePosition[1],spherePosition[2], 1.0 );
-    std::cout << "sphere world: " << sphereWorld << std::endl;
+   // std::cout << "sphere world: " << sphereWorld << std::endl;
     Vector3 sphereOffset =  sphereWorld.head<3>() - Vector3(translation);
     Vector3 actualtranslation =  Vector3(translation) - sphereOffset;
     translation[0] = actualtranslation[0];
