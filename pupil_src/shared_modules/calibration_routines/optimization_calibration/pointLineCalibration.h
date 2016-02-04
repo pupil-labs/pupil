@@ -59,24 +59,22 @@ struct TransformationError {
         Eigen::Matrix<T, 3, 1> ep2;
         ep2 << T(p2[0]) , T(p2[1]) , T(p2[2]);
 
-        // delta tells us if the point lies in direction from p1 to p2 or from p2 to p1
-        //T delta = -(ep1 - refP ).dot(ep2 - ep1) / (ep2 - ep1).squaredNorm();
-        // just interested in the sign so remove denominator
-        T delta = -(ep1 - refP ).dot(ep2 - ep1) ;
+        // Equation 3: http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+        // delta tells us if the point lies in direction "behind" or "infront" of ep1
+        T delta = -(ep1 - refP ).dot(ep2 - ep1) / (ep2 - ep1).squaredNorm();
 
-        // in our case out point should alway lay on the ray from p1 to p2
-        // we punish if it's the other way
+        // in our case the point should alway lay on the ray from p1 to p2
         if(  delta  >= 0.0 ){
             // now calculate the distance between the observed point and the nearest point on the line
+            // Equation 10: http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+            // and divide by delta
+            // by dividing by delta we actually optimize the Sine of the angle between these two lines
             residuals[0] = ((refP - ep1).cross(refP - ep2).squaredNorm() / (ep2 - ep1).squaredNorm()) / (delta*delta);
             return true;
 
         }
         return false;
-        //else{
-        //     //residuals[0] = T(999999999.9);
-        //     return true;
-        // }
+
 
     }
 
@@ -143,7 +141,7 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
 
     //options.use_nonmonotonic_steps = true;
     //options.minimizer_progress_to_stdout = true;
-    options.check_gradients = true;
+    //options.check_gradients = true;
     Solver::Summary summary;
     Solve(options, &problem, &summary);
     // // Recover r from m.
