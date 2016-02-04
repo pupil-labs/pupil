@@ -110,12 +110,11 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
         // do a check to handle parameters we can't solve
         // First: the length of the line must be greater zero
         // Second: the angle between line direction and reference point direction must not be greater 90 degrees, considering the initial orientation
-        auto v = g - spherePosition ;
-        auto v2 = q*v;
+        auto v2 = q*g;
         std::cout << "v2: " << v2 << std::endl;
         std::cout << "dot: " << v2.dot(p) << std::endl;
-        if( v.norm() >= std::numeric_limits<double>::epsilon() && v2.dot(p) > 0.0   ){
-            CostFunction* cost = new AutoDiffCostFunction<TransformationError , 1, 4, 3 >(new TransformationError(p , spherePosition , g ));
+        if( g.norm() >= std::numeric_limits<double>::epsilon() && v2.dot(p) > 0.0   ){
+            CostFunction* cost = new AutoDiffCostFunction<TransformationError , 1, 4, 3 >(new TransformationError(p , Vector3::Zero() , g ));
             problem.AddResidualBlock(cost, nullptr, orientation,  translation);
         }else{
             std::cout << "no valid direction vector"  << std::endl;
@@ -167,12 +166,25 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
     rc = Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> >(r.data());
 
 
-    Eigen::Matrix4d t = Eigen::Matrix4d::Identity();
-    t.block<3,3>(0,0) = rc;
-    t(0, 3) = translation[0];
-    t(1, 3) = translation[1];
-    t(2, 3) = translation[2];
-    std::cout << "transformation: "  << t  << std::endl;
+    // we need to take the sphere position into account
+    // thus the actual translation is not right, because the local cordinate frame of the eye need to be translated in the opposite direction
+    // of the sphere coordinates
+
+    // since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
+    Eigen::Matrix4d eyeToWorld =  Eigen::Matrix4d::Identity();
+    eyeToWorld.block<3,3>(0,0) = rc;
+    eyeToWorld(0, 3) = translation[0];
+    eyeToWorld(1, 3) = translation[1];
+    eyeToWorld(2, 3) = translation[2];
+    std::cout << "eyeToWorld: "  << eyeToWorld  << std::endl;
+
+    Eigen::Vector4d sphereWorld = eyeToWorld * Eigen::Vector4d(spherePosition[0],spherePosition[1],spherePosition[2], 1.0 );
+    std::cout << "sphere world: " << sphereWorld << std::endl;
+    Vector3 sphereOffset =  sphereWorld.head<3>() - Vector3(translation);
+    Vector3 actualtranslation =  Vector3(translation) - sphereOffset;
+    translation[0] = actualtranslation[0];
+    translation[1] = actualtranslation[1];
+    translation[2] = actualtranslation[2];
 
     // Eigen::Matrix4d tt = Eigen::Map<Eigen::Matrix<double,4,4,Eigen::RowMajor> >(t.data());
     // std::cout << "transformation: "  << tt  << std::endl;
