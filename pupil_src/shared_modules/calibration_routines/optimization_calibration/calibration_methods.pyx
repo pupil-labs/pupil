@@ -17,7 +17,6 @@ import numpy as np
 def point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation ):
 
 
-
     cdef vector[Vector3] cpp_ref_points
     cdef vector[Vector3] cpp_gaze_directions
     for p in ref_points_3D:
@@ -25,7 +24,6 @@ def point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D ,
 
     for p in gaze_directions_3D:
         cpp_gaze_directions.push_back(Vector3(p[0],p[1],p[2]))
-
 
     cdef Vector3 cpp_sphere_position
     cpp_sphere_position = Vector3(sphere_position[0],sphere_position[1],sphere_position[2])
@@ -36,7 +34,7 @@ def point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D ,
     cpp_translation[:] = initial_translation
 
     ## optimized values are written to cpp_orientation and cpp_translation
-    pointLineCalibration(cpp_sphere_position, cpp_ref_points , cpp_gaze_directions , &cpp_orientation[0], &cpp_translation[0])
+    cdef bint success  = pointLineCalibration(cpp_sphere_position, cpp_ref_points , cpp_gaze_directions , &cpp_orientation[0], &cpp_translation[0])
 
 
-    return cpp_orientation, cpp_translation
+    return success, cpp_orientation, cpp_translation
