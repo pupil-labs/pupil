@@ -73,7 +73,7 @@ struct TransformationError {
 };
 
 
-void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& refPoints, const std::vector<Vector3>& gazeDirections , double* orientation , double* translation )
+bool pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& refPoints, const std::vector<Vector3>& gazeDirections , double* orientation , double* translation )
 {
 
     // don't use Constructor 'Quaternion (const Scalar *data)' because the internal layout for coefficients is different from the one we use.
@@ -103,7 +103,7 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
 
     if( problem.NumResidualBlocks() == 0 ){
         std::cout << "nothing to solve"  << std::endl;
-        return;
+        return false;
     }
 
     problem.SetParameterBlockConstant(translation);
@@ -129,6 +129,10 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
     // std::cout << summary.BriefReport() << "\n";
     //std::cout << summary.FullReport() << "\n";
 
+    if( summary.termination_type != ceres::TerminationType::CONVERGENCE  ){
+        std::cout << "Termination Error: " << ceres::TerminationTypeToString(summary.termination_type) << std::endl;
+        return false;
+    }
 
     //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
     Eigen::Matrix<double, 3, 3, Eigen::RowMajor> rotation;
@@ -138,6 +142,7 @@ void pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
     // std::cout << "det:: " << det << std::endl;
     // if(  det == 1 ){
     //     std::cout << "Error: No valid rotation matrix."   << std::endl;
+    //     return false;
     // }
 
 
