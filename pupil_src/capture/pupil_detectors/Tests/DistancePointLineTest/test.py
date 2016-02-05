@@ -13,6 +13,16 @@ def distance_point_line( ref_point, line ):
     distance = np.linalg.norm( np.cross((ref_point-p1),(ref_point-p2)) )  / np.linalg.norm((p2 -p1));
     return distance , delta
 
+def nearest_linepoint_to_point( ref_point, line ):
+
+    p1 = line[0]
+    p2 = line[1]
+
+    direction = p2 - p1
+    denom =  np.linalg.norm(direction)
+    delta = - np.dot((p1 - ref_point),(direction)) / (denom*denom)
+    point  =   p1 + direction * delta
+    return point
 
 if __name__ == '__main__':
 
@@ -73,3 +83,13 @@ if __name__ == '__main__':
     distance, delta =  distance_point_line( ref_point , (line_p1, line_p2) )
     assert distance == 0.0 and delta == -1.0
 
+
+    ## check for the right direction
+    line_p1 = np.array([0.0,0.0,0.0 ])
+    line_p2 = np.array([0.0,0.0,1.0 ])
+
+    #find nearest point on line for ref point
+    ref_point = np.array([0.0,0.0,10])
+    point=  nearest_linepoint_to_point( ref_point , (line_p1, line_p2) )
+    assert (point == [0,0,10]).all()
+    print 'Test ended.'
