@@ -542,6 +542,19 @@ def quat2mat(q):
                      [xY+wZ, 1.0-(xX+zZ), yZ-wX],
                      [xZ-wY, yZ+wX, 1.0-(xX+yY)]])
 
+
+
+def nearest_linepoint_to_point( ref_point, line ):
+
+    p1 = line[0]
+    p2 = line[1]
+
+    direction = p2 - p1
+    denom =  np.linalg.norm(direction)
+    delta = - np.dot((p1 - ref_point),(direction)) / (denom*denom)
+    point  =   p1 + direction * delta
+    return point
+
 #NOTUSED
 def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
     """Return affine transform matrix to register two point sets.

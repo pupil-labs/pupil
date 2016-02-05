@@ -152,28 +152,57 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             # eye_to_world_matrix  = np.matrix(np.eye(4))
             # eye_to_world_matrix[:3,:3] = R
             # eye_to_world_matrix[:3,3:4] = t
-            sphere = pupil0[-1]['sphere']['center']
+            sphere_pos = pupil0[-1]['sphere']['center']
 
-            gaze_3d = ()
 
             initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033]
             #initial_orientation = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
-
             initial_translation = (30, 30,-20)
 
-            orientation, translation  = point_line_calibration(sphere, ref_3d,  gaze_direction_3d, initial_orientation, initial_translation)
+            success, orientation, translation  = point_line_calibration(sphere_pos, ref_3d,  gaze_direction_3d, initial_orientation, initial_translation)
+
+            if not success:
+                logger.error("Calibration wasn't successfull.")
+
             translation = np.ndarray(shape=(3,1), buffer=np.array(translation))
             rotation_matrix = calibrate.quat2mat(orientation)
             eye_to_world_matrix  = np.matrix(np.eye(4))
             eye_to_world_matrix[:3,:3] = rotation_matrix
             eye_to_world_matrix[:3,3:4] = translation
-            print 'matrix' , eye_to_world_matrix
 
-            avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_3d, eye_to_world_matrix )
+            world_to_eye_matrix  = np.linalg.inv(eye_to_world_matrix)
+
+            #with the eye_to_world matrix let's calculate the nearest points for every gaze line
+            sphere_pos_world = np.zeros(4)
+            sphere_pos_world[:3] = sphere_pos
+            sphere_pos_world[3] = 1.0
+            sphere_pos_world  = eye_to_world_matrix.dot(sphere_pos_world)
+            sphere_pos_world = np.squeeze(np.asarray(sphere_pos_world))
+
+            gaze_points_3d = []
+
+            for i in range(0,len(ref_3d)):
+                ref_p = ref_3d[i]
+                gaze_direction = np.ones(3)
+                gaze_direction[:3] = gaze_direction_3d[i]
+                gaze_direction = rotation_matrix.dot(gaze_direction)
+                gaze_direction = np.squeeze(np.asarray(gaze_direction))
+                line = (sphere_pos_world[:3] , sphere_pos_world[:3] + gaze_direction[:3] )
+                point_world = calibrate.nearest_linepoint_to_point( ref_p , line )
+                point_eye = np.ones(4)
+                point_eye[:3] = point_world
+                # everythings assumes gaze_points in eye coordinates
+                point_eye = world_to_eye_matrix.dot(point_eye)
+                point_eye = np.squeeze(np.asarray(point_eye))
+                gaze_points_3d.append( point_eye[:3] )
+
+            # TODO restructure mapper and visualizer to handle gaze points in world coordinates
+
+            avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_points_3d , eye_to_world_matrix  )
             print 'best calibration average distance: ' , avg_distance
             # print 'best calibration distance variance: ' , dist_var
 
-            g_pool.plugins.add(Vector_Gaze_Mapper,args={'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': gaze_3d})
+            g_pool.plugins.add(Vector_Gaze_Mapper,args={'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': gaze_points_3d})
 
         else:
             logger.error('Did not collect data during calibration.')
