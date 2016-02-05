@@ -413,6 +413,41 @@ def preprocess_3d_data_binocular(matched_data, camera_intrinsics , calibration_d
 
     return cal_data
 
+def preprocess_3d_data_binocular_gaze_direction(matched_data, camera_intrinsics , calibration_distance):
+
+    camera_matrix = camera_intrinsics["camera_matrix"]
+    dist_coefs = camera_intrinsics["dist_coefs"]
+
+    cal_data = []
+    for triplet in matched_data:
+        ref,p0,p1 = triplet['ref'],triplet['pupil0'],triplet['pupil1']
+        try:
+            # taking the pupil normal as line of sight vector
+            # we multiply by a fixed (assumed) distance and
+            # add the sphere pos to get the 3d gaze point in eye camera 3d coords
+            sphere_pos0 = np.array(p0['sphere']['center'])
+            gaze_pt0 = np.array(p0['circle3D']['normal'])
+
+
+            sphere_pos1 = np.array(p1['sphere']['center'])
+            gaze_pt1 = np.array(p1['circle3D']['normal'])
+
+
+            # projected point uv to normal ray vector of camera
+            ref_vector =  undistort_unproject_pts(ref['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
+            ref_vector = ref_vector / np.linalg.norm(ref_vector)
+            # assuming a fixed (assumed) distance we get a 3d point in world camera 3d coords.
+            ref_pt_3d = ref_vector*calibration_distance
+
+
+            point_triple_3d = tuple(gaze_pt0), tuple(gaze_pt1) , ref_pt_3d
+            cal_data.append(point_triple_3d)
+        except KeyError as e:
+            # this pupil data point did not have 3d detected data.
+            pass
+
+    return cal_data
+
 def rigid_transform_3D(A, B):
     assert len(A) == len(B)
 
@@ -554,6 +589,54 @@ def nearest_linepoint_to_point( ref_point, line ):
     delta = - np.dot((p1 - ref_point),(direction)) / (denom*denom)
     point  =   p1 + direction * delta
     return point
+
+def nearest_intersection( line0 , line1 ):
+
+    p1 = line0[0]
+    p2 = line0[1]
+    p3 = line1[0]
+    p4 = line1[1]
+
+    def mag(p):
+        return np.sqrt( p.dot(p) )
+
+    def normalise(p1, p2):
+        p = p2 - p1
+        m = mag(p)
+        if m == 0:
+            return [0.0, 0.0, 0.0]
+        else:
+            return p/m
+
+    # Check for parallel lines
+    magnitude = mag (np.cross(normalise(p1, p2), normalise(p3, p4 )) )
+
+    if round(magnitude, 6) != 0.0:
+
+        A = p1-p3
+        B = p2-p1
+        C = p4-p3
+
+        ma = ((np.dot(A, C)*np.dot(C, B)) - (np.dot(A, B)*np.dot(C, C)))/ \
+             ((np.dot(B, B)*np.dot(C, C)) - (np.dot(C, B)*np.dot(C, B)))
+        mb = (ma*np.dot(C, B) + np.dot(A, C))/ np.dot(C, C)
+
+        # Calculate the point on line 1 that is the closest point to line 2
+        Pa = p1 + B*ma
+
+        # Calculate the point on line 2 that is the closest point to line 1
+        Pb = p3 + C* mb
+
+        nPoint = Pa - Pb
+        # Distance between lines
+        intersection_dist = np.sqrt( nPoint.dot( nPoint ))
+
+        return Pb + nPoint * 0.5 , intersection_dist
+    else:
+        return None,None  # parallel lines
+
+
+
 
 #NOTUSED
 def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
