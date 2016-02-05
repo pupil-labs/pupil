@@ -8,15 +8,13 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os, sys, platform, errno
-import getpass
+import os, sys, platform, errno, getpass
 from pyglui import ui
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 from plugin import Plugin
 from time import strftime,localtime,time,gmtime
 from shutil import copy2
-from glob import glob
 from audio import Audio_Input_Dict
 from file_methods import save_object
 from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
@@ -24,7 +22,6 @@ from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
 import logging
 logger = logging.getLogger(__name__)
 
-import subprocess as sp
 
 
 def get_auto_name():
@@ -290,14 +287,7 @@ class Recorder(Plugin):
             self.writer.write_video_frame(frame)
             self.frame_count += 1
 
-            # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
-            for p in events['pupil_positions']:
-                pupil_pos = p['timestamp'],p['confidence'],p['id'],p['norm_pos'][0],p['norm_pos'][1],p['diameter']
-                self.pupil_pos_list.append(pupil_pos)
-
-            for g in events.get('gaze_positions',[]):
-                gaze_pos = g['timestamp'],g['confidence'],g['norm_pos'][0],g['norm_pos'][1]
-                self.gaze_pos_list.append(gaze_pos)
+            # # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
 
             self.button.status_text = self.get_rec_time_str()
 
@@ -312,12 +302,6 @@ class Recorder(Plugin):
                     pipe.send(('Rec_Stop',None))
 
         save_object(self.data,os.path.join(self.rec_path, "pupil_data"))
-
-        gaze_list_path = os.path.join(self.rec_path, "gaze_positions.npy")
-        np.save(gaze_list_path,np.asarray(self.gaze_pos_list))
-
-        pupil_list_path = os.path.join(self.rec_path, "pupil_positions.npy")
-        np.save(pupil_list_path,np.asarray(self.pupil_pos_list))
 
         timestamps_path = os.path.join(self.rec_path, "world_timestamps.npy")
         # ts = sanitize_timestamps(np.array(self.timestamps))
