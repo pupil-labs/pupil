@@ -228,7 +228,7 @@ class Reference_Surface(object):
 
                     K,dist_coef,img_size = camera_intrinsics
 
-                    ###marker support pose estiamtion:
+                    # marker support pose estimation:
                     # denormalize image reference points to pixel space
                     yx.shape = -1,2
                     yx *= img_size
