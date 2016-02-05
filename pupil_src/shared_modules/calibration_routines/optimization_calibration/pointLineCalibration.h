@@ -107,7 +107,14 @@ bool pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
         return false;
     }
 
-    problem.SetParameterBlockConstant(translation);
+    //problem.SetParameterBlockConstant(translation);
+    problem.SetParameterLowerBound(translation, 0 , translation[0] - 30.0);
+    problem.SetParameterLowerBound(translation, 1 , translation[1] - 30.0);
+    problem.SetParameterLowerBound(translation, 2 , translation[2] - 30.0);
+
+    problem.SetParameterUpperBound(translation, 0 , translation[0] + 30.0);
+    problem.SetParameterUpperBound(translation, 1 , translation[1] + 30.0);
+    problem.SetParameterUpperBound(translation, 2 , translation[2] + 30.0);
 
     ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
     problem.SetParameterization(orientation, quaternionParameterization);
