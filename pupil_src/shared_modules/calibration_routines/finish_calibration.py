@@ -11,11 +11,35 @@ import logging
 logger = logging.getLogger(__name__)
 from gaze_mappers import *
 
+def _send_cal_finished_notification(g_pool, successful, error_code=None, reason=None):
+    if reason == None:
+        reason = _message_for_error_code(error_code)
+    g_pool.active_calibration_plugin.notify_all({
+        'subject':'cal_finished',
+        'successful': successful,
+        'error_code': error_code,
+        'reason': reason
+    })
+
+def _message_for_error_code(error_code):
+    if not error_code:
+        return None
+
+    if error_code == 0:
+        return "Calibration was successful"
+    elif error_code == -1001:
+        return "Did not collect calibration data. Please retry."
+    elif error_code == -1002:
+        return "Did not collect enough data. Please retry."
+    else:
+        return None
+
 def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500, force=None):
     if pupil_list and ref_list:
         pass
     else:
         logger.error("Did not collect calibration data. Please retry.")
+        _send_cal_finished_notification(g_pool,False, -1001)
         return
 
     camera_intrinsics = load_camera_calibration(g_pool)
@@ -62,6 +86,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                 ref_3d = cal_pt_cloud[:,2]
             except:
                 logger.error('Did not collect enough data. Please retry.')
+                _send_cal_finished_notification(g_pool,False, -1002)
                 return
 
             best_distance = 1000
@@ -122,6 +147,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                 ref_3d = cal_pt_cloud[:,1]
             except:
                 logger.error('Did not collect enough data. Please retry.')
+                _send_cal_finished_notification(g_pool,False, -1002)
                 return
 
             best_distance = 1000
@@ -157,6 +183,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
 
         else:
             logger.error('Did not collect data during calibration.')
+            _send_cal_finished_notification(g_pool,False, -1001)
             return
     elif mode == '2d':
         if matched_binocular_data:
@@ -177,7 +204,9 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
         else:
             logger.error('Did not collect data during calibration.')
+            _send_cal_finished_notification(g_pool,False, -1001)
             return
 
     user_calibration_data = {'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
     save_object(user_calibration_data,os.path.join(g_pool.user_dir, "user_calibration_data"))
+    _send_cal_finished_notification(g_pool,True, 0)
