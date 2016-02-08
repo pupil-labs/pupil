@@ -129,7 +129,7 @@ class Offline_Marker_Detector(Marker_Detector):
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
-        self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statsics_to_file))
+        self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statistics_to_file))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
         for s in self.surfaces:
             idx = self.surfaces.index(s)
@@ -352,7 +352,7 @@ class Offline_Marker_Detector(Marker_Detector):
         glPopMatrix()
 
 
-    def save_surface_statsics_to_file(self):
+    def save_surface_statistics_to_file(self):
 
         in_mark = self.g_pool.trim_marks.in_mark
         out_mark = self.g_pool.trim_marks.out_mark
@@ -382,8 +382,8 @@ class Offline_Marker_Detector(Marker_Detector):
         """
         section = slice(in_mark,out_mark)
 
-
-        metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
+        analytics_dir = os.path.join(self.g_pool.rec_dir,"analytics")
+        metrics_dir = os.path.join(analytics_dir,"metrics_%s-%s"%(in_mark,out_mark))
         logger.info("exporting metrics to %s"%metrics_dir)
         if os.path.isdir(metrics_dir):
             logger.info("Will overwrite previous export for this section")
