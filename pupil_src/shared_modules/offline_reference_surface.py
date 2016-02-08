@@ -33,7 +33,8 @@ class Offline_Reference_Surface(Reference_Surface):
         self.g_pool = g_pool
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
-
+ 
+        self.heatmap_colormap = None
         self.heatmap_detail = .2
         self.heatmap = None
         self.heatmap_texture = None
@@ -285,9 +286,15 @@ class Offline_Reference_Surface(Reference_Surface):
             scale = 0
         hist = np.uint8( hist*(scale) )
 
-        #colormapping
-        c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
- 
+        # colormapping
+        colormap = cv2.COLORMAP_JET
+        cv2_colormaps = ['AUTUMN','BONE', 'JET', 'WINTER', 'RAINBOW', 'OCEAN', 'SUMMER', 'SPRING', 'COOL', 'HSV', 'PINK', 'HOT']
+        for i, name in enumerate(cv2_colormaps):
+            if self.heatmap_colormap == name:
+                colormap = i
+                break
+        c_map = cv2.applyColorMap(hist, colormap)
+
         # add alpha channel; transparent backgroud
         hist[hist>0] = 125
         self.heatmap[:,:,3] = hist
