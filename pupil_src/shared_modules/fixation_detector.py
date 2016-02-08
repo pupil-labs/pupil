@@ -211,7 +211,9 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         fixations_in_section = chain(*self.g_pool.fixations_by_frame[slice(in_mark,out_mark)])
         fixations_in_section = dict([(f['id'],f) for f in fixations_in_section]).values() #remove dublicates
         fixations_in_section.sort(key=lambda f:f['id'])
-        metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
+
+        analytics_dir = os.path.join(self.g_pool.rec_dir,"analytics")
+        metrics_dir = os.path.join(analytics_dir,"metrics_%s-%s"%(in_mark,out_mark))
         logger.info("exporting metrics to %s"%metrics_dir)
         if os.path.isdir(metrics_dir):
             logger.info("Will overwrite previous export for this section.")
