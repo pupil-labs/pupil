@@ -389,7 +389,7 @@ class Offline_Marker_Detector(Marker_Detector):
             logger.info("Will overwrite previous export for this section")
         else:
             try:
-                os.mkdir(metrics_dir)
+                os.makedirs(metrics_dir)
             except:
                 logger.warning("Could not make metrics dir %s"%metrics_dir)
                 return
