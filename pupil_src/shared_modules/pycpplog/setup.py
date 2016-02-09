@@ -1,32 +1,19 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2016  Pupil Labs
 
-# monkey-patch for parallel compilation
-def parallelCCompile(self, sources, output_dir=None, macros=None, include_dirs=None, debug=0, extra_preargs=None, extra_postargs=None, depends=None):
-    # those lines are copied from distutils.ccompiler.CCompiler directly
-    macros, objects, extra_postargs, pp_opts, build = self._setup_compile(output_dir, macros, include_dirs, sources, depends, extra_postargs)
-    cc_args = self._get_cc_args(pp_opts, debug, extra_preargs)
-    # parallel code
-    N=4 # number of parallel compilations
-    import multiprocessing.pool
-    def _single_compile(obj):
-        try: src, ext = build[obj]
-        except KeyError: return
-        self._compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
-    # convert to list, imap is evaluated on-demand
-    list(multiprocessing.pool.ThreadPool(N).imap(_single_compile,objects))
-    return objects
-import distutils.ccompiler
-distutils.ccompiler.CCompiler.compile=parallelCCompile
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
+
 
 from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Build import cythonize
-import numpy as np
-import os, platform
-
-
 
 dependencies = []
-
 
 extensions = [
     Extension(
@@ -44,7 +31,7 @@ extensions = [
 setup(
     name="pycpplog",
     version="0.1",
-    url="https://github.com/pupil-labs/pupil",
+    url="https://github.com/pupil-labs/pycpplog",
     author='Pupil Labs',
     author_email='info@pupil-labs.com',
     license='GNU',
