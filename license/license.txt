@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Pupil - open source eye tracking platform
-Copyright (C) 2012-2015  Pupil Labs UG
+Copyright (C) 2012-2016  Pupil Labs UG
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Motivation
@@ -20,7 +20,7 @@ We want you to change and improve the code. All software is distributed in the h
 ------------------------------------------------------------------------------------------
 Documentation
 
-All content of the documentation written by Pupil Labs UG is open source, according to GNU Lesser General Public License (LGPL v3.0) license.  See < http://www.gnu.org/licenses/lgpl-3.0.en.html >
+All content of the documentation written by Pupil Labs UG is open source, according to GNU Lesser General Public License (LGPL v3.0).  See < http://www.gnu.org/licenses/lgpl-3.0.en.html >
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Using PUPIL in your research and work

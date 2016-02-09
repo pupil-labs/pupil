@@ -14,10 +14,13 @@ logger = logging.getLogger(__name__)
 from gaze_mappers import *
 
 def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500, force=None):
+    not_enough_data_error_msg = 'Did not collect enough data during calibration.'
+
     if pupil_list and ref_list:
         pass
     else:
-        logger.error("Did not collect calibration data. Please retry.")
+        logger.error(not_enough_data_error_msg)
+        g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
         return
 
     camera_intrinsics = load_camera_calibration(g_pool)
@@ -63,7 +66,8 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                 gaze_direction1_3d = cal_pt_cloud[:,1]
                 ref_3d = cal_pt_cloud[:,2]
             except:
-                logger.error('Did not collect enough data. Please retry.')
+                logger.error(not_enough_data_error_msg)
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
             sphere_pos0 = pupil0[-1]['sphere']['center']
@@ -76,10 +80,10 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             success0, orientation0, translation0  = point_line_calibration(sphere_pos0, ref_3d,  gaze_direction0_3d, initial_orientation0, initial_translation0)
             success1, orientation1, translation1  = point_line_calibration(sphere_pos1, ref_3d,  gaze_direction1_3d, initial_orientation1, initial_translation1)
 
-            if not success0:
-                logger.error("Calibration for eye0 wasn't successfull.")
-            if not success1:
-                logger.error("Calibration for eye1 wasn't successfull.")
+            if not success0 or not success1:
+                logger.error("Calibration solver faild to converge.")
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True})
+                return
 
             translation0 = np.ndarray(shape=(3,1), buffer=np.array(translation0))
             rotation_matrix0 = calibrate.quat2mat(orientation0)
@@ -161,7 +165,8 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                 gaze_direction_3d = cal_pt_cloud[:,0]
                 ref_3d = cal_pt_cloud[:,1]
             except:
-                logger.error('Did not collect enough data. Please retry.')
+                logger.error(not_enough_data_error_msg)
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
             sphere_pos = pupil0[-1]['sphere']['center']
@@ -172,7 +177,9 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             success, orientation, translation  = point_line_calibration(sphere_pos, ref_3d,  gaze_direction_3d, initial_orientation, initial_translation)
 
             if not success:
-                logger.error("Calibration wasn't successfull.")
+                logger.error("Calibration solver faild to converge.")
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True})
+                return
 
             translation = np.ndarray(shape=(3,1), buffer=np.array(translation))
             rotation_matrix = calibrate.quat2mat(orientation)
@@ -207,16 +214,16 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                 gaze_points_3d.append( point_eye[:3] )
 
             # TODO restructure mapper and visualizer to handle gaze points in world coordinates
-
             avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_points_3d , eye_to_world_matrix  )
-            print 'calibration average distance: ' , avg_distance
-            # print 'best calibration distance variance: ' , dist_var
+            logger.info('calibration average distance: %s'%avg_distance)
 
             g_pool.plugins.add(Vector_Gaze_Mapper,args={'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': gaze_points_3d})
 
         else:
-            logger.error('Did not collect data during calibration.')
+            logger.error(not_enough_data_error_msg)
+            g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
             return
+
     elif mode == '2d':
         if matched_binocular_data:
             method = 'binocular polynomial regression'
@@ -235,8 +242,11 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             map_fn,inliers,params = calibrate.calibrate_2d_polynomial(cal_pt_cloud,g_pool.capture.frame_size,binocular=False)
             g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
         else:
-            logger.error('Did not collect data during calibration.')
+            logger.error(not_enough_data_error_msg)
+            g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
             return
 
     user_calibration_data = {'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
     save_object(user_calibration_data,os.path.join(g_pool.user_dir, "user_calibration_data"))
+    g_pool.active_calibration_plugin.notify_all({'subject':'calibration_successful','method':method,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+
