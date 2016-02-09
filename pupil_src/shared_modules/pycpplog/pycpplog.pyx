@@ -3,7 +3,7 @@
 from libcpp.string cimport string
 import logging
 
-cdef api void loggingBasicConfig():
+cdef api void logBasicConfig():
     logging.basicConfig()
 
 cdef api void logInfo( const string& msg , const string& loggername ):
