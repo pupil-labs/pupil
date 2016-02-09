@@ -76,8 +76,10 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             success0, orientation0, translation0  = point_line_calibration(sphere_pos0, ref_3d,  gaze_direction0_3d, initial_orientation0, initial_translation0)
             success1, orientation1, translation1  = point_line_calibration(sphere_pos1, ref_3d,  gaze_direction1_3d, initial_orientation1, initial_translation1)
 
-            if not success0 and not success1:
-                logger.error("Calibration wasn't successfull.")
+            if not success0:
+                logger.error("Calibration for eye0 wasn't successfull.")
+            if not success1:
+                logger.error("Calibration for eye1 wasn't successfull.")
 
             translation0 = np.ndarray(shape=(3,1), buffer=np.array(translation0))
             rotation_matrix0 = calibrate.quat2mat(orientation0)
@@ -207,7 +209,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             # TODO restructure mapper and visualizer to handle gaze points in world coordinates
 
             avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_points_3d , eye_to_world_matrix  )
-            print 'best calibration average distance: ' , avg_distance
+            print 'calibration average distance: ' , avg_distance
             # print 'best calibration distance variance: ' , dist_var
 
             g_pool.plugins.add(Vector_Gaze_Mapper,args={'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': gaze_points_3d})

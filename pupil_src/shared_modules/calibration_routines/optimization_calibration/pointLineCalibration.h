@@ -172,7 +172,7 @@ bool pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
     translation[0] = actualtranslation[0];
     translation[1] = actualtranslation[1];
     translation[2] = actualtranslation[2];
-
+    return true;
 
 }
 
