@@ -2,14 +2,14 @@
 
 #include <string>
 #include <iostream>
-#include "../../../../shared_modules/cpplogging/cpplogger_api.h"
+#include "../../../../shared_modules/pycpplog/pycpplog_api.h"
 
 int main()
 {
     Py_Initialize();
     PyRun_SimpleString("import sys");
     PyRun_SimpleString("sys.path.append(\"../../../../shared_modules/\")");
-    import_cpplogging__cpplogger();
+    import_pycpplog__pycpplog();
     loggingBasicConfig();
     std::string msg = "log this!";
     std::string msgInfo = "log info!";

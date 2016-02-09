@@ -30,8 +30,8 @@ dependencies = []
 
 extensions = [
     Extension(
-        name="cpplogger",
-        sources=['cpplogger.pyx'  ],
+        name="pycpplog",
+        sources=['pycpplog.pyx'  ],
         include_dirs = [ ],
         libraries = [ ],
         #library_dirs = ['/usr/local/lib'],
@@ -42,7 +42,7 @@ extensions = [
 ]
 
 setup(
-    name="cpplogger",
+    name="pycpplog",
     version="0.1",
     url="https://github.com/pupil-labs/pupil",
     author='Pupil Labs',
