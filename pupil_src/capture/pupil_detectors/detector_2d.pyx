@@ -15,6 +15,7 @@ from coarse_pupil cimport center_surround
 
 from cython.operator cimport dereference as deref
 import math
+import sys
 
 cdef class Detector_2D:
 
@@ -117,62 +118,66 @@ cdef class Detector_2D:
             #p_x,p_y,p_w,p_response = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
             results = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
 
-            # draw the candidates
+
+            #group the nearest ones
+            highest_response = 0.0
+            group = {}
             for r in results:
                 p_x,p_y,p_w,p_response = r
 
                 x = p_x * scale + roi_x
                 y = p_y * scale + roi_y
+                xs = int(math.floor(x / 50.0 + 0.5)) * 50
+                ys = int(math.floor(y / 50.0 + 0.5)) * 50
+
+                if (xs,ys) in group:
+                    if group[(xs,ys)][2] > p_w and group[(xs,ys)][3] > p_response:
+                        group[(xs,ys)][2] = p_w
+                        group[(xs,ys)][3] = p_response
+                else:
+                    group[(xs,ys)] = (p_x,p_y,p_w,p_response)
+
+                if p_response > highest_response:
+                    highest_response = p_response
+
+            # filter for response
+            group  = { k : group[k] for k in group if group[k][3] > highest_response*0.3 }
+
+             # draw the candidates
+            for k ,v  in group.iteritems():
+                p_x,p_y,p_w,p_response = v
+
+                x = p_x * scale + roi_x
+                y = p_y * scale + roi_y
                 width = p_w*scale
+
                 cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (255,255,0)  )
                 responseText = '{:2f}'.format(p_response)
                 cv2.putText(frame_.img, responseText,(int(x+width*0.5) , int(y+width*0.5)), cv2.FONT_HERSHEY_PLAIN,0.7,(0,0,255) , 1 )
 
-            #take the best one
-            p_x = 0
-            p_y = 0
-            p_w = 0
-            p_response = 0.0
-            bestResponse = 0.0
-
-            #choose the one where the changes are not to big
-            if self.coarseDetectionPreviousWidth != -1:
-                for r in results[::-1]:
-                    r_x,r_y,r_w,r_response = r
-                    r_x = r_x * scale + roi_x
-                    r_y = r_y * scale + roi_y
-                    #sizeRatio = float(r_w)/ self.coarseDetectionPreviousWidth
-                    distanceChange = cv2.norm( self.coarseDetectionPreviousPosition, (r_x,r_y) )
-                    #print 'distanceChange: ' , distanceChange
-                    #print 'ratio: ' , (1.0 - abs( sizeRatio - 1.0 ))
-                    #print 'distance: ' , distanceChangeRatio
-
-                    #start punish response if distance is bigger than nearDistance
-                    # this let's us find the best response within nearDistance
-                    nearDistance = 50.0
-                    distanceFactor = min(1.0 , math.exp(nearDistance - distanceChange) )
-                    response = r_response   * distanceFactor
-
-                    if response > bestResponse:
-                        p_x,p_y,p_w,p_response = r
-                        r_x = p_x * scale + roi_x
-                        r_y = p_y * scale + roi_y
-                        bestResponse = response
+                center = (int(x+width*0.5) , int(y+width*0.5))
+                cv2.circle( frame_.img , center , 5 , (255,0,255) , -1  )
 
 
-            if p_response == 0.0 :
-                p_x,p_y,p_w,p_response = results[-1]
+
+            #calculate bounding box
+            x_b , y_b, width_b = 2147483647 , 2147483647 , 0 # max int in C, sys.maxint from python is much higher
+
+            for k ,v  in group.iteritems():
+                x,y,w,response = v
+                x_b  = min(x, x_b)
+                y_b  = min(y, y_b)
+                if x_b + width_b < x + w:
+                    width_b = x+w - x_b
+                if y_b + width_b < y + w:
+                    width_b = x+w - y_b
 
 
-            r_x = p_x * scale + roi_x
-            r_y = p_y * scale + roi_y
-            self.coarseDetectionPreviousWidth  = p_w
-            self.coarseDetectionPreviousPosition = (r_x , r_y )
 
-            roi_x = p_x * scale + roi_x
-            roi_y = p_y * scale + roi_y
-            roi_width = p_w*scale
-            roi_height = p_w*scale
+            roi_x = x_b * scale + roi_x
+            roi_y = y_b * scale + roi_y
+            roi_width = width_b*scale
+            roi_height = width_b*scale
             roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_width))
 
 
