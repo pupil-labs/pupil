@@ -9,6 +9,7 @@
 '''
 
 cimport cython
+import math
 
 cdef struct point_t :
    int    r
@@ -102,29 +103,44 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
             if len(results) > 30:
                 results.pop(0)
 
-    # cdef point_t window_lower
-    # window_lower.r = max(0,best_pos.r-step+1)
-    # window_lower.c = max(0,best_pos.c-step+1)
+
+    # filter for response
+    results  = [ k  for k in results if k[3] > best_response*0.5 ]
+
+    #group the nearest ones
+    cdef dict group = {}
+    cdef int x,y,w,xs,ys
+    cdef float bucketSize = 20.0;
+    for r in results:
+        x,y,w,response = r
+        xs = int(math.floor(x / bucketSize) * bucketSize )
+        ys = int(math.floor(y / bucketSize) * bucketSize )
+
+        if (xs,ys) in group:
+            if group[(xs,ys)][2] > w and group[(xs,ys)][3] > response:
+                group[(xs,ys)][2] = w
+                group[(xs,ys)][3] = response
+        else:
+            group[(xs,ys)] = (x,y,w,response)
 
 
-    # cdef point_t window_upper
-    # window_upper.r = min(img_size.r,best_pos.r+step)
-    # window_upper.c = min(img_size.c,best_pos.c+step)
+    #calculate bounding box
+    cdef int x_b = 0
+    cdef int y_b = 0
+    cdef int x2_b = 1
+    cdef int y2_b = 1
 
-    # for h in range(max(3,best_h-h_step+1),best_h+h_step):
-    #     eye = make_eye(h)
-    #     for i in range(window_lower.r,min(window_upper.r,img_size.r-eye.w)) :
-    #         for j in range(window_lower.c,min(window_upper.c,img_size.c-eye.w)):
-    #             offset.r = i
-    #             offset.c = j
-    #             response = eye.outer.f*area(img,img_size,eye.outer.s,eye.outer.e,offset) + eye.inner.f*area(img,img_size,eye.inner.s,eye.inner.e,offset)
-    #             if(response > best_response):
-    #                 best_response = response
-    #                 best_pos.r = i
-    #                 best_pos.c = j
-    #                 best_h = h
+    if len(group) > 0 :
+        x_b , y_b  = group.itervalues().next()[:2]
+        for k ,v  in group.iteritems():
+            x,y,w,response = v
 
-    # x_pos = best_pos.c
-    # y_pos = best_pos.r
-    # width = best_h*3
-    return results
+            x_b  = min(x, x_b)
+            y_b  = min(y, y_b)
+
+            if x2_b < x + w:
+                x2_b = x+w
+            if y2_b < y + w:
+                y2_b = y+w
+
+    return  (x_b , y_b, x2_b, y2_b) , group

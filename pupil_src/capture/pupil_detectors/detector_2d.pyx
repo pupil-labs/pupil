@@ -116,74 +116,32 @@ cdef class Detector_2D:
             coarse_filter_max = self.detectProperties['coarse_filter_max']
             coarse_filter_min = self.detectProperties['coarse_filter_min']
             #p_x,p_y,p_w,p_response = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
-            results = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
+            result , candidates = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
 
-
-            #group the nearest ones
-            highest_response = 0.0
-            group = {}
-            for r in results:
-                p_x,p_y,p_w,p_response = r
+            # draw the candidates
+            for k ,v  in candidates.iteritems():
+                p_x,p_y,w,response = v
 
                 x = p_x * scale + roi_x
                 y = p_y * scale + roi_y
-                xs = int(math.floor(x / 50.0 + 0.5)) * 50
-                ys = int(math.floor(y / 50.0 + 0.5)) * 50
-
-                if (xs,ys) in group:
-                    if group[(xs,ys)][2] > p_w and group[(xs,ys)][3] > p_response:
-                        group[(xs,ys)][2] = p_w
-                        group[(xs,ys)][3] = p_response
-                else:
-                    group[(xs,ys)] = (p_x,p_y,p_w,p_response)
-
-                if p_response > highest_response:
-                    highest_response = p_response
-
-            # filter for response
-            group  = { k : group[k] for k in group if group[k][3] > highest_response*0.3 }
-
-             # draw the candidates
-            for k ,v  in group.iteritems():
-                p_x,p_y,p_w,p_response = v
-
-                x = p_x * scale + roi_x
-                y = p_y * scale + roi_y
-                width = p_w*scale
+                width = w*scale
 
                 cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (255,255,0)  )
-                responseText = '{:2f}'.format(p_response)
+                responseText = '{:2f}'.format(response)
                 cv2.putText(frame_.img, responseText,(int(x+width*0.5) , int(y+width*0.5)), cv2.FONT_HERSHEY_PLAIN,0.7,(0,0,255) , 1 )
 
                 center = (int(x+width*0.5) , int(y+width*0.5))
                 cv2.circle( frame_.img , center , 5 , (255,0,255) , -1  )
 
 
-
-            #calculate bounding box
-            x_b , y_b, width_b, height_b = 0 , 0 , 1 , 1
-
-            if len(group) > 0 :
-                x_b , y_b = group.itervalues().next()[:2]
-                for k ,v  in group.iteritems():
-                    x,y,w,response = v
-                    print x , " " , y , " " , w
-                    if x_b + width_b < x + w:
-                        width_b = x+w - x_b
-                    if y_b + height_b < y + w:
-                        height_b = y+w - y_b
-
-                    x_b  = min(x, x_b)
-                    y_b  = min(y, y_b)
-
-
-
-            roi_x = x_b * scale + roi_x
-            roi_y = y_b * scale + roi_y
-            roi_width = width_b*scale
-            roi_height = height_b*scale
+            x1 , y1 , x2, y2 = result
+            width = x2 - x1
+            height = y2 - y1
+            roi_x = x1 * scale + roi_x
+            roi_y = y1 * scale + roi_y
+            roi_width = width*scale
+            roi_height = height*scale
             roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_height))
-            print roi_x ,roi_y , roi_x+roi_width, roi_y+roi_width
 
 
 
