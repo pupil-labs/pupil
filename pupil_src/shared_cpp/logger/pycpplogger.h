@@ -9,8 +9,7 @@
 */
 
 /*
-    This is a small wrapper for the pycpplog.pyx file.
-    This makes it easier to use in C++ source code, because it keeps track of the logger state
+    Include this in your cython cpp code to use the python logger. Requires boost-python
 */
 
 
