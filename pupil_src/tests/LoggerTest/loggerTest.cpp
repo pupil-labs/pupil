@@ -8,7 +8,7 @@ int main()
 {
     Py_Initialize();
 
-
+    using namespace pupillabs;
     auto logger = PyCppLogger( "Awesome Logger" );
     logger.basicConfig();// this just needs to be called if python didn't set up a logger before. see: https://docs.python.org/2/library/logging.html#logging.basicConfig
     logger.error("log Error");
@@ -22,8 +22,8 @@ int main()
     logger.critical("log critical ");
     logger.warn("log warn ");
 
-    auto logger2 = PyCppLogger( "Awesome Logger2" );
-    logger.basicConfig();// this just needs to be called if python didn't set up a logger before. see: https://docs.python.org/2/library/logging.html#logging.basicConfig
+    auto logger2 = PyCppLogger();
+    logger2.basicConfig();// this just needs to be called if python didn't set up a logger before. see: https://docs.python.org/2/library/logging.html#logging.basicConfig
 
     logger2.error("log Error");
 
