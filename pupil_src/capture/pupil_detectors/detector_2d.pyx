@@ -161,25 +161,29 @@ cdef class Detector_2D:
 
 
             #calculate bounding box
-            x_b , y_b, width_b = 2147483647 , 2147483647 , 0 # max int in C, sys.maxint from python is much higher
+            x_b , y_b, width_b, height_b = 0 , 0 , 1 , 1
 
-            for k ,v  in group.iteritems():
-                x,y,w,response = v
-                x_b  = min(x, x_b)
-                y_b  = min(y, y_b)
-                if x_b + width_b < x + w:
-                    width_b = x+w - x_b
-                if y_b + width_b < y + w:
-                    width_b = x+w - y_b
+            if len(group) > 0 :
+                x_b , y_b = group.itervalues().next()[:2]
+                for k ,v  in group.iteritems():
+                    x,y,w,response = v
+                    print x , " " , y , " " , w
+                    if x_b + width_b < x + w:
+                        width_b = x+w - x_b
+                    if y_b + height_b < y + w:
+                        height_b = y+w - y_b
+
+                    x_b  = min(x, x_b)
+                    y_b  = min(y, y_b)
 
 
 
             roi_x = x_b * scale + roi_x
             roi_y = y_b * scale + roi_y
             roi_width = width_b*scale
-            roi_height = width_b*scale
-            roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_width))
-
+            roi_height = height_b*scale
+            roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_height))
+            print roi_x ,roi_y , roi_x+roi_width, roi_y+roi_width
 
 
 
