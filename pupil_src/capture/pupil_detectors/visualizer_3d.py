@@ -134,15 +134,15 @@ class Visualizer(object):
 		back[:] = np.array(circle_normal)
 		back[2] *=-1 #our z axis is inverted
 
-		# if np.linalg.norm(back) != 0:
-		back[:] /= np.linalg.norm(back)
-		right[:] = get_perpendicular_vector(back)/np.linalg.norm(get_perpendicular_vector(back))
-		up[:] = np.cross(right,back)/np.linalg.norm(np.cross(right,back))
-		right[:] *= circle_scale
-		back[:] *=circle_scale
-		up[:] *=circle_scale
-		translation[:] = np.array(circle_center)
-		translation[2] *= -1
+		if np.linalg.norm(back) != 0:
+			back[:] /= np.linalg.norm(back)
+			right[:] = get_perpendicular_vector(back)/np.linalg.norm(get_perpendicular_vector(back))
+			up[:] = np.cross(right,back)/np.linalg.norm(np.cross(right,back))
+			right[:] *= circle_scale
+			back[:] *=circle_scale
+			up[:] *=circle_scale
+			translation[:] = np.array(circle_center)
+			translation[2] *= -1
 		return   temp.T
 
 	############## DRAWING FUNCTIONS ##############################
