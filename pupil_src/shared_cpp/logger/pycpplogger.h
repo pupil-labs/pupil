@@ -20,6 +20,8 @@
 #include <boost/python.hpp>
 #include <string>
 
+namespace pupillabs {
+
 namespace py =  boost::python;
 
 class PyCppLogger{
@@ -30,6 +32,7 @@ public:
         mLoggingModule = py::import("logging");
         mLogger = mLoggingModule.attr("getLogger")(name);
     };
+    PyCppLogger(): PyCppLogger("DefaultLogger"){};
 
     enum struct LogLevel{ // same levels as in python
         NOTSET = 0,
@@ -49,11 +52,11 @@ public:
     void setLogLevel( LogLevel level ){ mLogger.attr("setLevel")( static_cast<int>(level) ); };
 
 private:
-    PyCppLogger(){};
 
     py::object mLogger;
     py::object mLoggingModule;
 };
 
+} // pupillabs
 
 #endif /* end of include guard: PYCPPLOGGER_H__ */
