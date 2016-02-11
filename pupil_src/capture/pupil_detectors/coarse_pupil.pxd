@@ -9,6 +9,7 @@
 '''
 
 cimport cython
+import math
 
 cdef struct point_t :
    int    r
@@ -79,6 +80,7 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
     cdef float a,c,
     cdef point_t b,d,e,f
 
+    cdef list results = []
 
     #for h in prange(min_h,max_h,h_step):
     for h from min_h <= h < max_h by h_step:
@@ -97,31 +99,45 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
             best_pos.r = i
             best_pos.c = j
             best_h = h
+            results.append( (j ,i, h * 3 ,  response) )
+            if len(results) > 30:
+                results.pop(0)
 
 
-    cdef point_t window_lower
-    window_lower.r = max(0,best_pos.r-step+1)
-    window_lower.c = max(0,best_pos.c-step+1)
+    #remove results which fully surround others, since we want the smalles ones
+    cdef list bad = []
+    cdef int x,y,w,x2,y2,w2
+    cdef float response2
 
+    bad = results[:]
+    for r in reversed(results):
+        x,y,w,response = r
+        # filter for response
+        if response < best_response*0.4 : #remove it anyway if it's bad
+            results.remove(r)
+            continue
 
-    cdef point_t window_upper
-    window_upper.r = min(img_size.r,best_pos.r+step)
-    window_upper.c = min(img_size.c,best_pos.c+step)
+        for g in bad:
+            x2,y2,w2,response2 = g
+            if x<x2 and y<y2 and x+w>x2+w2 and y+w>y2+w2: # g is fully included in r
+                results.remove(r)
+                break
 
-    for h in range(max(3,best_h-h_step+1),best_h+h_step):
-        eye = make_eye(h)
-        for i in range(window_lower.r,min(window_upper.r,img_size.r-eye.w)) :
-            for j in range(window_lower.c,min(window_upper.c,img_size.c-eye.w)):
-                offset.r = i
-                offset.c = j
-                response = eye.outer.f*area(img,img_size,eye.outer.s,eye.outer.e,offset) + eye.inner.f*area(img,img_size,eye.inner.s,eye.inner.e,offset)
-                if(response > best_response):
-                    best_response = response
-                    best_pos.r = i
-                    best_pos.c = j
-                    best_h = h
+    #calculate bounding box
+    cdef int x_b = 0
+    cdef int y_b = 0
+    cdef int x2_b = 1
+    cdef int y2_b = 1
 
-    x_pos = best_pos.c
-    y_pos = best_pos.r
-    width = best_h*3
-    return x_pos,y_pos,width,best_response
+    if len(results) > 0 :
+        x_b , y_b  = results[0][:2]
+        for v  in results:
+            x,y,w,response = v
+            x_b  = min(x, x_b)
+            y_b  = min(y, y_b)
+            if x2_b < x + w:
+                x2_b = x+w
+            if y2_b < y + w:
+                y2_b = y+w
+
+    return  (x_b , y_b, x2_b, y2_b) , results , bad

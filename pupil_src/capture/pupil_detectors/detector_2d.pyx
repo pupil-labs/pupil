@@ -14,6 +14,8 @@ from detector_utils cimport *
 from coarse_pupil cimport center_surround
 
 from cython.operator cimport dereference as deref
+import math
+import sys
 
 cdef class Detector_2D:
 
@@ -26,6 +28,9 @@ cdef class Detector_2D:
     cdef object menu
     cdef object gPool
 
+    cdef int coarseDetectionPreviousWidth
+    cdef object coarseDetectionPreviousPosition
+
     def __cinit__(self):
         self.thisptr = new Detector2D()
     def __init__(self, gPool = None, settings = None ):
@@ -36,11 +41,12 @@ cdef class Detector_2D:
         self.windowShouldClose = False
         self.gPool = gPool
         self.detectProperties = settings or {}
-
+        self.coarseDetectionPreviousWidth = -1
+        self.coarseDetectionPreviousPosition =  (0,0)
         if not self.detectProperties:
             self.detectProperties["coarse_detection"] = True
-            self.detectProperties["coarse_filter_min"] = 100
-            self.detectProperties["coarse_filter_max"] = 400
+            self.detectProperties["coarse_filter_min"] = 150
+            self.detectProperties["coarse_filter_max"] = 300
             self.detectProperties["intensity_range"] = 17
             self.detectProperties["blur_size"] = 3
             self.detectProperties["canny_treshold"] = 200
@@ -109,12 +115,40 @@ cdef class Detector_2D:
             integral = cv2.integral(user_roi_image[::scale,::scale])
             coarse_filter_max = self.detectProperties['coarse_filter_max']
             coarse_filter_min = self.detectProperties['coarse_filter_min']
-            p_x,p_y,p_w,p_response = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
-            roi_x = p_x * scale + roi_x
-            roi_y = p_y * scale + roi_y
-            roi_width = p_w*scale
-            roi_height = p_w*scale
-            roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_width))
+            bounding_box , good_ones , bad_ones = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
+
+            if visualize:
+                # !! uncomment this to visualize coarse detection
+                #  # draw the candidates
+                # for v  in bad_ones:
+                #     p_x,p_y,w,response = v
+                #     x = p_x * scale + roi_x
+                #     y = p_y * scale + roi_y
+                #     width = w*scale
+                #     cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (0,0,255)  )
+
+                # # draw the candidates
+                for v  in good_ones:
+                    p_x,p_y,w,response = v
+                    x = p_x * scale + roi_x
+                    y = p_y * scale + roi_y
+                    width = w*scale
+                    cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (255,255,0)  )
+                    #responseText = '{:2f}'.format(response)
+                    #cv2.putText(frame_.img, responseText,(int(x+width*0.5) , int(y+width*0.5)), cv2.FONT_HERSHEY_PLAIN,0.7,(0,0,255) , 1 )
+
+                    #center = (int(x+width*0.5) , int(y+width*0.5))
+                    #cv2.circle( frame_.img , center , 5 , (255,0,255) , -1  )
+
+            x1 , y1 , x2, y2 = bounding_box
+            width = x2 - x1
+            height = y2 - y1
+            roi_x = x1 * scale + roi_x
+            roi_y = y1 * scale + roi_y
+            roi_width = width*scale
+            roi_height = height*scale
+            roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_height))
+
 
         # every coordinates in the result are relative to the current ROI
         cppResultPtr =  self.thisptr.detect(self.detectProperties, frame, frameColor, debugImage, Rect_[int](roi_x,roi_y,roi_width,roi_height),  visualize , use_debugImage )

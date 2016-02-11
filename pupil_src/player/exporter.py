@@ -66,7 +66,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
-    video_path = glob(os.path.join(rec_dir,"world.*"))[0]
+    video_path = [f for f in glob(os.path.join(rec_dir,"world.*")) if f[-3:] in ('mp4','mkv','avi')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
