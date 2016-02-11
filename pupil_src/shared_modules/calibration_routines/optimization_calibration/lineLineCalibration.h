@@ -1,0 +1,204 @@
+
+
+
+#include "common.h"
+#include "geometry/intersect.h"
+#include <vector>
+#include <cstdio>
+#include <limits>
+
+#include <ceres/ceres.h>
+#include <ceres/rotation.h>
+#include <Eigen/Geometry>
+
+
+using ceres::AutoDiffCostFunction;
+using ceres::NumericDiffCostFunction;
+using ceres::CauchyLoss;
+using ceres::CostFunction;
+using ceres::LossFunction;
+using ceres::Problem;
+using ceres::Solve;
+using ceres::Solver;
+
+
+struct TransformationError {
+    TransformationError(const Vector3 refDirection,   const Vector3 gazeDirection,)
+        : refDirection(refDirection), gazeDirection(gazeDirection) {}
+
+    template <typename T>
+    bool operator()(
+        const T* const orientation,  // orientation denoted by quaternion
+        const T* const translation,  // followed by translation
+        T* residuals) const
+    {
+
+        // Compute coordinates with current transformation matrix: y = Rx + t.
+
+        Eigen::Matrix<T, 3, 1> gazeP = {T(gazeDirection[0]), T(gazeDirection[1]), T(gazeDirection[2])};
+        Eigen::Matrix<T, 3, 1> refP = {T(refDirection[0]) , T(refDirection[1]) , T(refDirection[2])};
+
+        Eigen::Matrix<T, 3, 1> t = {T(translation[0]) , T(translation[1]) , T(translation[2])};
+
+        Eigen::Matrix<T, 3, 1> gazeTransformed;
+
+        //rotate
+        ceres::QuaternionRotatePoint(orientation, gazeP.data(), gazeTransformed.data() );
+        //ceres::QuaternionRotatePoint(orientation, l2.data(), p2.data() );
+
+        //translate
+        gazeTransformed += t;
+
+        Eigen::Matrix<T, 3, 1> origin = {T(0),T(0),T(0)};
+        Eigen::ParametrizedLine<T, 3> gazeLine = { t , gazeTransformed};
+        Eigen::ParametrizedLine<T, 3> refLine = {origin, refP };
+
+        // Equation 3: http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+        // delta tells us if the point lies "behind" or "infront" of p1
+        T delta = -(p1 - refP ).dot(p2 - p1) / (p2 - p1).squaredNorm();
+
+        // in our case the point should alway lay on the ray from p1 to p2
+        if(  delta  >= 0.0 ){
+            // now calculate the distance between the observed point and the nearest point on the line
+            // Equation 10: http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+            // and divide by delta
+            // by dividing by delta we actually optimize the Sine of the angle between these two lines
+            residuals[0] = ((refP - p1).cross(refP - p2).squaredNorm() / (p2 - p1).squaredNorm()) / (delta*delta);
+            return true;
+
+        }
+        return false;
+
+
+    }
+
+    const Vector3 gazeDirection;
+    const Vector3 refDirection;
+};
+
+
+
+bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& refDirections, const std::vector<Vector3>& gazeDirections ,
+    double* orientation , double* translation , bool fixTranslation = false ,
+    Vector3 translationLowerBound = {15,5,5},Vector3 translationUpperBound = {15,5,5}
+    )
+{
+
+    // don't use Constructor 'Quaternion (const Scalar *data)' because the internal layout for coefficients is different from the one we use.
+    // Memory Layout EIGEN: xyzw
+    // Memory Layout CERES and the one we use: wxyz
+    Eigen::Quaterniond q(orientation[0],orientation[1],orientation[2],orientation[3]);
+
+    Problem problem;
+    double epsilon = std::numeric_limits<double>::epsilon();
+
+    for(int i=0; i<refDirections.size(); i++) {
+
+        auto gaze = gazeDirections.at(i);
+        auto ref = gazeDirections.at(i);
+        gaze.normalize();
+        ref.normalize();
+        i++;
+
+        // do a check to handle parameters we can't solve
+        // First: the length of the directions must not be zero
+        // Second: the angle between line direction and reference point direction must not be greater 90 degrees, considering the initial orientation
+
+        bool valid = true;
+        valid |= gaze.norm() >= epsilon;
+        valid |= ref.norm() >= epsilon;
+        valid |= (q*gaze).dot(ref) >= epsilon;
+
+        if( valid ){
+            CostFunction* cost = new AutoDiffCostFunction<TransformationError , 1, 4, 3 >(new TransformationError(p , Vector3::Zero() , gaze ));
+            // TODO use a loss function, to handle gaze point outliers
+            problem.AddResidualBlock(cost, nullptr, orientation,  translation);
+        }else{
+            std::cout << "no valid direction vector"  << std::endl;
+        }
+    }
+
+    if( problem.NumResidualBlocks() == 0 ){
+        std::cout << "nothing to solve"  << std::endl;
+        return false;
+    }
+
+    if (fixTranslation)
+    {
+        problem.SetParameterBlockConstant(translation);
+    }else{
+
+        Vector3 upperBound = Vector3(translation) + translationUpperBound;
+        Vector3 lowerBound = Vector3(translation) - translationLowerBound;
+
+        problem.SetParameterLowerBound(translation, 0 , lowerBound[0] );
+        problem.SetParameterLowerBound(translation, 1 , lowerBound[1] );
+        problem.SetParameterLowerBound(translation, 2 , lowerBound[2] );
+
+        problem.SetParameterUpperBound(translation, 0 , upperBound[0] );
+        problem.SetParameterUpperBound(translation, 1 , upperBound[1] );
+        problem.SetParameterUpperBound(translation, 2 , upperBound[2] );
+    }
+
+
+
+    ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
+    problem.SetParameterization(orientation, quaternionParameterization);
+
+    // Build and solve the problem.
+    Solver::Options options;
+    options.max_num_iterations = 1000;
+    options.linear_solver_type = ceres::DENSE_QR;
+    //options.parameter_tolerance = 1e-14;
+    options.function_tolerance = 1e-10;
+    options.gradient_tolerance = 1e-20;
+    options.minimizer_progress_to_stdout = false;
+    options.logging_type = ceres::SILENT;
+
+    //options.check_gradients = true;
+    Solver::Summary summary;
+
+    Solve(options, &problem, &summary);
+
+    // std::cout << summary.BriefReport() << "\n";
+    //std::cout << summary.FullReport() << "\n";
+
+    if( summary.termination_type != ceres::TerminationType::CONVERGENCE  ){
+        std::cout << "Termination Error: " << ceres::TerminationTypeToString(summary.termination_type) << std::endl;
+        return false;
+    }
+
+    //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
+    Eigen::Matrix<double, 3, 3, Eigen::RowMajor> rotation;
+    ceres::QuaternionToRotation( orientation , rotation.data() );
+    // ceres should always return a valid quaternion
+    // double det = r.determinant();
+    // std::cout << "det:: " << det << std::endl;
+    // if(  det == 1 ){
+    //     std::cout << "Error: No valid rotation matrix."   << std::endl;
+    //     return false;
+    // }
+
+
+    // we need to take the sphere position into account
+    // thus the actual translation is not right, because the local coordinate frame of the eye need to be translated in the opposite direction
+    // of the sphere coordinates
+
+    // since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
+    Eigen::Matrix4d eyeToWorld =  Eigen::Matrix4d::Identity();
+    eyeToWorld.block<3,3>(0,0) = Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> >(rotation.data());
+    eyeToWorld(0, 3) = translation[0];
+    eyeToWorld(1, 3) = translation[1];
+    eyeToWorld(2, 3) = translation[2];
+
+    Eigen::Vector4d sphereWorld = eyeToWorld * Eigen::Vector4d(spherePosition[0],spherePosition[1],spherePosition[2], 1.0 );
+    Vector3 sphereOffset =  sphereWorld.head<3>() - Vector3(translation);
+    Vector3 actualtranslation =  Vector3(translation) - sphereOffset;
+    // write the actual one back
+    translation[0] = actualtranslation[0];
+    translation[1] = actualtranslation[1];
+    translation[2] = actualtranslation[2];
+    return true;
+
+}
+
