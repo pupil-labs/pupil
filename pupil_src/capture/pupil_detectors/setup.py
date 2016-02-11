@@ -31,11 +31,13 @@ for dirpath, dirnames, filenames in os.walk("singleeyefitter"):
     for filename in [f for f in filenames if f.endswith(".h")]:
         dependencies.append( os.path.join(dirpath, filename) )
 
+shared_cpp_include_path = '../../shared_cpp/include'
+
 extensions = [
     Extension(
         name="detector_2d",
         sources=['detector_2d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp' ],
-        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3'],
+        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path],
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc' , 'boost_python'],
         #library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
@@ -45,7 +47,7 @@ extensions = [
      Extension(
         name="detector_3d",
         sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/EyeModelFitter.cpp','singleeyefitter/EyeModel.cpp'],
-        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3'],
+        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path],
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc', 'opencv_video', 'ceres', 'boost_python' ],
         # library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
