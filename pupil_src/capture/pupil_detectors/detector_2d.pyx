@@ -45,8 +45,8 @@ cdef class Detector_2D:
         self.coarseDetectionPreviousPosition =  (0,0)
         if not self.detectProperties:
             self.detectProperties["coarse_detection"] = True
-            self.detectProperties["coarse_filter_min"] = 200
-            self.detectProperties["coarse_filter_max"] = 400
+            self.detectProperties["coarse_filter_min"] = 150
+            self.detectProperties["coarse_filter_max"] = 300
             self.detectProperties["intensity_range"] = 17
             self.detectProperties["blur_size"] = 3
             self.detectProperties["canny_treshold"] = 200
