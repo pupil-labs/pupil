@@ -7,7 +7,7 @@
 
 #include "utils.h"
 #include "ImageProcessing/cvx.h"
-#include "intersect.h"
+#include "geometry/intersect.h"
 #include "projection.h"
 #include "fun.h"
 
