@@ -73,7 +73,10 @@ struct TransformationError {
 };
 
 
-bool pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& refPoints, const std::vector<Vector3>& gazeDirections , double* orientation , double* translation )
+bool pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& refPoints, const std::vector<Vector3>& gazeDirections ,
+    double* orientation , double* translation , bool fixTranslation = false ,
+    Vector3 translationLowerBound = {15,5,5},Vector3 translationUpperBound = {15,5,5}
+    )
 {
 
     // don't use Constructor 'Quaternion (const Scalar *data)' because the internal layout for coefficients is different from the one we use.
@@ -107,14 +110,24 @@ bool pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
         return false;
     }
 
-    //problem.SetParameterBlockConstant(translation);
-    problem.SetParameterLowerBound(translation, 0 , translation[0] - 15.0);
-    problem.SetParameterLowerBound(translation, 1 , translation[1] - 5.0);
-    problem.SetParameterLowerBound(translation, 2 , translation[2] - 5.0);
+    if (fixTranslation)
+    {
+        problem.SetParameterBlockConstant(translation);
+    }else{
 
-    problem.SetParameterUpperBound(translation, 0 , translation[0] + 15.0);
-    problem.SetParameterUpperBound(translation, 1 , translation[1] + 5.0);
-    problem.SetParameterUpperBound(translation, 2 , translation[2] + 5.0);
+        Vector3 upperBound = Vector3(translation) + translationUpperBound;
+        Vector3 lowerBound = Vector3(translation) - translationLowerBound;
+
+        problem.SetParameterLowerBound(translation, 0 , lowerBound[0] );
+        problem.SetParameterLowerBound(translation, 1 , lowerBound[1] );
+        problem.SetParameterLowerBound(translation, 2 , lowerBound[2] );
+
+        problem.SetParameterUpperBound(translation, 0 , upperBound[0] );
+        problem.SetParameterUpperBound(translation, 1 , upperBound[1] );
+        problem.SetParameterUpperBound(translation, 2 , upperBound[2] );
+    }
+
+
 
     ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
     problem.SetParameterization(orientation, quaternionParameterization);

@@ -37,4 +37,6 @@ cdef extern from 'common.h':
 cdef extern from 'pointLineCalibration.h':
 
 
-    bint pointLineCalibration( Vector3 spherePosition,const vector[Vector3]& points,const vector[Vector3]& lines,  double[4]& orientation , double[3]& translation  )
+    bint pointLineCalibration( Vector3 spherePosition,const vector[Vector3]& points,const vector[Vector3]& lines,  double[4]& orientation ,
+                                 double[3]& translation, bint fixTranslation,
+                                 Vector3 translationLowerBound, Vector3 translationUpperBound  )

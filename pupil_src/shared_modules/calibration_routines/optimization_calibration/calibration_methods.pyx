@@ -14,7 +14,8 @@ cimport calibration_methods
 from calibration_methods cimport *
 import numpy as np
 
-def point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation ):
+def point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation ,
+    fix_translation = False, translation_lower_bound = (15,5,5) ,  translation_upper_bound = (15,5,5) ):
 
 
     cdef vector[Vector3] cpp_ref_points
@@ -33,8 +34,13 @@ def point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D ,
     cpp_orientation[:] = initial_orientation
     cpp_translation[:] = initial_translation
 
+    cdef Vector3 cpp_translation_upper_bound = Vector3(translation_upper_bound[0],translation_upper_bound[1],translation_upper_bound[2])
+    cdef Vector3 cpp_translation_lower_bound = Vector3(translation_lower_bound[0],translation_lower_bound[1],translation_lower_bound[2])
+
     ## optimized values are written to cpp_orientation and cpp_translation
-    cdef bint success  = pointLineCalibration(cpp_sphere_position, cpp_ref_points , cpp_gaze_directions , &cpp_orientation[0], &cpp_translation[0])
+    cdef bint success  = pointLineCalibration(cpp_sphere_position, cpp_ref_points, cpp_gaze_directions,
+                                             &cpp_orientation[0], &cpp_translation[0], fix_translation,
+                                             cpp_translation_lower_bound, cpp_translation_upper_bound )
 
 
     return success, cpp_orientation, cpp_translation
