@@ -104,7 +104,7 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
                 results.pop(0)
 
 
-    #find the most inner box
+    #remove results which fully surround others, since we want the smalles ones
     cdef list bad = []
     cdef int x,y,w,x2,y2,w2
     cdef float response2
@@ -114,13 +114,13 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
         x,y,w,response = r
         # filter for response
         if response < best_response*0.4 : #remove it anyway if it's bad
-            results.remove(r) #remove r
+            results.remove(r)
             continue
 
         for g in bad:
             x2,y2,w2,response2 = g
             if x<x2 and y<y2 and x+w>x2+w2 and y+w>y2+w2: # g is fully included in r
-                results.remove(r) #remove r
+                results.remove(r)
                 break
 
     #calculate bounding box
