@@ -133,10 +133,8 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
         x_b , y_b  = results[0][:2]
         for v  in results:
             x,y,w,response = v
-
             x_b  = min(x, x_b)
             y_b  = min(y, y_b)
-
             if x2_b < x + w:
                 x2_b = x+w
             if y2_b < y + w:

@@ -115,35 +115,30 @@ cdef class Detector_2D:
             integral = cv2.integral(user_roi_image[::scale,::scale])
             coarse_filter_max = self.detectProperties['coarse_filter_max']
             coarse_filter_min = self.detectProperties['coarse_filter_min']
-            #p_x,p_y,p_w,p_response = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
             bounding_box , good_ones , bad_ones = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
 
+            if visualize:
+                # !! uncomment this to visualize coarse detection
+                #  # draw the candidates
+                # for v  in bad_ones:
+                #     p_x,p_y,w,response = v
+                #     x = p_x * scale + roi_x
+                #     y = p_y * scale + roi_y
+                #     width = w*scale
+                #     cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (0,0,255)  )
 
-             # draw the candidates
-            for v  in bad_ones:
-                p_x,p_y,w,response = v
+                # # draw the candidates
+                for v  in good_ones:
+                    p_x,p_y,w,response = v
+                    x = p_x * scale + roi_x
+                    y = p_y * scale + roi_y
+                    width = w*scale
+                    cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (255,255,0)  )
+                    #responseText = '{:2f}'.format(response)
+                    #cv2.putText(frame_.img, responseText,(int(x+width*0.5) , int(y+width*0.5)), cv2.FONT_HERSHEY_PLAIN,0.7,(0,0,255) , 1 )
 
-                x = p_x * scale + roi_x
-                y = p_y * scale + roi_y
-                width = w*scale
-
-                cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (0,0,255)  )
-
-            # draw the candidates
-            for v  in good_ones:
-                p_x,p_y,w,response = v
-
-                x = p_x * scale + roi_x
-                y = p_y * scale + roi_y
-                width = w*scale
-
-                cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (255,255,0)  )
-                responseText = '{:2f}'.format(response)
-                cv2.putText(frame_.img, responseText,(int(x+width*0.5) , int(y+width*0.5)), cv2.FONT_HERSHEY_PLAIN,0.7,(0,0,255) , 1 )
-
-                center = (int(x+width*0.5) , int(y+width*0.5))
-                cv2.circle( frame_.img , center , 5 , (255,0,255) , -1  )
-
+                    #center = (int(x+width*0.5) , int(y+width*0.5))
+                    #cv2.circle( frame_.img , center , 5 , (255,0,255) , -1  )
 
             x1 , y1 , x2, y2 = bounding_box
             width = x2 - x1
@@ -153,8 +148,6 @@ cdef class Detector_2D:
             roi_width = width*scale
             roi_height = height*scale
             roi.set((roi_x, roi_y, roi_x+roi_width, roi_y+roi_height))
-
-
 
 
         # every coordinates in the result are relative to the current ROI
