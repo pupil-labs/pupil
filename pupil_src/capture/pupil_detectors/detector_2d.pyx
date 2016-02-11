@@ -116,10 +116,21 @@ cdef class Detector_2D:
             coarse_filter_max = self.detectProperties['coarse_filter_max']
             coarse_filter_min = self.detectProperties['coarse_filter_min']
             #p_x,p_y,p_w,p_response = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
-            result , candidates = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
+            bounding_box , good_ones , bad_ones = center_surround( integral, coarse_filter_min/scale , coarse_filter_max/scale )
+
+
+             # draw the candidates
+            for v  in bad_ones:
+                p_x,p_y,w,response = v
+
+                x = p_x * scale + roi_x
+                y = p_y * scale + roi_y
+                width = w*scale
+
+                cv2.rectangle( frame_.img , (x,y) , (x+width , y+width) , (0,0,255)  )
 
             # draw the candidates
-            for k ,v  in candidates.iteritems():
+            for v  in good_ones:
                 p_x,p_y,w,response = v
 
                 x = p_x * scale + roi_x
@@ -134,7 +145,7 @@ cdef class Detector_2D:
                 cv2.circle( frame_.img , center , 5 , (255,0,255) , -1  )
 
 
-            x1 , y1 , x2, y2 = result
+            x1 , y1 , x2, y2 = bounding_box
             width = x2 - x1
             height = y2 - y1
             roi_x = x1 * scale + roi_x

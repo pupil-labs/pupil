@@ -104,25 +104,24 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
                 results.pop(0)
 
 
-    # filter for response
-    results  = [ k  for k in results if k[3] > best_response*0.5 ]
+    #find the most inner box
+    cdef list bad = []
+    cdef int x,y,w,x2,y2,w2
+    cdef float response2
 
-    #group the nearest ones
-    cdef dict group = {}
-    cdef int x,y,w,xs,ys
-    cdef float bucketSize = 20.0;
-    for r in results:
+    bad = results[:]
+    for r in reversed(results):
         x,y,w,response = r
-        xs = int(math.floor(x / bucketSize) * bucketSize )
-        ys = int(math.floor(y / bucketSize) * bucketSize )
+        # filter for response
+        if response < best_response*0.4 : #remove it anyway if it's bad
+            results.remove(r) #remove r
+            continue
 
-        if (xs,ys) in group:
-            if group[(xs,ys)][2] > w and group[(xs,ys)][3] > response:
-                group[(xs,ys)][2] = w
-                group[(xs,ys)][3] = response
-        else:
-            group[(xs,ys)] = (x,y,w,response)
-
+        for g in bad:
+            x2,y2,w2,response2 = g
+            if x<x2 and y<y2 and x+w>x2+w2 and y+w>y2+w2: # g is fully included in r
+                results.remove(r) #remove r
+                break
 
     #calculate bounding box
     cdef int x_b = 0
@@ -130,9 +129,9 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
     cdef int x2_b = 1
     cdef int y2_b = 1
 
-    if len(group) > 0 :
-        x_b , y_b  = group.itervalues().next()[:2]
-        for k ,v  in group.iteritems():
+    if len(results) > 0 :
+        x_b , y_b  = results[0][:2]
+        for v  in results:
             x,y,w,response = v
 
             x_b  = min(x, x_b)
@@ -143,4 +142,4 @@ cdef inline center_surround(int[:,::1] img, int min_w,int max_w):
             if y2_b < y + w:
                 y2_b = y+w
 
-    return  (x_b , y_b, x2_b, y2_b) , group
+    return  (x_b , y_b, x2_b, y2_b) , results , bad
