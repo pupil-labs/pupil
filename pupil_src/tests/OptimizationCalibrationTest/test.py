@@ -317,25 +317,23 @@ if __name__ == '__main__':
 
 #####################
 
-    initial_orientation = angle_axis2quat( np.pi * 0.6 , (0.0,1.0,0.0) )
-    initial_translation = (0,0,0)
+    initial_orientation = angle_axis2quat( np.pi * 0.25 , (0.0,1.0,0.0) )
+    initial_translation = (-10,0,0)
 
     sphere_position = [0.0,0.0,0.0]
     ref_directions_3D = [
-        [0.0,0.5,1.0],
         [0.0,0.0,1.0],
-        [0.0,0.0,1.0],
-        [0.0,-0.5,1.0]
+        [0.5,0.0,0.5]
     ]
     gaze_directions_3D = [
-        [ 0.0,0.5,-1.0],
-        [ 0.0,0.0,-1.0],
-        [ 0.0,0.0,-1.0],
-        [ 0.0,-0.5,-1.0]
+        [0.0,0.0,1.0],
+        [0.5,0.0,0.5]
     ]
     success, orientation, translation = line_line_calibration( sphere_position, ref_directions_3D, gaze_directions_3D , initial_orientation , initial_translation , fix_translation = True )
     angle_axis =  quat2angle_axis(orientation)
+    print success
     print angle_axis
+    print np.pi * 0.25
     assert almost_equal(angle_axis[1] , [0,1,0,]).all() and almost_equal(angle_axis[0] , radians(180) )
 
     print 'Test Ended'
