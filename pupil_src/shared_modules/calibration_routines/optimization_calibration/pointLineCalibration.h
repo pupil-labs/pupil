@@ -19,8 +19,8 @@ using ceres::Problem;
 using ceres::Solve;
 using ceres::Solver;
 
-struct TransformationError {
-    TransformationError(const Vector3 referencePoint,   const Vector3 linePoint1, const Vector3 linePoint2)
+struct TransformationPointLineError {
+    TransformationPointLineError(const Vector3 referencePoint,   const Vector3 linePoint1, const Vector3 linePoint2)
         : referencePoint(referencePoint), linePoint1(linePoint1), linePoint2(linePoint2) {}
 
     template <typename T>
@@ -97,7 +97,7 @@ bool pointLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& re
         // Second: the angle between line direction and reference point direction must not be greater 90 degrees, considering the initial orientation
         auto v = q*g;
         if( g.norm() >= std::numeric_limits<double>::epsilon() && v.dot(p) > 0.0   ){
-            CostFunction* cost = new AutoDiffCostFunction<TransformationError , 1, 4, 3 >(new TransformationError(p , Vector3::Zero() , g ));
+            CostFunction* cost = new AutoDiffCostFunction<TransformationPointLineError , 1, 4, 3 >(new TransformationPointLineError(p , Vector3::Zero() , g ));
             // TODO use a loss function, to handle gaze point outliers
             problem.AddResidualBlock(cost, nullptr, orientation,  translation);
         }else{

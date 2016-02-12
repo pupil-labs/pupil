@@ -2,7 +2,6 @@
 
 
 #include "common.h"
-#include "geometry/intersect.h"
 #include <vector>
 #include <cstdio>
 #include <limits>
@@ -21,9 +20,64 @@ using ceres::Problem;
 using ceres::Solve;
 using ceres::Solver;
 
+template<typename Scalar>
+struct Result{
+    Scalar distanceSquared;
+    bool valid = false;
+};
 
-struct TransformationError {
-    TransformationError(const Vector3 refDirection,   const Vector3 gazeDirection,)
+// since for rayray distance both parameters s,t for eq r0=p0+s*d0 and r1=p1+t*d1 need to be positive
+// ceres get's to know if the rays don't lie in the same direction with angle less than 90 degree
+// Book: Geometric Tools for Computer Graphics, Side 413
+template<typename Scalar, int Dim>
+Result<Scalar> ceresRayRayDistanceSquared(const Eigen::ParametrizedLine<Scalar, Dim>& ray0, const Eigen::ParametrizedLine<Scalar, Dim>& ray1 )
+{
+
+    typedef typename Eigen::ParametrizedLine<Scalar, Dim>::VectorType Vector;
+
+    Result<Scalar> result;
+    result.valid = false;
+
+    Vector diff = ray0.origin() - ray1.origin();
+    Scalar a01 = - ray0.direction().dot(ray1.direction());
+    Scalar b0 = diff.dot(ray0.direction());
+    Scalar b1;
+    Scalar s0, s1;
+
+    if (ceres::abs(a01) < Scalar(1) )
+    {
+        // Rays are not parallel.
+        b1 = -diff.dot(ray1.direction());
+        s0 = a01 * b1 - b0;
+        s1 = a01 * b0 - b1;
+
+        if (s0 >= Scalar(0) )
+        {
+            if (s1 >= Scalar(0) )
+            {
+                // Minimum at two  points of rays.
+                Scalar det = Scalar(1) - a01 * a01;
+                s0 /= det;
+                s1 /= det;
+
+                Vector closestPoint0 = ray0.origin() + s0 * ray0.direction();
+                Vector closestPoint1 = ray1.origin() + s1 * ray1.direction();
+                diff = closestPoint0 - closestPoint1;
+                result.distanceSquared =  diff.dot(diff);
+                result.valid = true;
+                return result;
+            }
+        }
+    }
+    // everything else is not valid
+    return result;
+
+}
+
+
+
+struct TransformationRayRayError {
+    TransformationRayRayError(const Vector3 refDirection,   const Vector3 gazeDirection )
         : refDirection(refDirection), gazeDirection(gazeDirection) {}
 
     template <typename T>
@@ -34,10 +88,8 @@ struct TransformationError {
     {
 
         // Compute coordinates with current transformation matrix: y = Rx + t.
-
         Eigen::Matrix<T, 3, 1> gazeP = {T(gazeDirection[0]), T(gazeDirection[1]), T(gazeDirection[2])};
         Eigen::Matrix<T, 3, 1> refP = {T(refDirection[0]) , T(refDirection[1]) , T(refDirection[2])};
-
         Eigen::Matrix<T, 3, 1> t = {T(translation[0]) , T(translation[1]) , T(translation[2])};
 
         Eigen::Matrix<T, 3, 1> gazeTransformed;
@@ -50,25 +102,16 @@ struct TransformationError {
         gazeTransformed += t;
 
         Eigen::Matrix<T, 3, 1> origin = {T(0),T(0),T(0)};
-        Eigen::ParametrizedLine<T, 3> gazeLine = { t , gazeTransformed};
+        Eigen::ParametrizedLine<T, 3> gazeLine = {origin+t , gazeTransformed};
         Eigen::ParametrizedLine<T, 3> refLine = {origin, refP };
 
-        // Equation 3: http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
-        // delta tells us if the point lies "behind" or "infront" of p1
-        T delta = -(p1 - refP ).dot(p2 - p1) / (p2 - p1).squaredNorm();
+        Result<T> result = ceresRayRayDistanceSquared(gazeLine , refLine);
 
-        // in our case the point should alway lay on the ray from p1 to p2
-        if(  delta  >= 0.0 ){
-            // now calculate the distance between the observed point and the nearest point on the line
-            // Equation 10: http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
-            // and divide by delta
-            // by dividing by delta we actually optimize the Sine of the angle between these two lines
-            residuals[0] = ((refP - p1).cross(refP - p2).squaredNorm() / (p2 - p1).squaredNorm()) / (delta*delta);
+        if(  result.valid ){
+            residuals[0] = result.distanceSquared;
             return true;
-
         }
         return false;
-
 
     }
 
@@ -102,7 +145,7 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
 
         // do a check to handle parameters we can't solve
         // First: the length of the directions must not be zero
-        // Second: the angle between line direction and reference point direction must not be greater 90 degrees, considering the initial orientation
+        // Second: the angle between gaze direction and reference direction must not be greater 90 degrees, considering the initial orientation
 
         bool valid = true;
         valid |= gaze.norm() >= epsilon;
@@ -110,7 +153,7 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
         valid |= (q*gaze).dot(ref) >= epsilon;
 
         if( valid ){
-            CostFunction* cost = new AutoDiffCostFunction<TransformationError , 1, 4, 3 >(new TransformationError(p , Vector3::Zero() , gaze ));
+            CostFunction* cost = new AutoDiffCostFunction<TransformationRayRayError , 1, 4, 3 >(new TransformationRayRayError(ref, gaze ));
             // TODO use a loss function, to handle gaze point outliers
             problem.AddResidualBlock(cost, nullptr, orientation,  translation);
         }else{
