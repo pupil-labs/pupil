@@ -99,10 +99,9 @@ struct TransformationRayRayError {
         //ceres::QuaternionRotatePoint(orientation, l2.data(), p2.data() );
 
         //translate
-        gazeTransformed += t;
 
         Eigen::Matrix<T, 3, 1> origin = {T(0),T(0),T(0)};
-        Eigen::ParametrizedLine<T, 3> gazeLine = {origin+t , gazeTransformed};
+        Eigen::ParametrizedLine<T, 3> gazeLine = {t , gazeTransformed};
         Eigen::ParametrizedLine<T, 3> refLine = {origin, refP };
 
         Result<T> result = ceresRayRayDistanceSquared(gazeLine , refLine);
