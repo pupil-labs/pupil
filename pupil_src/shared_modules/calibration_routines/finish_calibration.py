@@ -312,8 +312,8 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
             initial_translation0 = (25, 15, -10)
             initial_translation1 = (-5, 15, -10)
 
-            success0, orientation0, translation0  = line_line_calibration(sphere_pos0, ref_3d,  gaze_direction0_3d, initial_orientation0, initial_translation0)
-            success1, orientation1, translation1  = line_line_calibration(sphere_pos1, ref_3d,  gaze_direction1_3d, initial_orientation1, initial_translation1)
+            success0, orientation0, translation0  = line_line_calibration(sphere_pos0, ref_3d,  gaze_direction0_3d, initial_orientation0, initial_translation0, fix_translation = True)
+            success1, orientation1, translation1  = line_line_calibration(sphere_pos1, ref_3d,  gaze_direction1_3d, initial_orientation1, initial_translation1, fix_translation = True)
 
             if not success0 or not success1:
                 logger.error("Calibration solver faild to converge.")
@@ -407,9 +407,9 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
             sphere_pos = pupil0[-1]['sphere']['center']
             initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033]
             #initial_orientation = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
-            initial_translation = (15, 30,-20)
+            initial_translation = (25, 30,-20)
 
-            success, orientation, translation  = line_line_calibration(sphere_pos, ref_3d,  gaze_direction_3d, initial_orientation, initial_translation)
+            success, orientation, translation  = line_line_calibration(sphere_pos, ref_3d,  gaze_direction_3d, initial_orientation, initial_translation, fix_translation = True)
 
             if not success:
                 logger.error("Calibration solver faild to converge.")
@@ -432,6 +432,7 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
             sphere_pos_world = np.squeeze(np.asarray(sphere_pos_world))
 
             gaze_points_3d = []
+            ref_points_3d = []
 
             for i in range(0,len(ref_3d)):
                 ref_p = ref_3d[i]
@@ -439,20 +440,22 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
                 gaze_direction[:3] = gaze_direction_3d[i]
                 gaze_direction = rotation_matrix.dot(gaze_direction)
                 gaze_direction = np.squeeze(np.asarray(gaze_direction))
-                line = (sphere_pos_world[:3] , sphere_pos_world[:3] + gaze_direction[:3] )
-                point_world = calibrate.nearest_linepoint_to_point( ref_p , line )
+                gaze_line = (sphere_pos_world[:3] , sphere_pos_world[:3] + gaze_direction[:3] )
+                ref_line = ( np.zeros(3) , ref_p )
+                ref_point_world , gaze_point_world , distance = calibrate.nearest_intersection_points( ref_line , gaze_line )
                 point_eye = np.ones(4)
-                point_eye[:3] = point_world
+                point_eye[:3] = gaze_point_world
                 # everythings assumes gaze_points in eye coordinates
                 point_eye = world_to_eye_matrix.dot(point_eye)
                 point_eye = np.squeeze(np.asarray(point_eye))
                 gaze_points_3d.append( point_eye[:3] )
+                ref_points_3d.append( ref_point_world )
 
             # TODO restructure mapper and visualizer to handle gaze points in world coordinates
-            avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_points_3d , eye_to_world_matrix  )
+            avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_points_3d, gaze_points_3d , eye_to_world_matrix  )
             logger.info('calibration average distance: %s'%avg_distance)
 
-            g_pool.plugins.add(Vector_Gaze_Mapper,args={'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': gaze_points_3d})
+            g_pool.plugins.add(Vector_Gaze_Mapper,args={'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_points_3d, 'cal_gaze_points_3d': gaze_points_3d})
 
         else:
             logger.error(not_enough_data_error_msg)

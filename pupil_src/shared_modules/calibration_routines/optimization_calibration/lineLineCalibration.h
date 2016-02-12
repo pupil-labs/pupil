@@ -197,13 +197,13 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     options.minimizer_progress_to_stdout = false;
     options.logging_type = ceres::SILENT;
 
-    //options.check_gradients = true;
+    options.check_gradients = true;
     Solver::Summary summary;
 
     Solve(options, &problem, &summary);
 
     // std::cout << summary.BriefReport() << "\n";
-    //std::cout << summary.FullReport() << "\n";
+    std::cout << summary.FullReport() << "\n";
 
     if( summary.termination_type != ceres::TerminationType::CONVERGENCE  ){
         std::cout << "Termination Error: " << ceres::TerminationTypeToString(summary.termination_type) << std::endl;
