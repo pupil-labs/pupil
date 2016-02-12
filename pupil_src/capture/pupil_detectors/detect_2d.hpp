@@ -4,14 +4,14 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <iostream>
 
-#include "singleeyefitter/common/types.h"
-#include "singleeyefitter/common/colors.h"
+#include "common/types.h"
+#include "common/colors.h"
 
 #include "singleeyefitter/fun.h"
 #include "singleeyefitter/utils.h"
 #include "singleeyefitter/ImageProcessing/cvx.h"
-#include "singleeyefitter/Geometry/Ellipse.h"  // use ellipse eyefitter
-#include "singleeyefitter/distance.h"
+#include "geometry/Ellipse.h"  // use ellipse eyefitter
+#include "math/distance.h"
 #include "singleeyefitter/mathHelper.h"
 #include "singleeyefitter/detectorUtils.h"
 #include "singleeyefitter/EllipseDistanceApproxCalculator.h"

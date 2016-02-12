@@ -4,7 +4,7 @@
 #include <ceres/ceres.h>
 #include <Eigen/Core>
 
-#include "../common/types.h"
+#include "common/types.h"
 #include "../mathHelper.h"
 
 

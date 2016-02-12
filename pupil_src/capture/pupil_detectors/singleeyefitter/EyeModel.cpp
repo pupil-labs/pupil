@@ -19,12 +19,12 @@
 #include "CircleGoodness3D.h"
 
 #include "utils.h"
-#include "geometry/intersect.h"
+#include "math/intersect.h"
 #include "projection.h"
 #include "fun.h"
 
 #include "mathHelper.h"
-#include "distance.h"
+#include "math/distance.h"
 
 
 

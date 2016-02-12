@@ -7,12 +7,12 @@
 
 #include "utils.h"
 #include "ImageProcessing/cvx.h"
-#include "geometry/intersect.h"
+#include "math/intersect.h"
 #include "projection.h"
 #include "fun.h"
 
 #include "mathHelper.h"
-#include "distance.h"
+#include "math/distance.h"
 #include "common/constants.h"
 
 #include <Eigen/StdVector>

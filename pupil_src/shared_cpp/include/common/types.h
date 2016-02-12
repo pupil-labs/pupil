@@ -2,10 +2,10 @@
 #ifndef singleeyefitter_types_h__
 #define singleeyefitter_types_h__
 
-#include "../Geometry/Ellipse.h"
-#include "../Geometry/Circle.h"
-#include "../Geometry/Sphere.h"
-#include "../projection.h"
+#include "geometry/Ellipse.h"
+#include "geometry/Circle.h"
+#include "geometry/Sphere.h"
+#include "projection.h"
 
 #include <vector>
 #include <memory>

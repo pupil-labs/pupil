@@ -48,7 +48,7 @@ cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
         double norm()
 
 
-cdef extern from "singleeyefitter/Geometry/Ellipse.h" namespace "singleeyefitter":
+cdef extern from "geometry/Ellipse.h" namespace "singleeyefitter":
 
     cdef cppclass Ellipse2D[T]:
         Ellipse2D()
@@ -58,13 +58,13 @@ cdef extern from "singleeyefitter/Geometry/Ellipse.h" namespace "singleeyefitter
         T minor_radius
         T angle
 
-cdef extern from "singleeyefitter/Geometry/Sphere.h" namespace "singleeyefitter":
+cdef extern from "geometry/Sphere.h" namespace "singleeyefitter":
 
     cdef cppclass Sphere[T]:
         Matrix31d center
         T radius
 
-cdef extern from "singleeyefitter/Geometry/Circle.h" namespace "singleeyefitter":
+cdef extern from "geometry/Circle.h" namespace "singleeyefitter":
 
     cdef cppclass Circle3D[T]:
         Matrix31d center

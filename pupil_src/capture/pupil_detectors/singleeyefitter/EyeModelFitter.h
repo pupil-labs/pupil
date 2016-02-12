@@ -9,9 +9,9 @@
 
 #include "common/types.h"
 #include "ImageProcessing/cvx.h"
-#include "Geometry/Circle.h"
-#include "Geometry/Ellipse.h"
-#include "Geometry/Sphere.h"
+#include "geometry/Circle.h"
+#include "geometry/Ellipse.h"
+#include "geometry/Sphere.h"
 #include "EyeModel.h"
 
 #include "logger/pycpplogger.h"

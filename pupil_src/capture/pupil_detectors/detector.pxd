@@ -49,7 +49,7 @@ cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
         bint isZero()
 
 
-cdef extern from 'singleeyefitter/common/types.h':
+cdef extern from 'common/types.h':
 
     cdef cppclass Ellipse2D[T]:
         Ellipse2D()
