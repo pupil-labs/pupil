@@ -23,6 +23,8 @@ using ceres::Solver;
 template<typename Scalar>
 struct Result{
     Scalar distanceSquared;
+    Scalar rayLength0;
+    Scalar rayLength1;
     bool valid = false;
 };
 
@@ -63,7 +65,10 @@ Result<Scalar> ceresRayRayDistanceSquared(const Eigen::ParametrizedLine<Scalar, 
                 Vector closestPoint0 = ray0.origin() + s0 * ray0.direction();
                 Vector closestPoint1 = ray1.origin() + s1 * ray1.direction();
                 diff = closestPoint0 - closestPoint1;
+
                 result.distanceSquared =  diff.dot(diff);
+                result.rayLength0 = s0;
+                result.rayLength1 = s1;
                 result.valid = true;
                 return result;
             }
@@ -82,7 +87,7 @@ struct TransformationRayRayError {
 
     template <typename T>
     bool operator()(
-        const T* const orientation,  // orientation denoted by quaternion
+        const T* const orientation,  // orientation denoted by quaternionParameterization
         const T* const translation,  // followed by translation
         T* residuals) const
     {
@@ -107,7 +112,7 @@ struct TransformationRayRayError {
         Result<T> result = ceresRayRayDistanceSquared(gazeLine , refLine);
 
         if(  result.valid ){
-            residuals[0] = result.distanceSquared;
+            residuals[0] = result.distanceSquared / (result.rayLength0 * result.rayLength1);
             return true;
         }
         return false;
