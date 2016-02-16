@@ -12,10 +12,13 @@ logger = logging.getLogger(__name__)
 from gaze_mappers import *
 
 def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500, force=None):
+    not_enough_data_error_msg = 'Did not collect enough data during calibration.'
+
     if pupil_list and ref_list:
         pass
     else:
-        logger.error("Did not collect calibration data. Please retry.")
+        logger.error(not_enough_data_error_msg)
+        g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
         return
 
     camera_intrinsics = load_camera_calibration(g_pool)
@@ -61,7 +64,8 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                 gaze_pt1_3d = cal_pt_cloud[:,1]
                 ref_3d = cal_pt_cloud[:,2]
             except:
-                logger.error('Did not collect enough data. Please retry.')
+                logger.error(not_enough_data_error_msg)
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
             best_distance = 1000
@@ -121,7 +125,8 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                 gaze_3d = cal_pt_cloud[:,0]
                 ref_3d = cal_pt_cloud[:,1]
             except:
-                logger.error('Did not collect enough data. Please retry.')
+                logger.error(not_enough_data_error_msg)
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
             best_distance = 1000
@@ -152,12 +157,13 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_3d, gaze_3d, eye_to_world_matrix )
             print 'best calibration average distance: ' , avg_distance
             # print 'best calibration distance variance: ' , dist_var
-
             g_pool.plugins.add(Vector_Gaze_Mapper,args={'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': cal_pt_cloud[:,1].tolist(), 'cal_gaze_points_3d': cal_pt_cloud[:,0].tolist()})
 
         else:
-            logger.error('Did not collect data during calibration.')
+            logger.error(not_enough_data_error_msg)
+            g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
             return
+
     elif mode == '2d':
         if matched_binocular_data:
             method = 'binocular polynomial regression'
@@ -176,8 +182,11 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             map_fn,inliers,params = calibrate.calibrate_2d_polynomial(cal_pt_cloud,g_pool.capture.frame_size,binocular=False)
             g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
         else:
-            logger.error('Did not collect data during calibration.')
+            logger.error(not_enough_data_error_msg)
+            g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
             return
 
     user_calibration_data = {'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
     save_object(user_calibration_data,os.path.join(g_pool.user_dir, "user_calibration_data"))
+    g_pool.active_calibration_plugin.notify_all({'subject':'calibration_successful','method':method,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+
