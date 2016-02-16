@@ -165,7 +165,7 @@ cdef class Detector_2D:
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
         self.menu.append(info)
-        self.menu.append(ui.Switch('coarse_detection',self.detectProperties,label='Use coarse detection'))
+        #self.menu.append(ui.Switch('coarse_detection',self.detectProperties,label='Use coarse detection'))
         self.menu.append(ui.Slider('intensity_range',self.detectProperties,label='Pupil intensity range',min=0,max=60,step=1))
         self.menu.append(ui.Slider('pupil_size_min',self.detectProperties,label='Pupil min',min=1,max=250,step=1))
         self.menu.append(ui.Slider('pupil_size_max',self.detectProperties,label='Pupil max',min=50,max=400,step=1))

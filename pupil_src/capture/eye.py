@@ -91,8 +91,8 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         from av_writer import JPEG_Writer,AV_Writer
 
         # Pupil detectors
-        from pupil_detectors import Canny_Detector, Detector_2D, Detector_3D
-        pupil_detectors = {Canny_Detector.__name__:Canny_Detector,Detector_2D.__name__:Detector_2D,Detector_3D.__name__:Detector_3D}
+        from pupil_detectors import Detector_2D, Detector_3D
+        pupil_detectors = {Detector_2D.__name__:Detector_2D,Detector_3D.__name__:Detector_3D}
 
 
 
@@ -270,7 +270,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         general_settings.append(g_pool.display_mode_info)
         g_pool.sidebar.append(general_settings)
         g_pool.gui.append(g_pool.sidebar)
-        detector_selector = ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Canny_Detector, Detector_2D, Detector_3D],labels=['Python 2D detector','C++ 2d detector', 'C++ 3d detector'], label="Detection method")
+        detector_selector = ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Detector_2D, Detector_3D],labels=['C++ 2d detector', 'C++ 3d detector'], label="Detection method")
         general_settings.append(detector_selector)
 
         # let detector add its GUI
