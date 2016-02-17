@@ -416,7 +416,7 @@ class Visualizer(object):
 
 
 		self.draw_circle( latest_circle[0], latest_circle[1], latest_circle[2], RGBA(0.0,1.0,1.0,0.4))
-		self.draw_circle( predicted_circle[0], predicted_circle[1], predicted_circle[2], RGBA(1.0,0.0,0.0,0.4))
+		# self.draw_circle( predicted_circle[0], predicted_circle[1], predicted_circle[2], RGBA(1.0,0.0,0.0,0.4))
 
 		draw_points(edges, 2 , RGBA(1.0,0.0,0.6,0.5) )
 
@@ -433,8 +433,10 @@ class Visualizer(object):
 
 	def close_window(self):
 		if self._window:
+			active_window = glfwGetCurrentContext();
 			glfwDestroyWindow(self._window)
 			self._window = None
+			glfwMakeContextCurrent( active_window)
 
 	############ window callbacks #################
 	def on_resize(self,window,w, h):
