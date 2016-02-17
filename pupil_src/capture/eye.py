@@ -427,7 +427,6 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                         sphere_center = sphere_result['center']
                         sphere_radius = sphere_result['radius']
                         gl.glTranslate(sphere_center[0],sphere_center[1],sphere_center[2])
-                        gl.glTranslatef(0,0,sphere_radius)
                         gl.glScale(sphere_radius,sphere_radius,sphere_radius)
 
                         sphere.draw(color = RGBA(0.95,0.7,0.1,0.1), primitive_type = gl.GL_TRIANGLE_STRIP)

@@ -74,7 +74,7 @@ class Visualizer(object):
 		self.input = None
 		self.run_independently = run_independently
 
-		camera_fov = math.degrees(2.0 * math.atan( self.window_size[0] / (2.0 * self.focal_length)))
+		camera_fov = math.degrees(2.0 * math.atan( self.image_height / (2.0 * self.focal_length)))
 		self.trackball = Trackball(camera_fov)
 
 	############## MATRIX FUNCTIONS ##############################

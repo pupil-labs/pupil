@@ -89,7 +89,7 @@ def make_coord_system_pixel_based(img_shape,flip=False):
     glLoadIdentity()
 
 def make_coord_system_eye_camera_based(window_size, focal_length ):
-    camera_fov = math.degrees(2.0 * math.atan( window_size[0] / (2.0 * focal_length)))
+    camera_fov = math.degrees(2.0 * math.atan( window_size[1] / (2.0 * focal_length)))
     glMatrixMode( GL_PROJECTION )
     glLoadIdentity( )
     gluPerspective( camera_fov, float(window_size[0])/window_size[1], 0.1, 2000.0 )
