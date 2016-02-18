@@ -74,7 +74,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         #display
         import glfw
         from pyglui import ui,graph,cygl
-        from pyglui.cygl.utils import draw_points,RGBA,draw_polyline,Named_Texture , Gl_Sphere
+        from pyglui.cygl.utils import draw_points, RGBA, draw_polyline, Named_Texture, Sphere
         import OpenGL.GL as gl
         from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based, make_coord_system_eye_camera_based
         from ui_roi import UIRoi
@@ -256,8 +256,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         g_pool.image_tex.update_from_frame(frame)
         glfw.glfwSwapInterval(0)
 
-        sphere  = Gl_Sphere()
-        sphere.create(20)
+        sphere  = Sphere(20)
 
         #setup GUI
         g_pool.gui = ui.UI()
