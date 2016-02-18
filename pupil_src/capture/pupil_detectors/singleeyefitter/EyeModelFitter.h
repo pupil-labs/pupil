@@ -14,7 +14,7 @@
 #include "Geometry/Sphere.h"
 #include "EyeModel.h"
 
-#include "../../../shared_cpp/Logger/PyCppLogger.h"
+#include "../../../shared_cpp/logger/pycpplogger.h"
 
 
 namespace singleeyefitter {
