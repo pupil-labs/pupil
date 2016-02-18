@@ -514,14 +514,16 @@ def glfwCreateWindow(width=640, height=480, title="GLFW Window", monitor=None, s
         raise Exception("GLFW window failed to create.")
 def glfwDestroyWindow(window):
     index = __windows__.index(window)
-    #glfw 3.1 appears to require to the context to be destroyed to be current.
-    current = glfwGetCurrentContext()
-    glfwMakeContextCurrent(window)
-    _glfw.glfwDestroyWindow(window)
-    # We do not delete window from the list (or it would impact windows numbering)
-    # del __windows__[index]
-    del __c_callbacks__[index]
-    del __py_callbacks__[index]
+    try:
+        __c_callbacks__[index]
+    except KeyError:
+        print 'window already destroyed.'
+    else:
+        _glfw.glfwDestroyWindow(window)
+        # We do not delete window from the list (or it would impact windows numbering)
+        # del __windows__[index]
+        del __c_callbacks__[index]
+        del __py_callbacks__[index]
 
 def glfwGetVersion():
     major, minor, rev = c_int(0), c_int(0), c_int(0)

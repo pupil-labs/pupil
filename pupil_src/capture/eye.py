@@ -422,8 +422,9 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                             pts = cv2.ellipse2Poly( (int(result['ellipse']['center'][0]),int(result['ellipse']['center'][1])),
                                             (int(result['ellipse']['axes'][0]/2),int(result['ellipse']['axes'][1]/2)),
                                             int(result['ellipse']['angle']),0,360,15)
-                            draw_polyline(pts,1,RGBA(1.,0,0,.5))
-                        draw_points([result['ellipse']['center']],size=20,color=RGBA(1.,0.,0.,.5),sharpness=1.)
+                            confidence = result['confidence'] * 0.7 #scale it a little
+                            draw_polyline(pts,1,RGBA(1.,0,0,confidence))
+                            draw_points([result['ellipse']['center']],size=20,color=RGBA(1.,0.,0.,confidence),sharpness=1.)
 
                     # render graphs
                     graph.push_view()
