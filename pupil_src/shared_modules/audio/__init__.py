@@ -21,7 +21,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+audio_modes = ('voice and sound', 'sound only','voice only','silent')
+default_audio_mode = audio_modes[0]
+audio_mode = default_audio_mode
 
+def set_audio_mode(new_mode):
+    '''a save way to set the audio mode
+    '''
+    if new_mode in ('voice and sound', 'silent','voice only', 'sound only'):
+        global audio_mode
+        audio_mode = new_mode
 
 # OS specific audio players via terminal
 if os_name == "Linux":
@@ -36,31 +45,37 @@ if os_name == "Linux":
 
     if 'Ubuntu' in platform.linux_distribution():
         def beep():
-            try:
-                sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
-            except OSError:
-                logger.warning("Soundfile not found.")
+            if 'sound' in audio_mode:
+                try:
+                    sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
+                except OSError:
+                    logger.warning("Soundfile not found.")
         def tink():
-            try:
-                sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/button-pressed.ogg"])
-            except OSError:
-                logger.warning("Soundfile not found.")
+            if 'sound' in audio_mode:
+                try:
+                    sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/button-pressed.ogg"])
+                except OSError:
+                    logger.warning("Soundfile not found.")
 
         def say(message):
-            try:
-                sp.Popen(["spd-say", message])
-            except OSError:
-                logger.warning("could not say: '%s'. Please install spd-say if you want Pupil capture to speek to you.")
+            if 'voice' in audio_mode:
+                try:
+                    sp.Popen(["spd-say", message])
+                except OSError:
+                    logger.warning("could not say: '%s'. Please install spd-say if you want Pupil capture to speek to you.")
     else:
         def beep():
-            print '\a'
+            if 'sound' in audio_mode:
+                print '\a'
 
         def tink():
-            print '\a'
+            if 'sound' in audio_mode:
+                print '\a'
 
         def say(message):
-            print '\a'
-            print message
+            if 'sound' in audio_mode:
+                print '\a'
+                print message
 
 
     class Audio_Input_Dict(dict):
@@ -108,24 +123,30 @@ elif os_name == "Darwin":
 
 
     def beep():
-        sp.Popen(["afplay", "/System/Library/Sounds/Pop.aiff"])
+        if 'sound' in audio_mode:
+            sp.Popen(["afplay", "/System/Library/Sounds/Pop.aiff"])
 
     def tink():
-        sp.Popen(["afplay", "/System/Library/Sounds/Tink.aiff"])
+        if 'sound' in audio_mode:
+            sp.Popen(["afplay", "/System/Library/Sounds/Tink.aiff"])
 
     def say(message):
-        sp.Popen(["say", message, "-v" "Victoria"])
+        if 'voice' in audio_mode:
+            sp.Popen(["say", message, "-v" "Victoria"])
 
 else:
     def beep():
-        print '\a'
+        if 'sound' in audio_mode:
+            print '\a'
 
     def tink():
-        print '\a'
+        if 'sound' in audio_mode:
+            print '\a'
 
     def say(message):
-        print '\a'
-        print message
+        if 'voice' in audio_mode:
+            print '\a'
+            print message
 
 
     class Audio_Input_Dict(dict):
