@@ -429,7 +429,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                         gl.glTranslate(sphere_center[0],sphere_center[1],sphere_center[2])
                         gl.glScale(sphere_radius,sphere_radius,sphere_radius)
 
-                        sphere.draw(color = RGBA(0.95,0.7,0.1,0.1), primitive_type = gl.GL_TRIANGLE_STRIP)
+                        sphere.draw(color = RGBA(1,1,1,0.2), primitive_type = gl.GL_TRIANGLE_STRIP)
 
                     # switch to work in pixel space
                     make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
