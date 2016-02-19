@@ -8,18 +8,15 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Plugin
-
-import numpy as np
-from pyglui import ui
 import zmq
+import json
+import numpy as np
 
-
+from plugin import Plugin
+from pyglui import ui
 
 import logging
 logger = logging.getLogger(__name__)
-
-
 
 class Pupil_Server(Plugin):
     """pupil server plugin"""
@@ -29,6 +26,7 @@ class Pupil_Server(Plugin):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
         self.address = ''
+        self.new_message_format = 1
         self.set_server(address)
         self.menu = None
 
@@ -46,7 +44,7 @@ class Pupil_Server(Plugin):
         help_str = "Pupil Message server: Using ZMQ and the *Publish-Subscribe* scheme"
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Text_Input('address',self,setter=self.set_server,label='Address'))
-
+        self.menu.append(ui.Switch('new_message_format',self,label='Use JSON serialization'))
 
     def deinit_gui(self):
         if self.menu:
@@ -55,7 +53,6 @@ class Pupil_Server(Plugin):
             elif self.g_pool.app == 'player':
                 self.g_pool.gui.remove(self.menu)
             self.menu = None
-
 
     def set_server(self,new_address):
         try:
@@ -72,34 +69,44 @@ class Pupil_Server(Plugin):
             logger.error("Could not set Socket: %s. Reason: %s"%(new_address,e))
 
     def update(self,frame,events):
-        for p in events.get('pupil_positions',[]):
-            msg = "Pupil\n"
-            for key,value in p.iteritems():
-                if key not in self.exclude_list:
-                    msg +=key+":"+str(value)+'\n'
-            self.socket.send( msg )
-
-        for g in events.get('gaze_positions',[]):
-            msg = "Gaze\n"
-            for key,value in g.iteritems():
-                if key not in self.exclude_list:
-                    msg +=key+":"+str(value)+'\n'
-            self.socket.send( msg )
-
-        # for e in events:
-        #     msg = 'Event'+'\n'
-        #     for key,value in e.iteritems():
-        #         if key not in self.exclude_list:
-        #             msg +=key+":"+str(value).replace('\n','')+'\n'
-        #     self.socket.send( msg )
+        event_types = [
+            { 
+                'name': 'pupil_positions',
+                'topic': 'pupil',
+                'message_header': 'Pupil'
+            },
+            {
+                'name': 'gaze_positions',
+                'topic': 'gaze',
+                'message_header': 'Gaze'
+            }
+        ]
+          
+        for event_type in event_types:
+            if self.new_message_format:
+                event_data = {}
+        
+            for position in events.get(event_type['name'], []):
+                if not self.new_message_format:
+                    msg = event_type['message_header'] + '\n'
+                    
+                for key, value in position.iteritems():
+                    if key not in self.exclude_list:
+                        if self.new_message_format:
+                            event_data[key] = value
+                        else:
+                            msg += key + ":" + str(value) + '\n'
+                
+                if self.new_message_format:            
+                    self.socket.send_multipart((event_type['topic'], json.dumps(event_data)))
+                else:
+                    self.socket.send(msg)
 
     def close(self):
         self.alive = False
 
-
     def get_init_dict(self):
         return {'address':self.address}
-
 
     def cleanup(self):
         """gets called when the plugin get terminated.
