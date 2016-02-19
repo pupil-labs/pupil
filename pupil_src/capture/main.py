@@ -23,6 +23,8 @@ else:
     user_dir = os.path.join(pupil_base_dir,'capture_settings')
     version_file = None
 
+
+sys.path.append('/usr/local/Cellar/opencv3/3.0.0/lib/python2.7/site-packages')
 # create folder for user settings, tmp data
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)

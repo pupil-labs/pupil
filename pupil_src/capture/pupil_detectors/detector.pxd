@@ -4,32 +4,32 @@ from libcpp.vector cimport vector
 from libcpp.pair cimport pair
 from libc.stdint cimport int32_t
 
-cdef extern from '<opencv2/core/types_c.h>':
+cdef extern from '<opencv2/core.hpp>':
 
   int CV_8UC1
   int CV_8UC3
 
 
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv':
+cdef extern from '<opencv2/core.hpp>' namespace 'cv':
 
   cdef cppclass Mat :
       Mat() except +
       Mat( int height, int width, int type, void* data  ) except+
       Mat( int height, int width, int type ) except+
 
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv':
+cdef extern from '<opencv2/core.hpp>' namespace 'cv':
 
   cdef cppclass Rect_[T]:
     Rect_() except +
     Rect_( T x, T y, T width, T height ) except +
     T x, y, width, height
 
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv':
+cdef extern from '<opencv2/core.hpp>' namespace 'cv':
 
   cdef cppclass Point_[T]:
     Point_() except +
 
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv':
+cdef extern from '<opencv2/core.hpp>' namespace 'cv':
 
   cdef cppclass Scalar_[T]:
     Scalar_() except +
