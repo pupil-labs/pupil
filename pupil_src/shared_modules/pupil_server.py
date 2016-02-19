@@ -26,6 +26,7 @@ class Pupil_Server(Plugin):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
         self.address = ''
+        self.new_message_format = 1
         self.set_server(address)
         self.menu = None
 
@@ -43,6 +44,7 @@ class Pupil_Server(Plugin):
         help_str = "Pupil Message server: Using ZMQ and the *Publish-Subscribe* scheme"
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Text_Input('address',self,setter=self.set_server,label='Address'))
+        self.menu.append(ui.Switch('new_message_format',self,label='Use JSON serialization'))
 
     def deinit_gui(self):
         if self.menu:
@@ -67,21 +69,38 @@ class Pupil_Server(Plugin):
             logger.error("Could not set Socket: %s. Reason: %s"%(new_address,e))
 
     def update(self,frame,events):
-        # topic: pupil
-        pupil_data = {}
-        for position in events.get('pupil_positions',[]):
-            for key, value in position.iteritems():
-                if key not in self.exclude_list:
-                    pupil_data[key] = value
-            self.socket.send_multipart(('pupil', json.dumps(pupil_data)))
-
-        # topic: gaze
-        gaze_data = {}
-        for position in events.get('gaze_positions',[]):
-            for key, value in position.iteritems():
-                if key not in self.exclude_list:
-                    gaze_data[key] = value
-            self.socket.send_multipart(('gaze', json.dumps(gaze_data)))
+        event_types = [
+            { 
+                'name': 'pupil_positions',
+                'topic': 'pupil',
+                'message_header': 'Pupil'
+            },
+            {
+                'name': 'gaze_positions',
+                'topic': 'gaze',
+                'message_header': 'Gaze'
+            }
+        ]
+          
+        for event_type in event_types:
+            if self.new_message_format:
+                event_data = {}
+        
+            for position in events.get(event_type['name'], []):
+                if not self.new_message_format:
+                    msg = event_type['message_header'] + '\n'
+                    
+                for key, value in position.iteritems():
+                    if key not in self.exclude_list:
+                        if self.new_message_format:
+                            event_data[key] = value
+                        else:
+                            msg += key + ":" + str(value) + '\n'
+                
+                if self.new_message_format:            
+                    self.socket.send_multipart((event_type['topic'], json.dumps(event_data)))
+                else:
+                    self.socket.send(msg)
 
     def close(self):
         self.alive = False
