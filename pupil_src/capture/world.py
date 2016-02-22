@@ -62,7 +62,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
 
     #check versions for our own depedencies as they are fast-changing
     from pyglui import __version__ as pyglui_version
-    assert pyglui_version >= '0.7'
+    assert pyglui_version >= '0.8'
 
     #monitoring
     import psutil

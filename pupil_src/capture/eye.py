@@ -9,7 +9,6 @@
 '''
 import os, sys, platform
 
-
 class Global_Container(object):
     pass
 
@@ -75,12 +74,13 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         #display
         import glfw
         from pyglui import ui,graph,cygl
-        from pyglui.cygl.utils import draw_points,RGBA,draw_polyline,Named_Texture
-        from OpenGL.GL import GL_LINE_LOOP
-        from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based
+        from pyglui.cygl.utils import draw_points, RGBA, draw_polyline, Named_Texture, Sphere
+        import OpenGL.GL as gl
+        from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based, make_coord_system_eye_camera_based
         from ui_roi import UIRoi
         #monitoring
         import psutil
+        import math
 
 
         # helpers/utils
@@ -256,6 +256,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         g_pool.image_tex.update_from_frame(frame)
         glfw.glfwSwapInterval(0)
 
+        sphere  = Sphere(20)
 
         #setup GUI
         g_pool.gui = ui.UI()
@@ -414,6 +415,21 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
 
                     make_coord_system_norm_based(g_pool.flip)
                     g_pool.image_tex.draw()
+
+                    window_size =  glfw.glfwGetWindowSize(main_window)
+
+                    if result['method'] == '3D c++':
+                        focal_length = 620.
+                        make_coord_system_eye_camera_based((frame.width,frame.height), focal_length )
+
+                        sphere_result = result['sphere']
+                        sphere_center = sphere_result['center']
+                        sphere_radius = sphere_result['radius']
+                        gl.glTranslate(sphere_center[0],sphere_center[1],sphere_center[2])
+                        gl.glScale(sphere_radius,sphere_radius,sphere_radius)
+
+                        sphere.draw(color = RGBA(1,1,1,0.2), primitive_type = gl.GL_TRIANGLE_STRIP)
+
                     # switch to work in pixel space
                     make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
 
