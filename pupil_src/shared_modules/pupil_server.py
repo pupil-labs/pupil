@@ -13,7 +13,7 @@ from plugin import Plugin
 import numpy as np
 from pyglui import ui
 import zmq
-
+import json
 
 
 import logging
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class Pupil_Server(Plugin):
     """pupil server plugin"""
-    def __init__(self, g_pool,address="tcp://127.0.0.1:5000"):
+    def __init__(self, g_pool,address="tcp://127.0.0.1:5000",network_mode='zmq'):
         super(Pupil_Server, self).__init__(g_pool)
         self.order = .9
         self.context = zmq.Context()
@@ -32,7 +32,6 @@ class Pupil_Server(Plugin):
         self.set_server(address)
         self.menu = None
 
-        self.exclude_list = ['ellipse','pos_in_roi','major','minor','axes','angle','center']
 
     def init_gui(self):
         if self.g_pool.app == 'capture':
@@ -72,26 +71,8 @@ class Pupil_Server(Plugin):
             logger.error("Could not set Socket: %s. Reason: %s"%(new_address,e))
 
     def update(self,frame,events):
-        for p in events.get('pupil_positions',[]):
-            msg = "Pupil\n"
-            for key,value in p.iteritems():
-                if key not in self.exclude_list:
-                    msg +=key+":"+str(value)+'\n'
-            self.socket.send( msg )
-
-        for g in events.get('gaze_positions',[]):
-            msg = "Gaze\n"
-            for key,value in g.iteritems():
-                if key not in self.exclude_list:
-                    msg +=key+":"+str(value)+'\n'
-            self.socket.send( msg )
-
-        # for e in events:
-        #     msg = 'Event'+'\n'
-        #     for key,value in e.iteritems():
-        #         if key not in self.exclude_list:
-        #             msg +=key+":"+str(value).replace('\n','')+'\n'
-        #     self.socket.send( msg )
+        for topic,data in events.interitems():
+            self.socket.send_multipart((topic, json.dumps(data)))
 
     def close(self):
         self.alive = False
