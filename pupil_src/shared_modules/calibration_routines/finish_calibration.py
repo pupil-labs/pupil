@@ -407,21 +407,24 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
             sphere_pos = pupil0[-1]['sphere']['center']
             initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033]
             #initial_orientation = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
-            initial_translation = (25, 30,-20)
+            initial_translation = [25, 30,-20]
 
             success, orientation, translation  = line_line_calibration(sphere_pos, ref_3d,  gaze_direction_3d, initial_orientation, initial_translation, fix_translation = True)
+            print 'orientation: ' , orientation
+            print 'translation: ' , translation
 
             if not success:
                 logger.error("Calibration solver faild to converge.")
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
-            translation = np.ndarray(shape=(3,1), buffer=np.array(translation))
+            translation = np.matrix( translation )
+            translation.shape = (3,1)
             rotation_matrix = calibrate.quat2mat(orientation)
             eye_to_world_matrix  = np.matrix(np.eye(4))
             eye_to_world_matrix[:3,:3] = rotation_matrix
             eye_to_world_matrix[:3,3:4] = translation
-
+            print eye_to_world_matrix
             world_to_eye_matrix  = np.linalg.inv(eye_to_world_matrix)
 
             #with the eye_to_world matrix let's calculate the nearest points for every gaze line

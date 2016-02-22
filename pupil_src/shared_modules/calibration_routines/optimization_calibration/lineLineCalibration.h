@@ -9,7 +9,7 @@
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
 #include <Eigen/Geometry>
-
+#include "ceres/CeresParametrization.h"
 
 using ceres::AutoDiffCostFunction;
 using ceres::NumericDiffCostFunction;
@@ -20,102 +20,40 @@ using ceres::Problem;
 using ceres::Solve;
 using ceres::Solver;
 
-template<typename Scalar>
-struct Result{
-    Scalar distanceSquared;
-    Scalar rayLength0;
-    Scalar rayLength1;
-    bool valid = false;
-};
 
-// since for rayray distance both parameters s,t for eq r0=p0+s*d0 and r1=p1+t*d1 need to be positive
-// ceres get's to know if the rays don't lie in the same direction with angle less than 90 degree
-// Book: Geometric Tools for Computer Graphics, Side 413
-template<typename Scalar, int Dim>
-Result<Scalar> ceresRayRayDistanceSquared(const Eigen::ParametrizedLine<Scalar, Dim>& ray0, const Eigen::ParametrizedLine<Scalar, Dim>& ray1 )
-{
-
-    typedef typename Eigen::ParametrizedLine<Scalar, Dim>::VectorType Vector;
-
-    Result<Scalar> result;
-    result.valid = false;
-
-    Vector diff = ray0.origin() - ray1.origin();
-    Scalar a01 = - ray0.direction().dot(ray1.direction());
-    Scalar b0 = diff.dot(ray0.direction());
-    Scalar b1;
-    Scalar s0, s1;
-
-    if (ceres::abs(a01) < Scalar(1) )
-    {
-        // Rays are not parallel.
-        b1 = -diff.dot(ray1.direction());
-        s0 = a01 * b1 - b0;
-        s1 = a01 * b0 - b1;
-
-        if (s0 >= Scalar(0) )
-        {
-            if (s1 >= Scalar(0) )
-            {
-                // Minimum at two  points of rays.
-                Scalar det = Scalar(1) - a01 * a01;
-                s0 /= det;
-                s1 /= det;
-
-                Vector closestPoint0 = ray0.origin() + s0 * ray0.direction();
-                Vector closestPoint1 = ray1.origin() + s1 * ray1.direction();
-                diff = closestPoint0 - closestPoint1;
-
-                result.distanceSquared =  diff.dot(diff);
-                result.rayLength0 = s0;
-                result.rayLength1 = s1;
-                result.valid = true;
-                return result;
-            }
-        }
-    }
-    // everything else is not valid
-    return result;
-
-}
-
-
-
-struct TransformationRayRayError {
-    TransformationRayRayError(const Vector3 refDirection,   const Vector3 gazeDirection )
+struct CoplanarityError {
+    CoplanarityError(const Vector3 refDirection,   const Vector3 gazeDirection )
         : refDirection(refDirection), gazeDirection(gazeDirection) {}
 
     template <typename T>
     bool operator()(
-        const T* const orientation,  // orientation denoted by quaternionParameterization
+        const T* const orientation,  // orientation denoted by quaternion Parameterization
         const T* const translation,  // followed by translation
         T* residuals) const
     {
 
-        // Compute coordinates with current transformation matrix: y = Rx + t.
-        Eigen::Matrix<T, 3, 1> gazeP = {T(gazeDirection[0]), T(gazeDirection[1]), T(gazeDirection[2])};
-        Eigen::Matrix<T, 3, 1> refP = {T(refDirection[0]) , T(refDirection[1]) , T(refDirection[2])};
-        Eigen::Matrix<T, 3, 1> t = {T(translation[0]) , T(translation[1]) , T(translation[2])};
+        Eigen::Matrix<T, 3, 1> gazeDirection = {T(gazeDirection[0]), T(gazeDirection[1]), T(gazeDirection[2])};
+        Eigen::Matrix<T, 3, 1> refDirection = {T(refDirection[0]) , T(refDirection[1]) , T(refDirection[2])};
 
-        Eigen::Matrix<T, 3, 1> gazeTransformed;
+        //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
+        Eigen::Matrix<T, 3, 3, Eigen::RowMajor> rotationMatrix;
+        ceres::QuaternionToRotation( orientation , rotationMatrix.data() );
+         // cross-product matrix of the translation
+        Eigen::Matrix<T, 3, 3 > translationMatrix;
+        translationMatrix << T(0) , T(-translation[2]) , T(translation[1]),
+                             T(translation[2]), T(0), T(-translation[0]),
+                             T(-translation[1]), T(translation[0]), T(0);
 
-        //rotate
-        ceres::QuaternionRotatePoint(orientation, gazeP.data(), gazeTransformed.data() );
-        //ceres::QuaternionRotatePoint(orientation, l2.data(), p2.data() );
+        std::cout << "t: " << translation[0]<<translation[1]<<translation[2] << std::endl;
+        Eigen::Matrix<T, 3, 3 > essentialMatrix = translationMatrix * rotationMatrix.transpose();
 
-        //translate
+        //TODO add weighting factors to the residual , better approximation
+        //coplanarity constraint  x1.T * E * x2 = 0
+        auto res = refDirection.transpose() * essentialMatrix * gazeDirection;
+        std::cout << "res: " << res[0] << std::endl;
+        residuals[0] = res[0];
+        return true;
 
-        Eigen::Matrix<T, 3, 1> origin = {T(0),T(0),T(0)};
-        Eigen::ParametrizedLine<T, 3> gazeLine = {t , gazeTransformed};
-        Eigen::ParametrizedLine<T, 3> refLine = {origin, refP };
-
-        Result<T> result = ceresRayRayDistanceSquared(gazeLine , refLine);
-
-        if(  result.valid ){
-            residuals[0] = result.distanceSquared / (result.rayLength0 * result.rayLength1);
-            return true;
-        }
-        return false;
 
     }
 
@@ -126,7 +64,7 @@ struct TransformationRayRayError {
 
 
 bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& refDirections, const std::vector<Vector3>& gazeDirections ,
-    double* orientation , double* translation , bool fixTranslation = false ,
+    double *const orientation , double *const translation , bool fixTranslation = false ,
     Vector3 translationLowerBound = {15,5,5},Vector3 translationUpperBound = {15,5,5}
     )
 {
@@ -134,7 +72,12 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     // don't use Constructor 'Quaternion (const Scalar *data)' because the internal layout for coefficients is different from the one we use.
     // Memory Layout EIGEN: xyzw
     // Memory Layout CERES and the one we use: wxyz
-    Eigen::Quaterniond q(orientation[0],orientation[1],orientation[2],orientation[3]);
+    Eigen::Quaterniond q(orientation[0],orientation[1],orientation[2],orientation[3]); // don't mapp orientation
+    Vector3 t =  Eigen::Map<Eigen::Matrix<double,3,1> >(translation);
+    t.normalize();
+    translation[0] = t[0];
+    translation[1] = t[1];
+    translation[2] = t[2];
 
     Problem problem;
     double epsilon = std::numeric_limits<double>::epsilon();
@@ -157,9 +100,10 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
         valid |= (q*gaze).dot(ref) >= epsilon;
 
         if( valid ){
-            CostFunction* cost = new AutoDiffCostFunction<TransformationRayRayError , 1, 4, 3 >(new TransformationRayRayError(ref, gaze ));
+
+            CostFunction* cost = new AutoDiffCostFunction<CoplanarityError , 1, 4, 3 >(new CoplanarityError(ref, gaze ));
             // TODO use a loss function, to handle gaze point outliers
-            problem.AddResidualBlock(cost, nullptr, orientation,  translation);
+            problem.AddResidualBlock(cost, nullptr, orientation,  translation );
         }else{
             std::cout << "no valid direction vector"  << std::endl;
         }
@@ -170,37 +114,43 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
         return false;
     }
 
-    if (fixTranslation)
-    {
-        problem.SetParameterBlockConstant(translation);
-    }else{
+    // if (fixTranslation)
+    // {
+    //     problem.SetParameterBlockConstant(translation);
+    // }
+    problem.SetParameterBlockConstant(orientation);
 
-        Vector3 upperBound = Vector3(translation) + translationUpperBound;
-        Vector3 lowerBound = Vector3(translation) - translationLowerBound;
+    //else{
 
-        problem.SetParameterLowerBound(translation, 0 , lowerBound[0] );
-        problem.SetParameterLowerBound(translation, 1 , lowerBound[1] );
-        problem.SetParameterLowerBound(translation, 2 , lowerBound[2] );
+    //     Vector3 upperBound = Vector3(translation) + translationUpperBound;
+    //     Vector3 lowerBound = Vector3(translation) - translationLowerBound;
 
-        problem.SetParameterUpperBound(translation, 0 , upperBound[0] );
-        problem.SetParameterUpperBound(translation, 1 , upperBound[1] );
-        problem.SetParameterUpperBound(translation, 2 , upperBound[2] );
-    }
+    //     problem.SetParameterLowerBound(translation, 0 , lowerBound[0] );
+    //     problem.SetParameterLowerBound(translation, 1 , lowerBound[1] );
+    //     problem.SetParameterLowerBound(translation, 2 , lowerBound[2] );
+
+    //     problem.SetParameterUpperBound(translation, 0 , upperBound[0] );
+    //     problem.SetParameterUpperBound(translation, 1 , upperBound[1] );
+    //     problem.SetParameterUpperBound(translation, 2 , upperBound[2] );
+    // }
 
 
 
-    ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
-    problem.SetParameterization(orientation, quaternionParameterization);
+    //ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
+    //problem.SetParameterization(orientation, quaternionParameterization);
+
+    // ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
+    // problem.SetParameterization(translation, normedTranslationParameterization);
 
     // Build and solve the problem.
     Solver::Options options;
     options.max_num_iterations = 1000;
     options.linear_solver_type = ceres::DENSE_QR;
-    //options.parameter_tolerance = 1e-14;
+    options.parameter_tolerance = 1e-14;
     options.function_tolerance = 1e-10;
     options.gradient_tolerance = 1e-20;
-    options.minimizer_progress_to_stdout = false;
-    options.logging_type = ceres::SILENT;
+    options.minimizer_progress_to_stdout = true;
+    //options.logging_type = ceres::SILENT;
 
     options.check_gradients = true;
     Solver::Summary summary;
@@ -230,13 +180,14 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     // we need to take the sphere position into account
     // thus the actual translation is not right, because the local coordinate frame of the eye need to be translated in the opposite direction
     // of the sphere coordinates
+    double translationFactor = 30.0;
 
     // since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
     Eigen::Matrix4d eyeToWorld =  Eigen::Matrix4d::Identity();
     eyeToWorld.block<3,3>(0,0) = Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> >(rotation.data());
-    eyeToWorld(0, 3) = translation[0];
-    eyeToWorld(1, 3) = translation[1];
-    eyeToWorld(2, 3) = translation[2];
+    eyeToWorld(0, 3) = translation[0]*translationFactor;
+    eyeToWorld(1, 3) = translation[1]*translationFactor;
+    eyeToWorld(2, 3) = translation[2]*translationFactor;
 
     Eigen::Vector4d sphereWorld = eyeToWorld * Eigen::Vector4d(spherePosition[0],spherePosition[1],spherePosition[2], 1.0 );
     Vector3 sphereOffset =  sphereWorld.head<3>() - Vector3(translation);
