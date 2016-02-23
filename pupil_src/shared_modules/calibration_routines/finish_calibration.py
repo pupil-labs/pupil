@@ -404,10 +404,14 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
-            sphere_pos = pupil0[-1]['sphere']['center']
-            initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033]
-            #initial_orientation = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
-            initial_translation = [25, 30,-20]
+            sphere_pos = matched_monocular_data[-1]['pupil']['sphere']['center']
+
+            if matched_monocular_data[-1]['pupil']['id'] is 'eye0':
+                initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033] #eye0
+                initial_translation = (25, 15, -10)
+            else:
+                initial_orientation = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
+                initial_translation = (-5, 15, -10)
 
             success, orientation, translation  = line_line_calibration(sphere_pos, ref_3d,  gaze_direction_3d, initial_orientation, initial_translation, fix_translation = True)
             print 'orientation: ' , orientation
