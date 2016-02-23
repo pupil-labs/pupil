@@ -157,7 +157,7 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     // we need to take the sphere position into account
     // thus the actual translation is not right, because the local coordinate frame of the eye need to be translated in the opposite direction
     // of the sphere coordinates
-    double translationFactor = 20.0;
+    double translationFactor = 30.0;
 
     // since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
     Eigen::Matrix4d eyeToWorld =  Eigen::Matrix4d::Identity();
