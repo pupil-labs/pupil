@@ -279,11 +279,12 @@ class Recorder(Plugin):
     def update(self,frame,events):
         if self.running:
             for key,data in events.iteritems():
-                try:
-                    self.data[key] += data
-                except KeyError:
-                    self.data[key] = []
-                    self.data[key] += data
+                if key not in ('dt'):
+                    try:
+                        self.data[key] += data
+                    except KeyError:
+                        self.data[key] = []
+                        self.data[key] += data
 
             self.timestamps.append(frame.timestamp)
             self.writer.write_video_frame(frame)
