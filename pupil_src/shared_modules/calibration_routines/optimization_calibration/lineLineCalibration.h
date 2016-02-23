@@ -44,13 +44,12 @@ struct CoplanarityError {
                              T(translation[2]), T(0), T(-translation[0]),
                              T(-translation[1]), T(translation[0]), T(0);
 
-        std::cout << "t: " << translation[0]<<translation[1]<<translation[2] << std::endl;
         Eigen::Matrix<T, 3, 3 > essentialMatrix = translationMatrix * rotationMatrix.transpose();
 
         //TODO add weighting factors to the residual , better approximation
         //coplanarity constraint  x1.T * E * x2 = 0
-        auto res = refD.transpose() * essentialMatrix * gazeD;
-        std::cout << "res: " << res[0] << std::endl;
+        auto res = gazeD.transpose() * essentialMatrix * refD;
+
         residuals[0] = res[0];
         return true;
 
@@ -73,11 +72,11 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     // Memory Layout EIGEN: xyzw
     // Memory Layout CERES and the one we use: wxyz
     Eigen::Quaterniond q(orientation[0],orientation[1],orientation[2],orientation[3]); // don't mapp orientation
-    Vector3 t =  Eigen::Map<Eigen::Matrix<double,3,1> >(translation);
-    t.normalize();
-    translation[0] = t[0];
-    translation[1] = t[1];
-    translation[2] = t[2];
+    Vector3 t =  Vector3(translation[0],translation[1], translation[2]);
+    double n = t.norm();
+    translation[0] /= n;
+    translation[1] /= n;
+    translation[2] /= n;
 
     Problem problem;
     double epsilon = std::numeric_limits<double>::epsilon();
@@ -114,28 +113,6 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
         return false;
     }
 
-    // if (fixTranslation)
-    // {
-    //     problem.SetParameterBlockConstant(translation);
-    // }
-    problem.SetParameterBlockConstant(orientation);
-
-    //else{
-
-    //     Vector3 upperBound = Vector3(translation) + translationUpperBound;
-    //     Vector3 lowerBound = Vector3(translation) - translationLowerBound;
-
-    //     problem.SetParameterLowerBound(translation, 0 , lowerBound[0] );
-    //     problem.SetParameterLowerBound(translation, 1 , lowerBound[1] );
-    //     problem.SetParameterLowerBound(translation, 2 , lowerBound[2] );
-
-    //     problem.SetParameterUpperBound(translation, 0 , upperBound[0] );
-    //     problem.SetParameterUpperBound(translation, 1 , upperBound[1] );
-    //     problem.SetParameterUpperBound(translation, 2 , upperBound[2] );
-    // }
-
-
-
     ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
     problem.SetParameterization(orientation, quaternionParameterization);
 
@@ -145,7 +122,7 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     // Build and solve the problem.
     Solver::Options options;
     options.max_num_iterations = 1000;
-    options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.linear_solver_type = ceres::DENSE_QR;
     //options.parameter_tolerance = 1e-14;
     options.function_tolerance = 1e-10;
     options.gradient_tolerance = 1e-20;
@@ -180,7 +157,7 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     // we need to take the sphere position into account
     // thus the actual translation is not right, because the local coordinate frame of the eye need to be translated in the opposite direction
     // of the sphere coordinates
-    double translationFactor = 30.0;
+    double translationFactor = 20.0;
 
     // since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
     Eigen::Matrix4d eyeToWorld =  Eigen::Matrix4d::Identity();
