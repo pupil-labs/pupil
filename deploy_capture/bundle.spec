@@ -32,7 +32,6 @@ if platform.system() == 'Darwin':
                    a.zipfiles,
                    a.datas,
                    [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.1.2/lib/libglfw3.dylib','BINARY')],
-                   [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
                    strip=None,
@@ -75,7 +74,6 @@ elif platform.system() == 'Linux':
                    binaries,
                    a.zipfiles,
                    a.datas,
-                   [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
                    [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
                    [('libGLEW.so', '/usr/lib/x86_64-linux-gnu/libGLEW.so','BINARY')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/OpenSans-Regular.ttf','DATA')],
@@ -100,7 +98,7 @@ elif platform.system() == 'Windows':
 			lib_dir = os.path.abspath(os.path.join(path, os.path.pardir))
 			python_path = os.path.abspath(os.path.join(lib_dir, os.path.pardir))
 			package_path = path
-	if (python_path and package_path):	
+	if (python_path and package_path):
 		print "PYTHON PATH @ " + python_path
 		print "PACKAGE PATH @ " + package_path
 	else:
@@ -133,7 +131,6 @@ elif platform.system() == 'Windows':
 	               a.binaries,
 	               a.zipfiles,
 	               a.datas,
-	               [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
 	               [('glfw3.dll', '../pupil_src/shared_modules/external/glfw3.dll','BINARY')],
 	               [('glfw3.lib', '../pupil_src/shared_modules/external/glfw3.lib','BINARY')],
 	               [('glfw3dll.lib', '../pupil_src/shared_modules/external/glfw3dll.lib','BINARY')],

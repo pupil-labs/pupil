@@ -32,7 +32,8 @@ EyeModelFitter::EyeModelFitter(double focalLength, Vector3 cameraCenter) :
     mApproximatedFramerate(30),
     mAverageFramerate(400), // windowsize is 400, let this be slow to changes to better compensate jumps
     mLastFrameTimestamp(0),
-    mPupilState(7,3,0, CV_64F)
+    mPupilState(7,3,0, CV_64F),
+    mLogger( pupillabs::PyCppLogger("EyeModelFitter"))
 
 {
     mNextModelID++;
@@ -319,6 +320,9 @@ void EyeModelFitter::reset()
     mLastTimeModelAdded =  Clock::now();
     mCurrentSphere = Sphere::Null;
     mCurrentInitialSphere = Sphere::Null;
+    //mLogger.setLogLevel( pupillabs::PyCppLogger::LogLevel::DEBUG);
+    //mLogger.info("Reset models");
+    //mLogger.error("Reset models");
 
 }
 

@@ -67,7 +67,6 @@ class Visualizer(object):
 		self.image_height = 480
 		# transformation matrices
 		self.anthromorphic_matrix = self.get_anthropomorphic_matrix()
-		self.adjusted_pixel_space_matrix = self.get_adjusted_pixel_space_matrix(1)
 
 		self.name = name
 		self.window_size = (640,480)
@@ -75,7 +74,7 @@ class Visualizer(object):
 		self.input = None
 		self.run_independently = run_independently
 
-		camera_fov = math.degrees(2.0 * math.atan( self.window_size[0] / (2.0 * self.focal_length)))
+		camera_fov = math.degrees(2.0 * math.atan( self.image_height / (2.0 * self.focal_length)))
 		self.trackball = Trackball(camera_fov)
 
 	############## MATRIX FUNCTIONS ##############################
@@ -85,10 +84,6 @@ class Visualizer(object):
 		temp[2,2] *= -1
 		return temp
 
-	def get_adjusted_pixel_space_matrix(self):
-		temp =  np.identity(4)
-		temp[2,2] *= -1
-		return temp
 
 	def get_adjusted_pixel_space_matrix(self,scale):
 		# returns a homoegenous matrix
@@ -234,13 +229,6 @@ class Visualizer(object):
 
 
 
-	def draw_contours_on_screen(self,contours, color = RGBA(0.,0.,0.,0.5)):
-		#this function displays the contours on the 2D video stream within the visualizer module
-		glPushMatrix()
-		glLoadMatrixf(self.get_image_space_matrix(30))
-		for contour in contours:
-			draw_polyline(contour,color)
-		glPopMatrix()
 
 	def draw_contours(self, contours, thickness = 1, color = RGBA(0.,0.,0.,0.5) ):
 		glPushMatrix()
@@ -384,13 +372,13 @@ class Visualizer(object):
 		self.trackball.push()
 
 		# 2. in pixel space draw video frame
-		glLoadMatrixf(self.get_image_space_matrix())
+		glLoadMatrixf(self.get_image_space_matrix(15))
 		g_pool.image_tex.draw( quad=((0,self.image_height),(self.image_width,self.image_height),(self.image_width,0),(0,0)) ,alpha=0.5)
 
-		glLoadMatrixf(self.get_anthropomorphic_matrix())
-
+		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(15))
 		self.draw_frustum()
 
+		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		model_count = 0;
 		sphere_color = RGBA( 0,147/255.,147/255.,0.2)
 		initial_sphere_color = RGBA( 0,147/255.,147/255.,0.2)
@@ -416,7 +404,7 @@ class Visualizer(object):
 
 
 		self.draw_circle( latest_circle[0], latest_circle[1], latest_circle[2], RGBA(0.0,1.0,1.0,0.4))
-		self.draw_circle( predicted_circle[0], predicted_circle[1], predicted_circle[2], RGBA(1.0,0.0,0.0,0.4))
+		# self.draw_circle( predicted_circle[0], predicted_circle[1], predicted_circle[2], RGBA(1.0,0.0,0.0,0.4))
 
 		draw_points(edges, 2 , RGBA(1.0,0.0,0.6,0.5) )
 
@@ -433,10 +421,8 @@ class Visualizer(object):
 
 	def close_window(self):
 		if self._window:
-			active_window = glfwGetCurrentContext();
 			glfwDestroyWindow(self._window)
 			self._window = None
-			glfwMakeContextCurrent( active_window)
 
 	############ window callbacks #################
 	def on_resize(self,window,w, h):

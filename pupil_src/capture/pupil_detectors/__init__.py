@@ -15,7 +15,6 @@ if not getattr(sys, 'frozen', False):
     from build import build_cpp_extension
     build_cpp_extension()
 
-from canny_detector import Canny_Detector
 from detector_2d import Detector_2D
 from detector_3d import Detector_3D
 
