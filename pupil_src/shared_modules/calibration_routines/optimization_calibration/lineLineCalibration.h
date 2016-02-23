@@ -136,17 +136,17 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
 
 
 
-    //ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
-    //problem.SetParameterization(orientation, quaternionParameterization);
+    ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
+    problem.SetParameterization(orientation, quaternionParameterization);
 
-    // ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
-    // problem.SetParameterization(translation, normedTranslationParameterization);
+    ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
+    problem.SetParameterization(translation, normedTranslationParameterization);
 
     // Build and solve the problem.
     Solver::Options options;
     options.max_num_iterations = 1000;
-    options.linear_solver_type = ceres::DENSE_QR;
-    options.parameter_tolerance = 1e-14;
+    options.linear_solver_type = ceres::DENSE_SCHUR;
+    //options.parameter_tolerance = 1e-14;
     options.function_tolerance = 1e-10;
     options.gradient_tolerance = 1e-20;
     options.minimizer_progress_to_stdout = true;
