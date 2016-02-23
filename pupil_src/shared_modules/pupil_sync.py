@@ -122,11 +122,13 @@ class Pupil_Sync(Plugin):
         self.g_pool.sidebar.append(self.menu)
         self.update_gui()
 
+
     def update_gui(self):
         if self.group_menu:
             self.group_menu.elements[:] = []
             for uuid in self.group_members.keys():
                 self.group_menu.append(ui.Info_Text("%s"%self.group_members[uuid]))
+
 
     def set_name(self,new_name):
         self.name = new_name
@@ -135,6 +137,7 @@ class Pupil_Sync(Plugin):
             while self.thread_pipe:
                 sleep(.01)
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
+
 
     def set_group(self,new_name):
         self.group = new_name
@@ -150,10 +153,12 @@ class Pupil_Sync(Plugin):
     def close(self):
         self.alive = False
 
+
     def deinit_gui(self):
         if self.menu:
             self.g_pool.sidebar.remove(self.menu)
             self.menu = None
+
 
     def thread_loop(self,context,pipe):
         n = Pyre(self.name)
@@ -321,6 +326,7 @@ class Pupil_Sync(Plugin):
                 self.notify_all(notification)
         else:
             logger.warning('Received unknown message pattern. Payload:"%s"'%msg)
+
 
     def _handle_msg_whisper(self,uuid,name,msg,node):
         if TIMESTAMP_REQ in msg:
