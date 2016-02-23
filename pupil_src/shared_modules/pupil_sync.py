@@ -23,6 +23,8 @@ from network_time_sync import Clock_Sync_Master,Clock_Sync_Follower
 
 SYNC_TIME_MASTER_ANNOUNCE = "SYNC_TIME_MASTER:"
 NOTIFICATION = "REMOTE_NOTIFICATION:"
+TIMESTAMP_REQ = "TIMESTAMP_REQ"
+TIMESTAMP = "TIMESTAMP:"
 msg_delimeter  = '::'
 
 
@@ -321,8 +323,10 @@ class Pupil_Sync(Plugin):
         else:
             logger.warning('Received unknown message pattern. Payload:"%s"'%msg)
 
-    def handle_msg_whisper(self,peer,name,msg,node):
-        logger.warning('%s %s %s %s'%(peer,name,msg,node))
+    def handle_msg_whisper(self,uuid,name,msg,node):
+        if TIMESTAMP_REQ in msg:
+            node.whisper(UUID(bytes=uuid),TIMESTAMP+'%s'%self.g_pool.capture.get_timestamp())
+        logger.warning('%s %s %s %s'%(uuid,name,msg,node))
 
 
     def on_notify(self,notification):
