@@ -32,8 +32,8 @@ struct CoplanarityError {
         T* residuals) const
     {
 
-        Eigen::Matrix<T, 3, 1> gazeDirection = {T(gazeDirection[0]), T(gazeDirection[1]), T(gazeDirection[2])};
-        Eigen::Matrix<T, 3, 1> refDirection = {T(refDirection[0]) , T(refDirection[1]) , T(refDirection[2])};
+        Eigen::Matrix<T, 3, 1> gazeD = {T(gazeDirection[0]), T(gazeDirection[1]), T(gazeDirection[2])};
+        Eigen::Matrix<T, 3, 1> refD = {T(refDirection[0]) , T(refDirection[1]) , T(refDirection[2])};
 
         //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
         Eigen::Matrix<T, 3, 3, Eigen::RowMajor> rotationMatrix;
@@ -49,7 +49,7 @@ struct CoplanarityError {
 
         //TODO add weighting factors to the residual , better approximation
         //coplanarity constraint  x1.T * E * x2 = 0
-        auto res = refDirection.transpose() * essentialMatrix * gazeDirection;
+        auto res = refD.transpose() * essentialMatrix * gazeD;
         std::cout << "res: " << res[0] << std::endl;
         residuals[0] = res[0];
         return true;
