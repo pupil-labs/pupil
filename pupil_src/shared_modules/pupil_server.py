@@ -20,15 +20,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-
 class Pupil_Server(Plugin):
     """pupil server plugin"""
-    def __init__(self, g_pool,address="tcp://127.0.0.1:5000",network_mode='zmq'):
+    def __init__(self, g_pool,address="tcp://127.0.0.1:5000"):
         super(Pupil_Server, self).__init__(g_pool)
         self.order = .9
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
-        self.address = ''
+        self.address = address
         self.set_server(address)
         self.menu = None
 
@@ -70,8 +69,10 @@ class Pupil_Server(Plugin):
         except zmq.ZMQError as e:
             logger.error("Could not set Socket: %s. Reason: %s"%(new_address,e))
 
+
+
     def update(self,frame,events):
-        for topic,data in events.interitems():
+        for topic,data in events.iteritems():
             self.socket.send_multipart((topic, json.dumps(data)))
 
     def close(self):
