@@ -211,30 +211,28 @@ if __name__ == '__main__':
     cam1_center  = (0,0,0)
     cam1_orientation = angle_axis2quat( 0 , (0.0,1.0,0.0) )
 
-    cam2_center  = (100,0,0)
+    cam2_center  = (200,0,0)
     cam2_orientation = angle_axis2quat( -np.pi/4.0 , (0.0,1.0,0.0) )
     cam2_rotation_matrix = quat2mat(cam2_orientation)
     random_points = [];
     random_points_amount = 10
 
-    x_var = 10
-    y_var = 10
-    z_var = 50
+    x_var = 100
+    y_var = 0
+    z_var = 200
     z_min = 500
     for i in range(0,random_points_amount):
         random_point = ( uniform(-x_var,x_var) ,  uniform(-y_var,y_var) ,  uniform(z_min,z_min+z_var)  )
         random_points.append(random_point)
 
 
-    cam1_directions = []
-    cam2_directions = []
+    cam1_directions = [] #world coords
+    cam2_directions = [] #world coords
     for p in random_points:
         #pn = p / np.linalg.norm(p)
         pn = p
-        print 'pn: ' , pn
         cam1_directions.append(pn)
         pn2 = np.dot(pn, cam2_rotation_matrix.T)
-        print 'pn2: ' , pn2
         cam2_directions.append(pn2)
 
     sphere_position = (0,0,0)
@@ -255,18 +253,17 @@ if __name__ == '__main__':
 
     eye = { 'center': (0,0,0), 'radius': 1.0}
 
-    intersection_points_a = []
-    intersection_points_b = []
-    for a,b in zip(cam1_directions , cam2_directions):
-        print 'a: ' ,a
-        print 'b: ' , b
+    intersection_points_a = [] #world coords
+    intersection_points_b = [] #world coords
+    for a,b in zip(cam1_directions , cam2_directions): #world coords
+
         line_a = (np.array(cam1_center) , np.array(a) )
-        line_b = (np.array(cam2_center) , np.array(b))
-        ai, bi, _ =  nearest_intersection_points( line_a , line_b )
-        print ai
-        print bi
+        line_b = (np.array(cam2_center) , np.array(cam2_center + b))
+        ai, bi, _ =  nearest_intersection_points( line_a , line_b ) #world coords
+        # print ai
+        # print bi
         intersection_points_a.append(ai)
-        intersection_points_b.append(bi)
+        intersection_points_b.append( np.dot(bi-cam2_center ,cam2_rotation_matrix)  )  #cam2 coords , since visualizer expects local coordinates
 
     visualizer = Calibration_Visualizer(None,None, intersection_points_a,cam2_to_cam1_matrix , intersection_points_b, run_independently = True )
     visualizer.open_window()
