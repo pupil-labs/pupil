@@ -240,7 +240,7 @@ if __name__ == '__main__':
         cam2_directions.append(p2)
 
     sphere_position = (0,0,0)
-    orientation = initial_orientation = angle_axis2quat( -np.pi/4.1 , (0.0,1.0,0.0) )
+    orientation = initial_orientation = angle_axis2quat( -np.pi/4.0 , (0.0,1.0,0.0) )
     translation = initial_translation = [c*uniform(1.0,1.0)for c in cam2_center ]
     success, orientation, translation = line_line_calibration( sphere_position, cam1_directions, cam2_directions , initial_orientation , initial_translation , fix_translation = True )
     print initial_orientation
@@ -249,8 +249,11 @@ if __name__ == '__main__':
     print orientation
     print translation
     #assert (orientation== cam2_orientation).all() #and almost_equal(angle_axis[0] , radians(45) )
+
+    #replace with the optimized rotation and translation
+    cam2_rotation_matrix = quat2mat(orientation)
     cam2_to_cam1_matrix  = np.matrix(np.eye(4))
-    cam2_to_cam1_matrix[:3,:3] = quat2mat(orientation)
+    cam2_to_cam1_matrix[:3,:3] = cam2_rotation_matrix
     cam2_translation = np.matrix(translation)
     cam2_translation.shape = (3,1)
     cam2_to_cam1_matrix[:3,3:4] = cam2_translation
@@ -267,7 +270,7 @@ if __name__ == '__main__':
         intersection_points_a.append(ai)
         intersection_points_b.append( toEye(bi) )  #cam2 coords , since visualizer expects local coordinates
 
-    visualizer = Calibration_Visualizer(None,None, intersection_points_a,cam2_to_cam1_matrix , intersection_points_b, run_independently = True )
+    visualizer = Calibration_Visualizer(None,None, cam1_directions,cam2_to_cam1_matrix , intersection_points_b, run_independently = True )
     visualizer.open_window()
     while visualizer.window:
         visualizer.update_window( None, [] , eye)
