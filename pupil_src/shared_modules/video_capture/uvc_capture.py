@@ -109,7 +109,7 @@ class Camera_Capture(object):
             except KeyError:
                 pass
 
-        if "C525" or "B525" in self.capture.name:
+        if "C525" in self.capture.name or  "B525" in self.capture.name:
             self.capture.bandwidth_factor = 4.0
 
     def get_frame(self):
