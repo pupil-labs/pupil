@@ -417,21 +417,16 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                     g_pool.image_tex.draw()
 
                     window_size =  glfw.glfwGetWindowSize(main_window)
+                    make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
 
                     if result['method'] == '3D c++':
-                        focal_length = 620.
-                        make_coord_system_eye_camera_based((frame.width,frame.height), focal_length )
 
-                        sphere_result = result['sphere']
+                        sphere_result = result['projectedSphere']
                         sphere_center = sphere_result['center']
-                        sphere_radius = sphere_result['radius']
-                        gl.glTranslate(sphere_center[0],sphere_center[1],sphere_center[2])
-                        gl.glScale(sphere_radius,sphere_radius,sphere_radius)
-
-                        sphere.draw(color = RGBA(1,1,1,0.2), primitive_type = gl.GL_TRIANGLE_STRIP)
+                        sphere_radius, _ = sphere_result['axes']
+                        draw_points([sphere_center],size=sphere_radius,color=RGBA(1,1,1,0.2),sharpness=0.98)
 
                     # switch to work in pixel space
-                    make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
 
                     if result['confidence'] >0:
                         if result.has_key('ellipse'):
