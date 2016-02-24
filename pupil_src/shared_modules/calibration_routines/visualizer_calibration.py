@@ -140,9 +140,14 @@ class Calibration_Visualizer(object):
 		self.cal_gaze_points0_3d = cal_gaze_points0_3d
 		self.cal_gaze_points1_3d = cal_gaze_points1_3d
 
-		self.world_camera_width = world_camera_intrinsics['resolution'][0]
-		self.world_camera_height = world_camera_intrinsics['resolution'][1]
-		self.world_camera_focal = (world_camera_intrinsics['camera_matrix'][0][0] +  world_camera_intrinsics['camera_matrix'][1][1] ) / 2.0
+		if world_camera_intrinsics:
+			self.world_camera_width = world_camera_intrinsics['resolution'][0]
+			self.world_camera_height = world_camera_intrinsics['resolution'][1]
+			self.world_camera_focal = (world_camera_intrinsics['camera_matrix'][0][0] +  world_camera_intrinsics['camera_matrix'][1][1] ) / 2.0
+		else:
+			self.world_camera_width = 0
+			self.world_camera_height = 0
+			self.world_camera_focal = 0
 
 		# transformation matrices
 		self.anthromorphic_matrix = self.get_anthropomorphic_matrix()
@@ -345,7 +350,10 @@ class Calibration_Visualizer(object):
 			# get glfw started
 			if self.run_independently:
 				glfwInit()
-			self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None, share=self.g_pool.main_window )
+				self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None  )
+			else:
+				self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None, share=self.g_pool.main_window )
+
 			active_window = glfwGetCurrentContext();
 			glfwMakeContextCurrent(self.window)
 
@@ -394,11 +402,12 @@ class Calibration_Visualizer(object):
 			glPushMatrix()
 			glLoadIdentity()
 
-			calibration_points_line_color = RGBA(0.5,0.5,0.5,0.05);
+			calibration_points_line_color = RGBA(0.5,0.5,0.5,0.5);
 			error_line_color = RGBA(1.0,0.0,0.0,0.5)
 
 			self.draw_coordinate_system(200)
-			self.draw_frustum( self.world_camera_width/ 10.0 , self.world_camera_height/ 10.0 , self.world_camera_focal / 10.0)
+			if self.world_camera_width != 0:
+				self.draw_frustum( self.world_camera_width/ 10.0 , self.world_camera_height/ 10.0 , self.world_camera_focal / 10.0)
 
 			for p in self.cal_ref_points_3d:
 				draw_polyline( [ (0,0,0), p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
