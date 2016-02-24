@@ -420,13 +420,11 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                     make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
 
                     if result['method'] == '3D c++':
-
-                        sphere_result = result['projectedSphere']
-                        sphere_center = sphere_result['center']
-                        sphere_radius, _ = sphere_result['axes']
-                        draw_points([sphere_center],size=sphere_radius,color=RGBA(1,1,1,0.2),sharpness=0.98)
-
-                    # switch to work in pixel space
+                        eye_ball = result['projectedSphere']
+                        pts = cv2.ellipse2Poly( (int(eye_ball['center'][0]),int(eye_ball['center'][1])),
+                                            (int(eye_ball['axes'][0]/2),int(eye_ball['axes'][1]/2)),
+                                            int(eye_ball['angle']),0,360,8)
+                        draw_polyline(pts,2,RGBA(0.,4.,9.,0.3))
 
                     if result['confidence'] >0:
                         if result.has_key('ellipse'):
