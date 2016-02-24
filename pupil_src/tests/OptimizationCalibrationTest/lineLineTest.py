@@ -211,34 +211,38 @@ if __name__ == '__main__':
     cam1_center  = (0,0,0)
     cam1_orientation = angle_axis2quat( 0 , (0.0,1.0,0.0) )
 
-    cam2_center  = (200,0,0)
+    cam2_center  = np.array((100,0,0))
     cam2_orientation = angle_axis2quat( -np.pi/4.0 , (0.0,1.0,0.0) )
     cam2_rotation_matrix = quat2mat(cam2_orientation)
     random_points = [];
     random_points_amount = 10
 
-    x_var = 100
-    y_var = 0
-    z_var = 200
-    z_min = 500
+    x_var = 50
+    y_var = 10
+    z_var = 50
+    z_min = 100
     for i in range(0,random_points_amount):
         random_point = ( uniform(-x_var,x_var) ,  uniform(-y_var,y_var) ,  uniform(z_min,z_min+z_var)  )
         random_points.append(random_point)
 
 
-    cam1_directions = [] #world coords
-    cam2_directions = [] #world coords
+    def toEye(p):
+        return np.dot(p-cam2_center, cam2_rotation_matrix)
+
+    def toWorld(p):
+        return np.dot(p, cam2_rotation_matrix.T) + cam2_center
+
+    cam1_directions = [] #cam1 coords
+    cam2_directions = [] #cam2 coords
     for p in random_points:
-        #pn = p / np.linalg.norm(p)
-        pn = p
-        cam1_directions.append(pn)
-        pn2 = np.dot(pn, cam2_rotation_matrix.T)
-        cam2_directions.append(pn2)
+        cam1_directions.append(p)
+        p2 = toEye(p) # to cam2 coordinate system
+        cam2_directions.append(p2)
 
     sphere_position = (0,0,0)
-    orientation = initial_orientation = angle_axis2quat( -np.pi/4.0 , (0.0,1.0,0.0) )
+    orientation = initial_orientation = angle_axis2quat( -np.pi/4.1 , (0.0,1.0,0.0) )
     translation = initial_translation = [c*uniform(1.0,1.0)for c in cam2_center ]
-    #success, orientation, translation = line_line_calibration( sphere_position, cam1_directions, cam2_directions , initial_orientation , initial_translation , fix_translation = True )
+    success, orientation, translation = line_line_calibration( sphere_position, cam1_directions, cam2_directions , initial_orientation , initial_translation , fix_translation = True )
     print initial_orientation
     print initial_translation
 
@@ -247,23 +251,21 @@ if __name__ == '__main__':
     #assert (orientation== cam2_orientation).all() #and almost_equal(angle_axis[0] , radians(45) )
     cam2_to_cam1_matrix  = np.matrix(np.eye(4))
     cam2_to_cam1_matrix[:3,:3] = quat2mat(orientation)
-    cam2_translation = np.matrix(cam2_center)
+    cam2_translation = np.matrix(translation)
     cam2_translation.shape = (3,1)
     cam2_to_cam1_matrix[:3,3:4] = cam2_translation
 
     eye = { 'center': (0,0,0), 'radius': 1.0}
 
     intersection_points_a = [] #world coords
-    intersection_points_b = [] #world coords
-    for a,b in zip(cam1_directions , cam2_directions): #world coords
+    intersection_points_b = [] #cam2 coords
+    for a,b in zip(cam1_directions , cam2_directions): #world coords , cam2 coords
 
         line_a = (np.array(cam1_center) , np.array(a) )
-        line_b = (np.array(cam2_center) , np.array(cam2_center + b))
+        line_b = (np.array(cam2_center) , toWorld(b) ) #convert to world for intersection
         ai, bi, _ =  nearest_intersection_points( line_a , line_b ) #world coords
-        # print ai
-        # print bi
         intersection_points_a.append(ai)
-        intersection_points_b.append( np.dot(bi-cam2_center ,cam2_rotation_matrix)  )  #cam2 coords , since visualizer expects local coordinates
+        intersection_points_b.append( toEye(bi) )  #cam2 coords , since visualizer expects local coordinates
 
     visualizer = Calibration_Visualizer(None,None, intersection_points_a,cam2_to_cam1_matrix , intersection_points_b, run_independently = True )
     visualizer.open_window()
