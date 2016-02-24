@@ -408,7 +408,7 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
             sphere_pos = matched_monocular_data[-1]['pupil']['sphere']['center']
             if matched_monocular_data[-1]['pupil']['id'] == 0:
                 initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033] #eye0
-                initial_translation = (25, 15, -10)
+                initial_translation = (10, 30, -10)
             else:
                 initial_orientation = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
                 initial_translation = (-5, 15, -10)
@@ -432,8 +432,9 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
             world_to_eye_matrix  = np.linalg.inv(eye_to_world_matrix)
 
             #with the eye_to_world matrix let's calculate the nearest points for every gaze line
+            translation.shape = (1,3)
             sphere_pos_world = np.zeros(4)
-            sphere_pos_world[:3] = sphere_pos
+            sphere_pos_world[:3] = translation
             sphere_pos_world[3] = 1.0
             sphere_pos_world  = eye_to_world_matrix.dot(sphere_pos_world)
             sphere_pos_world = np.squeeze(np.asarray(sphere_pos_world))

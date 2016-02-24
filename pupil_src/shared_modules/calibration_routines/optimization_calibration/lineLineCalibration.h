@@ -10,6 +10,7 @@
 #include <ceres/rotation.h>
 #include <Eigen/Geometry>
 #include "ceres/CeresParametrization.h"
+//#include "math/Intersect.h"
 
 using ceres::AutoDiffCostFunction;
 using ceres::NumericDiffCostFunction;
@@ -34,6 +35,7 @@ struct CoplanarityError {
 
         Eigen::Matrix<T, 3, 1> gazeD = {T(gazeDirection[0]), T(gazeDirection[1]), T(gazeDirection[2])};
         Eigen::Matrix<T, 3, 1> refD = {T(refDirection[0]) , T(refDirection[1]) , T(refDirection[2])};
+        Eigen::Matrix<T, 3, 1> t = {T(translation[0]) , T(translation[1]) , T(translation[2])};
 
         //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
         Eigen::Matrix<T, 3, 3, Eigen::RowMajor> rotationMatrix;
@@ -44,13 +46,23 @@ struct CoplanarityError {
                              T(translation[2]), T(0), T(-translation[0]),
                              T(-translation[1]), T(translation[0]), T(0);
 
-        Eigen::Matrix<T, 3, 3 > essentialMatrix = translationMatrix * rotationMatrix.transpose();
+        Eigen::Matrix<T, 3, 3 > essentialMatrix = translationMatrix * rotationMatrix;
 
         //TODO add weighting factors to the residual , better approximation
         //coplanarity constraint  x1.T * E * x2 = 0
         auto res = gazeD.transpose() * essentialMatrix * refD;
 
-        residuals[0] = res[0];
+
+        // //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
+        // Eigen::Matrix<T, 3, 1> gazeWorld;
+        // ceres::QuaternionRotatePoint( orientation , gazeD.data(), gazeWorld.data() );
+
+
+        // //TODO add weighting factors to the residual , better approximation
+        // //coplanarity constraint  x1.T * E * x2 = 0
+        // auto res = refD.transpose() * ( t.cross(gazeWorld));
+
+        residuals[0] = res[0]* res[0];
         return true;
 
 
@@ -119,6 +131,9 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
     problem.SetParameterization(translation, normedTranslationParameterization);
 
+    problem.SetParameterBlockConstant(translation);
+
+
     // Build and solve the problem.
     Solver::Options options;
     options.max_num_iterations = 1000;
@@ -158,21 +173,24 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     // thus the actual translation is not right, because the local coordinate frame of the eye need to be translated in the opposite direction
     // of the sphere coordinates
     double translationFactor = 30.0;
+    translation[0] *= n;
+    translation[1] *= n;
+    translation[2] *= n;
 
-    // since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
-    Eigen::Matrix4d eyeToWorld =  Eigen::Matrix4d::Identity();
-    eyeToWorld.block<3,3>(0,0) = Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> >(rotation.data());
-    eyeToWorld(0, 3) = translation[0]*translationFactor;
-    eyeToWorld(1, 3) = translation[1]*translationFactor;
-    eyeToWorld(2, 3) = translation[2]*translationFactor;
+    // // since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
+    // Eigen::Matrix4d eyeToWorld =  Eigen::Matrix4d::Identity();
+    // eyeToWorld.block<3,3>(0,0) = Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> >(rotation.data());
+    // eyeToWorld(0, 3) = translation[0]*translationFactor;
+    // eyeToWorld(1, 3) = translation[1]*translationFactor;
+    // eyeToWorld(2, 3) = translation[2]*translationFactor;
 
-    Eigen::Vector4d sphereWorld = eyeToWorld * Eigen::Vector4d(spherePosition[0],spherePosition[1],spherePosition[2], 1.0 );
-    Vector3 sphereOffset =  sphereWorld.head<3>() - Vector3(translation);
-    Vector3 actualtranslation =  Vector3(translation) - sphereOffset;
-    // write the actual one back
-    translation[0] = actualtranslation[0];
-    translation[1] = actualtranslation[1];
-    translation[2] = actualtranslation[2];
+    // Eigen::Vector4d sphereWorld = eyeToWorld * Eigen::Vector4d(spherePosition[0],spherePosition[1],spherePosition[2], 1.0 );
+    // Vector3 sphereOffset =  sphereWorld.head<3>() - Vector3(translation);
+    // Vector3 actualtranslation =  Vector3(translation) - sphereOffset;
+    // // write the actual one back
+    // translation[0] = actualtranslation[0];
+    // translation[1] = actualtranslation[1];
+    // translation[2] = actualtranslation[2];
     return true;
 
 }

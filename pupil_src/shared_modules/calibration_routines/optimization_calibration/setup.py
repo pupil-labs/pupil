@@ -41,13 +41,14 @@ for dirpath, dirnames, filenames in os.walk("."):
         dependencies.append( os.path.join(dirpath, filename) )
 
 shared_cpp_include_path = '../../../shared_cpp/include'
+singleeyefitter_include_path = '../../../capture/pupil_detectors/singleeyefitter'
 
 
 extensions = [
      Extension(
         name="calibration_methods",
         sources=['calibration_methods.pyx'],
-        include_dirs = [ np.get_include() , shared_cpp_include_path , '/usr/local/include/eigen3','/usr/include/eigen3'],
+        include_dirs = [ np.get_include() , singleeyefitter_include_path, shared_cpp_include_path , '/usr/local/include/eigen3','/usr/include/eigen3'],
         libraries = [ 'ceres' ],
         # library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'

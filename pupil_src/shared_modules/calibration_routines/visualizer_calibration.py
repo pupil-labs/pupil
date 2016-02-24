@@ -417,20 +417,23 @@ class Calibration_Visualizer(object):
 				sphere_center0 = list(sphere0['center'])
 				sphere_radius0 = sphere0['radius']
 
-				self.draw_sphere(sphere_center0,sphere_radius0,  color = RGBA(1,1,0,1))
+				self.draw_sphere((0,0,0),sphere_radius0,  color = RGBA(1,1,0,1))
 
 				for p in self.cal_gaze_points0_3d:
-					draw_polyline( [ sphere_center0, p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
+					draw_polyline( [ (0,0,0), p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
 				#calibration points
 				draw_points( self.cal_gaze_points0_3d , 4 , RGBA( 1, 0, 1, 1 ) )
 
 				# eye camera
+				glPushMatrix()
+				glTranslatef(-sphere_center0[0],-sphere_center0[1],-sphere_center0[2] )
 				self.draw_coordinate_system(60)
 				self.draw_frustum( self.image_width / 10.0, self.image_height / 10.0, self.focal_length /10.)
+				glPopMatrix()
 
 				draw_points( gaze_points0 , 2 , RGBA( 1, 0, 0, 1 ) )
 				for p in gaze_points0:
-					draw_polyline( [sphere_center0, p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
+					draw_polyline( [(0,0,0), p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
 
 				glPopMatrix()
 
