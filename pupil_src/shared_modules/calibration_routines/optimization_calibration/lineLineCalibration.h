@@ -81,7 +81,7 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
         auto ref = refDirections.at(i);
         gaze.normalize(); //just to be sure
         ref.normalize(); //just to be sure
-        i++;
+
 
         // do a check to handle parameters we can't solve
         // First: the length of the directions must not be zero
