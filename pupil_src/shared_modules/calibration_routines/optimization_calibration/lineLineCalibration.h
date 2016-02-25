@@ -55,9 +55,7 @@ struct CoplanarityError {
 
         //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
         Eigen::Matrix<T, 3, 1> gazeWorld;
-        T inverseOrientation[4] = {orientation[0],-orientation[1],-orientation[2],-orientation[3]};
-        ceres::QuaternionRotatePoint( inverseOrientation , gazeD.data(), gazeWorld.data() );
-
+        ceres::QuaternionRotatePoint( orientation , gazeD.data(), gazeWorld.data() );
         //TODO add weighting factors to the residual , better approximation
         //coplanarity constraint  x1.T * E * x2 = 0
         auto res = refD.transpose() * ( t.cross(gazeWorld));
