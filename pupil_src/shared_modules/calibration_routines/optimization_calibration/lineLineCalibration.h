@@ -37,32 +37,33 @@ struct CoplanarityError {
         Eigen::Matrix<T, 3, 1> refD = {T(refDirection[0]) , T(refDirection[1]) , T(refDirection[2])};
         Eigen::Matrix<T, 3, 1> t = {T(translation[0]) , T(translation[1]) , T(translation[2])};
 
-        //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
-        Eigen::Matrix<T, 3, 3, Eigen::RowMajor> rotationMatrix;
-        ceres::QuaternionToRotation( orientation , rotationMatrix.data() );
-         // cross-product matrix of the translation
-        Eigen::Matrix<T, 3, 3 > translationMatrix;
-        translationMatrix << T(0) , T(-translation[2]) , T(translation[1]),
-                             T(translation[2]), T(0), T(-translation[0]),
-                             T(-translation[1]), T(translation[0]), T(0);
-
-        Eigen::Matrix<T, 3, 3 > essentialMatrix = translationMatrix * rotationMatrix;
-
-        //TODO add weighting factors to the residual , better approximation
-        //coplanarity constraint  x1.T * E * x2 = 0
-        auto res = gazeD.transpose() * essentialMatrix * refD;
-
-
         // //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
-        // Eigen::Matrix<T, 3, 1> gazeWorld;
-        // ceres::QuaternionRotatePoint( orientation , gazeD.data(), gazeWorld.data() );
+        // Eigen::Matrix<T, 3, 3, Eigen::RowMajor> rotationMatrix;
+        // ceres::QuaternionToRotation( orientation , rotationMatrix.data() );
+        //  // cross-product matrix of the translation
+        // Eigen::Matrix<T, 3, 3 > translationMatrix;
+        // translationMatrix << T(0) , T(-translation[2]) , T(translation[1]),
+        //                      T(translation[2]), T(0), T(-translation[0]),
+        //                      T(-translation[1]), T(translation[0]), T(0);
 
+        // Eigen::Matrix<T, 3, 3 > essentialMatrix = translationMatrix * rotationMatrix.transpose();
 
         // //TODO add weighting factors to the residual , better approximation
         // //coplanarity constraint  x1.T * E * x2 = 0
-        // auto res = refD.transpose() * ( t.cross(gazeWorld));
+        // auto res = refD.transpose() * essentialMatrix * gazeD;
+
+
+        //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
+        Eigen::Matrix<T, 3, 1> gazeWorld;
+        T inverseOrientation[4] = {orientation[0],-orientation[1],-orientation[2],-orientation[3]};
+        ceres::QuaternionRotatePoint( inverseOrientation , gazeD.data(), gazeWorld.data() );
+
+        //TODO add weighting factors to the residual , better approximation
+        //coplanarity constraint  x1.T * E * x2 = 0
+        auto res = refD.transpose() * ( t.cross(gazeWorld));
 
         residuals[0] = res[0]* res[0];
+        std::cout << "res: " << residuals[0] << std::endl;
         return true;
 
 
