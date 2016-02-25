@@ -215,7 +215,7 @@ if __name__ == '__main__':
     cam2_rotation_quaternion = angle_axis2quat( -np.pi/4, (0.0,1.0,0.0) )
     cam2_rotation_matrix = quat2mat(cam2_rotation_quaternion)
     random_points = [];
-    random_points_amount = 10
+    random_points_amount = 100
 
     x_var = 20
     y_var = 20
@@ -237,11 +237,11 @@ if __name__ == '__main__':
         cam2_points.append(p2)
 
     sphere_position = (0,0,0)
-    initial_rotation = angle_axis2quat( -np.pi/4, (0.0,1.0,0.0) )
+    initial_rotation = angle_axis2quat( -np.pi/1.0, (0.0,1.0,0.0) )
     initial_translation = [c*uniform(1.0,1.0)for c in cam2_center ]
 
 
-    success, rotation, translation = line_line_calibration( sphere_position, cam1_points, cam2_points , initial_rotation , initial_translation , fix_translation = True )
+    success, rotation, translation = line_line_calibration( sphere_position, cam1_points, cam2_points , initial_rotation , initial_translation , fix_translation = False )
 
     print 'initial rotation: ' , initial_rotation
     print 'initial translation: ' , initial_translation

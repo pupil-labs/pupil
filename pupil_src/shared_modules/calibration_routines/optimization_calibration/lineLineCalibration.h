@@ -10,7 +10,8 @@
 #include <ceres/rotation.h>
 #include <Eigen/Geometry>
 #include "ceres/CeresParametrization.h"
-//#include "math/Intersect.h"
+#include "math/Intersect.h"
+#include "common/types.h"
 
 using ceres::AutoDiffCostFunction;
 using ceres::NumericDiffCostFunction;
@@ -82,11 +83,9 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
         gaze.normalize(); //just to be sure
         ref.normalize(); //just to be sure
 
-
         // do a check to handle parameters we can't solve
         // First: the length of the directions must not be zero
         // Second: the angle between gaze direction and reference direction must not be greater 90 degrees, considering the initial orientation
-
         bool valid = true;
         valid |= gaze.norm() >= epsilon;
         valid |= ref.norm() >= epsilon;
@@ -113,20 +112,21 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
     problem.SetParameterization(translation, normedTranslationParameterization);
 
-    //problem.SetParameterBlockConstant(translation);
+    if (fixTranslation)
+    {
+        problem.SetParameterBlockConstant(translation);
+    }
+
 
 
     // Build and solve the problem.
     Solver::Options options;
     options.max_num_iterations = 1000;
-    options.linear_solver_type = ceres::DENSE_QR;
-    // options.linear_solver_type = ceres::ITERATIVE_SCHUR;
-    // options.preconditioner_type = ceres::SCHUR_JACOBI;
-    // options.dense_linear_algebra_library_type = ceres::LAPACK;
+    //options.linear_solver_type = ceres::DENSE_QR;
 
     //options.parameter_tolerance = 1e-15;
     //options.function_tolerance = 1e-9;
-    //options.gradient_tolerance = 1e-6;
+    options.gradient_tolerance = 1e-20;
     options.minimizer_progress_to_stdout = true;
     //options.logging_type = ceres::SILENT;
 
@@ -143,27 +143,85 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
         return false;
     }
 
-    //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
-    Eigen::Matrix<double, 3, 3, Eigen::RowMajor> rotation;
-    ceres::QuaternionToRotation( orientation , rotation.data() );
-    // ceres should always return a valid quaternion
-    // double det = r.determinant();
-    // std::cout << "det:: " << det << std::endl;
-    // if(  det == 1 ){
-    //     std::cout << "Error: No valid rotation matrix."   << std::endl;
-    //     return false;
-    // }
+    //rescale the translation according to the initial translation
+    translation[0] *= n;
+    translation[1] *= n;
+    translation[2] *= n;
+
+    using singleeyefitter::Line3;
+    // check for possible ambiguity
+    //intersection points need to lie in positive z
+
+    auto checkResult = [ &gazeDirections, &refDirections ]( Eigen::Quaterniond& orientation , Vector3 translation  ){
+
+        int validCount = 0;
+        for(int i=0; i<refDirections.size(); i++) {
+
+            auto gaze = gazeDirections.at(i);
+            auto ref = refDirections.at(i);
+
+            gaze.normalize(); //just to be sure
+            ref.normalize(); //just to be sure
+
+            Vector3 gazeWorld = orientation * gaze;
+
+            Line3 refLine = { Vector3(0,0,0) , ref  };
+            Line3 gazeLine = { translation , gazeWorld  };
+
+            auto intersectionPoint = singleeyefitter::nearest_intersect( refLine , gazeLine );
+            if( intersectionPoint.z() > 0.0)
+                validCount++;
+        }
+
+        return validCount == refDirections.size();
+    };
+
+
+    Eigen::Quaterniond q1(orientation[0],orientation[1],orientation[2],orientation[3]); // don't mapp orientation
+    Vector3 t1 =  Vector3(translation[0],translation[1], translation[2]);
+    Eigen::Quaterniond q2  = q1.conjugate();
+    Vector3 t2 =  -t1;
+
+
+    if(checkResult(q1,t1)){
+        std::cout << "result one" <<std::endl;
+        return true;
+    }
+    if(checkResult(q1,t2)){
+        std::cout << "result two" <<std::endl;
+        translation[0] *= -1.0;
+        translation[1] *= -1.0;
+        translation[2] *= -1.0;
+        return true;
+    }
+    if(checkResult(q2,t1)){
+        std::cout << "result three" <<std::endl;
+
+        orientation[1] *= -1.0;
+        orientation[2] *= -1.0;
+        orientation[3] *= -1.0;
+        return true;
+    }
+    if(checkResult(q2,t2)){
+        std::cout << "result four" <<std::endl;
+
+        orientation[1] *= -1.0;
+        orientation[2] *= -1.0;
+        orientation[3] *= -1.0;
+
+        translation[0] *= -1.0;
+        translation[1] *= -1.0;
+        translation[2] *= -1.0;
+        return true;
+    }
 
 
     // we need to take the sphere position into account
     // thus the actual translation is not right, because the local coordinate frame of the eye need to be translated in the opposite direction
     // of the sphere coordinates
-    double translationFactor = 30.0;
-    translation[0] *= n;
-    translation[1] *= n;
-    translation[2] *= n;
 
     // // since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
+
     // Eigen::Matrix4d eyeToWorld =  Eigen::Matrix4d::Identity();
     // eyeToWorld.block<3,3>(0,0) = Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> >(rotation.data());
     // eyeToWorld(0, 3) = translation[0]*translationFactor;
