@@ -130,7 +130,7 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
     problem.SetParameterization(translation, normedTranslationParameterization);
 
-    problem.SetParameterBlockConstant(translation);
+    //problem.SetParameterBlockConstant(translation);
 
 
     // Build and solve the problem.
