@@ -227,7 +227,7 @@ if __name__ == '__main__':
 
 
     def toEye(p):
-        return np.dot(cam2_rotation_matrix.T, p-cam2_center, )
+        return np.dot(cam2_rotation_matrix.T, p-cam2_center )
 
     cam1_points = [] #cam1 coords
     cam2_points = [] #cam2 coords
