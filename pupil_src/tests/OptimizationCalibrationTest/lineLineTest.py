@@ -209,11 +209,11 @@ if __name__ == '__main__':
     from random import uniform
 
     cam1_center  = (0,0,0)
-    cam1_orientation = angle_axis2quat( 0 , (0.0,1.0,0.0) )
+    cam1_rotation_quaternion = angle_axis2quat( 0 , (0.0,1.0,0.0) )
 
-    cam2_center  = np.array((500,0,0))
-    cam2_orientation = angle_axis2quat( -np.pi/4, (0.0,1.0,0.0) )
-    cam2_rotation_matrix = quat2mat(cam2_orientation)
+    cam2_center  = np.array((100,0,0))
+    cam2_rotation_quaternion = angle_axis2quat( -np.pi/4, (0.0,1.0,0.0) )
+    cam2_rotation_matrix = quat2mat(cam2_rotation_quaternion)
     random_points = [];
     random_points_amount = 10
 
@@ -227,10 +227,7 @@ if __name__ == '__main__':
 
 
     def toEye(p):
-        return np.dot(p-cam2_center, cam2_rotation_matrix)
-
-    def toWorld(p):
-        return np.dot(p, cam2_rotation_matrix.T) + cam2_center
+        return np.dot(cam2_rotation_matrix.T, p-cam2_center, )
 
     cam1_points = [] #cam1 coords
     cam2_points = [] #cam2 coords
@@ -240,26 +237,31 @@ if __name__ == '__main__':
         cam2_points.append(p2)
 
     sphere_position = (0,0,0)
-    initial_orientation = angle_axis2quat( -np.pi/2, (0.0,1.0,0.0) )
+    initial_rotation = angle_axis2quat( -np.pi/4, (0.0,1.0,0.0) )
     initial_translation = [c*uniform(1.0,1.0)for c in cam2_center ]
-    print 'initial orientation: ' , initial_orientation
+
+
+    success, rotation, translation = line_line_calibration( sphere_position, cam1_points, cam2_points , initial_rotation , initial_translation , fix_translation = True )
+
+    print 'initial rotation: ' , initial_rotation
     print 'initial translation: ' , initial_translation
 
-    success, orientation, translation = line_line_calibration( sphere_position, cam1_points, cam2_points , initial_orientation , initial_translation , fix_translation = True )
+    print 'true rotation: ' , quat2angle_axis(cam2_rotation_quaternion)
+    print 'true translation: ' , cam2_center
 
-    print orientation
-    print quat2angle_axis(orientation)
-    print translation
-    #assert (orientation== cam2_orientation).all() #and almost_equal(angle_axis[0] , radians(45) )
+    print 'found rotation: ' , quat2angle_axis(rotation)
+    print 'found translation: ' , translation
+
 
     #replace with the optimized rotation and translation
-    cam2_rotation_matrix = quat2mat(orientation)
+    cam2_rotation_matrix = quat2mat(rotation)
     cam2_to_cam1_matrix  = np.matrix(np.eye(4))
     cam2_to_cam1_matrix[:3,:3] = cam2_rotation_matrix
     cam2_translation = np.matrix(translation)
     cam2_translation.shape = (3,1)
     cam2_to_cam1_matrix[:3,3:4] = cam2_translation
 
+    print cam2_to_cam1_matrix
     eye = { 'center': (0,0,0), 'radius': 1.0}
 
     # intersection_points_a = [] #world coords
