@@ -236,7 +236,7 @@ if __name__ == '__main__':
     cam2_points = [] #cam2 coords
     for p in random_points:
         cam1_points.append(p)
-        factor = 0.1 #randomize point in eye space
+        factor = 0.01 #randomize point in eye space
         pr = p * np.array( (uniform(1.0-factor,1.0+factor),uniform(1.0-factor,1.0+factor),uniform(1.0-factor,1.0+factor))  )
         p2 = toEye(pr) # to cam2 coordinate system
         cam2_points.append(p2)
@@ -270,17 +270,24 @@ if __name__ == '__main__':
     print cam2_transformation_matrix
     eye = { 'center': (0,0,0), 'radius': 1.0}
 
-    # intersection_points_a = [] #world coords
-    # intersection_points_b = [] #cam2 coords
-    # for a,b in zip(cam1_points , cam2_points): #world coords , cam2 coords
+    intersection_points_a = [] #world coords
+    intersection_points_b = [] #cam2 coords
+    avg_error = 0.0
+    for a,b in zip(cam1_points , cam2_points): #world coords , cam2 coords
 
-    #     line_a = (np.array(cam1_center) , np.array(a))
-    #     line_b = (np.array(cam2_center) , toWorld(b) ) #convert to world for intersection
-    #     ai, bi, distance =  nearest_intersection_points( line_a , line_b ) #world coords
-    #     intersection_points_a.append(ai)
-    #     intersection_points_b.append(toEye(bi) )  #cam2 coords , since visualizer expects local coordinates
+        line_a = (np.array(cam1_center) , np.array(a))
+        line_b = (np.array(cam2_center) , toWorld(b) ) #convert to world for intersection
+        ai, bi, distance =  nearest_intersection_points( line_a , line_b ) #world coords
+        avg_error +=distance
+        print 'ai: ' , ai
+        print 'bi: ' , bi
+        intersection_points_a.append(ai)
+        intersection_points_b.append(toEye(bi) )  #cam2 coords , since visualizer expects local coordinates
 
-    visualizer = Calibration_Visualizer(None,None, cam1_points,cam2_transformation_matrix ,cam2_points, run_independently = True )
+    avg_error /= len(cam2_points)
+    print 'avg error: ', avg_error
+
+    visualizer = Calibration_Visualizer(None,None, intersection_points_a ,cam2_transformation_matrix , intersection_points_b, run_independently = True )
     visualizer.open_window()
     while visualizer.window:
         visualizer.update_window( None, [] , eye)

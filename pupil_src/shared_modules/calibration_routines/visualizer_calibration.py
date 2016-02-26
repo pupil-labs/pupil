@@ -444,14 +444,21 @@ class Calibration_Visualizer(object):
 				glPopMatrix()
 
 				#draw error lines form eye gaze points to world camera ref points
+				distance = 0.0
 				for(cal_gaze_point,ref_point) in zip(self.cal_gaze_points0_3d, self.cal_ref_points_3d):
 					point = np.zeros(4)
 					point[:3] = cal_gaze_point
 					point[3] = 1.0
-					point =  self.eye_to_world_matrix0.dot( point )
-					point = np.squeeze(np.asarray(point))
-					draw_polyline( [ point[:3], ref_point]  , 1 , error_line_color, line_type = GL_LINES)
+					point.shape = (4,1)
+					point_world =  self.eye_to_world_matrix0 *  point
+					point_world = np.squeeze(np.asarray(point_world))
+					print point_world
+					print ref_point
+					a =  point_world[:3] - ref_point
+					distance += np.sqrt(np.dot(a,a))
+					draw_polyline( [ point_world[:3], ref_point]  , 1 , error_line_color, line_type = GL_LINES)
 
+				print 'avg_di: ' , distance/len(self.cal_gaze_points0_3d)
 
 			# if we have a second eye
 			if sphere1:
