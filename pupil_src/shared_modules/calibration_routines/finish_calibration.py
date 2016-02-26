@@ -405,7 +405,6 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
-            sphere_pos = matched_monocular_data[-1]['pupil']['sphere']['center']
             if matched_monocular_data[-1]['pupil']['id'] == 0:
                 initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033] #eye0
                 initial_translation = (10, 30, -10)
@@ -415,57 +414,59 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
 
             #this returns the translation of the eye and not of the camera coordinate system
             #need to take sphere position into account
-            success, orientation, translation , avg_distance  = line_line_calibration(ref_3d,  gaze_direction_3d, initial_orientation, initial_translation, fix_translation = False)
+            success, orientation, translation , avg_distance  = line_line_calibration(ref_3d,  gaze_direction_3d, initial_orientation, initial_translation)
+            orientation = np.array(orientation)
+            translation = np.array(translation)
             print 'orientation: ' , orientation
             print 'translation: ' , translation
+            print 'avg distance: ' , avg_distance
 
             if not success:
                 logger.error("Calibration solver faild to converge.")
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
-            translation = np.matrix( translation )
-            translation.shape = (3,1)
-            rotation_matrix = calibrate.quat2mat(orientation)
-            eye_to_world_matrix  = np.matrix(np.eye(4))
-            eye_to_world_matrix[:3,:3] = rotation_matrix
-            eye_to_world_matrix[:3,3:4] = translation
-            print eye_to_world_matrix
-            world_to_eye_matrix  = np.linalg.inv(eye_to_world_matrix)
+            logger.info('calibration average distance: %s'%avg_distance)
 
-            #with the eye_to_world matrix let's calculate the nearest points for every gaze line
-            translation.shape = (1,3)
-            sphere_pos_world = np.zeros(4)
-            sphere_pos_world[:3] = translation
-            sphere_pos_world[3] = 1.0
-            sphere_pos_world  = eye_to_world_matrix.dot(sphere_pos_world)
-            sphere_pos_world = np.squeeze(np.asarray(sphere_pos_world))
+            rotation_matrix = calibrate.quat2mat(orientation)
+            def toEye(p):
+                return np.dot(rotation_matrix.T, p-translation )
 
             gaze_points_3d = []
             ref_points_3d = []
 
             for i in range(0,len(ref_3d)):
                 ref_p = ref_3d[i]
-                gaze_direction = np.ones(3)
-                gaze_direction[:3] = gaze_direction_3d[i]
-                gaze_direction = rotation_matrix.dot(gaze_direction)
+                gaze_direction = gaze_direction_3d[i]
+                gaze_direction = np.dot(rotation_matrix, gaze_direction)
                 gaze_direction = np.squeeze(np.asarray(gaze_direction))
-                gaze_line = (sphere_pos_world[:3] , sphere_pos_world[:3] + gaze_direction[:3] )
+                gaze_line = ( translation , translation + gaze_direction )
                 ref_line = ( np.zeros(3) , ref_p )
                 ref_point_world , gaze_point_world , distance = calibrate.nearest_intersection_points( ref_line , gaze_line )
-                point_eye = np.ones(4)
-                point_eye[:3] = gaze_point_world
-                # everythings assumes gaze_points in eye coordinates
-                point_eye = world_to_eye_matrix.dot(point_eye)
-                point_eye = np.squeeze(np.asarray(point_eye))
-                gaze_points_3d.append( point_eye[:3] )
+
+                # everything assumes gaze_points in eye coordinates
+                point_eye = toEye(gaze_point_world)
+                gaze_points_3d.append( point_eye )
                 ref_points_3d.append( ref_point_world )
 
-            # TODO restructure mapper and visualizer to handle gaze points in world coordinates
-            avg_distance, dist_var = calibrate.calculate_residual_3D_Points( ref_points_3d, gaze_points_3d , eye_to_world_matrix  )
-            logger.info('calibration average distance: %s'%avg_distance)
+            # we need to take the sphere position into account
+            # thus the actual translation is not right, because the local coordinate frame of the eye need to be translated in the opposite direction
+            # of the sphere coordinates
 
-            g_pool.plugins.add(Vector_Gaze_Mapper,args={'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_points_3d, 'cal_gaze_points_3d': gaze_points_3d})
+            # since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
+            sphere_translation = np.array( matched_monocular_data[-1]['pupil']['sphere']['center'] )
+            sphere_translation_world = np.dot( rotation_matrix , sphere_translation)
+
+            eye_to_world_matrix  = np.matrix(np.eye(4))
+            eye_to_world_matrix[:3,:3] = rotation_matrix
+            eye_to_world_matrix[:3,3:4] = np.reshape(translation - sphere_translation_world , (3,1) )
+            print eye_to_world_matrix
+
+            # TODO restructure mapper and visualizer to handle gaze points in world coordinates
+
+            g_pool.plugins.add(Vector_Gaze_Mapper,args=
+                {'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_points_3d,
+                 'cal_gaze_points_3d': gaze_points_3d})
 
         else:
             logger.error(not_enough_data_error_msg)
