@@ -143,96 +143,77 @@ bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::v
     translation[1] *= n;
     translation[2] *= n;
 
-    using singleeyefitter::Line3;
-    // check for possible ambiguity
-    //intersection points need to lie in positive z
+    // using singleeyefitter::Line3;
+    // // check for possible ambiguity
+    // //intersection points need to lie in positive z
 
-    auto checkResult = [ &gazeDirections, &refDirections ]( Eigen::Quaterniond& orientation , Vector3 translation, double& avgDistance ){
+    // auto checkResult = [ &gazeDirections, &refDirections ]( Eigen::Quaterniond& orientation , Vector3 translation, double& avgDistance ){
 
-        int validCount = 0;
-        avgDistance = 0.0;
-        for(int i=0; i<refDirections.size(); i++) {
+    //     int validCount = 0;
+    //     avgDistance = 0.0;
+    //     for(int i=0; i<refDirections.size(); i++) {
 
-            auto gaze = gazeDirections.at(i);
-            auto ref = refDirections.at(i);
+    //         auto gaze = gazeDirections.at(i);
+    //         auto ref = refDirections.at(i);
 
-            gaze.normalize(); //just to be sure
-            ref.normalize(); //just to be sure
+    //         gaze.normalize(); //just to be sure
+    //         ref.normalize(); //just to be sure
 
-            Vector3 gazeWorld = orientation * gaze;
+    //         Vector3 gazeWorld = orientation * gaze;
 
-            Line3 refLine = { Vector3(0,0,0) , ref  };
-            Line3 gazeLine = { translation , gazeWorld  };
+    //         Line3 refLine = { Vector3(0,0,0) , ref  };
+    //         Line3 gazeLine = { translation , gazeWorld  };
 
-            auto closestPoints = closest_points_on_line( refLine , gazeLine );
+    //         auto closestPoints = closest_points_on_line( refLine , gazeLine );
 
-            if( closestPoints.first.z() > 0.0 && closestPoints.second.z() > 0.0)
-                validCount++;
+    //         if( closestPoints.first.z() > 0.0 && closestPoints.second.z() > 0.0 )
+    //             validCount++;
 
-            avgDistance += euclidean_distance( closestPoints.first, closestPoints.second );
-        }
-        avgDistance /= refDirections.size();
-        return validCount == refDirections.size();
-    };
+    //         avgDistance += euclidean_distance( closestPoints.first, closestPoints.second );
+    //     }
+    //     avgDistance /= refDirections.size();
 
-
-    Eigen::Quaterniond q1(orientation[0],orientation[1],orientation[2],orientation[3]); // don't mapp orientation
-    Vector3 t1 =  Vector3(translation[0],translation[1], translation[2]);
-    Eigen::Quaterniond q2  = q1.conjugate();
-    Vector3 t2 =  -t1;
-
-    if(checkResult(q1,t1,avgDistance)){
-        std::cout << "result one" <<std::endl;
-        return true;
-    }
-    if(checkResult(q1,t2,avgDistance)){
-        std::cout << "result two" <<std::endl;
-        translation[0] *= -1.0;
-        translation[1] *= -1.0;
-        translation[2] *= -1.0;
-        return true;
-    }
-    if(checkResult(q2,t1,avgDistance)){
-        std::cout << "result three" <<std::endl;
-
-        orientation[1] *= -1.0;
-        orientation[2] *= -1.0;
-        orientation[3] *= -1.0;
-        return true;
-    }
-    if(checkResult(q2,t2,avgDistance)){
-        std::cout << "result four" <<std::endl;
-
-        orientation[1] *= -1.0;
-        orientation[2] *= -1.0;
-        orientation[3] *= -1.0;
-
-        translation[0] *= -1.0;
-        translation[1] *= -1.0;
-        translation[2] *= -1.0;
-        return true;
-    }
+    //     return validCount > refDirections.size() * 0.7;
+    // };
 
 
-    // we need to take the sphere position into account
-    // thus the actual translation is not right, because the local coordinate frame of the eye need to be translated in the opposite direction
-    // of the sphere coordinates
+    // Eigen::Quaterniond q1(orientation[0],orientation[1],orientation[2],orientation[3]); // don't mapp orientation
+    // Vector3 t1 =  Vector3(translation[0],translation[1], translation[2]);
+    // Eigen::Quaterniond q2  = q1.conjugate();
+    // Vector3 t2 =  -t1;
 
-    // // since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
+    // if(checkResult(q1,t1,avgDistance)){
+    //     std::cout << "result one" <<std::endl;
+    //     return true;
+    // }
+    // if(checkResult(q1,t2,avgDistance)){
+    //     std::cout << "result two" <<std::endl;
+    //     translation[0] *= -1.0;
+    //     translation[1] *= -1.0;
+    //     translation[2] *= -1.0;
+    //     return true;
+    // }
+    // if(checkResult(q2,t1,avgDistance)){
+    //     std::cout << "result three" <<std::endl;
 
-    // Eigen::Matrix4d eyeToWorld =  Eigen::Matrix4d::Identity();
-    // eyeToWorld.block<3,3>(0,0) = Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> >(rotation.data());
-    // eyeToWorld(0, 3) = translation[0]*translationFactor;
-    // eyeToWorld(1, 3) = translation[1]*translationFactor;
-    // eyeToWorld(2, 3) = translation[2]*translationFactor;
+    //     orientation[1] *= -1.0;
+    //     orientation[2] *= -1.0;
+    //     orientation[3] *= -1.0;
+    //     return true;
+    // }
+    // if(checkResult(q2,t2,avgDistance)){
+    //     std::cout << "result four" <<std::endl;
 
-    // Eigen::Vector4d sphereWorld = eyeToWorld * Eigen::Vector4d(spherePosition[0],spherePosition[1],spherePosition[2], 1.0 );
-    // Vector3 sphereOffset =  sphereWorld.head<3>() - Vector3(translation);
-    // Vector3 actualtranslation =  Vector3(translation) - sphereOffset;
-    // // write the actual one back
-    // translation[0] = actualtranslation[0];
-    // translation[1] = actualtranslation[1];
-    // translation[2] = actualtranslation[2];
+    //     orientation[1] *= -1.0;
+    //     orientation[2] *= -1.0;
+    //     orientation[3] *= -1.0;
+
+    //     translation[0] *= -1.0;
+    //     translation[1] *= -1.0;
+    //     translation[2] *= -1.0;
+    //     return true;
+    // }
+
     return true;
 
 }
