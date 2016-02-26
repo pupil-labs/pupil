@@ -409,8 +409,9 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
                 initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033] #eye0
                 initial_translation = (10, 30, -10)
             else:
+                print 'eye1'
                 initial_orientation = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
-                initial_translation = (-5, 15, -10)
+                initial_translation = (-50, 30, -10)
 
             #this returns the translation of the eye and not of the camera coordinate system
             #need to take sphere position into account
@@ -434,21 +435,32 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
 
             gaze_points_3d = []
             ref_points_3d = []
-
+            avg_error = 0.0
+            avg_gaze_distance = 0.0
+            avg_ref_distance = 0.0
             for i in range(0,len(ref_3d)):
                 ref_p = ref_3d[i]
                 gaze_direction = gaze_direction_3d[i]
-                gaze_direction = np.dot(rotation_matrix, gaze_direction)
-                gaze_direction = np.squeeze(np.asarray(gaze_direction))
-                gaze_line = ( translation , translation + gaze_direction )
+                gaze_direction_world = np.dot(rotation_matrix, gaze_direction)
+                gaze_line = ( translation , translation + gaze_direction_world )
                 ref_line = ( np.zeros(3) , ref_p )
                 ref_point_world , gaze_point_world , distance = calibrate.nearest_intersection_points( ref_line , gaze_line )
-
+                avg_error += distance
+                avg_ref_distance += np.linalg.norm(ref_point_world)
+                avg_gaze_distance += np.linalg.norm(gaze_point_world)
                 # everything assumes gaze_points in eye coordinates
                 point_eye = toEye(gaze_point_world)
                 gaze_points_3d.append( point_eye )
                 ref_points_3d.append( ref_point_world )
 
+
+
+            avg_error /= len(ref_3d)
+            avg_gaze_distance /= len(ref_3d)
+            avg_ref_distance /= len(ref_3d)
+            print 'avg error: ' , avg_error
+            print 'avg gaze distance: ' , avg_gaze_distance
+            print 'avg ref distance: ' , avg_ref_distance
             # we need to take the sphere position into account
             # thus the actual translation is not right, because the local coordinate frame of the eye need to be translated in the opposite direction
             # of the sphere coordinates
