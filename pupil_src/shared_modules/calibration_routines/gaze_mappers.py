@@ -186,7 +186,7 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         for p in events['pupil_positions']:
             if p['method'] == '3D c++' and p['confidence'] > self.g_pool.pupil_confidence_threshold:
 
-                gaze_point =  np.array(p['circle3D']['normal'] ) * self.gaze_distance  #+ np.array( p['sphere']['center'] )
+                gaze_point =  np.array(p['circle3D']['normal'] ) * self.gaze_distance  + np.array( p['sphere']['center'] )
 
                 self.gaze_pts_debug.append( gaze_point )
                 image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , self.rotation_vector, self.translation_vector , self.camera_matrix , self.dist_coefs )
