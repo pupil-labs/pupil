@@ -229,21 +229,24 @@ if __name__ == '__main__':
     def toEye(p):
         return np.dot(cam2_rotation_matrix.T, p-cam2_center )
 
+    def toWorld(p):
+        return np.dot(cam2_rotation_matrix, p)+cam2_center
+
     cam1_points = [] #cam1 coords
     cam2_points = [] #cam2 coords
     for p in random_points:
         cam1_points.append(p)
-        factor = 0.15 #randomize point in eye space
+        factor = 0.1 #randomize point in eye space
         pr = p * np.array( (uniform(1.0-factor,1.0+factor),uniform(1.0-factor,1.0+factor),uniform(1.0-factor,1.0+factor))  )
         p2 = toEye(pr) # to cam2 coordinate system
         cam2_points.append(p2)
 
     sphere_position = (0,0,0)
-    initial_rotation = angle_axis2quat( -np.pi/3.0, (0.0,1.0,0.0) )
+    initial_rotation = angle_axis2quat( -np.pi/4.0, (0.0,1.0,0.0) )
     initial_translation = [c*uniform(1.0,1.0)for c in cam2_center ]
 
 
-    success, rotation, translation, avg_distance = line_line_calibration( sphere_position, cam1_points, cam2_points , initial_rotation , initial_translation , fix_translation = False )
+    success, rotation, translation, avg_distance = line_line_calibration( cam1_points, cam2_points , initial_rotation , initial_translation  )
 
     print 'initial rotation: ' , initial_rotation
     print 'initial translation: ' , initial_translation
@@ -258,13 +261,13 @@ if __name__ == '__main__':
 
     #replace with the optimized rotation and translation
     cam2_rotation_matrix = quat2mat(rotation)
-    cam2_to_cam1_matrix  = np.matrix(np.eye(4))
-    cam2_to_cam1_matrix[:3,:3] = cam2_rotation_matrix
+    cam2_transformation_matrix  = np.matrix(np.eye(4))
+    cam2_transformation_matrix[:3,:3] = cam2_rotation_matrix
     cam2_translation = np.matrix(translation)
     cam2_translation.shape = (3,1)
-    cam2_to_cam1_matrix[:3,3:4] = cam2_translation
+    cam2_transformation_matrix[:3,3:4] = cam2_translation
 
-    print cam2_to_cam1_matrix
+    print cam2_transformation_matrix
     eye = { 'center': (0,0,0), 'radius': 1.0}
 
     # intersection_points_a = [] #world coords
@@ -277,7 +280,7 @@ if __name__ == '__main__':
     #     intersection_points_a.append(ai)
     #     intersection_points_b.append(toEye(bi) )  #cam2 coords , since visualizer expects local coordinates
 
-    visualizer = Calibration_Visualizer(None,None, cam1_points,cam2_to_cam1_matrix ,cam2_points, run_independently = True )
+    visualizer = Calibration_Visualizer(None,None, cam1_points,cam2_transformation_matrix ,cam2_points, run_independently = True )
     visualizer.open_window()
     while visualizer.window:
         visualizer.update_window( None, [] , eye)
