@@ -215,7 +215,7 @@ if __name__ == '__main__':
     cam2_rotation_quaternion = angle_axis2quat( -np.pi/4, (0.0,1.0,0.0) )
     cam2_rotation_matrix = quat2mat(cam2_rotation_quaternion)
     random_points = [];
-    random_points_amount = 100
+    random_points_amount = 35
 
     x_var = 20
     y_var = 20
@@ -233,15 +233,17 @@ if __name__ == '__main__':
     cam2_points = [] #cam2 coords
     for p in random_points:
         cam1_points.append(p)
-        p2 = toEye(p) # to cam2 coordinate system
+        factor = 0.15 #randomize point in eye space
+        pr = p * np.array( (uniform(1.0-factor,1.0+factor),uniform(1.0-factor,1.0+factor),uniform(1.0-factor,1.0+factor))  )
+        p2 = toEye(pr) # to cam2 coordinate system
         cam2_points.append(p2)
 
     sphere_position = (0,0,0)
-    initial_rotation = angle_axis2quat( -np.pi/1.0, (0.0,1.0,0.0) )
+    initial_rotation = angle_axis2quat( -np.pi/3.0, (0.0,1.0,0.0) )
     initial_translation = [c*uniform(1.0,1.0)for c in cam2_center ]
 
 
-    success, rotation, translation = line_line_calibration( sphere_position, cam1_points, cam2_points , initial_rotation , initial_translation , fix_translation = False )
+    success, rotation, translation, avg_distance = line_line_calibration( sphere_position, cam1_points, cam2_points , initial_rotation , initial_translation , fix_translation = False )
 
     print 'initial rotation: ' , initial_rotation
     print 'initial translation: ' , initial_translation
@@ -252,6 +254,7 @@ if __name__ == '__main__':
     print 'found rotation: ' , quat2angle_axis(rotation)
     print 'found translation: ' , translation
 
+    print 'avgerage distance: ' , avg_distance
 
     #replace with the optimized rotation and translation
     cam2_rotation_matrix = quat2mat(rotation)

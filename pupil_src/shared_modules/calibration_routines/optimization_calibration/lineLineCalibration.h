@@ -10,7 +10,7 @@
 #include <ceres/rotation.h>
 #include <Eigen/Geometry>
 #include "ceres/CeresParametrization.h"
-#include "math/Intersect.h"
+#include "math/Distance.h"
 #include "common/types.h"
 
 using ceres::AutoDiffCostFunction;
@@ -58,10 +58,9 @@ struct CoplanarityError {
 
 
 bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& refDirections, const std::vector<Vector3>& gazeDirections ,
-    double *const orientation , double *const translation , bool fixTranslation = false ,
-    Vector3 translationLowerBound = {15,5,5},Vector3 translationUpperBound = {15,5,5}
-    )
+    double (&orientation)[4], double (&translation)[3] , double& avgDistance, bool fixTranslation = false )
 {
+
 
     // don't use Constructor 'Quaternion (const Scalar *data)' because the internal layout for coefficients is different from the one we use.
     // Memory Layout EIGEN: xyzw
@@ -152,9 +151,10 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     // check for possible ambiguity
     //intersection points need to lie in positive z
 
-    auto checkResult = [ &gazeDirections, &refDirections ]( Eigen::Quaterniond& orientation , Vector3 translation  ){
+    auto checkResult = [ &gazeDirections, &refDirections ]( Eigen::Quaterniond& orientation , Vector3 translation, double& avgDistance ){
 
         int validCount = 0;
+        avgDistance = 0.0;
         for(int i=0; i<refDirections.size(); i++) {
 
             auto gaze = gazeDirections.at(i);
@@ -168,11 +168,14 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
             Line3 refLine = { Vector3(0,0,0) , ref  };
             Line3 gazeLine = { translation , gazeWorld  };
 
-            auto intersectionPoint = singleeyefitter::nearest_intersect( refLine , gazeLine );
-            if( intersectionPoint.z() > 0.0)
-                validCount++;
-        }
+            auto closestPoints = closest_points_on_line( refLine , gazeLine );
 
+            if( closestPoints.first.z() > 0.0 && closestPoints.second.z() > 0.0)
+                validCount++;
+
+            avgDistance += euclidean_distance( closestPoints.first, closestPoints.second );
+        }
+        avgDistance /= refDirections.size();
         return validCount == refDirections.size();
     };
 
@@ -182,19 +185,18 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
     Eigen::Quaterniond q2  = q1.conjugate();
     Vector3 t2 =  -t1;
 
-
-    if(checkResult(q1,t1)){
+    if(checkResult(q1,t1,avgDistance)){
         std::cout << "result one" <<std::endl;
         return true;
     }
-    if(checkResult(q1,t2)){
+    if(checkResult(q1,t2,avgDistance)){
         std::cout << "result two" <<std::endl;
         translation[0] *= -1.0;
         translation[1] *= -1.0;
         translation[2] *= -1.0;
         return true;
     }
-    if(checkResult(q2,t1)){
+    if(checkResult(q2,t1,avgDistance)){
         std::cout << "result three" <<std::endl;
 
         orientation[1] *= -1.0;
@@ -202,7 +204,7 @@ bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& ref
         orientation[3] *= -1.0;
         return true;
     }
-    if(checkResult(q2,t2)){
+    if(checkResult(q2,t2,avgDistance)){
         std::cout << "result four" <<std::endl;
 
         orientation[1] *= -1.0;
