@@ -29,7 +29,7 @@ struct CoplanarityError {
 
     template <typename T>
     bool operator()(
-        const T* const orientation,  // orientation denoted by quaternion Parameterization
+        const T* const rotation,  // rotation denoted by quaternion Parameterization
         const T* const translation,  // followed by translation
         T* residuals) const
     {
@@ -38,9 +38,8 @@ struct CoplanarityError {
         Eigen::Matrix<T, 3, 1> refD = {T(refDirection[0]) , T(refDirection[1]) , T(refDirection[2])};
         Eigen::Matrix<T, 3, 1> t = {T(translation[0]) , T(translation[1]) , T(translation[2])};
 
-        //Ceres Matrices are RowMajor, where as Eigen is default ColumnMajor
         Eigen::Matrix<T, 3, 1> gazeWorld;
-        ceres::QuaternionRotatePoint( orientation , gazeD.data(), gazeWorld.data() );
+        ceres::QuaternionRotatePoint( rotation , gazeD.data(), gazeWorld.data() );
         //TODO add weighting factors to the residual , better approximation
         //coplanarity constraint  x1.T * E * x2 = 0
         auto res = refD.transpose() * ( t.cross(gazeWorld));
@@ -61,11 +60,10 @@ bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::v
     double (&orientation)[4], double (&translation)[3] , double& avgDistance, bool fixTranslation = false )
 {
 
-
     // don't use Constructor 'Quaternion (const Scalar *data)' because the internal layout for coefficients is different from the one we use.
     // Memory Layout EIGEN: xyzw
     // Memory Layout CERES and the one we use: wxyz
-    Eigen::Quaterniond q(orientation[0],orientation[1],orientation[2],orientation[3]); // don't mapp orientation
+    Eigen::Quaterniond q(orientation[0],orientation[1],orientation[2],orientation[3]); // don't map orientation
     Vector3 t =  Vector3(translation[0],translation[1], translation[2]);
     double n = t.norm();
     translation[0] /= n;
@@ -116,17 +114,15 @@ bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::v
         problem.SetParameterBlockConstant(translation);
     }
 
-
-
     // Build and solve the problem.
     Solver::Options options;
     options.max_num_iterations = 1000;
     //options.linear_solver_type = ceres::DENSE_QR;
 
-    //options.parameter_tolerance = 1e-15;
-    //options.function_tolerance = 1e-9;
+    options.parameter_tolerance = 1e-15;
+    options.function_tolerance = 1e-16;
     options.gradient_tolerance = 1e-20;
-    options.minimizer_progress_to_stdout = true;
+   // options.minimizer_progress_to_stdout = true;
     //options.logging_type = ceres::SILENT;
 
     options.check_gradients = true;
