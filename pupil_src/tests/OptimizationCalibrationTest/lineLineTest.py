@@ -273,9 +273,9 @@ if __name__ == '__main__':
 
     #     line_a = (np.array(cam1_center) , np.array(a))
     #     line_b = (np.array(cam2_center) , toWorld(b) ) #convert to world for intersection
-    #     ai, bi, _ =  nearest_intersection_points( line_a , line_b ) #world coords
+    #     ai, bi, distance =  nearest_intersection_points( line_a , line_b ) #world coords
     #     intersection_points_a.append(ai)
-    #     intersection_points_b.append( bi )  #cam2 coords , since visualizer expects local coordinates
+    #     intersection_points_b.append(toEye(bi) )  #cam2 coords , since visualizer expects local coordinates
 
     visualizer = Calibration_Visualizer(None,None, cam1_points,cam2_to_cam1_matrix ,cam2_points, run_independently = True )
     visualizer.open_window()
