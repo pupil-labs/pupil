@@ -32,6 +32,54 @@ auto euclidean_distance_squared(const Eigen::MatrixBase<Derived>& point,
     return ((line.origin() - point) - ((line.origin() - point).dot(line.direction())) * line.direction()).squaredNorm();
 }
 
+
+template<class Scalar>
+Scalar euclidean_distance(const Eigen::ParametrizedLine<Scalar, 3>& line1,
+                                  const Eigen::ParametrizedLine<Scalar, 3>& line2)
+{
+    return std::sqrt( euclidean_distance_squared(line1, line2) ) ;
+}
+
+template<class Scalar>
+Scalar euclidean_distance_squared(const Eigen::ParametrizedLine<Scalar, 3>& line1,
+                                  const Eigen::ParametrizedLine<Scalar, 3>& line2)
+{
+
+    closestPoints = closest_points_on_line(line1, line2);
+    auto diff = closestPoint.first - closestPoint.second;
+    return diff.dot(diff);
+}
+
+template<class Scalar>
+auto closest_points_on_line(const Eigen::ParametrizedLine<Scalar, 3>& line1,
+                            const Eigen::ParametrizedLine<Scalar, 3>& line2)
+{
+    typedef typename Eigen::ParametrizedLine<Scalar, 3>::VectorType Vector;
+    Vector diff = line0.origin() - line1.origin();
+    Scalar a01 = -line0.direction().dot(line1.direction());
+    Scalar b0 = diff.dot(line0.direction());
+    Scalar s0, s1;
+
+    if (std::abs(a01) < Scalar(1) )
+    {
+        // Lines are not parallel.
+        Scalar det = Scalar(1) - a01 * a01;
+        Scalar b1 = -Dot(diff, line1.direction());
+        s0 = (a01 * b1 - b0) / det;
+        s1 = (a01 * b0 - b1) / det;
+    }
+    else
+    {
+        // Lines are parallel, select any pair of closest points.
+        s0 = -b0;
+        s1 = Scalar(0);
+    }
+
+    closestPoint1 = line0.origin() + s0 * line0.direction();
+    closestPoint2 = line1.origin() + s1 * line1.direction();
+    return std::pair<Vector, Vector>(closestPoint1, closestPoint2)
+}
+
 template<typename Scalar, int Dim>
 Scalar euclidean_distance(const Eigen::Matrix<Scalar, Dim, 1>& p, const Eigen::Matrix<Scalar, Dim, 1>& v, const Eigen::Matrix<Scalar, Dim, 1>& w)
 {
