@@ -45,26 +45,27 @@ Scalar euclidean_distance_squared(const Eigen::ParametrizedLine<Scalar, 3>& line
                                   const Eigen::ParametrizedLine<Scalar, 3>& line2)
 {
 
-    closestPoints = closest_points_on_line(line1, line2);
-    auto diff = closestPoint.first - closestPoint.second;
+    auto closestPoints = closest_points_on_line(line1, line2);
+    auto diff = closestPoints.first - closestPoints.second;
     return diff.dot(diff);
 }
 
 template<class Scalar>
-auto closest_points_on_line(const Eigen::ParametrizedLine<Scalar, 3>& line1,
+std::pair< typename Eigen::ParametrizedLine<Scalar, 3>::VectorType , typename Eigen::ParametrizedLine<Scalar, 3>::VectorType >
+closest_points_on_line(const Eigen::ParametrizedLine<Scalar, 3>& line1,
                             const Eigen::ParametrizedLine<Scalar, 3>& line2)
 {
     typedef typename Eigen::ParametrizedLine<Scalar, 3>::VectorType Vector;
-    Vector diff = line0.origin() - line1.origin();
-    Scalar a01 = -line0.direction().dot(line1.direction());
-    Scalar b0 = diff.dot(line0.direction());
+    Vector diff = line1.origin() - line2.origin();
+    Scalar a01 = -line1.direction().dot(line2.direction());
+    Scalar b0 = diff.dot(line1.direction());
     Scalar s0, s1;
 
     if (std::abs(a01) < Scalar(1) )
     {
         // Lines are not parallel.
         Scalar det = Scalar(1) - a01 * a01;
-        Scalar b1 = -Dot(diff, line1.direction());
+        Scalar b1 = -diff.dot(line2.direction());
         s0 = (a01 * b1 - b0) / det;
         s1 = (a01 * b0 - b1) / det;
     }
@@ -75,9 +76,9 @@ auto closest_points_on_line(const Eigen::ParametrizedLine<Scalar, 3>& line1,
         s1 = Scalar(0);
     }
 
-    closestPoint1 = line0.origin() + s0 * line0.direction();
-    closestPoint2 = line1.origin() + s1 * line1.direction();
-    return std::pair<Vector, Vector>(closestPoint1, closestPoint2)
+    Vector closestPoint1 = line1.origin() + s0 * line1.direction();
+    Vector closestPoint2 = line2.origin() + s1 * line2.direction();
+    return std::pair<Vector, Vector>(closestPoint1, closestPoint2);
 }
 
 template<typename Scalar, int Dim>
