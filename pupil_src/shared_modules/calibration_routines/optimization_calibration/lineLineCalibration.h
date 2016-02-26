@@ -84,9 +84,9 @@ bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::v
         // First: the length of the directions must not be zero
         // Second: the angle between gaze direction and reference direction must not be greater 90 degrees, considering the initial orientation
         bool valid = true;
-        valid |= gaze.norm() >= epsilon;
-        valid |= ref.norm() >= epsilon;
-        valid |= (q*gaze).dot(ref) >= epsilon;
+        valid &= gaze.norm() >= epsilon;
+        valid &= ref.norm() >= epsilon;
+        valid &= (q*gaze).dot(ref) >= epsilon;
 
         if( valid ){
 
