@@ -125,13 +125,13 @@ bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::v
    // options.minimizer_progress_to_stdout = true;
     //options.logging_type = ceres::SILENT;
 
-    options.check_gradients = true;
+    //options.check_gradients = true;
     Solver::Summary summary;
 
     Solve(options, &problem, &summary);
 
     // std::cout << summary.BriefReport() << "\n";
-    std::cout << summary.FullReport() << "\n";
+    //std::cout << summary.FullReport() << "\n";
 
     if( summary.termination_type != ceres::TerminationType::CONVERGENCE  ){
         std::cout << "Termination Error: " << ceres::TerminationTypeToString(summary.termination_type) << std::endl;
