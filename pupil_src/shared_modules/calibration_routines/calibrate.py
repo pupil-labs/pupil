@@ -370,7 +370,7 @@ def preprocess_3d_data_monocular_gaze_direction(matched_data, camera_intrinsics 
             ref_pt_3d = ref_vector*calibration_distance
 
 
-            point_pair_3d = tuple(gaze_pt_3d) , ref_pt_3d
+            point_pair_3d = np.array(gaze_pt_3d) , np.array(ref_pt_3d)
             cal_data.append(point_pair_3d)
         except KeyError as e:
             # this pupil data point did not have 3d detected data.
