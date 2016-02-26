@@ -46,7 +46,7 @@ def point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D ,
     return success, cpp_orientation, cpp_translation
 
 
-def line_line_calibration( sphere_position, ref_directions_3D, gaze_directions_3D , initial_orientation , initial_translation ,
+def line_line_calibration( ref_directions_3D, gaze_directions_3D , initial_orientation , initial_translation ,
     fix_translation = False ):
 
 
@@ -58,8 +58,6 @@ def line_line_calibration( sphere_position, ref_directions_3D, gaze_directions_3
     for p in gaze_directions_3D:
         cpp_gaze_directions.push_back(Vector3(p[0],p[1],p[2]))
 
-    cdef Vector3 cpp_sphere_position
-    cpp_sphere_position = Vector3(sphere_position[0],sphere_position[1],sphere_position[2])
 
     cdef double cpp_orientation[4] #quaternion
     cdef double cpp_translation[3]
@@ -69,7 +67,7 @@ def line_line_calibration( sphere_position, ref_directions_3D, gaze_directions_3
     cdef double avgDistance = 0.0
 
     ## optimized values are written to cpp_orientation and cpp_translation
-    cdef bint success  = lineLineCalibration(cpp_sphere_position, cpp_ref_directions, cpp_gaze_directions,
+    cdef bint success  = lineLineCalibration(cpp_ref_directions, cpp_gaze_directions,
                                              cpp_orientation, cpp_translation, avgDistance, fix_translation )
 
 

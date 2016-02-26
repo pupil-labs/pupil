@@ -57,7 +57,7 @@ struct CoplanarityError {
 
 
 
-bool lineLineCalibration(Vector3 spherePosition, const std::vector<Vector3>& refDirections, const std::vector<Vector3>& gazeDirections ,
+bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::vector<Vector3>& gazeDirections ,
     double (&orientation)[4], double (&translation)[3] , double& avgDistance, bool fixTranslation = false )
 {
 

@@ -43,5 +43,5 @@ cdef extern from 'pointLineCalibration.h':
 
 cdef extern from 'lineLineCalibration.h':
 
-    bint lineLineCalibration( Vector3 spherePosition,const vector[Vector3]& refDirections,const vector[Vector3]& gazeDirections,  double[4]& orientation ,
+    bint lineLineCalibration( const vector[Vector3]& refDirections,const vector[Vector3]& gazeDirections,  double[4]& orientation ,
                                  double[3]& translation, double& avgDistance, bint fixTranslation )

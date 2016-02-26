@@ -413,7 +413,9 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
                 initial_orientation = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
                 initial_translation = (-5, 15, -10)
 
-            success, orientation, translation  = line_line_calibration(sphere_pos, ref_3d,  gaze_direction_3d, initial_orientation, initial_translation, fix_translation = True)
+            #this returns the translation of the eye and not of the camera coordinate system
+            #need to take sphere position into account
+            success, orientation, translation , avg_distance  = line_line_calibration(ref_3d,  gaze_direction_3d, initial_orientation, initial_translation, fix_translation = False)
             print 'orientation: ' , orientation
             print 'translation: ' , translation
 
