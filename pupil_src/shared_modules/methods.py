@@ -108,7 +108,6 @@ def undistort_unproject_pts(pts_uv, camera_matrix, dist_coefs):
 
     """
     pts_uv = np.array(pts_uv)
-    camera_matrix_inv = np.linalg.inv(camera_matrix)
     num_pts = pts_uv.size / 2
 
     pts_uv.shape = (num_pts, 1, 2)
