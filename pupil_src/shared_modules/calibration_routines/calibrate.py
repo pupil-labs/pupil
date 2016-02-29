@@ -336,12 +336,13 @@ def preprocess_3d_data(matched_data, camera_intrinsics ):
             gaze_vector0 = np.array(pupil0['circle3D']['normal'])
             pupil0_processed.append( gaze_vector0 )
 
-            if lis_binocular: # we have binocular data
+            if is_binocular: # we have binocular data
                 pupil1 = data_point['pupil1']
                 gaze_vector1 = np.array(pupil1['circle3D']['normal'])
                 pupil1_processed.append( gaze_vector1 )
 
             # projected point uv to normal ray vector of camera
+            ref = data_point['ref']
             ref_vector =  undistort_unproject_pts(ref['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
             ref_vector = ref_vector / np.linalg.norm(ref_vector)
             # assuming a fixed (assumed) distance we get a 3d point in world camera 3d coords.
