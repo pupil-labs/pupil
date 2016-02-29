@@ -10,15 +10,13 @@
 
 from glfw import *
 from OpenGL.GL import *
-from OpenGL.GLU import gluOrtho2D
 
-from pyglui.cygl.utils import init
 from pyglui.cygl.utils import RGBA
-from pyglui.cygl.utils import *
 from pyglui.cygl import utils as glutils
 from pyglui.pyfontstash import fontstash as fs
 from pyglui.ui import get_opensans_font_path
 import math
+import numpy as np
 
 
 class Visualizer(object):
@@ -27,7 +25,7 @@ class Visualizer(object):
     """
 
 
-    def __init__(self, name = "Visualizer", run_independently = False):
+    def __init__(self, g_pool, name = "Visualizer", run_independently = False):
 
         self.name = name
         self.window_size = (640,480)
@@ -36,48 +34,7 @@ class Visualizer(object):
         self.run_independently = run_independently
         self.sphere = None
         self.other_window = None
-    ########### Open, update, close #####################
-
-
-    def open_window(self):
-        if not self.window:
-            self.input = {'button':None, 'mouse':(0,0)}
-
-            # get glfw started
-            if self.run_independently:
-                glfwInit()
-                self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None  )
-            else:
-                self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None, share=self.g_pool.main_window )
-
-            self.other_window = glfwGetCurrentContext();
-            glfwMakeContextCurrent(self.window)
-
-            glfwSetWindowPos(self.window,0,0)
-            # Register callbacks window
-            glfwSetFramebufferSizeCallback(self.window,self.on_resize)
-            glfwSetWindowIconifyCallback(self.window,self.on_iconify)
-            glfwSetKeyCallback(self.window,self.on_key)
-            glfwSetCharCallback(self.window,self.on_char)
-            glfwSetMouseButtonCallback(self.window,self.on_button)
-            glfwSetCursorPosCallback(self.window,self.on_pos)
-            glfwSetScrollCallback(self.window,self.on_scroll)
-
-            # get glfw started
-            if self.run_independently:
-                init()
-            self.basic_gl_setup()
-
-            self.sphere = Sphere(20)
-
-
-            self.glfont = fs.Context()
-            self.glfont.add_font('opensans',get_opensans_font_path())
-            self.glfont.set_size(22)
-            self.glfont.set_color_float((0.2,0.5,0.9,1.0))
-            self.on_resize(self.window,*glfwGetFramebufferSize(self.window))
-            glfwMakeContextCurrent(self.other_window)
-
+        self.g_pool = g_pool
 
     def begin_update_window(self ):
         if self.window:
@@ -93,9 +50,10 @@ class Visualizer(object):
         pass
 
     def end_update_window(self ):
+        if self.window:
             glfwSwapBuffers(self.window)
             glfwPollEvents()
-            glfwMakeContextCurrent(self.other_window)
+        glfwMakeContextCurrent(self.other_window)
 
 
     ############## DRAWING FUNCTIONS ##############################
@@ -179,13 +137,56 @@ class Visualizer(object):
         glLoadIdentity()
 
     def clear_gl_screen(self):
-        glClearColor(.9,.9,0.9,1.)
+        glClearColor(0.9,0.9,0.9,1.)
         glClear(GL_COLOR_BUFFER_BIT)
 
     def close_window(self):
         if self.window:
             glfwDestroyWindow(self.window)
             self.window = None
+
+    def open_window(self):
+        if not self.window:
+            self.input = {'button':None, 'mouse':(0,0)}
+
+
+            # get glfw started
+            if self.run_independently:
+                glfwInit()
+                self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None  )
+            else:
+                self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None, share= glfwGetCurrentContext() )
+
+            self.other_window = glfwGetCurrentContext();
+
+            glfwMakeContextCurrent(self.window)
+
+            glfwSetWindowPos(self.window,0,0)
+            # Register callbacks window
+            glfwSetFramebufferSizeCallback(self.window,self.on_resize)
+            glfwSetWindowIconifyCallback(self.window,self.on_iconify)
+            glfwSetKeyCallback(self.window,self.on_key)
+            glfwSetCharCallback(self.window,self.on_char)
+            glfwSetMouseButtonCallback(self.window,self.on_button)
+            glfwSetCursorPosCallback(self.window,self.on_pos)
+            glfwSetScrollCallback(self.window,self.on_scroll)
+
+            # get glfw started
+            if self.run_independently:
+                glutils.init()
+            self.basic_gl_setup()
+
+            self.sphere = glutils.Sphere(20)
+
+
+            self.glfont = fs.Context()
+            self.glfont.add_font('opensans',get_opensans_font_path())
+            self.glfont.set_size(22)
+            self.glfont.set_color_float((0.2,0.5,0.9,1.0))
+            self.on_resize(self.window,*glfwGetFramebufferSize(self.window))
+            glfwMakeContextCurrent(self.other_window)
+
+
 
     ############ window callbacks #################
     def on_resize(self,window,w, h):
