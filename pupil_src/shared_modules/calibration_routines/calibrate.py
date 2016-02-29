@@ -508,7 +508,12 @@ def nearest_linepoint_to_point( ref_point, line ):
     denom =  np.linalg.norm(direction)
     delta = - np.dot((p1 - ref_point),(direction)) / (denom*denom)
     point  =   p1 + direction * delta
-    return point
+
+    d = ref_point - point
+    # Distance between lines
+    intersection_dist = np.sqrt( d.dot( d ))
+
+    return point, intersection_dist
 
 def nearest_intersection( line0 , line1 ):
 
