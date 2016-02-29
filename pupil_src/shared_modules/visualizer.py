@@ -35,6 +35,7 @@ class Visualizer(object):
         self.window = None
         self.input = None
         self.run_independently = run_independently
+        self.sphere = None
 
     ########### Open, update, close #####################
 
@@ -67,6 +68,9 @@ class Visualizer(object):
             if self.run_independently:
                 init()
             self.basic_gl_setup()
+
+            self.sphere = Sphere(20)
+
 
             self.glfont = fs.Context()
             self.glfont.add_font('opensans',get_opensans_font_path())
@@ -142,6 +146,14 @@ class Visualizer(object):
         glVertex3f( 0, 0, 0 )
         glVertex3f( 0, 0, l )
         glEnd( )
+
+    def draw_sphere(self,sphere_position, sphere_radius,contours = 45, color =RGBA(.2,.5,0.5,.5) ):
+
+        glPushMatrix()
+        glTranslatef(sphere_position[0],sphere_position[1],sphere_position[2])
+        glScale(sphere_radius,sphere_radius,sphere_radius)
+        self.sphere.draw(color, primitive_type = GL_LINE_STRIP)
+        glPopMatrix()
 
     def basic_gl_setup(self):
         glEnable(GL_POINT_SPRITE )
