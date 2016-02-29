@@ -148,17 +148,17 @@ class Binocular_Gaze_Mapper(Gaze_Mapping_Plugin):
 
 class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Vector_Gaze_Mapper"""
-    def __init__(self, g_pool, eye_to_world_matrix , camera_intrinsics , cal_ref_points_3d = [], cal_gaze_points_3d = [] , gaze_distance = 500 ):
+    def __init__(self, g_pool, eye_camera_to_world_matrix , camera_intrinsics , cal_ref_points_3d = [], cal_gaze_points_3d = [] , gaze_distance = 500 ):
         super(Vector_Gaze_Mapper, self).__init__(g_pool)
-        self.eye_to_world_matrix  =  eye_to_world_matrix
-        self.rotation_vector = cv2.Rodrigues( self.eye_to_world_matrix[:3,:3]  )[0]
-        self.translation_vector  = self.eye_to_world_matrix[:3,3]
+        self.eye_camera_to_world_matrix  =  eye_camera_to_world_matrix
+        self.rotation_vector = cv2.Rodrigues( self.eye_camera_to_world_matrix[:3,:3]  )[0]
+        self.translation_vector  = self.eye_camera_to_world_matrix[:3,3]
         self.camera_matrix = camera_intrinsics['camera_matrix']
         self.dist_coefs = camera_intrinsics['dist_coefs']
         self.camera_intrinsics = camera_intrinsics
         self.cal_ref_points_3d = cal_ref_points_3d
         self.cal_gaze_points_3d = cal_gaze_points_3d
-        self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics , cal_ref_points_3d,eye_to_world_matrix, cal_gaze_points_3d)
+        self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics , cal_ref_points_3d,eye_camera_to_world_matrix, cal_gaze_points_3d)
         self.g_pool = g_pool
         self.gaze_pts_debug = []
         self.sphere = None
@@ -209,7 +209,7 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
             self.menu = None
 
     def get_init_dict(self):
-       return {'eye_to_world_matrix':self.eye_to_world_matrix ,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points_3d':self.cal_gaze_points_3d,  "camera_intrinsics":self.camera_intrinsics,'gaze_distance':self.gaze_distance}
+       return {'eye_camera_to_world_matrix':self.eye_camera_to_world_matrix ,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points_3d':self.cal_gaze_points_3d,  "camera_intrinsics":self.camera_intrinsics,'gaze_distance':self.gaze_distance}
 
     def cleanup(self):
         self.deinit_gui()

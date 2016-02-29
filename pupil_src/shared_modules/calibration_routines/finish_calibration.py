@@ -437,14 +437,14 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
             sphere_translation = np.array( matched_monocular_data[-1]['pupil']['sphere']['center'] )
             sphere_translation_world = np.dot( rotation_matrix , sphere_translation)
             camera_translation = translation - sphere_translation_world
-            eye_to_world_matrix  = np.matrix(np.eye(4))
-            eye_to_world_matrix[:3,:3] = rotation_matrix
-            eye_to_world_matrix[:3,3:4] = np.reshape(camera_translation, (3,1) )
+            eye_camera_to_world_matrix  = np.matrix(np.eye(4))
+            eye_camera_to_world_matrix[:3,:3] = rotation_matrix
+            eye_camera_to_world_matrix[:3,3:4] = np.reshape(camera_translation, (3,1) )
             world_to_eye_matrix  = np.matrix(np.eye(4))
             world_to_eye_matrix[:3,:3] = rotation_matrix.T
             world_to_eye_matrix[:3,3:4] = np.reshape(-np.dot(rotation_matrix.T , camera_translation), (3,1) )
 
-            # print eye_to_world_matrix
+            # print eye_camera_to_world_matrix
             # print world_to_eye_matrix
             def toEye(p):
                 point = np.ones(4)
@@ -480,14 +480,14 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
             logger.info('calibration average error: %s'%avg_error)
             logger.info('calibration average distance: %s'%avg_distance)
 
-            # print 'avg error: ' , avg_error
-            # print 'avg gaze distance: ' , avg_gaze_distance
-            # print 'avg ref distance: ' , avg_ref_distance
+            print 'avg error: ' , avg_error
+            print 'avg gaze distance: ' , avg_gaze_distance
+            print 'avg ref distance: ' , avg_ref_distance
 
             # TODO restructure mapper and visualizer to handle gaze points in world coordinates
 
             g_pool.plugins.add(Vector_Gaze_Mapper,args=
-                {'eye_to_world_matrix':eye_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_points_3d,
+                {'eye_camera_to_world_matrix':eye_camera_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_points_3d,
                  'cal_gaze_points_3d': gaze_points_3d})
 
         else:
