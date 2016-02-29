@@ -17,106 +17,6 @@ from pyglui.pyfontstash import fontstash as fs
 from pyglui.ui import get_opensans_font_path
 import numpy as np
 import math
-import cv2
-import random
-
-
-def R_axis_angle(matrix, axis, angle):
-    """Generate the rotation matrix from the axis-angle notation.
-
-    Conversion equations
-    ====================
-
-    From Wikipedia (http://en.wikipedia.org/wiki/Rotation_matrix), the conversion is given by::
-
-        c = cos(angle); s = sin(angle); C = 1-c
-        xs = x*s;   ys = y*s;   zs = z*s
-        xC = x*C;   yC = y*C;   zC = z*C
-        xyC = x*yC; yzC = y*zC; zxC = z*xC
-        [ x*xC+c   xyC-zs   zxC+ys ]
-        [ xyC+zs   y*yC+c   yzC-xs ]
-        [ zxC-ys   yzC+xs   z*zC+c ]
-
-
-    @param matrix:  The 3x3 rotation matrix to update.
-    @type matrix:   3x3 numpy array
-    @param axis:    The 3D rotation axis.
-    @type axis:     numpy array, len 3
-    @param angle:   The rotation angle.
-    @type angle:    float
-    """
-
-    # Trig factors.
-    ca = np.cos(angle)
-    sa = np.sin(angle)
-    C = 1 - ca
-
-    # Depack the axis.
-    x, y, z = axis
-
-    # Multiplications (to remove duplicate calculations).
-    xs = x*sa
-    ys = y*sa
-    zs = z*sa
-    xC = x*C
-    yC = y*C
-    zC = z*C
-    xyC = x*yC
-    yzC = y*zC
-    zxC = z*xC
-
-    # Update the rotation matrix.
-    matrix[0, 0] = x*xC + ca
-    matrix[0, 1] = xyC - zs
-    matrix[0, 2] = zxC + ys
-    matrix[1, 0] = xyC + zs
-    matrix[1, 1] = y*yC + ca
-    matrix[1, 2] = yzC - xs
-    matrix[2, 0] = zxC - ys
-    matrix[2, 1] = yzC + xs
-    matrix[2, 2] = z*zC + ca
-
-
-def invert_rigid_transformation_matrix( matrix ):
-
-	rotation_matrix = np.matrix(matrix[:3,:3])
-	translation_matrix = np.matrix(matrix[:3,3:4])
-	inverted_matrix = np.eye(4)
-	inverted_matrix[:3,:3 ] = rotation_matrix.T
-	inverted_matrix[:3,3:4] = -rotation_matrix.T * translation_matrix
-
-	return inverted_matrix
-
-def convert_fov(fov,width):
-	fov = fov* math.pi/180
-	focal_length = (width/2)/np.tan(fov/2)
-	return focal_length
-
-def get_perpendicular_vector(v):
-    """ Finds an arbitrary perpendicular vector to *v*."""
-    # http://codereview.stackexchange.com/questions/43928/algorithm-to-get-an-arbitrary-perpendicular-vector
-    # for two vectors (x, y, z) and (a, b, c) to be perpendicular,
-    # the following equation has to be fulfilled
-    #     0 = ax + by + cz
-
-    # x = y = z = 0 is not an acceptable solution
-    if v[0] == v[1] == v[2] == 0:
-        logger.error('zero-vector')
-
-    # If one dimension is zero, this can be solved by setting that to
-    # non-zero and the others to zero. Example: (4, 2, 0) lies in the
-    # x-y-Plane, so (0, 0, 1) is orthogonal to the plane.
-    if v[0] == 0:
-        return np.array((1, 0, 0))
-    if v[1] == 0:
-        return np.array((0, 1, 0))
-    if v[2] == 0:
-        return np.array((0, 0, 1))
-
-    # arbitrarily set a = b = 1
-    # then the equation simplifies to
-    #     c = -(x + y)/z
-    return np.array([1, 1, -1.0 * (v[0] + v[1]) / v[2]])
 
 circle_xy = [] #this is a global variable
 circle_res = 30.0
@@ -149,9 +49,6 @@ class Calibration_Visualizer(object):
 			self.world_camera_height = 0
 			self.world_camera_focal = 0
 
-		# transformation matrices
-		self.anthromorphic_matrix = self.get_anthropomorphic_matrix()
-		self.adjusted_pixel_space_matrix = self.get_adjusted_pixel_space_matrix(1)
 
 		self.name = name
 		self.window_size = (640,480)
@@ -164,66 +61,6 @@ class Calibration_Visualizer(object):
 		self.trackball.distance = [0,0,-0.1]
 		self.trackball.pitch = 0
 		self.trackball.roll = 180
-
-	############## MATRIX FUNCTIONS ##############################
-
-	def get_anthropomorphic_matrix(self):
-		temp =  np.identity(4)
-		return temp
-
-	def get_adjusted_pixel_space_matrix(self,scale  = 1.0):
-		# returns a homoegenous matrix
-		temp = self.get_anthropomorphic_matrix()
-		temp[3,3] *= scale
-		return temp
-
-	def get_image_space_matrix(self,scale=1.):
-		temp = self.get_adjusted_pixel_space_matrix(scale)
-		#temp[1,1] *=-1 #image origin is top left
-		#temp[2,2] *=-1 #image origin is top left
-		temp[0,3] = -self.world_camera_width/2.0
-		temp[1,3] = -self.world_camera_height/2.0
-		temp[2,3] = self.world_camera_focal
-		return temp.T
-
-	def get_pupil_transformation_matrix(self,circle_normal,circle_center, circle_scale = 1.0):
-		"""
-			OpenGL matrix convention for typical GL software
-			with positive Y=up and positive Z=rearward direction
-			RT = right
-			UP = up
-			BK = back
-			POS = position/translation
-			US = uniform scale
-
-			float transform[16];
-
-			[0] [4] [8 ] [12]
-			[1] [5] [9 ] [13]
-			[2] [6] [10] [14]
-			[3] [7] [11] [15]
-
-			[RT.x] [UP.x] [BK.x] [POS.x]
-			[RT.y] [UP.y] [BK.y] [POS.y]
-			[RT.z] [UP.z] [BK.z] [POS.Z]
-			[    ] [    ] [    ] [US   ]
-		"""
-		temp = self.get_anthropomorphic_matrix()
-		right = temp[:3,0]
-		up = temp[:3,1]
-		back = temp[:3,2]
-		translation = temp[:3,3]
-		back[:] = np.array(circle_normal)
-
-		# if np.linalg.norm(back) != 0:
-		back[:] /= np.linalg.norm(back)
-		right[:] = get_perpendicular_vector(back)/np.linalg.norm(get_perpendicular_vector(back))
-		up[:] = np.cross(right,back)/np.linalg.norm(np.cross(right,back))
-		right[:] *= circle_scale
-		back[:] *=circle_scale
-		up[:] *=circle_scale
-		translation[:] = np.array(circle_center)
-		return   temp.T
 
 	############## DRAWING FUNCTIONS ##############################
 
@@ -289,25 +126,6 @@ class Calibration_Visualizer(object):
 			draw_polyline((circle_xy),2,color)
 			glPopMatrix()
 
-		glPopMatrix()
-
-
-	def draw_circle(self, circle_center, circle_normal, circle_radius, color=RGBA(1.1,0.2,.8), num_segments = 20):
-		vertices = []
-		vertices.append( (0,0,0) )  # circle center
-
-		#create circle vertices in the xy plane
-		for i in np.linspace(0.0, 2.0*math.pi , num_segments ):
-			x = math.sin(i)
-			y = math.cos(i)
-			z = 0
-			vertices.append((x,y,z))
-
-		glPushMatrix()
-		glMatrixMode(GL_MODELVIEW )
-		glLoadMatrixf(self.get_pupil_transformation_matrix(circle_normal,circle_center, circle_radius))
-		draw_polyline((vertices),color=color, line_type = GL_TRIANGLE_FAN) # circle
-		draw_polyline( [ (0,0,0), (0,0, 4) ] ,color=RGBA(0,0,0), line_type = GL_LINES) #normal
 		glPopMatrix()
 
 
