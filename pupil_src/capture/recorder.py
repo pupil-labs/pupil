@@ -195,9 +195,6 @@ class Recorder(Plugin):
     def start(self,network_propagate=True):
         self.timestamps = []
         self.data = {'pupil_positions':[],'gaze_positions':[],'notifications':[]}
-        self.pupil_pos_list = []
-        self.gaze_pos_list = []
-
         self.frame_count = 0
         self.running = True
         self.menu.read_only = True
@@ -281,8 +278,14 @@ class Recorder(Plugin):
 
     def update(self,frame,events):
         if self.running:
-            self.data['pupil_positions'] += events['pupil_positions']
-            self.data['gaze_positions'] += events.get('gaze_positions',[])
+            for key,data in events.iteritems():
+                if key not in ('dt'):
+                    try:
+                        self.data[key] += data
+                    except KeyError:
+                        self.data[key] = []
+                        self.data[key] += data
+
             self.timestamps.append(frame.timestamp)
             self.writer.write_video_frame(frame)
             self.frame_count += 1

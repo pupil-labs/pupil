@@ -58,6 +58,11 @@ cdef inline convertTo3DPythonResult( Detector3DResult& result, object frame    )
     sphere['radius'] =  result.sphere.radius
     py_result['sphere'] = sphere
 
+    projectedSphere = {}
+    projectedSphere['center'] = (result.projectedSphere.center[0] + frame.width / 2.0 ,frame.height / 2.0  -  result.projectedSphere.center[1])
+    projectedSphere['axes'] =  (result.projectedSphere.minor_radius * 2.0 ,result.projectedSphere.major_radius * 2.0)
+    projectedSphere['angle'] = - (result.projectedSphere.angle * 180.0 / PI - 90.0)
+    py_result['projectedSphere'] = projectedSphere
 
     py_result['modelConfidence'] = result.modelConfidence
     py_result['modelID'] = result.modelID

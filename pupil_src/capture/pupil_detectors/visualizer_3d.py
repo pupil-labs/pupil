@@ -8,10 +8,7 @@ from OpenGL.GLU import gluOrtho2D
 logger = logging.getLogger(__name__)
 from pyglui import ui
 
-from pyglui.cygl.utils import init
-from pyglui.cygl.utils import RGBA
 from pyglui.cygl.utils import *
-from pyglui.cygl import utils as glutils
 from gl_utils.trackball import Trackball
 from pyglui.pyfontstash import fontstash as fs
 from pyglui.ui import get_opensans_font_path
@@ -53,12 +50,6 @@ def get_perpendicular_vector(v):
     #     c = -(x + y)/z
     return np.array([1, 1, -1.0 * (v[0] + v[1]) / v[2]])
 
-circle_xy = [] #this is a global variable
-circle_res = 30.0
-for i in range(0,int(circle_res+1)):
-	temp =  (i)/circle_res *  math.pi * 2.0
-	circle_xy.append([np.cos(temp),np.sin(temp)])
-
 class Visualizer(object):
 	def __init__(self,focal_length, name = "Debug Visualizer", run_independently = False):
        # super(Visualizer, self).__init__()
@@ -77,6 +68,7 @@ class Visualizer(object):
 		camera_fov = math.degrees(2.0 * math.atan( self.image_height / (2.0 * self.focal_length)))
 		self.trackball = Trackball(camera_fov)
 
+		self.sphere = None
 	############## MATRIX FUNCTIONS ##############################
 
 	def get_anthropomorphic_matrix(self):
@@ -191,23 +183,12 @@ class Visualizer(object):
 		glEnd( )
 
 	def draw_sphere(self,sphere_position, sphere_radius,contours = 45, color =RGBA(.2,.5,0.5,.5) ):
-		# this function draws the location of the eye sphere
+
 		glPushMatrix()
-
-		glTranslatef(sphere_position[0],sphere_position[1],sphere_position[2]) #sphere[0] contains center coordinates (x,y,z)
-		glTranslatef(0,0,sphere_radius) #sphere[1] contains radius
-		for i in xrange(1,contours+1):
-
-			glTranslatef(0,0, -sphere_radius/contours*2)
-			position = sphere_radius - i*sphere_radius*2/contours
-			draw_radius = np.sqrt(sphere_radius**2 - position**2)
-			glPushMatrix()
-			glScalef(draw_radius,draw_radius,1)
-			draw_polyline((circle_xy),2,color)
-			glPopMatrix()
-
+		glTranslatef(sphere_position[0],sphere_position[1],sphere_position[2])
+		glScale(sphere_radius,sphere_radius,sphere_radius)
+		self.sphere.draw(color, primitive_type = GL_LINE_STRIP)
 		glPopMatrix()
-
 
 	def draw_circle(self, circle_center, circle_normal, circle_radius, color=RGBA(1.1,0.2,.8), num_segments = 20):
 		vertices = []
@@ -337,6 +318,9 @@ class Visualizer(object):
 			if self.run_independently:
 				init()
 			self.basic_gl_setup()
+
+			self.sphere = Sphere(20)
+
 
 			self.glfont = fs.Context()
 			self.glfont.add_font('opensans',get_opensans_font_path())
