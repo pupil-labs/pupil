@@ -12,7 +12,6 @@ from glfw import *
 from OpenGL.GL import *
 from OpenGL.GLU import gluOrtho2D
 
-
 from pyglui.cygl.utils import init
 from pyglui.cygl.utils import RGBA
 from pyglui.cygl.utils import *
@@ -36,7 +35,7 @@ class Visualizer(object):
         self.input = None
         self.run_independently = run_independently
         self.sphere = None
-
+        self.other_window = None
     ########### Open, update, close #####################
 
 
@@ -51,7 +50,7 @@ class Visualizer(object):
             else:
                 self.window = glfwCreateWindow(self.window_size[0], self.window_size[1], self.name, None, share=self.g_pool.main_window )
 
-            active_window = glfwGetCurrentContext();
+            self.other_window = glfwGetCurrentContext();
             glfwMakeContextCurrent(self.window)
 
             glfwSetWindowPos(self.window,0,0)
@@ -77,7 +76,7 @@ class Visualizer(object):
             self.glfont.set_size(22)
             self.glfont.set_color_float((0.2,0.5,0.9,1.0))
             self.on_resize(self.window,*glfwGetFramebufferSize(self.window))
-            glfwMakeContextCurrent(active_window)
+            glfwMakeContextCurrent(self.other_window)
 
 
     def begin_update_window(self ):
@@ -86,7 +85,7 @@ class Visualizer(object):
                 self.close_window()
                 return
 
-            active_window = glfwGetCurrentContext()
+            self.other_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self.window)
 
 
@@ -96,7 +95,7 @@ class Visualizer(object):
     def end_update_window(self ):
             glfwSwapBuffers(self.window)
             glfwPollEvents()
-            glfwMakeContextCurrent(active_window)
+            glfwMakeContextCurrent(self.other_window)
 
 
     ############## DRAWING FUNCTIONS ##############################
@@ -199,13 +198,28 @@ class Visualizer(object):
         self.adjust_gl_view(w,h)
         glfwMakeContextCurrent(active_window)
 
-    def on_char(self,window,char):
-        pass
-
     def on_button(self,window,button, action, mods):
-        pass
+        # self.gui.update_button(button,action,mods)
+        if action == GLFW_PRESS:
+            self.input['button'] = button
+            self.input['mouse'] = glfwGetCursorPos(window)
+        if action == GLFW_RELEASE:
+            self.input['button'] = None
 
     def on_pos(self,window,x, y):
+        hdpi_factor = float(glfwGetFramebufferSize(window)[0]/glfwGetWindowSize(window)[0])
+        x,y = x*hdpi_factor,y*hdpi_factor
+        # self.gui.update_mouse(x,y)
+        if self.input['button']==GLFW_MOUSE_BUTTON_RIGHT:
+            old_x,old_y = self.input['mouse']
+            self.trackball.drag_to(x-old_x,y-old_y)
+            self.input['mouse'] = x,y
+        if self.input['button']==GLFW_MOUSE_BUTTON_LEFT:
+            old_x,old_y = self.input['mouse']
+            self.trackball.pan_to(x-old_x,y-old_y)
+            self.input['mouse'] = x,y
+
+    def on_char(self,window,char):
         pass
 
     def on_scroll(self,window,x,y):
