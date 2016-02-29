@@ -463,14 +463,13 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
                 gaze_line = ( translation , translation + gaze_direction_world )
                 ref_line = ( np.zeros(3) , ref_p )
                 ref_point_world , gaze_point_world , distance = calibrate.nearest_intersection_points( ref_line , gaze_line )
+
+                gaze_points_3d.append( gaze_point_world )
+                ref_points_3d.append( ref_point_world )
+
                 avg_error += distance
                 avg_ref_distance += np.linalg.norm(ref_point_world)
                 avg_gaze_distance += np.linalg.norm(gaze_point_world)
-                # everything assumes gaze_points in eye coordinates
-                point_eye = toEye(gaze_point_world)
-                gaze_points_3d.append( point_eye )
-                ref_points_3d.append( ref_point_world )
-
 
 
             avg_error /= len(ref_3d)
@@ -480,11 +479,9 @@ def finish_calibration_rays(g_pool,pupil_list,ref_list):
             logger.info('calibration average error: %s'%avg_error)
             logger.info('calibration average distance: %s'%avg_distance)
 
-            print 'avg error: ' , avg_error
-            print 'avg gaze distance: ' , avg_gaze_distance
-            print 'avg ref distance: ' , avg_ref_distance
-
-            # TODO restructure mapper and visualizer to handle gaze points in world coordinates
+            # print 'avg error: ' , avg_error
+            # print 'avg gaze distance: ' , avg_gaze_distance
+            # print 'avg ref distance: ' , avg_ref_distance
 
             g_pool.plugins.add(Vector_Gaze_Mapper,args=
                 {'eye_camera_to_world_matrix':eye_camera_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_points_3d,

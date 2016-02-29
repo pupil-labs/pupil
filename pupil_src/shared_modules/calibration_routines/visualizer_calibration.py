@@ -25,7 +25,7 @@ for i in range(0,int(circle_res+1)):
 	circle_xy.append([np.cos(temp),np.sin(temp)])
 
 class Calibration_Visualizer(object):
-	def __init__(self, g_pool, world_camera_intrinsics , cal_ref_points_3d, eye_to_world_matrix0 , cal_gaze_points0_3d, eye_to_world_matrix1 = np.eye(4) , cal_gaze_points1_3d = [],   name = "Debug Calibration Visualizer", run_independently = False):
+	def __init__(self, g_pool, world_camera_intrinsics , cal_ref_points_3d, eye_camera_to_world_matrix0 , cal_gaze_points0_3d, eye_camera_to_world_matrix1 = np.eye(4) , cal_gaze_points1_3d = [],   name = "Debug Calibration Visualizer", run_independently = False):
        # super(Visualizer, self).__init__()
 
 		self.g_pool = g_pool
@@ -33,8 +33,8 @@ class Calibration_Visualizer(object):
 		self.focal_length = 620
 		self.image_height = 480
 
-		self.eye_to_world_matrix0 = eye_to_world_matrix0
-		self.eye_to_world_matrix1 = eye_to_world_matrix1
+		self.eye_camera_to_world_matrix0 = eye_camera_to_world_matrix0
+		self.eye_camera_to_world_matrix1 = eye_camera_to_world_matrix1
 
 		self.cal_ref_points_3d = cal_ref_points_3d
 		self.cal_gaze_points0_3d = cal_gaze_points0_3d
@@ -236,89 +236,71 @@ class Calibration_Visualizer(object):
 			glPopMatrix()
 
 			if sphere0:
-
-				# draw things in first eye oordinate system
+				# eye camera
 				glPushMatrix()
-				glLoadMatrixf( self.eye_to_world_matrix0.T )
+				glLoadMatrixf( self.eye_camera_to_world_matrix0.T )
 
+				self.draw_coordinate_system(60)
+				self.draw_frustum( self.image_width / 10.0, self.image_height / 10.0, self.focal_length /10.)
+				glPopMatrix()
+
+				#everything else is in world coordinates
+
+				#eye
 				sphere_center0 = list(sphere0['center'])
 				sphere_radius0 = sphere0['radius']
-
 				self.draw_sphere(sphere_center0,sphere_radius0,  color = RGBA(1,1,0,1))
 
+				#gazelines
 				for p in self.cal_gaze_points0_3d:
 					draw_polyline( [ sphere_center0, p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
+
 				#calibration points
 				draw_points( self.cal_gaze_points0_3d , 4 , RGBA( 1, 0, 1, 1 ) )
 
-				# eye camera
-				self.draw_coordinate_system(60)
-				self.draw_frustum( self.image_width / 10.0, self.image_height / 10.0, self.focal_length /10.)
-
+				#current gaze points
 				draw_points( gaze_points0 , 2 , RGBA( 1, 0, 0, 1 ) )
 				for p in gaze_points0:
 					draw_polyline( [sphere_center0, p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
 
-				glPopMatrix()
-
-				#draw error lines form eye gaze points to world camera ref points
+				#draw error lines form eye gaze points to  ref points
 				distance = 0.0
 				for(cal_gaze_point,ref_point) in zip(self.cal_gaze_points0_3d, self.cal_ref_points_3d):
-					point = np.zeros(4)
-					point[:3] = cal_gaze_point
-					point[3] = 1.0
-					point.shape = (4,1)
-					point_world =  self.eye_to_world_matrix0 *  point
-					point_world = np.squeeze(np.asarray(point_world))
-					a =  point_world[:3] - ref_point
-					distance += np.sqrt(np.dot(a,a))
-					draw_polyline( [ point_world[:3], ref_point]  , 1 , error_line_color, line_type = GL_LINES)
+					draw_polyline( [ cal_gaze_point, ref_point]  , 1 , error_line_color, line_type = GL_LINES)
 
-				print 'avg_di: ' , distance/len(self.cal_gaze_points0_3d)
-
-			# if we have a second eye
+			#second eye
 			if sphere1:
-				# draw things in second eye oordinate system
+				# eye camera
 				glPushMatrix()
-				glLoadMatrixf( self.eye_to_world_matrix1.T )
+				glLoadMatrixf( self.eye_camera_to_world_matrix1.T )
 
+				self.draw_coordinate_system(60)
+				self.draw_frustum( self.image_width / 10.0, self.image_height / 10.0, self.focal_length /10.)
+				glPopMatrix()
+
+				#everything else is in world coordinates
+
+				#eye
 				sphere_center1 = list(sphere1['center'])
 				sphere_radius1 = sphere1['radius']
-
 				self.draw_sphere(sphere_center1,sphere_radius1,  color = RGBA(1,1,0,1))
 
+				#gazelines
 				for p in self.cal_gaze_points1_3d:
 					draw_polyline( [ sphere_center1, p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
+
 				#calibration points
 				draw_points( self.cal_gaze_points1_3d , 4 , RGBA( 1, 0, 1, 1 ) )
 
-				# eye camera
-				self.draw_coordinate_system(60)
-				self.draw_frustum( self.image_width / 10.0, self.image_height / 10.0, self.focal_length /10.)
-
+				#current gaze points
 				draw_points( gaze_points1 , 2 , RGBA( 1, 0, 0, 1 ) )
 				for p in gaze_points1:
 					draw_polyline( [sphere_center1, p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
 
-				glPopMatrix()
-
-
-				#draw error lines form eye gaze points to world camera ref points
+				#draw error lines form eye gaze points to  ref points
+				distance = 0.0
 				for(cal_gaze_point,ref_point) in zip(self.cal_gaze_points1_3d, self.cal_ref_points_3d):
-					point = np.zeros(4)
-					point[:3] = cal_gaze_point
-					point[3] = 1.0
-					point =  self.eye_to_world_matrix1.dot( point )
-					point = np.squeeze(np.asarray(point))
-					draw_polyline( [ point[:3], ref_point]  , 1 , error_line_color, line_type = GL_LINES)
-
-
-			#intersection points in world coordinate system
-			if len(intersection_points) > 0:
-				draw_points( intersection_points , 2 , RGBA( 1, 0.5, 0.5, 1 ) )
-				for p in intersection_points:
-					draw_polyline( [(0,0,0), p]  , 1 , RGBA(0.3,0.3,0.9,1), line_type = GL_LINES)
-
+					draw_polyline( [ cal_gaze_point, ref_point]  , 1 , error_line_color, line_type = GL_LINES)
 
 			self.trackball.pop()
 

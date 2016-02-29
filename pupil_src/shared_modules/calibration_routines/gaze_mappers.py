@@ -172,6 +172,10 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         else:
             self.visualizer.close_window()
 
+    def toWorld(self, p):
+        point = np.ones(4)
+        point[:3] = p[:3]
+        return np.dot(self.eye_camera_to_world_matrix , point).A1[:3]
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Monocular 3D gaze mapper')
@@ -188,14 +192,15 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
                 gaze_point =  np.array(p['circle3D']['normal'] ) * self.gaze_distance  + np.array( p['sphere']['center'] )
 
-                self.gaze_pts_debug.append( gaze_point )
                 image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , self.rotation_vector, self.translation_vector , self.camera_matrix , self.dist_coefs )
                 image_point = image_point.reshape(-1,2)
                 image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
                 gaze_pts.append({'norm_pos':image_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]})
 
-                self.sphere = p['sphere']
-
+                if self.visualizer.window:
+                    self.gaze_pts_debug.append( self.toWorld(gaze_point) )
+                    self.sphere = p['sphere'] #eye camera coordinates
+                    self.sphere['center'] = self.toWorld(self.sphere['center'])
 
         events['gaze_positions'] = gaze_pts
 
