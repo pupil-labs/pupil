@@ -260,7 +260,7 @@ def closest_matches_binocular(ref_pts, pupil_pts,max_dispersion=1/15.):
 
             dispersion = max(closest_p0['timestamp'],closest_p1['timestamp'],r['timestamp']) - min(closest_p0['timestamp'],closest_p1['timestamp'],r['timestamp'])
             if dispersion < max_dispersion:
-                matched.append({'ref':r,'pupil0':closest_p0, 'pupil1':closest_p1})
+                matched.append({'ref':r,'pupil':closest_p0, 'pupil1':closest_p1})
             else:
                 print "to far."
     return matched
@@ -299,7 +299,7 @@ def closest_matches_monocular(ref_pts, pupil_pts,max_dispersion=1/15.):
             closest_p0 = pupil0[closest_p0_idx]
             dispersion = max(closest_p0['timestamp'],r['timestamp']) - min(closest_p0['timestamp'],r['timestamp'])
             if dispersion < max_dispersion:
-                matched.append({'ref':r,'pupil0':closest_p0})
+                matched.append({'ref':r,'pupil':closest_p0})
             else:
                 pass
     return matched
@@ -308,14 +308,14 @@ def closest_matches_monocular(ref_pts, pupil_pts,max_dispersion=1/15.):
 def preprocess_2d_data_monocular(matched_data):
     cal_data = []
     for pair in matched_data:
-        ref,pupil = pair['ref'],pair['pupil0']
+        ref,pupil = pair['ref'],pair['pupil']
         cal_data.append( (pupil["norm_pos"][0], pupil["norm_pos"][1],ref['norm_pos'][0],ref['norm_pos'][1]) )
     return cal_data
 
 def preprocess_2d_data_binocular(matched_data):
     cal_data = []
     for triplet in matched_data:
-        ref,p0,p1 = triplet['ref'],triplet['pupil0'],triplet['pupil1']
+        ref,p0,p1 = triplet['ref'],triplet['pupil'],triplet['pupil1']
         data_pt = p0["norm_pos"][0], p0["norm_pos"][1],p1["norm_pos"][0], p1["norm_pos"][1],ref['norm_pos'][0],ref['norm_pos'][1]
         cal_data.append( data_pt )
     return cal_data
@@ -332,7 +332,7 @@ def preprocess_3d_data(matched_data, camera_intrinsics ):
     for data_point in matched_data:
         try:
             # taking the pupil normal as line of sight vector
-            pupil0 = data_point['pupil0']
+            pupil0 = data_point['pupil']
             gaze_vector0 = np.array(pupil0['circle3D']['normal'])
             pupil0_processed.append( gaze_vector0 )
 

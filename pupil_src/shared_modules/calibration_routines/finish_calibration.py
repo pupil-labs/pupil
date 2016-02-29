@@ -47,7 +47,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
         matched_monocular_data = matched_pupil0_data
     else:
         matched_monocular_data = matched_pupil1_data
-    print matched_monocular_data
+
     logger.info('Collected %s monocular calibration data.'%len(matched_monocular_data))
     logger.info('Collected %s binocular calibration data.'%len(matched_binocular_data))
 
@@ -170,15 +170,12 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
-            if 'pupil0' in matched_monocular_data[-1]:
+            if  matched_monocular_data[-1]['pupil']['id'] == 0:
                 initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033] #eye0
                 initial_translation = (10, 30, -10)
-                sphere_translation = np.array( matched_monocular_data[-1]['pupil0']['sphere']['center'] )
             else:
-                print 'eye1'
                 initial_orientation = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
                 initial_translation = (-50, 30, -10)
-                sphere_translation = np.array( matched_monocular_data[-1]['pupil1']['sphere']['center'] )
 
 
             #this returns the translation of the eye and not of the camera coordinate system
@@ -202,6 +199,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             # but we wanna have it referring to the camera center
 
             # since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
+            sphere_translation = np.array( matched_monocular_data[-1]['pupil']['sphere']['center'] )
             sphere_translation_world = np.dot( rotation_matrix , sphere_translation)
             camera_translation = translation - sphere_translation_world
             eye_camera_to_world_matrix  = np.matrix(np.eye(4))
