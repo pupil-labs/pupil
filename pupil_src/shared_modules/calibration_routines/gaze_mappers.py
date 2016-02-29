@@ -161,7 +161,7 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.visualizer = Calibration_Visualizer(g_pool, camera_intrinsics , cal_ref_points_3d,eye_camera_to_world_matrix, cal_gaze_points_3d)
         self.g_pool = g_pool
         self.gaze_pts_debug = []
-        self.sphere = None
+        self.sphere = {}
         self.gaze_distance = gaze_distance
 
         self.visualizer.open_window()
@@ -199,8 +199,8 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
                 if self.visualizer.window:
                     self.gaze_pts_debug.append( self.toWorld(gaze_point) )
-                    self.sphere = p['sphere'] #eye camera coordinates
-                    self.sphere['center'] = self.toWorld(self.sphere['center'])
+                    self.sphere['center'] = self.toWorld(p['sphere']['center']) #eye camera coordinates
+                    self.sphere['radius'] = p['sphere']['radius']
 
         events['gaze_positions'] = gaze_pts
 
