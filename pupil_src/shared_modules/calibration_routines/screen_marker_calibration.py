@@ -25,7 +25,7 @@ from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Calibration_Plugin
-from finish_calibration import finish_calibration , finish_calibration_rays
+from finish_calibration import finish_calibration
 
 #logging
 import logging
@@ -222,7 +222,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.close_window()
         self.active = False
         self.button.status_text = ''
-        finish_calibration_rays(self.g_pool,self.pupil_list,self.ref_list)
+        finish_calibration(self.g_pool,self.pupil_list,self.ref_list)
 
 
     def close_window(self):
