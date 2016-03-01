@@ -168,7 +168,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             print 'avg gaze distance: ' , avg_gaze_distance
             print 'avg ref distance: ' , avg_ref_distance
 
-            g_pool.plugins.add(Binocular_Vector_Gaze_Mapper,args={'eye_camera_to_world_matrix0':eye_camera_to_world_matrix0,'eye_camera_to_world_matrix1':eye_camera_to_world_matrix1 , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_3d, 'cal_gaze_points0_3d': gaze0_points_3d, 'cal_gaze_points1_3d': gaze1_points_3d })
+            g_pool.plugins.add(Binocular_Vector_Gaze_Mapper,args={'eye_camera_to_world_matrix0':eye_camera_to_world_matrix0,'eye_camera_to_world_matrix1':eye_camera_to_world_matrix1 , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_points_3d, 'cal_gaze_points0_3d': gaze0_points_3d, 'cal_gaze_points1_3d': gaze1_points_3d })
 
 
         elif matched_monocular_data:
