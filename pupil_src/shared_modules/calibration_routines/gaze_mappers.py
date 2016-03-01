@@ -343,13 +343,14 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
             #find the nearest intersection point of the two gaze lines
             # a line is defined by two point
-            s0_center = np.array( p0['sphere']['center'] )
-            s1_center = np.array( p1['sphere']['center'] )
+            s0_center = self.eye0_to_World( np.array( p0['sphere']['center'] ) )
+            s1_center = self.eye1_to_World( np.array( p1['sphere']['center'] ) )
 
-            s0_normal = np.array( p0['circle3D']['normal'] )
-            s1_normal = np.array( p1['circle3D']['normal'] )
-            gaze_line0 = [ self.eye0_to_World(s0_center), s0_normal ]
-            gaze_line1 = [ self.eye1_to_World(s1_center), s1_normal ]
+            s0_normal = np.dot( self.rotation_matrix0, np.array( p0['circle3D']['normal'] ) )
+            s1_normal = np.dot( self.rotation_matrix1, np.array( p1['circle3D']['normal'] ) )
+
+            gaze_line0 = [ s0_center, s0_center + s0_normal ]
+            gaze_line1 = [ s1_center, s1_center + s1_normal ]
 
             nearest_intersection_point , intersection_distance = calibrate.nearest_intersection( gaze_line0, gaze_line1 )
 
