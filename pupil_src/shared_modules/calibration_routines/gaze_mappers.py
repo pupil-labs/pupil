@@ -228,10 +228,13 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         super(Binocular_Vector_Gaze_Mapper, self).__init__(g_pool)
 
         self.eye_camera_to_world_matrix0  =  eye_camera_to_world_matrix0
+        self.rotation_matrix0  =  eye_camera_to_world_matrix0[:3,:3]
         self.rotation_vector0 = cv2.Rodrigues( self.eye_camera_to_world_matrix0[:3,:3]  )[0]
         self.translation_vector0  = self.eye_camera_to_world_matrix0[:3,3]
 
         self.eye_camera_to_world_matrix1  =  eye_camera_to_world_matrix1
+        self.rotation_matrix1  =  eye_camera_to_world_matrix1[:3,:3]
+
         self.rotation_vector1 = cv2.Rodrigues( self.eye_camera_to_world_matrix1[:3,:3]  )[0]
         self.translation_vector1  = self.eye_camera_to_world_matrix1[:3,3]
 
@@ -322,12 +325,12 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     def eye0_to_World(self, p):
         point = np.ones(4)
         point[:3] = p[:3]
-        return np.dot(self.eye_camera_to_world_matrix0 , point).A1[:3]
+        return np.dot(self.eye_camera_to_world_matrix0 , point)[:3]
 
     def eye1_to_World(self, p):
         point = np.ones(4)
         point[:3] = p[:3]
-        return np.dot(self.eye_camera_to_world_matrix1 , point).A1[:3]
+        return np.dot(self.eye_camera_to_world_matrix1 , point)[:3]
 
     def map_binocular(self, pupil_pts_0, pupil_pts_1 ,frame ):
         # maps gaze with binocular mapping

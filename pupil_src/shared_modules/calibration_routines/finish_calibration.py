@@ -106,14 +106,14 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             sphere_translation0 = np.array( sphere_pos0 )
             sphere_translation_world0 = np.dot( rotation_matrix0 , sphere_translation0)
             camera_translation0 = translation0 - sphere_translation_world0
-            eye_camera_to_world_matrix0  = np.matrix(np.eye(4))
+            eye_camera_to_world_matrix0  = np.eye(4)
             eye_camera_to_world_matrix0[:3,:3] = rotation_matrix0
             eye_camera_to_world_matrix0[:3,3:4] = np.reshape(camera_translation0, (3,1) )
 
             sphere_translation1 = np.array( sphere_pos1 )
             sphere_translation_world1 = np.dot( rotation_matrix1 , sphere_translation1)
             camera_translation1 = translation1 - sphere_translation_world1
-            eye_camera_to_world_matrix1  = np.matrix(np.eye(4))
+            eye_camera_to_world_matrix1  = np.eye(4)
             eye_camera_to_world_matrix1[:3,:3] = rotation_matrix1
             eye_camera_to_world_matrix1[:3,3:4] = np.reshape(camera_translation1, (3,1) )
 
@@ -209,7 +209,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             sphere_translation = np.array( matched_monocular_data[-1]['pupil']['sphere']['center'] )
             sphere_translation_world = np.dot( rotation_matrix , sphere_translation)
             camera_translation = translation - sphere_translation_world
-            eye_camera_to_world_matrix  = np.matrix(np.eye(4))
+            eye_camera_to_world_matrix  = np.eye(4)
             eye_camera_to_world_matrix[:3,:3] = rotation_matrix
             eye_camera_to_world_matrix[:3,3:4] = np.reshape(camera_translation, (3,1) )
 
