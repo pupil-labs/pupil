@@ -109,9 +109,6 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             eye_camera_to_world_matrix0  = np.matrix(np.eye(4))
             eye_camera_to_world_matrix0[:3,:3] = rotation_matrix0
             eye_camera_to_world_matrix0[:3,3:4] = np.reshape(camera_translation0, (3,1) )
-            world_to_eye_matrix0  = np.matrix(np.eye(4))
-            world_to_eye_matrix0[:3,:3] = rotation_matrix0.T
-            world_to_eye_matrix0[:3,3:4] = np.reshape(-np.dot(rotation_matrix0.T , camera_translation0), (3,1) )
 
             sphere_translation1 = np.array( sphere_pos1 )
             sphere_translation_world1 = np.dot( rotation_matrix1 , sphere_translation1)
@@ -119,9 +116,6 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             eye_camera_to_world_matrix1  = np.matrix(np.eye(4))
             eye_camera_to_world_matrix1[:3,:3] = rotation_matrix1
             eye_camera_to_world_matrix1[:3,3:4] = np.reshape(camera_translation1, (3,1) )
-            world_to_eye_matrix1  = np.matrix(np.eye(4))
-            world_to_eye_matrix1[:3,:3] = rotation_matrix1.T
-            world_to_eye_matrix1[:3,3:4] = np.reshape(-np.dot(rotation_matrix1.T , camera_translation1), (3,1) )
 
 
             gaze0_points_3d = []
@@ -142,17 +136,19 @@ def finish_calibration(g_pool,pupil_list,ref_list):
 
                 ref_line = ( np.zeros(3) , ref_v )
 
-                gaze_intersection, distance = calibrate.nearest_intersection( gaze_line0 , gaze_line1 )
-                ref_point, distance_ref  = calibrate.nearest_linepoint_to_point( gaze_intersection, ref_line )
 
-                gaze0_point_world, distance0 = calibrate.nearest_linepoint_to_point( ref_point, gaze_line0 )
-                gaze1_point_world, distance1 = calibrate.nearest_linepoint_to_point( ref_point, gaze_line1 )
+                r0, _ , _ = calibrate.nearest_intersection_points(ref_line , gaze_line0)
+                r1, _ , _ = calibrate.nearest_intersection_points(ref_line , gaze_line1)
+                ref_point = (r0+r1)*0.5
+
+                gaze0_point_world, distance0 = calibrate.nearest_intersection( ref_line, gaze_line0 )
+                gaze1_point_world, distance1 = calibrate.nearest_intersection( ref_line, gaze_line1 )
 
                 gaze0_points_3d.append( gaze0_point_world )
                 gaze1_points_3d.append( gaze1_point_world )
                 ref_points_3d.append( ref_point )
 
-                avg_error += (distance_ref + distance0 + distance1)/ 3.0
+                avg_error += ( distance0 + distance1)/ 2.0
                 avg_ref_distance += np.linalg.norm(ref_point)
                 avg_gaze_distance += (np.linalg.norm(gaze0_point_world) + np.linalg.norm(gaze1_point_world) ) * 0.5
 
@@ -216,12 +212,8 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             eye_camera_to_world_matrix  = np.matrix(np.eye(4))
             eye_camera_to_world_matrix[:3,:3] = rotation_matrix
             eye_camera_to_world_matrix[:3,3:4] = np.reshape(camera_translation, (3,1) )
-            world_to_eye_matrix  = np.matrix(np.eye(4))
-            world_to_eye_matrix[:3,:3] = rotation_matrix.T
-            world_to_eye_matrix[:3,3:4] = np.reshape(-np.dot(rotation_matrix.T , camera_translation), (3,1) )
 
-            # print eye_camera_to_world_matrix
-            # print world_to_eye_matrix
+
             gaze_points_3d = []
             ref_points_3d = []
             avg_error = 0.0
@@ -250,9 +242,9 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             logger.info('calibration average error: %s'%avg_error)
             logger.info('calibration average distance: %s'%avg_distance)
 
-            # print 'avg error: ' , avg_error
-            # print 'avg gaze distance: ' , avg_gaze_distance
-            # print 'avg ref distance: ' , avg_ref_distance
+            print 'avg error: ' , avg_error
+            print 'avg gaze distance: ' , avg_gaze_distance
+            print 'avg ref distance: ' , avg_ref_distance
 
             g_pool.plugins.add(Vector_Gaze_Mapper,args=
                 {'eye_camera_to_world_matrix':eye_camera_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_points_3d,

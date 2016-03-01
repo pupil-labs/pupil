@@ -110,7 +110,6 @@ class Calibration_Visualizer(Visualizer):
 				glutils.draw_polyline( [sphere_center0, p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
 
 			#draw error lines form eye gaze points to  ref points
-			distance = 0.0
 			for(cal_gaze_point,ref_point) in zip(self.cal_gaze_points0_3d, self.cal_ref_points_3d):
 				glutils.draw_polyline( [ cal_gaze_point, ref_point]  , 1 , error_line_color, line_type = GL_LINES)
 
@@ -144,7 +143,6 @@ class Calibration_Visualizer(Visualizer):
 				glutils.draw_polyline( [sphere_center1, p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
 
 			#draw error lines form eye gaze points to  ref points
-			distance = 0.0
 			for(cal_gaze_point,ref_point) in zip(self.cal_gaze_points1_3d, self.cal_ref_points_3d):
 				glutils.draw_polyline( [ cal_gaze_point, ref_point]  , 1 , error_line_color, line_type = GL_LINES)
 
