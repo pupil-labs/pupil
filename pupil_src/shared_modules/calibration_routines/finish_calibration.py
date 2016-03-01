@@ -65,6 +65,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                 ref_3d = cal_pt_cloud[:,2]
             except:
                 logger.error(not_enough_data_error_msg)
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
                 return
 
             best_distance = 1000
