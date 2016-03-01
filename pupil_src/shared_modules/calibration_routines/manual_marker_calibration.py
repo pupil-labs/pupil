@@ -188,14 +188,14 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                         self.sample_site = self.smooth_pos
                         audio.beep()
                         logger.debug("Steady marker found. Starting to sample %s datapoints" %self.counter_max)
-                        self.notify_all({'subject':'calibration marker found','timestamp':self.g_pool.capture.get_timestamp(),'record':True})
+                        self.notify_all({'subject':'calibration marker found','timestamp':self.g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
                         self.counter = self.counter_max
 
                 if self.counter:
                     if self.smooth_vel > 0.01:
                         audio.tink()
                         logger.warning("Marker moved too quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
-                        self.notify_all({'subject':'calibration marker moved too quickly','timestamp':self.g_pool.capture.get_timestamp(),'record':True})
+                        self.notify_all({'subject':'calibration marker moved too quickly','timestamp':self.g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
                         self.counter = 0
                     else:
                         self.counter -= 1
@@ -208,7 +208,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                             #last sample before counter done and moving on
                             audio.tink()
                             logger.debug("Sampled %s datapoints. Stopping to sample. Looking for steady marker again."%self.counter_max)
-                            self.notify_all({'subject':'calibration marker sample completed','timestamp':self.g_pool.capture.get_timestamp(),'record':True})
+                            self.notify_all({'subject':'calibration marker sample completed','timestamp':self.g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
 
 
             #always save pupil positions
