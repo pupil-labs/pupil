@@ -195,7 +195,7 @@ def quat2angle_axis(quat, identity_thresh=None):
     rotation.  In this case we return a 0 angle and an  arbitrary
     vector, here [1, 0, 0]
     '''
-    w, x, y, z = quat
+    w, x, y, z = unit_vector(quat)
     vec = np.asarray([x, y, z])
     if identity_thresh is None:
         try:
