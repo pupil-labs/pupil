@@ -65,7 +65,7 @@ def nearest_intersection( line0 , line1 ):
     """
     Pa, Pb ,intersection_dist =  nearest_intersection_points(line0, line1)
 
-    if Pa and Pb and intersection_dist:
+    if Pa is not None:
         nPoint = Pa - Pb
         return Pb + nPoint * 0.5 , intersection_dist
     else:
