@@ -35,7 +35,7 @@ def nearest_intersection_points( line0 , line1 ):
     # Check for parallel lines
     magnitude = mag (np.cross(normalise(p1, p2), normalise(p3, p4 )) )
 
-    if magnitude > np.finfo(np.float64).eps
+    if magnitude > np.finfo(np.float64).eps:
 
         A = p1-p3
         B = p2-p1
@@ -65,7 +65,7 @@ def nearest_intersection( line0 , line1 ):
     """
     Pa, Pb ,intersection_dist =  nearest_intersection_points(line0, line1)
 
-    if Pa and Pb and intersection_dist
+    if Pa and Pb and intersection_dist:
         nPoint = Pa - Pb
         return Pb + nPoint * 0.5 , intersection_dist
     else:
