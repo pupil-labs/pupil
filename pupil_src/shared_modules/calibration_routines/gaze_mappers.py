@@ -176,7 +176,7 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     def toWorld(self, p):
         point = np.ones(4)
         point[:3] = p[:3]
-        return np.dot(self.eye_camera_to_world_matrix , point).A1[:3]
+        return np.dot(self.eye_camera_to_world_matrix , point)[:3]
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Monocular 3D gaze mapper')
@@ -352,7 +352,7 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
             gaze_line0 = [ s0_center, s0_center + s0_normal ]
             gaze_line1 = [ s1_center, s1_center + s1_normal ]
 
-            nearest_intersection_point , intersection_distance = calibrate.nearest_intersection( gaze_line0, gaze_line1 )
+            nearest_intersection_point , intersection_distance = math_helper.nearest_intersection( gaze_line0, gaze_line1 )
 
             if nearest_intersection_point is not None :
 
