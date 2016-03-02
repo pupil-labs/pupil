@@ -43,10 +43,9 @@ def quat2mat(quaternion):
     q *= np.sqrt(2.0 / n)
     q = np.outer(q, q)
     return np.array([
-        [1.0-q[2, 2]-q[3, 3],     q[1, 2]-q[3, 0],     q[1, 3]+q[2, 0], 0.0],
-        [    q[1, 2]+q[3, 0], 1.0-q[1, 1]-q[3, 3],     q[2, 3]-q[1, 0], 0.0],
-        [    q[1, 3]-q[2, 0],     q[2, 3]+q[1, 0], 1.0-q[1, 1]-q[2, 2], 0.0],
-        [                0.0,                 0.0,                 0.0, 1.0]])
+        [1.0-q[2, 2]-q[3, 3],     q[1, 2]-q[3, 0],     q[1, 3]+q[2, 0]],
+        [    q[1, 2]+q[3, 0], 1.0-q[1, 1]-q[3, 3],     q[2, 3]-q[1, 0]],
+        [    q[1, 3]-q[2, 0],     q[2, 3]+q[1, 0], 1.0-q[1, 1]-q[2, 2]]])
 
 
 
@@ -207,7 +206,7 @@ def quat2angle_axis(quat, identity_thresh=None):
     if n < identity_thresh:
         # if vec is nearly 0,0,0, this is an identity rotation
         return 0.0, np.array([1.0, 0, 0])
-    return 2 * np.acos(w), vec / n
+    return 2 * np.arccos(w), vec / n
 
 def angle_axis2quat(theta, vector, is_normalized=False):
     ''' Quaternion for rotation of angle `theta` around `vector`
