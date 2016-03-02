@@ -12,6 +12,7 @@ import os
 import numpy as np
 
 import calibrate
+import math_helper
 from file_methods import load_object,save_object
 from camera_intrinsics_estimation import load_camera_calibration
 
@@ -96,8 +97,8 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
-            rotation_matrix0 = calibrate.quat2mat(orientation0)
-            rotation_matrix1 = calibrate.quat2mat(orientation1)
+            rotation_matrix0 = math_helper.quat2mat(orientation0)
+            rotation_matrix1 = math_helper.quat2mat(orientation1)
             # we need to take the sphere position into account
             # orientation and translation are referring to the sphere center.
             # but we wanna have it referring to the camera center
@@ -137,12 +138,12 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 ref_line = ( np.zeros(3) , ref_v )
 
 
-                r0, _ , _ = calibrate.nearest_intersection_points(ref_line , gaze_line0)
-                r1, _ , _ = calibrate.nearest_intersection_points(ref_line , gaze_line1)
+                r0, _ , _ = math_helper.nearest_intersection_points(ref_line , gaze_line0)
+                r1, _ , _ = math_helper.nearest_intersection_points(ref_line , gaze_line1)
                 ref_point = (r0+r1)*0.5
 
-                gaze0_point_world, distance0 = calibrate.nearest_intersection( ref_line, gaze_line0 )
-                gaze1_point_world, distance1 = calibrate.nearest_intersection( ref_line, gaze_line1 )
+                gaze0_point_world, distance0 = math_helper.nearest_intersection( ref_line, gaze_line0 )
+                gaze1_point_world, distance1 = math_helper.nearest_intersection( ref_line, gaze_line1 )
 
                 gaze0_points_3d.append( gaze0_point_world )
                 gaze1_points_3d.append( gaze1_point_world )
@@ -200,7 +201,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
-            rotation_matrix = calibrate.quat2mat(orientation)
+            rotation_matrix = math_helper.quat2mat(orientation)
             # we need to take the sphere position into account
             # orientation and translation are referring to the sphere center.
             # but we wanna have it referring to the camera center
@@ -225,7 +226,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 gaze_direction_world = np.dot(rotation_matrix, gaze_direction)
                 gaze_line = ( translation , translation + gaze_direction_world )
                 ref_line = ( np.zeros(3) , ref_p )
-                ref_point_world , gaze_point_world , distance = calibrate.nearest_intersection_points( ref_line , gaze_line )
+                ref_point_world , gaze_point_world , distance = math_helper.nearest_intersection_points( ref_line , gaze_line )
 
                 gaze_points_3d.append( gaze_point_world )
                 ref_points_3d.append( ref_point_world )
