@@ -46,8 +46,7 @@ def point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D ,
     return success, cpp_orientation, cpp_translation
 
 
-def line_line_calibration( ref_directions_3D, gaze_directions_3D , initial_orientation , initial_translation ,
-    fix_translation = False ):
+def line_line_calibration( ref_directions_3D, gaze_directions_3D , initial_orientation , initial_translation , fix_translation = False , use_weight = True):
 
 
     cdef vector[Vector3] cpp_ref_directions
@@ -68,7 +67,7 @@ def line_line_calibration( ref_directions_3D, gaze_directions_3D , initial_orien
 
     ## optimized values are written to cpp_orientation and cpp_translation
     cdef bint success  = lineLineCalibration(cpp_ref_directions, cpp_gaze_directions,
-                                             cpp_orientation, cpp_translation, avgDistance, fix_translation )
+                                             cpp_orientation, cpp_translation, avgDistance, fix_translation, use_weight )
 
 
     return success, cpp_orientation, cpp_translation , avgDistance
