@@ -58,13 +58,13 @@ struct CoplanarityError {
         if (useWeight)
         {
                        // weighting factor:
-            const T generalVariance = T(0.1);
+            const T generalVariance = T(0.9);
             const Eigen::Matrix<T, 3, 1> distanceVector = gazeWorld.cross(refD);
             const T distance = distanceVector.norm();
             const T distanceSquared = distance*distance;
 
-            const T worldCameraVariance = T(20.0);
-            const T eyeVariance = T(20.0);
+            const T worldCameraVariance = T(2.0);
+            const T eyeVariance = T(8.0);
 
             const T nom  = distanceSquared * generalVariance;
 
