@@ -27,6 +27,14 @@ cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
         Matrix4d() except +
         double& operator()(size_t,size_t)
 
+    cdef cppclass Quaterniond "Eigen::Quaterniond": # eigen defaults to column major layout
+        Quaterniond() except +
+        Quaterniond( double w, double x, double y, double z)
+        double w()
+        double x()
+        double y()
+        double z()
+
 cdef extern from 'common.h':
 
     #typdefs
@@ -43,5 +51,5 @@ cdef extern from 'pointLineCalibration.h':
 
 cdef extern from 'lineLineCalibration.h':
 
-    bint lineLineCalibration( const vector[Vector3]& refDirections,const vector[Vector3]& gazeDirections,  double[4]& orientation ,
-                                 double[3]& translation, double& avgDistance, bint fixTranslation, bint useWeight )
+    bint lineLineCalibration( const vector[Vector3]& refDirections,const vector[Vector3]& gazeDirections,  Quaterniond& orientation ,
+                                 Vector3& translation, double& avgDistance, bint fixTranslation, bint useWeight )

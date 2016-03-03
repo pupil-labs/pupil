@@ -58,10 +58,10 @@ def line_line_calibration( ref_directions_3D, gaze_directions_3D , initial_orien
         cpp_gaze_directions.push_back(Vector3(p[0],p[1],p[2]))
 
 
-    cdef double cpp_orientation[4] #quaternion
-    cdef double cpp_translation[3]
-    cpp_orientation[:] = initial_orientation
-    cpp_translation[:] = initial_translation
+    cdef Quaterniond cpp_orientation
+    cdef Vector3 cpp_translation
+    cpp_orientation = Quaterniond(initial_orientation[0],initial_orientation[1],initial_orientation[2],initial_orientation[3] )
+    cpp_translation = Vector3(initial_translation[0],initial_translation[1],initial_translation[2] )
 
     cdef double avgDistance = 0.0
 
@@ -70,4 +70,7 @@ def line_line_calibration( ref_directions_3D, gaze_directions_3D , initial_orien
                                              cpp_orientation, cpp_translation, avgDistance, fix_translation, use_weight )
 
 
-    return success, cpp_orientation, cpp_translation , avgDistance
+    orientation = ( cpp_orientation.w(),cpp_orientation.x(),cpp_orientation.y(),cpp_orientation.z() )
+    translation = ( cpp_translation[0],cpp_translation[1],cpp_translation[2] )
+
+    return success, orientation, translation , avgDistance

@@ -17,7 +17,9 @@
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
 #include <Eigen/Geometry>
-#include "ceres/CeresParametrization.h"
+#include "ceres/Fixed3DNormParametrization.h"
+#include "ceres/EigenQuaternionParameterization.h"
+#include "ceres/CeresUtils.h"
 #include "math/Distance.h"
 #include "common/types.h"
 
@@ -32,8 +34,8 @@ using ceres::Solver;
 
 
 struct CoplanarityError {
-    CoplanarityError(const Vector3 refDirection,   const Vector3 gazeDirection , const bool useWeight = true )
-        : refDirection(refDirection), gazeDirection(gazeDirection), useWeight(useWeight) {}
+    CoplanarityError(const Vector3 refDirection,   const Vector3 gazeDirection , bool weight )
+        : refDirection(refDirection), gazeDirection(gazeDirection), useWeight(weight) {}
 
     template <typename T>
     bool operator()(
@@ -48,7 +50,7 @@ struct CoplanarityError {
 
         Eigen::Matrix<T, 3, 1> gazeWorld;
         //T inv[4] = {rotation[0], -rotation[1],-rotation[2],-rotation[3]};
-        ceres::QuaternionRotatePoint( rotation , gazeD.data(), gazeWorld.data() );
+        pupillabs::EigenQuaternionRotatePoint( rotation , gazeD.data(), gazeWorld.data() );
         //TODO add weighting factors to the residual , better approximation
         //coplanarity constraint  x1.T * E * x2 = 0
         auto res = refD.transpose() * ( b.cross(gazeWorld));
@@ -95,21 +97,16 @@ struct CoplanarityError {
 
 
 bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::vector<Vector3>& gazeDirections ,
-    double (&orientation)[4], double (&translation)[3] , double& avgDistance, bool fixTranslation = false, bool useWeight = true )
+    Eigen::Quaterniond& orientation, Vector3& translation, double& avgDistance, bool fixTranslation = false, bool useWeight = true )
 {
 
-    // don't use Constructor 'Quaternion (const Scalar *data)' because the internal layout for coefficients is different from the one we use.
-    // Memory Layout EIGEN: xyzw
-    // Memory Layout CERES and the one we use: wxyz
-    Eigen::Quaterniond q(orientation[0],orientation[1],orientation[2],orientation[3]); // don't map orientation
-    Vector3 t =  Vector3(translation[0],translation[1], translation[2]);
-    double n = t.norm();
-    translation[0] /= n;
-    translation[1] /= n;
-    translation[2] /= n;
+    double n = translation.norm();
+    translation.normalize();
 
     Problem problem;
     double epsilon = std::numeric_limits<double>::epsilon();
+
+    std::vector<double> weights(refDirections.size(), 1.0 );
 
     for(int i=0; i<refDirections.size(); i++) {
 
@@ -124,13 +121,13 @@ bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::v
         bool valid = true;
         valid &= gaze.norm() >= epsilon;
         valid &= ref.norm() >= epsilon;
-        valid &= (q*gaze).dot(ref) >= epsilon;
+        valid &= (orientation*gaze).dot(ref) >= epsilon;
 
         if( valid ){
 
             CostFunction* cost = new AutoDiffCostFunction<CoplanarityError , 1, 4, 3 >(new CoplanarityError(ref, gaze, useWeight ));
             // TODO use a loss function, to handle gaze point outliers
-            problem.AddResidualBlock(cost, nullptr, orientation,  translation );
+            problem.AddResidualBlock(cost, nullptr, orientation.coeffs().data() ,  translation.data() );
         }else{
             std::cout << "no valid direction vector"  << std::endl;
         }
@@ -141,15 +138,15 @@ bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::v
         return false;
     }
 
-    ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
-    problem.SetParameterization(orientation, quaternionParameterization);
+    ceres::LocalParameterization* quaternionParameterization = new pupillabs::EigenQuaternionParameterization; // owned by the problem
+    problem.SetParameterization(orientation.coeffs().data(), quaternionParameterization);
 
     ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
-    problem.SetParameterization(translation, normedTranslationParameterization);
+    problem.SetParameterization(translation.data(), normedTranslationParameterization);
 
     if (fixTranslation)
     {
-        problem.SetParameterBlockConstant(translation);
+        problem.SetParameterBlockConstant(translation.data());
     }
 
     // Build and solve the problem.
@@ -177,9 +174,8 @@ bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::v
     }
 
     //rescale the translation according to the initial translation
-    translation[0] *= n;
-    translation[1] *= n;
-    translation[2] *= n;
+    translation *= n;
+
 
     using singleeyefitter::Line3;
     // check for possible ambiguity
@@ -215,8 +211,8 @@ bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::v
     };
 
 
-    Eigen::Quaterniond q1(orientation[0],orientation[1],orientation[2],orientation[3]); // don't mapp orientation
-    Vector3 t1 =  Vector3(translation[0],translation[1], translation[2]);
+    Eigen::Quaterniond q1 = orientation;
+    Vector3 t1 =  translation;
     Eigen::Quaterniond q2  = q1.conjugate();
     Vector3 t2 =  -t1;
 
@@ -252,28 +248,20 @@ bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::v
         case 1:
 
             std::cout << "result two" <<std::endl;
-            translation[0] *= -1.0;
-            translation[1] *= -1.0;
-            translation[2] *= -1.0;
+            translation = t2;
             break;
 
         case 2:
             std::cout << "result three" <<std::endl;
 
-            orientation[1] *= -1.0;
-            orientation[2] *= -1.0;
-            orientation[3] *= -1.0;
+            orientation = q2;
             break;
         case 3:
             std::cout << "result four" <<std::endl;
 
-            orientation[1] *= -1.0;
-            orientation[2] *= -1.0;
-            orientation[3] *= -1.0;
+            orientation = q2;
+            translation = t2;
 
-            translation[0] *= -1.0;
-            translation[1] *= -1.0;
-            translation[2] *= -1.0;
     }
 
     return true;
