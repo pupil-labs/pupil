@@ -32,11 +32,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef CERESPARAMETRIZATION_H__
-#define CERESPARAMETRIZATION_H__
+#ifndef FIXED3DNORMPARAMETRIZATION_H__
+#define FIXED3DNORMPARAMETRIZATION_H__
 
 
-#include <opencv2/core/core.hpp>
 #include <ceres/local_parameterization.h>
 
 namespace pupillabs
@@ -156,4 +155,4 @@ protected:
 } //namespace pupillabs
 
 
-#endif /* end of include guard: CERESPARAMETRIZATION_H__ */
+#endif /* end of include guard: FIXED3DNORMPARAMETRIZATION_H__ */
