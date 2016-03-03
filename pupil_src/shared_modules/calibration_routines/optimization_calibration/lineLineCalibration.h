@@ -32,8 +32,8 @@ using ceres::Solver;
 
 
 struct CoplanarityError {
-    CoplanarityError(const Vector3 refDirection,   const Vector3 gazeDirection )
-        : refDirection(refDirection), gazeDirection(gazeDirection) {}
+    CoplanarityError(const Vector3 refDirection,   const Vector3 gazeDirection , const bool useWeight = true )
+        : refDirection(refDirection), gazeDirection(gazeDirection), useWeight(useWeight) {}
 
     template <typename T>
     bool operator()(
