@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include <ceres/local_parameterization.h>
+#include <Eigen/Core>
 
 namespace pupillabs
 {
@@ -130,7 +131,8 @@ public:
 
     virtual bool ComputeJacobian(const double *x, double *jacobian) const
     {
-        cv::Matx32d &jacobian_ = *(cv::Matx32d *)jacobian;
+        typedef Eigen::Matrix<double, 3,2> Matrix32d;
+        Matrix32d &jacobian_ = *(Matrix32d *)jacobian;
         double basis1[3];
         double basis2[3];
 

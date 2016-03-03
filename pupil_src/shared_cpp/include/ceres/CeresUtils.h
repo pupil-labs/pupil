@@ -1,5 +1,5 @@
 
-##ifndef CERESUTILS_H__
+#ifndef CERESUTILS_H__
 #define CERESUTILS_H__
 
 #include <Eigen/Core>
