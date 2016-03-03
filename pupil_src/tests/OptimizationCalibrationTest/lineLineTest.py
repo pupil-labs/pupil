@@ -12,14 +12,6 @@ from math import acos, atan2, cos, pi, sin, radians
 from calibration_routines.visualizer_calibration import *
 
 
-
-def almost_equal(a, b, accuracy = 10e-6 ):
-    return abs(a - b) < accuracy
-
-
-
-
-
 def show_result(cam1_center, cam1_points, cam2_points, rotation, translation, name = "Calibration"):
 
     rotation = np.array(rotation)
@@ -127,8 +119,7 @@ if __name__ == '__main__':
     p.start();
 
     import time
-    time.sleep(5) # delays for 5 seconds
-
+    time.sleep(1)
     show_result(cam1_center, cam1_points, cam2_points, rotation2, translation2 , "With Weight")
 
 
