@@ -33,9 +33,55 @@ using ceres::Solve;
 using ceres::Solver;
 
 
+struct RecalculateWeights : public ceres::IterationCallback
+{
+
+    std::vector<double>& mWeights;
+    const std::vector<Vector3>& mRefDirections, mGazeDirections;
+    const Vector3& mBaseVector;
+    const Eigen::Quaterniond& mRotation;
+
+
+    RecalculateWeights( std::vector<double>& weights , const std::vector<Vector3>& refDirections, const std::vector<Vector3>& gazeDirections, const Vector3& baseVector, const Eigen::Quaterniond& rotation )
+        : mWeights(weights) , mRefDirections(refDirections) ,mGazeDirections(gazeDirections), mBaseVector(baseVector), mRotation(rotation)  {}
+
+    virtual ceres::CallbackReturnType operator() (const ceres::IterationSummary& summary) {
+
+        std::cout << "recalculate weights"  << std::endl;
+        const double generalVariance = 0.9;
+        const double worldCameraVariance = 2.0;
+        const double eyeVariance = 8.0;
+
+        for (int i = 0; i < mRefDirections.size(); ++i)
+        {
+            auto gaze = mGazeDirections.at(i);
+            auto ref = mRefDirections.at(i);
+
+            auto gazeWorld = mRotation * gaze;
+
+            const Vector3 distanceVector = gazeWorld.cross(ref);
+            const double distance = distanceVector.norm();
+            const double distanceSquared = distance*distance;
+            const double nom  = distanceSquared * generalVariance;
+
+            const double c = mBaseVector.cross(ref).dot(distanceVector);
+            const double d = mBaseVector.cross(gazeWorld).dot(distanceVector);
+
+            const double denom = c * c * worldCameraVariance + d * d * eyeVariance;
+
+            mWeights[i] = nom / denom;
+            std::cout << "weight" << mWeights[i] << std::endl;
+
+        }
+
+        return ceres::SOLVER_CONTINUE;
+    }
+};
+
+
 struct CoplanarityError {
-    CoplanarityError(const Vector3 refDirection,   const Vector3 gazeDirection , bool weight )
-        : refDirection(refDirection), gazeDirection(gazeDirection), useWeight(weight) {}
+    CoplanarityError(const Vector3 refDirection,   const Vector3 gazeDirection , bool useWeight )
+        : refDirection(refDirection), gazeDirection(gazeDirection), useWeight(useWeight) {}
 
     template <typename T>
     bool operator()(
@@ -49,6 +95,7 @@ struct CoplanarityError {
         Eigen::Matrix<T, 3, 1> b = {T(translation[0]) , T(translation[1]) , T(translation[2])};
 
         Eigen::Matrix<T, 3, 1> gazeWorld;
+
         //T inv[4] = {rotation[0], -rotation[1],-rotation[2],-rotation[3]};
         pupillabs::EigenQuaternionRotatePoint( rotation , gazeD.data(), gazeWorld.data() );
         //TODO add weighting factors to the residual , better approximation
@@ -56,11 +103,11 @@ struct CoplanarityError {
         auto res = refD.transpose() * ( b.cross(gazeWorld));
 
 
-
-        if (useWeight)
+        if ( !useWeight)
         {
-                       // weighting factor:
+            // weighting factor:
             const T generalVariance = T(0.9);
+
             const Eigen::Matrix<T, 3, 1> distanceVector = gazeWorld.cross(refD);
             const T distance = distanceVector.norm();
             const T distanceSquared = distance*distance;
@@ -76,13 +123,14 @@ struct CoplanarityError {
             const T denom = c * c * worldCameraVariance + d * d * eyeVariance;
 
             const T weight = nom / denom;
-            //std::cout << "weight" << weight << std::endl;
-
+            std::cout << "weight" << weight << std::endl;
             residuals[0] = weight * res[0]* res[0];
+
         }else{
-             residuals[0] =  res[0]* res[0];
+            residuals[0] =  res[0]* res[0];
 
         }
+
 
         return true;
 
@@ -96,7 +144,7 @@ struct CoplanarityError {
 
 
 
-bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::vector<Vector3>& gazeDirections ,
+bool lineLineCalibration(std::vector<Vector3>& refDirections, std::vector<Vector3>& gazeDirections ,
     Eigen::Quaterniond& orientation, Vector3& translation, double& avgDistance, bool fixTranslation = false, bool useWeight = true )
 {
 
@@ -110,8 +158,8 @@ bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::v
 
     for(int i=0; i<refDirections.size(); i++) {
 
-        auto gaze = gazeDirections.at(i);
-        auto ref = refDirections.at(i);
+        auto& gaze = gazeDirections.at(i);
+        auto& ref = refDirections.at(i);
         gaze.normalize(); //just to be sure
         ref.normalize(); //just to be sure
 
@@ -154,13 +202,21 @@ bool lineLineCalibration(const std::vector<Vector3>& refDirections, const std::v
     options.max_num_iterations = 1000;
     options.linear_solver_type = ceres::DENSE_QR;
 
+    options.update_state_every_iteration = true; // need to update the parameters every iteration step
+
     options.parameter_tolerance = 1e-15;
     options.function_tolerance = 1e-16;
     options.gradient_tolerance = 1e-20;
    // options.minimizer_progress_to_stdout = true;
     //options.logging_type = ceres::SILENT;
-
     //options.check_gradients = true;
+
+    if (useWeight)
+    {
+        options.callbacks.push_back( new RecalculateWeights(weights, refDirections, gazeDirections, translation , orientation ) );
+    }
+
+
     Solver::Summary summary;
 
     Solve(options, &problem, &summary);
