@@ -73,16 +73,17 @@ def finish_calibration(g_pool,pupil_list,ref_list):
 
             sphere_pos0 = pupil0[-1]['sphere']['center']
             sphere_pos1 = pupil1[-1]['sphere']['center']
-            initial_orientation0 = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033] #eye0
+            initial_orientation0 = [ 0.05334223 , 0.93651217 , 0.07765971 ,  -0.33774033] #eye0
             initial_orientation1 = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
-            initial_translation0 = (25, 15, -10)
-            initial_translation1 = (-5, 15, -10)
+            initial_translation0 = (10, 25, -10)
+            initial_translation1 = (-40, 25, -10)
+
 
             #this returns the translation of the eye and not of the camera coordinate system
             #need to take sphere position into account
             #success, orientation, translation , avg_distance  = line_line_calibration(ref_3d,  gaze_3d, initial_orientation, initial_translation)
-            success0, orientation0, translation0 , _  = line_line_calibration(ref_3d,  gaze0_3d, initial_orientation0, initial_translation0)
-            success1, orientation1, translation1 , _  = line_line_calibration(ref_3d,  gaze1_3d, initial_orientation1, initial_translation1)
+            success0, orientation0, translation0 , _  = line_line_calibration(ref_3d,  gaze0_3d, initial_orientation0, initial_translation0 ,  use_weight = True)
+            success1, orientation1, translation1 , _  = line_line_calibration(ref_3d,  gaze1_3d, initial_orientation1, initial_translation1,  use_weight = True)
             orientation0 = np.array(orientation0)
             translation0 = np.array(translation0)
             orientation1 = np.array(orientation1)
@@ -180,16 +181,16 @@ def finish_calibration(g_pool,pupil_list,ref_list):
 
             if  matched_monocular_data[-1]['pupil']['id'] == 0:
                 initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033] #eye0
-                initial_translation = (10, 30, -10)
+                initial_translation = (10, 25, -10)
             else:
                 initial_orientation = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
-                initial_translation = (-50, 30, -10)
+                initial_translation = (-40, 25, -10)
 
 
             #this returns the translation of the eye and not of the camera coordinate system
             #need to take sphere position into account
             #success, orientation, translation , avg_distance  = line_line_calibration(ref_3d,  gaze_3d, initial_orientation, initial_translation)
-            success, orientation, translation , _  = line_line_calibration(ref_3d,  gaze_3d, initial_orientation, initial_translation)
+            success, orientation, translation , _  = line_line_calibration(ref_3d,  gaze_3d, initial_orientation, initial_translation , use_weight = True )
             orientation = np.array(orientation)
             translation = np.array(translation)
             # print 'orientation: ' , orientation
