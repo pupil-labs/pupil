@@ -32,33 +32,33 @@ def nearest_intersection_points( line0 , line1 ):
         else:
             return p/m
 
-    # Check for parallel lines
-    magnitude = mag (np.cross(normalise(p1, p2), normalise(p3, p4 )) )
+    d1 = normalise(p1,p2)
+    d2 = normalise(p3,p4)
 
-    if magnitude > np.finfo(np.float64).eps:
+    diff = p1 - p3;
+    a01 = -d1.dot(d2);
+    b0 = diff.dot(d1);
 
-        A = p1-p3
-        B = p2-p1
-        C = p4-p3
 
-        ma = ((np.dot(A, C)*np.dot(C, B)) - (np.dot(A, B)*np.dot(C, C)))/ \
-             ((np.dot(B, B)*np.dot(C, C)) - (np.dot(C, B)*np.dot(C, B)))
-        mb = (ma*np.dot(C, B) + np.dot(A, C))/ np.dot(C, C)
+    if np.abs(a01) < 1.0:
 
-        # Calculate the point on line 1 that is the closest point to line 2
-        Pa = p1 + B*ma
+        # Lines are not parallel.
+        det = 1.0 - a01 * a01;
+        b1 = -diff.dot(d2);
+        s0 = (a01 * b1 - b0) / det;
+        s1 = (a01 * b0 - b1) / det;
 
-        # Calculate the point on line 2 that is the closest point to line 1
-        Pb = p3 + C* mb
-
-        nPoint = Pa - Pb
-        # Distance between lines
-        intersection_dist = np.sqrt( nPoint.dot( nPoint ))
-
-        return Pa , Pb , intersection_dist
     else:
-        return None,None,None  # parallel lines
 
+        # Lines are parallel, select any pair of closest points.
+        s0 = -b0;
+        s1 = 0;
+
+
+    closestPoint1 = p1 + s0 * d1;
+    closestPoint2 = p3 + s1 * d2;
+    dist = mag( closestPoint2 - closestPoint1 )
+    return closestPoint1 , closestPoint2, dist
 
 def nearest_intersection( line0 , line1 ):
     """ Calculates the nearest intersection point, and the shortest distance of line0 and line1.
