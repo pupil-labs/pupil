@@ -20,7 +20,7 @@ def almost_equal(a, b, accuracy = 10e-6 ):
 
 
 
-def show_result(cam1_center, cam1_points, cam2_points, rotation, translation):
+def show_result(cam1_center, cam1_points, cam2_points, rotation, translation, name = "Calibration"):
 
     rotation = np.array(rotation)
     translation = np.array(translation)
@@ -71,7 +71,7 @@ def show_result(cam1_center, cam1_points, cam2_points, rotation, translation):
 
     #cam2_points_world = [toWorld(p) for p in cam2_points]
 
-    visualizer = Calibration_Visualizer(None,None, intersection_points_a ,cam2_transformation_matrix , intersection_points_b, run_independently = True )
+    visualizer = Calibration_Visualizer(None,None, intersection_points_a ,cam2_transformation_matrix , intersection_points_b, run_independently = True , name = name)
     visualizer.open_window()
     while visualizer.window:
         visualizer.update_window( None, [] , eye)
@@ -126,7 +126,11 @@ if __name__ == '__main__':
     p = Process(target=show_result, args=(cam1_center, cam1_points, cam2_points, rotation, translation))
     p.start();
 
-    show_result(cam1_center, cam1_points, cam2_points, rotation2, translation2)
+    import time
+    time.sleep(5) # delays for 5 seconds
+
+    show_result(cam1_center, cam1_points, cam2_points, rotation2, translation2 , "With Weight")
+
 
     p.join()
 
