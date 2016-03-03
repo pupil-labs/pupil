@@ -70,7 +70,7 @@ struct CoplanarityError {
 
             const T nom  = distanceSquared * generalVariance;
 
-            const T c = b.cross(gazeD).dot(distanceVector);
+            const T c = b.cross(refD).dot(distanceVector);
             const T d = b.cross(gazeWorld).dot(distanceVector);
 
             const T denom = c * c * worldCameraVariance + d * d * eyeVariance;
