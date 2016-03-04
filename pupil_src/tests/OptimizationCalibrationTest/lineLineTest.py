@@ -78,16 +78,16 @@ if __name__ == '__main__':
     cam1_center  = (0,0,0)
     cam1_rotation_quaternion = math_helper.angle_axis2quat( 0 , (0.0,1.0,0.0) )
 
-    cam2_center  = np.array((-10,0,0))
-    cam2_rotation_quaternion = math_helper.angle_axis2quat( -np.pi/4, (0.0,1.0,0.0) )
+    cam2_center  = np.array((20,0,0))
+    cam2_rotation_quaternion = math_helper.angle_axis2quat( -np.pi, (0.0,1.0,0.0) )
     cam2_rotation_matrix = math_helper.quat2mat(cam2_rotation_quaternion)
     random_points = [];
     random_points_amount = 10
 
-    x_var = 20
-    y_var = 20
-    z_var = 10
-    z_min = 100
+    x_var = 300
+    y_var = 200
+    z_var = 100
+    z_min = 600
     for i in range(0,random_points_amount):
         random_point = ( uniform(-x_var,x_var) ,  uniform(-y_var,y_var) ,  uniform(z_min,z_min+z_var)  )
         random_points.append(random_point)
@@ -100,15 +100,15 @@ if __name__ == '__main__':
     cam2_points = [] #cam2 coords
     for p in random_points:
         cam1_points.append(p)
-        factor = 0.0 #randomize point in eye space
-        pr = p * np.array( (uniform(1.0-factor,1.0+factor),uniform(1.0-factor,1.0+factor),uniform(1.0-factor,1.0+factor))  )
+        factor = 30 #randomize point in eye space
+        pr = p + np.array( (uniform(-factor,+factor),uniform(-factor,+factor),uniform(-factor,+factor))  )
         p2 = toEye(pr) # to cam2 coordinate system
         #p2 *= 1.2,1.3,1.0
         cam2_points.append(p2)
 
     sphere_position = (0,0,0)
-    initial_rotation = math_helper.angle_axis2quat( -np.pi/3 , (0.0,1.0,0.0) )
-    initial_translation = np.array( (10,0,0) )
+    initial_rotation = math_helper.angle_axis2quat( -np.pi, (0.0,1.0,0.0) )
+    initial_translation = np.array( (20,0,0) )
 
     # initial_rotation = [ -0.30901699, -0. ,        -0.95105652, -0.       ]
     # initial_translation = (-40, 25, -10)
