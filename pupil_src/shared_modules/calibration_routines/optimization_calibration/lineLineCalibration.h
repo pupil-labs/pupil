@@ -145,7 +145,7 @@ bool lineLineCalibration(std::vector<Vector3>& refDirections, std::vector<Vector
 
     // Build and solve the problem.
     Solver::Options options;
-    options.max_num_iterations = 1000;
+    options.max_num_iterations = 3000;
     options.linear_solver_type = ceres::DENSE_QR;
 
     options.parameter_tolerance = 1e-15;
