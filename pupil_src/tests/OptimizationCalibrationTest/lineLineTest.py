@@ -78,11 +78,11 @@ if __name__ == '__main__':
     cam1_center  = (0,0,0)
     cam1_rotation_quaternion = math_helper.angle_axis2quat( 0 , (0.0,1.0,0.0) )
 
-    cam2_center  = np.array((10,0,0))
+    cam2_center  = np.array((-10,0,0))
     cam2_rotation_quaternion = math_helper.angle_axis2quat( -np.pi/4, (0.0,1.0,0.0) )
     cam2_rotation_matrix = math_helper.quat2mat(cam2_rotation_quaternion)
     random_points = [];
-    random_points_amount = 350
+    random_points_amount = 10
 
     x_var = 20
     y_var = 20
@@ -100,16 +100,21 @@ if __name__ == '__main__':
     cam2_points = [] #cam2 coords
     for p in random_points:
         cam1_points.append(p)
-        factor = 0.5 #randomize point in eye space
+        factor = 0.0 #randomize point in eye space
         pr = p * np.array( (uniform(1.0-factor,1.0+factor),uniform(1.0-factor,1.0+factor),uniform(1.0-factor,1.0+factor))  )
         p2 = toEye(pr) # to cam2 coordinate system
-        p2 *= 1.2,1.3,1.0
+        #p2 *= 1.2,1.3,1.0
         cam2_points.append(p2)
 
     sphere_position = (0,0,0)
     initial_rotation = math_helper.angle_axis2quat( -np.pi/3 , (0.0,1.0,0.0) )
     initial_translation = np.array( (10,0,0) )
 
+    # initial_rotation = [ -0.30901699, -0. ,        -0.95105652, -0.       ]
+    # initial_translation = (-40, 25, -10)
+
+    # import file_methods
+    # ref, gaze = file_methods.load_object( 'testdata')
 
     success, rotation, translation, avg_distance = line_line_calibration( cam1_points, cam2_points , initial_rotation , initial_translation , fix_translation = False, use_weight = False  )
     success2, rotation2, translation2, avg_distance2 = line_line_calibration( cam1_points, cam2_points , initial_rotation , initial_translation , fix_translation = False , use_weight = True  )
