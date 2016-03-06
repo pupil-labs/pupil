@@ -183,7 +183,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033] #eye0
                 initial_translation = (10, 25, -10)
             else:
-                initial_orientation = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
+                initial_orientation = [ -0.30901699, -0. ,        -0.95105652, -0.       ]
                 initial_translation = (-40, 25, -10)
 
 

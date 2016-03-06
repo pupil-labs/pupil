@@ -54,9 +54,9 @@ struct CoplanarityError {
         //coplanarity constraint  x1.T * E * x2 = 0
         auto res = refD.transpose() * ( b.cross(gazeWorld));
 
-        const T generalVariance = T(0.9);
-        const T worldCameraVariance = T(2.0);
-        const T eyeVariance = T(8.0);
+        const T generalVariance = T(0.8);
+        const T worldCameraVariance = T(40.0);
+        const T eyeVariance = T(30.0);
 
         if ( useWeight)
         {
@@ -145,7 +145,7 @@ bool lineLineCalibration(std::vector<Vector3>& refDirections, std::vector<Vector
 
     // Build and solve the problem.
     Solver::Options options;
-    options.max_num_iterations = 1000;
+    options.max_num_iterations = 3000;
     options.linear_solver_type = ceres::DENSE_QR;
 
     options.parameter_tolerance = 1e-15;
@@ -209,11 +209,15 @@ bool lineLineCalibration(std::vector<Vector3>& refDirections, std::vector<Vector
     Vector3 t1 =  translation;
     Eigen::Quaterniond q2  = q1.conjugate();
     Vector3 t2 =  -t1;
+    double avgD1,avgD2,avgD3,avgD4;
 
-    int s1 = checkResult(q1,t1,avgDistance);
-    int s2 = checkResult(q1,t2,avgDistance);
-    int s3 = checkResult(q2,t1,avgDistance);
-    int s4 = checkResult(q2,t2,avgDistance);
+
+    std::cout << "q2: " << q2.w() << " " << q2.x() << " " << q2.y() << " " <<q2.z() << std::endl;
+    std::cout << "q1: " << q1.w() << " " << q1.x() << " " << q1.y() << " "<< q1.z() << std::endl;
+    int s1 = checkResult(q1,t1,avgD1);
+    int s2 = checkResult(q1,t2,avgD2);
+    int s3 = checkResult(q2,t1,avgD3);
+    int s4 = checkResult(q2,t2,avgD4);
 
     std::cout << "s1: " << s1 << std::endl;
     std::cout << "s2: " << s2 << std::endl;
@@ -234,29 +238,31 @@ bool lineLineCalibration(std::vector<Vector3>& refDirections, std::vector<Vector
     }
 
 
-    switch(maxIndex){
+    // switch(maxIndex){
 
-        case 0:
-            std::cout << "result one" <<std::endl;
-            break;
-        case 1:
+    //     case 0:
+    //         std::cout << "result one" <<std::endl;
+    //         avgDistance = avgD1;
+    //         break;
+    //     case 1:
 
-            std::cout << "result two" <<std::endl;
-            translation = t2;
-            break;
+    //         std::cout << "result two" <<std::endl;
+    //         avgDistance = avgD2;
+    //         translation = t2;
+    //         break;
 
-        case 2:
-            std::cout << "result three" <<std::endl;
+    //     case 2:
+    //         std::cout << "result three" <<std::endl;
+    //         avgDistance = avgD3;
+    //         orientation = q2;
+    //         break;
+    //     case 3:
+    //         std::cout << "result four" <<std::endl;
+    //         avgDistance = avgD4;
+    //         orientation = q2;
+    //         translation = t2;
 
-            orientation = q2;
-            break;
-        case 3:
-            std::cout << "result four" <<std::endl;
-
-            orientation = q2;
-            translation = t2;
-
-    }
+    // }
 
     return true;
 
