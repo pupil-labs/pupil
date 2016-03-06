@@ -425,6 +425,35 @@ def preprocess_3d_data(matched_data, camera_intrinsics ):
 #     return cal_data
 
 
+def rigid_transform(A, B):
+    assert len(A) == len(B)
+
+    N = A.shape[0]; # total points
+
+    centroid_A = np.mean(A, axis=0)
+    centroid_B = np.mean(B, axis=0)
+
+    # centre the points
+    AA = A - np.tile(centroid_A, (N, 1))
+    BB = B - np.tile(centroid_B, (N, 1))
+
+    # dot is matrix multiplication for array
+    H = np.transpose(AA) * BB
+
+    U, S, Vt = np.linalg.svd(H)
+
+    R = Vt.T * U.T
+
+    # special reflection case
+    if np.linalg.det(R) < 0:
+       print "Reflection detected"
+       Vt[2,:] *= -1
+       R = Vt.T * U.T
+
+    t = -R*centroid_A.T + centroid_B.T
+
+    return R, t
+
 def calculate_residual_3D_Points( ref_points, gaze_points, eye_to_world_matrix ):
 
     average_distance = 0.0
