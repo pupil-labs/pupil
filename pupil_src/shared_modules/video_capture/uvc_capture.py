@@ -118,7 +118,7 @@ class Camera_Capture(object):
                 except KeyError:
                     pass
             else:
-                self.capture.bandwidth_factor = 1.6
+                self.capture.bandwidth_factor = 1.8
                 try:
                     controls_dict['Auto Exposure Priority'].value = 1
                 except KeyError:
