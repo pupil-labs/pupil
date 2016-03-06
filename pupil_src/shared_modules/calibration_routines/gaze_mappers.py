@@ -183,7 +183,7 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.menu = ui.Growing_Menu('Monocular 3D gaze mapper')
         self.g_pool.sidebar.insert(3,self.menu)
         self.menu.append(ui.Switch('debug window',setter=self.open_close_window, getter=lambda: bool(self.visualizer.window) ))
-        self.menu.append(ui.Slider('gaze_distance',self,min=300,max=5000,label='gaze distance mm'))
+        self.menu.append(ui.Slider('gaze_distance',self,min=100,max=5000,label='gaze distance mm'))
 
 
     def update(self,frame,events):
