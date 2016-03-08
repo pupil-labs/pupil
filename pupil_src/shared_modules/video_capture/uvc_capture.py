@@ -114,7 +114,7 @@ class Camera_Capture(object):
                 except KeyError:
                     pass
                 try:
-                    controls_dict['Gamma'].value = 72
+                    controls_dict['Gamma'].value = 100
                 except KeyError:
                     pass
             else:
