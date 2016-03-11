@@ -179,26 +179,20 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
-
-
-            initial_R,initial_t = find_rigid_transform(np.array(gaze_dir)*500,np.array(eye_dir)*500)
+            initial_R,initial_t = find_rigid_transform(np.array(gaze_dir),np.array(ref_dir))
             initial_orientation = math_helper.quaternion_from_rotation_matrix(initial_R)
             initial_translation = np.array(initial_t).reshape(3)
-            print initial_orientation, initial_translation
-            # if  matched_monocular_data[-1]['pupil']['id'] == 0:
-            #     initial_orientation = [ 0.05334223 , 0.93651217 , 0.07765971 ,-0.33774033] #eye0
-            #     initial_translation = (10, 25, -10)
-            # else:
-            #     initial_orientation = [ -0.30901699, -0. ,        -0.95105652, -0.       ]
-            #     initial_translation = (-40, 25, -10)
-
+            # this problem is scale invariant so we scale to some sensical value.
+            initial_translation *= 30/np.linalg.norm(initial_translation)
 
             #this returns the translation of the eye and not of the camera coordinate system
             #need to take sphere position into account
-            # success, orientation, translation , avg_distance  = line_line_calibration(ref_dir,  gaze_dir, initial_orientation, initial_translation)
-            # success, orientation, translation , _  = line_line_calibration(ref_dir,  gaze_dir, initial_orientation, initial_translation , use_weight = True )
+            success, orientation, translation , avg_distance  = line_line_calibration(ref_dir,  gaze_dir, initial_orientation, initial_translation , use_weight = True )
+            print 'solver_residual: ',avg_distance
+            # overwrite solution with intial guess
+            # success, orientation, translation , avg_distance = True, initial_orientation,initial_translation,-1
 
-            success, orientation, translation , _ = True,initial_orientation,initial_translation,True
+
             orientation = np.array(orientation)
             translation = np.array(translation)
             # print 'orientation: ' , orientation
@@ -211,10 +205,11 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 return
 
             rotation_matrix = math_helper.quaternion_rotation_matrix(orientation)
-            rotation_matrix = initial_R
+
+
             # we need to take the sphere position into account
             # orientation and translation are referring to the sphere center.
-            # but we wanna have it referring to the camera center
+            # but we want to have it referring to the camera center
 
             # since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
             sphere_translation = np.array( matched_monocular_data[-1]['pupil']['sphere']['center'] )
@@ -253,6 +248,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             logger.info('calibration average error: %s'%avg_error)
             logger.info('calibration average distance: %s'%avg_distance)
 
+            print 'intersecting gaze and ref lines in space'
             print 'avg error: ' , avg_error
             print 'avg gaze distance: ' , avg_gaze_distance
             print 'avg ref distance: ' , avg_ref_distance
