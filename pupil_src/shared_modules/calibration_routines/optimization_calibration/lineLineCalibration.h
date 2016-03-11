@@ -55,8 +55,8 @@ struct CoplanarityError {
         auto res = refD.transpose() * ( b.cross(gazeWorld));
 
         const T generalVariance = T(0.8);
-        const T worldCameraVariance = T(40.0);
-        const T eyeVariance = T(30.0);
+        const T worldCameraVariance = T(400.0);
+        const T eyeVariance = T(300.0);
 
         if ( useWeight)
         {
@@ -148,9 +148,9 @@ bool lineLineCalibration(std::vector<Vector3>& refDirections, std::vector<Vector
     options.max_num_iterations = 3000;
     options.linear_solver_type = ceres::DENSE_QR;
 
-    options.parameter_tolerance = 1e-15;
-    options.function_tolerance = 1e-16;
-    options.gradient_tolerance = 1e-20;
+    options.parameter_tolerance = 1e-25;
+    options.function_tolerance = 1e-26;
+    options.gradient_tolerance = 1e-30;
     //options.minimizer_progress_to_stdout = true;
     //options.logging_type = ceres::SILENT;
     //options.check_gradients = true;

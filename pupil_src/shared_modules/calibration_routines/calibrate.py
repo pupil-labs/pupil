@@ -425,7 +425,9 @@ def preprocess_3d_data(matched_data, camera_intrinsics ):
 #     return cal_data
 
 
-def rigid_transform(A, B):
+def find_rigid_transform(A, B):
+    A = np.matrix(A)
+    B = np.matrix(B)
     assert len(A) == len(B)
 
     N = A.shape[0]; # total points
@@ -452,7 +454,7 @@ def rigid_transform(A, B):
 
     t = -R*centroid_A.T + centroid_B.T
 
-    return R, t
+    return np.array(R), np.array(t).reshape(3)
 
 def calculate_residual_3D_Points( ref_points, gaze_points, eye_to_world_matrix ):
 

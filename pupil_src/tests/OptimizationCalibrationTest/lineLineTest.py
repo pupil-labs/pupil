@@ -10,9 +10,9 @@ import math_helper
 from numpy import array, cross, dot, double, hypot, zeros
 from math import acos, atan2, cos, pi, sin, radians
 from calibration_routines.visualizer_calibration import *
+from calibration_routines.calibrate import find_rigid_transform
 
-
-def show_result(cam1_center, cam1_points, cam2_points, rotation, translation, name = "Calibration"):
+def show_result(cam1_center, cam1_points, cam2_points, rotation, translation,avg_distance, name = "Calibration"):
 
     rotation = np.array(rotation)
     translation = np.array(translation)
@@ -23,16 +23,16 @@ def show_result(cam1_center, cam1_points, cam2_points, rotation, translation, na
     print 'initial rotation: ' , initial_rotation
     print 'initial translation: ' , initial_translation
 
-    print 'true rotation: ' , math_helper.quat2angle_axis(cam2_rotation_quaternion)
+    print 'true rotation: ' , math_helper.about_axis_from_quaternion(cam2_rotation_quaternion)
     print 'true translation: ' , cam2_center
 
-    print 'found rotation: ' , math_helper.quat2angle_axis(rotation)
+    print 'found rotation: ' , math_helper.about_axis_from_quaternion(rotation)
     print 'found translation: ' , translation
 
     print 'avgerage distance: ' , avg_distance
 
     #replace with the optimized rotation and translation
-    cam2_rotation_matrix = math_helper.quat2mat(rotation)
+    cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(rotation)
     cam2_transformation_matrix  = np.matrix(np.eye(4))
     cam2_transformation_matrix[:3,:3] = cam2_rotation_matrix
     cam2_translation = np.matrix(translation)
@@ -76,18 +76,18 @@ if __name__ == '__main__':
     from random import uniform
 
     cam1_center  = (0,0,0)
-    cam1_rotation_quaternion = math_helper.angle_axis2quat( 0 , (0.0,1.0,0.0) )
+    cam1_rotation_quaternion = math_helper.quaternion_about_axis( 0 , (0.0,1.0,0.0) )
 
-    cam2_center  = np.array((20,0,0))
-    cam2_rotation_quaternion = math_helper.angle_axis2quat( -np.pi, (0.0,1.0,0.0) )
-    cam2_rotation_matrix = math_helper.quat2mat(cam2_rotation_quaternion)
-    random_points = [];
+    cam2_center  = np.array((10,2,-4))
+    cam2_rotation_quaternion = math_helper.quaternion_about_axis( np.pi*.2, (0.0,1.0,0.0) )
+    cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(cam2_rotation_quaternion)
+    random_points = []
     random_points_amount = 10
 
     x_var = 300
     y_var = 200
     z_var = 100
-    z_min = 600
+    z_min = 900
     for i in range(0,random_points_amount):
         random_point = ( uniform(-x_var,x_var) ,  uniform(-y_var,y_var) ,  uniform(z_min,z_min+z_var)  )
         random_points.append(random_point)
@@ -100,15 +100,19 @@ if __name__ == '__main__':
     cam2_points = [] #cam2 coords
     for p in random_points:
         cam1_points.append(p)
-        factor = 30 #randomize point in eye space
+        factor = 10 #randomize point in eye space
         pr = p + np.array( (uniform(-factor,+factor),uniform(-factor,+factor),uniform(-factor,+factor))  )
         p2 = toEye(pr) # to cam2 coordinate system
-        #p2 *= 1.2,1.3,1.0
+        # p2 *= 1.2,1.3,1.0
         cam2_points.append(p2)
 
     sphere_position = (0,0,0)
-    initial_rotation = math_helper.angle_axis2quat( -np.pi, (0.0,1.0,0.0) )
-    initial_translation = np.array( (20,0,0) )
+
+    initial_R,initial_t = find_rigid_transform(np.array(cam2_points)*500,np.array(cam1_points)*500)
+    initial_rotation = math_helper.quaternion_from_rotation_matrix(initial_R)
+    initial_translation = np.array(initial_t).reshape(3)
+    # initial_rotation = math_helper.quaternion_about_axis( np.pi*.9, (0.1,1.0,0.1) )
+    # initial_translation = np.array( (8,1,1) )
 
     # initial_rotation = [ -0.30901699, -0. ,        -0.95105652, -0.       ]
     # initial_translation = (-40, 25, -10)
@@ -116,19 +120,19 @@ if __name__ == '__main__':
     # import file_methods
     # ref, gaze = file_methods.load_object( 'testdata')
 
-    success, rotation, translation, avg_distance = line_line_calibration( cam1_points, cam2_points , initial_rotation , initial_translation , fix_translation = False, use_weight = False  )
-    success2, rotation2, translation2, avg_distance2 = line_line_calibration( cam1_points, cam2_points , initial_rotation , initial_translation , fix_translation = False , use_weight = True  )
+    # success, rotation, translation, avg_distance = line_line_calibration( cam1_points, cam2_points , initial_rotation , initial_translation , fix_translation = False, use_weight = True  )
+    success2, rotation2, translation2, avg_distance2 = line_line_calibration( cam1_points, cam2_points , initial_rotation , initial_translation , fix_translation = True , use_weight = True  )
+    # success2, rotation2, translation2, avg_distance2 = True,initial_rotation,initial_translation,20
+    # from multiprocessing import Process
+    # p = Process(target=show_result, args=(cam1_center, cam1_points, cam2_points, rotation, translation))
+    # p.start();
 
-    from multiprocessing import Process
-    p = Process(target=show_result, args=(cam1_center, cam1_points, cam2_points, rotation, translation))
-    p.start();
-
-    import time
-    time.sleep(1)
-    show_result(cam1_center, cam1_points, cam2_points, rotation2, translation2 , "With Weight")
+    # import time
+    # time.sleep(1)
+    show_result(cam1_center, cam1_points, cam2_points, rotation2, translation2 ,avg_distance2, "With Weight")
 
 
-    p.join()
+    # p.join()
 
     print 'Test Ended'
 
