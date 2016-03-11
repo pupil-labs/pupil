@@ -55,7 +55,7 @@ struct CoplanarityError {
         auto res = refD.transpose() * ( b.cross(gazeWorld));
 
         const T generalVariance = T(0.8);
-        const T worldCameraVariance = T(800);
+        const T worldCameraVariance = T(1200);
         const T eyeVariance = T(300);
 
         if ( useWeight)

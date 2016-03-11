@@ -78,7 +78,7 @@ if __name__ == '__main__':
     cam2_rotation_quaternion = math_helper.quaternion_about_axis( np.pi*.9, (0.0,1.0,0.0) )
     cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(cam2_rotation_quaternion)
     random_points = []
-    random_points_amount = 100
+    random_points_amount = 10
 
     x_var = 200
     y_var = 200

@@ -93,8 +93,8 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             success1, orientation1, translation1 , solver_residual1  = line_line_calibration(ref_dir,  gaze1_dir, initial_orientation1, initial_translation1,  use_weight = True)
 
             # overwrite solution with intial guess
-            success0, orientation0, translation0 , avg_distance0 = True, initial_orientation0,initial_translation0,-1
-            success1, orientation1, translation1 , avg_distance1 = True, initial_orientation1,initial_translation1,-1
+            # success0, orientation0, translation0 , avg_distance0 = True, initial_orientation0,initial_translation0,-1
+            # success1, orientation1, translation1 , avg_distance1 = True, initial_orientation1,initial_translation1,-1
 
 
 
