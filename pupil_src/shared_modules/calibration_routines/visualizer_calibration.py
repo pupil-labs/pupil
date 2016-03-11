@@ -132,7 +132,7 @@ class Calibration_Visualizer(Visualizer):
 
 			#gazelines
 			for p in self.cal_gaze_points1_3d:
-				glutils.draw_polyline( [ sphere_center1, p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
+				glutils.draw_polyline( [ sphere_center1, p]  , 4 , calibration_points_line_color, line_type = GL_LINES)
 
 			#calibration points
 			glutils.draw_points( self.cal_gaze_points1_3d , 4 , RGBA( 1, 0, 1, 1 ) )

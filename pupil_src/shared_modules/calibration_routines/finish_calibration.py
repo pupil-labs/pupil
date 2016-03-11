@@ -63,27 +63,34 @@ def finish_calibration(g_pool,pupil_list,ref_list):
     if mode == '3d':
         if matched_binocular_data:
             method = 'binocular 3d model'
-            ref_3d, gaze0_3d, gaze1_3d = calibrate.preprocess_3d_data(matched_binocular_data,
+            ref_dir, gaze0_dir, gaze1_dir = calibrate.preprocess_3d_data(matched_binocular_data,
                                             camera_intrinsics = camera_intrinsics )
 
-            if len(ref_3d) < 1 or len(gaze0_3d) < 1 or len(gaze1_3d) < 1:
+            if len(ref_dir) < 1 or len(gaze0_dir) < 1 or len(gaze1_dir) < 1:
                 logger.error(not_enough_data_error_msg)
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
             sphere_pos0 = pupil0[-1]['sphere']['center']
             sphere_pos1 = pupil1[-1]['sphere']['center']
-            initial_orientation0 = [ 0.05334223 , 0.93651217 , 0.07765971 ,  -0.33774033] #eye0
-            initial_orientation1 = [ 0.34200577 , 0.21628107 , 0.91189657 ,   0.06855066] #eye1
-            initial_translation0 = (10, 25, -10)
-            initial_translation1 = (-40, 25, -10)
+
+            initial_R0,initial_t0 = find_rigid_transform(np.array(gaze0_dir),np.array(ref_dir))
+            initial_orientation0 = math_helper.quaternion_from_rotation_matrix(initial_R0)
+            initial_translation0 = np.array(initial_t0).reshape(3)
+            # this problem is scale invariant so we scale to some sensical value.
+            initial_translation0 *= 30/np.linalg.norm(initial_translation0)
+
+            initial_R1,initial_t1 = find_rigid_transform(np.array(gaze1_dir),np.array(ref_dir))
+            initial_orientation1 = math_helper.quaternion_from_rotation_matrix(initial_R1)
+            initial_translation1 = np.array(initial_t1).reshape(3)
+            # this problem is scale invariant so we scale to some sensical value.
+            initial_translation0 *= 50/np.linalg.norm(initial_translation0)
 
 
             #this returns the translation of the eye and not of the camera coordinate system
             #need to take sphere position into account
-            #success, orientation, translation , avg_distance  = line_line_calibration(ref_3d,  gaze_3d, initial_orientation, initial_translation)
-            success0, orientation0, translation0 , _  = line_line_calibration(ref_3d,  gaze0_3d, initial_orientation0, initial_translation0 ,  use_weight = True)
-            success1, orientation1, translation1 , _  = line_line_calibration(ref_3d,  gaze1_3d, initial_orientation1, initial_translation1,  use_weight = True)
+            success0, orientation0, translation0 , solver_residual0  = line_line_calibration(ref_dir,  gaze0_dir, initial_orientation0, initial_translation0 , use_weight = True)
+            success1, orientation1, translation1 , solver_residual1  = line_line_calibration(ref_dir,  gaze1_dir, initial_orientation1, initial_translation1,  use_weight = True)
             orientation0 = np.array(orientation0)
             translation0 = np.array(translation0)
             orientation1 = np.array(orientation1)
@@ -98,8 +105,8 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
-            rotation_matrix0 = math_helper.quat2mat(orientation0)
-            rotation_matrix1 = math_helper.quat2mat(orientation1)
+            rotation_matrix0 = math_helper.quaternion_rotation_matrix(orientation0)
+            rotation_matrix1 = math_helper.quaternion_rotation_matrix(orientation1)
             # we need to take the sphere position into account
             # orientation and translation are referring to the sphere center.
             # but we wanna have it referring to the camera center
@@ -126,18 +133,17 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             avg_error = 0.0
             avg_gaze_distance = 0.0
             avg_ref_distance = 0.0
-            for i in range(0,len(ref_3d)):
-                ref_v = ref_3d[i]
-                gaze_direction0 = gaze0_3d[i]
+            for i in range(0,len(ref_dir)):
+                ref_v = ref_dir[i]
+                gaze_direction0 = gaze0_dir[i]
                 gaze_direction_world0 = np.dot(rotation_matrix0, gaze_direction0)
                 gaze_line0 = ( translation0 , translation0 + gaze_direction_world0 )
 
-                gaze_direction1 = gaze1_3d[i]
+                gaze_direction1 = gaze1_dir[i]
                 gaze_direction_world1 = np.dot(rotation_matrix1, gaze_direction1)
                 gaze_line1 = ( translation1 , translation1 + gaze_direction_world1 )
 
                 ref_line = ( np.zeros(3) , ref_v )
-
 
                 r0, _ , _ = math_helper.nearest_intersection_points(ref_line , gaze_line0)
                 r1, _ , _ = math_helper.nearest_intersection_points(ref_line , gaze_line1)
@@ -155,9 +161,9 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 avg_gaze_distance += (np.linalg.norm(gaze0_point_world) + np.linalg.norm(gaze1_point_world) ) * 0.5
 
 
-            avg_error /= len(ref_3d)
-            avg_gaze_distance /= len(ref_3d)
-            avg_ref_distance /= len(ref_3d)
+            avg_error /= len(ref_dir)
+            avg_gaze_distance /= len(ref_dir)
+            avg_ref_distance /= len(ref_dir)
             avg_distance = (avg_ref_distance + avg_gaze_distance) * 0.5
             logger.info('calibration average error: %s'%avg_error)
             logger.info('calibration average distance: %s'%avg_distance)

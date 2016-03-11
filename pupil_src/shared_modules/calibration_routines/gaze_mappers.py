@@ -183,7 +183,7 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.menu = ui.Growing_Menu('Monocular 3D gaze mapper')
         self.g_pool.sidebar.insert(3,self.menu)
         self.menu.append(ui.Switch('debug window',setter=self.open_close_window, getter=lambda: bool(self.visualizer.window) ))
-        self.menu.append(ui.Slider('gaze_distance',self,min=100,max=5000,label='gaze distance mm'))
+        self.menu.append(ui.Slider('gaze_distance',self,min=50,max=2000,label='gaze distance mm'))
 
 
     def update(self,frame,events):
@@ -333,7 +333,7 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         point[:3] = p[:3]
         return np.dot(self.eye_camera_to_world_matrix1 , point)[:3]
 
-    def map_binocular(self, pupil_pts_0, pupil_pts_1 ,frame ):
+    def map_binocular_intersect(self, pupil_pts_0, pupil_pts_1 ,frame ):
         # maps gaze with binocular mapping
         # requires each list to contain at least one item!
         # returns 1 gaze point at minimum
@@ -407,6 +407,89 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
         return gaze_pts
 
+    def map_binocular(self, pupil_pts_0, pupil_pts_1 ,frame ):
+        # maps gaze with binocular mapping
+        # requires each list to contain at least one item!
+        # returns 1 gaze point at minimum
+        gaze_pts = []
+        p0 = pupil_pts_0.pop(0)
+        p1 = pupil_pts_1.pop(0)
+        while True:
+
+
+            #find the nearest intersection point of the two gaze lines
+            # a line is defined by two point
+            gaze_line0 = [np.zeros(4), np.zeros(4)]
+            gaze_line0[0][:3] =  np.array( p0['sphere']['center'] )
+            gaze_line0[1][:3] =  np.array( p0['sphere']['center'] ) + np.array(p0['circle3D']['normal'] ) * self.manual_gaze_distance
+
+            gaze_line1 = [np.zeros(4), np.zeros(4)]
+            gaze_line1[0][:3] =   np.array( p1['sphere']['center'] )
+            gaze_line1[1][:3] = np.array( p1['sphere']['center'] ) + np.array( p1['circle3D']['normal'] ) * self.manual_gaze_distance
+
+            #transform lines to world-coordinate system
+            gaze_line_world0 = [np.zeros(3), np.zeros(3)]
+            gaze_line_world0[0] = np.squeeze(np.asarray(self.eye_camera_to_world_matrix0.dot(gaze_line0[0])))[:3]
+            gaze_line_world0[1] = np.squeeze(np.asarray(self.eye_camera_to_world_matrix0.dot(gaze_line0[1])))[:3]
+
+            gaze_line_world1 = [np.zeros(3), np.zeros(3)]
+            gaze_line_world1[0] = np.squeeze(np.asarray( self.eye_camera_to_world_matrix1.dot(gaze_line1[0])))[:3]
+            gaze_line_world1[1] = np.squeeze(np.asarray( self.eye_camera_to_world_matrix1.dot(gaze_line1[1])))[:3]
+
+            # for debug
+            self.gaze_pts_debug0.append(  gaze_line_world0[1][:3] )
+            self.gaze_pts_debug1.append(  gaze_line_world1[1][:3] )
+
+            # nearest_intersection_point , intersection_distance = self.nearest_intersection( gaze_line_world0, gaze_line_world1 )
+            nearest_intersection_point = None
+            if nearest_intersection_point is not None :
+                pass
+            else:
+                #for now we are overwriting the gaze poinr tthough intersection.
+                nearest_intersection_point = gaze_line_world0[1] - gaze_line_world1[1]
+                nearest_intersection_point /=2.
+                nearest_intersection_point += gaze_line_world1[1]
+
+                self.intersection_points_debug.append( nearest_intersection_point )
+
+                # print nearest_intersection_point,gaze_line0[1][:3] ,gaze_line1[1][:3]
+                self.last_gaze_distance = np.sqrt( nearest_intersection_point.dot( nearest_intersection_point ) )
+                #print 'last_gaze_distance: ' , self.last_gaze_distance
+
+                image_point, _  =  cv2.projectPoints( np.array([nearest_intersection_point]) ,  np.array([0.0,0.0,0.0]) ,  np.array([0.0,0.0,0.0]) , self.camera_matrix , self.dist_coefs )
+                image_point = image_point.reshape(-1,2)
+                image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
+
+                confidence = (p0['confidence'] + p1['confidence'])/2.
+                ts = (p0['timestamp'] + p1['timestamp'])/2.
+                gaze_pts.append({'norm_pos':image_point,'confidence':confidence,'timestamp':ts,'base':[p0, p1]})
+
+            # else:
+            #     print 'no intersection point found'
+
+
+
+            self.sphere0['center'] = self.eye0_to_World(p0['sphere']['center']) #eye camera coordinates
+            self.sphere0['radius'] = p0['sphere']['radius']
+            self.sphere1['center'] = self.eye1_to_World(p1['sphere']['center']) #eye camera coordinates
+            self.sphere1['radius'] = p1['sphere']['radius']
+
+
+            # keep sample with higher timestamp and increase the one with lower timestamp
+            if p0['timestamp'] <= p1['timestamp'] and pupil_pts_0:
+                p0 = pupil_pts_0.pop(0)
+                continue
+            elif p1['timestamp'] <= p0['timestamp'] and pupil_pts_1:
+                p1 = pupil_pts_1.pop(0)
+                continue
+            elif pupil_pts_0 and not pupil_pts_1:
+                p0 = pupil_pts_0.pop(0)
+            elif pupil_pts_1 and not pupil_pts_0:
+                p1 = pupil_pts_1.pop(0)
+            else:
+                break
+
+        return gaze_pts
 
     def gl_display(self):
         self.visualizer.update_window( self.g_pool , self.gaze_pts_debug0 , self.sphere0, self.gaze_pts_debug1, self.sphere1, self.intersection_points_debug )
