@@ -225,7 +225,7 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
 class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     """docstring for Vector_Gaze_Mapper"""
-    def __init__(self, g_pool, eye_camera_to_world_matrix0, eye_camera_to_world_matrix1 , camera_intrinsics , cal_ref_points_3d = [], cal_gaze_points0_3d = [], cal_gaze_points1_3d = [] ):
+    def __init__(self, g_pool, eye_camera_to_world_matrix0, eye_camera_to_world_matrix1 , camera_intrinsics , cal_ref_points_3d = [], cal_gaze_points0_3d = [], cal_gaze_points1_3d = [],manual_gaze_distance = 500 ):
         super(Binocular_Vector_Gaze_Mapper, self).__init__(g_pool)
 
         self.eye_camera_to_world_matrix0  =  eye_camera_to_world_matrix0
@@ -256,7 +256,7 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.sphere0 = {}
         self.sphere1 = {}
         self.last_gaze_distance = 0.0
-        self.manual_gaze_distance = 500
+        self.manual_gaze_distance = manual_gaze_distance
 
 
 
@@ -270,6 +270,7 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     def init_gui(self):
         self.menu = ui.Growing_Menu('Binocular 3D gaze mapper')
         self.g_pool.sidebar.insert(3,self.menu)
+        self.menu.append(ui.Slider('manual_gaze_distance',self,min=50,max=2000,label='gaze distance mm'))
         self.menu.append(ui.Switch('debug window',setter=self.open_close_window, getter=lambda: bool(self.visualizer.window) ))
 
 
@@ -498,7 +499,7 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
         self.intersection_points_debug = []
 
     def get_init_dict(self):
-       return {'eye_camera_to_world_matrix0':self.eye_camera_to_world_matrix0 ,'eye_camera_to_world_matrix1':self.eye_camera_to_world_matrix1 ,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points0_3d':self.cal_gaze_points0_3d, 'cal_gaze_points1_3d':self.cal_gaze_points1_3d,  "camera_intrinsics":self.camera_intrinsics }
+       return {'eye_camera_to_world_matrix0':self.eye_camera_to_world_matrix0 ,'eye_camera_to_world_matrix1':self.eye_camera_to_world_matrix1 ,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points0_3d':self.cal_gaze_points0_3d, 'cal_gaze_points1_3d':self.cal_gaze_points1_3d,  "camera_intrinsics":self.camera_intrinsics,'manual_gaze_distance':self.manual_gaze_distance }
 
 
     def deinit_gui(self):
