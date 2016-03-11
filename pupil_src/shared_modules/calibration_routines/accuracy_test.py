@@ -132,7 +132,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
                         (1., 0),(.5, 0),(0,0.),
                         (.5,.5),(.5,.5)]
         self.sites = np.random.random((10,2)).tolist() + self.sites
-        self.active_site = 0
+        self.active_site = self.sites.pop(0)
         self.active = True
         self.ref_list = []
         self.pupil_list = [] #we dont use it only here becasue we use update fn from parent

@@ -293,7 +293,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.stop()
                     return
                 self.active_site = self.sites.pop(0)
-                logger.debug("Moving screen marker to site at %s %s"%self.active_site)
+                logger.debug("Moving screen marker to site at %s %s"%tuple(self.active_site))
 
 
 
