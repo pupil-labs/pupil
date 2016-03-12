@@ -105,9 +105,9 @@ struct ReprojectionError {
         ceres::AngleAxisRotatePoint(orientation, point, p);
 
         // camera[3,4,5] are the translation.
-        p[0] += translation[3];
-        p[1] += translation[4];
-        p[2] += translation[5];
+        p[0] += translation[0];
+        p[1] += translation[1];
+        p[2] += translation[2];
 
 
         // Normalize / project back to unit sphere
