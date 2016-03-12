@@ -95,18 +95,19 @@ struct ReprojectionError {
       : observed_dir(observed_dir) {}
 
   template <typename T>
-  bool operator()(const T* const camera,
+  bool operator()(const T* const orientation,
+                  const T* const translation,
                   const T* const point,
                   T* residuals) const {
 
         // camera[0,1,2] are the angle-axis rotation.
         T p[3];
-        ceres::AngleAxisRotatePoint(camera, point, p);
+        ceres::AngleAxisRotatePoint(orientation, point, p);
 
         // camera[3,4,5] are the translation.
-        p[0] += camera[3];
-        p[1] += camera[4];
-        p[2] += camera[5];
+        p[0] += translation[3];
+        p[1] += translation[4];
+        p[2] += translation[5];
 
 
         // Normalize / project back to unit sphere
@@ -131,7 +132,7 @@ struct ReprojectionError {
 // Factory to hide the construction of the CostFunction object from
   // the client code.
   static ceres::CostFunction* Create(const Vector3 observed_dir ) {
-    return (new ceres::AutoDiffCostFunction<ReprojectionError, 3, 7, 3>(
+    return (new ceres::AutoDiffCostFunction<ReprojectionError, 3, 4, 3, 3>(
                 new ReprojectionError(observed_dir)));
   }
 
@@ -181,23 +182,19 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
             problem.AddResidualBlock(cost_function,
                                      NULL /* squared loss */,
                                      camera,
+                                     camera+4,
                                      predicted_points[index].data() );
             index++;
 
         }
 
-        ceres::LocalParameterization* quaternionParameterization = new pupillabs::EigenQuaternionParameterization; // owned by the problem
+        ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
         problem.SetParameterization(camera, quaternionParameterization);
 
         if (fixTranslation)
         {
-            std::vector<int> constant_translation;
-            // First four elements are rotation, last three are translation.
-            constant_translation.push_back(4);
-            constant_translation.push_back(5);
-            constant_translation.push_back(6);
-            ceres::SubsetParameterization *constantTranslation = new ceres::SubsetParameterization(7, constant_translation);
-            problem.SetParameterization(camera, constantTranslation);
+            problem.SetParameterBlockConstant(camera+4) ;
+
         }else{
 
             ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
@@ -209,6 +206,7 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
             // first observation is world camera
             // fix translation and orientation
             problem.SetParameterBlockConstant(camera) ;
+            problem.SetParameterBlockConstant(camera+4) ;
             lockedCamera = true;
         }
 
