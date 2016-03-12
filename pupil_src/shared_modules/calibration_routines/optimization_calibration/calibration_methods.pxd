@@ -41,6 +41,10 @@ cdef extern from 'common.h':
     ctypedef Matrix31d Vector3
     ctypedef Matrix21d Vector2
 
+    cdef cppclass Observation "Observation": # eigen defaults to column major layout
+        Observation() except +
+        vector[Vector3] dirs
+        double[7] camera
 
 cdef extern from 'pointLineCalibration.h':
 
@@ -51,5 +55,5 @@ cdef extern from 'pointLineCalibration.h':
 
 cdef extern from 'lineLineCalibration.h':
 
-    bint lineLineCalibration( const vector[Vector3]& refDirections,const vector[Vector3]& gazeDirections,  Quaterniond& orientation ,
-                                 Vector3& translation, double& avgDistance, bint fixTranslation, bint useWeight )
+    bint bundleAdjustCalibration( const vector[Observation]& observation,
+                                double& avgDistance, vector[double[7]]& cameras, bint fixTranslation, bint useWeight  )

@@ -46,31 +46,81 @@ def point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D ,
     return success, cpp_orientation, cpp_translation
 
 
-def line_line_calibration( ref_directions_3D, gaze_directions_3D , initial_orientation , initial_translation , fix_translation = False , use_weight = True):
+# def line_line_calibration( ref_directions_3D, gaze_directions_3D , initial_orientation , initial_translation , fix_translation = False , use_weight = True):
 
 
-    cdef vector[Vector3] cpp_ref_directions
-    cdef vector[Vector3] cpp_gaze_directions
-    for p in ref_directions_3D:
-        cpp_ref_directions.push_back(Vector3(p[0],p[1],p[2]))
+#     cdef vector[Vector3] cpp_ref_directions
+#     cdef vector[Vector3] cpp_gaze_directions
+#     for p in ref_directions_3D:
+#         cpp_ref_directions.push_back(Vector3(p[0],p[1],p[2]))
 
-    for p in gaze_directions_3D:
-        cpp_gaze_directions.push_back(Vector3(p[0],p[1],p[2]))
+#     for p in gaze_directions_3D:
+#         cpp_gaze_directions.push_back(Vector3(p[0],p[1],p[2]))
 
 
-    cdef Quaterniond cpp_orientation
-    cdef Vector3 cpp_translation
-    cpp_orientation = Quaterniond(initial_orientation[0],initial_orientation[1],initial_orientation[2],initial_orientation[3] )
-    cpp_translation = Vector3(initial_translation[0],initial_translation[1],initial_translation[2] )
+#     cdef Quaterniond cpp_orientation
+#     cdef Vector3 cpp_translation
+#     cpp_orientation = Quaterniond(initial_orientation[0],initial_orientation[1],initial_orientation[2],initial_orientation[3] )
+#     cpp_translation = Vector3(initial_translation[0],initial_translation[1],initial_translation[2] )
+
+#     cdef double avgDistance = 0.0
+
+#     ## optimized values are written to cpp_orientation and cpp_translation
+#     cdef bint success  = lineLineCalibration(cpp_ref_directions, cpp_gaze_directions,
+#                                              cpp_orientation, cpp_translation, avgDistance, fix_translation, use_weight )
+
+
+#     orientation = ( cpp_orientation.w(),cpp_orientation.x(),cpp_orientation.y(),cpp_orientation.z() )
+#     translation = ( cpp_translation[0],cpp_translation[1],cpp_translation[2] )
+
+#     return success, orientation, translation , avgDistance
+
+
+def bundle_adjust_calibration( observations, fix_translation = False , use_weight = True):
 
     cdef double avgDistance = 0.0
 
+
+    cdef vector[Observation] cpp_observations;
+
+    cdef Observation cpp_observation
+    cdef double cpp_camera[7]
+    cdef vector[Vector3] cpp_dir
+
+    for o in observations:
+        directions = o["directions"]
+        translation = o["translation"]
+        orientation = o["orientation"]
+
+        cpp_camera[0] = orientation[0]
+        cpp_camera[1] = orientation[1]
+        cpp_camera[2] = orientation[2]
+        cpp_camera[3] = orientation[3]
+        cpp_camera[4] = translation[0]
+        cpp_camera[5] = translation[1]
+        cpp_camera[6] = translation[2]
+
+        cpp_dir.clear()
+        for p in directions:
+            cpp_dir.push_back(Vector3(p[0],p[1],p[2]))
+
+        cpp_observation = Observation()
+        cpp_observation.dirs = cpp_dir
+        cpp_observation.camera = cpp_camera
+        cpp_observations.push_back( cpp_observation )
+
+    cdef vector[double[7]] camera_results
+    cdef double[7] camera
     ## optimized values are written to cpp_orientation and cpp_translation
-    cdef bint success  = lineLineCalibration(cpp_ref_directions, cpp_gaze_directions,
-                                             cpp_orientation, cpp_translation, avgDistance, fix_translation, use_weight )
+    cdef bint success  = bundleAdjustCalibration(cpp_observations, avgDistance, camera_results,  fix_translation, use_weight,  )
+
+    orientations = []
+    translations = []
+
+    for i in camera_results.size():
+        camera = camera_results.at(i)
+        orientations.append( (camera[0],camera[1],camera[2],camera[3] ) )
+        translations.append( (camera[4],camera[5],camera[6] ) )
 
 
-    orientation = ( cpp_orientation.w(),cpp_orientation.x(),cpp_orientation.y(),cpp_orientation.z() )
-    translation = ( cpp_translation[0],cpp_translation[1],cpp_translation[2] )
-
-    return success, orientation, translation , avgDistance
+    return success, orientations, translations , avgDistance

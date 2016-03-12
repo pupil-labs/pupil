@@ -198,16 +198,21 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             # this problem is scale invariant so we scale to some sensical value.
             initial_translation *= 30/np.linalg.norm(initial_translation)
 
+
+            o1 = { "directions" : ref_dir , "translation" : (0,0,0) , "orientation" , (1,0,0,0)  }
+            o2 = { "directions" : gaze_dir , "translation" : initial_translation , "orientation" , initial_orientation  }
+            observations = [o1, o2]
+
             #this returns the translation of the eye and not of the camera coordinate system
             #need to take sphere position into account
-            success, orientation, translation , avg_distance  = line_line_calibration(ref_dir,  gaze_dir, initial_orientation, initial_translation , use_weight = True )
+            success, orientations, translations , avg_distance  = bundle_adjust_calibration(observations , use_weight = True )
             print 'solver_residual: ',avg_distance
             # overwrite solution with intial guess
             # success, orientation, translation , avg_distance = True, initial_orientation,initial_translation,-1
 
 
-            orientation = np.array(orientation)
-            translation = np.array(translation)
+            orientation = np.array(orientations[1]) #first one is fixed world camera
+            translation = np.array(translations[1]) #first one is fixed world camera
             # print 'orientation: ' , orientation
             # print 'translation: ' , translation
             # print 'avg distance: ' , avg_distance

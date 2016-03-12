@@ -92,8 +92,7 @@ struct CoplanarityError {
 
 
 
-bool lineLineCalibration(std::vector<Vector3>& refDirections, std::vector<Vector3>& gazeDirections ,
-    Eigen::Quaterniond& orientation, Vector3& translation, double& avgDistance, bool fixTranslation = false, bool useWeight = true )
+bool bundleAdjustCalibration( std::vector<Observation>, double& avgDistance, std::vector<double[7]>& cameras,  bool fixTranslation = false, bool useWeight = true )
 {
 
     double n = translation.norm();
