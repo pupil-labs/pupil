@@ -16,7 +16,7 @@ import math_helper
 from file_methods import load_object,save_object
 from camera_intrinsics_estimation import load_camera_calibration
 
-from optimization_calibration import point_line_calibration , line_line_calibration
+from optimization_calibration import point_line_calibration  , bundle_adjust_calibration
 from calibrate import find_rigid_transform
 #logging
 import logging
@@ -199,8 +199,8 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             initial_translation *= 30/np.linalg.norm(initial_translation)
 
 
-            o1 = { "directions" : ref_dir , "translation" : (0,0,0) , "orientation" , (1,0,0,0)  }
-            o2 = { "directions" : gaze_dir , "translation" : initial_translation , "orientation" , initial_orientation  }
+            o1 = { "directions" : ref_dir , "translation" : (0,0,0) , "orientation" : (1,0,0,0)  }
+            o2 = { "directions" : gaze_dir , "translation" : initial_translation , "orientation" : initial_orientation  }
             observations = [o1, o2]
 
             #this returns the translation of the eye and not of the camera coordinate system

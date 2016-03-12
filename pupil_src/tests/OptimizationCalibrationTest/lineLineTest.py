@@ -2,7 +2,7 @@ import os, sys, platform
 loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
 sys.path.append(os.path.join(loc[0], 'pupil_src', 'shared_modules'))
 
-from calibration_routines.optimization_calibration import  line_line_calibration
+from calibration_routines.optimization_calibration import  bundle_adjust_calibration
 
 import numpy as np
 import math
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         factor = 0 #randomize point in eye space
         pr = p + np.array( (uniform(-factor,+factor),uniform(-factor,+factor),uniform(-factor,+factor))  )
         p2 = toEye(pr) # to cam2 coordinate system
-        # p2 *= 1.2,1.3,1.0
+        p2 *= 1.2,1.3,1.0
         cam2_points.append(p2)
 
     sphere_position = (0,0,0)
@@ -111,9 +111,15 @@ if __name__ == '__main__':
     initial_translation = np.array(initial_t).reshape(3)
     initial_translation *= np.linalg.norm(cam2_center)/np.linalg.norm(initial_translation)
 
+    o1 = { "directions" : cam1_dir , "translation" : (0,0,0) , "orientation" : (1,0,0,0)  }
+    o2 = { "directions" : cam2_dir , "translation" : initial_translation , "orientation" : initial_rotation  }
+    observations = [o1, o2]
 
+    success, rotations, translations, avg_distance = bundle_adjust_calibration( observations , fix_translation = False, use_weight = True  )
 
-    success, rotation, translation, avg_distance = line_line_calibration( cam1_dir, cam2_dir , initial_rotation , initial_translation , fix_translation = False, use_weight = True  )
+    rotation = rotations[1]
+    translation = translations[1]
+    #success, rotation, translation, avg_distance = line_line_calibration( cam1_dir, cam2_dir , initial_rotation , initial_translation , fix_translation = False, use_weight = True  )
     # success2, rotation2, translation2, avg_distance2 = line_line_calibration( cam1_dir, cam2_dir , initial_rotation , initial_translation , fix_translation = False , use_weight = True  )
     success2, rotation2, translation2, avg_distance2 = True,initial_rotation,initial_translation,-1
     from multiprocessing import Process
