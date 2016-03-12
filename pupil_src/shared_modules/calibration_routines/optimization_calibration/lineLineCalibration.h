@@ -100,9 +100,8 @@ struct ReprojectionError {
                   const T* const point,
                   T* residuals) const {
 
-        // camera[0,1,2] are the angle-axis rotation.
         T p[3];
-        ceres::AngleAxisRotatePoint(orientation, point, p);
+        ceres::QuaternionRotatePoint(orientation, point, p);
 
         // camera[3,4,5] are the translation.
         p[0] += translation[0];
@@ -119,9 +118,9 @@ struct ReprojectionError {
         // should the residual be the distance squared between the directions or better the angle ?
 
         // The error is the difference between the predicted and observed position.
-        residuals[0] = p[0] - observed_dir[0];
-        residuals[1] = p[1] - observed_dir[1];
-        residuals[2] = p[2] - observed_dir[2];
+        residuals[0] = p[0] - T(observed_dir[0]);
+        residuals[1] = p[1] - T(observed_dir[1]);
+        residuals[2] = p[2] - T(observed_dir[2]);
 
         // residuals[0] = predicted_x - T(observed_x);
         // residuals[1] = predicted_y - T(observed_y);
@@ -147,7 +146,7 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
     std::vector<Vector3> predicted_points;
     std::vector<double> translationLenghts;
     // calculate the predicted points form the dir of the world camera
-    // world camera is the firs one in observations
+    // world camera is the first one in observations
 
     for( auto& dir : observations.at(0).dirs ){
         dir.normalize(); // to be sure
@@ -156,20 +155,20 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
         std::cout << "p: " <<predicted_points.back()  << std::endl;
     }
 
-    for( auto& obs : observations){
+    // for( auto& obs : observations){
 
-        std::vector<double>& camera = obs.camera;
+    //     std::vector<double>& camera = obs.camera;
 
-        double length = std::sqrt(  camera[4]*camera[4]+ camera[5]*camera[5] + camera[6]*camera[6]);
-        if (length > 0.0)
-        {
-            camera[4] /= length;
-            camera[5] /= length;
-            camera[6] /= length;
-        }
+    //     double length = std::sqrt(  camera[4]*camera[4]+ camera[5]*camera[5] + camera[6]*camera[6]);
+    //     if (length > 0.0)
+    //     {
+    //         camera[4] /= length;
+    //         camera[5] /= length;
+    //         camera[6] /= length;
+    //     }
 
-        translationLenghts.push_back(length);
-    }
+    //     translationLenghts.push_back(length);
+    // }
 
 
     bool lockedCamera = false;
@@ -214,58 +213,15 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
             {
                 problem.SetParameterBlockConstant(camera+4) ;
 
-            }else{
+             }//else{
 
-                ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
-                problem.SetParameterization(camera+4, normedTranslationParameterization);
-            }
+            //     ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
+            //     problem.SetParameterization(camera+4, normedTranslationParameterization);
+            // }
 
         }
 
     }
-
-    // double epsilon = std::numeric_limits<double>::epsilon();
-
-    // for(int i=0; i<refDirections.size(); i++) {
-
-    //     auto& gaze = gazeDirections.at(i);
-    //     auto& ref = refDirections.at(i);
-    //     gaze.normalize(); //just to be sure
-    //     ref.normalize(); //just to be sure
-
-    //     // do a check to handle parameters we can't solve
-    //     // First: the length of the directions must not be zero
-    //     // Second: the angle between gaze direction and reference direction must not be greater 90 degrees, considering the initial orientation
-    //     bool valid = true;
-    //     valid &= gaze.norm() >= epsilon;
-    //     valid &= ref.norm() >= epsilon;
-    //     valid &= (orientation*gaze).dot(ref) >= epsilon;
-
-    //     if( valid ){
-
-    //         CostFunction* cost = new AutoDiffCostFunction<CoplanarityError , 1, 4, 3 >(new CoplanarityError(ref, gaze, useWeight ));
-    //         // TODO use a loss function, to handle gaze point outliers
-    //         problem.AddResidualBlock(cost, nullptr, orientation.coeffs().data() ,  translation.data() );
-    //     }else{
-    //         std::cout << "no valid direction vector"  << std::endl;
-    //     }
-    // }
-
-    // if( problem.NumResidualBlocks() == 0 ){
-    //     std::cout << "nothing to solve"  << std::endl;
-    //     return false;
-    // }
-
-    // ceres::LocalParameterization* quaternionParameterization = new pupillabs::EigenQuaternionParameterization; // owned by the problem
-    // problem.SetParameterization(orientation.coeffs().data(), quaternionParameterization);
-
-    // ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
-    // problem.SetParameterization(translation.data(), normedTranslationParameterization);
-
-    // if (fixTranslation)
-    // {
-    //     problem.SetParameterBlockConstant(translation.data());
-    // }
 
     // Build and solve the problem.
     Solver::Options options;
@@ -294,12 +250,12 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
     //get result
     for( int i=0; i < observations.size(); i++){
 
-        double length = translationLenghts.at(i);
+        //double length = translationLenghts.at(i);
         std::vector<double>& camera = observations.at(i).camera;
 
-        camera[4] *= length;
-        camera[5] *= length;
-        camera[6] *= length;
+        // camera[4] *= length;
+        // camera[5] *= length;
+        // camera[6] *= length;
         std::cout << "ceres orientation: " << camera[0] << " "<< camera[1] << " "<< camera[2] << " " << camera[3] << std::endl;
         cameras.push_back( observations.at(i).camera );
 
