@@ -22,7 +22,7 @@ typedef Eigen::Matrix<double, 3, 1> Vector3;
 struct Observation{
 
     std::vector<Vector3> dirs;
-    double camera[7];
+    std::vector<double> camera;
 
 };
 
