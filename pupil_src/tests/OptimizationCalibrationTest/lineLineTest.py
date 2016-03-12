@@ -99,7 +99,7 @@ if __name__ == '__main__':
         factor = 0 #randomize point in eye space
         pr = p + np.array( (uniform(-factor,+factor),uniform(-factor,+factor),uniform(-factor,+factor))  )
         p2 = toEye(pr) # to cam2 coordinate system
-        p2 *= 1.2,1.3,1.0
+       # p2 *= 1.2,1.3,1.0
         cam2_points.append(p2)
 
     sphere_position = (0,0,0)
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     initial_translation = np.array(initial_t).reshape(3)
     initial_translation *= np.linalg.norm(cam2_center)/np.linalg.norm(initial_translation)
 
-    o1 = { "directions" : cam1_dir , "translation" : (0,0,0) , "orientation" : (1,0,0,0)  }
+    o1 = { "directions" : cam1_dir , "translation" : [0,0,0] , "orientation" : [1,0,0,0]  }
     o2 = { "directions" : cam2_dir , "translation" : initial_translation , "orientation" : initial_rotation  }
     observations = [o1, o2]
 

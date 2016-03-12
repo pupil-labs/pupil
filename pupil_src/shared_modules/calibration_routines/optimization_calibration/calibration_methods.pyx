@@ -118,7 +118,7 @@ def bundle_adjust_calibration( observations, fix_translation = False , use_weigh
     orientations = []
     translations = []
 
-    for i in camera_results.size():
+    for i in range(0,camera_results.size() ):
         camera = camera_results.at(i)
         orientations.append( (camera[0],camera[1],camera[2],camera[3] ) )
         translations.append( (camera[4],camera[5],camera[6] ) )

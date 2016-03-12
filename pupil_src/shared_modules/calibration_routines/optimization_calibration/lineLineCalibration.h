@@ -149,19 +149,26 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
     // calculate the predicted points form the dir of the world camera
     // world camera is the firs one in observations
 
-    for( const auto& dir : observations.at(0).dirs ){
+    for( auto& dir : observations.at(0).dirs ){
+        dir.normalize(); // to be sure
         predicted_points.push_back( dir * 500.0 );
+        std::cout << "p0: " <<dir  << std::endl;
+        std::cout << "p: " <<predicted_points.back()  << std::endl;
     }
 
     for( auto& obs : observations){
 
         std::vector<double>& camera = obs.camera;
 
-        double lenght = std::sqrt(  camera[4]*camera[4]+ camera[5]*camera[5] + camera[6]*camera[6]);
-        camera[4] /= lenght;
-        camera[5] /= lenght;
-        camera[6] /= lenght;
-        translationLenghts.push_back(lenght);
+        double length = std::sqrt(  camera[4]*camera[4]+ camera[5]*camera[5] + camera[6]*camera[6]);
+        if (length > 0.0)
+        {
+            camera[4] /= length;
+            camera[5] /= length;
+            camera[6] /= length;
+        }
+
+        translationLenghts.push_back(length);
     }
 
 
@@ -179,6 +186,8 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
             ceres::CostFunction* cost_function =
                 ReprojectionError::Create(dir);
 
+            std::cout << "orientation: " <<  camera[0] << " " << camera[1] << " " << camera[2] << " " << camera[3] << std::endl;
+            std::cout << "translation: " <<  camera[4] << " " << camera[5] << " " << camera[6] << std::endl;
             problem.AddResidualBlock(cost_function,
                                      NULL /* squared loss */,
                                      camera,
@@ -188,19 +197,6 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
 
         }
 
-        ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
-        problem.SetParameterization(camera, quaternionParameterization);
-
-        if (fixTranslation)
-        {
-            problem.SetParameterBlockConstant(camera+4) ;
-
-        }else{
-
-            ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
-            problem.SetParameterization(camera+4, normedTranslationParameterization);
-        }
-
 
         if(!lockedCamera){
             // first observation is world camera
@@ -208,25 +204,25 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
             problem.SetParameterBlockConstant(camera) ;
             problem.SetParameterBlockConstant(camera+4) ;
             lockedCamera = true;
+        }else{
+
+
+            ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
+            problem.SetParameterization(camera, quaternionParameterization);
+
+            if (fixTranslation)
+            {
+                problem.SetParameterBlockConstant(camera+4) ;
+
+            }else{
+
+                ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
+                problem.SetParameterization(camera+4, normedTranslationParameterization);
+            }
+
         }
 
     }
-
-
-    //get result
-    for( int i=0; i < observations.size(); i++){
-
-        double length = translationLenghts.at(i);
-        std::vector<double>& camera = observations.at(i).camera;
-
-        camera[4] *= length;
-        camera[5] *= length;
-        camera[6] *= length;
-        cameras.push_back( observations.at(i).camera );
-
-    }
-
-
 
     // double epsilon = std::numeric_limits<double>::epsilon();
 
@@ -273,15 +269,15 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
 
     // Build and solve the problem.
     Solver::Options options;
-    options.max_num_iterations = 3000;
-    options.linear_solver_type = ceres::DENSE_QR;
+    //options.max_num_iterations = 3000;
+    options.linear_solver_type = ceres::DENSE_SCHUR;
 
-    options.parameter_tolerance = 1e-25;
-    options.function_tolerance = 1e-26;
-    options.gradient_tolerance = 1e-30;
-    //options.minimizer_progress_to_stdout = true;
+    //options.parameter_tolerance = 1e-25;
+    //options.function_tolerance = 1e-26;
+    //options.gradient_tolerance = 1e-30;
+    options.minimizer_progress_to_stdout = true;
     //options.logging_type = ceres::SILENT;
-    //options.check_gradients = true;
+    options.check_gradients = true;
 
 
     Solver::Summary summary;
@@ -294,6 +290,22 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
         std::cout << "Termination Error: " << ceres::TerminationTypeToString(summary.termination_type) << std::endl;
         return false;
     }
+
+    //get result
+    for( int i=0; i < observations.size(); i++){
+
+        double length = translationLenghts.at(i);
+        std::vector<double>& camera = observations.at(i).camera;
+
+        camera[4] *= length;
+        camera[5] *= length;
+        camera[6] *= length;
+        std::cout << "ceres orientation: " << camera[0] << " "<< camera[1] << " "<< camera[2] << " " << camera[3] << std::endl;
+        cameras.push_back( observations.at(i).camera );
+
+    }
+
+
 
     //rescale the translation according to the initial translation
     // translation *= n;
