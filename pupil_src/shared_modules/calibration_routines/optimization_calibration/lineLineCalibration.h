@@ -137,7 +137,7 @@ struct ReprojectionError {
   Vector3 observed_dir;
 };
 
-bool bundleAdjustCalibration( std::vector<Observation> observations, std::vector<Vector3> predicted_points, std::vector<std::vector<double>>& cameras,  bool fixTranslation = false, bool useWeight = true )
+bool bundleAdjustCalibration( std::vector<Observation> observations, std::vector<Vector3>& predicted_points, std::vector<std::vector<double>>& cameras,  bool fixTranslation = false, bool useWeight = true )
 {
 
 
@@ -178,7 +178,7 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, std::vector
             // fix translation and orientation
             problem.SetParameterBlockConstant(camera) ;
             problem.SetParameterBlockConstant(camera+4) ;
-            // lockedCamera = true;
+            lockedCamera = true;
         }else{
 
 
@@ -201,15 +201,15 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, std::vector
 
     // Build and solve the problem.
     Solver::Options options;
-    //options.max_num_iterations = 3000;
+    options.max_num_iterations = 1000;
     options.linear_solver_type = ceres::DENSE_SCHUR;
 
     //options.parameter_tolerance = 1e-25;
     //options.function_tolerance = 1e-26;
     //options.gradient_tolerance = 1e-30;
-    // options.minimizer_progress_to_stdout = true;
+    options.minimizer_progress_to_stdout = true;
     //options.logging_type = ceres::SILENT;
-    // options.check_gradients = true;
+    options.check_gradients = true;
 
 
     Solver::Summary summary;

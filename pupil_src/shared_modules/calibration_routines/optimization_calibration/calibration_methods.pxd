@@ -55,5 +55,5 @@ cdef extern from 'pointLineCalibration.h':
 
 cdef extern from 'lineLineCalibration.h':
 
-    bint bundleAdjustCalibration( const vector[Observation]& observation,
-                                double& avgDistance, vector[vector[double]]& cameras, bint fixTranslation, bint useWeight  )
+    bint bundleAdjustCalibration( const vector[Observation]& observation, vector[Vector3]& points,
+                                 vector[vector[double]]& cameras, bint fixTranslation, bint useWeight  )

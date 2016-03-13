@@ -78,7 +78,6 @@ def point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D ,
 
 def bundle_adjust_calibration( observations, fix_translation = False , use_weight = True):
 
-    cdef double avgDistance = 0.0
 
 
     cdef vector[Observation] cpp_observations;
@@ -111,6 +110,11 @@ def bundle_adjust_calibration( observations, fix_translation = False , use_weigh
         cpp_observation.camera = cpp_camera
         cpp_observations.push_back( cpp_observation )
 
+
+    for p in observations[0]["directions"]:
+        cpp_points.push_back( Vector3(p[0]*500.0,p[1]*500.0,p[2]*500.0))
+        print (p[0]*500.0,p[1]*500.0,p[2]*500.0)
+
     cdef vector[vector[double]] camera_results
     cdef vector[double] camera
     ## optimized values are written to cpp_orientation and cpp_translation
@@ -124,5 +128,9 @@ def bundle_adjust_calibration( observations, fix_translation = False , use_weigh
         orientations.append( (camera[0],camera[1],camera[2],camera[3] ) )
         translations.append( (camera[4],camera[5],camera[6] ) )
 
+    points = []
+    for i in range(0,cpp_points.size() ):
+        point = cpp_points.at(i)
+        points.append( (point[0],point[1],point[2] ) )
 
-    return success, orientations, translations , avgDistance
+    return success, orientations, translations , points

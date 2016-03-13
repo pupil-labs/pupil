@@ -78,7 +78,7 @@ if __name__ == '__main__':
     cam2_rotation_quaternion = math_helper.quaternion_about_axis( np.pi*.9, (0.0,1.0,0.0) )
     cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(cam2_rotation_quaternion)
     random_points = []
-    random_points_amount = 770
+    random_points_amount = 30
 
     x_var = 200
     y_var = 200
@@ -115,8 +115,9 @@ if __name__ == '__main__':
     o2 = { "directions" : cam2_dir , "translation" : cam2_center , "orientation" : cam2_rotation_quaternion  }
     observations = [o1, o2]
 
-    success, rotations, translations, avg_distance = bundle_adjust_calibration( observations , fix_translation = False, use_weight = True  )
+    success, rotations, translations, points = bundle_adjust_calibration( observations , fix_translation = False, use_weight = True  )
 
+    avg_distance = 0.0
     rotation = rotations[1]
     translation = translations[1]
     #success, rotation, translation, avg_distance = line_line_calibration( cam1_dir, cam2_dir , initial_rotation , initial_translation , fix_translation = False, use_weight = True  )
