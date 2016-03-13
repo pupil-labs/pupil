@@ -115,7 +115,6 @@ struct ReprojectionError {
         p[1] /= s;
         p[2] /= s;
 
-        // should the residual be the distance squared between the directions or better the angle ?
 
         // The error is the difference between the predicted and observed position.
         residuals[0] = p[0] - T(observed_dir[0]);
@@ -138,37 +137,14 @@ struct ReprojectionError {
   Vector3 observed_dir;
 };
 
-bool bundleAdjustCalibration( std::vector<Observation> observations, double& avgDistance, std::vector<std::vector<double>>& cameras,  bool fixTranslation = false, bool useWeight = true )
+bool bundleAdjustCalibration( std::vector<Observation> observations, std::vector<Vector3> predicted_points, std::vector<std::vector<double>>& cameras,  bool fixTranslation = false, bool useWeight = true )
 {
 
 
     Problem problem;
-    std::vector<Vector3> predicted_points;
     std::vector<double> translationLenghts;
     // calculate the predicted points form the dir of the world camera
     // world camera is the first one in observations
-
-    for( auto& dir : observations.at(0).dirs ){
-        dir.normalize(); // to be sure
-        predicted_points.push_back( dir * 500.0 );
-        std::cout << "p0: " <<dir  << std::endl;
-        std::cout << "p: " <<predicted_points.back()  << std::endl;
-    }
-
-    // for( auto& obs : observations){
-
-    //     std::vector<double>& camera = obs.camera;
-
-    //     double length = std::sqrt(  camera[4]*camera[4]+ camera[5]*camera[5] + camera[6]*camera[6]);
-    //     if (length > 0.0)
-    //     {
-    //         camera[4] /= length;
-    //         camera[5] /= length;
-    //         camera[6] /= length;
-    //     }
-
-    //     translationLenghts.push_back(length);
-    // }
 
 
     bool lockedCamera = false;
@@ -202,7 +178,7 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
             // fix translation and orientation
             problem.SetParameterBlockConstant(camera) ;
             problem.SetParameterBlockConstant(camera+4) ;
-            lockedCamera = true;
+            // lockedCamera = true;
         }else{
 
 
@@ -231,9 +207,9 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, double& avg
     //options.parameter_tolerance = 1e-25;
     //options.function_tolerance = 1e-26;
     //options.gradient_tolerance = 1e-30;
-    options.minimizer_progress_to_stdout = true;
+    // options.minimizer_progress_to_stdout = true;
     //options.logging_type = ceres::SILENT;
-    options.check_gradients = true;
+    // options.check_gradients = true;
 
 
     Solver::Summary summary;

@@ -86,6 +86,7 @@ def bundle_adjust_calibration( observations, fix_translation = False , use_weigh
     cdef Observation cpp_observation
     cdef vector[double] cpp_camera
     cdef vector[Vector3] cpp_dir
+    cdef vector[Vector3] cpp_points
 
     for o in observations:
         directions = o["directions"]
@@ -113,7 +114,7 @@ def bundle_adjust_calibration( observations, fix_translation = False , use_weigh
     cdef vector[vector[double]] camera_results
     cdef vector[double] camera
     ## optimized values are written to cpp_orientation and cpp_translation
-    cdef bint success  = bundleAdjustCalibration(cpp_observations, avgDistance, camera_results,  fix_translation, use_weight,  )
+    cdef bint success  = bundleAdjustCalibration(cpp_observations, cpp_points, camera_results,  fix_translation, use_weight,  )
 
     orientations = []
     translations = []
