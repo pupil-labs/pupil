@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
     x_var = 200
     y_var = 200
-    z_var = 20
+    z_var = 0
     z_min = 300
     for i in range(0,random_points_amount):
         random_point = ( uniform(-x_var,x_var) ,  uniform(-y_var,y_var) ,  uniform(z_min,z_min+z_var)  )
@@ -120,7 +120,12 @@ if __name__ == '__main__':
     o2 = { "directions" : cam2_dir , "translation" : cam2_center , "orientation" : cam2_rotation_angle_axis  }
     observations = [o1, o2]
 
-    success, rotations, translations, points = bundle_adjust_calibration( observations , cam1_points, fix_translation = False, use_weight = True  )
+    inital_points = cam1_points
+    success, rotations, translations, points = bundle_adjust_calibration( observations , inital_points, fix_translation = False, use_weight = True  )
+
+    #compare points
+    for a,b in zip(inital_points, points):
+        print a , " " , b
 
     avg_distance = 0.0
     rotation = math_helper.quaternion_from_matrix( cv2.Rodrigues(rotations[1])[0] )
@@ -130,7 +135,7 @@ if __name__ == '__main__':
     success2, rotation2, translation2, avg_distance2 = True,initial_rotation,initial_translation,-1
     from multiprocessing import Process
     print "final result -------------------"
-    p = Process(target=show_result, args=(cam1_center, points, cam2_points, rotation, translation,avg_distance))
+    p = Process(target=show_result, args=(cam1_center, cam1_points, cam2_points, rotation, translation,avg_distance))
     p.start();
 
     import time
