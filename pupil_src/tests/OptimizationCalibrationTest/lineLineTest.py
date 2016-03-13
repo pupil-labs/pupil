@@ -77,7 +77,7 @@ if __name__ == '__main__':
     cam1_rotation_matrix = math_helper.quaternion_rotation_matrix(cam1_rotation_quaternion)
     cam1_rotation_angle_axis , _ = cv2.Rodrigues(cam1_rotation_matrix)
 
-    cam2_center  = np.array((100,0,0))
+    cam2_center  = np.array((5,0,0))
     cam2_rotation_quaternion = math_helper.quaternion_about_axis( -np.pi* 0.1, (0.0,1.0,0.0) )
     cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(cam2_rotation_quaternion)
     cam2_rotation_angle_axis, _  = cv2.Rodrigues(cam2_rotation_matrix)
@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
     x_var = 200
     y_var = 200
-    z_var = 200
+    z_var = 20
     z_min = 300
     for i in range(0,random_points_amount):
         random_point = ( uniform(-x_var,x_var) ,  uniform(-y_var,y_var) ,  uniform(z_min,z_min+z_var)  )
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     cam1_dir = [ p/np.linalg.norm(p) for p in cam1_points]
     cam2_dir = [ p/np.linalg.norm(p) for p in cam2_points]
 
-    initial_R,initial_t = find_rigid_transform(np.array(cam2_dir),np.array(cam1_dir))
+    initial_R,initial_t = find_rigid_transform(np.array(cam2_points),np.array(cam1_points))
     initial_rotation = math_helper.quaternion_from_rotation_matrix(initial_R)
     initial_translation = np.array(initial_t).reshape(3)
     initial_translation *= np.linalg.norm(cam2_center)/np.linalg.norm(initial_translation)
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     o2 = { "directions" : cam2_dir , "translation" : cam2_center , "orientation" : cam2_rotation_angle_axis  }
     observations = [o1, o2]
 
-    success, rotations, translations, points = bundle_adjust_calibration( observations , fix_translation = False, use_weight = True  )
+    success, rotations, translations, points = bundle_adjust_calibration( observations , cam1_points, fix_translation = False, use_weight = True  )
 
     avg_distance = 0.0
     rotation = math_helper.quaternion_from_matrix( cv2.Rodrigues(rotations[1])[0] )
@@ -130,7 +130,7 @@ if __name__ == '__main__':
     success2, rotation2, translation2, avg_distance2 = True,initial_rotation,initial_translation,-1
     from multiprocessing import Process
     print "final result -------------------"
-    p = Process(target=show_result, args=(cam1_center, cam1_points, cam2_points, rotation, translation,avg_distance))
+    p = Process(target=show_result, args=(cam1_center, points, cam2_points, rotation, translation,avg_distance))
     p.start();
 
     import time
