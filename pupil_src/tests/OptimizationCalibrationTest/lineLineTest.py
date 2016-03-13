@@ -74,8 +74,8 @@ if __name__ == '__main__':
     cam1_center  = (0,0,0)
     cam1_rotation_quaternion = math_helper.quaternion_about_axis( 0 , (0.0,1.0,0.0) )
 
-    cam2_center  = np.array((10,30,-30))
-    cam2_rotation_quaternion = math_helper.quaternion_about_axis( np.pi*.9, (0.0,1.0,0.0) )
+    cam2_center  = np.array((100,0,0))
+    cam2_rotation_quaternion = math_helper.quaternion_about_axis( -np.pi* 0.1, (0.0,1.0,0.0) )
     cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(cam2_rotation_quaternion)
     random_points = []
     random_points_amount = 30
@@ -103,8 +103,9 @@ if __name__ == '__main__':
         cam2_points.append(p2)
 
     sphere_position = (0,0,0)
-    cam1_dir = cam1_points/np.linalg.norm(cam1_points)
-    cam2_dir = cam2_points/np.linalg.norm(cam2_points)
+
+    cam1_dir = [ p/np.linalg.norm(p) for p in cam1_points]
+    cam2_dir = [ p/np.linalg.norm(p) for p in cam2_points]
 
     initial_R,initial_t = find_rigid_transform(np.array(cam2_dir),np.array(cam1_dir))
     initial_rotation = math_helper.quaternion_from_rotation_matrix(initial_R)
