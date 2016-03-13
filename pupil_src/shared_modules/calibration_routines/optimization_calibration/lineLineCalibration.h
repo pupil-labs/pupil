@@ -101,7 +101,7 @@ struct ReprojectionError {
                   T* residuals) const {
 
         T p[3];
-        ceres::QuaternionRotatePoint(orientation, point, p);
+        ceres::AngleAxisRotatePoint(orientation, point, p);
 
         // camera[3,4,5] are the translation.
         p[0] += translation[0];
@@ -121,16 +121,13 @@ struct ReprojectionError {
         residuals[1] = p[1] - T(observed_dir[1]);
         residuals[2] = p[2] - T(observed_dir[2]);
 
-        // residuals[0] = predicted_x - T(observed_x);
-        // residuals[1] = predicted_y - T(observed_y);
-        // residuals[1] = predicted_y - T(observed_y);
         return true;
   }
 
 // Factory to hide the construction of the CostFunction object from
   // the client code.
   static ceres::CostFunction* Create(const Vector3 observed_dir ) {
-    return (new ceres::AutoDiffCostFunction<ReprojectionError, 3, 4, 3, 3>(
+    return (new ceres::AutoDiffCostFunction<ReprojectionError, 3, 3, 3, 3>(
                 new ReprojectionError(observed_dir)));
   }
 
@@ -161,12 +158,10 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, std::vector
             ceres::CostFunction* cost_function =
                 ReprojectionError::Create(dir);
 
-            std::cout << "orientation: " <<  camera[0] << " " << camera[1] << " " << camera[2] << " " << camera[3] << std::endl;
-            std::cout << "translation: " <<  camera[4] << " " << camera[5] << " " << camera[6] << std::endl;
             problem.AddResidualBlock(cost_function,
                                      NULL /* squared loss */,
                                      camera,
-                                     camera+4,
+                                     camera+3,
                                      predicted_points[index].data() );
             index++;
 
@@ -177,22 +172,22 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, std::vector
             // first observation is world camera
             // fix translation and orientation
             problem.SetParameterBlockConstant(camera) ;
-            problem.SetParameterBlockConstant(camera+4) ;
+            problem.SetParameterBlockConstant(camera+3) ;
             lockedCamera = true;
         }else{
 
 
-            ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
-            problem.SetParameterization(camera, quaternionParameterization);
+            //ceres::LocalParameterization* quaternionParameterization = new ceres::QuaternionParameterization; // owned by the problem
+            //problem.SetParameterization(camera, quaternionParameterization);
 
             if (fixTranslation)
             {
-                problem.SetParameterBlockConstant(camera+4) ;
+                problem.SetParameterBlockConstant(camera+3) ;
 
              }//else{
 
             //     ceres::LocalParameterization* normedTranslationParameterization = new pupillabs::Fixed3DNormParametrization(1.0); // owned by the problem
-            //     problem.SetParameterization(camera+4, normedTranslationParameterization);
+            //     problem.SetParameterization(camera+3, normedTranslationParameterization);
             // }
 
         }
@@ -232,7 +227,7 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, std::vector
         // camera[4] *= length;
         // camera[5] *= length;
         // camera[6] *= length;
-        std::cout << "ceres orientation: " << camera[0] << " "<< camera[1] << " "<< camera[2] << " " << camera[3] << std::endl;
+        std::cout << "ceres orientation: " << camera[0] << " "<< camera[1] << " "<< camera[2]  << std::endl;
         cameras.push_back( observations.at(i).camera );
 
     }

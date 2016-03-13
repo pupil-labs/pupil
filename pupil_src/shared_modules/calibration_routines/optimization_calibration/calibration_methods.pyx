@@ -92,14 +92,14 @@ def bundle_adjust_calibration( observations, fix_translation = False , use_weigh
         translation = o["translation"]
         orientation = o["orientation"]
 
-        cpp_camera.resize(7)
+        cpp_camera.resize(6)
         cpp_camera[0] = orientation[0]
         cpp_camera[1] = orientation[1]
         cpp_camera[2] = orientation[2]
-        cpp_camera[3] = orientation[3]
-        cpp_camera[4] = translation[0]
-        cpp_camera[5] = translation[1]
-        cpp_camera[6] = translation[2]
+        #cpp_camera[3] = orientation[3]
+        cpp_camera[3] = translation[0]
+        cpp_camera[4] = translation[1]
+        cpp_camera[5] = translation[2]
 
         cpp_dir.clear()
         for p in directions:
@@ -113,6 +113,7 @@ def bundle_adjust_calibration( observations, fix_translation = False , use_weigh
 
     for p in observations[0]["directions"]:
         cpp_points.push_back( Vector3(p[0]*500.0,p[1]*500.0,p[2]*500.0))
+        print (p[0],p[1],p[2])
         print (p[0]*500.0,p[1]*500.0,p[2]*500.0)
 
     cdef vector[vector[double]] camera_results
@@ -125,8 +126,8 @@ def bundle_adjust_calibration( observations, fix_translation = False , use_weigh
 
     for i in range(0,camera_results.size() ):
         camera = camera_results.at(i)
-        orientations.append( (camera[0],camera[1],camera[2],camera[3] ) )
-        translations.append( (camera[4],camera[5],camera[6] ) )
+        orientations.append( (camera[0],camera[1],camera[2] ) )
+        translations.append( (camera[3],camera[4],camera[5] ) )
 
     points = []
     for i in range(0,cpp_points.size() ):

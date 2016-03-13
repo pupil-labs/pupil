@@ -5,6 +5,7 @@ sys.path.append(os.path.join(loc[0], 'pupil_src', 'shared_modules'))
 from calibration_routines.optimization_calibration import  bundle_adjust_calibration
 
 import numpy as np
+import cv2
 import math
 import math_helper
 from numpy import array, cross, dot, double, hypot, zeros
@@ -73,10 +74,13 @@ if __name__ == '__main__':
 
     cam1_center  = (0,0,0)
     cam1_rotation_quaternion = math_helper.quaternion_about_axis( 0 , (0.0,1.0,0.0) )
+    cam1_rotation_matrix = math_helper.quaternion_rotation_matrix(cam1_rotation_quaternion)
+    cam1_rotation_angle_axis , _ = cv2.Rodrigues(cam1_rotation_matrix)
 
     cam2_center  = np.array((100,0,0))
     cam2_rotation_quaternion = math_helper.quaternion_about_axis( -np.pi* 0.1, (0.0,1.0,0.0) )
     cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(cam2_rotation_quaternion)
+    cam2_rotation_angle_axis, _  = cv2.Rodrigues(cam2_rotation_matrix)
     random_points = []
     random_points_amount = 30
 
@@ -112,14 +116,14 @@ if __name__ == '__main__':
     initial_translation = np.array(initial_t).reshape(3)
     initial_translation *= np.linalg.norm(cam2_center)/np.linalg.norm(initial_translation)
 
-    o1 = { "directions" : cam1_dir , "translation" : [0,0,0] , "orientation" : cam1_rotation_quaternion  }
-    o2 = { "directions" : cam2_dir , "translation" : cam2_center , "orientation" : cam2_rotation_quaternion  }
+    o1 = { "directions" : cam1_dir , "translation" : [0,0,0] , "orientation" : cam1_rotation_angle_axis  }
+    o2 = { "directions" : cam2_dir , "translation" : cam2_center , "orientation" : cam2_rotation_angle_axis  }
     observations = [o1, o2]
 
     success, rotations, translations, points = bundle_adjust_calibration( observations , fix_translation = False, use_weight = True  )
 
     avg_distance = 0.0
-    rotation = rotations[1]
+    rotation = math_helper.quaternion_from_matrix( cv2.Rodrigues(rotations[1])[0] )
     translation = translations[1]
     #success, rotation, translation, avg_distance = line_line_calibration( cam1_dir, cam2_dir , initial_rotation , initial_translation , fix_translation = False, use_weight = True  )
     # success2, rotation2, translation2, avg_distance2 = line_line_calibration( cam1_dir, cam2_dir , initial_rotation , initial_translation , fix_translation = False , use_weight = True  )
