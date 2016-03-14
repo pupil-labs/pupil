@@ -17,12 +17,12 @@
 
 typedef Eigen::Matrix<double, 2, 1> Vector2;
 typedef Eigen::Matrix<double, 3, 1> Vector3;
+typedef Eigen::Matrix<double, 4, 1> Vector4;
 
 
-struct Observation{
-
-    std::vector<Vector3> dirs;
-    std::vector<double> camera;
+struct Observer{
+    std::vector<Vector3> observations;
+    std::vector<double> pose;
 
 };
 

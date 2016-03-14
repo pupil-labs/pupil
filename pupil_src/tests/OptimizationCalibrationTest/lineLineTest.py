@@ -13,32 +13,25 @@ from math import acos, atan2, cos, pi, sin, radians
 from calibration_routines.visualizer_calibration import *
 from calibration_routines.calibrate import find_rigid_transform
 
-def show_result(cam1_center, cam1_points, cam2_points, rotation, translation,avg_distance, name = "Calibration"):
+def show_result(observers,points, name = "Calibration"):
 
-    rotation = np.array(rotation)
-    translation = np.array(translation)
+    rotation = np.array(observers[1]['rotation'])
+    translation = np.array(observers[1]['translation'])
 
-    print 'initial rotation: ' , math_helper.about_axis_from_quaternion(initial_rotation)
-    print 'initial translation: ' , initial_translation
+    print 'rotation: ' , math_helper.about_axis_from_quaternion(rotation), 'thruth:',math_helper.about_axis_from_quaternion(cam2_rotation_quaternion)
+    print 'translation: ' , translation, 'thruth:',cam2_center
 
-    print 'found rotation: ' , math_helper.about_axis_from_quaternion(rotation)
-    print 'found translation: ' , translation
-
-    print 'true rotation: ' , math_helper.about_axis_from_quaternion(cam2_rotation_quaternion)
-    print 'true translation: ' , cam2_center
-
-    print 'avgerage distance of intersections from solver: ' , avg_distance
-
+    return
     #replace with the optimized rotation and translation
-    cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(rotation)
+    R = math_helper.quaternion_rotation_matrix(rotation)
     cam2_transformation_matrix  = np.matrix(np.eye(4))
-    cam2_transformation_matrix[:3,:3] = cam2_rotation_matrix
-    cam2_translation = np.matrix(translation)
-    cam2_translation.shape = (3,1)
-    cam2_transformation_matrix[:3,3:4] = cam2_translation
+    cam2_transformation_matrix[:3,:3] = R
+    t = np.matrix(translation)
+    t.shape = (3,1)
+    cam2_transformation_matrix[:3,3:4] = t
 
     def toWorld(p):
-        return np.dot(cam2_rotation_matrix, p)+translation
+        return np.dot(R, p)+t
 
     eye = { 'center': translation, 'radius': 1.0}
 
@@ -73,21 +66,21 @@ if __name__ == '__main__':
     from random import uniform
 
     cam1_center  = (0,0,0)
-    cam1_rotation_quaternion = math_helper.quaternion_about_axis( 0 , (0.0,1.0,0.0) )
+    cam1_rotation_angle_axis   = [0 , (0.0,1.0,0.0) ]
+    cam1_rotation_quaternion = math_helper.quaternion_about_axis( cam1_rotation_angle_axis[0] , cam1_rotation_angle_axis[1])
     cam1_rotation_matrix = math_helper.quaternion_rotation_matrix(cam1_rotation_quaternion)
-    cam1_rotation_angle_axis , _ = cv2.Rodrigues(cam1_rotation_matrix)
 
-    cam2_center  = np.array((5,0,0))
-    cam2_rotation_quaternion = math_helper.quaternion_about_axis( -np.pi* 0.1, (0.0,1.0,0.0) )
+    cam2_center  = np.array((4,-30,30))
+    cam2_rotation_angle_axis   = [ -np.pi* 0.9, (0.0,1.0,0.0) ]
+    cam2_rotation_quaternion = math_helper.quaternion_about_axis( cam2_rotation_angle_axis[0] , cam2_rotation_angle_axis[1])
     cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(cam2_rotation_quaternion)
-    cam2_rotation_angle_axis, _  = cv2.Rodrigues(cam2_rotation_matrix)
     random_points = []
-    random_points_amount = 1000
+    random_points_amount = 80
 
     x_var = 200
     y_var = 200
-    z_var = 300
-    z_min = 300
+    z_var = 100
+    z_min = 400
     for i in range(0,random_points_amount):
         random_point = ( uniform(-x_var,x_var) ,  uniform(-y_var,y_var) ,  uniform(z_min,z_min+z_var)  )
         random_points.append(random_point)
@@ -100,51 +93,57 @@ if __name__ == '__main__':
     cam2_points = [] #cam2 coords
     for p in random_points:
         cam1_points.append(p)
-        factor = 0 #randomize point in eye space
-        pr = p + np.array( (uniform(-factor,+factor),uniform(-factor,+factor),uniform(-factor,+factor))  )
+        noise = 0 #randomize point in eye space
+        pr = p + np.array( (uniform(-noise,+noise),uniform(-noise,+noise),uniform(-noise,+noise))  )
         p2 = toEye(pr) # to cam2 coordinate system
-       # p2 *= 1.2,1.3,1.0
+        # p2 *= 1.2,1.3,1.0
         cam2_points.append(p2)
 
     sphere_position = (0,0,0)
 
 
-    cam1_dir = [ p/np.linalg.norm(p) for p in cam1_points]
-    cam2_dir = [ p/np.linalg.norm(p) for p in cam2_points]
+    cam1_observation = [ p/np.linalg.norm(p) for p in cam1_points]
+    cam2_observation = [ p/np.linalg.norm(p) for p in cam2_points]
 
-    initial_R,initial_t = find_rigid_transform(np.array(cam2_dir),np.array(cam1_dir))
-    initial_rotation = math_helper.quaternion_from_rotation_matrix(initial_R)
+    initial_R,initial_t = find_rigid_transform(np.array(cam2_observation),np.array(cam1_observation))
+    initial_rotation_quaternion = math_helper.quaternion_from_rotation_matrix(initial_R)
     initial_translation = np.array(initial_t).reshape(3)
     initial_translation *= np.linalg.norm(cam2_center)/np.linalg.norm(initial_translation)
 
-    o1 = { "directions" : cam1_dir , "translation" : [0,0,0] , "orientation" : cam1_rotation_angle_axis  }
-    o2 = { "directions" : cam2_dir , "translation" : [0,50,0] , "orientation" : cam1_rotation_angle_axis  }
-    observations = [o1, o2]
 
-    inital_points = np.array(cam1_dir)
-    success, rotations, translations, points = bundle_adjust_calibration( observations , inital_points, fix_translation = False, use_weight = True  )
+    o1 = { "observations" : cam1_observation , "translation" : [0,0,0] , "rotation" : cam1_rotation_quaternion  }
+    o2 = { "observations" : cam2_observation , "translation" : initial_translation , "rotation" : initial_rotation_quaternion  }
+    initial_observers = [o1, o2]
 
-    #compare points
+    # initial_points = np.ones(np.array(cam1_points).shape,dtype= np.array(cam1_points).dtype)
+    initial_points = np.array(cam1_observation)*500
+    success, observers, points = bundle_adjust_calibration( initial_observers , initial_points, fix_translation = False )
+    #bundle adjustment does not solve global scale we add this from the ground thruth here:
+
+
     scaled_points = []
+    avg_scale = 0
     for a,b in zip(cam1_points, points):
-        scaled_points.append(np.array(b)*np.linalg.norm(np.array(a))/np.linalg.norm(np.array(b)))
-        # print a , " " , scaled_points[-1]
+        scale = np.linalg.norm(np.array(a))/np.linalg.norm(np.array(b))
+        scaled_points.append(np.array(b)*scale)
+        avg_scale += scale
+        print a,np.array(b)*scale,scale
 
-    avg_distance = 0.0
-    rotation = math_helper.quaternion_from_matrix( cv2.Rodrigues(rotations[1])[0] )
-    translation = translations[1]
-    #success, rotation, translation, avg_distance = line_line_calibration( cam1_dir, cam2_dir , initial_rotation , initial_translation , fix_translation = False, use_weight = True  )
-    # success2, rotation2, translation2, avg_distance2 = line_line_calibration( cam1_dir, cam2_dir , initial_rotation , initial_translation , fix_translation = False , use_weight = True  )
-    success2, rotation2, translation2, avg_distance2 = True,initial_rotation,initial_translation,-1
+    avg_scale /= len(cam1_points)
+    print avg_scale
+    for o in observers:
+        o['translation'] = np.array(o['translation'])*avg_scale
+
+
     from multiprocessing import Process
     print "final result -------------------"
-    p = Process(target=show_result, args=(cam1_center, cam1_points, cam2_points, rotation, translation,avg_distance))
+    p = Process(target=show_result, args=(observers, points))
     p.start();
 
     import time
     time.sleep(1)
     print "inital guess -------------------"
-    show_result(cam1_center, cam1_points, cam2_points, rotation2, translation2 ,avg_distance2, "inital guess")
+    show_result(initial_observers,initial_points, "inital guess")
 
     p.join()
 

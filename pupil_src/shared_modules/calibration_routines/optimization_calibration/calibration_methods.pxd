@@ -23,6 +23,14 @@ cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
         double& operator[](size_t)
         bint isZero()
 
+    cdef cppclass Matrix41d "Eigen::Matrix<double,4,1>": # eigen defaults to column major layout
+        Matrix41d() except +
+        Matrix41d(double w, double a, double b, double c)
+        double * data()
+        double& operator[](size_t)
+        bint isZero()
+
+
     cdef cppclass Matrix4d "Eigen::Matrix<double,4,4>": # eigen defaults to column major layout
         Matrix4d() except +
         double& operator()(size_t,size_t)
@@ -40,20 +48,23 @@ cdef extern from 'common.h':
     #typdefs
     ctypedef Matrix31d Vector3
     ctypedef Matrix21d Vector2
-
-    cdef cppclass Observation "Observation": # eigen defaults to column major layout
-        Observation() except +
-        vector[Vector3] dirs
-        vector[double] camera
-
-cdef extern from 'pointLineCalibration.h':
+    ctypedef Matrix41d Vector4
 
 
-    bint pointLineCalibration( Vector3 spherePosition,const vector[Vector3]& points,const vector[Vector3]& lines,  double[4]& orientation ,
-                                 double[3]& translation, bint fixTranslation,
-                                 Vector3 translationLowerBound, Vector3 translationUpperBound  )
+    cdef cppclass Observer "Observer": # eigen defaults to column major layout
+        Observer() except +
+        vector[Vector3] observations
+        vector[double] pose
+
+cdef extern from 'ceres/rotation.h' namespace 'ceres':
+    #template<typename T>
+    #AngleAxisToQuaternion(T const* angle_axis, T* quaternion);
+    #template<typename T>
+    #QuaternionToAngleAxis(T const* quaternion, T* angle_axis);
+    void AngleAxisToQuaternion(const double * angle_axis, double * quaternion);
+    void QuaternionToAngleAxis(const double * quaternion, double * angle_axis);
+    void AngleAxisRotatePoint(const double * angle_axis, const double * pt,double * result)
 
 cdef extern from 'lineLineCalibration.h':
 
-    bint bundleAdjustCalibration( const vector[Observation]& observation, vector[Vector3]& points,
-                                 vector[vector[double]]& cameras, bint fixTranslation, bint useWeight  )
+    bint bundleAdjustCalibration( vector[Observer]& obsevers, vector[Vector3]& points, bint fixTranslation )

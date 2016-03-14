@@ -10,126 +10,97 @@
 
 from libcpp.vector cimport vector
 
-cimport calibration_methods
 from calibration_methods cimport *
 import numpy as np
 
-def point_line_calibration( sphere_position, ref_points_3D, gaze_directions_3D , initial_orientation , initial_translation ,
-    fix_translation = False, translation_lower_bound = (15,5,5) ,  translation_upper_bound = (15,5,5) ):
-
-
-    cdef vector[Vector3] cpp_ref_points
-    cdef vector[Vector3] cpp_gaze_directions
-    for p in ref_points_3D:
-        cpp_ref_points.push_back(Vector3(p[0],p[1],p[2]))
-
-    for p in gaze_directions_3D:
-        cpp_gaze_directions.push_back(Vector3(p[0],p[1],p[2]))
-
-    cdef Vector3 cpp_sphere_position
-    cpp_sphere_position = Vector3(sphere_position[0],sphere_position[1],sphere_position[2])
-
-    cdef double cpp_orientation[4] #quaternion
-    cdef double cpp_translation[3]
-    cpp_orientation[:] = initial_orientation
-    cpp_translation[:] = initial_translation
-
-    cdef Vector3 cpp_translation_upper_bound = Vector3(translation_upper_bound[0],translation_upper_bound[1],translation_upper_bound[2])
-    cdef Vector3 cpp_translation_lower_bound = Vector3(translation_lower_bound[0],translation_lower_bound[1],translation_lower_bound[2])
-
-    ## optimized values are written to cpp_orientation and cpp_translation
-    cdef bint success  = pointLineCalibration(cpp_sphere_position, cpp_ref_points, cpp_gaze_directions,
-                                             &cpp_orientation[0], &cpp_translation[0], fix_translation,
-                                             cpp_translation_lower_bound, cpp_translation_upper_bound )
-
-
-    return success, cpp_orientation, cpp_translation
-
-
-# def line_line_calibration( ref_directions_3D, gaze_directions_3D , initial_orientation , initial_translation , fix_translation = False , use_weight = True):
-
-
-#     cdef vector[Vector3] cpp_ref_directions
-#     cdef vector[Vector3] cpp_gaze_directions
-#     for p in ref_directions_3D:
-#         cpp_ref_directions.push_back(Vector3(p[0],p[1],p[2]))
-
-#     for p in gaze_directions_3D:
-#         cpp_gaze_directions.push_back(Vector3(p[0],p[1],p[2]))
-
-
-#     cdef Quaterniond cpp_orientation
-#     cdef Vector3 cpp_translation
-#     cpp_orientation = Quaterniond(initial_orientation[0],initial_orientation[1],initial_orientation[2],initial_orientation[3] )
-#     cpp_translation = Vector3(initial_translation[0],initial_translation[1],initial_translation[2] )
-
-#     cdef double avgDistance = 0.0
-
-#     ## optimized values are written to cpp_orientation and cpp_translation
-#     cdef bint success  = lineLineCalibration(cpp_ref_directions, cpp_gaze_directions,
-#                                              cpp_orientation, cpp_translation, avgDistance, fix_translation, use_weight )
-
-
-#     orientation = ( cpp_orientation.w(),cpp_orientation.x(),cpp_orientation.y(),cpp_orientation.z() )
-#     translation = ( cpp_translation[0],cpp_translation[1],cpp_translation[2] )
-
-#     return success, orientation, translation , avgDistance
-
-
-def bundle_adjust_calibration( observations, predicted_points,  fix_translation = False , use_weight = True):
 
 
 
-    cdef vector[Observation] cpp_observations;
+def bundle_adjust_calibration( initial_observers, initial_points,  fix_translation = False):
 
-    cdef Observation cpp_observation
-    cdef vector[double] cpp_camera
-    cdef vector[Vector3] cpp_dir
+
+    cdef vector[Observer] cpp_observers;
+    cdef Observer cpp_observer
+    cdef vector[double] cpp_pose
+    cdef vector[Vector3] cpp_observations
     cdef vector[Vector3] cpp_points
 
-    for o in observations:
-        directions = o["directions"]
+    cdef Vector4 rotation_quaternion
+    cdef Vector3 rotation_angle_axis
+    cdef Vector3 cpp_translation,cpp_translation_inverse
+
+    for o in initial_observers:
+        observations = o["observations"]
         translation = o["translation"]
-        orientation = o["orientation"]
+        rotation = o["rotation"]
+        cpp_pose.resize(6)
 
-        cpp_camera.resize(6)
-        cpp_camera[0] = orientation[0]
-        cpp_camera[1] = orientation[1]
-        cpp_camera[2] = orientation[2]
-        #cpp_camera[3] = orientation[3]
-        cpp_camera[3] = translation[0]
-        cpp_camera[4] = translation[1]
-        cpp_camera[5] = translation[2]
+        #we need to invert the pose of the observer
+        #we will use this rotation translation to tranform the observed points in the cost fn
+        print 'pre inverse ',rotation
+        rotation_quaternion = Vector4(rotation[0],rotation[1],rotation[2],rotation[3])
+        #angle axis rotation: https://en.wikipedia.org/wiki/Axis%E2%80%93angle_representation
+        QuaternionToAngleAxis(rotation_quaternion.data(),rotation_angle_axis.data())
 
-        cpp_dir.clear()
-        for p in directions:
-            cpp_dir.push_back(Vector3(p[0],p[1],p[2]))
+        cpp_translation = Vector3(-translation[0],-translation[1],-translation[2])
+        cpp_translation_inverse = Vector3()
 
-        cpp_observation = Observation()
-        cpp_observation.dirs = cpp_dir
-        cpp_observation.camera = cpp_camera
-        cpp_observations.push_back( cpp_observation )
+        #invert rotation
+        rotation_angle_axis[0] *= -1
+        rotation_angle_axis[1] *= -1
+        rotation_angle_axis[2] *= -1
+
+        AngleAxisRotatePoint(rotation_angle_axis.data(),cpp_translation.data(),cpp_translation_inverse.data())
+
+        #first three is rotation
+        cpp_pose[0] = rotation_angle_axis[0]
+        cpp_pose[1] = rotation_angle_axis[1]
+        cpp_pose[2] = rotation_angle_axis[2]
 
 
-    for p in predicted_points:
+        #last three is translation
+        cpp_pose[3] = cpp_translation_inverse[0]
+        cpp_pose[4] = cpp_translation_inverse[1]
+        cpp_pose[5] = cpp_translation_inverse[2]
+
+        cpp_observations.clear()
+        for p in observations:
+            cpp_observations.push_back(Vector3(p[0],p[1],p[2]))
+
+        cpp_observer = Observer()
+        cpp_observer.observations = cpp_observations
+        cpp_observer.pose = cpp_pose
+        cpp_observers.push_back( cpp_observer )
+
+    for p in initial_points:
         cpp_points.push_back( Vector3(p[0],p[1],p[2]) )
 
-    cdef vector[vector[double]] camera_results
-    cdef vector[double] camera
+
     ## optimized values are written to cpp_orientation and cpp_translation
-    cdef bint success  = bundleAdjustCalibration(cpp_observations, cpp_points, camera_results,  fix_translation, use_weight,  )
+    cdef bint success  = bundleAdjustCalibration(cpp_observers, cpp_points, fix_translation )
 
-    orientations = []
-    translations = []
 
-    for i in range(0,camera_results.size() ):
-        camera = camera_results.at(i)
-        orientations.append( (camera[0],camera[1],camera[2] ) )
-        translations.append( (camera[3],camera[4],camera[5] ) )
+    observers = []
+    for cpp_observer in cpp_observers:
+        print cpp_observer.pose
+        observer = {}
+        rotation_angle_axis = Vector3(cpp_observer.pose[0],cpp_observer.pose[1],cpp_observer.pose[2])
+        cpp_translation_inverse = Vector3(-cpp_observer.pose[3],-cpp_observer.pose[4],-cpp_observer.pose[5])
+
+        rotation_angle_axis[0] *=-1
+        rotation_angle_axis[1] *=-1
+        rotation_angle_axis[2] *=-1
+
+        AngleAxisRotatePoint(rotation_angle_axis.data(),cpp_translation_inverse.data(),cpp_translation.data())
+
+        AngleAxisToQuaternion(rotation_angle_axis.data(),rotation_quaternion.data())
+        observer['rotation'] = rotation_quaternion[0],rotation_quaternion[1],rotation_quaternion[2],rotation_quaternion[3]
+        observer['translation'] = cpp_translation[0],cpp_translation[1],cpp_translation[2]
+        observers.append(observer)
 
     points = []
-    for i in range(0,cpp_points.size() ):
-        point = cpp_points.at(i)
-        points.append( (point[0],point[1],point[2] ) )
+    cdef Vector3 cpp_p
+    for cpp_p in cpp_points:
+        points.append( (cpp_p[0],cpp_p[1],cpp_p[2]) )
 
-    return success, orientations, translations , points
+    return success, observers, points
