@@ -188,10 +188,16 @@ class Recorder(Plugin):
             self.data['notifications'].append(notification)
 
 
+<<<<<<< b2e1149320a7cfca8b0466d6762848a8a59b5d61
         elif notification['subject'] == 'recording.should_start':
+=======
+        # Remote has started recording, we should start as well.
+        elif notification['subject'] == 'rec_should_start':
+>>>>>>> Implement 'rec_should_start'/'rec_should_stop' notifications
             if self.running:
                 logger.info('Recording already running!')
             else:
+<<<<<<< b2e1149320a7cfca8b0466d6762848a8a59b5d61
                 if notification.get("session_name",""):
                     self.set_session_name(notification["session_name"])
                 self.start()
@@ -199,6 +205,14 @@ class Recorder(Plugin):
         elif notification['subject'] == 'recording.should_stop':
             if self.running:
                 self.stop()
+=======
+                self.set_session_name(notification["session_name"])
+                self.start(network_propagate=True)
+        # Remote has stopped recording, we should stop as well.
+        elif notification['subject'] == 'rec_should_stop':
+            if self.running:
+                self.stop(network_propagate=True)
+>>>>>>> Implement 'rec_should_start'/'rec_should_stop' notifications
             else:
                 logger.info('Recording already stopped!')
 
