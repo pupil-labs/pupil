@@ -35,13 +35,14 @@ def bundle_adjust_calibration( initial_observers, initial_points,  fix_translati
         rotation = o["rotation"]
         cpp_pose.resize(6)
 
-        #we need to invert the pose of the observer
-        #we will use this rotation translation to tranform the observed points in the cost fn
-        print 'pre inverse ',rotation
+
         rotation_quaternion = Vector4(rotation[0],rotation[1],rotation[2],rotation[3])
         #angle axis rotation: https://en.wikipedia.org/wiki/Axis%E2%80%93angle_representation
         QuaternionToAngleAxis(rotation_quaternion.data(),rotation_angle_axis.data())
 
+
+        #we need to invert the pose of the observer
+        #we will use this rotation translation to tranform the observed points in the cost fn
         cpp_translation = Vector3(-translation[0],-translation[1],-translation[2])
         cpp_translation_inverse = Vector3()
 
@@ -52,12 +53,11 @@ def bundle_adjust_calibration( initial_observers, initial_points,  fix_translati
 
         AngleAxisRotatePoint(rotation_angle_axis.data(),cpp_translation.data(),cpp_translation_inverse.data())
 
+
         #first three is rotation
         cpp_pose[0] = rotation_angle_axis[0]
         cpp_pose[1] = rotation_angle_axis[1]
         cpp_pose[2] = rotation_angle_axis[2]
-
-
         #last three is translation
         cpp_pose[3] = cpp_translation_inverse[0]
         cpp_pose[4] = cpp_translation_inverse[1]
@@ -82,8 +82,9 @@ def bundle_adjust_calibration( initial_observers, initial_points,  fix_translati
 
     observers = []
     for cpp_observer in cpp_observers:
-        print cpp_observer.pose
         observer = {}
+
+        #invert translation rotation back to get the pose
         rotation_angle_axis = Vector3(cpp_observer.pose[0],cpp_observer.pose[1],cpp_observer.pose[2])
         cpp_translation_inverse = Vector3(-cpp_observer.pose[3],-cpp_observer.pose[4],-cpp_observer.pose[5])
 
@@ -94,6 +95,8 @@ def bundle_adjust_calibration( initial_observers, initial_points,  fix_translati
         AngleAxisRotatePoint(rotation_angle_axis.data(),cpp_translation_inverse.data(),cpp_translation.data())
 
         AngleAxisToQuaternion(rotation_angle_axis.data(),rotation_quaternion.data())
+
+
         observer['rotation'] = rotation_quaternion[0],rotation_quaternion[1],rotation_quaternion[2],rotation_quaternion[3]
         observer['translation'] = cpp_translation[0],cpp_translation[1],cpp_translation[2]
         observers.append(observer)

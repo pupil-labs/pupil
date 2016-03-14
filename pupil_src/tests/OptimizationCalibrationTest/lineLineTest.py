@@ -79,8 +79,8 @@ if __name__ == '__main__':
 
     x_var = 200
     y_var = 200
-    z_var = 100
-    z_min = 400
+    z_var = 500
+    z_min = 200
     for i in range(0,random_points_amount):
         random_point = ( uniform(-x_var,x_var) ,  uniform(-y_var,y_var) ,  uniform(z_min,z_min+z_var)  )
         random_points.append(random_point)
@@ -99,8 +99,6 @@ if __name__ == '__main__':
         # p2 *= 1.2,1.3,1.0
         cam2_points.append(p2)
 
-    sphere_position = (0,0,0)
-
 
     cam1_observation = [ p/np.linalg.norm(p) for p in cam1_points]
     cam2_observation = [ p/np.linalg.norm(p) for p in cam2_points]
@@ -117,20 +115,22 @@ if __name__ == '__main__':
 
     # initial_points = np.ones(np.array(cam1_points).shape,dtype= np.array(cam1_points).dtype)
     initial_points = np.array(cam1_observation)*500
+
+
     success, observers, points = bundle_adjust_calibration( initial_observers , initial_points, fix_translation = False )
+
+
     #bundle adjustment does not solve global scale we add this from the ground thruth here:
-
-
     scaled_points = []
     avg_scale = 0
     for a,b in zip(cam1_points, points):
         scale = np.linalg.norm(np.array(a))/np.linalg.norm(np.array(b))
         scaled_points.append(np.array(b)*scale)
         avg_scale += scale
-        print a,np.array(b)*scale,scale
+        # print a,np.array(b)*scale,scale
 
     avg_scale /= len(cam1_points)
-    print avg_scale
+    # print avg_scale
     for o in observers:
         o['translation'] = np.array(o['translation'])*avg_scale
 

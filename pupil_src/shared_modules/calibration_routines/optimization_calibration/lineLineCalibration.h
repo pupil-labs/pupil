@@ -88,7 +88,6 @@ bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vect
     for( auto& observer : observers ){
 
         double* pose = observer.pose.data();
-        std::cout << "pre ceres pose: " << pose[0] << " "<< pose[1] << " "<< pose[2]  << std::endl;
 
         int index = 0;
         for( auto& observation : observer.observations){
@@ -131,9 +130,9 @@ bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vect
     options.max_num_iterations = 1000;
     options.linear_solver_type = ceres::DENSE_SCHUR;
 
-    //options.parameter_tolerance = 1e-25;
-    //options.function_tolerance = 1e-26;
-    //options.gradient_tolerance = 1e-30;
+    // options.parameter_tolerance = 1e-25;
+    // options.function_tolerance = 1e-26;
+    options.gradient_tolerance = 1e-30;
     // options.minimizer_progress_to_stdout = true;
     //options.logging_type = ceres::SILENT;
     // options.check_gradients = true;
@@ -141,14 +140,6 @@ bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vect
 
     Solver::Summary summary;
     Solve(options, &problem, &summary);
-
-
-    for( int i=0; i < observers.size(); i++){
-        double* pose = observers.at(i).pose.data();
-        std::cout << "ceres pose: " << pose[0] << " "<< pose[1] << " "<< pose[2]  << std::endl;
-
-    }
-
 
 
     // std::cout << summary.BriefReport() << "\n";
