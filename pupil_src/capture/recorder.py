@@ -174,16 +174,16 @@ class Recorder(Plugin):
 
 
         # Remote has started recording, we should start as well.
-        elif notification['subject'] == 'rec_started' and notification.get('source','local') != 'local':
+        elif notification['subject'] == 'rec_should_start':
             if self.running:
                 logger.warning('Recording is already running!')
             else:
                 self.set_session_name(notification["session_name"])
-                self.start(network_propagate=False)
+                self.start(network_propagate=True)
         # Remote has stopped recording, we should stop as well.
-        elif notification['subject'] == 'rec_stopped' and notification.get('source','local') != 'local':
+        elif notification['subject'] == 'rec_should_stop':
             if self.running:
-                self.stop(network_propagate=False)
+                self.stop(network_propagate=True)
             else:
                 logger.warning('Recording is already stopped!')
 
