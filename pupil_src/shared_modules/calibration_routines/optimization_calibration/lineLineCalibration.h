@@ -202,9 +202,9 @@ bool bundleAdjustCalibration( std::vector<Observation> observations, std::vector
     //options.parameter_tolerance = 1e-25;
     //options.function_tolerance = 1e-26;
     //options.gradient_tolerance = 1e-30;
-    options.minimizer_progress_to_stdout = true;
+    // options.minimizer_progress_to_stdout = true;
     //options.logging_type = ceres::SILENT;
-    options.check_gradients = true;
+    // options.check_gradients = true;
 
 
     Solver::Summary summary;

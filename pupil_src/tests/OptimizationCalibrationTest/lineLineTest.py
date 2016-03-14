@@ -82,11 +82,11 @@ if __name__ == '__main__':
     cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(cam2_rotation_quaternion)
     cam2_rotation_angle_axis, _  = cv2.Rodrigues(cam2_rotation_matrix)
     random_points = []
-    random_points_amount = 30
+    random_points_amount = 1000
 
     x_var = 200
     y_var = 200
-    z_var = 0
+    z_var = 300
     z_min = 300
     for i in range(0,random_points_amount):
         random_point = ( uniform(-x_var,x_var) ,  uniform(-y_var,y_var) ,  uniform(z_min,z_min+z_var)  )
@@ -108,24 +108,27 @@ if __name__ == '__main__':
 
     sphere_position = (0,0,0)
 
+
     cam1_dir = [ p/np.linalg.norm(p) for p in cam1_points]
     cam2_dir = [ p/np.linalg.norm(p) for p in cam2_points]
 
-    initial_R,initial_t = find_rigid_transform(np.array(cam2_points),np.array(cam1_points))
+    initial_R,initial_t = find_rigid_transform(np.array(cam2_dir),np.array(cam1_dir))
     initial_rotation = math_helper.quaternion_from_rotation_matrix(initial_R)
     initial_translation = np.array(initial_t).reshape(3)
     initial_translation *= np.linalg.norm(cam2_center)/np.linalg.norm(initial_translation)
 
     o1 = { "directions" : cam1_dir , "translation" : [0,0,0] , "orientation" : cam1_rotation_angle_axis  }
-    o2 = { "directions" : cam2_dir , "translation" : cam2_center , "orientation" : cam2_rotation_angle_axis  }
+    o2 = { "directions" : cam2_dir , "translation" : [0,50,0] , "orientation" : cam1_rotation_angle_axis  }
     observations = [o1, o2]
 
-    inital_points = cam1_points
+    inital_points = np.array(cam1_dir)
     success, rotations, translations, points = bundle_adjust_calibration( observations , inital_points, fix_translation = False, use_weight = True  )
 
     #compare points
-    for a,b in zip(inital_points, points):
-        print a , " " , b
+    scaled_points = []
+    for a,b in zip(cam1_points, points):
+        scaled_points.append(np.array(b)*np.linalg.norm(np.array(a))/np.linalg.norm(np.array(b)))
+        # print a , " " , scaled_points[-1]
 
     avg_distance = 0.0
     rotation = math_helper.quaternion_from_matrix( cv2.Rodrigues(rotations[1])[0] )
