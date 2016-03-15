@@ -65,6 +65,8 @@ if __name__ == '__main__':
 
     from random import uniform
 
+
+    #DATA generation
     cam1_center  = (0.,0.,0.)
     cam1_rotation_angle_axis   = [0 , (0.0,1.0,0.0) ]
     cam1_rotation_quaternion = math_helper.quaternion_about_axis( cam1_rotation_angle_axis[0] , cam1_rotation_angle_axis[1])
@@ -103,11 +105,16 @@ if __name__ == '__main__':
     cam1_observation = [ p/np.linalg.norm(p) for p in cam1_points]
     cam2_observation = [ p/np.linalg.norm(p) for p in cam2_points]
 
+
+    #inital guess though rigid transform
+
     initial_R,initial_t = find_rigid_transform(np.array(cam2_observation),np.array(cam1_observation))
     initial_rotation_quaternion = math_helper.quaternion_from_rotation_matrix(initial_R)
     initial_translation = np.array(initial_t).reshape(3)
     initial_translation *= np.linalg.norm(cam2_center)/np.linalg.norm(initial_translation)
 
+
+    # setup bundle adjustment
 
     o1 = { "observations" : cam1_observation , "translation" : [0,0,0] , "rotation" : cam1_rotation_quaternion  }
     # o2 = { "observations" : cam2_observation , "translation" : cam2_center , "rotation" : cam2_rotation_quaternion  }
@@ -118,9 +125,11 @@ if __name__ == '__main__':
     initial_points = np.array(cam1_observation)*500
     # initial_points = cam1_points
 
+    #solve
     success, observers, points = bundle_adjust_calibration( initial_observers , initial_points)
 
 
+    #scale data to match ground truth
     #bundle adjustment does not solve global scale we add this from the ground thruth here:
     scaled_points = []
     avg_scale = 0
@@ -135,6 +144,8 @@ if __name__ == '__main__':
     for o in observers:
         o['translation'] = np.array(o['translation'])*avg_scale
 
+
+    # visualize
     from multiprocessing import Process
     print "final result -------------------"
     p = Process(target=show_result, args=(observers, scaled_points))
