@@ -71,7 +71,7 @@ if __name__ == '__main__':
     cam1_rotation_matrix = math_helper.quaternion_rotation_matrix(cam1_rotation_quaternion)
 
     cam2_center  = np.array((4,-30,30))
-    cam2_rotation_angle_axis   = [ -np.pi* 0.9, (0.0,1.0,0.0) ]
+    cam2_rotation_angle_axis   = [ -np.pi* 0.7, (0.0,1.0,0.0) ]
     cam2_rotation_quaternion = math_helper.quaternion_about_axis( cam2_rotation_angle_axis[0] , cam2_rotation_angle_axis[1])
     cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(cam2_rotation_quaternion)
     random_points = []
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     initial_points = np.array(cam1_observation)*500
 
 
-    success, observers, points = bundle_adjust_calibration( initial_observers , initial_points, fix_translation = False )
+    success, observers, points = bundle_adjust_calibration( initial_observers , initial_points)
 
 
     #bundle adjustment does not solve global scale we add this from the ground thruth here:

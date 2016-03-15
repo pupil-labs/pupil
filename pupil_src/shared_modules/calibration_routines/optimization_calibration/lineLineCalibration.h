@@ -76,7 +76,7 @@ struct ReprojectionError {
   Vector3 observed_point;
 };
 
-bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vector3>& points, bool fixTranslation = false)
+bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vector3>& points)
 {
 
 
@@ -113,16 +113,7 @@ bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vect
             problem.SetParameterBlockConstant(pose) ;
             problem.SetParameterBlockConstant(pose+3) ;
             lockedCamera = true;
-        }else{
-
-            if (fixTranslation)
-            {
-                problem.SetParameterBlockConstant(pose+3) ;
-
-             }
-
         }
-
     }
 
     // Build and solve the problem.

@@ -16,7 +16,7 @@ import numpy as np
 
 
 
-def bundle_adjust_calibration( initial_observers, initial_points,  fix_translation = False):
+def bundle_adjust_calibration( initial_observers, initial_points):
 
 
     cdef vector[Observer] cpp_observers;
@@ -77,7 +77,7 @@ def bundle_adjust_calibration( initial_observers, initial_points,  fix_translati
 
 
     ## optimized values are written to cpp_orientation and cpp_translation
-    cdef bint success  = bundleAdjustCalibration(cpp_observers, cpp_points, fix_translation )
+    cdef bint success  = bundleAdjustCalibration(cpp_observers, cpp_points)
 
 
     observers = []
@@ -95,7 +95,6 @@ def bundle_adjust_calibration( initial_observers, initial_points,  fix_translati
         AngleAxisRotatePoint(rotation_angle_axis.data(),cpp_translation_inverse.data(),cpp_translation.data())
 
         AngleAxisToQuaternion(rotation_angle_axis.data(),rotation_quaternion.data())
-
 
         observer['rotation'] = rotation_quaternion[0],rotation_quaternion[1],rotation_quaternion[2],rotation_quaternion[3]
         observer['translation'] = cpp_translation[0],cpp_translation[1],cpp_translation[2]
