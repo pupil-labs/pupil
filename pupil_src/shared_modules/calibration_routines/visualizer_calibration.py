@@ -18,7 +18,7 @@ import math
 
 
 class Calibration_Visualizer(Visualizer):
-	def __init__(self, g_pool, world_camera_intrinsics , cal_ref_points_3d, eye_camera_to_world_matrix0 , cal_gaze_points0_3d, eye_camera_to_world_matrix1 = np.eye(4) , cal_gaze_points1_3d = [],  run_independently = False , name = "Calibration Visualizer" ):
+	def __init__(self, g_pool, world_camera_intrinsics , cal_ref_points_3d, cal_observed_points_3d, eye_camera_to_world_matrix0 , cal_gaze_points0_3d, eye_camera_to_world_matrix1 = np.eye(4) , cal_gaze_points1_3d = [],  run_independently = False , name = "Calibration Visualizer" ):
 		super(Calibration_Visualizer, self).__init__( g_pool,name,  run_independently)
 
 		self.image_width = 640 # right values are assigned in update
@@ -29,6 +29,7 @@ class Calibration_Visualizer(Visualizer):
 		self.eye_camera_to_world_matrix1 = eye_camera_to_world_matrix1
 
 		self.cal_ref_points_3d = cal_ref_points_3d
+		self.cal_observed_points_3d = cal_observed_points_3d
 		self.cal_gaze_points0_3d = cal_gaze_points0_3d
 		self.cal_gaze_points1_3d = cal_gaze_points1_3d
 
@@ -73,7 +74,7 @@ class Calibration_Visualizer(Visualizer):
 		if self.world_camera_width != 0:
 			self.draw_frustum( self.world_camera_width/ 10.0 , self.world_camera_height/ 10.0 , self.world_camera_focal / 10.0)
 
-		for p in self.cal_ref_points_3d:
+		for p in self.cal_observed_points_3d:
 			glutils.draw_polyline( [ (0,0,0), p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
 		#calibration points
 		glutils.draw_points( self.cal_ref_points_3d , 4 , RGBA( 0, 1, 1, 1 ) )
@@ -102,7 +103,7 @@ class Calibration_Visualizer(Visualizer):
 				glutils.draw_polyline( [ sphere_center0, p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
 
 			#calibration points
-			glutils.draw_points( self.cal_gaze_points0_3d , 4 , RGBA( 1, 0, 1, 1 ) )
+			# glutils.draw_points( self.cal_gaze_points0_3d , 4 , RGBA( 1, 0, 1, 1 ) )
 
 			#current gaze points
 			glutils.draw_points( gaze_points0 , 2 , RGBA( 1, 0, 0, 1 ) )

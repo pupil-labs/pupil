@@ -133,8 +133,8 @@ bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vect
     Solve(options, &problem, &summary);
 
 
-    // std::cout << summary.BriefReport() << "\n";
-    std::cout << summary.FullReport() << "\n";
+    std::cout << summary.BriefReport() << "\n";
+    // std::cout << summary.FullReport() << "\n";
 
     if( summary.termination_type != ceres::TerminationType::CONVERGENCE  ){
         std::cout << "Termination Error: " << ceres::TerminationTypeToString(summary.termination_type) << std::endl;

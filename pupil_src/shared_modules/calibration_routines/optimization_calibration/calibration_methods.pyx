@@ -100,6 +100,10 @@ def bundle_adjust_calibration( initial_observers, initial_points):
         observer['translation'] = cpp_translation[0],cpp_translation[1],cpp_translation[2]
         observers.append(observer)
 
+    for final,inital in zip(observers,initial_observers):
+        final['observations'] = inital['observations']
+
+
     points = []
     cdef Vector3 cpp_p
     for cpp_p in cpp_points:

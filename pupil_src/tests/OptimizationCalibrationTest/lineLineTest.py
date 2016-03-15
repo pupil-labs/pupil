@@ -17,43 +17,40 @@ def show_result(observers,points, name = "Calibration"):
 
     rotation = np.array(observers[1]['rotation'])
     translation = np.array(observers[1]['translation'])
-
+    cam1_dirs = observers[0]['observations']
+    cam2_dirs = observers[1]['observations']
     print 'rotation: ' , math_helper.about_axis_from_quaternion(rotation), 'thruth:',math_helper.about_axis_from_quaternion(cam2_rotation_quaternion)
     print 'translation: ' , translation, 'thruth:',cam2_center
 
-    return
     #replace with the optimized rotation and translation
     R = math_helper.quaternion_rotation_matrix(rotation)
     cam2_transformation_matrix  = np.matrix(np.eye(4))
     cam2_transformation_matrix[:3,:3] = R
-    t = np.matrix(translation)
+    t = np.array(translation)
     t.shape = (3,1)
     cam2_transformation_matrix[:3,3:4] = t
 
     def toWorld(p):
-        return np.dot(R, p)+t
+        return np.dot(R, p)+np.array(translation)
 
     eye = { 'center': translation, 'radius': 1.0}
 
-    intersection_points_a = [] #world coords
-    intersection_points_b = [] #cam2 coords
+    points_a = [] #world coords
+    points_b = [] #cam2 coords
     avg_error = 0.0
-    for a,b in zip(cam1_points , cam2_points): #world coords , cam2 coords
+    for a,b,point in zip(cam1_dirs , cam2_dirs,points): #world coords , cam2 coords
 
-        line_a = (np.array(cam1_center) , np.array(a))
-        line_b = (toWorld(cam1_center) , toWorld(b) ) #convert to world for intersection
+        line_a = np.array([0,0,0]) , np.array(a) #observation as line
+        line_b = toWorld(np.array([0,0,0])) , toWorld(b)  #cam2 observation line in cam1 coords
+        close_point_a,_ =  math_helper.nearest_linepoint_to_point( point , line_a )
+        close_point_b,_ =  math_helper.nearest_linepoint_to_point( point , line_b )
+        print np.linalg.norm(point-close_point_a),np.linalg.norm(point-close_point_b)
 
-        ai, bi, distance =  math_helper.nearest_intersection_points( line_a , line_b ) #world coords
-        avg_error +=distance
-        intersection_points_a.append(ai)
-        intersection_points_b.append(bi)  #cam2 coords , since visualizer expects local coordinates
+        # print point,close_point_a,close_point_b
+        points_a.append(close_point_a)
+        points_b.append(close_point_b)
 
-    avg_error /= len(cam2_points)
-    print 'avg distace of intersections re calulated on scaled data: ', avg_error
-
-    #cam2_points_world = [toWorld(p) for p in cam2_points]
-
-    visualizer = Calibration_Visualizer(None,None, intersection_points_a ,cam2_transformation_matrix , intersection_points_b, run_independently = True , name = name)
+    visualizer = Calibration_Visualizer(None,None,points, points_a ,cam2_transformation_matrix , points_b, run_independently = True , name = name)
     visualizer.open_window()
     while visualizer.window:
         visualizer.update_window( None, [] , eye)
@@ -71,11 +68,11 @@ if __name__ == '__main__':
     cam1_rotation_matrix = math_helper.quaternion_rotation_matrix(cam1_rotation_quaternion)
 
     cam2_center  = np.array((4,-30,30))
-    cam2_rotation_angle_axis   = [ -np.pi* 0.7, (0.0,1.0,0.0) ]
+    cam2_rotation_angle_axis   = [ -np.pi* 0.0, (0.0,1.0,0.0) ]
     cam2_rotation_quaternion = math_helper.quaternion_about_axis( cam2_rotation_angle_axis[0] , cam2_rotation_angle_axis[1])
     cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(cam2_rotation_quaternion)
     random_points = []
-    random_points_amount = 80
+    random_points_amount = 8
 
     x_var = 200
     y_var = 200
@@ -110,12 +107,13 @@ if __name__ == '__main__':
 
 
     o1 = { "observations" : cam1_observation , "translation" : [0,0,0] , "rotation" : cam1_rotation_quaternion  }
+    # o2 = { "observations" : cam2_observation , "translation" : cam2_center , "rotation" : cam2_rotation_quaternion  }
     o2 = { "observations" : cam2_observation , "translation" : initial_translation , "rotation" : initial_rotation_quaternion  }
     initial_observers = [o1, o2]
 
     # initial_points = np.ones(np.array(cam1_points).shape,dtype= np.array(cam1_points).dtype)
     initial_points = np.array(cam1_observation)*500
-
+    initial_points = cam1_points
 
     success, observers, points = bundle_adjust_calibration( initial_observers , initial_points)
 
@@ -130,10 +128,9 @@ if __name__ == '__main__':
         # print a,np.array(b)*scale,scale
 
     avg_scale /= len(cam1_points)
-    # print avg_scale
+
     for o in observers:
         o['translation'] = np.array(o['translation'])*avg_scale
-
 
     from multiprocessing import Process
     print "final result -------------------"
