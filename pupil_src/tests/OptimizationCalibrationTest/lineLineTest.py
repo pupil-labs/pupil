@@ -30,7 +30,11 @@ def show_result(observers,points, name = "Calibration"):
     t.shape = (3,1)
     cam2_transformation_matrix[:3,3:4] = t
 
+    # R = np.eye(3)
+    # print R
+
     def toWorld(p):
+        # print R,t
         return np.dot(R, p)+np.array(translation)
 
     eye = { 'center': translation, 'radius': 1.0}
@@ -44,9 +48,8 @@ def show_result(observers,points, name = "Calibration"):
         line_b = toWorld(np.array([0,0,0])) , toWorld(b)  #cam2 observation line in cam1 coords
         close_point_a,_ =  math_helper.nearest_linepoint_to_point( point , line_a )
         close_point_b,_ =  math_helper.nearest_linepoint_to_point( point , line_b )
-        print np.linalg.norm(point-close_point_a),np.linalg.norm(point-close_point_b)
+        # print np.linalg.norm(point-close_point_a),np.linalg.norm(point-close_point_b)
 
-        # print point,close_point_a,close_point_b
         points_a.append(close_point_a)
         points_b.append(close_point_b)
 
@@ -62,21 +65,21 @@ if __name__ == '__main__':
 
     from random import uniform
 
-    cam1_center  = (0,0,0)
+    cam1_center  = (0.,0.,0.)
     cam1_rotation_angle_axis   = [0 , (0.0,1.0,0.0) ]
     cam1_rotation_quaternion = math_helper.quaternion_about_axis( cam1_rotation_angle_axis[0] , cam1_rotation_angle_axis[1])
     cam1_rotation_matrix = math_helper.quaternion_rotation_matrix(cam1_rotation_quaternion)
 
-    cam2_center  = np.array((4,-30,30))
-    cam2_rotation_angle_axis   = [ -np.pi* 0.0, (0.0,1.0,0.0) ]
+    cam2_center  = np.array((4.,-30.,80.))
+    cam2_rotation_angle_axis   = [ -np.pi* 0.6, (0.0,1.0,0.0) ]
     cam2_rotation_quaternion = math_helper.quaternion_about_axis( cam2_rotation_angle_axis[0] , cam2_rotation_angle_axis[1])
     cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(cam2_rotation_quaternion)
     random_points = []
-    random_points_amount = 8
+    random_points_amount = 80
 
     x_var = 200
     y_var = 200
-    z_var = 500
+    z_var = 300
     z_min = 200
     for i in range(0,random_points_amount):
         random_point = ( uniform(-x_var,x_var) ,  uniform(-y_var,y_var) ,  uniform(z_min,z_min+z_var)  )
@@ -113,7 +116,7 @@ if __name__ == '__main__':
 
     # initial_points = np.ones(np.array(cam1_points).shape,dtype= np.array(cam1_points).dtype)
     initial_points = np.array(cam1_observation)*500
-    initial_points = cam1_points
+    # initial_points = cam1_points
 
     success, observers, points = bundle_adjust_calibration( initial_observers , initial_points)
 
@@ -125,7 +128,7 @@ if __name__ == '__main__':
         scale = np.linalg.norm(np.array(a))/np.linalg.norm(np.array(b))
         scaled_points.append(np.array(b)*scale)
         avg_scale += scale
-        # print a,np.array(b)*scale,scale
+        # print np.array(a),np.array(b)*scale,scale
 
     avg_scale /= len(cam1_points)
 
@@ -134,7 +137,7 @@ if __name__ == '__main__':
 
     from multiprocessing import Process
     print "final result -------------------"
-    p = Process(target=show_result, args=(observers, points))
+    p = Process(target=show_result, args=(observers, scaled_points))
     p.start();
 
     import time

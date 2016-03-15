@@ -121,9 +121,9 @@ bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vect
     options.max_num_iterations = 1000;
     options.linear_solver_type = ceres::DENSE_SCHUR;
 
-    // options.parameter_tolerance = 1e-25;
-    // options.function_tolerance = 1e-26;
-    options.gradient_tolerance = 1e-30;
+    // options.parameter_tolerance = 1e-35;
+    // options.function_tolerance = 1e-35;
+    options.gradient_tolerance = 1e-35;
     // options.minimizer_progress_to_stdout = true;
     //options.logging_type = ceres::SILENT;
     // options.check_gradients = true;
