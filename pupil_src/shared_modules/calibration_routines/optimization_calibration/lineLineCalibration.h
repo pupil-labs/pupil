@@ -108,7 +108,7 @@ bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vect
         }
 
         if(!lockedCamera){
-            // first observation is world pose
+            // first observer is world camera
             // fix translation and orientation
             problem.SetParameterBlockConstant(pose) ;
             problem.SetParameterBlockConstant(pose+3) ;
