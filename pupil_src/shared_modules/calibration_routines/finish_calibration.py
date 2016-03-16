@@ -187,6 +187,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             ref_dir , gaze_dir, _ = calibrate.preprocess_3d_data(matched_monocular_data,
                                             camera_intrinsics = camera_intrinsics )
 
+            save_object((ref_dir,gaze_dir),os.path.join(g_pool.user_dir, "testdata"))
             if len(ref_dir) < 1 or len(gaze_dir) < 1:
                 logger.error(not_enough_data_error_msg)
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
@@ -199,81 +200,67 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             initial_translation *= 30/np.linalg.norm(initial_translation)
 
 
-            o1 = { "directions" : ref_dir , "translation" : (0,0,0) , "orientation" : (1,0,0,0)  }
-            o2 = { "directions" : gaze_dir , "translation" : initial_translation , "orientation" : initial_orientation  }
-            observations = [o1, o2]
-
+            o1 = { "observations" : ref_dir , "translation" : (0,0,0) , "rotation" : (1,0,0,0)  }
+            o2 = { "observations" : gaze_dir , "translation" : [10,10,-30] , "rotation" : initial_orientation  }
+            initial_observers = [o1, o2]
+            initial_points = np.array(ref_dir)*500
             #this returns the translation of the eye and not of the camera coordinate system
             #need to take sphere position into account
-            success, orientations, translations , avg_distance  = bundle_adjust_calibration(observations , use_weight = True )
-            print 'solver_residual: ',avg_distance
+            success, observers, points  = bundle_adjust_calibration(initial_observers , initial_points )
             # overwrite solution with intial guess
             # success, orientation, translation , avg_distance = True, initial_orientation,initial_translation,-1
 
-
-            orientation = np.array(orientations[1]) #first one is fixed world camera
-            translation = np.array(translations[1]) #first one is fixed world camera
-            # print 'orientation: ' , orientation
-            # print 'translation: ' , translation
-            # print 'avg distance: ' , avg_distance
 
             if not success:
                 logger.error("Calibration solver faild to converge.")
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
-            rotation_matrix = math_helper.quaternion_rotation_matrix(orientation)
+            #scale data to match
+            #bundle adjustment does not solve global scale
+            # scale = 30/np.linalg.norm(np.array(observers[1]['translation']))
+            # observers[1]['translation'] = np.array(observers[1]['translation'])*scale
+            # points = np.array(points)*scale
 
+
+            rotation = np.array(observers[1]['rotation']) #first one is fixed world camera
+            translation = np.array(observers[1]['translation']) #first one is fixed world camera
+            R = math_helper.quaternion_rotation_matrix(rotation)
+
+            def toWorld(p):
+                return np.dot(R, p)+np.array(translation)
+
+            points_a = [] #world points
+            points_b = [] #eye points
+            avg_error = 0.0
+            for a,b,point in zip(observers[0]['observations'] , observers[1]['observations'],points):
+                line_a = np.array([0,0,0]) , np.array(a) #observation as line
+                line_b = toWorld(np.array([0,0,0])) , toWorld(b)  #cam2 observation line in cam1 coords
+                close_point_a,_ =  math_helper.nearest_linepoint_to_point( point , line_a )
+                close_point_b,_ =  math_helper.nearest_linepoint_to_point( point , line_b )
+                print 'distacne 3d to lines: ',np.linalg.norm(point-close_point_a),np.linalg.norm(point-close_point_b)
+                points_a.append(close_point_a)
+                points_b.append(close_point_b)
 
             # we need to take the sphere position into account
             # orientation and translation are referring to the sphere center.
             # but we want to have it referring to the camera center
-
             # since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
             sphere_translation = np.array( matched_monocular_data[-1]['pupil']['sphere']['center'] )
-            sphere_translation_world = np.dot( rotation_matrix , sphere_translation)
+            sphere_translation_world = np.dot( R , sphere_translation)
             camera_translation = translation - sphere_translation_world
             eye_camera_to_world_matrix  = np.eye(4)
-            eye_camera_to_world_matrix[:3,:3] = rotation_matrix
+            eye_camera_to_world_matrix[:3,:3] = R
             eye_camera_to_world_matrix[:3,3:4] = np.reshape(camera_translation, (3,1) )
 
 
-            gaze_points_3d = []
-            ref_points_3d = []
-            avg_error = 0.0
-            avg_gaze_distance = 0.0
-            avg_ref_distance = 0.0
-            for i in range(0,len(ref_dir)):
-                ref_p = ref_dir[i]
-                gaze_direction = gaze_dir[i]
-                gaze_direction_world = np.dot(rotation_matrix, gaze_direction)
-                gaze_line = ( translation , translation + gaze_direction_world )
-                ref_line = ( np.zeros(3) , ref_p )
-                ref_point_world , gaze_point_world , distance = math_helper.nearest_intersection_points( ref_line , gaze_line )
-
-                gaze_points_3d.append( gaze_point_world )
-                ref_points_3d.append( ref_point_world )
-
-                avg_error += distance
-                avg_ref_distance += np.linalg.norm(ref_point_world)
-                avg_gaze_distance += np.linalg.norm(gaze_point_world)
-
-
-            avg_error /= len(ref_dir)
-            avg_gaze_distance /= len(ref_dir)
-            avg_ref_distance /= len(ref_dir)
-            avg_distance = (avg_ref_distance + avg_gaze_distance) * 0.5
-            logger.info('calibration average error: %s'%avg_error)
-            logger.info('calibration average distance: %s'%avg_distance)
-
-            print 'intersecting gaze and ref lines in space'
-            print 'avg error: ' , avg_error
-            print 'avg gaze distance: ' , avg_gaze_distance
-            print 'avg ref distance: ' , avg_ref_distance
-
             g_pool.plugins.add(Vector_Gaze_Mapper,args=
-                {'eye_camera_to_world_matrix':eye_camera_to_world_matrix , 'camera_intrinsics': camera_intrinsics , 'cal_ref_points_3d': ref_points_3d,
-                 'cal_gaze_points_3d': gaze_points_3d,'gaze_distance':avg_distance})
+                {'eye_camera_to_world_matrix':eye_camera_to_world_matrix ,
+                'camera_intrinsics': camera_intrinsics ,
+                'cal_points_3d': points,
+                'cal_ref_points_3d': points_a,
+                'cal_gaze_points_3d': points_b,
+                'gaze_distance':500})
 
         else:
             logger.error(not_enough_data_error_msg)

@@ -76,6 +76,10 @@ class Calibration_Visualizer(Visualizer):
 
 		for p in self.cal_observed_points_3d:
 			glutils.draw_polyline( [ (0,0,0), p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
+			#draw error lines form eye gaze points to  ref points
+		for(cal_point,ref_point) in zip(self.cal_ref_points_3d, self.cal_observed_points_3d):
+				glutils.draw_polyline( [ cal_point, ref_point]  , 1 , error_line_color, line_type = GL_LINES)
+
 		#calibration points
 		glutils.draw_points( self.cal_ref_points_3d , 4 , RGBA( 0, 1, 1, 1 ) )
 

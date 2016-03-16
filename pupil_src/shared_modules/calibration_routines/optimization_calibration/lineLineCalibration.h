@@ -114,6 +114,8 @@ bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vect
             problem.SetParameterBlockConstant(pose+3) ;
             lockedCamera = true;
         }
+        // problem.SetParameterBlockConstant(pose+3) ;
+
     }
 
     // Build and solve the problem.
