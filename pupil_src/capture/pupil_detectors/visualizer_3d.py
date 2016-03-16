@@ -138,11 +138,11 @@ class Eye_Visualizer(Visualizer):
 		#draw model info for each model
 		delta_y = 20
 		for model in models:
-			modelStatus =	('Model: %d \n ' %  model['modelID'] ,
+			modelStatus =	('Model: %d \n ' %  model['model_id'] ,
 							'    maturity: %.3f\n' % model['maturity'] ,
 							'    fit: %.6f\n' % model['fit'] ,
 							'    performance: %.6f\n' % model['performance'] ,
-							'    perf.Grad.: %.3e\n' % model['performanceGradient'] ,
+							'    perf.Grad.: %.3e\n' % model['performance_gradient'] ,
 							)
 			modeltext = ''.join( modelStatus )
 			self.glfont.draw_multi_line_text(self.window_size[0] - 200 ,delta_y, modeltext)
@@ -182,7 +182,7 @@ class Eye_Visualizer(Visualizer):
 		self.image_width , self.image_height = g_pool.capture.frame_size
 
 		latest_circle = result['circle']
-		predicted_circle = result['predictedCircle']
+		predicted_circle = result['predicted_circle']
 		edges =  result['edges']
 		sphere_models = result['models']
 
@@ -205,9 +205,9 @@ class Eye_Visualizer(Visualizer):
 		alternative_initial_sphere_color = RGBA( 1,0.5,0.5,0.05)
 
 		for model in sphere_models:
-			bin_positions = model['binPositions']
+			bin_positions = model['bin_positions']
 			sphere = model['sphere']
-			initial_sphere = model['initialSphere']
+			initial_sphere = model['initial_sphere']
 
 			if model_count == 0:
 				# self.draw_sphere(initial_sphere[0],initial_sphere[1], color = sphere_color )

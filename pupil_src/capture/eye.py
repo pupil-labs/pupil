@@ -421,7 +421,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
 
                     if result['method'] == '3D c++':
 
-                        eye_ball = result['projectedSphere']
+                        eye_ball = result['projected_sphere']
                         try:
                             pts = cv2.ellipse2Poly( (int(eye_ball['center'][0]),int(eye_ball['center'][1])),
                                                 (int(eye_ball['axes'][0]/2),int(eye_ball['axes'][1]/2)),
@@ -429,7 +429,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                         except ValueError:
                             pass
                         else:
-                            draw_polyline(pts,2,RGBA(0.,4.,9.,0.3))
+                            draw_polyline(pts,2,RGBA(0.,4.,9.,0.4*result['model_confidence']))
 
                     if result['confidence'] >0:
                         if result.has_key('ellipse'):

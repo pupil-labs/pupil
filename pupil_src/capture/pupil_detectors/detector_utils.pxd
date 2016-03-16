@@ -70,11 +70,13 @@ cdef inline convertTo3DPythonResult( Detector3DResult& result, object frame    )
     projectedSphere = {}
     projectedSphere['center'] = (result.projectedSphere.center[0] + frame.width / 2.0 ,frame.height / 2.0  -  result.projectedSphere.center[1])
     projectedSphere['axes'] =  (result.projectedSphere.minor_radius * 2.0 ,result.projectedSphere.major_radius * 2.0)
+    #TODO result.projectedSphere.angle is always 0
     projectedSphere['angle'] = - (result.projectedSphere.angle * 180.0 / PI - 90.0)
-    py_result['projectedSphere'] = projectedSphere
+    py_result['projected_sphere'] = projectedSphere
 
-    py_result['modelConfidence'] = result.modelConfidence
-    py_result['modelID'] = result.modelID
+    #TODO rename confidece to performace and vice versa
+    py_result['model_confidence'] = result.modelConfidence
+    py_result['model_id'] = result.modelID
 
     py_result['diameter_3D'] = result.circle.radius * 2.0
 
@@ -91,19 +93,19 @@ cdef inline prepareForVisualization3D(  Detector3DResult& result ):
 
     py_visualizationResult['edges'] = getEdges(result)
     py_visualizationResult['circle'] = getCircle(result);
-    py_visualizationResult['predictedCircle'] = getPredictedCircle(result);
+    py_visualizationResult['predicted_circle'] = getPredictedCircle(result);
 
     models = []
     for model in result.models:
         props = {}
-        props['binPositions'] = getBinPositions(model)
+        props['bin_positions'] = getBinPositions(model)
         props['sphere'] = getSphere(model)
-        props['initialSphere'] = getInitialSphere(model)
+        props['initial_sphere'] = getInitialSphere(model)
         props['maturity'] = model.maturity
         props['fit'] = model.fit
         props['performance'] = model.performance
-        props['performanceGradient'] = model.performanceGradient
-        props['modelID'] = model.modelID
+        props['performance_gradient'] = model.performanceGradient
+        props['model_id'] = model.modelID
         models.append(props)
 
     py_visualizationResult['models'] = models;
