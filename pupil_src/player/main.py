@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import sys, os,platform
+import sys, os,platform,errno
 from glob import glob
 from copy import deepcopy
 from time import time
@@ -105,12 +105,12 @@ from vis_light_points import Vis_Light_Points
 from vis_watermark import Vis_Watermark
 from seek_bar import Seek_Bar
 from trim_marks import Trim_Marks
-from export_launcher import Export_Launcher
+from video_export_launcher import Video_Export_Launcher
 from scan_path import Scan_Path
 from offline_marker_detector import Offline_Marker_Detector
 from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from pupil_server import Pupil_Server
-from fixation_detector import Dispersion_Duration_Fixation_Detector
+from fixation_detector import Fixation_Detector_Dispersion_Duration
 from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
@@ -119,7 +119,7 @@ from log_display import Log_Display
 from annotations import Annotation_Player
 
 system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
-user_launchable_plugins = [Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay,Annotation_Player] #,Marker_Auto_Trim_Marks
+user_launchable_plugins = [Video_Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Fixation_Detector_Dispersion_Duration,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay,Annotation_Player] #,Marker_Auto_Trim_Marks
 user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
@@ -271,6 +271,23 @@ def session(rec_dir):
                 p.alive = False
         g_pool.plugins.clean()
 
+    def do_export(_):
+        export_range = slice(g_pool.trim_marks.in_mark,g_pool.trim_marks.out_mark)
+        export_dir = os.path.join(g_pool.rec_dir,'exports','%s-%s'%(export_range.start,export_range.stop))
+        try:
+            os.makedirs(export_dir)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                logger.error("Could not create export dir")
+                raise e
+            else:
+                logger.warning("Previous export for range [%s-%s] already exsits - overwriting."%(export_range.start,export_range.stop))
+        else:
+            logger.info('Created export dir at "%s"'%export_dir)
+
+        notification = {'subject':'should_export','range':export_range,'export_dir':export_dir}
+        g_pool.notifications.append(notification)
+
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.main_menu = ui.Growing_Menu("Settings",pos=(-350,20),size=(300,400))
@@ -288,23 +305,19 @@ def session(rec_dir):
     g_pool.play_button.on_color[:] = (0,1.,.0,.8)
     g_pool.forward_button = ui.Thumb('forward',getter = lambda: False,setter= next_frame, hotkey=GLFW_KEY_RIGHT)
     g_pool.backward_button = ui.Thumb('backward',getter = lambda: False, setter = prev_frame, hotkey=GLFW_KEY_LEFT)
-    g_pool.quickbar.extend([g_pool.play_button,g_pool.forward_button,g_pool.backward_button])
+    g_pool.export_button = ui.Thumb('export',getter = lambda: False, setter = do_export, hotkey='e')
+    g_pool.quickbar.extend([g_pool.play_button,g_pool.forward_button,g_pool.backward_button,g_pool.export_button])
     g_pool.gui.append(g_pool.quickbar)
     g_pool.gui.append(g_pool.main_menu)
 
 
     #we always load these plugins
     system_plugins = [('Trim_Marks',{}),('Seek_Bar',{})]
-    default_plugins = [('Log_Display',{}),('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Export_Launcher',{})]
+    default_plugins = [('Log_Display',{}),('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Video_Export_Launcher',{})]
     previous_plugins = session_settings.get('loaded_plugins',default_plugins)
     g_pool.notifications = []
     g_pool.delayed_notifications = {}
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,system_plugins+previous_plugins)
-
-    for p in g_pool.plugins:
-        if p.class_name == 'Trim_Marks':
-            g_pool.trim_marks = p
-            break
 
 
     # Register callbacks main_window

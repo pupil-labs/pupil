@@ -28,7 +28,7 @@ class Fixation_Detector(Plugin):
         super(Fixation_Detector, self).__init__(g_pool)
 
 
-class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
+class Fixation_Detector_Dispersion_Duration(Fixation_Detector):
     '''
     This plugin classifies fixations and saccades by measuring dispersion and duration of gaze points
 
@@ -45,7 +45,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
 
     '''
     def __init__(self,g_pool,max_dispersion = 1.0,min_duration = 0.15,h_fov=78, v_fov=50,show_fixations = False):
-        super(Dispersion_Duration_Fixation_Detector, self).__init__(g_pool)
+        super(Fixation_Detector_Dispersion_Duration, self).__init__(g_pool)
         self.min_duration = min_duration
         self.max_dispersion = max_dispersion
         self.h_fov = h_fov
@@ -64,17 +64,28 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         def set_h_fov(new_fov):
             self.h_fov = new_fov
             self.pix_per_degree = float(self.g_pool.capture.frame_size[0])/new_fov
+            self.notify_all_delayed({'subject':'fixations_should_recalculate'},delay=1.)
 
         def set_v_fov(new_fov):
             self.v_fov = new_fov
             self.pix_per_degree = float(self.g_pool.capture.frame_size[1])/new_fov
+            self.notify_all_delayed({'subject':'fixations_should_recalculate'},delay=1.)
+
+        def set_duration(new_value):
+            self.min_duration = new_value
+            self.notify_all_delayed({'subject':'fixations_should_recalculate'},delay=1.)
+
+        def set_dispersion(new_value):
+            self.max_dispersion = new_value
+            self.notify_all_delayed({'subject':'fixations_should_recalculate'},delay=1.)
+
+
 
         self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Info_Text('This plugin detects fixations based on a dispersion threshold in terms of degrees of visual angle. It also uses a min duration threshold.'))
-        self.menu.append(ui.Slider('min_duration',self,min=0.0,step=0.05,max=1.0,label='duration threshold'))
-        self.menu.append(ui.Slider('max_dispersion',self,min=0.0,step=0.05,max=3.0,label='dispersion threshold'))
-        self.menu.append(ui.Button('Run fixation detector',self._classify))
-        self.menu.append(ui.Button('Export fixations',self.export_fixations))
+        self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
+        self.menu.append(ui.Slider('min_duration',self,min=0.0,step=0.05,max=1.0,label='duration threshold',setter=set_duration))
+        self.menu.append(ui.Slider('max_dispersion',self,min=0.0,step=0.05,max=3.0,label='dispersion threshold',setter=set_dispersion))
         self.menu.append(ui.Switch('show_fixations',self,label='Show fixations'))
         self.menu.append(ui.Slider('h_fov',self,min=5,step=1,max=180,label='horizontal FOV of scene camera',setter=set_h_fov))
         self.menu.append(ui.Slider('v_fov',self,min=5,step=1,max=180,label='vertical FOV of scene camera',setter=set_v_fov))
@@ -92,6 +103,9 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             self._classify()
         elif notification['subject'] == 'fixations_should_recalculate':
             self._classify()
+        elif notification['subject'] is "should_export":
+            self.export_fixations(notification['range'],notification['export_dir'])
+
 
 
     # def _velocity(self):
@@ -111,8 +125,8 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         classify fixations
         '''
 
+        logger.info("Reclassifying fixations.")
         gaze_data = list(chain(*self.g_pool.gaze_positions_by_frame))
-
 
         sample_threshold = self.min_duration * 3 *.3 #lets assume we need data for at least 30% of the duration
         dispersion_threshold = self.max_dispersion
@@ -185,13 +199,8 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         self.g_pool.fixations_by_frame = fixations_by_frame
 
 
-    def export_fixations(self):
-        #todo
-
-        in_mark = self.g_pool.trim_marks.in_mark
-        out_mark = self.g_pool.trim_marks.out_mark
-
-
+    def export_fixations(self,export_range,export_dir):
+        #t
         """
         between in and out mark
 
@@ -203,34 +212,22 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
                 id | start_timestamp | duration | start_frame_index | end_frame_index | dispersion | avg_pupil_size | confidence
 
         """
-
         if not self.fixations:
             logger.warning('No fixations in this recording nothing to export')
             return
 
-        fixations_in_section = chain(*self.g_pool.fixations_by_frame[slice(in_mark,out_mark)])
+        fixations_in_section = chain(*self.g_pool.fixations_by_frame[export_range])
         fixations_in_section = dict([(f['id'],f) for f in fixations_in_section]).values() #remove dublicates
         fixations_in_section.sort(key=lambda f:f['id'])
-        metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
-        logger.info("exporting metrics to %s"%metrics_dir)
-        if os.path.isdir(metrics_dir):
-            logger.info("Will overwrite previous export for this section.")
-        else:
-            try:
-                os.mkdir(metrics_dir)
-            except:
-                logger.warning("Could not make metrics dir %s!"%metrics_dir)
-                return
 
-
-        with open(os.path.join(metrics_dir,'fixations.csv'),'wb') as csvfile:
+        with open(os.path.join(export_dir,'fixations.csv'),'wb') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
             csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','dispersion','avg_pupil_size','confidence'))
             for f in fixations_in_section:
                 csv_writer.writerow( ( f['id'],f['timestamp'],f['duration'],f['start_frame_index'],f['end_frame_index'],f['norm_pos'][0],f['norm_pos'][1],f['dispersion'],f['pupil_diameter'],f['confidence'] ) )
             logger.info("Created 'fixations.csv' file.")
 
-        with open(os.path.join(metrics_dir,'fixation_report.csv'),'wb') as csvfile:
+        with open(os.path.join(export_dir,'fixation_report.csv'),'wb') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
             csv_writer.writerow(('fixation classifier','Dispersion_Duration'))
             csv_writer.writerow(('max_dispersion','%0.3f deg'%self.max_dispersion) )
@@ -238,7 +235,6 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             csv_writer.writerow((''))
             csv_writer.writerow(('fixation_count',len(fixations_in_section)))
             logger.info("Created 'fixation_report.csv' file.")
-
 
 
     def update(self,frame,events):
