@@ -12,12 +12,14 @@ import OpenGL
 # OpenGL.FULL_LOGGING = True
 OpenGL.ERROR_LOGGING = False
 from OpenGL.GL import *
+from OpenGL.GLU import gluPerspective
 
 import numpy as np
-
+import math
 
 __all__ =  ['make_coord_system_norm_based',
             'make_coord_system_pixel_based',
+            'make_coord_system_eye_camera_based',
             'adjust_gl_view',
             'clear_gl_screen',
             'basic_gl_setup',
@@ -85,6 +87,14 @@ def make_coord_system_pixel_based(img_shape,flip=False):
     # Switch back to Model View Matrix
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
+
+def make_coord_system_eye_camera_based(window_size, focal_length ):
+    camera_fov = math.degrees(2.0 * math.atan( window_size[1] / (2.0 * focal_length)))
+    glMatrixMode( GL_PROJECTION )
+    glLoadIdentity( )
+    gluPerspective( camera_fov, float(window_size[0])/window_size[1], 0.1, 2000.0 )
+    glMatrixMode( GL_MODELVIEW )
+    glLoadIdentity( )
 
 
 def make_coord_system_norm_based(flip=False):

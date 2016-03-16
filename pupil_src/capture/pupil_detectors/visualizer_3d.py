@@ -8,10 +8,7 @@ from OpenGL.GLU import gluOrtho2D
 logger = logging.getLogger(__name__)
 from pyglui import ui
 
-from pyglui.cygl.utils import init
-from pyglui.cygl.utils import RGBA
 from pyglui.cygl.utils import *
-from pyglui.cygl import utils as glutils
 from gl_utils.trackball import Trackball
 from pyglui.pyfontstash import fontstash as fs
 from pyglui.ui import get_opensans_font_path
@@ -53,12 +50,6 @@ def get_perpendicular_vector(v):
     #     c = -(x + y)/z
     return np.array([1, 1, -1.0 * (v[0] + v[1]) / v[2]])
 
-circle_xy = [] #this is a global variable
-circle_res = 30.0
-for i in range(0,int(circle_res+1)):
-	temp =  (i)/circle_res *  math.pi * 2.0
-	circle_xy.append([np.cos(temp),np.sin(temp)])
-
 class Visualizer(object):
 	def __init__(self,focal_length, name = "Debug Visualizer", run_independently = False):
        # super(Visualizer, self).__init__()
@@ -67,7 +58,6 @@ class Visualizer(object):
 		self.image_height = 480
 		# transformation matrices
 		self.anthromorphic_matrix = self.get_anthropomorphic_matrix()
-		self.adjusted_pixel_space_matrix = self.get_adjusted_pixel_space_matrix(1)
 
 		self.name = name
 		self.window_size = (640,480)
@@ -75,9 +65,10 @@ class Visualizer(object):
 		self.input = None
 		self.run_independently = run_independently
 
-		camera_fov = math.degrees(2.0 * math.atan( self.window_size[0] / (2.0 * self.focal_length)))
+		camera_fov = math.degrees(2.0 * math.atan( self.image_height / (2.0 * self.focal_length)))
 		self.trackball = Trackball(camera_fov)
 
+		self.sphere = None
 	############## MATRIX FUNCTIONS ##############################
 
 	def get_anthropomorphic_matrix(self):
@@ -85,10 +76,6 @@ class Visualizer(object):
 		temp[2,2] *= -1
 		return temp
 
-	def get_adjusted_pixel_space_matrix(self):
-		temp =  np.identity(4)
-		temp[2,2] *= -1
-		return temp
 
 	def get_adjusted_pixel_space_matrix(self,scale):
 		# returns a homoegenous matrix
@@ -196,23 +183,12 @@ class Visualizer(object):
 		glEnd( )
 
 	def draw_sphere(self,sphere_position, sphere_radius,contours = 45, color =RGBA(.2,.5,0.5,.5) ):
-		# this function draws the location of the eye sphere
+
 		glPushMatrix()
-
-		glTranslatef(sphere_position[0],sphere_position[1],sphere_position[2]) #sphere[0] contains center coordinates (x,y,z)
-		glTranslatef(0,0,sphere_radius) #sphere[1] contains radius
-		for i in xrange(1,contours+1):
-
-			glTranslatef(0,0, -sphere_radius/contours*2)
-			position = sphere_radius - i*sphere_radius*2/contours
-			draw_radius = np.sqrt(sphere_radius**2 - position**2)
-			glPushMatrix()
-			glScalef(draw_radius,draw_radius,1)
-			draw_polyline((circle_xy),2,color)
-			glPopMatrix()
-
+		glTranslatef(sphere_position[0],sphere_position[1],sphere_position[2])
+		glScale(sphere_radius,sphere_radius,sphere_radius)
+		self.sphere.draw(color, primitive_type = GL_LINE_STRIP)
 		glPopMatrix()
-
 
 	def draw_circle(self, circle_center, circle_normal, circle_radius, color=RGBA(1.1,0.2,.8), num_segments = 20):
 		vertices = []
@@ -234,13 +210,6 @@ class Visualizer(object):
 
 
 
-	def draw_contours_on_screen(self,contours, color = RGBA(0.,0.,0.,0.5)):
-		#this function displays the contours on the 2D video stream within the visualizer module
-		glPushMatrix()
-		glLoadMatrixf(self.get_image_space_matrix(30))
-		for contour in contours:
-			draw_polyline(contour,color)
-		glPopMatrix()
 
 	def draw_contours(self, contours, thickness = 1, color = RGBA(0.,0.,0.,0.5) ):
 		glPushMatrix()
@@ -350,6 +319,9 @@ class Visualizer(object):
 				init()
 			self.basic_gl_setup()
 
+			self.sphere = Sphere(20)
+
+
 			self.glfont = fs.Context()
 			self.glfont.add_font('opensans',get_opensans_font_path())
 			self.glfont.set_size(22)
@@ -384,13 +356,13 @@ class Visualizer(object):
 		self.trackball.push()
 
 		# 2. in pixel space draw video frame
-		glLoadMatrixf(self.get_image_space_matrix())
+		glLoadMatrixf(self.get_image_space_matrix(15))
 		g_pool.image_tex.draw( quad=((0,self.image_height),(self.image_width,self.image_height),(self.image_width,0),(0,0)) ,alpha=0.5)
 
-		glLoadMatrixf(self.get_anthropomorphic_matrix())
-
+		glLoadMatrixf(self.get_adjusted_pixel_space_matrix(15))
 		self.draw_frustum()
 
+		glLoadMatrixf(self.get_anthropomorphic_matrix())
 		model_count = 0;
 		sphere_color = RGBA( 0,147/255.,147/255.,0.2)
 		initial_sphere_color = RGBA( 0,147/255.,147/255.,0.2)
@@ -416,7 +388,7 @@ class Visualizer(object):
 
 
 		self.draw_circle( latest_circle[0], latest_circle[1], latest_circle[2], RGBA(0.0,1.0,1.0,0.4))
-		self.draw_circle( predicted_circle[0], predicted_circle[1], predicted_circle[2], RGBA(1.0,0.0,0.0,0.4))
+		# self.draw_circle( predicted_circle[0], predicted_circle[1], predicted_circle[2], RGBA(1.0,0.0,0.0,0.4))
 
 		draw_points(edges, 2 , RGBA(1.0,0.0,0.6,0.5) )
 
@@ -433,10 +405,8 @@ class Visualizer(object):
 
 	def close_window(self):
 		if self._window:
-			active_window = glfwGetCurrentContext();
 			glfwDestroyWindow(self._window)
 			self._window = None
-			glfwMakeContextCurrent( active_window)
 
 	############ window callbacks #################
 	def on_resize(self,window,w, h):

@@ -1,35 +1,37 @@
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Pupil - open source eye tracking platform
-Copyright (C) 2012-2015  Pupil Labs UG
+Copyright (C) 2012-2016  Pupil Labs UG
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Motivation
 
-We want Pupil to proliferate! We want you to use Pupil to empower and inspire whatever you do. Be it academic research, teaching, art or personally motivated projects.
+We want Pupil to proliferate! We want you to use Pupil to empower and inspire whatever you do. Be it academic research, commercial work, teaching, art, or personally motivated projects.
 
-The software is open and the hardware is very accessible and modifiable because we think that you should be more of a member of the Pupil community than a customer of the Pupil product. We encourage the modification of software and hardware in accordance to the open source license.
+We want you to be a member of the Pupil community and contribute as much as possible. The software is open and the hardware is modular and accessible. We encourage the modification of software in accordance to the open source license.
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Software
 
-All source code written by us is open source according to GNU Lesser General Public License (LGPL v3.0) license < http://www.gnu.org/licenses/lgpl-3.0.en.html >. 
+All source code written by us is open source in accordance with the GNU Lesser General Public License (LGPL v3.0) license < http://www.gnu.org/licenses/lgpl-3.0.en.html >. 
 
-We want you to change and improve the code. All software is distributed in the hope that it will be useful, but without any warranty. Just make sure to credit us, and we hope that you will share your work with the Pupil community.
+All software is distributed in the hope that it will be useful, but without any warranty. 
+
+We encourage you to change and improve the code. We require that you will share your work with the Pupil community, and credit the work appropirately.
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Documentation
 
-All content of the documentation written by Pupil Labs UG is open source, according to GNU Lesser General Public License (LGPL v3.0) license.  See < http://www.gnu.org/licenses/lgpl-3.0.en.html >
+All content of the documentation written by Pupil Labs UG is open source, according to GNU Lesser General Public License (LGPL v3.0). See < http://www.gnu.org/licenses/lgpl-3.0.en.html >
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 Using PUPIL in your research and work
 
-You can use Pupil in your research, academic work, art projects and personal work. We only ask you to credit us appropriately. Pupil is developed and maintained by Pupil Labs UG.
+You can use Pupil in your research, academic work, art projects, and personal work. We only ask you to credit us appropriately. Pupil is developed and maintained by Pupil Labs UG.
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
-Using PUPIL commercially
+Using PUPIL outside of LGPL
 
-If you plan to use Pupil in a commercial context please contact us so we can work out an appropriate license with you.  Contact sales [at] pupil-labs [dot] com
+If you want to use Pupil outside of LGPL v3.0 contact us at sales [at] pupil-labs [dot] com
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------

@@ -31,11 +31,11 @@ cdef inline convertTo2DPythonResult( Detector2DResult& result, object frame, obj
 
 cdef inline convertTo3DPythonResult( Detector3DResult& result, object frame    ):
 
-    #use negative y-coordinates to get from left-handed to right-handed coordinate system
+    #use negative z-coordinates to get from left-handed to right-handed coordinate system
     py_result = {}
     circle = {}
-    circle['center'] =  (result.circle.center[0],-result.circle.center[1], result.circle.center[2])
-    circle['normal'] =  (result.circle.normal[0],-result.circle.normal[1], result.circle.normal[2])
+    circle['center'] =  (result.circle.center[0],result.circle.center[1], -result.circle.center[2])
+    circle['normal'] =  (result.circle.normal[0],result.circle.normal[1], -result.circle.normal[2])
     circle['radius'] =  result.circle.radius
     py_result['circle3D'] = circle
 
@@ -54,10 +54,15 @@ cdef inline convertTo3DPythonResult( Detector3DResult& result, object frame    )
 
     #if result.sphere.radius != 0.0:
     sphere = {}
-    sphere['center'] =  (result.sphere.center[0],-result.sphere.center[1], result.sphere.center[2])
+    sphere['center'] =  (result.sphere.center[0],result.sphere.center[1], -result.sphere.center[2])
     sphere['radius'] =  result.sphere.radius
     py_result['sphere'] = sphere
 
+    projectedSphere = {}
+    projectedSphere['center'] = (result.projectedSphere.center[0] + frame.width / 2.0 ,frame.height / 2.0  -  result.projectedSphere.center[1])
+    projectedSphere['axes'] =  (result.projectedSphere.minor_radius * 2.0 ,result.projectedSphere.major_radius * 2.0)
+    projectedSphere['angle'] = - (result.projectedSphere.angle * 180.0 / PI - 90.0)
+    py_result['projectedSphere'] = projectedSphere
 
     py_result['modelConfidence'] = result.modelConfidence
     py_result['modelID'] = result.modelID

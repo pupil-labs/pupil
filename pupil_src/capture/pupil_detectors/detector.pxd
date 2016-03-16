@@ -103,6 +103,7 @@ cdef extern from 'singleeyefitter/common/types.h':
         Circle circle
         Ellipse ellipse
         Sphere[double] sphere
+        Ellipse projectedSphere
         double confidence
         double modelConfidence
         int modelID

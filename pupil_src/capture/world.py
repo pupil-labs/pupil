@@ -62,7 +62,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
 
     #check versions for our own depedencies as they are fast-changing
     from pyglui import __version__ as pyglui_version
-    assert pyglui_version >= '0.7'
+    assert pyglui_version >= '0.8'
 
     #monitoring
     import psutil
@@ -72,6 +72,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     from methods import normalize, denormalize, delta_t
     from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
     from version_utils import VersionFormat
+    import audio
 
     # Plug-ins
     from plugin import Plugin_List,import_runtime_plugins
@@ -198,6 +199,8 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     g_pool.active_calibration_plugin = None
 
 
+    audio.audio_mode = session_settings.get('audio_mode',audio.default_audio_mode)
+
     def open_plugin(plugin):
         if plugin ==  "Select to load":
             return
@@ -265,6 +268,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     general_settings = ui.Growing_Menu('General')
     general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,frame.width,frame.height)) )
+    general_settings.append(ui.Selector('audio_mode',audio,selection=audio.audio_modes))
     general_settings.append(ui.Selector('detection_mapping_mode',g_pool,label='detection & mapping mode',setter=set_detection_mapping_mode,selection=['2d','3d']))
     general_settings.append(ui.Switch('eye0_process',label='Detect eye 0',setter=lambda alive: start_stop_eye(0,alive),getter=lambda: eyes_are_alive[0].value ))
     general_settings.append(ui.Switch('eye1_process',label='Detect eye 1',setter=lambda alive: start_stop_eye(1,alive),getter=lambda: eyes_are_alive[1].value ))
@@ -437,6 +441,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     session_settings['eye0_process_alive'] = eyes_are_alive[0].value
     session_settings['eye1_process_alive'] = eyes_are_alive[1].value
     session_settings['detection_mapping_mode'] = g_pool.detection_mapping_mode
+    session_settings['audio_mode'] = audio.audio_mode
     session_settings.close()
 
     # de-init all running plugins

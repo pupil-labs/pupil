@@ -32,7 +32,8 @@ EyeModelFitter::EyeModelFitter(double focalLength, Vector3 cameraCenter) :
     mApproximatedFramerate(30),
     mAverageFramerate(400), // windowsize is 400, let this be slow to changes to better compensate jumps
     mLastFrameTimestamp(0),
-    mPupilState(7,3,0, CV_64F)
+    mPupilState(7,3,0, CV_64F),
+    mLogger( pupillabs::PyCppLogger("EyeModelFitter"))
 
 {
     mNextModelID++;
@@ -191,6 +192,9 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     mCurrentInitialSphere = mActiveModelPtr->getInitialSphere();
 
     result.sphere = mCurrentSphere;
+     // project the sphere back to 2D
+    // needed to draw it in the eye window
+    result.projectedSphere = project(mCurrentSphere, mFocalLength);
     // project the circle back to 2D
     // needed for some calculations in 2D later (calibration)
     if(result.circle != Circle::Null){
@@ -319,6 +323,9 @@ void EyeModelFitter::reset()
     mLastTimeModelAdded =  Clock::now();
     mCurrentSphere = Sphere::Null;
     mCurrentInitialSphere = Sphere::Null;
+    //mLogger.setLogLevel( pupillabs::PyCppLogger::LogLevel::DEBUG);
+    //mLogger.info("Reset models");
+    //mLogger.error("Reset models");
 
 }
 

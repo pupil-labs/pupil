@@ -18,7 +18,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
         pass
     else:
         logger.error(not_enough_data_error_msg)
-        g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+        g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
         return
 
     camera_intrinsics = load_camera_calibration(g_pool)
@@ -65,7 +65,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                 ref_3d = cal_pt_cloud[:,2]
             except:
                 logger.error(not_enough_data_error_msg)
-                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
                 return
 
             best_distance = 1000
@@ -126,7 +126,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
                 ref_3d = cal_pt_cloud[:,1]
             except:
                 logger.error(not_enough_data_error_msg)
-                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
                 return
 
             best_distance = 1000
@@ -161,7 +161,7 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
 
         else:
             logger.error(not_enough_data_error_msg)
-            g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+            g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
             return
 
     elif mode == '2d':
@@ -183,10 +183,10 @@ def finish_calibration(g_pool,pupil_list,ref_list,calibration_distance_3d = 500,
             g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
         else:
             logger.error(not_enough_data_error_msg)
-            g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+            g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
             return
 
     user_calibration_data = {'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
     save_object(user_calibration_data,os.path.join(g_pool.user_dir, "user_calibration_data"))
-    g_pool.active_calibration_plugin.notify_all({'subject':'calibration_successful','method':method,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+    g_pool.active_calibration_plugin.notify_all({'subject':'calibration_successful','method':method,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
 

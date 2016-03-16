@@ -497,10 +497,8 @@ class Calibration_Visualizer(object):
 
 	def close_window(self):
 		if self.window:
-			active_window = glfwGetCurrentContext();
 			glfwDestroyWindow(self.window)
 			self.window = None
-			glfwMakeContextCurrent(active_window)
 
 	############ window callbacks #################
 	def on_resize(self,window,w, h):
