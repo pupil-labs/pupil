@@ -117,9 +117,10 @@ from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
 from log_display import Log_Display
 from annotations import Annotation_Player
+from export_pupil_data_file import Export_Pupil_Data_File
 
 system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
-user_launchable_plugins = [Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay,Annotation_Player] #,Marker_Auto_Trim_Marks
+user_launchable_plugins = [Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay,Annotation_Player,Export_Pupil_Data_File] #,Marker_Auto_Trim_Marks
 user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
@@ -241,6 +242,8 @@ def session(rec_dir):
     g_pool.pupil_positions_by_frame = correlate_data(pupil_list,g_pool.timestamps)
     g_pool.gaze_positions_by_frame = correlate_data(gaze_list,g_pool.timestamps)
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps] #populated by the fixation detector plugin
+    g_pool.pupil_list = pupil_list
+    g_pool.gaze_list = gaze_list
 
     def next_frame(_):
         try:

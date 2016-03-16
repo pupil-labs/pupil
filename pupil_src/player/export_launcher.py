@@ -42,14 +42,23 @@ class Export_Process(Process):
 
 
 def verify_out_file_path(out_file_path,rec_dir):
-    #Out file path verification
+    # make dir for analytics as noted in issue #241
+    analytics_dir = os.path.join(rec_dir,"analytics")
+    # try to create the `analytics folder`
+    try:
+        os.mkdir(os.path.expanduser(analytics_dir))
+    except OSError, e:
+        # if folder already exists, it will not be overwritten an OSError will be thrown
+        logger.debug("Adding export to existing 'analytics' directory.")
+    
+    #Out file path verification        
     if not out_file_path:
-        out_file_path = os.path.join(rec_dir, "world_viz.mp4")
+        out_file_path = os.path.join(analytics_dir, "world_viz.mp4")
     else:
         file_name = os.path.basename(out_file_path)
         dir_name = os.path.dirname(out_file_path)
         if not dir_name:
-            dir_name = rec_dir
+            dir_name = analytics_dir
         if not file_name:
             file_name = 'world_viz.mp4'
         out_file_path = os.path.expanduser(os.path.join(dir_name,file_name))
