@@ -70,7 +70,7 @@ def update_recording_0v4_to_current(rec_dir):
 
     for datum in pupil_array:
         ts, confidence, id, x, y, diameter = datum[:6]
-        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':id,'norm_pos':[x,y],'diameter':diameter})
+        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':id,'norm_pos':[x,y],'diameter':diameter,'method':'2D python'})
 
     pupil_by_ts = dict([(p['timestamp'],p) for p in pupil_list])
 
@@ -93,7 +93,7 @@ def update_recording_0v3_to_current(rec_dir):
     for datum in pupilgaze_array:
         gaze_x,gaze_y,pupil_x,pupil_y,ts,confidence = datum
         #some bogus size and confidence as we did not save it back then
-        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':0,'norm_pos':[pupil_x,pupil_y],'diameter':50})
+        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':0,'norm_pos':[pupil_x,pupil_y],'diameter':50,'method':'2D python'})
         gaze_list.append({'timestamp':ts,'confidence':confidence,'norm_pos':[gaze_x,gaze_y],'base':[pupil_list[-1]]})
 
     pupil_data = {'pupil_positions':pupil_list,'gaze_positions':gaze_list}
