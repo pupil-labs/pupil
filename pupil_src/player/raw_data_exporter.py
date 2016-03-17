@@ -26,62 +26,61 @@ class Raw_Data_Exporter(Plugin):
         timestamp - timestamp of the source image frame
         index - associated_frame: closest world video frame
         id - 0 or 1 for left/right eye
-        confidence - detector confidece between 0 (not confident) -1 (confident)
+        confidence - detector confidence between 0 (not confident) -1 (confident)
         norm_pos_x - x position in the eye image frame in normalized coordinates
         norm_pos_y - y position in the eye image frame in normalized coordinates
-        diameter - diamter of the pupil in image pixels as observed in the eye image frame (is not corrected for perspective)
+        diameter - diameter of the pupil in image pixels as observed in the eye image frame (is not corrected for perspective)
 
         method - string that indicates what detector was used to detect the pupil
 
-        --- optional field depending on detector
+        --- optional fields depending on detector
 
-        #in 2d the pupil appears as an ellipse avaiable in `3D c++` and `2D c++` detector
+        #in 2d the pupil appears as an ellipse available in `3d c++` and `2D c++` detector
         2d_ellipse_center_x - x center of the pupil in image pixels
         2d_ellipse_center_y - y center of the pupil in image pixels
-        2d_ellipse_axis_a - first axis of the pupil ellispe in pixels
-        2d_ellipse_axis_b - second axis of the pupil ellispe in pixels
+        2d_ellipse_axis_a - first axis of the pupil ellipse in pixels
+        2d_ellipse_axis_b - second axis of the pupil ellipse in pixels
         2d_ellipse_angle - angle of the ellipse in degrees
 
 
-        #data made avaible by the `3D c++` detector
+        #data made available by the `3d c++` detector
 
-        diameter_3D - diameter of the pupil scaled to mm based on antropomorphic avg eye ball diameter and corrected for perspective.
+        diameter_3d - diameter of the pupil scaled to mm based on anthropomorphic avg eye ball diameter and corrected for perspective.
         model_confidence - confidence of the current eye model (0-1)
-        model_id - id of the current eye model. When a slippage is detected the model is replace and the id changes.
+        model_id - id of the current eye model. When a slippage is detected the model is replaced and the id changes.
 
-        sphere_center_x - x pos of the eye ball sphere is eye pinhole camera 3d space units are scaled to mm.
+        sphere_center_x - x pos of the eyeball sphere is eye pinhole camera 3d space units are scaled to mm.
         sphere_center_y - y pos of the eye ball sphere
         sphere_center_z - z pos of the eye ball sphere
-        sphere_radius - radius of the eye ball. This is always 12mm (the antropomorphic avg.) We need to make this assumption because of the `single camera scale ambiguity`.
+        sphere_radius - radius of the eyeball. This is always 12mm (the anthropomorphic avg.) We need to make this assumption because of the `single camera scale ambiguity`.
 
 
-        circle_3d_center_x - x center of the pupil as 3d circle ineye pinhole camera 3d space units are mm.
+        circle_3d_center_x - x center of the pupil as 3d circle in eye pinhole camera 3d space units are mm.
         circle_3d_center_y - y center of the pupil as 3d circle
         circle_3d_center_z - z center of the pupil as 3d circle
-        circle_3d_normal_x - x normal of the pupil as 3D circle. Indicates the direction that the pupil points at in 3D space.
-        circle_3d_normal_y - y normal of the pupil as 3D circle
-        circle_3d_normal_z - z normal of the pupil as 3D circle
-        circle_3d_radius - radius of the pupil as 3D circle. Same as `diameter_3D`
+        circle_3d_normal_x - x normal of the pupil as 3d circle. Indicates the direction that the pupil points at in 3d space.
+        circle_3d_normal_y - y normal of the pupil as 3d circle
+        circle_3d_normal_z - z normal of the pupil as 3d circle
+        circle_3d_radius - radius of the pupil as 3d circle. Same as `diameter_3d`
 
         theta - circle_3d_normal described in spherical coordinates
         phi - circle_3d_normal described in spherical coordinates
 
-        projected_sphere_center_x - x center of the 3D sphere projected back onto the eye image frame. Units are in image pixels.
-        projected_sphere_center_y - y center of the 3D sphere projected back onto the eye image frame
-        projected_sphere_axis_a - first axis of the 3D sphere projection.
-        projected_sphere_axis_b - second axis of the 3D sphere projection.
-        projected_sphere_angle - angle of the 3D sphere projection. Units are degrees.
+        projected_sphere_center_x - x center of the 3d sphere projected back onto the eye image frame. Units are in image pixels.
+        projected_sphere_center_y - y center of the 3d sphere projected back onto the eye image frame
+        projected_sphere_axis_a - first axis of the 3d sphere projection.
+        projected_sphere_axis_b - second axis of the 3d sphere projection.
+        projected_sphere_angle - angle of the 3d sphere projection. Units are degrees.
 
 
     gaze_positions.csv
     keys:
         timestamp - timestamp of the source image frame
         index - associated_frame: closest world video frame
-        confidence - computed confidece between 0 (not confident) -1 (confident)
+        confidence - computed confidence between 0 (not confident) -1 (confident)
         norm_pos_x - x position in the world image frame in normalized coordinates
         norm_pos_y - y position in the world image frame in normalized coordinates
-        base - [timestamp+id,timestamp+id] of pupil data that this gaze postition is computed from
-
+        base - "timestamp-id timestamp-id ..." of pupil data that this gaze position is computed from
     '''
     def __init__(self,g_pool):
         super(Raw_Data_Exporter, self).__init__(g_pool)
@@ -127,7 +126,7 @@ class Raw_Data_Exporter(Plugin):
                                     'ellipse_axis_a',
                                     'ellipse_axis_b',
                                     'ellipse_angle',
-                                    'diameter_3D',
+                                    'diameter_3d',
                                     'model_confidence',
                                     'model_id',
                                     'sphere_center_x',
@@ -207,6 +206,11 @@ class Raw_Data_Exporter(Plugin):
                 data = ['%s'%g["timestamp"],g["index"],g["confidence"],g["norm_pos"][0],g["norm_pos"][1]," ".join(['%s-%s'%(b['timestamp'],b['id']) for b in g['base']]) ] #use str on timestamp to be consitant with csv lib.
                 csv_writer.writerow(data)
             logger.info("Created 'gaze_positions.csv' file.")
+
+
+        with open(os.path.join(export_dir,'pupil_gaze_postions_info.txt'),'w') as info_file:
+            info_file.write(self.__doc__)
+
 
     def get_init_dict(self):
         return {}
