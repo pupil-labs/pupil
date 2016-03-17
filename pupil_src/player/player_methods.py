@@ -14,7 +14,7 @@ import numpy as np
 #logging
 import logging
 logger = logging.getLogger(__name__)
-from file_methods import save_object
+from file_methods import save_object,load_object
 
 
 def correlate_data(data,timestamps):
@@ -60,6 +60,36 @@ def correlate_data(data,timestamps):
     return data_by_frame
 
 
+def update_recording_0v73_to_current(rec_dir):
+    logger.info("Updating recording from v0.7x format to current version")
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+    modified = False
+    for p in pupil_data['pupil_positions']:
+        if p['method'] == "3D c++":
+            p['method'] = "3d c++"
+            p['projected_sphere'] = p.pop('projectedSphere')
+            p['model_confidence'] = p.pop('modelConfidence')
+            p['model_id'] = p.pop('modelID')
+            p['circle_3d'] = p.pop('circle3D')
+            p['diameter_3d'] = p.pop('diameter_3D')
+            modified = True
+    if modified:
+        save_object(load_object(os.path.join(rec_dir, "pupil_data")),os.path.join(rec_dir, "pupil_data_old"))
+    try:
+        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+    except IOError:
+        pass
+
+def update_recording_0v5_to_current(rec_dir):
+    logger.info("Updating recording from v0.5x/v0.6x/v0.7x format to current version")
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+    save_object(pupil_data,os.path.join(rec_dir, "pupil_data_old"))
+    for p in pupil_data['pupil_positions']:
+        p['method'] = '2d python'
+    try:
+        save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+    except IOError:
+        pass
 
 def update_recording_0v4_to_current(rec_dir):
     logger.info("Updating recording from v0.4x format to current version")
@@ -70,7 +100,7 @@ def update_recording_0v4_to_current(rec_dir):
 
     for datum in pupil_array:
         ts, confidence, id, x, y, diameter = datum[:6]
-        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':id,'norm_pos':[x,y],'diameter':diameter,'method':'2D python'})
+        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':id,'norm_pos':[x,y],'diameter':diameter,'method':'2d python'})
 
     pupil_by_ts = dict([(p['timestamp'],p) for p in pupil_list])
 
@@ -93,7 +123,7 @@ def update_recording_0v3_to_current(rec_dir):
     for datum in pupilgaze_array:
         gaze_x,gaze_y,pupil_x,pupil_y,ts,confidence = datum
         #some bogus size and confidence as we did not save it back then
-        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':0,'norm_pos':[pupil_x,pupil_y],'diameter':50,'method':'2D python'})
+        pupil_list.append({'timestamp':ts,'confidence':confidence,'id':0,'norm_pos':[pupil_x,pupil_y],'diameter':50,'method':'2d python'})
         gaze_list.append({'timestamp':ts,'confidence':confidence,'norm_pos':[gaze_x,gaze_y],'base':[pupil_list[-1]]})
 
     pupil_data = {'pupil_positions':pupil_list,'gaze_positions':gaze_list}

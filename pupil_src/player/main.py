@@ -91,7 +91,7 @@ from video_capture import File_Capture,EndofVideoFileError,FileSeekError
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize, delta_t
-from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current
+from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current,update_recording_0v5_to_current,update_recording_0v73_to_current
 
 #monitoring
 import psutil
@@ -192,17 +192,21 @@ def session(rec_dir):
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
     rec_version = read_rec_version(meta_info)
-    if rec_version >= VersionFormat('0.5'):
+    if rec_version >= VersionFormat('0.7.4'):
         pass
+    if rec_version >= VersionFormat('0.7.3'):
+        update_recording_0v73_to_current(rec_dir)
+    elif rec_version >= VersionFormat('0.5'):
+        update_recording_0v5_to_current(rec_dir)
     elif rec_version >= VersionFormat('0.4'):
         update_recording_0v4_to_current(rec_dir)
     elif rec_version >= VersionFormat('0.3'):
         update_recording_0v3_to_current(rec_dir)
         timestamps_path = os.path.join(rec_dir, "timestamps.npy")
-
     else:
         logger.Error("This recording is to old. Sorry.")
         return
+
 
     timestamps = np.load(timestamps_path)
     # Initialize capture

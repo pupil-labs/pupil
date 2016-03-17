@@ -150,8 +150,7 @@ class Raw_Data_Exporter(Plugin):
                                     'projected_sphere_angle'))
 
             for p in list(chain(*self.g_pool.pupil_positions_by_frame[export_range])):
-                print p
-                data_2d = [ p['timestamp'],
+                data_2d = [ '%s'%p['timestamp'],  #use str to be consitant with csv lib.
                             p['index'],
                             p['id'],
                             p['confidence'],
@@ -168,7 +167,7 @@ class Raw_Data_Exporter(Plugin):
                 except KeyError:
                     ellipse_data = [None,]*5
                 try:
-                    data_3d =   [   p['diameter_3D']   ,
+                    data_3d =   [   p['diameter_3d']   ,
                                     p['model_confidence'],
                                     p['model_id'],
                                     p['sphere']['center'][0],
@@ -189,13 +188,25 @@ class Raw_Data_Exporter(Plugin):
                                     p['projected_sphere']['axes'][0],
                                     p['projected_sphere']['axes'][1],
                                     p['projected_sphere']['angle']  ]
-                except KeyError:
+                except KeyError as e:
                     data_3d = [None,]*21
-
                 row = data_2d + ellipse_data + data_3d
                 csv_writer.writerow(row)
             logger.info("Created 'pupil_positions.csv' file.")
 
+        with open(os.path.join(export_dir,'gaze_postions.csv'),'wb') as csvfile:
+            csv_writer = csv.writer(csvfile, delimiter=',')
+            csv_writer.writerow(("timestamp",
+                                 "index",
+                                 "confidence",
+                                 "norm_pos_x",
+                                 "norm_pos_y",
+                                 "base" ) )
+
+            for g in list(chain(*self.g_pool.gaze_positions_by_frame[export_range])):
+                data = ['%s'%g["timestamp"],g["index"],g["confidence"],g["norm_pos"][0],g["norm_pos"][1]," ".join(['%s-%s'%(b['timestamp'],b['id']) for b in g['base']]) ] #use str on timestamp to be consitant with csv lib.
+                csv_writer.writerow(data)
+            logger.info("Created 'gaze_positions.csv' file.")
 
     def get_init_dict(self):
         return {}
