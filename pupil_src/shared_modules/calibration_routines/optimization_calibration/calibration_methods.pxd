@@ -55,6 +55,8 @@ cdef extern from 'common.h':
         Observer() except +
         vector[Vector3] observations
         vector[double] pose
+        int fix_rotation
+        int fix_translation
 
 cdef extern from 'ceres/rotation.h' namespace 'ceres':
     #template<typename T>
@@ -67,4 +69,4 @@ cdef extern from 'ceres/rotation.h' namespace 'ceres':
 
 cdef extern from 'lineLineCalibration.h':
 
-    bint bundleAdjustCalibration( vector[Observer]& obsevers, vector[Vector3]& points)
+    bint bundleAdjustCalibration( vector[Observer]& obsevers, vector[Vector3]& points,bint fix_points)

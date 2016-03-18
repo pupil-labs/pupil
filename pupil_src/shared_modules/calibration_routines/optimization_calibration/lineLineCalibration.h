@@ -43,13 +43,23 @@ struct ReprojectionError {
                   T* residuals) const {
 
         T p[3];
-        ceres::AngleAxisRotatePoint(orientation, point, p);
 
+
+        // convetional order rot and then trans
+        // ceres::AngleAxisRotatePoint(orientation, point, p);
+        // // pose[3,4,5] are the translation.
+        // p[0] += translation[0];
+        // p[1] += translation[1];
+        // p[2] += translation[2];
+
+
+        // unconvetional reverse order trans then rot.
+        T tp[3];
         // pose[3,4,5] are the translation.
-        p[0] += translation[0];
-        p[1] += translation[1];
-        p[2] += translation[2];
-
+        tp[0] = point[0] + translation[0];
+        tp[1] = point[1] + translation[1];
+        tp[2] = point[2] + translation[2];
+        ceres::AngleAxisRotatePoint(orientation, tp, p);
 
         // Normalize / project back to unit sphere
         T s = sqrt( p[0]*p[0] + p[1]*p[1] + p[2]*p[2]  );
@@ -76,14 +86,11 @@ struct ReprojectionError {
   Vector3 observed_point;
 };
 
-bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vector3>& points)
+bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vector3>& points,bool fix_points)
 {
 
 
     Problem problem;
-
-    bool lockedCamera = false;
-
 
     for( auto& observer : observers ){
 
@@ -106,17 +113,22 @@ bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vect
             index++;
 
         }
-
-        if(!lockedCamera){
-            // first observer is world camera
-            // fix translation and orientation
-            problem.SetParameterBlockConstant(pose) ;
-            problem.SetParameterBlockConstant(pose+3) ;
-            lockedCamera = true;
+      if(observer.fix_rotation == 1){
+          problem.SetParameterBlockConstant(pose);
         }
-        // problem.SetParameterBlockConstant(pose+3) ;
+      if(observer.fix_translation == 1){
+          problem.SetParameterBlockConstant(pose+3);
+        }
+      }
 
-    }
+      if(fix_points == true){
+        int index = 0;
+        for(auto o : observers[0].observations){
+            problem.SetParameterBlockConstant(points[index].data());
+            index++;
+            }
+        }
+
 
     // Build and solve the problem.
     Solver::Options options;

@@ -23,6 +23,8 @@ typedef Eigen::Matrix<double, 4, 1> Vector4;
 struct Observer{
     std::vector<Vector3> observations;
     std::vector<double> pose;
+    int fix_rotation;
+    int fix_translation;
 
 };
 

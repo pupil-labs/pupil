@@ -16,7 +16,7 @@ import numpy as np
 
 
 
-def bundle_adjust_calibration( initial_observers, initial_points):
+def bundle_adjust_calibration( initial_observers, initial_points,fix_points = True):
 
 
     cdef vector[Observer] cpp_observers;
@@ -27,7 +27,7 @@ def bundle_adjust_calibration( initial_observers, initial_points):
 
     cdef Vector4 rotation_quaternion
     cdef Vector3 rotation_angle_axis
-    cdef Vector3 cpp_translation,cpp_translation_inverse
+    cdef Vector3 cpp_translation
 
     for o in initial_observers:
         observations = o["observations"]
@@ -44,24 +44,27 @@ def bundle_adjust_calibration( initial_observers, initial_points):
         #we need to invert the pose of the observer
         #we will use this rotation translation to tranform the observed points in the cost fn
         cpp_translation = Vector3(-translation[0],-translation[1],-translation[2])
-        cpp_translation_inverse = Vector3()
 
         #invert rotation
         rotation_angle_axis[0] *= -1
         rotation_angle_axis[1] *= -1
         rotation_angle_axis[2] *= -1
 
-        AngleAxisRotatePoint(rotation_angle_axis.data(),cpp_translation.data(),cpp_translation_inverse.data())
+        #we have swapped to order rot/trans in the cost fn so we dont need to apply the line below
+        #AngleAxisRotatePoint(rotation_angle_axis.data(),cpp_translation.data(),cpp_translation.data())
+
+
 
 
         #first three is rotation
         cpp_pose[0] = rotation_angle_axis[0]
         cpp_pose[1] = rotation_angle_axis[1]
         cpp_pose[2] = rotation_angle_axis[2]
+
         #last three is translation
-        cpp_pose[3] = cpp_translation_inverse[0]
-        cpp_pose[4] = cpp_translation_inverse[1]
-        cpp_pose[5] = cpp_translation_inverse[2]
+        cpp_pose[3] = cpp_translation[0]
+        cpp_pose[4] = cpp_translation[1]
+        cpp_pose[5] = cpp_translation[2]
 
         cpp_observations.clear()
         for p in observations:
@@ -70,6 +73,8 @@ def bundle_adjust_calibration( initial_observers, initial_points):
         cpp_observer = Observer()
         cpp_observer.observations = cpp_observations
         cpp_observer.pose = cpp_pose
+        cpp_observer.fix_rotation = 1*bool('rotation' in o['fix'])
+        cpp_observer.fix_translation = 1*bool('translation' in o['fix'])
         cpp_observers.push_back( cpp_observer )
 
     for p in initial_points:
@@ -77,7 +82,7 @@ def bundle_adjust_calibration( initial_observers, initial_points):
 
 
     ## optimized values are written to cpp_orientation and cpp_translation
-    cdef bint success  = bundleAdjustCalibration(cpp_observers, cpp_points)
+    cdef bint success  = bundleAdjustCalibration(cpp_observers, cpp_points,fix_points)
 
 
     observers = []
@@ -86,13 +91,14 @@ def bundle_adjust_calibration( initial_observers, initial_points):
 
         #invert translation rotation back to get the pose
         rotation_angle_axis = Vector3(cpp_observer.pose[0],cpp_observer.pose[1],cpp_observer.pose[2])
-        cpp_translation_inverse = Vector3(-cpp_observer.pose[3],-cpp_observer.pose[4],-cpp_observer.pose[5])
+        cpp_translation = Vector3(-cpp_observer.pose[3],-cpp_observer.pose[4],-cpp_observer.pose[5])
 
         rotation_angle_axis[0] *=-1
         rotation_angle_axis[1] *=-1
         rotation_angle_axis[2] *=-1
 
-        AngleAxisRotatePoint(rotation_angle_axis.data(),cpp_translation_inverse.data(),cpp_translation.data())
+        #we have swapped to order rot/trans in the cost fn so we dont need to apply the line below
+        #AngleAxisRotatePoint(rotation_angle_axis.data(),cpp_translation.data(),cpp_translation.data())
 
         AngleAxisToQuaternion(rotation_angle_axis.data(),rotation_quaternion.data())
 

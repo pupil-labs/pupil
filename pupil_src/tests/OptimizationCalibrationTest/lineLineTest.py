@@ -22,7 +22,9 @@ def show_result(observers,points, name = "Calibration"):
     if synth_data:
         print 'rotation: ' , math_helper.about_axis_from_quaternion(rotation), 'thruth:',math_helper.about_axis_from_quaternion(cam2_rotation_quaternion)
         print 'translation: ' , translation, 'thruth:',cam2_center
-
+    else:
+        print 'rotation: ' , math_helper.about_axis_from_quaternion(rotation)#, 'thruth:',math_helper.about_axis_from_quaternion(cam2_rotation_quaternion)
+        print 'translation: ' , translation#, 'thruth:',cam2_center
     R = math_helper.quaternion_rotation_matrix(rotation)
     cam2_transformation_matrix  = np.matrix(np.eye(4))
     cam2_transformation_matrix[:3,:3] = R
@@ -75,8 +77,8 @@ if __name__ == '__main__':
         cam1_rotation_quaternion = math_helper.quaternion_about_axis( cam1_rotation_angle_axis[0] , cam1_rotation_angle_axis[1])
         cam1_rotation_matrix = math_helper.quaternion_rotation_matrix(cam1_rotation_quaternion)
 
-        cam2_center  = np.array((.0,0.,40.))
-        cam2_rotation_angle_axis   = [ -np.pi* .5, (1.0,0.0,0.0) ]
+        cam2_center  = np.array((.4,10.,40.))
+        cam2_rotation_angle_axis   = [ -np.pi* .3, (1.0,0.0,0.0) ]
         cam2_rotation_quaternion = math_helper.quaternion_about_axis( cam2_rotation_angle_axis[0] , cam2_rotation_angle_axis[1])
         cam2_rotation_matrix = math_helper.quaternion_rotation_matrix(cam2_rotation_quaternion)
         random_points = []
@@ -92,7 +94,7 @@ if __name__ == '__main__':
 
 
         manual_points = [(10,0,0),(0,0,100),(20,10,0),(30,24,32),(100,100,100),(100,0,0),(0,10,0),(340,32,43)]
-        points = np.array(manual_points)
+        points = np.array(random_points)
 
         def toEye(p):
             return np.dot(cam2_rotation_matrix.T, p-cam2_center )
@@ -131,17 +133,18 @@ if __name__ == '__main__':
 
     # setup bundle adjustment
 
-    o1 = { "observations" : cam1_observation , "translation" : [0,0,0] , "rotation" : math_helper.quaternion_about_axis( 0 ,(0,1,0))  }
-    # o2 = { "observations" : cam2_observation , "translation" : cam2_center , "rotation" : cam2_rotation_quaternion  }
-    o2 = { "observations" : cam2_observation , "translation" : [20,20,-30] , "rotation" : initial_rotation_quaternion  }
-    initial_observers = [o1, o2]
+    o1 = { "observations" : cam1_observation , "translation" : [0,0,0] , "rotation" : math_helper.quaternion_about_axis( 0 ,(0,1,0)),'fix':['translation','rotation']  }
+    # true = { "observations" : cam2_observation , "translation" : cam2_center , "rotation" : cam2_rotation_quaternion,'fix':[]   }
+    rigid = { "observations" : cam2_observation , "translation" : initial_translation , "rotation" : initial_rotation_quaternion,'fix':[]    }
+    init_guess = { "observations" : cam2_observation , "translation" : [20,20,-30] , "rotation" : initial_rotation_quaternion,'fix':['translation']    }
+    initial_observers = [o1, init_guess]
 
     # initial_points = np.ones(np.array(cam1_points).shape,dtype= np.array(cam1_points).dtype)
     initial_points = np.array(cam1_observation)*500
     # initial_points = cam1_points
 
     #solve
-    success, observers, points = bundle_adjust_calibration( initial_observers , initial_points)
+    success, observers, points = bundle_adjust_calibration( initial_observers , initial_points,fix_points=False)
 
 
     if synth_data:
@@ -170,7 +173,7 @@ if __name__ == '__main__':
     import time
     time.sleep(1)
     print "inital guess -------------------"
-    show_result(initial_observers,initial_points, "inital guess")
+    show_result([o1,rigid],initial_points, "inital guess")
 
     p.join()
 
