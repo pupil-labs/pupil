@@ -44,13 +44,17 @@ class Persistent_Dict(dict):
 
 def load_object(file_path):
 	file_path = os.path.expanduser(file_path)
+	#reading to string and loads is 2.5x faster that using the file handle and load.
 	with open(file_path,'rb') as fh:
-		return pickle.load(fh)
+		data = fh.read()
+	return pickle.loads(data)
 
 def save_object(object,file_path):
 	file_path = os.path.expanduser(file_path)
+	data = pickle.dumps(object,-1)
 	with open(file_path,'wb') as fh:
-		pickle.dump(object,fh,-1)
+		data = fh.write(data)
+
 
 if __name__ == '__main__':
 	logging.basicConfig(level=logging.DEBUG)
@@ -61,5 +65,9 @@ if __name__ == '__main__':
 
 	# save_object("string",'test')
 	# print load_object('test')
-	settings = Persistent_Dict('~/Desktop/pupil_settings/user_settings_eye')
-	print settings['roi']
+	# settings = Persistent_Dict('~/Desktop/pupil_settings/user_settings_eye')
+	# print settings['roi']
+	import time
+	t = time.time()
+	l = load_object('/Users/mkassner/Downloads/wrp_berlin_outside_sunny_binocular/pupil_data')
+
