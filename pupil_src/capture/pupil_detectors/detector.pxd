@@ -103,12 +103,15 @@ cdef extern from 'common/types.h':
         Sphere[double] initialSphere
         vector[Vector3] binPositions
         double maturity
-        double fit
+        double solverFit
+        double confidence
         double performance
         double performanceGradient
         int modelID
+        double birthTimestamp
 
     cdef struct Detector3DResult:
+        double timestamp
         Circle circle
         Ellipse ellipse
         Sphere[double] sphere
@@ -116,7 +119,7 @@ cdef extern from 'common/types.h':
         double confidence
         double modelConfidence
         int modelID
-        double timestamp
+        double modelBirthTimestamp
         #-------- For visualization ----------------
         Edges3D edges
         Circle predictedCircle
