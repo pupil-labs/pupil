@@ -429,11 +429,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                         except ValueError as e:
                             pass
                         else:
-                            if result['model_confidence'] > g_pool.pupil_detector.detectProperties3D['model_sensitivity']:
-                                model_color = RGBA(0.,.9,.1,.7)
-                            else:
-                                model_color = RGBA(.8,.1,.1,.3)
-                            draw_polyline(pts,2,model_color)
+                            draw_polyline(pts,2,RGBA(0.,.9,.1,result['model_confidence']) )
 
                     if result['confidence'] >0:
                         if result.has_key('ellipse'):

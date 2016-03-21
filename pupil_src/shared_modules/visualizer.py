@@ -181,7 +181,7 @@ class Visualizer(object):
 
             self.glfont = fs.Context()
             self.glfont.add_font('opensans',get_opensans_font_path())
-            self.glfont.set_size(22)
+            self.glfont.set_size(18)
             self.glfont.set_color_float((0.2,0.5,0.9,1.0))
             self.on_resize(self.window,*glfwGetFramebufferSize(self.window))
             glfwMakeContextCurrent(self.other_window)

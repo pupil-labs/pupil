@@ -138,17 +138,18 @@ class Eye_Visualizer(Visualizer):
 		#draw model info for each model
 		delta_y = 20
 		for model in models:
-			modelStatus =	('Model: %d \n ' %  model['model_id'] ,
+			modelStatus =	('Model: %d \n' %  model['model_id'] ,
 							'    age: %.1fs\n' %(self.g_pool.capture.get_timestamp()-model['birth_timestamp']) ,
 							'    maturity: %.3f\n' % model['maturity'] ,
 							'    solver fit: %.6f\n' % model['solver_fit'] ,
 							'    confidence: %.6f\n' % model['confidence'] ,
+							'    performance: %.6f\n' % model['performance'] ,
 							'    perf.Grad.: %.3e\n' % model['performance_gradient'] ,
 							)
 			modeltext = ''.join( modelStatus )
 			self.glfont.draw_multi_line_text(self.window_size[0] - 200 ,delta_y, modeltext)
 
-			delta_y += 100
+			delta_y += 160
 
 		self.glfont.pop_state()
 

@@ -495,7 +495,7 @@ double EyeModel::getMaturity() const {
 }
 
 double EyeModel::getConfidence() const {
-    return mPerformance.getAverage();
+    return fmin(1.,fmax(0.,fmod(mPerformance.getAverage(),0.99)*100));
 }
 double EyeModel::getPerformance() const {
     return mPerformance.getAverage();
