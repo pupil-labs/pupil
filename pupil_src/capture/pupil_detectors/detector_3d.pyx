@@ -34,7 +34,7 @@ cdef class Detector_3D:
     cdef Detector2D* detector2DPtr
     cdef EyeModelFitter *detector3DPtr
 
-    cdef dict detectProperties2D, detectProperties3D
+    cdef readonly dict detectProperties2D, detectProperties3D
     cdef object menu2D, menu3D
     cdef object gPool
     cdef object debugVisualizer3D
