@@ -67,7 +67,10 @@ def update_recording_0v73_to_current(rec_dir):
     for p in pupil_data['pupil_positions']:
         if p['method'] == "3D c++":
             p['method'] = "3d c++"
-            p['projected_sphere'] = p.pop('projectedSphere')
+            try:
+                p['projected_sphere'] = p.pop('projectedSphere')
+            except:
+                p['projected_sphere'] = {'center':(0,0),'angle':0,'axes':(0,0)}
             p['model_confidence'] = p.pop('modelConfidence')
             p['model_id'] = p.pop('modelID')
             p['circle_3d'] = p.pop('circle3D')
