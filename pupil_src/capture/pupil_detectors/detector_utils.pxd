@@ -34,7 +34,7 @@ cdef inline convertTo2DPythonResult( Detector2DResult& result, object frame, obj
     norm_center = normalize( ellipse['center'] , (frame.width, frame.height),flip_y=True)
     py_result['norm_pos'] = norm_center
     py_result['timestamp'] = frame.timestamp
-    py_result['method'] = '2D c++'
+    py_result['method'] = '2d c++'
 
     return py_result
 
@@ -46,12 +46,13 @@ cdef inline convertTo3DPythonResult( Detector3DResult& result, object frame    )
     circle['center'] =  (result.circle.center[0],-result.circle.center[1], result.circle.center[2])
     circle['normal'] =  (result.circle.normal[0],-result.circle.normal[1], result.circle.normal[2])
     circle['radius'] =  result.circle.radius
-    py_result['circle3D'] = circle
+    py_result['circle_3d'] = circle
+
 
     py_result['confidence'] = result.confidence
     py_result['timestamp'] = frame.timestamp
+    py_result['diameter_3d'] = result.circle.radius * 2.0
 
-    #if result.ellipse.minor_radius != 0.0 and result.ellipse.major_radius != 0.0 :
     ellipse = {}
     ellipse['center'] = (result.ellipse.center[0] + frame.width / 2.0 ,frame.height / 2.0  -  result.ellipse.center[1])
     ellipse['axes'] =  (result.ellipse.minor_radius * 2.0 ,result.ellipse.major_radius * 2.0)
@@ -61,7 +62,6 @@ cdef inline convertTo3DPythonResult( Detector3DResult& result, object frame    )
     py_result['norm_pos'] = norm_center
     py_result['diameter'] = max(ellipse['axes'])
 
-    #if result.sphere.radius != 0.0:
     sphere = {}
     sphere['center'] =  (result.sphere.center[0],-result.sphere.center[1], result.sphere.center[2])
     sphere['radius'] =  result.sphere.radius
@@ -70,18 +70,19 @@ cdef inline convertTo3DPythonResult( Detector3DResult& result, object frame    )
     projectedSphere = {}
     projectedSphere['center'] = (result.projectedSphere.center[0] + frame.width / 2.0 ,frame.height / 2.0  -  result.projectedSphere.center[1])
     projectedSphere['axes'] =  (result.projectedSphere.minor_radius * 2.0 ,result.projectedSphere.major_radius * 2.0)
+    #TODO result.projectedSphere.angle is always 0
     projectedSphere['angle'] = - (result.projectedSphere.angle * 180.0 / PI - 90.0)
-    py_result['projectedSphere'] = projectedSphere
+    py_result['projected_sphere'] = projectedSphere
 
-    py_result['modelConfidence'] = result.modelConfidence
-    py_result['modelID'] = result.modelID
+    py_result['model_confidence'] = result.modelConfidence
+    py_result['model_id'] = result.modelID
+    py_result['model_birth_timestamp'] = result.modelBirthTimestamp
 
-    py_result['diameter_3D'] = result.circle.radius * 2.0
 
     coords = cart2sph(result.circle.normal)
     py_result['theta'] = coords[0]
     py_result['phi'] = coords[1]
-    py_result['method'] = '3D c++'
+    py_result['method'] = '3d c++'
 
     return py_result
 
@@ -91,19 +92,21 @@ cdef inline prepareForVisualization3D(  Detector3DResult& result ):
 
     py_visualizationResult['edges'] = getEdges(result)
     py_visualizationResult['circle'] = getCircle(result);
-    py_visualizationResult['predictedCircle'] = getPredictedCircle(result);
+    py_visualizationResult['predicted_circle'] = getPredictedCircle(result);
 
     models = []
     for model in result.models:
         props = {}
-        props['binPositions'] = getBinPositions(model)
+        props['bin_positions'] = getBinPositions(model)
         props['sphere'] = getSphere(model)
-        props['initialSphere'] = getInitialSphere(model)
+        props['initial_sphere'] = getInitialSphere(model)
         props['maturity'] = model.maturity
-        props['fit'] = model.fit
+        props['solver_fit'] = model.solverFit
+        props['confidence'] = model.confidence
         props['performance'] = model.performance
-        props['performanceGradient'] = model.performanceGradient
-        props['modelID'] = model.modelID
+        props['performance_gradient'] = model.performanceGradient
+        props['model_id'] = model.modelID
+        props['birth_timestamp'] = model.birthTimestamp
         models.append(props)
 
     py_visualizationResult['models'] = models;

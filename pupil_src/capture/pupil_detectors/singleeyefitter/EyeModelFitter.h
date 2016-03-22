@@ -63,7 +63,7 @@ namespace singleeyefitter {
 
             pupillabs::PyCppLogger mLogger;
 
-            void checkModels( float sensitivity);
+            void checkModels( float sensitivity,double frame_timestamp);
 
             //Contours3D unprojectContours( const Contours_2D& contours) const;
             Edges3D unprojectEdges(const Edges2D& edges) const;

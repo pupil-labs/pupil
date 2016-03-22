@@ -36,8 +36,22 @@ namespace singleeyefitter {
     typedef std::vector<Vector3> Contour3D;
     typedef std::vector<Vector3> Edges3D;
     typedef std::vector<std::vector<Vector3>> Contours3D;
-    // goodness and confidence of the modelsupport
-    typedef std::pair<double,double> ModelSupport;
+
+    struct ConfidenceValue{
+        ConfidenceValue(double v,double c)
+        {
+            value = v;
+            confidence = c;
+        };
+        ConfidenceValue()
+        {
+            value = 0;
+            confidence = 0;
+        };
+        double value;
+        double confidence;
+        };
+
     // general time
     typedef std::chrono::steady_clock Clock;
 
@@ -60,21 +74,24 @@ namespace singleeyefitter {
         Sphere<double> initialSphere;
         std::vector<Vector3> binPositions;
         double maturity;
-        double fit;
+        double solverFit;
+        double confidence;
         double performance;
         double performanceGradient;
         int modelID;
+        double birthTimestamp;
     };
 
     struct Detector3DResult {
         double confidence =  0.0 ;
-        double modelConfidence = 0.0;
         Circle circle  = Circle::Null;
         Ellipse ellipse = Ellipse::Null; // the circle projected back to 2D
         Sphere<double> sphere = Sphere<double>::Null;
         Ellipse projectedSphere = Ellipse::Null; // the sphere projected back to 2D
+        double timestamp;
         int modelID = 0;
-        double timestamp = 0.0;
+        double modelBirthTimestamp = 0.0;
+        double modelConfidence = 0.0;
         //-------- For visualization ----------------
         // just valid if we want it for visualization
         Edges3D edges;

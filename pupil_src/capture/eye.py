@@ -419,17 +419,17 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                     window_size =  glfw.glfwGetWindowSize(main_window)
                     make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
 
-                    if result['method'] == '3D c++':
+                    if result['method'] == '3d c++':
 
-                        eye_ball = result['projectedSphere']
+                        eye_ball = result['projected_sphere']
                         try:
                             pts = cv2.ellipse2Poly( (int(eye_ball['center'][0]),int(eye_ball['center'][1])),
                                                 (int(eye_ball['axes'][0]/2),int(eye_ball['axes'][1]/2)),
                                                 int(eye_ball['angle']),0,360,8)
-                        except ValueError:
+                        except ValueError as e:
                             pass
                         else:
-                            draw_polyline(pts,2,RGBA(0.,4.,9.,0.3))
+                            draw_polyline(pts,2,RGBA(0.,.9,.1,result['model_confidence']) )
 
                     if result['confidence'] >0:
                         if result.has_key('ellipse'):
