@@ -184,80 +184,103 @@ def finish_calibration(g_pool,pupil_list,ref_list):
 
         elif matched_monocular_data:
             method = 'monocular 3d model'
-            ref_dir , gaze_dir, _ = calibrate.preprocess_3d_data(matched_monocular_data,
-                                            camera_intrinsics = camera_intrinsics )
-
-            save_object((ref_dir,gaze_dir),os.path.join(g_pool.user_dir, "testdata"))
-            if len(ref_dir) < 1 or len(gaze_dir) < 1:
-                logger.error(not_enough_data_error_msg)
-                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
-                return
-
-            initial_R,initial_t = find_rigid_transform(np.array(gaze_dir),np.array(ref_dir))
-            initial_orientation = math_helper.quaternion_from_rotation_matrix(initial_R)
-            initial_translation = np.array(initial_t).reshape(3)
-            # this problem is scale invariant so we scale to some sensical value.
-            initial_translation *= 30/np.linalg.norm(initial_translation)
+            K = camera_intrinsics["camera_matrix"]
 
 
-            o1 = { "observations" : ref_dir , "translation" : (0,0,0) , "rotation" : (1,0,0,0)  }
-            o2 = { "observations" : gaze_dir , "translation" : [10,10,-30] , "rotation" : initial_orientation  }
-            initial_observers = [o1, o2]
-            initial_points = np.array(ref_dir)*500
-            #this returns the translation of the eye and not of the camera coordinate system
-            #need to take sphere position into account
-            success, observers, points  = bundle_adjust_calibration(initial_observers , initial_points )
-            # overwrite solution with intial guess
-            # success, orientation, translation , avg_distance = True, initial_orientation,initial_translation,-1
+            #TODO model the world as cv2 pinhole camera with distorion and focal in ceres.
+            # right now we solve using a few permutations of K
+            smallest_residual = 1000
+            scales = list(np.linspace(0.7,1.4,20))
+            for s in scales:
+                scale = np.ones(K.shape)
+                scale[0,0] *= s
+                scale[1,1] *= s
+                camera_intrinsics["camera_matrix"] = K*scale
+                ref_dir , gaze_dir, _ = calibrate.preprocess_3d_data(matched_monocular_data,
+                                                camera_intrinsics = camera_intrinsics )
+                # save_object((ref_dir,gaze_dir),os.path.join(g_pool.user_dir, "testdata"))
+                if len(ref_dir) < 1 or len(gaze_dir) < 1:
+                    logger.error(not_enough_data_error_msg + " Using:" + method)
+                    g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+                    return
 
+
+
+                ### monocular calibration strategy: mimize the reprojection error by moving the world camera.
+                # we fix the eye points and work in the eye coord system.
+                initial_R,initial_t = find_rigid_transform(np.array(ref_dir)*500,np.array(gaze_dir)*500)
+                initial_rotation = math_helper.quaternion_from_rotation_matrix(initial_R)
+                initial_translation = np.array(initial_t).reshape(3)
+                # this problem is scale invariant so we scale to some sensical value.
+
+
+                eye = { "observations" : gaze_dir , "translation" : (0,0,0) , "rotation" : (1,0,0,0),'fix':['translation','rotation']  }
+                world = { "observations" : ref_dir , "translation" : np.dot(initial_R,-np.array([20,30,-30])) , "rotation" : initial_rotation,'fix':['translation']  }
+                initial_observers = [eye,world]
+                initial_points = np.array(gaze_dir)*500
+
+
+                success,residual, observers, points_in_eye  = bundle_adjust_calibration(initial_observers , initial_points, fix_points=True )
+                if residual <= smallest_residual:
+                    smallest_residual = residual
+                    scales[-1] = s
+
+            print s
+            eye, world = observers
 
             if not success:
                 logger.error("Calibration solver faild to converge.")
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True})
                 return
 
-            #scale data to match
-            #bundle adjustment does not solve global scale
-            # scale = 30/np.linalg.norm(np.array(observers[1]['translation']))
-            # observers[1]['translation'] = np.array(observers[1]['translation'])*scale
-            # points = np.array(points)*scale
+
+            #pose of the world in eye coords.
+            rotation = np.array(world['rotation'])
+            t_world = np.array(world['translation'])
+            R_world = math_helper.quaternion_rotation_matrix(rotation)
+
+            # inverse is pose of eye in world coords
+            R_eye = R_world.T
+            t_eye = np.dot(R_eye,-t_world)
 
 
-            rotation = np.array(observers[1]['rotation']) #first one is fixed world camera
-            translation = np.array(observers[1]['translation']) #first one is fixed world camera
-            R = math_helper.quaternion_rotation_matrix(rotation)
 
             def toWorld(p):
-                return np.dot(R, p)+np.array(translation)
+                return np.dot(R_eye, p)+np.array(t_eye)
 
-            points_a = [] #world points
-            points_b = [] #eye points
-            avg_error = 0.0
-            for a,b,point in zip(observers[0]['observations'] , observers[1]['observations'],points):
+            points_in_world = [toWorld(p) for p in points_in_eye]
+
+            points_a = [] #world coords
+            points_b = [] #cam2 coords
+            for a,b,point in zip(world['observations'] , eye['observations'],points_in_world):
+
                 line_a = np.array([0,0,0]) , np.array(a) #observation as line
                 line_b = toWorld(np.array([0,0,0])) , toWorld(b)  #cam2 observation line in cam1 coords
                 close_point_a,_ =  math_helper.nearest_linepoint_to_point( point , line_a )
                 close_point_b,_ =  math_helper.nearest_linepoint_to_point( point , line_b )
-                print 'distacne 3d to lines: ',np.linalg.norm(point-close_point_a),np.linalg.norm(point-close_point_b)
+                # print np.linalg.norm(point-close_point_a),np.linalg.norm(point-close_point_b)
+
                 points_a.append(close_point_a)
                 points_b.append(close_point_b)
+
+
 
             # we need to take the sphere position into account
             # orientation and translation are referring to the sphere center.
             # but we want to have it referring to the camera center
             # since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
             sphere_translation = np.array( matched_monocular_data[-1]['pupil']['sphere']['center'] )
-            sphere_translation_world = np.dot( R , sphere_translation)
-            camera_translation = translation - sphere_translation_world
+            sphere_translation_world = np.dot( R_eye , sphere_translation)
+            camera_translation = t_eye - sphere_translation_world
             eye_camera_to_world_matrix  = np.eye(4)
-            eye_camera_to_world_matrix[:3,:3] = R
+            eye_camera_to_world_matrix[:3,:3] = R_eye
             eye_camera_to_world_matrix[:3,3:4] = np.reshape(camera_translation, (3,1) )
 
 
             g_pool.plugins.add(Vector_Gaze_Mapper,args=
                 {'eye_camera_to_world_matrix':eye_camera_to_world_matrix ,
                 'camera_intrinsics': camera_intrinsics ,
-                'cal_points_3d': points,
+                'cal_points_3d': points_in_world,
                 'cal_ref_points_3d': points_a,
                 'cal_gaze_points_3d': points_b,
                 'gaze_distance':500})
