@@ -213,9 +213,10 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 initial_translation = np.array(initial_t).reshape(3)
                 # this problem is scale invariant so we scale to some sensical value.
 
+                hardcoded_translation  = np.array([20,30,-30])
 
                 eye = { "observations" : gaze_dir , "translation" : (0,0,0) , "rotation" : (1,0,0,0),'fix':['translation','rotation']  }
-                world = { "observations" : ref_dir , "translation" : np.dot(initial_R,-np.array([20,30,-30])) , "rotation" : initial_rotation,'fix':['translation']  }
+                world = { "observations" : ref_dir , "translation" : np.dot(initial_R,-hardcoded_translation) , "rotation" : initial_rotation,'fix':['translation']  }
                 initial_observers = [eye,world]
                 initial_points = np.array(gaze_dir)*500
 
@@ -225,7 +226,6 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                     smallest_residual = residual
                     scales[-1] = s
 
-            print s
             eye, world = observers
 
             if not success:
