@@ -82,7 +82,7 @@ def bundle_adjust_calibration( initial_observers, initial_points,fix_points = Tr
 
 
     ## optimized values are written to cpp_orientation and cpp_translation
-    cdef bint success  = bundleAdjustCalibration(cpp_observers, cpp_points,fix_points)
+    cdef double final_cost  = bundleAdjustCalibration(cpp_observers, cpp_points,fix_points)
 
 
     observers = []
@@ -115,4 +115,4 @@ def bundle_adjust_calibration( initial_observers, initial_points,fix_points = Tr
     for cpp_p in cpp_points:
         points.append( (cpp_p[0],cpp_p[1],cpp_p[2]) )
 
-    return success, observers, points
+    return final_cost != -1,final_cost, observers, points

@@ -86,7 +86,7 @@ struct ReprojectionError {
   Vector3 observed_point;
 };
 
-bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vector3>& points,bool fix_points)
+double bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vector3>& points,bool fix_points)
 {
 
 
@@ -152,10 +152,10 @@ bool bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vect
 
     if( summary.termination_type != ceres::TerminationType::CONVERGENCE  ){
         std::cout << "Termination Error: " << ceres::TerminationTypeToString(summary.termination_type) << std::endl;
-        return false;
+        return -1;
     }
 
-    return true;
+    return summary.final_cost;
 
 }
 

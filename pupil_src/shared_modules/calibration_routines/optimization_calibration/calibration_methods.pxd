@@ -69,4 +69,4 @@ cdef extern from 'ceres/rotation.h' namespace 'ceres':
 
 cdef extern from 'lineLineCalibration.h':
 
-    bint bundleAdjustCalibration( vector[Observer]& obsevers, vector[Vector3]& points,bint fix_points)
+    double bundleAdjustCalibration( vector[Observer]& obsevers, vector[Vector3]& points,bint fix_points)
