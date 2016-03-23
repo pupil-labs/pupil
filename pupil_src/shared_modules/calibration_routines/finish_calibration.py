@@ -140,7 +140,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
 
 
             # we need to take the sphere position into account
-            # orientation and translation are refering to the sphere center.
+            # orientation and translation are referring to the sphere center.
             # but we want to have it referring to the camera center
             # since the actual translation is in world coordinates, the sphere translation needs to be calculated in world coordinates
             sphere_translation = np.array( sphere_pos0 )
