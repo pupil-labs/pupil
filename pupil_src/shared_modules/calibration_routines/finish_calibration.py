@@ -61,8 +61,11 @@ def finish_calibration(g_pool,pupil_list,ref_list):
         logger.warning("Please calibrate your world camera using 'camera intrinsics estimation' for 3d gaze mapping.")
 
     if mode == '3d':
+        hardcoded_translation0  = np.array([20,15,-20])
+        hardcoded_translation1  = np.array([-40,15,-20])
         if matched_binocular_data:
             method = 'binocular 3d model'
+
             #TODO model the world as cv2 pinhole camera with distorion and focal in ceres.
             # right now we solve using a few permutations of K
             smallest_residual = 1000
@@ -94,9 +97,6 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 initial_rotation1 = math_helper.quaternion_from_rotation_matrix(initial_R1)
                 initial_translation1 = np.array(initial_t1).reshape(3)
 
-                hardcoded_translation0  = np.array([20,30,-30])
-                hardcoded_translation1  = np.array([-40,30,-30])
-
                 eye0 = { "observations" : gaze0_dir , "translation" : hardcoded_translation0 , "rotation" : initial_rotation0,'fix':['translation']  }
                 eye1 = { "observations" : gaze1_dir , "translation" : hardcoded_translation1 , "rotation" : initial_rotation1,'fix':['translation']  }
                 world = { "observations" : ref_dir , "translation" : (0,0,0) , "rotation" : (1,0,0,0),'fix':['translation','rotation'],'fix':['translation','rotation']  }
@@ -109,7 +109,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 if residual <= smallest_residual:
                     smallest_residual = residual
                     scales[-1] = s
-            print s
+
             eye0,eye1,world = observers
 
 
@@ -199,7 +199,12 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 initial_translation = np.array(initial_t).reshape(3)
                 # this problem is scale invariant so we scale to some sensical value.
 
-                hardcoded_translation  = np.array([20,30,-30])
+
+                if matched_monocular_data[0]['pupil']['id'] == 0:
+                    hardcoded_translation = hardcoded_translation0
+                else:
+                    hardcoded_translation = hardcoded_translation1
+
 
                 eye = { "observations" : gaze_dir , "translation" : (0,0,0) , "rotation" : (1,0,0,0),'fix':['translation','rotation']  }
                 world = { "observations" : ref_dir , "translation" : np.dot(initial_R,-hardcoded_translation) , "rotation" : initial_rotation,'fix':['translation']  }
