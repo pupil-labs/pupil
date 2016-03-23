@@ -63,41 +63,53 @@ def finish_calibration(g_pool,pupil_list,ref_list):
     if mode == '3d':
         if matched_binocular_data:
             method = 'binocular 3d model'
-            scale = np.ones(camera_intrinsics["camera_matrix"].shape)
-            scale[0,0] *= 1.4
-            scale[1,1] *= 1.4
-            camera_intrinsics["camera_matrix"] *= scale
-            ref_dir, gaze0_dir, gaze1_dir = calibrate.preprocess_3d_data(matched_binocular_data,
-                                            camera_intrinsics = camera_intrinsics )
+            #TODO model the world as cv2 pinhole camera with distorion and focal in ceres.
+            # right now we solve using a few permutations of K
+            smallest_residual = 1000
+            scales = list(np.linspace(0.7,1.4,20))
+            K = camera_intrinsics["camera_matrix"]
 
-            if len(ref_dir) < 1 or len(gaze0_dir) < 1 or len(gaze1_dir) < 1:
-                logger.error(not_enough_data_error_msg)
-                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
-                return
+            for s in scales:
+                scale = np.ones(K.shape)
+                scale[0,0] *= s
+                scale[1,1] *= s
+                camera_intrinsics["camera_matrix"] = K*scale
 
-            sphere_pos0 = pupil0[-1]['sphere']['center']
-            sphere_pos1 = pupil1[-1]['sphere']['center']
+                ref_dir, gaze0_dir, gaze1_dir = calibrate.preprocess_3d_data(matched_binocular_data,
+                                                camera_intrinsics = camera_intrinsics )
 
-            initial_R0,initial_t0 = find_rigid_transform(np.array(gaze0_dir)*500,np.array(ref_dir)*500)
-            initial_rotation0 = math_helper.quaternion_from_rotation_matrix(initial_R0)
-            initial_translation0 = np.array(initial_t0).reshape(3)
+                if len(ref_dir) < 1 or len(gaze0_dir) < 1 or len(gaze1_dir) < 1:
+                    logger.error(not_enough_data_error_msg)
+                    g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+                    return
 
-            initial_R1,initial_t1 = find_rigid_transform(np.array(gaze1_dir)*500,np.array(ref_dir)*500)
-            initial_rotation1 = math_helper.quaternion_from_rotation_matrix(initial_R1)
-            initial_translation1 = np.array(initial_t1).reshape(3)
+                sphere_pos0 = pupil0[-1]['sphere']['center']
+                sphere_pos1 = pupil1[-1]['sphere']['center']
 
-            hardcoded_translation0  = np.array([20,30,-30])
-            hardcoded_translation1  = np.array([-40,30,-30])
+                initial_R0,initial_t0 = find_rigid_transform(np.array(gaze0_dir)*500,np.array(ref_dir)*500)
+                initial_rotation0 = math_helper.quaternion_from_rotation_matrix(initial_R0)
+                initial_translation0 = np.array(initial_t0).reshape(3)
 
-            eye0 = { "observations" : gaze0_dir , "translation" : hardcoded_translation0 , "rotation" : initial_rotation0,'fix':[]  }
-            eye1 = { "observations" : gaze1_dir , "translation" : hardcoded_translation1 , "rotation" : initial_rotation1,'fix':[]  }
-            world = { "observations" : ref_dir , "translation" : (0,0,0) , "rotation" : (1,0,0,0),'fix':['translation','rotation'],'fix':['translation','rotation']  }
-            initial_observers = [eye0,eye1,world]
-            initial_points = np.array(ref_dir)*500
+                initial_R1,initial_t1 = find_rigid_transform(np.array(gaze1_dir)*500,np.array(ref_dir)*500)
+                initial_rotation1 = math_helper.quaternion_from_rotation_matrix(initial_R1)
+                initial_translation1 = np.array(initial_t1).reshape(3)
+
+                hardcoded_translation0  = np.array([20,30,-30])
+                hardcoded_translation1  = np.array([-40,30,-30])
+
+                eye0 = { "observations" : gaze0_dir , "translation" : hardcoded_translation0 , "rotation" : initial_rotation0,'fix':['translation']  }
+                eye1 = { "observations" : gaze1_dir , "translation" : hardcoded_translation1 , "rotation" : initial_rotation1,'fix':['translation']  }
+                world = { "observations" : ref_dir , "translation" : (0,0,0) , "rotation" : (1,0,0,0),'fix':['translation','rotation'],'fix':['translation','rotation']  }
+                initial_observers = [eye0,eye1,world]
+                initial_points = np.array(ref_dir)*500
 
 
-            success,residual, observers, points  = bundle_adjust_calibration(initial_observers , initial_points, fix_points=False )
+                success,residual, observers, points  = bundle_adjust_calibration(initial_observers , initial_points, fix_points=False )
 
+                if residual <= smallest_residual:
+                    smallest_residual = residual
+                    scales[-1] = s
+            print s
             eye0,eye1,world = observers
 
 
@@ -153,19 +165,18 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                                     'cal_points_3d': points,
                                     'cal_ref_points_3d': points_a,
                                     'cal_gaze_points0_3d': points_b,
-                                    'cal_gaze_points1_3d': points_c ,
-                                    'manual_gaze_distance':500})
+                                    'cal_gaze_points1_3d': points_c})
 
 
         elif matched_monocular_data:
             method = 'monocular 3d model'
-            K = camera_intrinsics["camera_matrix"]
 
 
             #TODO model the world as cv2 pinhole camera with distorion and focal in ceres.
             # right now we solve using a few permutations of K
             smallest_residual = 1000
             scales = list(np.linspace(0.7,1.4,20))
+            K = camera_intrinsics["camera_matrix"]
             for s in scales:
                 scale = np.ones(K.shape)
                 scale[0,0] *= s
