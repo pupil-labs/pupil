@@ -333,12 +333,12 @@ def preprocess_3d_data(matched_data, camera_intrinsics ):
         try:
             # taking the pupil normal as line of sight vector
             pupil0 = data_point['pupil']
-            gaze_vector0 = np.array(pupil0['circle3D']['normal'])
+            gaze_vector0 = np.array(pupil0['circle_3d']['normal'])
             pupil0_processed.append( gaze_vector0 )
 
             if is_binocular: # we have binocular data
                 pupil1 = data_point['pupil1']
-                gaze_vector1 = np.array(pupil1['circle3D']['normal'])
+                gaze_vector1 = np.array(pupil1['circle_3d']['normal'])
                 pupil1_processed.append( gaze_vector1 )
 
             # projected point uv to normal ray vector of camera
