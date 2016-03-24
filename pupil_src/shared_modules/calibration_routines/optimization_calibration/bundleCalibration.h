@@ -19,7 +19,7 @@
 #include "ceres/Fixed3DNormParametrization.h"
 #include "ceres/EigenQuaternionParameterization.h"
 #include "ceres/CeresUtils.h"
-#include "math/Distance.h"
+#include "math/distance.h"
 #include "common/types.h"
 
 using ceres::AutoDiffCostFunction;
