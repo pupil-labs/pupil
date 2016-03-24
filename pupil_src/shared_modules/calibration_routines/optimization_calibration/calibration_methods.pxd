@@ -67,6 +67,6 @@ cdef extern from 'ceres/rotation.h' namespace 'ceres':
     void QuaternionToAngleAxis(const double * quaternion, double * angle_axis);
     void AngleAxisRotatePoint(const double * angle_axis, const double * pt,double * result)
 
-cdef extern from 'lineLineCalibration.h':
+cdef extern from 'bundleCalibration.h':
 
     double bundleAdjustCalibration( vector[Observer]& obsevers, vector[Vector3]& points,bint fix_points)
