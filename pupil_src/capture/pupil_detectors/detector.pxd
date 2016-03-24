@@ -1,3 +1,12 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2016  Pupil Labs
+
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
 
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
@@ -49,7 +58,7 @@ cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
         bint isZero()
 
 
-cdef extern from 'singleeyefitter/common/types.h':
+cdef extern from 'common/types.h':
 
     cdef cppclass Ellipse2D[T]:
         Ellipse2D()
@@ -94,12 +103,15 @@ cdef extern from 'singleeyefitter/common/types.h':
         Sphere[double] initialSphere
         vector[Vector3] binPositions
         double maturity
-        double fit
+        double solverFit
+        double confidence
         double performance
         double performanceGradient
         int modelID
+        double birthTimestamp
 
     cdef struct Detector3DResult:
+        double timestamp
         Circle circle
         Ellipse ellipse
         Sphere[double] sphere
@@ -107,7 +119,7 @@ cdef extern from 'singleeyefitter/common/types.h':
         double confidence
         double modelConfidence
         int modelID
-        double timestamp
+        double modelBirthTimestamp
         #-------- For visualization ----------------
         Edges3D edges
         Circle predictedCircle

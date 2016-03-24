@@ -81,7 +81,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.lead_out = 5 #frames of markers shown after sampling is donw
 
 
-        self.active_site = 0
+        self.active_site = None
         self.sites = []
         self.display_pos = None
         self.on_position = False
@@ -157,13 +157,20 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
-        self.sites = [  (.25, .5), (0,.5),
+        if self.g_pool.detection_mapping_mode == '3d':
+            self.sites = [  (.5, .5),
+                            (0.,1.),(1.,1.),
+                            (1., 0.),(0.,0.)]
+
+        else:
+            self.sites = [  (.25, .5), (0,.5),
                         (0.,1.),(.5,1.),(1.,1.),
                         (1.,.5),
                         (1., 0.),(.5, 0.),(0.,0.),
                         (.75,.5)]
 
-        self.active_site = 0
+
+        self.active_site = self.sites.pop(0)
         self.active = True
         self.ref_list = []
         self.pupil_list = []
@@ -282,15 +289,16 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.screen_marker_state += 1
             else:
                 self.screen_marker_state = 0
-                self.active_site += 1
-                logger.debug("Moving screen marker to site no %s"%self.active_site)
-                if self.active_site >= len(self.sites):
+                if not self.sites:
                     self.stop()
                     return
+                self.active_site = self.sites.pop(0)
+                logger.debug("Moving screen marker to site at %s %s"%tuple(self.active_site))
+
 
 
             #use np.arrays for per element wise math
-            self.display_pos = np.array(self.sites[self.active_site])
+            self.display_pos = np.array(self.active_site)
             self.on_position = on_position
             self.button.status_text = '%s / %s'%(self.active_site,9)
 

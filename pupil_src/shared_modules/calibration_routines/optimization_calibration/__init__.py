@@ -8,13 +8,11 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-def build_cpp_extension():
-    import subprocess as sp
-    import os
-    src_loc = os.path.dirname(os.path.realpath(__file__))
-    cwd = os.getcwd()
-    sp.call("cd %s && python setup.py build_ext --inplace && cd %s"%(src_loc,cwd),shell=True)
+#when running from source compile cpp extension if nessesary.
 
-if __name__ == '__main__':
+import sys
+if not getattr(sys, 'frozen', False):
+    from build import build_cpp_extension
     build_cpp_extension()
 
+from calibration_methods import  bundle_adjust_calibration

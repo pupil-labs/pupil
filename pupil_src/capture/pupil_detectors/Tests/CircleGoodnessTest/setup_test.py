@@ -29,6 +29,9 @@ pupil_test_dir = os.path.abspath(__file__).rsplit('CircleGoodnessTest', 1)[0]
 print pupil_test_dir
 include_path = [  pupil_base_dir,pupil_test_dir ]
 
+shared_cpp_include_path = '../../shared_cpp/include'
+singleeyefitter_include_path = 'singleeyefitter/'
+
 extensions = [
     Extension(
 

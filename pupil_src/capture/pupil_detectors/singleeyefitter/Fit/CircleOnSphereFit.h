@@ -3,8 +3,8 @@
 #define CIRCLEFIT_H__
 
 
-#include "../common/types.h"
-#include "../Geometry/Sphere.h"
+#include "common/types.h"
+#include "geometry/Sphere.h"
 #include "PlaneFit3D.h"
 
 

@@ -19,12 +19,12 @@
 #include "CircleGoodness3D.h"
 
 #include "utils.h"
-#include "intersect.h"
+#include "math/intersect.h"
 #include "projection.h"
 #include "fun.h"
 
 #include "mathHelper.h"
-#include "distance.h"
+#include "math/distance.h"
 
 
 
@@ -71,15 +71,15 @@ namespace singleeyefitter {
 //     return *this;
 // }
 
-EyeModel::EyeModel( int modelId, Clock::time_point timestamp,  double focalLength, Vector3 cameraCenter, int initialUncheckedPupils, double binResolution  ):
+EyeModel::EyeModel( int modelId, double timestamp,  double focalLength, Vector3 cameraCenter, int initialUncheckedPupils, double binResolution  ):
     mModelID(modelId),
-    mTimestamp(timestamp),
+    mBirthTimestamp(timestamp),
     mFocalLength(std::move(focalLength)),
     mCameraCenter(std::move(cameraCenter)),
     mInitialUncheckedPupils(initialUncheckedPupils),
     mTotalBins(std::pow(std::floor(1.0/binResolution), 2 ) * 4 ),
     mBinResolution(binResolution),
-    mFit(0),
+    mSolverFit(0),
     mPerformance(30),
     mPerformanceGradient(0),
     mLastPerformanceCalculationTime(),
@@ -95,14 +95,17 @@ EyeModel::~EyeModel(){
 }
 
 
-std::pair<Circle,ModelSupport> EyeModel::presentObservation(const ObservationPtr newObservationPtr, double averageFramerate )
+std::pair<Circle,ConfidenceValue> EyeModel::presentObservation(const ObservationPtr newObservationPtr, double averageFramerate )
 {
 
+    if (mBirthTimestamp == -1){
+        mBirthTimestamp = newObservationPtr->getObservation2D()->timestamp;
+        }
 
     Circle circle;
     bool shouldAddObservation = false;
     double confidence2D = newObservationPtr->getObservation2D()->confidence;
-    ModelSupport support = {0,1};
+    ConfidenceValue oberservation_fit = ConfidenceValue(0,1);
 
     // unlock when done
     mModelMutex.lock(); // needed for mSphere and mSupportingPupilSize
@@ -116,8 +119,8 @@ std::pair<Circle,ModelSupport> EyeModel::presentObservation(const ObservationPtr
         circle = getIntersectedCircle(mSphere, unprojectedCircle);
 
         if (unprojectedCircle != Circle::Null && circle != Circle::Null) {  // initialise failed
-            support = calculateModelSupport(unprojectedCircle, circle , confidence2D);
-            calculatePerformance( support, averageFramerate);
+            oberservation_fit = calculateModelOberservationFit(unprojectedCircle, circle , confidence2D);
+            updatePerformance( oberservation_fit, averageFramerate);
         }
 
         if (circle == Circle::Null){
@@ -164,7 +167,7 @@ std::pair<Circle,ModelSupport> EyeModel::presentObservation(const ObservationPtr
                         std::lock_guard<std::mutex> lockModel(mModelMutex);
                         mInitialSphere = sphere2;
                         mSphere = sphere;
-                        mFit = fit;
+                        mSolverFit = fit;
                     }
                  };
                 // needed in order to assign a new thread
@@ -177,7 +180,7 @@ std::pair<Circle,ModelSupport> EyeModel::presentObservation(const ObservationPtr
             }
      }
 
-    return {circle, support};
+    return {circle, oberservation_fit};
 }
 
 EyeModel::Sphere EyeModel::findSphereCenter( bool use_ransac /*= true*/)
@@ -491,14 +494,17 @@ double EyeModel::getMaturity() const {
     return  mSpatialBins.size()/(mTotalBins/8.0);
 }
 
+double EyeModel::getConfidence() const {
+    return fmin(1.,fmax(0.,fmod(mPerformance.getAverage(),0.99)*100));
+}
 double EyeModel::getPerformance() const {
     return mPerformance.getAverage();
 }
 double EyeModel::getPerformanceGradient() const {
     return mPerformanceGradient;
 }
-double EyeModel::getFit() const {
-    return mFit;
+double EyeModel::getSolverFit() const {
+    return mSolverFit;
 }
 
 bool EyeModel::tryTransferNewObservations(){
@@ -518,13 +524,14 @@ bool EyeModel::tryTransferNewObservations(){
 
 }
 
-std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojectedCircle, const Circle& initialisedCircle, double confidence2D) const {
+ConfidenceValue EyeModel::calculateModelOberservationFit(const Circle&  unprojectedCircle, const Circle& initialisedCircle, double confidence2D) const {
 
     // the angle between the unprojected and the initialised circle normal tells us how good the current observation supports our current model
-    // if our model is good and the camera didn't change perspective or so, these normals should align pretty well
+    // if our model is good these normals should align.
     const auto& n1 = unprojectedCircle.normal;
     const auto& n2 = initialisedCircle.normal;
-    const double goodness = n1.dot(n2);
+    ConfidenceValue oberservationFit;
+    oberservationFit.value = n1.dot(n2);
 
     // if the 2d pupil is almost a circle the unprojection gets inaccurate, thus the normal doesn't align well with the initialised circle
     // this is the case when looking directly into the camera.
@@ -533,23 +540,19 @@ std::pair<double,double> EyeModel::calculateModelSupport(const Circle&  unprojec
     const double eccentricity = sphereToCameraDirection.dot(initialisedCircle.normal);
     //std::cout << "inaccuracy: " <<  inaccuracy << std::endl;
 
-    // the we calculate a how much we believe the 2d data by merging the 2d confidence with eccentriciy.
+    // the we calculate a how much we usefullness we give the oberservationFit value by merging the 2d confidence with eccentriciy.
     // we do this using a function with parameters that are tweaked through experimentation.
     // a plot of the fn can be found here:
     // http://www.livephysics.com/tools/mathematical-tools/online-3-d-function-grapher/?xmin=0&xmax=1&ymin=0&ymax=1&zmin=Auto&zmax=Auto&f=x%5E10%2A%281-y%5E20%29
+    oberservationFit.confidence =  (1-pow(eccentricity,20)) * pow(confidence2D,15);
 
-    const double goodnessConfidence =  (1-pow(eccentricity,20)) * pow(confidence2D,15);
-
-    return {goodness, goodnessConfidence};
+    return oberservationFit;
 }
 
-void EyeModel::calculatePerformance( const std::pair<double,double>& modelSupport, double averageFramerate ){
-
-    double supportGoodness = modelSupport.first;
-    double supportConfidence = modelSupport.second;
+void EyeModel::updatePerformance( const ConfidenceValue& performance_datum, double averageFramerate ){
 
     // dont add values with 0.0 confidence.
-    if( supportConfidence <= 0.0 )
+    if( performance_datum.value <= 0.0 )
         return;
 
     const double previousPerformance = mPerformance.getAverage();
@@ -562,7 +565,7 @@ void EyeModel::calculatePerformance( const std::pair<double,double>& modelSuppor
         mPerformance.changeWindowSize(newWindowSize);
     }
 
-    mPerformance.addValue(supportGoodness , supportConfidence); // weighted average
+    mPerformance.addValue(performance_datum.value , performance_datum.confidence); // weighted average
 
     using namespace std::chrono;
 
