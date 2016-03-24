@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 from plugin import Plugin
 from offline_marker_detector import Offline_Marker_Detector
-from export_launcher import Export_Launcher
+from video_export_launcher import Video_Export_Launcher
 from ctypes import c_int
 
 from pyglui import ui
@@ -105,7 +105,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         self.surface_export_queue = self.sections[:]
 
     def video_export(self,section):
-        plugins = [p for p in self.g_pool.plugins if isinstance(p,Export_Launcher)]
+        plugins = [p for p in self.g_pool.plugins if isinstance(p,Video_Export_Launcher)]
         if plugins:
             launcher = plugins[0]
             logger.info("exporting %s" %str(section))

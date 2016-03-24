@@ -102,7 +102,7 @@ class Offline_Marker_Detector(Marker_Detector):
             self.surfaces = []
 
     def init_gui(self):
-        self.menu = ui.Scrolling_Menu('Offline Marker Tracker')
+        self.menu = ui.Scrolling_Menu('Offline Marker Detector')
         self.g_pool.gui.append(self.menu)
 
 
@@ -125,11 +125,11 @@ class Offline_Marker_Detector(Marker_Detector):
         self.menu.elements[:] = []
         self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
+        self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
         self.menu.append(ui.Info_Text('Please note: Unlike the real-time marker detector the offline marker detector works with a fixed min_marker_perimeter of 20.'))
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
-        self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statsics_to_file))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
         for s in self.surfaces:
             idx = self.surfaces.index(s)
@@ -151,6 +151,9 @@ class Offline_Marker_Detector(Marker_Detector):
         if notification['subject'] == 'gaze_positions_changed':
             logger.info('Gaze postions changed. Recalculating.')
             self.recalculate()
+        elif notification['subject'] is "should_export":
+            self.save_surface_statsics_to_file(notification['range'],notification['export_dir'])
+
 
     def on_window_resize(self,window,w,h):
         self.win_size = w,h
@@ -362,12 +365,7 @@ class Offline_Marker_Detector(Marker_Detector):
         glPopMatrix()
 
 
-    def save_surface_statsics_to_file(self):
-
-        in_mark = self.g_pool.trim_marks.in_mark
-        out_mark = self.g_pool.trim_marks.out_mark
-
-
+    def save_surface_statsics_to_file(self,export_range,export_dir):
         """
         between in and out mark
 
@@ -390,10 +388,10 @@ class Offline_Marker_Detector(Marker_Detector):
                 positions_of_name_id.csv
 
         """
-        section = slice(in_mark,out_mark)
-
-
-        metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
+        metrics_dir = os.path.join(export_dir,'surfaces')
+        section = export_range
+        in_mark = export_range.start
+        out_mark = export_range.stop
         logger.info("exporting metrics to %s"%metrics_dir)
         if os.path.isdir(metrics_dir):
             logger.info("Will overwrite previous export for this section")

@@ -31,7 +31,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
         pass
     else:
         logger.error(not_enough_data_error_msg)
-        g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+        g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
         return
 
     camera_intrinsics = load_camera_calibration(g_pool)
@@ -83,7 +83,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
 
                 if len(ref_dir) < 1 or len(gaze0_dir) < 1 or len(gaze1_dir) < 1:
                     logger.error(not_enough_data_error_msg)
-                    g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+                    g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
                     return
 
                 sphere_pos0 = pupil0[-1]['sphere']['center']
@@ -109,6 +109,12 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 if residual <= smallest_residual:
                     smallest_residual = residual
                     scales[-1] = s
+
+            if not success:
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
+                logger.error("Calibration solver faild to converge.")
+                return
+
 
             eye0,eye1,world = observers
 
@@ -171,7 +177,6 @@ def finish_calibration(g_pool,pupil_list,ref_list):
         elif matched_monocular_data:
             method = 'monocular 3d model'
 
-
             #TODO model the world as cv2 pinhole camera with distorion and focal in ceres.
             # right now we solve using a few permutations of K
             smallest_residual = 1000
@@ -186,8 +191,8 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                                                 camera_intrinsics = camera_intrinsics )
                 # save_object((ref_dir,gaze_dir),os.path.join(g_pool.user_dir, "testdata"))
                 if len(ref_dir) < 1 or len(gaze_dir) < 1:
+                    g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
                     logger.error(not_enough_data_error_msg + " Using:" + method)
-                    g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
                     return
 
 
@@ -221,9 +226,8 @@ def finish_calibration(g_pool,pupil_list,ref_list):
 
             if not success:
                 logger.error("Calibration solver faild to converge.")
-                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True})
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
                 return
-
 
             #pose of the world in eye coords.
             rotation = np.array(world['rotation'])
@@ -278,7 +282,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
 
         else:
             logger.error(not_enough_data_error_msg)
-            g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+            g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
             return
 
     elif mode == '2d':
@@ -300,10 +304,10 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
         else:
             logger.error(not_enough_data_error_msg)
-            g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+            g_pool.active_calibration_plugin.notify_all({'subject':'calibration_failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
             return
 
     user_calibration_data = {'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
     save_object(user_calibration_data,os.path.join(g_pool.user_dir, "user_calibration_data"))
-    g_pool.active_calibration_plugin.notify_all({'subject':'calibration_successful','method':method,'timestamp':g_pool.capture.get_timestamp(),'record':True})
+    g_pool.active_calibration_plugin.notify_all({'subject':'calibration_successful','method':method,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
 

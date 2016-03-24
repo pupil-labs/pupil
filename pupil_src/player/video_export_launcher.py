@@ -69,12 +69,12 @@ def avoid_overwrite(out_file_path):
         out_file_path += str(int(time.time())) + '.mp4'
     return out_file_path
 
-class Export_Launcher(Plugin):
-    """docstring for Export_Launcher
+class Video_Export_Launcher(Plugin):
+    """docstring for Video_Export_Launcher
     this plugin can export the video in a seperate process using exporter
     """
     def __init__(self, g_pool):
-        super(Export_Launcher, self).__init__(g_pool)
+        super(Video_Export_Launcher, self).__init__(g_pool)
         # initialize empty menu
         self.menu = None
         self.new_export = None
@@ -85,7 +85,7 @@ class Export_Launcher(Plugin):
 
     def init_gui(self):
         # initialize the menu
-        self.menu = ui.Scrolling_Menu('Export Recording')
+        self.menu = ui.Scrolling_Menu('Export Video')
         # add menu to the window
         self.g_pool.gui.append(self.menu)
         self._update_gui()
@@ -98,9 +98,9 @@ class Export_Launcher(Plugin):
         self.menu.append(ui.Button('Close',self.unset_alive))
         self.menu.append(ui.Info_Text('Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.'))
         self.menu.append(ui.Text_Input('rec_name',self,label='export name'))
-        self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar.'))
+        self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins.'))
         self.menu.append(ui.Text_Input('in_mark',getter=self.g_pool.trim_marks.get_string,setter=self.g_pool.trim_marks.set_string,label='frame range to export'))
-        self.menu.append(ui.Button('new export',self.add_export))
+        self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
 
         for job in self.exports[::-1]:
             submenu = ui.Growing_Menu(job.out_file_path)
@@ -120,26 +120,30 @@ class Export_Launcher(Plugin):
     def get_init_dict(self):
         return {}
 
-    def add_export(self):
+    def on_notify(self,notification):
+        if notification['subject'] is "should_export":
+            self.add_export(notification['range'],notification['export_dir'])
+
+    def add_export(self,export_range,export_dir):
         # on MacOS we will not use os.fork, elsewhere this does nothing.
         forking_enable(0)
 
-        logger.debug("Adding new export.")
+        logger.debug("Adding new video export process.")
         should_terminate = Value(c_bool,False)
         frames_to_export  = Value(c_int,0)
         current_frame = Value(c_int,0)
 
         rec_dir = self.g_pool.rec_dir
         user_dir = self.g_pool.user_dir
-        start_frame= self.g_pool.trim_marks.in_mark
-        end_frame= self.g_pool.trim_marks.out_mark+1 #end_frame is exclusive
+        start_frame= export_range.start
+        end_frame= export_range.stop+1 #end_frame is exclusive
         frames_to_export.value = end_frame-start_frame
 
         # Here we make clones of every plugin that supports it.
         # So it runs in the current config when we lauch the exporter.
         plugins = self.g_pool.plugins.get_initializers()
 
-        out_file_path=verify_out_file_path(self.rec_name,self.g_pool.rec_dir)
+        out_file_path=verify_out_file_path(self.rec_name,export_dir)
         process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame,end_frame,plugins,out_file_path))
         self.new_export = process
 
