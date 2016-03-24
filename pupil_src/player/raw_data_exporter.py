@@ -26,7 +26,7 @@ class Raw_Data_Exporter(Plugin):
         timestamp - timestamp of the source image frame
         index - associated_frame: closest world video frame
         id - 0 or 1 for left/right eye
-        confidence - detector confidence between 0 (not confident) -1 (confident)
+        confidence - is an assessment by the pupil detector on how sure we can be on this measurement. A value of `0` indicates no confidence. `1` indicates perfect confidence. In our experience usefull data carries a confidence value greater than ~0.6. A `confidence` of exactly `0` means that we don't know anything. So you should ignore the position data.        norm_pos_x - x position in the eye image frame in normalized coordinates
         norm_pos_x - x position in the eye image frame in normalized coordinates
         norm_pos_y - y position in the eye image frame in normalized coordinates
         diameter - diameter of the pupil in image pixels as observed in the eye image frame (is not corrected for perspective)
@@ -53,7 +53,6 @@ class Raw_Data_Exporter(Plugin):
         sphere_center_y - y pos of the eye ball sphere
         sphere_center_z - z pos of the eye ball sphere
         sphere_radius - radius of the eyeball. This is always 12mm (the anthropomorphic avg.) We need to make this assumption because of the `single camera scale ambiguity`.
-
 
         circle_3d_center_x - x center of the pupil as 3d circle in eye pinhole camera 3d space units are mm.
         circle_3d_center_y - y center of the pupil as 3d circle
