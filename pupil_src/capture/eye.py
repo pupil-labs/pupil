@@ -491,10 +491,10 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
 
         logger.debug("Process done")
 
-def eye_profiled(g_pool,cap_src,pipe_to_world,eye_id):
+def eye_profiled(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, eye_id, cap_src):
     import cProfile,subprocess,os
     from eye import eye
-    cProfile.runctx("eye(g_pool,cap_src,pipe_to_world,eye_id)",{"g_pool":g_pool,'cap_src':cap_src,'pipe_to_world':pipe_to_world,'eye_id':eye_id},locals(),"eye%s.pstats"%eye_id)
+    cProfile.runctx("eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, eye_id, cap_src)",{'pupil_queue':pupil_queue, 'timebase':timebase, 'pipe_to_world':pipe_to_world, 'is_alive_flag':is_alive_flag, 'user_dir':user_dir, 'version':version, 'eye_id':eye_id, 'cap_src':cap_src},locals(),"eye%s.pstats"%eye_id)
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye%s.pstats | dot -Tpng -o eye%s_cpu_time.png"%(eye_id,eye_id), shell=True)

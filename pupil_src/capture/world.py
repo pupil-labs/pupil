@@ -462,10 +462,10 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
 
     logger.debug("world process done")
 
-def world_profiled(user_dir,version_file,video_sources,profiled=True):
+def world_profiled(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src):
     import cProfile,subprocess,os
     from world import world
-    cProfile.runctx("world(user_dir,version_file,video_sources,profiled)",{"user_dir":user_dir,"version_file":version_file,"video_sources":video_sources,'profiled':profiled},locals(),"world.pstats")
+    cProfile.runctx("world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src)",{'pupil_queue':pupil_queue,'timebase':timebase,'lauchner_pipe':lauchner_pipe,'eye_pipes':eye_pipes,'eyes_are_alive':eyes_are_alive,'user_dir':user_dir,'version':version,'cap_src':cap_src},locals(),"world.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
