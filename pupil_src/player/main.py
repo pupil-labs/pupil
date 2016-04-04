@@ -251,15 +251,17 @@ def session(rec_dir):
         try:
             cap.seek_to_frame(cap.get_frame_index())
         except FileSeekError:
-            pass
-        g_pool.new_seek = True
+            logger.warning("Could not seek to next frame.")
+        else:
+            g_pool.new_seek = True
 
     def prev_frame(_):
         try:
             cap.seek_to_frame(cap.get_frame_index()-2)
         except FileSeekError:
-            pass
-        g_pool.new_seek = True
+            logger.warning("Could not seek to previous frame.")
+        else:
+            g_pool.new_seek = True
 
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
