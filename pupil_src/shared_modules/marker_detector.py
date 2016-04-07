@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 from square_marker_detect import detect_markers_robust,detect_markers, draw_markers,m_marker_to_screen
 from reference_surface import Reference_Surface
+from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
+
 from math import sqrt
 
 class Marker_Detector(Plugin):
@@ -35,25 +37,8 @@ class Marker_Detector(Plugin):
         # all markers that are detected in the most recent frame
         self.markers = []
 
-        #load camera intrinsics
-
-        try:
-            camera_calibration = load_object(os.path.join(self.g_pool.user_dir,'camera_calibration'))
-        except:
-            self.camera_intrinsics = None
-        else:
-            same_name = camera_calibration['camera_name'] == self.g_pool.capture.name
-            same_resolution =  camera_calibration['resolution'] == self.g_pool.capture.frame_size
-            if same_name and same_resolution:
-                logger.info('Loaded camera calibration. 3D marker tracking enabled.')
-                K = camera_calibration['camera_matrix']
-                dist_coefs = camera_calibration['dist_coefs']
-                resolution = camera_calibration['resolution']
-                self.camera_intrinsics = K,dist_coefs,resolution
-            else:
-                logger.info('Loaded camera calibration but camera name and/or resolution has changed. Please re-calibrate.')
-                self.camera_intrinsics = None
-
+        #load camera calibration
+        self.camera_calibration = load_camera_calibration(self.g_pool)
 
         # all registered surfaces
         self.surface_definitions = Persistent_Dict(os.path.join(g_pool.user_dir,'surface_definitions') )
@@ -200,7 +185,7 @@ class Marker_Detector(Plugin):
 
         # locate surfaces
         for s in self.surfaces:
-            s.locate(self.markers, self.locate_3d,self.camera_intrinsics)
+            s.locate(self.markers, self.locate_3d,self.camera_calibration)
             # if s.detected:
                 # events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 

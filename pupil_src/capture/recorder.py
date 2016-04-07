@@ -18,6 +18,7 @@ from shutil import copy2
 from audio import Audio_Input_Dict
 from file_methods import save_object
 from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
+from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -319,9 +320,11 @@ class Recorder(Plugin):
             copy2(os.path.join(self.g_pool.user_dir,"user_calibration_data"),os.path.join(self.rec_path,"user_calibration_data"))
         except:
             logger.warning("No user calibration data found. Please calibrate first.")
-        try:
-            copy2(os.path.join(self.g_pool.user_dir,"camera_calibration"),os.path.join(self.rec_path,"camera_calibration"))
-        except:
+
+        camera_calibration = load_camera_calibration(self.g_pool)
+        if camera_calibration is not None:
+            save_object(camera_calibration,os.path.join(self.rec_path, "camera_calibration"))
+        else:
             logger.info("No camera calibration found.")
 
         try:

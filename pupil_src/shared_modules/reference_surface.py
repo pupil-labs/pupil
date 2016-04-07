@@ -198,7 +198,7 @@ class Reference_Surface(object):
             m.compute_robust_mean()
 
 
-    def locate(self, visible_markers, locate_3d=False, camera_intrinsics = None):
+    def locate(self, visible_markers, locate_3d=False, camera_calibration = None):
         """
         - find overlapping set of surface markers and visible_markers
         - compute homography (and inverse) based on this subset
@@ -226,7 +226,9 @@ class Reference_Surface(object):
 
                 if locate_3d:
 
-                    K,dist_coef,img_size = camera_intrinsics
+                    dist_coef, = camera_calibration['dist_coefs']
+                    img_size = camera_calibration['resolution']
+                    K = camera_calibration['camera_matrix']
 
                     # marker support pose estimation:
                     # denormalize image reference points to pixel space
@@ -240,7 +242,7 @@ class Reference_Surface(object):
                     uv3d = np.zeros((uv.shape[0], uv.shape[1]+1))
                     uv3d[:,:-1] = uv
                     # compute pose of object relative to camera center
-                    print yx,type(yx)
+                    # print yx,type(yx)
                     self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, yx, K, dist_coef,flags=cv2.CV_EPNP)
 
                     # not verifed, potentially usefull info: http://stackoverflow.com/questions/17423302/opencv-solvepnp-tvec-units-and-axes-directions

@@ -55,6 +55,16 @@ pre_recorded_calibrations = {
                             }
 
 
+ideal_camera_calibration_f1000px_720p = {
+                                    'dist_coefs': np.array([[ 0.,0.,0.,0.,0.]]),
+                                    'camera_name': 'ideal camera with focal length 1000px',
+                                    'resolution': (1280, 720),
+                                    'camera_matrix': np.array([[  1000.,     0., 1280./2],
+                                                                [    0.,  1000.,  720./2],
+                                                                [    0.,     0.,    1.  ]])
+                                    }
+
+
 def load_camera_calibration(g_pool):
     if g_pool.app == 'capture':
         try:
@@ -84,15 +94,13 @@ def load_camera_calibration(g_pool):
             logger.warning("Camera calibration not found please run Camera_Intrinsics_Estimation to calibrate camera.")
 
 
-        return camera_calibration
-
     else:
-        raise NotImplementedError()
-
-
-
-
-
+        try:
+            camera_calibration = load_object(os.path.join(g_pool.rec_dir,'camera_calibration'))
+        except:
+            camera_calibration = ideal_camera_calibration_f1000px_720p
+            logger.warning("Camera calibration not found. Will assume idealized camera. Please calibrate your cameras before your next recording.")
+    return camera_calibration
 
 
 # window calbacks
