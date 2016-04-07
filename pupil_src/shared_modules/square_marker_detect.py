@@ -267,7 +267,7 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,minEigThreshold=0.01,**lk_params)
             for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
                 if s: #ho do we ensure that this is a good move?
-                    m['verts'] += pt-m['centroid'] #uniformly translate verts by optlical flow offset
+                    m['verts'] += pt-m['centroid'] #uniformly translate verts by optical flow offset
                     r_norm = m['verts']/np.float32((gray_img.shape[1],gray_img.shape[0]))
                     r_norm[:,:,1] = 1-r_norm[:,:,1]
                     m['verts_norm'] = r_norm
