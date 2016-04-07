@@ -9,7 +9,6 @@
 '''
 import os, sys, platform
 
-
 class Global_Container(object):
     pass
 
@@ -75,12 +74,13 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         #display
         import glfw
         from pyglui import ui,graph,cygl
-        from pyglui.cygl.utils import draw_points,RGBA,draw_polyline,Named_Texture
-        from OpenGL.GL import GL_LINE_LOOP
-        from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based
+        from pyglui.cygl.utils import draw_points, RGBA, draw_polyline, Named_Texture, Sphere
+        import OpenGL.GL as gl
+        from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based, make_coord_system_eye_camera_based
         from ui_roi import UIRoi
         #monitoring
         import psutil
+        import math
 
 
         # helpers/utils
@@ -91,8 +91,8 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         from av_writer import JPEG_Writer,AV_Writer
 
         # Pupil detectors
-        from pupil_detectors import Canny_Detector, Detector_2D, Detector_3D
-        pupil_detectors = {Canny_Detector.__name__:Canny_Detector,Detector_2D.__name__:Detector_2D,Detector_3D.__name__:Detector_3D}
+        from pupil_detectors import Detector_2D, Detector_3D
+        pupil_detectors = {Detector_2D.__name__:Detector_2D,Detector_3D.__name__:Detector_3D}
 
 
 
@@ -204,8 +204,8 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         g_pool.flip = session_settings.get('flip',False)
         g_pool.display_mode = session_settings.get('display_mode','camera_image')
         g_pool.display_mode_info_text = {'camera_image': "Raw eye camera image. This uses the least amount of CPU power",
-                                    'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be a small as possible but big enough to capture to pupil in its movements",
-                                    'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters with in the Pupil Detection menu below."}
+                                    'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be as small as possible, but large enough to capture all pupil movements.",
+                                    'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters within the Pupil Detection menu below."}
 
 
         g_pool.u_r = UIRoi(frame.img.shape)
@@ -256,6 +256,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         g_pool.image_tex.update_from_frame(frame)
         glfw.glfwSwapInterval(0)
 
+        sphere  = Sphere(20)
 
         #setup GUI
         g_pool.gui = ui.UI()
@@ -270,7 +271,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         general_settings.append(g_pool.display_mode_info)
         g_pool.sidebar.append(general_settings)
         g_pool.gui.append(g_pool.sidebar)
-        detector_selector = ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Canny_Detector, Detector_2D, Detector_3D],labels=['Python 2D detector','C++ 2d detector', 'C++ 3d detector'], label="Detection method")
+        detector_selector = ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Detector_2D, Detector_3D],labels=['C++ 2d detector', 'C++ 3d detector'], label="Detection method")
         general_settings.append(detector_selector)
 
         # let detector add its GUI
@@ -414,16 +415,30 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
 
                     make_coord_system_norm_based(g_pool.flip)
                     g_pool.image_tex.draw()
-                    # switch to work in pixel space
+
+                    window_size =  glfw.glfwGetWindowSize(main_window)
                     make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
+
+                    if result['method'] == '3d c++':
+
+                        eye_ball = result['projected_sphere']
+                        try:
+                            pts = cv2.ellipse2Poly( (int(eye_ball['center'][0]),int(eye_ball['center'][1])),
+                                                (int(eye_ball['axes'][0]/2),int(eye_ball['axes'][1]/2)),
+                                                int(eye_ball['angle']),0,360,8)
+                        except ValueError as e:
+                            pass
+                        else:
+                            draw_polyline(pts,2,RGBA(0.,.9,.1,result['model_confidence']) )
 
                     if result['confidence'] >0:
                         if result.has_key('ellipse'):
                             pts = cv2.ellipse2Poly( (int(result['ellipse']['center'][0]),int(result['ellipse']['center'][1])),
                                             (int(result['ellipse']['axes'][0]/2),int(result['ellipse']['axes'][1]/2)),
                                             int(result['ellipse']['angle']),0,360,15)
-                            draw_polyline(pts,1,RGBA(1.,0,0,.5))
-                        draw_points([result['ellipse']['center']],size=20,color=RGBA(1.,0.,0.,.5),sharpness=1.)
+                            confidence = result['confidence'] * 0.7 #scale it a little
+                            draw_polyline(pts,1,RGBA(1.,0,0,confidence))
+                            draw_points([result['ellipse']['center']],size=20,color=RGBA(1.,0.,0.,confidence),sharpness=1.)
 
                     # render graphs
                     graph.push_view()
@@ -476,10 +491,10 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
 
         logger.debug("Process done")
 
-def eye_profiled(g_pool,cap_src,pipe_to_world,eye_id):
+def eye_profiled(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, eye_id, cap_src):
     import cProfile,subprocess,os
     from eye import eye
-    cProfile.runctx("eye(g_pool,cap_src,pipe_to_world,eye_id)",{"g_pool":g_pool,'cap_src':cap_src,'pipe_to_world':pipe_to_world,'eye_id':eye_id},locals(),"eye%s.pstats"%eye_id)
+    cProfile.runctx("eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, eye_id, cap_src)",{'pupil_queue':pupil_queue, 'timebase':timebase, 'pipe_to_world':pipe_to_world, 'is_alive_flag':is_alive_flag, 'user_dir':user_dir, 'version':version, 'eye_id':eye_id, 'cap_src':cap_src},locals(),"eye%s.pstats"%eye_id)
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye%s.pstats | dot -Tpng -o eye%s_cpu_time.png"%(eye_id,eye_id), shell=True)

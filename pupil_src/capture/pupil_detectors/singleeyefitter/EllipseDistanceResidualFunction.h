@@ -3,8 +3,8 @@
 
 
 #include "projection.h"
-#include "Geometry/Sphere.h"
-#include "Geometry/Ellipse.h"
+#include "geometry/Sphere.h"
+#include "geometry/Ellipse.h"
 #include "EllipseDistanceApproxCalculator.h"
 #include "utils.h"
 

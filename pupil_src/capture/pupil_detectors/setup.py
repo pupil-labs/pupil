@@ -1,3 +1,12 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2016  Pupil Labs
+
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
 
 # monkey-patch for parallel compilation
 def parallelCCompile(self, sources, output_dir=None, macros=None, include_dirs=None, debug=0, extra_preargs=None, extra_postargs=None, depends=None):
@@ -31,11 +40,14 @@ for dirpath, dirnames, filenames in os.walk("singleeyefitter"):
     for filename in [f for f in filenames if f.endswith(".h")]:
         dependencies.append( os.path.join(dirpath, filename) )
 
+shared_cpp_include_path = '../../shared_cpp/include'
+singleeyefitter_include_path = 'singleeyefitter/'
+
 extensions = [
     Extension(
         name="detector_2d",
         sources=['detector_2d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp' ],
-        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3'],
+        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path],
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc' , 'boost_python'],
         #library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
@@ -45,7 +57,7 @@ extensions = [
      Extension(
         name="detector_3d",
         sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/EyeModelFitter.cpp','singleeyefitter/EyeModel.cpp'],
-        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3'],
+        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path],
         libraries = ['opencv_highgui','opencv_core','opencv_imgproc', 'opencv_video', 'ceres', 'boost_python' ],
         # library_dirs = ['/usr/local/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'

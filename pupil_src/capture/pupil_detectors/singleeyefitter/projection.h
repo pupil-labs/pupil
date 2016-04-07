@@ -3,11 +3,11 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include "Geometry/Ellipse.h"
-#include "Geometry/Circle.h"
-#include "Geometry/Conic.h"
-#include "Geometry/Sphere.h"
-#include "Geometry/Conicoid.h"
+#include "geometry/Ellipse.h"
+#include "geometry/Circle.h"
+#include "geometry/Conic.h"
+#include "geometry/Sphere.h"
+#include "geometry/Conicoid.h"
 #include "mathHelper.h"
 #include "solve.h"
 

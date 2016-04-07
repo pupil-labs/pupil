@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 from ctypes import c_bool, c_int
 
-from export_launcher import Export_Process,Value,forking_enable,cpu_count
+from video_export_launcher import Export_Process,Value,forking_enable,cpu_count
 
 
 from exporter import export
@@ -40,7 +40,7 @@ def get_recording_dirs(data_dir):
     return filtered_recording_dirs
 
 class Batch_Exporter(Plugin):
-    """docstring for Export_Launcher
+    """docstring for Batch_Exporter
     this plugin can export videos in a seperate process using exporter
     """
     def __init__(self, g_pool):
