@@ -173,17 +173,18 @@ class Recorder(Plugin):
             self.data['notifications'].append(notification)
 
 
-        # Remote has started recording, we should start as well.
-        elif notification['subject'] == 'rec_started' and notification.get('source','local') != 'local':
+        # Notificatio to start recording
+        elif notification['subject'] == 'should_start_recording' and notification.get('source','local') != 'local':
             if self.running:
                 logger.warning('Recording is already running!')
             else:
-                self.set_session_name(notification["session_name"])
-                self.start(network_propagate=False)
+                if notification.get("session_name",""):
+                    self.set_session_name(notification["session_name"])
+                self.start(instruct_others=False)
         # Remote has stopped recording, we should stop as well.
-        elif notification['subject'] == 'rec_stopped' and notification.get('source','local') != 'local':
+        elif notification['subject'] == 'should_stop_recording' and notification.get('source','local') != 'local':
             if self.running:
-                self.stop(network_propagate=False)
+                self.stop(instruct_others=False)
             else:
                 logger.warning('Recording is already stopped!')
 
@@ -192,7 +193,7 @@ class Recorder(Plugin):
         rec_time = gmtime(time()-self.start_time)
         return strftime("%H:%M:%S", rec_time)
 
-    def start(self,network_propagate=True):
+    def start(self,instruct_others=True):
         self.timestamps = []
         self.data = {'pupil_positions':[],'gaze_positions':[],'notifications':[]}
         self.frame_count = 0
@@ -250,7 +251,9 @@ class Recorder(Plugin):
         if self.show_info_menu:
             self.open_info_menu()
 
-        self.notify_all( {'subject':'rec_started','rec_path':self.rec_path,'session_name':self.session_name,'network_propagate':network_propagate} )
+        self.notify_all( {'subject':'rec_started','rec_path':self.rec_path,'session_name':self.session_name,'network_propagate':True} )
+        if instruct_others:
+            self.notify_all( {'subject':'should_start_recording','session_name':self.session_name,'network_propagate':True} )
 
     def open_info_menu(self):
         self.info_menu = ui.Growing_Menu('additional Recording Info',size=(300,300),pos=(300,300))
@@ -294,7 +297,7 @@ class Recorder(Plugin):
 
             self.button.status_text = self.get_rec_time_str()
 
-    def stop(self,network_propagate=True):
+    def stop(self,instruct_others=True):
         #explicit release of VideoWriter
         self.writer.release()
         self.writer = None
@@ -370,8 +373,9 @@ class Recorder(Plugin):
         self.gaze_pos_list = []
 
 
-        self.notify_all( {'subject':'rec_stopped','rec_path':self.rec_path,'network_propagate':network_propagate} )
-
+        self.notify_all( {'subject':'rec_stopped','rec_path':self.rec_path,'network_propagate':True} )
+        if instruct_others:
+            self.notify_all( {'subject':'should_stop_recording','network_propagate':True} )
 
 
     def cleanup(self):
