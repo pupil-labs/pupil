@@ -153,7 +153,8 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
     def __init__(self, g_pool, eye_camera_to_world_matrix , camera_intrinsics ,cal_points_3d, cal_ref_points_3d, cal_gaze_points_3d, gaze_distance = 500 ):
         super(Vector_Gaze_Mapper, self).__init__(g_pool)
         self.eye_camera_to_world_matrix  =  eye_camera_to_world_matrix
-        self.rotation_vector = cv2.Rodrigues( self.eye_camera_to_world_matrix[:3,:3]  )[0]
+        self.rotation_matrix = self.eye_camera_to_world_matrix[:3,:3]
+        self.rotation_vector = cv2.Rodrigues( self.rotation_matrix  )[0]
         self.translation_vector  = self.eye_camera_to_world_matrix[:3,3]
         self.camera_matrix = camera_intrinsics['camera_matrix']
         self.dist_coefs = camera_intrinsics['dist_coefs']
@@ -200,9 +201,12 @@ class Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
                 eye_center = self.toWorld(p['sphere']['center'])
                 gaze_3d = self.toWorld(gaze_point)
+                normal_3d = np.dot( self.rotation_matrix, np.array( p['circle_3d']['normal'] ) )
+
                 gaze_pts.append({   'norm_pos':image_point,
                                     'eye_center_3d':eye_center.tolist(),
-                                    'gaze_3d':gaze_3d.tolist(),
+                                    'gaze_normal_3d':normal_3d.tolist(),
+                                    'gaze_point_3d':gaze_3d.tolist(),
                                     'confidence':p['confidence'],
                                     'timestamp':p['timestamp'],
                                     'base':[p]})
@@ -316,12 +320,15 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
 
                 eye_center = self.eye0_to_World(p['sphere']['center'])
                 gaze_3d = self.eye0_to_World(gaze_point)
+                normal_3d = np.dot( self.rotation_matrix0, np.array( p['circle_3d']['normal'] ) )
                 gaze_pts.append({   'norm_pos':image_point,
-                                    'eye_center_3d':eye_center.tolist(),
-                                    'gaze_3d':gaze_3d.tolist(),
+                                    'eye_centers_3d':{p['id']:eye_center.tolist()},
+                                    'gaze_normals_3d':{p['id']:normal_3d.tolist()},
+                                    'gaze_point_3d':gaze_3d.tolist(),
                                     'confidence':p['confidence'],
                                     'timestamp':p['timestamp'],
                                     'base':[p]})
+
 
                 if self.visualizer.window:
                     self.gaze_pts_debug0.append(gaze_3d)
@@ -338,9 +345,11 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
                 image_point = normalize( image_point[0], (frame.width, frame.height) , flip_y = True)
                 eye_center = self.eye1_to_World(p['sphere']['center'])
                 gaze_3d = self.eye1_to_World(gaze_point)
+                normal_3d = np.dot( self.rotation_matrix1, np.array( p['circle_3d']['normal'] ) )
                 gaze_pts.append({   'norm_pos':image_point,
-                                    'eye_center_3d':eye_center.tolist(),
-                                    'gaze_3d':gaze_3d.tolist(),
+                                    'eye_centers_3d':{p['id']:eye_center.tolist()},
+                                    'gaze_normals_3d':{p['id']:normal_3d.tolist()},
+                                    'gaze_point_3d':gaze_3d.tolist(),
                                     'confidence':p['confidence'],
                                     'timestamp':p['timestamp'],
                                     'base':[p]})
@@ -396,11 +405,9 @@ class Binocular_Vector_Gaze_Mapper(Gaze_Mapping_Plugin):
                 confidence = (p0['confidence'] + p1['confidence'])/2.
                 ts = (p0['timestamp'] + p1['timestamp'])/2.
                 gaze_pts.append({   'norm_pos':image_point,
-                                    'eye_center0_3d':s0_center.tolist(),
-                                    'eye_center1_3d':s1_center.tolist(),
-                                    'gaze_normal0':s0_normal.tolist(),
-                                    'gaze_normal1':s1_normal.tolist(),
-                                    'gaze_3d':nearest_intersection_point.tolist(),
+                                    'eye_centers_3d':{0:s0_center.tolist(),1:s1_center.tolist()},
+                                    'gaze_normals_3d':{0:s0_normal.tolist(),1:s1_normal.tolist()},
+                                    'gaze_point_3d':nearest_intersection_point.tolist(),
                                     'confidence':confidence,
                                     'timestamp':ts,
                                     'base':[p0,p1]})
