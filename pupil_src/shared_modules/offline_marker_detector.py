@@ -88,6 +88,8 @@ class Offline_Marker_Detector(Marker_Detector):
 
         self.img_shape = None
         self.img = None
+        
+        self.heatmap_colormap = "JET"
 
     def load_surface_definitions_from_file(self):
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'surface_definitions'))
@@ -119,7 +121,11 @@ class Offline_Marker_Detector(Marker_Detector):
         if self.add_button:
             self.g_pool.quickbar.remove(self.add_button)
             self.add_button = None
-
+            
+    def set_mode(self, value):
+        self.mode = value
+        self.update_gui_markers()
+        
     def update_gui_markers(self):
         pass
         self.menu.elements[:] = []
@@ -127,7 +133,13 @@ class Offline_Marker_Detector(Marker_Detector):
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
         self.menu.append(ui.Info_Text('Please note: Unlike the real-time marker detector the offline marker detector works with a fixed min_marker_perimeter of 20.'))
-        self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
+        self.menu.append(ui.Selector('mode',self,setter=self.set_mode,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
+
+        if self.mode == 'Show Heatmaps':
+            self.menu.append(ui.Info_Text('Heatmap Settings'))
+            # self.menu.append(ui.Slider('heatmap_blur_gradation',self,min=0.01,step=0.01,max=1.0,label='Blur Gradation'))
+            self.menu.append(ui.Selector('heatmap_colormap',self,label='Color Map',selection=['AUTUMN','BONE', 'JET', 'WINTER', 'RAINBOW', 'OCEAN', 'SUMMER', 'SPRING', 'COOL', 'HSV', 'PINK', 'HOT']))
+
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
@@ -174,6 +186,7 @@ class Offline_Marker_Detector(Marker_Detector):
         # calc heatmaps
         for s in self.surfaces:
             if s.defined:
+                s.heatmap_colormap = "JET"
                 s.generate_heatmap(section)
 
         # calc distirbution accross all surfaces.
