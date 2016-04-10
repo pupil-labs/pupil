@@ -178,12 +178,13 @@ class Marker_Detector(Plugin):
             if self.mode == "Show marker IDs":
                 draw_markers(frame.img,self.markers)
 
+        events['surfaces'] = []
 
         # locate surfaces
         for s in self.surfaces:
-            s.locate(self.markers, self.locate_3d,self.camera_calibration)
-            # if s.detected:
-                # events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
+            s.locate(self.markers,self.camera_calibration, self.locate_3d)
+            if s.detected:
+                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
         if self.running:
             self.button.status_text = '%s/%s'%(len([s for s in self.surfaces if s.detected]),len(self.surfaces))
