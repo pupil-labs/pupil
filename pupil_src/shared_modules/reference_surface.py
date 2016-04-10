@@ -28,15 +28,15 @@ from time import time
 import logging
 logger = logging.getLogger(__name__)
 
+marker_corners_norm = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
+
 def m_verts_to_screen(verts):
     #verts need to be sorted counter-clockwise stating at bottom left
-    mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
-    return cv2.getPerspectiveTransform(mapped_space_one,verts)
+    return cv2.getPerspectiveTransform(marker_corners_norm,verts)
 
 def m_verts_from_screen(verts):
     #verts need to be sorted counter-clockwise stating at bottom left
-    mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
-    return cv2.getPerspectiveTransform(verts,mapped_space_one)
+    return cv2.getPerspectiveTransform(verts,marker_corners_norm)
 
 
 
@@ -125,7 +125,7 @@ class Reference_Surface(object):
         self.defined = True
         self.build_up_status = self.required_build_up
 
-    def build_correspondance(self, visible_markers):
+    def build_correspondance(self, visible_markers,camera_calibration):
         """
         - use all visible markers
         - fit a convex quadrangle around it
@@ -140,9 +140,10 @@ class Reference_Surface(object):
 
             return
 
-        all_verts = np.array([[m['verts_norm'] for m in visible_markers]])
+        all_verts = np.array([[m['verts'] for m in visible_markers]])
         all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
-        hull = cv2.convexHull(all_verts,clockwise=False)
+        all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
+        hull = cv2.convexHull(all_verts_undistorted_normalized,clockwise=False)
 
         #simplify until we have excatly 4 verts
         if hull.shape[0]>4:
@@ -157,15 +158,15 @@ class Reference_Surface(object):
         #now we need to roll the hull verts until we have the right orientation:
         distance_to_origin = np.sqrt(hull[:,:,0]**2+hull[:,:,1]**2)
         top_left_idx = np.argmin(distance_to_origin)
-        hull = np.roll(hull,-top_left_idx,axis=0)
+        hull = np.roll(hull,-top_left_idx-1,axis=0)
 
 
         #based on these 4 verts we calculate the transformations into a 0,0 1,1 square space
-        self.m_to_screen = m_verts_to_screen(hull)
-        self.m_from_screen = m_verts_from_screen(hull)
+        m_to_undistored_norm_space = m_verts_to_screen(hull)
+        m_from_undistored_norm_space = m_verts_from_screen(hull)
         self.detected = True
         # map the markers vertices in to the surface space (one can think of these as texture coordinates u,v)
-        marker_uv_coords =  cv2.perspectiveTransform(all_verts,self.m_from_screen)
+        marker_uv_coords =  cv2.perspectiveTransform(all_verts_undistorted_normalized,m_from_undistored_norm_space)
         marker_uv_coords.shape = (-1,4,1,2) #[marker,marker...] marker = [ [[r,c]],[[r,c]] ]
 
         # build up a dict of discovered markers. Each with a history of uv coordinates
@@ -178,6 +179,21 @@ class Reference_Surface(object):
 
         #average collection of uv correspondences accros detected markers
         self.build_up_status = sum([len(m.collected_uv_coords) for m in self.markers.values()])/float(len(self.markers))
+
+        # for the preview we need to calculate the current transform into the distored image space
+        # project the corners of the surface to undistored space
+        corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
+        # project and distort these points  and normalize them
+        corners_distorted, _ = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs'])
+        #normalize to pupil norm space
+        corners_distorted.shape = -1,2
+        corners_distorted /= camera_calibration['resolution']
+        corners_distorted[:,-1] = 1-corners_distorted[:,-1]
+        #compute a perspective thransform from from the marker norm space to the apparent image.
+        # The surface corners will be at the right points
+        # However the space between the corners may be distored due to distortions of the lens,
+        self.m_to_screen = m_verts_to_screen(corners_distorted)
+        self.m_from_screen = m_verts_from_screen(corners_distorted)
 
         if self.build_up_status >= self.required_build_up:
             self.finalize_correnspondance()
@@ -198,14 +214,14 @@ class Reference_Surface(object):
             m.compute_robust_mean()
 
 
-    def locate(self, visible_markers, locate_3d=False, camera_calibration = None):
+    def locate(self, visible_markers,camera_calibration, locate_3d=False):
         """
         - find overlapping set of surface markers and visible_markers
         - compute homography (and inverse) based on this subset
         """
 
         if not self.defined:
-            self.build_correspondance(visible_markers)
+            self.build_correspondance(visible_markers,camera_calibration)
         else:
             marker_by_id = dict([(m['id'],m) for m in visible_markers])
             visible_ids = set(marker_by_id.keys())
@@ -214,15 +230,29 @@ class Reference_Surface(object):
             self.detected_markers = len(overlap)
             if len(overlap)>=min(1,len(requested_ids)):
                 self.detected = True
-                yx = np.array( [marker_by_id[i]['verts_norm'] for i in overlap] )
+                xy = np.array( [marker_by_id[i]['verts'] for i in overlap] )
                 uv = np.array( [self.markers[i].uv_coords for i in overlap] )
-                yx.shape=(-1,1,2)
                 uv.shape=(-1,1,2)
-                # print 'uv',uv
-                # print 'yx',yx
-                self.m_to_screen,mask = cv2.findHomography(uv,yx)
-                self.m_from_screen = np.linalg.inv(self.m_to_screen)
-                #self.m_from_screen,mask = cv2.findHomography(yx,uv)
+
+                # our camera lens creates distortions we want to get a good 2d estimate despite that so we:
+                # compute the homography transform from marker into the undistored normalized image space
+                # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
+                xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
+                m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized)
+                # project the corners of the surface to undistored space
+                corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
+                # project and distort these points  and normalize them
+                corners_distorted, _ = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs'])
+
+                #normalize to pupil norm space
+                corners_distorted.shape = -1,2
+                corners_distorted /= camera_calibration['resolution']
+                corners_distorted[:,-1] = 1-corners_distorted[:,-1]
+                #compute a perspective thransform from from the marker norm space to the apparent image.
+                # The surface corners will be at the right points
+                # However the space between the corners may be distored due to distortions of the lens,
+                self.m_to_screen = m_verts_to_screen(corners_distorted)
+                self.m_from_screen = m_verts_from_screen(corners_distorted)
 
                 if locate_3d:
 
@@ -230,11 +260,7 @@ class Reference_Surface(object):
                     img_size = camera_calibration['resolution']
                     K = camera_calibration['camera_matrix']
 
-                    # marker support pose estimation:
-                    # denormalize image reference points to pixel space
-                    yx.shape = -1,2
-                    yx *= img_size
-                    yx.shape = -1, 1, 2
+                    # 3d marker support pose estimation:
                     # scale normalized object points to world space units (think m,cm,mm)
                     uv.shape = -1,2
                     uv *= [self.real_world_size['x'], self.real_world_size['y']]
@@ -333,7 +359,7 @@ class Reference_Surface(object):
         the tranformation from old quadrangle to new quardangle
         and apply that transformation to our marker uv-coords
         """
-        before = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
+        before = marker_corners_norm
         after = before.copy()
         after[vert_idx] = new_pos
         transform = cv2.getPerspectiveTransform(after,before)
@@ -370,8 +396,7 @@ class Reference_Surface(object):
         draw surface and markers
         """
         if self.detected:
-            frame = np.array([[[0,0],[1,0],[1,1],[0,1]]],dtype=np.float32)
-            frame = cv2.perspectiveTransform(frame,self.m_to_screen)
+            frame = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),self.m_to_screen)
             draw_points_norm(frame.reshape((4,2)),15,RGBA(1.0,0.2,0.6,.5))
 
 
@@ -681,8 +706,8 @@ if __name__ == '__main__':
 
 
 
-    rMat, _ = cv2.Rodrigues(rotation3d)
-    self.from_camera_to_referece = np.eye(4, dtype=np.float32)
-    self.from_camera_to_referece[:-1,:-1] = rMat
-    self.from_camera_to_referece[:-1, -1] = translation3d.reshape(3)
-    # self.camera_pose_3d = np.linalg.inv(self.camera_pose_3d)
+    # rMat, _ = cv2.Rodrigues(rotation3d)
+    # self.from_camera_to_referece = np.eye(4, dtype=np.float32)
+    # self.from_camera_to_referece[:-1,:-1] = rMat
+    # self.from_camera_to_referece[:-1, -1] = translation3d.reshape(3)
+    # # self.camera_pose_3d = np.linalg.inv(self.camera_pose_3d)
