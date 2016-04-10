@@ -22,7 +22,7 @@ from glob import glob
 import cv2
 import numpy as np
 from video_capture import File_Capture,EndofVideoFileError
-from player_methods import correlate_data,update_recording_0v4_to_current,update_recording_0v3_to_current
+from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current,update_recording_0v5_to_current,update_recording_0v73_to_current
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version
 from av_writer import AV_Writer
@@ -72,8 +72,12 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
 
     rec_version = read_rec_version(meta_info)
-    if rec_version >= VersionFormat('0.5'):
+    if rec_version >= VersionFormat('0.7.4'):
         pass
+    if rec_version >= VersionFormat('0.7.3'):
+        update_recording_0v73_to_current(rec_dir)
+    elif rec_version >= VersionFormat('0.5'):
+        update_recording_0v5_to_current(rec_dir)
     elif rec_version >= VersionFormat('0.4'):
         update_recording_0v4_to_current(rec_dir)
     elif rec_version >= VersionFormat('0.3'):

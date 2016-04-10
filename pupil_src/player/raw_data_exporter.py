@@ -80,7 +80,24 @@ class Raw_Data_Exporter(Plugin):
         norm_pos_x - x position in the world image frame in normalized coordinates
         norm_pos_y - y position in the world image frame in normalized coordinates
         base - "timestamp-id timestamp-id ..." of pupil data that this gaze position is computed from
-    '''
+
+        #data made available by the 3d vector gaze mappers
+        gaze_point_3d_x - x position of the 3d gaze point (the point the sublejct lookes at) in the world camera coordinate system
+        gaze_point_3d_y - y position of the 3d gaze point
+        gaze_point_3d_z - z position of the 3d gaze point
+        eye_center0_3d_x - x center of eye-ball 0 in the world camera coordinate system (of camera 0 for binocular systems or any eye camera for monocular system)
+        eye_center0_3d_y - y center of eye-ball 0
+        eye_center0_3d_z - z center of eye-ball 0
+        gaze_normal0_x - x normal of the visual axis for eye 0 in the world camera coordinate system (of eye 0 for binocular systems or any eye for monocular system). The visual axis goes through the eye ball center and the object thats looked at.
+        gaze_normal0_y - y normal of the visual axis for eye 0
+        gaze_normal0_z - z normal of the visual axis for eye 0
+        eye_center1_3d_x - x center of eye-ball 1 in the world camera coordinate system (not avaible for monocular setups.)
+        eye_center1_3d_y - y center of eye-ball 1
+        eye_center1_3d_z - z center of eye-ball 1
+        gaze_normal1_x - x normal of the visual axis for eye 1 in the world camera coordinate system (not avaible for monocular setups.). The visual axis goes through the eye ball center and the object thats looked at.
+        gaze_normal1_y - y normal of the visual axis for eye 1
+        gaze_normal1_z - z normal of the visual axis for eye 1
+        '''
     def __init__(self,g_pool):
         super(Raw_Data_Exporter, self).__init__(g_pool)
 
@@ -201,10 +218,45 @@ class Raw_Data_Exporter(Plugin):
                                  "confidence",
                                  "norm_pos_x",
                                  "norm_pos_y",
-                                 "base" ) )
+                                 "base",
+                                 "gaze_point_3d_x",
+                                 "gaze_point_3d_y",
+                                 "gaze_point_3d_z",
+                                 "eye_center0_3d_x",
+                                 "eye_center0_3d_y",
+                                 "eye_center0_3d_z",
+                                 "gaze_normal0_x",
+                                 "gaze_normal0_y",
+                                 "gaze_normal0_z",
+                                 "eye_center1_3d_x",
+                                 "eye_center1_3d_y",
+                                 "eye_center1_3d_z",
+                                 "gaze_normal1_x",
+                                 "gaze_normal1_y",
+                                 "gaze_normal1_z"
+                                     ) )
 
             for g in list(chain(*self.g_pool.gaze_positions_by_frame[export_range])):
                 data = ['%s'%g["timestamp"],g["index"],g["confidence"],g["norm_pos"][0],g["norm_pos"][1]," ".join(['%s-%s'%(b['timestamp'],b['id']) for b in g['base']]) ] #use str on timestamp to be consitant with csv lib.
+
+                #add 3d data if avaiblable
+                if g.get('gaze_point_3d',None) is not None:
+                    data_3d = [g['gaze_point_3d'][0],g['gaze_point_3d'][1],g['gaze_point_3d'][2]]
+
+                    #binocular
+                    if g.get('eye_centers_3d',None) is not None:
+                        data_3d += g['eye_centers_3d'].get(0,[None,None,None])
+                        data_3d += g['gaze_normals_3d'].get(0,[None,None,None])
+                        data_3d += g['eye_centers_3d'].get(1,[None,None,None])
+                        data_3d += g['gaze_normals_3d'].get(1,[None,None,None])
+                    #monocular
+                    elif g.get('eye_center_3d',None) is not None:
+                        data_3d += g['eye_center_3d']
+                        data_3d += g['gaze_normal_3d']
+                        data_3d += [None,]*6
+                else:
+                    data_3d = [None,]*15
+                data +=data_3d
                 csv_writer.writerow(data)
             logger.info("Created 'gaze_positions.csv' file.")
 

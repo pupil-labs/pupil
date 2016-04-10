@@ -8,7 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from plugin import Plugin
 import numpy as np
 from pyglui import ui
 import os,sys, platform
@@ -19,6 +18,15 @@ logger = logging.getLogger(__name__)
 
 from ctypes import c_bool, c_int
 
+
+if __name__ == '__main__':
+    # Make all pupil shared_modules available to this Python session.
+    pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
+    sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
+    import argparse
+    from textwrap import dedent
+    from file_methods import Persistent_Dict
+from plugin import Plugin
 from video_export_launcher import Export_Process,Value,forking_enable,cpu_count
 
 
@@ -197,4 +205,160 @@ class Batch_Exporter(Plugin):
         """
         self.deinit_gui()
 
+
+def main():
+
+
+    def show_progess(jobs):
+        no_jobs = len(jobs)
+        width = 80
+        full = width/no_jobs
+        string = ""
+        for j in jobs:
+            try:
+                p = int(width*j.current_frame.value/float(j.frames_to_export.value*no_jobs) )
+            except:
+                p = 0
+            string += '['+ p*"|"+(full-p)*"-" + "]"
+        sys.stdout.write("\r"+string)
+        sys.stdout.flush()
+
+
+    """Batch process recordings to produce visualizations
+    Using simple_circle as the default visualizations
+    Steps:
+        - User Supplies: Directory that contains many recording(s) dirs or just one recordings dir
+        - We walk the user supplied directory to get all data folders
+        - Data is the list we feed to our multiprocessed
+        - Error check -- do we have required files in each dir?: world.avi, gaze_positions.npy, timestamps.npy
+        - Result: world_viz.avi within each original data folder
+    """
+
+
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=dedent('''\
+            ***************************************************
+            Batch process recordings to produce visualizations
+            The default visualization will use simple_circle
+
+            Usage Example:
+                python batch_exporter.py -d /path/to/folder-with-many-recordings -s ~/Pupil_Player/settings/user_settings -e ~/my_export_dir
+            Arguments:
+                -d : Specify a recording directory.
+                     This could have one or many recordings contained within it.
+                     We will recurse into the dir.
+                -s : Specify path to Pupil Player user_settings file to use last used vizualization settings.
+                -e : Specify export directory if you dont what the export saved within each recording dir.
+                -p : Export a 120 frame preview only.
+            ***************************************************\
+        '''))
+    parser.add_argument('-d', '--rec-dir',required=True)
+    parser.add_argument('-s', '--settings-file',required=True)
+    parser.add_argument('-e', '--export-to-dir',default=False)
+    parser.add_argument('-c', '--basic-color',default='red')
+    parser.add_argument('-p', '--preview', action='store_true')
+
+    if len(sys.argv)==1:
+        print parser.description
+        return
+
+    args = parser.parse_args()
+    # get the top level data folder from terminal argument
+
+    data_dir = args.rec_dir
+
+    if args.settings_file and os.path.isfile(args.settings_file):
+        session_settings = Persistent_Dict(os.path.splitext(args.settings_file)[0])
+        #these are loaded based on user settings
+        plugin_initializers = session_settings.get('plugins',[])
+        session_settings.close()
+    else:
+        logger.error("Setting file not found or valid")
+        return
+
+    if args.export_to_dir:
+        export_dir = args.export_to_dir
+        if os.path.isdir(export_dir):
+            logger.info("Exporting all vids to %s"%export_dir)
+        else:
+            logger.error("Exporting dir is not valid %s"%export_dir)
+            return
+    else:
+        export_dir = None
+        logger.info("Exporting into the recording dirs.")
+
+    if args.preview:
+        preview = True
+        logger.info("Exporting first 120frames only")
+    else:
+        preview =  False
+
+    class Temp(object):
+        pass
+
+    recording_dirs = get_recording_dirs(data_dir)
+    # start multiprocessing engine
+    n_cpu = cpu_count()
+    logger.info("Using a maximum of %s CPUs to process visualizations in parallel..." %n_cpu)
+
+    jobs = []
+    outfiles = set()
+    for d in recording_dirs:
+        j = Temp()
+        logger.info("Adding new export: %s"%d)
+        j.should_terminate = Value(c_bool,0)
+        j.frames_to_export  = Value(c_int,0)
+        j.current_frame = Value(c_int,0)
+        j.data_dir = d
+        j.user_dir = None
+        j.start_frame= None
+        if preview:
+            j.end_frame = 30
+        else:
+            j.end_frame = None
+        j.plugin_initializers = plugin_initializers[:]
+
+        if export_dir:
+            #make a unique name created from rec_session and dir name
+            rec_session, rec_dir = d.rsplit(os.path.sep,2)[1:]
+            out_name = rec_session+"_"+rec_dir+".mp4"
+            j.out_file_path = os.path.join(os.path.expanduser(export_dir),out_name)
+            if j.out_file_path in outfiles:
+                logger.error("This export setting would try to save %s at least twice pleace rename dirs to prevent this."%j.out_file_path)
+                return
+            outfiles.add(j.out_file_path)
+            logger.info("Exporting to: %s"%j.out_file_path)
+
+        else:
+            j.out_file_path = None
+
+        j.args = (j.should_terminate,j.frames_to_export,j.current_frame, j.data_dir, j.user_dir,j.start_frame,j.end_frame,j.plugin_initializers,j.out_file_path)
+        jobs.append(j)
+
+    
+    todo = jobs[:]
+    workers = [Export_Process(target=export,args=todo.pop(0).args) for i in range(min(len(todo),n_cpu))]
+    for w in workers:
+        w.start()
+
+    working = True
+
+    t = time.time()
+    while working: #cannot use pool as it does not allow shared memory
+        working = False
+        for i in range(len(workers)):
+            if workers[i].is_alive():
+                working = True
+            else:
+                if todo:
+                    workers[i] = Process(target=export,args=todo.pop(0).args)
+                    workers[i].start()
+                    working = True
+        show_progess(jobs)
+        time.sleep(.25)
+    print '\n'
+   
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.WARNING)
+    main()
 
