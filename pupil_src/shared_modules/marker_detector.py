@@ -131,14 +131,10 @@ class Marker_Detector(Plugin):
         self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Info_Text('This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*.'))
         self.menu.append(ui.Switch('robust_detection',self,label='Robust detection'))
-        self.menu.append(ui.Slider('min_marker_perimeter',self,step=1,min=10,max=80))
+        self.menu.append(ui.Slider('min_marker_perimeter',self,step=1,min=10,max=500))
         self.menu.append(ui.Switch('locate_3d',self,label='3D localization'))
         self.menu.append(ui.Selector('mode',self,label="Mode",selection=['Show markers and frames','Show marker IDs', 'Surface edit mode'] ))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_'),))
-
-        # disable locate_3d if camera intrinsics don't exist
-        if self.camera_intrinsics is None:
-            self.menu.elements[4].read_only = True
 
         for s in self.surfaces:
             idx = self.surfaces.index(s)
