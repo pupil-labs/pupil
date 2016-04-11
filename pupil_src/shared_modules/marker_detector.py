@@ -57,21 +57,11 @@ class Marker_Detector(Plugin):
         self.min_marker_perimeter = min_marker_perimeter
         self.locate_3d = False
 
-        #debug vars
-        self.draw_markers = 0
-        self.show_surface_idx = 0
-
         self.img_shape = None
 
-        self.menu= None
-        self.button=  None
+        self.menu = None
+        self.button =  None
         self.add_button = None
-
-
-
-    def close(self):
-        self.alive = False
-
 
 
     def on_click(self,pos,button,action):
@@ -127,8 +117,12 @@ class Marker_Detector(Plugin):
             self.add_button = None
 
     def update_gui_markers(self):
+
+        def close():
+            self.alive = False
+
         self.menu.elements[:] = []
-        self.menu.append(ui.Button('Close',self.close))
+        self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text('This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*.'))
         self.menu.append(ui.Switch('robust_detection',self,label='Robust detection'))
         self.menu.append(ui.Slider('min_marker_perimeter',self,step=1,min=10,max=500))

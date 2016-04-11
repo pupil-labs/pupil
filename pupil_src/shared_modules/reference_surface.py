@@ -156,9 +156,9 @@ class Reference_Surface(object):
             hull = hull[curvature<=most_acute_4_threshold]
 
         #now we need to roll the hull verts until we have the right orientation:
-        distance_to_origin = np.sqrt(hull[:,:,0]**2+hull[:,:,1]**2)
+        distance_to_origin = np.sqrt((hull[:,:,0]-1)**2+(hull[:,:,1]-1)**2)
         top_left_idx = np.argmin(distance_to_origin)
-        hull = np.roll(hull,-top_left_idx-1,axis=0)
+        hull = np.roll(hull,-top_left_idx,axis=0)
 
 
         #based on these 4 verts we calculate the transformations into a 0,0 1,1 square space
