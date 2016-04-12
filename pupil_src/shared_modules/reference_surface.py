@@ -242,17 +242,36 @@ class Reference_Surface(object):
                 # project the corners of the surface to undistored space
                 corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
                 # project and distort these points  and normalize them
-                corners_distorted, _ = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs'])
+                corners_distorted, corners_distorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs'])
+                corners_undistorted, corners_undistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*0)
 
                 #normalize to pupil norm space
                 corners_distorted.shape = -1,2
                 corners_distorted /= camera_calibration['resolution']
                 corners_distorted[:,-1] = 1-corners_distorted[:,-1]
+
+                #normalize to pupil norm space
+                corners_undistorted.shape = -1,2
+                corners_undistorted /= camera_calibration['resolution']
+                corners_undistorted[:,-1] = 1-corners_undistorted[:,-1]
+
+
+                # extreme lens distortion maps will behave irratically beyond the image bounds
+                # since our surfaces often extend beyond the screen we need to interpolate
+                # between a distored projection and undistored one.
+                corners_robust = []
+                for undistorted,distorted in zip(corners_undistorted,corners_distorted):
+                    if -.4 < undistorted[0] <1.4 and -.4 < undistorted[1] <1.4:
+                        corners_robust.append(distorted)
+                    else:
+                        corners_robust.append(undistorted)
+
+                corners_robust = np.array(corners_robust)
                 #compute a perspective thransform from from the marker norm space to the apparent image.
                 # The surface corners will be at the right points
                 # However the space between the corners may be distored due to distortions of the lens,
-                self.m_to_screen = m_verts_to_screen(corners_distorted)
-                self.m_from_screen = m_verts_from_screen(corners_distorted)
+                self.m_to_screen = m_verts_to_screen(corners_robust)
+                self.m_from_screen = m_verts_from_screen(corners_robust)
 
                 if locate_3d:
 
