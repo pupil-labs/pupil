@@ -150,7 +150,7 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
         cv2.drawContours(gray_img, rect_cand,-1, (255,100,50))
 
 
-    markers = []
+    markers = {}
     size = 10*grid_size
     #top left,bottom left, bottom right, top right in image
     mapped_space = np.array( ((0,0),(size,0),(size,size),(0,size)) ,dtype=np.float32).reshape(4,1,2)
@@ -186,12 +186,16 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
                 # but using m_screen_to_marker() will get you the marker with proper rotation.
                 r = np.roll(r,angle+1,axis=0) #np.roll is not the fastest when using these tiny arrays...
 
-                marker = {'id':msg,'verts':r,'centroid':centroid,"frames_since_true_detection":0}
+                marker = {'id':msg,'verts':r,'perimeter':cv2.arcLength(r,closed=True),'centroid':centroid,"frames_since_true_detection":0}
                 if visualize:
                     marker['img'] = np.rot90(otsu,-angle/90)
-                markers.append(marker)
+                if markers.has_key(marker['id']) and markers[marker['id']]['perimeter'] > marker['perimeter']:
+                    pass
+                else:
+                    markers[marker['id']] = marker
 
-    return markers
+
+    return markers.values()
 
 
 def draw_markers(img,markers):
@@ -264,8 +268,8 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
             # new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,winSize=(100,100))
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,minEigThreshold=0.01,**lk_params)
             for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
-                if s: #how do we ensure that this is a good move?
-                    m['verts'] += pt-m['centroid'] #uniformly translate verts by optical flow offset
+                if s: #ho do we ensure that this is a good move?
+                    m['verts'] += pt-m['centroid'] #uniformly translate verts by optlical flow offset
                     m["frames_since_true_detection"] +=1
                 else:
                     m["frames_since_true_detection"] =100
