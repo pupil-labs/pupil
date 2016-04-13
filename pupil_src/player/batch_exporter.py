@@ -248,7 +248,7 @@ def main():
                      This could have one or many recordings contained within it.
                      We will recurse into the dir.
                 -s : Specify path to Pupil Player user_settings file to use last used vizualization settings.
-                -e : Specify export directory if you dont what the export saved within each recording dir.
+                -e : Specify export directory if you dont want the export saved within each recording dir.
                 -p : Export a 120 frame preview only.
             ***************************************************\
         '''))
@@ -270,7 +270,7 @@ def main():
     if args.settings_file and os.path.isfile(args.settings_file):
         session_settings = Persistent_Dict(os.path.splitext(args.settings_file)[0])
         #these are loaded based on user settings
-        plugin_initializers = session_settings.get('plugins',[])
+        plugin_initializers = session_settings.get('loaded_plugins',[])
         session_settings.close()
     else:
         logger.error("Setting file not found or valid")
