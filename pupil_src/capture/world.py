@@ -41,7 +41,6 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     logger.addHandler(ch)
     #silence noisy modules
     logging.getLogger("OpenGL").setLevel(logging.ERROR)
-    logging.getLogger("libav").setLevel(logging.ERROR)
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 

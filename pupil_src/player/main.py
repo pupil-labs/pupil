@@ -61,8 +61,6 @@ logger.addHandler(fh)
 logger.addHandler(ch)
 
 logging.getLogger("OpenGL").setLevel(logging.ERROR)
-logging.getLogger("libav").setLevel(logging.ERROR)
-
 logger = logging.getLogger(__name__)
 
 
@@ -366,6 +364,7 @@ def session(rec_dir):
     pupil_graph.label = "Confidence: %0.2f"
 
     while not glfwWindowShouldClose(main_window):
+
 
         #grab new frame
         if g_pool.play or g_pool.new_seek:

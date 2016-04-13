@@ -16,6 +16,8 @@ requires:
 import os,sys,platform
 import av
 from av.packet import Packet
+av.logging.set_level(av.logging.ERROR)
+
 import numpy as np
 from time import time
 from fractions import Fraction

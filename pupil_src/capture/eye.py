@@ -59,7 +59,6 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         logger.addHandler(ch)
         #silence noisy modules
         logging.getLogger("OpenGL").setLevel(logging.ERROR)
-        logging.getLogger("libav").setLevel(logging.ERROR)
         # create logger for the context of this function
         logger = logging.getLogger(__name__)
 
