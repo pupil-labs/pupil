@@ -10,8 +10,9 @@
 
 import os,sys
 import av
-
 assert av.__version__ >= '0.2.5'
+
+av.logging.set_level(av.logging.ERROR)
 
 import numpy as np
 from time import time,sleep
