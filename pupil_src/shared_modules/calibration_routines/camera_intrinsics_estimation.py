@@ -99,6 +99,8 @@ def load_camera_calibration(g_pool):
         except:
             camera_calibration = idealized_camera_calibration(g_pool.capture.frame_size)
             logger.warning("Camera calibration not found. Will assume idealized camera. Please calibrate your cameras before your next recording.")
+        else:
+            logger.info("Loaded Camera calibration from file.")
     return camera_calibration
 
 

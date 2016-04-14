@@ -71,11 +71,9 @@ class Offline_Marker_Detector(Marker_Detector):
         self.surfaces = None
         self.load_surface_definitions_from_file()
 
-        self.camera_calibration = load_camera_calibration(self.g_pool)
-
         # ui mode settings
         self.mode = mode
-        self.min_marker_perimeter = 80  #if we make this a slider we need to invalidate the cache on change.
+        self.min_marker_perimeter = 120  #if we make this a slider we need to invalidate the cache on change.
         # edit surfaces
         self.edit_surfaces = []
 
