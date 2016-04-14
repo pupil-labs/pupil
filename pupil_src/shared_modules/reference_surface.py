@@ -224,7 +224,7 @@ class Reference_Surface(object):
         visible_ids = set(marker_by_id.keys())
         requested_ids = set(self.markers.keys())
         overlap = visible_ids & requested_ids
-        if len(overlap)>=min(1,len(requested_ids)):
+        if len(overlap)>=min(2,len(requested_ids)):
             detected = True
             xy = np.array( [marker_by_id[i]['verts'] for i in overlap] )
             uv = np.array( [self.markers[i].uv_coords for i in overlap] )
