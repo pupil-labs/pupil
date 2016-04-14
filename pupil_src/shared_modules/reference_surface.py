@@ -180,24 +180,8 @@ class Reference_Surface(object):
         #average collection of uv correspondences accros detected markers
         self.build_up_status = sum([len(m.collected_uv_coords) for m in self.markers.values()])/float(len(self.markers))
 
-        # for the preview we need to calculate the current transform into the distored image space
-        # project the corners of the surface to undistored space
-        corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
-        # project and distort these points  and normalize them
-        corners_redistorted, _ = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs'])
-        #normalize to pupil norm space
-        corners_redistorted.shape = -1,2
-        corners_redistorted /= camera_calibration['resolution']
-        corners_redistorted[:,-1] = 1-corners_redistorted[:,-1]
-        #compute a perspective thransform from from the marker norm space to the apparent image.
-        # The surface corners will be at the right points
-        # However the space between the corners may be distored due to distortions of the lens,
-        self.m_to_screen = m_verts_to_screen(corners_redistorted)
-        self.m_from_screen = m_verts_from_screen(corners_redistorted)
-
         if self.build_up_status >= self.required_build_up:
             self.finalize_correnspondance()
-            self.defined = True
 
     def finalize_correnspondance(self):
         """
@@ -213,6 +197,8 @@ class Reference_Surface(object):
         for m in self.markers.values():
             m.compute_robust_mean()
 
+        self.defined = True
+
 
     def locate(self, visible_markers,camera_calibration, locate_3d=False):
         """
@@ -222,129 +208,148 @@ class Reference_Surface(object):
 
         if not self.defined:
             self.build_correspondance(visible_markers,camera_calibration)
-        else:
-            marker_by_id = dict([(m['id'],m) for m in visible_markers])
-            visible_ids = set(marker_by_id.keys())
-            requested_ids = set(self.markers.keys())
-            overlap = visible_ids & requested_ids
-            self.detected_markers = len(overlap)
-            if len(overlap)>=min(1,len(requested_ids)):
-                self.detected = True
-                xy = np.array( [marker_by_id[i]['verts'] for i in overlap] )
-                uv = np.array( [self.markers[i].uv_coords for i in overlap] )
-                uv.shape=(-1,1,2)
 
-                # our camera lens creates distortions we want to get a good 2d estimate despite that so we:
-                # compute the homography transform from marker into the undistored normalized image space
-                # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
-                xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
-                m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized)
-                # project the corners of the surface to undistored space
-                corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
-                # project and distort these points  and normalize them
-                corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs'])
-                corners_nulldistorted, corners_nulldistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*0)
-
-                #normalize to pupil norm space
-                corners_redistorted.shape = -1,2
-                corners_redistorted /= camera_calibration['resolution']
-                corners_redistorted[:,-1] = 1-corners_redistorted[:,-1]
-
-                #normalize to pupil norm space
-                corners_nulldistorted.shape = -1,2
-                corners_nulldistorted /= camera_calibration['resolution']
-                corners_nulldistorted[:,-1] = 1-corners_nulldistorted[:,-1]
+        res = self._get_location(visible_markers,camera_calibration,locate_3d)
+        self.detected = res['detected']
+        self.detected_markers = res['detected_markers']
+        self.m_to_screen = res['m_to_screen']
+        self.m_from_screen = res['m_from_screen']
+        self.camera_pose_3d = res['camera_pose_3d']
+        self.is3dPoseAvailable = res['is3dPoseAvailable']
 
 
-                # extreme lens distortion maps will behave irratically beyond the image bounds
-                # since our surfaces often extend beyond the screen we need to interpolate
-                # between a distored projection and undistored one.
-                corners_robust = []
-                for undistorted,distorted in zip(corners_nulldistorted,corners_redistorted):
-                    use_redistorted
-                    if -.4 < undistorted[0] <1.4 and -.4 < undistorted[1] <1.4:
-                        corners_robust.append(distorted)
-                    else:
-                        corners_robust.append(undistorted)
+    def _get_location(self,visible_markers,camera_calibration,locate_3d=False):
 
-                corners_robust = np.array(corners_robust)
-                #compute a perspective thransform from from the marker norm space to the apparent image.
-                # The surface corners will be at the right points
-                # However the space between the corners may be distored due to distortions of the lens,
-                self.m_to_screen = m_verts_to_screen(corners_robust)
-                self.m_from_screen = m_verts_from_screen(corners_robust)
+        marker_by_id = dict([(m['id'],m) for m in visible_markers])
+        visible_ids = set(marker_by_id.keys())
+        requested_ids = set(self.markers.keys())
+        overlap = visible_ids & requested_ids
+        if len(overlap)>=min(1,len(requested_ids)):
+            detected = True
+            xy = np.array( [marker_by_id[i]['verts'] for i in overlap] )
+            uv = np.array( [self.markers[i].uv_coords for i in overlap] )
+            uv.shape=(-1,1,2)
 
-                if locate_3d:
+            # our camera lens creates distortions we want to get a good 2d estimate despite that so we:
+            # compute the homography transform from marker into the undistored normalized image space
+            # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
+            xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
+            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized)
+            # project the corners of the surface to undistored space
+            corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
+            # project and distort these points  and normalize them
+            corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs'])
+            corners_nulldistorted, corners_nulldistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*0)
 
-                    dist_coef, = camera_calibration['dist_coefs']
-                    img_size = camera_calibration['resolution']
-                    K = camera_calibration['camera_matrix']
+            #normalize to pupil norm space
+            corners_redistorted.shape = -1,2
+            corners_redistorted /= camera_calibration['resolution']
+            corners_redistorted[:,-1] = 1-corners_redistorted[:,-1]
 
-                    # 3d marker support pose estimation:
-                    # scale normalized object points to world space units (think m,cm,mm)
-                    uv.shape = -1,2
-                    uv *= [self.real_world_size['x'], self.real_world_size['y']]
-                    # convert object points to lie on z==0 plane in 3d space
-                    uv3d = np.zeros((uv.shape[0], uv.shape[1]+1))
-                    uv3d[:,:-1] = uv
-                    # compute pose of object relative to camera center
-                    # print yx,type(yx)
-                    self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, yx, K, dist_coef,flags=cv2.CV_EPNP)
-
-                    # not verifed, potentially usefull info: http://stackoverflow.com/questions/17423302/opencv-solvepnp-tvec-units-and-axes-directions
-
-                    ###marker posed estimation from virtually projected points.
-                    # object_pts = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
-                    # projected_pts = cv2.perspectiveTransform(object_pts,self.m_to_screen)
-                    # projected_pts.shape = -1,2
-                    # projected_pts *= img_size
-                    # projected_pts.shape = -1, 1, 2
-                    # # scale object points to world space units (think m,cm,mm)
-                    # object_pts.shape = -1,2
-                    # object_pts *= self.real_world_size
-                    # # convert object points to lie on z==0 plane in 3d space
-                    # object_pts_3d = np.zeros((4,3))
-                    # object_pts_3d[:,:-1] = object_pts
-                    # self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(object_pts_3d, projected_pts, K, dist_coef,flags=cv2.CV_EPNP)
+            #normalize to pupil norm space
+            corners_nulldistorted.shape = -1,2
+            corners_nulldistorted /= camera_calibration['resolution']
+            corners_nulldistorted[:,-1] = 1-corners_nulldistorted[:,-1]
 
 
-                    # transformation from Camera Optical Center:
-                    #   first: translate from Camera center to object origin.
-                    #   second: rotate x,y,z
-                    #   coordinate system is x,y,z where z goes out from the camera into the viewed volume.
-                    # print rot3d_cam_to_object[0],rot3d_cam_to_object[1],rot3d_cam_to_object[2], translate3d_cam_to_object[0],translate3d_cam_to_object[1],translate3d_cam_to_object[2]
+            # maps for extreme lens distortions will behave irratically beyond the image bounds
+            # since our surfaces often extend beyond the screen we need to interpolate
+            # between a distored projection and undistored one.
 
-                    #turn translation vectors into 3x3 rot mat.
-                    rot3d_cam_to_object_mat, _ = cv2.Rodrigues(rot3d_cam_to_object)
+            # def ratio(val):
+            #     centered_val = abs(.5 - val)
+            #     # signed distance to img cennter .5 is imag bound
+            #     # we look to interpolate between .7 and .9
+            #     inter = max()
 
-                    #to get the transformation from object to camera we need to reverse rotation and translation
-                    translate3d_object_to_cam = - translate3d_cam_to_object
-                    # rotation matrix inverse == transpose
-                    rot3d_object_to_cam_mat = rot3d_cam_to_object_mat.T
-
-
-                    # we assume that the volume of the object grows out of the marker surface and not into it. We thus have to flip the z-Axis:
-                    flip_z_axix_hm = np.eye(4, dtype=np.float32)
-                    flip_z_axix_hm[2,2] = -1
-                    # create a homogenous tranformation matrix from the rotation mat
-                    rot3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
-                    rot3d_object_to_cam_hm[:-1,:-1] = rot3d_object_to_cam_mat
-                    # create a homogenous tranformation matrix from the translation vect
-                    translate3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
-                    translate3d_object_to_cam_hm[:-1, -1] = translate3d_object_to_cam.reshape(3)
-
-                    # combine all tranformations into transformation matrix that decribes the move from object origin and orientation to camera origin and orientation
-                    tranform3d_object_to_cam =  np.matrix(flip_z_axix_hm) * np.matrix(rot3d_object_to_cam_hm) * np.matrix(translate3d_object_to_cam_hm)
-                    self.camera_pose_3d = tranform3d_object_to_cam
+            corners_robust = []
+            for undistorted,distorted in zip(corners_nulldistorted,corners_redistorted):
+                if -.4 < undistorted[0] <1.4 and -.4 < undistorted[1] <1.4:
+                    corners_robust.append(distorted)
                 else:
-                    self.is3dPoseAvailable = False
+                    corners_robust.append(undistorted)
 
+            corners_robust = np.array(corners_robust)
+            #compute a perspective thransform from from the marker norm space to the apparent image.
+            # The surface corners will be at the right points
+            # However the space between the corners may be distored due to distortions of the lens,
+            m_to_screen = m_verts_to_screen(corners_robust)
+            m_from_screen = m_verts_from_screen(corners_robust)
+
+            if locate_3d:
+
+                dist_coef, = camera_calibration['dist_coefs']
+                img_size = camera_calibration['resolution']
+                K = camera_calibration['camera_matrix']
+
+                # 3d marker support pose estimation:
+                # scale normalized object points to world space units (think m,cm,mm)
+                uv.shape = -1,2
+                uv *= [self.real_world_size['x'], self.real_world_size['y']]
+                # convert object points to lie on z==0 plane in 3d space
+                uv3d = np.zeros((uv.shape[0], uv.shape[1]+1))
+                uv3d[:,:-1] = uv
+                # compute pose of object relative to camera center
+                # print yx,type(yx)
+                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, yx, K, dist_coef,flags=cv2.CV_EPNP)
+
+                # not verifed, potentially usefull info: http://stackoverflow.com/questions/17423302/opencv-solvepnp-tvec-units-and-axes-directions
+
+                ###marker posed estimation from virtually projected points.
+                # object_pts = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
+                # projected_pts = cv2.perspectiveTransform(object_pts,self.m_to_screen)
+                # projected_pts.shape = -1,2
+                # projected_pts *= img_size
+                # projected_pts.shape = -1, 1, 2
+                # # scale object points to world space units (think m,cm,mm)
+                # object_pts.shape = -1,2
+                # object_pts *= self.real_world_size
+                # # convert object points to lie on z==0 plane in 3d space
+                # object_pts_3d = np.zeros((4,3))
+                # object_pts_3d[:,:-1] = object_pts
+                # self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(object_pts_3d, projected_pts, K, dist_coef,flags=cv2.CV_EPNP)
+
+
+                # transformation from Camera Optical Center:
+                #   first: translate from Camera center to object origin.
+                #   second: rotate x,y,z
+                #   coordinate system is x,y,z where z goes out from the camera into the viewed volume.
+                # print rot3d_cam_to_object[0],rot3d_cam_to_object[1],rot3d_cam_to_object[2], translate3d_cam_to_object[0],translate3d_cam_to_object[1],translate3d_cam_to_object[2]
+
+                #turn translation vectors into 3x3 rot mat.
+                rot3d_cam_to_object_mat, _ = cv2.Rodrigues(rot3d_cam_to_object)
+
+                #to get the transformation from object to camera we need to reverse rotation and translation
+                translate3d_object_to_cam = - translate3d_cam_to_object
+                # rotation matrix inverse == transpose
+                rot3d_object_to_cam_mat = rot3d_cam_to_object_mat.T
+
+
+                # we assume that the volume of the object grows out of the marker surface and not into it. We thus have to flip the z-Axis:
+                flip_z_axix_hm = np.eye(4, dtype=np.float32)
+                flip_z_axix_hm[2,2] = -1
+                # create a homogenous tranformation matrix from the rotation mat
+                rot3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
+                rot3d_object_to_cam_hm[:-1,:-1] = rot3d_object_to_cam_mat
+                # create a homogenous tranformation matrix from the translation vect
+                translate3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
+                translate3d_object_to_cam_hm[:-1, -1] = translate3d_object_to_cam.reshape(3)
+
+                # combine all tranformations into transformation matrix that decribes the move from object origin and orientation to camera origin and orientation
+                tranform3d_object_to_cam =  np.matrix(flip_z_axix_hm) * np.matrix(rot3d_object_to_cam_hm) * np.matrix(translate3d_object_to_cam_hm)
+                camera_pose_3d = tranform3d_object_to_cam
             else:
-                self.detected = False
-                self.is3dPoseAvailable = False
+                is3dPoseAvailable = False
+                camera_pose_3d = None
 
-                self.m_from_screen = None
-                self.m_to_screen = None
+        else:
+            detected = False
+            camera_pose_3d = None
+            is3dPoseAvailable = False
+            m_from_screen = None
+            m_to_screen = None
+
+        return {'detected':detected,'detected_markers':len(overlap),'m_from_screen':m_from_screen,'m_to_screen':m_to_screen,'is3dPoseAvailable':is3dPoseAvailable,'camera_pose_3d':camera_pose_3d}
 
 
     def img_to_ref_surface(self,pos):
@@ -616,12 +621,15 @@ class Support_Marker(object):
         self.uid = uid
         self.uv_coords = None
         self.collected_uv_coords = []
+        self.robust_uv_cords = False
 
     def load_uv_coords(self,uv_coords):
         self.uv_coords = uv_coords
+        self.robust_uv_cords = True
 
     def add_uv_coords(self,uv_coords):
         self.collected_uv_coords.append(uv_coords)
+        self.uv_coords = uv_coords
 
     def compute_robust_mean(self,threshhold=.1):
         """
@@ -642,6 +650,7 @@ class Support_Marker(object):
         #right now we take the mean of the last 30 datapoints
         uv_mean = np.mean(uv[-30:],axis=0)
         self.uv_coords = uv_mean
+        self.robust_uv_cords = True
 
 
 def draw_frustum(img_size, K, scale=1):

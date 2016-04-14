@@ -37,7 +37,6 @@ class Marker_Detector(Plugin):
         # all markers that are detected in the most recent frame
         self.markers = []
 
-        #load camera calibration
         self.camera_calibration = load_camera_calibration(self.g_pool)
 
         # all registered surfaces

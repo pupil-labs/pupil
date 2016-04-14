@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 from marker_detector import Marker_Detector
 from square_marker_detect import detect_markers_robust, draw_markers,m_marker_to_screen
+from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 from offline_reference_surface import Offline_Reference_Surface
 from math import sqrt
 
@@ -70,9 +71,11 @@ class Offline_Marker_Detector(Marker_Detector):
         self.surfaces = None
         self.load_surface_definitions_from_file()
 
+        self.camera_calibration = load_camera_calibration(self.g_pool)
+
         # ui mode settings
         self.mode = mode
-        self.min_marker_perimeter = 20  #if we make this a slider we need to invalidate the cache on change.
+        self.min_marker_perimeter = 80  #if we make this a slider we need to invalidate the cache on change.
         # edit surfaces
         self.edit_surfaces = []
 
@@ -121,9 +124,10 @@ class Offline_Marker_Detector(Marker_Detector):
             self.add_button = None
 
     def update_gui_markers(self):
-        pass
+        def close():
+            self.alive=False
         self.menu.elements[:] = []
-        self.menu.append(ui.Button('Close',self.close))
+        self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
         self.menu.append(ui.Info_Text('Please note: Unlike the real-time marker detector the offline marker detector works with a fixed min_marker_perimeter of 20.'))
@@ -206,18 +210,20 @@ class Offline_Marker_Detector(Marker_Detector):
         self.img = frame.img
         self.img_shape = frame.img.shape
         self.update_marker_cache()
+        # self.markers = [m for m in self.cache[frame.index] if m['perimeter'>=self.min_marker_perimeter]
         self.markers = self.cache[frame.index]
         if self.markers == False:
             self.markers = []
             self.seek_marker_cacher(frame.index) # tell precacher that it better have every thing from here on analyzed
 
+
+        events['surfaces'] = []
         # locate surfaces
         for s in self.surfaces:
             if not s.locate_from_cache(frame.index):
-                s.locate(self.markers)
+                s.locate(self.markers,self.camera_calibration)
             if s.detected:
-                pass
-                # events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp,'gaze_on_srf':s.gaze_on_srf})
+                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
         if self.mode == "Show marker IDs":
             draw_markers(frame.img,self.markers)
@@ -238,7 +244,7 @@ class Offline_Marker_Detector(Marker_Detector):
             # update srf with no or invald cache:
             for s in self.surfaces:
                 if s.cache == None:
-                    s.init_cache(self.cache)
+                    s.init_cache(self.cache,self.camera_calibration)
 
 
         #map recent gaze onto detected surfaces used for pupil server
@@ -276,7 +282,7 @@ class Offline_Marker_Detector(Marker_Detector):
             idx,c_m = self.cache_queue.get()
             self.cache.update(idx,c_m)
             for s in self.surfaces:
-                s.update_cache(self.cache,idx=idx)
+                s.update_cache(self.cache,camera_calibration = self.camera_calibration,idx=idx)
 
     def seek_marker_cacher(self,idx):
         self.cacher_seek_idx.value = idx

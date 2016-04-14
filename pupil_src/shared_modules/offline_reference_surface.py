@@ -67,7 +67,7 @@ class Offline_Reference_Surface(Reference_Surface):
         raise Exception("Invalid cache entry. Please report Bug.")
 
 
-    def update_cache(self,marker_cache,idx=None):
+    def update_cache(self,marker_cache,camera_calibration,idx=None):
         '''
         compute surface m's and gaze points from cached marker data
         entries are:
@@ -77,52 +77,37 @@ class Offline_Reference_Surface(Reference_Surface):
         '''
 
         # iterations = 0
-
         if self.cache == None:
             pass
             # self.init_cache(marker_cache)
         elif idx != None:
             #update single data pt
-            self.cache.update(idx,self.answer_caching_request(marker_cache,idx))
+            self.cache.update(idx,self.answer_caching_request(marker_cache,idx,camera_calibration))
         else:
             # update where marker cache is not False but surface cache is still false
             # this happens when the markercache was incomplete when this fn was run before
             for i in range(len(marker_cache)):
                 if self.cache[i] == False and marker_cache[i] != False:
-                    self.cache.update(i,self.answer_caching_request(marker_cache,i))
+                    self.cache.update(i,self.answer_caching_request(marker_cache,i,camera_calibration))
                     # iterations +=1
         # return iterations
 
 
 
-    def init_cache(self,marker_cache):
+    def init_cache(self,marker_cache,camera_calibration):
         if self.defined:
             logger.debug("Full update of surface '%s' positons cache"%self.name)
-            self.cache = Cache_List([self.answer_caching_request(marker_cache,i) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
+            self.cache = Cache_List([self.answer_caching_request(marker_cache,i,camera_calibration) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
 
 
-    def answer_caching_request(self,marker_cache,frame_index):
+    def answer_caching_request(self,marker_cache,frame_index,camera_calibration):
         visible_markers = marker_cache[frame_index]
         # cache point had not been visited
         if visible_markers == False:
             return False
-        # cache point had been visited
-        marker_by_id = dict( [ (m['id'],m) for m in visible_markers] )
-        visible_ids = set(marker_by_id.keys())
-        requested_ids = set(self.markers.keys())
-        overlap = visible_ids & requested_ids
-        detected_markers = len(overlap)
-        if len(overlap)>=min(2,len(requested_ids)):
-            yx = np.array( [marker_by_id[i]['verts_norm'] for i in overlap] )
-            uv = np.array( [self.markers[i].uv_coords for i in overlap] )
-            yx.shape=(-1,1,2)
-            uv.shape=(-1,1,2)
-            m_to_screen,mask = cv2.findHomography(uv,yx)
-            m_from_screen,mask = cv2.findHomography(yx,uv)
-
-            return {'m_to_screen':m_to_screen,
-                    'm_from_screen':m_from_screen,
-                    'detected_markers':len(overlap)}
+        res = self._get_location(visible_markers,camera_calibration,locate_3d=False)
+        if res['detected']:
+            return res
         else:
             #surface not found
             return None
