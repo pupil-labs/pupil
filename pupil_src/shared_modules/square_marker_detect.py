@@ -277,8 +277,9 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
 
         #cocatenating like this will favour older markers in the doublication deletion process
         markers = [m for m in not_found if m["frames_since_true_detection"] < 10 ]+new_markers
-        if 1: #del double detected markers
-            min_distace = min_marker_perimeter/4.
+        if markers: #del double detected markers
+            # min_distace = max([m['perimeter'] for m in markers])/4.
+            min_distace = 50
             if len(markers)>1:
                 remove = set()
                 close_markers = get_close_markers(markers,min_distance=min_distace)
