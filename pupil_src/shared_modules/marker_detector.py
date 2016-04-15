@@ -175,7 +175,7 @@ class Marker_Detector(Plugin):
 
         # locate surfaces
         for s in self.surfaces:
-            s.locate(self.markers,self.camera_calibration, self.locate_3d)
+            s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter, self.locate_3d)
             if s.detected:
                 events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 

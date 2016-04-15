@@ -55,7 +55,7 @@ class Offline_Marker_Detector(Marker_Detector):
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    def __init__(self,g_pool,mode="Show Markers and Frames"):
+    def __init__(self,g_pool,mode="Show Markers and Frames",min_marker_perimeter=100):
         super(Offline_Marker_Detector, self).__init__(g_pool)
         self.order = .2
 
@@ -73,22 +73,31 @@ class Offline_Marker_Detector(Marker_Detector):
 
         # ui mode settings
         self.mode = mode
-        self.min_marker_perimeter = 120  #if we make this a slider we need to invalidate the cache on change.
+        self.min_marker_perimeter = min_marker_perimeter
+        self.min_marker_perimeter_cacher = 20  #find even super small markers. The surface locater will filter using min_marker_perimeter
         # edit surfaces
         self.edit_surfaces = []
 
+        self.marker_cache_version = 1
 
         #check if marker cache is available from last session
         self.persistent_cache = Persistent_Dict(os.path.join(g_pool.rec_dir,'square_marker_cache'))
-        self.cache = Cache_List(self.persistent_cache.get('marker_cache',[False for _ in g_pool.timestamps]))
-        logger.debug("Loaded marker cache %s / %s frames had been searched before"%(len(self.cache)-self.cache.count(False),len(self.cache)) )
+        version = self.persistent_cache.get('version',0)
+        cache = self.persistent_cache.get('marker_cache',None)
+        if cache is None:
+            self.cache = Cache_List([False for _ in g_pool.timestamps])
+            self.persistent_cache['version'] = self.marker_cache_version
+        elif version != self.marker_cache_version:
+            self.persistent_cache['version'] = self.marker_cache_version
+            self.cache = Cache_List([False for _ in g_pool.timestamps])
+            logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
+        else:
+            self.cache = Cache_List(cache)
+            logger.debug("Loaded marker cache %s / %s frames had been searched before"%(len(self.cache)-self.cache.count(False),len(self.cache)) )
+
         self.init_marker_cacher()
 
-        #debug vars
-        self.show_surface_idx = c_int(0)
-
         self.img_shape = None
-        self.img = None
 
     def load_surface_definitions_from_file(self):
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'surface_definitions'))
@@ -105,8 +114,6 @@ class Offline_Marker_Detector(Marker_Detector):
     def init_gui(self):
         self.menu = ui.Scrolling_Menu('Offline Marker Detector')
         self.g_pool.gui.append(self.menu)
-
-
         self.add_button = ui.Thumb('add_surface',setter=self.add_surface,getter=lambda:False,label='Add Surface',hotkey='a')
         self.g_pool.quickbar.append(self.add_button)
         self.update_gui_markers()
@@ -124,8 +131,14 @@ class Offline_Marker_Detector(Marker_Detector):
     def update_gui_markers(self):
         def close():
             self.alive=False
+
+        def set_min_marker_perimeter(val):
+            self.min_marker_perimeter = val
+            self.notify_all_delayed({'subject':'min_marker_perimeter_changed'})
+
         self.menu.elements[:] = []
         self.menu.append(ui.Button('Close',close))
+        self.menu.append(ui.Slider('min_marker_perimeter',self,min=20,max=500,step=1,setter=set_min_marker_perimeter))
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
         self.menu.append(ui.Info_Text('Please note: Unlike the real-time marker detector the offline marker detector works with a fixed min_marker_perimeter of 20.'))
@@ -153,6 +166,12 @@ class Offline_Marker_Detector(Marker_Detector):
         if notification['subject'] == 'gaze_positions_changed':
             logger.info('Gaze postions changed. Recalculating.')
             self.recalculate()
+        elif notification['subject'] == 'surfaces_changed':
+            logger.info('Surfaces changed. Recalculating.')
+            self.recalculate()
+        elif notification['subject'] == 'min_marker_perimeter_changed':
+            logger.info('Min marper perimeter adjusted. Re-detecting surfaces.')
+            self.invalidate_surface_caches()
         elif notification['subject'] is "should_export":
             self.save_surface_statsics_to_file(notification['range'],notification['export_dir'])
 
@@ -204,8 +223,11 @@ class Offline_Marker_Detector(Marker_Detector):
             s.metrics_texture.update_from_ndarray(heatmap)
 
 
+    def invalidate_surface_caches(self):
+        for s in self.surfaces:
+            s.cache = None
+
     def update(self,frame,events):
-        self.img = frame.img
         self.img_shape = frame.img.shape
         self.update_marker_cache()
         # self.markers = [m for m in self.cache[frame.index] if m['perimeter'>=self.min_marker_perimeter]
@@ -219,7 +241,7 @@ class Offline_Marker_Detector(Marker_Detector):
         # locate surfaces
         for s in self.surfaces:
             if not s.locate_from_cache(frame.index):
-                s.locate(self.markers,self.camera_calibration)
+                s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter)
             if s.detected:
                 events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
@@ -242,7 +264,9 @@ class Offline_Marker_Detector(Marker_Detector):
             # update srf with no or invald cache:
             for s in self.surfaces:
                 if s.cache == None:
-                    s.init_cache(self.cache,self.camera_calibration)
+                    s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter)
+                    self.notify_all_delayed({'subject':'surfaces_changed'})
+
 
 
         #map recent gaze onto detected surfaces used for pupil server
@@ -272,7 +296,7 @@ class Offline_Marker_Detector(Marker_Detector):
         self.cache_queue = Queue()
         self.cacher_seek_idx = Value('i',0)
         self.cacher_run = Value(c_bool,True)
-        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,timestamps,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter))
+        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,timestamps,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter_cacher))
         self.cacher.start()
 
     def update_marker_cache(self):
@@ -280,7 +304,7 @@ class Offline_Marker_Detector(Marker_Detector):
             idx,c_m = self.cache_queue.get()
             self.cache.update(idx,c_m)
             for s in self.surfaces:
-                s.update_cache(self.cache,camera_calibration = self.camera_calibration,idx=idx)
+                s.update_cache(self.cache,camera_calibration=self.camera_calibration,min_marker_perimeter=self.min_marker_perimeter,idx=idx)
 
     def seek_marker_cacher(self,idx):
         self.cacher_seek_idx.value = idx
