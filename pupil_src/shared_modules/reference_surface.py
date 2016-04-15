@@ -125,7 +125,7 @@ class Reference_Surface(object):
         self.defined = True
         self.build_up_status = self.required_build_up
 
-    def build_correspondance(self, visible_markers,camera_calibration,use_distortion=0):
+    def build_correspondance(self, visible_markers,camera_calibration):
         """
         - use all visible markers
         - fit a convex quadrangle around it
@@ -142,7 +142,7 @@ class Reference_Surface(object):
 
         all_verts = np.array([[m['verts'] for m in visible_markers]])
         all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
-        all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*use_distortion)
+        all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
         hull = cv2.convexHull(all_verts_undistorted_normalized,clockwise=False)
 
         #simplify until we have excatly 4 verts
@@ -200,16 +200,16 @@ class Reference_Surface(object):
         self.defined = True
 
 
-    def locate(self, visible_markers,camera_calibration,min_marker_perimeter, locate_3d=False,use_distortion=0):
+    def locate(self, visible_markers,camera_calibration,min_marker_perimeter, locate_3d=False,):
         """
         - find overlapping set of surface markers and visible_markers
         - compute homography (and inverse) based on this subset
         """
 
         if not self.defined:
-            self.build_correspondance(visible_markers,camera_calibration,use_distortion)
+            self.build_correspondance(visible_markers,camera_calibration)
 
-        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,locate_3d,use_distortion)
+        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,locate_3d)
         self.detected = res['detected']
         self.detected_markers = res['detected_markers']
         self.m_to_screen = res['m_to_screen']
@@ -218,7 +218,7 @@ class Reference_Surface(object):
         self.is3dPoseAvailable = res['is3dPoseAvailable']
 
 
-    def _get_location(self,visible_markers,camera_calibration,min_marker_perimeter,locate_3d=False,use_distortion=0):
+    def _get_location(self,visible_markers,camera_calibration,min_marker_perimeter,locate_3d=False):
 
         marker_by_id = dict([(m['id'],m) for m in visible_markers if m['perimeter']>=min_marker_perimeter])
         visible_ids = set(marker_by_id.keys())
@@ -234,12 +234,12 @@ class Reference_Surface(object):
             # our camera lens creates distortions we want to get a good 2d estimate despite that so we:
             # compute the homography transform from marker into the undistored normalized image space
             # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
-            xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*use_distortion)
+            xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
             m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized)
             # project the corners of the surface to undistored space
             corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
             # project and distort these points  and normalize them
-            corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*use_distortion)
+            corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs'])
             corners_nulldistorted, corners_nulldistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*0)
 
             #normalize to pupil norm space
