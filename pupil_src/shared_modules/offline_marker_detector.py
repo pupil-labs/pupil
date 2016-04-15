@@ -324,10 +324,13 @@ class Offline_Marker_Detector(Marker_Detector):
 
         if self.mode == "Show Markers and Frames":
             for m in self.markers:
-                hat = np.array([[[0,0],[0,1],[1,1],[1,0],[0,0]]],dtype=np.float32)
+                hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-                draw_polyline(hat.reshape((5,2)),color=RGBA(0.1,1.,1.,.3),line_type=GL_POLYGON)
-                draw_polyline(hat.reshape((5,2)),color=RGBA(0.1,1.,1.,.6))
+                if m['perimeter']>=self.min_marker_perimeter:
+                    draw_polyline(hat.reshape((6,2)),color=RGBA(0.1,1.,1.,.5))
+                    draw_polyline(hat.reshape((6,2)),color=RGBA(0.1,1.,1.,.3),line_type=GL_POLYGON)
+                else:
+                    draw_polyline(hat.reshape((6,2)),color=RGBA(0.1,1.,1.,.5))
 
             for s in self.surfaces:
                 s.gl_draw_frame(self.img_shape)
