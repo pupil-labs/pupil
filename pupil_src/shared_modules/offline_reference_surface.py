@@ -112,6 +112,21 @@ class Offline_Reference_Surface(Reference_Surface):
             #surface not found
             return None
 
+    def move_vertex(self,vert_idx,new_pos):
+        super(Offline_Reference_Surface, self).move_vertex(vert_idx,new_pos)
+        self.cache = None
+        self.heatmap = None
+
+
+    def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter):
+        super(Offline_Reference_Surface, self).add_marker(marker,visible_markers,camera_calibration,min_marker_perimeter)
+        self.cache = None
+        self.heatmap = None
+
+    def remove_marker(self,marker):
+        super(Offline_Reference_Surface, self).remove_marker(marker)
+        self.cache = None
+        self.heatmap = None
 
     def gaze_on_srf_by_frame_idx(self,frame_index,m_from_screen):
         return self._on_srf_by_frame_idx(frame_index,m_from_screen,self.g_pool.gaze_positions_by_frame[frame_index])

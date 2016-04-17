@@ -142,7 +142,7 @@ class Offline_Marker_Detector(Marker_Detector):
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
         self.menu.append(ui.Info_Text('Please note: Unlike the real-time marker detector the offline marker detector works with a fixed min_marker_perimeter of 20.'))
-        self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
+        self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode",'Marker add/remove mode',"Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
@@ -153,6 +153,14 @@ class Offline_Marker_Detector(Marker_Detector):
             s_menu.append(ui.Text_Input('name',s))
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
+
+            def make_add_remove_m(s):
+                def add_remove_m():
+                    self.marker_edit_surface = s
+                    self.mode = 'Marker add/remove mode'
+                return add_remove_m
+            add_remove_m = make_add_remove_m(s)
+            s_menu.append(ui.Button('Add/remove markers',add_remove_m))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
@@ -258,8 +266,6 @@ class Offline_Marker_Detector(Marker_Detector):
                 if s.detected:
                     new_pos =  s.img_to_ref_surface(np.array(pos))
                     s.move_vertex(v_idx,new_pos)
-                    s.cache = None
-                    self.heatmap = None
         else:
             # update srf with no or invald cache:
             for s in self.surfaces:
@@ -322,23 +328,8 @@ class Offline_Marker_Detector(Marker_Detector):
         for s in self.surfaces:
             s.gl_display_in_window(self.g_pool.image_tex)
 
-        if self.mode == "Show Markers and Frames":
-            for m in self.markers:
-                hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
-                hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-                if m['perimeter']>=self.min_marker_perimeter:
-                    draw_polyline(hat.reshape((6,2)),color=RGBA(0.1,1.,1.,.5))
-                    draw_polyline(hat.reshape((6,2)),color=RGBA(0.1,1.,1.,.3),line_type=GL_POLYGON)
-                else:
-                    draw_polyline(hat.reshape((6,2)),color=RGBA(0.1,1.,1.,.5))
 
-            for s in self.surfaces:
-                s.gl_draw_frame(self.img_shape)
-
-        if self.mode == "Surface edit mode":
-            for s in self.surfaces:
-                s.gl_draw_frame(self.img_shape)
-                s.gl_draw_corners()
+        super(Offline_Marker_Detector,self).gl_display()
 
         if self.mode == "Show Heatmaps":
             for s in  self.surfaces:

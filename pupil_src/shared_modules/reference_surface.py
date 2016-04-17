@@ -125,7 +125,7 @@ class Reference_Surface(object):
         self.defined = True
         self.build_up_status = self.required_build_up
 
-    def build_correspondance(self, visible_markers,camera_calibration):
+    def build_correspondance(self, visible_markers,camera_calibration,min_marker_perimeter):
         """
         - use all visible markers
         - fit a convex quadrangle around it
@@ -133,14 +133,11 @@ class Reference_Surface(object):
         - map all markers into surface space
         - build up list of found markers and their uv coords
         """
-        if visible_markers == []:
-            self.m_to_screen = None
-            self.m_from_screen = None
-            self.detected = False
 
+        all_verts = [m['verts'] for m in visible_markers if m['perimeter']>=min_marker_perimeter]
+        if not all_verts:
             return
-
-        all_verts = np.array([[m['verts'] for m in visible_markers]])
+        all_verts = np.array(all_verts)
         all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
         all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
         hull = cv2.convexHull(all_verts_undistorted_normalized,clockwise=False)
@@ -162,7 +159,6 @@ class Reference_Surface(object):
 
 
         #based on these 4 verts we calculate the transformations into a 0,0 1,1 square space
-        m_to_undistored_norm_space = m_verts_to_screen(hull)
         m_from_undistored_norm_space = m_verts_from_screen(hull)
         self.detected = True
         # map the markers vertices in to the surface space (one can think of these as texture coordinates u,v)
@@ -207,7 +203,7 @@ class Reference_Surface(object):
         """
 
         if not self.defined:
-            self.build_correspondance(visible_markers,camera_calibration)
+            self.build_correspondance(visible_markers,camera_calibration,min_marker_perimeter)
 
         res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,locate_3d)
         self.detected = res['detected']
@@ -225,7 +221,7 @@ class Reference_Surface(object):
         requested_ids = set(self.markers.keys())
         overlap = visible_ids & requested_ids
         overlap_perimeter = sum(marker_by_id[i]['perimeter'] for i in overlap)
-        if overlap_perimeter>=min_marker_perimeter*min(2,len(requested_ids)):
+        if overlap and overlap_perimeter>=min_marker_perimeter*min(2,len(requested_ids)):
             detected = True
             xy = np.array( [marker_by_id[i]['verts'] for i in overlap] )
             uv = np.array( [self.markers[i].uv_coords for i in overlap] )
@@ -236,6 +232,7 @@ class Reference_Surface(object):
             # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
             xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
             m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized)
+            m_from_undistored_norm_space,mask = cv2.findHomography(xy_undistorted_normalized,uv)
             # project the corners of the surface to undistored space
             corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
             # project and distort these points  and normalize them
@@ -349,8 +346,10 @@ class Reference_Surface(object):
             is3dPoseAvailable = False
             m_from_screen = None
             m_to_screen = None
+            m_from_undistored_norm_space = None
+            m_to_undistored_norm_space = None
 
-        return {'detected':detected,'detected_markers':len(overlap),'m_from_screen':m_from_screen,'m_to_screen':m_to_screen,'is3dPoseAvailable':is3dPoseAvailable,'camera_pose_3d':camera_pose_3d}
+        return {'detected':detected,'detected_markers':len(overlap),'m_from_undistored_norm_space':m_from_undistored_norm_space,'m_to_undistored_norm_space':m_to_undistored_norm_space,'m_from_screen':m_from_screen,'m_to_screen':m_to_screen,'is3dPoseAvailable':is3dPoseAvailable,'camera_pose_3d':camera_pose_3d}
 
 
     def img_to_ref_surface(self,pos):
@@ -391,6 +390,25 @@ class Reference_Surface(object):
         transform = cv2.getPerspectiveTransform(after,before)
         for m in self.markers.values():
             m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
+
+
+    def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter):
+        '''
+        add marker to surface.
+        '''
+        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,locate_3d=False)
+        if res['detected']:
+            support_marker = Support_Marker(marker['id'])
+            marker_verts = np.array(marker['verts'])
+            marker_verts.shape = (-1,1,2)
+            marker_verts_undistorted_normalized = cv2.undistortPoints(marker_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
+            marker_uv_coords =  cv2.perspectiveTransform(marker_verts_undistorted_normalized,res['m_from_undistored_norm_space'])
+            support_marker.load_uv_coords(marker_uv_coords)
+        self.markers[marker['id']] = support_marker
+
+
+    def remove_marker(self,marker):
+        self.markers.pop(marker['id'])
 
 
     def marker_status(self):
