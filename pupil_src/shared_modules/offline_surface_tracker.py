@@ -38,16 +38,16 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-from marker_detector import Marker_Detector
+from surface_tracker import Surface_Tracker
 from square_marker_detect import detect_markers_robust, draw_markers,m_marker_to_screen
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 from offline_reference_surface import Offline_Reference_Surface
 from math import sqrt
 
 
-class Offline_Marker_Detector(Marker_Detector):
+class Offline_Surface_Tracker(Surface_Tracker):
     """
-    Special version of marker detector for use with videofile source.
+    Special version of surface tracker for use with videofile source.
     It uses a seperate process to search all frames in the world video file for markers.
      - self.cache is a list containing marker positions for each frame.
      - self.surfaces[i].cache is a list containing surface positions for each frame
@@ -55,8 +55,8 @@ class Offline_Marker_Detector(Marker_Detector):
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    def __init__(self,g_pool,mode="Show Markers and Frames",marker_edit_surface_idx=None,min_marker_perimeter = 100):
-        super(Offline_Marker_Detector, self).__init__(g_pool,mode,marker_edit_surface_idx,min_marker_perimeter)
+    def __init__(self,g_pool,mode="Show Markers and Surfaces",marker_edit_surface_idx=None,min_marker_perimeter = 100):
+        super(Offline_Surface_Tracker, self).__init__(g_pool,mode,marker_edit_surface_idx,min_marker_perimeter)
         self.order = .2
 
         if g_pool.app == 'capture':
@@ -94,7 +94,7 @@ class Offline_Marker_Detector(Marker_Detector):
             self.surfaces = []
 
     def init_gui(self):
-        self.menu = ui.Scrolling_Menu('Offline Marker Detector')
+        self.menu = ui.Scrolling_Menu('Offline Surface Tracker')
         self.g_pool.gui.append(self.menu)
         self.add_button = ui.Thumb('add_surface',setter=self.add_surface,getter=lambda:False,label='Add Surface',hotkey='a')
         self.g_pool.quickbar.append(self.add_button)
@@ -121,10 +121,10 @@ class Offline_Marker_Detector(Marker_Detector):
         self.menu.elements[:] = []
         self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Slider('min_marker_perimeter',self,min=20,max=500,step=1,setter=set_min_marker_perimeter))
-        self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
+        self.menu.append(ui.Info_Text('The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
         self.menu.append(ui.Info_Text('Please note: Unlike the real-time marker detector the offline marker detector works with a fixed min_marker_perimeter of 20.'))
-        self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode",'Marker add/remove mode',"Show Heatmaps","Show Metrics"] ))
+        self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Surfaces","Show marker IDs", "Surface edit mode",'Marker add/remove mode',"Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
@@ -308,7 +308,7 @@ class Offline_Marker_Detector(Marker_Detector):
         """
         self.gl_display_cache_bars()
 
-        super(Offline_Marker_Detector,self).gl_display()
+        super(Offline_Surface_Tracker,self).gl_display()
 
         if self.mode == "Show Heatmaps":
             for s in  self.surfaces:

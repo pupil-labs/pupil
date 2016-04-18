@@ -28,11 +28,11 @@ from calibration_routines.camera_intrinsics_estimation import load_camera_calibr
 
 from math import sqrt
 
-class Marker_Detector(Plugin):
+class Surface_Tracker(Plugin):
     """docstring
     """
-    def __init__(self,g_pool,mode="Show Markers and Frames",marker_edit_surface_idx=None,min_marker_perimeter = 100):
-        super(Marker_Detector, self).__init__(g_pool)
+    def __init__(self,g_pool,mode="Show Markers and Surfaces",marker_edit_surface_idx=None,min_marker_perimeter = 100):
+        super(Surface_Tracker, self).__init__(g_pool)
         self.order = .2
 
         # all markers that are detected in the most recent frame
@@ -104,7 +104,7 @@ class Marker_Detector(Plugin):
 
     def remove_surface(self,i):
         if self.mode == 'Marker add/remove mode':
-            self.mode = "Show Markers and Frames"
+            self.mode = "Show Markers and Surfaces"
         self.marker_edit_surface = None
 
         self.surfaces[i].cleanup()
@@ -144,7 +144,7 @@ class Marker_Detector(Plugin):
         self.menu.append(ui.Switch('robust_detection',self,label='Robust detection'))
         self.menu.append(ui.Slider('min_marker_perimeter',self,step=1,min=10,max=500))
         self.menu.append(ui.Switch('locate_3d',self,label='3D localization'))
-        self.menu.append(ui.Selector('mode',self,label="Mode",selection=['Show Markers and Frames','Show marker IDs', 'Surface edit mode','Marker add/remove mode'] ))
+        self.menu.append(ui.Selector('mode',self,label="Mode",selection=['Show Markers and Surfaces','Show marker IDs', 'Surface edit mode','Marker add/remove mode'] ))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_'),))
 
         for s in self.surfaces:
@@ -241,7 +241,7 @@ class Marker_Detector(Plugin):
         """
         Display marker and surface info inside world screen
         """
-        if self.mode == "Show Markers and Frames" or self.mode == "Marker add/remove mode":
+        if self.mode == "Show Markers and Surfaces" or self.mode == "Marker add/remove mode":
             for m in self.markers:
                 hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
