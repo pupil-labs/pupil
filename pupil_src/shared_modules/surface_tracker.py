@@ -112,7 +112,7 @@ class Surface_Tracker(Plugin):
         self.update_gui_markers()
 
     def init_gui(self):
-        self.menu = ui.Growing_Menu('Marker Detector')
+        self.menu = ui.Growing_Menu('Surface Tracker')
         self.g_pool.sidebar.append(self.menu)
 
         self.button = ui.Thumb('running',self,label='Track',hotkey='t')
