@@ -408,6 +408,9 @@ class Reference_Surface(object):
 
 
     def remove_marker(self,marker):
+        if len(self.markers) == 1:
+            logger.warning("Need at least one marker per surface. Will not remove this last marker.")
+            return
         self.markers.pop(marker['id'])
 
 
@@ -416,20 +419,22 @@ class Reference_Surface(object):
 
 
 
-    def gl_draw_frame(self,img_size):
+    def gl_draw_frame(self,img_size,color = (1.0,0.2,0.6,1.0),highlight=False):
         """
         draw surface and markers
         """
         if self.detected:
+            r,g,b,a = color
             frame = np.array([[[0,0],[1,0],[1,1],[0,1],[0,0]]],dtype=np.float32)
             hat = np.array([[[.3,.7],[.7,.7],[.5,.9],[.3,.7]]],dtype=np.float32)
             hat = cv2.perspectiveTransform(hat,self.m_to_screen)
             frame = cv2.perspectiveTransform(frame,self.m_to_screen)
             alpha = min(1,self.build_up_status/self.required_build_up)
-            draw_polyline_norm(frame.reshape((5,2)),1,RGBA(1.0,0.2,0.6,alpha))
-            draw_polyline_norm(hat.reshape((4,2)),1,RGBA(1.0,0.2,0.6,alpha))
-
-            draw_points_norm(frame.reshape((5,-1))[0:1])
+            if highlight:
+                draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*.1),line_type=GL_POLYGON)
+            draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*alpha))
+            draw_polyline_norm(hat.reshape((4,2)),1,RGBA(r,g,b,a*alpha))
+            # draw_points_norm(frame.reshape((5,-1))[0:1])
             text_anchor = frame.reshape((5,-1))[2]
             text_anchor[1] = 1-text_anchor[1]
             text_anchor *=img_size[1],img_size[0]

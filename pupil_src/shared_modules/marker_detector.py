@@ -31,7 +31,7 @@ from math import sqrt
 class Marker_Detector(Plugin):
     """docstring
     """
-    def __init__(self,g_pool,mode="Show Markers and Frames",min_marker_perimeter = 100):
+    def __init__(self,g_pool,mode="Show Markers and Frames",marker_edit_surface_idx=None,min_marker_perimeter = 100):
         super(Marker_Detector, self).__init__(g_pool)
         self.order = .2
 
@@ -39,14 +39,14 @@ class Marker_Detector(Plugin):
         self.markers = []
 
         self.camera_calibration = load_camera_calibration(self.g_pool)
-
-        # all registered surfaces
-        self.surface_definitions = Persistent_Dict(os.path.join(g_pool.user_dir,'surface_definitions') )
-        self.surfaces = [Reference_Surface(saved_definition=d) for d in  self.surface_definitions.get('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+        self.load_surface_definitions_from_file()
 
         # edit surfaces
         self.edit_surfaces = []
-        self.marker_edit_surface = None
+        try:
+            self.marker_edit_surface = self.surfaces[marker_edit_surface_idx]
+        except:
+            self.marker_edit_surface = None
         #plugin state
         self.mode = mode
         self.running = True
@@ -62,6 +62,11 @@ class Marker_Detector(Plugin):
         self.menu = None
         self.button =  None
         self.add_button = None
+
+    def load_surface_definitions_from_file(self):
+        # all registered surfaces
+        self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.user_dir,'surface_definitions') )
+        self.surfaces = [Reference_Surface(saved_definition=d) for d in  self.surface_definitions.get('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
 
 
     def on_click(self,pos,button,action):
@@ -85,18 +90,23 @@ class Marker_Detector(Plugin):
             if action == GLFW_PRESS:
                 x,y = pos
                 for m in self.markers:
-                    vx,vy = m['centroid']
-                    if sqrt((x-vx)**2 + (y-vy)**2) <15:
-                        if self.marker_edit_surface.markers.has_key(m['id']):
-                            self.marker_edit_surface.remove_marker(m)
-                        else:
-                            self.marker_edit_surface.add_marker(m,self.markers,self.camera_calibration,self.min_marker_perimeter)
+                    if m['perimeter']>=self.min_marker_perimeter:
+                        vx,vy = m['centroid']
+                        if sqrt((x-vx)**2 + (y-vy)**2) <15:
+                            if self.marker_edit_surface.markers.has_key(m['id']):
+                                self.marker_edit_surface.remove_marker(m)
+                            else:
+                                self.marker_edit_surface.add_marker(m,self.markers,self.camera_calibration,self.min_marker_perimeter)
 
     def add_surface(self,_):
         self.surfaces.append(Reference_Surface())
         self.update_gui_markers()
 
     def remove_surface(self,i):
+        if self.mode == 'Marker add/remove mode':
+            self.mode = "Show Markers and Frames"
+        self.marker_edit_surface = None
+
         self.surfaces[i].cleanup()
         del self.surfaces[i]
         self.update_gui_markers()
@@ -139,24 +149,25 @@ class Marker_Detector(Plugin):
 
         for s in self.surfaces:
             idx = self.surfaces.index(s)
-
             s_menu = ui.Growing_Menu("Surface %s"%idx)
             s_menu.collapsed=True
-            s_menu.append(ui.Text_Input('name',s,label='Name'))
-            s_menu.append(ui.Text_Input('x',s.real_world_size,'x_scale'))
-            s_menu.append(ui.Text_Input('y',s.real_world_size,'y_scale'))
+            s_menu.append(ui.Text_Input('name',s))
+            s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
+            s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
 
-            def add_remove_m():
-                self.marker_edit_surface = s
-                self.mode = 'Marker add/remove mode'
-
+            def make_edit_m(s):
+                def edit_m():
+                    self.marker_edit_surface = s
+                    self.mode = 'Marker add/remove mode'
+                return edit_m
+            add_remove_m = make_edit_m(s)
             s_menu.append(ui.Button('Add/remove markers',add_remove_m))
-            s_menu.append(ui.Button('Open debug window',s.open_close_window))
+            s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
                 return lambda: self.remove_surface(i)
             remove_s = make_remove_s(idx)
-            s_menu.append(ui.Button('Remove',remove_s))
+            s_menu.append(ui.Button('remove',remove_s))
             self.menu.append(s_menu)
 
     def update(self,frame,events):
@@ -219,14 +230,18 @@ class Marker_Detector(Plugin):
 
 
     def get_init_dict(self):
-        return {'mode':self.mode,'min_marker_perimeter':self.min_marker_perimeter}
+        try:
+            idx = self.surfaces.index(self.marker_edit_surface)
+        except:
+            idx=None
+        return {'mode':self.mode,'marker_edit_surface_idx':idx,'min_marker_perimeter':self.min_marker_perimeter}
 
 
     def gl_display(self):
         """
         Display marker and surface info inside world screen
         """
-        if self.mode == "Show Markers and Frames":
+        if self.mode == "Show Markers and Frames" or self.mode == "Marker add/remove mode":
             for m in self.markers:
                 hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
@@ -249,21 +264,21 @@ class Marker_Detector(Plugin):
 
         if self.mode == "Surface edit mode":
             for s in self.surfaces:
-                s.gl_draw_frame(self.img_shape)
+                s.gl_draw_frame(self.img_shape,highlight=True)
                 s.gl_draw_corners()
 
         if self.mode == "Marker add/remove mode" and self.marker_edit_surface:
             inc = []
             exc = []
             for m in self.markers:
-                if self.marker_edit_surface.markers.has_key(m['id']):
-                    inc.append(m['centroid'])
-                else:
-                    exc.append(m['centroid'])
+                if m['perimeter']>=self.min_marker_perimeter:
+                    if self.marker_edit_surface.markers.has_key(m['id']):
+                        inc.append(m['centroid'])
+                    else:
+                        exc.append(m['centroid'])
             draw_points(exc,size=20,color=RGBA(1.,0.5,0.5,.8))
             draw_points(inc,size=20,color=RGBA(0.5,1.,0.5,.8))
-
-            self.marker_edit_surface.gl_draw_frame(self.img_shape)
+            self.marker_edit_surface.gl_draw_frame(self.img_shape,color=(0.0,0.9,0.6,1.0),highlight=True)
 
     def cleanup(self):
         """ called when the plugin gets terminated.

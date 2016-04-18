@@ -55,31 +55,15 @@ class Offline_Marker_Detector(Marker_Detector):
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    def __init__(self,g_pool,mode="Show Markers and Frames",min_marker_perimeter=100):
-        super(Offline_Marker_Detector, self).__init__(g_pool)
+    def __init__(self,g_pool,mode="Show Markers and Frames",marker_edit_surface_idx=None,min_marker_perimeter = 100):
+        super(Offline_Marker_Detector, self).__init__(g_pool,mode,marker_edit_surface_idx,min_marker_perimeter)
         self.order = .2
-
-
-        # all markers that are detected in the most recent frame
-        self.markers = []
-        # all registered surfaces
 
         if g_pool.app == 'capture':
            raise Exception('For Player only.')
-        #in player we load from the rec_dir: but we have a couple options:
-        self.surface_definitions = None
-        self.surfaces = None
-        self.load_surface_definitions_from_file()
-
-        # ui mode settings
-        self.mode = mode
-        self.min_marker_perimeter = min_marker_perimeter
-        self.min_marker_perimeter_cacher = 20  #find even super small markers. The surface locater will filter using min_marker_perimeter
-        # edit surfaces
-        self.edit_surfaces = []
 
         self.marker_cache_version = 1
-
+        self.min_marker_perimeter_cacher = 20  #find even super small markers. The surface locater will filter using min_marker_perimeter
         #check if marker cache is available from last session
         self.persistent_cache = Persistent_Dict(os.path.join(g_pool.rec_dir,'square_marker_cache'))
         version = self.persistent_cache.get('version',0)
@@ -96,8 +80,6 @@ class Offline_Marker_Detector(Marker_Detector):
             logger.debug("Loaded marker cache %s / %s frames had been searched before"%(len(self.cache)-self.cache.count(False),len(self.cache)) )
 
         self.init_marker_cacher()
-
-        self.img_shape = None
 
     def load_surface_definitions_from_file(self):
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'surface_definitions'))
@@ -154,12 +136,12 @@ class Offline_Marker_Detector(Marker_Detector):
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
 
-            def make_add_remove_m(s):
-                def add_remove_m():
+            def make_edit_m(s):
+                def edit_m():
                     self.marker_edit_surface = s
                     self.mode = 'Marker add/remove mode'
-                return add_remove_m
-            add_remove_m = make_add_remove_m(s)
+                return edit_m
+            add_remove_m = make_edit_m(s)
             s_menu.append(ui.Button('Add/remove markers',add_remove_m))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
@@ -325,9 +307,6 @@ class Offline_Marker_Detector(Marker_Detector):
         Display marker and surface info inside world screen
         """
         self.gl_display_cache_bars()
-        for s in self.surfaces:
-            s.gl_display_in_window(self.g_pool.image_tex)
-
 
         super(Offline_Marker_Detector,self).gl_display()
 
@@ -559,10 +538,6 @@ class Offline_Marker_Detector(Marker_Detector):
         #     logger.info("Saved current image as .png file.")
         # else:
         #     logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
-
-
-    def get_init_dict(self):
-        return {'mode':self.mode}
 
 
     def cleanup(self):

@@ -270,13 +270,14 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
             for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
                 if s: #ho do we ensure that this is a good move?
                     m['verts'] += pt-m['centroid'] #uniformly translate verts by optlical flow offset
+                    m['centroid'] += pt-m['centroid'] #uniformly translate centrod by optlical flow offset
                     m["frames_since_true_detection"] +=1
                 else:
                     m["frames_since_true_detection"] =100
 
 
         #cocatenating like this will favour older markers in the doublication deletion process
-        markers = [m for m in not_found if m["frames_since_true_detection"] < 10 ]+new_markers
+        markers = new_markers+[m for m in not_found if m["frames_since_true_detection"] < 10 ]
         if markers: #del double detected markers
             # min_distace = max([m['perimeter'] for m in markers])/4.
             min_distace = 50
