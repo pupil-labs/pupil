@@ -55,8 +55,8 @@ class Offline_Surface_Tracker(Surface_Tracker):
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    def __init__(self,g_pool,mode="Show Markers and Surfaces",marker_edit_surface_idx=None,min_marker_perimeter = 100):
-        super(Offline_Surface_Tracker, self).__init__(g_pool,mode,marker_edit_surface_idx,min_marker_perimeter)
+    def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100):
+        super(Offline_Surface_Tracker, self).__init__(g_pool,mode,min_marker_perimeter)
         self.order = .2
 
         if g_pool.app == 'capture':
@@ -93,6 +93,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
             logger.debug("No surface defs found. Please define using GUI.")
             self.surfaces = []
 
+
     def init_gui(self):
         self.menu = ui.Scrolling_Menu('Offline Surface Tracker')
         self.g_pool.gui.append(self.menu)
@@ -124,7 +125,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         self.menu.append(ui.Info_Text('The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
         self.menu.append(ui.Info_Text('Please note: Unlike the real-time marker detector the offline marker detector works with a fixed min_marker_perimeter of 20.'))
-        self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Surfaces","Show marker IDs", "Surface edit mode",'Marker add/remove mode',"Show Heatmaps","Show Metrics"] ))
+        self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Surfaces","Show marker IDs","Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
@@ -238,22 +239,22 @@ class Offline_Surface_Tracker(Surface_Tracker):
         if self.mode == "Show marker IDs":
             draw_markers(frame.img,self.markers)
 
-        # edit surfaces by user
-        if self.mode == "Surface edit mode":
-            window = glfwGetCurrentContext()
-            pos = glfwGetCursorPos(window)
-            pos = normalize(pos,glfwGetWindowSize(window),flip_y=True)
-
-            for s,v_idx in self.edit_surfaces:
-                if s.detected:
-                    new_pos =  s.img_to_ref_surface(np.array(pos))
-                    s.move_vertex(v_idx,new_pos)
-        else:
-            # update srf with no or invald cache:
-            for s in self.surfaces:
-                if s.cache == None:
-                    s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter)
-                    self.notify_all_delayed({'subject':'surfaces_changed'})
+        elif self.mode == "Show Markers and Surfaces":
+            # edit surfaces by user
+            if self.edit_surf_verts:
+                window = glfwGetCurrentContext()
+                pos = glfwGetCursorPos(window)
+                pos = normalize(pos,glfwGetWindowSize(window),flip_y=True)
+                for s,v_idx in self.edit_surf_verts:
+                    if s.detected:
+                        new_pos =  s.img_to_ref_surface(np.array(pos))
+                        s.move_vertex(v_idx,new_pos)
+            else:
+                # update srf with no or invald cache:
+                for s in self.surfaces:
+                    if s.cache == None and s not in [s for s,i in self.edit_surf_verts]:
+                        s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter)
+                        self.notify_all_delayed({'subject':'surfaces_changed'})
 
 
 

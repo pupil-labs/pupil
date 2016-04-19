@@ -18,7 +18,7 @@ from OpenGL.GL import *
 from pyglui.cygl.utils import RGBA
 from pyglui.cygl.utils import draw_polyline_norm,draw_polyline,draw_points_norm,draw_points
 from OpenGL.GL import GL_LINES
-from methods import GetAnglesPolyline,normalize
+from methods import GetAnglesPolyline,normalize,denormalize
 
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
@@ -29,7 +29,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 marker_corners_norm = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
-
 def m_verts_to_screen(verts):
     #verts need to be sorted counter-clockwise stating at bottom left
     return cv2.getPerspectiveTransform(marker_corners_norm,verts)
@@ -417,9 +416,27 @@ class Reference_Surface(object):
     def marker_status(self):
         return "%s   %s/%s" %(self.name,self.detected_markers,len(self.markers))
 
+    def get_mode_toggle(self,pos,img_shape):
+        if self.detected and self.defined:
+            x,y = pos
+            frame = np.array([[[0,0],[1,0],[1,1],[0,1],[0,0]]],dtype=np.float32)
+            frame = cv2.perspectiveTransform(frame,self.m_to_screen)
+            text_anchor = frame.reshape((5,-1))[2]
+            text_anchor[1] = 1-text_anchor[1]
+            text_anchor *=img_shape[1],img_shape[0]
+            text_anchor = text_anchor[0],text_anchor[1]-75
+            surface_edit_anchor = text_anchor[0],text_anchor[1]+25
+            marker_edit_anchor = text_anchor[0],text_anchor[1]+50
+            if np.sqrt((x-surface_edit_anchor[0])**2 + (y-surface_edit_anchor[1])**2) <15:
+                return 'surface_mode'
+            elif np.sqrt((x-marker_edit_anchor[0])**2 + (y-marker_edit_anchor[1])**2) <15:
+                return 'marker_mode'
+            else:
+                return None
+        else:
+            return None
 
-
-    def gl_draw_frame(self,img_size,color = (1.0,0.2,0.6,1.0),highlight=False):
+    def gl_draw_frame(self,img_size,color = (1.0,0.2,0.6,1.0),highlight=False,surface_mode=False,marker_mode=False):
         """
         draw surface and markers
         """
@@ -434,11 +451,30 @@ class Reference_Surface(object):
                 draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*.1),line_type=GL_POLYGON)
             draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*alpha))
             draw_polyline_norm(hat.reshape((4,2)),1,RGBA(r,g,b,a*alpha))
-            # draw_points_norm(frame.reshape((5,-1))[0:1])
             text_anchor = frame.reshape((5,-1))[2]
             text_anchor[1] = 1-text_anchor[1]
             text_anchor *=img_size[1],img_size[0]
-            self.glfont.draw_text(text_anchor[0],text_anchor[1],self.marker_status())
+            text_anchor = text_anchor[0],text_anchor[1]-75
+            surface_edit_anchor = text_anchor[0],text_anchor[1]+25
+            marker_edit_anchor = text_anchor[0],text_anchor[1]+50
+            if marker_mode:
+                draw_points([marker_edit_anchor],color=RGBA(0,.8,.7))
+            else:
+                draw_points([marker_edit_anchor])
+            if surface_mode:
+                draw_points([surface_edit_anchor],color=RGBA(0,.8,.7))
+            else:
+                draw_points([surface_edit_anchor])
+            self.glfont.set_blur(3.9)
+            self.glfont.set_color_float((0,0,0,.8))
+            self.glfont.draw_text(text_anchor[0]+15,text_anchor[1]+6,self.marker_status())
+            self.glfont.draw_text(surface_edit_anchor[0]+15,surface_edit_anchor[1]+6,'edit surface')
+            self.glfont.draw_text(marker_edit_anchor[0]+15,marker_edit_anchor[1]+6,'add/remove markers')
+            self.glfont.set_blur(0.0)
+            self.glfont.set_color_float((0.1,8.,8.,.9))
+            self.glfont.draw_text(text_anchor[0]+15,text_anchor[1]+6,self.marker_status())
+            self.glfont.draw_text(surface_edit_anchor[0]+15,surface_edit_anchor[1]+6,'edit surface')
+            self.glfont.draw_text(marker_edit_anchor[0]+15,marker_edit_anchor[1]+6,'add/remove markers')
 
     def gl_draw_corners(self):
         """
@@ -446,7 +482,7 @@ class Reference_Surface(object):
         """
         if self.detected:
             frame = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),self.m_to_screen)
-            draw_points_norm(frame.reshape((4,2)),15,RGBA(1.0,0.2,0.6,.5))
+            draw_points_norm(frame.reshape((4,2)),20,RGBA(1.0,0.2,0.6,.5))
 
 
 
