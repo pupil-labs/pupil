@@ -117,7 +117,6 @@ class Offline_Reference_Surface(Reference_Surface):
         self.cache = None
         self.heatmap = None
 
-
     def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter):
         super(Offline_Reference_Surface, self).add_marker(marker,visible_markers,camera_calibration,min_marker_perimeter)
         self.cache = None
