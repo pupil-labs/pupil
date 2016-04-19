@@ -80,6 +80,9 @@ class Offline_Surface_Tracker(Surface_Tracker):
             logger.debug("Loaded marker cache %s / %s frames had been searched before"%(len(self.cache)-self.cache.count(False),len(self.cache)) )
 
         self.init_marker_cacher()
+        for s in self.surfaces:
+            s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter)
+        self.recalculate()
 
     def load_surface_definitions_from_file(self):
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'surface_definitions'))
@@ -283,6 +286,8 @@ class Offline_Surface_Tracker(Surface_Tracker):
             self.cache.update(idx,c_m)
             for s in self.surfaces:
                 s.update_cache(self.cache,camera_calibration=self.camera_calibration,min_marker_perimeter=self.min_marker_perimeter,idx=idx)
+            if self.cacher_run.value == False:
+                self.recalculate()
 
     def seek_marker_cacher(self,idx):
         self.cacher_seek_idx.value = idx
