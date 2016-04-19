@@ -22,7 +22,7 @@ if platform.system() == 'Darwin':
     shutil.rmtree('dist/Pupil Capture')
     print 'removed the non-app dist bundle'
 
-    bundle_name = 'Pupil Capture %s MacOS'%dpkg_deb_version()
+    bundle_name = 'pupil_capture_mac_os_x64_v%s'%dpkg_deb_version()
     bundle_dmg_name = 'Install Pupil Capture'
     src_dir = 'dist'
     bundle_app_dir = os.path.join(src_dir,'Pupil Capture.app/' )
@@ -54,7 +54,7 @@ elif platform.system() == 'Linux':
             pass
 
     #lets build the structure for our deb package.
-    deb_root = 'pupil_capture_%s'%dpkg_deb_version()
+    deb_root = 'pupil_capture_linux_os_x64_v%s'%dpkg_deb_version()
     DEBIAN_dir = os.path.join(deb_root,'DEBIAN')
     opt_dir = os.path.join(deb_root,'opt')
     bin_dir = os.path.join(deb_root,'usr','bin')
