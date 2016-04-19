@@ -97,7 +97,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
     def init_gui(self):
         self.menu = ui.Scrolling_Menu('Offline Surface Tracker')
         self.g_pool.gui.append(self.menu)
-        self.add_button = ui.Thumb('add_surface',setter=self.add_surface,getter=lambda:False,label='Add Surface',hotkey='a')
+        self.add_button = ui.Thumb('add_surface',setter=lambda x: self.add_surface(),getter=lambda:False,label='Add Surface',hotkey='a')
         self.g_pool.quickbar.append(self.add_button)
         self.update_gui_markers()
 
@@ -117,18 +117,17 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
         def set_min_marker_perimeter(val):
             self.min_marker_perimeter = val
-            self.notify_all_delayed({'subject':'min_marker_perimeter_changed'})
+            self.notify_all_delayed({'subject':'min_marker_perimeter_changed'},delay=1)
 
         self.menu.elements[:] = []
         self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Slider('min_marker_perimeter',self,min=20,max=500,step=1,setter=set_min_marker_perimeter))
         self.menu.append(ui.Info_Text('The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
-        self.menu.append(ui.Info_Text('Please note: Unlike the real-time marker detector the offline marker detector works with a fixed min_marker_perimeter of 20.'))
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Surfaces","Show marker IDs","Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
-        self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
+        self.menu.append(ui.Button("Add surface", lambda:self.add_surface()))
         for s in self.surfaces:
             idx = self.surfaces.index(s)
             s_menu = ui.Growing_Menu("Surface %s"%idx)
@@ -136,14 +135,6 @@ class Offline_Surface_Tracker(Surface_Tracker):
             s_menu.append(ui.Text_Input('name',s))
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
-
-            def make_edit_m(s):
-                def edit_m():
-                    self.marker_edit_surface = s
-                    self.mode = 'Marker add/remove mode'
-                return edit_m
-            add_remove_m = make_edit_m(s)
-            s_menu.append(ui.Button('Add/remove markers',add_remove_m))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
@@ -171,11 +162,9 @@ class Offline_Surface_Tracker(Surface_Tracker):
         self.win_size = w,h
 
 
-    def add_surface(self,_):
+    def add_surface(self):
         self.surfaces.append(Offline_Reference_Surface(self.g_pool))
         self.update_gui_markers()
-
-
 
     def recalculate(self):
 
