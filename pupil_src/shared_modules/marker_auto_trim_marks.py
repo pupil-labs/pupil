@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from plugin import Plugin
-from offline_marker_detector import Offline_Marker_Detector
+from offline_surface_tracker import Offline_Surface_Tracker
 from video_export_launcher import Video_Export_Launcher
 from ctypes import c_int
 
@@ -114,7 +114,7 @@ class Marker_Auto_Trim_Marks(Plugin):
             launcher.add_export()
 
     def surface_export(self,section):
-        plugins = [p for p in self.g_pool.plugins if isinstance(p,Offline_Marker_Detector)]
+        plugins = [p for p in self.g_pool.plugins if isinstance(p,Offline_Surface_Tracker)]
         if plugins:
             tracker = plugins[0]
             logger.info("exporting %s" %str(section))
@@ -122,7 +122,7 @@ class Marker_Auto_Trim_Marks(Plugin):
             tracker.recalculate()
             tracker.save_surface_statsics_to_file()
         else:
-            logger.warning("Please start Offline_Marker_Detector Plugin for surface export.")
+            logger.warning("Please start Offline_Surface_Tracker Plugin for surface export.")
 
     def activate_section(self,section):
         self.g_pool.trim_marks.set(section)
@@ -136,7 +136,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         if status:
             self.menu[0].text = "Marker Auto uses the marker detector to get markers"
         else:
-            self.menu[0].text  = "Marker Auto Trim Marks: Turn on Offline_Marker_Detector!"
+            self.menu[0].text  = "Marker Auto Trim Marks: Turn on Offline_Surface_Tracker!"
 
 
     def update(self,frame,events):
@@ -147,7 +147,7 @@ class Marker_Auto_Trim_Marks(Plugin):
             self.surface_export(self.surface_export_queue.pop(0))
 
         if self.sections == None:
-            plugins = [p for p in self.g_pool.plugins if isinstance(p,Offline_Marker_Detector)]
+            plugins = [p for p in self.g_pool.plugins if isinstance(p,Offline_Surface_Tracker)]
             if plugins:
                 marker_tracker_plugin = plugins[0]
             else:
