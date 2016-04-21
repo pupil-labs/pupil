@@ -2,9 +2,9 @@
 
 #include <iostream>
 #include "../../singleeyefitter/projection.h"
-#include "../../singleeyefitter/Geometry/Ellipse.h"
-#include "../../singleeyefitter/Geometry/Conic.h"
-#include "../../singleeyefitter/common/types.h"
+#include "geometry/Ellipse.h"
+#include "geometry/Conic.h"
+#include "common/types.h"
 
 
 

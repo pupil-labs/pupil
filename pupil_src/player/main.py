@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import sys, os,platform
+import sys, os,platform,errno
 from glob import glob
 from copy import deepcopy
 from time import time
@@ -61,8 +61,6 @@ logger.addHandler(fh)
 logger.addHandler(ch)
 
 logging.getLogger("OpenGL").setLevel(logging.ERROR)
-logging.getLogger("libav").setLevel(logging.ERROR)
-
 logger = logging.getLogger(__name__)
 
 
@@ -91,7 +89,7 @@ from video_capture import File_Capture,EndofVideoFileError,FileSeekError
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize, delta_t
-from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current
+from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current,update_recording_0v5_to_current,update_recording_0v73_to_current
 
 #monitoring
 import psutil
@@ -105,21 +103,22 @@ from vis_light_points import Vis_Light_Points
 from vis_watermark import Vis_Watermark
 from seek_bar import Seek_Bar
 from trim_marks import Trim_Marks
-from export_launcher import Export_Launcher
+from video_export_launcher import Video_Export_Launcher
 from scan_path import Scan_Path
-from offline_marker_detector import Offline_Marker_Detector
+from offline_surface_tracker import Offline_Surface_Tracker
 from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from pupil_server import Pupil_Server
-from fixation_detector import Dispersion_Duration_Fixation_Detector
+from fixation_detector import Fixation_Detector_Dispersion_Duration
 from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
 from log_display import Log_Display
 from annotations import Annotation_Player
+from raw_data_exporter import Raw_Data_Exporter
 
 system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
-user_launchable_plugins = [Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay,Annotation_Player] #,Marker_Auto_Trim_Marks
+user_launchable_plugins = [Video_Export_Launcher,Raw_Data_Exporter, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Fixation_Detector_Dispersion_Duration,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Surface_Tracker,Pupil_Server,Batch_Exporter,Eye_Video_Overlay,Annotation_Player] #,Marker_Auto_Trim_Marks
 user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
@@ -191,17 +190,21 @@ def session(rec_dir):
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
     rec_version = read_rec_version(meta_info)
-    if rec_version >= VersionFormat('0.5'):
+    if rec_version >= VersionFormat('0.7.4'):
         pass
+    if rec_version >= VersionFormat('0.7.3'):
+        update_recording_0v73_to_current(rec_dir)
+    elif rec_version >= VersionFormat('0.5'):
+        update_recording_0v5_to_current(rec_dir)
     elif rec_version >= VersionFormat('0.4'):
         update_recording_0v4_to_current(rec_dir)
     elif rec_version >= VersionFormat('0.3'):
         update_recording_0v3_to_current(rec_dir)
         timestamps_path = os.path.join(rec_dir, "timestamps.npy")
-
     else:
         logger.Error("This recording is to old. Sorry.")
         return
+
 
     timestamps = np.load(timestamps_path)
     # Initialize capture
@@ -246,15 +249,17 @@ def session(rec_dir):
         try:
             cap.seek_to_frame(cap.get_frame_index())
         except FileSeekError:
-            pass
-        g_pool.new_seek = True
+            logger.warning("Could not seek to next frame.")
+        else:
+            g_pool.new_seek = True
 
     def prev_frame(_):
         try:
             cap.seek_to_frame(cap.get_frame_index()-2)
         except FileSeekError:
-            pass
-        g_pool.new_seek = True
+            logger.warning("Could not seek to previous frame.")
+        else:
+            g_pool.new_seek = True
 
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
@@ -270,6 +275,23 @@ def session(rec_dir):
             if p.__class__ in user_launchable_plugins:
                 p.alive = False
         g_pool.plugins.clean()
+
+    def do_export(_):
+        export_range = slice(g_pool.trim_marks.in_mark,g_pool.trim_marks.out_mark)
+        export_dir = os.path.join(g_pool.rec_dir,'exports','%s-%s'%(export_range.start,export_range.stop))
+        try:
+            os.makedirs(export_dir)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                logger.error("Could not create export dir")
+                raise e
+            else:
+                logger.warning("Previous export for range [%s-%s] already exsits - overwriting."%(export_range.start,export_range.stop))
+        else:
+            logger.info('Created export dir at "%s"'%export_dir)
+
+        notification = {'subject':'should_export','range':export_range,'export_dir':export_dir}
+        g_pool.notifications.append(notification)
 
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
@@ -288,23 +310,19 @@ def session(rec_dir):
     g_pool.play_button.on_color[:] = (0,1.,.0,.8)
     g_pool.forward_button = ui.Thumb('forward',getter = lambda: False,setter= next_frame, hotkey=GLFW_KEY_RIGHT)
     g_pool.backward_button = ui.Thumb('backward',getter = lambda: False, setter = prev_frame, hotkey=GLFW_KEY_LEFT)
-    g_pool.quickbar.extend([g_pool.play_button,g_pool.forward_button,g_pool.backward_button])
+    g_pool.export_button = ui.Thumb('export',getter = lambda: False, setter = do_export, hotkey='e')
+    g_pool.quickbar.extend([g_pool.play_button,g_pool.forward_button,g_pool.backward_button,g_pool.export_button])
     g_pool.gui.append(g_pool.quickbar)
     g_pool.gui.append(g_pool.main_menu)
 
 
     #we always load these plugins
     system_plugins = [('Trim_Marks',{}),('Seek_Bar',{})]
-    default_plugins = [('Log_Display',{}),('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Export_Launcher',{})]
+    default_plugins = [('Log_Display',{}),('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Video_Export_Launcher',{})]
     previous_plugins = session_settings.get('loaded_plugins',default_plugins)
     g_pool.notifications = []
     g_pool.delayed_notifications = {}
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,system_plugins+previous_plugins)
-
-    for p in g_pool.plugins:
-        if p.class_name == 'Trim_Marks':
-            g_pool.trim_marks = p
-            break
 
 
     # Register callbacks main_window
@@ -346,6 +364,7 @@ def session(rec_dir):
     pupil_graph.label = "Confidence: %0.2f"
 
     while not glfwWindowShouldClose(main_window):
+
 
         #grab new frame
         if g_pool.play or g_pool.new_seek:

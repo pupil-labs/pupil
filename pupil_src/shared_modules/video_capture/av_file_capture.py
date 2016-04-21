@@ -10,8 +10,9 @@
 
 import os,sys
 import av
-
 assert av.__version__ >= '0.2.5'
+
+av.logging.set_level(av.logging.ERROR)
 
 import numpy as np
 from time import time,sleep
@@ -223,10 +224,14 @@ class File_Capture(object):
 
     def seek_to_frame(self, seek_pos):
         ###frame accurate seeking
-        self.video_stream.seek(self.idx_to_pts(seek_pos),mode='time')
-        self.next_frame = self._next_frame()
-        self.display_time = 0
-        self.target_frame_idx = seek_pos
+        try:
+            self.video_stream.seek(self.idx_to_pts(seek_pos),mode='time')
+        except av.AVError as e:
+            raise FileSeekError()
+        else:
+            self.next_frame = self._next_frame()
+            self.display_time = 0
+            self.target_frame_idx = seek_pos
 
     def seek_to_frame_fast(self, seek_pos):
         ###best effort seeking to closest keyframe

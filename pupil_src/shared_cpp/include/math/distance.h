@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <Eigen/Core>
-#include "Geometry/Ellipse.h"
+#include "geometry/Ellipse.h"
 #include "DistancePointEllipse.h"
 
 using namespace singleeyefitter;
@@ -30,6 +30,55 @@ auto euclidean_distance_squared(const Eigen::MatrixBase<Derived>& point,
                         const Eigen::ParametrizedLine<typename Derived::Scalar, Derived::SizeAtCompileTime>& line) -> decltype(point.norm())
 {
     return ((line.origin() - point) - ((line.origin() - point).dot(line.direction())) * line.direction()).squaredNorm();
+}
+
+
+template<class Scalar>
+Scalar euclidean_distance(const Eigen::ParametrizedLine<Scalar, 3>& line1,
+                                  const Eigen::ParametrizedLine<Scalar, 3>& line2)
+{
+    return std::sqrt( euclidean_distance_squared(line1, line2) ) ;
+}
+
+template<class Scalar>
+Scalar euclidean_distance_squared(const Eigen::ParametrizedLine<Scalar, 3>& line1,
+                                  const Eigen::ParametrizedLine<Scalar, 3>& line2)
+{
+
+    auto closestPoints = closest_points_on_line(line1, line2);
+    auto diff = closestPoints.first - closestPoints.second;
+    return diff.dot(diff);
+}
+
+template<class Scalar>
+std::pair< typename Eigen::ParametrizedLine<Scalar, 3>::VectorType , typename Eigen::ParametrizedLine<Scalar, 3>::VectorType >
+closest_points_on_line(const Eigen::ParametrizedLine<Scalar, 3>& line1,
+                            const Eigen::ParametrizedLine<Scalar, 3>& line2)
+{
+    typedef typename Eigen::ParametrizedLine<Scalar, 3>::VectorType Vector;
+    Vector diff = line1.origin() - line2.origin();
+    Scalar a01 = -line1.direction().dot(line2.direction());
+    Scalar b0 = diff.dot(line1.direction());
+    Scalar s0, s1;
+
+    if (std::abs(a01) < Scalar(1) )
+    {
+        // Lines are not parallel.
+        Scalar det = Scalar(1) - a01 * a01;
+        Scalar b1 = -diff.dot(line2.direction());
+        s0 = (a01 * b1 - b0) / det;
+        s1 = (a01 * b0 - b1) / det;
+    }
+    else
+    {
+        // Lines are parallel, select any pair of closest points.
+        s0 = -b0;
+        s1 = Scalar(0);
+    }
+
+    Vector closestPoint1 = line1.origin() + s0 * line1.direction();
+    Vector closestPoint2 = line2.origin() + s1 * line2.direction();
+    return std::pair<Vector, Vector>(closestPoint1, closestPoint2);
 }
 
 template<typename Scalar, int Dim>

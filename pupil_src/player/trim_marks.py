@@ -52,6 +52,7 @@ class Trim_Marks(Plugin):
     def set(self,mark_range):
         self._in_mark,self._out_mark = mark_range
 
+
     def get_string(self):
         return '%s - %s'%(self._in_mark,self._out_mark)
 

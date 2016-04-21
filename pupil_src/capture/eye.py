@@ -59,7 +59,6 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         logger.addHandler(ch)
         #silence noisy modules
         logging.getLogger("OpenGL").setLevel(logging.ERROR)
-        logging.getLogger("libav").setLevel(logging.ERROR)
         # create logger for the context of this function
         logger = logging.getLogger(__name__)
 
@@ -204,8 +203,8 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         g_pool.flip = session_settings.get('flip',False)
         g_pool.display_mode = session_settings.get('display_mode','camera_image')
         g_pool.display_mode_info_text = {'camera_image': "Raw eye camera image. This uses the least amount of CPU power",
-                                    'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be a small as possible but big enough to capture to pupil in its movements",
-                                    'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters with in the Pupil Detection menu below."}
+                                    'roi': "Click and drag on the blue circles to adjust the region of interest. The region should be as small as possible, but large enough to capture all pupil movements.",
+                                    'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters within the Pupil Detection menu below."}
 
 
         g_pool.u_r = UIRoi(frame.img.shape)
@@ -419,16 +418,17 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                     window_size =  glfw.glfwGetWindowSize(main_window)
                     make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
 
-                    if result['method'] == '3D c++':
-                        eye_ball = result['projectedSphere']
+                    if result['method'] == '3d c++':
+
+                        eye_ball = result['projected_sphere']
                         try:
                             pts = cv2.ellipse2Poly( (int(eye_ball['center'][0]),int(eye_ball['center'][1])),
                                                 (int(eye_ball['axes'][0]/2),int(eye_ball['axes'][1]/2)),
                                                 int(eye_ball['angle']),0,360,8)
-                        except ValueError:
+                        except ValueError as e:
                             pass
                         else:
-                            draw_polyline(pts,2,RGBA(0.,4.,9.,0.3))
+                            draw_polyline(pts,2,RGBA(0.,.9,.1,result['model_confidence']) )
 
                     if result['confidence'] >0:
                         if result.has_key('ellipse'):
@@ -490,10 +490,10 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
 
         logger.debug("Process done")
 
-def eye_profiled(g_pool,cap_src,pipe_to_world,eye_id):
+def eye_profiled(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, eye_id, cap_src):
     import cProfile,subprocess,os
     from eye import eye
-    cProfile.runctx("eye(g_pool,cap_src,pipe_to_world,eye_id)",{"g_pool":g_pool,'cap_src':cap_src,'pipe_to_world':pipe_to_world,'eye_id':eye_id},locals(),"eye%s.pstats"%eye_id)
+    cProfile.runctx("eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, eye_id, cap_src)",{'pupil_queue':pupil_queue, 'timebase':timebase, 'pipe_to_world':pipe_to_world, 'is_alive_flag':is_alive_flag, 'user_dir':user_dir, 'version':version, 'eye_id':eye_id, 'cap_src':cap_src},locals(),"eye%s.pstats"%eye_id)
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye%s.pstats | dot -Tpng -o eye%s_cpu_time.png"%(eye_id,eye_id), shell=True)

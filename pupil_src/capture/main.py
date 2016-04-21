@@ -42,7 +42,7 @@ from ctypes import c_double,c_bool
 
 if 'profiled' in sys.argv:
     from world import world_profiled as world
-    from eye import eye_profiles as eye
+    from eye import eye_profiled as eye
     logger.warning("Profiling active.")
 else:
     from world import world

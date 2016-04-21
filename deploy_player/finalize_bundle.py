@@ -57,7 +57,7 @@ if platform.system() == 'Darwin':
     with open("dist/Pupil Player.app/Contents/Info.plist", "w") as f:
         f.write(txt)
 
-    bundle_name = 'Pupil Player %s MacOS'%dpkg_deb_version()
+    bundle_name = 'pupil_player_mac_os_x64_v%s'%dpkg_deb_version()
     bundle_dmg_name = 'Install Pupil Player'
     src_dir = 'dist'
     bundle_app_dir = os.path.join(src_dir,'Pupil Player.app/' )
@@ -89,7 +89,7 @@ elif platform.system() == 'Linux':
             pass
 
     #lets build the structure for our deb package.
-    deb_root = 'pupil_player_%s'%dpkg_deb_version()
+    deb_root = 'pupil_player_linux_os_x64_v%s'%dpkg_deb_version()
     DEBIAN_dir = os.path.join(deb_root,'DEBIAN')
     opt_dir = os.path.join(deb_root,'opt')
     bin_dir = os.path.join(deb_root,'usr','bin')

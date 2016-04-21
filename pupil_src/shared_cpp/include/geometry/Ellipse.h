@@ -1,7 +1,7 @@
 #ifndef _ELLIPSE_H_
 #define _ELLIPSE_H_
 
-#include "../common/constants.h"
+#include "common/constants.h"
 
 #include <Eigen/Core>
 

@@ -105,4 +105,5 @@ def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker
     logger.debug("Closing Cacher Process")
     cap.close()
     q.close()
+    run.value = False
     return

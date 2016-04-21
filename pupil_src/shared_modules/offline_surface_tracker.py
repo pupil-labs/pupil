@@ -38,15 +38,16 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-from marker_detector import Marker_Detector
+from surface_tracker import Surface_Tracker
 from square_marker_detect import detect_markers_robust, draw_markers,m_marker_to_screen
+from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 from offline_reference_surface import Offline_Reference_Surface
 from math import sqrt
 
 
-class Offline_Marker_Detector(Marker_Detector):
+class Offline_Surface_Tracker(Surface_Tracker):
     """
-    Special version of marker detector for use with videofile source.
+    Special version of surface tracker for use with videofile source.
     It uses a seperate process to search all frames in the world video file for markers.
      - self.cache is a list containing marker positions for each frame.
      - self.surfaces[i].cache is a list containing surface positions for each frame
@@ -54,40 +55,34 @@ class Offline_Marker_Detector(Marker_Detector):
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    def __init__(self,g_pool,mode="Show Markers and Frames"):
-        super(Offline_Marker_Detector, self).__init__(g_pool)
+    def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100):
+        super(Offline_Surface_Tracker, self).__init__(g_pool,mode,min_marker_perimeter)
         self.order = .2
-
-
-        # all markers that are detected in the most recent frame
-        self.markers = []
-        # all registered surfaces
 
         if g_pool.app == 'capture':
            raise Exception('For Player only.')
-        #in player we load from the rec_dir: but we have a couple options:
-        self.surface_definitions = None
-        self.surfaces = None
-        self.load_surface_definitions_from_file()
 
-        # ui mode settings
-        self.mode = mode
-        self.min_marker_perimeter = 20  #if we make this a slider we need to invalidate the cache on change.
-        # edit surfaces
-        self.edit_surfaces = []
-
-
+        self.marker_cache_version = 1
+        self.min_marker_perimeter_cacher = 20  #find even super small markers. The surface locater will filter using min_marker_perimeter
         #check if marker cache is available from last session
         self.persistent_cache = Persistent_Dict(os.path.join(g_pool.rec_dir,'square_marker_cache'))
-        self.cache = Cache_List(self.persistent_cache.get('marker_cache',[False for _ in g_pool.timestamps]))
-        logger.debug("Loaded marker cache %s / %s frames had been searched before"%(len(self.cache)-self.cache.count(False),len(self.cache)) )
+        version = self.persistent_cache.get('version',0)
+        cache = self.persistent_cache.get('marker_cache',None)
+        if cache is None:
+            self.cache = Cache_List([False for _ in g_pool.timestamps])
+            self.persistent_cache['version'] = self.marker_cache_version
+        elif version != self.marker_cache_version:
+            self.persistent_cache['version'] = self.marker_cache_version
+            self.cache = Cache_List([False for _ in g_pool.timestamps])
+            logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
+        else:
+            self.cache = Cache_List(cache)
+            logger.debug("Loaded marker cache %s / %s frames had been searched before"%(len(self.cache)-self.cache.count(False),len(self.cache)) )
+
         self.init_marker_cacher()
-
-        #debug vars
-        self.show_surface_idx = c_int(0)
-
-        self.img_shape = None
-        self.img = None
+        for s in self.surfaces:
+            s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter)
+        self.recalculate()
 
     def load_surface_definitions_from_file(self):
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'surface_definitions'))
@@ -101,12 +96,11 @@ class Offline_Marker_Detector(Marker_Detector):
             logger.debug("No surface defs found. Please define using GUI.")
             self.surfaces = []
 
+
     def init_gui(self):
-        self.menu = ui.Scrolling_Menu('Offline Marker Tracker')
+        self.menu = ui.Scrolling_Menu('Offline Surface Tracker')
         self.g_pool.gui.append(self.menu)
-
-
-        self.add_button = ui.Thumb('add_surface',setter=self.add_surface,getter=lambda:False,label='Add Surface',hotkey='a')
+        self.add_button = ui.Thumb('add_surface',setter=lambda x: self.add_surface(),getter=lambda:False,label='Add Surface',hotkey='a')
         self.g_pool.quickbar.append(self.add_button)
         self.update_gui_markers()
 
@@ -121,16 +115,22 @@ class Offline_Marker_Detector(Marker_Detector):
             self.add_button = None
 
     def update_gui_markers(self):
-        pass
+        def close():
+            self.alive=False
+
+        def set_min_marker_perimeter(val):
+            self.min_marker_perimeter = val
+            self.notify_all_delayed({'subject':'min_marker_perimeter_changed'},delay=1)
+
         self.menu.elements[:] = []
-        self.menu.append(ui.Button('Close',self.close))
-        self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
-        self.menu.append(ui.Info_Text('Please note: Unlike the real-time marker detector the offline marker detector works with a fixed min_marker_perimeter of 20.'))
-        self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
+        self.menu.append(ui.Button('Close',close))
+        self.menu.append(ui.Slider('min_marker_perimeter',self,min=20,max=500,step=1,setter=set_min_marker_perimeter))
+        self.menu.append(ui.Info_Text('The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
+        self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
+        self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Surfaces","Show marker IDs","Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
-        self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statsics_to_file))
-        self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
+        self.menu.append(ui.Button("Add surface", lambda:self.add_surface()))
         for s in self.surfaces:
             idx = self.surfaces.index(s)
             s_menu = ui.Growing_Menu("Surface %s"%idx)
@@ -151,16 +151,23 @@ class Offline_Marker_Detector(Marker_Detector):
         if notification['subject'] == 'gaze_positions_changed':
             logger.info('Gaze postions changed. Recalculating.')
             self.recalculate()
+        elif notification['subject'] == 'surfaces_changed':
+            logger.info('Surfaces changed. Recalculating.')
+            self.recalculate()
+        elif notification['subject'] == 'min_marker_perimeter_changed':
+            logger.info('Min marper perimeter adjusted. Re-detecting surfaces.')
+            self.invalidate_surface_caches()
+        elif notification['subject'] is "should_export":
+            self.save_surface_statsics_to_file(notification['range'],notification['export_dir'])
+
 
     def on_window_resize(self,window,w,h):
         self.win_size = w,h
 
 
-    def add_surface(self,_):
+    def add_surface(self):
         self.surfaces.append(Offline_Reference_Surface(self.g_pool))
         self.update_gui_markers()
-
-
 
     def recalculate(self):
 
@@ -199,43 +206,48 @@ class Offline_Marker_Detector(Marker_Detector):
             s.metrics_texture.update_from_ndarray(heatmap)
 
 
+    def invalidate_surface_caches(self):
+        for s in self.surfaces:
+            s.cache = None
+
     def update(self,frame,events):
-        self.img = frame.img
         self.img_shape = frame.img.shape
         self.update_marker_cache()
+        # self.markers = [m for m in self.cache[frame.index] if m['perimeter'>=self.min_marker_perimeter]
         self.markers = self.cache[frame.index]
         if self.markers == False:
             self.markers = []
             self.seek_marker_cacher(frame.index) # tell precacher that it better have every thing from here on analyzed
 
+
+        events['surfaces'] = []
         # locate surfaces
         for s in self.surfaces:
             if not s.locate_from_cache(frame.index):
-                s.locate(self.markers)
+                s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter)
             if s.detected:
-                pass
-                # events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp,'gaze_on_srf':s.gaze_on_srf})
+                events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
         if self.mode == "Show marker IDs":
             draw_markers(frame.img,self.markers)
 
-        # edit surfaces by user
-        if self.mode == "Surface edit mode":
-            window = glfwGetCurrentContext()
-            pos = glfwGetCursorPos(window)
-            pos = normalize(pos,glfwGetWindowSize(window),flip_y=True)
+        elif self.mode == "Show Markers and Surfaces":
+            # edit surfaces by user
+            if self.edit_surf_verts:
+                window = glfwGetCurrentContext()
+                pos = glfwGetCursorPos(window)
+                pos = normalize(pos,glfwGetWindowSize(window),flip_y=True)
+                for s,v_idx in self.edit_surf_verts:
+                    if s.detected:
+                        new_pos =  s.img_to_ref_surface(np.array(pos))
+                        s.move_vertex(v_idx,new_pos)
+            else:
+                # update srf with no or invald cache:
+                for s in self.surfaces:
+                    if s.cache == None and s not in [s for s,i in self.edit_surf_verts]:
+                        s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter)
+                        self.notify_all_delayed({'subject':'surfaces_changed'})
 
-            for s,v_idx in self.edit_surfaces:
-                if s.detected:
-                    new_pos =  s.img_to_ref_surface(np.array(pos))
-                    s.move_vertex(v_idx,new_pos)
-                    s.cache = None
-                    self.heatmap = None
-        else:
-            # update srf with no or invald cache:
-            for s in self.surfaces:
-                if s.cache == None:
-                    s.init_cache(self.cache)
 
 
         #map recent gaze onto detected surfaces used for pupil server
@@ -265,7 +277,7 @@ class Offline_Marker_Detector(Marker_Detector):
         self.cache_queue = Queue()
         self.cacher_seek_idx = Value('i',0)
         self.cacher_run = Value(c_bool,True)
-        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,timestamps,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter))
+        self.cacher = Process(target=fill_cache, args=(visited_list,video_file_path,timestamps,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter_cacher))
         self.cacher.start()
 
     def update_marker_cache(self):
@@ -273,7 +285,9 @@ class Offline_Marker_Detector(Marker_Detector):
             idx,c_m = self.cache_queue.get()
             self.cache.update(idx,c_m)
             for s in self.surfaces:
-                s.update_cache(self.cache,idx=idx)
+                s.update_cache(self.cache,camera_calibration=self.camera_calibration,min_marker_perimeter=self.min_marker_perimeter,idx=idx)
+            if self.cacher_run.value == False:
+                self.recalculate()
 
     def seek_marker_cacher(self,idx):
         self.cacher_seek_idx.value = idx
@@ -288,23 +302,8 @@ class Offline_Marker_Detector(Marker_Detector):
         Display marker and surface info inside world screen
         """
         self.gl_display_cache_bars()
-        for s in self.surfaces:
-            s.gl_display_in_window(self.g_pool.image_tex)
 
-        if self.mode == "Show Markers and Frames":
-            for m in self.markers:
-                hat = np.array([[[0,0],[0,1],[1,1],[1,0],[0,0]]],dtype=np.float32)
-                hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-                draw_polyline(hat.reshape((5,2)),color=RGBA(0.1,1.,1.,.3),line_type=GL_POLYGON)
-                draw_polyline(hat.reshape((5,2)),color=RGBA(0.1,1.,1.,.6))
-
-            for s in self.surfaces:
-                s.gl_draw_frame(self.img_shape)
-
-        if self.mode == "Surface edit mode":
-            for s in self.surfaces:
-                s.gl_draw_frame(self.img_shape)
-                s.gl_draw_corners()
+        super(Offline_Surface_Tracker,self).gl_display()
 
         if self.mode == "Show Heatmaps":
             for s in  self.surfaces:
@@ -362,12 +361,7 @@ class Offline_Marker_Detector(Marker_Detector):
         glPopMatrix()
 
 
-    def save_surface_statsics_to_file(self):
-
-        in_mark = self.g_pool.trim_marks.in_mark
-        out_mark = self.g_pool.trim_marks.out_mark
-
-
+    def save_surface_statsics_to_file(self,export_range,export_dir):
         """
         between in and out mark
 
@@ -390,10 +384,10 @@ class Offline_Marker_Detector(Marker_Detector):
                 positions_of_name_id.csv
 
         """
-        section = slice(in_mark,out_mark)
-
-
-        metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
+        metrics_dir = os.path.join(export_dir,'surfaces')
+        section = export_range
+        in_mark = export_range.start
+        out_mark = export_range.stop
         logger.info("exporting metrics to %s"%metrics_dir)
         if os.path.isdir(metrics_dir):
             logger.info("Will overwrite previous export for this section")
@@ -539,10 +533,6 @@ class Offline_Marker_Detector(Marker_Detector):
         #     logger.info("Saved current image as .png file.")
         # else:
         #     logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
-
-
-    def get_init_dict(self):
-        return {'mode':self.mode}
 
 
     def cleanup(self):

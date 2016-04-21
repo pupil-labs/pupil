@@ -67,13 +67,13 @@ class EyeModel {
         typedef singleeyefitter::Sphere<double> Sphere;
     public:
 
-        EyeModel( int modelId, Clock::time_point timestamp,  double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 3, double binResolution = 0.05  );
+        EyeModel( int modelId, double timestamp,  double focalLength, Vector3 cameraCenter, int initialUncheckedPupils = 3, double binResolution = 0.05  );
         EyeModel(const EyeModel&) = delete;
         //EyeModel(EyeModel&&); // we need a explicit 1/Move constructor because of the mutex
         ~EyeModel();
 
 
-        std::pair<Circle,ModelSupport> presentObservation(const ObservationPtr observation, double averageFramerate  );
+        std::pair<Circle,ConfidenceValue> presentObservation(const ObservationPtr observation, double averageFramerate  );
         Sphere getSphere() const;
         Sphere getInitialSphere() const;
 
@@ -83,12 +83,13 @@ class EyeModel {
 
         // Describing how good different properties of the Eye are
         double getMaturity() const ; // How much spatial variance there is
-        double getPerformance() const; // The average of the model support
+        double getConfidence() const; // How much do we believe in this model
+        double getPerformance() const; // How much do we believe in this model
         double getPerformanceGradient() const;
-        double getFit() const ; // The residual of the sphere calculation
+        double getSolverFit() const ; // The residual of the sphere calculation
 
         int getModelID() const { return mModelID; };
-        Clock::time_point getTimestamp() const { return mTimestamp; };
+        double getBirthTimestamp() const { return mBirthTimestamp; };
 
         // ----- Visualization --------
         std::vector<Vector3> getBinPositions() const {return mBinPositions;};
@@ -116,8 +117,8 @@ class EyeModel {
         double refineWithEdges( Sphere& sphere  );
         bool tryTransferNewObservations();
 
-        ModelSupport calculateModelSupport(const Circle&  unprojectedCircle, const Circle& initialisedCircle, double confidence) const;
-        void calculatePerformance( const std::pair<double,double>& modelSupport,  double averageFramerate);
+        ConfidenceValue calculateModelOberservationFit(const Circle&  unprojectedCircle, const Circle& initialisedCircle, double confidence) const;
+        void updatePerformance( const ConfidenceValue& observation_fit,  double averageFramerate);
 
         double calculateModelFit(const Circle&  unprojectedCircle, const Circle& optimizedCircle) const;
         bool isSpatialRelevant(const Circle& circle);
@@ -142,7 +143,7 @@ class EyeModel {
 
         // Factors which describe how good certain properties of the model are
         //std::list<double> mModelSupports; // values to calculate the average
-        double mFit; // Residual of Ceres sovler , Thread sensitive
+        double mSolverFit; // Residual of Ceres sovler , Thread sensitive
         math::WMA<double> mPerformance; // moving Average of model support
         float mPerformanceWindowSize;  // in seconds
         double mPerformanceGradient;
@@ -154,7 +155,7 @@ class EyeModel {
         const double mBinResolution;
         const int mTotalBins;
         const int mModelID;
-        const Clock::time_point mTimestamp;
+        double mBirthTimestamp;
 
         Sphere mSphere;   // Thread sensitive
         Sphere mInitialSphere;    // Thread sensitive

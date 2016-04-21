@@ -41,7 +41,6 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     logger.addHandler(ch)
     #silence noisy modules
     logging.getLogger("OpenGL").setLevel(logging.ERROR)
-    logging.getLogger("libav").setLevel(logging.ERROR)
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 
@@ -82,7 +81,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     from display_recent_gaze import Display_Recent_Gaze
     from pupil_server import Pupil_Server
     from pupil_sync import Pupil_Sync
-    from marker_detector import Marker_Detector
+    from surface_tracker import Surface_Tracker
     from log_display import Log_Display
     from annotations import Annotation_Capture
     # create logger for the context of this function
@@ -117,7 +116,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
 
     #manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
-    user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Sync,Marker_Detector,Annotation_Capture]+runtime_plugins
+    user_launchable_plugins = [Show_Calibration,Pupil_Server,Pupil_Sync,Surface_Tracker,Annotation_Capture]+runtime_plugins
     system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder]
     plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins
     name_by_index = [p.__name__ for p in plugin_by_index]
@@ -462,10 +461,10 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
 
     logger.debug("world process done")
 
-def world_profiled(user_dir,version_file,video_sources,profiled=True):
+def world_profiled(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src):
     import cProfile,subprocess,os
     from world import world
-    cProfile.runctx("world(user_dir,version_file,video_sources,profiled)",{"user_dir":user_dir,"version_file":version_file,"video_sources":video_sources,'profiled':profiled},locals(),"world.pstats")
+    cProfile.runctx("world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src)",{'pupil_queue':pupil_queue,'timebase':timebase,'lauchner_pipe':lauchner_pipe,'eye_pipes':eye_pipes,'eyes_are_alive':eyes_are_alive,'user_dir':user_dir,'version':version,'cap_src':cap_src},locals(),"world.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
