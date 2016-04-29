@@ -127,7 +127,7 @@ class Adjust_Calibration(Calibration_Plugin):
             r['norm_pos'] = [ r['norm_pos'][0]-mean_offset[0],r['norm_pos'][1]-mean_offset[1] ]
 
 
-        finish_calibration(self.g_pool,self.pupil_list,self.ref_list,force='2d')
+        finish_calibration(self.g_pool,self.pupil_list,self.ref_list)
 
 
     def update(self,frame,events):
