@@ -28,16 +28,29 @@ def find_concetric_circles(gray_img,min_ring_count=3, visual_debug=False):
     concentric_cirlce_clusters = []
 
 
+
+
+
+    #speed up code by caching computed ellipses
+    ellipses = {}
+
+
     # for each cluster fit ellipses and cull members that dont have good ellipse fit
     for cluster in clusters:
         if visual_debug is not False:
-            cv2.drawContours(visual_debug, cluster,-1, (0,0,255))
+            cv2.drawContours(visual_debug, [contours[i] for i in cluster],-1, (0,0,255))
         candidate_ellipses = []
-        for c in cluster:
+        for i in cluster:
+            c = contours[i]
             if len(c)>5:
-                e = cv2.fitEllipse(c)
+                if not ellipses.has_key(i):
+                    e = cv2.fitEllipse(c)
+                    fit = max(dist_pts_ellipse(e,c))
+                    ellipses[i] = e,fit
+                else:
+                    e,fit = ellipses[i]
                 a,b = e[1][0]/2.,e[1][1]/2.
-                if max(dist_pts_ellipse(e,c))<max(2,max(e[1])/20):
+                if fit<max(2,max(e[1])/20):
                     candidate_ellipses.append(e)
                     if visual_debug is not False:
                         cv2.ellipse(visual_debug, e, (0,255,0),1)
@@ -52,6 +65,8 @@ def find_concetric_circles(gray_img,min_ring_count=3, visual_debug=False):
 
     #return clusters sorted by size of outmost cirlce biggest first.
     return sorted(concentric_cirlce_clusters,key=lambda e:-max(e[-1][1]))
+
+
 
 def add_parents(child,graph,family):
     family.append(child)
@@ -71,7 +86,7 @@ def get_nested_clusters(contours,hierarchy,min_nested_count):
             cluster = add_parents(i,hierarchy,[])
             # is this cluster bigger that the current contender in the innermost parent group if if already exsists?
             if min_nested_count < len(cluster) > len(clusters.get(cluster[1],[])):
-                clusters[cluster[1]] = [contours[m] for m in cluster]
+                clusters[cluster[1]] = cluster
     return clusters.values()
 
 
