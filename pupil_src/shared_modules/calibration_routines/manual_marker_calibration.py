@@ -14,7 +14,7 @@ import numpy as np
 from methods import normalize,denormalize
 from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
 from OpenGL.GL import GL_POLYGON
-from circle_detector import get_candidate_ellipses
+from circle_detector import find_concetric_circles
 from finish_calibration import finish_calibration
 from file_methods import load_object
 
@@ -47,11 +47,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.sample_site = (-2,-2)
         self.counter = 0
         self.counter_max = 30
-        self.candidate_ellipses = []
-        self.show_edges = 0
-        self.aperture = 7
-        self.dist_threshold = 10
-        self.area_threshold = 30
+        self.markers = []
         self.world_size = None
 
         self.stop_marker_found = False
@@ -69,9 +65,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
         self.menu = ui.Growing_Menu('Controls')
         self.g_pool.calibration_menu.append(self.menu)
-
-        self.menu.append(ui.Slider('aperture',self,min=3,step=2,max=11,label='filter aperture'))
-        self.menu.append(ui.Switch('show_edges',self,label='show edges'))
 
         self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
@@ -125,15 +118,11 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             if self.world_size is None:
                 self.world_size = frame.width,frame.height
 
-            self.candidate_ellipses = get_candidate_ellipses(gray_img,
-                                                            area_threshold=self.area_threshold,
-                                                            dist_threshold=self.dist_threshold,
-                                                            min_ring_count=4,
-                                                            visual_debug=self.show_edges)
+            self.markers = find_concetric_circles(gray_img,min_ring_count=3)
 
-            if len(self.candidate_ellipses) > 0:
+            if len(self.markers) > 0:
                 self.detected = True
-                marker_pos = self.candidate_ellipses[0][0]
+                marker_pos = self.markers[0][0][0] #first marker innermost ellipse, pos
                 self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
 
@@ -144,7 +133,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             # center dark or white?
             if self.detected:
-                second_ellipse =  self.candidate_ellipses[1]
+                second_ellipse =  self.markers[0][1]
                 col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
                 row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
                 marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
@@ -252,7 +241,8 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             draw_points_norm([self.smooth_pos],size=15,color=RGBA(1.,1.,0.,.5))
 
         if self.active and self.detected:
-            for e in self.candidate_ellipses:
+            for marker in self.markers:
+                e = marker[-1]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
@@ -260,7 +250,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             if self.counter:
                 # lets draw an indicator on the count
-                e = self.candidate_ellipses[3]
+                e = self.markers[0][-1]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360/self.counter_max)
@@ -269,7 +259,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             if self.auto_stop:
                 # lets draw an indicator on the autostop count
-                e = self.candidate_ellipses[3]
+                e = self.markers[0][-1]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360/self.auto_stop_max)

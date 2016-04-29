@@ -15,7 +15,7 @@ from methods import normalize,denormalize
 from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
-from circle_detector import get_candidate_ellipses
+from circle_detector import find_concetric_circles
 from file_methods import load_object,save_object
 
 import audio
@@ -86,13 +86,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.display_pos = None
         self.on_position = False
 
-        self.candidate_ellipses = []
+        self.markers = []
         self.pos = None
 
-        self.dist_threshold = 5
-        self.area_threshold = 20
         self.marker_scale = marker_scale
-
 
         self._window = None
 
@@ -252,15 +249,11 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 return
 
             #detect the marker
-            self.candidate_ellipses = get_candidate_ellipses(gray_img,
-                                                            area_threshold=self.area_threshold,
-                                                            dist_threshold=self.dist_threshold,
-                                                            min_ring_count=5,
-                                                            visual_debug=False)
+            self.markers = find_concetric_circles(gray_img,min_ring_count=4)
 
-            if len(self.candidate_ellipses) > 0:
+            if len(self.markers) > 0:
                 self.detected= True
-                marker_pos = self.candidate_ellipses[0][0]
+                marker_pos = self.markers[0][0][0] # first marker, innermost ellipse,center
                 self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
             else:
@@ -316,7 +309,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         # debug mode within world will show green ellipses around detected ellipses
         if self.active and self.detected:
-            for e in self.candidate_ellipses:
+            for marker in self.markers:
+                e = marker[-1] #outermost ellipse
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
