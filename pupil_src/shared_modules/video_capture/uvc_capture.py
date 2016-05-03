@@ -11,13 +11,13 @@
 import uvc
 from uvc import device_list,is_accessible
 #check versions for our own depedencies as they are fast-changing
-assert uvc.__version__ >= '0.5'
+assert uvc.__version__ >= '0.6'
 
 from fake_capture import Fake_Capture
 
 from ctypes import c_double
 from pyglui import ui
-from time import time
+from time import time,sleep
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -54,25 +54,39 @@ class Camera_Capture(object):
     def re_init_capture(self,uid):
         current_size = self.capture.frame_size
         current_fps = self.capture.frame_rate
-
         self.capture = None
-        #recreate the bar with new values
-        menu_conf = self.menu.configuration
+        if self.menu:
+            #recreate the bar with new values
+            menu_conf = self.menu.configuration
+        else:
+            menu_conf = None
         self.deinit_gui()
         self.init_capture(uid)
         self.frame_size = current_size
         self.frame_rate = current_fps
-        self.init_gui(self.sidebar)
-        self.menu.configuration = menu_conf
+        if menu_conf:
+            self.init_gui(self.sidebar)
+            self.menu.configuration = menu_conf
 
+    def _re_init_capture_by_name(self,name):
+        for x in range(4):
+            devices = device_list()
+            for d in devices:
+                if d['name'] == name:
+                    logger.info("Found device.%s."%name)
+                    self.re_init_capture(d['uid'])
+                    return
+            logger.warning('Could not find Camera %s during re initilization.'%name)
+            sleep(1.5)
+        raise CameraCaptureError('Could not find Camera %s during re initilization.'%name)
 
     def init_capture(self,uid):
         self.uid = uid
 
-        if uid is not None:
-            self.capture = uvc.Capture(uid)
-        else:
+        if uid is None:
             self.capture = Fake_Capture()
+        else:
+            self.capture = uvc.Capture(uid)
 
         if 'C930e' in self.capture.name:
                 logger.debug('Timestamp offset for c930 applied: -0.1sec')
@@ -133,8 +147,12 @@ class Camera_Capture(object):
     def get_frame(self):
         try:
             frame = self.capture.get_frame_robust()
-        except:
-            raise CameraCaptureError("Could not get frame from %s"%self.uid)
+        except uvc.CaptureError as e:
+            try:
+                self._re_init_capture_by_name(self.capture.name)
+                frame = self.capture.get_frame_robust()
+            except uvc.CaptureError as e:
+                raise CameraCaptureError("Could not get frame from %s"%self.uid)
 
         timestamp = self.get_now()+self.ts_offset
         timestamp -= self.timebase.value

@@ -351,10 +351,16 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
 
         # Get an image from the grabber
         try:
-            frame = cap.get_frame()
+            frame = g_pool.capture.get_frame()
         except CameraCaptureError:
-            logger.error("Capture from camera failed. Stopping.")
-            break
+            logger.error("Capture from camera failed. Starting Fake Capture.")
+            settings = g_pool.capture.settings
+            g_pool.capture.close()
+            g_pool.capture = autoCreateCapture(None, timebase=g_pool.timebase)
+            g_pool.capture.init_gui(g_pool.sidebar)
+            g_pool.capture.settings = settings
+            g_pool.notifications.append({'subject':'should_stop_recording'})
+            continue
         except EndofVideoFileError:
             logger.warning("Video file is done. Stopping")
             break
@@ -450,7 +456,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     g_pool.gui.terminate()
     glfw.glfwDestroyWindow(main_window)
     glfw.glfwTerminate()
-    cap.close()
+    g_pool.capture.close()
 
     #shut down eye processes:
     stop_eye_process(0)
