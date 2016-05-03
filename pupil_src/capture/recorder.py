@@ -178,7 +178,7 @@ class Recorder(Plugin):
         # Notificatio to start recording
         elif notification['subject'] == 'should_start_recording':
             if self.running:
-                logger.warning('Recording is already running!')
+                logger.info('Recording already running!')
             else:
                 if notification.get("session_name",""):
                     self.set_session_name(notification["session_name"])
@@ -188,7 +188,7 @@ class Recorder(Plugin):
             if self.running:
                 self.stop()
             else:
-                logger.warning('Recording is already stopped!')
+                logger.info('Recording already stopped!')
 
 
     def get_rec_time_str(self):
