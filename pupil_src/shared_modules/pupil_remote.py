@@ -33,6 +33,24 @@ class Pupil_Remote(Plugin):
 
     Pupil Remote is the simplistic version of Pupil Sync:
     Not as good but the protocol is dead simple.
+    A example script for talking with pupil remote below:
+    import zmq
+    from time import sleep,time
+    context =  zmq.Context()
+    socket = context.socket(zmq.REQ)
+    # set your ip here
+    socket.connect('tcp://192.168.1.100:50020')
+    t= time()
+    socket.send('T 0.0')
+    print socket.recv()
+    print 'Round trip command delay:', time()-t
+    print 'If you need continous syncing and less latency look at pupil_sync.'
+    sleep(1)
+    socket.send('R')
+    print socket.recv()
+    sleep(5)
+    socket.send('r')
+    print socket.recv()
     """
     def __init__(self, g_pool,address="tcp://*:50020"):
         super(Pupil_Remote, self).__init__(g_pool)
@@ -67,7 +85,7 @@ class Pupil_Remote(Plugin):
         def close():
             self.alive = False
 
-        help_str = 'Pupil Remote using REQ RREP schemme'
+        help_str = 'Pupil Remote using REQ RREP scheme.'
         self.menu = ui.Growing_Menu('Pupil Remote')
         self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text(help_str))
@@ -146,18 +164,3 @@ class Pupil_Remote(Plugin):
 
 
 
-# import zmq
-# from time import sleep,time
-# context =  zmq.Context()
-# socket = context.socket(zmq.REQ)
-# socket.connect('tcp://192.168.1.100:50020')
-# t= time()
-# socket.send('T 0.0')
-# print socket.recv()
-# print 'Round trip command delay:', time()-t
-# sleep(1)
-# socket.send('R')
-# print socket.recv()
-# sleep(5)
-# socket.send('r')
-# print socket.recv()
