@@ -1,7 +1,7 @@
 '''
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2015  Pupil Labs
+ Copyright (C) 2012-2016  Pupil Labs
 
  Distributed under the terms of the CC BY-NC-SA License.
  License details are in the file license.txt, distributed as part of this software.
@@ -85,7 +85,7 @@ class Pupil_Remote(Plugin):
         def close():
             self.alive = False
 
-        help_str = 'Pupil Remote using REQ RREP scheme.'
+        help_str = 'Pupil Remote using ZeroMQ REQ REP scheme.'
         self.menu = ui.Growing_Menu('Pupil Remote')
         self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text(help_str))
@@ -106,7 +106,7 @@ class Pupil_Remote(Plugin):
         while True:
             try:
                 #this should not fail but it does sometimes. We need to clean this out.
-                # I think we are not treating sockets correclty as they are not thread-save.
+                # I think we are not treating sockets correclty as they are not thread-safe.
                 items = dict(poller.poll())
             except zmq.ZMQError:
                 logger.warning('Socket fail.')
@@ -155,7 +155,7 @@ class Pupil_Remote(Plugin):
 
     def cleanup(self):
         """gets called when the plugin get terminated.
-           This happens either volunatily or forced.
+           This happens either voluntarily or forced.
         """
         self.stop_server()
         self.deinit_gui()
