@@ -29,7 +29,7 @@ class Pupil_Remote(Plugin):
     'C' start currently selected calibration
     'c' stop currently selected calibration
     'T 1234.56' Timesync: make timestamps count form 1234.56 from now on.
-
+    't' get pupil capture timestamp returns a float as string.
 
     Pupil Remote is the simplistic version of Pupil Sync:
     Not as good but the protocol is dead simple.
@@ -144,6 +144,8 @@ class Pupil_Remote(Plugin):
                 raw_time = self.g_pool.capture.get_now()
                 self.g_pool.timebase.value = raw_time-target
                 response = 'Timesync successful.'
+        elif msg[0] == 't':
+            response = str(self.g_pool.capture.get_timestamp())
         else:
             response = 'Unknown command.'
         socket.send(response)
