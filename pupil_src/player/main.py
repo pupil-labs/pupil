@@ -116,9 +116,10 @@ from eye_video_overlay import Eye_Video_Overlay
 from log_display import Log_Display
 from annotations import Annotation_Player
 from raw_data_exporter import Raw_Data_Exporter
+from log_history import Log_History
 
 system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
-user_launchable_plugins = [Video_Export_Launcher,Raw_Data_Exporter, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Fixation_Detector_Dispersion_Duration,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Surface_Tracker,Pupil_Server,Batch_Exporter,Eye_Video_Overlay,Annotation_Player] #,Marker_Auto_Trim_Marks
+user_launchable_plugins = [Video_Export_Launcher,Raw_Data_Exporter, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Fixation_Detector_Dispersion_Duration,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Surface_Tracker,Pupil_Server,Batch_Exporter,Eye_Video_Overlay,Annotation_Player,Log_History] #,Marker_Auto_Trim_Marks
 user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
