@@ -85,6 +85,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     from log_display import Log_Display
     from annotations import Annotation_Capture
     from pupil_remote import Pupil_Remote
+    from log_history import Log_History
     # create logger for the context of this function
 
 
@@ -117,7 +118,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
 
     #manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
-    user_launchable_plugins = [Show_Calibration,Pupil_Remote,Pupil_Server,Pupil_Sync,Surface_Tracker,Annotation_Capture]+runtime_plugins
+    user_launchable_plugins = [Show_Calibration,Pupil_Remote,Pupil_Server,Pupil_Sync,Surface_Tracker,Annotation_Capture,Log_History]+runtime_plugins
     system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder]
     plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins
     name_by_index = [p.__name__ for p in plugin_by_index]
