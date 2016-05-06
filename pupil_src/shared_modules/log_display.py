@@ -32,7 +32,7 @@ def duration_from_level(lvl):
 
 
 class Log_Display(Plugin):
-    """docstring for DisplayGaze"""
+    """docstring for Log_Display"""
     def __init__(self, g_pool):
         super(Log_Display, self).__init__(g_pool)
         self.rendered_log = []
