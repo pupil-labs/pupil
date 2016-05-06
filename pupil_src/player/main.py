@@ -88,7 +88,7 @@ from video_capture import File_Capture,EndofVideoFileError,FileSeekError
 
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
-from methods import normalize, denormalize, delta_t
+from methods import normalize, denormalize, delta_t,log_system_info
 from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current,update_recording_0v5_to_current,update_recording_0v73_to_current
 
 #monitoring
@@ -130,6 +130,7 @@ class Global_Container(object):
 
 def session(rec_dir):
 
+    
     # Callback functions
     def on_resize(window,w, h):
         g_pool.gui.update_window(w,h)
@@ -190,6 +191,11 @@ def session(rec_dir):
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
 
     rec_version = read_rec_version(meta_info)
+    app_version = get_version(version_file)
+
+    # log info about Pupil Platform and Platform in player.log
+    log_system_info(app_version,app='player')
+
     if rec_version >= VersionFormat('0.7.4'):
         pass
     if rec_version >= VersionFormat('0.7.3'):
@@ -232,7 +238,7 @@ def session(rec_dir):
     g_pool = Global_Container()
     g_pool.app = 'player'
     g_pool.binocular = meta_info.get('Eye Mode','monocular') == 'binocular'
-    g_pool.version = get_version(version_file)
+    g_pool.version = app_version
     g_pool.capture = cap
     g_pool.timestamps = timestamps
     g_pool.play = False
