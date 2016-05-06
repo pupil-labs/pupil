@@ -676,6 +676,30 @@ def filter_subsets(l):
 
 
 
+def log_system_info(pupil_version,app=None):
+    import os, sys, platform, getpass
+
+    try:
+        if platform.system() == "Windows":
+            username = os.environ["USERNAME"]
+            sysname, nodename, release, version, machine, _ = platform.uname()
+        else:
+            username = getpass.getuser()
+            try:
+                sysname, nodename, release, version, machine = os.uname()
+            except:
+                sysname, nodename, release, version, machine = sys.platform,None,None,None,None
+        
+        if app is 'player':
+            logger.info("Pupil Player Version: %s"%pupil_version)
+        else:
+            logger.info("Pupil Capture Version: %s"%pupil_version)
+
+        logger.info("System Info - User: %s, Platform: %s, Machine: %s, Release: %s, Version: %s" %(username,sysname,nodename,release,version))
+    except Exception:
+        logger.exception("Could log system info to world.log. Please report this bug!")
+
+
 if __name__ == '__main__':
     # tst = []
     # for x in range(10):
