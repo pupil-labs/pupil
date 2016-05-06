@@ -7,7 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-import os, sys, platform, getpass
+import os, sys, platform
 
 
 class Global_Container(object):
@@ -68,7 +68,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
 
     # helpers/utils
     from file_methods import Persistent_Dict
-    from methods import normalize, denormalize, delta_t
+    from methods import normalize, denormalize, delta_t, log_system_info
     from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
     from version_utils import VersionFormat
     import audio
@@ -125,24 +125,8 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     plugin_by_name = dict(zip(name_by_index,plugin_by_index))
     default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{})]
 
-    def log_system_info():
-        try:
-            if platform.system() == "Windows":
-                username = os.environ["USERNAME"]
-                sysname, nodename, release, version, machine, _ = platform.uname()
-            else:
-                username = getpass.getuser()
-                try:
-                    sysname, nodename, release, version, machine = os.uname()
-                except:
-                    sysname, nodename, release, version, machine = sys.platform,None,None,None,None
-            logger.info("Pupil Capture Version: %s"%g_pool.version)
-            logger.info("System Info - User: %s, Platform: %s, Machine: %s, Release: %s, Version: %s" %(username,sysname,nodename,release,version))
-        except Exception:
-            logger.exception("Could log system info to world.log. Please report this bug!")
-
     # log info about Pupil Capture and Platform in world.log
-    log_system_info()
+    log_system_info(g_pool.version,g_pool.app)
 
     # Callback functions
     def on_resize(window,w, h):
