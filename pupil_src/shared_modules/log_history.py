@@ -35,7 +35,7 @@ class Log_History(Plugin):
         def close():
             self.alive = False
 
-        help_str = "This menu shows the last %s messages from the logger. See world.log or eye.log files for full logs." %(self.num_messages)
+        help_str = 'A View of the %s most recent log messages. Complete logs are here: "%s"' %(self.num_messages,self.g_pool.user_dir)
         self.menu = ui.Scrolling_Menu('Log')
         self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Button('Close',close))
