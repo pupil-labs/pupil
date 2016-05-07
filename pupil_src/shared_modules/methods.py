@@ -8,6 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+import os, sys, platform, getpass
+from time import time
 import numpy as np
 try:
     import numexpr as ne
@@ -17,7 +19,7 @@ import cv2
 import logging
 logger = logging.getLogger(__name__)
 
-from time import time
+
 def timer(dt):
     '''
     a generator used to time window refreshs
@@ -676,28 +678,20 @@ def filter_subsets(l):
 
 
 
-def log_system_info(pupil_version,app=None):
-    import os, sys, platform, getpass
-
+def get_system_info():
     try:
         if platform.system() == "Windows":
             username = os.environ["USERNAME"]
             sysname, nodename, release, version, machine, _ = platform.uname()
         else:
             username = getpass.getuser()
-            try:
-                sysname, nodename, release, version, machine = os.uname()
-            except:
-                sysname, nodename, release, version, machine = sys.platform,None,None,None,None
-        
-        if app is 'player':
-            logger.info("Pupil Player Version: %s"%pupil_version)
-        else:
-            logger.info("Pupil Capture Version: %s"%pupil_version)
+            sysname, nodename, release, version, machine = os.uname()
+    except Exception as e:
+        logger.error(e)
+        username = 'unknown'
+        sysname, nodename, release, version, machine = sys.platform,'unknown','unknown','unknown','unknown'
 
-        logger.info("System Info - User: %s, Platform: %s, Machine: %s, Release: %s, Version: %s" %(username,sysname,nodename,release,version))
-    except Exception:
-        logger.exception("Could log system info to world.log. Please report this bug!")
+    return "User: %s, Platform: %s, Machine: %s, Release: %s, Version: %s" %(username,sysname,nodename,release,version)
 
 
 if __name__ == '__main__':
