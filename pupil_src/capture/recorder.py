@@ -17,6 +17,7 @@ from time import strftime,localtime,time,gmtime
 from shutil import copy2
 from audio import Audio_Input_Dict
 from file_methods import save_object
+from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 #logging
@@ -335,20 +336,7 @@ class Recorder(Plugin):
                 f.write("World Camera Frames\t"+ str(self.frame_count)+ "\n")
                 f.write("World Camera Resolution\t"+ str(self.g_pool.capture.frame_size[0])+"x"+str(self.g_pool.capture.frame_size[1])+"\n")
                 f.write("Capture Software Version\t%s\n"%self.g_pool.version)
-                if platform.system() == "Windows":
-                    username = os.environ["USERNAME"]
-                    sysname, nodename, release, version, machine, _ = platform.uname()
-                else:
-                    username = getpass.getuser()
-                    try:
-                        sysname, nodename, release, version, machine = os.uname()
-                    except:
-                        sysname, nodename, release, version, machine = sys.platform,None,None,None,None
-                f.write("User\t"+username+"\n")
-                f.write("Platform\t"+sysname+"\n")
-                f.write("Machine\t"+nodename+"\n")
-                f.write("Release\t"+release+"\n")
-                f.write("Version\t"+version+"\n")
+                f.write("System Info\t%s"%get_system_info())
         except Exception:
             logger.exception("Could not save metadata. Please report this bug!")
 
