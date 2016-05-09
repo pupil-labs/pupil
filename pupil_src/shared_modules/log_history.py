@@ -30,6 +30,15 @@ class Log_History(Plugin):
         self.menu = None
         self.num_messages = 50
 
+        self.formatter = None
+        self.logfile = None
+        for h in logging.getLogger().handlers:
+            if isinstance(h,logging.FileHandler):
+                self.formatter = h.formatter
+                self.logfile = h.stream.name
+        if self.formatter == None:
+            raise Exception("Could not find fh in logging system")
+
     def init_gui(self):
 
         def close():
@@ -41,14 +50,19 @@ class Log_History(Plugin):
         self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text(help_str))
 
+        with open(self.logfile,'r') as fh:
+            for l in fh.readlines():
+                self.menu.insert(2,ui.Info_Text(l[:-1]))
+
         self.log_handler = Log_to_Callback(self.on_log)
         logger = logging.getLogger()
         logger.addHandler(self.log_handler)
         self.log_handler.setLevel(logging.INFO)
 
+
     def on_log(self,record):
         self.menu.elements[self.num_messages+2:] = []
-        self.menu.insert(2,ui.Info_Text("%s - %s" %(record.levelname, record.msg)))
+        self.menu.insert(2,ui.Info_Text(self.formatter.format(record)))
 
 
     def deinit_gui(self):
