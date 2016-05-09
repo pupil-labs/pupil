@@ -68,7 +68,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
 
     # helpers/utils
     from file_methods import Persistent_Dict
-    from methods import normalize, denormalize, delta_t
+    from methods import normalize, denormalize, delta_t, get_system_info
     from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
     from version_utils import VersionFormat
     import audio
@@ -86,8 +86,9 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     from annotations import Annotation_Capture
     from pupil_remote import Pupil_Remote
     from log_history import Log_History
-    # create logger for the context of this function
 
+    logger.info('Application Version: %s'%version)
+    logger.info('System Info: %s'%get_system_info())
 
     #UI Platform tweaks
     if platform.system() == 'Linux':
@@ -124,7 +125,6 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     name_by_index = [p.__name__ for p in plugin_by_index]
     plugin_by_name = dict(zip(name_by_index,plugin_by_index))
     default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{})]
-
 
 
     # Callback functions
