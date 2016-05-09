@@ -38,25 +38,21 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
     is_alive = Is_Alive_Manager(is_alive_flag)
     with is_alive:
         import logging
-        # Set up root logger for this process before doing imports of logged modules.
+        import zmq
+        from zmq.log.handlers import PUBHandler
+        ctx = zmq.Context()
+        pub = ctx.socket(zmq.PUB)
+        pub.connect('tcp://127.0.0.1:52020')
+
         logger = logging.getLogger()
-        logger.setLevel(logging.INFO)
-        # remove inherited handlers
         logger.handlers = []
-        # create file handler which logs even debug messages
-        fh = logging.FileHandler(os.path.join(user_dir,'eye%s.log'%eye_id),mode='w')
-        # fh.setLevel(logging.DEBUG)
-        # create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logger.level+10)
-        # create formatter and add it to the handlers
-        formatter = logging.Formatter('Eye'+str(eye_id)+' Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        formatter = logging.Formatter('EYE'+str(eye_id)+' Process [%(levelname)s] %(name)s : %(message)s')
-        ch.setFormatter(formatter)
-        # add the handlers to the logger
-        logger.addHandler(fh)
-        logger.addHandler(ch)
+
+        logger.setLevel(logging.INFO)
+        handler = PUBHandler(pub)
+        formatter = logging.Formatter('%(processName)s - %(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
         #silence noisy modules
         logging.getLogger("OpenGL").setLevel(logging.ERROR)
         # create logger for the context of this function

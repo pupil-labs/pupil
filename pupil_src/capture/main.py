@@ -75,14 +75,16 @@ def main():
     com_eye_ends = com0[1],com1[1]
 
 
-    p_world = Process(target=world,args=(pupil_queue,
-                                        timebase,
-                                        cmd_world_end,
-                                        com_world_ends,
-                                        eyes_are_alive,
-                                        user_dir,
-                                        app_version,
-                                        video_sources['world'] ))
+    p_world = Process(target=world,
+                      name= 'world',
+                      args=(pupil_queue,
+                            timebase,
+                            cmd_world_end,
+                            com_world_ends,
+                            eyes_are_alive,
+                            user_dir,
+                            app_version,
+                            video_sources['world'] ))
     p_world.start()
 
     while True:
@@ -92,14 +94,16 @@ def main():
             break
         else:
             eye_id = cmd
-            p_eye = Process(target=eye,args=(pupil_queue,
-                                            timebase,
-                                            com_eye_ends[eye_id],
-                                            eyes_are_alive[eye_id],
-                                            user_dir,
-                                            app_version,
-                                            eye_id,
-                                            video_sources['eye%s'%eye_id] ))
+            p_eye = Process(target=eye,
+                            name='eye%s'%eye_id,
+                            args=(pupil_queue,
+                                timebase,
+                                com_eye_ends[eye_id],
+                                eyes_are_alive[eye_id],
+                                user_dir,
+                                app_version,
+                                eye_id,
+                                video_sources['eye%s'%eye_id] ))
             p_eye.start()
 
     for p in active_children(): p.join()

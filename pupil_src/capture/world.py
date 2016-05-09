@@ -32,15 +32,37 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     ch = logging.StreamHandler()
     ch.setLevel(logger.level+10)
     # create formatter and add it to the handlers
-    formatter = logging.Formatter('World Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(processName)s - %(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
-    formatter = logging.Formatter('WORLD Process [%(levelname)s] %(name)s : %(message)s')
+    formatter = logging.Formatter('%(processName)s - [%(levelname)s] %(name)s : %(message)s')
     ch.setFormatter(formatter)
     # add the handlers to the logger
     logger.addHandler(fh)
     logger.addHandler(ch)
     #silence noisy modules
     logging.getLogger("OpenGL").setLevel(logging.ERROR)
+
+
+
+    def log_loop(logging):
+        import zmq
+        ctx = zmq.Context()
+        sub = ctx.socket(zmq.SUB)
+        sub.bind('tcp://127.0.0.1:52020')
+        sub.setsockopt(zmq.SUBSCRIBE, "")
+        while True:
+            level, message = sub.recv_multipart()
+            if message.endswith('\n'):
+                # trim trailing newline, which will get appended again
+                message = message[:-1]
+            log = getattr(logging, level.lower())
+            print message
+            log(message)
+
+    import threading
+    log_thread = threading.Thread(target=log_loop, args=(logging,))
+    log_thread.setDaemon(True)
+    log_thread.start()
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 
