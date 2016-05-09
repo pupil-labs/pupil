@@ -49,7 +49,6 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                 pub.send_pyobj(record)
 
         logger = logging.getLogger()
-
         logger.handlers = []
         logger.setLevel(logging.INFO)
         logger.addHandler(ZMQ_handler())
