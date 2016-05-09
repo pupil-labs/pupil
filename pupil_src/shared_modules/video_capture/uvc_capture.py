@@ -326,6 +326,5 @@ class Camera_Capture(object):
         self.deinit_gui()
         # self.capture.close()
         del self.capture
-        logger.info("Capture released")
 
 

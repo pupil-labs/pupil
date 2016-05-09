@@ -37,31 +37,31 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
     """
     is_alive = Is_Alive_Manager(is_alive_flag)
     with is_alive:
+        #logging setup: We stream all log records to the world process.
         import logging
         import zmq
-        from zmq.log.handlers import PUBHandler
         ctx = zmq.Context()
         pub = ctx.socket(zmq.PUB)
-        pub.connect('tcp://127.0.0.1:52020')
+        pub.connect('tcp://127.0.0.1:502020')
+
+        class ZMQ_handler(logging.Handler):
+            def emit(self, record):
+                pub.send_pyobj(record)
 
         logger = logging.getLogger()
+
         logger.handlers = []
-
         logger.setLevel(logging.INFO)
-        handler = PUBHandler(pub)
-        formatter = logging.Formatter('%(processName)s - %(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        logger.addHandler(ZMQ_handler())
 
-        #silence noisy modules
-        logging.getLogger("OpenGL").setLevel(logging.ERROR)
         # create logger for the context of this function
         logger = logging.getLogger(__name__)
 
+        #silence noisy modules
+        logging.getLogger("OpenGL").setLevel(logging.ERROR)
 
         # We deferr the imports becasue of multiprocessing.
         # Otherwise the world process each process also loads the other imports.
-
         #general imports
         import numpy as np
         import cv2
@@ -482,9 +482,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         glfw.glfwDestroyWindow(main_window)
         glfw.glfwTerminate()
         cap.close()
-
-
-        logger.debug("Process done")
+        logger.info("Process Shutting down.")
 
 def eye_profiled(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, eye_id, cap_src):
     import cProfile,subprocess,os

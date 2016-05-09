@@ -25,44 +25,41 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     # Set up root logger for this process before doing imports of logged modules.
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
+    #silence noisy modules
+    logging.getLogger("OpenGL").setLevel(logging.ERROR)
+    # create formatter
+    formatter = logging.Formatter('%(processName)s - [%(levelname)s] %(name)s : %(message)s')
     # create file handler which logs even debug messages
-    fh = logging.FileHandler(os.path.join(user_dir,'world.log'),mode='w')
+    fh = logging.FileHandler(os.path.join(user_dir,'capture.log'),mode='w')
     fh.setLevel(logger.level)
+    fh.setFormatter(formatter)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
     ch.setLevel(logger.level+10)
-    # create formatter and add it to the handlers
-    formatter = logging.Formatter('%(processName)s - %(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    formatter = logging.Formatter('%(processName)s - [%(levelname)s] %(name)s : %(message)s')
     ch.setFormatter(formatter)
     # add the handlers to the logger
     logger.addHandler(fh)
     logger.addHandler(ch)
-    #silence noisy modules
-    logging.getLogger("OpenGL").setLevel(logging.ERROR)
 
 
-
+    #setup thread to recv log recrods from other processes.
     def log_loop(logging):
         import zmq
         ctx = zmq.Context()
         sub = ctx.socket(zmq.SUB)
-        sub.bind('tcp://127.0.0.1:52020')
+        sub.bind('tcp://127.0.0.1:502020')
         sub.setsockopt(zmq.SUBSCRIBE, "")
         while True:
-            level, message = sub.recv_multipart()
-            if message.endswith('\n'):
-                # trim trailing newline, which will get appended again
-                message = message[:-1]
-            log = getattr(logging, level.lower())
-            print message
-            log(message)
+            record = sub.recv_pyobj()
+            logger = logging.getLogger(record.name)
+            logger.handle(record)
 
     import threading
     log_thread = threading.Thread(target=log_loop, args=(logging,))
     log_thread.setDaemon(True)
     log_thread.start()
+
+
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 
@@ -72,7 +69,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     # This is not harmfull but unnessasary.
 
     #general imports
-    from time import time
+    from time import time,sleep
     import numpy as np
 
     #display
@@ -251,7 +248,8 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
         if eyes_are_alive[eye_id].value:
             eye_pipes[eye_id].send('Exit')
             if blocking:
-                raise NotImplementedError()
+                while eyes_are_alive[eye_id].value:
+                    sleep(.1)
 
     def start_stop_eye(eye_id,make_alive):
         if make_alive:
@@ -483,13 +481,13 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     g_pool.capture.close()
 
     #shut down eye processes:
-    stop_eye_process(0)
-    stop_eye_process(1)
+    stop_eye_process(0,blocking = True)
+    stop_eye_process(1,blocking = True)
 
     #shut down laucher
     lauchner_pipe.send("Exit")
 
-    logger.debug("world process done")
+    logger.info("Process Shutting down.")
 
 def world_profiled(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src):
     import cProfile,subprocess,os
