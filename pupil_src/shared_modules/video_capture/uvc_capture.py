@@ -197,7 +197,7 @@ class Camera_Capture(object):
             try:
                 c.value = settings['uvc_controls'][c.display_name]
             except KeyError as e:
-                logger.info('No UVC setting "%s" found from settings.'%c.display_name)
+                logger.debug('No UVC setting "%s" found from settings.'%c.display_name)
     @property
     def frame_size(self):
         return self.capture.frame_size
@@ -326,6 +326,5 @@ class Camera_Capture(object):
         self.deinit_gui()
         # self.capture.close()
         del self.capture
-        logger.info("Capture released")
 
 
