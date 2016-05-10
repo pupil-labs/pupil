@@ -13,7 +13,7 @@ import os, sys, platform
 class Global_Container(object):
     pass
 
-def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src):
+def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src):
     """world
     Creates a window, gl context.
     Grabs images from a capture.
@@ -64,9 +64,9 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     logger = logging.getLogger(__name__)
 
 
-    # We deferr the imports becasue of multiprocessing.
+    # We defer the imports because of multiprocessing.
     # Otherwise the world process each process also loads the other imports.
-    # This is not harmfull but unnessasary.
+    # This is not harmful but unnecessary.
 
     #general imports
     from time import time,sleep
@@ -131,7 +131,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     g_pool.app = 'capture'
     g_pool.pupil_queue = pupil_queue
     g_pool.timebase = timebase
-    # g_pool.lauchner_pipe = lauchner_pipe
+    # g_pool.launcher_pipe = launcher_pipe
     g_pool.eye_pipes = eye_pipes
     g_pool.eyes_are_alive = eyes_are_alive
 
@@ -207,7 +207,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     except CameraCaptureError:
         logger.error("Could not retrieve image from capture")
         cap.close()
-        lauchner_pipe.send("Exit")
+        launcher_pipe.send("Exit")
         return
 
 
@@ -234,7 +234,7 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
         if eyes_are_alive[eye_id].value:
             logger.error("Eye%s process already running."%eye_id)
             return
-        lauchner_pipe.send(eye_id)
+        launcher_pipe.send(eye_id)
         eye_pipes[eye_id].send( ('Set_Detection_Mapping_Mode',g_pool.detection_mapping_mode) )
 
         if blocking:
@@ -485,14 +485,14 @@ def world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,v
     stop_eye_process(1,blocking = True)
 
     #shut down laucher
-    lauchner_pipe.send("Exit")
+    launcher_pipe.send("Exit")
 
     logger.info("Process Shutting down.")
 
-def world_profiled(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src):
+def world_profiled(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src):
     import cProfile,subprocess,os
     from world import world
-    cProfile.runctx("world(pupil_queue,timebase,lauchner_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src)",{'pupil_queue':pupil_queue,'timebase':timebase,'lauchner_pipe':lauchner_pipe,'eye_pipes':eye_pipes,'eyes_are_alive':eyes_are_alive,'user_dir':user_dir,'version':version,'cap_src':cap_src},locals(),"world.pstats")
+    cProfile.runctx("world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src)",{'pupil_queue':pupil_queue,'timebase':timebase,'launcher_pipe':launcher_pipe,'eye_pipes':eye_pipes,'eyes_are_alive':eyes_are_alive,'user_dir':user_dir,'version':version,'cap_src':cap_src},locals(),"world.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
