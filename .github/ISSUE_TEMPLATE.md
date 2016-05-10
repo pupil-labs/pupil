@@ -1,8 +1,18 @@
 ### Prerequisites
 
+* [ ] Did you [perform a cursory search](https://github.com/pupil-labs/pupil/issues?utf8=%E2%9C%93&q=is%3Aissue) to see if your bug or enhancement was already reported?
 * [ ] Are you running the [latest version of Pupil](https://github.com/pupil-labs/pupil/releases/latest)?
 * [ ] Can you reproduce the problem after deleting `capture_settings` or `player_settings`?
-* [ ] did you [peform a cursory search](https://github.com/pupil-labs/pupil/issues?utf8=%E2%9C%93&q=is%3Aissue) to see if your bug or enhancement is already reported?
+
+* My problem occurs on:
+  * [ ] Ubuntu 14.04 LTS
+  * [ ] Windows 8
+  * [ ] Mac OS
+  * [ ] Other: `<Please specify>`
+
+* My cameras are:
+  * [ ] Pupil Pro Cameras
+  * [ ] Other: `<Please specify>`
 
 For more information on how to write a good [bug report]() or [enhancement request](), see the `CONTRIBUTING` guide.
 
