@@ -1,7 +1,7 @@
 # Contributing to Pupil
 Thanks for taking time to contribute.
 
-The following is a set of guidelines for contributing to Pupil. These guidelines (like Pupil) are open source, so feel free to propose changes to this document with a pull request.
+The following is a set of guidelines for contributing to Pupil. These guidelines (like Pupil) are open source, and are just guidelines not rules set in stone, so feel free to propose changes to this document with a pull request.
 
 ## What should I know before I get started?
 
