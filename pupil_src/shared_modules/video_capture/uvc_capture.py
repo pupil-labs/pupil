@@ -137,7 +137,7 @@ class Camera_Capture(object):
                     controls_dict['Auto Exposure Priority'].value = 1
                 except KeyError:
                     pass
-        if "C525" in self.capture.name or  "B525" in self.capture.name:
+        if "C525" in self.capture.name or  "B525" in self.capture.name or "C920" in self.capture.name:
             self.capture.bandwidth_factor = 4.0
             try:
                 controls_dict['Auto Focus'].value = 0
