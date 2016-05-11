@@ -32,12 +32,7 @@ from version_utils import get_version
 app_version = get_version(version_file)
 
 
-if platform.system() == 'Darwin' and getattr(sys, 'frozen', False):
-    from billiard import Process, Pipe, Queue, Value,freeze_support,active_children, forking_enable
-    forking_enable(0)
-else:
-    from multiprocessing import Process, Pipe, Queue, Value,active_children, freeze_support
-
+from multiprocessing import Process, Pipe, Queue, Value,active_children, freeze_support
 from ctypes import c_double,c_bool
 
 if 'profiled' in sys.argv:
