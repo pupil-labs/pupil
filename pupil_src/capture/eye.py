@@ -444,8 +444,9 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                     g_pool.gui.update()
 
                     #render the ROI
+                    g_pool.u_r.draw(g_pool.gui.scale)
                     if g_pool.display_mode == 'roi':
-                        g_pool.u_r.draw(g_pool.gui.scale)
+                        g_pool.u_r.draw_points(g_pool.gui.scale)
 
                     #update screen
                     glfw.glfwSwapBuffers(main_window)
