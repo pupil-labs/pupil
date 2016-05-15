@@ -37,35 +37,30 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
     """
     is_alive = Is_Alive_Manager(is_alive_flag)
     with is_alive:
+        #logging setup: We stream all log records to the world process.
         import logging
-        # Set up root logger for this process before doing imports of logged modules.
+        import zmq
+        ctx = zmq.Context()
+        pub = ctx.socket(zmq.PUB)
+        pub.connect('tcp://127.0.0.1:502020')
+
+        class ZMQ_handler(logging.Handler):
+            def emit(self, record):
+                pub.send_pyobj(record)
+
         logger = logging.getLogger()
-        logger.setLevel(logging.INFO)
-        # remove inherited handlers
         logger.handlers = []
-        # create file handler which logs even debug messages
-        fh = logging.FileHandler(os.path.join(user_dir,'eye%s.log'%eye_id),mode='w')
-        # fh.setLevel(logging.DEBUG)
-        # create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logger.level+10)
-        # create formatter and add it to the handlers
-        formatter = logging.Formatter('Eye'+str(eye_id)+' Process: %(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        formatter = logging.Formatter('EYE'+str(eye_id)+' Process [%(levelname)s] %(name)s : %(message)s')
-        ch.setFormatter(formatter)
-        # add the handlers to the logger
-        logger.addHandler(fh)
-        logger.addHandler(ch)
-        #silence noisy modules
-        logging.getLogger("OpenGL").setLevel(logging.ERROR)
+        logger.setLevel(logging.INFO)
+        logger.addHandler(ZMQ_handler())
+
         # create logger for the context of this function
         logger = logging.getLogger(__name__)
 
+        #silence noisy modules
+        logging.getLogger("OpenGL").setLevel(logging.ERROR)
 
         # We deferr the imports becasue of multiprocessing.
         # Otherwise the world process each process also loads the other imports.
-
         #general imports
         import numpy as np
         import cv2
@@ -449,8 +444,9 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                     g_pool.gui.update()
 
                     #render the ROI
+                    g_pool.u_r.draw(g_pool.gui.scale)
                     if g_pool.display_mode == 'roi':
-                        g_pool.u_r.draw(g_pool.gui.scale)
+                        g_pool.u_r.draw_points(g_pool.gui.scale)
 
                     #update screen
                     glfw.glfwSwapBuffers(main_window)
@@ -486,9 +482,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         glfw.glfwDestroyWindow(main_window)
         glfw.glfwTerminate()
         cap.close()
-
-
-        logger.debug("Process done")
+        logger.info("Process Shutting down.")
 
 def eye_profiled(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, eye_id, cap_src):
     import cProfile,subprocess,os

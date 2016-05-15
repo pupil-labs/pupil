@@ -70,7 +70,9 @@ class UIRoi(Roi):
                 return True
 
     def draw(self,ui_scale=1):
-        cygl_draw_polyline(self.rect,color=cygl_rgba(.8,.8,.8,0.9),thickness=2,line_type=GL_LINE_LOOP)
+        cygl_draw_polyline(self.rect,color=cygl_rgba(.8,.8,.8,0.9),thickness=1,line_type=GL_LINE_LOOP)
+
+    def draw_points(self,ui_scale=1):
         if self.active_edit_pt:
             inactive_pts = self.rect[:self.active_pt_idx]+self.rect[self.active_pt_idx+1:]
             active_pt = [self.rect[self.active_pt_idx]]

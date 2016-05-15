@@ -32,7 +32,7 @@ def duration_from_level(lvl):
 
 
 class Log_Display(Plugin):
-    """docstring for DisplayGaze"""
+    """docstring for Log_Display"""
     def __init__(self, g_pool):
         super(Log_Display, self).__init__(g_pool)
         self.rendered_log = []
@@ -84,10 +84,10 @@ class Log_Display(Plugin):
             for record in self.rendered_log:
                 self.glfont.set_color_float((0.,0.,0.,1.))
                 self.glfont.set_blur(10.5)
-                self.glfont.draw_limited_text(self.window_size[0]/2.,y,str(record.msg),self.window_size[0]*0.8)
+                self.glfont.draw_limited_text(self.window_size[0]/2.,y,str(record.processName.upper())+': '+str(record.msg),self.window_size[0]*0.8)
                 self.glfont.set_blur(0.96)
                 self.glfont.set_color_float(color_from_level(record.levelname))
-                self.glfont.draw_limited_text(self.window_size[0]/2.,y,str(record.msg),self.window_size[0]*0.8)
+                self.glfont.draw_limited_text(self.window_size[0]/2.,y,str(record.processName.upper())+': '+str(record.msg),self.window_size[0]*0.8)
                 y +=lineh
             pop_ortho()
             self.tex.pop()

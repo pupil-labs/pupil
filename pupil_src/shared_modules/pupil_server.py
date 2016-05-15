@@ -58,16 +58,17 @@ class Pupil_Server(Plugin):
     def set_server(self,new_address):
         try:
             self.socket.unbind(self.address)
+        except Exception as e:
+            logger.error(e)
+        else:
             logger.debug('Detached from %s'%self.address)
-        except:
-            pass
         try:
             self.socket.bind(new_address)
-            self.address = new_address
-            logger.debug('Bound to %s'%self.address)
-
         except zmq.ZMQError as e:
             logger.error("Could not set Socket: %s. Reason: %s"%(new_address,e))
+        else:
+            self.address = new_address
+            logger.debug('Bound to %s'%self.address)
 
 
 

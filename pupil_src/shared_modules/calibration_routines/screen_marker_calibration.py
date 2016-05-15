@@ -15,7 +15,7 @@ from methods import normalize,denormalize
 from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
-from circle_detector import get_candidate_ellipses
+from circle_detector import find_concetric_circles
 from file_methods import load_object,save_object
 
 import audio
@@ -86,13 +86,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.display_pos = None
         self.on_position = False
 
-        self.candidate_ellipses = []
+        self.markers = []
         self.pos = None
 
-        self.dist_threshold = 5
-        self.area_threshold = 20
         self.marker_scale = marker_scale
-
 
         self._window = None
 
@@ -252,15 +249,11 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 return
 
             #detect the marker
-            self.candidate_ellipses = get_candidate_ellipses(gray_img,
-                                                            area_threshold=self.area_threshold,
-                                                            dist_threshold=self.dist_threshold,
-                                                            min_ring_count=5,
-                                                            visual_debug=False)
+            self.markers = find_concetric_circles(gray_img,min_ring_count=4)
 
-            if len(self.candidate_ellipses) > 0:
+            if len(self.markers) > 0:
                 self.detected= True
-                marker_pos = self.candidate_ellipses[0][0]
+                marker_pos = self.markers[0][0][0] # first marker, innermost ellipse,center
                 self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
             else:
@@ -316,7 +309,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         # debug mode within world will show green ellipses around detected ellipses
         if self.active and self.detected:
-            for e in self.candidate_ellipses:
+            for marker in self.markers:
+                e = marker[-1] #outermost ellipse
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
@@ -352,17 +346,17 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             ratio = (out_range[1]-out_range[0])/(in_range[1]-in_range[0])
             return (value-in_range[0])*ratio+out_range[0]
 
-        pad = .6*r
+        pad = .7*r
         screen_pos = map_value(self.display_pos[0],out_range=(pad,p_window_size[0]-pad)),map_value(self.display_pos[1],out_range=(p_window_size[1]-pad,pad))
         alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
-        draw_concentric_circles(screen_pos,r,6,alpha)
+        draw_concentric_circles(screen_pos,r,4,alpha)
         #some feedback on the detection state
 
         if self.detected and self.on_position:
-            draw_points([screen_pos],size=5,color=RGBA(0.,.8,0.,alpha),sharpness=0.5)
+            draw_points([screen_pos],size=10*self.marker_scale,color=RGBA(0.,.8,0.,alpha),sharpness=0.5)
         else:
-            draw_points([screen_pos],size=5,color=RGBA(0.8,0.,0.,alpha),sharpness=0.5)
+            draw_points([screen_pos],size=10*self.marker_scale,color=RGBA(0.8,0.,0.,alpha),sharpness=0.5)
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))

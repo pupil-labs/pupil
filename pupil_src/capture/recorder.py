@@ -17,6 +17,7 @@ from time import strftime,localtime,time,gmtime
 from shutil import copy2
 from audio import Audio_Input_Dict
 from file_methods import save_object
+from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 #logging
@@ -163,9 +164,10 @@ class Recorder(Plugin):
 
     def toggle(self, _=None):
         if self.running:
-            self.stop()
+            self.notify_all( {'subject':'should_stop_recording','network_propagate':True} )
         else:
-            self.start()
+            self.notify_all( {'subject':'should_start_recording','session_name':self.session_name,'network_propagate':True} )
+
 
     def on_notify(self,notification):
 
@@ -174,26 +176,26 @@ class Recorder(Plugin):
             self.data['notifications'].append(notification)
 
         # Notificatio to start recording
-        elif notification['subject'] == 'should_start_recording' and notification.get('source','local') != 'local':
+        elif notification['subject'] == 'should_start_recording':
             if self.running:
-                logger.warning('Recording is already running!')
+                logger.info('Recording already running!')
             else:
                 if notification.get("session_name",""):
                     self.set_session_name(notification["session_name"])
-                self.start(instruct_others=False)
+                self.start()
         # Remote has stopped recording, we should stop as well.
-        elif notification['subject'] == 'should_stop_recording' and notification.get('source','local') != 'local':
+        elif notification['subject'] == 'should_stop_recording':
             if self.running:
-                self.stop(instruct_others=False)
+                self.stop()
             else:
-                logger.warning('Recording is already stopped!')
+                logger.info('Recording already stopped!')
 
 
     def get_rec_time_str(self):
         rec_time = gmtime(time()-self.start_time)
         return strftime("%H:%M:%S", rec_time)
 
-    def start(self,instruct_others=True):
+    def start(self):
         self.timestamps = []
         self.data = {'pupil_positions':[],'gaze_positions':[],'notifications':[]}
         self.frame_count = 0
@@ -252,8 +254,6 @@ class Recorder(Plugin):
             self.open_info_menu()
 
         self.notify_all( {'subject':'rec_started','rec_path':self.rec_path,'session_name':self.session_name,'network_propagate':True} )
-        if instruct_others:
-            self.notify_all( {'subject':'should_start_recording','session_name':self.session_name,'network_propagate':True} )
 
     def open_info_menu(self):
         self.info_menu = ui.Growing_Menu('additional Recording Info',size=(300,300),pos=(300,300))
@@ -297,7 +297,7 @@ class Recorder(Plugin):
 
             self.button.status_text = self.get_rec_time_str()
 
-    def stop(self,instruct_others=True):
+    def stop(self):
         #explicit release of VideoWriter
         self.writer.release()
         self.writer = None
@@ -335,20 +335,7 @@ class Recorder(Plugin):
                 f.write("World Camera Frames\t"+ str(self.frame_count)+ "\n")
                 f.write("World Camera Resolution\t"+ str(self.g_pool.capture.frame_size[0])+"x"+str(self.g_pool.capture.frame_size[1])+"\n")
                 f.write("Capture Software Version\t%s\n"%self.g_pool.version)
-                if platform.system() == "Windows":
-                    username = os.environ["USERNAME"]
-                    sysname, nodename, release, version, machine, _ = platform.uname()
-                else:
-                    username = getpass.getuser()
-                    try:
-                        sysname, nodename, release, version, machine = os.uname()
-                    except:
-                        sysname, nodename, release, version, machine = sys.platform,None,None,None,None
-                f.write("User\t"+username+"\n")
-                f.write("Platform\t"+sysname+"\n")
-                f.write("Machine\t"+nodename+"\n")
-                f.write("Release\t"+release+"\n")
-                f.write("Version\t"+version+"\n")
+                f.write("System Info\t%s"%get_system_info())
         except Exception:
             logger.exception("Could not save metadata. Please report this bug!")
 
@@ -376,9 +363,6 @@ class Recorder(Plugin):
 
 
         self.notify_all( {'subject':'rec_stopped','rec_path':self.rec_path,'network_propagate':True} )
-        if instruct_others:
-            self.notify_all( {'subject':'should_stop_recording','network_propagate':True} )
-
 
     def cleanup(self):
         """gets called when the plugin get terminated.

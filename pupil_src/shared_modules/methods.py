@@ -8,6 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+import os, sys, platform, getpass
+from time import time
 import numpy as np
 try:
     import numexpr as ne
@@ -17,7 +19,7 @@ import cv2
 import logging
 logger = logging.getLogger(__name__)
 
-from time import time
+
 def timer(dt):
     '''
     a generator used to time window refreshs
@@ -674,6 +676,22 @@ def pruning_quick_combine(l,fn,seed_idx=None,max_evals=1e20,max_depth=5):
 def filter_subsets(l):
     return [m for i, m in enumerate(l) if not any(set(m).issubset(set(n)) for n in (l[:i] + l[i+1:]))]
 
+
+
+def get_system_info():
+    try:
+        if platform.system() == "Windows":
+            username = os.environ["USERNAME"]
+            sysname, nodename, release, version, machine, _ = platform.uname()
+        else:
+            username = getpass.getuser()
+            sysname, nodename, release, version, machine = os.uname()
+    except Exception as e:
+        logger.error(e)
+        username = 'unknown'
+        sysname, nodename, release, version, machine = sys.platform,'unknown','unknown','unknown','unknown'
+
+    return "User: %s, Platform: %s, Machine: %s, Release: %s, Version: %s" %(username,sysname,nodename,release,version)
 
 
 if __name__ == '__main__':

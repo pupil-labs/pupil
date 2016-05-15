@@ -21,7 +21,6 @@ from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
 import calibrate
-from circle_detector import get_candidate_ellipses
 
 import audio
 
