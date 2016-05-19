@@ -253,7 +253,7 @@ class Recorder(Plugin):
 
         if self.show_info_menu:
             self.open_info_menu()
-
+        logger.info("Started Recording.")
         self.notify_all( {'subject':'rec_started','rec_path':self.rec_path,'session_name':self.session_name,'network_propagate':True} )
 
     def open_info_menu(self):
@@ -362,7 +362,7 @@ class Recorder(Plugin):
         self.pupil_pos_list = []
         self.gaze_pos_list = []
 
-
+        logger.info("Saved Recording.")
         self.notify_all( {'subject':'rec_stopped','rec_path':self.rec_path,'network_propagate':True} )
 
     def cleanup(self):
