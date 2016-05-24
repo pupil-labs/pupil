@@ -74,7 +74,8 @@ class Pupil_Server(Plugin):
 
     def update(self,frame,events):
         for topic,data in events.iteritems():
-            self.socket.send_multipart((topic, json.dumps(data)))
+            for d in data:
+                self.socket.send_multipart((topic, json.dumps(d)))
 
     def close(self):
         self.alive = False
