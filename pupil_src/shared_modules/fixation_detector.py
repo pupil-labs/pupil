@@ -64,20 +64,20 @@ class Fixation_Detector_Dispersion_Duration(Fixation_Detector):
         def set_h_fov(new_fov):
             self.h_fov = new_fov
             self.pix_per_degree = float(self.g_pool.capture.frame_size[0])/new_fov
-            self.notify_all_delayed({'subject':'fixations_should_recalculate'},delay=1.)
+            self.notify_all({'subject':'fixations_should_recalculate','delay':1.})
 
         def set_v_fov(new_fov):
             self.v_fov = new_fov
             self.pix_per_degree = float(self.g_pool.capture.frame_size[1])/new_fov
-            self.notify_all_delayed({'subject':'fixations_should_recalculate'},delay=1.)
+            self.notify_all({'subject':'fixations_should_recalculate','delay':1.})
 
         def set_duration(new_value):
             self.min_duration = new_value
-            self.notify_all_delayed({'subject':'fixations_should_recalculate'},delay=1.)
+            self.notify_all({'subject':'fixations_should_recalculate','delay':1.})
 
         def set_dispersion(new_value):
             self.max_dispersion = new_value
-            self.notify_all_delayed({'subject':'fixations_should_recalculate'},delay=1.)
+            self.notify_all({'subject':'fixations_should_recalculate','delay':1.})
 
 
 

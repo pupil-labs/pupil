@@ -11,7 +11,7 @@ from plugin import Plugin
 from pyglui.cygl.utils import Render_Target,push_ortho,pop_ortho
 import logging
 from glfw import glfwGetFramebufferSize,glfwGetCurrentContext
-
+import zmq_tools
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 
@@ -50,11 +50,16 @@ class Log_Display(Plugin):
 
         self.window_size = glfwGetFramebufferSize(glfwGetCurrentContext())
         self.tex = Render_Target(*self.window_size)
-
-        self.log_handler = Log_to_Callback(self.on_log)
-        logger = logging.getLogger()
-        logger.addHandler(self.log_handler)
-        self.log_handler.setLevel(logging.INFO)
+        if self.g_pool.app == 'capture':
+            self._socket = zmq_tools.Msg_Receiver(self.g_pool.zmq_ctx,self.g_pool.ipc_sub_url,('logging',))
+            self._poller = zmq_tools.zmq.Poller()
+            self._poller.register(self._socket.socket)
+        else:
+            self._socket = None
+            self.log_handler = Log_to_Callback(self.on_log)
+            logger = logging.getLogger()
+            logger.addHandler(self.log_handler)
+            self.log_handler.setLevel(logging.INFO)
 
     def on_log(self,record):
         if self.alpha < 1.0:
@@ -63,7 +68,6 @@ class Log_Display(Plugin):
         self.should_redraw = True
         self.rendered_log.append(record)
         self.alpha += duration_from_level(record.levelname) + len(str(record.msg))/100.
-
         self.rendered_log = self.rendered_log[-10:]
         self.alpha = min(self.alpha,6.)
 
@@ -72,6 +76,9 @@ class Log_Display(Plugin):
         self.tex.resize(*self.window_size)
 
     def update(self,frame,events):
+        if self._socket and self._socket.new_data:
+            t,s = self._socket.recv()
+            self.on_log(logging.makeLogRecord(s))
         self.alpha -= min(.2,events['dt'])
 
     def gl_display(self):

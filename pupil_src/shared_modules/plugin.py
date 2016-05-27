@@ -87,9 +87,11 @@ class Plugin(object):
 
     def on_notify(self,notification):
         """
-        this gets called when a plugin want to notify all others.
+        this gets called when a plugin wants to notify all others.
         notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
         implement this fn if you want to deal with notifications
+        note that notifications are collected from all threads and processes and dispatched in the update loop.
+        this callback happens in the main thread.
         """
         pass
 
@@ -113,30 +115,30 @@ class Plugin(object):
 
     def notify_all(self,notification):
         """
-        call this to notify all other plugins with a notification:
+        call this to notify all other plugins and processes with a notification:
         notification is a dict in the format {'subject':'notification_name',['addional_field':'foo']}
 
-            adding 'record':True will make recorder save the notification during recording
-            adding 'network_propagate':True will send the event to other pupil sync nodes in the same group
+            adding 'timestamp':self.g_pool.capture.get_timestamp() will allow other plugins to know when you created this notification.
+            adding 'record':True will make recorder save the notification during recording.
+            adding 'network_propagate':True will send the event to other pupil sync nodes in the same group.
+            adding 'delay':3.2 will delay the notification for 3.2s.
+            If a new delayed notification of same subject is sent before 3.2s have passed we will discard the former notification
 
-            if you want recording and network propagation to work make sure that the notification
-            is pickalable and can be recreated though repr+eval.
+            All notifications but be json serializable
 
             You may add more fields as you like.
 
 
         do not overwrite this method
         """
-        self.g_pool.notifications.append(notification)
-
-    def notify_all_delayed(self,notification,delay = 3.0):
-        """
-        call this to notify all other plugins with a notification.
-        if will be published after a bit of time to allow you to adjust the slider and keep the loop repsonsive
-        do not overwrite this method
-        """
-        notification['_notify_time_'] = time()+delay
-        self.g_pool.delayed_notifications[notification['subject']] = notification
+        if self.g_pool.app == 'capture':
+            self.g_pool.ipc_pub.notify(notification)
+        else:
+            if notification.get('delay',0):
+                notification['_notify_time_'] = time()+notification['delay']
+                self.g_pool.delayed_notifications[notification['subject']] = notification
+            else:
+                self.g_pool.notifications.append(notification)
 
 
     @property
@@ -219,14 +221,6 @@ class Calibration_Plugin(Plugin):
 
     def stop(self):
         raise  NotImplementedError()
-
-
-class Gaze_Mapping_Plugin(Plugin):
-    '''base class for all calibration routines'''
-    uniqueness = 'by_base_class'
-    order = 0.1
-    def __init__(self,g_pool):
-        super(Gaze_Mapping_Plugin, self).__init__(g_pool)
 
 
 
@@ -341,5 +335,5 @@ def import_runtime_plugins(plugin_dir):
                         logger.info('Added: %s'%member)
                         runtime_plugins.append(member)
             except Exception as e:
-                logger.debug("Failed to load '%s'. Reason: '%s' "%(d,e))
+                logger.warning("Failed to load '%s'. Reason: '%s' "%(d,e))
     return runtime_plugins
