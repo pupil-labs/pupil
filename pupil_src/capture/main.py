@@ -40,7 +40,7 @@ import zmq
 import zmq_tools
 from zmq_tools import json
 
-if 'profiled' in sys.argv or 1:
+if 'profiled' in sys.argv:
     from world import world_profiled as world
     from eye import eye_profiled as eye
 else:
