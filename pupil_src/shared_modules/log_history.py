@@ -62,7 +62,7 @@ class Log_History(Plugin):
 
     def update(self,frame,events):
         if self._socket:
-            while self._poller.new_data:
+            while self._socket.new_data:
                 t,s = self._socket.recv()
                 self.on_log(logging.makeLogRecord(s))
 
