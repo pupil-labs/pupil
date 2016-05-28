@@ -11,7 +11,7 @@
 import os, sys, platform
 
 if getattr(sys, 'frozen', False):
-    # Specifiy user dirs.
+    # Specifiy user dir.
     user_dir = os.path.expanduser(os.path.join('~','pupil_capture_settings'))
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
 else:
@@ -25,12 +25,14 @@ else:
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
+#logging
+import logging
+
 #app version
 from version_utils import get_version
 app_version = get_version(version_file)
 
-
-#multi threading and processing
+#threading and processing
 from multiprocessing import Process, Queue, Value,active_children, freeze_support
 from threading import Thread
 from ctypes import c_double,c_bool
@@ -40,12 +42,17 @@ import zmq
 import zmq_tools
 from zmq_tools import json
 
+#time
+from uvc import get_time_monotonic
+
+#functions to run in seperate processes
 if 'profiled' in sys.argv:
     from world import world_profiled as world
     from eye import eye_profiled as eye
 else:
     from world import world
     from eye import eye
+
 
 
 # To assign camera by name: put string(s) in list
@@ -71,16 +78,16 @@ def main():
     #network backbone setup
     zmq_ctx = zmq.Context()
     #lets get some open ports:
-    test_socket = zmq_ctx.socket(zmq.SUB)
-    ipc_sub_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=5001, max_port=6000, max_tries=100)
-    ipc_pub_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=6001, max_port=7000, max_tries=100)
-    test_socket.close(linger=0)
-    # ipc_sub_port = 52020
-    # ipc_pub_port = 52021
+    # test_socket = zmq_ctx.socket(zmq.SUB)
+    # ipc_sub_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=5001, max_port=6000, max_tries=100)
+    # ipc_pub_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=6001, max_port=7000, max_tries=100)
+    # test_socket.close(linger=0)
+    ipc_sub_port = 52020
+    ipc_pub_port = 52021
     ipc_pub_url = 'tcp://127.0.0.1:%s'%ipc_pub_port
     ipc_sub_url = 'tcp://127.0.0.1:%s'%ipc_sub_port
 
-    # we use a zmq forwarder and the zmq PUBSUB pattern to do all our IPC.
+    #We use a zmq forwarder and the zmq PUBSUB pattern to do all our IPC.
     def main_proxy(in_url, out_url):
         ctx = zmq.Context.instance()
         xsub = ctx.socket(zmq.XSUB)
@@ -97,7 +104,7 @@ def main():
     proxy_thread.setDaemon(True)
     proxy_thread.start()
 
-    #the delay proxy handles delayed notififications.
+    #The delay proxy handles delayed notififications.
     def delay_proxy(in_url, out_url):
         from time import time
         ctx = zmq.Context.instance()
@@ -109,11 +116,11 @@ def main():
         try:
             while True:
                 if poller.poll(timeout=250):
-                    #recv new delayed notification and store it
+                    #Recv new delayed notification and store it.
                     topic,n = sub.recv()
                     n['_notify_time_'] = time()+n['delay']
                     waiting_notifications[n['subject']] = n
-                #when a notifications time has come, pop from dict and send it as notification
+                #When a notifications time has come, pop from dict and send it as notification
                 for n in waiting_notifications.values():
                     if n['_notify_time_'] < time():
                         del n['_notify_time_']
@@ -128,25 +135,24 @@ def main():
     delay_thread.setDaemon(True)
     delay_thread.start()
 
-    # thread to recv log records from other processes.
+    #Thread to recv log records from other processes.
     def log_loop(ipc_sub_url):
-        import logging
+        #Get the root logger
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
+        #Stream to file
         fh = logging.FileHandler(os.path.join(user_dir,'capture.log'),mode='w')
         fh.setFormatter(logging.Formatter('%(asctime)s - %(processName)s - [%(levelname)s] %(name)s: %(message)s'))
         logger.addHandler(fh)
+        #Stream to console.
         ch = logging.StreamHandler()
         ch.setFormatter(logging.Formatter('%(processName)s - [%(levelname)s] %(name)s: %(message)s'))
         logger.addHandler(ch)
-
-        ctx = zmq.Context.instance()
-        sub = ctx.socket(zmq.SUB)
-        sub.connect(ipc_sub_url)
-        sub.setsockopt(zmq.SUBSCRIBE, "logging")
+        # IPC setup to receive log messages. Use ZMQ_handler to send messages in from remote to here.
+        sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=("logging",))
         while True:
-            topic,msg = sub.recv_multipart()
-            record = logging.makeLogRecord(json.loads(msg))
+            topic,msg = sub.recv()
+            record = logging.makeLogRecord(msg)
             logger = logging.getLogger(record.name)
             logger.handle(record)
 
@@ -154,13 +160,9 @@ def main():
     log_thread.setDaemon(True)
     log_thread.start()
 
-
-    cmd_socket = zmq_ctx.socket(zmq.SUB)
-    cmd_socket.connect(ipc_sub_url)
-    cmd_socket.setsockopt(zmq.SUBSCRIBE, 'notify.start_eye')
-    cmd_socket.setsockopt(zmq.SUBSCRIBE, 'notify.stop_launcher')
-    cmd_socket.setsockopt(zmq.SUBSCRIBE, 'notify.set_timebase')
-
+    topics = ('notify.start_eye','notify.stop_launcher','notify.set_timebase',"get_timestamp")
+    cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=topics )
+    cmd_pub = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_pub_url)
 
     p_world = Process(target=world,
                       name= 'world',
@@ -173,28 +175,42 @@ def main():
                             video_sources['world'] ))
     p_world.start()
 
+    # create logger for the context of this function
+    logger = logging.getLogger(__name__)
+    logger.handlers = []
+    logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_pub_url))
+    logger.info("Launcher process started")
+
     while True:
         #block and listen for relevant messages.
-        topic = cmd_socket.recv()
-        if "notify.set_timebase" == topic :
-            timebase.value = cmd_socket.recv_json()['timebase']
-        elif "notify.start_eye" in topic :
-            eye_id = cmd_socket.recv_json()['eye_id']
-            p_eye = Process(target=eye,
-                            name='eye%s'%eye_id,
-                            args=(timebase,
-                                eyes_are_alive[eye_id],
-                                ipc_pub_url,
-                                ipc_sub_url,
-                                user_dir,
-                                app_version,
-                                eye_id,
-                                video_sources['eye%s'%eye_id] ))
-            p_eye.start()
-        elif "notify.stop_launcher" == topic:
-            cmd_socket.recv_json()
-            break
+        try:
+            topic,n = cmd_sub.recv()
+            if "get_timestamp" == topic :
+                t = get_time_monotonic()-timebase.value
+                cmd_pub.send('timestamp',t)
+            elif "notify.set_timebase" == topic :
+                timebase.value = n['timebase']
+                logger.info('timebase set to %s'%n['timebase'])
+            elif "notify.start_eye" in topic :
+                eye_id = n['eye_id']
+                p_eye = Process(target=eye,
+                                name='eye%s'%eye_id,
+                                args=(timebase,
+                                    eyes_are_alive[eye_id],
+                                    ipc_pub_url,
+                                    ipc_sub_url,
+                                    user_dir,
+                                    app_version,
+                                    eye_id,
+                                    video_sources['eye%s'%eye_id] ))
+                p_eye.start()
+            elif "notify.stop_launcher" == topic:
+                break
+        except Exception as e:
+            logger.error("Invalid command recevied %s:%s . Error %s"%(topic,n,e) )
+
     for p in active_children(): p.join()
+    logger.info("Launcher process stopped")
 
 if __name__ == '__main__':
     freeze_support()
