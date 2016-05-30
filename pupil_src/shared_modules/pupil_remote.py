@@ -104,7 +104,6 @@ class Pupil_Remote(Plugin):
                 if cmd == 'Exit':
                     break
                 elif cmd == 'Bind':
-                    print 'dfdf'
                     new_url = pipe.recv()
                     if remote_socket:
                         poller.unregister(remote_socket)
