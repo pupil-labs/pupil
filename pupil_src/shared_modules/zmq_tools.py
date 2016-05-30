@@ -168,7 +168,7 @@ if __name__ == '__main__':
     ipc_sub_url = requester.recv()
     # we then connect to monitor log messages using the url. We can also monitor other topic if we wish
     print ipc_sub_url
-    monitor = Msg_Receiver(ctx,ipc_sub_url,topics=('logging',)) #more topics: gaze, pupil, notify, ...
+    monitor = Msg_Receiver(ctx,ipc_sub_url,topics=('logging','notify')) #more topics: gaze, pupil, notify, ...
 
     # now lets get the current pupil time.
     requester.send('t')
