@@ -2,18 +2,17 @@ import zmq
 import ujson as json
 import logging
 import threading
-
+from zmq.utils.monitor import recv_monitor_message
 class ZMQ_handler(logging.Handler):
     '''
     A handler that send log records as json strings via zmq
     '''
     def __init__(self,ctx,ipc_pub_url):
         super(ZMQ_handler, self).__init__()
-        self.socket = ctx.socket(zmq.PUB)
-        self.socket.connect(ipc_pub_url)
+        self.socket = Msg_Dispatcher(ctx,ipc_pub_url)
 
     def emit(self, record):
-        self.socket.send_multipart(('logging.%s'%record.levelname.lower(),json.dumps(record)))
+        self.socket.send('logging.%s'%str(record.levelname).lower(),record)
 
 # class Msg_Collector(threading.Thread):
 #     '''
@@ -59,11 +58,28 @@ class Msg_Receiver(object):
     '''
     Recv messages on a sub port.
     Not threadsave. Make a new one for each thread
+    __init__ will block until connection is established.
     '''
-    def __init__(self,ctx,url,topics = ()):
+    def __init__(self,ctx,url,topics = (),block_unitl_connected=True):
         self.socket = zmq.Socket(ctx,zmq.SUB)
         assert type(topics) != str
-        self.socket.connect(url)
+
+        if block_unitl_connected:
+            #connect node and block until a connecetion has been made
+            monitor = self.socket.get_monitor_socket()
+            self.socket.connect(url)
+            while True:
+                status =  recv_monitor_message(monitor)
+                if status['event'] == zmq.EVENT_CONNECTED:
+                    break
+                elif status['event'] == zmq.EVENT_CONNECT_DELAYED:
+                    pass
+                else:
+                    raise Exception("ZMQ connection failed")
+            self.socket.disable_monitor()
+        else:
+            self.socket.connect(url)
+
         for t in topics:
             self.subscribe(t)
 
@@ -93,10 +109,26 @@ class Msg_Dispatcher(object):
     '''
     Send messages on a pub port.
     Not threadsave. Make a new one for each thread
+    __init__ will block until connection is established.
     '''
-    def __init__(self,ctx,url):
+    def __init__(self,ctx,url,block_unitl_connected=True):
         self.socket = zmq.Socket(ctx,zmq.PUB)
-        self.socket.connect(url)
+
+        if block_unitl_connected:
+            #connect node and block until a connecetion has been made
+            monitor = self.socket.get_monitor_socket()
+            self.socket.connect(url)
+            while True:
+                status =  recv_monitor_message(monitor)
+                if status['event'] == zmq.EVENT_CONNECTED:
+                    break
+                elif status['event'] == zmq.EVENT_CONNECT_DELAYED:
+                    pass
+                else:
+                    raise Exception("ZMQ connection failed")
+            self.socket.disable_monitor()
+        else:
+            self.socket.connect(url)
 
     def send(self,topic,payload):
         '''
@@ -122,12 +154,26 @@ class Msg_Dispatcher(object):
         self.socket.close()
 
 
+
+
 if __name__ == '__main__':
     #tap into the IPC backbone of pupil capture
-    sub_url = 'tcp://localhost:5851' #set proper url!
-    pub_url = 'tcp://localhost:6851' #set proper url!
-
     ctx = zmq.Context()
-    monitor = Msg_Receiver(ctx,sub_url,topics=('logging','notify')) #more topics: gaze, pupil
+
+    # the requester talks to Pupil remote and recevied the session unique IPC SUB URL
+    requester = ctx.socket(zmq.REQ)
+    requester.connect('tcp://localhost:50020')
+
+    requester.send('SUB_URL')
+    ipc_sub_url = requester.recv()
+    # we then connect to monitor log messages using the url. We can also monitor other topic if we wish
+    print ipc_sub_url
+    monitor = Msg_Receiver(ctx,ipc_sub_url,topics=('logging',)) #more topics: gaze, pupil, notify, ...
+
+    # now lets get the current pupil time.
+    requester.send('t')
+    print requester.recv()
+
+    # listen to log messages.
     while True:
         print monitor.recv()

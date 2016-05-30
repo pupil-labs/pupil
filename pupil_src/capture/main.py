@@ -40,10 +40,9 @@ from ctypes import c_double,c_bool
 #networking
 import zmq
 import zmq_tools
-from zmq_tools import json
 
 #time
-from uvc import get_time_monotonic
+from time import time
 
 #functions to run in seperate processes
 if 'profiled' in sys.argv:
@@ -77,15 +76,16 @@ def main():
 
     #network backbone setup
     zmq_ctx = zmq.Context()
-    #lets get some open ports:
-    # test_socket = zmq_ctx.socket(zmq.SUB)
-    # ipc_sub_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=5001, max_port=6000, max_tries=100)
-    # ipc_pub_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=6001, max_port=7000, max_tries=100)
-    # test_socket.close(linger=0)
-    ipc_sub_port = 52020
-    ipc_pub_port = 52021
+    # lets get some open ports:
+    test_socket = zmq_ctx.socket(zmq.SUB)
+    ipc_sub_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=5001, max_port=6000, max_tries=100)
+    ipc_pub_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=6001, max_port=7000, max_tries=100)
+    test_socket.close(linger=0)
     ipc_pub_url = 'tcp://127.0.0.1:%s'%ipc_pub_port
     ipc_sub_url = 'tcp://127.0.0.1:%s'%ipc_sub_port
+
+
+
 
     #We use a zmq forwarder and the zmq PUBSUB pattern to do all our IPC.
     def main_proxy(in_url, out_url):
@@ -100,13 +100,8 @@ def main():
             xsub.close()
             xpub.close()
 
-    proxy_thread = Thread(target=main_proxy, args=(ipc_pub_url, ipc_sub_url))
-    proxy_thread.setDaemon(True)
-    proxy_thread.start()
-
     #The delay proxy handles delayed notififications.
     def delay_proxy(in_url, out_url):
-        from time import time
         ctx = zmq.Context.instance()
         sub = zmq_tools.Msg_Receiver(ctx,in_url,('delayed_notify',))
         pub = zmq_tools.Msg_Dispatcher(ctx,out_url)
@@ -131,10 +126,6 @@ def main():
             sub.close()
             pub.close()
 
-    delay_thread = Thread(target=delay_proxy, args=(ipc_sub_url, ipc_pub_url))
-    delay_thread.setDaemon(True)
-    delay_thread.start()
-
     #Thread to recv log records from other processes.
     def log_loop(ipc_sub_url):
         #Get the root logger
@@ -153,16 +144,23 @@ def main():
         while True:
             topic,msg = sub.recv()
             record = logging.makeLogRecord(msg)
-            logger = logging.getLogger(record.name)
             logger.handle(record)
+
+    proxy_thread = Thread(target=main_proxy, args=(ipc_pub_url, ipc_sub_url))
+    proxy_thread.setDaemon(True)
+    proxy_thread.start()
 
     log_thread = Thread(target=log_loop, args=(ipc_sub_url,))
     log_thread.setDaemon(True)
     log_thread.start()
 
-    topics = ('notify.start_eye','notify.stop_launcher','notify.set_timebase',"get_timestamp")
+    delay_thread = Thread(target=delay_proxy, args=(ipc_sub_url, ipc_pub_url))
+    delay_thread.setDaemon(True)
+    delay_thread.start()
+
+    topics = ('notify.start_eye','notify.stop_launcher')
     cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=topics )
-    cmd_pub = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_pub_url)
+
 
     p_world = Process(target=world,
                       name= 'world',
@@ -183,31 +181,22 @@ def main():
 
     while True:
         #block and listen for relevant messages.
-        try:
-            topic,n = cmd_sub.recv()
-            if "get_timestamp" == topic :
-                t = get_time_monotonic()-timebase.value
-                cmd_pub.send('timestamp',t)
-            elif "notify.set_timebase" == topic :
-                timebase.value = n['timebase']
-                logger.info('timebase set to %s'%n['timebase'])
-            elif "notify.start_eye" in topic :
-                eye_id = n['eye_id']
-                p_eye = Process(target=eye,
-                                name='eye%s'%eye_id,
-                                args=(timebase,
-                                    eyes_are_alive[eye_id],
-                                    ipc_pub_url,
-                                    ipc_sub_url,
-                                    user_dir,
-                                    app_version,
-                                    eye_id,
-                                    video_sources['eye%s'%eye_id] ))
-                p_eye.start()
-            elif "notify.stop_launcher" == topic:
-                break
-        except Exception as e:
-            logger.error("Invalid command recevied %s:%s . Error %s"%(topic,n,e) )
+        topic,n = cmd_sub.recv()
+        if "notify.start_eye" in topic :
+            eye_id = n['eye_id']
+            p_eye = Process(target=eye,
+                            name='eye%s'%eye_id,
+                            args=(timebase,
+                                eyes_are_alive[eye_id],
+                                ipc_pub_url,
+                                ipc_sub_url,
+                                user_dir,
+                                app_version,
+                                eye_id,
+                                video_sources['eye%s'%eye_id] ))
+            p_eye.start()
+        elif "notify.stop_launcher" == topic:
+            break
 
     for p in active_children(): p.join()
     logger.info("Launcher process stopped")
