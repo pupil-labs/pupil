@@ -205,12 +205,12 @@ class Calibration_Plugin(Plugin):
         self.g_pool.active_calibration_plugin = self
 
     def on_notify(self,notification):
-        if notification['subject'] is 'should_start_calibration':
+        if notification['subject'] is 'calibration.should_start':
             if self.active:
                 logger.warning('Calibration already running.')
             else:
                 self.start()
-        elif notification['subject'] is 'should_stop_calibration':
+        elif notification['subject'] is 'calibration.should_stop':
             if self.active:
                 self.stop()
             else:
@@ -218,9 +218,12 @@ class Calibration_Plugin(Plugin):
 
     def start(self):
         raise  NotImplementedError()
+        self.notify_all({'subject':'calibration.started'})
+
 
     def stop(self):
         raise  NotImplementedError()
+        self.notify_all({'subject':'calibration.stopped'})
 
 
 

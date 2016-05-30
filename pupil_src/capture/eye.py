@@ -315,7 +315,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, ey
                     else:
                         set_detector(Detector_2D)
                         detector_selector.read_only = False
-                elif subject == 'rec_started':
+                elif subject == 'recording.started':
                     if notification['record_eye']:
                         record_path = notification['rec_path']
                         raw_mode = notification['compression']
@@ -328,7 +328,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, ey
                             video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
                             writer = AV_Writer(video_path,cap.frame_rate)
                         timestamps = []
-                elif subject == 'rec_stopped':
+                elif subject == 'recording.stopped':
                     if writer:
                         logger.info("Done recording.")
                         writer.release()

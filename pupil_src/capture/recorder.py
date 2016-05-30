@@ -164,9 +164,9 @@ class Recorder(Plugin):
 
     def toggle(self, _=None):
         if self.running:
-            self.notify_all( {'subject':'should_stop_recording','network_propagate':True} )
+            self.notify_all( {'subject':'recording.should_stop','network_propagate':True} )
         else:
-            self.notify_all( {'subject':'should_start_recording','session_name':self.session_name,'network_propagate':True} )
+            self.notify_all( {'subject':'recording.should_start','session_name':self.session_name,'network_propagate':True} )
 
 
     def on_notify(self,notification):
@@ -176,7 +176,7 @@ class Recorder(Plugin):
             self.data['notifications'].append(notification)
 
 
-        elif notification['subject'] == 'should_start_recording':
+        elif notification['subject'] == 'recording.should_start':
             if self.running:
                 logger.info('Recording already running!')
             else:
@@ -184,7 +184,7 @@ class Recorder(Plugin):
                     self.set_session_name(notification["session_name"])
                 self.start()
 
-        elif notification['subject'] == 'should_stop_recording':
+        elif notification['subject'] == 'recording.should_stop':
             if self.running:
                 self.stop()
             else:
@@ -247,7 +247,7 @@ class Recorder(Plugin):
         if self.show_info_menu:
             self.open_info_menu()
         logger.info("Started Recording.")
-        self.notify_all( {'subject':'rec_started','rec_path':self.rec_path,'session_name':self.session_name,'record_eye':self.record_eye,'compression':self.raw_jpeg} )
+        self.notify_all( {'subject':'recording.started','rec_path':self.rec_path,'session_name':self.session_name,'record_eye':self.record_eye,'compression':self.raw_jpeg} )
 
     def open_info_menu(self):
         self.info_menu = ui.Growing_Menu('additional Recording Info',size=(300,300),pos=(300,300))
@@ -351,7 +351,7 @@ class Recorder(Plugin):
         self.gaze_pos_list = []
 
         logger.info("Saved Recording.")
-        self.notify_all( {'subject':'rec_stopped','rec_path':self.rec_path} )
+        self.notify_all( {'subject':'recording.stopped','rec_path':self.rec_path} )
 
     def cleanup(self):
         """gets called when the plugin get terminated.
