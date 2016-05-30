@@ -12,11 +12,10 @@ from time import sleep
 from plugin import Plugin
 from pyglui import ui
 import zmq
+import zmq_tools
 from pyre import zhelper
 import logging
 logger = logging.getLogger(__name__)
-
-exit_thread = "EXIT_THREAD".encode('utf_8')
 
 
 class Pupil_Remote(Plugin):
@@ -55,30 +54,24 @@ class Pupil_Remote(Plugin):
     def __init__(self, g_pool,address="tcp://*:50020"):
         super(Pupil_Remote, self).__init__(g_pool)
         self.order = .01 #excecute first
-        self.context = zmq.Context()
-        self.thread_pipe = None
-        self.address = 'not set'
+        self.context = g_pool.zmq_ctx
+        self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
         self.start_server(address)
 
 
     def start_server(self,new_address):
-        if self.thread_pipe:
-            self.stop_server()
-        try:
-            socket = self.context.socket(zmq.REP)
-            socket.bind(new_address)
-        except zmq.ZMQError as e:
-            logger.error("Could not bind to Socket: %s. Reason: %s"%(new_address,e))
-        else:
+        self.thread_pipe.send('Bind')
+        self.thread_pipe.send(new_address)
+        response = self.thread_pipe.recv()
+        if response == 'Bind OK':
             self.address = new_address
-            self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop,socket)
-
+        else:
+            logger.error(response)
 
     def stop_server(self):
-        self.thread_pipe.send(exit_thread)
+        self.thread_pipe.send('Exit')
         while self.thread_pipe:
             sleep(.01)
-
 
     def init_gui(self):
 
@@ -98,42 +91,67 @@ class Pupil_Remote(Plugin):
             self.menu = None
 
 
-    def thread_loop(self,context,pipe,socket):
+    def thread_loop(self,context,pipe):
         poller = zmq.Poller()
+        ipc_pub = zmq_tools.Msg_Dispatcher(context,self.g_pool.ipc_pub_url)
         poller.register(pipe, zmq.POLLIN)
-        poller.register(socket, zmq.POLLIN)
+        remote_socket = None
 
         while True:
-            try:
-                #this should not fail but it does sometimes. We need to clean this out.
-                # I think we are not treating sockets correclty as they are not thread-safe.
-                items = dict(poller.poll())
-            except zmq.ZMQError:
-                logger.warning('Socket fail.')
-            else:
-                if items.get(pipe,None) == zmq.POLLIN:
-                    message = pipe.recv()
-                    if message.decode('utf-8') == exit_thread:
-                        break
-                if items.get(socket,None) == zmq.POLLIN:
-                    self.on_recv(socket)
+            items = dict(poller.poll())
+            if items.get(pipe,None) == zmq.POLLIN:
+                cmd = pipe.recv()
+                if cmd == 'Exit':
+                    break
+                elif cmd == 'Bind':
+                    print 'dfdf'
+                    new_url = pipe.recv()
+                    if remote_socket:
+                        poller.unregister(remote_socket)
+                        remote_socket.close(linger=0)
+                    try:
+                        remote_socket = context.socket(zmq.REP)
+                        remote_socket.bind(new_url)
+                    except zmq.ZMQError as e:
+                        pipe.send("Could not bind to Socket: %s. Reason: %s"%(new_address,e))
+                    else:
+                        pipe.send("Bind OK")
+                        poller.register(remote_socket)
+            if items.get(remote_socket,None) == zmq.POLLIN:
+                self.on_recv(remote_socket,ipc_pub)
 
-        socket.close()
+        if remote_socket:
+            remote_socket.close(linger=0)
+            del ipc_pub
+
         self.thread_pipe = None
 
-    def on_recv(self,socket):
+    def on_recv(self,socket,ipc_pub):
         msg = socket.recv()
-        if msg[0] == 'R':
-            self.notify_all({'subject':'should_start_recording','session_name':msg[2:]})
+        if msg.startswith('notify.'):
+            try:
+                payload = socket.recv(flags=zmq.NOBLOCK)
+                payload['subject']
+            except Exception as e:
+                response = 'Notification mal-formatted or missing: %s'%e
+            else:
+                ipc_pub.notify(payload)
+                response = 'Notifaction recevied.'
+        elif msg == 'SUB_URL':
+            response = self.g_pool.ipc_sub_url
+        elif msg == 'PUB_URL':
+            response = self.g_pool.ipc_pub_url
+        elif msg[0] == 'R':
+            ipc_pub.notify({'subject':'should_start_recording','session_name':msg[2:]})
             response = 'started recording'
         elif msg[0] == 'r':
-            self.notify_all({'subject':'should_stop_recording'})
+            ipc_pub.notify({'subject':'should_stop_recording'})
             response = 'stopped recording'
         elif msg == 'C':
-            self.notify_all({'subject':'should_start_calibration'})
+            ipc_pub.notify({'subject':'should_start_calibration'})
             response = 'started calibration'
         elif msg == 'c':
-            self.notify_all({'subject':'should_stop_calibration'})
+            ipc_pub.notify({'subject':'should_stop_calibration'})
             response = 'stopped calibration'
         elif msg[0] == 'T':
             try:
@@ -154,14 +172,12 @@ class Pupil_Remote(Plugin):
     def get_init_dict(self):
         return {'address':self.address}
 
-
     def cleanup(self):
         """gets called when the plugin get terminated.
            This happens either voluntarily or forced.
         """
         self.stop_server()
         self.deinit_gui()
-        self.context.destroy()
 
 
 
