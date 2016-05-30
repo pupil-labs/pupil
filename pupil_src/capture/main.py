@@ -25,9 +25,6 @@ else:
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
-#logging
-import logging
-
 #app version
 from version_utils import get_version
 app_version = get_version(version_file)
@@ -85,8 +82,6 @@ def main():
     ipc_sub_url = 'tcp://127.0.0.1:%s'%ipc_sub_port
 
 
-
-
     #We use a zmq forwarder and the zmq PUBSUB pattern to do all our IPC.
     def main_proxy(in_url, out_url):
         ctx = zmq.Context.instance()
@@ -128,6 +123,7 @@ def main():
 
     #Thread to recv log records from other processes.
     def log_loop(ipc_sub_url):
+        import logging
         #Get the root logger
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
@@ -173,12 +169,6 @@ def main():
                             video_sources['world'] ))
     p_world.start()
 
-    # create logger for the context of this function
-    logger = logging.getLogger(__name__)
-    logger.handlers = []
-    logger.propagate = 0
-    logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_pub_url))
-    logger.info("Launcher process started")
 
     while True:
         #block and listen for relevant messages.
@@ -200,7 +190,6 @@ def main():
             break
 
     for p in active_children(): p.join()
-    logger.info("Launcher process stopped")
 
 if __name__ == '__main__':
     freeze_support()
