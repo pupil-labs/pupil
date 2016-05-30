@@ -176,6 +176,7 @@ def main():
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
     logger.handlers = []
+    logger.propagate = 0
     logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_pub_url))
     logger.info("Launcher process started")
 
