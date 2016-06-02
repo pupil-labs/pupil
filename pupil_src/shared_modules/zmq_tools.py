@@ -14,46 +14,6 @@ class ZMQ_handler(logging.Handler):
     def emit(self, record):
         self.socket.send('logging.%s'%str(record.levelname).lower(),record)
 
-# class Msg_Collector(threading.Thread):
-#     '''
-#     Collect messages on a sub port in a seperate thread.
-#     Do not use this for high volume traffic. (GIL battle)
-#     Clean exiting not implmentented
-#     '''
-#     def __init__(self,ctx,url,topics=() ):
-#         super(Msg_Collector, self).__init__()
-#         assert type(topics) != str
-#         self.setDaemon(True)
-#         self._ctx = ctx
-#         self._url = url
-#         self._topics = topics
-#         self._new_messages = []
-
-#     def run(self):
-#         socket = zmq.backend.Socket(self._ctx,zmq.SUB)
-#         socket.connect(self._url)
-#         for t in self._topics:
-#             socket.set(zmq.SUBSCRIBE, t)
-
-#         while True:
-#             topic = socket.recv()
-#             msg = json.loads(socket.recv())
-#             self._new_messages.append(msg) #append is atomic
-
-#     def collect(self):
-#         messages = []
-#         while self._new_messages:
-#             #worst case, a message is now. We will collect it next time.
-#             messages.append(self._new_messages.pop(0)) #pop is atomic
-#         return messages
-
-#     def collect_one(self):
-#         if self._new_messages:
-#             #worst case, a message is added now. We will collect it next time.
-#             return self._new_messages.pop(0) #pop is atomic
-#         else:
-#             return None
-
 class Msg_Receiver(object):
     '''
     Recv messages on a sub port.
@@ -176,4 +136,5 @@ if __name__ == '__main__':
 
     # listen to log messages.
     while True:
+        monitor.socket.poll()
         print monitor.recv()
