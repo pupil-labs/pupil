@@ -127,9 +127,9 @@ class Pupil_Remote(Plugin):
 
     def on_recv(self,socket,ipc_pub):
         msg = socket.recv()
-        if msg.startswith('notify.'):
+        if msg.startswith('notify'):
             try:
-                payload = socket.recv(flags=zmq.NOBLOCK)
+                payload = zmq_tools.json.loads(socket.recv(flags=zmq.NOBLOCK))
                 payload['subject']
             except Exception as e:
                 response = 'Notification mal-formatted or missing: %s'%e

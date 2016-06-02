@@ -138,12 +138,11 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self.g_pool.quickbar.remove(self.button)
             self.button = None
 
-
     def toggle(self,_=None):
         if self.active:
-            self.stop()
+            self.notify_all({'subject':'calibration.should_stop'})
         else:
-            self.start()
+            self.notify_all({'subject':'calibration.should_start'})
 
 
 
