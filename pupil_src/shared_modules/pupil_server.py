@@ -74,7 +74,7 @@ class Pupil_Server(Plugin):
 
     def update(self,frame,events):
         for topic,data in events.iteritems():
-            if type(d) in (tuple,list):
+            if type(data) in (tuple,list):
                 for d in data:
                     self.socket.send_multipart((topic, json.dumps(d)))
             else:
