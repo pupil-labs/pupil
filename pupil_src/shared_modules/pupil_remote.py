@@ -140,6 +140,10 @@ class Pupil_Remote(Plugin):
             response = self.g_pool.ipc_sub_url
         elif msg == 'PUB_URL':
             response = self.g_pool.ipc_pub_url
+        elif msg == 'SUB_PORT':
+            response = self.g_pool.ipc_sub_url.split(':')[-1]
+        elif msg == 'PUB_PORT':
+            response = self.g_pool.ipc_pub_url.split(':')[-1]
         elif msg[0] == 'R':
             ipc_pub.notify({'subject':'should_start_recording','session_name':msg[2:]})
             response = 'started recording'
