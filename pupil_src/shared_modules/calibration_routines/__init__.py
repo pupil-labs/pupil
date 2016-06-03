@@ -8,10 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-#logging
-import logging
-logger = logging.getLogger(__name__)
-
 
 # import detector classes from sibling files
 from screen_marker_calibration import Screen_Marker_Calibration

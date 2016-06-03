@@ -194,40 +194,6 @@ class Plugin(object):
 
 
 
-# Derived base classes:
-# If you inherit from these your plugin property base_class will point to them
-# This is good because we can categorize plugins.
-class Calibration_Plugin(Plugin):
-    '''base class for all calibration routines'''
-    uniqueness = 'by_base_class'
-    def __init__(self,g_pool):
-        super(Calibration_Plugin, self).__init__(g_pool)
-        self.g_pool.active_calibration_plugin = self
-
-    def on_notify(self,notification):
-        if notification['subject'].startswith('calibration.should_start'):
-            if self.active:
-                logger.warning('Calibration already running.')
-            else:
-                self.start()
-        elif notification['subject'].startswith('calibration.should_stop'):
-            if self.active:
-                self.stop()
-            else:
-                logger.warning('Calibration already stopped.')
-
-
-    def start(self):
-        raise  NotImplementedError()
-        self.notify_all({'subject':'calibration.started'})
-
-
-    def stop(self):
-        raise  NotImplementedError()
-        self.notify_all({'subject':'calibration.stopped'})
-
-
-
 # Plugin manager classes and fns
 
 class Plugin_List(object):

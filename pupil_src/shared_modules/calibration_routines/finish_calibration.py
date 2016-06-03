@@ -259,7 +259,6 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 points_b.append(close_point_b)
 
 
-
             # we need to take the sphere position into account
             # orientation and translation are referring to the sphere center.
             # but we want to have it referring to the camera center

@@ -21,7 +21,7 @@ from file_methods import load_object
 import audio
 
 from pyglui import ui
-from plugin import Calibration_Plugin
+from calibration_plugin_base import Calibration_Plugin
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -39,7 +39,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
     """
     def __init__(self, g_pool):
         super(Manual_Marker_Calibration, self).__init__(g_pool)
-        self.active = False
         self.detected = False
         self.pos = None
         self.smooth_pos = 0.,0.
@@ -82,9 +81,10 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
     def toggle(self,_=None):
         if self.active:
-            self.stop()
+            self.notify_all({'subject':'calibration.should_stop'})
         else:
-            self.start()
+            self.notify_all({'subject':'calibration.should_start'})
+
 
     def start(self):
         self.notify_all({'subject':'calibration.started'})
@@ -204,7 +204,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
+                if p_pt['confidence'] > self.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
             if self.counter:
