@@ -81,7 +81,6 @@ def main():
     ipc_pub_url = 'tcp://127.0.0.1:%s'%ipc_pub_port
     ipc_sub_url = 'tcp://127.0.0.1:%s'%ipc_sub_port
 
-
     #We use a zmq forwarder and the zmq PUBSUB pattern to do all our IPC.
     def main_proxy(in_url, out_url):
         ctx = zmq.Context.instance()
