@@ -30,8 +30,16 @@ class Pupil_Remote(Plugin):
     'T 1234.56' Timesync: make timestamps count form 1234.56 from now on.
     't' get pupil capture timestamp returns a float as string.
 
-    Pupil Remote is the simplistic version of Pupil Sync:
-    Not as good but the protocol is dead simple.
+
+    #IPC Backbone communication
+    'PUB_PORT' return the current pub port of the IPC Backbone
+    'SUB_PORT' return the current sub port of the IPC Backbone
+
+    mulitpart messages conforming to pattern:
+    part1: 'notify.' part2: json encoded dict with at least  key 'subject':'my_notification_subject'
+    will be forwared to the Pupil IPC Backbone.
+
+
     A example script for talking with pupil remote below:
     import zmq
     from time import sleep,time
@@ -40,10 +48,10 @@ class Pupil_Remote(Plugin):
     # set your ip here
     socket.connect('tcp://192.168.1.100:50020')
     t= time()
-    socket.send('T 0.0')
+    socket.send('t')
     print socket.recv()
     print 'Round trip command delay:', time()-t
-    print 'If you need continous syncing and less latency look at pupil_sync.'
+    print 'If you need continous syncing and/or less latency look at pupil_sync.'
     sleep(1)
     socket.send('R')
     print socket.recv()
@@ -67,6 +75,7 @@ class Pupil_Remote(Plugin):
             self.address = new_address
         else:
             logger.error(response)
+            self.address = ''
 
     def stop_server(self):
         self.thread_pipe.send('Exit')
@@ -112,7 +121,8 @@ class Pupil_Remote(Plugin):
                         remote_socket = context.socket(zmq.REP)
                         remote_socket.bind(new_url)
                     except zmq.ZMQError as e:
-                        pipe.send("Could not bind to Socket: %s. Reason: %s"%(new_address,e))
+                        remote_socket = None
+                        pipe.send("Could not bind to Socket: %s. Reason: %s"%(new_url,e))
                     else:
                         pipe.send("Bind OK")
                         poller.register(remote_socket)
@@ -135,27 +145,23 @@ class Pupil_Remote(Plugin):
                 response = 'Notification mal-formatted or missing: %s'%e
             else:
                 ipc_pub.notify(payload)
-                response = 'Notifaction recevied.'
-        elif msg == 'SUB_URL':
-            response = self.g_pool.ipc_sub_url
-        elif msg == 'PUB_URL':
-            response = self.g_pool.ipc_pub_url
+                response = 'Notification recevied.'
         elif msg == 'SUB_PORT':
             response = self.g_pool.ipc_sub_url.split(':')[-1]
         elif msg == 'PUB_PORT':
             response = self.g_pool.ipc_pub_url.split(':')[-1]
         elif msg[0] == 'R':
-            ipc_pub.notify({'subject':'should_start_recording','session_name':msg[2:]})
-            response = 'started recording'
+            ipc_pub.notify({'subject':'recording.should_start','session_name':msg[2:]})
+            response = 'OK'
         elif msg[0] == 'r':
-            ipc_pub.notify({'subject':'should_stop_recording'})
-            response = 'stopped recording'
+            ipc_pub.notify({'subject':'recording.should_stop'})
+            response = 'OK'
         elif msg == 'C':
-            ipc_pub.notify({'subject':'should_start_calibration'})
-            response = 'started calibration'
+            ipc_pub.notify({'subject':'calibration.should_start'})
+            response = 'OK'
         elif msg == 'c':
-            ipc_pub.notify({'subject':'should_stop_calibration'})
-            response = 'stopped calibration'
+            ipc_pub.notify({'subject':'calibration.should_stop'})
+            response = 'OK'
         elif msg[0] == 'T':
             try:
                 target = float(msg[2:])

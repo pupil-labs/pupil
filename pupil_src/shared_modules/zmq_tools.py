@@ -122,13 +122,12 @@ if __name__ == '__main__':
 
     # the requester talks to Pupil remote and recevied the session unique IPC SUB URL
     requester = ctx.socket(zmq.REQ)
-    requester.connect('tcp://localhost:50020')
+    requester.connect('tcp://192.168.1.100:50020')
 
-    requester.send('SUB_URL')
-    ipc_sub_url = requester.recv()
+    requester.send('SUB_PORT')
+    ipc_sub_port = requester.recv()
     # we then connect to monitor log messages using the url. We can also monitor other topic if we wish
-    print ipc_sub_url
-    monitor = Msg_Receiver(ctx,ipc_sub_url,topics=('logging','notify')) #more topics: gaze, pupil, notify, ...
+    monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('logging','notify')) #more topics: gaze, pupil, notify, ...
 
     # now lets get the current pupil time.
     requester.send('t')
