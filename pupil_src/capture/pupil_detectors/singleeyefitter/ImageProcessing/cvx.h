@@ -1,9 +1,8 @@
 #ifndef __SINGLEEYEFITTER_CVX_H__
 #define __SINGLEEYEFITTER_CVX_H__
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/core/core_c.h>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 
 namespace singleeyefitter {
 
