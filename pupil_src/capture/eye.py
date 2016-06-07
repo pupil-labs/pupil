@@ -295,7 +295,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, ey
         def window_should_update():
             return next(window_update_timer)
 
-
+        ipc_socket.notify({'subject':'eye_process.started', 'eye_id':eye_id})
         logger.warning('Process started.')
 
         # Event loop
@@ -304,7 +304,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, ey
             if notify_sub.new_data:
                 t,notification = notify_sub.recv()
                 subject = notification['subject']
-                if subject == 'stop_eye':
+                if subject == 'eye_process.should_stop':
                     if notification['eye_id'] == eye_id:
                         break
                 elif subject == 'set_detection_mapping_mode':
@@ -460,6 +460,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, ey
         glfw.glfwDestroyWindow(main_window)
         glfw.glfwTerminate()
         cap.close()
+        ipc_socket.notify({'subject':'eye_process.stopped', 'eye_id':eye_id})
         logger.info("Process shutting down.")
 
 def eye_profiled(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url, user_dir, version, eye_id, cap_src):

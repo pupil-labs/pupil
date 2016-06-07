@@ -153,7 +153,7 @@ def main():
     delay_thread.setDaemon(True)
     delay_thread.start()
 
-    topics = ('notify.start_eye','notify.stop_launcher')
+    topics = ('notify.eye_process.','notify.launcher_process.')
     cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=topics )
 
 
@@ -172,7 +172,7 @@ def main():
     while True:
         #block and listen for relevant messages.
         topic,n = cmd_sub.recv()
-        if "notify.start_eye" in topic :
+        if "notify.eye_process.should_start" in topic :
             eye_id = n['eye_id']
             p_eye = Process(target=eye,
                             name='eye%s'%eye_id,
@@ -185,7 +185,7 @@ def main():
                                 eye_id,
                                 video_sources['eye%s'%eye_id] ))
             p_eye.start()
-        elif "notify.stop_launcher" == topic:
+        elif "notify.launcher_process.should_stop" == topic:
             break
 
     for p in active_children(): p.join()

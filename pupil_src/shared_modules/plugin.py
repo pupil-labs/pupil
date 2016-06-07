@@ -88,7 +88,7 @@ class Plugin(object):
     def on_notify(self,notification):
         """
         this gets called when a plugin wants to notify all others.
-        notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
+        notification is a dict in the format {'subject':'notification_category.notification_name',['addional_field':'blah']}
         implement this fn if you want to deal with notifications
         note that notifications are collected from all threads and processes and dispatched in the update loop.
         this callback happens in the main thread.
@@ -116,7 +116,7 @@ class Plugin(object):
     def notify_all(self,notification):
         """
         call this to notify all other plugins and processes with a notification:
-        notification is a dict in the format {'subject':'notification_name',['addional_field':'foo']}
+        notification is a dict in the format {'subject':'notification_category.notification_name',['addional_field':'foo']}
 
             adding 'timestamp':self.g_pool.capture.get_timestamp() will allow other plugins to know when you created this notification.
             adding 'record':True will make recorder save the notification during recording.

@@ -34,32 +34,6 @@ class Gaze_Mapping_Plugin(Plugin):
     def on_pupil_datum(self, p):
         raise NotImplementedError()
 
-    # def start_map_loop(self):
-    #     self._map_process = Thread(target=self._map_loop)
-    #     self._map_process.start()
-
-    # def stop_map_loop(self):
-    #     n = {'subject':'stop_gaze_mapper'}
-    #     self.g_pool.ipc_pub.notify(n)
-
-    # def _map_loop(self):
-    #     zmq_ctx = zmq_tools.zmq.Context()
-    #     socket = zmq_tools.Msg_Receiver(zmq_ctx,self.g_pool.ipc_sub_url)
-    #     socket.subscribe('notify.stop_gaze_mapper')
-    #     socket.subscribe('pupil')
-    #     out_socket = zmq_tools.Msg_Dispatcher(zmq_ctx,self.g_pool.ipc_pub_url)
-
-    #     while True:
-    #         topic, p = socket.recv()
-    #         if topic == 'notify.stop_gaze_mapper':
-    #             break
-    #         gaze_data = self.on_pupil_datum(p)
-    #         for g in gaze_data:
-    #             out_socket.send('gaze.%s'%p['id'],g)
-
-    # def cleanup(self):
-    #     self.stop_map_loop()
-
 
 class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
     """Base class to implement the map callback"""

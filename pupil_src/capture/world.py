@@ -198,13 +198,11 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
         if eyes_are_alive[eye_id].value:
             logger.error("Eye%s process already running."%eye_id)
             return
-        n = {'subject':'start_eye%s'%eye_id,'eye_id':eye_id,'delay':delay}
-        ipc_pub.notify(n)
-        n = {'subject':'set_detection_mapping_mode','mode':g_pool.detection_mapping_mode,'delay':.5}
+        n = {'subject':'eye_process.should_start','eye_id':eye_id,'delay':delay}
         ipc_pub.notify(n)
 
-    def stop_eye_process(eye_id,blocking=False):
-        n = {'subject':'stop_eye','eye_id':eye_id}
+    def stop_eye_process(eye_id):
+        n = {'subject':'eye_process.should_stop','eye_id':eye_id}
         ipc_pub.notify(n)
 
     def start_stop_eye(eye_id,make_alive):
@@ -227,6 +225,9 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
             g_pool.detection_mapping_mode = n['mode']
         elif subject == 'start_plugin':
             g_pool.plugins.add(plugin_by_name[n['name']],args=n.get('args',{}) )
+        elif subject == 'eye_process.started':
+            n = {'subject':'set_detection_mapping_mode','mode':g_pool.detection_mapping_mode}
+            ipc_pub.notify(n)
 
     #window and gl setup
     glfw.glfwInit()
@@ -324,9 +325,9 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
     if session_settings.get('eye1_process_alive',False):
         launch_eye_process(1,delay=0.6)
     if session_settings.get('eye0_process_alive',True):
-        launch_eye_process(0,delay=.3)
+        launch_eye_process(0,delay=0.3)
 
-
+    ipc_pub.notify({'subject':'world_process.started'})
     logger.warning('Process started.')
 
     # Event loop
@@ -341,7 +342,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
             g_pool.capture = autoCreateCapture(None, timebase=g_pool.timebase)
             g_pool.capture.init_gui(g_pool.sidebar)
             g_pool.capture.settings = settings
-            g_pool.notifications.append({'subject':'should_stop_recording'})
+            ipc_pub.notify({'subject':'recording.should_stop'})
             continue
         except EndofVideoFileError:
             logger.warning("Video file is done. Stopping")
@@ -455,8 +456,10 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
     stop_eye_process(1)
 
     logger.info("Process shutting down.")
+    ipc_pub.notify({'subject':'world_process.stopped'})
+
     #shut down launcher
-    n = {'subject':'stop_launcher'}
+    n = {'subject':'launcher_process.should_stop'}
     ipc_pub.notify(n)
 
 
