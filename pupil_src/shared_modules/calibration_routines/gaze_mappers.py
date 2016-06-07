@@ -65,11 +65,15 @@ class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
     """Base class to implement the map callback"""
     def __init__(self, g_pool):
         super(Monocular_Gaze_Mapper_Base, self).__init__(g_pool)
+        self.min_pupil_confidence = 0.0
 
     def on_pupil_datum(self, p):
-        g = self._map_monocular(p)
-        if g:
-            return [g,]
+        if p['confidence'] > self.min_pupil_confidence:
+            g = self._map_monocular(p)
+            if g:
+                return [g,]
+            else:
+                return []
         else:
             return []
 
@@ -77,42 +81,46 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
     """Base class to implement the map callback"""
     def __init__(self, g_pool):
         super(Binocular_Gaze_Mapper_Base, self).__init__(g_pool)
-        self._cache = []
+
+        self.min_pupil_confidence = 0.7
+        self._caches = ([],[])
+        self.temportal_cutoff = 0.3
+        self.sample_cutoff = 10
 
     def on_pupil_datum(self, p):
-        g = self._map_monocular(p)
-        if g:
-            return [g,]
+        if p['confidence'] > self.min_pupil_confidence:
+            self._caches[p['id']].append(p)
+
+        if self._caches[0] and self._caches[1]:
+            #we have binocular data
+
+            if self._caches[0][0]['timestamp'] < self._caches[1][0]['timestamp']:
+                p0 = self._caches[0].pop(0)
+                p1 = self._caches[1][0]
+                older_pt = p0
+            else:
+                p0 = self._caches[0][0]
+                p1 = self._caches[1].pop(0)
+                older_pt = p1
+
+            if abs(p0['timestamp'] - p1['timestamp']) < self.temportal_cutoff:
+                gaze_datum = self._map_binocular(p0,p1)
+            else:
+                gaze_datum = self._map_monocular(older_pt)
+
+        elif len(self._caches[0])>self.sample_cutoff:
+            p = self._caches[0].pop(0)
+            gaze_datum = self._map_monocular(p)
+        elif len(self._caches[1])>self.sample_cutoff:
+            p = self._caches[1].pop(0)
+            gaze_datum = self._map_monocular(p)
+        else:
+            gaze_datum = None
+
+        if gaze_datum:
+            return [gaze_datum,]
         else:
             return []
-        binocular_data = [],[]
-        p0 = None
-        p1 = None
-
-
-                # #upsampling
-                # if p0['timestamp'] <= p1['timestamp'] and binocular_data[0]:
-                #     p0 = binocular_data[0].pop(0)
-                #     continue
-                # elif p1['timestamp'] <= p0['timestamp'] and pupil_pts_1:
-                #     p1 = pupil_pts_1.pop(0)
-                #     continue
-                # elif pupil_pts_0 and not pupil_pts_1:
-                #     p0 = pupil_pts_0.pop(0)
-                # elif pupil_pts_1 and not pupil_pts_0:
-                #     p1 = pupil_pts_1.pop(0)
-                # else:
-                #     break
-
-
-
-                # g = self._map_binocular(p0, p1, self.multivariate)
-                # # fallback to monocular if something went wrong
-                # g = self._map_monocular(p)
-
-                # self._gaze_data_out.append(g)
-                # out_socket.send('gaze',g)
-
 
 
 
@@ -126,7 +134,6 @@ class Dummy_Gaze_Mapper(Monocular_Gaze_Mapper_Base):
 
     def get_init_dict(self):
         return {}
-
 
 
 
@@ -176,7 +183,7 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base):
         ts = (p0['timestamp'] + p1['timestamp'])/2.
         return {'norm_pos':gaze_point,'confidence':confidence,'timestamp':ts,'base':[p0, p1]}
 
-    def _man_monocular(self,p):
+    def _map_monocular(self,p):
         gaze_point = self.map_fn_fallback[p['id']](p['norm_pos'])
         return {'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]}
 
