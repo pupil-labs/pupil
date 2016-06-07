@@ -126,14 +126,28 @@ if __name__ == '__main__':
 
     requester.send('SUB_PORT')
     ipc_sub_port = requester.recv()
+    requester.send('PUB_PORT')
+    ipc_pub_port = requester.recv()
     # we then connect to monitor log messages using the url. We can also monitor other topic if we wish
     monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('logging','notify')) #more topics: gaze, pupil, notify, ...
+    publisher = Msg_Dispatcher(ctx,'tcp://localhost:%s'%ipc_pub_port)
 
     # now lets get the current pupil time.
     requester.send('t')
     print requester.recv()
-
+    from time import time,sleep
     # listen to log messages.
-    while True:
-        monitor.socket.poll()
-        print monitor.recv()
+    ts = []
+
+    for x in range(100):
+        # print monitor.recv()
+        sleep(0.003)
+        t = time()
+        publisher.notify({'subject':'pingback_test'})
+        monitor.recv()
+        # requester.send('t')
+        # requester.recv()
+        ts.append(time()-t)
+        # print ts[-1]
+    print min(ts), sum(ts)/len(ts) , max(ts)
+
