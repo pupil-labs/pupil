@@ -19,14 +19,20 @@ class Is_Alive_Manager(object):
     A context manager to wrap the is_alive flag.
     Is alive will stay true as long is the eye process is running.
     '''
-    def __init__(self, is_alive):
+    def __init__(self, is_alive,ipc_socket,eye_id):
         self.is_alive = is_alive
+        self.ipc_socket = ipc_socket
+        self.eye_id = eye_id
+
     def __enter__( self ):
         self.is_alive.value = True
+        self.ipc_socket.notify({'subject':'eye_process.started', 'eye_id':self.eye_id})
+
     def __exit__(self, type, value, traceback):
         if type is not None:
             pass # Exception occurred
         self.is_alive.value = False
+        self.ipc_socket.notify({'subject':'eye_process.stopped', 'eye_id':self.eye_id})
 
 
 def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, eye_id, cap_src):
@@ -44,12 +50,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, ey
     import zmq_tools
     zmq_ctx = zmq.Context()
     notify_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=("notify",))
+    ipc_socket = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_pub_url)
 
-    is_alive = Is_Alive_Manager(is_alive_flag)
+    is_alive = Is_Alive_Manager(is_alive_flag,ipc_socket,eye_id)
     with is_alive:
-
-        #talk to the main IPC node
-        ipc_socket = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_pub_url)
 
         #logging setup
         import logging
@@ -295,7 +299,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, ey
         def window_should_update():
             return next(window_update_timer)
 
-        ipc_socket.notify({'subject':'eye_process.started', 'eye_id':eye_id})
         logger.warning('Process started.')
 
         # Event loop
@@ -460,7 +463,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, ey
         glfw.glfwDestroyWindow(main_window)
         glfw.glfwTerminate()
         cap.close()
-        ipc_socket.notify({'subject':'eye_process.stopped', 'eye_id':eye_id})
         logger.info("Process shutting down.")
 
 def eye_profiled(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url, user_dir, version, eye_id, cap_src):
