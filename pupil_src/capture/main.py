@@ -134,7 +134,7 @@ def main():
         ch = logging.StreamHandler()
         ch.setFormatter(logging.Formatter('%(processName)s - [%(levelname)s] %(name)s: %(message)s'))
         logger.addHandler(ch)
-        # IPC setup to receive log messages. Use ZMQ_handler to send messages in from remote to here.
+        # IPC setup to receive log messages. Use zmq_tools.ZMQ_handler to send messages to here.
         sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=("logging",))
         while True:
             topic,msg = sub.recv()
