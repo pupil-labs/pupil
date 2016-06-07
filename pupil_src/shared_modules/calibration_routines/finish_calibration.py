@@ -23,9 +23,10 @@ import logging
 logger = logging.getLogger(__name__)
 from gaze_mappers import *
 
+not_enough_data_error_msg = 'Did not collect enough data during calibration.'
+
 
 def finish_calibration(g_pool,pupil_list,ref_list):
-    not_enough_data_error_msg = 'Did not collect enough data during calibration.'
 
     if pupil_list and ref_list:
         pass
@@ -300,7 +301,7 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             method = 'monocular polynomial regression'
             cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_monocular_data)
             map_fn,inliers,params = calibrate.calibrate_2d_polynomial(cal_pt_cloud,g_pool.capture.frame_size,binocular=False)
-            g_pool.plugins.add(Simple_Gaze_Mapper,args={'params':params})
+            g_pool.plugins.add(Monocular_Gaze_Mapper,args={'params':params})
         else:
             logger.error(not_enough_data_error_msg)
             g_pool.active_calibration_plugin.notify_all({'subject':'calibration.failed','reason':not_enough_data_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})

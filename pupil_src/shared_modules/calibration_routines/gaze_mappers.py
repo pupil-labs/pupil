@@ -110,11 +110,10 @@ class Dummy_Gaze_Mapper(Monocular_Gaze_Mapper_Base):
         return {}
 
 
-
-class Simple_Gaze_Mapper(Monocular_Gaze_Mapper_Base):
-    """docstring for Simple_Gaze_Mapper"""
+class Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base):
+    """docstring for Monocular_Gaze_Mapper"""
     def __init__(self, g_pool,params):
-        super(Simple_Gaze_Mapper, self).__init__(g_pool)
+        super(Monocular_Gaze_Mapper, self).__init__(g_pool)
         self.params = params
         self.map_fn = make_map_function(*self.params)
 
@@ -125,6 +124,22 @@ class Simple_Gaze_Mapper(Monocular_Gaze_Mapper_Base):
 
     def get_init_dict(self):
         return {'params':self.params}
+
+
+class Dual_Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base):
+    """A gaze mapper that maps two eyes individually"""
+    def __init__(self, g_pool,params0,params1):
+        super(Simple_Gaze_Mapper, self).__init__(g_pool)
+        self.params0 = params0
+        self.params1 = params1
+        self.map_fns = (make_map_function(*self.params0),make_map_function(*self.params1))
+
+    def _map_monocular(self,p):
+        gaze_point = self.map_fns[p['id']](p['norm_pos'])
+        return {'norm_pos':gaze_point,'confidence':p['confidence'],'id':p['id'],'timestamp':p['timestamp'],'base':[p]}
+
+    def get_init_dict(self):
+        return {'params0':self.params0,'params1':self.params1}
 
 
 class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base):

@@ -16,8 +16,10 @@ class Calibration_Plugin(Plugin):
                 logger.warning('Calibration already running.')
             else:
                 self.start()
+                self.notify_all({'subject':'calibration.started'})
         elif notification['subject'].startswith('calibration.should_stop'):
             if self.active:
+                self.notify_all({'subject':'calibration.stopped'})
                 self.stop()
             else:
                 logger.warning('Calibration already stopped.')

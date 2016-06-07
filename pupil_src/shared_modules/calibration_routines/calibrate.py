@@ -17,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def calibrate_2d_polynomial(cal_pt_cloud,screen_size=(2,2),threshold = 35, binocular=False):
+def calibrate_2d_polynomial(cal_pt_cloud,screen_size=(1,1),threshold = 35, binocular=False):
     """
     we do a simple two pass fitting to a pair of bi-variate polynomials
     return the function to map vector
@@ -268,7 +268,6 @@ def closest_matches_binocular(ref_pts, pupil_pts,max_dispersion=1/15.):
 
 def closest_matches_monocular(ref_pts, pupil_pts,max_dispersion=1/15.):
     '''
-
     get pupil positions closest in time to ref points.
     return list of dict with matching ref and pupil datum.
 
@@ -353,76 +352,6 @@ def preprocess_3d_data(matched_data, camera_intrinsics ):
             pass
 
     return ref_processed,pupil0_processed,pupil1_processed
-
-# def preprocess_3d_data_binocular(matched_data, camera_intrinsics , calibration_distance):
-
-#     camera_matrix = camera_intrinsics["camera_matrix"]
-#     dist_coefs = camera_intrinsics["dist_coefs"]
-
-#     cal_data = []
-#     for triplet in matched_data:
-#         ref,p0,p1 = triplet['ref'],triplet['pupil0'],triplet['pupil1']
-#         try:
-#             # taking the pupil normal as line of sight vector
-#             # we multiply by a fixed (assumed) distance and
-#             # add the sphere pos to get the 3d gaze point in eye camera 3d coords
-#             sphere_pos0 = np.array(p0['sphere']['center'])
-#             gaze_pt0 = np.array(p0['circle3D']['normal']) * calibration_distance + sphere_pos0
-
-
-#             sphere_pos1 = np.array(p1['sphere']['center'])
-#             gaze_pt1 = np.array(p1['circle3D']['normal']) * calibration_distance + sphere_pos1
-
-
-#             # projected point uv to normal ray vector of camera
-#             ref_vector =  undistort_unproject_pts(ref['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
-#             ref_vector = ref_vector / np.linalg.norm(ref_vector)
-#             # assuming a fixed (assumed) distance we get a 3d point in world camera 3d coords.
-#             ref_pt_3d = ref_vector*calibration_distance
-
-
-#             point_triple_3d = tuple(gaze_pt0), tuple(gaze_pt1) , ref_pt_3d
-#             cal_data.append(point_triple_3d)
-#         except KeyError as e:
-#             # this pupil data point did not have 3d detected data.
-#             pass
-
-#     return cal_data
-
-# def preprocess_3d_data_binocular_gaze_direction(matched_data, camera_intrinsics , calibration_distance):
-
-#     camera_matrix = camera_intrinsics["camera_matrix"]
-#     dist_coefs = camera_intrinsics["dist_coefs"]
-
-#     cal_data = []
-#     for triplet in matched_data:
-#         ref,p0,p1 = triplet['ref'],triplet['pupil0'],triplet['pupil1']
-#         try:
-#             # taking the pupil normal as line of sight vector
-#             # we multiply by a fixed (assumed) distance and
-#             # add the sphere pos to get the 3d gaze point in eye camera 3d coords
-#             sphere_pos0 = np.array(p0['sphere']['center'])
-#             gaze_pt0 = np.array(p0['circle3D']['normal'])
-
-
-#             sphere_pos1 = np.array(p1['sphere']['center'])
-#             gaze_pt1 = np.array(p1['circle3D']['normal'])
-
-
-#             # projected point uv to normal ray vector of camera
-#             ref_vector =  undistort_unproject_pts(ref['screen_pos'] , camera_matrix, dist_coefs).tolist()[0]
-#             ref_vector = ref_vector / np.linalg.norm(ref_vector)
-#             # assuming a fixed (assumed) distance we get a 3d point in world camera 3d coords.
-#             ref_pt_3d = ref_vector*calibration_distance
-
-
-#             point_triple_3d = tuple(gaze_pt0), tuple(gaze_pt1) , ref_pt_3d
-#             cal_data.append(point_triple_3d)
-#         except KeyError as e:
-#             # this pupil data point did not have 3d detected data.
-#             pass
-
-#     return cal_data
 
 
 def find_rigid_transform(A, B):
