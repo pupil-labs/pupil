@@ -220,7 +220,7 @@ def make_map_function(cx,cy,n):
             return x2,y2
 
     else:
-        raise Exception("ERROR: Model n needs to be 3, 5, 7 or 9")
+        raise Exception("ERROR: unsopported number of coefficiants.")
 
     return fn
 
