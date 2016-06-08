@@ -24,7 +24,8 @@ calibration_plugins =  [Screen_Marker_Calibration,
                         Natural_Features_Calibration,
                         Camera_Intrinsics_Estimation,
                         Accuracy_Test,
-                        Adjust_Calibration ]
+                        Adjust_Calibration,
+                        HMD_Calibration ]
 
 gaze_mapping_plugins = [Dummy_Gaze_Mapper,
                         Monocular_Gaze_Mapper,

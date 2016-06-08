@@ -129,7 +129,7 @@ class Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base):
 class Dual_Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base):
     """A gaze mapper that maps two eyes individually"""
     def __init__(self, g_pool,params0,params1):
-        super(Simple_Gaze_Mapper, self).__init__(g_pool)
+        super(Dual_Monocular_Gaze_Mapper, self).__init__(g_pool)
         self.params0 = params0
         self.params1 = params1
         self.map_fns = (make_map_function(*self.params0),make_map_function(*self.params1))

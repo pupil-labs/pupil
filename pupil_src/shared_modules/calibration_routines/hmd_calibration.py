@@ -16,6 +16,7 @@ from pyglui import ui
 from calibration_plugin_base import Calibration_Plugin
 from finish_calibration import not_enough_data_error_msg
 import calibrate
+from gaze_mappers import Monocular_Gaze_Mapper,Dual_Monocular_Gaze_Mapper
 
 #logging
 import logging
@@ -92,7 +93,7 @@ class HMD_Calibration(Calibration_Plugin):
                     logger.warning('Calibration already stopped.')
             elif notification['subject'].startswith('calibration.add_ref_data'):
                 if self.active:
-                    self.ref_list += notification['ref_data']:
+                    self.ref_list += notification['ref_data']
                 else:
                     logger.error("Ref data can only be added when calibratio is runnings.")
         except KeyError as e:
@@ -100,16 +101,16 @@ class HMD_Calibration(Calibration_Plugin):
 
 
     def deinit_gui(self):
-        if self.menu:
-            self.g_pool.calibration_menu.remove(self.menu)
+        if self.info:
             self.g_pool.calibration_menu.remove(self.info)
-            self.menu = None
+            self.info = None
         if self.button:
             self.g_pool.quickbar.remove(self.button)
             self.button = None
 
 
     def start(self,hmd_video_frame_size,outlier_threshold):
+        self.active = True
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
         self.notify_all({'subject':'calibration.started'})
@@ -143,9 +144,9 @@ class HMD_Calibration(Calibration_Plugin):
         if matched_pupil0_data:
             cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_pupil0_data)
             map_fn0,inliers0,params0 = calibrate.calibrate_2d_polynomial(cal_pt_cloud,hmd_video_frame_size,binocular=False)
-            params0 = None
         else:
             logger.warning('No matched ref<->pupil data collected for id0')
+            params0 = None
 
         if matched_pupil1_data:
             cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_pupil1_data)
@@ -188,5 +189,55 @@ class HMD_Calibration(Calibration_Plugin):
         if self.active:
             self.stop()
         self.deinit_gui()
+
+# if __name__ == '__main__':
+
+    # import zmq, json
+    # ctx = zmq.Context()
+
+    # req = ctx.socket(zmq.REQ)
+    # req.connect('tcp://localhost:50020')
+
+    # def send_recv_notification(n):
+    #     # convinence fn
+    #     req.send_multipart(('notify.%s'%n['subject'], json.dumps(n)))
+    #     return req.recv()
+
+    # # set calibration to hmd calibration
+    # n = {'subject':'start_plugin','plugin':'HMD_Calibration', 'args':{}}
+    # print send_recv_notification(n)
+
+    # # start caliration routine with params. This will make pupil start sampeling pupil data.
+    # n = {'subject':'calibration.should_start', 'hmd_video_frame_size':(1000,1000), 'outlier_threshold':35}
+    # print send_recv_notification(n)
+
+
+    # #mockup logic for sample movement coordination we sample some positions (normalized screen coords).
+    # ref_data = []
+    # for pos in ((0,0),(0,1),(1,1),(1,0),(.5,.5)):
+    #     for s in range(30):
+    #         # calls to render stimulus on hmd screen l/r here
+    #         print 'subject now looks at position:',pos
+    #         # get the current pupil time. (You can also set the pupil time to another clock and use that.)
+    #         req.send('t')
+    #         t = req.recv()
+
+    #         # in this mockup  the left and right screen marker positions are identical.
+    #         datum0 = {'norm_pos':pos,'timestamps':t,'id':0}
+    #         datum1 = {'norm_pos':pos,'timestamps':t,'id':1}
+    #         ref_data.append(datum0)
+    #         ref_data.append(datum1)
+    #         sleep(1/30.) #simulate animation speed.
+
+    # # Send ref data to pupil this call can be done once at the end or multiple times.
+    # # During one calibraiton new data will be appended.
+    # n = {'subject':'calibration.add_ref_data','ref_data':ref_data}
+    # print send_recv_notification(n)
+
+    # # stop calibration
+    # # Pupil will correlate pupil and ref data based on timestamps,
+    # # compute the gaze mapping params, and start a new gaze mapper.
+    # n = {'subject':'calibration.should_stop'}
+    # print send_recv_notification(n)
 
 
