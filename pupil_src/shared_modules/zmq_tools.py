@@ -129,7 +129,7 @@ if __name__ == '__main__':
     requester.send('PUB_PORT')
     ipc_pub_port = requester.recv()
     # we then connect to monitor log messages using the url. We can also monitor other topic if we wish
-    monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('logging','notify')) #more topics: gaze, pupil, notify, ...
+    monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('notify',)) #more topics: gaze, pupil, logging, ...
     publisher = Msg_Dispatcher(ctx,'tcp://localhost:%s'%ipc_pub_port)
 
 
