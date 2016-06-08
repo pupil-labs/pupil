@@ -46,7 +46,7 @@ class Vis_Light_Points(Plugin):
             except:
                 pass
 
-        out = cv2.distanceTransform(overlay,cv2.cv.CV_DIST_L2, 5)
+        out = cv2.distanceTransform(overlay,cv2.DIST_L2, 5)
 
         # fix for opencv binding inconsitency
         if type(out)==tuple:
@@ -54,7 +54,8 @@ class Vis_Light_Points(Plugin):
 
         overlay =  1/(out/falloff+1)
 
-        img *= cv2.cvtColor(overlay,cv2.COLOR_GRAY2RGB)
+        img_float = img.astype(np.float32) * cv2.cvtColor(overlay,cv2.COLOR_GRAY2RGB)
+        img.data = img_float.round().astype(np.uint8).data
 
     def init_gui(self):
         # initialize the menu
