@@ -38,7 +38,7 @@ def calibrate_2d_polynomial(cal_pt_cloud,screen_size=(1,1),threshold = 35, binoc
         new_err_dist,new_err_mean,new_err_rms = fit_error_screen(new_err_x,new_err_y,screen_size)
 
         logger.info('first iteration. root-mean-square residuals: %s, in pixel' %err_rms)
-        logger.info('second iteration: ignoring outliers. root-mean-square residuals: %s in pixel',new_err_rms)
+        logger.info('second iteration: ignoring outliers. root-mean-square residuals: %s in pixel'%new_err_rms)
 
         logger.info('used %i data points out of the full dataset %i: subset is %i percent' \
             %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
@@ -48,8 +48,8 @@ def calibrate_2d_polynomial(cal_pt_cloud,screen_size=(1,1),threshold = 35, binoc
 
     else: # did disregard all points. The data cannot be represented by the model in a meaningful way:
         map_fn = make_map_function(cx,cy,model_n)
-        logger.info('First iteration. root-mean-square residuals: %s in pixel, this is bad!'%err_rms)
-        logger.warning('The data cannot be represented by the model in a meaningfull way.')
+        logger.error('First iteration. root-mean-square residuals: %s in pixel, this is bad!'%err_rms)
+        logger.error('The data cannot be represented by the model in a meaningfull way.')
         return map_fn,err_dist<=threshold,(cx,cy,model_n)
 
 

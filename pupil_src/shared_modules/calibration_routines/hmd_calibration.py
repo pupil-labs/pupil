@@ -14,7 +14,7 @@ import audio
 
 from pyglui import ui
 from calibration_plugin_base import Calibration_Plugin
-from finish_calibration import not_enough_data_error_msg
+from finish_calibration import not_enough_data_error_msg,solver_failed_to_converge_error_msg
 import calibrate
 from gaze_mappers import Monocular_Gaze_Mapper,Dual_Monocular_Gaze_Mapper
 
@@ -144,6 +144,9 @@ class HMD_Calibration(Calibration_Plugin):
         if matched_pupil0_data:
             cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_pupil0_data)
             map_fn0,inliers0,params0 = calibrate.calibrate_2d_polynomial(cal_pt_cloud,hmd_video_frame_size,binocular=False)
+            if not inliers0.any():
+                self.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg})
+                return
         else:
             logger.warning('No matched ref<->pupil data collected for id0')
             params0 = None
@@ -151,6 +154,9 @@ class HMD_Calibration(Calibration_Plugin):
         if matched_pupil1_data:
             cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_pupil1_data)
             map_fn1,inliers1,params1 = calibrate.calibrate_2d_polynomial(cal_pt_cloud,hmd_video_frame_size,binocular=False)
+            if not inliers1.any():
+                self.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg})
+                return
         else:
             logger.warning('No matched ref<->pupil data collected for id1')
             params1 = None

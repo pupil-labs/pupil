@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 from gaze_mappers import *
 
 not_enough_data_error_msg = 'Did not collect enough data during calibration.'
-
+solver_failed_to_converge_error_msg = 'Paramters could not be estimated from data.'
 
 def finish_calibration(g_pool,pupil_list,ref_list):
 
@@ -111,8 +111,9 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                     smallest_residual = residual
                     scales[-1] = s
 
+
             if not success:
-                g_pool.active_calibration_plugin.notify_all({'subject':'calibration.failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
                 logger.error("Calibration solver faild to converge.")
                 return
 
@@ -227,8 +228,9 @@ def finish_calibration(g_pool,pupil_list,ref_list):
 
             if not success:
                 logger.error("Calibration solver faild to converge.")
-                g_pool.active_calibration_plugin.notify_all({'subject':'calibration.failed','reason':"Calibration solver faild to converge.",'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
+                g_pool.active_calibration_plugin.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
                 return
+
 
             #pose of the world in eye coords.
             rotation = np.array(world['rotation'])
@@ -291,9 +293,22 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             cal_pt_cloud_binocular = calibrate.preprocess_2d_data_binocular(matched_binocular_data)
             cal_pt_cloud0 = calibrate.preprocess_2d_data_monocular(matched_pupil0_data)
             cal_pt_cloud1 = calibrate.preprocess_2d_data_monocular(matched_pupil1_data)
+
             map_fn,inliers,params = calibrate.calibrate_2d_polynomial(cal_pt_cloud_binocular,g_pool.capture.frame_size,binocular=True)
+            if not inliers.any():
+                self.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
+                return
+
             map_fn,inliers,params_eye0 = calibrate.calibrate_2d_polynomial(cal_pt_cloud0,g_pool.capture.frame_size,binocular=False)
+            if not inliers.any():
+                self.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
+                return
+
             map_fn,inliers,params_eye1 = calibrate.calibrate_2d_polynomial(cal_pt_cloud1,g_pool.capture.frame_size,binocular=False)
+            if not inliers.any():
+                self.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
+                return
+
             g_pool.plugins.add(Binocular_Gaze_Mapper,args={'params':params, 'params_eye0':params_eye0, 'params_eye1':params_eye1})
 
 
@@ -301,6 +316,10 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             method = 'monocular polynomial regression'
             cal_pt_cloud = calibrate.preprocess_2d_data_monocular(matched_monocular_data)
             map_fn,inliers,params = calibrate.calibrate_2d_polynomial(cal_pt_cloud,g_pool.capture.frame_size,binocular=False)
+            if not inliers.any():
+                self.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg,'timestamp':g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
+                return
+
             g_pool.plugins.add(Monocular_Gaze_Mapper,args={'params':params})
         else:
             logger.error(not_enough_data_error_msg)
