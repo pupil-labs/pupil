@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
     # the requester talks to Pupil remote and recevied the session unique IPC SUB URL
     requester = ctx.socket(zmq.REQ)
-    requester.connect('tcp://192.168.1.100:50020')
+    requester.connect('tcp://localhost:50020')
 
     requester.send('SUB_PORT')
     ipc_sub_port = requester.recv()
