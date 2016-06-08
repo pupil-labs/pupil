@@ -42,7 +42,7 @@ class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
         self.min_pupil_confidence = 0.0
 
     def on_pupil_datum(self, p):
-        if p['confidence'] > self.min_pupil_confidence:
+        if p['confidence'] >= self.min_pupil_confidence:
             g = self._map_monocular(p)
             if g:
                 return [g,]
@@ -62,7 +62,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
         self.sample_cutoff = 10
 
     def on_pupil_datum(self, p):
-        if p['confidence'] > self.min_pupil_confidence:
+        if p['confidence'] >= self.min_pupil_confidence:
             self._caches[p['id']].append(p)
 
         if self._caches[0] and self._caches[1]:
