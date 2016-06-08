@@ -45,15 +45,13 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, ey
 
     # We deferr the imports becasue of multiprocessing.
     # Otherwise the world process each process also loads the other imports.
-
     import zmq
     import zmq_tools
     zmq_ctx = zmq.Context()
     notify_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=("notify",))
     ipc_socket = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_pub_url)
 
-    is_alive = Is_Alive_Manager(is_alive_flag,ipc_socket,eye_id)
-    with is_alive:
+    with Is_Alive_Manager(is_alive_flag,ipc_socket,eye_id):
 
         #logging setup
         import logging

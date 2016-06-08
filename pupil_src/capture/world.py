@@ -255,8 +255,6 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
     general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter=lambda: "Select to load"))
-    general_settings.append(ui.Info_Text('IPC PUB URL: %s'%g_pool.ipc_pub_url))
-    general_settings.append(ui.Info_Text('IPC SUB URL: %s'%g_pool.ipc_sub_url))
     general_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
     g_pool.sidebar.append(general_settings)
 
