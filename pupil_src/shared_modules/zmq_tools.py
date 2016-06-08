@@ -1,8 +1,15 @@
+'''
+This file contains convenience classes for communication with
+the Pupil IPC Backbone.
+'''
+
 import zmq
+from zmq.utils.monitor import recv_monitor_message
 import ujson as json
 import logging
 import threading
-from zmq.utils.monitor import recv_monitor_message
+
+
 class ZMQ_handler(logging.Handler):
     '''
     A handler that send log records as json strings via zmq
@@ -100,7 +107,7 @@ class Msg_Dispatcher(object):
     def notify(self,notification):
         '''
         send a pupil notification
-        notificaiton is a dict with a least a subject field
+        notification is a dict with a least a subject field
         if a 'delay' field exsits the notification it will be grouped with notifications
         of same subject and only one send after specified delay.
         '''
