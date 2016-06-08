@@ -128,12 +128,19 @@ if __name__ == '__main__':
     ipc_sub_port = requester.recv()
     requester.send('PUB_PORT')
     ipc_pub_port = requester.recv()
-    # we then connect to monitor log messages using the url. We can also monitor other topic if we wish
-    monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('notify',)) #more topics: gaze, pupil, logging, ...
+
+    print 'ipc_sub_port:',ipc_sub_port
+    print 'ipc_pub_port:',ipc_pub_port
+
+    #more topics: gaze, pupil, logging, ...
+    log_monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('logging.',))
+    notification_monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('notify.',))
+    # gaze_monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('gaze.',))
+
+    #you can also publish to the IPC Backbone directly.
     publisher = Msg_Dispatcher(ctx,'tcp://localhost:%s'%ipc_pub_port)
 
-
-    def relay_benchmark_reqrep():
+    def roundtrip_latency_reqrep():
         ts = []
         for x in range(100):
             sleep(0.003)
@@ -143,12 +150,12 @@ if __name__ == '__main__':
             ts.append(time()-t)
         print min(ts), sum(ts)/len(ts) , max(ts)
 
-    def relay_benchmark_pubsub():
+    def roundtrip_latency_pubsub():
         ts = []
         for x in range(100):
             sleep(0.003)
             t = time()
-            publisher.notify({'subject':'pingback_test'})
+            publisher.notify({'subject':'pingback_test','index':x})
             monitor.recv()
             ts.append(time()-t)
         print min(ts), sum(ts)/len(ts) , max(ts)
@@ -158,9 +165,12 @@ if __name__ == '__main__':
     requester.send('t')
     print requester.recv()
 
-    # listen to log messages.
+    # listen to all notifications.
     while True:
-        print monitor.recv()
+        print notification_monitor.recv()
 
+    # # listen to all log messages.
+    # while True:
+    #     print log_monitor.recv()
 
 
