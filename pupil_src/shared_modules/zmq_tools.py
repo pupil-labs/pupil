@@ -132,22 +132,35 @@ if __name__ == '__main__':
     monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('logging','notify')) #more topics: gaze, pupil, notify, ...
     publisher = Msg_Dispatcher(ctx,'tcp://localhost:%s'%ipc_pub_port)
 
+
+    def relay_benchmark_reqrep():
+        ts = []
+        for x in range(100):
+            sleep(0.003)
+            t = time()
+            requester.send('t')
+            requester.recv()
+            ts.append(time()-t)
+        print min(ts), sum(ts)/len(ts) , max(ts)
+
+    def relay_benchmark_pubsub():
+        ts = []
+        for x in range(100):
+            sleep(0.003)
+            t = time()
+            publisher.notify({'subject':'pingback_test'})
+            monitor.recv()
+            ts.append(time()-t)
+        print min(ts), sum(ts)/len(ts) , max(ts)
+
+
     # now lets get the current pupil time.
     requester.send('t')
     print requester.recv()
-    from time import time,sleep
-    # listen to log messages.
-    ts = []
 
-    for x in range(100):
-        # print monitor.recv()
-        sleep(0.003)
-        t = time()
-        publisher.notify({'subject':'pingback_test'})
-        monitor.recv()
-        # requester.send('t')
-        # requester.recv()
-        ts.append(time()-t)
-        # print ts[-1]
-    print min(ts), sum(ts)/len(ts) , max(ts)
+    # listen to log messages.
+    while True:
+        print monitor.recv()
+
+
 
