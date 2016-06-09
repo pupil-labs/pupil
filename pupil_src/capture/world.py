@@ -28,7 +28,6 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
     #general imports
     from time import time,sleep
     import numpy as np
-    from multiprocessing import Queue
     import logging
     import zmq
     import zmq_tools
