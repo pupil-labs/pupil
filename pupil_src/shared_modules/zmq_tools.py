@@ -27,11 +27,11 @@ class Msg_Receiver(object):
     Not threadsave. Make a new one for each thread
     __init__ will block until connection is established.
     '''
-    def __init__(self,ctx,url,topics = (),block_unitl_connected=True):
+    def __init__(self,ctx,url,topics = (),block_until_connected=True):
         self.socket = zmq.Socket(ctx,zmq.SUB)
         assert type(topics) != str
 
-        if block_unitl_connected:
+        if block_until_connected:
             #connect node and block until a connecetion has been made
             monitor = self.socket.get_monitor_socket()
             self.socket.connect(url)
@@ -78,10 +78,10 @@ class Msg_Dispatcher(object):
     Not threadsave. Make a new one for each thread
     __init__ will block until connection is established.
     '''
-    def __init__(self,ctx,url,block_unitl_connected=True):
+    def __init__(self,ctx,url,block_until_connected=True):
         self.socket = zmq.Socket(ctx,zmq.PUB)
 
-        if block_unitl_connected:
+        if block_until_connected:
             #connect node and block until a connecetion has been made
             monitor = self.socket.get_monitor_socket()
             self.socket.connect(url)
