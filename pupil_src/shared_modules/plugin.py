@@ -57,6 +57,7 @@ class Plugin(object):
 
     def update(self,frame,events):
         """
+        called in Player and Capture
         gets called once every frame
         if you plan to update data inplace, note that this will affect all plugins executed after you.
         Use self.order to deal with this appropriately

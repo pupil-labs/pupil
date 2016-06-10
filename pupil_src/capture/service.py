@@ -35,17 +35,16 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     pupil_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=('pupil',))
     notify_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=('notify',))
 
+    poller =  zmq.Poller()
+    poller.register(pupil_sub.socket)
+    poller.register(notify_sub.socket)
+
     #log setup
-    logging.getLogger("OpenGL").setLevel(logging.ERROR)
     logger = logging.getLogger()
     logger.handlers = []
     logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_pub_url))
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
-
-    #check versions for our own depedencies as they are fast-changing
-    from pyglui import __version__ as pyglui_version
-    assert pyglui_version >= '0.8'
 
     #monitoring
     import psutil
@@ -53,7 +52,6 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     # helpers/utils
     from file_methods import Persistent_Dict
     from methods import normalize, denormalize, delta_t, get_system_info
-    from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
     from version_utils import VersionFormat
     import audio
 
@@ -89,7 +87,7 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     plugin_by_index =  runtime_plugins+calibration_plugins+gaze_mapping_plugins
     name_by_index = [p.__name__ for p in plugin_by_index]
     plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-    default_plugins = [('Dummy_Gaze_Mapper',{}),'HMD_Calibration',{}),('Pupil_Remote',{})]
+    default_plugins = [('Dummy_Gaze_Mapper',{}),('HMD_Calibration',{}),('Pupil_Remote',{})]
 
 
     tick = delta_t()
@@ -150,30 +148,33 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
         events = {}
         #report time between now and the last loop interation
         events['dt'] = get_dt()
-        frame = None
         new_notifications = []
-
-        while pupil_sub.new_data:
+        events['pupil_positions'] = []
+        events['gaze_positions'] = []
+        socks = dict(poller.poll())
+        if pupil_sub.socket in socks:
             t,p = pupil_sub.recv()
             pupil_graph.add(p['confidence'])
             recent_pupil_data.append(p)
             new_gaze_data = g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
             for g in new_gaze_data:
                 ipc_pub.send('gaze',g)
-            recent_gaze_data += new_gaze_data
+                recent_gaze_data += new_gaze_data
+        elif notify_sub.socket in socks:
         while notify_sub.new_data:
             t,n = notify_sub.recv()
-            new_notifications.append(n)
+            handle_notifications(p)
+            for p in plugins:
+                p.on_notify(n)
 
 
-        events['pupil_positions'] = recent_pupil_data
-        events['gaze_positions'] = recent_gaze_data
+
+
 
         # notify each plugin if there are new notifications:
         for n in new_notifications:
             handle_notifications(n)
             for p in g_pool.plugins:
-                p.on_notify(n)
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
