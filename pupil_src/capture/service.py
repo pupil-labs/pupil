@@ -144,13 +144,6 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
 
     # Event loop
     while True:
-        #a dictionary that allows plugins to post and read events
-        events = {}
-        #report time between now and the last loop interation
-        events['dt'] = get_dt()
-        new_notifications = []
-        events['pupil_positions'] = []
-        events['gaze_positions'] = []
         socks = dict(poller.poll())
         if pupil_sub.socket in socks:
             t,p = pupil_sub.recv()
@@ -161,7 +154,6 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
                 ipc_pub.send('gaze',g)
                 recent_gaze_data += new_gaze_data
         elif notify_sub.socket in socks:
-        while notify_sub.new_data:
             t,n = notify_sub.recv()
             handle_notifications(p)
             for p in plugins:
@@ -169,27 +161,8 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
 
 
 
-
-
-        # notify each plugin if there are new notifications:
-        for n in new_notifications:
-            handle_notifications(n)
-            for p in g_pool.plugins:
-
-        # allow each Plugin to do its work.
-        for p in g_pool.plugins:
-            p.update(frame,events)
-
         #check if a plugin need to be destroyed
         g_pool.plugins.clean()
-
-        #send new events to ipc:
-        del events['pupil_positions'] #already on the wire
-        del events['gaze_positions']  #send earlier in this loop
-        del events['dt']  #no need to send this
-        for topic,data in events.iteritems():
-            for d in data:
-                ipc_pub.send(topic, d)
 
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
