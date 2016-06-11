@@ -78,24 +78,18 @@ class Msg_Dispatcher(object):
     Not threadsave. Make a new one for each thread
     __init__ will block until connection is established.
     '''
-    def __init__(self,ctx,url,block_until_connected=True):
+    def __init__(self,ctx,url,block_until_topic_subscribed='notify'):
         self.socket = zmq.Socket(ctx,zmq.PUB)
+        self.socket.connect(url)
 
-        if block_until_connected:
-            #connect node and block until a connecetion has been made
-            monitor = self.socket.get_monitor_socket()
-            self.socket.connect(url)
+        if block_until_topic_subscribed:
+            xpub = zmq.Socket(ctx,zmq.XPUB)
+            xpub.connect(url)
             while True:
-                status =  recv_monitor_message(monitor)
-                if status['event'] == zmq.EVENT_CONNECTED:
+                if block_until_topic_subscribed in xpub.recv():
                     break
-                elif status['event'] == zmq.EVENT_CONNECT_DELAYED:
-                    pass
-                else:
-                    raise Exception("ZMQ connection failed")
-            self.socket.disable_monitor()
-        else:
-            self.socket.connect(url)
+            xpub.close()
+
 
     def send(self,topic,payload):
         '''
