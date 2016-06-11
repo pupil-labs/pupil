@@ -40,42 +40,6 @@ class HMD_Calibration(Calibration_Plugin):
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 
-    # def on_notify(self,notification):
-    #     if notification['subject'].startswith('calibration.should_start'):
-    #         if self.active:
-    #             logger.warning('Calibration already running.')
-    #         else:
-    #             hmd_video_frame_size = notification.get(hmd_video_frame_size,(1000,1000))
-    #             outlier_threshold = notification.get(outlier_threshold,35)
-    #             try:
-    #                 assert len(hmd_video_frame_size) ==2
-    #                 assert type(hmd_video_frame_size[0]) == int
-    #                 assert type(hmd_video_frame_size[1]) == int
-    #                 assert hmd_video_frame_size[0] > 0
-    #                 assert hmd_video_frame_size[1] > 0
-    #                 assert outlier_threshold > 0
-    #             except AssertionError as e:
-    #                 logger.error('Notification: %s not conform. Raised error %s'%(notification,e))
-    #             else:
-    #                 self.start(hmd_video_frame_size,outlier_threshold)
-    #     elif notification['subject'].startswith('calibration.should_stop'):
-    #         if self.active:
-    #             self.stop()
-    #         else:
-    #             logger.warning('Calibration already stopped.')
-    #     elif notification['subject'].startswith('calibration.add_ref_data')
-    #         if self.active:
-    #             try:
-    #                 for r in notification['ref_data']:
-    #                     try: #we explicitly recreate data to catch bad input early.
-    #                         self.ref_list.append({'id':r['id'],'norm_pos':r['norm_pos'],'timestamp':r['timestamp']})
-    #                     except KeyError as e:
-    #                         logger.error('Ref Data: %s not conform. Raised error %s'%(r,e))
-    #                         break
-    #             except KeyError as e:
-    #                 logger.error('Notification: %s not conform. Raised error %s'%(notification,e))
-    #         else:
-    #             logger.error("Ref data can only be added when calibratio is runnings.")
 
     def on_notify(self,notification):
         try:
@@ -195,55 +159,3 @@ class HMD_Calibration(Calibration_Plugin):
         if self.active:
             self.stop()
         self.deinit_gui()
-
-# if __name__ == '__main__':
-
-    # import zmq, json
-    # ctx = zmq.Context()
-
-    # req = ctx.socket(zmq.REQ)
-    # req.connect('tcp://localhost:50020')
-
-    # def send_recv_notification(n):
-    #     # convinence fn
-    #     req.send_multipart(('notify.%s'%n['subject'], json.dumps(n)))
-    #     return req.recv()
-
-    # # set calibration to hmd calibration
-    # n = {'subject':'start_plugin','plugin':'HMD_Calibration', 'args':{}}
-    # print send_recv_notification(n)
-
-    # # start caliration routine with params. This will make pupil start sampeling pupil data.
-    # n = {'subject':'calibration.should_start', 'hmd_video_frame_size':(1000,1000), 'outlier_threshold':35}
-    # print send_recv_notification(n)
-
-
-    # #mockup logic for sample movement coordination we sample some positions (normalized screen coords).
-    # ref_data = []
-    # for pos in ((0,0),(0,1),(1,1),(1,0),(.5,.5)):
-    #     for s in range(30):
-    #         # calls to render stimulus on hmd screen l/r here
-    #         print 'subject now looks at position:',pos
-    #         # get the current pupil time. (You can also set the pupil time to another clock and use that.)
-    #         req.send('t')
-    #         t = req.recv()
-
-    #         # in this mockup  the left and right screen marker positions are identical.
-    #         datum0 = {'norm_pos':pos,'timestamps':t,'id':0}
-    #         datum1 = {'norm_pos':pos,'timestamps':t,'id':1}
-    #         ref_data.append(datum0)
-    #         ref_data.append(datum1)
-    #         sleep(1/30.) #simulate animation speed.
-
-    # # Send ref data to pupil this call can be done once at the end or multiple times.
-    # # During one calibraiton new data will be appended.
-    # n = {'subject':'calibration.add_ref_data','ref_data':ref_data}
-    # print send_recv_notification(n)
-
-    # # stop calibration
-    # # Pupil will correlate pupil and ref data based on timestamps,
-    # # compute the gaze mapping params, and start a new gaze mapper.
-    # n = {'subject':'calibration.should_stop'}
-    # print send_recv_notification(n)
-
-
