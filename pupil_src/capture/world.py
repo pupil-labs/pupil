@@ -197,7 +197,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
         if eyes_are_alive[eye_id].value:
             logger.error("Eye%s process already running."%eye_id)
             return
-        n = {'subject':'eye_process.should_start','eye_id':eye_id,'delay':delay}
+        n = {'subject':'eye_process.should_start.%s'%eye_id,'eye_id':eye_id,'delay':delay}
         ipc_pub.notify(n)
 
     def stop_eye_process(eye_id):
