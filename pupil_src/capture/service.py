@@ -116,9 +116,6 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
 
 
     def launch_eye_process(eye_id,delay=0):
-        if eyes_are_alive[eye_id].value:
-            logger.error("Eye%s process already running."%eye_id)
-            return
         n = {'subject':'eye_process.should_start','eye_id':eye_id,'delay':delay}
         ipc_pub.notify(n)
 

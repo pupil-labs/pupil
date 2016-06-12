@@ -189,7 +189,8 @@ def main():
         topic,n = cmd_sub.recv()
         if "notify.eye_process.should_start" in topic :
             eye_id = n['eye_id']
-            p_eye = Process(target=eye,
+            if not eyes_are_alive[eye_id].value:
+                Process(target=eye,
                             name='eye%s'%eye_id,
                             args=(timebase,
                                 eyes_are_alive[eye_id],
@@ -198,8 +199,7 @@ def main():
                                 user_dir,
                                 app_version,
                                 eye_id,
-                                video_sources['eye%s'%eye_id] ))
-            p_eye.start()
+                                video_sources['eye%s'%eye_id] )).start()
         elif "notify.launcher_process.should_stop" == topic:
             break
 
