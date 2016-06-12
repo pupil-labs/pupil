@@ -44,9 +44,11 @@ from time import time
 #functions to run in seperate processes
 if 'profiled' in sys.argv:
     from world import world_profiled as world
+    from service import wservice_profiled as service
     from eye import eye_profiled as eye
 else:
     from world import world
+    from service import service
     from eye import eye
 
 
@@ -156,8 +158,18 @@ def main():
     topics = ('notify.eye_process.','notify.launcher_process.')
     cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=topics )
 
-
-    p_world = Process(target=world,
+    if 'service' in sys.argv:
+        Process(target=service,
+                      name= 'service',
+                      args=(timebase,
+                            eyes_are_alive,
+                            ipc_pub_url,
+                            ipc_sub_url,
+                            user_dir,
+                            app_version,
+                            None)).start()
+    else:
+        Process(target=world,
                       name= 'world',
                       args=(timebase,
                             eyes_are_alive,
@@ -165,8 +177,8 @@ def main():
                             ipc_sub_url,
                             user_dir,
                             app_version,
-                            video_sources['world'] ))
-    p_world.start()
+                            video_sources['world'] )).start()
+
 
 
     while True:

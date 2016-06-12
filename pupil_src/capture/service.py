@@ -20,7 +20,7 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     """
 
     # We defer the imports because of multiprocessing.
-    # Otherwise the world process each process also loads the other imports.
+    # Otherwise the service process each process also loads the other imports.
     # This is not harmful but unnecessary.
 
     #general imports
@@ -40,6 +40,7 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     poller.register(notify_sub.socket)
 
     #log setup
+    logging.getLogger("OpenGL").setLevel(logging.ERROR)
     logger = logging.getLogger()
     logger.handlers = []
     logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_pub_url))
@@ -54,6 +55,7 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     from methods import normalize, denormalize, delta_t, get_system_info
     from version_utils import VersionFormat
     import audio
+    from uvc import get_time_monotonic
 
     #trigger pupil detector cpp build:
     import pupil_detectors
@@ -74,17 +76,21 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     g_pool.app = 'service'
     g_pool.user_dir = user_dir
     g_pool.version = version
-    g_pool.timebase = timebase
+    g_pool.get_now = get_time_monotonic
     g_pool.zmq_ctx = zmq_ctx
     g_pool.ipc_pub = ipc_pub
     g_pool.ipc_pub_url = ipc_pub_url
     g_pool.ipc_sub_url = ipc_sub_url
     g_pool.eyes_are_alive = eyes_are_alive
-
+    g_pool.timebase = timebase
+    def get_timestamp():
+        return get_time_monotonic()-g_pool.timebase.value
+    g_pool.get_timestamp = get_timestamp
 
     #manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
-    plugin_by_index =  runtime_plugins+calibration_plugins+gaze_mapping_plugins
+    user_launchable_plugins = [Pupil_Remote,Pupil_Sync]+runtime_plugins
+    plugin_by_index =  runtime_plugins+calibration_plugins+gaze_mapping_plugins+user_launchable_plugins
     name_by_index = [p.__name__ for p in plugin_by_index]
     plugin_by_name = dict(zip(name_by_index,plugin_by_index))
     default_plugins = [('Dummy_Gaze_Mapper',{}),('HMD_Calibration',{}),('Pupil_Remote',{})]
@@ -106,6 +112,10 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     g_pool.active_gaze_mapping_plugin = None
 
     audio.audio_mode = session_settings.get('audio_mode',audio.default_audio_mode)
+
+    #plugins that are loaded based on user settings from previous session
+    g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
+
 
     def launch_eye_process(eye_id,delay=0):
         if eyes_are_alive[eye_id].value:
@@ -132,6 +142,9 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
         elif subject == 'eye_process.started':
             n = {'subject':'set_detection_mapping_mode','mode':g_pool.detection_mapping_mode}
             ipc_pub.notify(n)
+        elif subject == 'service_process.should_stop':
+            g_pool.service_should_run = False
+
 
 
     if session_settings.get('eye1_process_alive',False):
@@ -139,27 +152,32 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     if session_settings.get('eye0_process_alive',True):
         launch_eye_process(0,delay=0.0)
 
+
     ipc_pub.notify({'subject':'service_process.started'})
     logger.warning('Process started.')
+    g_pool.service_should_run = True
 
     # Event loop
-    while True:
+    while g_pool.service_should_run:
         socks = dict(poller.poll())
         if pupil_sub.socket in socks:
             t,p = pupil_sub.recv()
-            pupil_graph.add(p['confidence'])
-            recent_pupil_data.append(p)
             new_gaze_data = g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
             for g in new_gaze_data:
                 ipc_pub.send('gaze',g)
-                recent_gaze_data += new_gaze_data
-        elif notify_sub.socket in socks:
+
+            #simulate the update loop.
+            events = {}
+            events['gaze_positions'] = new_gaze_data
+            events['pupil_positions'] = [p,]
+            for plugin in g_pool.plugins:
+                plugin.update(frame=None,events=events)
+
+        if notify_sub.socket in socks:
             t,n = notify_sub.recv()
-            handle_notifications(p)
-            for p in plugins:
-                p.on_notify(n)
-
-
+            handle_notifications(n)
+            for plugin in g_pool.plugins:
+                plugin.on_notify(n)
 
         #check if a plugin need to be destroyed
         g_pool.plugins.clean()
@@ -191,11 +209,11 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     ipc_pub.notify(n)
 
 
-def world_profiled(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_src):
+def service_profiled(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_src):
     import cProfile,subprocess,os
-    from world import world
-    cProfile.runctx("world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_src)",{'timebase':timebase,'eyes_are_alive':eyes_are_alive,'ipc_pub_url':ipc_pub_url,'ipc_sub_url':ipc_sub_url,'user_dir':user_dir,'version':version,'cap_src':cap_src},locals(),"world.pstats")
+    from service import service
+    cProfile.runctx("service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_src)",{'timebase':timebase,'eyes_are_alive':eyes_are_alive,'ipc_pub_url':ipc_pub_url,'ipc_sub_url':ipc_sub_url,'user_dir':user_dir,'version':version,'cap_src':cap_src},locals(),"service.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-    subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
-    print "created cpu time graph for world process. Please check out the png next to the world.py file"
+    subprocess.call("python "+gprof2dot_loc+" -f pstats service.pstats | dot -Tpng -o service_cpu_time.png", shell=True)
+    print "created cpu time graph for service process. Please check out the png next to the service.py file"
