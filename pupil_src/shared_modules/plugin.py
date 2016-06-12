@@ -55,7 +55,7 @@ class Plugin(object):
         pass
 
 
-    def update(self,frame,events):
+    def update(self,frame=None,events={}):
         """
         gets called once every frame
         if you plan to update data inplace, note that this will affect all plugins executed after you.
