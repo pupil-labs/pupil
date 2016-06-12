@@ -65,6 +65,7 @@ class Pupil_Remote(Plugin):
         self.context = g_pool.zmq_ctx
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
         self.start_server(address)
+        self.menu = None
 
 
     def start_server(self,new_address):

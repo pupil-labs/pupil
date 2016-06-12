@@ -28,6 +28,9 @@ class HMD_Calibration(Calibration_Plugin):
     """
     def __init__(self, g_pool):
         super(HMD_Calibration, self).__init__(g_pool)
+        self.info = None
+        self.menu = None
+        self.button = None
 
     def init_gui(self):
 
