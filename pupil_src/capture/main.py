@@ -10,6 +10,9 @@
 
 import os, sys, platform
 
+# sys.argv.append('profiled')
+# sys.argv.append('service')
+
 if getattr(sys, 'frozen', False):
     # Specifiy user dir.
     user_dir = os.path.expanduser(os.path.join('~','pupil_capture_settings'))
@@ -44,7 +47,7 @@ from time import time
 #functions to run in seperate processes
 if 'profiled' in sys.argv:
     from world import world_profiled as world
-    from service import wservice_profiled as service
+    from service import service_profiled as service
     from eye import eye_profiled as eye
 else:
     from world import world
