@@ -168,11 +168,11 @@ class Pupil_Remote(Plugin):
             except:
                 response = "'%s' cannot be converted to float."%msg[2:]
             else:
-                raw_time = self.g_pool.capture.get_now()
+                raw_time = self.g_pool.get_now()
                 self.g_pool.timebase.value = raw_time-target
                 response = 'Timesync successful.'
         elif msg[0] == 't':
-            response = str(self.g_pool.capture.get_timestamp())
+            response = str(self.g_pool.get_timestamp())
         else:
             response = 'Unknown command.'
         socket.send(response)

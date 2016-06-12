@@ -64,6 +64,8 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
     from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
     from version_utils import VersionFormat
     import audio
+    from uvc import get_time_monotonic
+
 
     #trigger pupil detector cpp build:
     import pupil_detectors
@@ -108,6 +110,10 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
     g_pool.ipc_pub_url = ipc_pub_url
     g_pool.ipc_sub_url = ipc_sub_url
     g_pool.eyes_are_alive = eyes_are_alive
+    def get_timestamp():
+        return get_time_monotonic()-g_pool.timebase.value
+    g_pool.get_timestamp = get_timestamp
+    g_pool.get_now = get_time_monotonic
 
 
     #manage plugins
@@ -265,8 +271,6 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
     g_pool.capture.init_gui(g_pool.sidebar)
 
     #plugins that are loaded based on user settings from previous session
-    g_pool.notifications = []
-    g_pool.delayed_notifications = {}
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
 
     #We add the calibration menu selector, after a calibration has been added:

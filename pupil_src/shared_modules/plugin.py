@@ -55,7 +55,7 @@ class Plugin(object):
         pass
 
 
-    def update(self,frame,events):
+    def update(self,frame=None,events={}):
         """
         called in Player and Capture
         gets called once every frame
