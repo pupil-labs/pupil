@@ -9,7 +9,6 @@
 '''
 import os, sys, platform
 
-
 class Global_Container(object):
     pass
 
@@ -24,7 +23,6 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     # This is not harmful but unnecessary.
 
     #general imports
-    from time import time,sleep
     import numpy as np
     import logging
     import zmq
@@ -195,7 +193,6 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     for p in g_pool.plugins:
         p.alive = False
     g_pool.plugins.clean()
-
 
     #shut down eye processes:
     stop_eye_process(0)
