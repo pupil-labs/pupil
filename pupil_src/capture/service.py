@@ -12,7 +12,7 @@ import os, sys, platform
 class Global_Container(object):
     pass
 
-def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_src):
+def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
     """service
     Maps pupil to gaze data
     Can run various plug-ins.
@@ -29,7 +29,8 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     import zmq_tools
     #zmq ipc setup
     zmq_ctx = zmq.Context()
-    ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_pub_url)
+    ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
+    gaze_pub = zmq_tools.Msg_Streamer(zmq_ctx,ipc_pub_url)
     pupil_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=('pupil',))
     notify_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=('notify',))
 
@@ -41,7 +42,7 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     logging.getLogger("OpenGL").setLevel(logging.ERROR)
     logger = logging.getLogger()
     logger.handlers = []
-    logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_pub_url))
+    logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_push_url))
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 
@@ -79,6 +80,7 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
     g_pool.ipc_pub = ipc_pub
     g_pool.ipc_pub_url = ipc_pub_url
     g_pool.ipc_sub_url = ipc_sub_url
+    g_pool.ipc_push_url = ipc_push_url
     g_pool.eyes_are_alive = eyes_are_alive
     g_pool.timebase = timebase
     def get_timestamp():
@@ -126,6 +128,7 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
 
     def handle_notifications(n):
         subject = n['subject']
+        print n
         if subject == 'set_detection_mapping_mode':
             if n['mode'] == '2d':
                 if "Vector_Gaze_Mapper" in g_pool.active_gaze_mapping_plugin.class_name:
@@ -159,7 +162,7 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
             t,p = pupil_sub.recv()
             new_gaze_data = g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
             for g in new_gaze_data:
-                ipc_pub.send('gaze',g)
+                gaze_pub.send('gaze',g)
 
             #simulate the update loop.
             events = {}
@@ -176,7 +179,6 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap
 
         #check if a plugin need to be destroyed
         g_pool.plugins.clean()
-
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
     session_settings['version'] = g_pool.version

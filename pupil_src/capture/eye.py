@@ -35,7 +35,7 @@ class Is_Alive_Manager(object):
         self.ipc_socket.notify({'subject':'eye_process.stopped', 'eye_id':self.eye_id})
 
 
-def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, eye_id, cap_src):
+def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir, version, eye_id, cap_src):
     """
     Creates a window, gl context.
     Grabs images from a capture.
@@ -48,7 +48,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, ey
     import zmq
     import zmq_tools
     zmq_ctx = zmq.Context()
-    ipc_socket = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_pub_url)
+    ipc_socket = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
+    pupil_socket = zmq_tools.Msg_Streamer(zmq_ctx,ipc_pub_url)
     notify_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=("notify",))
 
     with Is_Alive_Manager(is_alive_flag,ipc_socket,eye_id):
@@ -58,7 +59,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, ey
         logging.getLogger("OpenGL").setLevel(logging.ERROR)
         logger = logging.getLogger()
         logger.handlers = []
-        logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_pub_url))
+        logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_push_url))
         # create logger for the context of this function
         logger = logging.getLogger(__name__)
 
@@ -370,7 +371,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, user_dir, version, ey
             result = g_pool.pupil_detector.detect(frame, g_pool.u_r, g_pool.display_mode == 'algorithm')
             result['id'] = eye_id
             # stream the result
-            ipc_socket.send('pupil.%s'%eye_id,result)
+            pupil_socket.send('pupil.%s'%eye_id,result)
 
             # GL drawing
             if window_should_update():

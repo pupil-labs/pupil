@@ -71,6 +71,30 @@ class Msg_Receiver(object):
     def __del__(self):
         self.socket.close()
 
+class Msg_Streamer(object):
+    '''
+    Send messages on a pub port.
+    Not threadsave. Make a new one for each thread
+    __init__ will block until connection is established.
+    '''
+    def __init__(self,ctx,url):
+        self.socket = zmq.Socket(ctx,zmq.PUB)
+        self.socket.connect(url)
+
+
+    def send(self,topic,payload):
+        '''
+        send a generic message with topic, payload
+        '''
+        self.socket.send(str(topic),flags=zmq.SNDMORE)
+        self.socket.send(json.dumps(payload))
+
+    def __del__(self):
+
+        self.socket.close()
+
+
+
 
 class Msg_Dispatcher(object):
     '''
@@ -78,18 +102,9 @@ class Msg_Dispatcher(object):
     Not threadsave. Make a new one for each thread
     __init__ will block until connection is established.
     '''
-    def __init__(self,ctx,url,block_until_topic_subscribed='notify'):
-        self.socket = zmq.Socket(ctx,zmq.PUB)
+    def __init__(self,ctx,url):
+        self.socket = zmq.Socket(ctx,zmq.PUSH)
         self.socket.connect(url)
-
-        if block_until_topic_subscribed:
-            xpub = zmq.Socket(ctx,zmq.XPUB)
-            xpub.connect(url)
-            while True:
-                if block_until_topic_subscribed in xpub.recv():
-                    break
-            xpub.close()
-
 
     def send(self,topic,payload):
         '''

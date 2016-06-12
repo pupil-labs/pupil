@@ -13,7 +13,7 @@ import os, sys, platform
 class Global_Container(object):
     pass
 
-def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_src):
+def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
     """world
     Creates a window, gl context.
     Grabs images from a capture.
@@ -33,7 +33,8 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
     import zmq_tools
     #zmq ipc setup
     zmq_ctx = zmq.Context()
-    ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_pub_url)
+    ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
+    gaze_pub = zmq_tools.Msg_Streamer(zmq_ctx,ipc_pub_url)
     pupil_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=('pupil',))
     notify_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=('notify',))
 
@@ -41,7 +42,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
     logging.getLogger("OpenGL").setLevel(logging.ERROR)
     logger = logging.getLogger()
     logger.handlers = []
-    logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_pub_url))
+    logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_push_url))
     # create logger for the context of this function
     logger = logging.getLogger(__name__)
 
@@ -109,6 +110,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
     g_pool.ipc_pub = ipc_pub
     g_pool.ipc_pub_url = ipc_pub_url
     g_pool.ipc_sub_url = ipc_sub_url
+    g_pool.ipc_push_url = ipc_push_url
     g_pool.eyes_are_alive = eyes_are_alive
     def get_timestamp():
         return get_time_monotonic()-g_pool.timebase.value
@@ -371,7 +373,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_s
             recent_pupil_data.append(p)
             new_gaze_data = g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
             for g in new_gaze_data:
-                ipc_pub.send('gaze',g)
+                gaze_pub.send('gaze',g)
             recent_gaze_data += new_gaze_data
         while notify_sub.new_data:
             t,n = notify_sub.recv()

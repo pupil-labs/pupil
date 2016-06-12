@@ -11,7 +11,7 @@
 import os, sys, platform
 
 # sys.argv.append('profiled')
-# sys.argv.append('service')
+sys.argv.append('service')
 
 if getattr(sys, 'frozen', False):
     # Specifiy user dir.
@@ -82,9 +82,11 @@ def main():
     test_socket = zmq_ctx.socket(zmq.SUB)
     ipc_sub_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=5001, max_port=6000, max_tries=100)
     ipc_pub_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=6001, max_port=7000, max_tries=100)
+    ipc_push_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=6001, max_port=7000, max_tries=100)
     test_socket.close(linger=0)
     ipc_pub_url = 'tcp://127.0.0.1:%s'%ipc_pub_port
     ipc_sub_url = 'tcp://127.0.0.1:%s'%ipc_sub_port
+    ipc_push_url = 'tcp://127.0.0.1:%s'%ipc_push_port
 
     #We use a zmq forwarder and the zmq PUBSUB pattern to do all our IPC.
     def main_proxy(in_url, out_url):
@@ -98,6 +100,17 @@ def main():
         except zmq.ContextTerminated:
             xsub.close()
             xpub.close()
+
+
+    def pull_pub(in_url,out_url):
+        ctx = zmq.Context.instance()
+        pull = ctx.socket(zmq.PULL)
+        pull.bind(in_url)
+        pub = ctx.socket(zmq.PUB)
+        pub.connect(out_url)
+        while True:
+            m = pull.recv_multipart()
+            pub.send_multipart(m)
 
     #The delay proxy handles delayed notififications.
     def delay_proxy(in_url, out_url):
@@ -130,7 +143,7 @@ def main():
         import logging
         #Get the root logger
         logger = logging.getLogger()
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logging.DEBUG)
         #Stream to file
         fh = logging.FileHandler(os.path.join(user_dir,'capture.log'),mode='w')
         fh.setFormatter(logging.Formatter('%(asctime)s - %(processName)s - [%(levelname)s] %(name)s: %(message)s'))
@@ -158,6 +171,10 @@ def main():
     delay_thread.setDaemon(True)
     delay_thread.start()
 
+    pull_pub = Thread(target=pull_pub, args=(ipc_push_url, ipc_pub_url))
+    pull_pub.setDaemon(True)
+    pull_pub.start()
+
     topics = ('notify.eye_process.','notify.launcher_process.')
     cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=topics )
 
@@ -168,6 +185,7 @@ def main():
                             eyes_are_alive,
                             ipc_pub_url,
                             ipc_sub_url,
+                            ipc_push_url,
                             user_dir,
                             app_version,
                             None)).start()
@@ -178,6 +196,7 @@ def main():
                             eyes_are_alive,
                             ipc_pub_url,
                             ipc_sub_url,
+                            ipc_push_url,
                             user_dir,
                             app_version,
                             video_sources['world'] )).start()
@@ -196,6 +215,7 @@ def main():
                                 eyes_are_alive[eye_id],
                                 ipc_pub_url,
                                 ipc_sub_url,
+                                ipc_push_url,
                                 user_dir,
                                 app_version,
                                 eye_id,

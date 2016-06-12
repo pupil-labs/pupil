@@ -81,7 +81,7 @@ class Pupil_Remote(Plugin):
     def stop_server(self):
         self.thread_pipe.send('Exit')
         while self.thread_pipe:
-            sleep(.01)
+            sleep(.1)
 
     def init_gui(self):
 
@@ -103,7 +103,7 @@ class Pupil_Remote(Plugin):
 
     def thread_loop(self,context,pipe):
         poller = zmq.Poller()
-        ipc_pub = zmq_tools.Msg_Dispatcher(context,self.g_pool.ipc_pub_url)
+        ipc_pub = zmq_tools.Msg_Dispatcher(context,self.g_pool.ipc_push_url)
         poller.register(pipe, zmq.POLLIN)
         remote_socket = None
 
@@ -129,10 +129,6 @@ class Pupil_Remote(Plugin):
                         poller.register(remote_socket)
             if items.get(remote_socket,None) == zmq.POLLIN:
                 self.on_recv(remote_socket,ipc_pub)
-
-        if remote_socket:
-            remote_socket.close(linger=0)
-            del ipc_pub
 
         self.thread_pipe = None
 
