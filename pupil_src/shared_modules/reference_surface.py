@@ -295,7 +295,7 @@ class Reference_Surface(object):
                 uv3d[:,:-1] = uv
                 xy.shape = -1,1,2
                 # compute pose of object relative to camera center
-                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, xy, K, dist_coef,flags=cv2.EPNP)
+                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, xy, K, dist_coef,flags=cv2.SOLVEPNP_EPNP)
 
                 # not verifed, potentially usefull info: http://stackoverflow.com/questions/17423302/opencv-solvepnp-tvec-units-and-axes-directions
 
