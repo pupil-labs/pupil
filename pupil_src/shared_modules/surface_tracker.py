@@ -197,7 +197,7 @@ class Surface_Tracker(Plugin):
 
 
             if self.mode == "Show marker IDs":
-                draw_markers(frame.img,self.markers)
+                draw_markers(frame.gray,self.markers)
 
         events['surfaces'] = []
 
