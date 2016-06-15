@@ -47,9 +47,9 @@ extensions = [
     Extension(
         name="detector_2d",
         sources=['detector_2d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp' ],
-        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, '/opt/ros/indigo/include/opencv-3.1.0-dev'],
+        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, '/opt/ros/indigo/include/opencv-3.1.0-dev', '/usr/local/opt/opencv3/include'],
         libraries = ['opencv_highgui3','opencv_core3','opencv_imgproc3' , 'boost_python'],
-        library_dirs = ['/opt/ros/indigo/lib'],
+        library_dirs = ['/opt/ros/indigo/lib', '/usr/local/opt/opencv3/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-std=c++11",'-w','-O2'], #-w hides warnings
         depends= dependencies,
@@ -57,9 +57,9 @@ extensions = [
      Extension(
         name="detector_3d",
         sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/EyeModelFitter.cpp','singleeyefitter/EyeModel.cpp'],
-        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, '/opt/ros/indigo/include/opencv-3.1.0-dev'],
+        include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, '/opt/ros/indigo/include/opencv-3.1.0-dev', '/usr/local/opt/opencv3/include'],
         libraries = ['opencv_highgui3','opencv_core3','opencv_imgproc3', 'opencv_video3', 'ceres', 'boost_python' ],
-        library_dirs = ['/opt/ros/indigo/lib'],
+        library_dirs = ['/opt/ros/indigo/lib', '/usr/local/opt/opencv3/lib'],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-std=c++11",'-w','-O2'], #-w hides warnings
         depends= dependencies,
