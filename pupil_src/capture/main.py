@@ -70,7 +70,11 @@ eye1_src = ["Pupil Cam1 ID1","HD-6000","Integrated Camera"]
 video_sources = {'world':world_src,'eye0':eye0_src,'eye1':eye1_src}
 
 def main():
-
+    """
+    Reacts to notifications:
+       ``launcher_process.should_stop``: Stops the launcher process
+       ``eye_process.should_start``: Starts the eye process
+    """
     ## IPC
     #shared values
     timebase = Value(c_double,0)
@@ -175,8 +179,11 @@ def main():
     pull_pub.setDaemon(True)
     pull_pub.start()
 
-    topics = ('notify.eye_process.','notify.launcher_process.')
+    topics = (  'notify.eye_process.',
+                'notify.launcher_process.',
+                'notify.notification.should_doc')
     cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=topics )
+    cmd_push = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
 
     if 'service' in sys.argv:
         Process(target=service,
@@ -222,6 +229,11 @@ def main():
                                 video_sources['eye%s'%eye_id] )).start()
         elif "notify.launcher_process.should_stop" == topic:
             break
+        elif "notify.notification.should_doc" == topic:
+            cmd_push.notify({
+                'subject':'notification.doc',
+                'actor':'main',
+                'doc':main.__doc__})
 
     for p in active_children(): p.join()
 
