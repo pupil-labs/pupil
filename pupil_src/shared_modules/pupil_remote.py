@@ -157,8 +157,11 @@ class Pupil_Remote(Plugin):
         elif msg == 'PUB_PORT':
             response = self.g_pool.ipc_pub_url.split(':')[-1]
         elif msg[0] == 'R':
-            ipc_pub.notify({'subject':'recording.should_start','session_name':msg[2:]})
-            response = 'OK'
+            try:
+                ipc_pub.notify({'subject':'recording.should_start','session_name':msg[2:]})
+                response = 'OK'
+            except IndexError:
+                response = 'Recording command mal-formatted.'
         elif msg[0] == 'r':
             ipc_pub.notify({'subject':'recording.should_stop'})
             response = 'OK'
