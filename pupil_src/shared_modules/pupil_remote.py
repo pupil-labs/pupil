@@ -85,6 +85,8 @@ class Pupil_Remote(Plugin):
         else:
             logger.error(response)
             self.address = ''
+            if self.g_pool.app == 'service':
+                self.notify_all({'subject':'service_process.should_stop'})
 
     def stop_server(self):
         self.thread_pipe.send('Exit')

@@ -128,7 +128,6 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_di
 
     def handle_notifications(n):
         subject = n['subject']
-        print n
         if subject == 'set_detection_mapping_mode':
             if n['mode'] == '2d':
                 if "Vector_Gaze_Mapper" in g_pool.active_gaze_mapping_plugin.class_name:

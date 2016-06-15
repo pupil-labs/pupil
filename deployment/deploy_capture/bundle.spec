@@ -9,8 +9,8 @@ pyglui_hidden_imports = ['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','py
 if platform.system() == 'Darwin':
     from version import dpkg_deb_version
 
-    a = Analysis(['../pupil_src/capture/main.py'],
-                 pathex=['../pupil_src/shared_modules/'],
+    a = Analysis(['../../pupil_src/capture/main.py'],
+                 pathex=['../../pupil_src/shared_modules/'],
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None,
@@ -45,8 +45,8 @@ if platform.system() == 'Darwin':
 
 
 elif platform.system() == 'Linux':
-    a = Analysis(['../pupil_src/capture/main.py'],
-                 pathex=['../pupil_src/shared_modules/'],
+    a = Analysis(['../../pupil_src/capture/main.py'],
+                 pathex=['../../pupil_src/shared_modules/'],
                  hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None,
@@ -108,8 +108,8 @@ elif platform.system() == 'Windows':
 	scipy_imports += ['scipy.integrate._ode', 'scipy.integrate.quadrature', 'scipy.integrate.odepack', 'scipy.integrate._odepack', 'scipy.integrate.quadpack', 'scipy.integrate._quadpack']
 	scipy_imports += ['scipy.integrate.vode', 'scipy.integrate.lsoda', 'scipy.integrate._dop', 'scipy.special._ufuncs', 'scipy.special._ufuncs_cxx']
 
-	a = Analysis(['../pupil_src/capture/main.py'],
-	             pathex=['../pupil_src/shared_modules/'],
+	a = Analysis(['../../pupil_src/capture/main.py'],
+	             pathex=['../../pupil_src/shared_modules/'],
 	             hiddenimports=['pyglui.cygl.shader']+scipy_imports+av_hidden_imports,
 	             hookspath=None,
 	             runtime_hooks=None,
@@ -131,9 +131,9 @@ elif platform.system() == 'Windows':
 	               a.binaries,
 	               a.zipfiles,
 	               a.datas,
-	               [('glfw3.dll', '../pupil_src/shared_modules/external/glfw3.dll','BINARY')],
-	               [('glfw3.lib', '../pupil_src/shared_modules/external/glfw3.lib','BINARY')],
-	               [('glfw3dll.lib', '../pupil_src/shared_modules/external/glfw3dll.lib','BINARY')],
+	               [('glfw3.dll', '../../pupil_src/shared_modules/external/glfw3.dll','BINARY')],
+	               [('glfw3.lib', '../../pupil_src/shared_modules/external/glfw3.lib','BINARY')],
+	               [('glfw3dll.lib', '../../pupil_src/shared_modules/external/glfw3dll.lib','BINARY')],
 	               [('opencv_ffmpeg2411.dll', os.path.join(python_path, 'opencv_ffmpeg2411.dll'),'BINARY')],
 	               [('_videoInput.lib', os.path.join(python_path, '_videoInput.lib'),'BINARY')],
 	               [('msvcp110.dll', os.path.join(system_path, 'msvcp110.dll'),'BINARY')],

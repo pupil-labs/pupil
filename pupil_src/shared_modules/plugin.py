@@ -132,15 +132,14 @@ class Plugin(object):
 
         do not overwrite this method
         """
-        if self.g_pool.app == 'capture':
-            self.g_pool.ipc_pub.notify(notification)
-        else:
+        if self.g_pool.app == 'player':
             if notification.get('delay',0):
                 notification['_notify_time_'] = time()+notification['delay']
                 self.g_pool.delayed_notifications[notification['subject']] = notification
             else:
                 self.g_pool.notifications.append(notification)
-
+        else:
+            self.g_pool.ipc_pub.notify(notification)
 
     @property
     def alive(self):

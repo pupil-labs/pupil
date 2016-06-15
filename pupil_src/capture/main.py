@@ -11,17 +11,22 @@
 import os, sys, platform
 
 # sys.argv.append('profiled')
-sys.argv.append('service')
+# sys.argv.append('service')
+app = 'capture'
 
 if getattr(sys, 'frozen', False):
+    if sys.executable.endswith('pupil_service'):
+        app = 'service'
     # Specifiy user dir.
-    user_dir = os.path.expanduser(os.path.join('~','pupil_capture_settings'))
+    user_dir = os.path.expanduser(os.path.join('~','pupil_%s_settings'%app))
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
 else:
+    if 'service' in sys.argv:
+        app = 'service'
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
     # Specifiy user dir.
-    user_dir = os.path.join(pupil_base_dir,'capture_settings')
+    user_dir = os.path.join(pupil_base_dir,'%s_settings'%app)
     version_file = None
 
 # create folder for user settings, tmp data
@@ -93,7 +98,7 @@ def main():
     ipc_push_url = 'tcp://127.0.0.1:%s'%ipc_push_port
 
     #We use a zmq forwarder and the zmq PUBSUB pattern to do all our IPC.
-    def main_proxy(in_url, out_url):
+    def ipc_backbone(in_url, out_url):
         ctx = zmq.Context.instance()
         xsub = ctx.socket(zmq.XSUB)
         xsub.bind(in_url)
@@ -163,9 +168,9 @@ def main():
             record = logging.makeLogRecord(msg)
             logger.handle(record)
 
-    proxy_thread = Thread(target=main_proxy, args=(ipc_pub_url, ipc_sub_url))
-    proxy_thread.setDaemon(True)
-    proxy_thread.start()
+    ipc_backbone_thread = Thread(target=ipc_backbone, args=(ipc_pub_url, ipc_sub_url))
+    ipc_backbone_thread.setDaemon(True)
+    ipc_backbone_thread.start()
 
     log_thread = Thread(target=log_loop, args=(ipc_sub_url,))
     log_thread.setDaemon(True)
@@ -185,7 +190,7 @@ def main():
     cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=topics )
     cmd_push = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
 
-    if 'service' in sys.argv:
+    if app == 'service':
         Process(target=service,
                       name= 'service',
                       args=(timebase,
