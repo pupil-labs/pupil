@@ -16,7 +16,7 @@ import zmq_tools
 from pyre import zhelper
 import logging
 logger = logging.getLogger(__name__)
-
+import audio
 
 class Pupil_Remote(Plugin):
     """pupil remote plugin
@@ -78,6 +78,7 @@ class Pupil_Remote(Plugin):
         else:
             logger.error(response)
             if self.g_pool.app == 'service':
+                audio.say("Error: Port already in use.")
                 self.notify_all({'subject':'service_process.should_stop'})
             else:
                 self.address = ''
