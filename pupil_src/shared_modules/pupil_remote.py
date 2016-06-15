@@ -64,6 +64,7 @@ class Pupil_Remote(Plugin):
         self.order = .01 #excecute first
         self.context = g_pool.zmq_ctx
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
+        self.address = address
         self.start_server(address)
         self.menu = None
 
@@ -76,9 +77,10 @@ class Pupil_Remote(Plugin):
             self.address = new_address
         else:
             logger.error(response)
-            self.address = ''
             if self.g_pool.app == 'service':
                 self.notify_all({'subject':'service_process.should_stop'})
+            else:
+                self.address = ''
 
     def stop_server(self):
         self.thread_pipe.send('Exit')
