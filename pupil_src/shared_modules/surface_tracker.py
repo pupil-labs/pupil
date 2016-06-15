@@ -197,7 +197,7 @@ class Surface_Tracker(Plugin):
 
 
             if self.mode == "Show marker IDs":
-                draw_markers(frame.img,self.markers)
+                draw_markers(frame.gray,self.markers)
 
         events['surfaces'] = []
 
@@ -274,7 +274,7 @@ class Surface_Tracker(Plugin):
 
         for s in self.surfaces:
             if self.locate_3d:
-                s.gl_display_in_window_3d(self.g_pool.image_tex,self.camera_intrinsics)
+                s.gl_display_in_window_3d(self.g_pool.image_tex,self.camera_calibration)
             else:
                 s.gl_display_in_window(self.g_pool.image_tex)
 

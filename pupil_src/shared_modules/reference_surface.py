@@ -293,9 +293,9 @@ class Reference_Surface(object):
                 # convert object points to lie on z==0 plane in 3d space
                 uv3d = np.zeros((uv.shape[0], uv.shape[1]+1))
                 uv3d[:,:-1] = uv
+                xy.shape = -1,1,2
                 # compute pose of object relative to camera center
-                # print yx,type(yx)
-                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, yx, K, dist_coef,flags=cv2.CV_EPNP)
+                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, xy, K, dist_coef,flags=cv2.CV_EPNP)
 
                 # not verifed, potentially usefull info: http://stackoverflow.com/questions/17423302/opencv-solvepnp-tvec-units-and-axes-directions
 
@@ -535,7 +535,7 @@ class Reference_Surface(object):
         """
         here we map a selected surface onto a seperate window.
         """
-        K,dist_coef,img_size = camera_intrinsics
+        K,dist_coef,img_size = camera_intrinsics['camera_matrix'],camera_intrinsics['dist_coefs'],camera_intrinsics['resolution']
 
         if self._window and self.detected:
             active_window = glfwGetCurrentContext()
