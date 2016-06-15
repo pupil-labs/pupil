@@ -199,8 +199,12 @@ class Pupil_Remote(Plugin):
             'PUB_PORT' return the current pub port of the IPC Backbone
             'SUB_PORT' return the current sub port of the IPC Backbone
 
-        Args:
-            notification (dictionary): Notification dictionary
+        Emits notifications:
+            ``recording.should_start``
+            ``recording.should_stop``
+            ``calibration.should_start``
+            ``calibration.should_stop``
+            Any other notification received
         """
         pass
 
