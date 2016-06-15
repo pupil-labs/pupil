@@ -6,7 +6,6 @@ import platform
 av_hidden_imports = ['av.format','av.packet','av.buffer','av.bytesource','av.frame','av.stream','av.descriptor','av.plane','av.audio.plane','av.container.streams','av.dictionary', 'av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane','av.option']
 pyglui_hidden_imports = ['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']
 
-options = [ ('service', None, 'OPTION') ] #this will trigger the app to run as service
 
 if platform.system() == 'Darwin':
     from version import dpkg_deb_version
@@ -20,7 +19,6 @@ if platform.system() == 'Darwin':
     pyz = PYZ(a.pure)
     exe = EXE(pyz,
               a.scripts,
-              options,
               exclude_binaries=True,
               name='pupil_service',
               debug=False,
@@ -58,7 +56,6 @@ elif platform.system() == 'Linux':
     pyz = PYZ(a.pure)
     exe = EXE(pyz,
               a.scripts,
-              options,
               exclude_binaries=True,
               name='pupil_service',
               debug=False,
@@ -123,7 +120,6 @@ elif platform.system() == 'Windows':
 	pyz = PYZ(a.pure)
 	exe = EXE(pyz,
 	          a.scripts,
-            options,
 	          exclude_binaries=True,
 	          name='pupil_service.exe',
 	          icon='pupil-service.ico',
