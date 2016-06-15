@@ -11,7 +11,7 @@
 import os, sys, platform
 
 # sys.argv.append('profiled')
-sys.argv.append('service')
+# sys.argv.append('service')
 
 if getattr(sys, 'frozen', False):
     # Specifiy user dir.
