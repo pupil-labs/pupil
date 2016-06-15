@@ -40,6 +40,16 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
     Creates a window, gl context.
     Grabs images from a capture.
     Streams Pupil coordinates into g_pool.pupil_queue
+
+    Reacts to notifications:
+       ``set_detection_mapping_mode``: Sets detection method
+       ``eye_process.should_stop``: Stops the eye process
+       ``recording.started``: Starts recording eye video
+       ``recording.stopped``: Stops recording eye video
+
+    Emits notifications:
+        ``eye_process.started``: Eye process started
+        ``eye_process.stopped``: Eye process stopped
     """
 
 
@@ -337,7 +347,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                         writer = None
                         np.save(timestamps_path,np.asarray(timestamps))
                         del timestamps
-
+                elif subject.startswith('notification.should_doc'):
+                    ipc_socket.notify({
+                        'subject':'notification.doc',
+                        'actor':'eye%i'%eye_id,
+                        'doc':eye.__doc__
+                        })
 
             # Get an image from the grabber
             try:
