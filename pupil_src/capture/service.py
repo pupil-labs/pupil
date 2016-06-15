@@ -16,6 +16,20 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_di
     """service
     Maps pupil to gaze data
     Can run various plug-ins.
+
+    Reacts to notifications:
+       ``set_detection_mapping_mode``: Sets detection method
+       ``start_plugin``: Starts given plugin with the given arguments
+       ``eye_process.started``: Sets the detection method eye process
+       ``service_process.should_stop``: Stops the service process
+
+    Emits notifications:
+        ``eye_process.should_start``
+        ``eye_process.should_stop``
+        ``set_detection_mapping_mode``
+        ``service_process.started``
+        ``service_process.stopped``
+        ``launcher_process.should_stop``
     """
 
     # We defer the imports because of multiprocessing.
@@ -142,6 +156,10 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_di
         elif subject == 'service_process.should_stop':
             g_pool.service_should_run = False
         elif subject.startswith('notification.should_doc'):
+            ipc_pub.notify({
+                'subject':'notification.doc',
+                'actor':g_pool.app,
+                'doc':service.__doc__})
             for p in g_pool.plugins:
                 if p.on_notify.__doc__ and p.__class__.on_notify != Plugin.on_notify:
                     ipc_pub.notify({
