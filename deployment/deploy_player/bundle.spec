@@ -8,7 +8,7 @@ pyglui_hidden_imports = ['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','py
 
 
 if platform.system() == 'Darwin':
-    from version import dpkg_deb_version
+    from ..version import dpkg_deb_version
 
     a = Analysis(['../pupil_src/player/main.py'],
                  pathex=['../pupil_src/shared_modules/'],

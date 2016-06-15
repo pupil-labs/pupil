@@ -7,7 +7,7 @@ av_hidden_imports = ['av.format','av.packet','av.buffer','av.bytesource','av.fra
 pyglui_hidden_imports = ['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']
 
 if platform.system() == 'Darwin':
-    from version import dpkg_deb_version
+    from ..version import dpkg_deb_version
 
     a = Analysis(['../pupil_src/capture/main.py'],
                  pathex=['../pupil_src/shared_modules/'],
