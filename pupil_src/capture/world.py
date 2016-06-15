@@ -19,6 +19,20 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     Grabs images from a capture.
     Maps pupil to gaze data
     Can run various plug-ins.
+
+    Reacts to notifications:
+        ``set_detection_mapping_mode``
+        ``eye_process.started``
+        ``start_plugin``
+
+    Emits notifications:
+        ``eye_process.should_start``
+        ``eye_process.should_stop``
+        ``set_detection_mapping_mode``
+        ``world_process.started``
+        ``world_process.stopped``
+        ``recording.should_stop``: Emits on camera failure
+        ``launcher_process.should_stop``
     """
 
     # We defer the imports because of multiprocessing.
@@ -233,6 +247,10 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
             n = {'subject':'set_detection_mapping_mode','mode':g_pool.detection_mapping_mode}
             ipc_pub.notify(n)
         elif subject.startswith('notification.should_doc'):
+            ipc_pub.notify({
+                'subject':'notification.doc',
+                'actor':g_pool.app,
+                'doc':world.__doc__})
             for p in g_pool.plugins:
                 if p.on_notify.__doc__ and p.__class__.on_notify != Plugin.on_notify:
                     ipc_pub.notify({
