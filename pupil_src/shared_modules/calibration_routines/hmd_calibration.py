@@ -91,7 +91,8 @@ class HMD_Calibration(Calibration_Plugin):
         logger.info("Stopping Calibration")
         self.notify_all({'subject':'calibration.stopped'})
         self.active = False
-        self.button.status_text = ''
+        if self.button:
+            self.button.status_text = ''
 
         pupil_list = self.pupil_list
         ref_list = self.ref_list
