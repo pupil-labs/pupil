@@ -145,7 +145,7 @@ class Pupil_Remote(Plugin):
                 self.g_pool.timebase.value = raw_time-target
                 response = 'Timesync successful.'
         elif msg[0] == 't':
-            response = str(self.g_pool.capture.get_timestamp())
+            response = repr(self.g_pool.capture.get_timestamp())
         else:
             response = 'Unknown command.'
         socket.send(response)
