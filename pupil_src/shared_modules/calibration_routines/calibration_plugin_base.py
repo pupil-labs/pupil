@@ -11,6 +11,18 @@ class Calibration_Plugin(Plugin):
         self.active = False
 
     def on_notify(self,notification):
+        '''
+        Reacts to notifications:
+           ``calibration.should_start``: Starts the calibration procedure
+           ``calibration.should_stop``: Stops the calibration procedure
+
+        Emits notifications:
+            ``calibration.started``: Calibration procedure started
+            ``calibration.stopped``: Calibration procedure stopped
+
+        Args:
+            notification (dictionary): Notification dictionary
+        '''
         if notification['subject'].startswith('calibration.should_start'):
             if self.active:
                 logger.warning('Calibration already running.')

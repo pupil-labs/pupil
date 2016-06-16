@@ -19,45 +19,53 @@ logger = logging.getLogger(__name__)
 import audio
 
 class Pupil_Remote(Plugin):
-    """pupil remote plugin
-    send simple string messages to control Pupil Capture functions:
+    """Pupil Remote plugin
 
-    'R' start recording with auto generated session name
-    'R rec_name' start recording and name new session name: rec_name
-    'r' stop recording
-    'C' start currently selected calibration
-    'c' stop currently selected calibration
-    'T 1234.56' Timesync: make timestamps count form 1234.56 from now on.
-    't' get pupil capture timestamp returns a float as string.
+    Send simple string messages to control Pupil Capture functions:
+        'R' start recording with auto generated session name
+        'R rec_name' start recording and name new session name: rec_name
+        'r' stop recording
+        'C' start currently selected calibration
+        'c' stop currently selected calibration
+        'T 1234.56' Timesync: make timestamps count form 1234.56 from now on.
+        't' get pupil capture timestamp returns a float as string.
 
 
-    #IPC Backbone communication
-    'PUB_PORT' return the current pub port of the IPC Backbone
-    'SUB_PORT' return the current sub port of the IPC Backbone
+        # IPC Backbone communication
+        'PUB_PORT' return the current pub port of the IPC Backbone
+        'SUB_PORT' return the current sub port of the IPC Backbone
 
-    mulitpart messages conforming to pattern:
-    part1: 'notify.' part2: json encoded dict with at least  key 'subject':'my_notification_subject'
-    will be forwared to the Pupil IPC Backbone.
+    Mulitpart messages conforming to pattern:
+        part1: 'notify.' part2: json encoded dict with at least  key 'subject':'my_notification_subject'
+        will be forwared to the Pupil IPC Backbone.
 
 
     A example script for talking with pupil remote below:
-    import zmq
-    from time import sleep,time
-    context =  zmq.Context()
-    socket = context.socket(zmq.REQ)
-    # set your ip here
-    socket.connect('tcp://192.168.1.100:50020')
-    t= time()
-    socket.send('t')
-    print socket.recv()
-    print 'Round trip command delay:', time()-t
-    print 'If you need continous syncing and/or less latency look at pupil_sync.'
-    sleep(1)
-    socket.send('R')
-    print socket.recv()
-    sleep(5)
-    socket.send('r')
-    print socket.recv()
+        import zmq
+        from time import sleep,time
+        context =  zmq.Context()
+        socket = context.socket(zmq.REQ)
+        # set your ip here
+        socket.connect('tcp://192.168.1.100:50020')
+        t= time()
+        socket.send('t')
+        print socket.recv()
+        print 'Round trip command delay:', time()-t
+        print 'If you need continous syncing and/or less latency look at pupil_sync.'
+        sleep(1)
+        socket.send('R')
+        print socket.recv()
+        sleep(5)
+        socket.send('r')
+        print socket.recv()
+
+    Attributes:
+        address (str): Remote host address
+        alive (bool): See plugin.py
+        context (zmq.Context): zmq context
+        menu (ui.Growing_Menu): Sidebar menu
+        order (float): See plugin.py
+        thread_pipe (zmq.Socket): Pipe for background communication
     """
     def __init__(self, g_pool,address="tcp://*:50020"):
         super(Pupil_Remote, self).__init__(g_pool)
@@ -89,7 +97,6 @@ class Pupil_Remote(Plugin):
             sleep(.1)
 
     def init_gui(self):
-
         def close():
             self.alive = False
 
@@ -153,8 +160,11 @@ class Pupil_Remote(Plugin):
         elif msg == 'PUB_PORT':
             response = self.g_pool.ipc_pub_url.split(':')[-1]
         elif msg[0] == 'R':
-            ipc_pub.notify({'subject':'recording.should_start','session_name':msg[2:]})
-            response = 'OK'
+            try:
+                ipc_pub.notify({'subject':'recording.should_start','session_name':msg[2:]})
+                response = 'OK'
+            except IndexError:
+                response = 'Recording command mal-formatted.'
         elif msg[0] == 'r':
             ipc_pub.notify({'subject':'recording.should_stop'})
             response = 'OK'
@@ -179,6 +189,30 @@ class Pupil_Remote(Plugin):
             response = 'Unknown command.'
         socket.send(response)
 
+    def on_notify(self,notification):
+        """
+        Send simple string messages to control Pupil Capture functions:
+            'R' start recording with auto generated session name
+            'R rec_name' start recording and name new session name: rec_name
+            'r' stop recording
+            'C' start currently selected calibration
+            'c' stop currently selected calibration
+            'T 1234.56' Timesync: make timestamps count form 1234.56 from now on.
+            't' get pupil capture timestamp returns a float as string.
+
+
+            #IPC Backbone communication
+            'PUB_PORT' return the current pub port of the IPC Backbone
+            'SUB_PORT' return the current sub port of the IPC Backbone
+
+        Emits notifications:
+            ``recording.should_start``
+            ``recording.should_stop``
+            ``calibration.should_start``
+            ``calibration.should_stop``
+            Any other notification received
+        """
+        pass
 
     def get_init_dict(self):
         return {'address':self.address}

@@ -45,6 +45,19 @@ class HMD_Calibration(Calibration_Plugin):
 
 
     def on_notify(self,notification):
+        '''
+        Reacts to notifications:
+           ``calibration.should_start``: Starts the calibration procedure
+           ``calibration.should_stop``:  Stops the calibration procedure
+           ``calibration.add_ref_data``: Adds reference data
+
+        Emits notifications:
+            ``calibration.started``: Calibration procedure started
+            ``calibration.stopped``: Calibration procedure stopped
+
+        Args:
+            notification (dictionary): Notification dictionary
+        '''
         try:
             if notification['subject'].startswith('calibration.should_start'):
                 if self.active:

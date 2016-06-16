@@ -170,7 +170,19 @@ class Recorder(Plugin):
 
 
     def on_notify(self,notification):
+        """Handles recorder notifications
 
+        Reacts to notifications:
+            ``recording.should_start``: Starts a new recording session
+            ``recording.should_stop``: Stops current recording session
+
+        Emits notifications:
+            ``recording.started``: New recording session started
+            ``recording.stopped``: Current recording session stopped
+
+        Args:
+            notification (dictionary): Notification dictionary
+        """
         # notification wants to be recorded
         if notification.get('record',False) and self.running:
             self.data['notifications'].append(notification)
