@@ -21,7 +21,7 @@ class Calibration_Plugin(Plugin):
             ``calibration.stopped``: Calibration procedure stopped
 
         Args:
-            notification (dictionart): Notification dictionary
+            notification (dictionary): Notification dictionary
         '''
         if notification['subject'].startswith('calibration.should_start'):
             if self.active:
