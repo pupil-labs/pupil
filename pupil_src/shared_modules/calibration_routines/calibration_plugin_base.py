@@ -1,5 +1,6 @@
 from plugin import Plugin
-
+import logging
+logger = logging.getLogger(__name__)
 
 class Calibration_Plugin(Plugin):
     '''base class for all calibration routines'''
@@ -18,7 +19,9 @@ class Calibration_Plugin(Plugin):
 
         Emits notifications:
             ``calibration.started``: Calibration procedure started
-            ``calibration.stopped``: Calibration procedure stopped
+            ``calibration.stopped``: Calibration procedure stopped (manually)
+            ``calibration.failed``: Calibration failed
+            ``calibration.successful``: Calibration succeeded
 
         Args:
             notification (dictionary): Notification dictionary
