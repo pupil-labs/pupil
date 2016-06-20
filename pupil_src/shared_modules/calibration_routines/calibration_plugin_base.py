@@ -19,7 +19,7 @@ class Calibration_Plugin(Plugin):
 
         Emits notifications:
             ``calibration.started``: Calibration procedure started
-            ``calibration.stopped``: Calibration procedure stopped (manually)
+            ``calibration.stopped``: Calibration procedure stopped
             ``calibration.failed``: Calibration failed
             ``calibration.successful``: Calibration succeeded
 
