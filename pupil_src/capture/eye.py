@@ -50,6 +50,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
     Emits notifications:
         ``eye_process.started``: Eye process started
         ``eye_process.stopped``: Eye process stopped
+
+    Emits data:
+        ``pupil.<eye id>``: Pupil data for eye with id ``<eye id>``
     """
 
 
