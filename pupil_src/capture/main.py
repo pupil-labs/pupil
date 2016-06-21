@@ -218,7 +218,7 @@ def main():
     while True:
         #block and listen for relevant messages.
         topic,n = cmd_sub.recv()
-        if "notify.eye_process.should_start" in topic :
+        if topic.startswith("notify.eye_process.should_start"):
             eye_id = n['eye_id']
             if not eyes_are_alive[eye_id].value:
                 Process(target=eye,

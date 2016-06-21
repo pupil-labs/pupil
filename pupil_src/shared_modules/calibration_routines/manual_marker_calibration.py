@@ -105,6 +105,21 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.button.status_text = ''
         finish_calibration(self.g_pool,self.pupil_list,self.ref_list)
 
+    def on_notify(self,notification):
+        '''
+        Reacts to notifications:
+           ``calibration.should_start``: Starts the calibration procedure
+           ``calibration.should_stop``: Stops the calibration procedure
+
+        Emits notifications:
+            ``calibration.started``: Calibration procedure started
+            ``calibration.stopped``: Calibration procedure stopped
+            ``calibration.marker_found``: Steady marker found
+            ``calibration.marker_moved_too_quickly``: Marker moved too quickly
+            ``calibration.marker_sample_completed``: Enough data points sampled
+
+        '''
+        super(Manual_Marker_Calibration, self).on_notify(notification)
 
     def update(self,frame,events):
         """
