@@ -125,7 +125,7 @@ class Plugin(object):
             adding 'delay':3.2 will delay the notification for 3.2s.
             If a new delayed notification of same subject is sent before 3.2s have passed we will discard the former notification
 
-            All notifications but be json serializable
+            All notifications must be serializable
 
             You may add more fields as you like.
 
