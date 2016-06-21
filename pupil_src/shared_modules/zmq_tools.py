@@ -98,21 +98,8 @@ class Msg_Dispatcher(Msg_Streamer):
     Send messages on a push port.
     Not threadsave. Make a new one for each thread
     '''
-<<<<<<< HEAD
-    def __init__(self,ctx,url):
-        self.socket = zmq.Socket(ctx,zmq.PUSH)
-        self.socket.connect(url)
-
-    def send(self,topic,payload):
-        '''
-        send a generic message with topic, payload
-        '''
-        self.socket.send(str(topic),flags=zmq.SNDMORE)
-        self.socket.send(json.dumps(payload))
-=======
     def __init__(self,ctx,url,block_unitl_connected=True):
         super(Msg_Dispatcher, self).__init__(ctx,url,zmq.PUSH,block_unitl_connected)
->>>>>>> 65fae6f... Revision of zmq_tools
 
     def notify(self,notification):
         '''
