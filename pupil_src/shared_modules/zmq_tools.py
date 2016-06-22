@@ -5,21 +5,22 @@ the Pupil IPC Backbone.
 
 import zmq
 from zmq.utils.monitor import recv_monitor_message
-import ujson as json
+# import ujson as serializer # uncomment for json seialization
+import msgpack as serializer
 import logging
 import threading
 
 
 class ZMQ_handler(logging.Handler):
     '''
-    A handler that send log records as json strings via zmq
+    A handler that send log records as serialized strings via zmq
     '''
     def __init__(self,ctx,ipc_pub_url):
         super(ZMQ_handler, self).__init__()
         self.socket = Msg_Dispatcher(ctx,ipc_pub_url)
 
     def emit(self, record):
-        self.socket.send('logging.%s'%str(record.levelname).lower(),record)
+        self.socket.send('logging.%s'%str(record.levelname).lower(),record.__dict__)
 
 class Msg_Receiver(object):
     '''
@@ -61,7 +62,7 @@ class Msg_Receiver(object):
         recv a generic message with topic, payload
         '''
         topic = self.socket.recv(*args,**kwargs)
-        payload = json.loads(self.socket.recv(*args,**kwargs))
+        payload = serializer.loads(self.socket.recv(*args,**kwargs))
         return topic,payload
 
     @property
@@ -87,7 +88,7 @@ class Msg_Streamer(object):
         send a generic message with topic, payload
         '''
         self.socket.send(str(topic),flags=zmq.SNDMORE)
-        self.socket.send(json.dumps(payload))
+        self.socket.send(serializer.dumps(payload))
 
     def __del__(self):
 
@@ -111,7 +112,7 @@ class Msg_Dispatcher(object):
         send a generic message with topic, payload
         '''
         self.socket.send(str(topic),flags=zmq.SNDMORE)
-        self.socket.send(json.dumps(payload))
+        self.socket.send(serializer.dumps(payload))
 
     def notify(self,notification):
         '''

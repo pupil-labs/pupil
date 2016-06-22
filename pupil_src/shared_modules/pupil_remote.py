@@ -36,7 +36,7 @@ class Pupil_Remote(Plugin):
         'SUB_PORT' return the current sub port of the IPC Backbone
 
     Mulitpart messages conforming to pattern:
-        part1: 'notify.' part2: json encoded dict with at least  key 'subject':'my_notification_subject'
+        part1: 'notify.' part2: a msgpack serialized dict with at least key 'subject':'my_notification_subject'
         will be forwared to the Pupil IPC Backbone.
 
 
@@ -148,7 +148,7 @@ class Pupil_Remote(Plugin):
         msg = socket.recv()
         if msg.startswith('notify'):
             try:
-                payload = zmq_tools.json.loads(socket.recv(flags=zmq.NOBLOCK))
+                payload = zmq_tools.serializer.loads(socket.recv(flags=zmq.NOBLOCK))
                 payload['subject']
             except Exception as e:
                 response = 'Notification mal-formatted or missing: %s'%e
