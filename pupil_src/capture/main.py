@@ -13,6 +13,7 @@ import os, sys, platform
 # sys.argv.append('profiled')
 # sys.argv.append('debug')
 # sys.argv.append('service')
+
 app = 'capture'
 
 if getattr(sys, 'frozen', False):
@@ -155,11 +156,11 @@ def main():
         import logging
         #Get the root logger
         logger = logging.getLogger()
+        #set log level
         if log_level_debug:
             logger.setLevel(logging.DEBUG)
         else:
             logger.setLevel(logging.INFO)
-
         #Stream to file
         fh = logging.FileHandler(os.path.join(user_dir,'capture.log'),mode='w')
         fh.setFormatter(logging.Formatter('%(asctime)s - %(processName)s - [%(levelname)s] %(name)s: %(message)s'))
