@@ -114,7 +114,7 @@ def main():
             xsub.close()
             xpub.close()
 
-
+    #reliable msg dispatch to the IPC via push bridge
     def pull_pub(in_url,out_url):
         ctx = zmq.Context.instance()
         pull = ctx.socket(zmq.PULL)
@@ -151,7 +151,7 @@ def main():
             sub.close()
             pub.close()
 
-    #Thread to recv log records from other processes.
+    #recv log records from other processes.
     def log_loop(ipc_sub_url,log_level_debug):
         import logging
         #Get the root logger
@@ -192,10 +192,10 @@ def main():
     pull_pub.setDaemon(True)
     pull_pub.start()
 
+
     topics = (  'notify.eye_process.',
                 'notify.launcher_process.',
                 'notify.notification.should_doc')
-
     cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=topics )
     cmd_push = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
 
