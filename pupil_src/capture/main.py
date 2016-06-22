@@ -11,6 +11,7 @@
 import os, sys, platform
 
 # sys.argv.append('profiled')
+# sys.argv.append('debug')
 # sys.argv.append('service')
 app = 'capture'
 
@@ -89,13 +90,15 @@ def main():
     zmq_ctx = zmq.Context()
     # lets get some open ports:
     test_socket = zmq_ctx.socket(zmq.SUB)
-    ipc_sub_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=5001, max_port=6000, max_tries=100)
-    ipc_pub_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=6001, max_port=7000, max_tries=100)
-    ipc_push_port = test_socket.bind_to_random_port('tcp://127.0.0.1', min_port=6001, max_port=7000, max_tries=100)
+    ipc_sub_port = test_socket.bind_to_random_port('tcp://*', min_port=5001, max_port=6000, max_tries=100)
+    ipc_pub_port = test_socket.bind_to_random_port('tcp://*', min_port=6001, max_port=7000, max_tries=100)
+    ipc_push_port = test_socket.bind_to_random_port('tcp://*', min_port=6001, max_port=7000, max_tries=100)
     test_socket.close(linger=0)
+
     ipc_pub_url = 'tcp://127.0.0.1:%s'%ipc_pub_port
     ipc_sub_url = 'tcp://127.0.0.1:%s'%ipc_sub_port
     ipc_push_url = 'tcp://127.0.0.1:%s'%ipc_push_port
+
 
     #We use a zmq forwarder and the zmq PUBSUB pattern to do all our IPC.
     def ipc_backbone(in_url, out_url):
@@ -148,11 +151,15 @@ def main():
             pub.close()
 
     #Thread to recv log records from other processes.
-    def log_loop(ipc_sub_url):
+    def log_loop(ipc_sub_url,log_level_debug):
         import logging
         #Get the root logger
         logger = logging.getLogger()
-        logger.setLevel(logging.DEBUG)
+        if log_level_debug:
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(logging.INFO)
+
         #Stream to file
         fh = logging.FileHandler(os.path.join(user_dir,'capture.log'),mode='w')
         fh.setFormatter(logging.Formatter('%(asctime)s - %(processName)s - [%(levelname)s] %(name)s: %(message)s'))
@@ -168,25 +175,26 @@ def main():
             record = logging.makeLogRecord(msg)
             logger.handle(record)
 
-    ipc_backbone_thread = Thread(target=ipc_backbone, args=(ipc_pub_url, ipc_sub_url))
+    ipc_backbone_thread = Thread(target=ipc_backbone, args=('tcp://*:%s'%ipc_pub_port, 'tcp://*:%s'%ipc_sub_port))
     ipc_backbone_thread.setDaemon(True)
     ipc_backbone_thread.start()
 
-    log_thread = Thread(target=log_loop, args=(ipc_sub_url,))
+    log_thread = Thread(target=log_loop, args=(ipc_sub_url,'debug'in sys.argv))
     log_thread.setDaemon(True)
     log_thread.start()
 
-    delay_thread = Thread(target=delay_proxy, args=(ipc_sub_url, ipc_pub_url))
+    delay_thread = Thread(target=delay_proxy, args=(ipc_sub_url, ipc_push_url))
     delay_thread.setDaemon(True)
     delay_thread.start()
 
-    pull_pub = Thread(target=pull_pub, args=(ipc_push_url, ipc_pub_url))
+    pull_pub = Thread(target=pull_pub, args=('tcp://*:%s'%ipc_push_port, ipc_pub_url))
     pull_pub.setDaemon(True)
     pull_pub.start()
 
     topics = (  'notify.eye_process.',
                 'notify.launcher_process.',
                 'notify.notification.should_doc')
+
     cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=topics )
     cmd_push = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
 
@@ -218,7 +226,7 @@ def main():
     while True:
         #block and listen for relevant messages.
         topic,n = cmd_sub.recv()
-        if topic.startswith("notify.eye_process.should_start"):
+        if "notify.eye_process.should_start" in topic:
             eye_id = n['eye_id']
             if not eyes_are_alive[eye_id].value:
                 Process(target=eye,
@@ -232,9 +240,9 @@ def main():
                                 app_version,
                                 eye_id,
                                 video_sources['eye%s'%eye_id] )).start()
-        elif "notify.launcher_process.should_stop" == topic:
+        elif "notify.launcher_process.should_stop" in topic:
             break
-        elif "notify.notification.should_doc" == topic:
+        elif "notify.notification.should_doc" in topic:
             cmd_push.notify({
                 'subject':'notification.doc',
                 'actor':'main',
