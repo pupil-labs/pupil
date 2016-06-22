@@ -8,7 +8,6 @@ from zmq.utils.monitor import recv_monitor_message
 # import ujson as serializer # uncomment for json seialization
 import msgpack as serializer
 import logging
-import threading
 
 
 class ZMQ_handler(logging.Handler):
@@ -76,12 +75,10 @@ class Msg_Streamer(object):
     '''
     Send messages on a pub port.
     Not threadsave. Make a new one for each thread
-    __init__ will block until connection is established.
     '''
     def __init__(self,ctx,url):
         self.socket = zmq.Socket(ctx,zmq.PUB)
         self.socket.connect(url)
-
 
     def send(self,topic,payload):
         '''
@@ -91,7 +88,6 @@ class Msg_Streamer(object):
         self.socket.send(serializer.dumps(payload))
 
     def __del__(self):
-
         self.socket.close()
 
 
@@ -101,7 +97,6 @@ class Msg_Dispatcher(object):
     '''
     Send messages on a pub port.
     Not threadsave. Make a new one for each thread
-    __init__ will block until connection is established.
     '''
     def __init__(self,ctx,url):
         self.socket = zmq.Socket(ctx,zmq.PUSH)
