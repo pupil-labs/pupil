@@ -488,10 +488,10 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     ipc_pub.notify(n)
 
 
-def world_profiled(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_src):
+def world_profiled(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
     import cProfile,subprocess,os
     from world import world
-    cProfile.runctx("world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,user_dir,version,cap_src)",{'timebase':timebase,'eyes_are_alive':eyes_are_alive,'ipc_pub_url':ipc_pub_url,'ipc_sub_url':ipc_sub_url,'user_dir':user_dir,'version':version,'cap_src':cap_src},locals(),"world.pstats")
+    cProfile.runctx("world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src)",{'timebase':timebase,'eyes_are_alive':eyes_are_alive,'ipc_pub_url':ipc_pub_url,'ipc_sub_url':ipc_sub_url,'ipc_push_url':ipc_push_url,'user_dir':user_dir,'version':version,'cap_src':cap_src},locals(),"world.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
