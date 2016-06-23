@@ -328,7 +328,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                             set_detector(Detector_3D)
                         detector_selector.read_only  = True
                     else:
-                        set_detector(Detector_2D)
+                        if not isinstance(g_pool.pupil_detector,Detector_2D):
+                            set_detector(Detector_2D)
                         detector_selector.read_only = False
                 elif subject == 'recording.started':
                     if notification['record_eye']:
