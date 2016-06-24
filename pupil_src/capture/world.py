@@ -341,11 +341,15 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     fps_graph.update_rate = 5
     fps_graph.label = "%0.0f FPS"
 
-    pupil_graph = graph.Bar_Graph(max_val=1.0)
-    pupil_graph.pos = (260,130)
-    pupil_graph.update_rate = 5
-    pupil_graph.label = "Confidence: %0.2f"
-
+    pupil0_graph = graph.Bar_Graph(max_val=1.0)
+    pupil0_graph.pos = (260,130)
+    pupil0_graph.update_rate = 5
+    pupil0_graph.label = "id0 conf: %0.2f"
+    pupil1_graph = graph.Bar_Graph(max_val=1.0)
+    pupil1_graph.pos = (380,130)
+    pupil1_graph.update_rate = 5
+    pupil1_graph.label = "id1 conf: %0.2f"
+    pupil_graphs = pupil0_graph,pupil1_graph
 
     if session_settings.get('eye1_process_alive',False):
         launch_eye_process(1,delay=0.6)
@@ -394,7 +398,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
         while pupil_sub.new_data:
             t,p = pupil_sub.recv()
-            pupil_graph.add(p['confidence'])
+            pupil_graphs[p['id']].add(p['confidence'])
             recent_pupil_data.append(p)
             new_gaze_data = g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
             for g in new_gaze_data:
@@ -447,7 +451,8 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
             graph.push_view()
             fps_graph.draw()
             cpu_graph.draw()
-            pupil_graph.draw()
+            pupil0_graph.draw()
+            pupil1_graph.draw()
             graph.pop_view()
             g_pool.gui.update()
             glfw.glfwSwapBuffers(main_window)
