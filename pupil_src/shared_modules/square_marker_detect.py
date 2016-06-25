@@ -118,7 +118,9 @@ def correct_gradient(gray_img,r):
         return True
 
 
-def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False):
+def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False,invert_image=False):
+    if invert_image:
+        gray_img = 255-gray_img
     edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, aperture, 9)
 
     contours, hierarchy = cv2.findContours(edges,
@@ -245,7 +247,7 @@ lk_params = dict( winSize  = (45, 45),
 prev_img = None
 tick = 0
 
-def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False,true_detect_every_frame = 1):
+def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False,true_detect_every_frame = 1,invert_image=False):
     global prev_img
 
     global tick

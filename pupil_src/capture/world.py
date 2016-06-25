@@ -64,7 +64,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     import glfw
     from pyglui import ui,graph,cygl
     from pyglui.cygl.utils import Named_Texture
-    from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
+    from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based,glFlush
 
     #check versions for our own depedencies as they are fast-changing
     from pyglui import __version__ as pyglui_version
@@ -439,7 +439,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
             pass
         else:
             g_pool.image_tex.update_from_frame(frame)
-
+            glFlush()
         make_coord_system_norm_based()
         g_pool.image_tex.draw()
         make_coord_system_pixel_based((frame.height,frame.width,3))

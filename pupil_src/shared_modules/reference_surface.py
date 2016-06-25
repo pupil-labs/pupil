@@ -138,6 +138,7 @@ class Reference_Surface(object):
             return
         all_verts = np.array(all_verts)
         all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
+        # all_verts_undistorted_normalized centered in img center flipped in y and range [-1,1]
         all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
         hull = cv2.convexHull(all_verts_undistorted_normalized,clockwise=False)
 
@@ -151,11 +152,17 @@ class Reference_Surface(object):
             most_acute_4_threshold = sorted(curvature)[3]
             hull = hull[curvature<=most_acute_4_threshold]
 
-        #now we need to roll the hull verts until we have the right orientation:
-        distance_to_origin = np.sqrt((hull[:,:,0]-1)**2+(hull[:,:,1]-1)**2)
-        top_left_idx = np.argmin(distance_to_origin)
-        hull = np.roll(hull,-top_left_idx,axis=0)
 
+        # all_verts_undistorted_normalized space is flipped in y.
+        # we need to change the order of the hull vertecies
+        hull = hull[[1,0,3,2],:,:]
+
+        # now we need to roll the hull verts until we have the right orientation:
+        # all_verts_undistorted_normalized space has its origin at the image center.
+        # adding 1 to the coordinates puts the origin at the top left.
+        distance_to_top_left = np.sqrt((hull[:,:,0]+1)**2+(hull[:,:,1]+1)**2)
+        bot_left_idx = np.argmin(distance_to_top_left)+1
+        hull = np.roll(hull,-bot_left_idx,axis=0)
 
         #based on these 4 verts we calculate the transformations into a 0,0 1,1 square space
         m_from_undistored_norm_space = m_verts_from_screen(hull)
@@ -286,9 +293,9 @@ class Reference_Surface(object):
                 # convert object points to lie on z==0 plane in 3d space
                 uv3d = np.zeros((uv.shape[0], uv.shape[1]+1))
                 uv3d[:,:-1] = uv
+                xy.shape = -1,1,2
                 # compute pose of object relative to camera center
-                # print yx,type(yx)
-                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, yx, K, dist_coef,flags=cv2.CV_EPNP)
+                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, xy, K, dist_coef,flags=cv2.CV_EPNP)
 
                 # not verifed, potentially usefull info: http://stackoverflow.com/questions/17423302/opencv-solvepnp-tvec-units-and-axes-directions
 
@@ -528,7 +535,7 @@ class Reference_Surface(object):
         """
         here we map a selected surface onto a seperate window.
         """
-        K,dist_coef,img_size = camera_intrinsics
+        K,dist_coef,img_size = camera_intrinsics['camera_matrix'],camera_intrinsics['dist_coefs'],camera_intrinsics['resolution']
 
         if self._window and self.detected:
             active_window = glfwGetCurrentContext()
