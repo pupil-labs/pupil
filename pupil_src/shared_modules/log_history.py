@@ -10,7 +10,7 @@
 import os
 from pyglui import ui
 from plugin import Plugin
-
+import zmq_tools
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -30,14 +30,9 @@ class Log_History(Plugin):
         self.menu = None
         self.num_messages = 50
 
-        self.formatter = None
-        self.logfile = None
-        for h in logging.getLogger().handlers:
-            if isinstance(h,logging.FileHandler):
-                self.formatter = h.formatter
-                self.logfile = h.stream.name
-        if self.formatter == None:
-            raise Exception("Could not find fh in logging system")
+
+        self.formatter = logging.Formatter('%(processName)s - [%(levelname)s] %(name)s: %(message)s')
+        self.logfile = os.path.join(self.g_pool.user_dir,self.g_pool.app+'.log')
 
     def init_gui(self):
 
@@ -52,28 +47,42 @@ class Log_History(Plugin):
 
         with open(self.logfile,'r') as fh:
             for l in fh.readlines():
-                self.menu.insert(2,ui.Info_Text(l[:-1]))
+                self.menu.insert(2,ui.Info_Text(l[26:-1]))
 
-        self.log_handler = Log_to_Callback(self.on_log)
-        logger = logging.getLogger()
-        logger.addHandler(self.log_handler)
-        self.log_handler.setLevel(logging.INFO)
+        if self.g_pool.app == 'capture':
+            self.log_handler = None
+            self._socket = zmq_tools.Msg_Receiver(self.g_pool.zmq_ctx,self.g_pool.ipc_sub_url,('logging',))
 
+        else:
+            self._socket = None
+            self.log_handler = Log_to_Callback(self.on_log)
+            logger = logging.getLogger()
+            logger.addHandler(self.log_handler)
+            self.log_handler.setLevel(logging.INFO)
+
+    def update(self,frame,events):
+        if self._socket:
+            while self._socket.new_data:
+                t,s = self._socket.recv()
+                self.on_log(logging.makeLogRecord(s))
 
     def on_log(self,record):
         self.menu.elements[self.num_messages+2:] = []
-        self.menu.insert(2,ui.Info_Text(self.formatter.format(record)))
+        self.menu.insert(2,ui.Info_Text(str(self.formatter.format(record))))
 
 
     def deinit_gui(self):
         if self.menu:
-            logger = logging.getLogger()
-            logger.removeHandler(self.log_handler)
             self.g_pool.gui.remove(self.menu)
             self.menu= None
 
     def cleanup(self):
         self.deinit_gui()
+        if self.log_handler:
+            logger = logging.getLogger()
+            logger.removeHandler(self.log_handler)
+        if self._socket:
+            del self._socket
 
     def get_init_dict(self):
         return {}

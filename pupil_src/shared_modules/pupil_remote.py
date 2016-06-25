@@ -12,76 +12,91 @@ from time import sleep
 from plugin import Plugin
 from pyglui import ui
 import zmq
+import zmq_tools
 from pyre import zhelper
 import logging
 logger = logging.getLogger(__name__)
-
-exit_thread = "EXIT_THREAD".encode('utf_8')
-
+import audio
 
 class Pupil_Remote(Plugin):
-    """pupil remote plugin
-    send simple string messages to control Pupil Capture functions:
+    """Pupil Remote plugin
 
-    'R' start recording with auto generated session name
-    'R rec_name' start recording and name new session name: rec_name
-    'r' stop recording
-    'C' start currently selected calibration
-    'c' stop currently selected calibration
-    'T 1234.56' Timesync: make timestamps count form 1234.56 from now on.
-    't' get pupil capture timestamp returns a float as string.
+    Send simple string messages to control Pupil Capture functions:
+        'R' start recording with auto generated session name
+        'R rec_name' start recording and name new session name: rec_name
+        'r' stop recording
+        'C' start currently selected calibration
+        'c' stop currently selected calibration
+        'T 1234.56' Timesync: make timestamps count form 1234.56 from now on.
+        't' get pupil capture timestamp returns a float as string.
 
-    Pupil Remote is the simplistic version of Pupil Sync:
-    Not as good but the protocol is dead simple.
+
+        # IPC Backbone communication
+        'PUB_PORT' return the current pub port of the IPC Backbone
+        'SUB_PORT' return the current sub port of the IPC Backbone
+
+    Mulitpart messages conforming to pattern:
+        part1: 'notify.' part2: a msgpack serialized dict with at least key 'subject':'my_notification_subject'
+        will be forwared to the Pupil IPC Backbone.
+
+
     A example script for talking with pupil remote below:
-    import zmq
-    from time import sleep,time
-    context =  zmq.Context()
-    socket = context.socket(zmq.REQ)
-    # set your ip here
-    socket.connect('tcp://192.168.1.100:50020')
-    t= time()
-    socket.send('T 0.0')
-    print socket.recv()
-    print 'Round trip command delay:', time()-t
-    print 'If you need continous syncing and less latency look at pupil_sync.'
-    sleep(1)
-    socket.send('R')
-    print socket.recv()
-    sleep(5)
-    socket.send('r')
-    print socket.recv()
+        import zmq
+        from time import sleep,time
+        context =  zmq.Context()
+        socket = context.socket(zmq.REQ)
+        # set your ip here
+        socket.connect('tcp://192.168.1.100:50020')
+        t= time()
+        socket.send('t')
+        print socket.recv()
+        print 'Round trip command delay:', time()-t
+        print 'If you need continous syncing and/or less latency look at pupil_sync.'
+        sleep(1)
+        socket.send('R')
+        print socket.recv()
+        sleep(5)
+        socket.send('r')
+        print socket.recv()
+
+    Attributes:
+        address (str): Remote host address
+        alive (bool): See plugin.py
+        context (zmq.Context): zmq context
+        menu (ui.Growing_Menu): Sidebar menu
+        order (float): See plugin.py
+        thread_pipe (zmq.Socket): Pipe for background communication
     """
     def __init__(self, g_pool,address="tcp://*:50020"):
         super(Pupil_Remote, self).__init__(g_pool)
         self.order = .01 #excecute first
-        self.context = zmq.Context()
-        self.thread_pipe = None
-        self.address = 'not set'
+        self.context = g_pool.zmq_ctx
+        self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
+        self.address = address
         self.start_server(address)
+        self.menu = None
 
 
     def start_server(self,new_address):
-        if self.thread_pipe:
-            self.stop_server()
-        try:
-            socket = self.context.socket(zmq.REP)
-            socket.bind(new_address)
-        except zmq.ZMQError as e:
-            logger.error("Could not bind to Socket: %s. Reason: %s"%(new_address,e))
-        else:
+        self.thread_pipe.send('Bind')
+        self.thread_pipe.send(new_address)
+        response = self.thread_pipe.recv()
+        if response == 'Bind OK':
             self.address = new_address
-            self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop,socket)
-
+        else:
+            logger.error(response)
+            if self.g_pool.app == 'service':
+                audio.say("Error: Port already in use.")
+                self.notify_all({'subject':'service_process.should_stop'})
+            else:
+                self.address = ''
 
     def stop_server(self):
-        self.thread_pipe.send(exit_thread)
+        self.thread_pipe.send('Exit')
         while self.thread_pipe:
-            sleep(.01)
-
+            sleep(.1)
 
     def init_gui(self):
-
         def close():
             self.alive = False
 
@@ -98,62 +113,109 @@ class Pupil_Remote(Plugin):
             self.menu = None
 
 
-    def thread_loop(self,context,pipe,socket):
+    def thread_loop(self,context,pipe):
         poller = zmq.Poller()
+        ipc_pub = zmq_tools.Msg_Dispatcher(context,self.g_pool.ipc_push_url)
         poller.register(pipe, zmq.POLLIN)
-        poller.register(socket, zmq.POLLIN)
+        remote_socket = None
 
         while True:
-            try:
-                #this should not fail but it does sometimes. We need to clean this out.
-                # I think we are not treating sockets correclty as they are not thread-safe.
-                items = dict(poller.poll())
-            except zmq.ZMQError:
-                logger.warning('Socket fail.')
-            else:
-                if items.get(pipe,None) == zmq.POLLIN:
-                    message = pipe.recv()
-                    if message.decode('utf-8') == exit_thread:
-                        break
-                if items.get(socket,None) == zmq.POLLIN:
-                    self.on_recv(socket)
+            items = dict(poller.poll())
+            if items.get(pipe,None) == zmq.POLLIN:
+                cmd = pipe.recv()
+                if cmd == 'Exit':
+                    break
+                elif cmd == 'Bind':
+                    new_url = pipe.recv()
+                    if remote_socket:
+                        poller.unregister(remote_socket)
+                        remote_socket.close(linger=0)
+                    try:
+                        remote_socket = context.socket(zmq.REP)
+                        remote_socket.bind(new_url)
+                    except zmq.ZMQError as e:
+                        remote_socket = None
+                        pipe.send("Could not bind to Socket: %s. Reason: %s"%(new_url,e))
+                    else:
+                        pipe.send("Bind OK")
+                        poller.register(remote_socket)
+            if items.get(remote_socket,None) == zmq.POLLIN:
+                self.on_recv(remote_socket,ipc_pub)
 
-        socket.close()
         self.thread_pipe = None
 
-    def on_recv(self,socket):
+    def on_recv(self,socket,ipc_pub):
         msg = socket.recv()
-        if msg[0] == 'R':
-            self.notify_all({'subject':'should_start_recording','session_name':msg[2:]})
-            response = 'started recording'
+        if msg.startswith('notify'):
+            try:
+                payload = zmq_tools.serializer.loads(socket.recv(flags=zmq.NOBLOCK))
+                payload['subject']
+            except Exception as e:
+                response = 'Notification mal-formatted or missing: %s'%e
+            else:
+                ipc_pub.notify(payload)
+                response = 'Notification recevied.'
+        elif msg == 'SUB_PORT':
+            response = self.g_pool.ipc_sub_url.split(':')[-1]
+        elif msg == 'PUB_PORT':
+            response = self.g_pool.ipc_pub_url.split(':')[-1]
+        elif msg[0] == 'R':
+            try:
+                ipc_pub.notify({'subject':'recording.should_start','session_name':msg[2:]})
+                response = 'OK'
+            except IndexError:
+                response = 'Recording command mal-formatted.'
         elif msg[0] == 'r':
-            self.notify_all({'subject':'should_stop_recording'})
-            response = 'stopped recording'
+            ipc_pub.notify({'subject':'recording.should_stop'})
+            response = 'OK'
         elif msg == 'C':
-            self.notify_all({'subject':'should_start_calibration'})
-            response = 'started calibration'
+            ipc_pub.notify({'subject':'calibration.should_start'})
+            response = 'OK'
         elif msg == 'c':
-            self.notify_all({'subject':'should_stop_calibration'})
-            response = 'stopped calibration'
+            ipc_pub.notify({'subject':'calibration.should_stop'})
+            response = 'OK'
         elif msg[0] == 'T':
             try:
                 target = float(msg[2:])
             except:
                 response = "'%s' cannot be converted to float."%msg[2:]
             else:
-                raw_time = self.g_pool.capture.get_now()
+                raw_time = self.g_pool.get_now()
                 self.g_pool.timebase.value = raw_time-target
                 response = 'Timesync successful.'
         elif msg[0] == 't':
-            response = repr(self.g_pool.capture.get_timestamp())
+            response = repr(self.g_pool.get_timestamp())
         else:
             response = 'Unknown command.'
         socket.send(response)
 
+    def on_notify(self,notification):
+        """
+        Send simple string messages to control Pupil Capture functions:
+            'R' start recording with auto generated session name
+            'R rec_name' start recording and name new session name: rec_name
+            'r' stop recording
+            'C' start currently selected calibration
+            'c' stop currently selected calibration
+            'T 1234.56' Timesync: make timestamps count form 1234.56 from now on.
+            't' get pupil capture timestamp returns a float as string.
+
+
+            #IPC Backbone communication
+            'PUB_PORT' return the current pub port of the IPC Backbone
+            'SUB_PORT' return the current sub port of the IPC Backbone
+
+        Emits notifications:
+            ``recording.should_start``
+            ``recording.should_stop``
+            ``calibration.should_start``
+            ``calibration.should_stop``
+            Any other notification received
+        """
+        pass
 
     def get_init_dict(self):
         return {'address':self.address}
-
 
     def cleanup(self):
         """gets called when the plugin get terminated.
@@ -161,7 +223,6 @@ class Pupil_Remote(Plugin):
         """
         self.stop_server()
         self.deinit_gui()
-        self.context.destroy()
 
 
 

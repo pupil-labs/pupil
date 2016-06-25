@@ -40,7 +40,7 @@ cdef class Detector_3D:
     cdef object debugVisualizer3D
     cdef object pyResult3D
 
-    def __cinit__(self):
+    def __cinit__(self, g_pool = None, settings = None):
         self.detector2DPtr = new Detector2D()
         focal_length = 620.
         '''
@@ -53,11 +53,11 @@ cdef class Detector_3D:
         #region_step_epsilon = 0.5
         self.detector3DPtr = new EyeModelFitter(focal_length)
 
-    def __init__(self, gPool = None, settings = None ):
+    def __init__(self, g_pool = None, settings = None ):
 
         #debug window
-        self.debugVisualizer3D = Eye_Visualizer(gPool ,self.detector3DPtr.getFocalLength() )
-        self.gPool = gPool
+        self.debugVisualizer3D = Eye_Visualizer(g_pool ,self.detector3DPtr.getFocalLength() )
+        self.gPool = g_pool
         self.detectProperties2D = settings['2D_Settings'] if settings else {}
         self.detectProperties3D = settings['3D_Settings'] if settings else {}
 

@@ -120,7 +120,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
         def set_min_marker_perimeter(val):
             self.min_marker_perimeter = val
-            self.notify_all_delayed({'subject':'min_marker_perimeter_changed'},delay=1)
+            self.notify_all({'subject':'min_marker_perimeter_changed','delay':1})
 
         self.menu.elements[:] = []
         self.menu.append(ui.Button('Close',close))
@@ -246,7 +246,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
                 for s in self.surfaces:
                     if s.cache == None and s not in [s for s,i in self.edit_surf_verts]:
                         s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter)
-                        self.notify_all_delayed({'subject':'surfaces_changed'})
+                        self.notify_all({'subject':'surfaces_changed','delay':1})
 
 
 

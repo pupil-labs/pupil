@@ -80,6 +80,7 @@ class AV_Writer(object):
         self.use_timestamps = use_timestamps
         # the approximate capture rate.
         self.fps = int(fps)
+        file_loc = str(file_loc) #force str over unicode.
         try:
             file_path,ext = file_loc.rsplit('.', 1)
         except:
@@ -172,7 +173,7 @@ class JPEG_Writer(object):
         # the approximate capture rate.
         self.fps = int(fps)
         self.time_base = Fraction(1000,self.fps*1000)
-
+        file_loc = str(file_loc) #force str over unicode.
         try:
             file_path,ext = file_loc.rsplit('.', 1)
         except:

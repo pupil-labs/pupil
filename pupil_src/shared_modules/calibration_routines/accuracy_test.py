@@ -29,7 +29,7 @@ from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw
 
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
-from plugin import Calibration_Plugin
+from calibration_plugin_base import Calibration_Plugin
 from screen_marker_calibration import Screen_Marker_Calibration
 import calibrate
 #logging
