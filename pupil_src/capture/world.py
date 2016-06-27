@@ -33,6 +33,10 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         ``world_process.stopped``
         ``recording.should_stop``: Emits on camera failure
         ``launcher_process.should_stop``
+
+    Emits data:
+        ``gaze``: Gaze data from current gaze mapping plugin.``
+        ``*``: any other plugin generated data in the events that it not [dt,pupil,gaze].
     """
 
     # We defer the imports because of multiprocessing.
