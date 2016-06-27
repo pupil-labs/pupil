@@ -1,4 +1,4 @@
-We use `deploy_capture` and `deploy_player` to create application bundles for deployment.
+We use `deploy_capture`, `deploy_player`, and `deploy_service` to create application bundles for deployment.
 
 Since pyinstaller does not cross compile the scripts need to work on mac/linux/windows.
 

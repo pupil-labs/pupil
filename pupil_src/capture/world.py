@@ -13,56 +13,31 @@ import os, sys, platform
 class Global_Container(object):
     pass
 
-def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src):
+def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
     """world
     Creates a window, gl context.
     Grabs images from a capture.
-    Receives Pupil coordinates from eye process[es]
+    Maps pupil to gaze data
     Can run various plug-ins.
+
+    Reacts to notifications:
+        ``set_detection_mapping_mode``
+        ``eye_process.started``
+        ``start_plugin``
+
+    Emits notifications:
+        ``eye_process.should_start``
+        ``eye_process.should_stop``
+        ``set_detection_mapping_mode``
+        ``world_process.started``
+        ``world_process.stopped``
+        ``recording.should_stop``: Emits on camera failure
+        ``launcher_process.should_stop``
+
+    Emits data:
+        ``gaze``: Gaze data from current gaze mapping plugin.``
+        ``*``: any other plugin generated data in the events that it not [dt,pupil,gaze].
     """
-
-    import logging
-    # Set up root logger for this process before doing imports of logged modules.
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    #silence noisy modules
-    logging.getLogger("OpenGL").setLevel(logging.ERROR)
-    # create formatter
-    formatter = logging.Formatter('%(processName)s - [%(levelname)s] %(name)s : %(message)s')
-    # create file handler which logs even debug messages
-    fh = logging.FileHandler(os.path.join(user_dir,'capture.log'),mode='w')
-    fh.setLevel(logger.level)
-    fh.setFormatter(formatter)
-    # create console handler with a higher log level
-    ch = logging.StreamHandler()
-    ch.setLevel(logger.level+10)
-    ch.setFormatter(formatter)
-    # add the handlers to the logger
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-
-
-    #setup thread to recv log recrods from other processes.
-    def log_loop(logging):
-        import zmq
-        ctx = zmq.Context()
-        sub = ctx.socket(zmq.SUB)
-        sub.bind('tcp://127.0.0.1:502020')
-        sub.setsockopt(zmq.SUBSCRIBE, "")
-        while True:
-            record = sub.recv_pyobj()
-            logger = logging.getLogger(record.name)
-            logger.handle(record)
-
-    import threading
-    log_thread = threading.Thread(target=log_loop, args=(logging,))
-    log_thread.setDaemon(True)
-    log_thread.start()
-
-
-    # create logger for the context of this function
-    logger = logging.getLogger(__name__)
-
 
     # We defer the imports because of multiprocessing.
     # Otherwise the world process each process also loads the other imports.
@@ -71,6 +46,23 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
     #general imports
     from time import time,sleep
     import numpy as np
+    import logging
+    import zmq
+    import zmq_tools
+    #zmq ipc setup
+    zmq_ctx = zmq.Context()
+    ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
+    gaze_pub = zmq_tools.Msg_Streamer(zmq_ctx,ipc_pub_url)
+    pupil_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=('pupil',))
+    notify_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=('notify',))
+
+    #log setup
+    logging.getLogger("OpenGL").setLevel(logging.ERROR)
+    logger = logging.getLogger()
+    logger.handlers = []
+    logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_push_url))
+    # create logger for the context of this function
+    logger = logging.getLogger(__name__)
 
     #display
     import glfw
@@ -91,19 +83,24 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
     from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
     from version_utils import VersionFormat
     import audio
+    from uvc import get_time_monotonic
+
+
+    #trigger pupil detector cpp build:
+    import pupil_detectors
+    del pupil_detectors
 
     # Plug-ins
-    from plugin import Plugin_List,import_runtime_plugins
+    from plugin import Plugin,Plugin_List,import_runtime_plugins
     from calibration_routines import calibration_plugins, gaze_mapping_plugins
     from recorder import Recorder
     from show_calibration import Show_Calibration
     from display_recent_gaze import Display_Recent_Gaze
-    from pupil_server import Pupil_Server
     from pupil_sync import Pupil_Sync
+    from pupil_remote import Pupil_Remote
     from surface_tracker import Surface_Tracker
     from log_display import Log_Display
     from annotations import Annotation_Capture
-    from pupil_remote import Pupil_Remote
     from log_history import Log_History
 
     logger.info('Application Version: %s'%version)
@@ -121,29 +118,32 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
         window_position_default = (0,0)
 
 
-
-    #g_pool holds variables for this process
+    #g_pool holds variables for this process they are accesible to all plugins
     g_pool = Global_Container()
-
-    # make some constants avaiable
+    g_pool.app = 'capture'
     g_pool.user_dir = user_dir
     g_pool.version = version
-    g_pool.app = 'capture'
-    g_pool.pupil_queue = pupil_queue
     g_pool.timebase = timebase
-    # g_pool.launcher_pipe = launcher_pipe
-    g_pool.eye_pipes = eye_pipes
+    g_pool.zmq_ctx = zmq_ctx
+    g_pool.ipc_pub = ipc_pub
+    g_pool.ipc_pub_url = ipc_pub_url
+    g_pool.ipc_sub_url = ipc_sub_url
+    g_pool.ipc_push_url = ipc_push_url
     g_pool.eyes_are_alive = eyes_are_alive
+    def get_timestamp():
+        return get_time_monotonic()-g_pool.timebase.value
+    g_pool.get_timestamp = get_timestamp
+    g_pool.get_now = get_time_monotonic
 
 
     #manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
-    user_launchable_plugins = [Show_Calibration,Pupil_Remote,Pupil_Server,Pupil_Sync,Surface_Tracker,Annotation_Capture,Log_History]+runtime_plugins
+    user_launchable_plugins = [Show_Calibration,Pupil_Remote,Pupil_Sync,Surface_Tracker,Annotation_Capture,Log_History]+runtime_plugins
     system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder]
     plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins
     name_by_index = [p.__name__ for p in plugin_by_index]
     plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-    default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{})]
+    default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Remote',{})]
 
 
     # Callback functions
@@ -201,23 +201,12 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
     else:
         cap.settings = default_settings
 
-    # Test capture
-    try:
-        frame = cap.get_frame()
-    except CameraCaptureError:
-        logger.error("Could not retrieve image from capture")
-        cap.close()
-        launcher_pipe.send("Exit")
-        return
-
-
 
     g_pool.iconified = False
     g_pool.capture = cap
-    g_pool.pupil_confidence_threshold = session_settings.get('pupil_confidence_threshold',.6)
     g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode','2d')
     g_pool.active_calibration_plugin = None
-
+    g_pool.active_gaze_mapping_plugin = None
 
     audio.audio_mode = session_settings.get('audio_mode',audio.default_audio_mode)
 
@@ -230,26 +219,13 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
 
-    def launch_eye_process(eye_id,blocking=False):
-        if eyes_are_alive[eye_id].value:
-            logger.error("Eye%s process already running."%eye_id)
-            return
-        launcher_pipe.send(eye_id)
-        eye_pipes[eye_id].send( ('Set_Detection_Mapping_Mode',g_pool.detection_mapping_mode) )
+    def launch_eye_process(eye_id,delay=0):
+        n = {'subject':'eye_process.should_start.%s'%eye_id,'eye_id':eye_id,'delay':delay}
+        ipc_pub.notify(n)
 
-        if blocking:
-            #wait for ready message from eye to sequentialize startup
-            eye_pipes[eye_id].send('Ping')
-            eye_pipes[eye_id].recv()
-
-        logger.warning('Eye %s process started.'%eye_id)
-
-    def stop_eye_process(eye_id,blocking=False):
-        if eyes_are_alive[eye_id].value:
-            eye_pipes[eye_id].send('Exit')
-            if blocking:
-                while eyes_are_alive[eye_id].value:
-                    sleep(.1)
+    def stop_eye_process(eye_id):
+        n = {'subject':'eye_process.should_stop','eye_id':eye_id}
+        ipc_pub.notify(n)
 
     def start_stop_eye(eye_id,make_alive):
         if make_alive:
@@ -258,21 +234,37 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
             stop_eye_process(eye_id)
 
     def set_detection_mapping_mode(new_mode):
-        if new_mode == '2d':
-            for p in g_pool.plugins:
-                if "Vector_Gaze_Mapper" in p.class_name:
-                    logger.warning("The gaze mapper is not supported in 2d mode. Please recalibrate.")
-                    p.alive = False
-            g_pool.plugins.clean()
-        for alive, pipe in zip(g_pool.eyes_are_alive,g_pool.eye_pipes):
-            if alive.value:
-                pipe.send( ('Set_Detection_Mapping_Mode',new_mode) )
-        g_pool.detection_mapping_mode = new_mode
+        n = {'subject':'set_detection_mapping_mode','mode':new_mode}
+        ipc_pub.notify(n)
 
+    def handle_notifications(n):
+        subject = n['subject']
+        if subject == 'set_detection_mapping_mode':
+            if n['mode'] == '2d':
+                if "Vector_Gaze_Mapper" in g_pool.active_gaze_mapping_plugin.class_name:
+                    logger.warning("The gaze mapper is not supported in 2d mode. Please recalibrate.")
+                    g_pool.plugins.add(plugin_by_name['Dummy_Gaze_Mapper'])
+            g_pool.detection_mapping_mode = n['mode']
+        elif subject == 'start_plugin':
+            g_pool.plugins.add(plugin_by_name[n['name']],args=n.get('args',{}) )
+        elif subject == 'eye_process.started':
+            n = {'subject':'set_detection_mapping_mode','mode':g_pool.detection_mapping_mode}
+            ipc_pub.notify(n)
+        elif subject.startswith('notification.should_doc'):
+            ipc_pub.notify({
+                'subject':'notification.doc',
+                'actor':g_pool.app,
+                'doc':world.__doc__})
+            for p in g_pool.plugins:
+                if p.on_notify.__doc__ and p.__class__.on_notify != Plugin.on_notify:
+                    ipc_pub.notify({
+                        'subject':'notification.doc',
+                        'actor': p.class_name,
+                        'doc':p.on_notify.__doc__})
 
     #window and gl setup
     glfw.glfwInit()
-    width,height = session_settings.get('window_size',(frame.width, frame.height))
+    width,height = session_settings.get('window_size',cap.frame_size)
     main_window = glfw.glfwCreateWindow(width,height, "World")
     window_pos = session_settings.get('window_position',window_position_default)
     glfw.glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
@@ -296,7 +288,6 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
     general_settings.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter=lambda: "Select to load"))
-    general_settings.append(ui.Slider('pupil_confidence_threshold', g_pool,step = .01,min=0.,max=1.,label='Minimum pupil confidence'))
     general_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
     g_pool.sidebar.append(general_settings)
 
@@ -308,8 +299,6 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
     g_pool.capture.init_gui(g_pool.sidebar)
 
     #plugins that are loaded based on user settings from previous session
-    g_pool.notifications = []
-    g_pool.delayed_notifications = {}
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
 
     #We add the calibration menu selector, after a calibration has been added:
@@ -329,7 +318,6 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
     # gl_state settings
     basic_gl_setup()
     g_pool.image_tex = Named_Texture()
-    g_pool.image_tex.update_from_frame(frame)
     # refresh speed settings
     glfw.glfwSwapInterval(0)
 
@@ -344,7 +332,7 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
     #set up performace graphs:
     pid = os.getpid()
     ps = psutil.Process(pid)
-    ts = frame.timestamp
+    ts = cap.get_timestamp()
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,130)
@@ -357,20 +345,26 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
     fps_graph.update_rate = 5
     fps_graph.label = "%0.0f FPS"
 
-    pupil_graph = graph.Bar_Graph(max_val=1.0)
-    pupil_graph.pos = (260,130)
-    pupil_graph.update_rate = 5
-    pupil_graph.label = "Confidence: %0.2f"
-
+    pupil0_graph = graph.Bar_Graph(max_val=1.0)
+    pupil0_graph.pos = (260,130)
+    pupil0_graph.update_rate = 5
+    pupil0_graph.label = "id0 conf: %0.2f"
+    pupil1_graph = graph.Bar_Graph(max_val=1.0)
+    pupil1_graph.pos = (380,130)
+    pupil1_graph.update_rate = 5
+    pupil1_graph.label = "id1 conf: %0.2f"
+    pupil_graphs = pupil0_graph,pupil1_graph
 
     if session_settings.get('eye1_process_alive',False):
-        launch_eye_process(1,blocking=True)
+        launch_eye_process(1,delay=0.6)
     if session_settings.get('eye0_process_alive',True):
-        launch_eye_process(0,blocking=False)
+        launch_eye_process(0,delay=0.3)
+
+    ipc_pub.notify({'subject':'world_process.started'})
+    logger.warning('Process started.')
 
     # Event loop
     while not glfw.glfwWindowShouldClose(main_window):
-
         # Get an image from the grabber
         try:
             frame = g_pool.capture.get_frame()
@@ -381,7 +375,7 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
             g_pool.capture = autoCreateCapture(None, timebase=g_pool.timebase)
             g_pool.capture.init_gui(g_pool.sidebar)
             g_pool.capture.settings = settings
-            g_pool.notifications.append({'subject':'should_stop_recording'})
+            ipc_pub.notify({'subject':'recording.should_stop'})
             continue
         except EndofVideoFileError:
             logger.warning("Video file is done. Stopping")
@@ -399,29 +393,32 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
 
         #a dictionary that allows plugins to post and read events
         events = {}
-
         #report time between now and the last loop interation
         events['dt'] = get_dt()
 
-        #receive and map pupil positions
-        recent_pupil_positions = []
-        while not g_pool.pupil_queue.empty():
-            p = g_pool.pupil_queue.get()
-            recent_pupil_positions.append(p)
-            pupil_graph.add(p['confidence'])
-        events['pupil_positions'] = recent_pupil_positions
+        recent_pupil_data = []
+        recent_gaze_data = []
+        new_notifications = []
+
+        while pupil_sub.new_data:
+            t,p = pupil_sub.recv()
+            pupil_graphs[p['id']].add(p['confidence'])
+            recent_pupil_data.append(p)
+            new_gaze_data = g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
+            for g in new_gaze_data:
+                gaze_pub.send('gaze',g)
+            recent_gaze_data += new_gaze_data
+        while notify_sub.new_data:
+            t,n = notify_sub.recv()
+            new_notifications.append(n)
 
 
-        # publish delayed notifiactions when their time has come.
-        for n in g_pool.delayed_notifications.values():
-            if n['_notify_time_'] < time():
-                del n['_notify_time_']
-                del g_pool.delayed_notifications[n['subject']]
-                g_pool.notifications.append(n)
+        events['pupil_positions'] = recent_pupil_data
+        events['gaze_positions'] = recent_gaze_data
 
         # notify each plugin if there are new notifications:
-        while g_pool.notifications:
-            n = g_pool.notifications.pop(0)
+        for n in new_notifications:
+            handle_notifications(n)
             for p in g_pool.plugins:
                 p.on_notify(n)
 
@@ -431,6 +428,14 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
 
         #check if a plugin need to be destroyed
         g_pool.plugins.clean()
+
+        #send new events to ipc:
+        del events['pupil_positions'] #already on the wire
+        del events['gaze_positions']  #send earlier in this loop
+        del events['dt']  #no need to send this
+        for topic,data in events.iteritems():
+            for d in data:
+                ipc_pub.send(topic, d)
 
         # render camera image
         glfw.glfwMakeContextCurrent(main_window)
@@ -450,7 +455,8 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
             graph.push_view()
             fps_graph.draw()
             cpu_graph.draw()
-            pupil_graph.draw()
+            pupil0_graph.draw()
+            pupil1_graph.draw()
             graph.pop_view()
             g_pool.gui.update()
             glfw.glfwSwapBuffers(main_window)
@@ -458,7 +464,6 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
 
     glfw.glfwRestoreWindow(main_window) #need to do this for windows os
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
-    session_settings['pupil_confidence_threshold'] = g_pool.pupil_confidence_threshold
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['capture_settings'] = g_pool.capture.settings
@@ -481,18 +486,21 @@ def world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,v
     g_pool.capture.close()
 
     #shut down eye processes:
-    stop_eye_process(0,blocking = True)
-    stop_eye_process(1,blocking = True)
+    stop_eye_process(0)
+    stop_eye_process(1)
 
-    #shut down laucher
-    launcher_pipe.send("Exit")
+    logger.info("Process shutting down.")
+    ipc_pub.notify({'subject':'world_process.stopped'})
 
-    logger.info("Process Shutting down.")
+    #shut down launcher
+    n = {'subject':'launcher_process.should_stop'}
+    ipc_pub.notify(n)
 
-def world_profiled(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src):
+
+def world_profiled(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
     import cProfile,subprocess,os
     from world import world
-    cProfile.runctx("world(pupil_queue,timebase,launcher_pipe,eye_pipes,eyes_are_alive,user_dir,version,cap_src)",{'pupil_queue':pupil_queue,'timebase':timebase,'launcher_pipe':launcher_pipe,'eye_pipes':eye_pipes,'eyes_are_alive':eyes_are_alive,'user_dir':user_dir,'version':version,'cap_src':cap_src},locals(),"world.pstats")
+    cProfile.runctx("world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src)",{'timebase':timebase,'eyes_are_alive':eyes_are_alive,'ipc_pub_url':ipc_pub_url,'ipc_sub_url':ipc_sub_url,'ipc_push_url':ipc_push_url,'user_dir':user_dir,'version':version,'cap_src':cap_src},locals(),"world.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)

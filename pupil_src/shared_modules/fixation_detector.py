@@ -64,20 +64,30 @@ class Fixation_Detector_Dispersion_Duration(Fixation_Detector):
         def set_h_fov(new_fov):
             self.h_fov = new_fov
             self.pix_per_degree = float(self.g_pool.capture.frame_size[0])/new_fov
-            self.notify_all_delayed({'subject':'fixations_should_recalculate'},delay=1.)
+            self.notify_all({'subject':'fixations_should_recalculate','delay':1.})
 
         def set_v_fov(new_fov):
             self.v_fov = new_fov
             self.pix_per_degree = float(self.g_pool.capture.frame_size[1])/new_fov
-            self.notify_all_delayed({'subject':'fixations_should_recalculate'},delay=1.)
+            self.notify_all({'subject':'fixations_should_recalculate','delay':1.})
 
         def set_duration(new_value):
             self.min_duration = new_value
-            self.notify_all_delayed({'subject':'fixations_should_recalculate'},delay=1.)
+            self.notify_all({'subject':'fixations_should_recalculate','delay':1.})
 
         def set_dispersion(new_value):
             self.max_dispersion = new_value
-            self.notify_all_delayed({'subject':'fixations_should_recalculate'},delay=1.)
+            self.notify_all({'subject':'fixations_should_recalculate','delay':1.})
+
+
+        def jump_next_fixation(_):
+            ts = self.g_pool.capture.get_timestamp()
+            for f in self.fixations:
+                if f['timestamp'] > ts:
+                    self.g_pool.capture.seek_to_frame(f['mid_frame_index'])
+                    self.g_pool.new_seek = True
+                    return
+            logger.error('could not seek to next fixation.')
 
 
 
@@ -90,11 +100,18 @@ class Fixation_Detector_Dispersion_Duration(Fixation_Detector):
         self.menu.append(ui.Slider('h_fov',self,min=5,step=1,max=180,label='horizontal FOV of scene camera',setter=set_h_fov))
         self.menu.append(ui.Slider('v_fov',self,min=5,step=1,max=180,label='vertical FOV of scene camera',setter=set_v_fov))
 
+
+        self.add_button = ui.Thumb('jump_next_fixation',setter=jump_next_fixation,getter=lambda:False,label='f',hotkey='f')
+        self.g_pool.quickbar.append(self.add_button)
+
+
     def deinit_gui(self):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
             self.menu = None
-
+        if self.add_button:
+            self.g_pool.quickbar.remove(self.add_button)
+            self.add_button = None
     ###todo setters with delay trigger
 
     def on_notify(self,notification):
@@ -170,6 +187,7 @@ class Fixation_Detector_Dispersion_Duration(Fixation_Detector):
                                         'duration':duration,
                                         'dispersion':dispersion,
                                         'start_frame_index':fixation_support[0]['index'],
+                                        'mid_frame_index':fixation_support[len(fixation_support)/2]['index'],
                                         'end_frame_index':fixation_support[-1]['index'],
                                         'pix_dispersion':dispersion*self.pix_per_degree,
                                         'timestamp':fixation_support[0]['timestamp'],

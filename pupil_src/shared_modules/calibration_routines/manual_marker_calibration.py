@@ -21,7 +21,7 @@ from file_methods import load_object
 import audio
 
 from pyglui import ui
-from plugin import Calibration_Plugin
+from calibration_plugin_base import Calibration_Plugin
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -39,7 +39,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
     """
     def __init__(self, g_pool):
         super(Manual_Marker_Calibration, self).__init__(g_pool)
-        self.active = False
         self.detected = False
         self.pos = None
         self.smooth_pos = 0.,0.
@@ -82,11 +81,13 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
     def toggle(self,_=None):
         if self.active:
-            self.stop()
+            self.notify_all({'subject':'calibration.should_stop'})
         else:
-            self.start()
+            self.notify_all({'subject':'calibration.should_start'})
+
 
     def start(self):
+        self.notify_all({'subject':'calibration.started'})
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
         self.active = True
@@ -95,6 +96,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
 
     def stop(self):
+        self.notify_all({'subject':'calibration.stopped'})
         audio.say("Stopping Calibration")
         logger.info('Stopping Calibration')
         self.screen_marker_state = 0
@@ -103,6 +105,21 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.button.status_text = ''
         finish_calibration(self.g_pool,self.pupil_list,self.ref_list)
 
+    def on_notify(self,notification):
+        '''
+        Reacts to notifications:
+           ``calibration.should_start``: Starts the calibration procedure
+           ``calibration.should_stop``: Stops the calibration procedure
+
+        Emits notifications:
+            ``calibration.started``: Calibration procedure started
+            ``calibration.stopped``: Calibration procedure stopped
+            ``calibration.marker_found``: Steady marker found
+            ``calibration.marker_moved_too_quickly``: Marker moved too quickly
+            ``calibration.marker_sample_completed``: Enough data points sampled
+
+        '''
+        super(Manual_Marker_Calibration, self).on_notify(notification)
 
     def update(self,frame,events):
         """
@@ -177,14 +194,14 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                         self.sample_site = self.smooth_pos
                         audio.beep()
                         logger.debug("Steady marker found. Starting to sample %s datapoints" %self.counter_max)
-                        self.notify_all({'subject':'calibration marker found','timestamp':self.g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
+                        self.notify_all({'subject':'calibration.marker_found','timestamp':self.g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
                         self.counter = self.counter_max
 
                 if self.counter:
                     if self.smooth_vel > 0.01:
                         audio.tink()
                         logger.warning("Marker moved too quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
-                        self.notify_all({'subject':'calibration marker moved too quickly','timestamp':self.g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
+                        self.notify_all({'subject':'calibration.marker_moved_too_quickly','timestamp':self.g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
                         self.counter = 0
                     else:
                         self.counter -= 1
@@ -197,12 +214,12 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                             #last sample before counter done and moving on
                             audio.tink()
                             logger.debug("Sampled %s datapoints. Stopping to sample. Looking for steady marker again."%self.counter_max)
-                            self.notify_all({'subject':'calibration marker sample completed','timestamp':self.g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
+                            self.notify_all({'subject':'calibration.marker_sample_completed','timestamp':self.g_pool.capture.get_timestamp(),'record':True,'network_propagate':True})
 
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
+                if p_pt['confidence'] > self.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
             if self.counter:

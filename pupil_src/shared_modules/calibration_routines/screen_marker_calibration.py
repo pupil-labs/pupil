@@ -24,7 +24,7 @@ from pyglui import ui
 from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA,draw_concentric_circles
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
-from plugin import Calibration_Plugin
+from calibration_plugin_base import Calibration_Plugin
 from finish_calibration import finish_calibration
 
 #logging
@@ -73,7 +73,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     """
     def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
         super(Screen_Marker_Calibration, self).__init__(g_pool)
-        self.active = False
         self.detected = False
         self.screen_marker_state = 0.
         self.sample_duration =  sample_duration # number of frames to sample per site
@@ -107,8 +106,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
 
-
-
     def init_gui(self):
         self.monitor_idx = 0
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
@@ -139,18 +136,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self.button = None
 
 
-    def toggle(self,_=None):
-        if self.active:
-            self.stop()
-        else:
-            self.start()
-
-
-
     def start(self):
-        # ##############
-        # DEBUG
-        #self.stop()
 
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
@@ -273,7 +259,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
+                if p_pt['confidence'] > self.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
             # Animate the screen marker

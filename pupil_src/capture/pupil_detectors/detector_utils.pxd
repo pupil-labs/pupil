@@ -67,11 +67,14 @@ cdef inline convertTo3DPythonResult( Detector3DResult& result, object frame    )
     sphere['radius'] =  result.sphere.radius
     py_result['sphere'] = sphere
 
-    projectedSphere = {}
-    projectedSphere['center'] = (result.projectedSphere.center[0] + frame.width / 2.0 ,frame.height / 2.0  -  result.projectedSphere.center[1])
-    projectedSphere['axes'] =  (result.projectedSphere.minor_radius * 2.0 ,result.projectedSphere.major_radius * 2.0)
-    #TODO result.projectedSphere.angle is always 0
-    projectedSphere['angle'] = - (result.projectedSphere.angle * 180.0 / PI - 90.0)
+    if str(result.projectedSphere.center[0]) == 'nan':
+        projectedSphere = {'axes': (0,0), 'angle': 90.0, 'center': (0,0)}
+    else:
+        projectedSphere = {}
+        projectedSphere['center'] = (result.projectedSphere.center[0] + frame.width / 2.0 ,frame.height / 2.0  -  result.projectedSphere.center[1])
+        projectedSphere['axes'] =  (result.projectedSphere.minor_radius * 2.0 ,result.projectedSphere.major_radius * 2.0)
+        #TODO result.projectedSphere.angle is always 0
+        projectedSphere['angle'] = - (result.projectedSphere.angle * 180.0 / PI - 90.0)
     py_result['projected_sphere'] = projectedSphere
 
     py_result['model_confidence'] = result.modelConfidence
@@ -80,8 +83,12 @@ cdef inline convertTo3DPythonResult( Detector3DResult& result, object frame    )
 
 
     coords = cart2sph(result.circle.normal)
-    py_result['theta'] = coords[0]
-    py_result['phi'] = coords[1]
+    if str(coords[0]) == 'nan':
+        py_result['theta'] = 0
+        py_result['phi'] = 0
+    else:
+        py_result['theta'] = coords[0]
+        py_result['phi'] = coords[1]
     py_result['method'] = '3d c++'
 
     return py_result

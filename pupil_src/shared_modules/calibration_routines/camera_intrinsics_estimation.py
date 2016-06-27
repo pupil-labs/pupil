@@ -23,7 +23,7 @@ from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from glfw import *
 
-from plugin import Calibration_Plugin
+from calibration_plugin_base import Calibration_Plugin
 
 #logging
 import logging

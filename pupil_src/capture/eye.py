@@ -19,48 +19,63 @@ class Is_Alive_Manager(object):
     A context manager to wrap the is_alive flag.
     Is alive will stay true as long is the eye process is running.
     '''
-    def __init__(self, is_alive):
+    def __init__(self, is_alive,ipc_socket,eye_id):
         self.is_alive = is_alive
+        self.ipc_socket = ipc_socket
+        self.eye_id = eye_id
+
     def __enter__( self ):
         self.is_alive.value = True
+        self.ipc_socket.notify({'subject':'eye_process.started', 'eye_id':self.eye_id})
+
     def __exit__(self, type, value, traceback):
         if type is not None:
             pass # Exception occurred
         self.is_alive.value = False
+        self.ipc_socket.notify({'subject':'eye_process.stopped', 'eye_id':self.eye_id})
 
 
-def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, eye_id, cap_src):
+def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir, version, eye_id, cap_src):
     """
     Creates a window, gl context.
     Grabs images from a capture.
     Streams Pupil coordinates into g_pool.pupil_queue
+
+    Reacts to notifications:
+       ``set_detection_mapping_mode``: Sets detection method
+       ``eye_process.should_stop``: Stops the eye process
+       ``recording.started``: Starts recording eye video
+       ``recording.stopped``: Stops recording eye video
+
+    Emits notifications:
+        ``eye_process.started``: Eye process started
+        ``eye_process.stopped``: Eye process stopped
+
+    Emits data:
+        ``pupil.<eye id>``: Pupil data for eye with id ``<eye id>``
     """
-    is_alive = Is_Alive_Manager(is_alive_flag)
-    with is_alive:
-        #logging setup: We stream all log records to the world process.
+
+
+    # We deferr the imports becasue of multiprocessing.
+    # Otherwise the world process each process also loads the other imports.
+    import zmq
+    import zmq_tools
+    zmq_ctx = zmq.Context()
+    ipc_socket = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
+    pupil_socket = zmq_tools.Msg_Streamer(zmq_ctx,ipc_pub_url)
+    notify_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=("notify",))
+
+    with Is_Alive_Manager(is_alive_flag,ipc_socket,eye_id):
+
+        #logging setup
         import logging
-        import zmq
-        ctx = zmq.Context()
-        pub = ctx.socket(zmq.PUB)
-        pub.connect('tcp://127.0.0.1:502020')
-
-        class ZMQ_handler(logging.Handler):
-            def emit(self, record):
-                pub.send_pyobj(record)
-
+        logging.getLogger("OpenGL").setLevel(logging.ERROR)
         logger = logging.getLogger()
         logger.handlers = []
-        logger.setLevel(logging.INFO)
-        logger.addHandler(ZMQ_handler())
-
+        logger.addHandler(zmq_tools.ZMQ_handler(zmq_ctx,ipc_push_url))
         # create logger for the context of this function
         logger = logging.getLogger(__name__)
 
-        #silence noisy modules
-        logging.getLogger("OpenGL").setLevel(logging.ERROR)
-
-        # We deferr the imports becasue of multiprocessing.
-        # Otherwise the world process each process also loads the other imports.
         #general imports
         import numpy as np
         import cv2
@@ -109,7 +124,6 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         g_pool.user_dir = user_dir
         g_pool.version = version
         g_pool.app = 'capture'
-        g_pool.pupil_queue = pupil_queue
         g_pool.timebase = timebase
 
 
@@ -180,19 +194,6 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
             cap.settings = default_settings
 
 
-        # Test capture
-        try:
-            frame = cap.get_frame()
-        except CameraCaptureError:
-            logger.error("Could not retrieve image from capture")
-            cap.close()
-            return
-
-        #signal world that we are ready to go
-        # pipe_to_world.send('eye%s process ready'%eye_id)
-
-        # any object we attach to the g_pool object *from now on* will only be visible to this process!
-        # vars should be declared here to make them visible to the code reader.
         g_pool.iconified = False
         g_pool.capture = cap
         g_pool.flip = session_settings.get('flip',False)
@@ -202,7 +203,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
                                     'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters within the Pupil Detection menu below."}
 
 
-        g_pool.u_r = UIRoi(frame.img.shape)
+        g_pool.u_r = UIRoi((cap.frame_size[1],cap.frame_size[0]))
         g_pool.u_r.set(session_settings.get('roi',g_pool.u_r.get()))
 
 
@@ -237,7 +238,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         # Initialize glfw
         glfw.glfwInit()
         title = "eye %s"%eye_id
-        width,height = session_settings.get('window_size',(frame.width, frame.height))
+        width,height = session_settings.get('window_size',cap.frame_size)
         main_window = glfw.glfwCreateWindow(width,height, title, None, None)
         window_pos = session_settings.get('window_position',window_position_default)
         glfw.glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
@@ -247,10 +248,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         # gl_state settings
         basic_gl_setup()
         g_pool.image_tex = Named_Texture()
-        g_pool.image_tex.update_from_frame(frame)
         glfw.glfwSwapInterval(0)
-
-        sphere  = Sphere(20)
 
         #setup GUI
         g_pool.gui = ui.UI()
@@ -294,7 +292,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         #set up performance graphs
         pid = os.getpid()
         ps = psutil.Process(pid)
-        ts = frame.timestamp
+        ts = cap.get_timestamp()
 
         cpu_graph = graph.Bar_Graph()
         cpu_graph.pos = (20,130)
@@ -313,32 +311,52 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         def window_should_update():
             return next(window_update_timer)
 
+        logger.warning('Process started.')
 
         # Event loop
         while not glfw.glfwWindowShouldClose(main_window):
 
-            if pipe_to_world.poll():
-                cmd = pipe_to_world.recv()
-                if cmd == 'Exit':
-                    break
-                elif cmd == "Ping":
-                    pipe_to_world.send("Pong")
-                    command = None
-                else:
-                    command,payload = cmd
-                if command == 'Set_Detection_Mapping_Mode':
-                    if payload == '3d':
+            if notify_sub.new_data:
+                t,notification = notify_sub.recv()
+                subject = notification['subject']
+                if subject == 'eye_process.should_stop':
+                    if notification['eye_id'] == eye_id:
+                        break
+                elif subject == 'set_detection_mapping_mode':
+                    if notification['mode'] == '3d':
                         if not isinstance(g_pool.pupil_detector,Detector_3D):
                             set_detector(Detector_3D)
                         detector_selector.read_only  = True
                     else:
-                        set_detector(Detector_2D)
+                        if not isinstance(g_pool.pupil_detector,Detector_2D):
+                            set_detector(Detector_2D)
                         detector_selector.read_only = False
-
-            else:
-                command = None
-
-
+                elif subject == 'recording.started':
+                    if notification['record_eye']:
+                        record_path = notification['rec_path']
+                        raw_mode = notification['compression']
+                        logger.info("Will save eye video to: %s"%record_path)
+                        timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
+                        if raw_mode and frame.jpeg_buffer:
+                            video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
+                            writer = JPEG_Writer(video_path,cap.frame_rate)
+                        else:
+                            video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
+                            writer = AV_Writer(video_path,cap.frame_rate)
+                        timestamps = []
+                elif subject == 'recording.stopped':
+                    if writer:
+                        logger.info("Done recording.")
+                        writer.release()
+                        writer = None
+                        np.save(timestamps_path,np.asarray(timestamps))
+                        del timestamps
+                elif subject.startswith('notification.should_doc'):
+                    ipc_socket.notify({
+                        'subject':'notification.doc',
+                        'actor':'eye%i'%eye_id,
+                        'doc':eye.__doc__
+                        })
 
             # Get an image from the grabber
             try:
@@ -362,25 +380,6 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
             cpu_graph.update()
 
 
-            ###  RECORDING of Eye Video (on demand) ###
-            # Setup variables and lists for recording
-            if 'Rec_Start' == command:
-                record_path,raw_mode = payload
-                logger.info("Will save eye video to: %s"%record_path)
-                timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-                if raw_mode and frame.jpeg_buffer:
-                    video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
-                    writer = JPEG_Writer(video_path,cap.frame_rate)
-                else:
-                    video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
-                    writer = AV_Writer(video_path,cap.frame_rate)
-                timestamps = []
-            elif 'Rec_Stop' == command:
-                logger.info("Done recording.")
-                writer.release()
-                writer = None
-                np.save(timestamps_path,np.asarray(timestamps))
-                del timestamps
 
             if writer:
                 writer.write_video_frame(frame)
@@ -391,7 +390,7 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
             result = g_pool.pupil_detector.detect(frame, g_pool.u_r, g_pool.display_mode == 'algorithm')
             result['id'] = eye_id
             # stream the result
-            g_pool.pupil_queue.put(result)
+            pupil_socket.send('pupil.%s'%eye_id,result)
 
             # GL drawing
             if window_should_update():
@@ -482,12 +481,12 @@ def eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, 
         glfw.glfwDestroyWindow(main_window)
         glfw.glfwTerminate()
         cap.close()
-        logger.info("Process Shutting down.")
+        logger.info("Process shutting down.")
 
-def eye_profiled(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, eye_id, cap_src):
+def eye_profiled(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, cap_src):
     import cProfile,subprocess,os
     from eye import eye
-    cProfile.runctx("eye(pupil_queue, timebase, pipe_to_world, is_alive_flag, user_dir, version, eye_id, cap_src)",{'pupil_queue':pupil_queue, 'timebase':timebase, 'pipe_to_world':pipe_to_world, 'is_alive_flag':is_alive_flag, 'user_dir':user_dir, 'version':version, 'eye_id':eye_id, 'cap_src':cap_src},locals(),"eye%s.pstats"%eye_id)
+    cProfile.runctx("eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, cap_src)",{'timebase':timebase,'is_alive_flag':is_alive_flag,'ipc_pub_url':ipc_pub_url,'ipc_sub_url':ipc_sub_url,'ipc_push_url':ipc_push_url, 'user_dir':user_dir, 'version':version, 'eye_id':eye_id,'cap_src':cap_src},locals(),"eye%s.pstats"%eye_id)
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye%s.pstats | dot -Tpng -o eye%s_cpu_time.png"%(eye_id,eye_id), shell=True)
