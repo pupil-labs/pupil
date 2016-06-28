@@ -4,6 +4,7 @@ the Pupil IPC Backbone.
 '''
 
 import zmq
+assert zmq.__version__  > '15.1'
 from zmq.utils.monitor import recv_monitor_message
 # import ujson as serializer # uncomment for json seialization
 import msgpack as serializer
@@ -99,7 +100,7 @@ class Msg_Dispatcher(object):
     Not threadsave. Make a new one for each thread
     '''
     def __init__(self,ctx,url):
-        self.socket = zmq.Socket(ctx,zmq.REQ)
+        self.socket = zmq.Socket(ctx,zmq.PUSH)
         self.socket.connect(url)
 
     def send(self,topic,payload):
@@ -108,7 +109,6 @@ class Msg_Dispatcher(object):
         '''
         self.socket.send(str(topic),flags=zmq.SNDMORE)
         self.socket.send(serializer.dumps(payload))
-        self.socket.recv()
 
     def notify(self,notification):
         '''
