@@ -217,8 +217,6 @@ class Reference_Surface(object):
         self.m_to_screen = res['m_to_screen']
         self.m_from_screen = res['m_from_screen']
         self.camera_pose_3d = res['camera_pose_3d']
-        self.is3dPoseAvailable = res['is3dPoseAvailable']
-
 
     def _get_location(self,visible_markers,camera_calibration,min_marker_perimeter,locate_3d=False):
 
@@ -280,8 +278,8 @@ class Reference_Surface(object):
             m_to_screen = m_verts_to_screen(corners_robust)
             m_from_screen = m_verts_from_screen(corners_robust)
 
+            camera_pose_3d = None
             if locate_3d:
-
                 dist_coef, = camera_calibration['dist_coefs']
                 img_size = camera_calibration['resolution']
                 K = camera_calibration['camera_matrix']
@@ -297,65 +295,62 @@ class Reference_Surface(object):
                 # compute pose of object relative to camera center
                 is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, xy, K, dist_coef,flags=cv2.CV_EPNP)
 
-                # not verifed, potentially usefull info: http://stackoverflow.com/questions/17423302/opencv-solvepnp-tvec-units-and-axes-directions
+                if is3dPoseAvailable:
 
-                ###marker posed estimation from virtually projected points.
-                # object_pts = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
-                # projected_pts = cv2.perspectiveTransform(object_pts,self.m_to_screen)
-                # projected_pts.shape = -1,2
-                # projected_pts *= img_size
-                # projected_pts.shape = -1, 1, 2
-                # # scale object points to world space units (think m,cm,mm)
-                # object_pts.shape = -1,2
-                # object_pts *= self.real_world_size
-                # # convert object points to lie on z==0 plane in 3d space
-                # object_pts_3d = np.zeros((4,3))
-                # object_pts_3d[:,:-1] = object_pts
-                # self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(object_pts_3d, projected_pts, K, dist_coef,flags=cv2.CV_EPNP)
+                    # not verifed, potentially usefull info: http://stackoverflow.com/questions/17423302/opencv-solvepnp-tvec-units-and-axes-directions
 
-
-                # transformation from Camera Optical Center:
-                #   first: translate from Camera center to object origin.
-                #   second: rotate x,y,z
-                #   coordinate system is x,y,z where z goes out from the camera into the viewed volume.
-                # print rot3d_cam_to_object[0],rot3d_cam_to_object[1],rot3d_cam_to_object[2], translate3d_cam_to_object[0],translate3d_cam_to_object[1],translate3d_cam_to_object[2]
-
-                #turn translation vectors into 3x3 rot mat.
-                rot3d_cam_to_object_mat, _ = cv2.Rodrigues(rot3d_cam_to_object)
-
-                #to get the transformation from object to camera we need to reverse rotation and translation
-                translate3d_object_to_cam = - translate3d_cam_to_object
-                # rotation matrix inverse == transpose
-                rot3d_object_to_cam_mat = rot3d_cam_to_object_mat.T
+                    ###marker posed estimation from virtually projected points.
+                    # object_pts = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
+                    # projected_pts = cv2.perspectiveTransform(object_pts,self.m_to_screen)
+                    # projected_pts.shape = -1,2
+                    # projected_pts *= img_size
+                    # projected_pts.shape = -1, 1, 2
+                    # # scale object points to world space units (think m,cm,mm)
+                    # object_pts.shape = -1,2
+                    # object_pts *= self.real_world_size
+                    # # convert object points to lie on z==0 plane in 3d space
+                    # object_pts_3d = np.zeros((4,3))
+                    # object_pts_3d[:,:-1] = object_pts
+                    # self.is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(object_pts_3d, projected_pts, K, dist_coef,flags=cv2.CV_EPNP)
 
 
-                # we assume that the volume of the object grows out of the marker surface and not into it. We thus have to flip the z-Axis:
-                flip_z_axix_hm = np.eye(4, dtype=np.float32)
-                flip_z_axix_hm[2,2] = -1
-                # create a homogenous tranformation matrix from the rotation mat
-                rot3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
-                rot3d_object_to_cam_hm[:-1,:-1] = rot3d_object_to_cam_mat
-                # create a homogenous tranformation matrix from the translation vect
-                translate3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
-                translate3d_object_to_cam_hm[:-1, -1] = translate3d_object_to_cam.reshape(3)
+                    # transformation from Camera Optical Center:
+                    #   first: translate from Camera center to object origin.
+                    #   second: rotate x,y,z
+                    #   coordinate system is x,y,z where z goes out from the camera into the viewed volume.
+                    # print rot3d_cam_to_object[0],rot3d_cam_to_object[1],rot3d_cam_to_object[2], translate3d_cam_to_object[0],translate3d_cam_to_object[1],translate3d_cam_to_object[2]
 
-                # combine all tranformations into transformation matrix that decribes the move from object origin and orientation to camera origin and orientation
-                tranform3d_object_to_cam =  np.matrix(flip_z_axix_hm) * np.matrix(rot3d_object_to_cam_hm) * np.matrix(translate3d_object_to_cam_hm)
-                camera_pose_3d = tranform3d_object_to_cam
-            else:
-                is3dPoseAvailable = False
-                camera_pose_3d = None
+                    #turn translation vectors into 3x3 rot mat.
+                    rot3d_cam_to_object_mat, _ = cv2.Rodrigues(rot3d_cam_to_object)
 
+                    #to get the transformation from object to camera we need to reverse rotation and translation
+                    translate3d_object_to_cam = - translate3d_cam_to_object
+                    # rotation matrix inverse == transpose
+                    rot3d_object_to_cam_mat = rot3d_cam_to_object_mat.T
+
+
+                    # we assume that the volume of the object grows out of the marker surface and not into it. We thus have to flip the z-Axis:
+                    flip_z_axix_hm = np.eye(4, dtype=np.float32)
+                    flip_z_axix_hm[2,2] = -1
+                    # create a homogenous tranformation matrix from the rotation mat
+                    rot3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
+                    rot3d_object_to_cam_hm[:-1,:-1] = rot3d_object_to_cam_mat
+                    # create a homogenous tranformation matrix from the translation vect
+                    translate3d_object_to_cam_hm = np.eye(4, dtype=np.float32)
+                    translate3d_object_to_cam_hm[:-1, -1] = translate3d_object_to_cam.reshape(3)
+
+                    # combine all tranformations into transformation matrix that decribes the move from object origin and orientation to camera origin and orientation
+                    tranform3d_object_to_cam =  np.matrix(flip_z_axix_hm) * np.matrix(rot3d_object_to_cam_hm) * np.matrix(translate3d_object_to_cam_hm)
+                    camera_pose_3d = tranform3d_object_to_cam
         else:
             detected = False
             camera_pose_3d = None
-            is3dPoseAvailable = False
             m_from_screen = None
             m_to_screen = None
             m_from_undistored_norm_space = None
             m_to_undistored_norm_space = None
 
-        return {'detected':detected,'detected_markers':len(overlap),'m_from_undistored_norm_space':m_from_undistored_norm_space,'m_to_undistored_norm_space':m_to_undistored_norm_space,'m_from_screen':m_from_screen,'m_to_screen':m_to_screen,'is3dPoseAvailable':is3dPoseAvailable,'camera_pose_3d':camera_pose_3d}
+        return {'detected':detected,'detected_markers':len(overlap),'m_from_undistored_norm_space':m_from_undistored_norm_space,'m_to_undistored_norm_space':m_to_undistored_norm_space,'m_from_screen':m_from_screen,'m_to_screen':m_to_screen,'camera_pose_3d':camera_pose_3d}
 
 
     def img_to_ref_surface(self,pos):
@@ -537,7 +532,7 @@ class Reference_Surface(object):
         """
         K,dist_coef,img_size = camera_intrinsics['camera_matrix'],camera_intrinsics['dist_coefs'],camera_intrinsics['resolution']
 
-        if self._window and self.detected:
+        if self._window and self.camera_pose_3d is not None:
             active_window = glfwGetCurrentContext()
             glfwMakeContextCurrent(self._window)
             glClearColor(.8,.8,.8,1.)
