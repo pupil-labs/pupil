@@ -114,15 +114,16 @@ def main():
             xsub.close()
             xpub.close()
 
-    #reliable msg dispatch to the IPC via push bridge
-    def pull_pub(in_url,out_url):
+    #reliable msg dispatch to the IPC via reqrep bridge
+    def reliable_pub(in_url,out_url):
         ctx = zmq.Context.instance()
-        pull = ctx.socket(zmq.PULL)
-        pull.bind(in_url)
+        rep = ctx.socket(zmq.REP)
+        rep.bind(in_url)
         pub = ctx.socket(zmq.PUB)
         pub.connect(out_url)
         while True:
-            m = pull.recv_multipart()
+            m = rep.recv_multipart()
+            rep.send('OK')
             pub.send_multipart(m)
 
     #The delay proxy handles delayed notififications.
@@ -188,9 +189,9 @@ def main():
     delay_thread.setDaemon(True)
     delay_thread.start()
 
-    pull_pub = Thread(target=pull_pub, args=('tcp://*:%s'%ipc_push_port, ipc_pub_url))
-    pull_pub.setDaemon(True)
-    pull_pub.start()
+    reliable_pub_thread = Thread(target=reliable_pub, args=('tcp://*:%s'%ipc_push_port, ipc_pub_url))
+    reliable_pub_thread.setDaemon(True)
+    reliable_pub_thread.start()
 
 
     topics = (  'notify.eye_process.',
