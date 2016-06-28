@@ -73,7 +73,7 @@ class Msg_Receiver(object):
 
 class Msg_Streamer(object):
     '''
-    Send messages on a pub port.
+    Send messages on fast and efficiat but without garatees.
     Not threadsave. Make a new one for each thread
     '''
     def __init__(self,ctx,url):
@@ -95,11 +95,11 @@ class Msg_Streamer(object):
 
 class Msg_Dispatcher(object):
     '''
-    Send messages on a pub port.
+    Send messages with deliavry garantee.
     Not threadsave. Make a new one for each thread
     '''
     def __init__(self,ctx,url):
-        self.socket = zmq.Socket(ctx,zmq.PUSH)
+        self.socket = zmq.Socket(ctx,zmq.REQ)
         self.socket.connect(url)
 
     def send(self,topic,payload):
@@ -108,6 +108,7 @@ class Msg_Dispatcher(object):
         '''
         self.socket.send(str(topic),flags=zmq.SNDMORE)
         self.socket.send(serializer.dumps(payload))
+        self.socket.recv()
 
     def notify(self,notification):
         '''
