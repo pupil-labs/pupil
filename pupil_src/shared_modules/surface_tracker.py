@@ -209,7 +209,7 @@ class Surface_Tracker(Plugin):
         for s in self.surfaces:
             s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter, self.locate_3d)
             if s.detected:
-                events['surface'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(), 'timestamp':frame.timestamp})
+                events['surface'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(), 'timestamp':frame.timestamp,'camera_pose_3d',s.camera_pose_3d.tolist()})
 
         if self.running:
             self.button.status_text = '%s/%s'%(len([s for s in self.surfaces if s.detected]),len(self.surfaces))
