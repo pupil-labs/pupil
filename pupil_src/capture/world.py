@@ -495,6 +495,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     #shut down launcher
     n = {'subject':'launcher_process.should_stop'}
     ipc_pub.notify(n)
+    zmq_ctx.destroy()
 
 
 def world_profiled(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
