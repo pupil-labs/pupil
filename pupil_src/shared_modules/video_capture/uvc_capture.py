@@ -11,7 +11,7 @@
 import uvc
 from uvc import device_list,is_accessible
 #check versions for our own depedencies as they are fast-changing
-assert uvc.__version__ >= '0.6'
+assert uvc.__version__ >= '0.7'
 
 from fake_capture import Fake_Capture
 
