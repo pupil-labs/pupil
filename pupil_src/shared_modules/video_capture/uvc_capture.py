@@ -103,7 +103,6 @@ class Camera_Capture(object):
             pass
 
         if "Pupil Cam1" in self.capture.name or "USB2.0 Camera" in self.capture.name:
-            self.capture.bandwidth_factor = 1.8
             if "ID0" in self.capture.name or "ID1" in self.capture.name:
                 self.capture.bandwidth_factor = 1.3
                 try:
@@ -132,13 +131,13 @@ class Camera_Capture(object):
                 except KeyError:
                     pass
             else:
-                self.capture.bandwidth_factor = 1.8
+                self.capture.bandwidth_factor = 2.0
                 try:
                     controls_dict['Auto Exposure Priority'].value = 1
                 except KeyError:
                     pass
-        if "C525" in self.capture.name or  "B525" in self.capture.name or "C920" in self.capture.name:
-            self.capture.bandwidth_factor = 4.0
+        else:
+            self.capture.bandwidth_factor = 3.0
             try:
                 controls_dict['Auto Focus'].value = 0
             except KeyError:
