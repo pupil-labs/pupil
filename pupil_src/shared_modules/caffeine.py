@@ -9,7 +9,18 @@
 '''
 
 from plugin import Plugin
-import os,sys
+import os,sys,time
+
+# see https://github.com/google/python-subprocess32
+if os.name == 'posix' and sys.version_info[0] < 3:
+    try:
+        import subprocess32 as subprocess
+    except ImportError:
+        import subprocess
+else:
+    import subprocess
+from subprocess import Popen
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -26,6 +37,7 @@ class Caffeine(Plugin):
             logger.error('This plugin only supports OS X currently.')
             self.alive = False
             return
+        self.start_caffeine()
 
     def on_notify(self,notification):
         """Activates ``caffeinate`` during recordings on OS X
@@ -35,3 +47,19 @@ class Caffeine(Plugin):
             ``recording.should_stop``: Stops ``caffeinate``
         """
         pass
+
+    def start_caffeine(self):
+        app_pid = os.getpid()
+        # -w option stops `caffeinate` in case current app does not
+        # terminate plugin correctly
+        self.caffeine = Popen(['caffeinate', '-disu', '-w', str(app_pid)])
+        logger.info('Started caffeine.')
+
+    def stop_caffeine(self):
+        if self.caffeine:
+            self.caffeine.terminate()
+            self.caffeine = None
+            logger.info('Stopped caffeine.')
+
+    def cleanup(self):
+        self.stop_caffeine()
