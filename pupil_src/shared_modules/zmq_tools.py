@@ -179,7 +179,7 @@ if __name__ == '__main__':
     print requester.recv()
     requester.send_multipart(('notify.service_process.should_stop',serializer.dumps({'subject':'service_process.should_stop'})))
     print requester.recv()
-    requester.send_multipart(('notify.notification.should_doc',serializer.dumps({'subject':'notification.should_doc'})))
+    requester.send_multipart(('notify.meta.should_doc',serializer.dumps({'subject':'meta.should_doc'})))
     print requester.recv()
     # listen to all notifications.
     while True:
