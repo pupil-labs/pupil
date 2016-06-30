@@ -352,9 +352,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                         writer = None
                         np.save(timestamps_path,np.asarray(timestamps))
                         del timestamps
-                elif subject.startswith('notification.should_doc'):
+                elif subject.startswith('meta.should_doc'):
                     ipc_socket.notify({
-                        'subject':'notification.doc',
+                        'subject':'meta.doc',
                         'actor':'eye%i'%eye_id,
                         'doc':eye.__doc__
                         })
