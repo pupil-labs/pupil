@@ -36,10 +36,11 @@ class Is_Alive_Manager(object):
 
 
 def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir, version, eye_id, cap_src):
-    """
+    """reads eye video and detects the pupil.
+
     Creates a window, gl context.
     Grabs images from a capture.
-    Streams Pupil coordinates into g_pool.pupil_queue
+    Streams Pupil coordinates.
 
     Reacts to notifications:
        ``set_detection_mapping_mode``: Sets detection method
