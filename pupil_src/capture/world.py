@@ -14,7 +14,8 @@ class Global_Container(object):
     pass
 
 def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
-    """world
+    """Reads world video and runs plugins.
+
     Creates a window, gl context.
     Grabs images from a capture.
     Maps pupil to gaze data

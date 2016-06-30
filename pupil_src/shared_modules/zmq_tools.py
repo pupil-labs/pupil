@@ -151,7 +151,7 @@ if __name__ == '__main__':
     # gaze_monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('gaze.',))
 
     #you can also publish to the IPC Backbone directly.
-    publisher = Msg_Dispatcher(ctx,'tcp://localhost:%s'%ipc_pub_port)
+    publisher = Msg_Streamer(ctx,'tcp://localhost:%s'%ipc_pub_port)
 
     def roundtrip_latency_reqrep():
         ts = []
@@ -177,10 +177,14 @@ if __name__ == '__main__':
     # now lets get the current pupil time.
     requester.send('t')
     print requester.recv()
-
+    requester.send_multipart(('notify.service_process.should_stop',serializer.dumps({'subject':'service_process.should_stop'})))
+    print requester.recv()
+    requester.send_multipart(('notify.notification.should_doc',serializer.dumps({'subject':'notification.should_doc'})))
+    print requester.recv()
     # listen to all notifications.
     while True:
-        print notification_monitor.recv()
+        topic,msg = notification_monitor.recv()
+        print '%s: %s' %(msg.get('actor'), msg.get('doc'))
 
     # # listen to all log messages.
     # while True:

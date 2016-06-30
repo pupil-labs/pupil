@@ -45,7 +45,8 @@ class HMD_Calibration(Calibration_Plugin):
 
 
     def on_notify(self,notification):
-        '''
+        '''Calibrates user gaze for HMDs
+
         Reacts to notifications:
            ``calibration.should_start``: Starts the calibration procedure
            ``calibration.should_stop``:  Stops the calibration procedure
