@@ -103,7 +103,6 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     from log_display import Log_Display
     from annotations import Annotation_Capture
     from log_history import Log_History
-    from caffeine import Caffeine
 
     logger.info('Application Version: %s'%version)
     logger.info('System Info: %s'%get_system_info())
@@ -140,7 +139,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
     #manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
-    user_launchable_plugins = [Show_Calibration,Pupil_Remote,Pupil_Sync,Surface_Tracker,Annotation_Capture,Log_History,Caffeine]+runtime_plugins
+    user_launchable_plugins = [Show_Calibration,Pupil_Remote,Pupil_Sync,Surface_Tracker,Annotation_Capture,Log_History]+runtime_plugins
     system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder]
     plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins
     name_by_index = [p.__name__ for p in plugin_by_index]
