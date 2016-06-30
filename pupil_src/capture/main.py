@@ -51,6 +51,9 @@ import zmq_tools
 #time
 from time import time,sleep
 
+# os utilities
+from os_utils import disable_idle_sleep, enable_idle_sleep
+
 #functions to run in seperate processes
 if 'profiled' in sys.argv:
     from world import world_profiled as world
@@ -226,6 +229,8 @@ def launcher():
                             app_version,
                             video_sources['world'] )).start()
 
+    # Disable idle sleep on supported platforms
+    disable_idle_sleep()
 
     while True:
         #block and listen for relevant messages.
@@ -253,6 +258,9 @@ def launcher():
                 'doc':launcher.__doc__})
 
     for p in active_children(): p.join()
+
+    # reenable idle sleep
+    enable_idle_sleep()
 
 if __name__ == '__main__':
     freeze_support()
