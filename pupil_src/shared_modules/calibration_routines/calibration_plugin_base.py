@@ -12,7 +12,8 @@ class Calibration_Plugin(Plugin):
         self.active = False
 
     def on_notify(self,notification):
-        '''
+        '''Handles calibration notifications
+
         Reacts to notifications:
            ``calibration.should_start``: Starts the calibration procedure
            ``calibration.should_stop``: Stops the calibration procedure

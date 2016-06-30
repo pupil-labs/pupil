@@ -76,12 +76,14 @@ eye1_src = ["Pupil Cam1 ID1","HD-6000","Integrated Camera"]
 
 video_sources = {'world':world_src,'eye0':eye0_src,'eye1':eye1_src}
 
-def main():
-    """
+def launcher():
+    """Starts eye processes. Hosts the IPC Backbone and Logging functions.
+
     Reacts to notifications:
        ``launcher_process.should_stop``: Stops the launcher process
        ``eye_process.should_start``: Starts the eye process
     """
+
     ## IPC
     #shared values
     timebase = Value(c_double,0)
@@ -246,11 +248,11 @@ def main():
         elif "notify.notification.should_doc" in topic:
             cmd_push.notify({
                 'subject':'notification.doc',
-                'actor':'main',
-                'doc':main.__doc__})
+                'actor':'launcher',
+                'doc':launcher.__doc__})
 
     for p in active_children(): p.join()
 
 if __name__ == '__main__':
     freeze_support()
-    main()
+    launcher()

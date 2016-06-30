@@ -13,9 +13,7 @@ class Global_Container(object):
     pass
 
 def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
-    """service
-    Maps pupil to gaze data
-    Can run various plug-ins.
+    """Maps pupil to gaze data, can run various plug-ins.
 
     Reacts to notifications:
        ``set_detection_mapping_mode``: Sets detection method

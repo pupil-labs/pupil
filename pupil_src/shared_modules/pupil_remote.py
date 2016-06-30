@@ -190,27 +190,14 @@ class Pupil_Remote(Plugin):
         socket.send(response)
 
     def on_notify(self,notification):
-        """
-        Send simple string messages to control Pupil Capture functions:
-            'R' start recording with auto generated session name
-            'R rec_name' start recording and name new session name: rec_name
-            'r' stop recording
-            'C' start currently selected calibration
-            'c' stop currently selected calibration
-            'T 1234.56' Timesync: make timestamps count form 1234.56 from now on.
-            't' get pupil capture timestamp returns a float as string.
-
-
-            #IPC Backbone communication
-            'PUB_PORT' return the current pub port of the IPC Backbone
-            'SUB_PORT' return the current sub port of the IPC Backbone
+        """send simple string messages to control application functions.
 
         Emits notifications:
             ``recording.should_start``
             ``recording.should_stop``
             ``calibration.should_start``
             ``calibration.should_stop``
-            Any other notification received
+            Any other notification received though the reqrepl port.
         """
         pass
 
