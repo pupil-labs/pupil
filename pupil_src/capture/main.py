@@ -197,7 +197,7 @@ def launcher():
 
     topics = (  'notify.eye_process.',
                 'notify.launcher_process.',
-                'notify.notification.should_doc')
+                'notify.meta.should_doc')
     cmd_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=topics )
     cmd_push = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
 
@@ -245,9 +245,9 @@ def launcher():
                                 video_sources['eye%s'%eye_id] )).start()
         elif "notify.launcher_process.should_stop" in topic:
             break
-        elif "notify.notification.should_doc" in topic:
+        elif "notify.meta.should_doc" in topic:
             cmd_push.notify({
-                'subject':'notification.doc',
+                'subject':'meta.doc',
                 'actor':'launcher',
                 'doc':launcher.__doc__})
 

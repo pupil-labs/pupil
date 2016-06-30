@@ -252,15 +252,15 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         elif subject == 'eye_process.started':
             n = {'subject':'set_detection_mapping_mode','mode':g_pool.detection_mapping_mode}
             ipc_pub.notify(n)
-        elif subject.startswith('notification.should_doc'):
+        elif subject.startswith('meta.should_doc'):
             ipc_pub.notify({
-                'subject':'notification.doc',
+                'subject':'meta.doc',
                 'actor':g_pool.app,
                 'doc':world.__doc__})
             for p in g_pool.plugins:
                 if p.on_notify.__doc__ and p.__class__.on_notify != Plugin.on_notify:
                     ipc_pub.notify({
-                        'subject':'notification.doc',
+                        'subject':'meta.doc',
                         'actor': p.class_name,
                         'doc':p.on_notify.__doc__})
 
