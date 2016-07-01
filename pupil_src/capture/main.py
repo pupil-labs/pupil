@@ -76,6 +76,19 @@ eye1_src = ["Pupil Cam1 ID1","HD-6000","Integrated Camera"]
 
 video_sources = {'world':world_src,'eye0':eye0_src,'eye1':eye1_src}
 
+#network backbone setup
+zmq_ctx = zmq.Context()
+# lets get some open ports:
+test_socket = zmq_ctx.socket(zmq.SUB)
+ipc_sub_port = test_socket.bind_to_random_port('tcp://*', min_port=5001, max_port=6000, max_tries=100)
+ipc_pub_port = test_socket.bind_to_random_port('tcp://*', min_port=6001, max_port=7000, max_tries=100)
+ipc_push_port = test_socket.bind_to_random_port('tcp://*', min_port=6001, max_port=7000, max_tries=100)
+test_socket.close(linger=0)
+
+ipc_pub_url = 'tcp://127.0.0.1:%s'%ipc_pub_port
+ipc_sub_url = 'tcp://127.0.0.1:%s'%ipc_sub_port
+ipc_push_url = 'tcp://127.0.0.1:%s'%ipc_push_port
+
 def launcher():
     """Starts eye processes. Hosts the IPC Backbone and Logging functions.
 
@@ -88,20 +101,6 @@ def launcher():
     #shared values
     timebase = Value(c_double,0)
     eyes_are_alive = Value(c_bool,0),Value(c_bool,0)
-
-    #network backbone setup
-    zmq_ctx = zmq.Context()
-    # lets get some open ports:
-    test_socket = zmq_ctx.socket(zmq.SUB)
-    ipc_sub_port = test_socket.bind_to_random_port('tcp://*', min_port=5001, max_port=6000, max_tries=100)
-    ipc_pub_port = test_socket.bind_to_random_port('tcp://*', min_port=6001, max_port=7000, max_tries=100)
-    ipc_push_port = test_socket.bind_to_random_port('tcp://*', min_port=6001, max_port=7000, max_tries=100)
-    test_socket.close(linger=0)
-
-    ipc_pub_url = 'tcp://127.0.0.1:%s'%ipc_pub_port
-    ipc_sub_url = 'tcp://127.0.0.1:%s'%ipc_sub_port
-    ipc_push_url = 'tcp://127.0.0.1:%s'%ipc_push_port
-
 
     #We use a zmq forwarder and the zmq PUBSUB pattern to do all our IPC.
     def ipc_backbone(in_url, out_url):
