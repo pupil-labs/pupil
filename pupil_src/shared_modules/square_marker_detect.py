@@ -14,6 +14,11 @@ from scipy.spatial.distance import pdist
 #because np.sqrt is slower when we do it on small arrays
 from math import sqrt
 
+from pyglui.cygl.utils import RGBA
+from pyglui.cygl.utils import draw_polyline_norm,draw_polyline,draw_points_norm,draw_points
+from pyglui.pyfontstash import fontstash
+from pyglui.ui import get_opensans_font_path
+
 def get_close_markers(markers,centroids=None, min_distance=20):
     if centroids is None:
         centroids = [m['centroid']for m in markers]
@@ -196,8 +201,19 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
     return markers
 
 
-def draw_markers(img,markers):
+def draw_markers(img_size,markers, roi=None):
+
+    glfont = fontstash.Context()
+    glfont.add_font('opensans',get_opensans_font_path())
+    if roi != None:
+        glfont.set_size((22 * roi[2]) / float(img_size[1]))
+    else:
+        glfont.set_size(22)
+    glfont.set_color_float((0.2,0.5,0.9,1.0))
+
     for m in markers:
+        #old method using opencv to draw doesn't show the result on screen
+        """
         centroid = [m['verts'].sum(axis=0)/4.]
         origin = m['verts'][0]
         hat = np.array([[[0,0],[0,1],[.5,1.25],[1,1],[1,0]]],dtype=np.float32)
@@ -205,6 +221,13 @@ def draw_markers(img,markers):
         cv2.polylines(img,np.int0(hat),color = (0,0,255),isClosed=True)
         cv2.polylines(img,np.int0(centroid),color = (255,255,0),isClosed=True,thickness=2)
         cv2.putText(img,'id: '+str(m['id']),tuple(np.int0(origin)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
+
+
+        """
+        hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
+        hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
+        draw_polyline(hat.reshape((6,2)),1,RGBA(1.0,0,0,1.0))
+        glfont.draw_text(m['verts'][0][0][0],m['verts'][0][0][1],'id: '+str(m['id']))
 
 
 def m_marker_to_screen(marker):
@@ -297,6 +320,10 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
     prev_img = gray_img.copy()
     return markers
 
+
+def init_prev_img():
+    global prev_img
+    prev_img = None
 
 
 def bench():

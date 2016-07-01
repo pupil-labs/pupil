@@ -473,9 +473,15 @@ def size_deviation(ellipse,target_size):
     center, axis, angle = ellipse
     return abs(target_size-max(axis))
 
-
-
-
+def distance( pa, pb ):
+    """
+    Return the distance between two 3D or 2D points
+    """
+    _, size = pa.shape
+    if size == 3:
+        return np.sqrt((pa[0][0]-pb[0][0])*(pa[0][0]-pb[0][0]) + (pa[0][1]-pb[0][1])*(pa[0][1]-pb[0][1]) + (pa[0][2]-pb[0][2])*(pa[0][2]-pb[0][2]))
+    else:
+        return np.sqrt((pa[0][0]-pb[0][0])*(pa[0][0]-pb[0][0]) + (pa[0][1]-pb[0][1])*(pa[0][1]-pb[0][1]))
 
 def circle_grid(image, pattern_size=(4,11)):
     """Circle grid: finds an assymetric circle pattern
@@ -496,6 +502,95 @@ def calibrate_camera(img_pts, obj_pts, img_size):
     rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_pts, img_pts,
                                                     img_size, camera_matrix, dist_coef)
     return camera_matrix, dist_coefs
+
+def gen_square_pattern_grid(h=76):
+    """
+    given the size expressed in millimeter, it will return the objects points of an square with size=h
+    Use for solvePNP
+    """
+    if h%2 == 0:
+        offset = 0
+    else :
+        offset = 0.5
+    return np.array(((-h/2+offset,-h/2,0+offset),(h/2+offset,-h/2,0+offset),(h/2+offset,h/2+offset,0),(-h/2+offset,h/2+offset,0)),dtype=np.float32)
+
+
+def undistord(img, cm, dist_coef, size):
+    adjusted_k, roi = cv2.getOptimalNewCameraMatrix(cameraMatrix= cm, distCoeffs=dist_coef, imageSize=size, alpha=1.0,newImgSize=size,centerPrincipalPoint=1)
+
+    #undistord is very heavy for the CPU, it could be threaded
+    new_img = cv2.undistort(img, cm, dist_coef, newCameraMatrix=adjusted_k)
+
+    # crop the image
+    x,y,w,h = roi
+    new_img = new_img[y:(y+h), x:(x+w)]
+    
+    return new_img
+
+def undistord_with_roi(img, cm, dist_coef, roi, new_cm):
+    #undistord is very heavy for the CPU, it could be threaded
+    new_img = cv2.undistort(img, cm, dist_coef, newCameraMatrix=new_cm)
+
+    # crop the image
+    x,y,w,h,_,_ = roi
+    new_img = new_img[y:(y+h), x:(x+w)]
+    
+    return new_img
+
+def distortPoints(undistored, cm, dist, new_cm=None, alpha=0.):
+    
+    # will support only 2-channel data for points
+    nb_points, _, channels = undistored.shape
+    if channels != 2:
+        return None
+
+    distored = np.zeros(undistored.shape, dtype = np.float64)
+
+    cx = cm[0][2]
+    cy = cm[1][2]
+    fx = cm[0][0]
+    fy = cm[1][1]
+
+    c2x = new_cm[0][2]
+    c2y = new_cm[1][2]
+    f2x = new_cm[0][0]
+    f2y = new_cm[1][1]
+
+    _, dist_size = dist.shape
+    if dist_size == 5:
+        k1, k2, p1, p2, k3 = dist[0]
+    else:
+        k1, k2, p1, p2 = dist[0]
+        k3 = 0.
+
+    nb_points, _, _ = undistored.shape
+
+    for i in range(nb_points):
+        point = undistored[i][0]
+
+        # To relative coordinates
+        x = (point[0] - c2x) / f2x
+        y = (point[1] - c2y) / f2y
+
+        r2 = x*x + y*y
+
+        # Radial distorsion
+        xDistort = x * (1 + k1 * r2 + k2 * r2 * r2 + k3 * r2 * r2 * r2)
+        yDistort = y * (1 + k1 * r2 + k2 * r2 * r2 + k3 * r2 * r2 * r2)
+
+        # Tangential distorsion
+        xDistort = xDistort + (2 * p1 * x * y + p2 * (r2 + 2 * x * x))
+        yDistort = yDistort + (p1 * (r2 + 2 * y * y) + 2 * p2 * x * y)
+
+        # Back to absolute coordinates.
+        xDistort = xDistort * fx + cx
+        yDistort = yDistort * fy + cy
+
+        distored[i][0][0] = float(xDistort)
+        distored[i][0][1] = float(yDistort)
+
+    return distored
+
 
 def gen_pattern_grid(size=(4,11)):
     pattern_grid = []
@@ -530,7 +625,38 @@ def denormalize(pos, (width, height), flip_y=False):
     y *= height
     return x,y
 
+def is_inside_simple_polygone(point, polygone, tolerance):
+    """
+    return true if 2D point is inside the oriented polygone, both expressed as numpy array
+    """
+    if point == None:
+        return False
 
+    pt_dim = point.shape[0]
+    nb_pts, _, poly_dim = polygone.shape
+
+    #check if 2D points
+    if pt_dim != 2 or poly_dim != 2:
+        logger.warning('Work only with 2D points')
+        return False
+
+    x2, y2 = point
+    #print point.shape, point , polygone
+    for i in range(0,nb_pts-1) :
+        cx, cy = polygone[i][0]
+        x1, y1 = polygone[i+1][0]
+        res = (x1-cx)*(y2-cy) - (y1-cy)*(x2-cx)
+        if res < tolerance :
+            return False
+
+    #last test
+    cx, cy = polygone[nb_pts-1][0]
+    x1, y1 = polygone[0][0]
+    res = (x1-cx)*(y2-cy) - (y1-cy)*(x2-cx)
+    if res < tolerance :
+        return False
+    else :
+        return True
 
 def dist_pts_ellipse(((ex,ey),(dx,dy),angle),points):
     """
