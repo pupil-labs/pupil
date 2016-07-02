@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os, sys, platform, time
+import os, sys, platform
 
 # sys.argv.append('profiled')
 # sys.argv.append('debug')
@@ -49,7 +49,7 @@ import zmq
 import zmq_tools
 
 #time
-from time import time
+from time import time,sleep
 
 #functions to run in seperate processes
 if 'profiled' in sys.argv:
@@ -184,14 +184,14 @@ def launcher():
     ipc_backbone_thread.start()
     while ipc_urls['sub'][-1] == '*':
         print 'waiting for pub and sub port to bind'
-        time.sleep(0.01)
+        sleep(0.01)
 
     pull_pub = Thread(target=pull_pub, args=(ipc_urls,))
     pull_pub.setDaemon(True)
     pull_pub.start()
     while ipc_urls['push'][-1] == '*':
         print 'waiting for push port to bind'
-        time.sleep(0.01)
+        sleep(0.01)
 
     log_thread = Thread(target=log_loop, args=(ipc_urls,'debug'in sys.argv))
     log_thread.setDaemon(True)
