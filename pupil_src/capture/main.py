@@ -62,7 +62,6 @@ else:
     from eye import eye
 
 
-
 # To assign camera by name: put string(s) in list
 world_src = ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
 eye0_src = ["Pupil Cam1 ID0","HD-6000","Integrated Camera","HD USB Camera","USB 2.0 Camera"]
@@ -76,6 +75,7 @@ eye1_src = ["Pupil Cam1 ID1","HD-6000","Integrated Camera"]
 
 video_sources = {'world':world_src,'eye0':eye0_src,'eye1':eye1_src}
 
+
 def launcher():
     """Starts eye processes. Hosts the IPC Backbone and Logging functions.
 
@@ -84,32 +84,21 @@ def launcher():
        ``eye_process.should_start``: Starts the eye process
     """
 
-    ## IPC
-    #shared values
-    timebase = Value(c_double,0)
-    eyes_are_alive = Value(c_bool,0),Value(c_bool,0)
-
-    #network backbone setup
-    zmq_ctx = zmq.Context()
-    # lets get some open ports:
-    test_socket = zmq_ctx.socket(zmq.SUB)
-    ipc_sub_port = test_socket.bind_to_random_port('tcp://*', min_port=5001, max_port=6000, max_tries=100)
-    ipc_pub_port = test_socket.bind_to_random_port('tcp://*', min_port=6001, max_port=7000, max_tries=100)
-    ipc_push_port = test_socket.bind_to_random_port('tcp://*', min_port=6001, max_port=7000, max_tries=100)
-    test_socket.close(linger=0)
-
-    ipc_pub_url = 'tcp://127.0.0.1:%s'%ipc_pub_port
-    ipc_sub_url = 'tcp://127.0.0.1:%s'%ipc_sub_port
-    ipc_push_url = 'tcp://127.0.0.1:%s'%ipc_push_port
-
 
     #We use a zmq forwarder and the zmq PUBSUB pattern to do all our IPC.
-    def ipc_backbone(in_url, out_url):
+    def ipc_backbone(ipc_urls):
+
         ctx = zmq.Context.instance()
         xsub = ctx.socket(zmq.XSUB)
-        xsub.bind(in_url)
+        xsub.bind(ipc_urls['pub'])
+        url = xsub.last_endpoint.decode('ascii', 'replace')
+        ipc_urls['pub'] = url.replace("0.0.0.0","127.0.0.1")
+
         xpub = ctx.socket(zmq.XPUB)
-        xpub.bind(out_url)
+        xpub.bind(ipc_urls['sub'])
+        url = xpub.last_endpoint.decode('ascii', 'replace')
+        ipc_urls['sub'] = url.replace("0.0.0.0","127.0.0.1")
+
         try:
             zmq.proxy(xsub, xpub)
         except zmq.ContextTerminated:
@@ -117,21 +106,25 @@ def launcher():
             xpub.close()
 
     #reliable msg dispatch to the IPC via push bridge
-    def pull_pub(in_url,out_url):
+    def pull_pub(ipc_urls):
         ctx = zmq.Context.instance()
         pull = ctx.socket(zmq.PULL)
-        pull.bind(in_url)
+        pull.bind(ipc_urls['push'])
+        url = pull.last_endpoint.decode('ascii', 'replace')
+        ipc_urls['push'] = url.replace("0.0.0.0","127.0.0.1")
+
         pub = ctx.socket(zmq.PUB)
-        pub.connect(out_url)
+        pub.connect(ipc_urls['pub'])
+
         while True:
             m = pull.recv_multipart()
             pub.send_multipart(m)
 
     #The delay proxy handles delayed notififications.
-    def delay_proxy(in_url, out_url):
+    def delay_proxy(ipc_urls):
         ctx = zmq.Context.instance()
-        sub = zmq_tools.Msg_Receiver(ctx,in_url,('delayed_notify',))
-        pub = zmq_tools.Msg_Dispatcher(ctx,out_url)
+        sub = zmq_tools.Msg_Receiver(ctx,ipc_urls['sub'],('delayed_notify',))
+        pub = zmq_tools.Msg_Dispatcher(ctx,ipc_urls['push'])
         poller = zmq.Poller()
         poller.register(sub.socket, zmq.POLLIN)
         waiting_notifications = {}
@@ -154,7 +147,7 @@ def launcher():
             pub.close()
 
     #recv log records from other processes.
-    def log_loop(ipc_sub_url,log_level_debug):
+    def log_loop(ipc_urls,log_level_debug):
         import logging
         #Get the root logger
         logger = logging.getLogger()
@@ -172,27 +165,46 @@ def launcher():
         ch.setFormatter(logging.Formatter('%(processName)s - [%(levelname)s] %(name)s: %(message)s'))
         logger.addHandler(ch)
         # IPC setup to receive log messages. Use zmq_tools.ZMQ_handler to send messages to here.
-        sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=("logging",))
+        sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_urls['sub'],topics=("logging",))
         while True:
             topic,msg = sub.recv()
             record = logging.makeLogRecord(msg)
             logger.handle(record)
 
-    ipc_backbone_thread = Thread(target=ipc_backbone, args=('tcp://*:%s'%ipc_pub_port, 'tcp://*:%s'%ipc_sub_port))
+
+    ## IPC
+
+    timebase = Value(c_double,0)
+    eyes_are_alive = Value(c_bool,0),Value(c_bool,0)
+    zmq_ctx = zmq.Context()
+
+    #ipc urls are assinged by the OS`
+    ipc_urls = {'pub':'tcp://*:*','sub':'tcp://*:*','push':'tcp://*:*'}
+
+    ipc_backbone_thread = Thread(target=ipc_backbone, args=(ipc_urls,))
     ipc_backbone_thread.setDaemon(True)
     ipc_backbone_thread.start()
+    while ipc_urls['sub'][-1] == '*':
+        print 'waiting for pub and sub port to bind'
 
-    log_thread = Thread(target=log_loop, args=(ipc_sub_url,'debug'in sys.argv))
+
+    pull_pub = Thread(target=pull_pub, args=(ipc_urls,))
+    pull_pub.setDaemon(True)
+    pull_pub.start()
+    while ipc_urls['push'][-1] == '*':
+        print 'waiting for push port to bind'
+
+    log_thread = Thread(target=log_loop, args=(ipc_urls,'debug'in sys.argv))
     log_thread.setDaemon(True)
     log_thread.start()
 
-    delay_thread = Thread(target=delay_proxy, args=(ipc_sub_url, ipc_push_url))
+    delay_thread = Thread(target=delay_proxy, args=(ipc_urls,))
     delay_thread.setDaemon(True)
     delay_thread.start()
 
-    pull_pub = Thread(target=pull_pub, args=('tcp://*:%s'%ipc_push_port, ipc_pub_url))
-    pull_pub.setDaemon(True)
-    pull_pub.start()
+    ipc_pub_url = ipc_urls['pub']
+    ipc_sub_url = ipc_urls['sub']
+    ipc_push_url = ipc_urls['push']
 
 
     topics = (  'notify.eye_process.',
