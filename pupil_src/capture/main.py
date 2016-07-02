@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os, sys, platform
+import os, sys, platform, time
 
 # sys.argv.append('profiled')
 # sys.argv.append('debug')
@@ -87,7 +87,6 @@ def launcher():
 
     #We use a zmq forwarder and the zmq PUBSUB pattern to do all our IPC.
     def ipc_backbone(ipc_urls):
-
         ctx = zmq.Context.instance()
         xsub = ctx.socket(zmq.XSUB)
         xsub.bind(ipc_urls['pub'])
@@ -173,7 +172,6 @@ def launcher():
 
 
     ## IPC
-
     timebase = Value(c_double,0)
     eyes_are_alive = Value(c_bool,0),Value(c_bool,0)
     zmq_ctx = zmq.Context()
@@ -186,13 +184,14 @@ def launcher():
     ipc_backbone_thread.start()
     while ipc_urls['sub'][-1] == '*':
         print 'waiting for pub and sub port to bind'
-
+        time.sleep(0.01)
 
     pull_pub = Thread(target=pull_pub, args=(ipc_urls,))
     pull_pub.setDaemon(True)
     pull_pub.start()
     while ipc_urls['push'][-1] == '*':
         print 'waiting for push port to bind'
+        time.sleep(0.01)
 
     log_thread = Thread(target=log_loop, args=(ipc_urls,'debug'in sys.argv))
     log_thread.setDaemon(True)
