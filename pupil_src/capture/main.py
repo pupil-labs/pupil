@@ -162,18 +162,15 @@ def launcher():
     # Using them in the main thread is not allowed.
     xsub_socket = zmq_ctx.socket(zmq.XSUB)
     xsub_socket.bind(ipc_pub_url)
-    url = xsub_socket.last_endpoint.decode('ascii', 'replace')
-    ipc_pub_url = url.replace("0.0.0.0","127.0.0.1")
+    ipc_pub_url = xsub_socket.last_endpoint.replace("0.0.0.0","127.0.0.1")
 
     xpub_socket = zmq_ctx.socket(zmq.XPUB)
     xpub_socket.bind(ipc_sub_url)
-    url = xpub_socket.last_endpoint.decode('ascii', 'replace')
-    ipc_sub_url = url.replace("0.0.0.0","127.0.0.1")
+    ipc_sub_url = xpub_socket.last_endpoint.replace("0.0.0.0","127.0.0.1")
 
     pull_socket = zmq_ctx.socket(zmq.PULL)
     pull_socket.bind(ipc_push_url)
-    url = pull_socket.last_endpoint.decode('ascii', 'replace')
-    ipc_push_url = url.replace("0.0.0.0","127.0.0.1")
+    ipc_push_url = pull_socket.last_endpoint.replace("0.0.0.0","127.0.0.1")
 
 
     # Starting communication threads:
