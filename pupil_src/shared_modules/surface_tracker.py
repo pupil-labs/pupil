@@ -203,13 +203,24 @@ class Surface_Tracker(Plugin):
             if self.mode == "Show marker IDs":
                 draw_markers(frame.gray,self.markers)
 
-        events['surface'] = []
 
         # locate surfaces
         for s in self.surfaces:
             s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter, self.locate_3d)
+
+        #map recent gaze onto detected surfaces used for pupil server
+        for s in self.surfaces:
             if s.detected:
-                events['surface'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(), 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d else None})
+                s.gaze_on_srf = []
+                for p in events.get('gaze',[]):
+                    gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_pos'])))
+                    p['realtime gaze on ' + s.name] = gp_on_s
+                    s.gaze_on_srf.append(gp_on_s)
+
+        events['surface'] = []
+        for s in self.surfaces:
+            if s.detected:
+                events['surface'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d else None})
 
         if self.running:
             self.button.status_text = '%s/%s'%(len([s for s in self.surfaces if s.detected]),len(self.surfaces))
@@ -227,14 +238,6 @@ class Surface_Tracker(Plugin):
                         new_pos = s.img_to_ref_surface(np.array(pos))
                         s.move_vertex(v_idx,new_pos)
 
-        #map recent gaze onto detected surfaces used for pupil server
-        for s in self.surfaces:
-            if s.detected:
-                s.gaze_on_srf = []
-                for p in events.get('gaze_positions',[]):
-                    gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_pos'])))
-                    p['realtime gaze on ' + s.name] = gp_on_s
-                    s.gaze_on_srf.append(gp_on_s)
 
 
     def get_init_dict(self):
