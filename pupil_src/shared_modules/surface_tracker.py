@@ -220,7 +220,8 @@ class Surface_Tracker(Plugin):
         events['surface'] = []
         for s in self.surfaces:
             if s.detected:
-                events['surface'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d else None})
+                events['surface'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen.tolist(),'m_from_screen':s.m_from_screen.tolist(),'gaze_on_srf': s.gaze_on_srf, 'timestamp':frame.timestamp,'camera_pose_3d':s.camera_pose_3d.tolist() if s.camera_pose_3d is not None else None})
+
 
         if self.running:
             self.button.status_text = '%s/%s'%(len([s for s in self.surfaces if s.detected]),len(self.surfaces))
