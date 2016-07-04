@@ -116,21 +116,30 @@ class Plugin(object):
 
     def notify_all(self,notification):
         """
-        call this to notify all other plugins and processes with a notification:
-        notification is a dict in the format {'subject':'notification_category.notification_name',['addional_field':'foo']}
+
+        Do not overwrite this method.
+
+        Call `notify_all` to notify all other plugins and processes with a notification:
+
+        notification is a dict in the format {'subject':'notification_category.[subcategory].action_name',['addional_field':'foo']}
 
             adding 'timestamp':self.g_pool.capture.get_timestamp() will allow other plugins to know when you created this notification.
+
             adding 'record':True will make recorder save the notification during recording.
-            adding 'network_propagate':True will send the event to other pupil sync nodes in the same group.
+
+            adding 'remote_notify':'all' will send the event all other pupil sync nodes in the same group.
+            (Remote notifyifactions are not be recevied by any local actor.)
+
+            adding 'remote_notify':node_UUID will send the event the pupil sync nodes with node_UUID.
+            (Remote notifyifactions are not be recevied by any local actor.)
+
             adding 'delay':3.2 will delay the notification for 3.2s.
-            If a new delayed notification of same subject is sent before 3.2s have passed we will discard the former notification
+            If a new delayed notification of same subject is sent before 3.2s have passed we will discard the former notification.
 
-            All notifications must be serializable
+        You may add more fields as you like.
 
-            You may add more fields as you like.
+        All notifications must be serializable
 
-
-        do not overwrite this method
         """
         if self.g_pool.app == 'player':
             if notification.get('delay',0):

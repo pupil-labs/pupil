@@ -111,17 +111,15 @@ class Msg_Dispatcher(object):
         self.socket.send(serializer.dumps(payload))
 
     def notify(self,notification):
+        '''Send a pupil notification.
+        see plugin.notify_all for documentation on notifications.
         '''
-        send a pupil notification
-        notification is a dict with a least a subject field
-        if a 'delay' field exsits the notification it will be grouped with notifications
-        of same subject and only one send after specified delay.
-        '''
-        if notification.get('delay',0):
+        if notification.get('remote_notify'):
+            self.send("remote_notify.%s"%notification['subject'],notification)
+        elif notification.get('delay',0):
             self.send("delayed_notify.%s"%notification['subject'],notification)
         else:
             self.send("notify.%s"%notification['subject'],notification)
-
 
     def __del__(self):
         self.socket.close()
