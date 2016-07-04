@@ -128,12 +128,13 @@ class Msg_Dispatcher(object):
 
 
 if __name__ == '__main__':
+    from time import sleep,time
     #tap into the IPC backbone of pupil capture
     ctx = zmq.Context()
 
     # the requester talks to Pupil remote and recevied the session unique IPC SUB URL
     requester = ctx.socket(zmq.REQ)
-    requester.connect('tcp://localhost:50020')
+    requester.connect('tcp://192.168.1.150:50020')
 
     requester.send('SUB_PORT')
     ipc_sub_port = requester.recv()
@@ -144,13 +145,14 @@ if __name__ == '__main__':
     print 'ipc_pub_port:',ipc_pub_port
 
     #more topics: gaze, pupil, logging, ...
-    log_monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('logging.',))
-    notification_monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('notify.',))
+    log_monitor = Msg_Receiver(ctx,'tcp://192.168.1.150:%s'%ipc_sub_port,topics=('logging.',))
+    notification_monitor = Msg_Receiver(ctx,'tcp://192.168.1.150:%s'%ipc_sub_port,topics=('notify.',))
+    monitor = Msg_Receiver(ctx,'tcp://192.168.1.150:%s'%ipc_sub_port,topics=('pingback_test.3',))
     # gaze_monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('gaze.',))
 
     #you can also publish to the IPC Backbone directly.
-    publisher = Msg_Streamer(ctx,'tcp://localhost:%s'%ipc_pub_port)
-
+    publisher = Msg_Streamer(ctx,'tcp://192.168.1.150:%s'%ipc_pub_port)
+    sleep(1)
     def roundtrip_latency_reqrep():
         ts = []
         for x in range(100):
@@ -166,23 +168,26 @@ if __name__ == '__main__':
         for x in range(100):
             sleep(0.003)
             t = time()
-            publisher.notify({'subject':'pingback_test','index':x})
+            publisher.send('pingback_test.3',{'subject':'pingback_test.3','index':x})
             monitor.recv()
             ts.append(time()-t)
         print min(ts), sum(ts)/len(ts) , max(ts)
 
+    roundtrip_latency_reqrep()
+    roundtrip_latency_pubsub()
 
-    # now lets get the current pupil time.
-    requester.send('t')
-    print requester.recv()
-    requester.send_multipart(('notify.service_process.should_stop',serializer.dumps({'subject':'service_process.should_stop'})))
-    print requester.recv()
-    requester.send_multipart(('notify.meta.should_doc',serializer.dumps({'subject':'meta.should_doc'})))
-    print requester.recv()
-    # listen to all notifications.
-    while True:
-        topic,msg = notification_monitor.recv()
-        print '%s: %s' %(msg.get('actor'), msg.get('doc'))
+
+    # # now lets get the current pupil time.
+    # requester.send('t')
+    # print requester.recv()
+    # requester.send_multipart(('notify.service_process.should_stop',serializer.dumps({'subject':'service_process.should_stop'})))
+    # print requester.recv()
+    # requester.send_multipart(('notify.meta.should_doc',serializer.dumps({'subject':'meta.should_doc'})))
+    # print requester.recv()
+    # # listen to all notifications.
+    # while True:
+    #     topic,msg = notification_monitor.recv()
+    #     print '%s: %s' %(msg.get('actor'), msg.get('doc'))
 
     # # listen to all log messages.
     # while True:
