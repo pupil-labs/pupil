@@ -74,8 +74,11 @@ class Pupil_Server(Plugin):
 
     def update(self,frame,events):
         for topic,data in events.iteritems():
-            for d in data:
-                self.socket.send_multipart((topic, serializer.dumps(d)))
+            if type(d) in (tuple,list):
+                for d in data:
+                    self.socket.send_multipart((topic, serializer.dumps(d)))
+            else:
+                self.socket.send_multipart((topic, serializer.dumps(data)))
 
     def close(self):
         self.alive = False
