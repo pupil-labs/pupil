@@ -158,7 +158,8 @@ def launcher():
     ipc_push_url = 'tcp://*:*'
 
     # Binding IPC Backbone Sockets to URLs.
-    # They are only used in the threads started below.
+    # They are used in the threads started below.
+    # Using them in the main thread is not allowed.
     xsub_socket = zmq_ctx.socket(zmq.XSUB)
     xsub_socket.bind(ipc_pub_url)
     url = xsub_socket.last_endpoint.decode('ascii', 'replace')
