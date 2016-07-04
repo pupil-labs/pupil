@@ -34,10 +34,10 @@ class Discovery(Plugin):
         help_str = "Uses the ZeroMQ Realtime Exchange Protocol to discover other local network members."
         self.menu = ui.Growing_Menu('Discovery')
         self.menu.append(ui.Button('Close',self.close))
-        self.menu.append(ui.Button('Test',self.test))
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Text_Input('name',self,label='Name:'))
         self.menu.append(ui.Text_Input('active_group',self,label='Group:'))
+        self.menu.append(ui.Button('Ping Other Nodes',self.test))
         self.g_pool.sidebar.append(self.menu)
 
 
@@ -59,17 +59,17 @@ class Discovery(Plugin):
             self.name = notification['name']
         elif notification['subject'].startswith('discovery.active_group_should_change'):
             self.active_group = notification['name']
-        elif notification['subject'].startswith('discovery.ping') and 'discovery.peer' in notification:
+        elif notification['subject'].startswith('discovery.ping'):
             peer = notification['discovery.peer']
             self.notify_all({
                 'subject': 'discovery.pong',
                 't1': notification['t1'],
                 't2': self.g_pool.get_timestamp(),
-                'remote_notify': peer['uuid']
+                'remote_notify': peer['uuid_bytes']
             })
-        elif notification['subject'].startswith('discovery.pong') and 'discovery.peer' in notification:
+        elif notification['subject'].startswith('discovery.pong'):
             peer = notification['discovery.peer']
-            logger.debug(
+            logger.info(
                 '%s took %s seconds to answer.'%(
                     peer['name'],
                     float(notification['t2'])-
@@ -136,7 +136,7 @@ class Discovery(Plugin):
     def _thread_loop(self,context,pipe):
         # setup sockets
         local_in  = Msg_Receiver(context, self.g_pool.ipc_sub_url, topics=('remote_notify.',))
-        local_out = Msg_Dispatcher(context, self.g_pool.ipc_sub_url)
+        local_out = Msg_Dispatcher(context, self.g_pool.ipc_push_url)
         discovery = self._setup_discovery_node()
 
         # register sockets for polling
@@ -153,18 +153,18 @@ class Discovery(Plugin):
             readable = dict(poller.poll())
 
             # shout or whisper marked notifications
-            if local_in in readable:
+            if local_in.socket in readable:
                 topic, notification = local_in.recv()
-
                 remote_key = 'remote_notify'
                 if notification[remote_key] == 'all':
                     del notification[remote_key]
                     serialized = serializer.dumps(notification)
                     discovery.shout(self.active_group,serialized)
                 else:
-                    peer_uuid = notification[remote_key]
-                    del notification[whisper_key]
+                    peer_uuid_bytes = notification[remote_key]
+                    del notification[remote_key]
                     serialized = serializer.dumps(notification)
+                    peer_uuid = uuid.UUID(bytes=peer_uuid_bytes)
                     discovery.whisper(peer_uuid,serialized)
 
             if discovery.socket() in readable:
@@ -178,15 +178,14 @@ class Discovery(Plugin):
                             notification['subject']
                             # add peer information
                             notification['discovery.peer'] = {
-                                'uuid': event.peer_uuid,
+                                'uuid_bytes': event.peer_uuid_bytes,
                                 'name': event.peer_name,
                                 'arrival_timestamp': self.g_pool.get_timestamp(),
                                 'type': event.type
                             }
                             local_out.notify(notification)
-                        except Exception:
+                        except Exception as e:
                             logger.info('Dropped garbage data by peer %s (%s)'%(event.peer_name, event.peer_uuid))
-                            pass
 
             if pipe in readable:
                 command = pipe.recv()
