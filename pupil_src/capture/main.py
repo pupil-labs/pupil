@@ -52,7 +52,7 @@ import zmq_tools
 from time import time,sleep
 
 # os utilities
-from os_utils import disable_idle_sleep, enable_idle_sleep
+from os_utils import Prevent_Idle_Sleep
 
 #functions to run in seperate processes
 if 'profiled' in sys.argv:
@@ -226,38 +226,34 @@ def launcher():
                             app_version,
                             video_sources['world'] )).start()
 
-    # Disable idle sleep on supported platforms
-    disable_idle_sleep()
+    with Prevent_Idle_Sleep():
+        while True:
+            #block and listen for relevant messages.
+            topic,n = cmd_sub.recv()
+            if "notify.eye_process.should_start" in topic:
+                eye_id = n['eye_id']
+                if not eyes_are_alive[eye_id].value:
+                    Process(target=eye,
+                                name='eye%s'%eye_id,
+                                args=(timebase,
+                                    eyes_are_alive[eye_id],
+                                    ipc_pub_url,
+                                    ipc_sub_url,
+                                    ipc_push_url,
+                                    user_dir,
+                                    app_version,
+                                    eye_id,
+                                    video_sources['eye%s'%eye_id] )).start()
+            elif "notify.launcher_process.should_stop" in topic:
+                break
+            elif "notify.meta.should_doc" in topic:
+                cmd_push.notify({
+                    'subject':'meta.doc',
+                    'actor':'launcher',
+                    'doc':launcher.__doc__})
 
-    while True:
-        #block and listen for relevant messages.
-        topic,n = cmd_sub.recv()
-        if "notify.eye_process.should_start" in topic:
-            eye_id = n['eye_id']
-            if not eyes_are_alive[eye_id].value:
-                Process(target=eye,
-                            name='eye%s'%eye_id,
-                            args=(timebase,
-                                eyes_are_alive[eye_id],
-                                ipc_pub_url,
-                                ipc_sub_url,
-                                ipc_push_url,
-                                user_dir,
-                                app_version,
-                                eye_id,
-                                video_sources['eye%s'%eye_id] )).start()
-        elif "notify.launcher_process.should_stop" in topic:
-            break
-        elif "notify.meta.should_doc" in topic:
-            cmd_push.notify({
-                'subject':'meta.doc',
-                'actor':'launcher',
-                'doc':launcher.__doc__})
+        for p in active_children(): p.join()
 
-    for p in active_children(): p.join()
-
-    # reenable idle sleep
-    enable_idle_sleep()
 
 if __name__ == '__main__':
     freeze_support()

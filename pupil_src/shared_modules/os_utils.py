@@ -9,36 +9,47 @@
 '''
 
 import platform, sys, os, time
-os_name = platform.system()
-
-# see https://github.com/google/python-subprocess32
-if os.name == 'posix' and sys.version_info[0] < 3:
-    try:
-        import subprocess32 as sp
-    except ImportError:
-        import subprocess as sp
-else:
-    import subprocess as sp
+import subprocess as sp
 
 import logging
 logger = logging.getLogger(__name__)
 
-caffeine_process = None
+os_name = platform.system()
+mac_version = platform.mac_ver()
+mac_major,mac_minor,mac_patch = map(int,mac_version[0].split('.'))
 
-def disable_idle_sleep():
-    if os_name == "Darwin":
-        app_pid = os.getpid()
-        # -w option stops `caffeinate` in case current app does not
-        # terminate plugin correctly
-        global caffeine_process
-        caffeine_process = sp.Popen(['caffeinate', '-i', '-w', str(app_pid)])
-        logger.info('Disabled idle sleep.')
-    else:
-        logger.info('Disabling idle sleep is not supported on this platform.')
+if os_name == "Darwin" and mac_minor >=11:
 
-def enable_idle_sleep():
-    global caffeine_process
-    if caffeine_process:
-        caffeine_process.terminate()
-        caffeine_process = None
-        logger.info('Enabled idle sleep.')
+    class Prevent_Idle_Sleep(object):
+
+        def __init__(self):
+            self.caffeine_process = None
+
+        def __enter__(self):
+            self.caffeine_process = sp.Popen(['caffeinate','-w', str(os.getpid())])
+            logger.info('Disabled idle sleep.')
+
+        def __exit__(self, type, value, traceback):
+            if type is not None:
+                pass # Exception occurred
+            self.caffeine_process.terminate()
+            self.caffeine_process = None
+            logger.info('Re-enabled idle sleep.')
+else:
+    class Prevent_Idle_Sleep(object):
+
+        def __init__(self):
+            self.caffeine_process = None
+
+        def __enter__(self):
+            logger.info('Disabling idle sleep not supported on this OS version.')
+
+        def __exit__(self, type, value, traceback):
+            if type is not None:
+                pass # Exception occurred
+            pass
+
+
+if __name__ == '__main__':
+    with Prevent_Idle_Sleep():
+        pass
