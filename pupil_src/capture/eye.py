@@ -47,6 +47,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
        ``eye_process.should_stop``: Stops the eye process
        ``recording.started``: Starts recording eye video
        ``recording.stopped``: Stops recording eye video
+       ``frame_publishing.started``: Starts frame publishing
+       ``frame_publishing.stopped``: Stops frame publishing
 
     Emits notifications:
         ``eye_process.started``: Eye process started
@@ -54,6 +56,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
 
     Emits data:
         ``pupil.<eye id>``: Pupil data for eye with id ``<eye id>``
+        ``frame.eye.<eye id>``: Eye frames with id ``<eye id>``
     """
 
 
@@ -306,6 +309,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         fps_graph.update_rate = 5
         fps_graph.label = "%0.0f FPS"
 
+        should_publish_frames = False
+        frame_publish_format = 'jpeg'
 
         #create a timer to control window update frequency
         window_update_timer = timer(1/60.)
@@ -358,6 +363,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                         'actor':'eye%i'%eye_id,
                         'doc':eye.__doc__
                         })
+                elif subject.startswith('frame_publishing.started'):
+                    should_publish_frames = True
+                    frame_publish_format = notification.get('format','jpeg')
+                elif subject.startswith('frame_publishing.stopped'):
+                    should_publish_frames = False
+                    frame_publish_format = 'jpeg'
 
             # Get an image from the grabber
             try:
@@ -369,6 +380,24 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                 logger.warning("Video File is done. Stopping")
                 cap.seek_to_frame(0)
                 frame = cap.get_frame()
+
+            if should_publish_frames and frame.jpeg_buffer:
+                if   frame_publish_format == "jpeg":
+                    data = frame.jpeg_buffer
+                elif frame_publish_format == "yuv":
+                    data = frame.yuv_buffer
+                elif frame_publish_format == "bgr":
+                    data = frame.bgr
+                elif frame_publish_format == "gray":
+                    data = frame.gray
+                pupil_socket.send('frame.eye.%s'%eye_id,{
+                    'width': frame.width,
+                    'height': frame.width,
+                    'index': frame.index,
+                    'timestamp': frame.timestamp,
+                    'format': frame_publish_format,
+                    '__raw_data__': [data]
+                })
 
 
             #update performace graphs

@@ -185,10 +185,10 @@ if __name__ == '__main__':
     #roundtrip_latency_reqrep()
     #roundtrip_latency_pubsub()
 
-    monitor.subscribe('frame.world')
+    monitor.subscribe('frame.')
     while True:
         topic,msg = monitor.recv()
-        print topic
+        print topic,msg['format']
 
     # # now lets get the current pupil time.
     # requester.send('t')

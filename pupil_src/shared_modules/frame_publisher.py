@@ -6,7 +6,7 @@ class Frame_Publisher(Plugin):
 
     def __init__(self,g_pool,format='jpeg'):
         super(Frame_Publisher,self).__init__(g_pool)
-        self.format = format
+        self._format = format
 
     def init_gui(self):
         help_str = "Publishes frame data in different formats under the topic \"frame.world\"."
@@ -17,8 +17,7 @@ class Frame_Publisher(Plugin):
         self.g_pool.sidebar.append(self.menu)
 
     def update(self,frame=None,events={}):
-        if frame.jpeg_buffer:
-
+        if frame and frame.jpeg_buffer:
             if   self.format == "jpeg":
                 data = frame.jpeg_buffer
             elif self.format == "yuv":
@@ -42,6 +41,20 @@ class Frame_Publisher(Plugin):
                 '__raw_data__': [blob]
             }]
 
+    def on_notify(self,notification):
+        """Publishes frame data in several formats
+
+        Reacts to notifications:
+            ``eye_process.started``: Re-emits ``frame_publishing.started``
+
+        Emits notifications:
+           ``frame_publishing.started``: Frame publishing started
+           ``frame_publishing.stopped``: Frame publishing stopped
+        """
+        if notification['subject'].startswith('eye_process.started'):
+            # trigger notification
+            self.format = self.format
+
     def get_init_dict(self):
         return {'format':self.format}
 
@@ -49,6 +62,16 @@ class Frame_Publisher(Plugin):
             self.alive = False
 
     def cleanup(self):
+        self.notify_all({'subject':'frame_publishing.stopped'})
         if self.menu:
             self.g_pool.sidebar.remove(self.menu)
             self.menu = None
+
+    @property
+    def format(self):
+        return self._format
+
+    @format.setter
+    def format(self,value):
+        self._format = value
+        self.notify_all({'subject':'frame_publishing.started','format':value})
