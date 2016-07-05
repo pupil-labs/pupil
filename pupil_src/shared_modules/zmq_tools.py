@@ -67,7 +67,7 @@ class Msg_Receiver(object):
         payload = serializer.loads(self.socket.recv())
         extra_frames = []
         while self.socket.get(zmq.RCVMORE):
-            extra_frames.append(self.socket.recv(),copy=False)
+            extra_frames.append(self.socket.recv())
         if extra_frames:
             payload['__raw_data__'] = extra_frames
         return topic,payload
@@ -100,11 +100,12 @@ class Msg_Streamer(object):
             self.socket.send(serializer.dumps(payload))
         else:
             extra_frames = payload.pop('__raw_data__')
+            assert(isinstance(extra_frames, (list, tuple)))
             self.socket.send(str(topic),flags=zmq.SNDMORE)
             self.socket.send(serializer.dumps(payload),flags=zmq.SNDMORE)
             for frame in extra_frames[:-1]:
-                self.socket.send(frame,flags=zmq.SNDMORE,copy=False)
-            self.socket.send(extra_frames[-1],copy=False)
+                self.socket.send(frame,flags=zmq.SNDMORE,copy=True)
+            self.socket.send(extra_frames[-1],copy=True)
 
     def __del__(self):
         self.socket.close()
@@ -142,7 +143,7 @@ if __name__ == '__main__':
 
     # the requester talks to Pupil remote and recevied the session unique IPC SUB URL
     requester = ctx.socket(zmq.REQ)
-    requester.connect('tcp://192.168.1.150:50020')
+    requester.connect('tcp://127.0.0.1:50020')
 
     requester.send('SUB_PORT')
     ipc_sub_port = requester.recv()
@@ -153,13 +154,13 @@ if __name__ == '__main__':
     print 'ipc_pub_port:',ipc_pub_port
 
     #more topics: gaze, pupil, logging, ...
-    log_monitor = Msg_Receiver(ctx,'tcp://192.168.1.150:%s'%ipc_sub_port,topics=('logging.',))
-    notification_monitor = Msg_Receiver(ctx,'tcp://192.168.1.150:%s'%ipc_sub_port,topics=('notify.',))
-    monitor = Msg_Receiver(ctx,'tcp://192.168.1.150:%s'%ipc_sub_port,topics=('pingback_test.3',))
+    log_monitor = Msg_Receiver(ctx,'tcp://127.0.0.1:%s'%ipc_sub_port,topics=('logging.',))
+    notification_monitor = Msg_Receiver(ctx,'tcp://127.0.0.1:%s'%ipc_sub_port,topics=('notify.',))
+    monitor = Msg_Receiver(ctx,'tcp://127.0.0.1:%s'%ipc_sub_port,topics=('pingback_test.3',))
     # gaze_monitor = Msg_Receiver(ctx,'tcp://localhost:%s'%ipc_sub_port,topics=('gaze.',))
 
     #you can also publish to the IPC Backbone directly.
-    publisher = Msg_Streamer(ctx,'tcp://192.168.1.150:%s'%ipc_pub_port)
+    publisher = Msg_Streamer(ctx,'tcp://127.0.0.1:%s'%ipc_pub_port)
     sleep(1)
     def roundtrip_latency_reqrep():
         ts = []
@@ -181,9 +182,13 @@ if __name__ == '__main__':
             ts.append(time()-t)
         print min(ts), sum(ts)/len(ts) , max(ts)
 
-    roundtrip_latency_reqrep()
-    roundtrip_latency_pubsub()
+    #roundtrip_latency_reqrep()
+    #roundtrip_latency_pubsub()
 
+    monitor.subscribe('frame.world')
+    while True:
+        topic,msg = monitor.recv()
+        print topic
 
     # # now lets get the current pupil time.
     # requester.send('t')
