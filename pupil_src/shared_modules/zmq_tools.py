@@ -57,12 +57,19 @@ class Msg_Receiver(object):
     def unsubscribe(self,topic):
         self.socket.set(zmq.UNSUBSCRIBE, topic)
 
-    def recv(self,*args,**kwargs):
+    def recv(self):
+        '''Recv a message with topic, payload.
+
+        Any addional message frames will be added as a list
+        in the payload dict with key: '__raw_data__' .
         '''
-        recv a generic message with topic, payload
-        '''
-        topic = self.socket.recv(*args,**kwargs)
-        payload = serializer.loads(self.socket.recv(*args,**kwargs))
+        topic = self.socket.recv()
+        payload = serializer.loads(self.socket.recv())
+        extra_frames = []
+        while self.socket.get(zmq.RCVMORE):
+            extra_frames.append(self.socket.recv(),copy=False)
+        if extra_frames:
+            payload['__raw_data__'] = extra_frames
         return topic,payload
 
     @property
@@ -82,11 +89,22 @@ class Msg_Streamer(object):
         self.socket.connect(url)
 
     def send(self,topic,payload):
+        '''Send a message with topic, payload
+`
+        if payload has the key '__raw_data__' we pop if of the payload and send its raw contents as extra frames
+        everything else need to be serializable
+        the contents of the iterable in '__raw_data__' require exposing the pyhton buffer interface.
         '''
-        send a generic message with topic, payload
-        '''
-        self.socket.send(str(topic),flags=zmq.SNDMORE)
-        self.socket.send(serializer.dumps(payload))
+        if '__raw_data__' not in payload:
+            self.socket.send(str(topic),flags=zmq.SNDMORE)
+            self.socket.send(serializer.dumps(payload))
+        else:
+            extra_frames = payload.pop('__raw_data__')
+            self.socket.send(str(topic),flags=zmq.SNDMORE)
+            self.socket.send(serializer.dumps(payload),flags=zmq.SNDMORE)
+            for frame in extra_frames[:-1]:
+                self.socket.send(frame,flags=zmq.SNDMORE,copy=False)
+            self.socket.send(extra_frames[-1],copy=False)
 
     def __del__(self):
         self.socket.close()
@@ -94,7 +112,7 @@ class Msg_Streamer(object):
 
 
 
-class Msg_Dispatcher(object):
+class Msg_Dispatcher(Msg_Streamer):
     '''
     Send messages with deliavry garantee.
     Not threadsave. Make a new one for each thread
@@ -103,12 +121,6 @@ class Msg_Dispatcher(object):
         self.socket = zmq.Socket(ctx,zmq.PUSH)
         self.socket.connect(url)
 
-    def send(self,topic,payload):
-        '''
-        send a generic message with topic, payload
-        '''
-        self.socket.send(str(topic),flags=zmq.SNDMORE)
-        self.socket.send(serializer.dumps(payload))
 
     def notify(self,notification):
         '''Send a pupil notification.
@@ -120,10 +132,6 @@ class Msg_Dispatcher(object):
             self.send("delayed_notify.%s"%notification['subject'],notification)
         else:
             self.send("notify.%s"%notification['subject'],notification)
-
-    def __del__(self):
-        self.socket.close()
-
 
 
 
