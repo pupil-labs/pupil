@@ -15,8 +15,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 os_name = platform.system()
-mac_version = platform.mac_ver()
-mac_major,mac_minor,mac_patch = map(int,mac_version[0].split('.'))
+if os_name == "Darwin":
+    mac_version = platform.mac_ver()
+    mac_major,mac_minor,mac_patch = map(int,mac_version[0].split('.'))
 
 if os_name == "Darwin" and mac_minor >=11:
 
