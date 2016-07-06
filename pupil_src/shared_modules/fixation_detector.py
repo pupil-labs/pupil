@@ -239,7 +239,7 @@ class Fixation_Detector_Dispersion_Duration(Fixation_Detector):
         fixations_in_section.sort(key=lambda f:f['id'])
 
         with open(os.path.join(export_dir,'fixations.csv'),'wb') as csvfile:
-            csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            csv_writer = csv.writer(csvfile, delimiter=',')
             csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','dispersion','avg_pupil_size','confidence'))
             for f in fixations_in_section:
                 csv_writer.writerow( ( f['id'],f['timestamp'],f['duration'],f['start_frame_index'],f['end_frame_index'],f['norm_pos'][0],f['norm_pos'][1],f['dispersion'],f['pupil_diameter'],f['confidence'] ) )

@@ -154,7 +154,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     #add plugins
     g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
 
-    while frames_to_export.value - current_frame.value > 0:
+    while frames_to_export.value > current_frame.value:
 
         if should_terminate.value:
             logger.warning("User aborted export. Exported %s frames to %s."%(current_frame.value,out_file_path))

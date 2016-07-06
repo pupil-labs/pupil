@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os, sys, platform, errno, getpass
+import os, sys, platform, errno, getpass, csv
 from pyglui import ui
 import numpy as np
 from scipy.interpolate import UnivariateSpline
@@ -237,10 +237,13 @@ class Recorder(Plugin):
 
         self.meta_info_path = os.path.join(self.rec_path, "info.csv")
 
-        with open(self.meta_info_path, 'w') as f:
-            f.write("Recording Name\t"+self.session_name+ "\n")
-            f.write("Start Date\t"+ strftime("%d.%m.%Y", localtime(self.start_time))+ "\n")
-            f.write("Start Time\t"+ strftime("%H:%M:%S", localtime(self.start_time))+ "\n")
+        with open(self.meta_info_path, 'w') as csvfile:
+            csv_writer = csv.writer(csvfile, delimiter=',')
+            csv_writer.writerow(('name','value'))
+            csv_writer.write(('Recording Name',self.session_name))
+            csv_writer.write(('Start Date',strftime("%d.%m.%Y", localtime(self.start_time))))
+            csv_writer.write(('Start Time',self.session_name))
+            f.write(('Start Time',strftime("%H:%M:%S", localtime(self.start_time))))
 
 
         if self.audio_src != 'No Audio':
@@ -341,9 +344,11 @@ class Recorder(Plugin):
             logger.exception("Could not save metadata. Please report this bug!")
 
         try:
-            with open(os.path.join(self.rec_path, "user_info.csv"), 'w') as f:
+            with open(os.path.join(self.rec_path, "user_info.csv"), 'w') as csvfile:
+                csv_writer = csv.writer(csvfile, delimiter=',')
+                csv_writer.writerow(('name','value'))
                 for name,val in self.user_info.iteritems():
-                    f.write("%s\t%s\n"%(name,val))
+                    csv_writer.writerow((name,val))
         except Exception:
             logger.exception("Could not save userdata. Please report this bug!")
 

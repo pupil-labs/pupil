@@ -400,7 +400,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
 
         with open(os.path.join(metrics_dir,'surface_visibility.csv'),'wb') as csvfile:
-            csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            csv_writer = csv.writer(csvfile, delimiter=',')
 
             # surface visibility report
             frame_count = len(self.g_pool.timestamps[section])
