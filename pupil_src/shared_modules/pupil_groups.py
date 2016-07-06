@@ -27,6 +27,7 @@ class Pupil_Groups(Plugin):
         super(Pupil_Groups, self).__init__(g_pool)
         self._name = name
         self._active_group = active_group
+        self.group_members = {}
         self.thread_pipe = None
         self.start_group_communication()
 
@@ -37,7 +38,9 @@ class Pupil_Groups(Plugin):
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Text_Input('name',self,label='Name:'))
         self.menu.append(ui.Text_Input('active_group',self,label='Group:'))
-        self.menu.append(ui.Button('Ping Other Nodes',self.test))
+        self.group_menu = ui.Growing_Menu('Other Group Members')
+        self.update_member_list()
+        self.menu.append(self.group_menu)
         self.g_pool.sidebar.append(self.menu)
 
 
@@ -60,10 +63,14 @@ class Pupil_Groups(Plugin):
         Reacts to notifications:
             ``groups.name_should_change``: Changes node name
             ``groups.active_group_should_change``: Changes active group
+            ``groups.member_joined``: New member appeared.
+            ``groups.member_left``: A member left. Might occure multiple times.
             ``groups.ping``: Answers with ``groups.pong``
             ``groups.pong``: Log ping/pong roundtrip time
 
         Emits notifications:
+            ``groups.member_joined``: New member appeared.
+            ``groups.member_left``: A member left. Might occure multiple times.
             ``groups.ping``: Inits roundtrip time measurement
             ``groups.pong``: Answer to ``groups.ping``
         """
@@ -71,6 +78,17 @@ class Pupil_Groups(Plugin):
             self.name = notification['name']
         elif notification['subject'].startswith('groups.active_group_should_change'):
             self.active_group = notification['name']
+        elif notification['subject'].startswith('groups.member_joined'):
+            uuid = notification['uuid_bytes']
+            self.group_members[uuid] = notification['name']
+            self.update_member_list()
+        elif notification['subject'].startswith('groups.member_left'):
+            uuid = notification['uuid_bytes']
+            try:
+                del self.group_members[uuid]
+            except KeyError:
+                pass # Already removed from list
+            self.update_member_list()
         elif notification['subject'].startswith('groups.ping'):
             peer = notification['groups.peer']
             self.notify_all({
@@ -90,7 +108,6 @@ class Pupil_Groups(Plugin):
                     float(notification['t2']))
             )
 
-
     def close(self):
         self.alive = False
 
@@ -102,6 +119,13 @@ class Pupil_Groups(Plugin):
             self.g_pool.sidebar.remove(self.menu)
             self.menu = None
         self.stop_group_communication()
+
+    def update_member_list(self):
+        self.group_menu.elements[:] = []
+        if not self.group_members:
+            self.group_menu.append(ui.Info_Text('There are no other group members.'))
+        for uuid in self.group_members.keys():
+            self.group_menu.append(ui.Info_Text("%s"%self.group_members[uuid]))
 
     @property
     def default_headers(self):
@@ -124,9 +148,9 @@ class Pupil_Groups(Plugin):
 
     @name.setter
     def name(self,value):
-        self.thread_pipe.send('$NAME')
-        self.thread_pipe.send(value)
         self._name = value
+        self.group_members = {}
+        self.thread_pipe.send('$RESTART')
 
     @property
     def active_group(self):
@@ -134,10 +158,10 @@ class Pupil_Groups(Plugin):
 
     @active_group.setter
     def active_group(self,value):
-        self.thread_pipe.send('$GROUP')
-        self.thread_pipe.send(self._active_group)
-        self.thread_pipe.send(value)
         self._active_group = value
+        self.group_members = {}
+        self.thread_pipe.send('$RESTART')
+        self.update_member_list()
 
 
     # @groups.setter
@@ -200,21 +224,29 @@ class Pupil_Groups(Plugin):
                             local_out.notify(notification)
                         except Exception as e:
                             logger.info('Dropped garbage data by peer %s (%s)'%(event.peer_name, event.peer_uuid))
+                elif event.type == 'JOIN' and event.group == self.active_group:
+                    local_out.notify({
+                        'subject': 'groups.member_joined',
+                        'name': event.peer_name,
+                        'uuid_bytes': event.peer_uuid_bytes
+                    })
+                elif (event.type == 'LEAVE' and \
+                      event.group == self.active_group) or \
+                      event.type == 'EXIT':
+                    local_out.notify({
+                        'subject': 'groups.member_left',
+                        'name': event.peer_name,
+                        'uuid_bytes': event.peer_uuid_bytes
+                    })
 
             if pipe in readable:
                 command = pipe.recv()
-                if command == '$NAME':
+                if command == '$RESTART':
                     # Restart group_member node to change name
                     poller.unregister(group_member.socket())
                     self._shutdown_group_member(group_member)
                     group_member = self._setup_group_member()
                     poller.register(group_member.socket(),zmq.POLLIN)
-                elif command == '$GROUP':
-                    # Leave old group. Join new group.
-                    old_group = pipe.recv()
-                    new_group = pipe.recv()
-                    group_member.leave(old_group)
-                    group_member.join(new_group)
                 elif command == '$TERM':
                     break
 
