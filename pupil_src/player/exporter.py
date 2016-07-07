@@ -23,7 +23,7 @@ from glob import glob
 import cv2
 import numpy as np
 from video_capture import File_Capture,EndofVideoFileError
-from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent
+from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version
 from av_writer import AV_Writer
@@ -72,6 +72,8 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
         logger.Error("This recording is too old. Sorry.")
         return
 
+    meta_info = load_meta_info(rec_dir)
+    rec_version = read_rec_version(meta_info)
     timestamps = np.load(timestamps_path)
 
     cap = File_Capture(video_path,timestamps=timestamps)

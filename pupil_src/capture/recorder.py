@@ -338,7 +338,7 @@ class Recorder(Plugin):
                     'Duration Time': self.get_rec_time_str(),
                     'World Camera Frames': self.frame_count,
                     'World Camera Resolution': str(self.g_pool.capture.frame_size[0])+"x"+str(self.g_pool.capture.frame_size[1]),
-                    'Capture Software Version': self.g_pool.version.
+                    'Capture Software Version': self.g_pool.version,
                     'System Info': get_system_info()
                 }, append=True)
         except Exception:
