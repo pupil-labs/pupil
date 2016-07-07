@@ -212,7 +212,7 @@ class Surface_Tracker(Plugin):
         for s in self.surfaces:
             if s.detected:
                 s.gaze_on_srf = []
-                for p in events.get('gaze',[]):
+                for p in events.get('gaze_positions',[]):
                     gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_pos'])))
                     s.gaze_on_srf.append(gp_on_s)
 
