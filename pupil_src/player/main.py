@@ -89,7 +89,7 @@ from video_capture import File_Capture,EndofVideoFileError,FileSeekError
 # helpers/utils
 from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize, delta_t,get_system_info
-from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current,update_recording_0v5_to_current,update_recording_0v73_to_current
+from player_methods import correlate_data, is_pupil_rec_dir,update_recording_v04_to_v074,update_recording_v03_to_v074,update_recording_v05_to_v074,update_recording_v073_to_v074
 
 #monitoring
 import psutil
@@ -200,13 +200,13 @@ def session(rec_dir):
     if rec_version >= VersionFormat('0.7.4'):
         pass
     if rec_version >= VersionFormat('0.7.3'):
-        update_recording_0v73_to_current(rec_dir)
+        update_recording_v073_to_v074(rec_dir)
     elif rec_version >= VersionFormat('0.5'):
-        update_recording_0v5_to_current(rec_dir)
+        update_recording_v05_to_v074(rec_dir)
     elif rec_version >= VersionFormat('0.4'):
-        update_recording_0v4_to_current(rec_dir)
+        update_recording_v04_to_v074(rec_dir)
     elif rec_version >= VersionFormat('0.3'):
-        update_recording_0v3_to_current(rec_dir)
+        update_recording_v03_to_v074(rec_dir)
         timestamps_path = os.path.join(rec_dir, "timestamps.npy")
     else:
         logger.Error("This recording is to old. Sorry.")

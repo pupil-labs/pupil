@@ -59,9 +59,11 @@ def correlate_data(data,timestamps):
 
     return data_by_frame
 
+def update_recording_v074_to_v081(rec_dir):
+    pass
 
-def update_recording_0v73_to_current(rec_dir):
-    logger.info("Updating recording from v0.7x format to current version")
+def update_recording_v073_to_v074(rec_dir):
+    logger.info("Updating recording from v0.7x format to v0.7.4 format")
     pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
     modified = False
     for p in pupil_data['pupil_positions']:
@@ -83,8 +85,8 @@ def update_recording_0v73_to_current(rec_dir):
     except IOError:
         pass
 
-def update_recording_0v5_to_current(rec_dir):
-    logger.info("Updating recording from v0.5x/v0.6x/v0.7x format to current version")
+def update_recording_v05_to_v074(rec_dir):
+    logger.info("Updating recording from v0.5x/v0.6x/v0.7x format to v0.7.4 format")
     pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data_old"))
     for p in pupil_data['pupil_positions']:
@@ -94,8 +96,8 @@ def update_recording_0v5_to_current(rec_dir):
     except IOError:
         pass
 
-def update_recording_0v4_to_current(rec_dir):
-    logger.info("Updating recording from v0.4x format to current version")
+def update_recording_v04_to_v074(rec_dir):
+    logger.info("Updating recording from v0.4x format to v0.7.4 format")
     gaze_array = np.load(os.path.join(rec_dir,'gaze_positions.npy'))
     pupil_array = np.load(os.path.join(rec_dir,'pupil_positions.npy'))
     gaze_list = []
@@ -117,8 +119,8 @@ def update_recording_0v4_to_current(rec_dir):
     except IOError:
         pass
 
-def update_recording_0v3_to_current(rec_dir):
-    logger.info("Updating recording from v0.3x format to current version")
+def update_recording_v03_to_v074(rec_dir):
+    logger.info("Updating recording from v0.3x format to v0.7.4 format")
     pupilgaze_array = np.load(os.path.join(rec_dir,'gaze_positions.npy'))
     gaze_list = []
     pupil_list = []

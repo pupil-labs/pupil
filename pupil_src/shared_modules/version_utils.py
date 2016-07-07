@@ -34,7 +34,7 @@ def dpkg_deb_version():
     if version is None:
         raise ValueError('Version Error')
     version = version.replace("\n",'')#strip newlines
-    version = version.replace("v",'')#strip version 'v' 
+    version = version.replace("v",'')#strip version 'v'
     if '-' in version:
         parts = version.split('-')
         parts[-2] = '-'+parts[-2]
@@ -51,7 +51,7 @@ def pupil_version():
     if version is None:
         raise ValueError('Version Error')
     version = version.replace("\n",'')#strip newlines
-    version = version.replace("v",'')#strip version 'v' 
+    version = version.replace("v",'')#strip version 'v'
     if '-' in version:
         parts = version.split('-')
         version = '.'.join(parts[:-1])
