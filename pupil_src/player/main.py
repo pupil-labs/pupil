@@ -188,7 +188,7 @@ def session(rec_dir):
     #parse info.csv file
     meta_info_path = os.path.join(rec_dir,"info.csv")
     with open(meta_info_path) as info:
-        meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
+        meta_info = csv_utils.read_key_value_file(csvfile)
 
     rec_version = read_rec_version(meta_info)
     app_version = get_version(version_file)

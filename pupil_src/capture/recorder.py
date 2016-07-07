@@ -8,7 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os, sys, platform, errno, getpass, csv
+import os, sys, platform, errno, getpass
+import csv_utils
 from pyglui import ui
 import numpy as np
 from scipy.interpolate import UnivariateSpline
@@ -238,13 +239,11 @@ class Recorder(Plugin):
         self.meta_info_path = os.path.join(self.rec_path, "info.csv")
 
         with open(self.meta_info_path, 'w') as csvfile:
-            csv_writer = csv.writer(csvfile, delimiter=',')
-            csv_writer.writerow(('name','value'))
-            csv_writer.write(('Recording Name',self.session_name))
-            csv_writer.write(('Start Date',strftime("%d.%m.%Y", localtime(self.start_time))))
-            csv_writer.write(('Start Time',self.session_name))
-            f.write(('Start Time',strftime("%H:%M:%S", localtime(self.start_time))))
-
+            csv_utils.write_key_value_file(csvfile,{
+                'Recording Name': self.session_name,
+                'Start Date': strftime("%d.%m.%Y", localtime(self.start_time)),
+                'Start Time': strftime("%H:%M:%S", localtime(self.start_time))
+            })
 
         if self.audio_src != 'No Audio':
             audio_path = os.path.join(self.rec_path, "world.wav")
@@ -334,21 +333,20 @@ class Recorder(Plugin):
             logger.info("No camera calibration found.")
 
         try:
-            with open(self.meta_info_path, 'a') as f:
-                f.write("Duration Time\t"+ self.get_rec_time_str()+ "\n")
-                f.write("World Camera Frames\t"+ str(self.frame_count)+ "\n")
-                f.write("World Camera Resolution\t"+ str(self.g_pool.capture.frame_size[0])+"x"+str(self.g_pool.capture.frame_size[1])+"\n")
-                f.write("Capture Software Version\t%s\n"%self.g_pool.version)
-                f.write("System Info\t%s"%get_system_info())
+            with open(self.meta_info_path, 'a') as csvfile:
+                csv_utils.write_key_value_file(csvfile, {
+                    'Duration Time': self.get_rec_time_str(),
+                    'World Camera Frames': self.frame_count,
+                    'World Camera Resolution': str(self.g_pool.capture.frame_size[0])+"x"+str(self.g_pool.capture.frame_size[1]),
+                    'Capture Software Version': self.g_pool.version.
+                    'System Info': get_system_info()
+                }, append=True)
         except Exception:
             logger.exception("Could not save metadata. Please report this bug!")
 
         try:
             with open(os.path.join(self.rec_path, "user_info.csv"), 'w') as csvfile:
-                csv_writer = csv.writer(csvfile, delimiter=',')
-                csv_writer.writerow(('name','value'))
-                for name,val in self.user_info.iteritems():
-                    csv_writer.writerow((name,val))
+                csv_utils.write_key_value_file(csvfile, self.user_info)
         except Exception:
             logger.exception("Could not save userdata. Please report this bug!")
 

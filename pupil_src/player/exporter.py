@@ -17,6 +17,7 @@ if __name__ == '__main__':
     del syspath, ospath
 
 import os
+import csv_utils
 from time import time
 from glob import glob
 import cv2
@@ -63,8 +64,8 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
    #parse info.csv file
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as info:
-        meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
+    with open(meta_info_path) as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
 
     video_path = [f for f in glob(os.path.join(rec_dir,"world.*")) if f[-3:] in ('mp4','mkv','avi')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")

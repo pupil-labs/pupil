@@ -44,7 +44,7 @@ def write_key_value_file(csvfile,dictionary,append=False):
         writer.writerow([key,val])
 
 if __name__ == '__main__':
-    test = {'foo':'bar','oh':'rl","y','it was':'not me'}
+    test = {'foo':'bar','oh':'rl","y','it was':'not me', 0:{u'ü',5.0}}
     test_append = {'jo':'ho'}
     test_updated = test.copy()
     test_updated.update(test_append)
