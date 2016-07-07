@@ -87,9 +87,10 @@ from OpenGL.GL import glClearColor
 from video_capture import File_Capture,EndofVideoFileError,FileSeekError
 
 # helpers/utils
+import csv_utils
 from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize, delta_t,get_system_info
-from player_methods import correlate_data, is_pupil_rec_dir,update_recording_v04_to_v074,update_recording_v03_to_v074,update_recording_v05_to_v074,update_recording_v073_to_v074
+from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 
 #monitoring
 import psutil
@@ -185,33 +186,19 @@ def session(rec_dir):
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
-    #parse info.csv file
-    meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as info:
-        meta_info = csv_utils.read_key_value_file(csvfile)
+    # updates timestamps_path if necessary
+    timestamps_path = update_recording_to_recent(rec_dir,timestamps_path)
+    if not timestamps_path:
+        logger.Error("This recording is too old. Sorry.")
+        return
 
+    meta_info = load_meta_info(rec_dir)
     rec_version = read_rec_version(meta_info)
     app_version = get_version(version_file)
 
     # log info about Pupil Platform and Platform in player.log
     logger.info('Application Version: %s'%app_version)
     logger.info('System Info: %s'%get_system_info())
-
-    if rec_version >= VersionFormat('0.7.4'):
-        pass
-    if rec_version >= VersionFormat('0.7.3'):
-        update_recording_v073_to_v074(rec_dir)
-    elif rec_version >= VersionFormat('0.5'):
-        update_recording_v05_to_v074(rec_dir)
-    elif rec_version >= VersionFormat('0.4'):
-        update_recording_v04_to_v074(rec_dir)
-    elif rec_version >= VersionFormat('0.3'):
-        update_recording_v03_to_v074(rec_dir)
-        timestamps_path = os.path.join(rec_dir, "timestamps.npy")
-    else:
-        logger.Error("This recording is to old. Sorry.")
-        return
-
 
     timestamps = np.load(timestamps_path)
     # Initialize capture

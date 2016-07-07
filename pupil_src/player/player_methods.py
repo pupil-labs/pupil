@@ -8,14 +8,13 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os
-import cv2
+import os, cv2, csv_utils, shutil
 import numpy as np
 #logging
 import logging
 logger = logging.getLogger(__name__)
 from file_methods import save_object,load_object
-
+from version_utils import VersionFormat, read_rec_version
 
 def correlate_data(data,timestamps):
     '''
@@ -58,6 +57,69 @@ def correlate_data(data,timestamps):
             frame_idx+=1
 
     return data_by_frame
+
+def update_recording_to_recent(rec_dir,timestamps_path):
+    meta_info = load_meta_info(rec_dir,update=True) # also updates info file
+
+    # Reference format: v0.7.4
+    rec_version = read_rec_version(meta_info)
+    if rec_version >= VersionFormat('0.7.4'):
+        pass
+    elif rec_version >= VersionFormat('0.7.3'):
+        update_recording_v073_to_v074(rec_dir)
+    elif rec_version >= VersionFormat('0.5'):
+        update_recording_v05_to_v074(rec_dir)
+    elif rec_version >= VersionFormat('0.4'):
+        update_recording_v04_to_v074(rec_dir)
+    elif rec_version >= VersionFormat('0.3'):
+        update_recording_v03_to_v074(rec_dir)
+        timestamps_path = os.path.join(rec_dir, "timestamps.npy")
+    else:
+        return None
+
+    # Incremental format updates
+    if rec_version < VersionFormat('0.8.1'):
+        update_recording_v074_to_v081(rec_dir)
+    # How to extend:
+    # if rec_version < VersionFormat('FUTURE FORMAT'):
+    #    update_recording_v081_to_FUTURE(rec_dir)
+    return timestamps_path
+
+def load_meta_info(rec_dir,update=False):
+    #parse info.csv file
+    try:
+        meta_info = read_meta_info_v081(rec_dir)
+    except IndexError:
+        meta_info = read_meta_info_legacy(rec_dir)
+        if update:
+            update_meta_info(rec_dir,meta_info)
+    return meta_info
+
+def read_meta_info_v081(rec_dir):
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+    with open(meta_info_path) as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+    return meta_info
+
+def read_meta_info_legacy(rec_dir):
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+    with open(meta_info_path) as info:
+        meta_info = dict( ((line.strip().split('\t')) for line in info.readlines()) )
+    return meta_info
+
+def update_meta_info(rec_dir, meta_info):
+    """Backup old meta info file. Write current format.
+
+    Args:
+        rec_dir (path): Recording folder
+        meta_info (dict): Meta info
+    """
+    logger.info('Updating meta info')
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+    meta_info_old_path = os.path.join(rec_dir,"info_old.csv")
+    shutil.copy2(meta_info_path,meta_info_old_path)
+    with open(meta_info_path,'w') as csvfile:
+        csv_utils.write_key_value_file(csvfile,meta_info)
 
 def update_recording_v074_to_v081(rec_dir):
     pass
@@ -141,11 +203,9 @@ def is_pupil_rec_dir(rec_dir):
     if not os.path.isdir(rec_dir):
         logger.error("No valid dir supplied")
         return False
-    meta_info_path = os.path.join(rec_dir,"info.csv")
     try:
-        with open(meta_info_path) as info:
-            meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
-            info = meta_info["Capture Software Version"]
+        meta_info = load_meta_info(rec_dir)
+        info = meta_info["Capture Software Version"]
     except:
         logger.error("Could not read info.csv file: Not a valid Pupil recording.")
         return False

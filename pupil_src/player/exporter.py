@@ -23,7 +23,7 @@ from glob import glob
 import cv2
 import numpy as np
 from video_capture import File_Capture,EndofVideoFileError
-from player_methods import correlate_data, is_pupil_rec_dir,update_recording_v04_to_v074,update_recording_v03_to_v074,update_recording_v05_to_v074,update_recording_v073_to_v074
+from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version
 from av_writer import AV_Writer
@@ -62,37 +62,15 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
-   #parse info.csv file
-    meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as csvfile:
-        meta_info = csv_utils.read_key_value_file(csvfile)
-
     video_path = [f for f in glob(os.path.join(rec_dir,"world.*")) if f[-3:] in ('mp4','mkv','avi')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
-
-    rec_version = read_rec_version(meta_info)
-    if rec_version >= VersionFormat('0.7.4'):
-        pass
-    elif rec_version >= VersionFormat('0.7.3'):
-        update_recording_v073_to_v074(rec_dir)
-    elif rec_version >= VersionFormat('0.5'):
-        update_recording_v05_to_v074(rec_dir)
-    elif rec_version >= VersionFormat('0.4'):
-        update_recording_v04_to_v074(rec_dir)
-    elif rec_version >= VersionFormat('0.3'):
-        update_recording_v03_to_v074(rec_dir)
-        timestamps_path = os.path.join(rec_dir, "timestamps.npy")
-    else:
+    # updates timestamps_path if necessary
+    timestamps_path = update_recording_to_recent(rec_dir,timestamps_path)
+    if not timestamps:
         logger.Error("This recording is too old. Sorry.")
         return
-
-    if rec_version < VersionFormat('0.8.1'):
-        update_recording_v074_to_v081(rec_dir)
-    # How to extend:
-    # if rec_version < VersionFormat('FUTURE FORMAT'):
-    #    update_recording_v081_to_FUTURE(rec_dir)
 
     timestamps = np.load(timestamps_path)
 
