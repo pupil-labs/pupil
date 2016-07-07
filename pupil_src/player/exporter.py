@@ -68,7 +68,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     # updates timestamps_path if necessary
     timestamps_path = update_recording_to_recent(rec_dir,timestamps_path)
-    if not timestamps:
+    if not timestamps_path:
         logger.Error("This recording is too old. Sorry.")
         return
 
