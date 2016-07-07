@@ -214,8 +214,8 @@ class Surface_Tracker(Plugin):
                 s.gaze_on_srf = []
                 for p in events.get('gaze',[]):
                     gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_pos'])))
-                    p['realtime gaze on ' + s.name] = gp_on_s
                     s.gaze_on_srf.append(gp_on_s)
+
 
         events['surface'] = []
         for s in self.surfaces:
