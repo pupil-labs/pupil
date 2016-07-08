@@ -160,8 +160,8 @@ class Pupil_Groups(Plugin):
     def active_group(self,value):
         self._active_group = value
         self.group_members = {}
-        self.thread_pipe.send('$RESTART')
         self.update_member_list()
+        self.thread_pipe.send('$RESTART')
 
 
     # @groups.setter
@@ -172,10 +172,27 @@ class Pupil_Groups(Plugin):
     # Background functions
 
     def _thread_loop(self,context,pipe):
+        # Pyre helper functions
+        def setup_group_member():
+            group_member = Pyre(self.name)
+            # set headers
+            for header in self.default_headers:
+                group_member.set_header(*header)
+            # join active group
+            group_member.join(self.active_group)
+
+            # start group_member
+            group_member.start()
+            return group_member
+
+        def shutdown_group_member(node):
+            node.leave(self.active_group)
+            node.stop()
+
         # setup sockets
         local_in  = Msg_Receiver(context, self.g_pool.ipc_sub_url, topics=('remote_notify.',))
         local_out = Msg_Dispatcher(context, self.g_pool.ipc_push_url)
-        group_member = self._setup_group_member()
+        group_member = setup_group_member()
 
         # register sockets for polling
         poller = zmq.Poller()
@@ -244,31 +261,13 @@ class Pupil_Groups(Plugin):
                 if command == '$RESTART':
                     # Restart group_member node to change name
                     poller.unregister(group_member.socket())
-                    self._shutdown_group_member(group_member)
-                    group_member = self._setup_group_member()
+                    shutdown_group_member(group_member)
+                    group_member = setup_group_member()
                     poller.register(group_member.socket(),zmq.POLLIN)
                 elif command == '$TERM':
                     break
 
         del local_in
         del local_out
-        self._shutdown_group_member(group_member)
+        shutdown_group_member(group_member)
         self.thread_pipe = None
-
-
-    def _setup_group_member(self,start_group_member=True):
-        group_member = Pyre(self.name)
-        # set headers
-        for header in self.default_headers:
-            group_member.set_header(*header)
-        # join active group
-        group_member.join(self.active_group)
-
-        # start group_member
-        if start_group_member:
-            group_member.start()
-        return group_member
-
-    def _shutdown_group_member(self,node):
-        node.leave(self.active_group)
-        node.stop()
