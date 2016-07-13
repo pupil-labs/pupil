@@ -118,9 +118,7 @@ def correct_gradient(gray_img,r):
         return True
 
 
-def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False,invert_image=False):
-    if invert_image:
-        gray_img = 255-gray_img
+def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False):
     edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, aperture, 9)
 
     contours, hierarchy = cv2.findContours(edges,
@@ -250,6 +248,9 @@ tick = 0
 def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False,true_detect_every_frame = 1,invert_image=False):
     global prev_img
 
+    if invert_image:
+        gray_img = 255-gray_img
+
     global tick
     if not tick:
         tick = true_detect_every_frame
@@ -275,11 +276,11 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
                     m['centroid'] += pt-m['centroid'] #uniformly translate centrod by optlical flow offset
                     m["frames_since_true_detection"] +=1
                 else:
-                    m["frames_since_true_detection"] =100
+                    m["frames_since_true_detection"] = 100
 
 
         #cocatenating like this will favour older markers in the doublication deletion process
-        markers = new_markers+[m for m in not_found if m["frames_since_true_detection"] < 10 ]
+        markers = [m for m in not_found if m["frames_since_true_detection"] < 10 ]+new_markers
         if markers: #del double detected markers
             # min_distace = max([m['perimeter'] for m in markers])/4.
             min_distace = 50

@@ -182,22 +182,15 @@ class Surface_Tracker(Plugin):
         if self.running:
             gray = frame.gray
 
-            if self.robust_detection:
-                self.markers = detect_markers_robust(gray,
-                                                    grid_size = 5,
-                                                    prev_markers=self.markers,
-                                                    min_marker_perimeter=self.min_marker_perimeter,
-                                                    aperture=self.aperture,
-                                                    visualize=0,
-                                                    true_detect_every_frame=3,
-                                                    invert_image=self.invert_image)
-            else:
-                self.markers = detect_markers(gray,
+            self.markers = detect_markers_robust(gray,
                                                 grid_size = 5,
+                                                prev_markers=self.markers,
                                                 min_marker_perimeter=self.min_marker_perimeter,
                                                 aperture=self.aperture,
                                                 visualize=0,
+                                                true_detect_every_frame=3 if self.robust_detection else 1,
                                                 invert_image=self.invert_image)
+
 
 
             if self.mode == "Show marker IDs":
