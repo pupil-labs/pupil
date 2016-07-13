@@ -32,9 +32,12 @@ class Pupil_Groups(Plugin):
         self.start_group_communication()
 
     def init_gui(self):
+        def close():
+            self.alive = False
+
         help_str = "Uses the ZeroMQ Realtime Exchange Protocol to discover other local group members."
         self.menu = ui.Growing_Menu('Pupil Groups')
-        self.menu.append(ui.Button('Close',self.close))
+        self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text(help_str))
         self.menu.append(ui.Text_Input('name',self,label='Name:'))
         self.menu.append(ui.Text_Input('active_group',self,label='Group:'))
@@ -63,8 +66,8 @@ class Pupil_Groups(Plugin):
         Reacts to notifications:
             ``groups.name_should_change``: Changes node name
             ``groups.active_group_should_change``: Changes active group
-            ``groups.member_joined``: New member appeared.
-            ``groups.member_left``: A member left. Might occure multiple times.
+            ``groups.member_joined``: Adds peer to member list.
+            ``groups.member_left``: Removes peer from member list.
             ``groups.ping``: Answers with ``groups.pong``
             ``groups.pong``: Log ping/pong roundtrip time
 
@@ -88,7 +91,9 @@ class Pupil_Groups(Plugin):
                 del self.group_members[uuid]
             except KeyError:
                 pass # Already removed from list
-            self.update_member_list()
+            else:
+                # Update only on change
+                self.update_member_list()
         elif notification['subject'].startswith('groups.ping'):
             peer = notification['groups.peer']
             self.notify_all({
@@ -108,9 +113,6 @@ class Pupil_Groups(Plugin):
                     float(notification['t2']))
             )
 
-    def close(self):
-        self.alive = False
-
     def get_init_dict(self):
         return {'name':self.name, 'active_group': self.active_group}
 
@@ -124,8 +126,8 @@ class Pupil_Groups(Plugin):
         self.group_menu.elements[:] = []
         if not self.group_members:
             self.group_menu.append(ui.Info_Text('There are no other group members.'))
-        for uuid in self.group_members.keys():
-            self.group_menu.append(ui.Info_Text("%s"%self.group_members[uuid]))
+        for name in self.group_members.values():
+            self.group_menu.append(ui.Info_Text("%s"%name))
 
     @property
     def default_headers(self):
