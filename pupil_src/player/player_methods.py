@@ -78,8 +78,8 @@ def update_recording_to_recent(rec_dir,timestamps_path):
         return None
 
     # Incremental format updates
-    if rec_version < VersionFormat('0.8.1'):
-        update_recording_v074_to_v081(rec_dir)
+    if rec_version < VersionFormat('0.8.2'):
+        update_recording_v074_to_v082(rec_dir)
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
     #    update_recording_v081_to_FUTURE(rec_dir)
@@ -121,7 +121,7 @@ def update_meta_info(rec_dir, meta_info):
     with open(meta_info_path,'w') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
-def update_recording_v074_to_v081(rec_dir):
+def update_recording_v074_to_v082(rec_dir):
     pass
 
 def update_recording_v073_to_v074(rec_dir):
