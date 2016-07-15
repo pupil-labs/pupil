@@ -25,6 +25,7 @@ class Pupil_Groups(Plugin):
     """
     def __init__(self, g_pool, name="Unnamed Group Member", active_group="pupil-groups"):
         super(Pupil_Groups, self).__init__(g_pool)
+        self.menu = None
         self._name = name
         self._active_group = active_group
         self.group_members = {}
