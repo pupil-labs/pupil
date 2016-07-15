@@ -164,9 +164,9 @@ class Recorder(Plugin):
 
     def toggle(self, _=None):
         if self.running:
-            self.notify_all( {'subject':'recording.should_stop','network_propagate':True} )
+            self.notify_all( {'subject':'recording.should_stop'} )
         else:
-            self.notify_all( {'subject':'recording.should_start','session_name':self.session_name,'network_propagate':True} )
+            self.notify_all( {'subject':'recording.should_start','session_name':self.session_name} )
 
 
     def on_notify(self,notification):
