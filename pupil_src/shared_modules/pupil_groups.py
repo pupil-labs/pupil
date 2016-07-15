@@ -123,11 +123,12 @@ class Pupil_Groups(Plugin):
         self.stop_group_communication()
 
     def update_member_list(self):
-        self.group_menu.elements[:] = []
-        if not self.group_members:
-            self.group_menu.append(ui.Info_Text('There are no other group members.'))
-        for name in self.group_members.values():
-            self.group_menu.append(ui.Info_Text("%s"%name))
+        if self.menu:
+            self.group_menu.elements[:] = []
+            if not self.group_members:
+                self.group_menu.append(ui.Info_Text('There are no other group members.'))
+            for name in self.group_members.values():
+                self.group_menu.append(ui.Info_Text("%s"%name))
 
     @property
     def default_headers(self):
