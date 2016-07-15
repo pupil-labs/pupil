@@ -42,7 +42,7 @@ class Pupil_Groups(Plugin):
         self.menu.append(ui.Text_Input('name',self,label='Name:'))
         self.menu.append(ui.Text_Input('active_group',self,label='Group:'))
         self.group_menu = ui.Growing_Menu('Other Group Members')
-        self.update_member_list()
+        self.update_member_menu()
         self.menu.append(self.group_menu)
         self.g_pool.sidebar.append(self.menu)
 
@@ -84,7 +84,7 @@ class Pupil_Groups(Plugin):
         elif notification['subject'].startswith('groups.member_joined'):
             uuid = notification['uuid_bytes']
             self.group_members[uuid] = notification['name']
-            self.update_member_list()
+            self.update_member_menu()
         elif notification['subject'].startswith('groups.member_left'):
             uuid = notification['uuid_bytes']
             try:
@@ -93,7 +93,7 @@ class Pupil_Groups(Plugin):
                 pass # Already removed from list
             else:
                 # Update only on change
-                self.update_member_list()
+                self.update_member_menu()
         elif notification['subject'].startswith('groups.ping'):
             peer = notification['groups.peer']
             self.notify_all({
@@ -122,7 +122,7 @@ class Pupil_Groups(Plugin):
             self.menu = None
         self.stop_group_communication()
 
-    def update_member_list(self):
+    def update_member_menu(self):
         if self.menu:
             self.group_menu.elements[:] = []
             if not self.group_members:
@@ -163,7 +163,7 @@ class Pupil_Groups(Plugin):
     def active_group(self,value):
         self._active_group = value
         self.group_members = {}
-        self.update_member_list()
+        self.update_member_menu()
         self.thread_pipe.send('$RESTART')
 
 
