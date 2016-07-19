@@ -129,11 +129,11 @@ class Time_Sync(Plugin):
         Reacts to notifications:
             ``time_sync.master_announcement``: React accordingly to annouce notification from remote peer.
             ``time_sync.master_announce_interval``: Re-annouce clock masterhood.
-            ``time_sync.master_announce_timeout``: React accordingly when no master annoucment has appeard in to long.
+            ``time_sync.master_announce_timeout``: React accordingly when no master announcement has appeard whithin timeout.
 
 
         Emits notifications:
-            ``time_sync.master_announcement``: Annouce masterhood to remote peers (remote notification).
+            ``time_sync.master_announcement``: Announce masterhood to remote peers (remote notification).
             ``time_sync.master_announce_interval``: Re-announce masterhood reminder (delayed notification).
             ``time_sync.master_announce_timeout``:  Timeout for foreind master announcement (delayed notification).
 
