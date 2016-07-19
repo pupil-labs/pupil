@@ -22,7 +22,7 @@ A Master/Follower scheme for sychronizing clock in a network.
 Accuracy is bounded by network latency and clock jitter.
 
 Time synchonization scheme:
-    follower sends time req to maste at t0
+    follower sends time req to master at t0
     master returns with massage of own time stamp (t1)
     Upon receipt by master, node take time t2 then: latency: t2-t0 target time = t1+latency/2
     Do this many times. And be smart about what measurments to take and combine.
@@ -37,14 +37,14 @@ class Time_Echo(asyncore.dispatcher_with_send):
     reply to request with timestamp
     '''
 
-    def __init__(self,port,time_fn):
+    def __init__(self,sock,time_fn):
         self.time_fn = time_fn
-        asyncore.dispatcher_with_send.__init__(self,port)
+        asyncore.dispatcher_with_send.__init__(self,sock)
 
     def handle_read(self):
         data = self.recv(1024)
         if data:
-            self.send('%s'%self.time_fn())
+            self.send(repr(self.time_fn()))
 
     def __del__(self):
         pass
@@ -56,13 +56,15 @@ class Time_Echo_Server(asyncore.dispatcher):
     bind at next open port and listen for time sync requests.
     '''
 
-    def __init__(self,time_fn,socket_map):
+    def __init__(self,time_fn,socket_map,host = ""):
         asyncore.dispatcher.__init__(self,socket_map)
         self.time_fn = time_fn
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
-        self.bind(("", 0))
+        self.bind((host, 0))
         self.port = self.getsockname()[1]
+        self.host = host or socket.gethostbyname(socket.getfqdn())
+        self.protocol = 'tcp://'
         self.listen(5)
         logger.debug('Timer Server ready on port:%s'%self.port)
 
@@ -85,7 +87,6 @@ class Clock_Sync_Master(threading.Thread):
         threading.Thread.__init__(self)
         self.socket_map = {}
         self.server = Time_Echo_Server(time_fn,self.socket_map)
-
         self.start()
 
 
@@ -109,6 +110,10 @@ class Clock_Sync_Master(threading.Thread):
     def port(self):
         return self.server.port
 
+    @property
+    def host(self):
+        return self.server.host
+
     def __str__(self):
         return "Acting as clock master."
 
@@ -128,6 +133,7 @@ class Clock_Sync_Follower(threading.Thread):
 
     def __init__(self,host,port,interval,time_fn,jump_fn,slew_fn):
         threading.Thread.__init__(self)
+        self.setDaemon(1)
         self.host = host
         self.port = port
         self.interval = interval
@@ -140,7 +146,7 @@ class Clock_Sync_Follower(threading.Thread):
         # this error can come from application_runtime jitter, network_jitter,master_clock_jitter and slave_clock_jitter
         self.sync_jitter = 1000000.
 
-        #amount slave was not able to set the clock at current
+        #slave was not able to set the clock at current
         self.offset_remains = True
 
         #is this node synced?
@@ -259,6 +265,7 @@ if __name__ == '__main__':
     # it is thus recommended for Linux to use uvc.get_time_monotonic.
     master = Clock_Sync_Master(get_time_monotonic)
     port = master.port
+    host = master.host
     epoch = 0.0
     # sleep(3)
     # master.stop()
@@ -268,17 +275,25 @@ if __name__ == '__main__':
 
     def jump_time(offset):
         global epoch
-        epoch += offset
+        epoch -= offset
         return True
 
     def slew_time(offset):
         global epoch
-        epoch += offset
+        epoch -= offset
 
+    def jump_time_dummy(offset):
+        return True
 
-    slave = Clock_Sync_Follower('',port=port,interval=10,time_fn=get_time,jump_fn=jump_time,slew_fn=slew_time)
-    for x in range(4):
-        sleep(2)
+    def slew_time_dummy(offset):
+        pass
+
+    slave = Clock_Sync_Follower(host,port=port,interval=10,time_fn=get_time,jump_fn=jump_time,slew_fn=slew_time)
+    # slave1 = Clock_Sync_Follower(host,port=port,interval=10,time_fn=get_time,jump_fn=jump_time_dummy,slew_fn=slew_time_dummy)
+    # slave2 = Clock_Sync_Follower(host,port=port,interval=10,time_fn=get_time,jump_fn=jump_time_dummy,slew_fn=slew_time_dummy)
+    # slave3 = Clock_Sync_Follower(host,port=port,interval=10,time_fn=get_time,jump_fn=jump_time_dummy,slew_fn=slew_time_dummy)
+    for x in range(10):
+        sleep(4)
         print slave
         # print "offset:%f, jitter: %f"%(epoch,slave.sync_jitter)
     print 'shutting down'

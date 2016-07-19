@@ -99,7 +99,7 @@ class Annotation_Capture(Plugin):
     def fire_annotation(self,annotation_label):
         t = self.g_pool.capture.get_timestamp()
         logger.info('"%s"@%s'%(annotation_label,t))
-        notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','network_propagate':True,'record':True} #you may add more field to this dictionary if you want.
+        notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','record':True} #you may add more field to this dictionary if you want.
         self.notify_all(notification)
 
 
