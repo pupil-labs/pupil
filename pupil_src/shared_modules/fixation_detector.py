@@ -180,10 +180,10 @@ class Fixation_Detector_Dispersion_Duration(Fixation_Detector):
                         confidence = sum(g['confidence'] for g in fixation_support)/len(fixation_support)
 
                         # avg pupil size  = mean of (mean of pupil size per gaze ) for all gaze points of support
-                        avg_pupil_size =  sum([sum([p['diameter'] for p in g['base']])/len(g['base']) for g in fixation_support])/len(fixation_support)
+                        avg_pupil_size =  sum([sum([p['diameter'] for p in g['base_data']])/len(g['base_data']) for g in fixation_support])/len(fixation_support)
                         new_fixation = {'id': len(fixations),
                                         'norm_pos':fixation_centroid,
-                                        'gaze':fixation_support,
+                                        'base_data':fixation_support,
                                         'duration':duration,
                                         'dispersion':dispersion,
                                         'start_frame_index':fixation_support[0]['index'],

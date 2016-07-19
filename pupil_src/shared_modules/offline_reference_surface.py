@@ -142,7 +142,7 @@ class Offline_Reference_Surface(Reference_Surface):
             mapped_pos = cv2.perspectiveTransform(pos , m_from_screen )
             mapped_pos.shape = (2)
             on_srf = bool((0 <= mapped_pos[0] <= 1) and (0 <= mapped_pos[1] <= 1))
-            data_on_srf.append( {'norm_pos':(mapped_pos[0],mapped_pos[1]),'on_srf':on_srf,'base':d } )
+            data_on_srf.append( {'norm_pos':(mapped_pos[0],mapped_pos[1]),'on_srf':on_srf,'base_data':d } )
         return data_on_srf
 
 

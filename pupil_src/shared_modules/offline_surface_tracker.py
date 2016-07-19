@@ -430,7 +430,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
             for s in self.surfaces:
                 gaze_on_srf  = s.gaze_on_srf_in_section(section)
-                gaze_on_srf = set([gp['base']['timestamp'] for gp in gaze_on_srf])
+                gaze_on_srf = set([gp['base_data']['timestamp'] for gp in gaze_on_srf])
                 not_on_any_srf -= gaze_on_srf
                 csv_writer.writerow( (s.name, len(gaze_on_srf)) )
 
@@ -483,7 +483,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
                     if in_mark <= idx <= out_mark:
                         if ref_srf_data is not None and ref_srf_data is not False:
                             for gp in s.gaze_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
-                                csv_writer.writerow( (ts,idx,gp['base']['timestamp'],gp['norm_pos'][0],gp['norm_pos'][1],gp['norm_pos'][0]*s.real_world_size['x'],gp['norm_pos'][1]*s.real_world_size['y'],gp['on_srf']) )
+                                csv_writer.writerow( (ts,idx,gp['base_data']['timestamp'],gp['norm_pos'][0],gp['norm_pos'][1],gp['norm_pos'][0]*s.real_world_size['x'],gp['norm_pos'][1]*s.real_world_size['y'],gp['on_srf']) )
 
 
             # save fixation on srf as csv.
@@ -497,9 +497,9 @@ class Offline_Surface_Tracker(Surface_Tracker):
                             for f in s.fixations_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
                                 fixations_on_surface.append(f)
 
-                removed_dublicates = dict([(f['base']['id'],f) for f in fixations_on_surface]).values()
+                removed_dublicates = dict([(f['base_data']['id'],f) for f in fixations_on_surface]).values()
                 for f_on_s in removed_dublicates:
-                    f = f_on_s['base']
+                    f = f_on_s['base_data']
                     f_x,f_y = f_on_s['norm_pos']
                     f_on_srf = f_on_s['on_srf']
                     csv_writer.writerow( (f['id'],f['timestamp'],f['duration'],f['start_frame_index'],f['end_frame_index'],f_x,f_y,f_x*s.real_world_size['x'],f_y*s.real_world_size['y'],f_on_srf) )
