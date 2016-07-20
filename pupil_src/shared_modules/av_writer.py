@@ -353,11 +353,6 @@ def mac_pyav_hack():
 
 
 if __name__ == '__main__':
-    # try:
-    #     from billiard import forking_enable
-    #     forking_enable(0)
-    # except ImportError:
-    #     pass
     logging.basicConfig(level=logging.DEBUG)
 
     cap = Audio_Capture('test.wav','default')
