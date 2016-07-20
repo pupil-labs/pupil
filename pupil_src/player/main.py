@@ -12,10 +12,7 @@ import sys, os,platform,errno
 from glob import glob
 from copy import deepcopy
 from time import time
-try:
-    from billiard import freeze_support
-except:
-    from multiprocessing import freeze_support
+from multiprocessing import freeze_support
 
 if getattr(sys, 'frozen', False):
     user_dir = os.path.expanduser(os.path.join('~','pupil_player_settings'))

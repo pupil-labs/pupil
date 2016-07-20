@@ -17,14 +17,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 from ctypes import c_bool, c_int,create_string_buffer
-
-if platform.system() == 'Darwin':
-    from billiard import Process,forking_enable,cpu_count
-    from billiard.sharedctypes import Value
-else:
-    from multiprocessing import Process,cpu_count
-    forking_enable = lambda x: x #dummy fn
-    from multiprocessing.sharedctypes import Value
+from multiprocessing import Process,cpu_count
+from multiprocessing.sharedctypes import Value
 
 from exporter import export
 
@@ -38,7 +32,6 @@ class Export_Process(Process):
         return self.current_frame.value
     def cancel(self):
         self.should_terminate.value = True
-
 
 
 def verify_out_file_path(out_file_path,rec_dir):
@@ -125,8 +118,6 @@ class Video_Export_Launcher(Plugin):
             self.add_export(notification['range'],notification['export_dir'])
 
     def add_export(self,export_range,export_dir):
-        # on MacOS we will not use os.fork, elsewhere this does nothing.
-        forking_enable(0)
 
         logger.debug("Adding new video export process.")
         should_terminate = Value(c_bool,False)
@@ -152,6 +143,7 @@ class Video_Export_Launcher(Plugin):
         new_export.start()
         self.exports.append(new_export)
         self._update_gui()
+
 
     def update(self,frame,events):
         if self.new_export:
