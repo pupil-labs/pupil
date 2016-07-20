@@ -13,11 +13,9 @@ from glob import glob
 from copy import deepcopy
 from time import time
 if platform.system() == 'Darwin':
-    from billiard import freeze_support,forking_enable
-
+    from billiard import freeze_support
 else:
     from multiprocessing import freeze_support
-    forking_enable = lambda x: x #dummy fn
 
 
 if getattr(sys, 'frozen', False):
@@ -538,7 +536,6 @@ def show_no_rec_window():
     del glfont
     glfwDestroyWindow(window)
 
-forking_enable(0)
 
 if __name__ == '__main__':
     freeze_support()
