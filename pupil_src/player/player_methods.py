@@ -58,9 +58,8 @@ def correlate_data(data,timestamps):
 
     return data_by_frame
 
-def update_recording_to_recent(rec_dir,timestamps_path):
+def update_recording_to_recent(rec_dir):
     meta_info = load_meta_info(rec_dir,update=True) # also updates info file
-
     # Reference format: v0.7.4
     rec_version = read_rec_version(meta_info)
     if rec_version >= VersionFormat('0.7.4'):
@@ -73,9 +72,15 @@ def update_recording_to_recent(rec_dir,timestamps_path):
         update_recording_v04_to_v074(rec_dir)
     elif rec_version >= VersionFormat('0.3'):
         update_recording_v03_to_v074(rec_dir)
-        timestamps_path = os.path.join(rec_dir, "timestamps.npy")
+        ts_path     = os.path.join(rec_dir,"world_timestamps.npy")
+        ts_path_old = os.path.join(rec_dir,"timestamps.npy")
+        if not os.path.isfile(ts_path) and os.path.isfile(ts_path_old):
+            os.rename(ts_path_old, ts_path)
+
     else:
-        return None
+        logger.Error("This recording is too old. Sorry.")
+        return
+
 
     # Incremental format updates
     if rec_version < VersionFormat('0.8.2'):
@@ -83,7 +88,6 @@ def update_recording_to_recent(rec_dir,timestamps_path):
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
     #    update_recording_v081_to_FUTURE(rec_dir)
-    return timestamps_path
 
 def load_meta_info(rec_dir,update=False):
     #parse info.csv file
