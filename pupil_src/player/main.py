@@ -537,6 +537,7 @@ def show_no_rec_window():
     glfwDestroyWindow(window)
 
 
+
 if __name__ == '__main__':
     freeze_support()
     try:

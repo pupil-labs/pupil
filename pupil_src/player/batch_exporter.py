@@ -27,7 +27,7 @@ if __name__ == '__main__':
     from textwrap import dedent
     from file_methods import Persistent_Dict
 from plugin import Plugin
-from video_export_launcher import Export_Process,Value,cpu_count
+from video_export_launcher import Export_Process,Value,forking_enable,cpu_count
 
 
 from exporter import export
@@ -140,6 +140,8 @@ class Batch_Exporter(Plugin):
         self._update_gui()
 
     def add_exports(self):
+        # on MacOS we will not use os.fork, elsewhere this does nothing.
+        forking_enable(0)
 
         outfiles = set()
         for d in self.new_exports:
@@ -333,7 +335,7 @@ def main():
         j.args = (j.should_terminate,j.frames_to_export,j.current_frame, j.data_dir, j.user_dir,j.start_frame,j.end_frame,j.plugin_initializers,j.out_file_path)
         jobs.append(j)
 
-
+    
     todo = jobs[:]
     workers = [Export_Process(target=export,args=todo.pop(0).args) for i in range(min(len(todo),n_cpu))]
     for w in workers:
@@ -355,7 +357,7 @@ def main():
         show_progess(jobs)
         time.sleep(.25)
     print '\n'
-
+   
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARNING)
     main()
