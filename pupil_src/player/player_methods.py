@@ -85,6 +85,8 @@ def update_recording_to_recent(rec_dir):
     # Incremental format updates
     if rec_version < VersionFormat('0.8.2'):
         update_recording_v074_to_v082(rec_dir)
+    if rec_version < VersionFormat('0.8.3'):
+        update_recording_v082_to_v083(rec_dir)
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
     #    update_recording_v081_to_FUTURE(rec_dir)
@@ -127,6 +129,17 @@ def update_meta_info(rec_dir, meta_info):
 
 def update_recording_v074_to_v082(rec_dir):
     pass
+
+def update_recording_v082_to_v083(rec_dir):
+    logger.info("Updating recording from v0.8.2 format to v0.8.3 format")
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+
+    for d in pupil_data['gaze_positions']:
+        if 'base' in d:
+            d['base_data'] = d.pop('base')
+
+    save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+
 
 def update_recording_v073_to_v074(rec_dir):
     logger.info("Updating recording from v0.7x format to v0.7.4 format")
