@@ -8,14 +8,13 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os
-import cv2
+import os, cv2, csv_utils, shutil
 import numpy as np
 #logging
 import logging
 logger = logging.getLogger(__name__)
 from file_methods import save_object,load_object
-
+from version_utils import VersionFormat, read_rec_version
 
 def correlate_data(data,timestamps):
     '''
@@ -59,9 +58,78 @@ def correlate_data(data,timestamps):
 
     return data_by_frame
 
+def update_recording_to_recent(rec_dir):
+    meta_info = load_meta_info(rec_dir,update=True) # also updates info file
+    # Reference format: v0.7.4
+    rec_version = read_rec_version(meta_info)
+    if rec_version >= VersionFormat('0.7.4'):
+        pass
+    elif rec_version >= VersionFormat('0.7.3'):
+        update_recording_v073_to_v074(rec_dir)
+    elif rec_version >= VersionFormat('0.5'):
+        update_recording_v05_to_v074(rec_dir)
+    elif rec_version >= VersionFormat('0.4'):
+        update_recording_v04_to_v074(rec_dir)
+    elif rec_version >= VersionFormat('0.3'):
+        update_recording_v03_to_v074(rec_dir)
+        ts_path     = os.path.join(rec_dir,"world_timestamps.npy")
+        ts_path_old = os.path.join(rec_dir,"timestamps.npy")
+        if not os.path.isfile(ts_path) and os.path.isfile(ts_path_old):
+            os.rename(ts_path_old, ts_path)
 
-def update_recording_0v73_to_current(rec_dir):
-    logger.info("Updating recording from v0.7x format to current version")
+    else:
+        logger.Error("This recording is too old. Sorry.")
+        return
+
+
+    # Incremental format updates
+    if rec_version < VersionFormat('0.8.2'):
+        update_recording_v074_to_v082(rec_dir)
+    # How to extend:
+    # if rec_version < VersionFormat('FUTURE FORMAT'):
+    #    update_recording_v081_to_FUTURE(rec_dir)
+
+def load_meta_info(rec_dir,update=False):
+    #parse info.csv file
+    try:
+        meta_info = read_meta_info_v081(rec_dir)
+    except IndexError:
+        meta_info = read_meta_info_legacy(rec_dir)
+        if update:
+            update_meta_info(rec_dir,meta_info)
+    return meta_info
+
+def read_meta_info_v081(rec_dir):
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+    with open(meta_info_path) as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+    return meta_info
+
+def read_meta_info_legacy(rec_dir):
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+    with open(meta_info_path) as info:
+        meta_info = dict( ((line.strip().split('\t')) for line in info.readlines()) )
+    return meta_info
+
+def update_meta_info(rec_dir, meta_info):
+    """Backup old meta info file. Write current format.
+
+    Args:
+        rec_dir (path): Recording folder
+        meta_info (dict): Meta info
+    """
+    logger.info('Updating meta info')
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+    meta_info_old_path = os.path.join(rec_dir,"info_old.csv")
+    shutil.copy2(meta_info_path,meta_info_old_path)
+    with open(meta_info_path,'w') as csvfile:
+        csv_utils.write_key_value_file(csvfile,meta_info)
+
+def update_recording_v074_to_v082(rec_dir):
+    pass
+
+def update_recording_v073_to_v074(rec_dir):
+    logger.info("Updating recording from v0.7x format to v0.7.4 format")
     pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
     modified = False
     for p in pupil_data['pupil_positions']:
@@ -83,8 +151,8 @@ def update_recording_0v73_to_current(rec_dir):
     except IOError:
         pass
 
-def update_recording_0v5_to_current(rec_dir):
-    logger.info("Updating recording from v0.5x/v0.6x/v0.7x format to current version")
+def update_recording_v05_to_v074(rec_dir):
+    logger.info("Updating recording from v0.5x/v0.6x/v0.7x format to v0.7.4 format")
     pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data_old"))
     for p in pupil_data['pupil_positions']:
@@ -94,8 +162,8 @@ def update_recording_0v5_to_current(rec_dir):
     except IOError:
         pass
 
-def update_recording_0v4_to_current(rec_dir):
-    logger.info("Updating recording from v0.4x format to current version")
+def update_recording_v04_to_v074(rec_dir):
+    logger.info("Updating recording from v0.4x format to v0.7.4 format")
     gaze_array = np.load(os.path.join(rec_dir,'gaze_positions.npy'))
     pupil_array = np.load(os.path.join(rec_dir,'pupil_positions.npy'))
     gaze_list = []
@@ -117,8 +185,8 @@ def update_recording_0v4_to_current(rec_dir):
     except IOError:
         pass
 
-def update_recording_0v3_to_current(rec_dir):
-    logger.info("Updating recording from v0.3x format to current version")
+def update_recording_v03_to_v074(rec_dir):
+    logger.info("Updating recording from v0.3x format to v0.7.4 format")
     pupilgaze_array = np.load(os.path.join(rec_dir,'gaze_positions.npy'))
     gaze_list = []
     pupil_list = []
@@ -139,11 +207,9 @@ def is_pupil_rec_dir(rec_dir):
     if not os.path.isdir(rec_dir):
         logger.error("No valid dir supplied")
         return False
-    meta_info_path = os.path.join(rec_dir,"info.csv")
     try:
-        with open(meta_info_path) as info:
-            meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
-            info = meta_info["Capture Software Version"]
+        meta_info = load_meta_info(rec_dir)
+        info = meta_info["Capture Software Version"]
     except:
         logger.error("Could not read info.csv file: Not a valid Pupil recording.")
         return False

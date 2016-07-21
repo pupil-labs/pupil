@@ -17,12 +17,13 @@ if __name__ == '__main__':
     del syspath, ospath
 
 import os
+import csv_utils
 from time import time
 from glob import glob
 import cv2
 import numpy as np
 from video_capture import File_Capture,EndofVideoFileError
-from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current,update_recording_0v5_to_current,update_recording_0v73_to_current
+from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version
 from av_writer import AV_Writer
@@ -61,35 +62,16 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
-   #parse info.csv file
-    meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as info:
-        meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
+    update_recording_to_recent(rec_dir)
 
     video_path = [f for f in glob(os.path.join(rec_dir,"world.*")) if f[-3:] in ('mp4','mkv','avi')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
-
+    meta_info = load_meta_info(rec_dir)
     rec_version = read_rec_version(meta_info)
-    if rec_version >= VersionFormat('0.7.4'):
-        pass
-    if rec_version >= VersionFormat('0.7.3'):
-        update_recording_0v73_to_current(rec_dir)
-    elif rec_version >= VersionFormat('0.5'):
-        update_recording_0v5_to_current(rec_dir)
-    elif rec_version >= VersionFormat('0.4'):
-        update_recording_0v4_to_current(rec_dir)
-    elif rec_version >= VersionFormat('0.3'):
-        update_recording_0v3_to_current(rec_dir)
-        timestamps_path = os.path.join(rec_dir, "timestamps.npy")
-    else:
-        logger.Error("This recording is to old. Sorry.")
-        return
-
 
     timestamps = np.load(timestamps_path)
-
     cap = File_Capture(video_path,timestamps=timestamps)
 
 
@@ -154,7 +136,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     #add plugins
     g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
 
-    while frames_to_export.value - current_frame.value > 0:
+    while frames_to_export.value > current_frame.value:
 
         if should_terminate.value:
             logger.warning("User aborted export. Exported %s frames to %s."%(current_frame.value,out_file_path))
