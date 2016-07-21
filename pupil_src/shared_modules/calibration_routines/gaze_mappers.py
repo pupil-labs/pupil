@@ -104,7 +104,7 @@ class Dummy_Gaze_Mapper(Monocular_Gaze_Mapper_Base):
         super(Dummy_Gaze_Mapper, self).__init__(g_pool)
 
     def _map_monocular(self,p):
-        return {'norm_pos':p['norm_pos'],'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]}
+        return {'norm_pos':p['norm_pos'],'confidence':p['confidence'],'timestamp':p['timestamp'],'base_data':[p]}
 
     def get_init_dict(self):
         return {}
@@ -119,7 +119,7 @@ class Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base):
 
     def _map_monocular(self,p):
         gaze_point = self.map_fn(p['norm_pos'])
-        return {'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]}
+        return {'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base_data':[p]}
 
 
     def get_init_dict(self):
@@ -136,7 +136,7 @@ class Dual_Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base):
 
     def _map_monocular(self,p):
         gaze_point = self.map_fns[p['id']](p['norm_pos'])
-        return {'norm_pos':gaze_point,'confidence':p['confidence'],'id':p['id'],'timestamp':p['timestamp'],'base':[p]}
+        return {'norm_pos':gaze_point,'confidence':p['confidence'],'id':p['id'],'timestamp':p['timestamp'],'base_data':[p]}
 
     def get_init_dict(self):
         return {'params0':self.params0,'params1':self.params1}
@@ -170,11 +170,11 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base):
             gaze_point = (gaze_point_eye0[0] + gaze_point_eye1[0])/2. , (gaze_point_eye0[1] + gaze_point_eye1[1])/2.
         confidence = (p0['confidence'] + p1['confidence'])/2.
         ts = (p0['timestamp'] + p1['timestamp'])/2.
-        return {'norm_pos':gaze_point,'confidence':confidence,'timestamp':ts,'base':[p0, p1]}
+        return {'norm_pos':gaze_point,'confidence':confidence,'timestamp':ts,'base_data':[p0, p1]}
 
     def _map_monocular(self,p):
         gaze_point = self.map_fn_fallback[p['id']](p['norm_pos'])
-        return {'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base':[p]}
+        return {'norm_pos':gaze_point,'confidence':p['confidence'],'timestamp':p['timestamp'],'base_data':[p]}
 
     def deinit_gui(self):
         if self.menu:
@@ -252,7 +252,7 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base):
                 'gaze_point_3d':gaze_3d.tolist(),
                 'confidence':p['confidence'],
                 'timestamp':p['timestamp'],
-                'base':[p]}
+                'base_data':[p]}
 
         if self.visualizer.window:
             self.gaze_pts_debug.append( gaze_3d )
@@ -367,7 +367,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base):
                 'gaze_point_3d':gaze_3d.tolist(),
                 'confidence':p['confidence'],
                 'timestamp':p['timestamp'],
-                'base':[p]}
+                'base_data':[p]}
 
 
         if self.visualizer.window:
@@ -432,7 +432,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base):
                 'gaze_point_3d':nearest_intersection_point.tolist(),
                 'confidence':confidence,
                 'timestamp':ts,
-                'base':[p0,p1]}
+                'base_data':[p0,p1]}
         return g
 
     def gl_display(self):

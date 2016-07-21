@@ -79,7 +79,7 @@ class Raw_Data_Exporter(Plugin):
         confidence - computed confidence between 0 (not confident) -1 (confident)
         norm_pos_x - x position in the world image frame in normalized coordinates
         norm_pos_y - y position in the world image frame in normalized coordinates
-        base - "timestamp-id timestamp-id ..." of pupil data that this gaze position is computed from
+        base_data - "timestamp-id timestamp-id ..." of pupil data that this gaze position is computed from
 
         #data made available by the 3d vector gaze mappers
         gaze_point_3d_x - x position of the 3d gaze point (the point the sublejct lookes at) in the world camera coordinate system
@@ -218,7 +218,7 @@ class Raw_Data_Exporter(Plugin):
                                  "confidence",
                                  "norm_pos_x",
                                  "norm_pos_y",
-                                 "base",
+                                 "base_data",
                                  "gaze_point_3d_x",
                                  "gaze_point_3d_y",
                                  "gaze_point_3d_z",
@@ -237,7 +237,7 @@ class Raw_Data_Exporter(Plugin):
                                      ) )
 
             for g in list(chain(*self.g_pool.gaze_positions_by_frame[export_range])):
-                data = ['%s'%g["timestamp"],g["index"],g["confidence"],g["norm_pos"][0],g["norm_pos"][1]," ".join(['%s-%s'%(b['timestamp'],b['id']) for b in g['base']]) ] #use str on timestamp to be consitant with csv lib.
+                data = ['%s'%g["timestamp"],g["index"],g["confidence"],g["norm_pos"][0],g["norm_pos"][1]," ".join(['%s-%s'%(b['timestamp'],b['id']) for b in g['base_data']]) ] #use str on timestamp to be consitant with csv lib.
 
                 #add 3d data if avaiblable
                 if g.get('gaze_point_3d',None) is not None:
