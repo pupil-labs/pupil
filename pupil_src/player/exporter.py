@@ -62,20 +62,16 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
+    update_recording_to_recent(rec_dir)
+
     video_path = [f for f in glob(os.path.join(rec_dir,"world.*")) if f[-3:] in ('mp4','mkv','avi')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
-    # updates timestamps_path if necessary
-    timestamps_path = update_recording_to_recent(rec_dir,timestamps_path)
-    if not timestamps_path:
-        logger.Error("This recording is too old. Sorry.")
-        return
-
     meta_info = load_meta_info(rec_dir)
     rec_version = read_rec_version(meta_info)
-    timestamps = np.load(timestamps_path)
 
+    timestamps = np.load(timestamps_path)
     cap = File_Capture(video_path,timestamps=timestamps)
 
 
