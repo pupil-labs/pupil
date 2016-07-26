@@ -250,7 +250,7 @@ class Camera_Capture(object):
             if requested_id is None:
                 self.re_init_capture(None)
             else:
-                for cam in uvc.device_list():
+                for cam in device_list():
                     if cam['uid'] == requested_id:
                         if is_accessible(requested_id):
                             self.re_init_capture(requested_id)
@@ -262,7 +262,7 @@ class Camera_Capture(object):
 
         #create the menu entry
         self.menu = ui.Growing_Menu(label='Camera Settings')
-        cameras = uvc.device_list()
+        cameras = device_list()
         camera_names = ['Fake Capture']+[c['name'] for c in cameras]
         camera_ids = [None]+[c['uid'] for c in cameras]
         self.menu.append(ui.Selector('uid',self,selection=camera_ids,labels=camera_names,label='Capture device', setter=gui_init_cam_by_uid) )
