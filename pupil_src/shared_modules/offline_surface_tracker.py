@@ -250,16 +250,6 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
 
 
-        #map recent gaze onto detected surfaces used for pupil server
-        for s in self.surfaces:
-            if s.detected:
-                s.gaze_on_srf = []
-                for p in events.get('gaze_positions',[]):
-                    gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_pos'])))
-                    p['realtime gaze on ' + s.name] = gp_on_s
-                    s.gaze_on_srf.append(gp_on_s)
-
-
         #allow surfaces to open/close windows
         for s in self.surfaces:
             if s.window_should_close:

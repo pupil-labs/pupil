@@ -98,7 +98,6 @@ class Reference_Surface(object):
             self.load_from_dict(saved_definition)
 
 
-
     def save_to_dict(self):
         """
         save all markers and name of this surface to a dict.
@@ -354,28 +353,33 @@ class Reference_Surface(object):
 
 
     def img_to_ref_surface(self,pos):
-        if self.m_from_screen is not None:
-            #convenience lines to allow 'simple' vectors (x,y) to be used
-            shape = pos.shape
-            pos.shape = (-1,1,2)
-            new_pos = cv2.perspectiveTransform(pos,self.m_from_screen )
-            new_pos.shape = shape
-            return new_pos
-        else:
-            return None
+        #convenience lines to allow 'simple' vectors (x,y) to be used
+        shape = pos.shape
+        pos.shape = (-1,1,2)
+        new_pos = cv2.perspectiveTransform(pos,self.m_from_screen )
+        new_pos.shape = shape
+        return new_pos
+
 
     def ref_surface_to_img(self,pos):
-        if self.m_to_screen is not None:
-            #convenience lines to allow 'simple' vectors (x,y) to be used
-            shape = pos.shape
-            pos.shape = (-1,1,2)
-            new_pos = cv2.perspectiveTransform(pos,self.m_to_screen )
-            new_pos.shape = shape
-            return new_pos
-        else:
-            return None
+        #convenience lines to allow 'simple' vectors (x,y) to be used
+        shape = pos.shape
+        pos.shape = (-1,1,2)
+        new_pos = cv2.perspectiveTransform(pos,self.m_to_screen )
+        new_pos.shape = shape
+        return new_pos
 
 
+    @staticmethod
+    def map_datum_to_surface(d,m_from_screen):
+        pos = np.array([d['norm_pos']]).reshape(1,1,2)
+        mapped_pos = cv2.perspectiveTransform(pos , m_from_screen )
+        mapped_pos.shape = (2)
+        on_srf = bool((0 <= mapped_pos[0] <= 1) and (0 <= mapped_pos[1] <= 1))
+        return {'norm_pos':(mapped_pos[0],mapped_pos[1]),'on_srf':on_srf,'base_data':d }
+
+    def map_data_to_surface(self,data,m_from_screen):
+        return [self.map_datum_to_surface(d,m_from_screen) for d in data]
 
     def move_vertex(self,vert_idx,new_pos):
         """
@@ -488,7 +492,7 @@ class Reference_Surface(object):
 
 
 
-    #### fns to draw surface in separate window
+    #### fns to draw surface in seperate window
     def gl_display_in_window(self,world_tex):
         """
         here we map a selected surface onto a seperate window.
@@ -512,18 +516,18 @@ class Reference_Surface(object):
             glLoadMatrixf(m)
 
             world_tex.draw()
+
             glMatrixMode(GL_PROJECTION)
             glPopMatrix()
             glMatrixMode(GL_MODELVIEW)
             glPopMatrix()
 
             # now lets get recent pupil positions on this surface:
-            draw_points_norm(self.gaze_on_srf,color=RGBA(0.,8.,.5,.8), size=80)
+            for gp in self.gaze_on_srf:
+                draw_points_norm([gp['norm_pos']],color=RGBA(0.0,0.8,0.5,0.8), size=80)
 
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
-        if self.window_should_close:
-            self.close_window()
 
     #### fns to draw surface in separate window
     def gl_display_in_window_3d(self,world_tex,camera_intrinsics):
