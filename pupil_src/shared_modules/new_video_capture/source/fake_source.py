@@ -18,10 +18,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class CameraCaptureError(Exception):
+class CameraSourceError(Exception):
     """General Exception for this module"""
     def __init__(self, arg):
-        super(FileCaptureError, self).__init__()
+        super(FileSourceError, self).__init__()
         self.arg = arg
 
 class Frame(object):
@@ -46,16 +46,17 @@ class Frame(object):
     def gray(self, value):
         raise Exception('Read only.')
 
-class Fake_Capture(object):
-    """docstring for FakeCapture"""
+class Fake_Source(object):
+    """docstring for FakeSource"""
     def __init__(self):
-        super(Fake_Capture, self).__init__()
+        super(Fake_Source, self).__init__()
         self.fps = 30
         self.presentation_time = time()
         self.make_img((640,480))
         self.frame_count = 0
         self.controls = []
-        self.control_menu = None
+        self.parent_menu = None
+        self.info_text = None
 
     def make_img(self,size):
         c_w ,c_h = max(1,size[0]/30),max(1,size[1]/30)
@@ -83,7 +84,6 @@ class Fake_Capture(object):
     @property
     def settings(self):
         settings = {}
-        settings['name'] = self.name
         settings['frame_rate'] = self.frame_rate
         settings['frame_size'] = self.frame_size
         return settings
@@ -117,15 +117,18 @@ class Fake_Capture(object):
 
     @property
     def name(self):
-        return 'Fake Capture'
+        return 'Fake Source'
 
-    def init_gui(self):
-        self.control_menu = ui.Growing_Menu(label='Information')
-        self.control_menu.append(ui.Info_Text('This is a fake capture.'))
+    def init_gui(self, parent_menu):
+        self.parent_menu = parent_menu
+        self.info_text = ui.Info_Text('This is a fake Source.')
+        parent_menu.append(self.info_text)
 
     def deinit_gui(self):
-        if self.control_menu:
-            self.control_menu = None
+        if self.info_text:
+            self.parent_menu.remove(self.info_text)
+            self.info_text = None
+            self.parent_menu = None
 
     def close(self):
         self.deinit_gui()

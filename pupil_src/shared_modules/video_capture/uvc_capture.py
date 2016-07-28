@@ -9,11 +9,11 @@
 '''
 
 import uvc
-from uvc import device_list,is_accessible
 #check versions for our own depedencies as they are fast-changing
 assert uvc.__version__ >= '0.7'
 
 from fake_capture import Fake_Capture
+from ndsi_capture import Network_Device_Manager, Network_Device_Capture
 
 from ctypes import c_double
 from pyglui import ui
@@ -35,60 +35,50 @@ class Camera_Capture(object):
      - adds UI elements
      - adds timestamping sanitization fns.
     """
-    def __init__(self,uid,timebase=None):
-        if timebase == None:
-            logger.debug("Capture will run with default system timebase")
-            self.timebase = c_double(0)
-        elif hasattr(timebase,'value'):
-            logger.debug("Capture will run with app wide adjustable timebase")
-            self.timebase = timebase
-        else:
-            logger.error("Invalid timebase variable type. Will use default system timebase")
-            self.timebase = c_double(0)
+    def __init__(self,g_pool,uid):
+        self.g_pool = g_pool
+        self.control_menu = None
+        self.backend = None
+        self.init_backend(uid)
 
-        self.sidebar = None
-        self.menu = None
-        self.init_capture(uid)
-
-
-    def re_init_capture(self,uid):
-        current_size = self.capture.frame_size
-        current_fps = self.capture.frame_rate
-        self.capture = None
-        if self.menu:
+    def re_init_backend(self,uid):
+        current_size = self.backend.frame_size
+        current_fps = self.backend.frame_rate
+        self.backend = None
+        if self.control_menu:
             #recreate the bar with new values
-            menu_conf = self.menu.configuration
+            menu_conf = self.control_menu.configuration
         else:
             menu_conf = None
         self.deinit_gui()
-        self.init_capture(uid)
+        self.init_backend(uid)
         self.frame_size = current_size
         self.frame_rate = current_fps
         if menu_conf:
-            self.init_gui(self.sidebar)
-            self.menu.configuration = menu_conf
+            self.init_gui()
+            self.control_menu.configuration = menu_conf
 
-    def _re_init_capture_by_name(self,name):
+    def _re_init_backend_by_name(self,name):
         for x in range(4):
-            devices = device_list()
+            devices = uvc.device_list()
             for d in devices:
                 if d['name'] == name:
                     logger.info("Found device.%s."%name)
-                    self.re_init_capture(d['uid'])
+                    self.re_init_backend(d['uid'])
                     return
-            logger.warning('Could not find Camera %s during re initilization.'%name)
+            logger.warning('Could not find camera "%s" during re initilization.'%name)
             sleep(1.5)
-        raise CameraCaptureError('Could not find Camera %s during re initilization.'%name)
+        raise CameraCaptureError('Could not find camera "%s" during re initilization.'%name)
 
-    def init_capture(self,uid):
+    def init_backend(self,uid):
         self.uid = uid
 
-        if uid is None:
-            self.capture = Fake_Capture()
+        if uvc.is_accessible(uid):
+            self.backend = uvc.Capture(uid)
         else:
-            self.capture = uvc.Capture(uid)
+            raise RuntimeError('UVC device with uid "%s" is not accessible.'%uid)
 
-        if 'C930e' in self.capture.name:
+        if 'C930e' in self.backend.name:
                 logger.debug('Timestamp offset for c930 applied: -0.1sec')
                 self.ts_offset = -0.1
         else:
@@ -96,15 +86,15 @@ class Camera_Capture(object):
 
 
         #UVC setting quirks:
-        controls_dict = dict([(c.display_name,c) for c in self.capture.controls])
+        controls_dict = dict([(c.display_name,c) for c in self.backend.controls])
         try:
             controls_dict['Auto Focus'].value = 0
         except KeyError:
             pass
 
-        if "Pupil Cam1" in self.capture.name or "USB2.0 Camera" in self.capture.name:
-            if "ID0" in self.capture.name or "ID1" in self.capture.name:
-                self.capture.bandwidth_factor = 1.3
+        if "Pupil Cam1" in self.backend.name or "USB2.0 Camera" in self.backend.name:
+            if "ID0" in self.backend.name or "ID1" in self.backend.name:
+                self.backend.bandwidth_factor = 1.3
                 try:
                     controls_dict['Auto Exposure Priority'].value = 0
                 except KeyError:
@@ -131,13 +121,13 @@ class Camera_Capture(object):
                 except KeyError:
                     pass
             else:
-                self.capture.bandwidth_factor = 2.0
+                self.backend.bandwidth_factor = 2.0
                 try:
                     controls_dict['Auto Exposure Priority'].value = 1
                 except KeyError:
                     pass
         else:
-            self.capture.bandwidth_factor = 3.0
+            self.backend.bandwidth_factor = 3.0
             try:
                 controls_dict['Auto Focus'].value = 0
             except KeyError:
@@ -145,139 +135,105 @@ class Camera_Capture(object):
 
     def get_frame(self):
         try:
-            frame = self.capture.get_frame_robust()
+            frame = self.backend.get_frame_robust()
         except uvc.CaptureError as e:
             try:
-                self._re_init_capture_by_name(self.capture.name)
-                frame = self.capture.get_frame_robust()
+                self._re_init_backend_by_name(self.backend.name)
+                frame = self.backend.get_frame_robust()
             except uvc.CaptureError as e:
-                raise CameraCaptureError("Could not get frame from %s"%self.uid)
+                raise CameraCaptureError("Could not get frame from '%s'"%self.uid)
 
-        timestamp = self.get_now()+self.ts_offset
-        timestamp -= self.timebase.value
+        timestamp = self.g_pool.get_now()+self.ts_offset
+        timestamp -= self.g_pool.timebase.value
         frame.timestamp = timestamp
         return frame
 
-    def get_now(self):
-        return uvc.get_time_monotonic()
-
-    def get_timestamp(self):
-        return self.get_now()-self.timebase.value
-
     @property
     def frame_rate(self):
-        return self.capture.frame_rate
+        return self.backend.frame_rate
     @frame_rate.setter
     def frame_rate(self,new_rate):
         #closest match for rate
-        rates = [ abs(r-new_rate) for r in self.capture.frame_rates ]
+        rates = [ abs(r-new_rate) for r in self.backend.frame_rates ]
         best_rate_idx = rates.index(min(rates))
-        rate = self.capture.frame_rates[best_rate_idx]
+        rate = self.backend.frame_rates[best_rate_idx]
         if rate != new_rate:
-            logger.warning("%sfps capture mode not available at (%s) on '%s'. Selected %sfps. "%(new_rate,self.capture.frame_size,self.capture.name,rate))
-        self.capture.frame_rate = rate
+            logger.warning("%sfps capture mode not available at (%s) on '%s'. Selected %sfps. "%(new_rate,self.backend.frame_size,self.backend.name,rate))
+        self.backend.frame_rate = rate
 
 
     @property
     def settings(self):
         settings = {}
-        settings['name'] = self.capture.name
+        settings['name'] = self.backend.name
         settings['frame_rate'] = self.frame_rate
         settings['frame_size'] = self.frame_size
         settings['uvc_controls'] = {}
-        for c in self.capture.controls:
+        for c in self.backend.controls:
             settings['uvc_controls'][c.display_name] = c.value
         return settings
     @settings.setter
     def settings(self,settings):
         self.frame_size = settings['frame_size']
         self.frame_rate = settings['frame_rate']
-        for c in self.capture.controls:
+        for c in self.backend.controls:
             try:
                 c.value = settings['uvc_controls'][c.display_name]
             except KeyError as e:
                 logger.debug('No UVC setting "%s" found from settings.'%c.display_name)
     @property
     def frame_size(self):
-        return self.capture.frame_size
+        return self.backend.frame_size
     @frame_size.setter
     def frame_size(self,new_size):
         #closest match for size
-        sizes = [ abs(r[0]-new_size[0]) for r in self.capture.frame_sizes ]
+        sizes = [ abs(r[0]-new_size[0]) for r in self.backend.frame_sizes ]
         best_size_idx = sizes.index(min(sizes))
-        size = self.capture.frame_sizes[best_size_idx]
+        size = self.backend.frame_sizes[best_size_idx]
         if size != new_size:
             logger.warning("%s resolution capture mode not available. Selected %s."%(new_size,size))
-        self.capture.frame_size = size
-
-        if hasattr(self,'on_frame_size_change'):
-            self.on_frame_size_change(size)
+        self.backend.frame_size = size
 
     @property
     def name(self):
-        return self.capture.name
+        return self.backend.name
 
 
     @property
     def jpeg_support(self):
-        if self.capture.__class__ is Fake_Capture:
+        if self.backend.__class__ is Fake_Capture:
             return False
         else:
             return True
 
-    def init_gui(self,sidebar):
+    def init_gui(self):
 
         #lets define some  helper functions:
         def gui_load_defaults():
-            for c in self.capture.controls:
+            for c in self.backend.controls:
                 try:
                     c.value = c.def_val
                 except:
                     pass
         def set_size(new_size):
             self.frame_size = new_size
-            menu_conf = self.menu.configuration
-            self.deinit_gui()
-            self.init_gui(self.sidebar)
-            self.menu.configuration = menu_conf
-
 
         def gui_update_from_device():
-            for c in self.capture.controls:
+            for c in self.backend.controls:
                 c.refresh()
 
-        def gui_init_cam_by_uid(requested_id):
-            if requested_id is None:
-                self.re_init_capture(None)
-            else:
-                for cam in device_list():
-                    if cam['uid'] == requested_id:
-                        if is_accessible(requested_id):
-                            self.re_init_capture(requested_id)
-                        else:
-                            logger.error("The selected Camera is already in use or blocked.")
-                        return
-                logger.warning("could not reinit capture, src_id not valid anymore")
-                return
-
-        #create the menu entry
-        self.menu = ui.Growing_Menu(label='Camera Settings')
-        cameras = device_list()
-        camera_names = ['Fake Capture']+[c['name'] for c in cameras]
-        camera_ids = [None]+[c['uid'] for c in cameras]
-        self.menu.append(ui.Selector('uid',self,selection=camera_ids,labels=camera_names,label='Capture device', setter=gui_init_cam_by_uid) )
-
+        self.control_menu = ui.Growing_Menu(label='%s Controls'%self.backend.name)
         sensor_control = ui.Growing_Menu(label='Sensor Settings')
         sensor_control.append(ui.Info_Text("Do not change these during calibration or recording!"))
         sensor_control.collapsed=False
         image_processing = ui.Growing_Menu(label='Image Post Processing')
         image_processing.collapsed=True
 
-        sensor_control.append(ui.Selector('frame_size',self,setter=set_size, selection=self.capture.frame_sizes,label='Resolution' ) )
-        sensor_control.append(ui.Selector('frame_rate',self, selection=self.capture.frame_rates,label='Frame rate' ) )
+        sensor_control.append(ui.Selector('frame_size',self,setter=set_size, selection=self.backend.frame_sizes,label='Resolution' ) )
+        sensor_control.append(ui.Selector('frame_rate',self, selection=self.backend.frame_rates,label='Frame rate' ) )
 
 
-        for control in self.capture.controls:
+        for control in self.backend.controls:
             c = None
             ctl_name = control.display_name
 
@@ -304,26 +260,21 @@ class Camera_Capture(object):
                 else:
                     sensor_control.append(c)
 
-        self.menu.append(sensor_control)
+        self.control_menu.append(sensor_control)
         if image_processing.elements:
-            self.menu.append(image_processing)
-        self.menu.append(ui.Button("refresh",gui_update_from_device))
-        self.menu.append(ui.Button("load defaults",gui_load_defaults))
-
-        self.sidebar = sidebar
-        #add below geneal settings
-        self.sidebar.insert(1,self.menu)
-
+            self.control_menu.append(image_processing)
+        self.control_menu.append(ui.Button("refresh",gui_update_from_device))
+        self.control_menu.append(ui.Button("load defaults",gui_load_defaults))
 
     def deinit_gui(self):
-        if self.menu:
-            self.sidebar.remove(self.menu)
-            self.menu = None
-
+        if self.control_menu:
+            del self.control_menu.elements[:]
+            self.control_menu = None
 
     def close(self):
         self.deinit_gui()
-        # self.capture.close()
-        del self.capture
+        # self.backend.close()
+        self.backend = None
 
-
+    def __del__(self):
+        self.close()
