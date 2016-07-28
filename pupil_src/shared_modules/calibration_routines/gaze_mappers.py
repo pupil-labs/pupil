@@ -56,7 +56,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
     def __init__(self, g_pool):
         super(Binocular_Gaze_Mapper_Base, self).__init__(g_pool)
 
-        self.min_pupil_confidence = 0.7
+        self.min_pupil_confidence = 0.6
         self._caches = ([],[])
         self.temportal_cutoff = 0.3
         self.sample_cutoff = 10
@@ -384,7 +384,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base):
 
     def _map_binocular(self, p0, p1):
 
-        if '3d'not in p0['method'] or '3d' not in p1['method']:
+        if '3d' not in p0['method'] or '3d' not in p1['method']:
             return None
 
         #find the nearest intersection point of the two gaze lines
