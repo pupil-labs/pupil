@@ -339,7 +339,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base):
 
         self.menu = ui.Growing_Menu('Binocular 3D gaze mapper')
         self.g_pool.sidebar.insert(3,self.menu)
-        # self.menu.append(ui.Slider('last_gaze_distance',self,min=50,max=2000,label='gaze distance mm'))
+        # self.menu.append(ui.Text_Input('last_gaze_distance',self))
         self.menu.append(ui.Switch('debug window',setter=open_close_window, getter=lambda: bool(self.visualizer.window) ))
 
     def _map_monocular(self,p):
@@ -388,20 +388,37 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base):
             return None
 
         #find the nearest intersection point of the two gaze lines
-        # a line is defined by two point
+        #eye ball centers in world coords
         s0_center = self.eye0_to_World( np.array( p0['sphere']['center'] ) )
         s1_center = self.eye1_to_World( np.array( p1['sphere']['center'] ) )
-
+        #eye line of sight in world coords
         s0_normal = np.dot( self.rotation_matricies[0], np.array( p0['circle_3d']['normal'] ) )
         s1_normal = np.dot( self.rotation_matricies[1], np.array( p1['circle_3d']['normal'] ) )
 
-        gaze_line0 = [ s0_center, s0_center + s0_normal ]
-        gaze_line1 = [ s1_center, s1_center + s1_normal ]
+        # See Lech Swirski: "Gaze estimation on glasses-based stereoscopic displays"
+        # Chapter: 7.4.2 Cyclopean gaze estimate
 
+        #the cyclop is the avg of both lines of sight
+        cyclop_normal = (s0_normal+s1_normal)/2.
+        cyclop_center = (s0_center+s1_center)/2.
+
+        # We use it to define a viewing plane.
+        gaze_plane = np.cross(cyclop_normal , s1_center-s0_center)
+        gaze_plane = gaze_plane/np.linalg.norm(gaze_plane)
+
+        #project lines of sight onto the gaze plane
+        s0_norm_on_plane =  s0_normal - np.dot(gaze_plane,s0_normal)*gaze_plane
+        s1_norm_on_plane =  s1_normal - np.dot(gaze_plane,s1_normal)*gaze_plane
+
+        #create gaze lines on this plane
+        gaze_line0 = [ s0_center, s0_center + s0_norm_on_plane ]
+        gaze_line1 = [ s1_center, s1_center + s1_norm_on_plane ]
+
+        #find the intersection of left and right line of sight.
         nearest_intersection_point , intersection_distance = math_helper.nearest_intersection( gaze_line0, gaze_line1 )
-
         if nearest_intersection_point is not None :
-            self.last_gaze_distance = np.sqrt( nearest_intersection_point.dot( nearest_intersection_point ) )
+            cyclop_gaze =  nearest_intersection_point-cyclop_center
+            self.last_gaze_distance = np.sqrt( cyclop_gaze.dot( cyclop_gaze ) )
             image_point, _  =  cv2.projectPoints( np.array([nearest_intersection_point]) ,  np.array([0.0,0.0,0.0]) ,  np.array([0.0,0.0,0.0]) , self.camera_matrix , self.dist_coefs )
             image_point = image_point.reshape(-1,2)
             image_point = normalize( image_point[0], self.world_frame_size , flip_y = True)
@@ -424,7 +441,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base):
             return None
 
 
-        confidence = (p0['confidence'] + p1['confidence'])/2.
+        confidence = min(p0['confidence'],p1['confidence'])
         ts = (p0['timestamp'] + p1['timestamp'])/2.
         g = {   'norm_pos':image_point,
                 'eye_centers_3d':{0:s0_center.tolist(),1:s1_center.tolist()},
