@@ -57,6 +57,9 @@ class Fake_Source(object):
         self.controls = []
         self.parent_menu = None
         self.info_text = None
+        def nothing(arg):
+            pass
+        self.on_frame_size_change = nothing
 
     def make_img(self,size):
         c_w ,c_h = max(1,size[0]/30),max(1,size[1]/30)
@@ -84,6 +87,7 @@ class Fake_Source(object):
     @property
     def settings(self):
         settings = {}
+        settings['name'] = self.name
         settings['frame_rate'] = self.frame_rate
         settings['frame_size'] = self.frame_size
         return settings
@@ -99,6 +103,7 @@ class Fake_Source(object):
     @frame_size.setter
     def frame_size(self,new_size):
         self.make_img(new_size)
+        self.on_frame_size_change(new_size)
 
     @property
     def frame_rates(self):

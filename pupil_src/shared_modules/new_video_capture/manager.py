@@ -30,6 +30,7 @@ class Manager(object):
             UVC_Backend.source_type() : UVC_Backend
         }
 
+        self.on_frame_size_change = None
         if  not self.set_active_backend_from_settings(previous_settings) and \
             not self.set_active_backend_from_settings(fallback_settings):
             self.set_active_backend(UVC_Backend) # Fallback
@@ -54,23 +55,23 @@ class Manager(object):
         settings = {}
         if self.active_backend:
             settings['active_backend'] = self.active_backend.settings
-        logger.debug('Retrieving settings: %s'%settings)
         return settings
 
     def get_frame(self):
         return self.active_backend.get_frame()
 
     def set_active_backend_from_settings(self, settings):
-        ab = settings.get('active_backend')
-        if ab and ab.get('source_type') in self.source_types:
-            self.set_active_backend_by_source_type(ab['source_type'])
+        if not settings: return False
+        actv_be = settings.get('active_backend')
+        if actv_be and actv_be.get('source_type') in self.source_types:
+            self.set_active_backend_by_source_type(actv_be['source_type'],actv_be.get('active_source'))
             return True
         return False
 
-    def set_active_backend_by_source_type(self, src_type):
-        self.set_active_backend(self.source_types[src_type])
+    def set_active_backend_by_source_type(self, src_type, settings=None):
+        self.set_active_backend(self.source_types[src_type], settings=settings)
 
-    def set_active_backend(self, backend):
+    def set_active_backend(self, backend, settings=None):
         """Sets active  backend
 
         Args:
@@ -82,19 +83,19 @@ class Manager(object):
         if self.active_backend_source_type == backend.source_type():
             return
 
-        settings = None
+        if not settings and self.active_backend:
+            settings = self.active_backend.settings
         self.close_active_backend()
         if backend:
             # instanciates backend
             self.active_backend = backend(self.g_pool,settings)
             self.active_backend_source_type = backend.source_type()
+            self.active_backend.on_frame_size_change = self.on_frame_size_change
 
     def close_active_backend(self):
         if self.active_backend:
-            settings = self.active_backend.settings
             self.active_backend.close()
             self.active_backend = None
-
 
     def init_gui(self, sidebar):
         self.parent_menu = sidebar

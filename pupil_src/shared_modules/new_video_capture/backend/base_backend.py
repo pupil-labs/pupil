@@ -9,24 +9,32 @@
 '''
 
 from pyglui import ui
-from source import Fake_Source
+from ..source import Fake_Source
 
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 class Base_Backend(object):
     """docstring for Base_Backend"""
-    def __init__(self, g_pool, fallback_settings, previous_settings=None):
+    def __init__(self, g_pool, fallback_settings, previous_settings=None, should_load_settings=True):
         super(Base_Backend, self).__init__()
         self.g_pool = g_pool
         self.active_source = None
         self.active_source_id = 0xDeadBeef # None is for fake source
         self.menu = None
         self.parent_menu = None
-
         self.source_selector = None
 
+        self.on_frame_size_change = None
+
+        if should_load_settings:
+            self.attempt_loading_settings(previous_settings, fallback_settings)
+        else:
+            self._previous_settings = previous_settings
+            self._fallback_settings = fallback_settings
+
+    def attempt_loading_settings(self,previous_settings, fallback_settings):
         if  not self.init_from_settings(previous_settings) and \
             not self.init_from_settings(fallback_settings):
             self.init_with_fake_source()
@@ -35,9 +43,9 @@ class Base_Backend(object):
     def name(self):
         return type(self).__name__
 
-    @staticmethod
-    def source_type():
-        return 'Local / UVC'
+    @classmethod
+    def source_type(self):
+        return self.__
 
     @property
     def settings(self):
@@ -53,10 +61,10 @@ class Base_Backend(object):
         logger.debug('Try init from settings: %s'%settings)
         try:
             actv_src_settings = settings['active_source']
-            return self.set_active_source_with_name(actv_src_settings['name'])
+            return self.set_active_source_with_name(actv_src_settings['name'], settings=actv_src_settings)
         except:
+            logger.debug('No previous source name found.')
             return False
-
 
     def init_with_fake_source(self):
         logger.debug('Init fake source.')
@@ -77,15 +85,17 @@ class Base_Backend(object):
     def set_active_source_with_id(self, source_id, settings=None):
         if self.active_source_id == source_id:
             return True
-        if self.active_source:
-            self.active_source.close()
         if not source_id:
+            if self.active_source:
+                settings = settings or self.active_source.settings
+                self.active_source.close()
             self.active_source = Fake_Source()
             self.active_source_id = None
             if settings:
                 self.active_source.settings = settings
             if self.menu:
                 self.active_source.init_gui(self.menu)
+            self.active_source.on_frame_size_change = self.on_frame_size_change
             logger.info('Activated fake source with settings: %s'%settings)
             return True
         else:
@@ -136,6 +146,3 @@ class Base_Backend(object):
             self.active_source.close()
             self.active_source = None
             self.active_source_id = None
-
-class UVC_Backend(Base_Backend):
-    pass

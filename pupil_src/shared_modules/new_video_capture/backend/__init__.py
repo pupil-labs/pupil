@@ -3,10 +3,10 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
+ Distributed under the terms of the CC BY-NC-SA License.
+ License details are in the file LICENSE, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from fake_source import Fake_Source
-from uvc_source import UVC_Source
+from base_backend import Base_Backend
+from uvc_backend import UVC_Backend

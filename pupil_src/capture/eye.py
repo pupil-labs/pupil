@@ -97,11 +97,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
 
 
         # helpers/utils
-        from uvc import get_time_monotonic
+        from uvc import get_time_monotonic, StreamError
         from file_methods import Persistent_Dict
         from version_utils import VersionFormat
         from methods import normalize, denormalize, Roi, timer
-        from video_capture import Capture_Manager, FileCaptureError, EndofVideoFileError, CameraCaptureError
+        from video_capture import FileCaptureError, EndofVideoFileError, CameraCaptureError
+        from new_video_capture import Manager as Capture_Manager
         from av_writer import JPEG_Writer,AV_Writer
 
         # Pupil detectors
@@ -196,12 +197,16 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         # Initialize capture
         previous_settings = session_settings.get('capture_settings')
         fallback_settings = {
-            'cap_type'  : 'uvc',
-            'names'     : cap_src,
-            'frame_size': (640,480),
-            'frame_rate': 60
+            'active_backend': {
+                'source_type'  : 'Local / UVC',
+                'active_source': {
+                    'names'     : cap_src,
+                    'frame_size': (640,480),
+                    'frame_rate': 60
+                }
+            }
         }
-        cap = Capture_Manager(g_pool,previous_settings,fallback_settings)
+        cap = Capture_Manager(g_pool,fallback_settings,previous_settings)
 
         g_pool.iconified = False
         g_pool.capture = cap
@@ -215,7 +220,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
 
         g_pool.u_r = UIRoi((cap.frame_size[1],cap.frame_size[0]))
         roi_user_settings = session_settings.get('roi')
-        if roi_user_settings[-1] == g_pool.u_r.get()[-1]:
+        if roi_user_settings and roi_user_settings[-1] == g_pool.u_r.get()[-1]:
             g_pool.u_r.set(roi_user_settings)
 
         def on_frame_size_change(new_size):
@@ -381,9 +386,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             # Get an image from the grabber
             try:
                 frame = cap.get_frame()
-                if not frame:
-                    logger.error("Capture from Camera Failed. Stopping.")
-                    break
+            except StreamError:
+                break
             except EndofVideoFileError:
                 logger.warning("Video File is done. Stopping")
                 cap.seek_to_frame(0)
