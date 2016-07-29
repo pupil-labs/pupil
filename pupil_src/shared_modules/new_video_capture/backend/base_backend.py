@@ -17,7 +17,7 @@ logger.setLevel(logging.INFO)
 
 class Base_Backend(object):
     """docstring for Base_Backend"""
-    def __init__(self, g_pool, fallback_settings, previous_settings=None, should_load_settings=True):
+    def __init__(self, g_pool, settings, should_load_settings=True):
         super(Base_Backend, self).__init__()
         self.g_pool = g_pool
         self.active_source = None
@@ -29,14 +29,10 @@ class Base_Backend(object):
         self.on_frame_size_change = None
 
         if should_load_settings:
-            self.attempt_loading_settings(previous_settings, fallback_settings)
-        else:
-            self._previous_settings = previous_settings
-            self._fallback_settings = fallback_settings
+            self.attempt_loading_settings(settings)
 
-    def attempt_loading_settings(self,previous_settings, fallback_settings):
-        if  not self.init_from_settings(previous_settings) and \
-            not self.init_from_settings(fallback_settings):
+    def attempt_loading_settings(self,settings):
+        if not self.init_from_settings(settings):
             self.init_with_fake_source()
 
     @property
@@ -63,7 +59,7 @@ class Base_Backend(object):
             actv_src_settings = settings['active_source']
             return self.set_active_source_with_name(actv_src_settings['name'], settings=actv_src_settings)
         except:
-            logger.debug('No previous source name found.')
+            logger.debug('Settings do not contain previous source.')
             return False
 
     def init_with_fake_source(self):

@@ -18,15 +18,13 @@ logger.setLevel(logging.INFO)
 
 class UVC_Backend(Base_Backend):
 
-    def __init__(self, *args, **kwargs):
-        kwargs['should_load_settings'] = False
-        super(UVC_Backend, self).__init__(*args,**kwargs)
-        self.attempt_loading_settings(self._previous_settings,self._fallback_settings)
+    def __init__(self, g_pool, settings):
+        super(UVC_Backend, self).__init__(g_pool, settings, should_load_settings=False)
+        self.attempt_loading_settings(settings)
 
-    def attempt_loading_settings(self,previous_settings, fallback_settings):
-        if  not self.init_from_settings(previous_settings) and \
-            not self.init_from_settings(fallback_settings):
-            super(UVC_Backend, self).attempt_loading_settings(previous_settings, fallback_settings)
+    def attempt_loading_settings(self,settings):
+        if  not self.init_from_settings(settings):
+            super(UVC_Backend, self).attempt_loading_settings(settings)
 
     @staticmethod
     def source_type():
