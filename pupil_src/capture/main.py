@@ -195,7 +195,7 @@ def launcher():
     delay_thread.start()
 
     del xsub_socket,xpub_socket,pull_socket
-
+    sleep(0.2)
 
     topics = (  'notify.eye_process.',
                 'notify.launcher_process.',
