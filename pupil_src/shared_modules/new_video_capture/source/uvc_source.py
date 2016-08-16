@@ -8,6 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+from base_source import Base_Source
+
 import uvc
 #check versions for our own depedencies as they are fast-changing
 assert uvc.__version__ >= '0.7'
@@ -26,20 +28,18 @@ class CameraCaptureError(Exception):
         self.arg = arg
 
 
-class UVC_Source(object):
+class UVC_Source(Base_Source):
     """
     Camera Capture is a class that encapsualtes uvc.Capture:
      - adds UI elements
      - adds timestamping sanitization fns.
     """
-    def __init__(self,g_pool,uid):
-        self.g_pool         = g_pool
+    def __init__(self,g_pool,uid,on_frame_size_change):
+        super(Base_Source, self).__init__(g_pool)
         self.control_menu   = None
         self.parent_menu    = None
         self.uvc_capture    = None
-        def nothing(arg):
-            pass
-        self.on_frame_size_change = nothing
+        self.on_frame_size_change = on_frame_size_change
         self.init_backend(uid)
 
     def init_backend(self,uid):
@@ -159,6 +159,9 @@ class UVC_Source(object):
         self.uvc_capture.frame_size = size
         self.on_frame_size_change(size)
 
+    def set_frame_size(self,new_size):
+        self.frame_size = new_size
+
     @property
     def name(self):
         return self.uvc_capture.name
@@ -190,7 +193,7 @@ class UVC_Source(object):
 
         sensor_control.append(ui.Selector(
             'frame_size',self,
-            setter=self.frame_size,
+            setter=self.set_frame_size,
             selection=self.uvc_capture.frame_sizes,
             label='Resolution'
         ))

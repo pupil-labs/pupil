@@ -58,11 +58,7 @@ class UVC_Backend(Base_Backend):
         if not succesfull:
             for dev in self.list_sources():
                 if dev['name'] == name:
-                    if uvc.is_accessible(dev['uid']):
-                        return self.set_active_source_with_id(dev['uid'], settings=settings)
-                    else:
-                        logger.error('Source "%s" already in use or not accessible.'%name)
-                        return True
+                    return self.set_active_source_with_id(dev['uid'], settings=settings)
         return succesfull
 
     def set_active_source_with_id(self, source_id, settings=None):
@@ -76,7 +72,7 @@ class UVC_Backend(Base_Backend):
                 settings = settings or self.active_source.settings
                 self.active_source.close()
             try:
-                self.active_source = UVC_Source(self.g_pool, source_id)
+                self.active_source = UVC_Source(self.g_pool, source_id, self.on_frame_size_change)
                 self.active_source_id = source_id
                 if settings:
                     self.active_source.settings = settings
@@ -85,6 +81,5 @@ class UVC_Backend(Base_Backend):
                 return False
             if self.menu:
                 self.active_source.init_gui(self.menu)
-            self.active_source.on_frame_size_change = self.on_frame_size_change
             return True
         return succesfull

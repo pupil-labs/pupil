@@ -26,7 +26,7 @@ class Base_Backend(object):
         self.parent_menu = None
         self.source_selector = None
 
-        self.on_frame_size_change = None
+        self._on_frame_size_change = None
 
         if should_load_settings:
             self.attempt_loading_settings(settings)
@@ -36,12 +36,21 @@ class Base_Backend(object):
             self.init_with_fake_source()
 
     @property
+    def on_frame_size_change(self):
+        return self._on_frame_size_change
+    @on_frame_size_change.setter
+    def on_frame_size_change(self, fun):
+        self._on_frame_size_change = fun
+        if self.active_source:
+            self.active_source.on_frame_size_change = fun
+
+    @property
     def name(self):
         return type(self).__name__
 
     @classmethod
     def source_type(self):
-        return self.__
+        return self.__name__
 
     @property
     def settings(self):
@@ -85,7 +94,7 @@ class Base_Backend(object):
             if self.active_source:
                 settings = settings or self.active_source.settings
                 self.active_source.close()
-            self.active_source = Fake_Source()
+            self.active_source = Fake_Source(self.g_pool)
             self.active_source_id = None
             if settings:
                 self.active_source.settings = settings

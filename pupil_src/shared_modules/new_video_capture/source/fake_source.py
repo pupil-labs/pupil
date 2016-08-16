@@ -8,6 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+from base_source import Base_Source
+
 import cv2
 import numpy as np
 from time import time,sleep
@@ -46,10 +48,10 @@ class Frame(object):
     def gray(self, value):
         raise Exception('Read only.')
 
-class Fake_Source(object):
+class Fake_Source(Base_Source):
     """docstring for FakeSource"""
-    def __init__(self):
-        super(Fake_Source, self).__init__()
+    def __init__(self, g_pool):
+        super(Fake_Source, self).__init__(g_pool)
         self.fps = 30
         self.presentation_time = time()
         self.make_img((640,480))

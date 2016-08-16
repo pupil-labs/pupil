@@ -10,6 +10,7 @@
 
 from pyglui import ui
 from backend import UVC_Backend
+from backend import NDSI_Backend
 
 import logging
 logger = logging.getLogger(__name__)
@@ -27,13 +28,25 @@ class Manager(object):
         self.active_backend = None
         self.active_backend_source_type = None
         self.source_types = {
-            UVC_Backend.source_type() : UVC_Backend
+            b.source_type() : b for b in [UVC_Backend, NDSI_Backend]
         }
 
-        self.on_frame_size_change = None
+        def do_nothing(*arg,**kwargs):
+            pass
+        self._on_frame_size_change = do_nothing
         if  not self.set_active_backend_from_settings(previous_settings) and \
             not self.set_active_backend_from_settings(fallback_settings):
             self.set_active_backend(UVC_Backend) # Fallback
+
+
+    @property
+    def on_frame_size_change(self):
+        return self._on_frame_size_change
+    @on_frame_size_change.setter
+    def on_frame_size_change(self, fun):
+        self._on_frame_size_change = fun
+        if self.active_backend:
+            self.active_backend.on_frame_size_change = fun
 
     @property
     def settings(self):
@@ -91,6 +104,8 @@ class Manager(object):
             self.active_backend = backend(self.g_pool,settings)
             self.active_backend_source_type = backend.source_type()
             self.active_backend.on_frame_size_change = self.on_frame_size_change
+            if self.menu:
+                self.active_backend.init_gui(self.menu)
 
     def close_active_backend(self):
         if self.active_backend:
