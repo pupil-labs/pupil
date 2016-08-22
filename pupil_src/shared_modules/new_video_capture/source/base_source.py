@@ -13,3 +13,5 @@ class Base_Source(object):
     def __init__(self, g_pool, on_frame_size_change=None):
         super(Base_Source, self).__init__()
         self.g_pool = g_pool
+        self.parent_menu = None
+

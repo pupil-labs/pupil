@@ -70,6 +70,7 @@ class NDSI_Backend(Base_Backend):
                 self.active_source_id = source_id
                 if settings:
                     self.active_source.settings = settings
+                self.active_source.init_gui(self.menu)
             except Exception as e:
                 tb.print_exc()
                 logger.error('Initializing Pupil Mobile source failed because of: %s'%str(e))

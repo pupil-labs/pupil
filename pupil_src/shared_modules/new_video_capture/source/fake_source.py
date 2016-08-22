@@ -57,7 +57,6 @@ class Fake_Source(Base_Source):
         self.make_img((640,480))
         self.frame_count = 0
         self.controls = []
-        self.parent_menu = None
         self.info_text = None
         def nothing(arg):
             pass

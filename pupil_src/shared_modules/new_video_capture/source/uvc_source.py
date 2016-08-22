@@ -35,10 +35,9 @@ class UVC_Source(Base_Source):
      - adds timestamping sanitization fns.
     """
     def __init__(self,g_pool,uid,on_frame_size_change):
-        super(Base_Source, self).__init__(g_pool)
-        self.control_menu   = None
-        self.parent_menu    = None
-        self.uvc_capture    = None
+        super(UVC_Source, self).__init__(g_pool)
+        self.control_menu = None
+        self.uvc_capture  = None
         self.on_frame_size_change = on_frame_size_change
         self.init_backend(uid)
 
