@@ -38,8 +38,8 @@ class NDSI_Source(Fake_Source):
         return super(NDSI_Source, self).get_frame()
 
     def on_notification(self, sensor, event):
-        logger.debug('%s: %s'%(sensor,event))
         if self.control_menu and event['control_id'] not in self.control_id_ui_mapping:
+            logger.debug('! update_control_menu call ! %s > %s'%(sensor,event))
             self.update_control_menu()
 
     def set_frame_size(self,new_size):
@@ -71,27 +71,29 @@ class NDSI_Source(Fake_Source):
         # closure factory
         def make_value_change_fn(ctrl_id):
             def initiate_value_change(val):
+                logger.debug('%s: %s >> %s'%(self.sensor, ctrl_id, val))
                 self.sensor.set_control_value(ctrl_id, val)
             return initiate_value_change
 
         for ctrl_id, ctrl_dict in self.sensor.controls.iteritems():
-            logger.debug('Creating UI for %s'%ctrl_dict)
             dtype = ctrl_dict['dtype']
             ctrl_ui = None
-            if dtype == "string" or dtype == "float":
+            if dtype == "string":
+                logger.debug('Text input for %s named "%s"'%(dtype,ctrl_dict['caption']))
                 ctrl_ui = ui.Text_Input(
                     'value',
                     ctrl_dict,
                     label=str(ctrl_dict['caption']),
                     setter=make_value_change_fn(ctrl_id))
-            elif dtype == "integer":
+            elif dtype == "integer" or dtype == "float":
+                convert_fn = int if dtype == "integer" else float
                 ctrl_ui = ui.Slider(
                     'value',
                     ctrl_dict,
                     label=str(ctrl_dict['caption']),
-                    min=int(ctrl_dict['min']),
-                    max=int(ctrl_dict['max']),
-                    step=1,
+                    min =convert_fn(ctrl_dict['min'] or 0),
+                    max =convert_fn(ctrl_dict['max'] or 100),
+                    step=convert_fn(ctrl_dict['res'] or 0.),
                     setter=make_value_change_fn(ctrl_id))
             elif dtype == "bool":
                 ctrl_ui = ui.Switch(
