@@ -68,16 +68,47 @@ class NDSI_Source(Fake_Source):
 
     def update_control_menu(self):
         del self.control_menu.elements[:]
-        def print_new_value(val):
-            logger.debug('New value: %s'%val)
         for ctrl_id, ctrl_dict in self.sensor.controls.iteritems():
             logger.debug('Creating UI for %s'%ctrl_dict)
-            self.control_menu.append(ui.Text_Input(
-                'value',
-                ctrl_dict,
-                label=str(ctrl_dict['caption']),
-                setter=print_new_value
-                ))
+            dtype = ctrl_dict['dtype']
+            def print_new_value(val):
+                logger.debug('New value for %s: %s'%(ctrl_id,val))
+            ctrl_ui = None
+            if dtype == "string" or dtype == "float":
+                ctrl_ui = ui.Text_Input(
+                    'value',
+                    ctrl_dict,
+                    label=str(ctrl_dict['caption']),
+                    setter=print_new_value)
+            elif dtype == "integer":
+                ctrl_ui = ui.Slider(
+                    'value',
+                    ctrl_dict,
+                    label=str(ctrl_dict['caption']),
+                    min=int(ctrl_dict['min']),
+                    max=int(ctrl_dict['max']),
+                    step=1,
+                    setter=print_new_value)
+            elif dtype == "bool":
+                ctrl_ui = ui.Switch(
+                    'value',
+                    ctrl_dict,
+                    label=str(ctrl_dict['caption']),
+                    on_val=ctrl_dict['max'],
+                    off_val=ctrl_dict['min'],
+                    setter=print_new_value)
+            elif dtype == "selector":
+                desc_list = ctrl_dict['selector']
+                labels    = [str(desc['caption']) for desc in desc_list]
+                selection = [desc['value']        for desc in desc_list]
+                ctrl_ui = ui.Selector(
+                    'value',
+                    ctrl_dict,
+                    label=str(ctrl_dict['caption']),
+                    selection=selection,
+                    labels=labels,
+                    setter=print_new_value)
+            if ctrl_ui: self.control_menu.append(ctrl_ui)
 
 
     def deinit_gui(self):
