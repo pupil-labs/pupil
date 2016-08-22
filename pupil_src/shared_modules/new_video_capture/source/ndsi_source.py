@@ -23,6 +23,7 @@ class NDSI_Source(Fake_Source):
         self.sensor = network.sensor(source_id, callbacks=(self.on_notification,))
         logger.debug('NDSI Source Sensor: %s'%self.sensor)
         self.control_menu = None
+        self.control_id_ui_mapping = {}
 
     @property
     def name(self):
@@ -38,7 +39,8 @@ class NDSI_Source(Fake_Source):
 
     def on_notification(self, sensor, event):
         logger.debug('%s: %s'%(sensor,event))
-        if self.control_menu: self.update_control_menu()
+        if self.control_menu and event['control_id'] not in self.control_id_ui_mapping:
+            self.update_control_menu()
 
     def set_frame_size(self,new_size):
         self.frame_size = new_size
@@ -58,28 +60,30 @@ class NDSI_Source(Fake_Source):
 
     def init_gui(self, parent_menu):
         self.parent_menu = parent_menu
-        #lets define some  helper functions:
-        def gui_load_defaults():
-            pass
-
         self.control_menu = ui.Growing_Menu(label='%s Controls'%str(self.sensor.name))
         self.update_control_menu()
         self.parent_menu.append(self.control_menu)
 
     def update_control_menu(self):
         del self.control_menu.elements[:]
+        self.control_id_ui_mapping = {}
+
+        # closure factory
+        def make_value_change_fn(ctrl_id):
+            def initiate_value_change(val):
+                self.sensor.set_control_value(ctrl_id, val)
+            return initiate_value_change
+
         for ctrl_id, ctrl_dict in self.sensor.controls.iteritems():
             logger.debug('Creating UI for %s'%ctrl_dict)
             dtype = ctrl_dict['dtype']
-            def print_new_value(val):
-                logger.debug('New value for %s: %s'%(ctrl_id,val))
             ctrl_ui = None
             if dtype == "string" or dtype == "float":
                 ctrl_ui = ui.Text_Input(
                     'value',
                     ctrl_dict,
                     label=str(ctrl_dict['caption']),
-                    setter=print_new_value)
+                    setter=make_value_change_fn(ctrl_id))
             elif dtype == "integer":
                 ctrl_ui = ui.Slider(
                     'value',
@@ -88,7 +92,7 @@ class NDSI_Source(Fake_Source):
                     min=int(ctrl_dict['min']),
                     max=int(ctrl_dict['max']),
                     step=1,
-                    setter=print_new_value)
+                    setter=make_value_change_fn(ctrl_id))
             elif dtype == "bool":
                 ctrl_ui = ui.Switch(
                     'value',
@@ -96,7 +100,7 @@ class NDSI_Source(Fake_Source):
                     label=str(ctrl_dict['caption']),
                     on_val=ctrl_dict['max'],
                     off_val=ctrl_dict['min'],
-                    setter=print_new_value)
+                    setter=make_value_change_fn(ctrl_id))
             elif dtype == "selector":
                 desc_list = ctrl_dict['selector']
                 labels    = [str(desc['caption']) for desc in desc_list]
@@ -107,9 +111,11 @@ class NDSI_Source(Fake_Source):
                     label=str(ctrl_dict['caption']),
                     selection=selection,
                     labels=labels,
-                    setter=print_new_value)
-            if ctrl_ui: self.control_menu.append(ctrl_ui)
-
+                    setter=make_value_change_fn(ctrl_id))
+            if ctrl_ui:
+                self.control_id_ui_mapping[ctrl_id] = ctrl_ui
+                self.control_menu.append(ctrl_ui)
+        self.control_menu.append(ui.Button("Reset to default values",self.sensor.reset_all_control_values))
 
     def deinit_gui(self):
         if self.control_menu:
