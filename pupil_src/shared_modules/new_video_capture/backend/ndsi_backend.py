@@ -21,7 +21,7 @@ class NDSI_Backend(Base_Backend):
     """docstring for NDSI_Backend"""
     def __init__(self, g_pool, settings):
         super(NDSI_Backend, self).__init__(g_pool, settings, should_load_settings=True)
-        self.network = ndsi.Network()
+        self.network = ndsi.Network(callbacks=(self.on_event,))
         self.network.start()
 
     @staticmethod
@@ -35,6 +35,12 @@ class NDSI_Backend(Base_Backend):
     def get_frame(self):
         self.poll_events()
         return super(NDSI_Backend, self).get_frame()
+
+    def on_event(self, caller, event):
+        if (event['subject'] == 'detach' and
+            isinstance(self.active_source, NDSI_Source) and
+            self.active_source.sensor.uuid == event['sensor_uuid']):
+            self.set_active_source_with_id(None, self.active_source.settings)
 
     def list_sources(self):
         self.poll_events()

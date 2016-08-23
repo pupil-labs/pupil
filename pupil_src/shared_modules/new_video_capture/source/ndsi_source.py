@@ -11,10 +11,31 @@
 from . import Fake_Source
 
 from pyglui import ui
+import json, numpy as np, copy
 
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+class Frame(object):
+    def __init__(self, meta_data, data):
+        self.height = meta_data['height']
+        self.width  = meta_data['width']
+        self.depth  = meta_data['depth']
+        self.timestamp = meta_data['timestamp']
+
+        img = np.ndarray(
+            shape=(self.height,self.width,self.depth),
+            dtype=np.dtype(meta_data.get('dtype','uint8')),
+            buffer=data)
+        img.flags.writeable = True
+        self.img = img
+        self.bgr = img
+        self._gray = None
+        self.index = meta_data['seq']
+        #indicate that the frame does not have a native yuv or jpeg buffer
+        self.yuv_buffer = None
+        self.jpeg_buffer = None
 
 class NDSI_Source(Fake_Source):
     """docstring for NDSI_Source"""
@@ -35,7 +56,9 @@ class NDSI_Source(Fake_Source):
 
     def get_frame(self):
         self.poll_events()
-        return super(NDSI_Source, self).get_frame()
+        data_msg = self.sensor.get_data(copy=False)
+        meta_data = json.loads(data_msg[1].bytes)
+        return Frame(meta_data, data_msg[2].buffer.tobytes())
 
     def on_notification(self, sensor, event):
         if self.control_menu and event['control_id'] not in self.control_id_ui_mapping:
