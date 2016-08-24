@@ -33,8 +33,7 @@ class NDSI_Backend(Base_Backend):
             self.network.handle_event()
 
     def get_frame(self):
-        self.poll_events()
-        return super(NDSI_Backend, self).get_frame()
+        return self.active_source.get_frame_robust()
 
     def on_event(self, caller, event):
         if (event['subject'] == 'detach' and

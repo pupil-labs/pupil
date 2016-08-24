@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from . import Fake_Source
+from base_source import Base_Source
 
 from pyglui import ui
 import json, numpy as np, copy
@@ -16,6 +16,16 @@ import json, numpy as np, copy
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+class CaptureError(Exception):
+    def __init__(self, message):
+        super(CaptureError, self).__init__()
+        self.message = message
+
+class StreamError(CaptureError):
+    def __init__(self, message):
+        super(StreamError, self).__init__(message)
+        self.message = message
 
 class Frame(object):
     def __init__(self, meta_data, data):
@@ -37,7 +47,7 @@ class Frame(object):
         self.yuv_buffer = None
         self.jpeg_buffer = None
 
-class NDSI_Source(Fake_Source):
+class NDSI_Source(Base_Source):
     """docstring for NDSI_Source"""
     def __init__(self, g_pool, network, source_id):
         super(NDSI_Source, self).__init__(g_pool)
@@ -45,6 +55,7 @@ class NDSI_Source(Fake_Source):
         logger.debug('NDSI Source Sensor: %s'%self.sensor)
         self.control_menu = None
         self.control_id_ui_mapping = {}
+        self.get_frame_timeout = 1000
 
     @property
     def name(self):
@@ -56,9 +67,29 @@ class NDSI_Source(Fake_Source):
 
     def get_frame(self):
         self.poll_events()
-        data_msg = self.sensor.get_data(copy=False)
-        meta_data = json.loads(data_msg[1].bytes)
-        return Frame(meta_data, data_msg[2].buffer.tobytes())
+        # blocks until new frame arrives or times out
+        if self.sensor.data_sub.poll(timeout=self.get_frame_timeout):
+            # skip to newest frame
+            while self.sensor.has_data:
+                data_msg = self.sensor.get_data(copy=False)
+            meta_data = json.loads(data_msg[1].bytes)
+            return Frame(meta_data, data_msg[2].bytes)
+        else: raise StreamError('get_frame timed out')
+
+    def get_frame_robust(self):
+        '''Mirrors uvc.Capture.get_frame_robust()'''
+        attempts = 3
+        for a in range(attempts):
+            try:
+                frame = self.get_frame()
+            except Exception as e:
+                if a:
+                    logger.info('Could not get Frame: "%s". Attempt:%s/%s '%(e.message,a+1,attempts))
+                else:
+                    logger.debug('Could not get Frame of first try: "%s". Attempt:%s/%s '%(e.message,a+1,attempts))
+            else:
+                return frame
+        raise StreamError("Could not grab frame after 3 attempts. Giving up.")
 
     def on_notification(self, sensor, event):
         if self.control_menu and event['control_id'] not in self.control_id_ui_mapping:
