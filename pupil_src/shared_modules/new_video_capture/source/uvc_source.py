@@ -27,7 +27,6 @@ class CameraCaptureError(Exception):
         super(CameraCaptureError, self).__init__()
         self.arg = arg
 
-
 class UVC_Source(Base_Source):
     """
     Camera Capture is a class that encapsualtes uvc.Capture:

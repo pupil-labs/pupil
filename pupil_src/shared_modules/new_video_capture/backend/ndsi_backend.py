@@ -11,7 +11,7 @@
 import ndsi
 
 from base_backend import Base_Backend
-from ..source import NDSI_Source
+from ..source import NDSI_Source, NDSI_StreamError
 
 import logging, traceback as tb
 logger = logging.getLogger(__name__)
@@ -23,6 +23,10 @@ class NDSI_Backend(Base_Backend):
         super(NDSI_Backend, self).__init__(g_pool, settings, should_load_settings=True)
         self.network = ndsi.Network(callbacks=(self.on_event,))
         self.network.start()
+
+    @staticmethod
+    def stream_error_class():
+        return NDSI_StreamError
 
     @staticmethod
     def source_type():

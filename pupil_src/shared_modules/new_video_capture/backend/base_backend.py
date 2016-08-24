@@ -48,6 +48,10 @@ class Base_Backend(object):
     def name(self):
         return type(self).__name__
 
+    @staticmethod
+    def stream_error_class():
+        return None
+
     @classmethod
     def source_type(self):
         return self.__name__

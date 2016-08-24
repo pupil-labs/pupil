@@ -74,7 +74,7 @@ class NDSI_Source(Base_Source):
                 data_msg = self.sensor.get_data(copy=False)
             meta_data = json.loads(data_msg[1].bytes)
             return Frame(meta_data, data_msg[2].bytes)
-        else: raise StreamError('get_frame timed out')
+        else: raise StreamError('Operation timed out.')
 
     def get_frame_robust(self):
         '''Mirrors uvc.Capture.get_frame_robust()'''

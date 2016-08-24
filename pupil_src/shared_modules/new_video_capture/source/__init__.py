@@ -10,4 +10,4 @@
 
 from fake_source import Fake_Source
 from uvc_source  import UVC_Source
-from ndsi_source import NDSI_Source
+from ndsi_source import NDSI_Source, StreamError as NDSI_StreamError

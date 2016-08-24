@@ -27,6 +27,10 @@ class UVC_Backend(Base_Backend):
             super(UVC_Backend, self).attempt_loading_settings(settings)
 
     @staticmethod
+    def stream_error_class():
+        return uvc.StreamError
+
+    @staticmethod
     def source_type():
         return 'Local / UVC'
 

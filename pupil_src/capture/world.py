@@ -85,7 +85,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     from new_video_capture import Manager as Capture_Manager
     from version_utils import VersionFormat
     import audio
-    from uvc import get_time_monotonic, StreamError
+    from uvc import get_time_monotonic
 
 
     #trigger pupil detector cpp build:
@@ -377,8 +377,8 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         # Get an image from the grabber
         try:
             frame = g_pool.capture.get_frame()
-        except StreamError:
-            break
+        except g_pool.capture.active_backend.stream_error_class():
+            g_pool.capture.active_backend.set_active_source_with_id(None)
         except EndofVideoFileError:
             logger.warning("Video file is done. Stopping")
             break
