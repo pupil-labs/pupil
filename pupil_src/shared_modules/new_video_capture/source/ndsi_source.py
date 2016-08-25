@@ -9,43 +9,13 @@
 '''
 
 from base_source import Base_Source
+from ndsi import StreamError
 
 from pyglui import ui
-import json, numpy as np, copy
 
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-class CaptureError(Exception):
-    def __init__(self, message):
-        super(CaptureError, self).__init__()
-        self.message = message
-
-class StreamError(CaptureError):
-    def __init__(self, message):
-        super(StreamError, self).__init__(message)
-        self.message = message
-
-class Frame(object):
-    def __init__(self, meta_data, data):
-        self.height = meta_data['height']
-        self.width  = meta_data['width']
-        self.depth  = meta_data['depth']
-        self.timestamp = meta_data['timestamp']
-
-        img = np.ndarray(
-            shape=(self.height,self.width,self.depth),
-            dtype=np.dtype(meta_data.get('dtype','uint8')),
-            buffer=data)
-        img.flags.writeable = True
-        self.img = img
-        self.bgr = img
-        self._gray = None
-        self.index = meta_data['seq']
-        #indicate that the frame does not have a native yuv or jpeg buffer
-        self.yuv_buffer = None
-        self.jpeg_buffer = None
 
 class NDSI_Source(Base_Source):
     """docstring for NDSI_Source"""
@@ -61,20 +31,13 @@ class NDSI_Source(Base_Source):
     def name(self):
         return '%s @ %s'%(self.sensor.name, self.sensor.host_name)
 
-    def poll_events(self):
+    def poll_notifications(self):
         while self.sensor.has_notifications:
             self.sensor.handle_notification()
 
     def get_frame(self):
-        self.poll_events()
-        # blocks until new frame arrives or times out
-        if self.sensor.data_sub.poll(timeout=self.get_frame_timeout):
-            # skip to newest frame
-            while self.sensor.has_data:
-                data_msg = self.sensor.get_data(copy=False)
-            meta_data = json.loads(data_msg[1].bytes)
-            return Frame(meta_data, data_msg[2].bytes)
-        else: raise StreamError('Operation timed out.')
+        self.poll_notifications()
+        return self.sensor.get_newest_data_frame(timeout=self.get_frame_timeout)
 
     def get_frame_robust(self):
         '''Mirrors uvc.Capture.get_frame_robust()'''

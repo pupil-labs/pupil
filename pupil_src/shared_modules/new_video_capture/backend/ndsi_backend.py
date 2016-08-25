@@ -11,7 +11,7 @@
 import ndsi
 
 from base_backend import Base_Backend
-from ..source import NDSI_Source, NDSI_StreamError
+from ..source import NDSI_Source
 
 import logging, traceback as tb
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class NDSI_Backend(Base_Backend):
 
     @staticmethod
     def stream_error_class():
-        return NDSI_StreamError
+        return ndsi.StreamError
 
     @staticmethod
     def source_type():
@@ -37,6 +37,7 @@ class NDSI_Backend(Base_Backend):
             self.network.handle_event()
 
     def get_frame(self):
+        self.poll_events()
         return self.active_source.get_frame_robust()
 
     def on_event(self, caller, event):
