@@ -36,7 +36,7 @@ class Pupil_Groups(Plugin):
         def close():
             self.alive = False
 
-        help_str = "Uses the ZeroMQ Realtime Exchange Protocol to discover other local group members."
+        help_str = "Pupil Groups utilizes the ZeroMQ Realtime Exchange Protocol to discover other local group members. We use it to relay notifications to other group members. Example: Sychronise time."
         self.menu = ui.Growing_Menu('Pupil Groups')
         self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text(help_str))
