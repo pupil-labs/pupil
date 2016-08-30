@@ -130,10 +130,14 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         g_pool.app = 'capture'
         g_pool.timebase = timebase
 
+        def should_call_ui_functions(window):
+            # GLFW_VISIBLE == 0x00020004
+            visible = glfw.glfwGetWindowAttrib(window, 0x00020004)
+            return visible and not g_pool.iconified
 
         # Callback functions
         def on_resize(window,w, h):
-            if not g_pool.iconified:
+            if should_call_ui_functions(window):
                 active_window = glfw.glfwGetCurrentContext()
                 glfw.glfwMakeContextCurrent(window)
                 g_pool.gui.update_window(w,h)
@@ -424,7 +428,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
 
             # GL drawing
             if window_should_update():
-                if not g_pool.iconified:
+                if should_call_ui_functions(main_window):
                     glfw.glfwMakeContextCurrent(main_window)
                     clear_gl_screen()
 

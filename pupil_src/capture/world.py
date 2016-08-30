@@ -447,7 +447,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
         # render camera image
         glfw.glfwMakeContextCurrent(main_window)
-        if should_call_ui_functions():
+        if should_call_ui_functions(main_window):
             g_pool.image_tex.update_from_frame(frame)
             glFlush()
         make_coord_system_norm_based()
@@ -455,7 +455,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         make_coord_system_pixel_based((frame.height,frame.width,3))
         # render visual feedback from loaded plugins
 
-        if should_call_ui_functions:
+        if should_call_ui_functions(main_window):
             for p in g_pool.plugins:
                 p.gl_display()
 
