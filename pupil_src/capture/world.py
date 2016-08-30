@@ -69,7 +69,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     import glfw
     from pyglui import ui,graph,cygl
     from pyglui.cygl.utils import Named_Texture
-    from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based,glFlush
+    from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based,glFlush,is_window_visible
 
     #check versions for our own depedencies as they are fast-changing
     from pyglui import __version__ as pyglui_version
@@ -148,15 +148,9 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     plugin_by_name = dict(zip(name_by_index,plugin_by_index))
     default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Remote',{})]
 
-
-    def should_call_ui_functions(window):
-        # GLFW_VISIBLE == 0x00020004
-        visible = glfw.glfwGetWindowAttrib(window, 0x00020004)
-        return visible and not g_pool.iconified
-
     # Callback functions
     def on_resize(window,w, h):
-        if should_call_ui_functions(window):
+        if is_window_visible(window):
             g_pool.gui.update_window(w,h)
             g_pool.gui.collect_menus()
             graph.adjust_size(w,h)
@@ -447,7 +441,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
         # render camera image
         glfw.glfwMakeContextCurrent(main_window)
-        if should_call_ui_functions(main_window):
+        if is_window_visible(main_window):
             g_pool.image_tex.update_from_frame(frame)
             glFlush()
         make_coord_system_norm_based()
@@ -455,7 +449,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         make_coord_system_pixel_based((frame.height,frame.width,3))
         # render visual feedback from loaded plugins
 
-        if should_call_ui_functions(main_window):
+        if is_window_visible(main_window):
             for p in g_pool.plugins:
                 p.gl_display()
 
