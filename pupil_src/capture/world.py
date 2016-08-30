@@ -149,9 +149,14 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Remote',{})]
 
 
+    def should_call_ui_functions(window):
+        # GLFW_VISIBLE == 0x00020004
+        visible = glfw.glfwGetWindowAttrib(window, 0x00020004)
+        return visible and not g_pool.iconified
+
     # Callback functions
     def on_resize(window,w, h):
-        if not g_pool.iconified:
+        if should_call_ui_functions(window):
             g_pool.gui.update_window(w,h)
             g_pool.gui.collect_menus()
             graph.adjust_size(w,h)
@@ -183,7 +188,6 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
     def on_scroll(window,x,y):
         g_pool.gui.update_scroll(x,y*scroll_factor)
-
 
     tick = delta_t()
     def get_dt():
@@ -443,19 +447,18 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
         # render camera image
         glfw.glfwMakeContextCurrent(main_window)
-        if g_pool.iconified:
-            pass
-        else:
+        if should_call_ui_functions():
             g_pool.image_tex.update_from_frame(frame)
             glFlush()
         make_coord_system_norm_based()
         g_pool.image_tex.draw()
         make_coord_system_pixel_based((frame.height,frame.width,3))
         # render visual feedback from loaded plugins
-        for p in g_pool.plugins:
-            p.gl_display()
 
-        if not g_pool.iconified:
+        if should_call_ui_functions:
+            for p in g_pool.plugins:
+                p.gl_display()
+
             graph.push_view()
             fps_graph.draw()
             cpu_graph.draw()
