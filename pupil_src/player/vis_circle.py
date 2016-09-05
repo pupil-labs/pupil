@@ -44,7 +44,9 @@ class Vis_Circle(Plugin):
 
         pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze_positions',[])]
         for pt in pts:
-            transparent_circle(frame.img, pt, radius=self.radius, color=(self.b, self.g, self.r, self.a), thickness=thickness)
+            fixations = self.g_pool.fixations_by_frame[frame.index]
+            c = (0,0,1,.2) if fixations else (self.b, self.g, self.r, self.a)
+            transparent_circle(frame.img, pt, radius=self.radius, color=c, thickness=thickness)
 
     def init_gui(self):
         # initialize the menu
