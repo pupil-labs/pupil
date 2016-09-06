@@ -128,23 +128,10 @@ class Offline_Reference_Surface(Reference_Surface):
         self.heatmap = None
 
     def gaze_on_srf_by_frame_idx(self,frame_index,m_from_screen):
-        return self._on_srf_by_frame_idx(frame_index,m_from_screen,self.g_pool.gaze_positions_by_frame[frame_index])
-
+        return self.map_data_to_surface(self.g_pool.gaze_positions_by_frame[frame_index],m_from_screen)
 
     def fixations_on_srf_by_frame_idx(self,frame_index,m_from_screen):
-        return self._on_srf_by_frame_idx(frame_index,m_from_screen,self.g_pool.fixations_by_frame[frame_index])
-
-
-    def _on_srf_by_frame_idx(self,frame_idx,m_from_screen,data_by_frame):
-        data_on_srf = []
-        for d in data_by_frame:
-            pos = np.array([d['norm_pos']]).reshape(1,1,2)
-            mapped_pos = cv2.perspectiveTransform(pos , m_from_screen )
-            mapped_pos.shape = (2)
-            on_srf = bool((0 <= mapped_pos[0] <= 1) and (0 <= mapped_pos[1] <= 1))
-            data_on_srf.append( {'norm_pos':(mapped_pos[0],mapped_pos[1]),'on_srf':on_srf,'base_data':d } )
-        return data_on_srf
-
+        return self.map_data_to_surface(self.g_pool.fixations_by_frame[frame_index],m_from_screen)
 
     def gl_display_heatmap(self):
         if self.heatmap_texture and self.detected:
@@ -194,47 +181,6 @@ class Offline_Reference_Surface(Reference_Surface):
             glMatrixMode(GL_MODELVIEW)
             glPopMatrix()
 
-
-    #### fns to draw surface in seperate window
-    def gl_display_in_window(self,world_tex):
-        """
-        here we map a selected surface onto a seperate window.
-        """
-        if self._window and self.detected:
-            active_window = glfwGetCurrentContext()
-            glfwMakeContextCurrent(self._window)
-            clear_gl_screen()
-
-            # cv uses 3x3 gl uses 4x4 tranformation matricies
-            m = cvmat_to_glmat(self.m_from_screen)
-
-            glMatrixMode(GL_PROJECTION)
-            glPushMatrix()
-            glLoadIdentity()
-            glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
-
-            glMatrixMode(GL_MODELVIEW)
-            glPushMatrix()
-            #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
-            glLoadMatrixf(m)
-
-            world_tex.draw()
-
-            glMatrixMode(GL_PROJECTION)
-            glPopMatrix()
-            glMatrixMode(GL_MODELVIEW)
-            glPopMatrix()
-
-
-            if self.heatmap_texture:
-                self.heatmap_texture.draw()
-
-            # now lets get recent pupil positions on this surface:
-            for gp in self.gaze_on_srf:
-                draw_points_norm([gp['norm_pos']],color=RGBA(0.0,0.8,0.5,0.8), size=80)
-
-            glfwSwapBuffers(self._window)
-            glfwMakeContextCurrent(active_window)
 
 
     def generate_heatmap(self,section):

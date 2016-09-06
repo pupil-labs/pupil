@@ -79,7 +79,7 @@ import numpy as np
 from glfw import *
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.3'
+assert pyglui_version >= '0.9'
 from pyglui import ui,graph,cygl
 from pyglui.cygl.utils import Named_Texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
@@ -290,9 +290,16 @@ def session(rec_dir):
     g_pool.main_menu.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
-    g_pool.main_menu.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
-                                        labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
-                                        setter= open_plugin, getter = lambda: "Select to load"))
+
+    selector_label = "Select to load"
+    labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins]
+    user_launchable_plugins.insert(0, selector_label)
+    labels.insert(0, selector_label)
+    g_pool.main_menu.append(ui.Selector('Open plugin',
+                                        selection = user_launchable_plugins,
+                                        labels    = labels,
+                                        setter    = open_plugin,
+                                        getter    = lambda: selector_label))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))

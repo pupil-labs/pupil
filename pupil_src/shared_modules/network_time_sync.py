@@ -63,7 +63,7 @@ class Time_Echo_Server(asyncore.dispatcher):
         self.set_reuse_addr()
         self.bind((host, 0))
         self.port = self.getsockname()[1]
-        self.host = host or socket.gethostbyname(socket.getfqdn())
+        self.host = host or socket.gethostbyname(socket.gethostname())
         self.protocol = 'tcp://'
         self.listen(5)
         logger.debug('Timer Server ready on port:%s'%self.port)

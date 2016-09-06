@@ -197,18 +197,13 @@ class Surface_Tracker(Plugin):
                 draw_markers(frame.gray,self.markers)
 
 
-        # locate surfaces
+        # locate surfaces, map gaze
         for s in self.surfaces:
             s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter, self.locate_3d)
-
-        #map recent gaze onto detected surfaces used for pupil server
-        for s in self.surfaces:
             if s.detected:
-                s.gaze_on_srf = []
-                for p in events.get('gaze_positions',[]):
-                    gp_on_s = tuple(s.img_to_ref_surface(np.array(p['norm_pos'])))
-                    s.gaze_on_srf.append(gp_on_s)
-
+                s.gaze_on_srf = s.map_data_to_surface(events.get('gaze_positions',[]),s.m_from_screen)
+            else:
+                s.gaze_on_srf =[]
 
         events['surface'] = []
         for s in self.surfaces:

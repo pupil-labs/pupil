@@ -89,7 +89,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         from pyglui import ui,graph,cygl
         from pyglui.cygl.utils import draw_points, RGBA, draw_polyline, Named_Texture, Sphere
         import OpenGL.GL as gl
-        from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based, make_coord_system_eye_camera_based
+        from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen ,make_coord_system_pixel_based,make_coord_system_norm_based, make_coord_system_eye_camera_based,is_window_visible
         from ui_roi import UIRoi
         #monitoring
         import psutil
@@ -136,10 +136,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         g_pool.get_timestamp = get_timestamp
         g_pool.get_now = get_time_monotonic
 
-
         # Callback functions
         def on_resize(window,w, h):
-            if not g_pool.iconified:
+            if is_window_visible(window):
                 active_window = glfw.glfwGetCurrentContext()
                 glfw.glfwMakeContextCurrent(window)
                 g_pool.gui.update_window(w,h)
@@ -436,7 +435,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
 
             # GL drawing
             if window_should_update():
-                if not g_pool.iconified:
+                if is_window_visible(main_window):
                     glfw.glfwMakeContextCurrent(main_window)
                     clear_gl_screen()
 
