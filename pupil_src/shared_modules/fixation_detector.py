@@ -13,7 +13,7 @@ import csv
 import numpy as np
 import cv2
 import logging
-from itertools import chain
+from itertools import chain, ifilter
 from math import atan, tan
 from methods import denormalize
 from plugin import Plugin
@@ -22,9 +22,6 @@ from player_methods import transparent_circle
 # logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-def angle_between_normals(v1, v2):
-    return np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0))
 
 class Fixation_Detector(Plugin):
     """ base class for different fixation detection algorithms """
@@ -292,18 +289,116 @@ class Fixation_Detector_Gaze_Position_Dispersion_Duration(Fixation_Detector):
     def cleanup(self):
         self.deinit_gui()
 
+class Sliding_Window(object):
+    """docstring for Sliding_Window"""
+    def __init__(self, g_pool, eye_id, min_duration):
+        super(Sliding_Window, self).__init__()
+        self.all_pupil_positions = list(ifilter(
+            lambda datum: datum['id'] == eye_id,
+            chain(*g_pool.pupil_positions_by_frame)
+        ))
+        if not self.all_pupil_positions: return
+        self.eye_id         = eye_id
+        self.min_duration   = min_duration
+        self.start_frame    = 0
+        self.stop_frame     = 0
+        self.distance_fn    = self.angle_between_normals
+        self.distances      = []
+        self.make_valid()
+
+    def append_frames(self,n=1):
+        if (self.stop_frame+n > len(self.all_pupil_positions)):
+            raise EOFError('Appending %i frames would exceed frame bound.'%n)
+
+        new_data = self.pupil_data(self.stop_frame, self.stop_frame+n)
+        for datum in new_data:
+            old_incl_new = self.pupil_data(stop=self.stop_frame+n)
+            datum_dist = self.calc_dist_one_to_many(datum, old_incl_new)
+            for dist_idx, elem in enumerate(datum_dist[:-1]): # add row
+                if dist_idx < len(self.distances):
+                    self.distances[dist_idx].append(elem)
+            self.distances.append(datum_dist) # add column
+        self.stop_frame += n
+
+    def pop_frames(self,n=1):
+        assert(n>0)
+        del self.distances[:n]
+        for col in self.distances:
+            del col[:n]
+
+        dm_col_no = len(self.distances)
+        dm_row_no = len(self.distances[0]) if dm_col_no > 0 else 0
+        logger.info('DM shape %i, %i', dm_col_no,dm_row_no)
+
+        self.start_frame += n
+        self.make_valid()
+
+    def make_valid(self):
+        _,stop = self.find_min_frame_range(self.start_frame)
+        if stop > self.stop_frame:
+            self.append_frames(n=stop-self.stop_frame)
+        logger.info('Sliding window: %i:%i'%(self.start_frame,self.stop_frame))
+
+    def max_distance(self, ignore_last_frame=False):
+        max_dist = 0.
+        distance_count = len(self.distances)
+        if ignore_last_frame: distance_count -= 1
+        for i in range(distance_count-1):
+            for j in range(i+1, distance_count):
+                if  max_dist < self.distances[i][j]:
+                    max_dist = self.distances[i][j]
+        return max_dist
+
+    def calc_dist_one_to_many(self, datum, data):
+        distances = []
+        base_vector = datum['circle_3d']['normal']
+        for target_datum in data:
+            target_vector = target_datum['circle_3d']['normal']
+            dist = self.distance_fn(base_vector,target_vector)
+            distances.append(dist)
+        return distances
+
+    @classmethod
+    def angle_between_normals(self, v1, v2):
+        return np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0))
+
+    def find_min_frame_range(self,start_idx=0):
+        """Returns minimal frame range for duration `min_duration`
+        starting from index `start_idx`
+
+        Args:
+            min_duration (float): Description
+            start_idx (int, optional): Description
+
+        Returns:
+            2 int tuple: range values. See `range()` https://docs.python.org/2/library/functions.html#range
+        """
+        assert(self.min_duration > 0)
+        if start_idx >= len(self.all_pupil_positions):
+            raise EOFError('Start index for range search out of bounds.')
+        ts0 = self.all_pupil_positions[start_idx]['timestamp']
+        for j in range(start_idx+1, len(self.all_pupil_positions)):
+            ts1 = self.all_pupil_positions[j]['timestamp']
+            if ts1 - ts0 > self.min_duration:
+                return start_idx, j+1
+        raise EOFError('Could not find a sliding window with minimal lenght of %.2fs'%self.min_duration)
+
+    def pupil_data(self,start=None,stop=None):
+        start = start or self.start_frame
+        stop  = stop  or self.stop_frame
+        return self.all_pupil_positions[start:stop]
+
 class Fixation_Detector_Pupil_Angle_Dispersion_Duration(Fixation_Detector_Gaze_Position_Dispersion_Duration):
     """Fixation detector that uses pupil normal angle for dispersion calculations."""
     def __init__(self, g_pool, max_dispersion = 1.0,min_duration = 0.15,h_fov=78, v_fov=50,show_fixations = False,use_binocular_fixations = False):
         super(Fixation_Detector_Pupil_Angle_Dispersion_Duration, self).__init__(g_pool, max_dispersion, min_duration, h_fov, v_fov, show_fixations, classify_on_init=False)
         self.dispersion_slider_min = .0
-        self.dispersion_slider_max = 10.
-        self.dispersion_slider_stp = .5
+        self.dispersion_slider_max = 5.
+        self.dispersion_slider_stp = .1
 
         self.use_binocular_fixations = use_binocular_fixations
         self._fixations_eye0 = []
         self._fixations_eye1 = []
-        self._classify()
 
     @classmethod
     def menu_title(self):
@@ -315,6 +410,7 @@ class Fixation_Detector_Pupil_Angle_Dispersion_Duration(Fixation_Detector_Gaze_P
             self.use_binocular_fixations = val
             self.notify_all({'subject':'fixations_should_recalculate','delay':1.})
         self.menu.append(ui.Switch('use_binocular_fixations',self,label='Use binocular fixations', setter=set_use_binocular_fixations))
+        self._classify_profiled()
 
     def get_init_dict(self):
         init_dict = super(Fixation_Detector_Pupil_Angle_Dispersion_Duration, self).get_init_dict()
@@ -325,79 +421,83 @@ class Fixation_Detector_Pupil_Angle_Dispersion_Duration(Fixation_Detector_Gaze_P
     def fixations(self):
         return self._fixations_eye0 + self._fixations_eye1
 
+    def _classify_profiled(self):
+        import cProfile,subprocess,os
+        classify = self._classify
+        cProfile.runctx("classify()",{},locals(),"fixation.pstats")
+        loc = os.path.dirname(__file__)
+        gprof2dot_loc = os.path.join(loc, 'gprof2dot.py')
+        subprocess.call("python "+gprof2dot_loc+" -f pstats fixation.pstats | dot -Tpng -o fixation.png", shell=True)
+        print "created cpu time graph for world process. Please check out the png next to the world.py file"
+
     def _classify(self):
         '''
         classify fixations
         '''
-        logger.info("Reclassifying fixations.")
-        pupil_data = list(chain(*self.g_pool.pupil_positions_by_frame))
 
         def fixations_for_eye_id(eye_id):
             t_start = time.time()
-
+            sw = Sliding_Window(self.g_pool, eye_id, self.min_duration)
+            if not sw.all_pupil_positions: return []
+            fix_found = False
             fixations = []
-            pupilX = [
-                pupil_data[i]
-                for i in range(len(pupil_data))
-                if pupil_data[i]['id'] == eye_id
-            ]
-            normal_angle_difs = np.array ([
-                angle_between(
-                    pupilX[i  ]['circle_3d']['normal'],
-                    pupilX[i+1]['circle_3d']['normal']
-                )
-                for i in range(len(pupilX)-1)
-            ])
 
-            below_threshold_angles = normal_angle_difs < self.max_dispersion
+            def add_fixation_for_sliding_window(slid_win):
+                fixation_support = sw.pupil_data(stop=sw.stop_frame-1)
+                fix_sup_len = len(fixation_support)
+                fixation_centroid = sum([
+                        p['norm_pos'][0] for p in fixation_support
+                    ])/fix_sup_len, sum([
+                        p['norm_pos'][1] for p in fixation_support
+                    ])/fix_sup_len
+                dispersion = sw.max_distance(ignore_last_frame=True)
+                confidence = sum(p['confidence'] for p in fixation_support)/fix_sup_len
+                avg_pupil_size =  sum([
+                    p['diameter']
+                    for p in fixation_support
+                ])/fix_sup_len
+                duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
 
-            idx_start = None
-            ranges = []
-            for i,b in enumerate(below_threshold_angles):
-                if b and not idx_start:
-                    idx_start = i
-                elif not b and idx_start:
-                    duration = pupilX[i-1]['timestamp'] - pupilX[idx_start]['timestamp']
-                    if duration > self.min_duration:
-                        fixation_support = pupilX[idx_start:i]
-                        fix_sup_len = i - idx_start
-                        fixation_centroid = sum([
-                                p['norm_pos'][0] for p in fixation_support
-                            ])/fix_sup_len, sum([
-                                p['norm_pos'][1] for p in fixation_support
-                            ])/fix_sup_len
-                        dispersion = max(normal_angle_difs[idx_start:i])
-                        confidence = sum(p['confidence'] for p in fixation_support)/fix_sup_len
-                        avg_pupil_size =  sum([
-                            p['diameter']
-                            for p in fixation_support
-                        ])/fix_sup_len
+                new_fixation = {
+                    'id': len(fixations),
+                    'norm_pos'         :fixation_centroid,
+                    'base_data'        :fixation_support,
+                    'duration'         :duration,
+                    'dispersion'       :dispersion,
+                    'start_frame_index':fixation_support[0]['index'],
+                    'mid_frame_index'  :fixation_support[fix_sup_len/2]['index'],
+                    'end_frame_index'  :fixation_support[-1]['index'],
+                    'pix_dispersion'   :np.rad2deg(dispersion)*self.pix_per_degree,
+                    'timestamp'        :fixation_support[0]['timestamp'],
+                    'pupil_diameter'   :avg_pupil_size,
+                    'confidence'       :confidence
+                }
+                fixations.append(new_fixation)
 
-                        new_fixation = {
-                            'id': len(fixations),
-                            'norm_pos'         :fixation_centroid,
-                            'base_data'        :fixation_support,
-                            'duration'         :duration,
-                            'dispersion'       :dispersion,
-                            'start_frame_index':fixation_support[0]['index'],
-                            'mid_frame_index'  :fixation_support[fix_sup_len/2]['index'],
-                            'end_frame_index'  :fixation_support[-1]['index'],
-                            'pix_dispersion'   :dispersion*self.pix_per_degree,
-                            'timestamp'        :fixation_support[0]['timestamp'],
-                            'pupil_diameter'   :avg_pupil_size,
-                            'confidence'       :confidence
-                        }
-                        fixations.append(new_fixation)
-
-                    idx_start = None
+            try:
+                while True:
+                    if sw.max_distance() < np.deg2rad(self.max_dispersion):
+                        sw.append_frames()
+                        fix_found = True
+                    elif fix_found:
+                        add_fixation_for_sliding_window(sw)
+                        sw.pop_frames(n=sw.stop_frame-1-sw.start_frame)
+                        fix_found = False
+                    else:
+                        # move sliding window
+                        sw.pop_frames(n=1)
+            except EOFError:
+                if fix_found and sw.stop_frame-1 - sw.start_frame > 0:
+                    add_fixation_for_sliding_window(sw)
 
             total_fixation_time  = sum([f['duration'] for f in fixations])
-            total_video_time = self.g_pool.timestamps[-1] - self.g_pool.timestamps[0]
+            total_video_time = self.g_pool.timestamps[-1]-self.g_pool.timestamps[0]
             fixation_count = len(fixations)
             t_stop = time.time()
             logger.info("Detected %s fixations for eye %i. Total duration of fixations: %0.2fsec total time of video %0.2fsec. Took %.5fsec to calculate."%(fixation_count, eye_id,total_fixation_time, total_video_time, t_stop - t_start))
             return fixations
 
+        logger.info("Reclassifying fixations.")
         self._fixations_eye0 = fixations_for_eye_id(0)
         self._fixations_eye1 = fixations_for_eye_id(1)
 
