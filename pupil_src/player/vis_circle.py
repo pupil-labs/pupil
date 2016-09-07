@@ -42,10 +42,21 @@ class Vis_Circle(Plugin):
         else:
             thickness = self.thickness
 
-        pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze_positions',[])]
-        for pt in pts:
-            fixations = self.g_pool.fixations_by_frame[frame.index]
-            c = (0,0,1,.2) if fixations else (self.b, self.g, self.r, self.a)
+        pts = [(
+            denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True),
+            pt['timestamp'])
+            for pt in events.get('gaze_positions',[])
+        ]
+        fixations = self.g_pool.fixations_by_frame[frame.index]
+        fixation_timeranges = [
+            (f['timestamp'], f['timestamp']+f['duration'])
+            for f in fixations
+        ]
+        for pt, ts in pts:
+            c = (self.b, self.g, self.r, self.a)
+            for timerange in fixation_timeranges:
+                if timerange[0] <= ts <= timerange[1]:
+                    c = (0,0,1,.2)
             transparent_circle(frame.img, pt, radius=self.radius, color=c, thickness=thickness)
 
     def init_gui(self):
