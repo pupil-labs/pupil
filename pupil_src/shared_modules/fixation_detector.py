@@ -105,16 +105,16 @@ class Fixation_Detector_Gaze_Position_Dispersion_Duration(Fixation_Detector):
         self.menu.append(ui.Button('Close',self.close))
         self.menu.append(ui.Info_Text('This plugin detects fixations based on a dispersion threshold in terms of degrees of visual angle. It also uses a min duration threshold.'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
-        self.menu.append(ui.Slider('min_duration',self,min=0.0,step=0.05,max=1.0,label='duration threshold',setter=set_duration))
+        self.menu.append(ui.Slider('min_duration',self,min=0.0,step=0.05,max=1.0,label='Duration threshold',setter=set_duration))
         self.menu.append(ui.Slider('max_dispersion',self,
             min =self.dispersion_slider_min,
             step=self.dispersion_slider_stp,
             max =self.dispersion_slider_max,
-            label='dispersion threshold',
+            label='Dispersion threshold',
             setter=set_dispersion))
         self.menu.append(ui.Switch('show_fixations',self,label='Show fixations'))
-        self.menu.append(ui.Slider('h_fov',self,min=5,step=1,max=180,label='horizontal FOV of scene camera',setter=set_h_fov))
-        self.menu.append(ui.Slider('v_fov',self,min=5,step=1,max=180,label='vertical FOV of scene camera',setter=set_v_fov))
+        self.menu.append(ui.Slider('h_fov',self,min=5,step=1,max=180,label='Horizontal FOV of scene camera',setter=set_h_fov))
+        self.menu.append(ui.Slider('v_fov',self,min=5,step=1,max=180,label='Vertical FOV of scene camera',setter=set_v_fov))
 
 
         self.add_button = ui.Thumb('jump_next_fixation',setter=jump_next_fixation,getter=lambda:False,label='f',hotkey='f')
