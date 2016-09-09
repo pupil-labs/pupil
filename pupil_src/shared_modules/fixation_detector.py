@@ -233,6 +233,25 @@ class Fixation_Detector_Gaze_Position_Dispersion_Duration(Fixation_Detector):
         self.g_pool.fixations_by_frame = fixations_by_frame
 
 
+    @classmethod
+    def csv_representation_keys(self):
+        return ('id','start_timestamp','duration','start_index','end_frame','norm_pos_x','norm_pos_y','dispersion','avg_pupil_size','confidence')
+
+    @classmethod
+    def csv_representation_for_fixation(self, fixation):
+        return (
+            fixation['id'],
+            fixation['timestamp'],
+            fixation['duration'],
+            fixation['start_frame_index'],
+            fixation['end_frame_index'],
+            fixation['norm_pos'][0],
+            fixation['norm_pos'][1],
+            fixation['dispersion'],
+            fixation['pupil_diameter'],
+            fixation['confidence']
+        )
+
     def export_fixations(self,export_range,export_dir):
         #t
         """
@@ -244,7 +263,6 @@ class Fixation_Detector_Gaze_Position_Dispersion_Duration(Fixation_Detector):
 
             fixation list:
                 id | start_timestamp | duration | start_frame_index | end_frame_index | dispersion | avg_pupil_size | confidence
-
         """
         if not self.fixations:
             logger.warning('No fixations in this recording nothing to export')
@@ -256,9 +274,9 @@ class Fixation_Detector_Gaze_Position_Dispersion_Duration(Fixation_Detector):
 
         with open(os.path.join(export_dir,'fixations.csv'),'wb') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',')
-            csv_writer.writerow(('id','start_timestamp','duration','start_index','end_frame','norm_pos_x','norm_pos_y','dispersion','avg_pupil_size','confidence'))
+            csv_writer.writerow(self.csv_representation_keys())
             for f in fixations_in_section:
-                csv_writer.writerow( ( f['id'],f['timestamp'],f['duration'],f['start_frame_index'],f['end_frame_index'],f['norm_pos'][0],f['norm_pos'][1],f['dispersion'],f['pupil_diameter'],f['confidence'] ) )
+                csv_writer.writerow(self.csv_representation_for_fixation(f))
             logger.info("Created 'fixations.csv' file.")
 
         with open(os.path.join(export_dir,'fixation_report.csv'),'wb') as csvfile:
@@ -360,7 +378,7 @@ class Sliding_Window(object):
             self.append_frames(n=stop-self.stop_index)
 
         dm_shape = self.dm_shape
-        if len(dm_shape) != dm_shape[-1]:
+        if len(dm_shape) and len(dm_shape) != dm_shape[-1]:
             raise ValueError('Distance matrix not squared: %ix%i'%(dm_cols,dm_rows))
 
     def max_distance(self, ignore_last_frame=False):
@@ -463,6 +481,26 @@ class Fixation_Detector_Pupil_Angle_Dispersion_Duration(Fixation_Detector_Gaze_P
     @classmethod
     def menu_title(self):
         return 'Pupil Angle Dispersion Fixation Detector'
+
+    @classmethod
+    def csv_representation_keys(self):
+        return ('id','eye_id','start_timestamp','duration','start_index','end_frame','norm_pos_x','norm_pos_y','dispersion','avg_pupil_size','confidence')
+
+    @classmethod
+    def csv_representation_for_fixation(self, fixation):
+        return (
+            fixation['id'],
+            fixation['eye_id'],
+            fixation['timestamp'],
+            fixation['duration'],
+            fixation['start_frame_index'],
+            fixation['end_frame_index'],
+            fixation['norm_pos'][0],
+            fixation['norm_pos'][1],
+            fixation['dispersion'],
+            fixation['pupil_diameter'],
+            fixation['confidence']
+        )
 
     def _classify(self):
         self.fixations = []
