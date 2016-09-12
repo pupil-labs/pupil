@@ -43,14 +43,15 @@ from vis_watermark import Vis_Watermark
 from scan_path import Scan_Path
 from manual_gaze_correction import Manual_Gaze_Correction
 from eye_video_overlay import Eye_Video_Overlay
-from fixation_detector import Fixation_Detector_Gaze_Position_Dispersion_Duration
+from fixation_detector import Pupil_An gle_3D_Fixation_Detector,Gaze_Position_2D_Fixation_Detector
 
 
 available_plugins = Vis_Circle,Vis_Cross, Vis_Polyline, \
                     Vis_Light_Points, Vis_Watermark, \
                     Scan_Path, \
                     Manual_Gaze_Correction,Eye_Video_Overlay, \
-                    Fixation_Detector_Gaze_Position_Dispersion_Duration
+                    Pupil_Angle_3D_Fixation_Detector, \
+                    Gaze_Position_2D_Fixation_Detector
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
