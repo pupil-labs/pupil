@@ -104,8 +104,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         from av_writer import JPEG_Writer,AV_Writer
 
         # Pupil detectors
-        from pupil_detectors import Detector_2D, Detector_3D
-        pupil_detectors = {Detector_2D.__name__:Detector_2D,Detector_3D.__name__:Detector_3D}
+        from pupil_detectors import Detector_2D, Detector_3D, Detector_ElSe
+        pupil_detectors = {Detector_2D.__name__:Detector_2D,Detector_3D.__name__:Detector_3D,Detector_ElSe.__name__:Detector_ElSe}
 
 
 
@@ -266,7 +266,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         general_settings.append(g_pool.display_mode_info)
         g_pool.sidebar.append(general_settings)
         g_pool.gui.append(g_pool.sidebar)
-        detector_selector = ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Detector_2D, Detector_3D],labels=['C++ 2d detector', 'C++ 3d detector'], label="Detection method")
+        detector_selector = ui.Selector('pupil_detector',getter = lambda: g_pool.pupil_detector.__class__ ,setter=set_detector,selection=[Detector_2D, Detector_3D, Detector_ElSe],labels=['C++ 2d detector', 'C++ 3d detector', 'ElSe detector'], label="Detection method")
         general_settings.append(detector_selector)
 
         # let detector add its GUI
