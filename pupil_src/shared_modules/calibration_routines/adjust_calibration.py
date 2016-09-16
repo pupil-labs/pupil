@@ -60,7 +60,7 @@ class Adjust_Calibration(Calibration_Plugin):
         self.menu = ui.Growing_Menu('Controls')
         self.g_pool.calibration_menu.append(self.menu)
 
-        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 

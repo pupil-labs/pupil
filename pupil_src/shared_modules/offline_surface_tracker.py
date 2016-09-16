@@ -100,7 +100,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
     def init_gui(self):
         self.menu = ui.Scrolling_Menu('Offline Surface Tracker')
         self.g_pool.gui.append(self.menu)
-        self.add_button = ui.Thumb('add_surface',setter=lambda x: self.add_surface(),getter=lambda:False,label='Add Surface',hotkey='a')
+        self.add_button = ui.Thumb('add_surface',setter=lambda x: self.add_surface(),getter=lambda:False,label='A',hotkey='a')
         self.g_pool.quickbar.append(self.add_button)
         self.update_gui_markers()
 
