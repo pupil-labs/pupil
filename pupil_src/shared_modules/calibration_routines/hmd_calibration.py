@@ -39,7 +39,7 @@ class HMD_Calibration(Calibration_Plugin):
 
         self.info = ui.Info_Text("Calibrate gaze parameters to map onto an HMD.")
         self.g_pool.calibration_menu.append(self.info)
-        self.button = ui.Thumb('active',self,setter=dummy,label='Calibrate',hotkey='c')
+        self.button = ui.Thumb('active',self,setter=dummy,label='C',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 

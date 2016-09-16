@@ -73,7 +73,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
     #check versions for our own depedencies as they are fast-changing
     from pyglui import __version__ as pyglui_version
-    assert pyglui_version >= '0.9'
+    assert pyglui_version >= '1.0'
 
     #monitoring
     import psutil

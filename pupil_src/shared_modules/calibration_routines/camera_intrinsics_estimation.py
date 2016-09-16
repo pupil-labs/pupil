@@ -175,7 +175,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             self.show_undistortion_switch.read_only=True
         self.g_pool.calibration_menu.append(self.menu)
 
-        self.button = ui.Thumb('collect_new',self,setter=self.advance,label='Capture',hotkey='c')
+        self.button = ui.Thumb('collect_new',self,setter=self.advance,label='C',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 
