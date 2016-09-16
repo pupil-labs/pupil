@@ -121,7 +121,8 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
         self.menu.append(ui.Slider('v_fov',self,min=5,step=1,max=180,label='Vertical FOV of scene camera',setter=set_v_fov))
 
 
-        self.add_button = ui.Thumb('jump_next_fixation',setter=jump_next_fixation,getter=lambda:False,label='f',hotkey='f')
+        self.add_button = ui.Thumb('jump_next_fixation',setter=jump_next_fixation,getter=lambda:False,label=unichr(0xf051).encode('utf-8'),hotkey='f',label_font='fontawesome',label_offset_x=0,label_offset_y=2,label_offset_size=-24)
+        self.add_button.status_text = 'Next Fixation'
         self.g_pool.quickbar.append(self.add_button)
 
 
