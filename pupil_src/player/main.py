@@ -79,7 +79,7 @@ import numpy as np
 from glfw import *
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.9'
+assert pyglui_version >= '1.0'
 from pyglui import ui,graph,cygl
 from pyglui.cygl.utils import Named_Texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
