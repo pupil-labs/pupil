@@ -43,6 +43,15 @@ for dirpath, dirnames, filenames in os.walk("singleeyefitter"):
 shared_cpp_include_path = '../../shared_cpp/include'
 singleeyefitter_include_path = 'singleeyefitter/'
 
+else_include_path = 'else_algosplit/'
+dependencies_else = []
+# include all header files, to recognize changes
+for dirpath, dirnames, filenames in os.walk("else_algosplit"):
+    for filename in [f for f in filenames if f.endswith(".cpp")]:
+        dependencies_else.append( os.path.join(dirpath, filename) )
+sources_else = ['detector_else.pyx']
+sources_else.extend(dependencies_else)
+
 extensions = [
     Extension(
         name="detector_2d",
@@ -54,7 +63,17 @@ extensions = [
         extra_compile_args=["-std=c++11",'-w','-O2'], #-w hides warnings
         depends= dependencies,
         language="c++"),
-     Extension(
+    Extension(
+        name="detector_else",
+        sources=sources_else,
+        include_dirs = [else_include_path],
+        libraries = ['opencv_highgui','opencv_core','opencv_imgproc' , 'boost_python'],
+        #library_dirs = ['/usr/local/lib'],
+        extra_link_args=[], #'-WL,-R/usr/local/lib'
+        extra_compile_args=["-std=c++11",'-w','-O1'], #-w hides warnings
+        depends= dependencies_else,
+        language="c++"),
+    Extension(
         name="detector_3d",
         sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/EyeModelFitter.cpp','singleeyefitter/EyeModel.cpp'],
         include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path],
