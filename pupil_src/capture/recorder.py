@@ -148,7 +148,7 @@ class Recorder(Plugin):
         self.menu.append(ui.Switch('record_eye',self,on_val=True,off_val=False,label='Record eye'))
         self.menu.append(ui.Selector('audio_src',self, selection=self.audio_devices_dict.keys(),label='Audio Source'))
 
-        self.button = ui.Thumb('running',self,setter=self.toggle,label='Record',hotkey='r')
+        self.button = ui.Thumb('running',self,setter=self.toggle,label='R',hotkey='r')
         self.button.on_color[:] = (1,.0,.0,.8)
         self.g_pool.quickbar.insert(1,self.button)
 

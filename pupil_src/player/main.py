@@ -79,7 +79,7 @@ import numpy as np
 from glfw import *
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.9'
+assert pyglui_version >= '1.0'
 from pyglui import ui,graph,cygl
 from pyglui.cygl.utils import Named_Texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
@@ -119,18 +119,20 @@ from annotations import Annotation_Player
 from raw_data_exporter import Raw_Data_Exporter
 from log_history import Log_History
 
-system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
-user_launchable_plugins = [Video_Export_Launcher,Raw_Data_Exporter, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector, Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Surface_Tracker,Batch_Exporter,Eye_Video_Overlay,Annotation_Player,Log_History] #,Marker_Auto_Trim_Marks
-user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
-available_plugins = system_plugins + user_launchable_plugins
-name_by_index = [p.__name__ for p in available_plugins]
-index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
-plugin_by_name = dict(zip(name_by_index,available_plugins))
 
 class Global_Container(object):
     pass
 
 def session(rec_dir):
+
+
+    system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
+    user_launchable_plugins = [Video_Export_Launcher,Raw_Data_Exporter, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Fixation_Detector_Dispersion_Duration,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Surface_Tracker,Batch_Exporter,Eye_Video_Overlay,Annotation_Player,Log_History] #,Marker_Auto_Trim_Marks
+    user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
+    available_plugins = system_plugins + user_launchable_plugins
+    name_by_index = [p.__name__ for p in available_plugins]
+    index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
+    plugin_by_name = dict(zip(name_by_index,available_plugins))
 
 
     # Callback functions
@@ -303,11 +305,11 @@ def session(rec_dir):
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
-    g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey=GLFW_KEY_SPACE)
+    g_pool.play_button = ui.Thumb('play',g_pool,label=unichr(0xf04b).encode('utf-8'),hotkey=GLFW_KEY_SPACE,label_font='fontawesome',label_offset_x=5,label_offset_y=0,label_offset_size=-24)
     g_pool.play_button.on_color[:] = (0,1.,.0,.8)
-    g_pool.forward_button = ui.Thumb('forward',getter = lambda: False,setter= next_frame, hotkey=GLFW_KEY_RIGHT)
-    g_pool.backward_button = ui.Thumb('backward',getter = lambda: False, setter = prev_frame, hotkey=GLFW_KEY_LEFT)
-    g_pool.export_button = ui.Thumb('export',getter = lambda: False, setter = do_export, hotkey='e')
+    g_pool.forward_button = ui.Thumb('forward',label=unichr(0xf04e).encode('utf-8'),getter = lambda: False,setter= next_frame, hotkey=GLFW_KEY_RIGHT,label_font='fontawesome',label_offset_x=5,label_offset_y=0,label_offset_size=-24)
+    g_pool.backward_button = ui.Thumb('backward',label=unichr(0xf04a).encode('utf-8'),getter = lambda: False, setter = prev_frame, hotkey=GLFW_KEY_LEFT,label_font='fontawesome',label_offset_x=-5,label_offset_y=0,label_offset_size=-24)
+    g_pool.export_button = ui.Thumb('export',label=unichr(0xf063).encode('utf-8'),getter = lambda: False, setter = do_export, hotkey='e',label_font='fontawesome',label_offset_x=0,label_offset_y=2,label_offset_size=-24)
     g_pool.quickbar.extend([g_pool.play_button,g_pool.forward_button,g_pool.backward_button,g_pool.export_button])
     g_pool.gui.append(g_pool.quickbar)
     g_pool.gui.append(g_pool.main_menu)
