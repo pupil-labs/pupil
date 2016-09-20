@@ -97,10 +97,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
 
 
         # helpers/utils
+        from uvc import get_time_monotonic, StreamError
         from file_methods import Persistent_Dict
         from version_utils import VersionFormat
         from methods import normalize, denormalize, Roi, timer
-        from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
+        from video_capture import FileCaptureError, EndofVideoFileError, CameraCaptureError
+        from new_video_capture import Manager as Capture_Manager
         from av_writer import JPEG_Writer,AV_Writer
 
         # Pupil detectors
@@ -129,6 +131,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         g_pool.version = version
         g_pool.app = 'capture'
         g_pool.timebase = timebase
+        def get_timestamp():
+            return get_time_monotonic()-g_pool.timebase.value
+        g_pool.get_timestamp = get_timestamp
+        g_pool.get_now = get_time_monotonic
 
         # Callback functions
         def on_resize(window,w, h):
@@ -188,14 +194,18 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             logger.info("Session setting are from older version of this app. I will not use those.")
             session_settings.clear()
         # Initialize capture
-        cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
-        default_settings = {'frame_size':(640,480),'frame_rate':60}
-        previous_settings = session_settings.get('capture_settings',None)
-        if previous_settings and previous_settings['name'] == cap.name:
-            cap.settings = previous_settings
-        else:
-            cap.settings = default_settings
-
+        previous_settings = session_settings.get('capture_settings')
+        fallback_settings = {
+            'active_backend': {
+                'source_type'  : 'Local / UVC',
+                'active_source': {
+                    'names'     : cap_src,
+                    'frame_size': (640,480),
+                    'frame_rate': 60
+                }
+            }
+        }
+        cap = Capture_Manager(g_pool,fallback_settings,previous_settings)
 
         g_pool.iconified = False
         g_pool.capture = cap
@@ -206,11 +216,14 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                                     'algorithm': "Algorithm display mode overlays a visualization of the pupil detection parameters on top of the eye video. Adjust parameters within the Pupil Detection menu below."}
 
 
-        g_pool.u_r = UIRoi((cap.frame_size[1],cap.frame_size[0]))
-        g_pool.u_r.set(session_settings.get('roi',g_pool.u_r.get()))
 
+        g_pool.u_r = UIRoi((cap.frame_size[1],cap.frame_size[0]))
+        roi_user_settings = session_settings.get('roi')
+        if roi_user_settings and roi_user_settings[-1] == g_pool.u_r.get()[-1]:
+            g_pool.u_r.set(roi_user_settings)
 
         def on_frame_size_change(new_size):
+            logger.warning(str(new_size))
             g_pool.u_r = UIRoi((new_size[1],new_size[0]))
 
         cap.on_frame_size_change = on_frame_size_change
@@ -295,7 +308,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         #set up performance graphs
         pid = os.getpid()
         ps = psutil.Process(pid)
-        ts = cap.get_timestamp()
+        ts = g_pool.get_timestamp()
 
         cpu_graph = graph.Bar_Graph()
         cpu_graph.pos = (20,130)
@@ -372,8 +385,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             # Get an image from the grabber
             try:
                 frame = cap.get_frame()
-            except CameraCaptureError:
-                logger.error("Capture from Camera Failed. Stopping.")
+            except StreamError:
                 break
             except EndofVideoFileError:
                 logger.warning("Video File is done. Stopping")

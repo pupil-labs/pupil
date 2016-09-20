@@ -81,7 +81,8 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     # helpers/utils
     from file_methods import Persistent_Dict
     from methods import normalize, denormalize, delta_t, get_system_info
-    from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
+    from video_capture import FileCaptureError, EndofVideoFileError, CameraCaptureError
+    from new_video_capture import Manager as Capture_Manager
     from version_utils import VersionFormat
     import audio
     from uvc import get_time_monotonic
@@ -194,14 +195,18 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         session_settings.clear()
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
-    default_settings = {'frame_size':(1280,720),'frame_rate':30}
-    previous_settings = session_settings.get('capture_settings',None)
-    if previous_settings and previous_settings['name'] == cap.name:
-        cap.settings = previous_settings
-    else:
-        cap.settings = default_settings
-
+    previous_settings = session_settings.get('capture_settings')
+    fallback_settings = {
+        'active_backend'    : {
+            'source_type'   : 'Local / UVC',
+            'active_source' : {
+                'names'     : cap_src,
+                'frame_size': (1280,720),
+                'frame_rate': 30
+            }
+        }
+    }
+    cap = Capture_Manager(g_pool,fallback_settings,previous_settings)
 
     g_pool.iconified = False
     g_pool.capture = cap
@@ -296,6 +301,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
                                         labels    = labels,
                                         setter    = open_plugin,
                                         getter    = lambda: selector_label))
+
     general_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
     g_pool.sidebar.append(general_settings)
 
@@ -340,7 +346,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     #set up performace graphs:
     pid = os.getpid()
     ps = psutil.Process(pid)
-    ts = cap.get_timestamp()
+    ts = g_pool.get_timestamp()
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,130)
@@ -376,15 +382,8 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         # Get an image from the grabber
         try:
             frame = g_pool.capture.get_frame()
-        except CameraCaptureError:
-            logger.error("Capture from camera failed. Starting Fake Capture.")
-            settings = g_pool.capture.settings
-            g_pool.capture.close()
-            g_pool.capture = autoCreateCapture(None, timebase=g_pool.timebase)
-            g_pool.capture.init_gui(g_pool.sidebar)
-            g_pool.capture.settings = settings
-            ipc_pub.notify({'subject':'recording.should_stop'})
-            continue
+        except g_pool.capture.active_backend.stream_error_class():
+            g_pool.capture.active_backend.set_active_source_with_id(None)
         except EndofVideoFileError:
             logger.warning("Video file is done. Stopping")
             break
