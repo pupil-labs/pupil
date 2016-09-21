@@ -13,7 +13,6 @@ from plugin import Plugin
 import numpy as np
 import cv2
 
-# TODO: Import pyglui
 from pyglui import ui
 
 from methods import denormalize

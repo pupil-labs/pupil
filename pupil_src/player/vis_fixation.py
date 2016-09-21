@@ -13,12 +13,9 @@ from plugin import Plugin
 import numpy as np
 import cv2
 
-# TODO: Import pyglui
 from pyglui import ui
 
 from methods import denormalize
-
-from fixation_detector import Fixation_Detector
 
 class Vis_Fixation(Plugin):
     uniqueness = "not_unique"
