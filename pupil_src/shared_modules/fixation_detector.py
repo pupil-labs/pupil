@@ -746,7 +746,6 @@ class Fixation_Detector_3D(Online_Base_Fixation_Detector):
                     detect_win.max_distance_deg <= self.max_dispersion):
                     new_fixation = detect_win.pop_fixation()
                     events['fixations'].append(new_fixation)
-                    logger.debug('Fixation eye %i: %fdeg'%(new_fixation['eye_id'],new_fixation['dispersion']))
 
     def init_gui(self):
         def close():
