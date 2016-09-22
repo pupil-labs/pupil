@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from . import Base_Source
+from . import InitialisationError, Base_Source
 
 import uvc
 #check versions for our own depedencies as they are fast-changing
@@ -21,39 +21,50 @@ from time import time,sleep
 import logging
 logger = logging.getLogger(__name__)
 
-class CameraCaptureError(Exception):
-    """General Exception for this module"""
-    def __init__(self, arg):
-        super(CameraCaptureError, self).__init__()
-        self.arg = arg
-
 class UVC_Source(Base_Source):
     """
     Camera Capture is a class that encapsualtes uvc.Capture:
      - adds UI elements
      - adds timestamping sanitization fns.
     """
-    def __init__(self,g_pool,uid,on_frame_size_change):
+    def __init__(self, g_pool, frame_size, frame_rate, name=None, uid=None, uvc_controls={}, **settings):
         super(UVC_Source, self).__init__(g_pool)
-        self.control_menu = None
-        self.uvc_capture  = None
-        self.on_frame_size_change = on_frame_size_change
-        self.init_backend(uid)
+        self.uvc_capture = None
+        devices = uvc.device_list()
+        devices_by_name = {dev['name']: dev for dev in devices}
+        devices_by_uid  = {dev['uid']: dev for dev in devices}
 
-    def init_backend(self,uid):
-        self.uid = uid
+        # name is given. check if list of names
+        names = name if type(name) in (list, tuple) else [name]
+        if names:
+            for name in names:
+                if name in devices_by_name:
+                    uid_for_name = devices_by_name[name]['uid']
+                    if uvc.is_accessible(uid_for_name):
+                        self.uvc_capture = uvc.Capture(uid_for_name)
+                        break
+                    else: logger.warning('UVC source `%s` is not accessible.'%name)
+        # uid is given
+        elif uid and uid in devices_by_uid:
+            if uvc.is_accessible(uid):
+                self.uvc_capture = uvc.Capture(uid)
+            else: logger.warning('UVC source `%s` is not accessible.'%devices_by_uid[uid]['name'])
+        # neither name nore uid are given, take first accessible device
+        elif not name and not uid:
+            for uid in device_uids:
+                if uvc.is_accessible(uid):
+                    self.uvc_capture = uvc.Capture(uid)
+                    break
+        if not self.uvc_capture:
+            raise InitialisationError()
 
-        if uvc.is_accessible(uid):
-            self.uvc_capture = uvc.Capture(uid)
-        else:
-            raise RuntimeError('UVC device with uid "%s" is not accessible.'%uid)
+        # Set camera defaults. Override with previous settings afterwards
 
         if 'C930e' in self.uvc_capture.name:
                 logger.debug('Timestamp offset for c930 applied: -0.1sec')
                 self.ts_offset = -0.1
         else:
             self.ts_offset = 0.0
-
 
         #UVC setting quirks:
         controls_dict = dict([(c.display_name,c) for c in self.uvc_capture.controls])
@@ -62,46 +73,48 @@ class UVC_Source(Base_Source):
         except KeyError:
             pass
 
-        if "Pupil Cam1" in self.uvc_capture.name or "USB2.0 Camera" in self.uvc_capture.name:
-            if "ID0" in self.uvc_capture.name or "ID1" in self.uvc_capture.name:
+        if ("Pupil Cam1" in self.uvc_capture.name or
+            "USB2.0 Camera" in self.uvc_capture.name):
+
+            if ("ID0" in self.uvc_capture.name or
+                "ID1" in self.uvc_capture.name):
+
                 self.uvc_capture.bandwidth_factor = 1.3
-                try:
-                    controls_dict['Auto Exposure Priority'].value = 0
-                except KeyError:
-                    pass
-                try:
-                    # print controls_dict['Auto Exposure Mode'].value
-                    controls_dict['Auto Exposure Mode'].value = 1
-                except KeyError as e:
-                    pass
-                try:
-                    controls_dict['Saturation'].value = 0
-                except KeyError:
-                    pass
-                try:
-                    controls_dict['Absolute Exposure Time'].value = 63
-                except KeyError:
-                    pass
-                try:
-                    controls_dict['Backlight Compensation'].value = 2
-                except KeyError:
-                    pass
-                try:
-                    controls_dict['Gamma'].value = 100
-                except KeyError:
-                    pass
+
+                try: controls_dict['Auto Exposure Priority'].value = 0
+                except KeyError: pass
+
+                try: controls_dict['Auto Exposure Mode'].value = 1
+                except KeyError as e: pass
+
+                try:controls_dict['Saturation'].value = 0
+                except KeyError: pass
+
+                try: controls_dict['Absolute Exposure Time'].value = 63
+                except KeyError: pass
+
+                try: controls_dict['Backlight Compensation'].value = 2
+                except KeyError: pass
+
+                try: controls_dict['Gamma'].value = 100
+                except KeyError: pass
+
             else:
                 self.uvc_capture.bandwidth_factor = 2.0
-                try:
-                    controls_dict['Auto Exposure Priority'].value = 1
-                except KeyError:
-                    pass
+                try: controls_dict['Auto Exposure Priority'].value = 1
+                except KeyError: pass
         else:
             self.uvc_capture.bandwidth_factor = 3.0
+            try: controls_dict['Auto Focus'].value = 0
+            except KeyError: pass
+
+        self.frame_size = frame_size
+        self.frame_rate = frame_rate
+        for c in self.uvc_capture.controls:
             try:
-                controls_dict['Auto Focus'].value = 0
-            except KeyError:
-                pass
+                c.value = uvc_controls[c.display_name]
+            except KeyError as e:
+                logger.debug('No UVC setting "%s" found from settings.'%c.display_name)
 
     def get_frame(self):
         frame = self.uvc_capture.get_frame_robust()
@@ -111,22 +124,8 @@ class UVC_Source(Base_Source):
         return frame
 
     @property
-    def frame_rate(self):
-        return self.uvc_capture.frame_rate
-    @frame_rate.setter
-    def frame_rate(self,new_rate):
-        #closest match for rate
-        rates = [ abs(r-new_rate) for r in self.uvc_capture.frame_rates ]
-        best_rate_idx = rates.index(min(rates))
-        rate = self.uvc_capture.frame_rates[best_rate_idx]
-        if rate != new_rate:
-            logger.warning("%sfps capture mode not available at (%s) on '%s'. Selected %sfps. "%(new_rate,self.uvc_capture.frame_size,self.uvc_capture.name,rate))
-        self.uvc_capture.frame_rate = rate
-
-
-    @property
     def settings(self):
-        settings = {}
+        settings = super(UVC_Source, self).settings
         settings['name'] = self.uvc_capture.name
         settings['frame_rate'] = self.frame_rate
         settings['frame_size'] = self.frame_size
@@ -148,6 +147,7 @@ class UVC_Source(Base_Source):
         return self.uvc_capture.frame_size
     @frame_size.setter
     def frame_size(self,new_size):
+        self.g_pool.on_frame_size_change(new_size)
         #closest match for size
         sizes = [ abs(r[0]-new_size[0]) for r in self.uvc_capture.frame_sizes ]
         best_size_idx = sizes.index(min(sizes))
@@ -155,22 +155,34 @@ class UVC_Source(Base_Source):
         if size != new_size:
             logger.warning("%s resolution capture mode not available. Selected %s."%(new_size,size))
         self.uvc_capture.frame_size = size
-        self.on_frame_size_change(size)
 
     def set_frame_size(self,new_size):
         self.frame_size = new_size
 
     @property
-    def name(self):
-        return self.uvc_capture.name
-
+    def frame_rate(self):
+        return self.uvc_capture.frame_rate
+    @frame_rate.setter
+    def frame_rate(self,new_rate):
+        #closest match for rate
+        rates = [ abs(r-new_rate) for r in self.uvc_capture.frame_rates ]
+        best_rate_idx = rates.index(min(rates))
+        rate = self.uvc_capture.frame_rates[best_rate_idx]
+        if rate != new_rate:
+            logger.warning("%sfps capture mode not available at (%s) on '%s'. Selected %sfps. "%(new_rate,self.uvc_capture.frame_size,self.uvc_capture.name,rate))
+        self.uvc_capture.frame_rate = rate
 
     @property
     def jpeg_support(self):
         return True
 
-    def init_gui(self, parent_menu):
-        self.parent_menu = parent_menu
+    @staticmethod
+    def error_class():
+        return uvc.StreamError
+
+    def init_gui(self):
+        from pyglui import ui
+        ui_elements = []
         #lets define some  helper functions:
         def gui_load_defaults():
             for c in self.uvc_capture.controls:
@@ -182,7 +194,7 @@ class UVC_Source(Base_Source):
             for c in self.uvc_capture.controls:
                 c.refresh()
 
-        self.control_menu = ui.Growing_Menu(label='%s Controls'%self.uvc_capture.name)
+        ui_elements.append(ui.Info_Text('%s Controls'%self.uvc_capture.name))
         sensor_control = ui.Growing_Menu(label='Sensor Settings')
         sensor_control.append(ui.Info_Text("Do not change these during calibration or recording!"))
         sensor_control.collapsed=False
@@ -225,25 +237,12 @@ class UVC_Source(Base_Source):
                 else:
                     sensor_control.append(c)
 
-        self.control_menu.append(sensor_control)
+        ui_elements.append(sensor_control)
         if image_processing.elements:
-            self.control_menu.append(image_processing)
-        self.control_menu.append(ui.Button("refresh",gui_update_from_device))
-        self.control_menu.append(ui.Button("load defaults",gui_load_defaults))
-        self.parent_menu.append(self.control_menu)
+            ui_elements.append(image_processing)
+        ui_elements.append(ui.Button("refresh",gui_update_from_device))
+        ui_elements.append(ui.Button("load defaults",gui_load_defaults))
+        self.g_pool.capture_source_menu.extend(ui_elements)
 
-    def deinit_gui(self):
-        if self.control_menu:
-            del self.control_menu.elements[:]
-            self.parent_menu.remove(self.control_menu)
-            self.control_menu = None
-            self.parent_menu = None
-
-
-    def close(self):
-        self.deinit_gui()
-        # self.uvc_capture.close()
+    def cleanup(self):
         self.uvc_capture = None
-
-    def __del__(self):
-        self.close()

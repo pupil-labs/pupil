@@ -50,17 +50,25 @@ class Frame(object):
 
 class Fake_Source(Base_Source):
     """docstring for FakeSource"""
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, **settings):
         super(Fake_Source, self).__init__(g_pool)
         self.fps = 30
         self.presentation_time = time()
         self.make_img((640,480))
         self.frame_count = 0
-        self.controls = []
+        self.info_text = settings.get('info_text', 'Fake source has no settings.')
+        self.preferred_source = settings
+        self.settings = settings
+
+    def init_gui(self):
+        from pyglui import ui
+        text = ui.Info_Text(self.info_text)
+        self.g_pool.capture_source_menu.append(text)
+
+    def cleanup(self):
         self.info_text = None
-        def nothing(arg):
-            pass
-        self.on_frame_size_change = nothing
+        self.img = None
+        self.preferred_source = None
 
     def make_img(self,size):
         c_w ,c_h = max(1,size[0]/30),max(1,size[1]/30)
@@ -70,7 +78,6 @@ class Fake_Source(Base_Source):
         # coarse[:,:,1] /=30
         # self.img = np.ones((size[1],size[0],3),dtype=np.uint8)
         self.img = cv2.resize(coarse,size,interpolation=cv2.INTER_LANCZOS4)
-
 
     def get_frame(self):
         now =  time()
@@ -82,33 +89,32 @@ class Fake_Source(Base_Source):
         self.frame_count +=1
         return Frame(now,self.img.copy(),frame_count)
 
-    def get_frame_robust(self):
-        return self.get_frame()
-
     @property
     def settings(self):
-        settings = {}
-        settings['name'] = self.name
-        settings['frame_rate'] = self.frame_rate
-        settings['frame_size'] = self.frame_size
-        return settings
+        return self.preferred_source
 
     @settings.setter
     def settings(self,settings):
-        self.frame_size = settings['frame_size']
-        self.frame_rate = settings['frame_rate']
+        self.frame_size = settings.get('frame_size', self.frame_size)
+        self.frame_rate = settings.get('frame_rate', self.frame_rate )
 
     @property
     def frame_size(self):
         return self.img.shape[1],self.img.shape[0]
     @frame_size.setter
     def frame_size(self,new_size):
-        self.make_img(new_size)
-        self.on_frame_size_change(new_size)
+        self.g_pool.on_frame_size_change(new_size)
+        #closest match for size
+        sizes = [ abs(r[0]-new_size[0]) for r in self.frame_sizes ]
+        best_size_idx = sizes.index(min(sizes))
+        size = self.frame_sizes[best_size_idx]
+        if size != new_size:
+            logger.warning("%s resolution capture mode not available. Selected %s."%(new_size,size))
+        self.make_img(size)
 
     @property
     def frame_rates(self):
-        return range(30,121,30)
+        return range(30,60,120)
 
     @property
     def frame_sizes(self):
@@ -119,22 +125,13 @@ class Fake_Source(Base_Source):
         return self.fps
     @frame_rate.setter
     def frame_rate(self,new_rate):
-        self.fps = new_rate
+        rates = [ abs(r-new_rate) for r in self.frame_rates ]
+        best_rate_idx = rates.index(min(rates))
+        rate = self.frame_rates[best_rate_idx]
+        if rate != new_rate:
+            logger.warning("%sfps capture mode not available at (%s) on 'Fake Source'. Selected %sfps. "%(new_rate,self.frame_size,rate))
+        self.fps = rate
 
     @property
-    def name(self):
-        return 'Fake Source'
-
-    def init_gui(self, parent_menu):
-        self.parent_menu = parent_menu
-        self.info_text = ui.Info_Text('This is a fake Source.')
-        parent_menu.append(self.info_text)
-
-    def deinit_gui(self):
-        if self.info_text:
-            self.parent_menu.remove(self.info_text)
-            self.info_text = None
-            self.parent_menu = None
-
-    def close(self):
-        self.deinit_gui()
+    def jpeg_support(self):
+        return False

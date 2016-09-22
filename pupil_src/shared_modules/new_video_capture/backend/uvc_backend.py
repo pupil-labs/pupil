@@ -3,14 +3,15 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the CC BY-NC-SA License.
- License details are in the file LICENSE, distributed as part of this software.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
+ License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from base_backend import Base_Backend
+from . import Base_Backend
 from ..source import UVC_Source
-import uvc
+import uvc, time
+from sets import ImmutableSet
 
 import logging
 logger = logging.getLogger(__name__)
@@ -18,72 +19,67 @@ logger.setLevel(logging.INFO)
 
 class UVC_Backend(Base_Backend):
 
-    def __init__(self, g_pool, settings):
-        super(UVC_Backend, self).__init__(g_pool, settings, should_load_settings=False)
-        self.attempt_loading_settings(settings)
+    def __init__(self, g_pool):
+        super(UVC_Backend, self).__init__(g_pool)
+        self.last_check_ts = 0.
+        self.last_check_result = {}
+        self.check_intervall = .5
 
-    def attempt_loading_settings(self,settings):
-        if  not self.init_from_settings(settings):
-            super(UVC_Backend, self).attempt_loading_settings(settings)
+    def init_gui(self):
+        from pyglui import ui
+        ui_elements = []
+        ui_elements.append(ui.Info_Text('Local UVC sources'))
 
-    @staticmethod
-    def stream_error_class():
-        return uvc.StreamError
+        def dev_selection_list():
+            default = (None, 'Select to activate')
+            devices = uvc.device_list()
+            dev_pairs = [default] + [(d['uid'], d['name']) for d in devices]
+            return zip(*dev_pairs)
 
-    @staticmethod
-    def source_type():
-        return 'Local / UVC'
+        def activate(source_uid):
+            if not source_uid:
+                return
+            settings = {
+                'frame_size': self.g_pool.capture.frame_size,
+                'frame_rate': self.g_pool.capture.frame_rate,
+                'uid': source_uid
+            }
+            self.activate_source(UVC_Source, settings)
 
-    def init_from_settings(self, settings):
-        succesfull = super(UVC_Backend,self).init_from_settings(settings)
-        if not succesfull and settings:
-            name = settings.get('name')
-            priority_list = [name] if name else settings.get('names',[])
-            succesfull = self.set_active_source_with_priority(
-                priority_list,
-                settings = settings
-            )
-        return succesfull
+        ui_elements.append(ui.Selector(
+            'selected_source',
+            selection_getter=dev_selection_list,
+            getter=lambda: None,
+            setter=activate,
+            label='Activate source'
+        ))
+        self.g_pool.capture_selector_menu.extend(ui_elements)
 
-    def list_sources(self):
-        return uvc.device_list()
+    def update(self, frame, events):
+        now = time.time()
+        if now - self.last_check_ts > self.check_intervall:
+            self.last_check_ts = now
+            devices = uvc.device_list()
+            device_names_by_uid = {d['uid']:d['name'] for d in devices}
 
-    def set_active_source_with_priority(self, names, settings=None):
-        logger.debug('set_active_source_with_priority: %s, %s'%(names,settings))
-        for name in names:
-            if self.set_active_source_with_name(name,settings=settings):
-                return True
-        return False
+            old_result = ImmutableSet(self.last_check_result.keys())
+            new_result = ImmutableSet(device_names_by_uid.keys())
 
-    def set_active_source_with_name(self, name, settings=None):
-        if self.active_source:
-            settings = settings or self.active_source.settings
-        succesfull = super(UVC_Backend,self).set_active_source_with_name(name,settings)
-        if not succesfull:
-            for dev in self.list_sources():
-                if dev['name'] == name:
-                    return self.set_active_source_with_id(dev['uid'], settings=settings)
-        return succesfull
+            for lost_key in old_result - new_result:
+                self.notify_all({
+                    'subject': 'capture_backend.source_lost',
+                    'source_class_name': UVC_Source.class_name(),
+                    'name': self.last_check_result[lost_key],
+                    'uid': lost_key
+                })
+                del self.last_check_result[lost_key]
 
-    def set_active_source_with_id(self, source_id, settings=None):
-        succesfull = super(UVC_Backend,self).set_active_source_with_id(source_id, settings)
-        if not succesfull:
-            if not uvc.is_accessible(source_id):
-                logger.error('Selected UVC source is already in use or not accessible.')
-                return True
-
-            if self.active_source:
-                settings = settings or self.active_source.settings
-                self.active_source.close()
-            try:
-                self.active_source = UVC_Source(self.g_pool, source_id, self.on_frame_size_change)
-                self.active_source_id = source_id
-                if settings:
-                    self.active_source.settings = settings
-            except Exception as e:
-                logger.error('Initializing UVC source failed because of: %s'%str(e))
-                return False
-            if self.menu:
-                self.active_source.init_gui(self.menu)
-            return True
-        return succesfull
+            for found_key in new_result - old_result:
+                device_name = device_names_by_uid[found_key]
+                self.notify_all({
+                    'subject': 'capture_backend.source_found',
+                    'source_class_name': UVC_Source.class_name(),
+                    'name': device_name,
+                    'uid': found_key
+                })
+                self.last_check_result[found_key] = device_name

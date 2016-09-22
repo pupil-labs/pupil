@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from . import Base_Source
+from . import InitialisationError, Base_Source
 from ndsi import StreamError
 
 from pyglui import ui
@@ -20,6 +20,7 @@ logger.setLevel(logging.DEBUG)
 class NDSI_Source(Base_Source):
     """docstring for NDSI_Source"""
     def __init__(self, g_pool, network, source_id):
+        raise InitialisationError()
         super(NDSI_Source, self).__init__(g_pool)
         self.sensor = network.sensor(source_id, callbacks=(self.on_notification,))
         logger.debug('NDSI Source Sensor: %s'%self.sensor)

@@ -98,6 +98,7 @@ class Fake_Capture(object):
         return self.img.shape[1],self.img.shape[0]
     @frame_size.setter
     def frame_size(self,new_size):
+        self.on_frame_size_change(new_size)
         self.make_img(new_size)
 
     @property

@@ -82,7 +82,10 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     from file_methods import Persistent_Dict
     from methods import normalize, denormalize, delta_t, get_system_info
     from video_capture import FileCaptureError, EndofVideoFileError, CameraCaptureError
-    from new_video_capture import Manager as Capture_Manager
+    from new_video_capture.source import InitialisationError, Fake_Source
+    from new_video_capture import source_classes, backend_classes
+    source_by_name = {src.class_name():src for src in source_classes}
+
     from version_utils import VersionFormat
     import audio
     from uvc import get_time_monotonic
@@ -144,10 +147,10 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
     user_launchable_plugins = [Pupil_Groups,Frame_Publisher,Show_Calibration,Pupil_Remote,Time_Sync,Surface_Tracker,Annotation_Capture,Log_History]+runtime_plugins
     system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder]
-    plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins
+    plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins+backend_classes
     name_by_index = [p.__name__ for p in plugin_by_index]
     plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-    default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Remote',{})]
+    default_plugins = [('UVC_Backend',{}),('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Remote',{})]
 
     # Callback functions
     def on_resize(window,w, h):
@@ -188,6 +191,8 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     def get_dt():
         return next(tick)
 
+    g_pool.on_frame_size_change = lambda new_size: None
+
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
     if session_settings.get("version",VersionFormat('0.0')) < g_pool.version:
@@ -195,24 +200,28 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         session_settings.clear()
 
     # Initialize capture
-    previous_settings = session_settings.get('capture_settings')
     fallback_settings = {
-        'active_backend'    : {
-            'source_type'   : 'Local / UVC',
-            'active_source' : {
-                'names'     : cap_src,
-                'frame_size': (1280,720),
-                'frame_rate': 30
-            }
-        }
+        'source_class_name': 'UVC_Source',
+        'name'     : cap_src,
+        'frame_size': (1280,720),
+        'frame_rate': 30
     }
-    cap = Capture_Manager(g_pool,fallback_settings,previous_settings)
+    settings = session_settings.get('capture_settings', fallback_settings)
+    try:
+        cap = source_by_name[settings['source_class_name']](g_pool, **settings)
+    except KeyError:
+        logger.warning('Incompatible capture setting encountered. Falling back to fake source.')
+        cap = Fake_Source(g_pool, **settings)
+    except InitialisationError:
+        cap = Fake_Source(g_pool, **settings)
 
     g_pool.iconified = False
-    g_pool.capture = cap
     g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode','2d')
     g_pool.active_calibration_plugin = None
     g_pool.active_gaze_mapping_plugin = None
+
+    g_pool.capture = cap
+    g_pool.capture_backend = None
 
     audio.audio_mode = session_settings.get('audio_mode',audio.default_audio_mode)
 
@@ -303,14 +312,22 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
                                         getter    = lambda: selector_label))
 
     general_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
-    g_pool.sidebar.append(general_settings)
+
+    g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
+
+    g_pool.capture_source_menu = ui.Growing_Menu('Capture Source')
+    g_pool.capture.init_gui()
 
     g_pool.calibration_menu = ui.Growing_Menu('Calibration')
+    g_pool.capture_selector_menu = ui.Growing_Menu('Capture Selection')
+
+    g_pool.sidebar.append(general_settings)
+    g_pool.sidebar.append(g_pool.capture_selector_menu)
+    g_pool.sidebar.append(g_pool.capture_source_menu)
     g_pool.sidebar.append(g_pool.calibration_menu)
+
     g_pool.gui.append(g_pool.sidebar)
-    g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
     g_pool.gui.append(g_pool.quickbar)
-    g_pool.capture.init_gui(g_pool.sidebar)
 
     #plugins that are loaded based on user settings from previous session
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
@@ -319,6 +336,16 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     g_pool.calibration_menu.insert(0,ui.Selector('active_calibration_plugin',getter=lambda: g_pool.active_calibration_plugin.__class__, selection = calibration_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
                                         setter= open_plugin,label='Method'))
+
+    #We add the capture selection menu, after a backend has been added:
+    g_pool.capture_selector_menu.insert(0,ui.Selector(
+        'capture_backend',g_pool,
+        setter    = open_plugin,
+        getter    = lambda: g_pool.capture_backend.__class__,
+        selection = backend_classes,
+        labels    = [b.__name__.replace('_',' ') for b in backend_classes],
+        label     = 'Backend'
+    ))
 
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window,on_resize)
@@ -379,14 +406,36 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
     # Event loop
     while not glfw.glfwWindowShouldClose(main_window):
+
+        # fetch newest notifications
+        new_notifications = []
+        while notify_sub.new_data:
+            t,n = notify_sub.recv()
+            new_notifications.append(n)
+
+        # notify each plugin if there are new notifications:
+        for n in new_notifications:
+            handle_notifications(n)
+            g_pool.capture.on_notify(n)
+            for p in g_pool.plugins:
+                p.on_notify(n)
+
         # Get an image from the grabber
         try:
             frame = g_pool.capture.get_frame()
-        except g_pool.capture.active_backend.stream_error_class():
-            g_pool.capture.active_backend.set_active_source_with_id(None)
+        except g_pool.capture.error_class():
+            prev_settings = g_pool.capture.settings
+            g_pool.capture_backend.activate_source(Fake_Source, prev_settings)
+            continue
         except EndofVideoFileError:
             logger.warning("Video file is done. Stopping")
             break
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            prev_settings = g_pool.capture.settings
+            g_pool.capture_backend.activate_source(Fake_Source, prev_settings)
+            continue
 
         #update performace graphs
         t = frame.timestamp
@@ -405,7 +454,6 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
         recent_pupil_data = []
         recent_gaze_data = []
-        new_notifications = []
 
         while pupil_sub.new_data:
             t,p = pupil_sub.recv()
@@ -415,19 +463,9 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
             for g in new_gaze_data:
                 gaze_pub.send('gaze',g)
             recent_gaze_data += new_gaze_data
-        while notify_sub.new_data:
-            t,n = notify_sub.recv()
-            new_notifications.append(n)
-
 
         events['pupil_positions'] = recent_pupil_data
         events['gaze_positions'] = recent_gaze_data
-
-        # notify each plugin if there are new notifications:
-        for n in new_notifications:
-            handle_notifications(n)
-            for p in g_pool.plugins:
-                p.on_notify(n)
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
@@ -456,6 +494,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         # render visual feedback from loaded plugins
 
         if is_window_visible(main_window):
+            g_pool.capture.gl_display()
             for p in g_pool.plugins:
                 p.gl_display()
 
@@ -490,7 +529,9 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     g_pool.gui.terminate()
     glfw.glfwDestroyWindow(main_window)
     glfw.glfwTerminate()
-    g_pool.capture.close()
+
+    g_pool.capture.deinit_gui()
+    g_pool.capture.cleanup()
 
     #shut down eye processes:
     stop_eye_process(0)

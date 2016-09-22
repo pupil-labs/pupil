@@ -10,7 +10,7 @@
 
 import ndsi
 
-from base_backend import Base_Backend
+from . import Base_Backend
 from ..source import NDSI_Source
 
 import logging, traceback as tb
