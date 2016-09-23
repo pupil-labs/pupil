@@ -321,7 +321,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             setter    = open_backend,
             getter    = lambda: g_pool.capture_backend.__class__,
             selection = backend_classes,
-            labels    = [b.__name__.replace('_',' ') for b in backend_classes],
+            labels    = [b.gui_name for b in backend_classes],
             label     = 'Backend'
         ))
 

@@ -17,6 +17,7 @@ class Base_Backend(Plugin):
     """docstring for Base_Backend"""
 
     uniqueness = 'by_base_class'
+    gui_name = '???'
 
     def __init__(self, g_pool):
         super(Base_Backend, self).__init__(g_pool)
@@ -38,6 +39,7 @@ class Base_Backend(Plugin):
         try:
             self.g_pool.capture = source_class(self.g_pool,**init_args)
         except InitialisationError:
+            logger.debug('Initialisation error with %s'%settings)
             # try to recover to previous source
             if prev_source_class and prev_source_class != Fake_Source:
                 self.activate_source(prev_source_class,prev_settings)

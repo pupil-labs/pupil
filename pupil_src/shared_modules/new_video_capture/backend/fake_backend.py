@@ -13,6 +13,9 @@ from ..source import Fake_Source
 
 class Fake_Backend(Base_Backend):
     """docstring for Fake_Backend"""
+
+    gui_name = 'Test image'
+
     def __init__(self, g_pool):
         super(Fake_Backend, self).__init__(g_pool)
 

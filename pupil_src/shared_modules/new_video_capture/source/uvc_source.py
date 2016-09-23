@@ -36,7 +36,7 @@ class UVC_Source(Base_Source):
 
         # name is given. check if list of names
         names = name if type(name) in (list, tuple) else [name]
-        if names:
+        if name:
             for name in names:
                 if name in devices_by_name:
                     uid_for_name = devices_by_name[name]['uid']

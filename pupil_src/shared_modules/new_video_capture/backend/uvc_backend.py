@@ -19,6 +19,8 @@ logger.setLevel(logging.INFO)
 
 class UVC_Backend(Base_Backend):
 
+    gui_name = 'Local USB'
+
     def __init__(self, g_pool):
         super(UVC_Backend, self).__init__(g_pool)
         self.last_check_ts = 0.
@@ -40,6 +42,7 @@ class UVC_Backend(Base_Backend):
             if not source_uid:
                 return
             settings = {
+                'source_class_name': UVC_Source.class_name(),
                 'frame_size': self.g_pool.capture.frame_size,
                 'frame_rate': self.g_pool.capture.frame_rate,
                 'uid': source_uid
