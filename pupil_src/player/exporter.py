@@ -43,7 +43,7 @@ from vis_watermark import Vis_Watermark
 from scan_path import Scan_Path
 from manual_gaze_correction import Manual_Gaze_Correction
 from eye_video_overlay import Eye_Video_Overlay
-from fixation_detector import Pupil_An gle_3D_Fixation_Detector,Gaze_Position_2D_Fixation_Detector
+from fixation_detector import Pupil_Angle_3D_Fixation_Detector,Gaze_Position_2D_Fixation_Detector
 
 
 available_plugins = Vis_Circle,Vis_Cross, Vis_Polyline, \
