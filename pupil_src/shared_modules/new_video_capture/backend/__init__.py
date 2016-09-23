@@ -26,6 +26,8 @@ class Base_Backend(Plugin):
         return {}
 
     def activate_source(self, source_class, settings={}):
+        init_args = self.source_init_arguments()
+        init_args.update(settings)
         prev_source_class = None
         if self.g_pool.capture:
             prev_source_class = self.g_pool.capture.__class__
@@ -34,15 +36,19 @@ class Base_Backend(Plugin):
             self.g_pool.capture.cleanup()
             self.g_pool.capture = None
         try:
-            self.g_pool.capture = source_class(self.g_pool,**settings)
+            self.g_pool.capture = source_class(self.g_pool,**init_args)
         except InitialisationError:
             # try to recover to previous source
             if prev_source_class and prev_source_class != Fake_Source:
                 self.activate_source(prev_source_class,prev_settings)
                 logger.info('Reactivated `%s`'%prev_settings['name'])
             # no recovery possible, load fake source
-            else: self.g_pool.capture = Fake_Source(self.g_pool,**settings)
+            else: self.g_pool.capture = Fake_Source(self.g_pool,**init_args)
         self.g_pool.capture.init_gui()
+
+    def source_init_arguments(self):
+        """Provides non-serializable init arguments"""
+        return {}
 
     def init_gui(self):
         self.g_pool.capture_selector_menu.extend([])
@@ -63,19 +69,19 @@ class Base_Backend(Plugin):
             ``capture_backend.source_found``
             ``capture_backend.source_lost``
         """
-        from .. import source_classes
-        source_class_by_name = {sc.class_name():sc for sc in source_classes}
-
-        if (n['subject'].startswith('capture_backend.source_found')
-            and self.g_pool.capture.class_name() == Fake_Source.class_name()):
+        if (n['subject'].startswith('capture_backend.source_found') and
+            self.g_pool.capture.class_name() == Fake_Source.class_name()):
             preferred = self.g_pool.capture.preferred_source
             found_source_class_name = n['source_class_name']
             preferred_source_class_name = preferred['source_class_name']
             if found_source_class_name == preferred_source_class_name:
+                # Cannot be imported at file start (recursion)
+                from .. import source_classes
+                source_class_by_name = {sc.class_name():sc for sc in source_classes}
                 source_class = source_class_by_name[found_source_class_name]
                 self.activate_source(source_class, preferred)
 
 
 from fake_backend import Fake_Backend
 from uvc_backend  import UVC_Backend
-#from ndsi_backend import NDSI_Backend
+from ndsi_backend import NDSI_Backend

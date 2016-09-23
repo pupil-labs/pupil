@@ -10,5 +10,5 @@
 
 import source, backend
 
-source_classes  = [source.Fake_Source, source.UVC_Source]
-backend_classes = [backend.Fake_Backend, backend.UVC_Backend]
+source_classes  = [source.Fake_Source, source.UVC_Source, source.NDSI_Source]
+backend_classes = [backend.Fake_Backend, backend.UVC_Backend, backend.NDSI_Backend]

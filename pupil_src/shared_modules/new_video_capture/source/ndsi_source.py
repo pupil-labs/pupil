@@ -3,15 +3,13 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the CC BY-NC-SA License.
- License details are in the file LICENSE, distributed as part of this software.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
+ License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
 
 from . import InitialisationError, Base_Source
 from ndsi import StreamError
-
-from pyglui import ui
 
 import logging
 logger = logging.getLogger(__name__)
@@ -19,14 +17,36 @@ logger.setLevel(logging.DEBUG)
 
 class NDSI_Source(Base_Source):
     """docstring for NDSI_Source"""
-    def __init__(self, g_pool, network, source_id):
-        raise InitialisationError()
+    def __init__(self, g_pool, frame_size, frame_rate, network=None, source_id=None, host_name=None, sensor_name=None,**settings):
+        if not network: raise InitialisationError()
         super(NDSI_Source, self).__init__(g_pool)
-        self.sensor = network.sensor(source_id, callbacks=(self.on_notification,))
+        self.sensor = None
+        try:
+            # uuid given
+            if source_id:
+                self.sensor = network.sensor(source_id, callbacks=(self.on_notification,))
+            # host/sensor name combination, prob. from settings
+            elif host_name and sensor_name:
+                for sensor in network.sensors.values():
+                    if (sensor['host_name'] == host_name and
+                        sensor['sensor_name'] == sensor_name):
+                        self.sensor = network.sensor(sensor['sensor_uuid'], callbacks=(self.on_notification,))
+            else:
+                for sensor_id in network.sensors:
+                    try:
+                        self.sensor = network.sensor(sensor_id, callbacks=(self.on_notification,))
+                        break
+                    except ValueError:
+                        continue
+        except ValueError:  raise InitialisationError()
+        if not self.sensor: raise InitialisationError()
+
         logger.debug('NDSI Source Sensor: %s'%self.sensor)
-        self.control_menu = None
         self.control_id_ui_mapping = {}
         self.get_frame_timeout = 1000
+        self.frame_size = frame_size
+        self.frame_rate = frame_rate
+        self.has_ui = False
 
     @property
     def name(self):
@@ -56,17 +76,39 @@ class NDSI_Source(Base_Source):
         raise StreamError("Could not grab frame after 3 attempts. Giving up.")
 
     def on_notification(self, sensor, event):
-        if self.control_menu and event['control_id'] not in self.control_id_ui_mapping:
-            logger.debug('! update_control_menu call ! %s > %s'%(sensor,event))
+        if self.has_ui and event['control_id'] not in self.control_id_ui_mapping:
             self.update_control_menu()
 
+    @property
+    def frame_size(self):
+        return (1280, 720)
+    @frame_size.setter
+    def frame_size(self,new_size):
+        # Subclasses need to call this:
+        self.g_pool.on_frame_size_change(new_size)
+        # eye.py sets a custom `on_frame_size_change` callback
+        # which recalculates the size of the ROI. If this does not
+        # happen, the eye process will crash.
     def set_frame_size(self,new_size):
         self.frame_size = new_size
 
     @property
+    def frame_rate(self):
+        return 30
+    @frame_rate.setter
+    def frame_rate(self,new_rate):
+        pass
+
+    @property
+    def jpeg_support(self):
+        raise NotImplementedError()
+
+    @property
     def settings(self):
-        settings = {}
-        settings['name'] = self.sensor.name
+        settings = super(NDSI_Source, self).settings
+        settings['name'] = self.name
+        settings['sensor_name'] = self.sensor.name
+        settings['host_name'] = self.sensor.host_name
         settings['frame_rate'] = self.frame_rate
         settings['frame_size'] = self.frame_size
         return settings
@@ -76,14 +118,13 @@ class NDSI_Source(Base_Source):
         self.frame_size = settings['frame_size']
         self.frame_rate = settings['frame_rate']
 
-    def init_gui(self, parent_menu):
-        self.parent_menu = parent_menu
-        self.control_menu = ui.Growing_Menu(label='%s Controls'%str(self.sensor.name))
+    def init_gui(self):
+        self.has_ui = True
         self.update_control_menu()
-        self.parent_menu.append(self.control_menu)
 
     def update_control_menu(self):
-        del self.control_menu.elements[:]
+        from pyglui import ui
+        del self.g_pool.capture_source_menu.elements[:]
         self.control_id_ui_mapping = {}
 
         # closure factory
@@ -134,19 +175,12 @@ class NDSI_Source(Base_Source):
                     setter=make_value_change_fn(ctrl_id))
             if ctrl_ui:
                 self.control_id_ui_mapping[ctrl_id] = ctrl_ui
-                self.control_menu.append(ctrl_ui)
-        self.control_menu.append(ui.Button("Reset to default values",self.sensor.reset_all_control_values))
+                self.g_pool.capture_source_menu.append(ctrl_ui)
+        self.g_pool.capture_source_menu.append(ui.Button("Reset to default values",self.sensor.reset_all_control_values))
 
-    def deinit_gui(self):
-        if self.control_menu:
-            del self.control_menu.elements[:]
-            self.parent_menu.remove(self.control_menu)
-            self.control_menu = None
-            self.parent_menu = None
-
-    def close(self):
-        self.deinit_gui()
+    def cleanup(self):
         self.sensor = None
 
-    def __del__(self):
-        self.close()
+    @staticmethod
+    def error_class():
+        return StreamError

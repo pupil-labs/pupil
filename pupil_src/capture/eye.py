@@ -135,6 +135,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         g_pool.app = 'capture'
         g_pool.timebase = timebase
 
+        g_pool.ipc_pub = ipc_socket
+
         def get_timestamp():
             return get_time_monotonic()-g_pool.timebase.value
         g_pool.get_timestamp = get_timestamp
@@ -427,6 +429,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                 logger.warning("Video File is done. Stopping")
                 g_pool.capture.seek_to_frame(0)
                 frame = g_pool.capture.get_frame()
+
+            g_pool.capture_backend.update(frame, {})
 
             if should_publish_frames and frame.jpeg_buffer:
                 if   frame_publish_format == "jpeg":

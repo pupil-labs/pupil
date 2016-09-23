@@ -3,15 +3,15 @@
  Pupil - eye tracking platform
  Copyright (C) 2012-2016  Pupil Labs
 
- Distributed under the terms of the CC BY-NC-SA License.
- License details are in the file LICENSE, distributed as part of this software.
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
+ License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
 
 import ndsi
 
 from . import Base_Backend
-from ..source import NDSI_Source
+from ..source import NDSI_Source, Fake_Source
 
 import logging, traceback as tb
 logger = logging.getLogger(__name__)
@@ -19,70 +19,75 @@ logger.setLevel(logging.DEBUG)
 
 class NDSI_Backend(Base_Backend):
     """docstring for NDSI_Backend"""
-    def __init__(self, g_pool, settings):
-        super(NDSI_Backend, self).__init__(g_pool, settings, should_load_settings=True)
+    def __init__(self, g_pool):
+        super(NDSI_Backend, self).__init__(g_pool)
         self.network = ndsi.Network(callbacks=(self.on_event,))
         self.network.start()
 
-    @staticmethod
-    def stream_error_class():
-        return ndsi.StreamError
+    def init_gui(self):
+        from pyglui import ui
+        ui_elements = []
+        ui_elements.append(ui.Info_Text('Remote Pupil Mobile sources'))
 
-    @staticmethod
-    def source_type():
-        return 'Pupil Mobile'
+        def dev_selection_list():
+            default = (None, 'Select to activate')
+            self.poll_events()
+            devices = [
+                {
+                    'name': str('%s @ %s'%(s['sensor_name'],s['host_name'])),
+                    'uid' : s['sensor_uuid']
+                }
+                for s in self.network.sensors.values()
+                if s['sensor_type'] == 'video'
+            ]
+            dev_pairs = [default] + [(d['uid'], d['name']) for d in devices]
+            return zip(*dev_pairs)
+
+        def activate(source_uid):
+            if not source_uid:
+                return
+            settings = {
+                'frame_size': self.g_pool.capture.frame_size,
+                'frame_rate': self.g_pool.capture.frame_rate,
+                'source_id': source_uid,
+                'network': self.network
+            }
+            self.activate_source(NDSI_Source, settings)
+
+        ui_elements.append(ui.Selector(
+            'selected_source',
+            selection_getter=dev_selection_list,
+            getter=lambda: None,
+            setter=activate,
+            label='Activate source'
+        ))
+        self.g_pool.capture_selector_menu.extend(ui_elements)
 
     def poll_events(self):
         while self.network.has_events:
             self.network.handle_event()
 
-    def get_frame(self):
+    def update(self, frame, events):
         self.poll_events()
-        return self.active_source.get_frame_robust()
 
     def on_event(self, caller, event):
-        if (event['subject'] == 'detach' and
-            isinstance(self.active_source, NDSI_Source) and
-            self.active_source.sensor.uuid == event['sensor_uuid']):
-            self.set_active_source_with_id(None, self.active_source.settings)
+        if event['subject'] == 'detach':
+            name = str('%s @ %s'%(event['sensor_name'],event['host_name']))
+            self.notify_all({
+                'subject': 'capture_backend.source_lost',
+                'source_class_name': NDSI_Source.class_name(),
+                'source_id': event['sensor_uuid'],
+                'name': name
+            })
+        elif event['subject'] == 'attach':
+            name = str('%s @ %s'%(event['sensor_name'],event['host_name']))
+            self.notify_all({
+                'subject': 'capture_backend.source_found',
+                'source_class_name': NDSI_Source.class_name(),
+                'source_id': event['sensor_uuid'],
+                'name': name
+            })
 
-    def list_sources(self):
-        self.poll_events()
-        return [
-            {
-                'name': str('%s @ %s'%(s['sensor_name'],s['host_name'])),
-                'uid' : s['sensor_uuid']
-            }
-            for s in self.network.sensors.values()
-            if s['sensor_type'] == 'video'
-        ]
-
-    def set_active_source_with_name(self, name, settings=None):
-        if self.active_source:
-            settings = settings or self.active_source.settings
-        succesfull = super(NDSI_Backend,self).set_active_source_with_name(name,settings)
-        if not succesfull:
-            for dev in self.list_sources():
-                if dev['name'] == name:
-                    return self.set_active_source_with_id(dev['uid'], settings=settings)
-            return self.set_active_source_with_id(None)
-        return succesfull
-
-    def set_active_source_with_id(self, source_id, settings=None):
-        succesfull = super(NDSI_Backend,self).set_active_source_with_id(source_id, settings)
-        if not succesfull:
-            if self.active_source:
-                settings = settings or self.active_source.settings
-                self.active_source.close()
-
-            try:
-                self.active_source = NDSI_Source(self.g_pool, self.network, source_id)
-                self.active_source_id = source_id
-                if settings:
-                    self.active_source.settings = settings
-                self.active_source.init_gui(self.menu)
-            except Exception as e:
-                tb.print_exc()
-                logger.error('Initializing Pupil Mobile source failed because of: %s'%str(e))
-                return False
-
+    def source_init_arguments(self):
+        """Provides non-serializable init arguments"""
+        return {'network': self.network}
