@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from . import Base_Backend
+from . import Base_Manager
 from ..source import UVC_Source
 import uvc, time
 from sets import ImmutableSet
@@ -17,12 +17,12 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-class UVC_Backend(Base_Backend):
+class UVC_Manager(Base_Manager):
 
     gui_name = 'Local USB'
 
     def __init__(self, g_pool):
-        super(UVC_Backend, self).__init__(g_pool)
+        super(UVC_Manager, self).__init__(g_pool)
         self.last_check_ts = 0.
         self.last_check_result = {}
         self.check_intervall = .5
@@ -70,7 +70,7 @@ class UVC_Backend(Base_Backend):
 
             for lost_key in old_result - new_result:
                 self.notify_all({
-                    'subject': 'capture_backend.source_lost',
+                    'subject': 'capture_manager.source_lost',
                     'source_class_name': UVC_Source.class_name(),
                     'name': self.last_check_result[lost_key],
                     'uid': lost_key
@@ -80,7 +80,7 @@ class UVC_Backend(Base_Backend):
             for found_key in new_result - old_result:
                 device_name = device_names_by_uid[found_key]
                 self.notify_all({
-                    'subject': 'capture_backend.source_found',
+                    'subject': 'capture_manager.source_found',
                     'source_class_name': UVC_Source.class_name(),
                     'name': device_name,
                     'uid': found_key

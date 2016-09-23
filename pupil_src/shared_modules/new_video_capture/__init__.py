@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import source, backend
+import source, manager
 
 source_classes  = [source.Fake_Source, source.UVC_Source, source.NDSI_Source]
-backend_classes = [backend.Fake_Backend, backend.UVC_Backend, backend.NDSI_Backend]
+manager_classes = [manager.Fake_Manager, manager.UVC_Manager, manager.NDSI_Manager]

@@ -13,15 +13,15 @@ from ..source import InitialisationError, Fake_Source
 import logging
 logger = logging.getLogger(__name__)
 
-class Base_Backend(Plugin):
-    """docstring for Base_Backend"""
+class Base_Manager(Plugin):
+    """docstring for Base_Manager"""
 
     uniqueness = 'by_base_class'
     gui_name = '???'
 
     def __init__(self, g_pool):
-        super(Base_Backend, self).__init__(g_pool)
-        g_pool.capture_backend = self
+        super(Base_Manager, self).__init__(g_pool)
+        g_pool.capture_manager = self
 
     def get_init_dict(self):
         return {}
@@ -65,13 +65,13 @@ class Base_Backend(Plugin):
         """Provides UI for the capture selection
 
         Handles notifications:
-            ``capture_backend.source_found``
+            ``capture_manager.source_found``
 
         Emmits notifications:
-            ``capture_backend.source_found``
-            ``capture_backend.source_lost``
+            ``capture_manager.source_found``
+            ``capture_manager.source_lost``
         """
-        if (n['subject'].startswith('capture_backend.source_found') and
+        if (n['subject'].startswith('capture_manager.source_found') and
             self.g_pool.capture.class_name() == Fake_Source.class_name()):
             preferred = self.g_pool.capture.preferred_source
             found_source_class_name = n['source_class_name']
@@ -84,6 +84,6 @@ class Base_Backend(Plugin):
                 self.activate_source(source_class, preferred)
 
 
-from fake_backend import Fake_Backend
-from uvc_backend  import UVC_Backend
-from ndsi_backend import NDSI_Backend
+from fake_manager import Fake_Manager
+from uvc_manager  import UVC_Manager
+from ndsi_manager import NDSI_Manager

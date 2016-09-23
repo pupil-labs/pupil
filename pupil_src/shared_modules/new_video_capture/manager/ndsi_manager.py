@@ -10,20 +10,19 @@
 
 import ndsi
 
-from . import Base_Backend
+from . import Base_Manager
 from ..source import NDSI_Source, Fake_Source
 
 import logging, traceback as tb
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
-class NDSI_Backend(Base_Backend):
+class NDSI_Manager(Base_Manager):
+    """docstring for NDSI_Manager"""
 
     gui_name = 'Pupil Mobile'
 
-    """docstring for NDSI_Backend"""
     def __init__(self, g_pool):
-        super(NDSI_Backend, self).__init__(g_pool)
+        super(NDSI_Manager, self).__init__(g_pool)
         self.network = ndsi.Network(callbacks=(self.on_event,))
         self.network.start()
         self.selected_host = None
@@ -115,7 +114,7 @@ class NDSI_Backend(Base_Backend):
         if event['subject'] == 'detach':
             name = str('%s @ %s'%(event['sensor_name'],event['host_name']))
             self.notify_all({
-                'subject': 'capture_backend.source_lost',
+                'subject': 'capture_manager.source_lost',
                 'source_class_name': NDSI_Source.class_name(),
                 'source_id': event['sensor_uuid'],
                 'name': name
@@ -132,7 +131,7 @@ class NDSI_Backend(Base_Backend):
         elif event['subject'] == 'attach':
             name = str('%s @ %s'%(event['sensor_name'],event['host_name']))
             self.notify_all({
-                'subject': 'capture_backend.source_found',
+                'subject': 'capture_manager.source_found',
                 'source_class_name': NDSI_Source.class_name(),
                 'source_id': event['sensor_uuid'],
                 'name': name

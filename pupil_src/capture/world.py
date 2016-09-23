@@ -83,7 +83,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     from methods import normalize, denormalize, delta_t, get_system_info
     from video_capture import FileCaptureError, EndofVideoFileError, CameraCaptureError
     from new_video_capture.source import InitialisationError, Fake_Source
-    from new_video_capture import source_classes, backend_classes
+    from new_video_capture import source_classes, manager_classes
     source_by_name = {src.class_name():src for src in source_classes}
 
     from version_utils import VersionFormat
@@ -147,10 +147,10 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
     user_launchable_plugins = [Pupil_Groups,Frame_Publisher,Show_Calibration,Pupil_Remote,Time_Sync,Surface_Tracker,Annotation_Capture,Log_History]+runtime_plugins
     system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder]
-    plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins+backend_classes
+    plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins+manager_classes
     name_by_index = [p.__name__ for p in plugin_by_index]
     plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-    default_plugins = [('UVC_Backend',{}),('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Remote',{})]
+    default_plugins = [('UVC_Manager',{}),('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Remote',{})]
 
     # Callback functions
     def on_resize(window,w, h):
@@ -221,7 +221,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     g_pool.active_gaze_mapping_plugin = None
 
     g_pool.capture = cap
-    g_pool.capture_backend = None
+    g_pool.capture_manager = None
 
     audio.audio_mode = session_settings.get('audio_mode',audio.default_audio_mode)
 
@@ -337,14 +337,14 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
                                         labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
                                         setter= open_plugin,label='Method'))
 
-    #We add the capture selection menu, after a backend has been added:
+    #We add the capture selection menu, after a manager has been added:
     g_pool.capture_selector_menu.insert(0,ui.Selector(
-        'capture_backend',g_pool,
+        'capture_manager',g_pool,
         setter    = open_plugin,
-        getter    = lambda: g_pool.capture_backend.__class__,
-        selection = backend_classes,
-        labels    = [b.gui_name for b in backend_classes],
-        label     = 'Backend'
+        getter    = lambda: g_pool.capture_manager.__class__,
+        selection = manager_classes,
+        labels    = [b.gui_name for b in manager_classes],
+        label     = 'Manager'
     ))
 
     # Register callbacks main_window
@@ -425,7 +425,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
             frame = g_pool.capture.get_frame()
         except g_pool.capture.error_class():
             prev_settings = g_pool.capture.settings
-            g_pool.capture_backend.activate_source(Fake_Source, prev_settings)
+            g_pool.capture_manager.activate_source(Fake_Source, prev_settings)
             continue
         except EndofVideoFileError:
             logger.warning("Video file is done. Stopping")
@@ -434,7 +434,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
             import traceback
             traceback.print_exc()
             prev_settings = g_pool.capture.settings
-            g_pool.capture_backend.activate_source(Fake_Source, prev_settings)
+            g_pool.capture_manager.activate_source(Fake_Source, prev_settings)
             continue
 
         #update performace graphs

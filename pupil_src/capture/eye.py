@@ -105,7 +105,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         from av_writer import JPEG_Writer,AV_Writer
 
         from new_video_capture.source import InitialisationError, Fake_Source
-        from new_video_capture import source_classes, backend_classes
+        from new_video_capture import source_classes, manager_classes
         source_by_name = {src.class_name():src for src in source_classes}
 
         # Pupil detectors
@@ -201,8 +201,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             logger.info("Session setting are from older version of this app. I will not use those.")
             session_settings.clear()
 
-        capture_backend_settings = session_settings.get(
-            'capture_backend_settings', ('UVC_Backend',{}))
+        capture_manager_settings = session_settings.get(
+            'capture_manager_settings', ('UVC_Manager',{}))
 
         # Initialize capture
         fallback_settings = {
@@ -222,7 +222,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
 
         g_pool.iconified = False
         g_pool.capture = cap
-        g_pool.capture_backend = None
+        g_pool.capture_manager = None
         g_pool.flip = session_settings.get('flip',False)
         g_pool.display_mode = session_settings.get('display_mode','camera_image')
         g_pool.display_mode_info_text = {'camera_image': "Raw eye camera image. This uses the least amount of CPU power",
@@ -305,24 +305,24 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
 
         g_pool.pupil_detector.init_gui(g_pool.sidebar)
 
-        backend_class_name, backend_settings = capture_backend_settings
-        backend_class_by_name = {c.__name__:c for c in backend_classes}
-        g_pool.capture_backend = backend_class_by_name[backend_class_name](g_pool,**backend_settings)
-        g_pool.capture_backend.init_gui()
+        manager_class_name, manager_settings = capture_manager_settings
+        manager_class_by_name = {c.__name__:c for c in manager_classes}
+        g_pool.capture_manager = manager_class_by_name[manager_class_name](g_pool,**manager_settings)
+        g_pool.capture_manager.init_gui()
 
-        def open_backend(backend_class):
-            g_pool.capture_backend.cleanup()
-            g_pool.capture_backend = backend_class(g_pool)
-            g_pool.capture_backend.init_gui()
+        def open_manager(manager_class):
+            g_pool.capture_manager.cleanup()
+            g_pool.capture_manager = manager_class(g_pool)
+            g_pool.capture_manager.init_gui()
 
-        #We add the capture selection menu, after a backend has been added:
+        #We add the capture selection menu, after a manager has been added:
         g_pool.capture_selector_menu.insert(0,ui.Selector(
-            'capture_backend',g_pool,
-            setter    = open_backend,
-            getter    = lambda: g_pool.capture_backend.__class__,
-            selection = backend_classes,
-            labels    = [b.gui_name for b in backend_classes],
-            label     = 'Backend'
+            'capture_manager',g_pool,
+            setter    = open_manager,
+            getter    = lambda: g_pool.capture_manager.__class__,
+            selection = manager_classes,
+            labels    = [b.gui_name for b in manager_classes],
+            label     = 'Manager'
         ))
 
         # Register callbacks main_window
@@ -418,7 +418,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                 elif subject.startswith('frame_publishing.stopped'):
                     should_publish_frames = False
                     frame_publish_format = 'jpeg'
-                else: g_pool.capture_backend.on_notify(notification)
+                else: g_pool.capture_manager.on_notify(notification)
 
             # Get an image from the grabber
             try:
@@ -430,7 +430,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                 g_pool.capture.seek_to_frame(0)
                 frame = g_pool.capture.get_frame()
 
-            g_pool.capture_backend.update(frame, {})
+            g_pool.capture_manager.update(frame, {})
 
             if should_publish_frames and frame.jpeg_buffer:
                 if   frame_publish_format == "jpeg":
@@ -550,7 +550,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         session_settings['display_mode'] = g_pool.display_mode
         session_settings['ui_config'] = g_pool.gui.configuration
         session_settings['capture_settings'] = g_pool.capture.settings
-        session_settings['capture_backend_settings'] = g_pool.capture_backend.class_name, g_pool.capture_backend.get_init_dict()
+        session_settings['capture_manager_settings'] = g_pool.capture_manager.class_name, g_pool.capture_manager.get_init_dict()
         session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
         session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
         session_settings['version'] = g_pool.version
