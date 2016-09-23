@@ -109,7 +109,7 @@ from video_export_launcher import Video_Export_Launcher
 from scan_path import Scan_Path
 from offline_surface_tracker import Offline_Surface_Tracker
 from marker_auto_trim_marks import Marker_Auto_Trim_Marks
-from fixation_detector import Fixation_Detector_Dispersion_Duration
+from fixation_detector import Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector
 from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
