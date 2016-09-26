@@ -87,3 +87,4 @@ class Base_Manager(Plugin):
 from fake_manager import Fake_Manager
 from uvc_manager  import UVC_Manager
 from ndsi_manager import NDSI_Manager
+from file_manager import File_Manager

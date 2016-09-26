@@ -83,8 +83,7 @@ class NDSI_Manager(Base_Manager):
                 'source_class_name': NDSI_Source.class_name(),
                 'frame_size': self.g_pool.capture.frame_size,
                 'frame_rate': self.g_pool.capture.frame_rate,
-                'source_id': source_uid,
-                'network': self.network
+                'source_id': source_uid
             }
             self.activate_source(NDSI_Source, settings)
 

@@ -71,7 +71,7 @@ class Base_Source(object):
         raise NotImplementedError()
     @frame_rate.setter
     def frame_rate(self,new_rate):
-        raise NotImplementedError()
+        pass
 
     @property
     def jpeg_support(self):
@@ -88,3 +88,4 @@ class Base_Source(object):
 from fake_source import Fake_Source
 from uvc_source  import UVC_Source
 from ndsi_source import NDSI_Source
+from file_source import File_Source

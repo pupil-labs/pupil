@@ -10,5 +10,5 @@
 
 import source, manager
 
-source_classes  = [source.Fake_Source, source.UVC_Source, source.NDSI_Source]
-manager_classes = [manager.Fake_Manager, manager.UVC_Manager, manager.NDSI_Manager]
+source_classes  = [source.Fake_Source, source.UVC_Source, source.NDSI_Source, source.File_Source]
+manager_classes = [manager.Fake_Manager, manager.UVC_Manager, manager.NDSI_Manager, manager.File_Manager]
