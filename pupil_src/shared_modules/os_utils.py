@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 os_name = platform.system()
 if os_name == "Darwin":
     mac_version = VersionFormat(platform.mac_ver()[0])
-    min_version = VersionFormat("11.0.0")
+    min_version = VersionFormat("10.11.0")
 
 if os_name == "Darwin" and mac_version >= min_version:
 
