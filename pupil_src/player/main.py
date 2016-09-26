@@ -85,7 +85,7 @@ from pyglui.cygl.utils import Named_Texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 from OpenGL.GL import glClearColor
 #capture
-from video_capture import File_Capture,EndofVideoFileError,FileSeekError
+from video_capture.source.file_source import File_Source,EndofVideoFileError,FileSeekError
 
 # helpers/utils
 import csv_utils
@@ -199,8 +199,13 @@ def session(rec_dir):
     logger.info('System Info: %s'%get_system_info())
 
     timestamps = np.load(timestamps_path)
+
+    # create container for globally scoped vars
+    g_pool = Global_Container()
+    g_pool.app = 'player'
+
     # Initialize capture
-    cap = File_Capture(video_path,timestamps=list(timestamps))
+    cap = File_Source(g_pool,video_path,timestamps=list(timestamps))
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
@@ -220,9 +225,6 @@ def session(rec_dir):
     pupil_list = pupil_data['pupil_positions']
     gaze_list = pupil_data['gaze_positions']
 
-    # create container for globally scoped vars
-    g_pool = Global_Container()
-    g_pool.app = 'player'
     g_pool.binocular = meta_info.get('Eye Mode','monocular') == 'binocular'
     g_pool.version = app_version
     g_pool.capture = cap
@@ -457,7 +459,7 @@ def session(rec_dir):
         p.alive = False
     g_pool.plugins.clean()
 
-    cap.close()
+    cap.cleanup()
     g_pool.gui.terminate()
     glfwDestroyWindow(main_window)
 

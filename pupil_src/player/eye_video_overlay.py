@@ -21,7 +21,7 @@ from plugin import Plugin
 from version_utils import VersionFormat
 
 #capture
-from video_capture import EndofVideoFileError,FileSeekError,FileCaptureError,File_Capture
+from video_capture.source.file_source import EndofVideoFileError,FileSeekError,FileCaptureError,File_Source
 
 #mouse
 from glfw import glfwGetCursorPos,glfwGetWindowSize,glfwGetCurrentContext
@@ -154,7 +154,7 @@ class Eye_Video_Overlay(Plugin):
         #try to load eye video and ts for each eye.
         for video,ts in zip(eye_video_path,eye_timestamps_path):
             try:
-                self.eye_cap.append(File_Capture(glob(video)[0],timestamps=np.load(ts)))
+                self.eye_cap.append(File_Source(glob(video)[0],timestamps=np.load(ts)))
             except IndexError,FileCaptureError:
                 pass
             else:
@@ -200,7 +200,7 @@ class Eye_Video_Overlay(Plugin):
         if 1 in self.showeyes:
             self.menu.append(ui.Switch('1',self.mirror,label="Eye 2: Horiz Flip"))
             self.menu.append(ui.Switch('1',self.flip,label="Eye 2: Vert Flip"))
-        
+
 
     def set_showeyes(self,new_mode):
         #everytime we choose eye setting (either use eye 1, 2, or both, updates the gui menu to remove certain options from list)

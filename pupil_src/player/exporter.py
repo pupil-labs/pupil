@@ -22,7 +22,7 @@ from time import time
 from glob import glob
 import cv2
 import numpy as np
-from video_capture import File_Capture,EndofVideoFileError
+from video_capture.source.file_source import File_Source,EndofVideoFileError
 from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version
@@ -71,8 +71,11 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     meta_info = load_meta_info(rec_dir)
     rec_version = read_rec_version(meta_info)
 
+    g = Global_Container()
+    g.app = 'exporter'
+
     timestamps = np.load(timestamps_path)
-    cap = File_Capture(video_path,timestamps=timestamps)
+    cap = File_Source(g,video_path,timestamps=timestamps)
 
 
     #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
@@ -115,8 +118,6 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     start_time = time()
 
-    g = Global_Container()
-    g.app = 'exporter'
     g.capture = cap
     g.rec_dir = rec_dir
     g.user_dir = user_dir

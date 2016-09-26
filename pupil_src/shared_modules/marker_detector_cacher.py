@@ -8,8 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-
-
+class Global_Container(object):
+    pass
 
 def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker_perimeter):
     '''
@@ -21,11 +21,11 @@ def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
     logger.debug('Started cacher process for Marker Detector')
     import cv2
-    from video_capture import File_Capture, EndofVideoFileError,FileSeekError
+    from video_capture.source.file_source import File_Source, EndofVideoFileError,FileSeekError
     from square_marker_detect import detect_markers_robust
     aperture = 9
     markers = []
-    cap = File_Capture(video_file_path,timestamps=timestamps)
+    cap = File_Source(Global_Container(), video_file_path,timestamps=timestamps)
 
     def next_unvisited_idx(frame_idx):
         try:
@@ -103,7 +103,7 @@ def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker
 
 
     logger.debug("Closing Cacher Process")
-    cap.close()
+    cap.cleanup()
     q.close()
     run.value = False
     return
