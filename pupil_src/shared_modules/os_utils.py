@@ -8,7 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import platform, sys, os, time, re
+import platform, sys, os, time
+from distutils.version import LooseVersion as VersionFormat
 import subprocess as sp
 
 import logging
@@ -16,22 +17,10 @@ logger = logging.getLogger(__name__)
 
 os_name = platform.system()
 if os_name == "Darwin":
-    # version regex from - http://svn.python.org/projects/python/tags/r32rc1/Lib/distutils/version.py
-    version_re = re.compile(r'^(\d+) \. (\d+) (\. (\d+))? ([ab](\d+))?$', re.VERBOSE)
-    mac_version = platform.mac_ver()
-    mac_version_str = mac_version[0]
+    mac_version = VersionFormat(platform.mac_ver()[0])
+    min_version = VersionFormat("11.0.0")
 
-    match = version_re.match(mac_version_str)
-    if not match:
-        logger.error("Invalid version string. Valid semantic versioning follows the MAJOR.MINOR.PATCH pattern with optional pre-release and pre-release build numbers.")
-
-    try:
-        (mac_major,mac_minor,mac_patch,mac_prerelease,mac_prerelease_num) = match.group(1,2,4,5,6) 
-    except Exception as e:
-        logger.error(e)
-
-
-if os_name == "Darwin" and mac_minor >=11:
+if os_name == "Darwin" and mac_version >= min_version:
 
     class Prevent_Idle_Sleep(object):
 
