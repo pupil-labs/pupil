@@ -13,6 +13,7 @@ from plugin import Plugin
 from pyglui import ui
 import zmq
 import zmq_tools
+import socket
 from pyre import zhelper
 import logging
 logger = logging.getLogger(__name__)
@@ -67,29 +68,50 @@ class Pupil_Remote(Plugin):
         order (float): See plugin.py
         thread_pipe (zmq.Socket): Pipe for background communication
     """
-    def __init__(self, g_pool,address="tcp://*:50020"):
+    def __init__(self, g_pool,port="50020", host="*", use_primary_interface=True):
         super(Pupil_Remote, self).__init__(g_pool)
         self.order = .01 #excecute first
         self.context = g_pool.zmq_ctx
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
-        self.address = address
-        self.start_server(address)
+
+        self.use_primary_interface = use_primary_interface
+        self.host = host
+        self.port= port
+
+        self.start_server(host+':'+port)
         self.menu = None
 
 
     def start_server(self,new_address):
-        self.thread_pipe.send('Bind')
-        self.thread_pipe.send(new_address)
-        response = self.thread_pipe.recv()
-        if response == 'Bind OK':
-            self.address = new_address
+        self.thread_pipe.send_multipart(('Bind',"tcp://"+new_address))
+        response,msg = self.thread_pipe.recv_multipart()
+        if response == 'Bind OK' :
+            host,port = msg.split(':')
+            self.host = host
+            self.port = port
+            return
+
+        #fail logic
+        logger.error(msg)
+
+        #for service we shut down
+        if self.g_pool.app == 'service':
+            audio.say("Error: Port already in use.")
+            self.notify_all({'subject':'service_process.should_stop'})
+            return
+
+        #for capture we try to bind to a arbitrary port on the first external interface
         else:
-            logger.error(response)
-            if self.g_pool.app == 'service':
-                audio.say("Error: Port already in use.")
-                self.notify_all({'subject':'service_process.should_stop'})
+            self.thread_pipe.send_multipart(('Bind',"tcp://*:*"))
+            response,msg = self.thread_pipe.recv_multipart()
+            if response == 'Bind OK' :
+                host,port = msg.split(':')
+                self.host = host
+                self.port = port
             else:
-                self.address = ''
+                logger.error(msg)
+                raise Exception("Could not bind to port")
+
 
     def stop_server(self):
         self.thread_pipe.send('Exit')
@@ -97,15 +119,45 @@ class Pupil_Remote(Plugin):
             sleep(.1)
 
     def init_gui(self):
+        self.menu = ui.Growing_Menu('Pupil Remote')
+        self.g_pool.sidebar.append(self.menu)
+        self.update_menu()
+
+    def update_menu(self):
+
+        del self.menu.elements[:]
+
         def close():
             self.alive = False
 
+        def set_iface(use_primary_interface):
+            self.use_primary_interface = use_primary_interface
+            self.update_menu()
+
+        if self.use_primary_interface:
+            def set_port(new_port):
+                new_address = '*:'+new_port
+                self.start_server(new_address)
+                self.update_menu()
+        else:
+            def set_address(new_address):
+                if new_address.count(":") != 1:
+                    logger.error("address format not correct")
+                    return
+                self.start_server(new_address)
+                self.update_menu()
+
         help_str = 'Pupil Remote using ZeroMQ REQ REP scheme.'
-        self.menu = ui.Growing_Menu('Pupil Remote')
         self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text(help_str))
-        self.menu.append(ui.Text_Input('address',self,setter=self.start_server,label='Address'))
-        self.g_pool.sidebar.append(self.menu)
+        self.menu.append(ui.Switch('use_primary_interface',self,setter=set_iface,label="Use primary network interface"))
+        if self.use_primary_interface:
+            self.menu.append(ui.Text_Input('port',self,setter=set_port,label='Port'))
+            self.menu.append(ui.Info_Text('Connect localy:   "tcp://%s:%s" ' %('127.0.0.1',self.port)))
+            self.menu.append(ui.Info_Text('Connect remotely: "tcp://%s:%s" '%(socket.gethostbyname(socket.gethostname()),self.port)))
+        else:
+            self.menu.append(ui.Text_Input('host',setter=set_address,getter=lambda : self.host+':'+self.port, label='Address'))
+            self.menu.append(ui.Info_Text('Bound to: "tcp://%s:%s" ' %(self.host,self.port)))
 
     def deinit_gui(self):
         if self.menu:
@@ -135,9 +187,9 @@ class Pupil_Remote(Plugin):
                         remote_socket.bind(new_url)
                     except zmq.ZMQError as e:
                         remote_socket = None
-                        pipe.send("Could not bind to Socket: %s. Reason: %s"%(new_url,e))
+                        pipe.send_multipart(("Error","Could not bind to Socket: %s. Reason: %s"%(new_url,e)))
                     else:
-                        pipe.send("Bind OK")
+                        pipe.send_multipart(("Bind OK",remote_socket.last_endpoint.replace("tcp://","")))
                         poller.register(remote_socket)
             if items.get(remote_socket,None) == zmq.POLLIN:
                 self.on_recv(remote_socket,ipc_pub)
@@ -202,7 +254,7 @@ class Pupil_Remote(Plugin):
         pass
 
     def get_init_dict(self):
-        return {'address':self.address}
+        return {'port':self.port, 'host':self.host, 'use_primary_interface':self.use_primary_interface}
 
     def cleanup(self):
         """gets called when the plugin get terminated.
