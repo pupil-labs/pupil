@@ -6,9 +6,8 @@
  Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
-'''
 
-""" General documentation:
+General documentation:
 
 Video capture provides two basic functionalities:
 - A source, which provides a stream of image frames
@@ -24,7 +23,7 @@ four source types:
 
 See `manager.__init__.py` for more information on managers.
 See `source.__init__.py` for more information on sources.
-"""
+'''
 
 import source, manager
 

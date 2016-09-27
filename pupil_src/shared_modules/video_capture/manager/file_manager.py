@@ -16,7 +16,12 @@ import logging, traceback as tb
 logger = logging.getLogger(__name__)
 
 class File_Manager(Base_Manager):
+    """Summary
 
+    Attributes:
+        file_exts (list): File extensions to filter displayed files
+        root_folder (str): Folder path, which includes file sources
+    """
     gui_name = 'Video File Source'
     file_exts = ['.mp4','.mkv','.mov']
 
@@ -25,8 +30,6 @@ class File_Manager(Base_Manager):
         base_dir = self.g_pool.user_dir.rsplit(os.path.sep,1)[0]
         default_rec_dir = os.path.join(base_dir,'recordings')
         self.root_folder = root_folder or default_rec_dir
-        self.selected_file = None
-        self.eligible_files = [None]
 
     def init_gui(self):
         from pyglui import ui
@@ -57,7 +60,7 @@ class File_Manager(Base_Manager):
             self.activate_source(File_Source, settings)
 
         ui_elements.append(ui.Selector(
-            'selected_file',self,
+            'selected_file',
             selection_getter=split_enumeration,
             getter=lambda: None,
             setter=activate,

@@ -12,7 +12,7 @@ from . import Base_Manager
 from ..source import Fake_Source
 
 class Fake_Manager(Base_Manager):
-    """docstring for Fake_Manager"""
+    """Simple manager to explicitly activate a fake source"""
 
     gui_name = 'Test image'
 

@@ -17,7 +17,12 @@ import logging, traceback as tb
 logger = logging.getLogger(__name__)
 
 class NDSI_Manager(Base_Manager):
-    """docstring for NDSI_Manager"""
+    """Enumerates and activates Pupil Mobile video sources
+
+    Attributes:
+        network (ndsi.Network): NDSI Network backend
+        selected_host (unicode): Selected host uuid
+    """
 
     gui_name = 'Pupil Mobile'
 

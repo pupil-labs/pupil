@@ -26,6 +26,9 @@ class UVC_Source(Base_Source):
     Camera Capture is a class that encapsualtes uvc.Capture:
      - adds UI elements
      - adds timestamping sanitization fns.
+
+    Attributes:
+        uvc_capture (uvc.Capture): UVC backend object
     """
     def __init__(self, g_pool, frame_size, frame_rate, name=None, uid=None, uvc_controls={}, **settings):
         super(UVC_Source, self).__init__(g_pool)

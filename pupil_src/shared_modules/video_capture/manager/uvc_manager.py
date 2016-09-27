@@ -18,7 +18,11 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 class UVC_Manager(Base_Manager):
+    """Manages local USB sources
 
+    Attributes:
+        check_intervall (float): Intervall in which to look for new UVC devices
+    """
     gui_name = 'Local USB'
 
     def __init__(self, g_pool):

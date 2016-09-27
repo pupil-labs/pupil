@@ -14,7 +14,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Base_Manager(Plugin):
-    """docstring for Base_Manager"""
+    """Abstract base class for source managers.
+
+    Managers are plugins that enumerate and load accessible sources from
+    different domains, e.g. locally USB-connected cameras. They should notify
+    other plugins about new and disconnected sources using the
+    `capture_manager.source_found` and `capture_manager.source_lost`
+    notifications.
+
+    Managers are able to activate sources. In case the new source is not accessible, the default behaviour is to recover to the previours source.
+
+    In case a fake source is active, the default behaviour is to try to recover to the original source whose settings are stored in
+    `Fake_Source.preferred_source`. In the special case that a source needs
+    additional initialisation arguments, the active manager can try to provide
+    these with `source_init_arguments()`.
+
+    Attributes:
+        gui_name (str): String used for manager selector labels
+    """
 
     uniqueness = 'by_base_class'
     gui_name = '???'

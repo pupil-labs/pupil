@@ -16,7 +16,12 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 class NDSI_Source(Base_Source):
-    """docstring for NDSI_Source"""
+    """Pupil Mobile video source
+
+    Attributes:
+        get_frame_timeout (float): Maximal waiting time for next frame
+        sensor (ndsi.Sensor): NDSI sensor backend
+    """
     def __init__(self, g_pool, frame_size, frame_rate, network=None, source_id=None, host_name=None, sensor_name=None,**settings):
         if not network: raise InitialisationError()
         super(NDSI_Source, self).__init__(g_pool)
@@ -101,7 +106,7 @@ class NDSI_Source(Base_Source):
 
     @property
     def jpeg_support(self):
-        raise NotImplementedError()
+        return True
 
     @property
     def settings(self):

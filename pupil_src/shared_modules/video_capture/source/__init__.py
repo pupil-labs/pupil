@@ -8,20 +8,6 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-""" Source Documentation
-
-All source objects are based on `Base_Source`. It defines a basic interface
-which is a variation of `Plugin`.
-
-A source object is independent of its matching manager and should be
-initialisable without it. If something fails the system will fallback
-to `Fake_Source` which will wrap the settings of the previous source.
-This feature is used for re-initialisation of the previous source in
-case it is accessible again. See `../manager/__init__.py` for more
-information on source recovery.
-
-"""
-
 class InitialisationError(Exception):
     pass
 
@@ -29,48 +15,95 @@ class StreamError(Exception):
     pass
 
 class Base_Source(object):
-    """docstring for Base_Source"""
+    """Abstract source class
+
+    All source objects are based on `Base_Source`. It defines a basic interface
+    which is a variation of `Plugin`.
+
+    A source object is independent of its matching manager and should be
+    initialisable without it. If something fails the system will fallback
+    to `Fake_Source` which will wrap the settings of the previous source.
+    This feature is used for re-initialisation of the previous source in
+    case it is accessible again. See `../manager/__init__.py` for more
+    information on source recovery.
+
+    Attributes:
+        g_pool (object): Global container, see `Plugin.g_pool`
+    """
 
     def __init__(self, g_pool):
         super(Base_Source, self).__init__()
         self.g_pool = g_pool
 
     def init_gui(self):
+        """Place to add UI to system-provided menu
+
+        System creates `self.g_pool.capture_source_menu`. UI elements
+        should go in there. Only called once and if UI is supported.
+        """
         self.g_pool.capture_source_menu.extend([])
 
     def deinit_gui(self):
+        """By default, removes all UI elements from system-provided menu
+
+        Only called once and if UI is supported.
+        """
         del self.g_pool.capture_source_menu[:]
 
     def cleanup(self):
+        """Called on source termination."""
         pass
 
     def get_frame(self):
+        """Returns the current frame object
+
+        Returns:
+            Frame: Object containing image and time information of the current
+            source frame. See `fake_source.py` for a minimal implementation.
+        """
         raise NotImplementedError()
 
     def notify_all(self,notification):
+        """Same as `Plugin.notify_all`"""
         self.g_pool.ipc_pub.notify(notification)
 
     def on_notify(self,notification):
+        """Same as `Plugin.on_notify`"""
         pass
 
     def gl_display(self):
-        pass
-
-    def on_frame_size_change(self, new_size):
+        """Same as `Plugin.gl_display`"""
         pass
 
     @property
     def settings(self):
+        """Dict containing recovery information.
+
+        Subclasses should extend the minimal set of recovery information below.
+
+        Returns:
+            dict: Recovery information
+        """
         return {
             'source_class_name': self.class_name(),
             'name': self.class_name().replace('_',' ')
         }
+
     @settings.setter
     def settings(self,settings):
+        """Allows to use selective information from settings
+
+        Args: settings (dict)
+        """
         pass
 
     @property
     def frame_size(self):
+        """Summary
+
+        Returns:
+            tuple: 2-element tuple containing width, height
+        """
         raise NotImplementedError()
     @frame_size.setter
     def frame_size(self,new_size):
@@ -82,6 +115,10 @@ class Base_Source(object):
 
     @property
     def frame_rate(self):
+        """
+        Returns:
+            int/float: Frame rate
+        """
         raise NotImplementedError()
     @frame_rate.setter
     def frame_rate(self,new_rate):
@@ -89,10 +126,18 @@ class Base_Source(object):
 
     @property
     def jpeg_support(self):
+        """
+        Returns:
+            bool: Source supports jpeg data
+        """
         raise NotImplementedError()
 
     @staticmethod
     def error_class():
+        """
+        Returns:
+            type: Error class which should be caught to initialise fallback
+        """
         return StreamError
 
     @classmethod

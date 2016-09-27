@@ -49,7 +49,23 @@ class Frame(object):
         raise Exception('Read only.')
 
 class Fake_Source(Base_Source):
-    """docstring for FakeSource"""
+    """Simple source which shows random, static image.
+
+    It is used as falback in case the original source fails. `preferred_source`
+    contains the necessary information to recover to the original source if
+    it becomes accessible again.
+
+    Attributes:
+        fps (int)
+        frame_count (int): Sequence counter
+        frame_rate (int)
+        frame_size (tuple)
+        img (uint8 numpy array): bgr image
+        info_text (str): String shown to the user
+        preferred_source (dict): Settings about source which is to be recovered
+        presentation_time (float)
+        settings (dict)
+    """
     def __init__(self, g_pool, **settings):
         super(Fake_Source, self).__init__(g_pool)
         self.fps = 30
@@ -65,10 +81,29 @@ class Fake_Source(Base_Source):
         text = ui.Info_Text(self.info_text)
         self.g_pool.capture_source_menu.append(text)
 
+        from pyglui.pyfontstash import fontstash
+        self.glfont = fontstash.Context()
+        self.glfont.add_font('opensans',ui.get_opensans_font_path())
+        self.glfont.set_size(64)
+        self.glfont.set_color_float((1.,1.,1.,1.0))
+        self.glfont.set_align_string(v_align='center',h_align='middle')
+
     def cleanup(self):
         self.info_text = None
         self.img = None
         self.preferred_source = None
+
+    def gl_display(self):
+        if hasattr(self,'glfont'):
+            from glfw import glfwGetFramebufferSize,glfwGetCurrentContext
+            self.window_size = glfwGetFramebufferSize(glfwGetCurrentContext())
+            self.glfont.set_color_float((0.,0.,0.,1.))
+            self.glfont.set_blur(5.)
+            self.glfont.draw_limited_text(self.window_size[0]/2.,self.window_size[1]/2.,self.info_text,self.window_size[0]*0.8)
+            self.glfont.set_blur(0.96)
+            self.glfont.set_color_float((1.,1.,1.,1.0))
+            self.glfont.draw_limited_text(self.window_size[0]/2.,self.window_size[1]/2.,self.info_text,self.window_size[0]*0.8)
+
 
     def make_img(self,size):
         c_w ,c_h = max(1,size[0]/30),max(1,size[1]/30)

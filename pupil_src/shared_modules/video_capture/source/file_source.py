@@ -77,8 +77,11 @@ class Frame(object):
 
 
 class File_Source(Base_Source):
-    """
-    simple file capture.
+    """Simple file capture.
+
+    Attributes:
+        source_path (str): Path to source file
+        timestamps (str): Path to timestamps file
     """
     def __init__(self,g_pool,source_path=None,timestamps=None,*args,**kwargs):
         if not source_path or not os.path.isfile(source_path):
