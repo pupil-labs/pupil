@@ -125,7 +125,7 @@ class Pupil_Remote(Plugin):
 
     def update_menu(self):
 
-        self.menu.elements[:] = []
+        del self.menu.elements[:]
 
         def close():
             self.alive = False
@@ -134,21 +134,12 @@ class Pupil_Remote(Plugin):
             self.use_primary_interface = use_primary_interface
             self.update_menu()
 
-
-
         if self.use_primary_interface:
             def set_port(new_port):
                 new_address = '*:'+new_port
                 self.start_server(new_address)
                 self.update_menu()
-
         else:
-            def set_port(new_port):
-                new_address = self.host+':'+new_port
-                self.start_server(new_address)
-                self.update_menu()
-
-
             def set_address(new_address):
                 if new_address.count(":") != 1:
                     logger.error("address format not correct")
@@ -156,17 +147,16 @@ class Pupil_Remote(Plugin):
                 self.start_server(new_address)
                 self.update_menu()
 
-
         help_str = 'Pupil Remote using ZeroMQ REQ REP scheme.'
         self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text(help_str))
-        self.menu.append(ui.Switch('use_primary_interface',self,setter=set_iface,label="use primary network interface"))
+        self.menu.append(ui.Switch('use_primary_interface',self,setter=set_iface,label="Use primary network interface"))
         if self.use_primary_interface:
-            self.menu.append(ui.Text_Input('port',self,setter=set_port,label='port'))
+            self.menu.append(ui.Text_Input('port',self,setter=set_port,label='Port'))
             self.menu.append(ui.Info_Text('Connect localy:   "tcp://%s:%s" ' %('127.0.0.1',self.port)))
             self.menu.append(ui.Info_Text('Connect remotely: "tcp://%s:%s" '%(socket.gethostbyname(socket.gethostname()),self.port)))
         else:
-            self.menu.append(ui.Text_Input('host',setter=set_address,getter=lambda : self.host+':'+self.port, label='address'))
+            self.menu.append(ui.Text_Input('host',setter=set_address,getter=lambda : self.host+':'+self.port, label='Address'))
             self.menu.append(ui.Info_Text('Bound to: "tcp://%s:%s" ' %(self.host,self.port)))
 
     def deinit_gui(self):
