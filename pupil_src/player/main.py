@@ -103,6 +103,7 @@ from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
 from vis_light_points import Vis_Light_Points
 from vis_watermark import Vis_Watermark
+from vis_fixation import Vis_Fixation
 from seek_bar import Seek_Bar
 from trim_marks import Trim_Marks
 from video_export_launcher import Video_Export_Launcher
@@ -127,7 +128,7 @@ def session(rec_dir):
 
 
     system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
-    user_launchable_plugins = [Video_Export_Launcher,Raw_Data_Exporter, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Surface_Tracker,Batch_Exporter,Eye_Video_Overlay,Annotation_Player,Log_History] #,Marker_Auto_Trim_Marks
+    user_launchable_plugins = [Video_Export_Launcher,Raw_Data_Exporter, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Vis_Fixation,Scan_Path,Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Surface_Tracker,Batch_Exporter,Eye_Video_Overlay,Annotation_Player,Log_History] #,Marker_Auto_Trim_Marks
     user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
     available_plugins = system_plugins + user_launchable_plugins
     name_by_index = [p.__name__ for p in available_plugins]
