@@ -8,6 +8,20 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+""" Source Documentation
+
+All source objects are based on `Base_Source`. It defines a basic interface
+which is a variation of `Plugin`.
+
+A source object is independent of its matching manager and should be
+initialisable without it. If something fails the system will fallback
+to `Fake_Source` which will wrap the settings of the previous source.
+This feature is used for re-initialisation of the previous source in
+case it is accessible again. See `../manager/__init__.py` for more
+information on source recovery.
+
+"""
+
 class InitialisationError(Exception):
     pass
 

@@ -56,7 +56,7 @@ index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
 
 class Global_Container(object):
-        pass
+    pass
 
 def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
 
