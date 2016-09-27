@@ -40,7 +40,13 @@ from version_utils import get_version
 app_version = get_version(version_file)
 
 #threading and processing
-from multiprocessing import Process, Queue, Value,active_children, freeze_support
+try:
+    from billiard import Process, Queue, Value,active_children, freeze_support,forking_enable
+except:
+    from multiprocessing import Process, Queue, Value,active_children, freeze_support
+    def forking_enable(_):
+        pass
+
 from threading import Thread
 from ctypes import c_double,c_bool
 
@@ -257,4 +263,5 @@ def launcher():
 
 if __name__ == '__main__':
     freeze_support()
+    forking_enable(0)
     launcher()

@@ -27,6 +27,7 @@ from visualizer_calibration import *
 class Gaze_Mapping_Plugin(Plugin):
     '''base class for all gaze mapping routines'''
     uniqueness = 'by_base_class'
+    order = .1
     def __init__(self,g_pool):
         super(Gaze_Mapping_Plugin, self).__init__(g_pool)
         self.g_pool.active_gaze_mapping_plugin = self
