@@ -34,6 +34,7 @@ if platform.system() == 'Darwin':
                    [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.1.2/lib/libglfw3.dylib','BINARY')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
+                   [('fontawesome-webfont.ttf','/usr/local/lib/python2.7/site-packages/pyglui/fontawesome-webfont.ttf','DATA')],
                    strip=None,
                    upx=True,
                    name='Pupil Capture')
@@ -78,6 +79,7 @@ elif platform.system() == 'Linux':
                    [('libGLEW.so', '/usr/lib/x86_64-linux-gnu/libGLEW.so','BINARY')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/Roboto-Regular.ttf','DATA')],
+                   [('fontawesome-webfont.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/fontawesome-webfont.ttf','DATA')],
                    strip=True,
                    upx=True,
                    name='pupil_capture')
@@ -140,7 +142,8 @@ elif platform.system() == 'Windows':
 	               [('msvcr110.dll', os.path.join(system_path, 'msvcr110.dll'),'BINARY')],
 	               [('msvcr120.dll', os.path.join(system_path, 'msvcr120.dll'),'BINARY')],
 	               [('OpenSans-Regular.ttf', os.path.join(package_path, 'pyglui/OpenSans-Regular.ttf'),'DATA')],
-                   [('Roboto-Regular.ttf', os.path.join(package_path, 'pyglui/Roboto-Regular.ttf'),'DATA')],
+                 [('Roboto-Regular.ttf', os.path.join(package_path, 'pyglui/Roboto-Regular.ttf'),'DATA')],
+                 [('fontawesome-webfont.ttf', os.path.join(package_path, 'pyglui/fontawesome-webfont.ttf'),'DATA')],
 	               strip=None,
 	               upx=True,
 	               name='Pupil Capture')
