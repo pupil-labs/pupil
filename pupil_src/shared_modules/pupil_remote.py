@@ -139,6 +139,12 @@ class Pupil_Remote(Plugin):
                 new_address = '*:'+new_port
                 self.start_server(new_address)
                 self.update_menu()
+
+            try:
+                ip = socket.gethostbyname(socket.gethostname())
+            except:
+                ip = 'Your external ip'
+
         else:
             def set_address(new_address):
                 if new_address.count(":") != 1:
@@ -147,6 +153,8 @@ class Pupil_Remote(Plugin):
                 self.start_server(new_address)
                 self.update_menu()
 
+
+
         help_str = 'Pupil Remote using ZeroMQ REQ REP scheme.'
         self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text(help_str))
@@ -154,7 +162,7 @@ class Pupil_Remote(Plugin):
         if self.use_primary_interface:
             self.menu.append(ui.Text_Input('port',self,setter=set_port,label='Port'))
             self.menu.append(ui.Info_Text('Connect localy:   "tcp://%s:%s" ' %('127.0.0.1',self.port)))
-            self.menu.append(ui.Info_Text('Connect remotely: "tcp://%s:%s" '%(socket.gethostbyname(socket.gethostname()),self.port)))
+            self.menu.append(ui.Info_Text('Connect remotely: "tcp://%s:%s" '%(ip,self.port)))
         else:
             self.menu.append(ui.Text_Input('host',setter=set_address,getter=lambda : self.host+':'+self.port, label='Address'))
             self.menu.append(ui.Info_Text('Bound to: "tcp://%s:%s" ' %(self.host,self.port)))
