@@ -23,7 +23,7 @@ from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from glfw import *
 
-from plugin import Calibration_Plugin
+from calibration_plugin_base import Calibration_Plugin
 
 #logging
 import logging
@@ -54,6 +54,15 @@ pre_recorded_calibrations = {
                                 },
                             }
 
+def idealized_camera_calibration(resolution,f=1000.):
+    return {   'dist_coefs': np.array([[ 0.,0.,0.,0.,0.]]),
+               'camera_name': 'ideal camera with focal length %s'%f,
+               'resolution': resolution,
+               'camera_matrix': np.array([[  f,     0., resolution[0]/2.],
+                                          [    0.,  f,  resolution[1]/2.],
+                                          [    0.,     0.,    1.  ]])
+           }
+
 
 def load_camera_calibration(g_pool):
     if g_pool.app == 'capture':
@@ -81,18 +90,18 @@ def load_camera_calibration(g_pool):
 
 
         if not camera_calibration:
-            logger.warning("Camera calibration not found please run Camera_Intrinsics_Estimation to calibrate camera.")
-
-
-        return camera_calibration
+            camera_calibration = idealized_camera_calibration(g_pool.capture.frame_size)
+            logger.warning("Camera calibration not found. Will assume idealized camera. Please calibrate your cameras. Using camera 'Camera_Intrinsics_Estimation'.")
 
     else:
-        raise NotImplementedError()
-
-
-
-
-
+        try:
+            camera_calibration = load_object(os.path.join(g_pool.rec_dir,'camera_calibration'))
+        except:
+            camera_calibration = idealized_camera_calibration(g_pool.capture.frame_size)
+            logger.warning("Camera calibration not found. Will assume idealized camera. Please calibrate your cameras before your next recording.")
+        else:
+            logger.info("Loaded Camera calibration from file.")
+    return camera_calibration
 
 
 # window calbacks
@@ -166,7 +175,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
             self.show_undistortion_switch.read_only=True
         self.g_pool.calibration_menu.append(self.menu)
 
-        self.button = ui.Thumb('collect_new',self,setter=self.advance,label='Capture',hotkey='c')
+        self.button = ui.Thumb('collect_new',self,setter=self.advance,label='C',hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 

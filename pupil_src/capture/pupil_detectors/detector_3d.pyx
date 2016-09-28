@@ -1,4 +1,14 @@
 
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2016  Pupil Labs
+
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
+
 # cython: profile=False
 import cv2
 import numpy as np
@@ -10,7 +20,7 @@ from gl_utils import  adjust_gl_view, clear_gl_screen,basic_gl_setup,make_coord_
 from pyglui.cygl.utils import draw_gl_texture
 import math
 
-from pupil_detectors.visualizer_3d import Visualizer
+from visualizer_3d import Eye_Visualizer
 from collections import namedtuple
 
 from detector cimport *
@@ -30,7 +40,7 @@ cdef class Detector_3D:
     cdef object debugVisualizer3D
     cdef object pyResult3D
 
-    def __cinit__(self):
+    def __cinit__(self, g_pool = None, settings = None):
         self.detector2DPtr = new Detector2D()
         focal_length = 620.
         '''
@@ -43,11 +53,11 @@ cdef class Detector_3D:
         #region_step_epsilon = 0.5
         self.detector3DPtr = new EyeModelFitter(focal_length)
 
-    def __init__(self, gPool = None, settings = None ):
+    def __init__(self, g_pool = None, settings = None ):
 
         #debug window
-        self.debugVisualizer3D = Visualizer(self.detector3DPtr.getFocalLength() )
-        self.gPool = gPool
+        self.debugVisualizer3D = Eye_Visualizer(g_pool ,self.detector3DPtr.getFocalLength() )
+        self.gPool = g_pool
         self.detectProperties2D = settings['2D_Settings'] if settings else {}
         self.detectProperties3D = settings['3D_Settings'] if settings else {}
 
@@ -157,7 +167,7 @@ cdef class Detector_3D:
         deref(cpp2DResultPtr).timestamp = frame.timestamp #timestamp doesn't get set elsewhere and it is needt in detector3D
 
         ######### 3D Model Part ############
-        debugDetector =  self.debugVisualizer3D._window
+        debugDetector =  self.debugVisualizer3D.window
         cdef Detector3DResult cpp3DResult  = self.detector3DPtr.updateAndDetect( cpp2DResultPtr , self.detectProperties3D, debugDetector)
 
         pyResult = convertTo3DPythonResult(cpp3DResult , frame )
@@ -215,12 +225,12 @@ cdef class Detector_3D:
          self.detector3DPtr.reset()
 
     def toggle_window(self):
-        if not self.debugVisualizer3D._window:
+        if not self.debugVisualizer3D.window:
             self.debugVisualizer3D.open_window()
         else:
             self.debugVisualizer3D.close_window()
 
     def visualize(self):
-        if self.debugVisualizer3D._window:
+        if self.debugVisualizer3D.window:
             self.debugVisualizer3D.update_window( self.gPool, self.pyResult3D  )
 

@@ -2,7 +2,7 @@
 
 #include <string>
 #include <iostream>
-#include "../../shared_cpp/Logger/PyCpplogger.h"
+#include "logger/pycpplogger.h"
 
 int main()
 {

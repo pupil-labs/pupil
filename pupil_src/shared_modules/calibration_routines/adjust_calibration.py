@@ -15,14 +15,14 @@ from methods import normalize,denormalize
 from file_methods import load_object
 from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
 from OpenGL.GL import GL_POLYGON
-from circle_detector import get_candidate_ellipses
+from circle_detector import find_concetric_circles
 from finish_calibration import finish_calibration
 import calibrate
 
 import audio
 
 from pyglui import ui
-from plugin import Calibration_Plugin
+from calibration_plugin_base import Calibration_Plugin
 
 #logging
 import logging
@@ -41,11 +41,7 @@ class Adjust_Calibration(Calibration_Plugin):
         self.sample_site = (-2,-2)
         self.counter = 0
         self.counter_max = 30
-        self.candidate_ellipses = []
-        self.show_edges = 0
-        self.aperture = 7
-        self.dist_threshold = 10
-        self.area_threshold = 30
+        self.markers = []
         self.world_size = None
 
         self.stop_marker_found = False
@@ -64,10 +60,7 @@ class Adjust_Calibration(Calibration_Plugin):
         self.menu = ui.Growing_Menu('Controls')
         self.g_pool.calibration_menu.append(self.menu)
 
-        self.menu.append(ui.Slider('aperture',self,min=3,step=2,max=11,label='filter aperture'))
-        self.menu.append(ui.Switch('show_edges',self,label='show edges'))
-
-        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 
@@ -127,7 +120,7 @@ class Adjust_Calibration(Calibration_Plugin):
             r['norm_pos'] = [ r['norm_pos'][0]-mean_offset[0],r['norm_pos'][1]-mean_offset[1] ]
 
 
-        finish_calibration(self.g_pool,self.pupil_list,self.ref_list,force='2d')
+        finish_calibration(self.g_pool,self.pupil_list,self.ref_list)
 
 
     def update(self,frame,events):
@@ -144,15 +137,11 @@ class Adjust_Calibration(Calibration_Plugin):
             if self.world_size is None:
                 self.world_size = frame.width,frame.height
 
-            self.candidate_ellipses = get_candidate_ellipses(gray_img,
-                                                            area_threshold=self.area_threshold,
-                                                            dist_threshold=self.dist_threshold,
-                                                            min_ring_count=5,
-                                                            visual_debug=self.show_edges)
+            self.markers = find_concetric_circles(gray_img,min_ring_count=3)
 
-            if len(self.candidate_ellipses) > 0:
+            if len(self.markers) > 0:
                 self.detected = True
-                marker_pos = self.candidate_ellipses[0][0]
+                marker_pos = self.markers[0][0][0] #first marker, innermost ellipse, center
                 self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
 
@@ -212,7 +201,7 @@ class Adjust_Calibration(Calibration_Plugin):
 
             #always save pupil positions
             for pt in events.get('gaze_positions',[]):
-                if pt['confidence'] > self.g_pool.pupil_confidence_threshold:
+                if pt['confidence'] > self.pupil_confidence_threshold:
                     #we add an id for the calibration preprocess data to work as is usually expects pupil data.
                     pt['id'] = 0
                     self.gaze_list.append(pt)
@@ -253,20 +242,12 @@ class Adjust_Calibration(Calibration_Plugin):
             draw_points_norm([self.smooth_pos],size=15,color=RGBA(1.,1.,0.,.5))
 
         if self.active and self.detected:
-            for e in self.candidate_ellipses:
+            for marker in self.markers:
+                e = marker[-1]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
                 draw_polyline(pts,color=RGBA(0.,1.,0,1.))
-
-
-            # lets draw an indicator on the autostop count
-            e = self.candidate_ellipses[3]
-            pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
-                                (int(e[1][0]/2),int(e[1][1]/2)),
-                                int(e[-1]),0,360,360/self.auto_stop_max)
-            indicator = [e[0]] + pts[self.auto_stop:].tolist() + [e[0]]
-            draw_polyline(indicator,color=RGBA(8.,0.1,0.1,.8),line_type=GL_POLYGON)
         else:
             pass
 

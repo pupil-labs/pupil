@@ -44,13 +44,17 @@ class Persistent_Dict(dict):
 
 def load_object(file_path):
 	file_path = os.path.expanduser(file_path)
+	#reading to string and loads is 2.5x faster that using the file handle and load.
 	with open(file_path,'rb') as fh:
-		return pickle.load(fh)
+		data = fh.read()
+	return pickle.loads(data)
 
 def save_object(object,file_path):
 	file_path = os.path.expanduser(file_path)
+	data = pickle.dumps(object,-1)
 	with open(file_path,'wb') as fh:
-		pickle.dump(object,fh,-1)
+		data = fh.write(data)
+
 
 if __name__ == '__main__':
 	logging.basicConfig(level=logging.DEBUG)
@@ -61,5 +65,41 @@ if __name__ == '__main__':
 
 	# save_object("string",'test')
 	# print load_object('test')
-	settings = Persistent_Dict('~/Desktop/pupil_settings/user_settings_eye')
-	print settings['roi']
+	# settings = Persistent_Dict('~/Desktop/pupil_settings/user_settings_eye')
+	# print settings['roi']
+	l = load_object('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_data')
+	import csv
+	with open(os.path.join('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_postions.csv'),'wb') as csvfile:
+		csv_writer = csv.writer(csvfile, delimiter=',')
+		csv_writer.writerow(('timestamp',
+									'id',
+									'confidence',
+									'norm_pos_x',
+									'norm_pos_y',
+									'diameter',
+									'method',
+									'ellipse_center_x',
+									'ellipse_center_y',
+									'ellipse_axis_a',
+									'ellipse_axis_b',
+									'ellipse_angle'))
+		for p in l:
+			data_2d = [ '%s'%p['timestamp'],  #use str to be consitant with csv lib.
+						p['id'],
+						p['confidence'],
+						p['norm_pos'][0],
+						p['norm_pos'][1],
+						p['diameter'],
+						p['method'] ]
+			try:
+				ellipse_data = [p['ellipse']['center'][0],
+								p['ellipse']['center'][1],
+								p['ellipse']['axes'][0],
+								p['ellipse']['axes'][1],
+								p['ellipse']['angle'] ]
+			except KeyError:
+				ellipse_data = [None,]*5
+
+			row = data_2d + ellipse_data
+			csv_writer.writerow(row)
+

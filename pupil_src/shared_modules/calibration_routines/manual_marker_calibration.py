@@ -14,14 +14,14 @@ import numpy as np
 from methods import normalize,denormalize
 from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
 from OpenGL.GL import GL_POLYGON
-from circle_detector import get_candidate_ellipses
+from circle_detector import find_concetric_circles
 from finish_calibration import finish_calibration
 from file_methods import load_object
 
 import audio
 
 from pyglui import ui
-from plugin import Calibration_Plugin
+from calibration_plugin_base import Calibration_Plugin
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -39,7 +39,6 @@ class Manual_Marker_Calibration(Calibration_Plugin):
     """
     def __init__(self, g_pool):
         super(Manual_Marker_Calibration, self).__init__(g_pool)
-        self.active = False
         self.detected = False
         self.pos = None
         self.smooth_pos = 0.,0.
@@ -47,11 +46,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.sample_site = (-2,-2)
         self.counter = 0
         self.counter_max = 30
-        self.candidate_ellipses = []
-        self.show_edges = 0
-        self.aperture = 7
-        self.dist_threshold = 10
-        self.area_threshold = 30
+        self.markers = []
         self.world_size = None
 
         self.stop_marker_found = False
@@ -70,10 +65,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.menu = ui.Growing_Menu('Controls')
         self.g_pool.calibration_menu.append(self.menu)
 
-        self.menu.append(ui.Slider('aperture',self,min=3,step=2,max=11,label='filter aperture'))
-        self.menu.append(ui.Switch('show_edges',self,label='show edges'))
-
-        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 
@@ -89,11 +81,13 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
     def toggle(self,_=None):
         if self.active:
-            self.stop()
+            self.notify_all({'subject':'calibration.should_stop'})
         else:
-            self.start()
+            self.notify_all({'subject':'calibration.should_start'})
+
 
     def start(self):
+        self.notify_all({'subject':'calibration.started'})
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
         self.active = True
@@ -102,6 +96,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
 
     def stop(self):
+        self.notify_all({'subject':'calibration.stopped'})
         audio.say("Stopping Calibration")
         logger.info('Stopping Calibration')
         self.screen_marker_state = 0
@@ -110,6 +105,21 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.button.status_text = ''
         finish_calibration(self.g_pool,self.pupil_list,self.ref_list)
 
+    def on_notify(self,notification):
+        '''
+        Reacts to notifications:
+           ``calibration.should_start``: Starts the calibration procedure
+           ``calibration.should_stop``: Stops the calibration procedure
+
+        Emits notifications:
+            ``calibration.started``: Calibration procedure started
+            ``calibration.stopped``: Calibration procedure stopped
+            ``calibration.marker_found``: Steady marker found
+            ``calibration.marker_moved_too_quickly``: Marker moved too quickly
+            ``calibration.marker_sample_completed``: Enough data points sampled
+
+        '''
+        super(Manual_Marker_Calibration, self).on_notify(notification)
 
     def update(self,frame,events):
         """
@@ -125,15 +135,11 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             if self.world_size is None:
                 self.world_size = frame.width,frame.height
 
-            self.candidate_ellipses = get_candidate_ellipses(gray_img,
-                                                            area_threshold=self.area_threshold,
-                                                            dist_threshold=self.dist_threshold,
-                                                            min_ring_count=4,
-                                                            visual_debug=self.show_edges)
+            self.markers = find_concetric_circles(gray_img,min_ring_count=3)
 
-            if len(self.candidate_ellipses) > 0:
+            if len(self.markers) > 0:
                 self.detected = True
-                marker_pos = self.candidate_ellipses[0][0]
+                marker_pos = self.markers[0][0][0] #first marker innermost ellipse, pos
                 self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
 
@@ -144,7 +150,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             # center dark or white?
             if self.detected:
-                second_ellipse =  self.candidate_ellipses[1]
+                second_ellipse =  self.markers[0][1]
                 col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
                 row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
                 marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
@@ -188,12 +194,14 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                         self.sample_site = self.smooth_pos
                         audio.beep()
                         logger.debug("Steady marker found. Starting to sample %s datapoints" %self.counter_max)
+                        self.notify_all({'subject':'calibration.marker_found','timestamp':self.g_pool.capture.get_timestamp(),'record':True})
                         self.counter = self.counter_max
 
                 if self.counter:
                     if self.smooth_vel > 0.01:
                         audio.tink()
-                        logger.warning("Marker moved to quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
+                        logger.warning("Marker moved too quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
+                        self.notify_all({'subject':'calibration.marker_moved_too_quickly','timestamp':self.g_pool.capture.get_timestamp(),'record':True})
                         self.counter = 0
                     else:
                         self.counter -= 1
@@ -206,11 +214,12 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                             #last sample before counter done and moving on
                             audio.tink()
                             logger.debug("Sampled %s datapoints. Stopping to sample. Looking for steady marker again."%self.counter_max)
+                            self.notify_all({'subject':'calibration.marker_sample_completed','timestamp':self.g_pool.capture.get_timestamp(),'record':True})
 
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
+                if p_pt['confidence'] > self.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
             if self.counter:
@@ -249,7 +258,8 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             draw_points_norm([self.smooth_pos],size=15,color=RGBA(1.,1.,0.,.5))
 
         if self.active and self.detected:
-            for e in self.candidate_ellipses:
+            for marker in self.markers:
+                e = marker[-1]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
@@ -257,7 +267,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             if self.counter:
                 # lets draw an indicator on the count
-                e = self.candidate_ellipses[3]
+                e = self.markers[0][-1]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360/self.counter_max)
@@ -266,7 +276,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
 
             if self.auto_stop:
                 # lets draw an indicator on the autostop count
-                e = self.candidate_ellipses[3]
+                e = self.markers[0][-1]
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,360/self.auto_stop_max)

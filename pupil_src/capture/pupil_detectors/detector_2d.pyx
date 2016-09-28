@@ -1,3 +1,12 @@
+'''
+(*)~----------------------------------------------------------------------------------
+ Pupil - eye tracking platform
+ Copyright (C) 2012-2016  Pupil Labs
+
+ Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
+ License details are in the file license.txt, distributed as part of this software.
+----------------------------------------------------------------------------------~(*)
+'''
 
 # cython: profile=False
 import cv2
@@ -31,15 +40,14 @@ cdef class Detector_2D:
     cdef int coarseDetectionPreviousWidth
     cdef object coarseDetectionPreviousPosition
 
-    def __cinit__(self):
+    def __cinit__(self,g_pool = None, settings = None ):
         self.thisptr = new Detector2D()
-    def __init__(self, gPool = None, settings = None ):
-
+    def __init__(self, g_pool = None, settings = None ):
         #debug window
         self._window = None
         self.windowShouldOpen = False
         self.windowShouldClose = False
-        self.gPool = gPool
+        self.gPool = g_pool
         self.detectProperties = settings or {}
         self.coarseDetectionPreviousWidth = -1
         self.coarseDetectionPreviousPosition =  (0,0)

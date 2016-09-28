@@ -9,12 +9,12 @@
 
 #include "common/types.h"
 #include "ImageProcessing/cvx.h"
-#include "Geometry/Circle.h"
-#include "Geometry/Ellipse.h"
-#include "Geometry/Sphere.h"
+#include "geometry/Circle.h"
+#include "geometry/Ellipse.h"
+#include "geometry/Sphere.h"
 #include "EyeModel.h"
 
-#include "../../../shared_cpp/logger/pycpplogger.h"
+#include "logger/pycpplogger.h"
 
 
 namespace singleeyefitter {
@@ -63,7 +63,7 @@ namespace singleeyefitter {
 
             pupillabs::PyCppLogger mLogger;
 
-            void checkModels( float sensitivity);
+            void checkModels( float sensitivity,double frame_timestamp);
 
             //Contours3D unprojectContours( const Contours_2D& contours) const;
             Edges3D unprojectEdges(const Edges2D& edges) const;

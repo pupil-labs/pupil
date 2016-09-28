@@ -55,8 +55,9 @@ class Plugin(object):
         pass
 
 
-    def update(self,frame,events):
+    def update(self,frame=None,events={}):
         """
+        called in Player and Capture
         gets called once every frame
         if you plan to update data inplace, note that this will affect all plugins executed after you.
         Use self.order to deal with this appropriately
@@ -87,9 +88,11 @@ class Plugin(object):
 
     def on_notify(self,notification):
         """
-        this gets called when a plugin want to notify all others.
-        notification is a dict in the format {'subject':'notification_name',['addional_field':'blah']}
+        this gets called when a plugin wants to notify all others.
+        notification is a dict in the format {'subject':'notification_category.notification_name',['addional_field':'blah']}
         implement this fn if you want to deal with notifications
+        note that notifications are collected from all threads and processes and dispatched in the update loop.
+        this callback happens in the main thread.
         """
         pass
 
@@ -113,31 +116,39 @@ class Plugin(object):
 
     def notify_all(self,notification):
         """
-        call this to notify all other plugins with a notification:
-        notification is a dict in the format {'subject':'notification_name',['addional_field':'foo']}
 
-            adding 'record':True will make recorder save the notification during recording
-            adding 'network_propagate':True will send the event to other pupil sync nodes in the same group
+        Do not overwrite this method.
 
-            if you want recording and network propagation to work make sure that the notification
-            is pickalable and can be recreated though repr+eval.
+        Call `notify_all` to notify all other plugins and processes with a notification:
 
-            You may add more fields as you like.
+        notification is a dict in the format {'subject':'notification_category.[subcategory].action_name',['addional_field':'foo']}
 
+            adding 'timestamp':self.g_pool.capture.get_timestamp() will allow other plugins to know when you created this notification.
 
-        do not overwrite this method
+            adding 'record':True will make recorder save the notification during recording.
+
+            adding 'remote_notify':'all' will send the event all other pupil sync nodes in the same group.
+            (Remote notifyifactions are not be recevied by any local actor.)
+
+            adding 'remote_notify':node_UUID will send the event the pupil sync nodes with node_UUID.
+            (Remote notifyifactions are not be recevied by any local actor.)
+
+            adding 'delay':3.2 will delay the notification for 3.2s.
+            If a new delayed notification of same subject is sent before 3.2s have passed we will discard the former notification.
+
+        You may add more fields as you like.
+
+        All notifications must be serializable
+
         """
-        self.g_pool.notifications.append(notification)
-
-    def notify_all_delayed(self,notification,delay = 3.0):
-        """
-        call this to notify all other plugins with a notification.
-        if will be published after a bit of time to allow you to adjust the slider and keep the loop repsonsive
-        do not overwrite this method
-        """
-        notification['_notify_time_'] = time()+delay
-        self.g_pool.delayed_notifications[notification['subject']] = notification
-
+        if self.g_pool.app == 'player':
+            if notification.get('delay',0):
+                notification['_notify_time_'] = time()+notification['delay']
+                self.g_pool.delayed_notifications[notification['subject']] = notification
+            else:
+                self.g_pool.notifications.append(notification)
+        else:
+            self.g_pool.ipc_pub.notify(notification)
 
     @property
     def alive(self):
@@ -192,44 +203,6 @@ class Plugin(object):
 
 
 
-# Derived base classes:
-# If you inherit from these your plugin property base_class will point to them
-# This is good because we can categorize plugins.
-class Calibration_Plugin(Plugin):
-    '''base class for all calibration routines'''
-    uniqueness = 'by_base_class'
-    def __init__(self,g_pool):
-        super(Calibration_Plugin, self).__init__(g_pool)
-        self.g_pool.active_calibration_plugin = self
-
-    def on_notify(self,notification):
-        if notification['subject'] is 'cal_should_start':
-            if self.active:
-                logger.warning('Calibration already running.')
-            else:
-                self.start()
-        elif notification['subject'] is 'cal_should_stop':
-            if self.active:
-                self.stop()
-            else:
-                logger.warning('Calibration already stopped.')
-
-    def start(self):
-        raise  NotImplementedError()
-
-    def stop(self):
-        raise  NotImplementedError()
-
-
-class Gaze_Mapping_Plugin(Plugin):
-    '''base class for all calibration routines'''
-    uniqueness = 'by_base_class'
-    order = 0.1
-    def __init__(self,g_pool):
-        super(Gaze_Mapping_Plugin, self).__init__(g_pool)
-
-
-
 # Plugin manager classes and fns
 
 class Plugin_List(object):
@@ -250,8 +223,10 @@ class Plugin_List(object):
             logger.debug("Loading plugin: %s with settings %s"%(name, args))
             try:
                 self.add(plugin_by_name[name],args)
-            except (AttributeError,TypeError,KeyError) as e:
+            except (AttributeError,TypeError) as e:
                 logger.warning("Plugin '%s' failed to load from settings file. Because of Error:%s" %(name,e))
+            except KeyError:
+                logger.debug("Plugin '%s' failed to load. Not available for import." %(name))
 
     def __iter__(self):
         for p in self._plugins:
@@ -341,5 +316,5 @@ def import_runtime_plugins(plugin_dir):
                         logger.info('Added: %s'%member)
                         runtime_plugins.append(member)
             except Exception as e:
-                logger.debug("Failed to load '%s'. Reason: '%s' "%(d,e))
+                logger.warning("Failed to load '%s'. Reason: '%s' "%(d,e))
     return runtime_plugins

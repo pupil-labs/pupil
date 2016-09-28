@@ -67,7 +67,7 @@ class Offline_Reference_Surface(Reference_Surface):
         raise Exception("Invalid cache entry. Please report Bug.")
 
 
-    def update_cache(self,marker_cache,idx=None):
+    def update_cache(self,marker_cache,camera_calibration,min_marker_perimeter,idx=None):
         '''
         compute surface m's and gaze points from cached marker data
         entries are:
@@ -77,75 +77,61 @@ class Offline_Reference_Surface(Reference_Surface):
         '''
 
         # iterations = 0
-
         if self.cache == None:
             pass
             # self.init_cache(marker_cache)
         elif idx != None:
             #update single data pt
-            self.cache.update(idx,self.answer_caching_request(marker_cache,idx))
+            self.cache.update(idx,self.answer_caching_request(marker_cache,idx,camera_calibration,min_marker_perimeter))
         else:
             # update where marker cache is not False but surface cache is still false
             # this happens when the markercache was incomplete when this fn was run before
             for i in range(len(marker_cache)):
                 if self.cache[i] == False and marker_cache[i] != False:
-                    self.cache.update(i,self.answer_caching_request(marker_cache,i))
+                    self.cache.update(i,self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter))
                     # iterations +=1
         # return iterations
 
 
 
-    def init_cache(self,marker_cache):
+    def init_cache(self,marker_cache,camera_calibration,min_marker_perimeter):
         if self.defined:
             logger.debug("Full update of surface '%s' positons cache"%self.name)
-            self.cache = Cache_List([self.answer_caching_request(marker_cache,i) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
+            self.cache = Cache_List([self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
 
 
-    def answer_caching_request(self,marker_cache,frame_index):
+    def answer_caching_request(self,marker_cache,frame_index,camera_calibration,min_marker_perimeter):
         visible_markers = marker_cache[frame_index]
         # cache point had not been visited
         if visible_markers == False:
             return False
-        # cache point had been visited
-        marker_by_id = dict( [ (m['id'],m) for m in visible_markers] )
-        visible_ids = set(marker_by_id.keys())
-        requested_ids = set(self.markers.keys())
-        overlap = visible_ids & requested_ids
-        detected_markers = len(overlap)
-        if len(overlap)>=min(2,len(requested_ids)):
-            yx = np.array( [marker_by_id[i]['verts_norm'] for i in overlap] )
-            uv = np.array( [self.markers[i].uv_coords for i in overlap] )
-            yx.shape=(-1,1,2)
-            uv.shape=(-1,1,2)
-            m_to_screen,mask = cv2.findHomography(uv,yx)
-            m_from_screen,mask = cv2.findHomography(yx,uv)
-
-            return {'m_to_screen':m_to_screen,
-                    'm_from_screen':m_from_screen,
-                    'detected_markers':len(overlap)}
+        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,locate_3d=False)
+        if res['detected']:
+            return res
         else:
             #surface not found
             return None
 
+    def move_vertex(self,vert_idx,new_pos):
+        super(Offline_Reference_Surface, self).move_vertex(vert_idx,new_pos)
+        self.cache = None
+        self.heatmap = None
+
+    def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter):
+        super(Offline_Reference_Surface, self).add_marker(marker,visible_markers,camera_calibration,min_marker_perimeter)
+        self.cache = None
+        self.heatmap = None
+
+    def remove_marker(self,marker):
+        super(Offline_Reference_Surface, self).remove_marker(marker)
+        self.cache = None
+        self.heatmap = None
 
     def gaze_on_srf_by_frame_idx(self,frame_index,m_from_screen):
-        return self._on_srf_by_frame_idx(frame_index,m_from_screen,self.g_pool.gaze_positions_by_frame[frame_index])
-
+        return self.map_data_to_surface(self.g_pool.gaze_positions_by_frame[frame_index],m_from_screen)
 
     def fixations_on_srf_by_frame_idx(self,frame_index,m_from_screen):
-        return self._on_srf_by_frame_idx(frame_index,m_from_screen,self.g_pool.fixations_by_frame[frame_index])
-
-
-    def _on_srf_by_frame_idx(self,frame_idx,m_from_screen,data_by_frame):
-        data_on_srf = []
-        for d in data_by_frame:
-            pos = np.array([d['norm_pos']]).reshape(1,1,2)
-            mapped_pos = cv2.perspectiveTransform(pos , m_from_screen )
-            mapped_pos.shape = (2)
-            on_srf = bool((0 <= mapped_pos[0] <= 1) and (0 <= mapped_pos[1] <= 1))
-            data_on_srf.append( {'norm_pos':(mapped_pos[0],mapped_pos[1]),'on_srf':on_srf,'base':d } )
-        return data_on_srf
-
+        return self.map_data_to_surface(self.g_pool.fixations_by_frame[frame_index],m_from_screen)
 
     def gl_display_heatmap(self):
         if self.heatmap_texture and self.detected:
@@ -195,47 +181,6 @@ class Offline_Reference_Surface(Reference_Surface):
             glMatrixMode(GL_MODELVIEW)
             glPopMatrix()
 
-
-    #### fns to draw surface in seperate window
-    def gl_display_in_window(self,world_tex):
-        """
-        here we map a selected surface onto a seperate window.
-        """
-        if self._window and self.detected:
-            active_window = glfwGetCurrentContext()
-            glfwMakeContextCurrent(self._window)
-            clear_gl_screen()
-
-            # cv uses 3x3 gl uses 4x4 tranformation matricies
-            m = cvmat_to_glmat(self.m_from_screen)
-
-            glMatrixMode(GL_PROJECTION)
-            glPushMatrix()
-            glLoadIdentity()
-            glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
-
-            glMatrixMode(GL_MODELVIEW)
-            glPushMatrix()
-            #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
-            glLoadMatrixf(m)
-
-            world_tex.draw()
-
-            glMatrixMode(GL_PROJECTION)
-            glPopMatrix()
-            glMatrixMode(GL_MODELVIEW)
-            glPopMatrix()
-
-
-            if self.heatmap_texture:
-                self.heatmap_texture.draw()
-
-            # now lets get recent pupil positions on this surface:
-            for gp in self.gaze_on_srf:
-                draw_points_norm([gp['norm_pos']],color=RGBA(0.0,0.8,0.5,0.8), size=80)
-
-            glfwSwapBuffers(self._window)
-            glfwMakeContextCurrent(active_window)
 
 
     def generate_heatmap(self,section):

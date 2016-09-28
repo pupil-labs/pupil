@@ -16,6 +16,8 @@ requires:
 import os,sys,platform
 import av
 from av.packet import Packet
+av.logging.set_level(av.logging.ERROR)
+
 import numpy as np
 from time import time
 from fractions import Fraction
@@ -78,6 +80,7 @@ class AV_Writer(object):
         self.use_timestamps = use_timestamps
         # the approximate capture rate.
         self.fps = int(fps)
+        file_loc = str(file_loc) #force str over unicode.
         try:
             file_path,ext = file_loc.rsplit('.', 1)
         except:
@@ -170,7 +173,7 @@ class JPEG_Writer(object):
         # the approximate capture rate.
         self.fps = int(fps)
         self.time_base = Fraction(1000,self.fps*1000)
-
+        file_loc = str(file_loc) #force str over unicode.
         try:
             file_path,ext = file_loc.rsplit('.', 1)
         except:
@@ -350,11 +353,6 @@ def mac_pyav_hack():
 
 
 if __name__ == '__main__':
-    # try:
-    #     from billiard import forking_enable
-    #     forking_enable(0)
-    # except ImportError:
-    #     pass
     logging.basicConfig(level=logging.DEBUG)
 
     cap = Audio_Capture('test.wav','default')

@@ -15,7 +15,7 @@ from methods import normalize,denormalize
 from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
-from circle_detector import get_candidate_ellipses
+from circle_detector import find_concetric_circles
 from file_methods import load_object,save_object
 
 import audio
@@ -24,7 +24,7 @@ from pyglui import ui
 from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw_polyline_norm, RGBA,draw_concentric_circles
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
-from plugin import Calibration_Plugin
+from calibration_plugin_base import Calibration_Plugin
 from finish_calibration import finish_calibration
 
 #logging
@@ -73,7 +73,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
     """
     def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
         super(Screen_Marker_Calibration, self).__init__(g_pool)
-        self.active = False
         self.detected = False
         self.screen_marker_state = 0.
         self.sample_duration =  sample_duration # number of frames to sample per site
@@ -81,18 +80,15 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.lead_out = 5 #frames of markers shown after sampling is donw
 
 
-        self.active_site = 0
+        self.active_site = None
         self.sites = []
         self.display_pos = None
         self.on_position = False
 
-        self.candidate_ellipses = []
+        self.markers = []
         self.pos = None
 
-        self.dist_threshold = 5
-        self.area_threshold = 20
         self.marker_scale = marker_scale
-
 
         self._window = None
 
@@ -107,8 +103,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.glfont.set_size(32)
         self.glfont.set_color_float((0.2,0.5,0.9,1.0))
         self.glfont.set_align_string(v_align='center')
-
-
 
 
 
@@ -127,7 +121,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.menu.append(ui.Slider('marker_scale',self,step=0.1,min=0.5,max=2.0,label='Marker size'))
         self.menu.append(ui.Slider('sample_duration',self,step=1,min=10,max=100,label='Sample duration'))
 
-        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 
@@ -142,28 +136,24 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self.button = None
 
 
-    def toggle(self,_=None):
-        if self.active:
-            self.stop()
-        else:
-            self.start()
-
-
-
     def start(self):
-        # ##############
-        # DEBUG
-        #self.stop()
 
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
-        self.sites = [  (.25, .5), (0,.5),
+        if self.g_pool.detection_mapping_mode == '3d':
+            self.sites = [  (.5, .5),
+                            (0.,1.),(1.,1.),
+                            (1., 0.),(0.,0.)]
+
+        else:
+            self.sites = [  (.25, .5), (0,.5),
                         (0.,1.),(.5,1.),(1.,1.),
                         (1.,.5),
                         (1., 0.),(.5, 0.),(0.,0.),
                         (.75,.5)]
 
-        self.active_site = 0
+
+        self.active_site = self.sites.pop(0)
         self.active = True
         self.ref_list = []
         self.pupil_list = []
@@ -245,15 +235,11 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 return
 
             #detect the marker
-            self.candidate_ellipses = get_candidate_ellipses(gray_img,
-                                                            area_threshold=self.area_threshold,
-                                                            dist_threshold=self.dist_threshold,
-                                                            min_ring_count=5,
-                                                            visual_debug=False)
+            self.markers = find_concetric_circles(gray_img,min_ring_count=4)
 
-            if len(self.candidate_ellipses) > 0:
+            if len(self.markers) > 0:
                 self.detected= True
-                marker_pos = self.candidate_ellipses[0][0]
+                marker_pos = self.markers[0][0][0] # first marker, innermost ellipse,center
                 self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
 
             else:
@@ -273,7 +259,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
+                if p_pt['confidence'] > self.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
             # Animate the screen marker
@@ -282,15 +268,16 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.screen_marker_state += 1
             else:
                 self.screen_marker_state = 0
-                self.active_site += 1
-                logger.debug("Moving screen marker to site no %s"%self.active_site)
-                if self.active_site >= len(self.sites):
+                if not self.sites:
                     self.stop()
                     return
+                self.active_site = self.sites.pop(0)
+                logger.debug("Moving screen marker to site at %s %s"%tuple(self.active_site))
+
 
 
             #use np.arrays for per element wise math
-            self.display_pos = np.array(self.sites[self.active_site])
+            self.display_pos = np.array(self.active_site)
             self.on_position = on_position
             self.button.status_text = '%s / %s'%(self.active_site,9)
 
@@ -308,7 +295,8 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         # debug mode within world will show green ellipses around detected ellipses
         if self.active and self.detected:
-            for e in self.candidate_ellipses:
+            for marker in self.markers:
+                e = marker[-1] #outermost ellipse
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
                                     int(e[-1]),0,360,15)
@@ -344,17 +332,17 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             ratio = (out_range[1]-out_range[0])/(in_range[1]-in_range[0])
             return (value-in_range[0])*ratio+out_range[0]
 
-        pad = .6*r
+        pad = .7*r
         screen_pos = map_value(self.display_pos[0],out_range=(pad,p_window_size[0]-pad)),map_value(self.display_pos[1],out_range=(p_window_size[1]-pad,pad))
         alpha = interp_fn(self.screen_marker_state,0.,1.,float(self.sample_duration+self.lead_in+self.lead_out),float(self.lead_in),float(self.sample_duration+self.lead_in))
 
-        draw_concentric_circles(screen_pos,r,6,alpha)
+        draw_concentric_circles(screen_pos,r,4,alpha)
         #some feedback on the detection state
 
         if self.detected and self.on_position:
-            draw_points([screen_pos],size=5,color=RGBA(0.,.8,0.,alpha),sharpness=0.5)
+            draw_points([screen_pos],size=10*self.marker_scale,color=RGBA(0.,.8,0.,alpha),sharpness=0.5)
         else:
-            draw_points([screen_pos],size=5,color=RGBA(0.8,0.,0.,alpha),sharpness=0.5)
+            draw_points([screen_pos],size=10*self.marker_scale,color=RGBA(0.8,0.,0.,alpha),sharpness=0.5)
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))

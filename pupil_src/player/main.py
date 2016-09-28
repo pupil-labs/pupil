@@ -8,14 +8,15 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import sys, os,platform
+import sys, os,platform,errno
 from glob import glob
 from copy import deepcopy
 from time import time
-try:
+if platform.system() == 'Darwin':
     from billiard import freeze_support
-except:
+else:
     from multiprocessing import freeze_support
+
 
 if getattr(sys, 'frozen', False):
     user_dir = os.path.expanduser(os.path.join('~','pupil_player_settings'))
@@ -61,8 +62,6 @@ logger.addHandler(fh)
 logger.addHandler(ch)
 
 logging.getLogger("OpenGL").setLevel(logging.ERROR)
-logging.getLogger("libav").setLevel(logging.ERROR)
-
 logger = logging.getLogger(__name__)
 
 
@@ -80,7 +79,7 @@ import numpy as np
 from glfw import *
 # check versions for our own depedencies as they are fast-changing
 from pyglui import __version__ as pyglui_version
-assert pyglui_version >= '0.3'
+assert pyglui_version >= '1.0'
 from pyglui import ui,graph,cygl
 from pyglui.cygl.utils import Named_Texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
@@ -89,9 +88,10 @@ from OpenGL.GL import glClearColor
 from video_capture import File_Capture,EndofVideoFileError,FileSeekError
 
 # helpers/utils
+import csv_utils
 from version_utils import VersionFormat, read_rec_version, get_version
-from methods import normalize, denormalize, delta_t
-from player_methods import correlate_data, is_pupil_rec_dir,update_recording_0v4_to_current,update_recording_0v3_to_current
+from methods import normalize, denormalize, delta_t,get_system_info
+from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 
 #monitoring
 import psutil
@@ -103,33 +103,38 @@ from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
 from vis_light_points import Vis_Light_Points
 from vis_watermark import Vis_Watermark
+from vis_fixation import Vis_Fixation
 from seek_bar import Seek_Bar
 from trim_marks import Trim_Marks
-from export_launcher import Export_Launcher
+from video_export_launcher import Video_Export_Launcher
 from scan_path import Scan_Path
-from offline_marker_detector import Offline_Marker_Detector
+from offline_surface_tracker import Offline_Surface_Tracker
 from marker_auto_trim_marks import Marker_Auto_Trim_Marks
-from pupil_server import Pupil_Server
-from fixation_detector import Dispersion_Duration_Fixation_Detector
+from fixation_detector import Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector
 from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
 from log_display import Log_Display
 from annotations import Annotation_Player
+from raw_data_exporter import Raw_Data_Exporter
+from log_history import Log_History
 
-system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
-user_launchable_plugins = [Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay,Annotation_Player] #,Marker_Auto_Trim_Marks
-user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
-available_plugins = system_plugins + user_launchable_plugins
-name_by_index = [p.__name__ for p in available_plugins]
-index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
-plugin_by_name = dict(zip(name_by_index,available_plugins))
 
 class Global_Container(object):
     pass
 
 def session(rec_dir):
+
+
+    system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
+    user_launchable_plugins = [Video_Export_Launcher,Raw_Data_Exporter, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Vis_Fixation,Scan_Path,Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Surface_Tracker,Batch_Exporter,Eye_Video_Overlay,Annotation_Player,Log_History] #,Marker_Auto_Trim_Marks
+    user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
+    available_plugins = system_plugins + user_launchable_plugins
+    name_by_index = [p.__name__ for p in available_plugins]
+    index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
+    plugin_by_name = dict(zip(name_by_index,available_plugins))
+
 
     # Callback functions
     def on_resize(window,w, h):
@@ -180,28 +185,19 @@ def session(rec_dir):
     def get_dt():
         return next(tick)
 
+    update_recording_to_recent(rec_dir)
 
     video_path = [f for f in glob(os.path.join(rec_dir,"world.*")) if f[-3:] in ('mp4','mkv','avi')][0]
     timestamps_path = os.path.join(rec_dir, "world_timestamps.npy")
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
-    #parse info.csv file
-    meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as info:
-        meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
-
+    meta_info = load_meta_info(rec_dir)
     rec_version = read_rec_version(meta_info)
-    if rec_version >= VersionFormat('0.5'):
-        pass
-    elif rec_version >= VersionFormat('0.4'):
-        update_recording_0v4_to_current(rec_dir)
-    elif rec_version >= VersionFormat('0.3'):
-        update_recording_0v3_to_current(rec_dir)
-        timestamps_path = os.path.join(rec_dir, "timestamps.npy")
+    app_version = get_version(version_file)
 
-    else:
-        logger.Error("This recording is to old. Sorry.")
-        return
+    # log info about Pupil Platform and Platform in player.log
+    logger.info('Application Version: %s'%app_version)
+    logger.info('System Info: %s'%get_system_info())
 
     timestamps = np.load(timestamps_path)
     # Initialize capture
@@ -229,7 +225,7 @@ def session(rec_dir):
     g_pool = Global_Container()
     g_pool.app = 'player'
     g_pool.binocular = meta_info.get('Eye Mode','monocular') == 'binocular'
-    g_pool.version = get_version(version_file)
+    g_pool.version = app_version
     g_pool.capture = cap
     g_pool.timestamps = timestamps
     g_pool.play = False
@@ -246,15 +242,17 @@ def session(rec_dir):
         try:
             cap.seek_to_frame(cap.get_frame_index())
         except FileSeekError:
-            pass
-        g_pool.new_seek = True
+            logger.warning("Could not seek to next frame.")
+        else:
+            g_pool.new_seek = True
 
     def prev_frame(_):
         try:
             cap.seek_to_frame(cap.get_frame_index()-2)
         except FileSeekError:
-            pass
-        g_pool.new_seek = True
+            logger.warning("Could not seek to previous frame.")
+        else:
+            g_pool.new_seek = True
 
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
@@ -271,6 +269,23 @@ def session(rec_dir):
                 p.alive = False
         g_pool.plugins.clean()
 
+    def do_export(_):
+        export_range = slice(g_pool.trim_marks.in_mark,g_pool.trim_marks.out_mark)
+        export_dir = os.path.join(g_pool.rec_dir,'exports','%s-%s'%(export_range.start,export_range.stop))
+        try:
+            os.makedirs(export_dir)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                logger.error("Could not create export dir")
+                raise e
+            else:
+                logger.warning("Previous export for range [%s-%s] already exsits - overwriting."%(export_range.start,export_range.stop))
+        else:
+            logger.info('Created export dir at "%s"'%export_dir)
+
+        notification = {'subject':'should_export','range':export_range,'export_dir':export_dir}
+        g_pool.notifications.append(notification)
+
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.main_menu = ui.Growing_Menu("Settings",pos=(-350,20),size=(300,400))
@@ -278,33 +293,36 @@ def session(rec_dir):
     g_pool.main_menu.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
-    g_pool.main_menu.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
-                                        labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
-                                        setter= open_plugin, getter = lambda: "Select to load"))
+
+    selector_label = "Select to load"
+    labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins]
+    user_launchable_plugins.insert(0, selector_label)
+    labels.insert(0, selector_label)
+    g_pool.main_menu.append(ui.Selector('Open plugin',
+                                        selection = user_launchable_plugins,
+                                        labels    = labels,
+                                        setter    = open_plugin,
+                                        getter    = lambda: selector_label))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
-    g_pool.play_button = ui.Thumb('play',g_pool,label='Play',hotkey=GLFW_KEY_SPACE)
+    g_pool.play_button = ui.Thumb('play',g_pool,label=unichr(0xf04b).encode('utf-8'),hotkey=GLFW_KEY_SPACE,label_font='fontawesome',label_offset_x=5,label_offset_y=0,label_offset_size=-24)
     g_pool.play_button.on_color[:] = (0,1.,.0,.8)
-    g_pool.forward_button = ui.Thumb('forward',getter = lambda: False,setter= next_frame, hotkey=GLFW_KEY_RIGHT)
-    g_pool.backward_button = ui.Thumb('backward',getter = lambda: False, setter = prev_frame, hotkey=GLFW_KEY_LEFT)
-    g_pool.quickbar.extend([g_pool.play_button,g_pool.forward_button,g_pool.backward_button])
+    g_pool.forward_button = ui.Thumb('forward',label=unichr(0xf04e).encode('utf-8'),getter = lambda: False,setter= next_frame, hotkey=GLFW_KEY_RIGHT,label_font='fontawesome',label_offset_x=5,label_offset_y=0,label_offset_size=-24)
+    g_pool.backward_button = ui.Thumb('backward',label=unichr(0xf04a).encode('utf-8'),getter = lambda: False, setter = prev_frame, hotkey=GLFW_KEY_LEFT,label_font='fontawesome',label_offset_x=-5,label_offset_y=0,label_offset_size=-24)
+    g_pool.export_button = ui.Thumb('export',label=unichr(0xf063).encode('utf-8'),getter = lambda: False, setter = do_export, hotkey='e',label_font='fontawesome',label_offset_x=0,label_offset_y=2,label_offset_size=-24)
+    g_pool.quickbar.extend([g_pool.play_button,g_pool.forward_button,g_pool.backward_button,g_pool.export_button])
     g_pool.gui.append(g_pool.quickbar)
     g_pool.gui.append(g_pool.main_menu)
 
 
     #we always load these plugins
     system_plugins = [('Trim_Marks',{}),('Seek_Bar',{})]
-    default_plugins = [('Log_Display',{}),('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Export_Launcher',{})]
+    default_plugins = [('Log_Display',{}),('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Video_Export_Launcher',{})]
     previous_plugins = session_settings.get('loaded_plugins',default_plugins)
     g_pool.notifications = []
     g_pool.delayed_notifications = {}
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,system_plugins+previous_plugins)
-
-    for p in g_pool.plugins:
-        if p.class_name == 'Trim_Marks':
-            g_pool.trim_marks = p
-            break
 
 
     # Register callbacks main_window
@@ -346,6 +364,7 @@ def session(rec_dir):
     pupil_graph.label = "Confidence: %0.2f"
 
     while not glfwWindowShouldClose(main_window):
+
 
         #grab new frame
         if g_pool.play or g_pool.new_seek:

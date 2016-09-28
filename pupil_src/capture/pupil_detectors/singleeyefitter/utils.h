@@ -1,9 +1,9 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
-#include "Geometry/Ellipse.h"
-#include "Geometry/Circle.h"
-#include "Geometry/Sphere.h"
+#include "geometry/Ellipse.h"
+#include "geometry/Circle.h"
+#include "geometry/Sphere.h"
 #include "common/constants.h"
 #include "common/traits.h"
 #include "mathHelper.h"

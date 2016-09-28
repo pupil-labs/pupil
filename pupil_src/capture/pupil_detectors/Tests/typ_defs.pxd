@@ -3,32 +3,32 @@ from libcpp.vector cimport vector
 from libcpp.deque cimport deque
 from libc.stdint cimport int32_t
 
-cdef extern from '<opencv2/core/types_c.h>':
+cdef extern from '<opencv2/core.hpp>':
 
   int CV_8UC1
   int CV_8UC3
 
 
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Mat':
+cdef extern from '<opencv2/core.hpp>' namespace 'cv::Mat':
 
   cdef cppclass Mat :
       Mat() except +
       Mat( int height, int width, int type, void* data  ) except+
       Mat( int height, int width, int type ) except+
 
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Rect':
+cdef extern from '<opencv2/core.hpp>' namespace 'cv::Rect':
 
   cdef cppclass Rect_[T]:
     Rect_() except +
     Rect_( T x, T y, T width, T height ) except +
     T x, y, width, height
 
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Point':
+cdef extern from '<opencv2/core.hpp>' namespace 'cv::Point':
 
   cdef cppclass Point_[T]:
     Point_() except +
 
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv::Scalar':
+cdef extern from '<opencv2/core.hpp>' namespace 'cv::Scalar':
 
   cdef cppclass Scalar_[T]:
     Scalar_() except +
@@ -48,7 +48,7 @@ cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
         double norm()
 
 
-cdef extern from "singleeyefitter/Geometry/Ellipse.h" namespace "singleeyefitter":
+cdef extern from "geometry/Ellipse.h" namespace "singleeyefitter":
 
     cdef cppclass Ellipse2D[T]:
         Ellipse2D()
@@ -58,13 +58,13 @@ cdef extern from "singleeyefitter/Geometry/Ellipse.h" namespace "singleeyefitter
         T minor_radius
         T angle
 
-cdef extern from "singleeyefitter/Geometry/Sphere.h" namespace "singleeyefitter":
+cdef extern from "geometry/Sphere.h" namespace "singleeyefitter":
 
     cdef cppclass Sphere[T]:
         Matrix31d center
         T radius
 
-cdef extern from "singleeyefitter/Geometry/Circle.h" namespace "singleeyefitter":
+cdef extern from "geometry/Circle.h" namespace "singleeyefitter":
 
     cdef cppclass Circle3D[T]:
         Matrix31d center

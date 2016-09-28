@@ -21,7 +21,6 @@ from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
 import calibrate
-from circle_detector import get_candidate_ellipses
 
 import audio
 
@@ -30,7 +29,7 @@ from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw
 
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
-from plugin import Calibration_Plugin
+from calibration_plugin_base import Calibration_Plugin
 from screen_marker_calibration import Screen_Marker_Calibration
 import calibrate
 #logging
@@ -107,7 +106,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
         self.menu.append(submenu)
 
 
-        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 
@@ -132,7 +131,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
                         (1., 0),(.5, 0),(0,0.),
                         (.5,.5),(.5,.5)]
         self.sites = np.random.random((10,2)).tolist() + self.sites
-        self.active_site = 0
+        self.active_site = self.sites.pop(0)
         self.active = True
         self.ref_list = []
         self.pupil_list = [] #we dont use it only here becasue we use update fn from parent
@@ -144,7 +143,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
         if self.active :
             #always save gaze positions as opposed to pupil positons during calibration
             for pt in events.get('gaze_positions',[]):
-                if pt['confidence'] > self.g_pool.pupil_confidence_threshold:
+                if pt['confidence'] > self.pupil_confidence_threshold:
                     #we add an id for the calibration preprocess data to work as is usually expects pupil data.
                     pt['id'] = 0
                     self.gaze_list.append(pt)

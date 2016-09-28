@@ -7,12 +7,12 @@
 
 #include "utils.h"
 #include "ImageProcessing/cvx.h"
-#include "intersect.h"
+#include "math/intersect.h"
 #include "projection.h"
 #include "fun.h"
 
 #include "mathHelper.h"
-#include "distance.h"
+#include "math/distance.h"
 #include "common/constants.h"
 
 #include <Eigen/StdVector>
@@ -27,7 +27,7 @@ EyeModelFitter::EyeModelFitter(double focalLength, Vector3 cameraCenter) :
     mCameraCenter(std::move(cameraCenter)),
     mCurrentSphere(Sphere::Null), mCurrentInitialSphere(Sphere::Null),
     mNextModelID(1),
-    mActiveModelPtr(new EyeModel(mNextModelID, Clock::now(), mFocalLength, mCameraCenter)),
+    mActiveModelPtr(new EyeModel(mNextModelID, -1, mFocalLength, mCameraCenter)),
     mLastTimeModelAdded( Clock::now() ),
     mApproximatedFramerate(30),
     mAverageFramerate(400), // windowsize is 400, let this be slow to changes to better compensate jumps
@@ -82,8 +82,6 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     }
     mLastFrameTimestamp = observation2D->timestamp;
 
-    // Observations are realtive to their ROI
-    cv::Rect roi = observation2D->current_roi;
     int image_height = observation2D->image_height;
     int image_width = observation2D->image_width;
     int image_height_half = image_height / 2.0;
@@ -93,6 +91,11 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     ellipse.center[0] -= image_width_half;
     ellipse.center[1] = image_height_half - ellipse.center[1];
     ellipse.angle = -ellipse.angle; //take y axis flip into account
+
+
+
+    // Observation edge data are realtive to their ROI
+    cv::Rect roi = observation2D->current_roi;
 
     //put the edges int or coordinate system
     // edges are needed for every optimisation step
@@ -108,22 +111,18 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     if (observation2D->confidence >= 0.7) {
 
         // allow each model to decide by themself if the new observation supports the model or not
-        auto circleAndSupport = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage()  );
-        auto circle = circleAndSupport.first;
-        auto modelSupport = circleAndSupport.second;
-        auto supportGoodness = modelSupport.first;
-        auto supportGoodnessConfidence = modelSupport.second;
+        auto circleAndFit = mActiveModelPtr->presentObservation(observation3DPtr, mAverageFramerate.getAverage()  );
+        auto circle = circleAndFit.first;
+        auto observationFit = circleAndFit.second;
 
-        result.modelConfidence = mActiveModelPtr->getPerformance();
-
-        // recalculate confidence based on 3D observation
+        // overwrite confidence based on 3D observation
         double confidence2D = observation2D->confidence;
-        result.confidence = confidence2D * (1.0 - supportGoodnessConfidence)  + supportGoodness * supportGoodnessConfidence;
+        result.confidence = confidence2D * (1.0 - observationFit.confidence) + observationFit.value * observationFit.confidence;
         result.circle = circle;
-        // std::cout << "modelgoodness: " << modelSupport.first << std::endl;
-        // std::cout << "modelconfidence: " << modelSupport.second << std::endl;
+
+
         // only if the detected 2d pupil fits our model well we trust it to update the Kalman filter.
-        if (circle != Circle::Null && supportGoodness > 0.99 ){
+        if (circle != Circle::Null && observationFit.value > 0.99 ){
             predictPupilState( deltaTime );
             auto cc  = correctPupilState( circle );
             // if (mDebug) {
@@ -143,7 +142,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
         do3DSearch = true;
     }
 
-    if (do3DSearch  && mCurrentSphere != Sphere::Null) { // if it's too weak we wanna try to find a better one in 3D
+    if (do3DSearch  && mCurrentSphere != Sphere::Null) { // if it's too weak we try to find a better one in 3D
 
         // since the raw edges are used to find a better circle fit
         // they need to be converted in the out coordinate system
@@ -192,6 +191,9 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
     mCurrentInitialSphere = mActiveModelPtr->getInitialSphere();
 
     result.sphere = mCurrentSphere;
+     // project the sphere back to 2D
+    // needed to draw it in the eye window
+    result.projectedSphere = project(mCurrentSphere, mFocalLength);
     // project the circle back to 2D
     // needed for some calculations in 2D later (calibration)
     if(result.circle != Circle::Null){
@@ -203,21 +205,26 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
    }
 
     // contains the logic for building alternative models if the current one is bad
-    checkModels(modelSensitivity );
+    checkModels(modelSensitivity,observation2D->timestamp );
     result.modelID = mActiveModelPtr->getModelID();
+    result.modelBirthTimestamp = mActiveModelPtr->getBirthTimestamp();
+    result.modelConfidence = mActiveModelPtr->getConfidence();
 
     if (mDebug) {
         result.models.reserve(mAlternativeModelsPtrs.size() + 1);
+
 
         ModelDebugProperties props;
         props.sphere = mActiveModelPtr->getSphere();
         props.initialSphere = mActiveModelPtr->getInitialSphere();
         props.binPositions = mActiveModelPtr->getBinPositions();
         props.maturity = mActiveModelPtr->getMaturity();
-        props.fit = mActiveModelPtr->getFit();
+        props.solverFit = mActiveModelPtr->getSolverFit();
+        props.confidence = mActiveModelPtr->getConfidence();
         props.performance = mActiveModelPtr->getPerformance();
         props.performanceGradient = mActiveModelPtr->getPerformanceGradient();
         props.modelID = mActiveModelPtr->getModelID();
+        props.birthTimestamp = mActiveModelPtr->getBirthTimestamp();
         result.models.push_back(std::move(props));
 
         for (const auto& modelPtr : mAlternativeModelsPtrs) {
@@ -227,10 +234,12 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
             props.initialSphere = modelPtr->getInitialSphere();
             props.binPositions = modelPtr->getBinPositions();
             props.maturity = modelPtr->getMaturity();
-            props.fit = modelPtr->getFit();
+            props.solverFit = modelPtr->getSolverFit();
+            props.confidence = modelPtr->getConfidence();
             props.performance = modelPtr->getPerformance();
             props.performanceGradient = modelPtr->getPerformanceGradient();
             props.modelID = modelPtr->getModelID();
+            props.birthTimestamp = modelPtr->getBirthTimestamp();
             result.models.push_back(std::move(props));
 
         }
@@ -241,7 +250,7 @@ Detector3DResult EyeModelFitter::updateAndDetect(std::shared_ptr<Detector2DResul
 }
 
 
-void EyeModelFitter::checkModels( float sensitivity )
+void EyeModelFitter::checkModels( float sensitivity,double frame_timestamp )
 {
 
     using namespace std::chrono;
@@ -268,7 +277,7 @@ void EyeModelFitter::checkModels( float sensitivity )
             mActiveModelPtr->getMaturity() > minMaturity &&
             lastTimeAdded  > minNewModelTime )
         {
-            mAlternativeModelsPtrs.emplace_back(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ) );
+            mAlternativeModelsPtrs.emplace_back(  new EyeModel(mNextModelID , frame_timestamp, mFocalLength, mCameraCenter ) );
             mNextModelID++;
             mLastTimeModelAdded = now;
         }
@@ -284,7 +293,7 @@ void EyeModelFitter::checkModels( float sensitivity )
 
     // sort the model with increasing fit
     const auto sortFit = [](const EyeModelPtr&  a , const EyeModelPtr& b){
-        return a->getFit() < b->getFit();
+        return a->getSolverFit() < b->getSolverFit();
     };
     mAlternativeModelsPtrs.sort(sortFit);
 
@@ -305,7 +314,7 @@ void EyeModelFitter::checkModels( float sensitivity )
     if( !foundNew && lastPenalty > altModelExpirationTime ){
 
         mAlternativeModelsPtrs.clear();
-        mActiveModelPtr.reset(  new EyeModel(mNextModelID , now, mFocalLength, mCameraCenter ));
+        mActiveModelPtr.reset(  new EyeModel(mNextModelID , frame_timestamp, mFocalLength, mCameraCenter ));
         mNextModelID++;
     }
 
@@ -316,7 +325,7 @@ void EyeModelFitter::reset()
 {
     mNextModelID = 1;
     mAlternativeModelsPtrs.clear();
-    mActiveModelPtr = EyeModelPtr( new EyeModel(mNextModelID , Clock::now(), mFocalLength, mCameraCenter ));
+    mActiveModelPtr = EyeModelPtr( new EyeModel(mNextModelID , -1, mFocalLength, mCameraCenter ));
     mLastTimeModelAdded =  Clock::now();
     mCurrentSphere = Sphere::Null;
     mCurrentInitialSphere = Sphere::Null;

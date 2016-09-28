@@ -4,9 +4,9 @@
 #define singleeyefitter_CircleGoodness3D_h__
 
 #include "common/types.h"
-#include "distance.h"
+#include "math/distance.h"
 #include "common/constants.h"
-#include "Geometry/Sphere.h"
+#include "geometry/Sphere.h"
 #include "fun.h"
 
 #include <iostream>

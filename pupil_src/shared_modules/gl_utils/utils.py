@@ -16,6 +16,7 @@ from OpenGL.GLU import gluPerspective
 
 import numpy as np
 import math
+import glfw
 
 __all__ =  ['make_coord_system_norm_based',
             'make_coord_system_pixel_based',
@@ -23,9 +24,14 @@ __all__ =  ['make_coord_system_norm_based',
             'adjust_gl_view',
             'clear_gl_screen',
             'basic_gl_setup',
-            'cvmat_to_glmat'
+            'cvmat_to_glmat',
+            'is_window_visible'
 ]
 
+def is_window_visible(window):
+    visible = glfw.glfwGetWindowAttrib(window, glfw.GLFW_VISIBLE)
+    iconified = glfw.glfwGetWindowAttrib(window, glfw.GLFW_ICONIFIED)
+    return visible and not iconified
 
 def cvmat_to_glmat(m):
     mat = np.eye(4,dtype=np.float32)

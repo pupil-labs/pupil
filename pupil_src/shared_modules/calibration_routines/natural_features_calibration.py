@@ -19,7 +19,7 @@ import audio
 
 
 from pyglui import ui
-from plugin import Calibration_Plugin
+from calibration_plugin_base import Calibration_Plugin
 
 #logging
 import logging
@@ -35,7 +35,6 @@ class Natural_Features_Calibration(Calibration_Plugin):
         self.point = None
         self.count = 0
         self.detected = False
-        self.active = False
         self.pos = None
         self.r = 40.0 # radius of circle displayed
         self.ref_list = []
@@ -51,7 +50,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
     def init_gui(self):
         self.info = ui.Info_Text("Calibrate gaze parameters using features in your environment. Ask the subject to look at objects in the scene and click on them in the world window.")
         self.g_pool.calibration_menu.append(self.info)
-        self.button = ui.Thumb('active',self,setter=self.toggle,label='Calibrate',hotkey='c')
+        self.button = ui.Thumb('active',self,label='C',setter=self.toggle,hotkey='c')
         self.button.on_color[:] = (.3,.2,1.,.9)
         self.g_pool.quickbar.insert(0,self.button)
 
@@ -67,9 +66,10 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
     def toggle(self,_=None):
         if self.active:
-            self.stop()
+            self.notify_all({'subject':'calibration.should_stop'})
         else:
-            self.start()
+            self.notify_all({'subject':'calibration.should_start'})
+
 
     def start(self):
         audio.say("Starting Calibration")
@@ -116,7 +116,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
 
             #always save pupil positions
             for p_pt in recent_pupil_positions:
-                if p_pt['confidence'] > self.g_pool.pupil_confidence_threshold:
+                if p_pt['confidence'] > self.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
 
             if self.count:

@@ -18,7 +18,7 @@ def get_tag_commit():
     returns string: 'tag'-'commits since tag'-'7 digit commit id'
     """
     try:
-        return check_output(['git', 'describe'],stderr=STDOUT,cwd=os.path.dirname(os.path.abspath(__file__)))
+        return check_output(['git', 'describe','--tags'],stderr=STDOUT,cwd=os.path.dirname(os.path.abspath(__file__)))
     except CalledProcessError as e:
         logger.error('Error calling git: "%s" \n output: "%s"'%(e,e.output))
         return None
@@ -34,7 +34,7 @@ def dpkg_deb_version():
     if version is None:
         raise ValueError('Version Error')
     version = version.replace("\n",'')#strip newlines
-    version = version.replace("v",'')#strip version 'v' 
+    version = version.replace("v",'')#strip version 'v'
     if '-' in version:
         parts = version.split('-')
         parts[-2] = '-'+parts[-2]
@@ -51,7 +51,7 @@ def pupil_version():
     if version is None:
         raise ValueError('Version Error')
     version = version.replace("\n",'')#strip newlines
-    version = version.replace("v",'')#strip version 'v' 
+    version = version.replace("v",'')#strip version 'v'
     if '-' in version:
         parts = version.split('-')
         version = '.'.join(parts[:-1])

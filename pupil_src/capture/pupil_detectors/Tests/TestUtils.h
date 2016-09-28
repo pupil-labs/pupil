@@ -2,7 +2,7 @@
 
 
 #include "../singleeyefitter/utils.h" // random
-#include "../singleeyefitter/common/types.h"
+#include "common/types.h"
 
 
 std::vector<singleeyefitter::Vector3> createCirclePointsOnSphere( singleeyefitter::Vector2 center, double opening_angle_alpha,  int amount, float circle_segment_range, double randomAmount = 0.0 ){
