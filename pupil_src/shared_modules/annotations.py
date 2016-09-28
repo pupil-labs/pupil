@@ -188,6 +188,38 @@ class Annotation_Player(Annotation_Capture):
         self.annotations_list.append(notification)
         self.annotations_by_frame[notification['index']].append(notification)
 
+    @classmethod
+    def csv_representation_keys(self):
+        return ('id', 'timestamp','duration','start_index','end_frame')
+
+    @classmethod
+    def csv_representation_for_annotations(self, annotation):
+        return (
+            fixation['id'],
+            fixation['timestamp'],
+            fixation['duration'],
+            fixation['start_frame_index'],
+            fixation['end_frame_index']
+        )
+
+
+    def export_annotations(self,export_range,export_dir):
+
+        if not self.annotations:
+            logger.warning('No annotations in this recording nothing to export')
+            return
+
+        annotations_in_section = chain(*self.annotations_by_frame[export_range])
+        annotations_in_section = dict([(a['index'],a) for a in annotations_in_section]).values() #remove dublicates
+        annotations_in_section.sort(key=lambda a:a['index'])
+
+        with open(os.path.join(export_dir,'annotations.csv'),'wb') as csvfile:
+            csv_writer = csv.writer(csvfile)
+            csv_writer.writerow(self.csv_representation_keys())
+            for a in annotations_in_section:
+                csv_writer.writerow(self.csv_representation_for_annotations(a))
+            logger.info("Created 'annotations.csv' file.")
+
 
     def update(self,frame,events):
         if frame.index != self.current_frame:
@@ -205,6 +237,10 @@ class Annotation_Player(Annotation_Capture):
             for b in self.buttons:
                 self.g_pool.quickbar.remove(b)
             self.buttons = []
+
+    def on_notify(self,notification):
+        if notification['subject'] is "should_export":
+            self.export_annotations(notification['range'],notification['export_dir'])
 
     def unset_alive(self):
         self.alive = False
