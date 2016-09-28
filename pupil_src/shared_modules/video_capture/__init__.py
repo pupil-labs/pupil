@@ -7,25 +7,26 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 
-General documentation:
+Video Capture provides the interface to get frames from diffferent backends.
+Backends consist of a manager and at least one source class. The manager
+is a Pupil plugin that provides an GUI that lists all available sources. The
+source provides the stream of image frames.
 
-Video capture provides two basic functionalities:
-- A source, which provides a stream of image frames
-- A manager, which enumerates all available sources
-
-Each source type is usually paired with a matching manager. There are currently
-four source types:
-
-- `UVC_Source` (Local USB sources)
-- `NDSI_Source` (Remote Pupil Mobile sources)
-- `Fake_Source` (Fallback, static random image)
-- `File_Source` (For debugging, loads video from file)
-
-See `manager.__init__.py` for more information on managers.
-See `source.__init__.py` for more information on sources.
+These backends are available:
+- UVC: Local USB sources
+- NDSI: Remote Pupil Mobile sources
+- Fake: Fallback, static random image
+- File: Loads video from file
 '''
 
-import source, manager
+from base_backend import InitialisationError, StreamError
+from base_backend import Base_Source, Base_Manager
+from fake_backend import Fake_Source, Fake_Manager
+from file_backend import FileCaptureError, EndofVideoFileError, FileSeekError
+from file_backend import File_Source, File_Manager
+from ndsi_backend import NDSI_Source, NDSI_Manager
+from uvc_backend  import UVC_Source,  UVC_Manager
 
-source_classes  = [source.Fake_Source, source.UVC_Source, source.NDSI_Source, source.File_Source]
-manager_classes = [manager.Fake_Manager, manager.UVC_Manager, manager.NDSI_Manager, manager.File_Manager]
+
+source_classes  = [Fake_Source,  File_Source,  NDSI_Source,  UVC_Source ]
+manager_classes = [Fake_Manager, File_Manager, NDSI_Manager, UVC_Manager]

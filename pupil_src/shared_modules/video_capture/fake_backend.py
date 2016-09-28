@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from . import Base_Source
+from .base_backend import Base_Source, Base_Manager
 
 import cv2
 import numpy as np
@@ -18,7 +18,6 @@ from pyglui import ui
 #logging
 import logging
 logger = logging.getLogger(__name__)
-
 
 class CameraSourceError(Exception):
     """General Exception for this module"""
@@ -170,3 +169,26 @@ class Fake_Source(Base_Source):
     @property
     def jpeg_support(self):
         return False
+
+class Fake_Manager(Base_Manager):
+    """Simple manager to explicitly activate a fake source"""
+
+    gui_name = 'Test image'
+
+    def __init__(self, g_pool):
+        super(Fake_Manager, self).__init__(g_pool)
+
+    def init_gui(self):
+        from pyglui import ui
+        text = ui.Info_Text('Convenience manager to select a fake source explicitly.')
+        def activate():
+            settings = self.g_pool.capture.settings
+            self.activate_source(settings)
+        activation_button = ui.Button('Activate Test Image', activate)
+        self.g_pool.capture_selector_menu.extend([text, activation_button])
+
+    def activate_source(self, settings={}):
+        self.g_pool.capture.deinit_gui()
+        self.g_pool.capture.cleanup()
+        self.g_pool.capture = None
+        self.g_pool.capture = Fake_Source(self.g_pool,**settings)

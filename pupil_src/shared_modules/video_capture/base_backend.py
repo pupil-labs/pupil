@@ -8,6 +8,10 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+from plugin import Plugin
+import logging
+logger = logging.getLogger(__name__)
+
 class InitialisationError(Exception):
     pass
 
@@ -23,15 +27,16 @@ class Base_Source(object):
     A source object is independent of its matching manager and should be
     initialisable without it. If something fails the system will fallback
     to `Fake_Source` which will wrap the settings of the previous source.
-    This feature is used for re-initialisation of the previous source in
-    case it is accessible again. See `../manager/__init__.py` for more
-    information on source recovery.
+    This feature can be used for re-initialisation of the previous source in
+    case it is accessible again. See `Base_Manager` for more information on
+    source recovery.
 
     Attributes:
         g_pool (object): Global container, see `Plugin.g_pool`
     """
 
     def __init__(self, g_pool):
+        assert(not isinstance(g_pool, dict))
         super(Base_Source, self).__init__()
         self.g_pool = g_pool
 
@@ -40,8 +45,10 @@ class Base_Source(object):
 
         System creates `self.g_pool.capture_source_menu`. UI elements
         should go in there. Only called once and if UI is supported.
+
+        e.g. self.g_pool.capture_source_menu.extend([])
         """
-        self.g_pool.capture_source_menu.extend([])
+        pass
 
     def deinit_gui(self):
         """By default, removes all UI elements from system-provided menu
@@ -144,7 +151,62 @@ class Base_Source(object):
     def class_name(self):
         return self.__name__
 
-from fake_source import Fake_Source
-from uvc_source  import UVC_Source
-from ndsi_source import NDSI_Source
-from file_source import File_Source
+class Base_Manager(Plugin):
+    """Abstract base class for source managers.
+
+    Managers are plugins that enumerate and load accessible sources from
+    different backends, e.g. locally USB-connected cameras. They should notify
+    other plugins about new and disconnected sources using the
+    `capture_manager.source_found` and `capture_manager.source_lost`
+    notifications.
+
+    Managers are able to activate sources. The default behaviour is to only
+    activate a new source if it is accessible.
+
+    In case a fake source is active, it is possible to try to recover to the
+    original source whose settings are stored in `Fake_Source.preferred_source`
+
+    Attributes:
+        gui_name (str): String used for manager selector labels
+    """
+
+    uniqueness = 'by_base_class'
+    gui_name = '???'
+
+    def __init__(self, g_pool):
+        super(Base_Manager, self).__init__(g_pool)
+        g_pool.capture_manager = self
+
+    def get_init_dict(self):
+        return {}
+
+    def init_gui(self):
+        """GUI initialisation, see `Plugin.init_gui`
+
+        UI elements should be placed in `self.g_pool.capture_selector_menu`
+        """
+        pass
+
+    def deinit_gui(self):
+        """Removes GUI elements but backend selector"""
+        del self.g_pool.capture_selector_menu[1:]
+
+    def cleanup(self):
+        self.deinit_gui()
+
+    def recover(self):
+        """Check if recovery from Fake Source is possible"""
+        pass
+
+    def on_notify(self,n):
+        """Provides UI for the capture selection
+
+        Reacts to notification:
+            ``capture_manager.source_found``: Check if recovery is possible
+
+        Emmits notifications:
+            ``capture_manager.source_found``
+            ``capture_manager.source_lost``
+        """
+        if (n['subject'].startswith('capture_manager.source_found')):
+            self.recover()

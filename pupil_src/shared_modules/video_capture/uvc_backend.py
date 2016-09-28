@@ -8,15 +8,15 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from . import InitialisationError, Base_Source
+from .base_backend import InitialisationError, Base_Source, Base_Manager
+from .fake_backend import Fake_Source
 
-import uvc
+import uvc, time
 #check versions for our own depedencies as they are fast-changing
-assert uvc.__version__ >= '0.7'
-
+assert uvc.__version__ >= '0.7.1'
 from ctypes import c_double
-from pyglui import ui
-from time import time,sleep
+from sets import ImmutableSet
+
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -120,7 +120,10 @@ class UVC_Source(Base_Source):
                 logger.debug('No UVC setting "%s" found from settings.'%c.display_name)
 
     def get_frame(self):
-        frame = self.uvc_capture.get_frame_robust()
+        try:
+            frame = self.uvc_capture.get_frame_robust()
+        except uvc.InitError as e:
+            raise self.error_class()(e)
         timestamp = self.g_pool.get_now()+self.ts_offset
         timestamp -= self.g_pool.timebase.value
         frame.timestamp = timestamp
@@ -248,4 +251,122 @@ class UVC_Source(Base_Source):
         self.g_pool.capture_source_menu.extend(ui_elements)
 
     def cleanup(self):
+        self.uvc_capture.close()
         self.uvc_capture = None
+
+class UVC_Manager(Base_Manager):
+    """Manages local USB sources
+
+    Attributes:
+        check_intervall (float): Intervall in which to look for new UVC devices
+    """
+    gui_name = 'Local USB'
+
+    def __init__(self, g_pool):
+        super(UVC_Manager, self).__init__(g_pool)
+        self.last_check_ts = 0.
+        self.last_check_result = {}
+        self.check_intervall = .5
+
+    def init_gui(self):
+        from pyglui import ui
+        ui_elements = []
+        ui_elements.append(ui.Info_Text('Local UVC sources'))
+
+        def dev_selection_list():
+            default = (None, 'Select to activate')
+            devices = uvc.device_list()
+            dev_pairs = [default] + [(d['uid'], d['name']) for d in devices]
+            return zip(*dev_pairs)
+
+        def activate(source_uid):
+            if not source_uid:
+                return
+            settings = {
+                'source_class_name': UVC_Source.class_name(),
+                'frame_size': self.g_pool.capture.frame_size,
+                'frame_rate': self.g_pool.capture.frame_rate,
+                'uid': source_uid
+            }
+            self.activate_source(settings)
+
+        ui_elements.append(ui.Selector(
+            'selected_source',
+            selection_getter=dev_selection_list,
+            getter=lambda: None,
+            setter=activate,
+            label='Activate source'
+        ))
+        self.g_pool.capture_selector_menu.extend(ui_elements)
+
+    def update(self, frame, events):
+        now = time.time()
+        if now - self.last_check_ts > self.check_intervall:
+            self.last_check_ts = now
+            devices = uvc.device_list()
+            device_names_by_uid = {d['uid']:d['name'] for d in devices}
+
+            old_result = ImmutableSet(self.last_check_result.keys())
+            new_result = ImmutableSet(device_names_by_uid.keys())
+
+            for lost_key in old_result - new_result:
+                self.notify_all({
+                    'subject': 'capture_manager.source_lost',
+                    'source_class_name': UVC_Source.class_name(),
+                    'name': self.last_check_result[lost_key],
+                    'uid': lost_key
+                })
+                del self.last_check_result[lost_key]
+
+            for found_key in new_result - old_result:
+                device_name = device_names_by_uid[found_key]
+                self.notify_all({
+                    'subject': 'capture_manager.source_found',
+                    'source_class_name': UVC_Source.class_name(),
+                    'name': device_name,
+                    'uid': found_key
+                })
+                self.last_check_result[found_key] = device_name
+
+    def activate_source(self, settings={}):
+        if self.g_pool.capture.class_name() == UVC_Source.class_name():
+            prev_settings = self.g_pool.capture.settings
+            self.g_pool.capture.deinit_gui()
+            self.g_pool.capture.cleanup()
+            self.g_pool.capture = None
+            try:
+                capture = UVC_Source(self.g_pool, **settings)
+            except InitialisationError:
+                logger.error('UVC source could not be initialised.')
+                logger.debug('UVC source init settings: %s'%(settings))
+
+                try: # Recover
+                    capture = UVC_Source(self.g_pool, **prev_settings)
+                except InitialisationError:
+                    logger.error('Recovery to previous source failed.')
+                    logger.debug('Previous settings: %s'%(prev_settings))
+                    capture = Fake_Source(self.g_pool, **prev_settings)
+                finally:
+                    self.g_pool.capture = capture
+                    self.g_pool.capture.init_gui()
+            else:
+                self.g_pool.capture = capture
+                self.g_pool.capture.init_gui()
+        else:
+            try:
+                capture = UVC_Source(self.g_pool, **settings)
+            except InitialisationError:
+                logger.error('UVC source could not be initialised.')
+                logger.debug('UVC source init settings: %s'%(settings))
+            else:
+                self.g_pool.capture.deinit_gui()
+                self.g_pool.capture.cleanup()
+                self.g_pool.capture = None
+                self.g_pool.capture = capture
+                self.g_pool.capture.init_gui()
+
+    def recover(self):
+        if self.g_pool.capture.class_name() == Fake_Source.class_name():
+            preferred = self.g_pool.capture.preferred_source
+            if preferred['source_class_name'] == UVC_Source.class_name():
+                self.activate_source(preferred)

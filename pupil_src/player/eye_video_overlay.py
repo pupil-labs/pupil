@@ -21,7 +21,7 @@ from plugin import Plugin
 from version_utils import VersionFormat
 
 #capture
-from video_capture.source.file_source import EndofVideoFileError,FileSeekError,FileCaptureError,File_Source
+from video_capture import EndofVideoFileError,FileSeekError,FileCaptureError,File_Source
 
 #mouse
 from glfw import glfwGetCursorPos,glfwGetWindowSize,glfwGetCurrentContext

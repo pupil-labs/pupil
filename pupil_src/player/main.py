@@ -85,7 +85,7 @@ from pyglui.cygl.utils import Named_Texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 from OpenGL.GL import glClearColor
 #capture
-from video_capture.source.file_source import File_Source,EndofVideoFileError,FileSeekError
+from video_capture import File_Source,EndofVideoFileError,FileSeekError
 
 # helpers/utils
 import csv_utils

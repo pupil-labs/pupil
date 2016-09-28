@@ -82,9 +82,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     from file_methods import Persistent_Dict
     from methods import normalize, denormalize, delta_t, get_system_info
 
-    from video_capture.source import InitialisationError, Fake_Source
-    from video_capture.source.file_source import EndofVideoFileError
-    from video_capture import source_classes, manager_classes
+    from video_capture import InitialisationError, Fake_Source, EndofVideoFileError, source_classes, manager_classes
     source_by_name = {src.class_name():src for src in source_classes}
 
     from version_utils import VersionFormat
@@ -425,19 +423,18 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         # Get an image from the grabber
         try:
             frame = g_pool.capture.get_frame()
-        except g_pool.capture.error_class():
+        except g_pool.capture.error_class() as excp:
             prev_settings = g_pool.capture.settings
-            g_pool.capture_manager.activate_source(Fake_Source, prev_settings)
+            g_pool.capture.deinit_gui()
+            g_pool.capture.cleanup()
+            g_pool.capture = None
+            g_pool.capture = Fake_Source(g_pool, **prev_settings)
+            logger.error("Error getting frame. Falling back to Fake source.")
+            logger.debug("Caught error: %s"%excp)
             continue
         except EndofVideoFileError:
             logger.warning("Video file is done. Stopping")
             break
-        except Exception:
-            import traceback
-            traceback.print_exc()
-            prev_settings = g_pool.capture.settings
-            g_pool.capture_manager.activate_source(Fake_Source, prev_settings)
-            continue
 
         #update performace graphs
         t = frame.timestamp

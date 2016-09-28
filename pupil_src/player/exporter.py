@@ -22,7 +22,7 @@ from time import time
 from glob import glob
 import cv2
 import numpy as np
-from video_capture.source.file_source import File_Source,EndofVideoFileError
+from video_capture import File_Source,EndofVideoFileError
 from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version
