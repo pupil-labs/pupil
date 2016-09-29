@@ -121,7 +121,14 @@ class Fake_Source(Base_Source):
         self.presentation_time = time()
         frame_count = self.frame_count
         self.frame_count +=1
-        return Frame(now,self.img.copy(),frame_count)
+
+        timestamp = self.g_pool.get_now()
+        timestamp -= self.g_pool.timebase.value
+        return Frame(timestamp,self.img.copy(),frame_count)
+
+    @property
+    def name(self):
+        return self.preferred_source['name']
 
     @property
     def settings(self):

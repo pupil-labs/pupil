@@ -155,9 +155,12 @@ class UVC_Source(Base_Source):
         return frame
 
     @property
+    def name(self):
+        return self.uvc_capture.name
+
+    @property
     def settings(self):
         settings = super(UVC_Source, self).settings
-        settings['name'] = self.uvc_capture.name
         settings['frame_rate'] = self.frame_rate
         settings['frame_size'] = self.frame_size
         settings['uvc_controls'] = {}

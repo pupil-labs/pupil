@@ -162,6 +162,10 @@ class File_Source(Base_Source):
         settings['timestamps'] = self.timestamps
         return settings
 
+    @property
+    def name(self):
+        return os.path.splitext(self.source_path)[0]
+
     @settings.setter
     def settings(self,settings):
         pass

@@ -85,6 +85,10 @@ class Base_Source(object):
         pass
 
     @property
+    def name(self):
+        raise NotImplementedError()
+
+    @property
     def settings(self):
         """Dict containing recovery information.
 
@@ -95,7 +99,7 @@ class Base_Source(object):
         """
         return {
             'source_class_name': self.class_name(),
-            'name': self.class_name().replace('_',' ')
+            'name': self.name
         }
 
     @settings.setter
