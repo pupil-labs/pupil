@@ -8,9 +8,11 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 import os
+import csv
 from pyglui import ui
 from plugin import Plugin
 from file_methods import load_object,save_object
+from itertools import chain
 
 import numpy as np
 from OpenGL.GL import *
@@ -190,16 +192,16 @@ class Annotation_Player(Annotation_Capture):
 
     @classmethod
     def csv_representation_keys(self):
-        return ('id', 'timestamp','duration','start_index','end_frame')
+        return ('label', 'timestamp','duration','source','index')
 
     @classmethod
     def csv_representation_for_annotations(self, annotation):
         return (
-            fixation['id'],
-            fixation['timestamp'],
-            fixation['duration'],
-            fixation['start_frame_index'],
-            fixation['end_frame_index']
+            annotation['label'],
+            annotation['timestamp'],
+            annotation['duration'],
+            annotation['source'],
+            annotation['index']
         )
 
 
