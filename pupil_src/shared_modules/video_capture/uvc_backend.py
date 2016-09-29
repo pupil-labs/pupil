@@ -52,6 +52,7 @@ class UVC_Source(Base_Source):
             if uvc.is_accessible(uid):
                 self.uvc_capture = uvc.Capture(uid)
             else: logger.warning('UVC source `%s` is not accessible.'%devices_by_uid[uid]['name'])
+
         # neither name nore uid are given, take first accessible device
         elif not name and not uid:
             for uid in device_uids:
@@ -60,9 +61,10 @@ class UVC_Source(Base_Source):
                     break
         if not self.uvc_capture:
             raise InitialisationError()
+        self.update_capture(frame_size,frame_rate,uvc_controls)
 
+    def update_capture(self,frame_size,frame_rate,uvc_controls={}):
         # Set camera defaults. Override with previous settings afterwards
-
         if 'C930e' in self.uvc_capture.name:
                 logger.debug('Timestamp offset for c930 applied: -0.1sec')
                 self.ts_offset = -0.1
@@ -119,11 +121,36 @@ class UVC_Source(Base_Source):
             except KeyError as e:
                 logger.debug('No UVC setting "%s" found from settings.'%c.display_name)
 
+    def re_init_capture(self,uid):
+        current_size = self.uvc_capture.frame_size
+        current_fps = self.uvc_capture.frame_rate
+        self.uvc_capture.close()
+        self.uvc_capture = uvc.Capture(uid)
+        self.update_capture(current_size,current_fps)
+
+    def _re_init_capture_by_name(self,name):
+        for x in range(4):
+            devices = uvc.device_list()
+            for d in devices:
+                if d['name'] == name:
+                    logger.info("Found device. %s."%name)
+                    self.re_init_capture(d['uid'])
+                    return
+            logger.warning('Could not find Camera %s during re initilization.'%name)
+            time.sleep(1.5)
+        raise InitialisationError('Could not find Camera %s during re initilization.'%name)
+
     def get_frame(self):
         try:
             frame = self.uvc_capture.get_frame_robust()
+        except uvc.StreamError:
+            try:
+                self._re_init_capture_by_name(self.uvc_capture.name)
+                frame = self.uvc_capture.get_frame_robust()
+            except InitialisationError as e:
+                raise self.error_class()(e.message)
         except uvc.InitError as e:
-            raise self.error_class()(e)
+            raise self.error_class()(str(e))
         timestamp = self.g_pool.get_now()+self.ts_offset
         timestamp -= self.g_pool.timebase.value
         frame.timestamp = timestamp
@@ -266,7 +293,7 @@ class UVC_Manager(Base_Manager):
         super(UVC_Manager, self).__init__(g_pool)
         self.last_check_ts = 0.
         self.last_check_result = {}
-        self.check_intervall = .5
+        self.check_intervall = .0
 
     def init_gui(self):
         from pyglui import ui
@@ -324,7 +351,8 @@ class UVC_Manager(Base_Manager):
                     'subject': 'capture_manager.source_found',
                     'source_class_name': UVC_Source.class_name(),
                     'name': device_name,
-                    'uid': found_key
+                    'uid': found_key,
+                    'delay': 1.
                 })
                 self.last_check_result[found_key] = device_name
 

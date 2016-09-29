@@ -13,7 +13,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 class InitialisationError(Exception):
-    pass
+    def __init__(self,msg=None):
+        super(InitialisationError,self).__init__()
+        self.message = msg
 
 class StreamError(Exception):
     pass
