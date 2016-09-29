@@ -337,3 +337,16 @@ class NDSI_Manager(Base_Manager):
             preferred = self.g_pool.capture.preferred_source
             if preferred['source_class_name'] == NDSI_Source.class_name():
                 self.activate_source(preferred)
+
+    def on_notify(self,n):
+        """Provides UI for the capture selection
+
+        Reacts to notification:
+            ``capture_manager.source_found``: Check if recovery is possible
+
+        Emmits notifications:
+            ``capture_manager.source_found``
+            ``capture_manager.source_lost``
+        """
+        if (n['subject'].startswith('capture_manager.source_found')):
+            self.recover()

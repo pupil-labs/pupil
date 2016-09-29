@@ -195,20 +195,3 @@ class Base_Manager(Plugin):
 
     def cleanup(self):
         self.deinit_gui()
-
-    def recover(self):
-        """Check if recovery from Fake Source is possible"""
-        pass
-
-    def on_notify(self,n):
-        """Provides UI for the capture selection
-
-        Reacts to notification:
-            ``capture_manager.source_found``: Check if recovery is possible
-
-        Emmits notifications:
-            ``capture_manager.source_found``
-            ``capture_manager.source_lost``
-        """
-        if (n['subject'].startswith('capture_manager.source_found')):
-            self.recover()
