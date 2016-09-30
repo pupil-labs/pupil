@@ -36,6 +36,7 @@ class Seek_Bar(Plugin):
         self.padding = 20. #in sceen pixel
         self.window_size = 0,0
 
+        
     def init_gui(self):
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 

@@ -254,6 +254,13 @@ def session(rec_dir):
         else:
             g_pool.new_seek = True
 
+    def toggle_play(new_state):
+        logger.warning('play%s'%new_state)
+        if cap.get_frame_index() > cap.get_frame_count()-1:
+            cap.seek_to_frame(1) #avoid pause set by hitting trimmark pause.
+            logger.warning("End of video - restart at beginning.")
+        g_pool.play = new_state
+
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
@@ -306,7 +313,7 @@ def session(rec_dir):
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
-    g_pool.play_button = ui.Thumb('play',g_pool,label=unichr(0xf04b).encode('utf-8'),hotkey=GLFW_KEY_SPACE,label_font='fontawesome',label_offset_x=5,label_offset_y=0,label_offset_size=-24)
+    g_pool.play_button = ui.Thumb('play',g_pool,label=unichr(0xf04b).encode('utf-8'),setter=toggle_play,hotkey=GLFW_KEY_SPACE,label_font='fontawesome',label_offset_x=5,label_offset_y=0,label_offset_size=-24)
     g_pool.play_button.on_color[:] = (0,1.,.0,.8)
     g_pool.forward_button = ui.Thumb('forward',label=unichr(0xf04e).encode('utf-8'),getter = lambda: False,setter= next_frame, hotkey=GLFW_KEY_RIGHT,label_font='fontawesome',label_offset_x=5,label_offset_y=0,label_offset_size=-24)
     g_pool.backward_button = ui.Thumb('backward',label=unichr(0xf04a).encode('utf-8'),getter = lambda: False, setter = prev_frame, hotkey=GLFW_KEY_LEFT,label_font='fontawesome',label_offset_x=-5,label_offset_y=0,label_offset_size=-24)
@@ -374,6 +381,7 @@ def session(rec_dir):
             except EndofVideoFileError:
                 #end of video logic: pause at last frame.
                 g_pool.play=False
+                logger.warning("end of video")
             update_graph = True
         else:
             update_graph = False

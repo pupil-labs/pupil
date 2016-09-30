@@ -76,7 +76,7 @@ class Trim_Marks(Plugin):
     def update(self,frame,events):
 
         if frame.index == self.out_mark or frame.index == self.in_mark:
-            self.g_pool.play=False
+            self.g_pool.play = False
 
         if self.drag_in:
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
