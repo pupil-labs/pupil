@@ -149,9 +149,7 @@ class UVC_Source(Base_Source):
                 raise self.error_class()(str(e))
         except uvc.InitError as e:
             raise self.error_class()(e.message)
-        timestamp = self.g_pool.get_now()+self.ts_offset
-        timestamp -= self.g_pool.timebase.value
-        frame.timestamp = timestamp
+        frame.timestamp = self.g_pool.get_timestamp()+self.ts_offset
         return frame
 
     @property

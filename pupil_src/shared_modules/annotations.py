@@ -97,7 +97,7 @@ class Annotation_Capture(Plugin):
         self.alive = False
 
     def fire_annotation(self,annotation_label):
-        t = self.g_pool.capture.get_timestamp()
+        t = self.g_pool.get_timestamp()
         logger.info('"%s"@%s'%(annotation_label,t))
         notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','record':True} #you may add more field to this dictionary if you want.
         self.notify_all(notification)
@@ -182,7 +182,7 @@ class Annotation_Player(Annotation_Capture):
         self.v_pad = self.padding * 1./h
 
     def fire_annotation(self,annotation_label):
-        t = self.g_pool.capture.get_timestamp()
+        t = self.last_frame_ts
         logger.info('"%s"@%s'%(annotation_label,t))
         notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','added_in_player':True,'index':self.g_pool.capture.get_frame_index()-1} #you may add more field to this dictionary if you want.
         self.annotations_list.append(notification)
@@ -190,6 +190,7 @@ class Annotation_Player(Annotation_Capture):
 
 
     def update(self,frame,events):
+        self.last_frame_ts = frame.timestamp
         if frame.index != self.current_frame:
             self.current_frame = frame.index
             events = self.annotations_by_frame[frame.index]

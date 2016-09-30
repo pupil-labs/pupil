@@ -139,7 +139,7 @@ class Eye_Visualizer(Visualizer):
 		delta_y = 20
 		for model in models:
 			modelStatus =	('Model: %d \n' %  model['model_id'] ,
-							'    age: %.1fs\n' %(self.g_pool.capture.get_timestamp()-model['birth_timestamp']) ,
+							'    age: %.1fs\n' %(self.g_pool.get_timestamp()-model['birth_timestamp']) ,
 							'    maturity: %.3f\n' % model['maturity'] ,
 							'    solver fit: %.6f\n' % model['solver_fit'] ,
 							'    confidence: %.6f\n' % model['confidence'] ,
