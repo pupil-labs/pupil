@@ -334,7 +334,7 @@ class UVC_Manager(Base_Manager):
 
     def update(self, frame, events):
         now = time.time()
-        if (self.check_intervall and
+        if (self.check_devices and
             now - self.last_check_ts > self.check_intervall):
 
             self.last_check_ts = now
@@ -374,6 +374,7 @@ class UVC_Manager(Base_Manager):
                 capture = UVC_Source(self.g_pool, **settings)
             except InitialisationError:
                 logger.error('UVC source could not be initialised.')
+                if init_error.message: logger.error(init_error.message)
                 logger.debug('UVC source init settings: %s'%(settings))
 
                 try: # Recover

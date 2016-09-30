@@ -122,7 +122,7 @@ class Fake_Source(Base_Source):
         frame_count = self.frame_count
         self.frame_count +=1
 
-        timestamp = self.g_pool.timestamp()
+        timestamp = self.g_pool.get_timestamp()
         return Frame(timestamp,self.img.copy(),frame_count)
 
     @property
