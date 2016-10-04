@@ -416,7 +416,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                 elif subject.startswith('frame_publishing.stopped'):
                     should_publish_frames = False
                     frame_publish_format = 'jpeg'
-                else: g_pool.capture_manager.on_notify(notification)
+                else:
+                    notification['recover_delay'] = eye_id*.5+.5
+                    g_pool.capture_manager.on_notify(notification)
 
             # Get an image from the grabber
             try:
@@ -563,6 +565,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         g_pool.gui.terminate()
         glfw.glfwDestroyWindow(main_window)
         glfw.glfwTerminate()
+        g_pool.capture_manager.cleanup()
         g_pool.capture.cleanup()
         logger.info("Process shutting down.")
 

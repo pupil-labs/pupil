@@ -13,7 +13,7 @@ from .fake_backend import Fake_Source
 
 import uvc, time
 #check versions for our own depedencies as they are fast-changing
-assert uvc.__version__ >= '0.7.1'
+assert uvc.__version__ >= '0.7.2'
 from ctypes import c_double
 from sets import ImmutableSet
 
@@ -33,9 +33,9 @@ class UVC_Source(Base_Source):
     def __init__(self, g_pool, frame_size, frame_rate, name=None, uid=None, uvc_controls={}, **settings):
         super(UVC_Source, self).__init__(g_pool)
         self.uvc_capture = None
-        devices = uvc.device_list()
-        devices_by_name = {dev['name']: dev for dev in devices}
-        devices_by_uid  = {dev['uid']: dev for dev in devices}
+        self.devices = uvc.Device_List()
+        devices_by_name = {dev['name']: dev for dev in self.devices}
+        devices_by_uid  = {dev['uid']: dev for dev in self.devices}
 
         # name is given. check if list of names
         names = name if type(name) in (list, tuple) else [name]
@@ -126,8 +126,8 @@ class UVC_Source(Base_Source):
 
     def _re_init_capture_by_name(self,name):
         for x in range(4):
-            devices = uvc.device_list()
-            for d in devices:
+            self.devices.update()
+            for d in self.devices:
                 if d['name'] == name:
                     logger.info("Found device. %s."%name)
                     self.re_init_capture(d['uid'])
@@ -277,6 +277,8 @@ class UVC_Source(Base_Source):
         self.g_pool.capture_source_menu.extend(ui_elements)
 
     def cleanup(self):
+        self.devices.cleanup()
+        self.devices = None
         self.uvc_capture.close()
         self.uvc_capture = None
 
@@ -294,6 +296,7 @@ class UVC_Manager(Base_Manager):
         self.last_check_result = {}
         self.check_intervall = 1.
         self.check_devices = check_devices
+        self.devices = uvc.Device_List()
 
     def get_init_dict(self):
         return {'check_devices':True}
@@ -305,8 +308,8 @@ class UVC_Manager(Base_Manager):
 
         def dev_selection_list():
             default = (None, 'Select to activate')
-            devices = uvc.device_list()
-            dev_pairs = [default] + [(d['uid'], d['name']) for d in devices]
+            self.devices.update()
+            dev_pairs = [default] + [(d['uid'], d['name']) for d in self.devices]
             return zip(*dev_pairs)
 
         def activate(source_uid):
@@ -338,8 +341,8 @@ class UVC_Manager(Base_Manager):
             now - self.last_check_ts > self.check_intervall):
 
             self.last_check_ts = now
-            devices = uvc.device_list()
-            device_names_by_uid = {d['uid']:d['name'] for d in devices}
+            self.devices.update()
+            device_names_by_uid = {d['uid']:d['name'] for d in self.devices}
 
             old_result = ImmutableSet(self.last_check_result.keys())
             new_result = ImmutableSet(device_names_by_uid.keys())
@@ -359,8 +362,7 @@ class UVC_Manager(Base_Manager):
                     'subject': 'capture_manager.source_found',
                     'source_class_name': UVC_Source.class_name(),
                     'name': device_name,
-                    'uid': found_key,
-                    'delay': 1.
+                    'uid': found_key
                 })
                 self.last_check_result[found_key] = device_name
 
@@ -420,3 +422,8 @@ class UVC_Manager(Base_Manager):
         """
         if (n['subject'].startswith('capture_manager.source_found')):
             self.recover()
+
+    def cleanup(self):
+        self.deinit_gui()
+        self.devices.cleanup()
+        self.devices = None
