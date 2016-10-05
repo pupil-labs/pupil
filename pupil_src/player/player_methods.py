@@ -258,11 +258,11 @@ def transparent_circle(img,center,radius,color,thickness):
 
     try:
         overlay = img[roi].copy()
-        cv2.circle(overlay,(pad,pad), radius=radius, color=rgb, thickness=thickness, lineType=cv2.cv.CV_AA)
+        cv2.circle(img,center,radius,rgb, thickness=thickness, lineType=cv2.LINE_AA)        
         opacity = alpha
-        cv2.addWeighted(overlay, opacity, img[roi], 1. - opacity, 0, img[roi])
+        cv2.addWeighted(src1=img[roi], alpha=opacity, src2=overlay, beta=1. - opacity, gamma=0, dst=img[roi])
     except:
-        logger.debug("transparent_circle would have been partially outsize of img. Did not draw it.")
+        logger.debug("transparent_circle would have been partially outside of img. Did not draw it.")
 
 
 def transparent_image_overlay(pos,overlay_img,img,alpha):

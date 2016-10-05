@@ -1,7 +1,7 @@
 #ifndef singleeyefitter_colors_h__
 #define singleeyefitter_colors_h__
 
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 
 
 namespace singleeyefitter {

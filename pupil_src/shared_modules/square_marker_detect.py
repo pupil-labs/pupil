@@ -121,7 +121,7 @@ def correct_gradient(gray_img,r):
 def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False):
     edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, aperture, 9)
 
-    contours, hierarchy = cv2.findContours(edges,
+    _, contours, hierarchy = cv2.findContours(edges,
                                     mode=cv2.RETR_TREE,
                                     method=cv2.CHAIN_APPROX_SIMPLE,offset=(0,0)) #TC89_KCOS
 
@@ -269,7 +269,7 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
         if not_found:
             prev_pts = np.array([m['centroid'] for m in not_found])
             # new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,winSize=(100,100))
-            new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,minEigThreshold=0.01,**lk_params)
+            new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,None,minEigThreshold=0.01,**lk_params)
             for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
                 if s: #ho do we ensure that this is a good move?
                     m['verts'] += pt-m['centroid'] #uniformly translate verts by optlical flow offset
