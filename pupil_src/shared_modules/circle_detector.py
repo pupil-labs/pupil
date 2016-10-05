@@ -17,7 +17,7 @@ def find_concetric_circles(gray_img,min_ring_count=3, visual_debug=False):
 
     # get threshold image used to get crisp-clean edges using blur to remove small features
     edges = cv2.adaptiveThreshold(cv2.blur(gray_img,(3,3)), 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 5, 11)
-    contours, hierarchy = cv2.findContours(edges,
+    _, contours, hierarchy = cv2.findContours(edges,
                                     mode=cv2.RETR_TREE,
                                     method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
     if visual_debug is not False:
