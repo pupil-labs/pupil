@@ -12,9 +12,11 @@ from .base_backend import InitialisationError, Base_Source, Base_Manager
 from .fake_backend import Fake_Source
 
 import ndsi
+assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.11'
 
 import logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class NDSI_Source(Base_Source):
     """Pupil Mobile video source
@@ -46,6 +48,9 @@ class NDSI_Source(Base_Source):
                         continue
         except ValueError:  raise InitialisationError()
         if not self.sensor: raise InitialisationError()
+        if not self.sensor.supports_data_subscription:
+            self.cleanup()
+            raise InitialisationError('Source does not support data subscription.')
 
         logger.debug('NDSI Source Sensor: %s'%self.sensor)
         self.control_id_ui_mapping = {}
@@ -185,6 +190,7 @@ class NDSI_Source(Base_Source):
         self.g_pool.capture_source_menu.append(ui.Button("Reset to default values",self.sensor.reset_all_control_values))
 
     def cleanup(self):
+        self.sensor.unlink()
         self.sensor = None
 
     @staticmethod
@@ -207,13 +213,16 @@ class NDSI_Manager(Base_Manager):
         self.network.start()
         self.selected_host = None
 
+    def cleanup(self):
+        self.deinit_gui()
+        self.network.stop()
+
     def init_gui(self):
         from pyglui import ui
         ui_elements = []
         ui_elements.append(ui.Info_Text('Remote Pupil Mobile sources'))
 
         def host_selection_list():
-            self.poll_events()
             devices = {
                 s['host_uuid']: str(s['host_name']) # removes duplicates
                 for s in self.network.sensors.values()
@@ -223,17 +232,16 @@ class NDSI_Manager(Base_Manager):
             # split tuples into 2 lists
             return zip(*(devices or [(None, 'No hosts found')]))
 
-        #def host_selection_getter():
-
         def view_host(host_uuid):
             if self.selected_host != host_uuid:
                 self.selected_host = host_uuid
                 self.re_build_ndsi_menu()
 
+        host_sel, host_sel_labels = host_selection_list()
         ui_elements.append(ui.Selector(
             'selected_host',self,
-            selection_getter=host_selection_list,
-            # getter=host_selection_getter,
+            selection=host_sel,
+            labels=host_sel_labels,
             setter=view_host,
             label='Remote host'
         ))
@@ -247,7 +255,7 @@ class NDSI_Manager(Base_Manager):
 
         def source_selection_list():
             default = (None, 'Select to activate')
-            self.poll_events()
+            #self.poll_events()
             sources = [default] + [
                 (s['sensor_uuid'], str(s['sensor_name']))
                 for s in self.network.sensors.values()
@@ -267,10 +275,11 @@ class NDSI_Manager(Base_Manager):
             }
             self.activate_source(settings)
 
-
+        src_sel, src_sel_labels = source_selection_list()
         host_menu.append(ui.Selector(
             'selected_source',
-            selection_getter=source_selection_list,
+            selection=src_sel,
+            labels=src_sel_labels,
             getter=lambda: None,
             setter=activate,
             label='Activate source'
@@ -291,6 +300,7 @@ class NDSI_Manager(Base_Manager):
 
     def on_event(self, caller, event):
         if event['subject'] == 'detach':
+            logger.debug('detached: %s'%event)
             name = str('%s @ %s'%(event['sensor_name'],event['host_name']))
             self.notify_all({
                 'subject': 'capture_manager.source_lost',
@@ -298,16 +308,17 @@ class NDSI_Manager(Base_Manager):
                 'source_id': event['sensor_uuid'],
                 'name': name
             })
-            sensors = self.network.sensors
+            sensors = [s for s in self.network.sensors.values() if s['sensor_type'] == 'video']
             if self.selected_host == event['host_uuid']:
                 if sensors:
-                    any_key = sensors.keys()[0]
-                    self.selected_host = sensors[any_key]['host_uuid']
+                    self.selected_host = sensors[0]['host_uuid']
                 else:
                     self.selected_host = None
                 self.re_build_ndsi_menu()
 
-        elif event['subject'] == 'attach':
+        elif (event['subject'] == 'attach' and
+            event['sensor_type'] == 'video'):
+            logger.debug('attached: %s'%event)
             name = str('%s @ %s'%(event['sensor_name'],event['host_name']))
             self.notify_all({
                 'subject': 'capture_manager.source_found',
@@ -322,8 +333,9 @@ class NDSI_Manager(Base_Manager):
     def activate_source(self, settings={}):
         try:
             capture = NDSI_Source(self.g_pool,network=self.network, **settings)
-        except InitialisationError:
+        except InitialisationError as init_error:
             logger.error('NDSI source could not be initialised.')
+            if init_error.message: logger.error(init_error.message)
             logger.debug('NDSI source init settings:\n\t%s\n\t%s'%(self.network,settings))
         else:
             self.g_pool.capture.deinit_gui()
