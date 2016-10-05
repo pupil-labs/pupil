@@ -27,7 +27,7 @@ From https://github.com/arnaud-ramey/voronoi
 #include <stdio.h>
 #include <vector>
 #include <numeric>      // std::accumulate
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 
