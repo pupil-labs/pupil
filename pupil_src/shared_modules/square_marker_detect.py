@@ -11,8 +11,14 @@
 import cv2
 import numpy as np
 from scipy.spatial.distance import pdist
+from scipy.interpolate import interp1d
 #because np.sqrt is slower when we do it on small arrays
+from itertools import ifilter,izip
+def reversedEnumerate(l):
+    return izip(xrange(len(l)-1, -1, -1), reversed(l))
+
 from math import sqrt
+sqrt_2 = sqrt(2)
 
 def get_close_markers(markers,centroids=None, min_distance=20):
     if centroids is None:
@@ -206,7 +212,19 @@ def draw_markers(img,markers):
         hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
         cv2.polylines(img,np.int0(hat),color = (0,0,255),isClosed=True)
         cv2.polylines(img,np.int0(centroid),color = (255,255,0),isClosed=True,thickness=2)
-        cv2.putText(img,'id: '+str(m['id']),tuple(np.int0(origin)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
+        m_str = 'id: %i'%m['id']
+        org = origin.copy()
+        # cv2.rectangle(img, tuple(np.int0(org+(-5,-13))[0,:]), tuple(np.int0(org+(100,30))[0,:]),color=(0,0,0),thickness=-1)
+        cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
+        if 'id_confidence' in m:
+            m_str = 'idc: %.3f'%m['id_confidence']
+            org += (0, 13)
+            cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
+        if 'norm_centroid_confidence' in m:
+            m_str = 'locc: %.3f'%m['norm_centroid_confidence']
+            org += (0, 13)
+            cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
+
 
 
 def m_marker_to_screen(marker):
@@ -301,24 +319,190 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
     prev_img = gray_img.copy()
     return markers
 
+def int_to_bin_list(value, width=None):
+    """Create binary repr from int
+
+    from http://stackoverflow.com/questions/22227595/convert-integer-to-binary-array-with-suitable-padding
+    """
+    m = width or 6
+    return (((value & (1 << np.arange(m)))) > 0).astype(int)
+
+def bin_list_to_int(bin_list):
+     """Create int from binary repr
+
+     from http://stackoverflow.com/questions/26060839/convert-a-binary-string-into-signed-integer-python
+     """
+     return (bin_list<<range(len(bin_list))).sum(0)
+
+def marker_id_confidence(marker_state):
+    return 2*np.mean(np.abs(.5 - marker_state[3:]))
+
+class MarkerTracker(object):
+    """docstring for MarkerTracker"""
+    def __init__(self, detect_func=detect_markers):
+        super(MarkerTracker, self).__init__()
+        self.detect_in_frame = detect_func
+        self.history = []
+
+        x = [0.,.025, .1, .75, 1.]
+        y = [1.,.9 , .2, .1, .0]
+        self.loc_conf_target = interp1d(x,y, kind='cubic')
+        self.loc_conf_velocity = .75
+        self.loc_purge_threshold = .1
+        self.loc_dist_weight = .3
+        self.id_merge_weight = .4
+        self.id_purge_threshold = .3
+        self.display_threshold = .0
+        self.min_match_dist = 0.1
+
+    @property
+    def id_dist_weight(self): return 1. - self.loc_dist_weight
+
+    def location_distance(self,marker_state, raw_marker):
+        centroids = np.asarray((marker_state[:2],raw_marker['norm_centroid']))
+        return pdist(centroids, 'euclidean') / sqrt_2
+
+    def id_distance(self,marker_state, raw_marker):
+        old_id_bin = marker_state[3:]
+        new_id_bin = int_to_bin_list(raw_marker['id'],width=6)
+        ids_bin = np.asarray((old_id_bin,new_id_bin),dtype=int)
+        id_dist = pdist(ids_bin, 'cityblock') / len(new_id_bin)
+        return id_dist
+
+    def distance(self,marker_state, raw_marker):
+        centr_dist = self.location_distance(marker_state,raw_marker)
+        id_dist = self.id_distance(marker_state,raw_marker)
+        return self.loc_dist_weight*centr_dist + self.id_dist_weight*id_dist
+
+    def _merge_marker(self, old_marker, raw_marker):
+        marker_state = old_marker['state']
+
+        # update centroid
+        marker_state[:2] = raw_marker['norm_centroid']
+
+        # update centroid location confidence
+        old_conf = marker_state[2]
+        centr_dist = self.location_distance(marker_state,raw_marker)
+        conf_target = self.loc_conf_target(centr_dist)
+        conf_change = self.loc_conf_velocity * (conf_target - old_conf)
+        marker_state[2] = old_conf + conf_change
+
+        # update marker id
+        raw_bits = int_to_bin_list(raw_marker['id'],width=6)
+        marker_state[3:] = np.average(
+            np.vstack((marker_state[3:], raw_bits)), axis=0,
+            weights=(1-self.id_merge_weight,self.id_merge_weight))
+
+        # reference current raw marker
+        old_marker['last_raw_marker'] = raw_marker
+
+    def _append_marker(self, raw_marker):
+        bits = int_to_bin_list(raw_marker['id'],width=6)
+        # x, y, pos_conf, 6 marker bits
+        hstacked = np.hstack((raw_marker['norm_centroid'], (.3,), bits))
+        hstacked[3:] -= .5
+        hstacked[3:] *= .5
+        hstacked[3:] += .5
+        self.history.append({'state': hstacked, 'last_raw_marker': raw_marker})
+
+    def tracked_markers(self):
+        """Construct valid marker result from state"""
+        markers = {}
+        # should_display = lambda m: self.total_marker_confidence(m['state']) >self.display_threshold
+        # for marker in ifilter(should_display, self.history):
+        for marker in self.history:
+            m_state = marker['state']
+            m_id = bin_list_to_int(np.round(m_state[3:]).astype(int))
+            m_id_conf = 2*np.min(np.abs(.5 - m_state[3:]))
+            if m_id in markers:
+                markers[m_id].append((m_id_conf, m_state[:2], m_state[2], marker['last_raw_marker']))
+            else:
+                markers[m_id] = [(m_id_conf, m_state[:2], m_state[2], marker['last_raw_marker'])]
+
+        for m in markers.values():
+            m.sort(key=lambda x: x[0])
+        return [{
+            'id': m_id,
+            'id_confidence': m[0][0],
+            'norm_centroid': m[0][1],
+            'norm_centroid_confidence': m[0][2],
+            'verts': m[0][3]['verts']
+        } for m_id, m in markers.iteritems()]
 
 
-def bench():
-    cap = cv2.VideoCapture('/Users/mkassner/Pupil/datasets/markers/many.mov')
+    def track_in_frame(self,gray_img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False):
+        observed_markers = self.detect_in_frame(gray_img,grid_size,min_marker_perimeter,aperture,visualize)
+        for raw_m in observed_markers:
+            centroid = raw_m['centroid']
+            raw_m['norm_centroid'] = centroid / gray_img.T.shape
+
+        distances = np.empty((len(self.history), len(observed_markers)))
+        for n_i, marker in enumerate(self.history):
+            for n_ip1, new_m in enumerate(observed_markers):
+                distances[n_i, n_ip1] = self.distance(marker['state'], new_m)
+
+        hist_to_match = np.ones(len(self.history)).astype(bool)
+        observ_to_match =np.ones(len(observed_markers)).astype(bool)
+
+        while hist_to_match.any() and observ_to_match.any():
+            match_dist = np.min(distances)
+            if match_dist > self.min_match_dist:
+                break
+            match_idx = np.argmin(distances)
+            matched_hist_idx, matched_observ_idx = np.unravel_index(match_idx, distances.shape)
+            self._merge_marker(self.history[matched_hist_idx], observed_markers[matched_observ_idx])
+            # remove rows and columns
+            distances[matched_hist_idx, :] = 2
+            distances[:, matched_observ_idx] = 2
+            hist_to_match[matched_hist_idx] = False
+            observ_to_match[matched_observ_idx] = False
+
+        for hist_marker in np.asarray(self.history)[hist_to_match]:
+            # penalize unmatched history entries
+            hist_marker['state'][2] *= .5
+
+        for observ_marker in np.asarray(observed_markers)[observ_to_match ]:
+            # add unmatched oberservations
+            self._append_marker(observ_marker)
+
+        # purge low confidence markers
+        for m_idx, marker in reversedEnumerate(self.history):
+            m_state = marker['state']
+            if (marker_id_confidence(m_state) < self.id_purge_threshold or
+                m_state[2] < self.loc_purge_threshold):
+                del self.history[m_idx]
+
+        tracked_markers = self.tracked_markers()
+        for tracked_m in tracked_markers:
+            norm_centroid = tracked_m['norm_centroid']
+            tracked_m['centroid'] = norm_centroid * gray_img.T.shape
+
+        return tracked_markers
+
+
+def bench(folder):
+    from os.path import join
+    cap = cv2.VideoCapture(join(folder,'marker-test.mp4'))
     status,img = cap.read()
-    markers = []
+    tracker = MarkerTracker()
     while status:
-        markers = detect_markers_robust(img,5,markers,true_detect_every_frame=1)
+        gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
+        markers = tracker.track_in_frame(gray_img,5,visualize=True)
+        draw_markers(img, markers)
+        cv2.imshow('Detected Markers', img)
+        if cv2.waitKey(0) == 27:
+            break
+
         status,img = cap.read()
-        if markers:
-            return
+
 
 
 
 if __name__ == '__main__':
+    folder = '/Users/pabloprietz/work/test_scripts/'
     import cProfile,subprocess,os
-    cProfile.runctx("bench()",{},locals(),"world.pstats")
+    cProfile.runctx("bench(folder)",{'folder':folder},locals(),os.path.join(folder, "world.pstats"))
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-    subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
+    subprocess.call("cd %s ; python "%folder+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
     print "created  time graph for  process. Please check out the png next to this file"
