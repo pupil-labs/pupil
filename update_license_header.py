@@ -24,7 +24,7 @@ license_txt = """\
 
 # find out the cwd and change to the top level Pupil folder
 cwd = os.getcwd()
-pupil_dir = os.path.join(*os.path.split(cwd)[:-1])
+pupil_dir = os.path.join(cwd,'pupil_src')
 
 pattern = re.compile('(\'{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n(\'{3}|[*][/])', re.DOTALL|re.MULTILINE)
 
