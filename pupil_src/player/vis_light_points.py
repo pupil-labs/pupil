@@ -54,7 +54,7 @@ class Vis_Light_Points(Plugin):
 
         overlay =  1/(out/falloff+1)
 
-        img = np.multiply(img, cv2.cvtColor(overlay,cv2.COLOR_GRAY2RGB), casting="unsafe")
+        img[:] = np.multiply(img, cv2.cvtColor(overlay,cv2.COLOR_GRAY2RGB), casting="unsafe")
 
     def init_gui(self):
         # initialize the menu
