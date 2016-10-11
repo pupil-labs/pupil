@@ -215,15 +215,15 @@ def draw_markers(img,markers):
         m_str = 'id: %i'%m['id']
         org = origin.copy()
         # cv2.rectangle(img, tuple(np.int0(org+(-5,-13))[0,:]), tuple(np.int0(org+(100,30))[0,:]),color=(0,0,0),thickness=-1)
-        cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
+        cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
         if 'id_confidence' in m:
             m_str = 'idc: %.3f'%m['id_confidence']
-            org += (0, 13)
-            cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
-        if 'norm_centroid_confidence' in m:
-            m_str = 'locc: %.3f'%m['norm_centroid_confidence']
-            org += (0, 13)
-            cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255,100,50))
+            org += (0, 12)
+            cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
+        if 'loc_confidence' in m:
+            m_str = 'locc: %.3f'%m['loc_confidence']
+            org += (0, 12 )
+            cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
 
 
 
@@ -334,11 +334,13 @@ def bin_list_to_int(bin_list):
      """
      return (bin_list<<range(len(bin_list))).sum(0)
 
-def marker_id_confidence(marker_state):
-    return 2*np.mean(np.abs(.5 - marker_state[3:]))
-
 class MarkerTracker(object):
     """docstring for MarkerTracker"""
+
+    vert_slc = slice(0,8)
+    loc_conf_idx = 8
+    id_slc = slice(9,15)
+
     def __init__(self, detect_func=detect_markers):
         super(MarkerTracker, self).__init__()
         self.detect_in_frame = detect_func
@@ -348,134 +350,139 @@ class MarkerTracker(object):
         y = [1.,.9 , .2, .1, .0]
         self.loc_conf_target = interp1d(x,y, kind='cubic')
         self.loc_conf_velocity = .75
-        self.loc_purge_threshold = .1
-        self.loc_dist_weight = .3
-        self.id_merge_weight = .4
+        self.loc_purge_threshold = .2
+        self.loc_dist_weight = .8
+
+        self.id_merge_weight = .1
         self.id_purge_threshold = .3
+
         self.display_threshold = .0
-        self.min_match_dist = 0.1
+        self.max_match_dist = .1
+        self.unmatched_penalty = .5
 
     @property
     def id_dist_weight(self): return 1. - self.loc_dist_weight
 
-    def location_distance(self,marker_state, raw_marker):
-        centroids = np.asarray((marker_state[:2],raw_marker['norm_centroid']))
-        return pdist(centroids, 'euclidean') / sqrt_2
+    def location_distance(self,hist_entry, raw_marker):
+        """Calculates mean euclidian distance between vertices"""
+        P, Q = hist_entry[self.vert_slc].reshape(4,2), raw_marker['norm_verts']
+        return np.sqrt(np.power(P-Q, 2).sum(axis=1)).mean() / sqrt_2
 
-    def id_distance(self,marker_state, raw_marker):
-        old_id_bin = marker_state[3:]
+    def id_distance(self,hist_entry, raw_marker):
+        """Calculates mean manhatten distance between ids"""
+        old_id_bin = hist_entry[self.id_slc]
         new_id_bin = int_to_bin_list(raw_marker['id'],width=6)
-        ids_bin = np.asarray((old_id_bin,new_id_bin),dtype=int)
-        id_dist = pdist(ids_bin, 'cityblock') / len(new_id_bin)
+        id_dist = np.abs(old_id_bin - new_id_bin).mean()
         return id_dist
 
-    def distance(self,marker_state, raw_marker):
-        centr_dist = self.location_distance(marker_state,raw_marker)
-        id_dist = self.id_distance(marker_state,raw_marker)
+    def distance(self,hist_entry, raw_marker):
+        centr_dist = self.location_distance(hist_entry,raw_marker)
+        id_dist = self.id_distance(hist_entry,raw_marker)
         return self.loc_dist_weight*centr_dist + self.id_dist_weight*id_dist
 
-    def _merge_marker(self, old_marker, raw_marker):
-        marker_state = old_marker['state']
+    def marker_id_confidence(self,marker_state):
+        return 2*np.mean(np.abs(.5 - marker_state[self.id_slc]))
+
+    def _merge_marker(self, hist_entry, raw_marker):
 
         # update centroid
-        marker_state[:2] = raw_marker['norm_centroid']
+        hist_entry[self.vert_slc] = raw_marker['norm_verts'].flatten()
 
         # update centroid location confidence
-        old_conf = marker_state[2]
-        centr_dist = self.location_distance(marker_state,raw_marker)
-        conf_target = self.loc_conf_target(centr_dist)
+        old_conf = hist_entry[self.loc_conf_idx]
+        vert_dist = self.location_distance(hist_entry,raw_marker)
+        conf_target = self.loc_conf_target(vert_dist)
         conf_change = self.loc_conf_velocity * (conf_target - old_conf)
-        marker_state[2] = old_conf + conf_change
+        hist_entry[self.loc_conf_idx] = old_conf + conf_change
 
         # update marker id
         raw_bits = int_to_bin_list(raw_marker['id'],width=6)
-        marker_state[3:] = np.average(
-            np.vstack((marker_state[3:], raw_bits)), axis=0,
+        hist_entry[self.id_slc] = np.average(
+            np.vstack((hist_entry[self.id_slc], raw_bits)), axis=0,
             weights=(1-self.id_merge_weight,self.id_merge_weight))
-
-        # reference current raw marker
-        old_marker['last_raw_marker'] = raw_marker
 
     def _append_marker(self, raw_marker):
         bits = int_to_bin_list(raw_marker['id'],width=6)
         # x, y, pos_conf, 6 marker bits
-        hstacked = np.hstack((raw_marker['norm_centroid'], (.3,), bits))
-        hstacked[3:] -= .5
-        hstacked[3:] *= .5
-        hstacked[3:] += .5
-        self.history.append({'state': hstacked, 'last_raw_marker': raw_marker})
+        hstacked = np.hstack((raw_marker['norm_verts'].flatten(), (.3,), bits))
+        # hstacked[3:] -= .5
+        # hstacked[3:] *= .5
+        # hstacked[3:] += .5
+        self.history.append(hstacked)
 
     def tracked_markers(self):
         """Construct valid marker result from state"""
         markers = {}
         # should_display = lambda m: self.total_marker_confidence(m['state']) >self.display_threshold
         # for marker in ifilter(should_display, self.history):
-        for marker in self.history:
-            m_state = marker['state']
-            m_id = bin_list_to_int(np.round(m_state[3:]).astype(int))
-            m_id_conf = 2*np.min(np.abs(.5 - m_state[3:]))
+        for m_state in self.history:
+            m_id = bin_list_to_int(np.round(m_state[self.id_slc]).astype(int))
+            m_id_conf = self.marker_id_confidence(m_state)
             if m_id in markers:
-                markers[m_id].append((m_id_conf, m_state[:2], m_state[2], marker['last_raw_marker']))
+                markers[m_id].append((m_id_conf, m_state))
             else:
-                markers[m_id] = [(m_id_conf, m_state[:2], m_state[2], marker['last_raw_marker'])]
+                markers[m_id] = [(m_id_conf, m_state)]
 
         for m in markers.values():
             m.sort(key=lambda x: x[0])
         return [{
             'id': m_id,
-            'id_confidence': m[0][0],
-            'norm_centroid': m[0][1],
-            'norm_centroid_confidence': m[0][2],
-            'verts': m[0][3]['verts']
-        } for m_id, m in markers.iteritems()]
-
+            'id_confidence': m_list[0][0],
+            'norm_verts': m_list[0][1][self.vert_slc].reshape((4,1,2)),
+            'loc_confidence': m_list[0][1][self.loc_conf_idx]
+        } for m_id, m_list in markers.iteritems()]
 
     def track_in_frame(self,gray_img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False):
         observed_markers = self.detect_in_frame(gray_img,grid_size,min_marker_perimeter,aperture,visualize)
         for raw_m in observed_markers:
-            centroid = raw_m['centroid']
-            raw_m['norm_centroid'] = centroid / gray_img.T.shape
+            raw_m['norm_verts'] = raw_m['verts'].reshape((4,2)) / gray_img.T.shape
 
         distances = np.empty((len(self.history), len(observed_markers)))
-        for n_i, marker in enumerate(self.history):
+        for n_i, hist_m in enumerate(self.history):
             for n_ip1, new_m in enumerate(observed_markers):
-                distances[n_i, n_ip1] = self.distance(marker['state'], new_m)
+                distances[n_i, n_ip1] = self.distance(hist_m, new_m)
 
         hist_to_match = np.ones(len(self.history)).astype(bool)
         observ_to_match =np.ones(len(observed_markers)).astype(bool)
 
         while hist_to_match.any() and observ_to_match.any():
             match_dist = np.min(distances)
-            if match_dist > self.min_match_dist:
-                break
+            if match_dist > self.max_match_dist:
+                break # do not match markers that are to distant to each other
             match_idx = np.argmin(distances)
             matched_hist_idx, matched_observ_idx = np.unravel_index(match_idx, distances.shape)
-            self._merge_marker(self.history[matched_hist_idx], observed_markers[matched_observ_idx])
+
+            #
+            self._merge_marker(
+                self.history[matched_hist_idx],
+                observed_markers[matched_observ_idx])
+
             # remove rows and columns
             distances[matched_hist_idx, :] = 2
             distances[:, matched_observ_idx] = 2
             hist_to_match[matched_hist_idx] = False
             observ_to_match[matched_observ_idx] = False
 
-        for hist_marker in np.asarray(self.history)[hist_to_match]:
+        for hist_marker, unmatched in zip(self.history,hist_to_match):
             # penalize unmatched history entries
-            hist_marker['state'][2] *= .5
+            if unmatched: hist_marker[self.loc_conf_idx] *= self.unmatched_penalty
 
-        for observ_marker in np.asarray(observed_markers)[observ_to_match ]:
+        for observ_marker, unmatched in zip(observed_markers, observ_to_match):
             # add unmatched oberservations
-            self._append_marker(observ_marker)
+            if unmatched: self._append_marker(observ_marker)
 
         # purge low confidence markers
-        for m_idx, marker in reversedEnumerate(self.history):
-            m_state = marker['state']
-            if (marker_id_confidence(m_state) < self.id_purge_threshold or
-                m_state[2] < self.loc_purge_threshold):
+        for m_idx, m_hist in reversedEnumerate(self.history):
+            if (self.marker_id_confidence(m_hist) < self.id_purge_threshold or
+                m_hist[self.loc_conf_idx] < self.loc_purge_threshold):
                 del self.history[m_idx]
 
         tracked_markers = self.tracked_markers()
         for tracked_m in tracked_markers:
-            norm_centroid = tracked_m['norm_centroid']
-            tracked_m['centroid'] = norm_centroid * gray_img.T.shape
+            norm_verts = tracked_m['norm_verts']
+            # cv2.getPerspectiveTransform needs np.float32
+            tracked_m['verts'] = (norm_verts * gray_img.T.shape).astype(np.float32)
+            tracked_m['centroid'] = np.mean(tracked_m['verts'], axis=0)
 
         return tracked_markers
 
@@ -491,7 +498,7 @@ def bench(folder):
         draw_markers(img, markers)
         cv2.imshow('Detected Markers', img)
         if cv2.waitKey(0) == 27:
-            break
+           break
 
         status,img = cap.read()
 
