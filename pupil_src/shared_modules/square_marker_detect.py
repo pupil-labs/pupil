@@ -340,6 +340,7 @@ class MarkerTracker(object):
     vert_slc = slice(0,8)
     loc_conf_idx = 8
     id_slc = slice(9,15)
+    vel_slc = slice(15, 17)
 
     def __init__(self, detect_func=detect_markers):
         super(MarkerTracker, self).__init__()
@@ -350,6 +351,7 @@ class MarkerTracker(object):
         y = [1.,.9 , .2, .1, .0]
         self.loc_conf_target = interp1d(x,y, kind='cubic')
         self.loc_conf_velocity = .75
+        self.rep_match_loc_conf = .1
         self.loc_purge_threshold = .2
         self.loc_dist_weight = .8
 
@@ -363,51 +365,56 @@ class MarkerTracker(object):
     @property
     def id_dist_weight(self): return 1. - self.loc_dist_weight
 
-    def location_distance(self,hist_entry, raw_marker):
+    def location_distance(self,hist_entry, flat_marker):
         """Calculates mean euclidian distance between vertices"""
-        P, Q = hist_entry[self.vert_slc].reshape(4,2), raw_marker['norm_verts']
-        return np.sqrt(np.power(P-Q, 2).sum(axis=1)).mean() / sqrt_2
+        old_pos = hist_entry[self.vert_slc].reshape(4,2)
+        old_vel = hist_entry[self.vel_slc]
+        projection = old_pos + old_vel
+        old, new = projection, flat_marker[self.vert_slc].reshape(4,2)
+        return np.sqrt(np.power(old-new, 2).sum(axis=1)).mean() / sqrt_2
 
-    def id_distance(self,hist_entry, raw_marker):
+    def id_distance(self,hist_entry, flat_marker):
         """Calculates mean manhatten distance between ids"""
-        old_id_bin = hist_entry[self.id_slc]
-        new_id_bin = int_to_bin_list(raw_marker['id'],width=6)
-        id_dist = np.abs(old_id_bin - new_id_bin).mean()
-        return id_dist
+        return np.abs(hist_entry[self.id_slc] - flat_marker[self.id_slc]).mean()
 
-    def distance(self,hist_entry, raw_marker):
-        centr_dist = self.location_distance(hist_entry,raw_marker)
-        id_dist = self.id_distance(hist_entry,raw_marker)
+    def distance(self,hist_entry, flat_marker):
+        centr_dist = self.location_distance(hist_entry,flat_marker)
+        id_dist = self.id_distance(hist_entry,flat_marker)
         return self.loc_dist_weight*centr_dist + self.id_dist_weight*id_dist
 
-    def marker_id_confidence(self,marker_state):
-        return 2*np.mean(np.abs(.5 - marker_state[self.id_slc]))
+    def marker_id_confidence(self,marker):
+        return 2*np.mean(np.abs(.5 - marker[self.id_slc]))
 
-    def _merge_marker(self, hist_entry, raw_marker):
+    def _merge_marker(self, hist_entry, flat_marker):
 
-        # update centroid
-        hist_entry[self.vert_slc] = raw_marker['norm_verts'].flatten()
+        # update velocity
+        current_verts = flat_marker[self.vert_slc]
+        old_verts = hist_entry[self.vert_slc]
+        velocity = (current_verts - old_verts).reshape((4,2)).mean(axis=0)
+        hist_entry[self.vel_slc] = velocity
 
-        # update centroid location confidence
-        old_conf = hist_entry[self.loc_conf_idx]
-        vert_dist = self.location_distance(hist_entry,raw_marker)
-        conf_target = self.loc_conf_target(vert_dist)
-        conf_change = self.loc_conf_velocity * (conf_target - old_conf)
-        hist_entry[self.loc_conf_idx] = old_conf + conf_change
+        # update verts
+        hist_entry[self.vert_slc] = current_verts
+
+        # update location confidence
+        # old_conf = hist_entry[self.loc_conf_idx]
+        # vert_dist = self.location_distance(hist_entry,raw_marker)
+        # conf_target = self.loc_conf_target(vert_dist)
+        # conf_change = self.loc_conf_velocity * (conf_target - old_conf)
+        # hist_entry[self.loc_conf_idx] = old_conf + conf_change
+        new_conf = hist_entry[self.loc_conf_idx] + self.rep_match_loc_conf
+        hist_entry[self.loc_conf_idx] = min(new_conf , 1.)
 
         # update marker id
-        raw_bits = int_to_bin_list(raw_marker['id'],width=6)
         hist_entry[self.id_slc] = np.average(
-            np.vstack((hist_entry[self.id_slc], raw_bits)), axis=0,
-            weights=(1-self.id_merge_weight,self.id_merge_weight))
+            np.vstack((hist_entry[self.id_slc], flat_marker[self.id_slc])),
+            axis=0, weights=(1-self.id_merge_weight,self.id_merge_weight))
 
-    def _append_marker(self, raw_marker):
-        bits = int_to_bin_list(raw_marker['id'],width=6)
-        # x, y, pos_conf, 6 marker bits
-        hstacked = np.hstack((raw_marker['norm_verts'].flatten(), (.3,), bits))
-        # hstacked[3:] -= .5
-        # hstacked[3:] *= .5
-        # hstacked[3:] += .5
+    def _append_marker(self, flat_marker):
+        copied_marker = flat_marker[:]
+        copied_marker[self.loc_conf_idx] = .3
+        # append velocity, (0,0)
+        hstacked = np.hstack((copied_marker, (0.,0.)))
         self.state.append(hstacked)
 
     def extract_markers(self):
@@ -432,10 +439,21 @@ class MarkerTracker(object):
             'loc_confidence': m_list[0][1][self.loc_conf_idx]
         } for m_id, m_list in markers.iteritems()]
 
+    def make_raw_to_flat_map(self, img_shape):
+        assert len(img_shape) == 2
+        def raw_to_flat(raw_m):
+            norm_verts = raw_m['verts'].reshape((4,2)) / img_shape
+            return np.hstack((
+                norm_verts.flatten(),
+                (raw_m['id'],),
+                int_to_bin_list(raw_m['id'],width=6)))
+        return raw_to_flat
+
     def track_in_frame(self,gray_img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False):
         observed_markers = self.detect_in_frame(gray_img,grid_size,min_marker_perimeter,aperture,visualize)
-        for raw_m in observed_markers:
-            raw_m['norm_verts'] = raw_m['verts'].reshape((4,2)) / gray_img.T.shape
+        # flatten observed marker into state entry format
+        map_fn = self.make_raw_to_flat_map(gray_img.T.shape)
+        observed_markers = map(map_fn, observed_markers)
 
         distances = np.empty((len(self.state), len(observed_markers)))
         for n_i, hist_m in enumerate(self.state):
@@ -484,6 +502,7 @@ class MarkerTracker(object):
             tracked_m['verts'] = (norm_verts * gray_img.T.shape).astype(np.float32)
             tracked_m['centroid'] = np.mean(tracked_m['verts'], axis=0).reshape((2,))
             tracked_m['perimeter'] = cv2.arcLength(tracked_m['verts'],closed=True)
+            tracked_m['img'] = gray_img
 
 
         return tracked_markers
