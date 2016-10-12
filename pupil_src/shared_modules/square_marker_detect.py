@@ -344,7 +344,7 @@ class MarkerTracker(object):
     def __init__(self, detect_func=detect_markers):
         super(MarkerTracker, self).__init__()
         self.detect_in_frame = detect_func
-        self.history = []
+        self.state = []
 
         x = [0.,.025, .1, .75, 1.]
         y = [1.,.9 , .2, .1, .0]
@@ -356,7 +356,7 @@ class MarkerTracker(object):
         self.id_merge_weight = .1
         self.id_purge_threshold = .3
 
-        self.display_threshold = .0
+        self.display_threshold = .4
         self.max_match_dist = .1
         self.unmatched_penalty = .5
 
@@ -408,14 +408,14 @@ class MarkerTracker(object):
         # hstacked[3:] -= .5
         # hstacked[3:] *= .5
         # hstacked[3:] += .5
-        self.history.append(hstacked)
+        self.state.append(hstacked)
 
-    def tracked_markers(self):
+    def extract_markers(self):
         """Construct valid marker result from state"""
         markers = {}
-        # should_display = lambda m: self.total_marker_confidence(m['state']) >self.display_threshold
-        # for marker in ifilter(should_display, self.history):
-        for m_state in self.history:
+        should_display = lambda m: m[self.loc_conf_idx] > self.display_threshold
+        for m_state in ifilter(should_display, self.state):
+        #for m_state in self.state:
             m_id = bin_list_to_int(np.round(m_state[self.id_slc]).astype(int))
             m_id_conf = self.marker_id_confidence(m_state)
             if m_id in markers:
@@ -437,12 +437,12 @@ class MarkerTracker(object):
         for raw_m in observed_markers:
             raw_m['norm_verts'] = raw_m['verts'].reshape((4,2)) / gray_img.T.shape
 
-        distances = np.empty((len(self.history), len(observed_markers)))
-        for n_i, hist_m in enumerate(self.history):
+        distances = np.empty((len(self.state), len(observed_markers)))
+        for n_i, hist_m in enumerate(self.state):
             for n_ip1, new_m in enumerate(observed_markers):
                 distances[n_i, n_ip1] = self.distance(hist_m, new_m)
 
-        hist_to_match = np.ones(len(self.history)).astype(bool)
+        hist_to_match = np.ones(len(self.state)).astype(bool)
         observ_to_match =np.ones(len(observed_markers)).astype(bool)
 
         while hist_to_match.any() and observ_to_match.any():
@@ -454,7 +454,7 @@ class MarkerTracker(object):
 
             #
             self._merge_marker(
-                self.history[matched_hist_idx],
+                self.state[matched_hist_idx],
                 observed_markers[matched_observ_idx])
 
             # remove rows and columns
@@ -463,7 +463,7 @@ class MarkerTracker(object):
             hist_to_match[matched_hist_idx] = False
             observ_to_match[matched_observ_idx] = False
 
-        for hist_marker, unmatched in zip(self.history,hist_to_match):
+        for hist_marker, unmatched in zip(self.state,hist_to_match):
             # penalize unmatched history entries
             if unmatched: hist_marker[self.loc_conf_idx] *= self.unmatched_penalty
 
@@ -472,17 +472,19 @@ class MarkerTracker(object):
             if unmatched: self._append_marker(observ_marker)
 
         # purge low confidence markers
-        for m_idx, m_hist in reversedEnumerate(self.history):
+        for m_idx, m_hist in reversedEnumerate(self.state):
             if (self.marker_id_confidence(m_hist) < self.id_purge_threshold or
                 m_hist[self.loc_conf_idx] < self.loc_purge_threshold):
-                del self.history[m_idx]
+                del self.state[m_idx]
 
-        tracked_markers = self.tracked_markers()
+        tracked_markers = self.extract_markers()
         for tracked_m in tracked_markers:
             norm_verts = tracked_m['norm_verts']
             # cv2.getPerspectiveTransform needs np.float32
             tracked_m['verts'] = (norm_verts * gray_img.T.shape).astype(np.float32)
-            tracked_m['centroid'] = np.mean(tracked_m['verts'], axis=0)
+            tracked_m['centroid'] = np.mean(tracked_m['verts'], axis=0).reshape((2,))
+            tracked_m['perimeter'] = cv2.arcLength(tracked_m['verts'],closed=True)
+
 
         return tracked_markers
 
