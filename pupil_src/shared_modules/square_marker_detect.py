@@ -340,7 +340,7 @@ class MarkerTracker(object):
     vert_slc = slice(0,8)
     loc_conf_idx = 8
     id_slc = slice(9,15)
-    vel_slc = slice(15, 17)
+    vel_slc = slice(15, 23)
 
     def __init__(self, detect_func=detect_markers):
         super(MarkerTracker, self).__init__()
@@ -360,18 +360,18 @@ class MarkerTracker(object):
 
         self.display_threshold = .4
         self.max_match_dist = .1
-        self.unmatched_penalty = .5
+        self.unmatched_penalty = .2
 
     @property
     def id_dist_weight(self): return 1. - self.loc_dist_weight
 
     def location_distance(self,hist_entry, flat_marker):
         """Calculates mean euclidian distance between vertices"""
-        old_pos = hist_entry[self.vert_slc].reshape(4,2)
+        old_pos = hist_entry[self.vert_slc]
         old_vel = hist_entry[self.vel_slc]
         projection = old_pos + old_vel
-        old, new = projection, flat_marker[self.vert_slc].reshape(4,2)
-        return np.sqrt(np.power(old-new, 2).sum(axis=1)).mean() / sqrt_2
+        old, new = projection, flat_marker[self.vert_slc]
+        return np.sqrt(np.power(old-new, 2).reshape(4,2).sum(axis=1)).mean() / sqrt_2
 
     def id_distance(self,hist_entry, flat_marker):
         """Calculates mean manhatten distance between ids"""
@@ -390,8 +390,7 @@ class MarkerTracker(object):
         # update velocity
         current_verts = flat_marker[self.vert_slc]
         old_verts = hist_entry[self.vert_slc]
-        velocity = (current_verts - old_verts).reshape((4,2)).mean(axis=0)
-        hist_entry[self.vel_slc] = velocity
+        hist_entry[self.vel_slc] = current_verts - old_verts
 
         # update verts
         hist_entry[self.vert_slc] = current_verts
@@ -413,8 +412,8 @@ class MarkerTracker(object):
     def _append_marker(self, flat_marker):
         copied_marker = flat_marker[:]
         copied_marker[self.loc_conf_idx] = .3
-        # append velocity, (0,0)
-        hstacked = np.hstack((copied_marker, (0.,0.)))
+        # append velocity 0
+        hstacked = np.hstack((copied_marker, np.zeros(8)))
         self.state.append(hstacked)
 
     def extract_markers(self):
@@ -483,7 +482,10 @@ class MarkerTracker(object):
 
         for hist_marker, unmatched in zip(self.state,hist_to_match):
             # penalize unmatched history entries
-            if unmatched: hist_marker[self.loc_conf_idx] *= self.unmatched_penalty
+            if unmatched:
+                hist_marker[self.loc_conf_idx] -= self.unmatched_penalty
+                # forward project marker if it was not found
+                hist_marker[self.vert_slc] += hist_marker[self.vel_slc]
 
         for observ_marker, unmatched in zip(observed_markers, observ_to_match):
             # add unmatched oberservations
