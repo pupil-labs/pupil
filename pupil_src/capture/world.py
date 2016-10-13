@@ -206,7 +206,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
     g_pool.iconified = False
     g_pool.capture = cap
-    g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode','2d')
+    g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode','3d')
     g_pool.active_calibration_plugin = None
     g_pool.active_gaze_mapping_plugin = None
 
