@@ -463,24 +463,39 @@ class Reference_Surface(object):
             text_anchor = text_anchor[0],text_anchor[1]-75
             surface_edit_anchor = text_anchor[0],text_anchor[1]+25
             marker_edit_anchor = text_anchor[0],text_anchor[1]+50
-            if marker_mode:
-                draw_points([marker_edit_anchor],color=RGBA(0,.8,.7))
+            if self.defined:
+                if marker_mode:
+                    draw_points([marker_edit_anchor],color=RGBA(0,.8,.7))
+                else:
+                    draw_points([marker_edit_anchor])
+                if surface_mode:
+                    draw_points([surface_edit_anchor],color=RGBA(0,.8,.7))
+                else:
+                    draw_points([surface_edit_anchor])
+
+                self.glfont.set_blur(3.9)
+                self.glfont.set_color_float((0,0,0,.8))
+                self.glfont.draw_text(text_anchor[0]+15,text_anchor[1]+6,self.marker_status())
+                self.glfont.draw_text(surface_edit_anchor[0]+15,surface_edit_anchor[1]+6,'edit surface')
+                self.glfont.draw_text(marker_edit_anchor[0]+15,marker_edit_anchor[1]+6,'add/remove markers')
+                self.glfont.set_blur(0.0)
+                self.glfont.set_color_float((0.1,8.,8.,.9))
+                self.glfont.draw_text(text_anchor[0]+15,text_anchor[1]+6,self.marker_status())
+                self.glfont.draw_text(surface_edit_anchor[0]+15,surface_edit_anchor[1]+6,'edit surface')
+                self.glfont.draw_text(marker_edit_anchor[0]+15,marker_edit_anchor[1]+6,'add/remove markers')
             else:
-                draw_points([marker_edit_anchor])
-            if surface_mode:
-                draw_points([surface_edit_anchor],color=RGBA(0,.8,.7))
-            else:
-                draw_points([surface_edit_anchor])
-            self.glfont.set_blur(3.9)
-            self.glfont.set_color_float((0,0,0,.8))
-            self.glfont.draw_text(text_anchor[0]+15,text_anchor[1]+6,self.marker_status())
-            self.glfont.draw_text(surface_edit_anchor[0]+15,surface_edit_anchor[1]+6,'edit surface')
-            self.glfont.draw_text(marker_edit_anchor[0]+15,marker_edit_anchor[1]+6,'add/remove markers')
-            self.glfont.set_blur(0.0)
-            self.glfont.set_color_float((0.1,8.,8.,.9))
-            self.glfont.draw_text(text_anchor[0]+15,text_anchor[1]+6,self.marker_status())
-            self.glfont.draw_text(surface_edit_anchor[0]+15,surface_edit_anchor[1]+6,'edit surface')
-            self.glfont.draw_text(marker_edit_anchor[0]+15,marker_edit_anchor[1]+6,'add/remove markers')
+                progress = (self.build_up_status/float(self.required_build_up))*100
+                progress_text = '%.0f%%'%progress
+                self.glfont.set_blur(3.9)
+                self.glfont.set_color_float((0,0,0,.8))
+                self.glfont.draw_text(text_anchor[0]+15,text_anchor[1]+6,self.marker_status())
+                self.glfont.draw_text(surface_edit_anchor[0]+15,surface_edit_anchor[1]+6,'Learning affiliated markers...')
+                self.glfont.draw_text(marker_edit_anchor[0]+15,marker_edit_anchor[1]+6,progress_text)
+                self.glfont.set_blur(0.0)
+                self.glfont.set_color_float((0.1,8.,8.,.9))
+                self.glfont.draw_text(text_anchor[0]+15,text_anchor[1]+6,self.marker_status())
+                self.glfont.draw_text(surface_edit_anchor[0]+15,surface_edit_anchor[1]+6,'Learning affiliated markers...')
+                self.glfont.draw_text(marker_edit_anchor[0]+15,marker_edit_anchor[1]+6,progress_text)
 
     def gl_draw_corners(self):
         """
