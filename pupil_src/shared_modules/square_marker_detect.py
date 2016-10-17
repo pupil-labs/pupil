@@ -156,7 +156,7 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
         cv2.drawContours(gray_img, rect_cand,-1, (255,100,50))
 
 
-    markers = {}
+    markers = []
     size = 10*grid_size
     #top left,bottom left, bottom right, top right in image
     mapped_space = np.array( ((0,0),(size,0),(size,size),(0,size)) ,dtype=np.float32).reshape(4,1,2)
@@ -195,13 +195,11 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
                 marker = {'id':msg,'verts':r,'perimeter':cv2.arcLength(r,closed=True),'centroid':centroid,"frames_since_true_detection":0}
                 if visualize:
                     marker['img'] = np.rot90(otsu,-angle/90)
-                if markers.has_key(marker['id']) and markers[marker['id']]['perimeter'] > marker['perimeter']:
-                    pass
-                else:
-                    markers[marker['id']] = marker
+                if marker['id'] != 32:
+                    markers.append(marker)
 
 
-    return markers.values()
+    return markers
 
 
 def draw_markers(img,markers):
@@ -351,8 +349,9 @@ class MarkerTracker(object):
         y = [1.,.9 , .2, .1, .0]
         self.loc_conf_target = interp1d(x,y, kind='cubic')
         self.loc_conf_velocity = .75
-        self.rep_match_loc_conf = .1
-        self.loc_purge_threshold = .2
+        self.initial_loc_conf = .2
+        self.rep_match_loc_conf = .2
+        self.loc_purge_threshold = .1
         self.loc_dist_weight = .8
 
         self.id_merge_weight = .1
@@ -360,7 +359,8 @@ class MarkerTracker(object):
 
         self.display_threshold = .4
         self.max_match_dist = .1
-        self.unmatched_penalty = .2
+        self.unmatched_penalty = .15
+        self.prev_img = None
 
     @property
     def id_dist_weight(self): return 1. - self.loc_dist_weight
@@ -411,7 +411,7 @@ class MarkerTracker(object):
 
     def _append_marker(self, flat_marker):
         copied_marker = flat_marker[:]
-        copied_marker[self.loc_conf_idx] = .3
+        copied_marker[self.loc_conf_idx] = self.initial_loc_conf
         # append velocity 0
         hstacked = np.hstack((copied_marker, np.zeros(8)))
         self.state.append(hstacked)
@@ -469,7 +469,6 @@ class MarkerTracker(object):
             match_idx = np.argmin(distances)
             matched_hist_idx, matched_observ_idx = np.unravel_index(match_idx, distances.shape)
 
-            #
             self._merge_marker(
                 self.state[matched_hist_idx],
                 observed_markers[matched_observ_idx])
@@ -480,12 +479,48 @@ class MarkerTracker(object):
             hist_to_match[matched_hist_idx] = False
             observ_to_match[matched_observ_idx] = False
 
-        for hist_marker, unmatched in zip(self.state,hist_to_match):
-            # penalize unmatched history entries
-            if unmatched:
+        prev_pts = []
+        unmatched_history = filter(
+            lambda (_,unmatched): unmatched,
+            izip(self.state,hist_to_match))
+        for hist_marker, unmatched in unmatched_history:
+            # use optical flow to track unmatched markers...
+            norm_verts = hist_marker[self.vert_slc].reshape((4,2))
+            verts = (norm_verts * gray_img.T.shape).astype(np.float32)
+            prev_pts.append(verts)
+
+        if self.prev_img is not None and prev_pts:
+            prev_pts = np.vstack(prev_pts)
+            new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(
+                self.prev_img, gray_img, prev_pts,
+                minEigThreshold=0.01,**lk_params)
+
+            for marker_idx in xrange(flow_found.shape[0]/4):
+                hist_marker = unmatched_history[marker_idx][0]
                 hist_marker[self.loc_conf_idx] -= self.unmatched_penalty
-                # forward project marker if it was not found
-                hist_marker[self.vert_slc] += hist_marker[self.vel_slc]
+                m_slc = slice(marker_idx*4,marker_idx*4+4)
+                if flow_found[m_slc].sum() >= 3:
+                    found, _  = np.where(flow_found[m_slc])
+                    # calculate differences
+                    old_verts = prev_pts[m_slc][found,:]
+                    new_verts = new_pts[m_slc][found,:]
+                    vert_difs = new_verts - old_verts
+
+                    # calc mean dif
+                    mean_dif = vert_difs.mean(axis=0)
+                    # take 3 closest difs
+                    mean_dif_dist = np.linalg.norm(mean_dif - vert_difs,axis=1)
+                    closest_mean_dif = np.argsort(mean_dif_dist)[:-1]
+                    # recalc mean dif
+                    mean_dif = vert_difs[closest_mean_dif].mean(axis=0)
+
+                    m_id = bin_list_to_int(np.round(hist_marker[self.id_slc]).astype(int))
+                    # apply mean dif and normalize
+                    proj_verts = (prev_pts[m_slc] + mean_dif) / gray_img.T.shape
+                    hist_marker[self.vert_slc] = proj_verts.flatten()
+                else:
+                    # penalize again, if optical flow did not work
+                    hist_marker[self.loc_conf_idx] -= 2*self.unmatched_penalty
 
         for observ_marker, unmatched in zip(observed_markers, observ_to_match):
             # add unmatched oberservations
@@ -506,6 +541,7 @@ class MarkerTracker(object):
             tracked_m['perimeter'] = cv2.arcLength(tracked_m['verts'],closed=True)
             tracked_m['img'] = gray_img
 
+        self.prev_img = gray_img
 
         return tracked_markers
 

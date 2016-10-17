@@ -224,7 +224,7 @@ class Reference_Surface(object):
         requested_ids = set(self.markers.keys())
         overlap = visible_ids & requested_ids
         overlap_perimeter = sum(marker_by_id[i]['perimeter'] for i in overlap)
-        if overlap and overlap_perimeter>=min_marker_perimeter*min(2,len(requested_ids)):
+        if overlap and overlap_perimeter>=min_marker_perimeter*min(2,len(requested_ids)) and len(overlap) >= min(2,len(requested_ids)):
             detected = True
             xy = np.array( [marker_by_id[i]['verts'] for i in overlap] )
             uv = np.array( [self.markers[i].uv_coords for i in overlap] )
@@ -409,7 +409,7 @@ class Reference_Surface(object):
             marker_verts_undistorted_normalized = cv2.undistortPoints(marker_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
             marker_uv_coords =  cv2.perspectiveTransform(marker_verts_undistorted_normalized,res['m_from_undistored_norm_space'])
             support_marker.load_uv_coords(marker_uv_coords)
-        self.markers[marker['id']] = support_marker
+            self.markers[marker['id']] = support_marker
 
 
     def remove_marker(self,marker):
