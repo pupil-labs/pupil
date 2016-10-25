@@ -313,12 +313,12 @@ def session(rec_dir):
     other_plugins = [selector_label] + sorted(user_launchable_plugins[16:18], key=lambda x: x.__name__)
     other_labels = [plugin_labels[2]] + ["   " + p.__name__.replace('_',' ') for p in other_plugins[1:]]
 
-    if len(user_launchable_plugins) > 18:
-        user_plugins = [selector_label] + sorted(user_launchable_plugins[18:], key=lambda x: x.__name__)
-        user_labels = [plugin_labels[3]] + ["   " + p.__name__.replace('_',' ') for p in user_plugins[1:]]
-    else:
-        user_plugins = [selector_label]
-        user_labels = [plugin_labels[3]]
+    
+    user_plugins = [selector_label] + sorted(user_launchable_plugins[18:], key=lambda x: x.__name__)
+    user_labels = [plugin_labels[3]] + ["   " + p.__name__.replace('_',' ') for p in user_plugins[1:]]
+    # else:
+    #     user_plugins = [selector_label]
+    #     user_labels = [plugin_labels[3]]
 
     plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
     labels = vis_labels + analysis_labels + other_labels + user_labels
