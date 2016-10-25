@@ -302,25 +302,30 @@ def session(rec_dir):
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
 
     selector_label = "Select to load"
-    plugin_labels = ["Visualization", "Analysis", "Other"]
+    plugin_labels = ["Visualization", "Analysis", "Other", "User added"]
 
-    # vis_plugins =  [selector_label] + user_launchable_plugins[:7]
-    # vis_labels = [selector_label] + sorted([p.__name__.replace('_',' ') for p in vis_plugins[1:]])
+    vis_plugins = [selector_label, selector_label] + sorted(user_launchable_plugins[:7], key=lambda x: x.__name__)
+    vis_labels = [selector_label, plugin_labels[0]] + ["   " + p.__name__.replace('_',' ') for p in vis_plugins[2:]]
 
-    # analysis_plugins =  [selector_label] + user_launchable_plugins[7:16]
-    # analysis_labels = [selector_label] + sorted([p.__name__.replace('_',' ') for p in analysis_plugins[1:]])
+    analysis_plugins = [selector_label] + sorted(user_launchable_plugins[7:16], key=lambda x: x.__name__)
+    analysis_labels = [plugin_labels[1]] + ["   " + p.__name__.replace('_',' ') for p in analysis_plugins[1:]]
 
-    # other_plugins =  [selector_label] + user_launchable_plugins[16:]
-    # other_labels = [selector_label] + sorted([p.__name__.replace('_',' ') for p in other_plugins[1:]])
-    vis_labels = sorted([p.__name__.replace('_',' ') for p in user_launchable_plugins[:7]])
-    vis_labels = ["   " + i for i in vis_labels]
-    analysis_labels = sorted([p.__name__.replace('_',' ') for p in user_launchable_plugins[7:16]])
-    analysis_labels = ["   " + i for i in analysis_labels]
-    other_labels = sorted([p.__name__.replace('_',' ') for p in user_launchable_plugins[16:]])
-    other_labels = ["   " + i for i in other_labels]
+    other_plugins = [selector_label] + sorted(user_launchable_plugins[16:18], key=lambda x: x.__name__)
+    other_labels = [plugin_labels[2]] + ["   " + p.__name__.replace('_',' ') for p in other_plugins[1:]]
 
-    plugins = [selector_label, selector_label] + user_launchable_plugins[:7] + [selector_label] + user_launchable_plugins[7:16] + [selector_label] + user_launchable_plugins[16:]
-    labels = [selector_label, plugin_labels[0]] + vis_labels + [plugin_labels[1]] + analysis_labels + [plugin_labels[2]] + other_labels
+    if len(user_launchable_plugins) > 18:
+        user_plugins = [selector_label] + sorted(user_launchable_plugins[18:], key=lambda x: x.__name__)
+        user_labels = [plugin_labels[3]] + ["   " + p.__name__.replace('_',' ') for p in user_plugins[1:]]
+    else:
+        user_plugins = [selector_label]
+        user_labels = [plugin_labels[3]]
+
+    plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
+    labels = vis_labels + analysis_labels + other_labels + user_labels
+
+    print "plugins ", plugins
+    print "labels: ", labels
+    print "len of user_launchable_plugins: ", len(user_launchable_plugins)
 
     g_pool.main_menu.append(ui.Selector('Open plugin:',
                                         selection = plugins,
