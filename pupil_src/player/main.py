@@ -302,32 +302,32 @@ def session(rec_dir):
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
 
     selector_label = "Select to load"
+    plugin_labels = ["Visualization", "Analysis", "Other"]
 
-    vis_plugins =  [selector_label] + user_launchable_plugins[:7]
-    vis_labels = [selector_label] + [p.__name__.replace('_',' ') for p in vis_plugins[1:]]
+    # vis_plugins =  [selector_label] + user_launchable_plugins[:7]
+    # vis_labels = [selector_label] + sorted([p.__name__.replace('_',' ') for p in vis_plugins[1:]])
 
-    analysis_plugins =  [selector_label] + user_launchable_plugins[7:16]
-    analysis_labels = [selector_label] + [p.__name__.replace('_',' ') for p in analysis_plugins[1:]]
+    # analysis_plugins =  [selector_label] + user_launchable_plugins[7:16]
+    # analysis_labels = [selector_label] + sorted([p.__name__.replace('_',' ') for p in analysis_plugins[1:]])
 
-    other_plugins =  [selector_label] + user_launchable_plugins[16:]
-    other_labels = [selector_label] + [p.__name__.replace('_',' ') for p in other_plugins[1:]]
+    # other_plugins =  [selector_label] + user_launchable_plugins[16:]
+    # other_labels = [selector_label] + sorted([p.__name__.replace('_',' ') for p in other_plugins[1:]])
+    vis_labels = sorted([p.__name__.replace('_',' ') for p in user_launchable_plugins[:7]])
+    vis_labels = ["   " + i for i in vis_labels]
+    analysis_labels = sorted([p.__name__.replace('_',' ') for p in user_launchable_plugins[7:16]])
+    analysis_labels = ["   " + i for i in analysis_labels]
+    other_labels = sorted([p.__name__.replace('_',' ') for p in user_launchable_plugins[16:]])
+    other_labels = ["   " + i for i in other_labels]
 
-    g_pool.main_menu.append(ui.Info_Text('Open plugin:'))
-    g_pool.main_menu.append(ui.Selector('Visualization',
-                                        selection = vis_plugins,
-                                        labels    = vis_labels,
+    plugins = [selector_label, selector_label] + user_launchable_plugins[:7] + [selector_label] + user_launchable_plugins[7:16] + [selector_label] + user_launchable_plugins[16:]
+    labels = [selector_label, plugin_labels[0]] + vis_labels + [plugin_labels[1]] + analysis_labels + [plugin_labels[2]] + other_labels
+
+    g_pool.main_menu.append(ui.Selector('Open plugin:',
+                                        selection = plugins,
+                                        labels    = labels,
                                         setter    = open_plugin,
                                         getter    = lambda: selector_label))
-    g_pool.main_menu.append(ui.Selector('Analysis',
-                                        selection = analysis_plugins,
-                                        labels    = analysis_labels,
-                                        setter    = open_plugin,
-                                        getter    = lambda: selector_label))
-    g_pool.main_menu.append(ui.Selector('Other',
-                                        selection = other_plugins,
-                                        labels    = other_labels,
-                                        setter    = open_plugin,
-                                        getter    = lambda: selector_label))
+
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
