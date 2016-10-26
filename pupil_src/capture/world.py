@@ -331,13 +331,17 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
 
     #We add the calibration menu selector, after a calibration has been added:
-    g_pool.calibration_menu.insert(0,ui.Selector('active_calibration_plugin',getter=lambda: g_pool.active_calibration_plugin.__class__, selection = calibration_plugins,
+    g_pool.calibration_menu.insert(0,ui.Selector(
+                                        'active_calibration_plugin',
+                                        getter=lambda: g_pool.active_calibration_plugin.__class__,
+                                        selection = calibration_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
-                                        setter= open_plugin,label='Method'))
+                                        setter= open_plugin,label='Method'
+                                                ))
 
     #We add the capture selection menu, after a manager has been added:
     g_pool.capture_selector_menu.insert(0,ui.Selector(
-        'capture_manager',g_pool,
+        'capture_manager',
         setter    = open_plugin,
         getter    = lambda: g_pool.capture_manager.__class__,
         selection = manager_classes,
