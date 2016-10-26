@@ -498,6 +498,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
 
                     window_size =  glfw.glfwGetWindowSize(main_window)
                     make_coord_system_pixel_based((frame.height,frame.width,3),g_pool.flip)
+                    g_pool.capture.gl_display()
 
                     if result['method'] == '3d c++':
 
