@@ -126,10 +126,12 @@ class Global_Container(object):
 
 def session(rec_dir):
 
-
     system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
-    user_launchable_plugins = [Vis_Circle,Vis_Polyline,Vis_Light_Points,Vis_Cross,Vis_Watermark,Eye_Video_Overlay,Scan_Path,Gaze_Position_2D_Fixation_Detector,Pupil_Angle_3D_Fixation_Detector,Pupil_Angle_3D_Fixation_Detector,Manual_Gaze_Correction,Video_Export_Launcher,Offline_Surface_Tracker,Raw_Data_Exporter,Batch_Exporter,Annotation_Player,Show_Calibration,Log_History] #,Marker_Auto_Trim_Marks
-    user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
+    vis_plugins = sorted([Vis_Circle,Vis_Polyline,Vis_Light_Points,Vis_Cross,Vis_Watermark,Eye_Video_Overlay,Scan_Path], key=lambda x: x.__name__)
+    analysis_plugins = sorted([Gaze_Position_2D_Fixation_Detector,Pupil_Angle_3D_Fixation_Detector,Pupil_Angle_3D_Fixation_Detector,Manual_Gaze_Correction,Video_Export_Launcher,Offline_Surface_Tracker,Raw_Data_Exporter,Batch_Exporter,Annotation_Player], key=lambda x: x.__name__)
+    other_plugins = sorted([Show_Calibration,Log_History], key=lambda x: x.__name__)
+    user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir,'plugins')), key=lambda x: x.__name__)
+    user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
     available_plugins = system_plugins + user_launchable_plugins
     name_by_index = [p.__name__ for p in available_plugins]
     index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
@@ -304,28 +306,13 @@ def session(rec_dir):
     selector_label = "Select to load"
     plugin_labels = ["Visualization", "Analysis", "Other", "User added"]
 
-    vis_plugins = [selector_label, selector_label] + sorted(user_launchable_plugins[:7], key=lambda x: x.__name__)
-    vis_labels = [selector_label, plugin_labels[0]] + ["   " + p.__name__.replace('_',' ') for p in vis_plugins[2:]]
+    vis_labels = [selector_label, plugin_labels[0]] + ["   " + p.__name__.replace('_',' ') for p in vis_plugins]
+    analysis_labels = [plugin_labels[1]] + ["   " + p.__name__.replace('_',' ') for p in analysis_plugins]
+    other_labels = [plugin_labels[2]] + ["   " + p.__name__.replace('_',' ') for p in other_plugins]
+    user_labels = [plugin_labels[3]] + ["   " + p.__name__.replace('_',' ') for p in user_plugins]
 
-    analysis_plugins = [selector_label] + sorted(user_launchable_plugins[7:16], key=lambda x: x.__name__)
-    analysis_labels = [plugin_labels[1]] + ["   " + p.__name__.replace('_',' ') for p in analysis_plugins[1:]]
-
-    other_plugins = [selector_label] + sorted(user_launchable_plugins[16:18], key=lambda x: x.__name__)
-    other_labels = [plugin_labels[2]] + ["   " + p.__name__.replace('_',' ') for p in other_plugins[1:]]
-
-    
-    user_plugins = [selector_label] + sorted(user_launchable_plugins[18:], key=lambda x: x.__name__)
-    user_labels = [plugin_labels[3]] + ["   " + p.__name__.replace('_',' ') for p in user_plugins[1:]]
-    # else:
-    #     user_plugins = [selector_label]
-    #     user_labels = [plugin_labels[3]]
-
-    plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
+    plugins = [selector_label, selector_label] + vis_plugins + [selector_label] + analysis_plugins + [selector_label] + other_plugins + [selector_label] + user_plugins
     labels = vis_labels + analysis_labels + other_labels + user_labels
-
-    print "plugins ", plugins
-    print "labels: ", labels
-    print "len of user_launchable_plugins: ", len(user_launchable_plugins)
 
     g_pool.main_menu.append(ui.Selector('Open plugin:',
                                         selection = plugins,
