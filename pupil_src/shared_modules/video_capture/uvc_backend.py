@@ -372,6 +372,7 @@ class UVC_Manager(Base_Manager):
     def activate_source(self, settings={}):
         if self.g_pool.capture.class_name() == UVC_Source.class_name():
             prev_settings = self.g_pool.capture.settings
+            del prev_settings['uvc_controls']
             self.g_pool.capture.deinit_gui()
             self.g_pool.capture.cleanup()
             self.g_pool.capture = None
