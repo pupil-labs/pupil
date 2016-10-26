@@ -71,19 +71,6 @@ else:
     from eye import eye
 
 
-# To assign camera by name: put string(s) in list
-world_src = ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"]
-eye0_src = ["Pupil Cam1 ID0","HD-6000","Integrated Camera","HD USB Camera","USB 2.0 Camera"]
-eye1_src = ["Pupil Cam1 ID1","HD-6000","Integrated Camera"]
-
-# to use a pre-recorded video.
-# Use a string to specify the path to your video file as demonstrated below
-# world_src = "/Users/mkassner/Downloads/000/world.mkv"
-# eye0_src = '/Users/mkassner/Downloads/eye0.mkv'
-# eye1_src =  '/Users/mkassner/Downloads/eye.avi'
-
-video_sources = {'world':world_src,'eye0':eye0_src,'eye1':eye1_src}
-
 
 def launcher():
     """Starts eye processes. Hosts the IPC Backbone and Logging functions.
@@ -230,7 +217,7 @@ def launcher():
                             ipc_push_url,
                             user_dir,
                             app_version,
-                            video_sources['world'] )).start()
+                            )).start()
 
     with Prevent_Idle_Sleep():
         while True:
@@ -248,8 +235,8 @@ def launcher():
                                     ipc_push_url,
                                     user_dir,
                                     app_version,
-                                    eye_id,
-                                    video_sources['eye%s'%eye_id] )).start()
+                                    eye_id
+                                    )).start()
             elif "notify.launcher_process.should_stop" in topic:
                 break
             elif "notify.meta.should_doc" in topic:

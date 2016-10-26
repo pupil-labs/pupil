@@ -35,7 +35,7 @@ class Is_Alive_Manager(object):
         self.ipc_socket.notify({'subject':'eye_process.stopped', 'eye_id':self.eye_id})
 
 
-def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir, version, eye_id, cap_src):
+def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir, version, eye_id,overwrite_cap_settings=None):
     """reads eye video and detects the pupil.
 
     Creates a window, gl context.
@@ -202,20 +202,24 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         capture_manager_settings = session_settings.get(
             'capture_manager_settings', ('UVC_Manager',{'check_devices':False}))
 
+        if eye_id == 0:
+            cap_src = ["Pupil Cam1 ID0","HD-6000","Integrated Camera","HD USB Camera","USB 2.0 Camera"]
+        else:
+            cap_src = ["Pupil Cam1 ID1","HD-6000","Integrated Camera"]
+
         # Initialize capture
-        fallback_settings = {
+        default_settings = {
             'source_class_name': 'UVC_Source',
             'name'     : cap_src,
             'frame_size': (640,480),
             'frame_rate': 60
         }
-        settings = session_settings.get('capture_settings', fallback_settings)
+        settings = overwrite_cap_settings or session_settings.get('capture_settings', default_settings)
         try:
             cap = source_by_name[settings['source_class_name']](g_pool, **settings)
-        except KeyError:
-            logger.warning('Incompatible capture setting encountered. Falling back to fake source.')
-            cap = Fake_Source(g_pool, **settings)
-        except InitialisationError:
+        except (KeyError,InitialisationError) as e:
+            if isinstance(e,KeyError):
+                logger.warning('Incompatible capture setting encountered. Falling back to fake source.')
             cap = Fake_Source(g_pool, **settings)
 
         g_pool.iconified = False
@@ -569,10 +573,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         g_pool.capture.cleanup()
         logger.info("Process shutting down.")
 
-def eye_profiled(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, cap_src):
+def eye_profiled(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id,overwrite_cap_settings=None):
     import cProfile,subprocess,os
     from eye import eye
-    cProfile.runctx("eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, cap_src)",{'timebase':timebase,'is_alive_flag':is_alive_flag,'ipc_pub_url':ipc_pub_url,'ipc_sub_url':ipc_sub_url,'ipc_push_url':ipc_push_url, 'user_dir':user_dir, 'version':version, 'eye_id':eye_id,'cap_src':cap_src},locals(),"eye%s.pstats"%eye_id)
+    cProfile.runctx("eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings)",{'timebase':timebase,'is_alive_flag':is_alive_flag,'ipc_pub_url':ipc_pub_url,'ipc_sub_url':ipc_sub_url,'ipc_push_url':ipc_push_url, 'user_dir':user_dir, 'version':version, 'eye_id':eye_id,'overwrite_cap_settings':overwrite_cap_settings},locals(),"eye%s.pstats"%eye_id)
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye%s.pstats | dot -Tpng -o eye%s_cpu_time.png"%(eye_id,eye_id), shell=True)

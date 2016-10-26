@@ -13,7 +13,7 @@ import os, sys, platform
 class Global_Container(object):
     pass
 
-def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
+def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version):
     """Reads world video and runs plugins.
 
     Creates a window, gl context.
@@ -200,26 +200,24 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         session_settings.clear()
 
     # Initialize capture
-    fallback_settings = {
+    default_settings = {
         'source_class_name': 'UVC_Source',
-        'name'     : cap_src,
+        'name'     : ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"],
         'frame_size': (1280,720),
         'frame_rate': 30
     }
-    settings = session_settings.get('capture_settings', fallback_settings)
+    settings = session_settings.get('capture_settings', default_settings)
     try:
         cap = source_by_name[settings['source_class_name']](g_pool, **settings)
-    except KeyError:
-        logger.warning('Incompatible capture setting encountered. Falling back to fake source.')
-        cap = Fake_Source(g_pool, **settings)
-    except InitialisationError:
+    except (KeyError,InitialisationError) as e:
+        if isinstance(e,KeyError):
+            logger.warning('Incompatible capture setting encountered. Falling back to fake source.')
         cap = Fake_Source(g_pool, **settings)
 
     g_pool.iconified = False
     g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode','2d')
     g_pool.active_calibration_plugin = None
     g_pool.active_gaze_mapping_plugin = None
-
     g_pool.capture = cap
     g_pool.capture_manager = None
 
