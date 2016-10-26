@@ -304,15 +304,14 @@ def session(rec_dir):
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
 
     selector_label = "Select to load"
-    plugin_labels = ["Visualization", "Analysis", "Other", "User added"]
 
-    vis_labels = [selector_label, plugin_labels[0]] + ["   " + p.__name__.replace('_',' ') for p in vis_plugins]
-    analysis_labels = [plugin_labels[1]] + ["   " + p.__name__.replace('_',' ') for p in analysis_plugins]
-    other_labels = [plugin_labels[2]] + ["   " + p.__name__.replace('_',' ') for p in other_plugins]
-    user_labels = [plugin_labels[3]] + ["   " + p.__name__.replace('_',' ') for p in user_plugins]
+    vis_labels = ["   " + p.__name__.replace('_',' ') for p in vis_plugins]
+    analysis_labels = ["   " + p.__name__.replace('_',' ') for p in analysis_plugins]
+    other_labels = ["   " + p.__name__.replace('_',' ') for p in other_plugins]
+    user_labels = ["   " + p.__name__.replace('_',' ') for p in user_plugins]
 
     plugins = [selector_label, selector_label] + vis_plugins + [selector_label] + analysis_plugins + [selector_label] + other_plugins + [selector_label] + user_plugins
-    labels = vis_labels + analysis_labels + other_labels + user_labels
+    labels = [selector_label, "Visualization"] + vis_labels + ["Analysis"] + analysis_labels + ["Other"] + other_labels + ["User added"] + user_labels
 
     g_pool.main_menu.append(ui.Selector('Open plugin:',
                                         selection = plugins,
