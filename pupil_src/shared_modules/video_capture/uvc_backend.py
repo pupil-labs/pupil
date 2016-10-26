@@ -43,7 +43,10 @@ class UVC_Source(Base_Source):
             for name in names:
                 if name in devices_by_name:
                     uid_for_name = devices_by_name[name]['uid']
-                    self.uvc_capture = uvc.Capture(uid_for_name)
+                    try:
+                        self.uvc_capture = uvc.Capture(uid_for_name)
+                    except uvc.InitError:
+                        raise InitialisationError("The selected camera is already in use or blocked.")
                     break
         # uid is given
         elif uid and uid in devices_by_uid:
