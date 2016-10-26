@@ -105,7 +105,6 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.glfont.set_align_string(v_align='center')
 
 
-
     def init_gui(self):
         self.monitor_idx = 0
         self.monitor_names = [glfwGetMonitorName(m) for m in glfwGetMonitors()]
