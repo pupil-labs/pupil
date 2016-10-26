@@ -96,7 +96,7 @@ class File_Source(Base_Source):
 
         self.slowdown = 0.0
         self.source_path = source_path
-        self.container = av.open(source_path)
+        self.container = av.open(str(source_path))
 
         try:
             self.video_stream = next(s for s in self.container.streams if s.type=="video")# looking for the first videostream
