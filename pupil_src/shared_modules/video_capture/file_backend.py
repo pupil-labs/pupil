@@ -255,18 +255,6 @@ class File_Source(Base_Source):
         self.display_time = 0
 
 
-    def get_now(self):
-        try:
-            timestamp = self.timestamps[self.get_frame_index()-1]
-            logger.debug("Filecapture is not a realtime source. -NOW- will be the current timestamp")
-        except IndexError:
-            logger.warning("timestamp not found.")
-            timestamp = 0
-        return timestamp
-
-    def get_timestamp(self):
-        return self.get_now()
-
     def init_gui(self):
         from pyglui import ui
         ui_elements = []
