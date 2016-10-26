@@ -433,8 +433,9 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
             sleep(.2)
             continue
         except EndofVideoFileError:
-            logger.warning("Video file is done. Stopping")
-            break
+            logger.warning("Video file is done. Rewinding")
+            g_pool.capture.seek_to_frame(0)
+            continue
 
         #update performace graphs
         t = frame.timestamp
