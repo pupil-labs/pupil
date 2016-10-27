@@ -255,8 +255,8 @@ def m_screen_to_marker(marker):
 
 
 #persistent vars for detect_markers_robust
-lk_params = dict( winSize  = (45, 45),
-                  maxLevel = 1,
+lk_params = dict( winSize  = (90, 90),
+                  maxLevel = 3,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 prev_img = None
 tick = 0
