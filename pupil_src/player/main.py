@@ -346,7 +346,7 @@ def session(rec_dir):
     #set up performace graphs:
     pid = os.getpid()
     ps = psutil.Process(pid)
-    ts = cap.get_timestamp()-.03
+    ts = None
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,110)
@@ -394,9 +394,9 @@ def session(rec_dir):
                 pupil_graph.add(p['confidence'])
 
             t = new_frame.timestamp
-            if ts != t:
+            if ts and ts != t:
                 dt,ts = t-ts,t
-            fps_graph.add(1./dt)
+                fps_graph.add(1./dt)
 
             g_pool.play_button.status_text = str(frame.index)
         #always update the CPU graph
