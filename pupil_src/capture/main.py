@@ -205,8 +205,8 @@ def launcher():
                             ipc_sub_url,
                             ipc_push_url,
                             user_dir,
-                            app_version,
-                            None)).start()
+                            app_version
+                            )).start()
     else:
         Process(target=world,
                       name= 'world',
