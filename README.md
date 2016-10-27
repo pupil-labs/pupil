@@ -18,14 +18,14 @@ For an intro to the Pupil mobile eye tracking platform have a look at the [Pupil
 	<td align="center" width="20%"><img width="100" src="https://github.com/pupil-labs/pupil/wiki/media/icons/Pupil_Logo_wiki-02.png" /></td>
 </tr>
 <tr>
-	<td><a href="https://github.com/pupil-labs/pupil/wiki/Getting-Pupil-Hardware">Get Pupil Hardware</a></td>
+	<td><a href="https://github.com/pupil-labs/pupil/wiki/Getting-Pupil-Hardware">Pupil Hardware</a></td>
 	<td><a href="https://github.com/pupil-labs/pupil/wiki/Getting-Started">Getting Started</a></td>
 	<td><a href="https://github.com/pupil-labs/pupil/wiki/User-Guide">User Docs</a></td>
 	<td><a href="https://github.com/pupil-labs/pupil/wiki/Developer-Guide">Developer Docs</a></td>
 	<td><a href="https://github.com/pupil-labs/pupil/wiki/Community">Community</a></td>
 </tr>
 <tr>
-	<td valign="top">How and where to get your mobile eye tracking headset</td>
+	<td valign="top">Get and setup your Pupil eye tracking hardware</td>
 	<td valign="top">Get up and running and learn the basic Pupil workflow</td>
 	<td valign="top">Learn more about Pupil Capture and Pupil Player software settings and workflows here</td>
 	<td valign="top">Want to write code? Read the developer docs here</td>
