@@ -430,7 +430,9 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
             g_pool.capture.deinit_gui()
             g_pool.capture.cleanup()
             g_pool.capture = None
-            g_pool.capture = Fake_Source(g_pool, **prev_settings)
+            prev_settings['info_text'] ="'%s' disconnected. Trying to reconnect..."%prev_settings['name']
+            g_pool.capture = Fake_Source(g_pool,**prev_settings)
+            g_pool.capture.init_gui()
             ipc_pub.notify({'subject':'recording.should_stop'})
             logger.error("Error getting frame. Falling back to Fake source.")
             logger.debug("Caught error: %s"%excp)
