@@ -236,7 +236,7 @@ class Reference_Surface(object):
             # compute the homography transform from marker into the undistored normalized image space
             # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
             xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
-            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized)
+            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized,method=cv2.cv.CV_RANSAC,ransacReprojThreshold=0.01)
             m_from_undistored_norm_space,mask = cv2.findHomography(xy_undistorted_normalized,uv)
             # project the corners of the surface to undistored space
             corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
@@ -277,7 +277,7 @@ class Reference_Surface(object):
 
             if self.old_corners_robust is not None:
                 smooth_corners_robust  = self.old_corners_robust
-                smooth_corners_robust += .5*(corners_robust-self.old_corners_robust )
+                smooth_corners_robust += .6*(corners_robust-self.old_corners_robust )
 
                 corners_robust = smooth_corners_robust
                 self.old_corners_robust  = smooth_corners_robust
