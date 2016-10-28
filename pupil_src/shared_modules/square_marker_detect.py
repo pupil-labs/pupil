@@ -190,9 +190,12 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
     for r in rect_cand:
         if correct_gradient(gray_img,r):
             r = np.float32(r)
+            # define the criteria to stop and refine the marker verts
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 40, 0.001)
+            cv2.cornerSubPix(gray_img,r,(3,3      ),(-1,-1),criteria)
+
             M = cv2.getPerspectiveTransform(r,mapped_space)
             flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
-
             # Otsu documentation here :
             # https://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_imgproc/py_thresholding/py_thresholding.html#thresholding
             _ , otsu = cv2.threshold(flat_marker_img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
@@ -202,14 +205,9 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
             cv2.erode(otsu,kernel,otsu, iterations=3)
             # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
             # cv2.dilate(otsu,kernel,otsu, iterations=1)
-
             marker = decode(otsu, grid_size)
             if marker is not None:
                 angle,msg,soft_msg,msg_img = marker
-
-                # define the criteria to stop and refine the marker verts
-                criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
-                cv2.cornerSubPix(gray_img,r,(3,3),(-1,-1),criteria)
 
                 centroid = r.sum(axis=0)/4.
                 centroid.shape = (2)
@@ -220,19 +218,15 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
                 r = np.roll(r,angle+1,axis=0) #np.roll is not the fastest when using these tiny arrays...
 
                 id_confidence = 2*np.mean (np.abs(np.array(soft_msg)-.5 ))
-                # id_confidence = np.abs(np.array(soft_msg)-.5 )
+                id_confidence = 2* min(np.abs(np.array(soft_msg)-.5 ))
 
                 marker = {'id':msg,'id_confidence':id_confidence,'verts':r,'soft_id':soft_msg,'perimeter':cv2.arcLength(r,closed=True),'centroid':centroid,"frames_since_true_detection":0}
                 if visualize:
                     marker['otsu'] = np.rot90(otsu,-angle-2).transpose()
                     marker['img'] = cv2.resize(msg_img,(20*grid_size,20*grid_size),interpolation=cv2.INTER_NEAREST)
-                if marker['id'] != 32:
+                if marker['id'] != 32: #marker 32 sucks because its just a single white spec.
                     markers.append(marker)
-
-
     return markers
-
-
 
 
 
@@ -537,7 +531,7 @@ def bench(folder):
         img = frame.img
         gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
         markers = tracker.track_in_frame(gray_img,5,visualize=True)
-        # draw_markers(img, markers)
+        draw_markers(img, markers)
         cv2.imshow('Detected Markers', img)
         if cv2.waitKey(1) == 27:
            break
@@ -546,31 +540,31 @@ def bench(folder):
     print detected_count #3106 #3226
 
 
-def bench(folder):
-    from os.path import join
-    from video_capture.   av_file_capture import File_Capture
-    cap = File_Capture(join(folder,'marker-test.mp4'))
-    prev_markers = []
-    detected_count = 0
+# def bench(folder):
+#     from os.path import join
+#     from video_capture.   av_file_capture import File_Capture
+#     cap = File_Capture(join(folder,'marker-test.mp4'))
+#     prev_markers = []
+#     detected_count = 0
 
-    for x in range(500):
-        frame = cap.get_frame()
-        img = frame.img
-        gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
-        markers = detect_markers(gray_img,5,visualize=True)
-        prev_markers = markers
+#     for x in range(500):
+#         frame = cap.get_frame()
+#         img = frame.img
+#         gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
+#         markers = detect_markers(gray_img,5,visualize=True)
+#         prev_markers = markers
 
-        draw_markers(img, markers)
-        cv2.imshow('Detected Markers', img)
+#         draw_markers(img, markers)
+#         cv2.imshow('Detected Markers', img)
 
-        for m in markers:
-            if 'img' in m:
-                cv2.imshow('id %s'%m['id'], m['img'])
-                cv2.imshow('otsu %s'%m['id'], m['otsu'])
-        if cv2.waitKey(0) == 27:
-           break
-        detected_count += len(markers)
-    print detected_count #2900 #3042
+#         for m in markers:
+#             if 'img' in m:
+#                 cv2.imshow('id %s'%m['id'], m['img'])
+#                 cv2.imshow('otsu %s'%m['id'], m['otsu'])
+#         if cv2.waitKey(0) == 27:
+#            break
+#         detected_count += len(markers)
+#     print detected_count #2900 #3042 #3021
 
 
 
