@@ -94,6 +94,7 @@ class Reference_Surface(object):
         self.glfont.set_color_float((0.2,0.5,0.9,1.0))
 
 
+        self.old_corners_robust = None
         if saved_definition is not None:
             self.load_from_dict(saved_definition)
 
@@ -224,7 +225,8 @@ class Reference_Surface(object):
         requested_ids = set(self.markers.keys())
         overlap = visible_ids & requested_ids
         overlap_perimeter = sum(marker_by_id[i]['perimeter'] for i in overlap)
-        if overlap and overlap_perimeter>=min_marker_perimeter*min(2,len(requested_ids)) and len(overlap) >= min(2,len(requested_ids)):
+        # need at least two markers per surface when the surface is more that 1 marker.
+        if overlap and len(overlap) >= min(2,len(requested_ids)):
             detected = True
             xy = np.array( [marker_by_id[i]['verts'] for i in overlap] )
             uv = np.array( [self.markers[i].uv_coords for i in overlap] )
@@ -270,7 +272,18 @@ class Reference_Surface(object):
                 else:
                     corners_robust.append(nulldist)
 
+
             corners_robust = np.array(corners_robust)
+
+            if self.old_corners_robust is not None:
+                smooth_corners_robust  = self.old_corners_robust
+                smooth_corners_robust += .5*(corners_robust-self.old_corners_robust )
+
+                corners_robust = smooth_corners_robust
+                self.old_corners_robust  = smooth_corners_robust
+            else:
+                self.old_corners_robust = corners_robust
+
             #compute a perspective thransform from from the marker norm space to the apparent image.
             # The surface corners will be at the right points
             # However the space between the corners may be distored due to distortions of the lens,
