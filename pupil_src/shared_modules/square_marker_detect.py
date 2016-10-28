@@ -49,7 +49,11 @@ def decode(square_img,grid):
     msg = cv2.resize(square_img,(grid,grid),interpolation=cv2.INTER_LINEAR)
     msg = msg>50 #threshold
 
-    soft_msg = cv2.resize(square_img,(grid,grid),interpolation=cv2.INTER_AREA)
+
+    #resample to 4 pixel per gridcell. using linear interpolation
+    soft_msg = cv2.resize(square_img,(grid*2,grid*2),interpolation=cv2.INTER_LINEAR)
+    #take the area mean to get a soft msg bit.
+    soft_msg = cv2.resize(soft_msg,(grid,grid),interpolation=cv2.INTER_AREA)
 
 
 
@@ -215,10 +219,13 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
                 # but using m_screen_to_marker() will get you the marker with proper rotation.
                 r = np.roll(r,angle+1,axis=0) #np.roll is not the fastest when using these tiny arrays...
 
-                marker = {'id':msg,'verts':r,'soft_id':soft_msg,'perimeter':cv2.arcLength(r,closed=True),'centroid':centroid,"frames_since_true_detection":0}
+                id_confidence = 2*np.mean (np.abs(np.array(soft_msg)-.5 ))
+                # id_confidence = np.abs(np.array(soft_msg)-.5 )
+
+                marker = {'id':msg,'id_confidence':id_confidence,'verts':r,'soft_id':soft_msg,'perimeter':cv2.arcLength(r,closed=True),'centroid':centroid,"frames_since_true_detection":0}
                 if visualize:
-                    marker['otsu'] = np.rot90(otsu,-angle/90)
-                    marker['img'] = cv2.resize(np.rot90(msg_img,-angle/90),(20*grid_size,20*grid_size),interpolation=cv2.INTER_NEAREST)
+                    marker['otsu'] = np.rot90(otsu,-angle-2).transpose()
+                    marker['img'] = cv2.resize(msg_img,(20*grid_size,20*grid_size),interpolation=cv2.INTER_NEAREST)
                 if marker['id'] != 32:
                     markers.append(marker)
 
@@ -235,8 +242,11 @@ def draw_markers(img,markers):
         origin = m['verts'][0]
         hat = np.array([[[0,0],[0,1],[.5,1.25],[1,1],[1,0]]],dtype=np.float32)
         hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-        cv2.polylines(img,np.int0(hat),color = (0,0,255),isClosed=True)
-        cv2.polylines(img,np.int0(centroid),color = (255,255,0),isClosed=True,thickness=2)
+        if m['id_confidence']>.9:
+            cv2.polylines(img,np.int0(hat),color = (0,0,255),isClosed=True)
+        else:
+            cv2.polylines(img,np.int0(hat),color = (0,255,0),isClosed=True)
+        cv2.polylines(img,np.int0(centroid),color = (255,255,int(255*m['id_confidence'])),isClosed=True,thickness=2)
         m_str = 'id: %i'%m['id']
         org = origin.copy()
         # cv2.rectangle(img, tuple(np.int0(org+(-5,-13))[0,:]), tuple(np.int0(org+(100,30))[0,:]),color=(0,0,0),thickness=-1)
@@ -281,67 +291,10 @@ def m_screen_to_marker(marker):
 
 
 #persistent vars for detect_markers_robust
-lk_params = dict( winSize  = (90, 90),
-                  maxLevel = 3,
+lk_params = dict( winSize  = (45, 45),
+                  maxLevel = 2,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
-prev_img = None
-tick = 0
 
-def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False,true_detect_every_frame = 1,invert_image=False):
-    global prev_img
-
-    if invert_image:
-        gray_img = 255-gray_img
-
-    global tick
-    if not tick:
-        tick = true_detect_every_frame
-        new_markers = detect_markers(gray_img,grid_size,min_marker_perimeter,aperture,visualize)
-    else:
-        new_markers = []
-    tick -=1
-
-
-    if prev_img is not None and prev_markers:
-
-        new_ids = [m['id'] for m in new_markers]
-
-        #any old markers not found in the new list?
-        not_found = [m for m in prev_markers if m['id'] not in new_ids and m['id'] >=0]
-        if not_found:
-            prev_pts = np.array([m['centroid'] for m in not_found])
-            # new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,winSize=(100,100))
-            new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,minEigThreshold=0.01,**lk_params)
-            for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
-                if s: #ho do we ensure that this is a good move?
-                    m['verts'] += pt-m['centroid'] #uniformly translate verts by optlical flow offset
-                    m['centroid'] += pt-m['centroid'] #uniformly translate centrod by optlical flow offset
-                    m["frames_since_true_detection"] +=1
-                else:
-                    m["frames_since_true_detection"] = 100
-
-
-        #cocatenating like this will favour older markers in the doublication deletion process
-        markers = [m for m in not_found if m["frames_since_true_detection"] < 10 ]+new_markers
-        if markers: #del double detected markers
-            # min_distace = max([m['perimeter'] for m in markers])/4.
-            min_distace = 50
-            if len(markers)>1:
-                remove = set()
-                close_markers = get_close_markers(markers,min_distance=min_distace)
-                for f,s in close_markers.T:
-                    #remove the markers further down in the list
-                    remove.add(s)
-                remove = list(remove)
-                remove.sort(reverse=True)
-                for i in remove:
-                    del markers[i]
-    else:
-        markers = new_markers
-
-
-    prev_img = gray_img.copy()
-    return markers
 
 def int_to_bin_list(value, width=None):
     """Create binary repr from int
@@ -584,40 +537,40 @@ def bench(folder):
         img = frame.img
         gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
         markers = tracker.track_in_frame(gray_img,5,visualize=True)
-        draw_markers(img, markers)
+        # draw_markers(img, markers)
         cv2.imshow('Detected Markers', img)
-        if cv2.waitKey(0) == 27:
+        if cv2.waitKey(1) == 27:
            break
         detected_count += len(markers)
 
     print detected_count #3106 #3226
 
 
-# def bench(folder):
-#     from os.path import join
-#     from video_capture.   av_file_capture import File_Capture
-#     cap = File_Capture(join(folder,'marker-test.mp4'))
-#     prev_markers = []
-#     detected_count = 0
+def bench(folder):
+    from os.path import join
+    from video_capture.   av_file_capture import File_Capture
+    cap = File_Capture(join(folder,'marker-test.mp4'))
+    prev_markers = []
+    detected_count = 0
 
-#     for x in range(500):
-#         frame = cap.get_frame()
-#         img = frame.img
-#         gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
-#         markers = detect_markers(gray_img,5,visualize=True)
-#         prev_markers = markers
+    for x in range(500):
+        frame = cap.get_frame()
+        img = frame.img
+        gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
+        markers = detect_markers(gray_img,5,visualize=True)
+        prev_markers = markers
 
-#         draw_markers(img, markers)
-#         cv2.imshow('Detected Markers', img)
+        draw_markers(img, markers)
+        cv2.imshow('Detected Markers', img)
 
-#         for m in markers:
-#             if 'img' in m:
-#                 cv2.imshow('img %s'%m['soft_id'], m['img'])
-#                 cv2.imshow('otsu %s'%m['id'], m['otsu'])
-#         if cv2.waitKey(0) == 27:
-#            break
-#         detected_count += len(markers)
-#     print detected_count #2900 #3042
+        for m in markers:
+            if 'img' in m:
+                cv2.imshow('id %s'%m['id'], m['img'])
+                cv2.imshow('otsu %s'%m['id'], m['otsu'])
+        if cv2.waitKey(0) == 27:
+           break
+        detected_count += len(markers)
+    print detected_count #2900 #3042
 
 
 

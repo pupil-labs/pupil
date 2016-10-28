@@ -22,7 +22,7 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-from square_marker_detect import detect_markers_robust,detect_markers, draw_markers,m_marker_to_screen, MarkerTracker
+from square_marker_detect import detect_markers, draw_markers,m_marker_to_screen, MarkerTracker
 from reference_surface import Reference_Surface
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 
@@ -31,7 +31,7 @@ from math import sqrt
 class Surface_Tracker(Plugin):
     """docstring
     """
-    def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False):
+    def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False,robust_detection=True):
         super(Surface_Tracker, self).__init__(g_pool)
         self.order = .2
 
@@ -51,7 +51,7 @@ class Surface_Tracker(Plugin):
         self.running = True
 
 
-        self.robust_detection = 1
+        self.robust_detection = robust_detection
         self.aperture = 11
         self.min_marker_perimeter = min_marker_perimeter
         self.locate_3d = False
@@ -182,11 +182,17 @@ class Surface_Tracker(Plugin):
 
         if self.running:
             gray = frame.gray
+            if self.invert_image:
+                gray = 255-gray
 
-            self.markers = self.marker_tracker.track_in_frame(
-                gray, grid_size = 5,aperture=self.aperture,
-                min_marker_perimeter=self.min_marker_perimeter)
-
+            if self.robust_detection:
+                self.markers = self.marker_tracker.track_in_frame(
+                    gray, grid_size = 5,aperture=self.aperture,
+                    min_marker_perimeter=self.min_marker_perimeter)
+            else:
+                self.markers = detect_markers(
+                    gray, grid_size = 5,aperture=self.aperture,
+                    min_marker_perimeter=self.min_marker_perimeter)
             if self.mode == "Show marker IDs":
                 draw_markers(frame.gray,self.markers)
 
@@ -224,7 +230,7 @@ class Surface_Tracker(Plugin):
 
 
     def get_init_dict(self):
-        return {'mode':self.mode,'min_marker_perimeter':self.min_marker_perimeter}
+        return {'mode':self.mode,'min_marker_perimeter':self.min_marker_perimeter,'invert_image':self.invert_image,'robust_detection':self.robust_detection}
 
 
     def gl_display(self):
