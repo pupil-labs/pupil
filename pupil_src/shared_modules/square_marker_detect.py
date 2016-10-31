@@ -285,9 +285,68 @@ def m_screen_to_marker(marker):
 
 
 #persistent vars for detect_markers_robust
-lk_params = dict( winSize  = (45, 45),
+lk_params = dict( winSize  = (15, 15),
                   maxLevel = 2,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+
+prev_img = None
+tick = 0
+
+def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=40,aperture=11,visualize=False,true_detect_every_frame = 1,invert_image=False):
+    global prev_img
+
+    if invert_image:
+        gray_img = 255-gray_img
+
+    global tick
+    if not tick:
+        tick = true_detect_every_frame
+        new_markers = detect_markers(gray_img,grid_size,min_marker_perimeter,aperture,visualize)
+    else:
+        new_markers = []
+    tick -=1
+
+
+    if prev_img is not None and prev_markers:
+
+        new_ids = [m['id'] for m in new_markers]
+
+        #any old markers not found in the new list?
+        not_found = [m for m in prev_markers if m['id'] not in new_ids and m['id'] >=0]
+        if not_found:
+            prev_pts = np.array([m['centroid'] for m in not_found])
+            # new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,winSize=(100,100))
+            new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,minEigThreshold=0.1,**lk_params)
+            for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
+                if s: #ho do we ensure that this is a good move?
+                    m['verts'] += pt-m['centroid'] #uniformly translate verts by optlical flow offset
+                    m['centroid'] += pt-m['centroid'] #uniformly translate centrod by optlical flow offset
+                    m["frames_since_true_detection"] +=1
+                else:
+                    m["frames_since_true_detection"] = 100
+
+
+        #cocatenating like this will favour older markers in the doublication deletion process
+        markers = [m for m in not_found if m["frames_since_true_detection"] < 4 ]+new_markers
+        if markers: #del double detected markers
+            # min_distace = max([m['perimeter'] for m in markers])/4.
+            min_distace = 50
+            if len(markers)>1:
+                remove = set()
+                close_markers = get_close_markers(markers,min_distance=min_distace)
+                for f,s in close_markers.T:
+                    #remove the markers further down in the list
+                    remove.add(s)
+                remove = list(remove)
+                remove.sort(reverse=True)
+                for i in remove:
+                    del markers[i]
+    else:
+        markers = new_markers
+
+
+    prev_img = gray_img.copy()
+    return markers
 
 
 def int_to_bin_list(value, width=None):
@@ -337,6 +396,10 @@ class MarkerTracker(object):
 
     @property
     def id_dist_weight(self): return 1. - self.loc_dist_weight
+
+
+    def reset(self):
+        self.state = []
 
     def location_distance(self,hist_entry, flat_marker):
         """Calculates mean euclidian distance between vertices"""
@@ -466,12 +529,12 @@ class MarkerTracker(object):
             prev_pts = np.vstack(prev_pts)
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(
                 self.prev_img, gray_img, prev_pts,
-                minEigThreshold=0.005,**lk_params)
+                minEigThreshold=0.01,**lk_params)
             for marker_idx in xrange(flow_found.shape[0]/4):
                 hist_marker = unmatched_history[marker_idx][0]
                 hist_marker[self.loc_conf_idx] -= self.unmatched_penalty
                 m_slc = slice(marker_idx*4,marker_idx*4+4)
-                if flow_found[m_slc].sum() >= 3:
+                if flow_found[m_slc].sum() >= 4 :
                     found, _  = np.where(flow_found[m_slc])
                     # calculate differences
                     old_verts = prev_pts[m_slc][found,:]
@@ -492,7 +555,7 @@ class MarkerTracker(object):
                     hist_marker[self.vert_slc] = proj_verts.flatten()
                 else:
                     # penalize again, if optical flow did not work
-                    hist_marker[self.loc_conf_idx] -= 2*self.unmatched_penalty
+                    hist_marker[self.loc_conf_idx] -= 10*self.unmatched_penalty
 
         for observ_marker, unmatched in zip(observed_markers, observ_to_match):
             # add unmatched oberservations
@@ -540,31 +603,31 @@ def bench(folder):
     print detected_count #3106 #3226
 
 
-# def bench(folder):
-#     from os.path import join
-#     from video_capture.   av_file_capture import File_Capture
-#     cap = File_Capture(join(folder,'marker-test.mp4'))
-#     prev_markers = []
-#     detected_count = 0
+def bench(folder):
+    from os.path import join
+    from video_capture.   av_file_capture import File_Capture
+    cap = File_Capture(join(folder,'marker-test.mp4'))
+    prev_markers = []
+    detected_count = 0
 
-#     for x in range(500):
-#         frame = cap.get_frame()
-#         img = frame.img
-#         gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
-#         markers = detect_markers(gray_img,5,visualize=True)
-#         prev_markers = markers
+    for x in range(500):
+        frame = cap.get_frame()
+        img = frame.img
+        gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
+        markers = detect_markers(gray_img,5,visualize=True)
+        prev_markers = markers
 
-#         draw_markers(img, markers)
-#         cv2.imshow('Detected Markers', img)
+        draw_markers(img, markers)
+        cv2.imshow('Detected Markers', img)
 
-#         for m in markers:
-#             if 'img' in m:
-#                 cv2.imshow('id %s'%m['id'], m['img'])
-#                 cv2.imshow('otsu %s'%m['id'], m['otsu'])
-#         if cv2.waitKey(0) == 27:
-#            break
-#         detected_count += len(markers)
-#     print detected_count #2900 #3042 #3021
+        # for m in markers:
+        #     if 'img' in m:
+        #         cv2.imshow('id %s'%m['id'], m['img'])
+        #         cv2.imshow('otsu %s'%m['id'], m['otsu'])
+        if cv2.waitKey(1) == 27:
+           break
+        detected_count += len(markers)
+    print detected_count #2900 #3042 #3021
 
 
 
