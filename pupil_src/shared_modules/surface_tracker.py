@@ -54,7 +54,7 @@ class Surface_Tracker(Plugin):
         self.robust_detection = robust_detection
         self.aperture = 11
         self.min_marker_perimeter = min_marker_perimeter
-        self.min_id_confidence = 0.2
+        self.min_id_confidence = 0.0
         self.locate_3d = False
         self.invert_image = invert_image
 
