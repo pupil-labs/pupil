@@ -202,7 +202,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     # Initialize capture
     default_settings = {
         'source_class_name': 'UVC_Source',
-        'name'     : ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"],
+        'preferred_names'  : ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"],
         'frame_size': (1280,720),
         'frame_rate': 30
     }

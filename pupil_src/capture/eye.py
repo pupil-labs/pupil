@@ -210,7 +210,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         # Initialize capture
         default_settings = {
             'source_class_name': 'UVC_Source',
-            'name'     : cap_src,
+            'preferred_names'  : cap_src,
             'frame_size': (640,480),
             'frame_rate': 60
         }

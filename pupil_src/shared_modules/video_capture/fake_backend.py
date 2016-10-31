@@ -131,7 +131,7 @@ class Fake_Source(Base_Source):
 
     @property
     def name(self):
-        return self.preferred_source['name']
+        return self.preferred_source.get('name', 'Fake Source')
 
     @property
     def settings(self):

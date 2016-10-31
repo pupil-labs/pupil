@@ -30,29 +30,33 @@ class UVC_Source(Base_Source):
     Attributes:
         uvc_capture (uvc.Capture): UVC backend object
     """
-    def __init__(self, g_pool, frame_size, frame_rate, name=None, uid=None, uvc_controls={}, **settings):
+    def __init__(self, g_pool, frame_size, frame_rate, name=None, preferred_names=None, uid=None, uvc_controls={}, **settings):
         super(UVC_Source, self).__init__(g_pool)
         self.uvc_capture = None
         self.devices = uvc.Device_List()
         devices_by_name = {dev['name']: dev for dev in self.devices}
         devices_by_uid  = {dev['uid']: dev for dev in self.devices}
 
-        # name is given. check if list of names
-        names = name if type(name) in (list, tuple) else [name]
-        if name:
-            for name in names:
+        if name and name in devices_by_name:
+            uid_for_name = devices_by_name[name]['uid']
+            try:
+                self.uvc_capture = uvc.Capture(uid_for_name)
+            except uvc.InitError:
+                raise InitialisationError("The selected camera is already in use or blocked.")
+        elif preferred_names:
+            for name in preferred_names:
                 if name in devices_by_name:
                     uid_for_name = devices_by_name[name]['uid']
                     try:
                         self.uvc_capture = uvc.Capture(uid_for_name)
                     except uvc.InitError:
-                        raise InitialisationError("The selected camera is already in use or blocked.")
-                    break
+                        pass
+                    else: break
         # uid is given
         elif uid and uid in devices_by_uid:
             self.uvc_capture = uvc.Capture(uid)
         # neither name nore uid are given, take first accessible device
-        elif not name and not uid:
+        elif not name and not uid and not preferred_names:
             for uid in device_uids:
                 self.uvc_capture = uvc.Capture(uid)
                 break
