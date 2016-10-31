@@ -158,7 +158,7 @@ class Surface_Tracker(Plugin):
         self.menu.append(ui.Info_Text('This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*.'))
         self.menu.append(ui.Switch('robust_detection',self,label='Robust detection'))
         self.menu.append(ui.Switch('invert_image',self,label='Use inverted markers'))
-        self.menu.append(ui.Slider('min_marker_perimeter',self,step=1,min=10,max=500))
+        self.menu.append(ui.Slider('min_marker_perimeter',self,step=1,min=10,max=100))
         self.menu.append(ui.Switch('locate_3d',self,label='3D localization'))
         self.menu.append(ui.Selector('mode',self,label="Mode",selection=['Show Markers and Surfaces','Show marker IDs'] ))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_'),))
@@ -190,7 +190,7 @@ class Surface_Tracker(Plugin):
                 self.markers = detect_markers_robust(
                     gray, grid_size = 5,aperture=self.aperture,
                     prev_markers=self.markers,
-                    true_detect_every_frame=2,
+                    true_detect_every_frame=3,
                     min_marker_perimeter=self.min_marker_perimeter)
             else:
                 self.markers = detect_markers(

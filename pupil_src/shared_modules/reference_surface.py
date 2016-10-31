@@ -285,9 +285,9 @@ class Reference_Surface(object):
 
             corners_robust = np.array(corners_robust)
 
-            if self.old_corners_robust is not None and np.mean(np.abs(corners_robust-self.old_corners_robust)) < 0.01:
+            if self.old_corners_robust is not None and np.mean(np.abs(corners_robust-self.old_corners_robust)) < 0.02:
                 smooth_corners_robust  = self.old_corners_robust
-                smooth_corners_robust += .6*(corners_robust-self.old_corners_robust )
+                smooth_corners_robust += .5*(corners_robust-self.old_corners_robust )
 
                 corners_robust = smooth_corners_robust
                 self.old_corners_robust  = smooth_corners_robust
