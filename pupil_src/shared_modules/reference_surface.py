@@ -125,7 +125,7 @@ class Reference_Surface(object):
         self.defined = True
         self.build_up_status = self.required_build_up
 
-    def build_correspondance(self, visible_markers,camera_calibration,min_marker_perimeter):
+    def build_correspondance(self, visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
         """
         - use all visible markers
         - fit a convex quadrangle around it
@@ -203,29 +203,36 @@ class Reference_Surface(object):
         self.defined = True
 
 
-    def locate(self, visible_markers,camera_calibration,min_marker_perimeter, locate_3d=False,):
+    def locate(self, visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence, locate_3d=False,):
         """
         - find overlapping set of surface markers and visible_markers
         - compute homography (and inverse) based on this subset
         """
 
         if not self.defined:
-            self.build_correspondance(visible_markers,camera_calibration,min_marker_perimeter)
+            self.build_correspondance(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
 
-        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,locate_3d)
+        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence,locate_3d)
         self.detected = res['detected']
         self.detected_markers = res['detected_markers']
         self.m_to_screen = res['m_to_screen']
         self.m_from_screen = res['m_from_screen']
         self.camera_pose_3d = res['camera_pose_3d']
 
-    def _get_location(self,visible_markers,camera_calibration,min_marker_perimeter,locate_3d=False):
+    def _get_location(self,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence, locate_3d=False):
 
-        marker_by_id = dict([(m['id'],m) for m in visible_markers if m['perimeter']>=min_marker_perimeter])
+        filtered_markers = [m for m in visible_markers if m['perimeter']>=min_marker_perimeter and m['id_confidence']>min_id_confidence]
+        marker_by_id ={}
+        #if an id shows twice we use the bigger marker (usually this is a screen camera echo artifact.)
+        for m in filtered_markers:
+            if m["id"] in marker_by_id and m["perimeter"] < marker_by_id[m['id']]['perimeter']:
+                pass
+            else:
+                marker_by_id[m["id"]] = m
+
         visible_ids = set(marker_by_id.keys())
         requested_ids = set(self.markers.keys())
         overlap = visible_ids & requested_ids
-        overlap_perimeter = sum(marker_by_id[i]['perimeter'] for i in overlap)
         # need at least two markers per surface when the surface is more that 1 marker.
         if overlap and len(overlap) >= min(2,len(requested_ids)):
             detected = True
@@ -414,16 +421,16 @@ class Reference_Surface(object):
             m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
 
 
-    def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter):
+    def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
         '''
         add marker to surface.
         '''
-        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,locate_3d=False)
+        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence,locate_3d=False)
         if res['detected']:
             support_marker = Support_Marker(marker['id'])
             marker_verts = np.array(marker['verts'])
             marker_verts.shape = (-1,1,2)
-            marker_verts_undistorted_normalized = cv2.undistortPoints(marker_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
+            marker_verts_undistorted_normalized = cv2.undistortPoints(marker_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*self.use_distortion)
             marker_uv_coords =  cv2.perspectiveTransform(marker_verts_undistorted_normalized,res['m_from_undistored_norm_space'])
             support_marker.load_uv_coords(marker_uv_coords)
             self.markers[marker['id']] = support_marker

@@ -54,6 +54,7 @@ class Surface_Tracker(Plugin):
         self.robust_detection = robust_detection
         self.aperture = 11
         self.min_marker_perimeter = min_marker_perimeter
+        self.min_id_confidence = 0.2
         self.locate_3d = False
         self.invert_image = invert_image
 
@@ -107,7 +108,7 @@ class Surface_Tracker(Plugin):
                                 if self.marker_edit_surface.markers.has_key(m['id']):
                                     self.marker_edit_surface.remove_marker(m)
                                 else:
-                                    self.marker_edit_surface.add_marker(m,self.markers,self.camera_calibration,self.min_marker_perimeter)
+                                    self.marker_edit_surface.add_marker(m,self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
 
     def add_surface(self,_):
         self.surfaces.append(Reference_Surface())
@@ -199,7 +200,7 @@ class Surface_Tracker(Plugin):
 
         # locate surfaces, map gaze
         for s in self.surfaces:
-            s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter, self.locate_3d)
+            s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence, self.locate_3d)
             if s.detected:
                 s.gaze_on_srf = s.map_data_to_surface(events.get('gaze_positions',[]),s.m_from_screen)
             else:
@@ -241,7 +242,7 @@ class Surface_Tracker(Plugin):
             for m in self.markers:
                 hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-                if m['perimeter']>=self.min_marker_perimeter:
+                if m['perimeter']>=self.min_marker_perimeter and m['id_confidence']>self.min_id_confidence:
                     draw_polyline(hat.reshape((6,2)),color=RGBA(0.1,1.,1.,.5))
                     draw_polyline(hat.reshape((6,2)),color=RGBA(0.1,1.,1.,.3),line_type=GL_POLYGON)
                 else:
