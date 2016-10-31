@@ -67,7 +67,7 @@ class Offline_Reference_Surface(Reference_Surface):
         raise Exception("Invalid cache entry. Please report Bug.")
 
 
-    def update_cache(self,marker_cache,camera_calibration,min_marker_perimeter,idx=None):
+    def update_cache(self,marker_cache,camera_calibration,min_marker_perimeter,min_id_confidence,idx=None):
         '''
         compute surface m's and gaze points from cached marker data
         entries are:
@@ -82,30 +82,30 @@ class Offline_Reference_Surface(Reference_Surface):
             # self.init_cache(marker_cache)
         elif idx != None:
             #update single data pt
-            self.cache.update(idx,self.answer_caching_request(marker_cache,idx,camera_calibration,min_marker_perimeter))
+            self.cache.update(idx,self.answer_caching_request(marker_cache,idx,camera_calibration,min_marker_perimeter,min_id_confidence))
         else:
             # update where marker cache is not False but surface cache is still false
             # this happens when the markercache was incomplete when this fn was run before
             for i in range(len(marker_cache)):
                 if self.cache[i] == False and marker_cache[i] != False:
-                    self.cache.update(i,self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter))
+                    self.cache.update(i,self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter,min_id_confidence))
                     # iterations +=1
         # return iterations
 
 
 
-    def init_cache(self,marker_cache,camera_calibration,min_marker_perimeter):
+    def init_cache(self,marker_cache,camera_calibration,min_marker_perimeter,min_id_confidence):
         if self.defined:
             logger.debug("Full update of surface '%s' positons cache"%self.name)
-            self.cache = Cache_List([self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
+            self.cache = Cache_List([self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter,min_id_confidence) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
 
 
-    def answer_caching_request(self,marker_cache,frame_index,camera_calibration,min_marker_perimeter):
+    def answer_caching_request(self,marker_cache,frame_index,camera_calibration,min_marker_perimeter,min_id_confidence):
         visible_markers = marker_cache[frame_index]
         # cache point had not been visited
         if visible_markers == False:
             return False
-        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,locate_3d=False)
+        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence,locate_3d=False)
         if res['detected']:
             return res
         else:
@@ -117,8 +117,8 @@ class Offline_Reference_Surface(Reference_Surface):
         self.cache = None
         self.heatmap = None
 
-    def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter):
-        super(Offline_Reference_Surface, self).add_marker(marker,visible_markers,camera_calibration,min_marker_perimeter)
+    def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
+        super(Offline_Reference_Surface, self).add_marker(marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
         self.cache = None
         self.heatmap = None
 
