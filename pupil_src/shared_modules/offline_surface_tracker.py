@@ -62,7 +62,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         if g_pool.app == 'capture':
            raise Exception('For Player only.')
 
-        self.marker_cache_version = 1
+        self.marker_cache_version = 2
         self.min_marker_perimeter_cacher = 20  #find even super small markers. The surface locater will filter using min_marker_perimeter
         #check if marker cache is available from last session
         self.persistent_cache = Persistent_Dict(os.path.join(g_pool.rec_dir,'square_marker_cache'))
