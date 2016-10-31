@@ -54,7 +54,7 @@ class NDSI_Source(Base_Source):
 
         logger.debug('NDSI Source Sensor: %s'%self.sensor)
         self.control_id_ui_mapping = {}
-        self.get_frame_timeout = 1000
+        self.get_frame_timeout = 2000
         self.frame_size = frame_size
         self.frame_rate = frame_rate
         self.has_ui = False
@@ -67,17 +67,22 @@ class NDSI_Source(Base_Source):
         while self.sensor.has_notifications:
             self.sensor.handle_notification()
 
-    def get_frame(self):
+    def _get_frame(self):
         self.poll_notifications()
         return self.sensor.get_newest_data_frame(timeout=self.get_frame_timeout)
 
-    def get_frame_robust(self):
+    def get_frame(self):
         '''Mirrors uvc.Capture.get_frame_robust()'''
         attempts = 3
         for a in range(attempts):
             try:
-                frame = self.get_frame()
+                frame = self._get_frame()
             except Exception as e:
+                # check if streaming is enabled
+                if 'streaming' in self.sensor.controls:
+                    pub_ctrl = self.sensor.controls['streaming']
+                    if not pub_ctrl.get('value', False):
+                        self.sensor.set_control_value('streaming', True)
                 if a:
                     logger.info('Could not get Frame: "%s". Attempt:%s/%s '%(e.message,a+1,attempts))
                 else:
@@ -87,7 +92,9 @@ class NDSI_Source(Base_Source):
         raise ndsi.StreamError("Could not grab frame after 3 attempts. Giving up.")
 
     def on_notification(self, sensor, event):
-        if self.has_ui and event['control_id'] not in self.control_id_ui_mapping:
+        if event['subject'] == 'error':
+            logger.warning('Error: %s'%event['error_str'])
+        elif self.has_ui and event['control_id'] not in self.control_id_ui_mapping:
             self.update_control_menu()
 
     @property
@@ -146,47 +153,51 @@ class NDSI_Source(Base_Source):
             return initiate_value_change
 
         for ctrl_id, ctrl_dict in self.sensor.controls.iteritems():
-            dtype = ctrl_dict['dtype']
-            ctrl_ui = None
-            if dtype == "string":
-                logger.debug('Text input for %s named "%s"'%(dtype,ctrl_dict['caption']))
-                ctrl_ui = ui.Text_Input(
-                    'value',
-                    ctrl_dict,
-                    label=str(ctrl_dict['caption']),
-                    setter=make_value_change_fn(ctrl_id))
-            elif dtype == "integer" or dtype == "float":
-                convert_fn = int if dtype == "integer" else float
-                ctrl_ui = ui.Slider(
-                    'value',
-                    ctrl_dict,
-                    label=str(ctrl_dict['caption']),
-                    min =convert_fn(ctrl_dict['min'] or 0),
-                    max =convert_fn(ctrl_dict['max'] or 100),
-                    step=convert_fn(ctrl_dict['res'] or 0.),
-                    setter=make_value_change_fn(ctrl_id))
-            elif dtype == "bool":
-                ctrl_ui = ui.Switch(
-                    'value',
-                    ctrl_dict,
-                    label=str(ctrl_dict['caption']),
-                    on_val=ctrl_dict['max'],
-                    off_val=ctrl_dict['min'],
-                    setter=make_value_change_fn(ctrl_id))
-            elif dtype == "selector":
-                desc_list = ctrl_dict['selector']
-                labels    = [str(desc['caption']) for desc in desc_list]
-                selection = [desc['value']        for desc in desc_list]
-                ctrl_ui = ui.Selector(
-                    'value',
-                    ctrl_dict,
-                    label=str(ctrl_dict['caption']),
-                    selection=selection,
-                    labels=labels,
-                    setter=make_value_change_fn(ctrl_id))
-            if ctrl_ui:
-                self.control_id_ui_mapping[ctrl_id] = ctrl_ui
-                self.g_pool.capture_source_menu.append(ctrl_ui)
+            try:
+                dtype = ctrl_dict['dtype']
+                ctrl_ui = None
+                if dtype == "string":
+                    ctrl_ui = ui.Text_Input(
+                        'value',
+                        ctrl_dict,
+                        label=unicode(ctrl_dict['caption']),
+                        setter=make_value_change_fn(ctrl_id))
+                elif dtype == "integer" or dtype == "float":
+                    convert_fn = int if dtype == "integer" else float
+                    ctrl_ui = ui.Slider(
+                        'value',
+                        ctrl_dict,
+                        label=unicode(ctrl_dict['caption']),
+                        min =convert_fn(ctrl_dict.get('min', 0)),
+                        max =convert_fn(ctrl_dict.get('max', 100)),
+                        step=convert_fn(ctrl_dict.get('res', 0.)),
+                        setter=make_value_change_fn(ctrl_id))
+                elif dtype == "bool":
+                    ctrl_ui = ui.Switch(
+                        'value',
+                        ctrl_dict,
+                        label=unicode(ctrl_dict['caption']),
+                        on_val=ctrl_dict.get('max',True),
+                        off_val=ctrl_dict.get('min',False),
+                        setter=make_value_change_fn(ctrl_id))
+                elif dtype == "selector":
+                    desc_list = ctrl_dict['selector']
+                    labels    = [unicode(desc['caption']) for desc in desc_list]
+                    selection = [desc['value']        for desc in desc_list]
+                    ctrl_ui = ui.Selector(
+                        'value',
+                        ctrl_dict,
+                        label=unicode(ctrl_dict['caption']),
+                        selection=selection,
+                        labels=labels,
+                        setter=make_value_change_fn(ctrl_id))
+                if ctrl_ui:
+                    self.control_id_ui_mapping[ctrl_id] = ctrl_ui
+                    self.g_pool.capture_source_menu.append(ctrl_ui)
+            except:
+                logger.error('Exception for control:\n%s'%ctrl_dict)
+                import traceback as tb
+                tb.print_exc()
         self.g_pool.capture_source_menu.append(ui.Button("Reset to default values",self.sensor.reset_all_control_values))
 
     def cleanup(self):
@@ -224,7 +235,7 @@ class NDSI_Manager(Base_Manager):
 
         def host_selection_list():
             devices = {
-                s['host_uuid']: str(s['host_name']) # removes duplicates
+                s['host_uuid']: s['host_name'] # removes duplicates
                 for s in self.network.sensors.values()
                 if s['sensor_type'] == 'video'
             }
@@ -257,7 +268,7 @@ class NDSI_Manager(Base_Manager):
             default = (None, 'Select to activate')
             #self.poll_events()
             sources = [default] + [
-                (s['sensor_uuid'], str(s['sensor_name']))
+                (s['sensor_uuid'], s['sensor_name'])
                 for s in self.network.sensors.values()
                 if (s['sensor_type'] == 'video' and
                     s['host_uuid'] == self.selected_host)
@@ -328,7 +339,7 @@ class NDSI_Manager(Base_Manager):
             })
             if not self.selected_host:
                 self.selected_host = event['host_uuid']
-                self.re_build_ndsi_menu()
+            self.re_build_ndsi_menu()
 
     def activate_source(self, settings={}):
         try:
