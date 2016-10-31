@@ -731,22 +731,23 @@ class Support_Marker(object):
 
     def compute_robust_mean(self,threshhold=.1):
         """
-        right now its just the mean. Not so good...
+        treat 50% as outliers. Assume majory is right.
         """
         # a stacked list of marker uv coords. marker uv cords are 4 verts with each a uv position.
         uv = np.array(self.collected_uv_coords)
         # # the mean marker uv_coords including outliers
-        # base_line_mean = np.mean(uv,axis=0)
+        base_line_mean = np.mean(uv,axis=0)
         # # devidation is the distance of each scalar (4*2 per marker to the mean value of this scalar acros our stacked list)
-        # deviation = uv-base_line_mean
-        # # now we treat the four uv scalars as a vector in 8-d space and compute the euclidian distace to the mean
-        # distance =  np.linalg.norm(deviation,axis=(1,3))
-        # # we now have 1 distance measure per recorded apprearace of the marker
-        # uv_subset = uv[distance<threshhold]
-        # ratio = uv_subset.shape[0]/float(uv.shape[0])
-        # #todo: find a good way to get some meaningfull and accurate numbers to use
-        #right now we take the mean of the last 30 datapoints
-        uv_mean = np.mean(uv[-30:],axis=0)
+        deviation = uv-base_line_mean
+        # # now we treat the four uv scalars as a vector in 8-d space and compute the distace to the mean
+        distance =  np.linalg.norm(deviation,axis=(1,3)).reshape(-1)
+        # lets get the .5 cutof;
+        cut_off = sorted(distance)[len(distance)/2]
+        # filter the better half
+        uv_subset = uv[distance<=cut_off]
+        # claculate the mean of this subset
+        uv_mean = np.mean(uv_subset,axis=0)
+        # use it
         self.uv_coords = uv_mean
         self.robust_uv_cords = True
 
