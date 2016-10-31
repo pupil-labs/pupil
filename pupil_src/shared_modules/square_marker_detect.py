@@ -349,15 +349,16 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
                         # apply mean dif
                         proj_verts = prev_pts[m_slc] + mean_dif
                         m['verts'] = new_verts
-                        m['centroid'] += mean_dif.reshape(-1)
+                        m['centroid'] = new_verts.sum(axis=0)/4.
+                        m['centroid'].shape = (2)
                         m["frames_since_true_detection"] +=1
-                        m['opf_vel'] = mean_dif
+                        # m['opf_vel'] = mean_dif
                 else:
                     m["frames_since_true_detection"] = 100
 
 
         #cocatenating like this will favour older markers in the doublication deletion process
-        markers = [m for m in not_found if m["frames_since_true_detection"] < 10 ]+new_markers
+        markers = [m for m in not_found if m["frames_since_true_detection"] < 5 ]+new_markers
         if markers: #del double detected markers
             min_distace = min([m['perimeter'] for m in markers])/4.
             # min_distace = 50
@@ -653,7 +654,7 @@ def bench(folder):
         #     if 'img' in m:
         #         cv2.imshow('id %s'%m['id'], m['img'])
         #         cv2.imshow('otsu %s'%m['id'], m['otsu'])
-        if cv2.waitKey(0) == 27:
+        if cv2.waitKey(1) == 27:
            break
         detected_count += len(markers)
     print detected_count #2900 #3042 #3021
