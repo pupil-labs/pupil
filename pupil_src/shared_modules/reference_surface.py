@@ -244,10 +244,9 @@ class Reference_Surface(object):
             # compute the homography transform from marker into the undistored normalized image space
             # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
             xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*self.use_distortion)
-            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized)#, method=cv2.cv.CV_RANSAC,ransacReprojThreshold=0.01)
-            # if np.linalg.cond(m_to_undistored_norm_space) > 1/sys.float_info.epsilon:
-            #     detected = False
-            #     logger.warning("singular homography matrix")
+            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized, method=cv2.cv.CV_RANSAC,ransacReprojThreshold=0.1)
+            if not mask.all():
+                detected = False
             m_from_undistored_norm_space,mask = cv2.findHomography(xy_undistorted_normalized,uv)
             # project the corners of the surface to undistored space
             corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
@@ -365,6 +364,13 @@ class Reference_Surface(object):
                     # combine all tranformations into transformation matrix that decribes the move from object origin and orientation to camera origin and orientation
                     tranform3d_object_to_cam =  np.matrix(flip_z_axix_hm) * np.matrix(rot3d_object_to_cam_hm) * np.matrix(translate3d_object_to_cam_hm)
                     camera_pose_3d = tranform3d_object_to_cam
+            if detected == False:
+                camera_pose_3d = None
+                m_from_screen = None
+                m_to_screen = None
+                m_from_undistored_norm_space = None
+                m_to_undistored_norm_space = None
+
         else:
             detected = False
             camera_pose_3d = None
