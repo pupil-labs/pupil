@@ -253,6 +253,14 @@ def draw_markers(img,markers):
             m_str = 'locc: %.3f'%m['loc_confidence']
             org += (0, 12 )
             cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
+        if 'frames_since_true_detection' in m:
+            m_str = 'otf: %s'%m['frames_since_true_detection']
+            org += (0, 12 )
+            cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
+        if 'opf_vel' in m:
+            m_str = 'otf: %s'%m['opf_vel']
+            org += (0, 12 )
+            cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
 
 
 def m_marker_to_screen(marker):
@@ -285,9 +293,9 @@ def m_screen_to_marker(marker):
 
 
 #persistent vars for detect_markers_robust
-lk_params = dict( winSize  = (15, 15),
-                  maxLevel = 2,
-                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+lk_params = dict( winSize  = (45, 45),
+                  maxLevel = 3,
+                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 100, 0.03))
 
 prev_img = None
 tick = 0
@@ -314,23 +322,45 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
         #any old markers not found in the new list?
         not_found = [m for m in prev_markers if m['id'] not in new_ids and m['id'] >=0]
         if not_found:
-            prev_pts = np.array([m['centroid'] for m in not_found])
-            # new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,winSize=(100,100))
-            new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(prev_img, gray_img,prev_pts,minEigThreshold=0.1,**lk_params)
-            for pt,s,e,m in zip(new_pts,flow_found,err,not_found):
-                if s: #ho do we ensure that this is a good move?
-                    m['verts'] += pt-m['centroid'] #uniformly translate verts by optlical flow offset
-                    m['centroid'] += pt-m['centroid'] #uniformly translate centrod by optlical flow offset
-                    m["frames_since_true_detection"] +=1
+            prev_pts = np.array([m['verts'] for m in not_found])
+            prev_pts = np.vstack(prev_pts)
+            new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(
+                prev_img, gray_img, prev_pts,
+                minEigThreshold=.01,**lk_params)
+            for marker_idx in xrange(flow_found.shape[0]/4):
+                m = not_found[marker_idx]
+                m_slc = slice(marker_idx*4,marker_idx*4+4)
+                if flow_found[m_slc].sum() >= 4:
+                    found, _  = np.where(flow_found[m_slc])
+                    # calculate differences
+                    old_verts = prev_pts[m_slc][found,:]
+                    new_verts = new_pts[m_slc][found,:]
+                    vert_difs = new_verts - old_verts
+                    # calc mean dif
+                    mean_dif = vert_difs.mean(axis=0)
+                    # take n-1 closest difs
+                    dist_variance = np.linalg.norm(mean_dif - vert_difs,axis=1)
+                    if max(np.abs(dist_variance).flatten())>5:
+                        m["frames_since_true_detection"] = 100
+                    else:
+                        closest_mean_dif = np.argsort(dist_variance,axis=0)[:-1,0]
+                        # recalc mean dif
+                        mean_dif = vert_difs[closest_mean_dif].mean(axis=0)
+                        # apply mean dif
+                        proj_verts = prev_pts[m_slc] + mean_dif
+                        m['verts'] = new_verts
+                        m['centroid'] += mean_dif.reshape(-1)
+                        m["frames_since_true_detection"] +=1
+                        m['opf_vel'] = mean_dif
                 else:
                     m["frames_since_true_detection"] = 100
 
 
         #cocatenating like this will favour older markers in the doublication deletion process
-        markers = [m for m in not_found if m["frames_since_true_detection"] < 4 ]+new_markers
+        markers = [m for m in not_found if m["frames_since_true_detection"] < 10 ]+new_markers
         if markers: #del double detected markers
-            # min_distace = max([m['perimeter'] for m in markers])/4.
-            min_distace = 50
+            min_distace = min([m['perimeter'] for m in markers])/4.
+            # min_distace = 50
             if len(markers)>1:
                 remove = set()
                 close_markers = get_close_markers(markers,min_distance=min_distace)
@@ -605,17 +635,16 @@ def bench(folder):
 
 def bench(folder):
     from os.path import join
-    from video_capture.   av_file_capture import File_Capture
+    from video_capture.av_file_capture import File_Capture
     cap = File_Capture(join(folder,'marker-test.mp4'))
-    prev_markers = []
+    markers = []
     detected_count = 0
 
     for x in range(500):
         frame = cap.get_frame()
         img = frame.img
         gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
-        markers = detect_markers(gray_img,5,visualize=True)
-        prev_markers = markers
+        markers = detect_markers_robust(gray_img,5,prev_markers=markers,true_detect_every_frame=1,visualize=True)
 
         draw_markers(img, markers)
         cv2.imshow('Detected Markers', img)
@@ -624,7 +653,7 @@ def bench(folder):
         #     if 'img' in m:
         #         cv2.imshow('id %s'%m['id'], m['img'])
         #         cv2.imshow('otsu %s'%m['id'], m['otsu'])
-        if cv2.waitKey(1) == 27:
+        if cv2.waitKey(0) == 27:
            break
         detected_count += len(markers)
     print detected_count #2900 #3042 #3021
