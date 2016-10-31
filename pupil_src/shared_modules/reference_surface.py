@@ -76,6 +76,7 @@ class Reference_Surface(object):
         self.m_to_screen = None
         self.m_from_screen = None
         self.camera_pose_3d = None
+        self.use_distortion = 0
 
         self.uid = str(time())
         self.real_world_size = {'x':1.,'y':1.}
@@ -139,7 +140,7 @@ class Reference_Surface(object):
         all_verts = np.array(all_verts)
         all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
         # all_verts_undistorted_normalized centered in img center flipped in y and range [-1,1]
-        all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
+        all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*self.use_distortion)
         hull = cv2.convexHull(all_verts_undistorted_normalized,clockwise=False)
 
         #simplify until we have excatly 4 verts
@@ -167,7 +168,7 @@ class Reference_Surface(object):
         #based on these 4 verts we calculate the transformations into a 0,0 1,1 square space
         m_from_undistored_norm_space = m_verts_from_screen(hull)
         self.detected = True
-        # map the markers vertices in to the surface space (one can think of these as texture coordinates u,v)
+        # map the markers vertices into the surface space (one can think of these as texture coordinates u,v)
         marker_uv_coords =  cv2.perspectiveTransform(all_verts_undistorted_normalized,m_from_undistored_norm_space)
         marker_uv_coords.shape = (-1,4,1,2) #[marker,marker...] marker = [ [[r,c]],[[r,c]] ]
 
@@ -235,13 +236,16 @@ class Reference_Surface(object):
             # our camera lens creates distortions we want to get a good 2d estimate despite that so we:
             # compute the homography transform from marker into the undistored normalized image space
             # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
-            xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs'])
-            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized,method=cv2.cv.CV_RANSAC,ransacReprojThreshold=0.01)
+            xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*self.use_distortion)
+            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized)#, method=cv2.cv.CV_RANSAC,ransacReprojThreshold=0.01)
+            # if np.linalg.cond(m_to_undistored_norm_space) > 1/sys.float_info.epsilon:
+            #     detected = False
+            #     logger.warning("singular homography matrix")
             m_from_undistored_norm_space,mask = cv2.findHomography(xy_undistorted_normalized,uv)
             # project the corners of the surface to undistored space
             corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
             # project and distort these points  and normalize them
-            corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs'])
+            corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*self.use_distortion)
             corners_nulldistorted, corners_nulldistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*0)
 
             #normalize to pupil norm space
