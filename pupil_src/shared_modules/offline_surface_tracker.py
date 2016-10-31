@@ -39,7 +39,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from surface_tracker import Surface_Tracker
-from square_marker_detect import detect_markers_robust, draw_markers,m_marker_to_screen
+from square_marker_detect import draw_markers,m_marker_to_screen
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 from offline_reference_surface import Offline_Reference_Surface
 from math import sqrt
@@ -55,14 +55,14 @@ class Offline_Surface_Tracker(Surface_Tracker):
     See marker_tracker.py for more info on this marker tracker.
     """
 
-    def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100):
-        super(Offline_Surface_Tracker, self).__init__(g_pool,mode,min_marker_perimeter)
+    def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False,robust_detection=True):
+        super(Offline_Surface_Tracker, self).__init__(g_pool,mode,min_marker_perimeter,robust_detection)
         self.order = .2
 
         if g_pool.app == 'capture':
            raise Exception('For Player only.')
 
-        self.marker_cache_version = 1
+        self.marker_cache_version = 2
         self.min_marker_perimeter_cacher = 20  #find even super small markers. The surface locater will filter using min_marker_perimeter
         #check if marker cache is available from last session
         self.persistent_cache = Persistent_Dict(os.path.join(g_pool.rec_dir,'square_marker_cache'))
@@ -81,7 +81,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
         self.init_marker_cacher()
         for s in self.surfaces:
-            s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter)
+            s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
         self.recalculate()
 
     def load_surface_definitions_from_file(self):
@@ -224,7 +224,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         # locate surfaces
         for s in self.surfaces:
             if not s.locate_from_cache(frame.index):
-                s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter)
+                s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
             if s.detected:
                 events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
@@ -245,7 +245,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
                 # update srf with no or invald cache:
                 for s in self.surfaces:
                     if s.cache == None and s not in [s for s,i in self.edit_surf_verts]:
-                        s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter)
+                        s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
                         self.notify_all({'subject':'surfaces_changed','delay':1})
 
 
@@ -275,7 +275,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
             idx,c_m = self.cache_queue.get()
             self.cache.update(idx,c_m)
             for s in self.surfaces:
-                s.update_cache(self.cache,camera_calibration=self.camera_calibration,min_marker_perimeter=self.min_marker_perimeter,idx=idx)
+                s.update_cache(self.cache,camera_calibration=self.camera_calibration,min_marker_perimeter=self.min_marker_perimeter,min_id_confidence=self.min_id_confidence,idx=idx)
             if self.cacher_run.value == False:
                 self.recalculate()
 
