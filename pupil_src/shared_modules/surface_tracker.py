@@ -22,7 +22,7 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-from square_marker_detect import detect_markers, draw_markers,m_marker_to_screen, MarkerTracker
+from square_marker_detect import detect_markers,detect_markers_robust, draw_markers,m_marker_to_screen, MarkerTracker
 from reference_surface import Reference_Surface
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 
@@ -187,8 +187,10 @@ class Surface_Tracker(Plugin):
                 gray = 255-gray
 
             if self.robust_detection:
-                self.markers = self.marker_tracker.track_in_frame(
+                self.markers = detect_markers_robust(
                     gray, grid_size = 5,aperture=self.aperture,
+                    prev_markers=self.markers,
+                    true_detect_every_frame=2,
                     min_marker_perimeter=self.min_marker_perimeter)
             else:
                 self.markers = detect_markers(
