@@ -192,7 +192,7 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
             r = np.float32(r)
             # define the criteria to stop and refine the marker verts
             criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 40, 0.001)
-            cv2.cornerSubPix(gray_img,r,(3,3      ),(-1,-1),criteria)
+            cv2.cornerSubPix(gray_img,r,(3,3),(-1,-1),criteria)
 
             M = cv2.getPerspectiveTransform(r,mapped_space)
             flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
