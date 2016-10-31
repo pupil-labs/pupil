@@ -71,7 +71,7 @@ class Fake_Source(Base_Source):
         self.presentation_time = time()
         self.make_img((640,480))
         self.frame_count = 0
-        self.info_text = settings.get('info_text', 'Fake source has no settings.')
+        self.info_text = settings.get('info_text', 'Select video source in the capture menu.')
         self.preferred_source = settings
         self.settings = settings
 
@@ -87,6 +87,9 @@ class Fake_Source(Base_Source):
         self.glfont.set_color_float((1.,1.,1.,1.0))
         self.glfont.set_align_string(v_align='center',h_align='middle')
 
+
+
+
     def cleanup(self):
         self.info_text = None
         self.img = None
@@ -97,6 +100,7 @@ class Fake_Source(Base_Source):
             from glfw import glfwGetFramebufferSize,glfwGetCurrentContext
             self.window_size = glfwGetFramebufferSize(glfwGetCurrentContext())
             self.glfont.set_color_float((0.,0.,0.,1.))
+            self.glfont.set_size(int(self.window_size[0]/30.))
             self.glfont.set_blur(5.)
             self.glfont.draw_limited_text(self.window_size[0]/2.,self.window_size[1]/2.,self.info_text,self.window_size[0]*0.8)
             self.glfont.set_blur(0.96)
@@ -189,6 +193,8 @@ class Fake_Manager(Base_Manager):
         text = ui.Info_Text('Convenience manager to select a fake source explicitly.')
         def activate():
             settings = self.g_pool.capture.settings
+            #if the user set fake capture, we dont want it to auto jump back to the old capture.
+            settings['source_class_name'] = Fake_Source.class_name()
             self.activate_source(settings)
         activation_button = ui.Button('Activate Test Image', activate)
         self.g_pool.capture_selector_menu.extend([text, activation_button])
@@ -198,3 +204,4 @@ class Fake_Manager(Base_Manager):
         self.g_pool.capture.cleanup()
         self.g_pool.capture = None
         self.g_pool.capture = Fake_Source(self.g_pool,**settings)
+        self.g_pool.capture.init_gui()

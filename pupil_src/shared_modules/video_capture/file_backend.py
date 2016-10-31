@@ -96,7 +96,7 @@ class File_Source(Base_Source):
 
         self.slowdown = 0.0
         self.source_path = source_path
-        self.container = av.open(source_path)
+        self.container = av.open(str(source_path))
 
         try:
             self.video_stream = next(s for s in self.container.streams if s.type=="video")# looking for the first videostream
@@ -254,18 +254,6 @@ class File_Source(Base_Source):
         self.target_frame_idx = index+1
         self.display_time = 0
 
-
-    def get_now(self):
-        try:
-            timestamp = self.timestamps[self.get_frame_index()-1]
-            logger.debug("Filecapture is not a realtime source. -NOW- will be the current timestamp")
-        except IndexError:
-            logger.warning("timestamp not found.")
-            timestamp = 0
-        return timestamp
-
-    def get_timestamp(self):
-        return self.get_now()
 
     def init_gui(self):
         from pyglui import ui

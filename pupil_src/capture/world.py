@@ -13,7 +13,7 @@ import os, sys, platform
 class Global_Container(object):
     pass
 
-def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
+def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version):
     """Reads world video and runs plugins.
 
     Creates a window, gl context.
@@ -200,26 +200,24 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         session_settings.clear()
 
     # Initialize capture
-    fallback_settings = {
+    default_settings = {
         'source_class_name': 'UVC_Source',
-        'name'     : cap_src,
+        'name'     : ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"],
         'frame_size': (1280,720),
         'frame_rate': 30
     }
-    settings = session_settings.get('capture_settings', fallback_settings)
+    settings = session_settings.get('capture_settings', default_settings)
     try:
         cap = source_by_name[settings['source_class_name']](g_pool, **settings)
-    except KeyError:
-        logger.warning('Incompatible capture setting encountered. Falling back to fake source.')
-        cap = Fake_Source(g_pool, **settings)
-    except InitialisationError:
+    except (KeyError,InitialisationError) as e:
+        if isinstance(e,KeyError):
+            logger.warning('Incompatible capture setting encountered. Falling back to fake source.')
         cap = Fake_Source(g_pool, **settings)
 
     g_pool.iconified = False
     g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode','2d')
     g_pool.active_calibration_plugin = None
     g_pool.active_gaze_mapping_plugin = None
-
     g_pool.capture = cap
     g_pool.capture_manager = None
 
@@ -333,13 +331,17 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
 
     #We add the calibration menu selector, after a calibration has been added:
-    g_pool.calibration_menu.insert(0,ui.Selector('active_calibration_plugin',getter=lambda: g_pool.active_calibration_plugin.__class__, selection = calibration_plugins,
+    g_pool.calibration_menu.insert(0,ui.Selector(
+                                        'active_calibration_plugin',
+                                        getter=lambda: g_pool.active_calibration_plugin.__class__,
+                                        selection = calibration_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
-                                        setter= open_plugin,label='Method'))
+                                        setter= open_plugin,label='Method'
+                                                ))
 
     #We add the capture selection menu, after a manager has been added:
     g_pool.capture_selector_menu.insert(0,ui.Selector(
-        'capture_manager',g_pool,
+        'capture_manager',
         setter    = open_plugin,
         getter    = lambda: g_pool.capture_manager.__class__,
         selection = manager_classes,
@@ -428,15 +430,18 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
             g_pool.capture.deinit_gui()
             g_pool.capture.cleanup()
             g_pool.capture = None
-            g_pool.capture = Fake_Source(g_pool, **prev_settings)
+            prev_settings['info_text'] ="'%s' disconnected. Trying to reconnect..."%prev_settings['name']
+            g_pool.capture = Fake_Source(g_pool,**prev_settings)
+            g_pool.capture.init_gui()
             ipc_pub.notify({'subject':'recording.should_stop'})
             logger.error("Error getting frame. Falling back to Fake source.")
             logger.debug("Caught error: %s"%excp)
             sleep(.2)
             continue
         except EndofVideoFileError:
-            logger.warning("Video file is done. Stopping")
-            break
+            logger.warning("Video file is done. Rewinding")
+            g_pool.capture.seek_to_frame(0)
+            continue
 
         #update performace graphs
         t = frame.timestamp
@@ -547,10 +552,10 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     zmq_ctx.destroy()
 
 
-def world_profiled(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
+def world_profiled(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version):
     import cProfile,subprocess,os
     from world import world
-    cProfile.runctx("world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src)",{'timebase':timebase,'eyes_are_alive':eyes_are_alive,'ipc_pub_url':ipc_pub_url,'ipc_sub_url':ipc_sub_url,'ipc_push_url':ipc_push_url,'user_dir':user_dir,'version':version,'cap_src':cap_src},locals(),"world.pstats")
+    cProfile.runctx("world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",{'timebase':timebase,'eyes_are_alive':eyes_are_alive,'ipc_pub_url':ipc_pub_url,'ipc_sub_url':ipc_sub_url,'ipc_push_url':ipc_push_url,'user_dir':user_dir,'version':version},locals(),"world.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
