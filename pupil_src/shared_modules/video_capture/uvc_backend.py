@@ -21,6 +21,10 @@ from sets import ImmutableSet
 import logging
 logger = logging.getLogger(__name__)
 
+class AvalilabeDeviceNotFoundError(InitialisationError):
+    pass
+
+
 class UVC_Source(Base_Source):
     """
     Camera Capture is a class that encapsualtes uvc.Capture:
@@ -37,31 +41,41 @@ class UVC_Source(Base_Source):
         devices_by_name = {dev['name']: dev for dev in self.devices}
         devices_by_uid  = {dev['uid']: dev for dev in self.devices}
 
-        if name and name in devices_by_name:
-            uid_for_name = devices_by_name[name]['uid']
+
+        #if uid is supplied we init with that
+        if uid:
             try:
-                self.uvc_capture = uvc.Capture(uid_for_name)
+                self.uvc_capture = uvc.Capture(uid)
+            except uvc.OpenError:
+                raise AvalilabeDeviceNotFoundError("No avalilable camera found that matched %s"%preferred_names)
             except uvc.InitError:
-                raise InitialisationError("The selected camera is already in use or blocked.")
-        elif preferred_names:
+                raise InitialisationError("Camera failed to initialize.")
+
+        #otherwise we use name or preffered_names
+        else:
+            if name:
+                preferred_names = [name]
+            else:
+                pass
+
+            assert preferred_names
+
+
+            #try to init by name
             for name in preferred_names:
                 if name in devices_by_name:
                     uid_for_name = devices_by_name[name]['uid']
                     try:
                         self.uvc_capture = uvc.Capture(uid_for_name)
-                    except uvc.InitError:
-                        pass
-                    else: break
-        # uid is given
-        elif uid and uid in devices_by_uid:
-            self.uvc_capture = uvc.Capture(uid)
-        # neither name nore uid are given, take first accessible device
-        elif not name and not uid and not preferred_names:
-            for uid in device_uids:
-                self.uvc_capture = uvc.Capture(uid)
-                break
-        if not self.uvc_capture:
-            raise InitialisationError()
+                    except uvc.OpenError:
+                        logger.debug("%s matches %s but is already in use or blocked."%(uid_for_name,name))
+                    except uvc.InitError as e:
+                        raise InitialisationError("Camera failed to initialize.")
+                    else:
+                        break
+            #check if we where sucessfull
+            if not self.uvc_capture:
+                raise AvalilabeDeviceNotFoundError("No avalilable camera found that matched %s"%preferred_names)
         self.update_capture(frame_size,frame_rate,uvc_controls)
 
     def update_capture(self,frame_size,frame_rate,uvc_controls={}):
@@ -283,6 +297,10 @@ class UVC_Source(Base_Source):
         ui_elements.append(ui.Button("load defaults",gui_load_defaults))
         self.g_pool.capture_source_menu.extend(ui_elements)
 
+    def stop_stream(self):
+        if self.uvc_capture:
+            self.uvc_capture.stop_stream()
+
     def cleanup(self):
         self.devices.cleanup()
         self.devices = None
@@ -300,8 +318,7 @@ class UVC_Manager(Base_Manager):
     def __init__(self, g_pool, check_devices=True):
         super(UVC_Manager, self).__init__(g_pool)
         self.last_check_ts = 0.
-        self.last_check_result = {}
-        self.check_intervall = 1.
+        self.check_intervall = 3.5
         self.check_devices = check_devices
         self.devices = uvc.Device_List()
 
@@ -349,74 +366,43 @@ class UVC_Manager(Base_Manager):
 
             self.last_check_ts = now
             self.devices.update()
-            device_names_by_uid = {d['uid']:d['name'] for d in self.devices}
-
-            old_result = ImmutableSet(self.last_check_result.keys())
-            new_result = ImmutableSet(device_names_by_uid.keys())
-
-            for lost_key in old_result - new_result:
+            for device in self.devices:
+                delay = {"Pupil Cam1 ID0":1.5,'Pupil Cam1 ID1':2.5}.get(device['name'],1.)
                 self.notify_all({
-                    'subject': 'capture_manager.source_lost',
+                    'subject': 'capture_manager.source_found.%s'%device['name'],
                     'source_class_name': UVC_Source.class_name(),
-                    'name': self.last_check_result[lost_key],
-                    'uid': lost_key
+                    'name': device['name'],
+                    'uid': device['uid'],
+                    'delay':delay
                 })
-                del self.last_check_result[lost_key]
 
-            for found_key in new_result - old_result:
-                device_name = device_names_by_uid[found_key]
-                self.notify_all({
-                    'subject': 'capture_manager.source_found',
-                    'source_class_name': UVC_Source.class_name(),
-                    'name': device_name,
-                    'uid': found_key
-                })
-                self.last_check_result[found_key] = device_name
 
     def activate_source(self, settings={}):
         if self.g_pool.capture.class_name() == UVC_Source.class_name():
-            prev_settings = self.g_pool.capture.settings
-            del prev_settings['uvc_controls']
+            self.g_pool.capture.stop_stream()
+
+        try:
+            capture = UVC_Source(self.g_pool, **settings)
+        except AvalilabeDeviceNotFoundError as e:
+            pass
+        except InitialisationError as e:
+            logger.error(InitialisationError.msg)
+            logger.debug('UVC source init settings: %s'%(settings))
+        else:
             self.g_pool.capture.deinit_gui()
             self.g_pool.capture.cleanup()
             self.g_pool.capture = None
-            try:
-                capture = UVC_Source(self.g_pool, **settings)
-            except InitialisationError:
-                logger.error('UVC source could not be initialised.')
-                if init_error.message: logger.error(init_error.message)
-                logger.debug('UVC source init settings: %s'%(settings))
+            self.g_pool.capture = capture
+            self.g_pool.capture.init_gui()
 
-                try: # Recover
-                    capture = UVC_Source(self.g_pool, **prev_settings)
-                except InitialisationError:
-                    logger.error('Recovery to previous source failed.')
-                    logger.debug('Previous settings: %s'%(prev_settings))
-                    capture = Fake_Source(self.g_pool, **prev_settings)
-                finally:
-                    self.g_pool.capture = capture
-                    self.g_pool.capture.init_gui()
-            else:
-                self.g_pool.capture = capture
-                self.g_pool.capture.init_gui()
-        else:
-            try:
-                capture = UVC_Source(self.g_pool, **settings)
-            except InitialisationError:
-                logger.error('UVC source could not be initialised.')
-                logger.debug('UVC source init settings: %s'%(settings))
-            else:
-                self.g_pool.capture.deinit_gui()
-                self.g_pool.capture.cleanup()
-                self.g_pool.capture = None
-                self.g_pool.capture = capture
-                self.g_pool.capture.init_gui()
-
-    def recover(self):
+    def recover(self,new_device):
         if self.g_pool.capture.class_name() == Fake_Source.class_name():
-            preferred = self.g_pool.capture.preferred_source
-            if preferred['source_class_name'] == UVC_Source.class_name():
-                self.activate_source(preferred)
+            preferred_settings = self.g_pool.capture.preferred_source
+            if preferred_settings['source_class_name'] == UVC_Source.class_name():
+                if preferred_settings['name'] == new_device['name'] or new_device['name'] in preferred_settings.get('preferred_names',[]):
+                    preferred_settings['uid'] = new_device['uid']
+                    logger.info("Attempting to auto connect to %s"%new_device['name'])
+                    self.activate_source(preferred_settings)
 
     def on_notify(self,n):
         """Provides UI for the capture selection
@@ -429,7 +415,7 @@ class UVC_Manager(Base_Manager):
             ``capture_manager.source_lost``
         """
         if (n['subject'].startswith('capture_manager.source_found')):
-            self.recover()
+            self.recover(n)
 
     def cleanup(self):
         self.deinit_gui()
