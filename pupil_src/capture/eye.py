@@ -239,7 +239,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             g_pool.u_r.set(roi_user_settings)
 
         def on_frame_size_change(new_size):
-            logger.warning(str(new_size))
             g_pool.u_r = UIRoi((new_size[1],new_size[0]))
 
         g_pool.on_frame_size_change = on_frame_size_change
