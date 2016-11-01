@@ -421,7 +421,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                     should_publish_frames = False
                     frame_publish_format = 'jpeg'
                 else:
-                    notification['recover_delay'] = eye_id*.5+.5
                     g_pool.capture_manager.on_notify(notification)
 
             # Get an image from the grabber
