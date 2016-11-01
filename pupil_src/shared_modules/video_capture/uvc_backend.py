@@ -13,7 +13,7 @@ from .fake_backend import Fake_Source
 
 import uvc, time
 #check versions for our own depedencies as they are fast-changing
-assert uvc.__version__ >= '0.7.2'
+assert uvc.__version__ >= '0.8'
 from ctypes import c_double
 from sets import ImmutableSet
 
@@ -50,6 +50,8 @@ class UVC_Source(Base_Source):
                 raise AvalilabeDeviceNotFoundError("No avalilable camera found that matched %s"%preferred_names)
             except uvc.InitError:
                 raise InitialisationError("Camera failed to initialize.")
+            except uvc.DeviceNotFoundError as e:
+                raise AvalilabeDeviceNotFoundError("No camera found that matched %s"%preferred_names)
 
         #otherwise we use name or preffered_names
         else:
@@ -60,7 +62,6 @@ class UVC_Source(Base_Source):
 
             assert preferred_names
 
-
             #try to init by name
             for name in preferred_names:
                 if name in devices_by_name:
@@ -68,7 +69,7 @@ class UVC_Source(Base_Source):
                     try:
                         self.uvc_capture = uvc.Capture(uid_for_name)
                     except uvc.OpenError:
-                        logger.debug("%s matches %s but is already in use or blocked."%(uid_for_name,name))
+                        logger.info("%s matches %s but is already in use or blocked."%(uid_for_name,name))
                     except uvc.InitError as e:
                         raise InitialisationError("Camera failed to initialize.")
                     else:
@@ -317,9 +318,9 @@ class UVC_Manager(Base_Manager):
 
     def __init__(self, g_pool, check_devices=True):
         super(UVC_Manager, self).__init__(g_pool)
-        self.last_check_ts = 0.
-        self.check_intervall = 3.5
-        self.check_devices = check_devices
+        # self.last_check_ts = 0.
+        # self.check_intervall = 3.5
+        # self.check_devices = check_devices
         self.devices = uvc.Device_List()
 
     def get_init_dict(self):
@@ -359,28 +360,27 @@ class UVC_Manager(Base_Manager):
         ))
         self.g_pool.capture_selector_menu.extend(ui_elements)
 
-    def update(self, frame, events):
-        now = time.time()
-        if (self.check_devices and
-            now - self.last_check_ts > self.check_intervall):
+    # def update(self, frame, events):
+    #     now = time.time()
+    #     if (self.check_devices and
+    #         now - self.last_check_ts > self.check_intervall):
 
-            self.last_check_ts = now
-            self.devices.update()
-            for device in self.devices:
-                delay = {"Pupil Cam1 ID0":1.5,'Pupil Cam1 ID1':2.5}.get(device['name'],1.)
-                self.notify_all({
-                    'subject': 'capture_manager.source_found.%s'%device['name'],
-                    'source_class_name': UVC_Source.class_name(),
-                    'name': device['name'],
-                    'uid': device['uid'],
-                    'delay':delay
-                })
+    #         self.last_check_ts = now
+    #         self.devices.update()
+    #         for device in self.devices:
+    #             delay = {"Pupil Cam1 ID0":1.5,'Pupil Cam1 ID1':2.5}.get(device['name'],1.)
+    #             self.notify_all({
+    #                 'subject': 'capture_manager.source_found.%s'%device['name'],
+    #                 'source_class_name': UVC_Source.class_name(),
+    #                 'name': device['name'],
+    #                 'uid': device['uid'],
+    #                 'delay':delay
+    #             })
 
 
     def activate_source(self, settings={}):
         if self.g_pool.capture.class_name() == UVC_Source.class_name():
             self.g_pool.capture.stop_stream()
-
         try:
             capture = UVC_Source(self.g_pool, **settings)
         except AvalilabeDeviceNotFoundError as e:
@@ -395,27 +395,27 @@ class UVC_Manager(Base_Manager):
             self.g_pool.capture = capture
             self.g_pool.capture.init_gui()
 
-    def recover(self,new_device):
-        if self.g_pool.capture.class_name() == Fake_Source.class_name():
-            preferred_settings = self.g_pool.capture.preferred_source
-            if preferred_settings['source_class_name'] == UVC_Source.class_name():
-                if preferred_settings['name'] == new_device['name'] or new_device['name'] in preferred_settings.get('preferred_names',[]):
-                    preferred_settings['uid'] = new_device['uid']
-                    logger.info("Attempting to auto connect to %s"%new_device['name'])
-                    self.activate_source(preferred_settings)
+    # def recover(self,new_device):
+    #     if self.g_pool.capture.class_name() == Fake_Source.class_name():
+    #         preferred_settings = self.g_pool.capture.preferred_source
+    #         if preferred_settings['source_class_name'] == UVC_Source.class_name():
+    #             if preferred_settings['name'] == new_device['name'] or new_device['name'] in preferred_settings.get('preferred_names',[]):
+    #                 preferred_settings['uid'] = new_device['uid']
+    #                 logger.info("Attempting to auto connect to %s"%new_device['name'])
+    #                 self.activate_source(preferred_settings)
 
-    def on_notify(self,n):
-        """Provides UI for the capture selection
+    # def on_notify(self,n):
+    #     """Provides UI for the capture selection
 
-        Reacts to notification:
-            ``capture_manager.source_found``: Check if recovery is possible
+    #     Reacts to notification:
+    #         ``capture_manager.source_found``: Check if recovery is possible
 
-        Emmits notifications:
-            ``capture_manager.source_found``
-            ``capture_manager.source_lost``
-        """
-        if (n['subject'].startswith('capture_manager.source_found')):
-            self.recover(n)
+    #     Emmits notifications:
+    #         ``capture_manager.source_found``
+    #         ``capture_manager.source_lost``
+    #     """
+    #     if (n['subject'].startswith('capture_manager.source_found')):
+    #         self.recover(n)
 
     def cleanup(self):
         self.deinit_gui()

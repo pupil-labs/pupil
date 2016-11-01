@@ -200,7 +200,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             session_settings.clear()
 
         capture_manager_settings = session_settings.get(
-            'capture_manager_settings', ('UVC_Manager',{'check_devices':False}))
+            'capture_manager_settings', ('UVC_Manager',{}))
 
         if eye_id == 0:
             cap_src = ["Pupil Cam1 ID0","HD-6000","Integrated Camera","HD USB Camera","USB 2.0 Camera"]
