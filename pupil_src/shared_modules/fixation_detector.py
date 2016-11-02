@@ -609,7 +609,6 @@ class Detection_Window(object):
         self.distances       = []
         self._max_dist_idc_c = -1
         self._max_dist_idc_r = -1
-        logger.info('Make sure 3D gaze mapping is active.')
 
     def append(self, datum):
         gaze_point, pupil_point = datum
