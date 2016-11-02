@@ -305,7 +305,7 @@ def session(rec_dir):
 
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
-    g_pool.main_menu = ui.Growing_Menu("Settings",pos=(-350,20),size=(300,400))
+    g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,500))
     g_pool.main_menu.append(ui.Button("Close Pupil Player",lambda:glfwSetWindowShouldClose(main_window,True)))
     g_pool.main_menu.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
