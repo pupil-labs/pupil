@@ -13,7 +13,7 @@ import os, sys, platform
 class Global_Container(object):
     pass
 
-def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
+def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version):
     """Reads world video and runs plugins.
 
     Creates a window, gl context.
@@ -48,8 +48,12 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     from time import time,sleep
     import numpy as np
     import logging
+
+
+    #networking
     import zmq
     import zmq_tools
+
     #zmq ipc setup
     zmq_ctx = zmq.Context()
     ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
@@ -67,24 +71,27 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
     #display
     import glfw
-    from pyglui import ui,graph,cygl
+    from pyglui import ui,graph,cygl,__version__ as pyglui_version
+    assert pyglui_version >= '1.0'
     from pyglui.cygl.utils import Named_Texture
     from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based,glFlush,is_window_visible
 
-    #check versions for our own depedencies as they are fast-changing
-    from pyglui import __version__ as pyglui_version
-    assert pyglui_version >= '1.0'
 
     #monitoring
     import psutil
 
     # helpers/utils
+    from version_utils import VersionFormat
     from file_methods import Persistent_Dict
     from methods import normalize, denormalize, delta_t, get_system_info
-    from video_capture import autoCreateCapture, FileCaptureError, EndofVideoFileError, CameraCaptureError
-    from version_utils import VersionFormat
-    import audio
     from uvc import get_time_monotonic
+    logger.info('Application Version: %s'%version)
+    logger.info('System Info: %s'%get_system_info())
+
+    # video sources
+    from video_capture import InitialisationError,StreamError, Fake_Source, EndofVideoFileError, source_classes, manager_classes
+    source_by_name = {src.class_name():src for src in source_classes}
+    import audio
 
 
     #trigger pupil detector cpp build:
@@ -106,9 +113,6 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     from annotations import Annotation_Capture
     from log_history import Log_History
     from frame_publisher import Frame_Publisher
-
-    logger.info('Application Version: %s'%version)
-    logger.info('System Info: %s'%get_system_info())
 
     #UI Platform tweaks
     if platform.system() == 'Linux':
@@ -144,10 +148,10 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
     user_launchable_plugins = [Pupil_Groups,Frame_Publisher,Show_Calibration,Pupil_Remote,Time_Sync,Surface_Tracker,Annotation_Capture,Log_History,Fixation_Detector_3D]+runtime_plugins
     system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder]
-    plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins
+    plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins+manager_classes
     name_by_index = [p.__name__ for p in plugin_by_index]
     plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-    default_plugins = [('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Remote',{}),('Fixation_Detector_3D',{})]
+    default_plugins = [('UVC_Manager',{}),('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Remote',{}),('Fixation_Detector_3D',{})]
 
     # Callback functions
     def on_resize(window,w, h):
@@ -188,6 +192,8 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     def get_dt():
         return next(tick)
 
+    g_pool.on_frame_size_change = lambda new_size: None
+
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
     if session_settings.get("version",VersionFormat('0.0')) < g_pool.version:
@@ -195,20 +201,26 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         session_settings.clear()
 
     # Initialize capture
-    cap = autoCreateCapture(cap_src, timebase=g_pool.timebase)
-    default_settings = {'frame_size':(1280,720),'frame_rate':30}
-    previous_settings = session_settings.get('capture_settings',None)
-    if previous_settings and previous_settings['name'] == cap.name:
-        cap.settings = previous_settings
-    else:
-        cap.settings = default_settings
-
+    default_settings = {
+        'source_class_name': 'UVC_Source',
+        'preferred_names'  : ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"],
+        'frame_size': (1280,720),
+        'frame_rate': 30
+    }
+    settings = session_settings.get('capture_settings', default_settings)
+    try:
+        cap = source_by_name[settings['source_class_name']](g_pool, **settings)
+    except (KeyError,InitialisationError) as e:
+        if isinstance(e,KeyError):
+            logger.warning('Incompatible capture setting encountered. Falling back to fake source.')
+        cap = Fake_Source(g_pool, **settings)
 
     g_pool.iconified = False
-    g_pool.capture = cap
     g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode','3d')
     g_pool.active_calibration_plugin = None
     g_pool.active_gaze_mapping_plugin = None
+    g_pool.capture = cap
+    g_pool.capture_manager = None
 
     audio.audio_mode = session_settings.get('audio_mode',audio.default_audio_mode)
 
@@ -297,23 +309,46 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
                                         labels    = labels,
                                         setter    = open_plugin,
                                         getter    = lambda: selector_label))
+
     general_settings.append(ui.Info_Text('Capture Version: %s'%g_pool.version))
-    g_pool.sidebar.append(general_settings)
+
+    g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
+
+    g_pool.capture_source_menu = ui.Growing_Menu('Capture Source')
+    g_pool.capture.init_gui()
 
     g_pool.calibration_menu = ui.Growing_Menu('Calibration')
+    g_pool.capture_selector_menu = ui.Growing_Menu('Capture Selection')
+
+    g_pool.sidebar.append(general_settings)
+    g_pool.sidebar.append(g_pool.capture_selector_menu)
+    g_pool.sidebar.append(g_pool.capture_source_menu)
     g_pool.sidebar.append(g_pool.calibration_menu)
+
     g_pool.gui.append(g_pool.sidebar)
-    g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
     g_pool.gui.append(g_pool.quickbar)
-    g_pool.capture.init_gui(g_pool.sidebar)
 
     #plugins that are loaded based on user settings from previous session
     g_pool.plugins = Plugin_List(g_pool,plugin_by_name,session_settings.get('loaded_plugins',default_plugins))
 
     #We add the calibration menu selector, after a calibration has been added:
-    g_pool.calibration_menu.insert(0,ui.Selector('active_calibration_plugin',getter=lambda: g_pool.active_calibration_plugin.__class__, selection = calibration_plugins,
+    g_pool.calibration_menu.insert(0,ui.Selector(
+                                        'active_calibration_plugin',
+                                        getter=lambda: g_pool.active_calibration_plugin.__class__,
+                                        selection = calibration_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in calibration_plugins],
-                                        setter= open_plugin,label='Method'))
+                                        setter= open_plugin,label='Method'
+                                                ))
+
+    #We add the capture selection menu, after a manager has been added:
+    g_pool.capture_selector_menu.insert(0,ui.Selector(
+        'capture_manager',
+        setter    = open_plugin,
+        getter    = lambda: g_pool.capture_manager.__class__,
+        selection = manager_classes,
+        labels    = [b.gui_name for b in manager_classes],
+        label     = 'Manager'
+    ))
 
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window,on_resize)
@@ -341,7 +376,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     #set up performace graphs:
     pid = os.getpid()
     ps = psutil.Process(pid)
-    ts = cap.get_timestamp()
+    ts = g_pool.get_timestamp()
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,130)
@@ -374,21 +409,40 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
     # Event loop
     while not glfw.glfwWindowShouldClose(main_window):
+
+        # fetch newest notifications
+        new_notifications = []
+        while notify_sub.new_data:
+            t,n = notify_sub.recv()
+            new_notifications.append(n)
+
+        # notify each plugin if there are new notifications:
+        for n in new_notifications:
+            handle_notifications(n)
+            g_pool.capture.on_notify(n)
+            for p in g_pool.plugins:
+                p.on_notify(n)
+
         # Get an image from the grabber
         try:
             frame = g_pool.capture.get_frame()
-        except CameraCaptureError:
-            logger.error("Capture from camera failed. Starting Fake Capture.")
-            settings = g_pool.capture.settings
-            g_pool.capture.close()
-            g_pool.capture = autoCreateCapture(None, timebase=g_pool.timebase)
-            g_pool.capture.init_gui(g_pool.sidebar)
-            g_pool.capture.settings = settings
+        except StreamError as e:
+            prev_settings = g_pool.capture.settings
+            g_pool.capture.deinit_gui()
+            g_pool.capture.cleanup()
+            g_pool.capture = None
+            prev_settings['info_text'] ="'%s' disconnected."%prev_settings['name']
+            g_pool.capture = Fake_Source(g_pool,**prev_settings)
+            g_pool.capture.init_gui()
             ipc_pub.notify({'subject':'recording.should_stop'})
+            logger.error("Error getting frame. Falling back to Fake source.")
+            logger.debug("Caught error: %s"%e)
+            sleep(.2)
             continue
         except EndofVideoFileError:
-            logger.warning("Video file is done. Stopping")
-            break
+            logger.warning("Video file is done. Rewinding")
+            g_pool.capture.seek_to_frame(0)
+            continue
 
         #update performace graphs
         t = frame.timestamp
@@ -407,7 +461,6 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
         recent_pupil_data = []
         recent_gaze_data = []
-        new_notifications = []
 
         while pupil_sub.new_data:
             t,p = pupil_sub.recv()
@@ -417,19 +470,9 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
             for g in new_gaze_data:
                 gaze_pub.send('gaze',g)
             recent_gaze_data += new_gaze_data
-        while notify_sub.new_data:
-            t,n = notify_sub.recv()
-            new_notifications.append(n)
-
 
         events['pupil_positions'] = recent_pupil_data
         events['gaze_positions'] = recent_gaze_data
-
-        # notify each plugin if there are new notifications:
-        for n in new_notifications:
-            handle_notifications(n)
-            for p in g_pool.plugins:
-                p.on_notify(n)
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
@@ -458,6 +501,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         # render visual feedback from loaded plugins
 
         if is_window_visible(main_window):
+            g_pool.capture.gl_display()
             for p in g_pool.plugins:
                 p.gl_display()
 
@@ -492,7 +536,9 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     g_pool.gui.terminate()
     glfw.glfwDestroyWindow(main_window)
     glfw.glfwTerminate()
-    g_pool.capture.close()
+
+    g_pool.capture.deinit_gui()
+    g_pool.capture.cleanup()
 
     #shut down eye processes:
     stop_eye_process(0)
@@ -507,10 +553,10 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     zmq_ctx.destroy()
 
 
-def world_profiled(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src):
+def world_profiled(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version):
     import cProfile,subprocess,os
     from world import world
-    cProfile.runctx("world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,cap_src)",{'timebase':timebase,'eyes_are_alive':eyes_are_alive,'ipc_pub_url':ipc_pub_url,'ipc_sub_url':ipc_sub_url,'ipc_push_url':ipc_push_url,'user_dir':user_dir,'version':version,'cap_src':cap_src},locals(),"world.pstats")
+    cProfile.runctx("world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",{'timebase':timebase,'eyes_are_alive':eyes_are_alive,'ipc_pub_url':ipc_pub_url,'ipc_sub_url':ipc_sub_url,'ipc_push_url':ipc_push_url,'user_dir':user_dir,'version':version},locals(),"world.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)

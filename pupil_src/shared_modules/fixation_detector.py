@@ -96,7 +96,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
 
 
         def jump_next_fixation(_):
-            ts = self.g_pool.capture.get_timestamp()
+            ts = self.last_frame_ts
             for f in self.fixations:
                 if f['timestamp'] > ts:
                     self.g_pool.capture.seek_to_frame(f['mid_frame_index'])
@@ -295,6 +295,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
 
 
     def update(self,frame,events):
+        self.last_frame_ts = frame.timestamp
         from player_methods import transparent_circle
         events['fixations'] = self.g_pool.fixations_by_frame[frame.index]
         if self.show_fixations:
@@ -465,6 +466,7 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
         super(Pupil_Angle_3D_Fixation_Detector, self).__init__(g_pool, max_dispersion, min_duration, h_fov, v_fov, show_fixations)
 
     def update(self,frame,events):
+        self.last_frame_ts = frame.timestamp
         from player_methods import transparent_circle
         events['fixations'] = self.g_pool.fixations_by_frame[frame.index]
         if self.show_fixations:

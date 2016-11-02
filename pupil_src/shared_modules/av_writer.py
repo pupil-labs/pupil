@@ -359,7 +359,7 @@ if __name__ == '__main__':
 
     import time
     time.sleep(5)
-    cap.close()
+    cap.cleanup()
     #mic device
     exit()
 
