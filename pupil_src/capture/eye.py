@@ -103,7 +103,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         from methods import normalize, denormalize, Roi, timer
         from av_writer import JPEG_Writer,AV_Writer
 
-        from video_capture import InitialisationError, Fake_Source,EndofVideoFileError, source_classes, manager_classes
+        from video_capture import InitialisationError,StreamError, Fake_Source,EndofVideoFileError, source_classes, manager_classes
         source_by_name = {src.class_name():src for src in source_classes}
 
         # Pupil detectors
@@ -425,9 +425,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             # Get an image from the grabber
             try:
                 frame = g_pool.capture.get_frame()
-            except g_pool.capture.error_class() as excp:
+            except StreamError as e:
                 logger.error("Error getting frame. Stopping eye process.")
-                logger.debug("Caught error: %s"%excp)
+                logger.debug("Caught error: %s"%e)
                 break
             except EndofVideoFileError:
                 logger.warning("Video File is done. Stopping")

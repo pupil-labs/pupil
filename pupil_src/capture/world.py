@@ -48,8 +48,12 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     from time import time,sleep
     import numpy as np
     import logging
+
+
+    #networking
     import zmq
     import zmq_tools
+
     #zmq ipc setup
     zmq_ctx = zmq.Context()
     ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
@@ -67,27 +71,27 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
 
     #display
     import glfw
-    from pyglui import ui,graph,cygl
+    from pyglui import ui,graph,cygl,__version__ as pyglui_version
+    assert pyglui_version >= '1.0'
     from pyglui.cygl.utils import Named_Texture
     from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based,glFlush,is_window_visible
 
-    #check versions for our own depedencies as they are fast-changing
-    from pyglui import __version__ as pyglui_version
-    assert pyglui_version >= '1.0'
 
     #monitoring
     import psutil
 
     # helpers/utils
+    from version_utils import VersionFormat
     from file_methods import Persistent_Dict
     from methods import normalize, denormalize, delta_t, get_system_info
-
-    from video_capture import InitialisationError, Fake_Source, EndofVideoFileError, source_classes, manager_classes
-    source_by_name = {src.class_name():src for src in source_classes}
-
-    from version_utils import VersionFormat
-    import audio
     from uvc import get_time_monotonic
+    logger.info('Application Version: %s'%version)
+    logger.info('System Info: %s'%get_system_info())
+
+    # video sources
+    from video_capture import InitialisationError,StreamError, Fake_Source, EndofVideoFileError, source_classes, manager_classes
+    source_by_name = {src.class_name():src for src in source_classes}
+    import audio
 
 
     #trigger pupil detector cpp build:
@@ -109,9 +113,6 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     from annotations import Annotation_Capture
     from log_history import Log_History
     from frame_publisher import Frame_Publisher
-
-    logger.info('Application Version: %s'%version)
-    logger.info('System Info: %s'%get_system_info())
 
     #UI Platform tweaks
     if platform.system() == 'Linux':
@@ -425,17 +426,17 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         # Get an image from the grabber
         try:
             frame = g_pool.capture.get_frame()
-        except g_pool.capture.error_class() as excp:
+        except StreamError as e:
             prev_settings = g_pool.capture.settings
             g_pool.capture.deinit_gui()
             g_pool.capture.cleanup()
             g_pool.capture = None
-            prev_settings['info_text'] ="'%s' disconnected. Trying to reconnect..."%prev_settings['name']
+            prev_settings['info_text'] ="'%s' disconnected."%prev_settings['name']
             g_pool.capture = Fake_Source(g_pool,**prev_settings)
             g_pool.capture.init_gui()
             ipc_pub.notify({'subject':'recording.should_stop'})
             logger.error("Error getting frame. Falling back to Fake source.")
-            logger.debug("Caught error: %s"%excp)
+            logger.debug("Caught error: %s"%e)
             sleep(.2)
             continue
         except EndofVideoFileError:

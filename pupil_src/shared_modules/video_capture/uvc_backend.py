@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from .base_backend import InitialisationError, Base_Source, Base_Manager
+from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
 from .fake_backend import Fake_Source
 
 import uvc, time
@@ -166,11 +166,11 @@ class UVC_Source(Base_Source):
                 self._re_init_capture_by_name(self.uvc_capture.name)
                 frame = self.uvc_capture.get_frame_robust()
             except InitialisationError as e:
-                raise self.error_class()(e.message)
+                raise StreamError(e.message)
             except uvc.InitError as e:
-                raise self.error_class()(str(e))
+                raise StreamError(str(e))
         except uvc.InitError as e:
-            raise self.error_class()(e.message)
+            raise StreamError(e.message)
         frame.timestamp = self.g_pool.get_timestamp()+self.ts_offset
         return frame
 
@@ -229,10 +229,6 @@ class UVC_Source(Base_Source):
     @property
     def jpeg_support(self):
         return True
-
-    @staticmethod
-    def error_class():
-        return uvc.StreamError
 
     def init_gui(self):
         from pyglui import ui

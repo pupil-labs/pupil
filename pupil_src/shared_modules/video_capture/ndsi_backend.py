@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from .base_backend import InitialisationError, Base_Source, Base_Manager
+from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
 from .fake_backend import Fake_Source
 
 import ndsi
@@ -89,7 +89,7 @@ class NDSI_Source(Base_Source):
                     logger.debug('Could not get Frame of first try: "%s". Attempt:%s/%s '%(e.message,a+1,attempts))
             else:
                 return frame
-        raise ndsi.StreamError("Could not grab frame after 3 attempts. Giving up.")
+        raise StreamError("Could not grab frame after 3 attempts. Giving up.")
 
     def on_notification(self, sensor, event):
         if event['subject'] == 'error':
@@ -203,10 +203,6 @@ class NDSI_Source(Base_Source):
     def cleanup(self):
         self.sensor.unlink()
         self.sensor = None
-
-    @staticmethod
-    def error_class():
-        return ndsi.StreamError
 
 class NDSI_Manager(Base_Manager):
     """Enumerates and activates Pupil Mobile video sources
