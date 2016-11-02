@@ -33,6 +33,7 @@ class Frame_Publisher(Plugin):
             blob = data
 
             events['frame.world'] = [{
+                'topic':'frame',
                 'width': frame.width,
                 'height': frame.width,
                 'index': frame.index,

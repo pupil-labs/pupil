@@ -202,7 +202,8 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
 
                         # avg pupil size  = mean of (mean of pupil size per gaze ) for all gaze points of support
                         avg_pupil_size =  sum([sum([p['diameter'] for p in g['base_data']])/len(g['base_data']) for g in fixation_support])/len(fixation_support)
-                        new_fixation = {'id': len(fixations),
+                        new_fixation = {'topic':'fixation',
+                                        'id': len(fixations),
                                         'norm_pos':fixation_centroid,
                                         'base_data':fixation_support,
                                         'duration':duration,
@@ -554,6 +555,7 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
             duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
 
             new_fixation = {
+                'topic'            :'fixation',
                 'norm_pos'         :fixation_centroid,
                 'base_data'        :fixation_support,
                 'duration'         :duration,
@@ -669,6 +671,7 @@ class Detection_Window(object):
         confidence = sum(p['confidence'] for p in self.pupil_data)/fix_sup_len
         avg_diameter = sum(p['diameter'] for p in self.pupil_data)/fix_sup_len
         new_fixation = {
+            'topic'            :'fixation',
             'norm_pos'         :fixation_centroid,
             'base_data'        :self.gaze_data,
             'duration'         :self.duration,
