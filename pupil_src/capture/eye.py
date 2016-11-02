@@ -103,7 +103,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         from methods import normalize, denormalize, Roi, timer
         from av_writer import JPEG_Writer,AV_Writer
 
-        from video_capture import InitialisationError, Fake_Source,EndofVideoFileError, source_classes, manager_classes
+        from video_capture import InitialisationError,StreamError, Fake_Source,EndofVideoFileError, source_classes, manager_classes
         source_by_name = {src.class_name():src for src in source_classes}
 
         # Pupil detectors
@@ -200,7 +200,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             session_settings.clear()
 
         capture_manager_settings = session_settings.get(
-            'capture_manager_settings', ('UVC_Manager',{'check_devices':False}))
+            'capture_manager_settings', ('UVC_Manager',{}))
 
         if eye_id == 0:
             cap_src = ["Pupil Cam1 ID0","HD-6000","Integrated Camera","HD USB Camera","USB 2.0 Camera"]
@@ -239,7 +239,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             g_pool.u_r.set(roi_user_settings)
 
         def on_frame_size_change(new_size):
-            logger.warning(str(new_size))
             g_pool.u_r = UIRoi((new_size[1],new_size[0]))
 
         g_pool.on_frame_size_change = on_frame_size_change
@@ -421,15 +420,14 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                     should_publish_frames = False
                     frame_publish_format = 'jpeg'
                 else:
-                    notification['recover_delay'] = eye_id*.5+.5
                     g_pool.capture_manager.on_notify(notification)
 
             # Get an image from the grabber
             try:
                 frame = g_pool.capture.get_frame()
-            except g_pool.capture.error_class() as excp:
+            except StreamError as e:
                 logger.error("Error getting frame. Stopping eye process.")
-                logger.debug("Caught error: %s"%excp)
+                logger.debug("Caught error: %s"%e)
                 break
             except EndofVideoFileError:
                 logger.warning("Video File is done. Stopping")

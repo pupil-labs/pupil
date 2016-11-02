@@ -61,7 +61,7 @@ class Fake_Source(Base_Source):
         frame_size (tuple)
         img (uint8 numpy array): bgr image
         info_text (str): String shown to the user
-        preferred_source (dict): Settings about source which is to be recovered
+        preferred_source (dict): Settings about source which this fake capture is a fallback for.
         presentation_time (float)
         settings (dict)
     """

@@ -145,13 +145,6 @@ class Base_Source(object):
         """
         raise NotImplementedError()
 
-    @staticmethod
-    def error_class():
-        """
-        Returns:
-            type: Error class which should be caught to initialise fallback
-        """
-        return StreamError
 
     @classmethod
     def class_name(self):
