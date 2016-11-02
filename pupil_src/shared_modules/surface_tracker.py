@@ -22,7 +22,7 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-from square_marker_detect import detect_markers_robust,detect_markers, draw_markers,m_marker_to_screen
+from square_marker_detect import detect_markers,detect_markers_robust, draw_markers,m_marker_to_screen, MarkerTracker
 from reference_surface import Reference_Surface
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 
@@ -31,12 +31,13 @@ from math import sqrt
 class Surface_Tracker(Plugin):
     """docstring
     """
-    def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False):
+    def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False,robust_detection=True):
         super(Surface_Tracker, self).__init__(g_pool)
         self.order = .2
 
         # all markers that are detected in the most recent frame
         self.markers = []
+        self.marker_tracker = MarkerTracker()
 
         self.camera_calibration = load_camera_calibration(self.g_pool)
         self.load_surface_definitions_from_file()
@@ -50,9 +51,10 @@ class Surface_Tracker(Plugin):
         self.running = True
 
 
-        self.robust_detection = 1
+        self.robust_detection = robust_detection
         self.aperture = 11
         self.min_marker_perimeter = min_marker_perimeter
+        self.min_id_confidence = 0.0
         self.locate_3d = False
         self.invert_image = invert_image
 
@@ -106,7 +108,7 @@ class Surface_Tracker(Plugin):
                                 if self.marker_edit_surface.markers.has_key(m['id']):
                                     self.marker_edit_surface.remove_marker(m)
                                 else:
-                                    self.marker_edit_surface.add_marker(m,self.markers,self.camera_calibration,self.min_marker_perimeter)
+                                    self.marker_edit_surface.add_marker(m,self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
 
     def add_surface(self,_):
         self.surfaces.append(Reference_Surface())
@@ -156,7 +158,7 @@ class Surface_Tracker(Plugin):
         self.menu.append(ui.Info_Text('This plugin detects and tracks fiducial markers visible in the scene. You can define surfaces using 1 or more marker visible within the world view by clicking *add surface*. You can edit defined surfaces by selecting *Surface edit mode*.'))
         self.menu.append(ui.Switch('robust_detection',self,label='Robust detection'))
         self.menu.append(ui.Switch('invert_image',self,label='Use inverted markers'))
-        self.menu.append(ui.Slider('min_marker_perimeter',self,step=1,min=10,max=500))
+        self.menu.append(ui.Slider('min_marker_perimeter',self,step=1,min=10,max=100))
         self.menu.append(ui.Switch('locate_3d',self,label='3D localization'))
         self.menu.append(ui.Selector('mode',self,label="Mode",selection=['Show Markers and Surfaces','Show marker IDs'] ))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_'),))
@@ -181,25 +183,26 @@ class Surface_Tracker(Plugin):
 
         if self.running:
             gray = frame.gray
+            if self.invert_image:
+                gray = 255-gray
 
-            self.markers = detect_markers_robust(gray,
-                                                grid_size = 5,
-                                                prev_markers=self.markers,
-                                                min_marker_perimeter=self.min_marker_perimeter,
-                                                aperture=self.aperture,
-                                                visualize=0,
-                                                true_detect_every_frame=3 if self.robust_detection else 1,
-                                                invert_image=self.invert_image)
-
-
-
+            if self.robust_detection:
+                self.markers = detect_markers_robust(
+                    gray, grid_size = 5,aperture=self.aperture,
+                    prev_markers=self.markers,
+                    true_detect_every_frame=3,
+                    min_marker_perimeter=self.min_marker_perimeter)
+            else:
+                self.markers = detect_markers(
+                    gray, grid_size = 5,aperture=self.aperture,
+                    min_marker_perimeter=self.min_marker_perimeter)
             if self.mode == "Show marker IDs":
                 draw_markers(frame.gray,self.markers)
 
 
         # locate surfaces, map gaze
         for s in self.surfaces:
-            s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter, self.locate_3d)
+            s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence, self.locate_3d)
             if s.detected:
                 s.gaze_on_srf = s.map_data_to_surface(events.get('gaze_positions',[]),s.m_from_screen)
             else:
@@ -230,7 +233,7 @@ class Surface_Tracker(Plugin):
 
 
     def get_init_dict(self):
-        return {'mode':self.mode,'min_marker_perimeter':self.min_marker_perimeter}
+        return {'mode':self.mode,'min_marker_perimeter':self.min_marker_perimeter,'invert_image':self.invert_image,'robust_detection':self.robust_detection}
 
 
     def gl_display(self):
@@ -241,7 +244,7 @@ class Surface_Tracker(Plugin):
             for m in self.markers:
                 hat = np.array([[[0,0],[0,1],[.5,1.3],[1,1],[1,0],[0,0]]],dtype=np.float32)
                 hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
-                if m['perimeter']>=self.min_marker_perimeter:
+                if m['perimeter']>=self.min_marker_perimeter and m['id_confidence']>self.min_id_confidence:
                     draw_polyline(hat.reshape((6,2)),color=RGBA(0.1,1.,1.,.5))
                     draw_polyline(hat.reshape((6,2)),color=RGBA(0.1,1.,1.,.3),line_type=GL_POLYGON)
                 else:

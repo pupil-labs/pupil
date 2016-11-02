@@ -151,7 +151,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins+manager_classes
     name_by_index = [p.__name__ for p in plugin_by_index]
     plugin_by_name = dict(zip(name_by_index,plugin_by_index))
-    default_plugins = [('UVC_Manager',{}),('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Remote',{})]
+    default_plugins = [('UVC_Manager',{}),('Log_Display',{}),('Dummy_Gaze_Mapper',{}),('Display_Recent_Gaze',{}), ('Screen_Marker_Calibration',{}),('Recorder',{}),('Pupil_Remote',{}),('Fixation_Detector_3D',{})]
 
     # Callback functions
     def on_resize(window,w, h):
@@ -216,7 +216,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         cap = Fake_Source(g_pool, **settings)
 
     g_pool.iconified = False
-    g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode','2d')
+    g_pool.detection_mapping_mode = session_settings.get('detection_mapping_mode','3d')
     g_pool.active_calibration_plugin = None
     g_pool.active_gaze_mapping_plugin = None
     g_pool.capture = cap
