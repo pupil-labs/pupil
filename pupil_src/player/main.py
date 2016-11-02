@@ -126,10 +126,12 @@ class Global_Container(object):
 
 def session(rec_dir):
 
-
     system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
-    user_launchable_plugins = [Video_Export_Launcher,Raw_Data_Exporter, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Vis_Fixation,Scan_Path,Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Surface_Tracker,Batch_Exporter,Eye_Video_Overlay,Annotation_Player,Log_History] #,Marker_Auto_Trim_Marks
-    user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
+    vis_plugins = sorted([Vis_Circle,Vis_Polyline,Vis_Light_Points,Vis_Cross,Vis_Watermark,Eye_Video_Overlay,Scan_Path], key=lambda x: x.__name__)
+    analysis_plugins = sorted([Gaze_Position_2D_Fixation_Detector,Pupil_Angle_3D_Fixation_Detector,Pupil_Angle_3D_Fixation_Detector,Manual_Gaze_Correction,Video_Export_Launcher,Offline_Surface_Tracker,Raw_Data_Exporter,Batch_Exporter,Annotation_Player], key=lambda x: x.__name__)
+    other_plugins = sorted([Show_Calibration,Log_History], key=lambda x: x.__name__)
+    user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir,'plugins')), key=lambda x: x.__name__)
+    user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
     available_plugins = system_plugins + user_launchable_plugins
     name_by_index = [p.__name__ for p in available_plugins]
     index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
@@ -304,14 +306,21 @@ def session(rec_dir):
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
 
     selector_label = "Select to load"
-    labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins]
-    user_launchable_plugins.insert(0, selector_label)
-    labels.insert(0, selector_label)
-    g_pool.main_menu.append(ui.Selector('Open plugin',
-                                        selection = user_launchable_plugins,
+
+    vis_labels = ["   " + p.__name__.replace('_',' ') for p in vis_plugins]
+    analysis_labels = ["   " + p.__name__.replace('_',' ') for p in analysis_plugins]
+    other_labels = ["   " + p.__name__.replace('_',' ') for p in other_plugins]
+    user_labels = ["   " + p.__name__.replace('_',' ') for p in user_plugins]
+
+    plugins = [selector_label, selector_label] + vis_plugins + [selector_label] + analysis_plugins + [selector_label] + other_plugins + [selector_label] + user_plugins
+    labels = [selector_label, "Visualization"] + vis_labels + ["Analysis"] + analysis_labels + ["Other"] + other_labels + ["User added"] + user_labels
+
+    g_pool.main_menu.append(ui.Selector('Open plugin:',
+                                        selection = plugins,
                                         labels    = labels,
                                         setter    = open_plugin,
                                         getter    = lambda: selector_label))
+
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
