@@ -151,11 +151,14 @@ class Offline_Surface_Tracker(Surface_Tracker):
         if notification['subject'] == 'gaze_positions_changed':
             logger.info('Gaze postions changed. Recalculating.')
             self.recalculate()
+        if notification['subject'] == 'min_data_confidence_changed':
+            logger.info('Min_data_confidence changed. Recalculating.')
+            self.recalculate()
         elif notification['subject'] == 'surfaces_changed':
             logger.info('Surfaces changed. Recalculating.')
             self.recalculate()
         elif notification['subject'] == 'min_marker_perimeter_changed':
-            logger.info('Min marper perimeter adjusted. Re-detecting surfaces.')
+            logger.info('Min marker perimeter adjusted. Re-detecting surfaces.')
             self.invalidate_surface_caches()
         elif notification['subject'] is "should_export":
             self.save_surface_statsics_to_file(notification['range'],notification['export_dir'])

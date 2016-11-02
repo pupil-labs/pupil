@@ -30,7 +30,7 @@ class Vis_Polyline(Plugin):
         self.thickness = thickness
 
     def update(self,frame,events):
-        pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze_positions',[])]
+        pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze_positions',[]) if pt['confidence']>=self.g_pool.min_data_confidence]
         bgra = (self.b*255,self.g*255,self.r*255,self.a*255)
         if pts:
             pts = np.array([pts],dtype=np.int32)

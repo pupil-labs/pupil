@@ -238,6 +238,7 @@ def session(rec_dir):
     g_pool.rec_dir = rec_dir
     g_pool.rec_version = rec_version
     g_pool.meta_info = meta_info
+    g_pool.min_data_confidence = session_settings.get('min_data_confidence',0.6)
     g_pool.pupil_positions_by_frame = correlate_data(pupil_list,g_pool.timestamps)
     g_pool.gaze_positions_by_frame = correlate_data(gaze_list,g_pool.timestamps)
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps] #populated by the fixation detector plugin
@@ -267,6 +268,12 @@ def session(rec_dir):
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
+
+    def set_data_confidence(new_confidence):
+        g_pool.min_data_confidence = new_confidence
+        notification = {'subject':'min_data_confidence_changed'}
+        notification['_notify_time_'] = time()+.8
+        g_pool.delayed_notifications[notification['subject']] = notification
 
     def open_plugin(plugin):
         if plugin ==  "Select to load":
@@ -303,6 +310,7 @@ def session(rec_dir):
     g_pool.main_menu.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
+    g_pool.main_menu.append(ui.Slider('min_data_confidence',g_pool, setter=set_data_confidence,step=.05 ,min=0.0,max=1.0,label='Confidence threshold'))
 
     selector_label = "Select to load"
 
@@ -464,6 +472,7 @@ def session(rec_dir):
         glfwPollEvents()
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
+    session_settings['min_data_confidence'] = g_pool.min_data_confidence
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)

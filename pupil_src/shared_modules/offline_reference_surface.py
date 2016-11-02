@@ -203,7 +203,8 @@ class Offline_Reference_Surface(Reference_Surface):
             if c_e:
                 frame_idx+=section.start
                 for gp in self.gaze_on_srf_by_frame_idx(frame_idx,c_e['m_from_screen']):
-                    all_gaze.append(gp['norm_pos'])
+                    if gp['confidence']>=self.g_pool.min_data_confidence:
+                        all_gaze.append(gp['norm_pos'])
 
         if not all_gaze:
             logger.warning("No gaze data on surface for heatmap found.")
