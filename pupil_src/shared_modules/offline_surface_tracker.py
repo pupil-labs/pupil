@@ -262,7 +262,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         forking_enable(0) #for MacOs only
         from marker_detector_cacher import fill_cache
         visited_list = [False if x == False else True for x in self.cache]
-        video_file_path =  self.g_pool.capture.src
+        video_file_path =  self.g_pool.capture.source_path
         timestamps = self.g_pool.capture.timestamps
         self.cache_queue = Queue()
         self.cacher_seek_idx = Value('i',0)
