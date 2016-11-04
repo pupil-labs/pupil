@@ -175,7 +175,7 @@ class Batch_Exporter(Plugin):
                 outfiles.add(out_file_path)
                 logger.info("Exporting to: %s"%out_file_path)
 
-                process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, export_dir,user_dir,start_frame,end_frame,plugins,out_file_path))
+                process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, export_dir,user_dir,self.g_pool.min_data_confidence,start_frame,end_frame,plugins,out_file_path))
                 self.exports.append(process)
 
     def start(self):
@@ -335,7 +335,7 @@ def main():
         j.args = (j.should_terminate,j.frames_to_export,j.current_frame, j.data_dir, j.user_dir,j.start_frame,j.end_frame,j.plugin_initializers,j.out_file_path)
         jobs.append(j)
 
-    
+
     todo = jobs[:]
     workers = [Export_Process(target=export,args=todo.pop(0).args) for i in range(min(len(todo),n_cpu))]
     for w in workers:
@@ -357,7 +357,7 @@ def main():
         show_progess(jobs)
         time.sleep(.25)
     print '\n'
-   
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARNING)
     main()

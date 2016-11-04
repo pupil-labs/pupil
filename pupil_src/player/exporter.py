@@ -59,7 +59,7 @@ plugin_by_name = dict(zip(name_by_index,available_plugins))
 class Global_Container(object):
     pass
 
-def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
+def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min_data_confidence,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
@@ -74,7 +74,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     g = Global_Container()
     g.app = 'exporter'
-
+    g.min_data_confidence = min_data_confidence
     timestamps = np.load(timestamps_path)
     cap = File_Source(g,video_path,timestamps=timestamps)
 
