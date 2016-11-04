@@ -260,7 +260,7 @@ def session(rec_dir):
             g_pool.new_seek = True
 
     def toggle_play(new_state):
-        if cap.get_frame_index() > cap.get_frame_count()-1:
+        if cap.get_frame_index() >= cap.get_frame_count()-5:
             cap.seek_to_frame(1) #avoid pause set by hitting trimmark pause.
             logger.warning("End of video - restart at beginning.")
         g_pool.play = new_state
