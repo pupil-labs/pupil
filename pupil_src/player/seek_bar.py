@@ -33,10 +33,10 @@ class Seek_Bar(Plugin):
         self.drag_mode = False
         self.was_playing = True
         #display layout
-        self.padding = 20. #in sceen pixel
+        self.padding = 30. #in sceen pixel
         self.window_size = 0,0
 
-        
+
     def init_gui(self):
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 
@@ -113,17 +113,21 @@ class Seek_Bar(Plugin):
         glPushMatrix()
         glLoadIdentity()
 
-        if self.drag_mode:
-            color1 = (0.,.8,.5,.5)
-            color2 = (0.,.8,.5,1.)
-        else:
-            color1 = (.25,.8,.8,.5)
-            color2 = (.25,.8,.8,1.)
+        # if self.drag_mode:
+        #     color1 = (0.,.8,.5,.5)
+        #     color2 = (0.,.8,.5,1.)
+        # else:
+        color1 = (1,1,1,0.4)#(.25,.8,.8,.5)
+        color2 = (1,1,1,1.)#(.25,.8,.8,1.)
 
-        draw_polyline(verts=[(0,0),(self.current_frame_index,0)],color=RGBA(*color1))
-        draw_polyline(verts=[(self.current_frame_index,0),(self.frame_count,0)],color=RGBA(.5,.5,.5,.5))
-        draw_points([(self.current_frame_index,0)],color=RGBA(*color1),size=40)
-        draw_points([(self.current_frame_index,0)],color=RGBA(*color2),size=10)
+        thickness = 10.
+        draw_polyline(verts=[(0,0),(self.current_frame_index,0)],
+            thickness=thickness,color=RGBA(*color1))
+        draw_polyline(verts=[(self.current_frame_index,0),(self.frame_count,0)],
+            thickness=thickness,color=RGBA(*color1))
+        if not self.drag_mode:
+            draw_points([(self.current_frame_index,0)],color=RGBA(*color1),size=30)
+        draw_points([(self.current_frame_index,0)],color=RGBA(*color2),size=20)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
