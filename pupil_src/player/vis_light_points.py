@@ -40,7 +40,7 @@ class Vis_Light_Points(Plugin):
         overlay = np.ones(img.shape[:-1],dtype=img.dtype)
 
         # draw recent gaze postions as black dots on an overlay image.
-        for gaze_point in screen_gaze:
+        for gaze_point in pts:
             try:
                 overlay[int(gaze_point[1]),int(gaze_point[0])] = 0
             except:
