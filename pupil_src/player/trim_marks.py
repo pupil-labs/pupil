@@ -22,7 +22,7 @@ class Trim_Marks(Plugin):
     def __init__(self, g_pool):
         super(Trim_Marks, self).__init__(g_pool)
         g_pool.trim_marks = self #attach self for ease of access by others.
-        self.order = .8
+        self.order = .4
         self.capture = g_pool.capture
         self.frame_count = self.capture.get_frame_count()
         self._in_mark = 0
@@ -30,7 +30,7 @@ class Trim_Marks(Plugin):
         self.drag_in = False
         self.drag_out = False
         #display layout
-        self.padding = 20. #in sceen pixel
+        self.padding = 30. #in sceen pixel
         self.window_size = 0,0
 
     @property
@@ -155,13 +155,13 @@ class Trim_Marks(Plugin):
         glPushMatrix()
         glLoadIdentity()
 
-        color1 = RGBA(.1,.9,.2,.5)
-        color2 = RGBA(.1,.9,.2,.5)
+        color1 = RGBA(.1,.9,.2,1.)
+        color2 = RGBA(.1,.9,.2,1.)
 
         if self.in_mark != 0 or self.out_mark != self.frame_count:
-            draw_polyline( [(self.in_mark,0),(self.out_mark,0)],color=color1,thickness=2)
-        draw_points([(self.in_mark,0),],color=color2,size=10)
-        draw_points([(self.out_mark,0),],color=color2,size=10)
+            draw_polyline( [(self.in_mark,0),(self.out_mark,0)],color=color1,thickness=20.)
+        draw_points([(self.in_mark,0),],color=color2,size=20)
+        draw_points([(self.out_mark,0),],color=color2,size=20)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()

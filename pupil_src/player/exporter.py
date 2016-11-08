@@ -33,7 +33,7 @@ from file_methods import load_object
 import logging
 
 # Plug-ins
-from plugin import Plugin_List
+from plugin import Plugin_List,import_runtime_plugins
 from vis_circle import Vis_Circle
 from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
@@ -46,20 +46,22 @@ from eye_video_overlay import Eye_Video_Overlay
 from fixation_detector import Pupil_Angle_3D_Fixation_Detector,Gaze_Position_2D_Fixation_Detector
 
 
-available_plugins = Vis_Circle,Vis_Cross, Vis_Polyline, \
-                    Vis_Light_Points, Vis_Watermark, \
-                    Scan_Path, \
-                    Manual_Gaze_Correction,Eye_Video_Overlay, \
-                    Pupil_Angle_3D_Fixation_Detector, \
-                    Gaze_Position_2D_Fixation_Detector
-name_by_index = [p.__name__ for p in available_plugins]
-index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
-plugin_by_name = dict(zip(name_by_index,available_plugins))
-
 class Global_Container(object):
     pass
 
-def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min_data_confidence,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
+def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min_data_confidence,start_frame=None,end_frame=None,plugin_initializers=(),out_file_path=None):
+
+    vis_plugins = sorted([Vis_Circle,Vis_Cross, Vis_Polyline,
+        Vis_Light_Points, Vis_Watermark, Scan_Path], key=lambda x: x.__name__)
+    analysis_plugins = sorted([Manual_Gaze_Correction,Eye_Video_Overlay,
+        Pupil_Angle_3D_Fixation_Detector, Gaze_Position_2D_Fixation_Detector],
+        key=lambda x: x.__name__)
+    user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir,'plugins')),
+        key=lambda x: x.__name__)
+    available_plugins = vis_plugins + analysis_plugins + user_plugins
+    name_by_index = [p.__name__ for p in available_plugins]
+    index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
+    plugin_by_name = dict(zip(name_by_index,available_plugins))
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
