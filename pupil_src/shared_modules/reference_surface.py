@@ -406,7 +406,7 @@ class Reference_Surface(object):
         mapped_pos = cv2.perspectiveTransform(pos , m_from_screen )
         mapped_pos.shape = (2)
         on_srf = bool((0 <= mapped_pos[0] <= 1) and (0 <= mapped_pos[1] <= 1))
-        return {'norm_pos':(mapped_pos[0],mapped_pos[1]),'on_srf':on_srf,'base_data':d }
+        return {'topic':d['topic']+"_on_surface",'norm_pos':(mapped_pos[0],mapped_pos[1]),'confidence':d['confidence'],'on_srf':on_srf,'base_data':d }
 
     def map_data_to_surface(self,data,m_from_screen):
         return [self.map_datum_to_surface(d,m_from_screen) for d in data]

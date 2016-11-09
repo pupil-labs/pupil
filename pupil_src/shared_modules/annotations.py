@@ -8,9 +8,11 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 import os
+import csv
 from pyglui import ui
 from plugin import Plugin
 from file_methods import load_object,save_object
+from itertools import chain
 
 import numpy as np
 from OpenGL.GL import *
@@ -97,7 +99,7 @@ class Annotation_Capture(Plugin):
         self.alive = False
 
     def fire_annotation(self,annotation_label):
-        t = self.g_pool.capture.get_timestamp()
+        t = self.g_pool.get_timestamp()
         logger.info('"%s"@%s'%(annotation_label,t))
         notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','record':True} #you may add more field to this dictionary if you want.
         self.notify_all(notification)
@@ -182,14 +184,47 @@ class Annotation_Player(Annotation_Capture):
         self.v_pad = self.padding * 1./h
 
     def fire_annotation(self,annotation_label):
-        t = self.g_pool.capture.get_timestamp()
+        t = self.last_frame_ts
         logger.info('"%s"@%s'%(annotation_label,t))
         notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','added_in_player':True,'index':self.g_pool.capture.get_frame_index()-1} #you may add more field to this dictionary if you want.
         self.annotations_list.append(notification)
         self.annotations_by_frame[notification['index']].append(notification)
 
+    @classmethod
+    def csv_representation_keys(self):
+        return ('label', 'timestamp','duration','source','index')
+
+    @classmethod
+    def csv_representation_for_annotations(self, annotation):
+        return (
+            annotation['label'],
+            annotation['timestamp'],
+            annotation['duration'],
+            annotation['source'],
+            annotation['index']
+        )
+
+
+    def export_annotations(self,export_range,export_dir):
+
+        if not self.annotations:
+            logger.warning('No annotations in this recording nothing to export')
+            return
+
+        annotations_in_section = chain(*self.annotations_by_frame[export_range])
+        annotations_in_section = { a['index']:a for a in annotations_in_section}.values() #remove dublicates
+        annotations_in_section.sort(key=lambda a:a['index'])
+
+        with open(os.path.join(export_dir,'annotations.csv'),'wb') as csvfile:
+            csv_writer = csv.writer(csvfile)
+            csv_writer.writerow(self.csv_representation_keys())
+            for a in annotations_in_section:
+                csv_writer.writerow(self.csv_representation_for_annotations(a))
+            logger.info("Created 'annotations.csv' file.")
+
 
     def update(self,frame,events):
+        self.last_frame_ts = frame.timestamp
         if frame.index != self.current_frame:
             self.current_frame = frame.index
             events = self.annotations_by_frame[frame.index]
@@ -205,6 +240,10 @@ class Annotation_Player(Annotation_Capture):
             for b in self.buttons:
                 self.g_pool.quickbar.remove(b)
             self.buttons = []
+
+    def on_notify(self,notification):
+        if notification['subject'] is "should_export":
+            self.export_annotations(notification['range'],notification['export_dir'])
 
     def unset_alive(self):
         self.alive = False

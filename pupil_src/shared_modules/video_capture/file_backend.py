@@ -14,16 +14,18 @@ assert av.__version__ >= '0.2.5'
 
 av.logging.set_level(av.logging.ERROR)
 
+from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
+from .fake_backend import Fake_Source
+
 import numpy as np
 from time import time,sleep
 from fractions import Fraction
 from  multiprocessing import cpu_count
+import os.path
+
 #logging
 import logging
 logger = logging.getLogger(__name__)
-
-#UI
-from pyglui import ui
 
 class FileCaptureError(Exception):
     """General Exception for this module"""
@@ -36,7 +38,6 @@ class EndofVideoFileError(Exception):
     def __init__(self, arg):
         super(EndofVideoFileError, self).__init__()
         self.arg = arg
-
 
 class FileSeekError(Exception):
     """docstring for EndofVideoFileError"""
@@ -77,21 +78,24 @@ class Frame(object):
 
 
 
-class File_Capture(object):
+class File_Source(Base_Source):
+    """Simple file capture.
+
+    Attributes:
+        source_path (str): Path to source file
+        timestamps (str): Path to timestamps file
     """
-    simple file capture.
-    """
-    def __init__(self,src,timestamps=None):
-        self.menu = None
+    def __init__(self,g_pool,source_path=None,timestamps=None,*args,**kwargs):
+        if not source_path or not os.path.isfile(source_path):
+            raise InitialisationError()
+
+        super(File_Source,self).__init__(g_pool)
         self.display_time = 0.
         self.target_frame_idx = 0
 
-
         self.slowdown = 0.0
-        assert os.path.isfile(src)
-        self.src = src
-
-        self.container = av.open(src)
+        self.source_path = source_path
+        self.container = av.open(str(source_path))
 
         try:
             self.video_stream = next(s for s in self.container.streams if s.type=="video")# looking for the first videostream
@@ -108,6 +112,9 @@ class File_Capture(object):
             self.audio_stream = None
             logger.debug("No audiostream found in media container")
 
+        if not self.video_stream and not self.audio_stream:
+            raise InitialisationError()
+
         #we will use below for av playback
         # self.selected_streams = [s for s in (self.video_stream,self.audio_stream) if s]
         # self.av_packet_iterator = self.container.demux(self.selected_streams)
@@ -117,7 +124,7 @@ class File_Capture(object):
 
         #load/generate timestamps.
         if timestamps is None:
-            timestamps_path,ext =  os.path.splitext(src)
+            timestamps_path,ext =  os.path.splitext(source_path)
             timestamps = timestamps_path+'_timestamps.npy'
             try:
                 self.timestamps = np.load(timestamps).tolist()
@@ -131,10 +138,6 @@ class File_Capture(object):
             logger.debug('using timestamps from list')
             self.timestamps = timestamps
         self.next_frame = self._next_frame()
-
-    @property
-    def name(self):
-        return 'File Capture'
 
 
     @property
@@ -150,13 +153,18 @@ class File_Capture(object):
 
     @property
     def settings(self):
-        logger.warning("File capture has no settings.")
-        return {}
+        settings = super(File_Source, self).settings
+        settings['source_path'] = self.source_path
+        settings['timestamps'] = self.timestamps
+        return settings
+
+    @property
+    def name(self):
+        return os.path.splitext(self.source_path)[0]
 
     @settings.setter
     def settings(self,settings):
-        logger.warning("File capture ignores settings.")
-
+        pass
 
     def get_frame_index(self):
         return self.target_frame_idx
@@ -243,75 +251,95 @@ class File_Capture(object):
         self.display_time = 0
 
 
-    def get_now(self):
+    def init_gui(self):
+        from pyglui import ui
+        ui_elements = []
+        ui_elements.append(ui.Info_Text("Running Capture with '%s' as src"%self.source_path))
+        ui_elements.append(ui.Slider('slowdown',self,min=0,max=1.0))
+        self.g_pool.capture_source_menu.extend(ui_elements)
+
+    @property
+    def jpeg_support(self):
+        return False
+
+class File_Manager(Base_Manager):
+    """Summary
+
+    Attributes:
+        file_exts (list): File extensions to filter displayed files
+        root_folder (str): Folder path, which includes file sources
+    """
+    gui_name = 'Video File Source'
+    file_exts = ['.mp4','.mkv','.mov']
+
+    def __init__(self, g_pool, root_folder=None):
+        super(File_Manager, self).__init__(g_pool)
+        base_dir = self.g_pool.user_dir.rsplit(os.path.sep,1)[0]
+        default_rec_dir = os.path.join(base_dir,'recordings')
+        self.root_folder = root_folder or default_rec_dir
+
+    def init_gui(self):
+        from pyglui import ui
+        ui_elements = []
+        ui_elements.append(ui.Info_Text('Enter a folder to enumerate all eligible video files. Be aware that entering folders with a lot of files can slow down Pupil Capture.'))
+
+        def set_root(folder):
+            if not os.path.isdir(folder):
+                logger.error('`%s` is not a valid folder path.'%folder)
+            else: self.root_folder = folder
+
+        ui_elements.append(ui.Text_Input('root_folder',self,label='Source Folder',setter=set_root))
+
+        def split_enumeration():
+            eligible_files = self.enumerate_folder(self.root_folder)
+            eligible_files.insert(0, (None, 'Select to activate'))
+            return zip(*eligible_files)
+
+        def activate(full_path):
+            if not full_path:
+                return
+            settings = {
+                'source_class_name': File_Source.class_name(),
+                'frame_size': self.g_pool.capture.frame_size,
+                'frame_rate': self.g_pool.capture.frame_rate,
+                'source_path': full_path
+            }
+            self.activate_source(settings)
+
+        ui_elements.append(ui.Selector(
+            'selected_file',
+            selection_getter=split_enumeration,
+            getter=lambda: None,
+            setter=activate,
+            label='Video File'
+        ))
+
+        self.g_pool.capture_selector_menu.extend(ui_elements)
+
+    def enumerate_folder(self,path):
+        eligible_files  = []
+        is_eligible = lambda f: os.path.splitext(f)[-1] in self.file_exts
+        path = os.path.abspath(os.path.expanduser(path))
+        for root,dirs,files in os.walk(path):
+            def root_split(file):
+                full_p = os.path.join(root,file)
+                disp_p = full_p.replace(path,'')
+                return (full_p, disp_p)
+            eligible_files.extend(map(root_split, filter(is_eligible, files)))
+        return eligible_files
+
+    def get_init_dict(self):
+        return {'root_folder':self.root_folder}
+
+    def activate_source(self, settings={}):
         try:
-            timestamp = self.timestamps[self.get_frame_index()-1]
-            logger.debug("Filecapture is not a realtime source. -NOW- will be the current timestamp")
-        except IndexError:
-            logger.warning("timestamp not found.")
-            timestamp = 0
-        return timestamp
-
-    def get_timestamp(self):
-        return self.get_now()
-
-    def init_gui(self,sidebar):
-        self.menu = ui.Growing_Menu(label='File Capture Settings')
-        self.menu.append(ui.Info_Text("Running Capture with '%s' as src"%self.src))
-        self.menu.append(ui.Slider('slowdown',self,min=0,max=1.0))
-        self.sidebar = sidebar
-        self.sidebar.append(self.menu)
-
-    def deinit_gui(self):
-        if self.menu:
-            self.sidebar.remove(self.menu)
-            self.menu = None
-
-    def close(self):
-        self.deinit_gui()
-if __name__ == '__main__':
-    import os
-    import cv2
-    logging.basicConfig(level=logging.DEBUG)
-    # file_loc = os.path.expanduser("~/Pupil/pupil_code/recordings/2015_09_30/019/world.mp4")
-    file_loc = os.path.expanduser("~/Desktop/Marker_Tracking_Demo_Recording/world_viz.mp4")
-    # file_loc = os.path.expanduser('~/pupil/recordings/2015_09_30/000/world.mp4')
-    # file_loc = os.path.expanduser("~/Desktop/MAH02282.MP4")
-    file_loc = os.path.expanduser("/Users/mkassner/Downloads/P012/world.mkv")
-
-    logging.getLogger("libav").setLevel(logging.ERROR)
-
-    cap = File_Capture(file_loc)
-    print 'durantion',float(cap.container.duration/av.time_base)
-    print 'frame_count', cap.get_frame_count()
-    print "container timebase",av.time_base
-    print 'time_base',cap.video_stream.time_base
-    print 'avg rate',cap.video_stream.average_rate
-    # exit()
-    # print cap.video_stream.time_base
-    import time
-    frame = cap.get_frame_nowait()
-    t = time.time()
-    try:
-        while 1:
-            frame = cap.get_frame_nowait()
-            # print frame.index
-            # cv2.imshow("test",frame.img)
-            # print frame.index, frame.timestamp
-            # if cv2.waitKey(30)==27:
-            #     print "seeking to ",95
-            #     cap.seek_to_frame(95)
-
-    except EndofVideoFileError:
-        print 'Video Over'
-    print'avcapture took:', time.time()-t
-
-    import cv2
-    cap = cv2.VideoCapture(file_loc)
-    s,i = cap.read()
-
-    t = time.time()
-    while s:
-        s,i = cap.read()
-    print time.time()-t
-
+            capture = File_Source(self.g_pool, **settings)
+        except InitialisationError:
+            logger.error('File source could not be initialised.')
+            logger.debug('File source init settings: %s'%settings)
+        else:
+            self.g_pool.capture.deinit_gui()
+            self.g_pool.capture.cleanup()
+            self.g_pool.capture = None
+            self.g_pool.capture = capture
+            self.g_pool.capture.init_gui()

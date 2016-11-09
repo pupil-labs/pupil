@@ -96,7 +96,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
 
 
         def jump_next_fixation(_):
-            ts = self.g_pool.capture.get_timestamp()
+            ts = self.last_frame_ts
             for f in self.fixations:
                 if f['timestamp'] > ts:
                     self.g_pool.capture.seek_to_frame(f['mid_frame_index'])
@@ -202,7 +202,8 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
 
                         # avg pupil size  = mean of (mean of pupil size per gaze ) for all gaze points of support
                         avg_pupil_size =  sum([sum([p['diameter'] for p in g['base_data']])/len(g['base_data']) for g in fixation_support])/len(fixation_support)
-                        new_fixation = {'id': len(fixations),
+                        new_fixation = {'topic':'fixation',
+                                        'id': len(fixations),
                                         'norm_pos':fixation_centroid,
                                         'base_data':fixation_support,
                                         'duration':duration,
@@ -278,14 +279,14 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
         fixations_in_section.sort(key=lambda f:f['id'])
 
         with open(os.path.join(export_dir,'fixations.csv'),'wb') as csvfile:
-            csv_writer = csv.writer(csvfile, delimiter=',')
+            csv_writer = csv.writer(csvfile)
             csv_writer.writerow(self.csv_representation_keys())
             for f in fixations_in_section:
                 csv_writer.writerow(self.csv_representation_for_fixation(f))
             logger.info("Created 'fixations.csv' file.")
 
         with open(os.path.join(export_dir,'fixation_report.csv'),'wb') as csvfile:
-            csv_writer = csv.writer(csvfile, delimiter=',')
+            csv_writer = csv.writer(csvfile)
             csv_writer.writerow(('fixation classifier','Dispersion_Duration'))
             csv_writer.writerow(('max_dispersion','%0.3f deg'%self.max_dispersion) )
             csv_writer.writerow(('min_duration','%0.3f sec'%self.min_duration) )
@@ -295,6 +296,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
 
 
     def update(self,frame,events):
+        self.last_frame_ts = frame.timestamp
         from player_methods import transparent_circle
         events['fixations'] = self.g_pool.fixations_by_frame[frame.index]
         if self.show_fixations:
@@ -465,6 +467,7 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
         super(Pupil_Angle_3D_Fixation_Detector, self).__init__(g_pool, max_dispersion, min_duration, h_fov, v_fov, show_fixations)
 
     def update(self,frame,events):
+        self.last_frame_ts = frame.timestamp
         from player_methods import transparent_circle
         events['fixations'] = self.g_pool.fixations_by_frame[frame.index]
         if self.show_fixations:
@@ -552,6 +555,7 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
             duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
 
             new_fixation = {
+                'topic'            :'fixation',
                 'norm_pos'         :fixation_centroid,
                 'base_data'        :fixation_support,
                 'duration'         :duration,
@@ -605,7 +609,6 @@ class Detection_Window(object):
         self.distances       = []
         self._max_dist_idc_c = -1
         self._max_dist_idc_r = -1
-        logger.info('Make sure 3D gaze mapping is active.')
 
     def append(self, datum):
         gaze_point, pupil_point = datum
@@ -667,6 +670,7 @@ class Detection_Window(object):
         confidence = sum(p['confidence'] for p in self.pupil_data)/fix_sup_len
         avg_diameter = sum(p['diameter'] for p in self.pupil_data)/fix_sup_len
         new_fixation = {
+            'topic'            :'fixation',
             'norm_pos'         :fixation_centroid,
             'base_data'        :self.gaze_data,
             'duration'         :self.duration,

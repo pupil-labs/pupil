@@ -85,7 +85,7 @@ from pyglui.cygl.utils import Named_Texture
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 from OpenGL.GL import glClearColor
 #capture
-from video_capture import File_Capture,EndofVideoFileError,FileSeekError
+from video_capture import File_Source,EndofVideoFileError,FileSeekError
 
 # helpers/utils
 import csv_utils
@@ -103,6 +103,7 @@ from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
 from vis_light_points import Vis_Light_Points
 from vis_watermark import Vis_Watermark
+from vis_fixation import Vis_Fixation
 from seek_bar import Seek_Bar
 from trim_marks import Trim_Marks
 from video_export_launcher import Video_Export_Launcher
@@ -125,10 +126,12 @@ class Global_Container(object):
 
 def session(rec_dir):
 
-
     system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
-    user_launchable_plugins = [Video_Export_Launcher,Raw_Data_Exporter, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Surface_Tracker,Batch_Exporter,Eye_Video_Overlay,Annotation_Player,Log_History] #,Marker_Auto_Trim_Marks
-    user_launchable_plugins += import_runtime_plugins(os.path.join(user_dir,'plugins'))
+    vis_plugins = sorted([Vis_Circle,Vis_Polyline,Vis_Light_Points,Vis_Cross,Vis_Watermark,Eye_Video_Overlay,Scan_Path], key=lambda x: x.__name__)
+    analysis_plugins = sorted([Gaze_Position_2D_Fixation_Detector,Pupil_Angle_3D_Fixation_Detector,Pupil_Angle_3D_Fixation_Detector,Manual_Gaze_Correction,Video_Export_Launcher,Offline_Surface_Tracker,Raw_Data_Exporter,Batch_Exporter,Annotation_Player], key=lambda x: x.__name__)
+    other_plugins = sorted([Show_Calibration,Log_History], key=lambda x: x.__name__)
+    user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir,'plugins')), key=lambda x: x.__name__)
+    user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
     available_plugins = system_plugins + user_launchable_plugins
     name_by_index = [p.__name__ for p in available_plugins]
     index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
@@ -199,8 +202,13 @@ def session(rec_dir):
     logger.info('System Info: %s'%get_system_info())
 
     timestamps = np.load(timestamps_path)
+
+    # create container for globally scoped vars
+    g_pool = Global_Container()
+    g_pool.app = 'player'
+
     # Initialize capture
-    cap = File_Capture(video_path,timestamps=list(timestamps))
+    cap = File_Source(g_pool,video_path,timestamps=list(timestamps))
 
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
@@ -220,9 +228,6 @@ def session(rec_dir):
     pupil_list = pupil_data['pupil_positions']
     gaze_list = pupil_data['gaze_positions']
 
-    # create container for globally scoped vars
-    g_pool = Global_Container()
-    g_pool.app = 'player'
     g_pool.binocular = meta_info.get('Eye Mode','monocular') == 'binocular'
     g_pool.version = app_version
     g_pool.capture = cap
@@ -233,6 +238,7 @@ def session(rec_dir):
     g_pool.rec_dir = rec_dir
     g_pool.rec_version = rec_version
     g_pool.meta_info = meta_info
+    g_pool.min_data_confidence = session_settings.get('min_data_confidence',0.6)
     g_pool.pupil_positions_by_frame = correlate_data(pupil_list,g_pool.timestamps)
     g_pool.gaze_positions_by_frame = correlate_data(gaze_list,g_pool.timestamps)
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps] #populated by the fixation detector plugin
@@ -253,9 +259,21 @@ def session(rec_dir):
         else:
             g_pool.new_seek = True
 
+    def toggle_play(new_state):
+        if cap.get_frame_index() >= cap.get_frame_count()-5:
+            cap.seek_to_frame(1) #avoid pause set by hitting trimmark pause.
+            logger.warning("End of video - restart at beginning.")
+        g_pool.play = new_state
+
     def set_scale(new_scale):
         g_pool.gui.scale = new_scale
         g_pool.gui.collect_menus()
+
+    def set_data_confidence(new_confidence):
+        g_pool.min_data_confidence = new_confidence
+        notification = {'subject':'min_data_confidence_changed'}
+        notification['_notify_time_'] = time()+.8
+        g_pool.delayed_notifications[notification['subject']] = notification
 
     def open_plugin(plugin):
         if plugin ==  "Select to load":
@@ -287,25 +305,33 @@ def session(rec_dir):
 
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
-    g_pool.main_menu = ui.Growing_Menu("Settings",pos=(-350,20),size=(300,400))
+    g_pool.main_menu = ui.Scrolling_Menu("Settings",pos=(-350,20),size=(300,500))
     g_pool.main_menu.append(ui.Button("Close Pupil Player",lambda:glfwSetWindowShouldClose(main_window,True)))
     g_pool.main_menu.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
+    g_pool.main_menu.append(ui.Slider('min_data_confidence',g_pool, setter=set_data_confidence,step=.05 ,min=0.0,max=1.0,label='Confidence threshold'))
 
     selector_label = "Select to load"
-    labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins]
-    user_launchable_plugins.insert(0, selector_label)
-    labels.insert(0, selector_label)
-    g_pool.main_menu.append(ui.Selector('Open plugin',
-                                        selection = user_launchable_plugins,
+
+    vis_labels = ["   " + p.__name__.replace('_',' ') for p in vis_plugins]
+    analysis_labels = ["   " + p.__name__.replace('_',' ') for p in analysis_plugins]
+    other_labels = ["   " + p.__name__.replace('_',' ') for p in other_plugins]
+    user_labels = ["   " + p.__name__.replace('_',' ') for p in user_plugins]
+
+    plugins = [selector_label, selector_label] + vis_plugins + [selector_label] + analysis_plugins + [selector_label] + other_plugins + [selector_label] + user_plugins
+    labels = [selector_label, "Visualization"] + vis_labels + ["Analysis"] + analysis_labels + ["Other"] + other_labels + ["User added"] + user_labels
+
+    g_pool.main_menu.append(ui.Selector('Open plugin:',
+                                        selection = plugins,
                                         labels    = labels,
                                         setter    = open_plugin,
                                         getter    = lambda: selector_label))
+
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
     g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
-    g_pool.play_button = ui.Thumb('play',g_pool,label=unichr(0xf04b).encode('utf-8'),hotkey=GLFW_KEY_SPACE,label_font='fontawesome',label_offset_x=5,label_offset_y=0,label_offset_size=-24)
+    g_pool.play_button = ui.Thumb('play',g_pool,label=unichr(0xf04b).encode('utf-8'),setter=toggle_play,hotkey=GLFW_KEY_SPACE,label_font='fontawesome',label_offset_x=5,label_offset_y=0,label_offset_size=-24)
     g_pool.play_button.on_color[:] = (0,1.,.0,.8)
     g_pool.forward_button = ui.Thumb('forward',label=unichr(0xf04e).encode('utf-8'),getter = lambda: False,setter= next_frame, hotkey=GLFW_KEY_RIGHT,label_font='fontawesome',label_offset_x=5,label_offset_y=0,label_offset_size=-24)
     g_pool.backward_button = ui.Thumb('backward',label=unichr(0xf04a).encode('utf-8'),getter = lambda: False, setter = prev_frame, hotkey=GLFW_KEY_LEFT,label_font='fontawesome',label_offset_x=-5,label_offset_y=0,label_offset_size=-24)
@@ -344,7 +370,7 @@ def session(rec_dir):
     #set up performace graphs:
     pid = os.getpid()
     ps = psutil.Process(pid)
-    ts = cap.get_timestamp()-.03
+    ts = None
 
     cpu_graph = graph.Bar_Graph()
     cpu_graph.pos = (20,110)
@@ -373,6 +399,7 @@ def session(rec_dir):
             except EndofVideoFileError:
                 #end of video logic: pause at last frame.
                 g_pool.play=False
+                logger.warning("end of video")
             update_graph = True
         else:
             update_graph = False
@@ -392,9 +419,9 @@ def session(rec_dir):
                 pupil_graph.add(p['confidence'])
 
             t = new_frame.timestamp
-            if ts != t:
+            if ts and ts != t:
                 dt,ts = t-ts,t
-            fps_graph.add(1./dt)
+                fps_graph.add(1./dt)
 
             g_pool.play_button.status_text = str(frame.index)
         #always update the CPU graph
@@ -445,6 +472,7 @@ def session(rec_dir):
         glfwPollEvents()
 
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
+    session_settings['min_data_confidence'] = g_pool.min_data_confidence
     session_settings['gui_scale'] = g_pool.gui.scale
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfwGetWindowSize(main_window)
@@ -457,7 +485,7 @@ def session(rec_dir):
         p.alive = False
     g_pool.plugins.clean()
 
-    cap.close()
+    cap.cleanup()
     g_pool.gui.terminate()
     glfwDestroyWindow(main_window)
 

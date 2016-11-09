@@ -35,12 +35,12 @@ class Vis_Light_Points(Plugin):
         falloff = self.falloff
 
         img = frame.img
-        screen_gaze = [denormalize(g['norm_pos'],self.g_pool.capture.frame_size,flip_y=True) for g in events.get('gaze_positions',[])]
+        pts = [denormalize(pt['norm_pos'],frame.img.shape[:-1][::-1],flip_y=True) for pt in events.get('gaze_positions',[]) if pt['confidence']>=self.g_pool.min_data_confidence]
 
         overlay = np.ones(img.shape[:-1],dtype=img.dtype)
 
         # draw recent gaze postions as black dots on an overlay image.
-        for gaze_point in screen_gaze:
+        for gaze_point in pts:
             try:
                 overlay[int(gaze_point[1]),int(gaze_point[0])] = 0
             except:
@@ -54,7 +54,7 @@ class Vis_Light_Points(Plugin):
 
         overlay =  1/(out/falloff+1)
 
-        img = np.multiply(img, cv2.cvtColor(overlay,cv2.COLOR_GRAY2RGB), casting="unsafe")
+        img[:] = np.multiply(img, cv2.cvtColor(overlay,cv2.COLOR_GRAY2RGB), casting="unsafe")
 
     def init_gui(self):
         # initialize the menu

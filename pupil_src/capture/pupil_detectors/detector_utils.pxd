@@ -27,6 +27,7 @@ cdef inline convertTo2DPythonResult( Detector2DResult& result, object frame, obj
     ellipse['angle'] = result.ellipse.angle * 180.0 / PI - 90.0
 
     py_result = {}
+    py_result['topic'] = 'pupil'
     py_result['confidence'] = result.confidence
     py_result['ellipse'] = ellipse
     py_result['diameter'] = max(ellipse['axes'])
@@ -42,6 +43,8 @@ cdef inline convertTo3DPythonResult( Detector3DResult& result, object frame    )
 
     #use negative z-coordinates to get from left-handed to right-handed coordinate system
     py_result = {}
+    py_result['topic'] = 'pupil'
+
     circle = {}
     circle['center'] =  (result.circle.center[0],-result.circle.center[1], result.circle.center[2])
     circle['normal'] =  (result.circle.normal[0],-result.circle.normal[1], result.circle.normal[2])

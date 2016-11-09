@@ -22,7 +22,7 @@ from time import time
 from glob import glob
 import cv2
 import numpy as np
-from video_capture import File_Capture,EndofVideoFileError
+from video_capture import File_Source,EndofVideoFileError
 from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version
@@ -33,7 +33,7 @@ from file_methods import load_object
 import logging
 
 # Plug-ins
-from plugin import Plugin_List
+from plugin import Plugin_List,import_runtime_plugins
 from vis_circle import Vis_Circle
 from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
@@ -46,20 +46,22 @@ from eye_video_overlay import Eye_Video_Overlay
 from fixation_detector import Pupil_Angle_3D_Fixation_Detector,Gaze_Position_2D_Fixation_Detector
 
 
-available_plugins = Vis_Circle,Vis_Cross, Vis_Polyline, \
-                    Vis_Light_Points, Vis_Watermark, \
-                    Scan_Path, \
-                    Manual_Gaze_Correction,Eye_Video_Overlay, \
-                    Pupil_Angle_3D_Fixation_Detector, \
-                    Gaze_Position_2D_Fixation_Detector
-name_by_index = [p.__name__ for p in available_plugins]
-index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
-plugin_by_name = dict(zip(name_by_index,available_plugins))
-
 class Global_Container(object):
-        pass
+    pass
 
-def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
+def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min_data_confidence,start_frame=None,end_frame=None,plugin_initializers=(),out_file_path=None):
+
+    vis_plugins = sorted([Vis_Circle,Vis_Cross, Vis_Polyline,
+        Vis_Light_Points, Vis_Watermark, Scan_Path], key=lambda x: x.__name__)
+    analysis_plugins = sorted([Manual_Gaze_Correction,Eye_Video_Overlay,
+        Pupil_Angle_3D_Fixation_Detector, Gaze_Position_2D_Fixation_Detector],
+        key=lambda x: x.__name__)
+    user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir,'plugins')),
+        key=lambda x: x.__name__)
+    available_plugins = vis_plugins + analysis_plugins + user_plugins
+    name_by_index = [p.__name__ for p in available_plugins]
+    index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
+    plugin_by_name = dict(zip(name_by_index,available_plugins))
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
@@ -72,8 +74,11 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
     meta_info = load_meta_info(rec_dir)
     rec_version = read_rec_version(meta_info)
 
+    g = Global_Container()
+    g.app = 'exporter'
+    g.min_data_confidence = min_data_confidence
     timestamps = np.load(timestamps_path)
-    cap = File_Capture(video_path,timestamps=timestamps)
+    cap = File_Source(g,video_path,timestamps=timestamps)
 
 
     #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
@@ -116,8 +121,6 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     start_time = time()
 
-    g = Global_Container()
-    g.app = 'exporter'
     g.capture = cap
     g.rec_dir = rec_dir
     g.user_dir = user_dir

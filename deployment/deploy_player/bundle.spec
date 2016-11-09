@@ -5,6 +5,7 @@ import platform
 
 av_hidden_imports = ['av.format','av.packet','av.buffer','av.bytesource','av.frame','av.stream','av.descriptor','av.plane','av.audio.plane','av.container.streams','av.dictionary', 'av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane','av.option']
 pyglui_hidden_imports = ['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']
+pyndsi_hidden_imports = ['pyre']
 
 
 if platform.system() == 'Darwin':
@@ -12,7 +13,7 @@ if platform.system() == 'Darwin':
 
     a = Analysis(['../../pupil_src/player/main.py'],
                  pathex=['../../pupil_src/shared_modules/'],
-                 hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports,
+                 hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports+pyndsi_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None,
                  excludes=['pyx_compiler','matplotlib'])
@@ -49,7 +50,7 @@ if platform.system() == 'Darwin':
 elif platform.system() == 'Linux':
     a = Analysis(['../../pupil_src/player/main.py'],
                  pathex=['../../pupil_src/shared_modules/'],
-                 hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports,
+                 hiddenimports=[]+av_hidden_imports+pyglui_hidden_imports+pyndsi_hidden_imports,
                  hookspath=None,
                  runtime_hooks=None,
                  excludes=['pyx_compiler','matplotlib'])
@@ -112,7 +113,7 @@ elif platform.system() == 'Windows':
 
 	a = Analysis(['../../pupil_src/player/main.py'],
 	             pathex=['../../pupil_src/shared_modules/'],
-	             hiddenimports=['pyglui.cygl.shader']+scipy_imports+av_hidden_imports,
+	             hiddenimports=['pyglui.cygl.shader']+scipy_imports+av_hidden_imports+pyndsi_hidden_imports,
 	             hookspath=None,
 	             runtime_hooks=None,
                  excludes=['pyx_compiler','matplotlib'])

@@ -123,7 +123,7 @@ class Plugin(object):
 
         notification is a dict in the format {'subject':'notification_category.[subcategory].action_name',['addional_field':'foo']}
 
-            adding 'timestamp':self.g_pool.capture.get_timestamp() will allow other plugins to know when you created this notification.
+            adding 'timestamp':self.g_pool.get_timestamp() will allow other plugins to know when you created this notification.
 
             adding 'record':True will make recorder save the notification during recording.
 
