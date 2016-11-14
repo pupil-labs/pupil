@@ -94,7 +94,8 @@ class NDSI_Source(Base_Source):
     def on_notification(self, sensor, event):
         if event['subject'] == 'error':
             logger.warning('Error: %s'%event['error_str'])
-        elif self.has_ui and event['control_id'] not in self.control_id_ui_mapping:
+        elif self.has_ui and (event['control_id'] not in self.control_id_ui_mapping
+            or ctrl_dtype == "selector" or ctrl_dtype == "bitmap"):
             self.update_control_menu()
 
     @property
@@ -137,14 +138,13 @@ class NDSI_Source(Base_Source):
         self.frame_rate = settings['frame_rate']
 
     def init_gui(self):
+        from pyglui import ui
         self.has_ui = True
+        self.uvc_menu = ui.Growing_Menu("UVC Controls")
         self.update_control_menu()
 
-    def update_control_menu(self):
+    def add_controls_to_menu(self,menu,controls):
         from pyglui import ui
-        del self.g_pool.capture_source_menu.elements[:]
-        self.control_id_ui_mapping = {}
-
         # closure factory
         def make_value_change_fn(ctrl_id):
             def initiate_value_change(val):
@@ -152,22 +152,22 @@ class NDSI_Source(Base_Source):
                 self.sensor.set_control_value(ctrl_id, val)
             return initiate_value_change
 
-        for ctrl_id, ctrl_dict in self.sensor.controls.iteritems():
+        for ctrl_id, ctrl_dict in controls:
             try:
-                dtype = ctrl_dict['dtype']
-                ctrl_ui = None
+                dtype    = ctrl_dict['dtype']
+                ctrl_ui  = None
                 if dtype == "string":
                     ctrl_ui = ui.Text_Input(
                         'value',
                         ctrl_dict,
-                        label=unicode(ctrl_dict['caption']),
+                        label=ctrl_dict['caption'],
                         setter=make_value_change_fn(ctrl_id))
                 elif dtype == "integer" or dtype == "float":
                     convert_fn = int if dtype == "integer" else float
                     ctrl_ui = ui.Slider(
                         'value',
                         ctrl_dict,
-                        label=unicode(ctrl_dict['caption']),
+                        label=ctrl_dict['caption'],
                         min =convert_fn(ctrl_dict.get('min', 0)),
                         max =convert_fn(ctrl_dict.get('max', 100)),
                         step=convert_fn(ctrl_dict.get('res', 0.)),
@@ -176,33 +176,56 @@ class NDSI_Source(Base_Source):
                     ctrl_ui = ui.Switch(
                         'value',
                         ctrl_dict,
-                        label=unicode(ctrl_dict['caption']),
+                        label=ctrl_dict['caption'],
                         on_val=ctrl_dict.get('max',True),
                         off_val=ctrl_dict.get('min',False),
                         setter=make_value_change_fn(ctrl_id))
                 elif dtype == "selector":
                     desc_list = ctrl_dict['selector']
-                    labels    = [unicode(desc['caption']) for desc in desc_list]
-                    selection = [desc['value']        for desc in desc_list]
+                    labels    = [desc['caption'] for desc in desc_list]
+                    selection = [desc['value']   for desc in desc_list]
                     ctrl_ui = ui.Selector(
                         'value',
                         ctrl_dict,
-                        label=unicode(ctrl_dict['caption']),
-                        selection=selection,
+                        label=ctrl_dict['caption'],
                         labels=labels,
+                        selection=selection,
                         setter=make_value_change_fn(ctrl_id))
                 if ctrl_ui:
+                    ctrl_ui.read_only = ctrl_dict.get('readonly',False)
                     self.control_id_ui_mapping[ctrl_id] = ctrl_ui
-                    self.g_pool.capture_source_menu.append(ctrl_ui)
+                    menu.append(ctrl_ui)
             except:
-                logger.error('Exception for control:\n%s'%ctrl_dict)
+                logger.error('Exception for control:\n%s'%pprint.pformat(ctrl_dict))
                 import traceback as tb
                 tb.print_exc()
+        if len(menu) == 0:
+            menu.append(ui.Info_Text("No %s settings found"%menu.label))
+        return menu
+
+    def update_control_menu(self):
+        from pyglui import ui
+        del self.g_pool.capture_source_menu.elements[:]
+        del self.uvc_menu[:]
+        self.control_id_ui_mapping = {}
+
+        uvc_controls = []
+        other_controls = []
+        for entry in self.sensor.controls.iteritems():
+            if entry[0].startswith("UVC"):
+                uvc_controls.append(entry)
+            else: other_controls.append(entry)
+
+        self.add_controls_to_menu(self.g_pool.capture_source_menu, other_controls)
+        self.add_controls_to_menu(self.uvc_menu, uvc_controls)
+        self.g_pool.capture_source_menu.append(self.uvc_menu)
+
         self.g_pool.capture_source_menu.append(ui.Button("Reset to default values",self.sensor.reset_all_control_values))
 
     def cleanup(self):
         self.sensor.unlink()
         self.sensor = None
+        self.uvc_menu = None
 
 class NDSI_Manager(Base_Manager):
     """Enumerates and activates Pupil Mobile video sources
