@@ -39,6 +39,9 @@ from ctypes import c_int,c_ushort,c_char_p,c_double,c_uint, c_char,Structure,CFU
 import platform
 from ctypes.util import find_library
 
+import logging
+logger = logging.getLogger(__name__)
+
 os_name = platform.system()
 del platform
 
@@ -67,7 +70,7 @@ else:
     else:
         dll_path = find_library('glfw')
     if not dll_path:
-        raise RuntimeError, 'GLFW library not found'
+        raise RuntimeError('GLFW library not found')
 
 _glfw = ctypes.CDLL(dll_path)
 
@@ -517,7 +520,7 @@ def glfwDestroyWindow(window):
     try:
         __c_callbacks__[index]
     except KeyError:
-        print 'window already destroyed.'
+        logger.error('Window already destroyed.')
     else:
         _glfw.glfwDestroyWindow(window)
         # We do not delete window from the list (or it would impact windows numbering)
@@ -636,18 +639,18 @@ def %(callback)s(window, callback = None):
     return old_callback"""  % {'callback': callback, 'fun': fun}
     return code
 
-exec __callback__('Error')
-exec __callback__('Monitor')
-exec __callback__('WindowPos')
-exec __callback__('WindowSize')
-exec __callback__('WindowClose')
-exec __callback__('WindowRefresh')
-exec __callback__('WindowFocus')
-exec __callback__('WindowIconify')
-exec __callback__('FramebufferSize')
-exec __callback__('Key')
-exec __callback__('Char')
-exec __callback__('MouseButton')
-exec __callback__('CursorPos')
-exec __callback__('Scroll')
-exec __callback__('Drop')
+exec(__callback__('Error'))
+exec(__callback__('Monitor'))
+exec(__callback__('WindowPos'))
+exec(__callback__('WindowSize'))
+exec(__callback__('WindowClose'))
+exec(__callback__('WindowRefresh'))
+exec(__callback__('WindowFocus'))
+exec(__callback__('WindowIconify'))
+exec(__callback__('FramebufferSize'))
+exec(__callback__('Key'))
+exec(__callback__('Char'))
+exec(__callback__('MouseButton'))
+exec(__callback__('CursorPos'))
+exec(__callback__('Scroll'))
+exec(__callback__('Drop'))
