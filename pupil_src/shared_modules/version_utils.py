@@ -18,7 +18,7 @@ def get_tag_commit():
     returns string: 'tag'-'commits since tag'-'7 digit commit id'
     """
     try:
-        return check_output(['git', 'describe','--tags'],stderr=STDOUT,cwd=os.path.dirname(os.path.abspath(__file__)))
+        return str(check_output(['git', 'describe','--tags'],stderr=STDOUT,cwd=os.path.dirname(os.path.abspath(__file__))),'utf-8')
     except CalledProcessError as e:
         logger.error('Error calling git: "%s" \n output: "%s"'%(e,e.output))
         return None
@@ -48,9 +48,10 @@ def pupil_version():
     [major].[minor].[rev].[trailing-untagged-commits]
     '''
     version = get_tag_commit()
+    print(version)
     if version is None:
         raise ValueError('Version Error')
-    version = version.replace("\n",'')#strip newlines
+    version = version.replace("\n","")#strip newlines
     version = version.replace("v",'')#strip version 'v'
     if '-' in version:
         parts = version.split('-')
@@ -61,7 +62,7 @@ def pupil_version():
 def get_version(version_file=None):
     #get the current software version
     if getattr(sys, 'frozen', False):
-        with open(version_file) as f:
+        with open(version_file, 'r') as f:
             version = f.read()
     else:
         version = pupil_version()
@@ -79,11 +80,11 @@ def read_rec_version(meta_info):
 
 def write_version_file(target_dir):
     version = pupil_version()
-    print "Current version of Pupil: ",version
+    print("Current version of Pupil: ",version)
 
     with open(os.path.join(target_dir,'_version_string_'),'w') as f:
         f.write(version)
-    print 'Wrote version into: %s' %os.path.join(target_dir,'_version_string_')
+    print('Wrote version into: %s' %os.path.join(target_dir,'_version_string_'))
 
 if __name__ == "__main__":
-    print get_tag_commit()
+    print(get_tag_commit())
