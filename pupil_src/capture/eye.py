@@ -212,7 +212,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             'source_class_name': 'UVC_Source',
             'preferred_names'  : cap_src,
             'frame_size': (640,480),
-            'frame_rate': 60
+            'frame_rate': 90
         }
         settings = overwrite_cap_settings or session_settings.get('capture_settings', default_settings)
         try:
