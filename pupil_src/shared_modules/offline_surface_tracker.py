@@ -310,7 +310,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
     def gl_display_cache_bars(self):
         """
         """
-        padding = 20.
+        padding = 30.
 
        # Lines for areas that have been cached
         cached_ranges = []
