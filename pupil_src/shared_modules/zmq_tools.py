@@ -11,6 +11,8 @@ This file contains convenience classes for communication with
 the Pupil IPC Backbone.
 '''
 
+from __future__ import print_function
+
 import zmq
 assert zmq.__version__  > '15.1'
 from zmq.utils.monitor import recv_monitor_message
@@ -158,8 +160,8 @@ if __name__ == '__main__':
     requester.send('PUB_PORT')
     ipc_pub_port = requester.recv()
 
-    print 'ipc_sub_port:',ipc_sub_port
-    print 'ipc_pub_port:',ipc_pub_port
+    print('ipc_sub_port:',ipc_sub_port)
+    print('ipc_pub_port:',ipc_pub_port)
 
     #more topics: gaze, pupil, logging, ...
     log_monitor = Msg_Receiver(ctx,'tcp://127.0.0.1:%s'%ipc_sub_port,topics=('logging.',))
@@ -178,7 +180,7 @@ if __name__ == '__main__':
             requester.send('t')
             requester.recv()
             ts.append(time()-t)
-        print min(ts), sum(ts)/len(ts) , max(ts)
+        print(min(ts), sum(ts)/len(ts) , max(ts))
 
     def roundtrip_latency_pubsub():
         ts = []
@@ -188,7 +190,7 @@ if __name__ == '__main__':
             publisher.send('pingback_test.3',{'subject':'pingback_test.3','index':x})
             monitor.recv()
             ts.append(time()-t)
-        print min(ts), sum(ts)/len(ts) , max(ts)
+        print(min(ts), sum(ts)/len(ts) , max(ts))
 
     #roundtrip_latency_reqrep()
     #roundtrip_latency_pubsub()
@@ -196,7 +198,7 @@ if __name__ == '__main__':
     monitor.subscribe('frame.')
     while True:
         topic,msg = monitor.recv()
-        print topic,msg['format']
+        print(topic,msg['format'])
 
     # # now lets get the current pupil time.
     # requester.send('t')
