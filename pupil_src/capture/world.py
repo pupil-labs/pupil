@@ -7,6 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+from __future__ import print_function
 import os, sys, platform
 
 
@@ -560,4 +561,4 @@ def world_profiled(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
-    print "created cpu time graph for world process. Please check out the png next to the world.py file"
+    print("created cpu time graph for world process. Please check out the png next to the world.py file")

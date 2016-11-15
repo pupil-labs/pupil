@@ -7,6 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+from __future__ import print_function
 import os, sys, platform
 
 class Global_Container(object):
@@ -239,4 +240,4 @@ def service_profiled(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_ur
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats service.pstats | dot -Tpng -o service_cpu_time.png", shell=True)
-    print "created cpu time graph for service process. Please check out the png next to the service.py file"
+    print("created cpu time graph for service process. Please check out the png next to the service.py file")
