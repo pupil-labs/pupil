@@ -126,6 +126,8 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min
     g.user_dir = user_dir
     g.rec_version = rec_version
     g.timestamps = timestamps
+    g.delayed_notifications = {}
+    g_pool.notifications = []
 
 
     # load pupil_positions, gaze_positions
@@ -156,9 +158,24 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min
             break
 
         events = {}
+        #report time between now and the last loop interation
+        events['dt'] = get_dt()
         #new positons and events
         events['gaze_positions'] = g.gaze_positions_by_frame[frame.index]
         events['pupil_positions'] = g.pupil_positions_by_frame[frame.index]
+
+        # publish delayed notifiactions when their time has come.
+        for n in g_pool.delayed_notifications.values():
+            if n['_notify_time_'] < time():
+                del n['_notify_time_']
+                del g_pool.delayed_notifications[n['subject']]
+                g_pool.notifications.append(n)
+
+        # notify each plugin if there are new notifactions:
+        while g_pool.notifications:
+            n = g_pool.notifications.pop(0)
+            for p in g_pool.plugins:
+                p.on_notify(n)
 
         # allow each Plugin to do its work.
         for p in g.plugins:
