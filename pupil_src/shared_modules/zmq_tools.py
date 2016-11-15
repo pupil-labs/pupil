@@ -30,7 +30,7 @@ class ZMQ_handler(logging.Handler):
         self.socket = Msg_Dispatcher(ctx,ipc_pub_url)
 
     def emit(self, record):
-        self.socket.send('logging.%s'%str(record.levelname).lower(),record.__dict__)
+        self.socket.send(b'logging.%s' %record.levelname.lower().encode('utf-8'),record.__dict__)
 
 class Msg_Receiver(object):
     '''
@@ -62,10 +62,10 @@ class Msg_Receiver(object):
             self.subscribe(t)
 
     def subscribe(self,topic):
-        self.socket.set(zmq.SUBSCRIBE, topic)
+        self.socket.set_string(zmq.SUBSCRIBE, topic)
 
     def unsubscribe(self,topic):
-        self.socket.set(zmq.UNSUBSCRIBE, topic)
+        self.socket.set_string(zmq.UNSUBSCRIBE, topic)
 
     def recv(self):
         '''Recv a message with topic, payload.
@@ -106,12 +106,12 @@ class Msg_Streamer(object):
         the contents of the iterable in '__raw_data__' require exposing the pyhton buffer interface.
         '''
         if '__raw_data__' not in payload:
-            self.socket.send(str(topic),flags=zmq.SNDMORE)
+            self.socket.send(bytes(topic),flags=zmq.SNDMORE)
             self.socket.send(serializer.dumps(payload))
         else:
             extra_frames = payload.pop('__raw_data__')
             assert(isinstance(extra_frames, (list, tuple)))
-            self.socket.send(str(topic),flags=zmq.SNDMORE)
+            self.socket.send(bytes(topic),flags=zmq.SNDMORE)
             self.socket.send(serializer.dumps(payload),flags=zmq.SNDMORE)
             for frame in extra_frames[:-1]:
                 self.socket.send(frame,flags=zmq.SNDMORE,copy=True)
@@ -125,8 +125,8 @@ class Msg_Streamer(object):
 
 class Msg_Dispatcher(Msg_Streamer):
     '''
-    Send messages with deliavry garantee.
-    Not threadsave. Make a new one for each thread
+    Send messages with delivery guarantee.
+    Not threadsafe. Make a new one for each thread.
     '''
     def __init__(self,ctx,url):
         self.socket = zmq.Socket(ctx,zmq.PUSH)
