@@ -77,16 +77,18 @@ class Roi(object):
     def view(self, value):
         raise Exception('The view field is read-only. Use the set methods instead')
 
-    def add_vector(self,(x,y)):
+    def add_vector(self,vector):
         """
         adds the roi offset to a len2 vector
         """
+        x,y = vector
         return (self.lX+x,self.lY+y)
 
-    def sub_vector(self,(x,y)):
+    def sub_vector(self,vector):
         """
         subs the roi offset to a len2 vector
         """
+        x,y = vector
         return (x-self.lX,y-self.lY)
 
     def set(self,vals):
@@ -125,9 +127,10 @@ def project_distort_pts(pts_xyz,camera_matrix, dist_coefs,  rvec = np.array([0,0
     pts2d, _ = cv2.projectPoints(pts_xyz, rvec , tvec, camera_matrix, dist_coefs)
     return pts2d.reshape(-1,2)
 
-def cart_to_spherical( (x,y, z) ):
+def cart_to_spherical(vector):
     # convert to spherical coordinates
     # source: http://stackoverflow.com/questions/4116658/faster-numpy-cartesian-to-spherical-coordinate-conversion
+    x,y,z = vector
     r = np.sqrt(x**2 + y**2 + z**2)
     theta = np.arccos( y /  r ) # for elevation angle defined from Z-axis down
     psi = np.arctan2(z, x)
@@ -379,7 +382,6 @@ def find_slope_disc(curvature,angle = 15):
         dif = abs(base_slope-new_slope)
         if dif>=angle:
             split_idx.add(i)
-        print i,dif
         i +=1
 
     return split_list
@@ -496,10 +498,11 @@ def gen_pattern_grid(size=(4,11)):
 
 
 
-def normalize(pos, (width, height),flip_y=False):
+def normalize(pos, size, flip_y=False):
     """
     normalize return as float
     """
+    width,height = size
     x = pos[0]
     y = pos[1]
     x /=float(width)
@@ -508,10 +511,11 @@ def normalize(pos, (width, height),flip_y=False):
         return x,1-y
     return x,y
 
-def denormalize(pos, (width, height), flip_y=False):
+def denormalize(pos, size, flip_y=False):
     """
     denormalize
     """
+    width,height = size
     x = pos[0]
     y = pos[1]
     x *= width
@@ -522,10 +526,13 @@ def denormalize(pos, (width, height), flip_y=False):
 
 
 
-def dist_pts_ellipse(((ex,ey),(dx,dy),angle),points):
+def dist_pts_ellipse(ellipse, points):
     """
     return unsigned euclidian distances of points to ellipse
     """
+    pos, size, angle = ellipse
+    ex,ey = pos
+    dx,dy = size
     pts = np.float64(points)
     rx,ry = dx/2., dy/2.
     angle = (angle/180.)*np.pi
@@ -555,11 +562,14 @@ def dist_pts_ellipse(((ex,ey),(dx,dy),angle),points):
 
 
 if ne:
-    def dist_pts_ellipse(((ex,ey),(dx,dy),angle),points):
+    def dist_pts_ellipse(ellipse, points):
         """
         return unsigned euclidian distances of points to ellipse
         same as above but uses numexpr for 2x speedup
         """
+        pos, size, angle = ellipse
+        ex,ey = pos
+        dx,dy = size        
         pts = np.float64(points)
         pts.shape=(-1,2)
         rx,ry = dx/2., dy/2.
@@ -710,7 +720,6 @@ if __name__ == '__main__':
     #  *-*
     pl = np.array([[[0, 0]],[[0, 1]],[[1, 1]],[[2, 1]],[[2, 2]],[[1, 3]],[[1, 4]],[[2,4]]], dtype=np.int32)
     curvature = GetAnglesPolyline(pl,closed=0)
-    print curvature
     curvature = GetAnglesPolyline(pl,closed=1)
     # print curvature
     # print find_curv_disc(curvature)
