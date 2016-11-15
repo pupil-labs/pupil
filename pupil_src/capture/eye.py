@@ -7,6 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+from __future__ import print_function
 import os, sys, platform
 
 class Global_Container(object):
@@ -579,5 +580,5 @@ def eye_profiled(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, u
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats eye%s.pstats | dot -Tpng -o eye%s_cpu_time.png"%(eye_id,eye_id), shell=True)
-    print "created cpu time graph for eye%s process. Please check out the png next to the eye.py file"%eye_id
+    print("created cpu time graph for eye%s process. Please check out the png next to the eye.py file"%eye_id)
 
