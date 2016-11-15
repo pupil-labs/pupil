@@ -78,7 +78,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min
     g_pool.app = 'exporter'
     g_pool.min_data_confidence = min_data_confidence
     timestamps = np.load(timestamps_path)
-    cap = File_Source(g,video_path,timestamps=timestamps)
+    cap = File_Source(g_pool,video_path,timestamps=timestamps)
 
 
     #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
@@ -140,7 +140,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps] #populated by the fixation detector plugin
 
     #add plugins
-    g_pool.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
+    g_pool.plugins = Plugin_List(g_pool,plugin_by_name,plugin_initializers)
 
     while frames_to_export.value > current_frame.value:
 
