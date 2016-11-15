@@ -8,5 +8,5 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from utils import *
-from trackball import *
+from . utils import *
+from . trackball import *
