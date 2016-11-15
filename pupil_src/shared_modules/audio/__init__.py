@@ -7,6 +7,7 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
+from __future__ import print_function
 
 import platform,sys,os
 os_name = platform.system()
@@ -66,16 +67,16 @@ if os_name == "Linux":
     else:
         def beep():
             if 'sound' in audio_mode:
-                print '\a'
+                print('\a')
 
         def tink():
             if 'sound' in audio_mode:
-                print '\a'
+                print('\a')
 
         def say(message):
             if 'sound' in audio_mode:
-                print '\a'
-                print message
+                print('\a')
+                print(message)
 
 
     class Audio_Input_Dict(dict):
@@ -137,16 +138,16 @@ elif os_name == "Darwin":
 else:
     def beep():
         if 'sound' in audio_mode:
-            print '\a'
+            print('\a')
 
     def tink():
         if 'sound' in audio_mode:
-            print '\a'
+            print('\a')
 
     def say(message):
         if 'voice' in audio_mode:
-            print '\a'
-            print message
+            print('\a')
+            print(message)
 
 
     class Audio_Input_Dict(dict):
@@ -165,7 +166,7 @@ else:
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    print Audio_Input_Dict()
+    print(Audio_Input_Dict())
 
 
     # beep()
