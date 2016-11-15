@@ -157,8 +157,6 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min
             break
 
         events = {}
-        #report time between now and the last loop interation
-        events['dt'] = get_dt()
         #new positons and events
         events['gaze_positions'] = g_pool.gaze_positions_by_frame[frame.index]
         events['pupil_positions'] = g_pool.pupil_positions_by_frame[frame.index]
