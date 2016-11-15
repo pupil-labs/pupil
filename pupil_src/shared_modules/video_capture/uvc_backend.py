@@ -15,7 +15,6 @@ import uvc, time
 #check versions for our own depedencies as they are fast-changing
 assert uvc.__version__ >= '0.8'
 from ctypes import c_double
-from sets import ImmutableSet
 
 #logging
 import logging
