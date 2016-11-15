@@ -74,9 +74,9 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min
     meta_info = load_meta_info(rec_dir)
     rec_version = read_rec_version(meta_info)
 
-    g = Global_Container()
-    g.app = 'exporter'
-    g.min_data_confidence = min_data_confidence
+    g_pool = Global_Container()
+    g_pool.app = 'exporter'
+    g_pool.min_data_confidence = min_data_confidence
     timestamps = np.load(timestamps_path)
     cap = File_Source(g,video_path,timestamps=timestamps)
 
@@ -121,12 +121,12 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min
 
     start_time = time()
 
-    g.capture = cap
-    g.rec_dir = rec_dir
-    g.user_dir = user_dir
-    g.rec_version = rec_version
-    g.timestamps = timestamps
-    g.delayed_notifications = {}
+    g_pool.capture = cap
+    g_pool.rec_dir = rec_dir
+    g_pool.user_dir = user_dir
+    g_pool.rec_version = rec_version
+    g_pool.timestamps = timestamps
+    g_pool.delayed_notifications = {}
     g_pool.notifications = []
 
 
@@ -135,12 +135,12 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min
     pupil_list = pupil_data['pupil_positions']
     gaze_list = pupil_data['gaze_positions']
 
-    g.pupil_positions_by_frame = correlate_data(pupil_list,g.timestamps)
-    g.gaze_positions_by_frame = correlate_data(gaze_list,g.timestamps)
-    g.fixations_by_frame = [[] for x in g.timestamps] #populated by the fixation detector plugin
+    g_pool.pupil_positions_by_frame = correlate_data(pupil_list,g.timestamps)
+    g_pool.gaze_positions_by_frame = correlate_data(gaze_list,g.timestamps)
+    g_pool.fixations_by_frame = [[] for x in g_pool.timestamps] #populated by the fixation detector plugin
 
     #add plugins
-    g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
+    g_pool.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
 
     while frames_to_export.value > current_frame.value:
 
@@ -161,8 +161,8 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min
         #report time between now and the last loop interation
         events['dt'] = get_dt()
         #new positons and events
-        events['gaze_positions'] = g.gaze_positions_by_frame[frame.index]
-        events['pupil_positions'] = g.pupil_positions_by_frame[frame.index]
+        events['gaze_positions'] = g_pool.gaze_positions_by_frame[frame.index]
+        events['pupil_positions'] = g_pool.pupil_positions_by_frame[frame.index]
 
         # publish delayed notifiactions when their time has come.
         for n in g_pool.delayed_notifications.values():
@@ -178,7 +178,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min
                 p.on_notify(n)
 
         # allow each Plugin to do its work.
-        for p in g.plugins:
+        for p in g_pool.plugins:
             p.update(frame,events)
 
         writer.write_video_frame(frame)
