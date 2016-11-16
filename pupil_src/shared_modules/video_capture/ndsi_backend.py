@@ -94,8 +94,10 @@ class NDSI_Source(Base_Source):
     def on_notification(self, sensor, event):
         if event['subject'] == 'error':
             logger.warning('Error: %s'%event['error_str'])
-        elif self.has_ui and (event['control_id'] not in self.control_id_ui_mapping
-            or ctrl_dtype == "selector" or ctrl_dtype == "bitmap"):
+        elif self.has_ui and (
+            event['control_id'] not in self.control_id_ui_mapping or
+            event['changes'].get('dtype') == "selector" or
+            event['changes'].get('dtype') == "bitmap"):
             self.update_control_menu()
 
     @property
