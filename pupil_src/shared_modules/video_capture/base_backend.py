@@ -120,11 +120,7 @@ class Base_Source(object):
         raise NotImplementedError()
     @frame_size.setter
     def frame_size(self,new_size):
-        # Subclasses need to call this:
-        self.g_pool.on_frame_size_change(new_size)
-        # eye.py sets a custom `on_frame_size_change` callback
-        # which recalculates the size of the ROI. If this does not
-        # happen, the eye process will crash.
+        raise NotImplementedError()
 
     @property
     def frame_rate(self):

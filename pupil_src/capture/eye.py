@@ -191,8 +191,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         def on_scroll(window,x,y):
             g_pool.gui.update_scroll(x,y*scroll_factor)
 
-        g_pool.on_frame_size_change = lambda new_size: None
-
         # load session persistent settings
         session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_eye%s'%eye_id))
         if session_settings.get("version",VersionFormat('0.0')) < g_pool.version:
@@ -237,11 +235,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         roi_user_settings = session_settings.get('roi')
         if roi_user_settings and roi_user_settings[-1] == g_pool.u_r.get()[-1]:
             g_pool.u_r.set(roi_user_settings)
-
-        def on_frame_size_change(new_size):
-            g_pool.u_r = UIRoi((new_size[1],new_size[0]))
-
-        g_pool.on_frame_size_change = on_frame_size_change
 
         writer = None
 
@@ -434,6 +427,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                 g_pool.capture.seek_to_frame(0)
                 frame = g_pool.capture.get_frame()
 
+            g_pool.u_r = UIRoi((frame.height,frame.width))
             g_pool.capture_manager.update(frame, {})
 
             if should_publish_frames and frame.jpeg_buffer:

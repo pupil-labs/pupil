@@ -54,7 +54,8 @@ class NDSI_Source(Base_Source):
 
         logger.debug('NDSI Source Sensor: %s'%self.sensor)
         self.control_id_ui_mapping = {}
-        self.get_frame_timeout = 2000
+        self.get_frame_timeout = 1000
+        self._frame_size = None
         self.frame_size = frame_size
         self.frame_rate = frame_rate
         self.has_ui = False
@@ -77,6 +78,7 @@ class NDSI_Source(Base_Source):
         for a in range(attempts):
             try:
                 frame = self._get_frame()
+                self.frame_size = (frame.width, frame.height)
             except Exception as e:
                 # check if streaming is enabled
                 if 'streaming' in self.sensor.controls:
@@ -102,14 +104,10 @@ class NDSI_Source(Base_Source):
 
     @property
     def frame_size(self):
-        return (1280, 720)
+        return self._frame_size
     @frame_size.setter
     def frame_size(self,new_size):
-        # Subclasses need to call this:
-        self.g_pool.on_frame_size_change(new_size)
-        # eye.py sets a custom `on_frame_size_change` callback
-        # which recalculates the size of the ROI. If this does not
-        # happen, the eye process will crash.
+        self._frame_size = new_size
     def set_frame_size(self,new_size):
         self.frame_size = new_size
 
@@ -144,6 +142,7 @@ class NDSI_Source(Base_Source):
         self.has_ui = True
         self.uvc_menu = ui.Growing_Menu("UVC Controls")
         self.update_control_menu()
+        self.sensor.refresh_controls()
 
     def add_controls_to_menu(self,menu,controls):
         from pyglui import ui

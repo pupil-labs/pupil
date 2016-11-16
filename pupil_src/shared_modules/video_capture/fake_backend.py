@@ -147,7 +147,6 @@ class Fake_Source(Base_Source):
         return self.img.shape[1],self.img.shape[0]
     @frame_size.setter
     def frame_size(self,new_size):
-        self.g_pool.on_frame_size_change(new_size)
         #closest match for size
         sizes = [ abs(r[0]-new_size[0]) for r in self.frame_sizes ]
         best_size_idx = sizes.index(min(sizes))
