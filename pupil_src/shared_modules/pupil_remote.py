@@ -83,6 +83,9 @@ class Pupil_Remote(Plugin):
 
 
     def start_server(self,new_address):
+        #addes needs to be a byte array for zmq
+        new_address = new_address.encode('utf-8')
+
         self.thread_pipe.send_multipart(('Bind',"tcp://"+new_address))
         response,msg = self.thread_pipe.recv_multipart()
         if response == 'Bind OK' :
