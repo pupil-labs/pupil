@@ -158,7 +158,7 @@ class Fake_Source(Base_Source):
 
     @property
     def frame_rates(self):
-        return range(30,60,90,120)
+        return (30,60,90,120)
 
     @property
     def frame_sizes(self):
