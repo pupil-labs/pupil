@@ -436,7 +436,7 @@ class Sliding_Window(object):
         ts0 = self.timestamps[start_idx]
         for j in range(start_idx+1, len(self.timestamps)):
             ts1 = self.timestamps[j]
-            if ts1 - ts0 > self.min_duration:
+            if abs(ts1 - ts0) > self.min_duration:
                 return start_idx, j
         raise EOFError('Could not find a sliding window with minimal lenght of %.2fs'%self.min_duration)
 
