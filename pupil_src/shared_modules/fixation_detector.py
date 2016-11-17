@@ -641,7 +641,7 @@ class Detection_Window(object):
         counter = 1
         newest = self.gaze_data[-1]['timestamp']
         for idx, datum in enumerate(self.gaze_data):
-            if newest - datum['timestamp'] > time_constraint:
+            if abs(newest - datum['timestamp']) > time_constraint:
                 counter += 1
             else:
                 # do not remove datum that breaks the constraint
