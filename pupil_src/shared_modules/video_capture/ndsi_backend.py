@@ -59,6 +59,7 @@ class NDSI_Source(Base_Source):
         self.frame_size = frame_size
         self.frame_rate = frame_rate
         self.has_ui = False
+        self._initial_refresh = True
 
     @property
     def name(self):
@@ -94,12 +95,16 @@ class NDSI_Source(Base_Source):
         raise StreamError("Could not grab frame after 3 attempts. Giving up.")
 
     def on_notification(self, sensor, event):
+        if self._initial_refresh:
+            self.sensor.__events__.append((time.time(),{'subject':'initial refresh'}))
+            self.sensor.refresh_controls()
+            self._initial_refresh = False
         if event['subject'] == 'error':
             logger.warning('Error: %s'%event['error_str'])
         elif self.has_ui and (
             event['control_id'] not in self.control_id_ui_mapping or
-            event['changes'].get('dtype') == "selector" or
-            event['changes'].get('dtype') == "bitmap"):
+            event['changes'].get('dtype') == "strmapping" or
+            event['changes'].get('dtype') == "intmapping"):
             self.update_control_menu()
 
     @property
@@ -142,7 +147,6 @@ class NDSI_Source(Base_Source):
         self.has_ui = True
         self.uvc_menu = ui.Growing_Menu("UVC Controls")
         self.update_control_menu()
-        self.sensor.refresh_controls()
 
     def add_controls_to_menu(self,menu,controls):
         from pyglui import ui
@@ -181,8 +185,8 @@ class NDSI_Source(Base_Source):
                         on_val=ctrl_dict.get('max',True),
                         off_val=ctrl_dict.get('min',False),
                         setter=make_value_change_fn(ctrl_id))
-                elif dtype == "selector":
-                    desc_list = ctrl_dict['selector']
+                elif dtype == "strmapping" or dtype == "intmapping":
+                    desc_list = ctrl_dict['map']
                     labels    = [desc['caption'] for desc in desc_list]
                     selection = [desc['value']   for desc in desc_list]
                     ctrl_ui = ui.Selector(
@@ -196,6 +200,8 @@ class NDSI_Source(Base_Source):
                     ctrl_ui.read_only = ctrl_dict.get('readonly',False)
                     self.control_id_ui_mapping[ctrl_id] = ctrl_ui
                     menu.append(ctrl_ui)
+                else:
+                    logger.error('Did not generate UI for %s'%ctrl_id)
             except:
                 logger.error('Exception for control:\n%s'%pprint.pformat(ctrl_dict))
                 import traceback as tb
@@ -350,7 +356,7 @@ class NDSI_Manager(Base_Manager):
         elif (event['subject'] == 'attach' and
             event['sensor_type'] == 'video'):
             logger.debug('attached: %s'%event)
-            name = str('%s @ %s'%(event['sensor_name'],event['host_name']))
+            name = '%s @ %s'%(event['sensor_name'],event['host_name'])
             self.notify_all({
                 'subject': 'capture_manager.source_found',
                 'source_class_name': NDSI_Source.class_name(),
