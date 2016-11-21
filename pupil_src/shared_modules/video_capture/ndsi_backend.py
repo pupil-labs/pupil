@@ -212,7 +212,7 @@ class NDSI_Source(Base_Source):
 
         uvc_controls = []
         other_controls = []
-        for entry in self.sensor.controls.iteritems():
+        for entry in iter(sorted(self.sensor.controls.iteritems())):
             if entry[0].startswith("UVC"):
                 uvc_controls.append(entry)
             else: other_controls.append(entry)
