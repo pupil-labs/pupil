@@ -100,7 +100,7 @@ if __name__ == '__main__':
             sts,img = cap.read()
             # img = cv2.imread('/Users/mkassner/Desktop/manual_calibration_marker-01.png')
             gray  = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            print len(find_concetric_circles(gray,visual_debug=img))
+            print(len(find_concetric_circles(gray,visual_debug=img)))
             cv2.imshow('img',img)
             cv2.waitKey(1)
             # return
@@ -111,4 +111,4 @@ if __name__ == '__main__':
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
-    print "created  time graph for  process. Please check out the png next to this file"
+    print("created  time graph for  process. Please check out the png next to this file")

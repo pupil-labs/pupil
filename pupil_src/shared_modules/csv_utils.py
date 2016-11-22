@@ -76,4 +76,4 @@ if __name__ == '__main__':
 
     import os
     os.remove(testfile)
-    print 'CSV Test: successfull'
+    print('CSV Test: successful')

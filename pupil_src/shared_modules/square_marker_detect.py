@@ -15,9 +15,8 @@ import numpy as np
 from scipy.spatial.distance import pdist
 from scipy.interpolate import interp1d
 #because np.sqrt is slower when we do it on small arrays
-from itertools import ifilter,izip
 def reversedEnumerate(l):
-    return izip(xrange(len(l)-1, -1, -1), reversed(l))
+    return zip(xrange(len(l)-1, -1, -1), reversed(l))
 
 from math import sqrt
 sqrt_2 = sqrt(2)
@@ -487,7 +486,7 @@ class MarkerTracker(object):
         """Construct valid marker result from state"""
         markers = {}
         should_display = lambda m: m[self.loc_conf_idx] > self.display_threshold
-        for m_state in ifilter(should_display, self.state):
+        for m_state in filter(should_display, self.state):
         #for m_state in self.state:
             m_id = bin_list_to_int(np.round(m_state[self.id_slc]).astype(int))
             m_id_conf = self.marker_id_confidence(m_state)
@@ -548,7 +547,7 @@ class MarkerTracker(object):
 
         prev_pts = []
         unmatched_history = filter(
-            lambda (_,unmatched): unmatched,
+            lambda _,unmatched: unmatched,
             izip(self.state,hist_to_match))
         for hist_marker, unmatched in unmatched_history:
             # use optical flow to track unmatched markers...
@@ -657,7 +656,7 @@ def bench(folder):
         if cv2.waitKey(1) == 27:
            break
         detected_count += len(markers)
-    print detected_count #2900 #3042 #3021
+    print(detected_count) #2900 #3042 #3021
 
 
 
@@ -670,4 +669,4 @@ if __name__ == '__main__':
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("cd %s ; python "%folder+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
-    print "created  time graph for  process. Please check out the png next to this file"
+    print("created  time graph for  process. Please check out the png next to this file")

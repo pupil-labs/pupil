@@ -63,7 +63,7 @@ extensions = [
         name="detector_2d",
         sources=['detector_2d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp' ],
         include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, opencv_include_dir ],
-        libraries = ['boost_python']+opencv_libraries,
+        libraries = ['boost_python3']+opencv_libraries,
         library_dirs = [opencv_library_dir],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-std=c++11",'-w','-O2'], #-w hides warnings
@@ -73,7 +73,7 @@ extensions = [
         name="detector_3d",
         sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/EyeModelFitter.cpp','singleeyefitter/EyeModel.cpp'],
         include_dirs = [ np.get_include() , '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, opencv_include_dir ],
-        libraries = ['ceres', 'boost_python']+opencv_libraries,
+        libraries = ['ceres', 'boost_python3']+opencv_libraries,
         library_dirs = [opencv_library_dir],
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-std=c++11",'-w','-O2'], #-w hides warnings

@@ -11,7 +11,7 @@
 import os, sys, platform
 
 # sys.argv.append('profiled')
-# sys.argv.append('debug')
+sys.argv.append('debug')
 # sys.argv.append('service')
 
 app = 'capture'

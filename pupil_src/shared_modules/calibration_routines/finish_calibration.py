@@ -11,17 +11,17 @@
 import os
 import numpy as np
 
-import calibrate
-import math_helper
+from . calibrate import *
+from math_helper import *
 from file_methods import load_object,save_object
-from camera_intrinsics_estimation import load_camera_calibration
+from . camera_intrinsics_estimation import load_camera_calibration
 
-from optimization_calibration import  bundle_adjust_calibration
-from calibrate import find_rigid_transform
+from . optimization_calibration import  bundle_adjust_calibration
+from . calibrate import find_rigid_transform
 #logging
 import logging
 logger = logging.getLogger(__name__)
-from gaze_mappers import *
+from . gaze_mappers import *
 
 not_enough_data_error_msg = 'Did not collect enough data during calibration.'
 solver_failed_to_converge_error_msg = 'Paramters could not be estimated from data.'

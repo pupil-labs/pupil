@@ -840,9 +840,9 @@ if __name__ == '__main__':
     tranform3d_to_camera_rotation = np.eye(4, dtype=np.float32)
     tranform3d_to_camera_rotation[:-1,:-1] = rotation3dMat.T
 
-    print tranform3d_to_camera_translation
-    print tranform3d_to_camera_rotation
-    print np.matrix(tranform3d_to_camera_rotation) * np.matrix(tranform3d_to_camera_translation)
+    print(tranform3d_to_camera_translation)
+    print(tranform3d_to_camera_rotation)
+    print(np.matrix(tranform3d_to_camera_rotation) * np.matrix(tranform3d_to_camera_translation))
 
 
 

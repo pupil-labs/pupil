@@ -217,7 +217,7 @@ class Clock_Sync_Follower(threading.Thread):
 
             server_socket.close()
 
-            times.sort(key=lambda (t0,t1,t2): t2-t0)
+            times.sort(key=lambda t0,t1,t2: t2-t0)
             times = times[:int(len(times)*0.69)]
             delays = [t2-t0 for t0,t1,t2 in times]
             offsets = [t0-((t1+(t2-t0)/2)) for t0,t1,t2 in times]
@@ -294,9 +294,9 @@ if __name__ == '__main__':
     # slave3 = Clock_Sync_Follower(host,port=port,interval=10,time_fn=get_time,jump_fn=jump_time_dummy,slew_fn=slew_time_dummy)
     for x in range(10):
         sleep(4)
-        print slave
+        print(slave)
         # print "offset:%f, jitter: %f"%(epoch,slave.sync_jitter)
-    print 'shutting down'
+    print('shutting down')
     slave.stop()
     master.stop()
-    print 'googdby'
+    print('good bye')

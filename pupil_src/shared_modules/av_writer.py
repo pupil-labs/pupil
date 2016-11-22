@@ -366,40 +366,39 @@ if __name__ == '__main__':
 
     # container = av.open('hw:0',format="alsa")
     container = av.open('1:0',format="avfoundation")
-    print 'container:', container
-    print '\tformat:', container.format
-    print '\tduration:', float(container.duration) / av.time_base
-    print '\tmetadata:'
+    print('container:', container)
+    print('\tformat:', container.format)
+    print('\tduration:', float(container.duration) / av.time_base)
+    print('\tmetadata:')
     for k, v in sorted(container.metadata.iteritems()):
-        print '\t\t%s: %r' % (k, v)
-    print
+        print('\t\t%s: %r' % (k, v))
 
-    print len(container.streams), 'stream(s):'
+    print(len(container.streams), 'stream(s):')
     audio_stream = None
     for i, stream in enumerate(container.streams):
 
-        print '\t%r' % stream
-        print '\t\ttime_base: %r' % stream.time_base
-        print '\t\trate: %r' % stream.rate
-        print '\t\tstart_time: %r' % stream.start_time
-        print '\t\tduration: %s' % format_time(stream.duration, stream.time_base)
-        print '\t\tbit_rate: %r' % stream.bit_rate
-        print '\t\tbit_rate_tolerance: %r' % stream.bit_rate_tolerance
+        print('\t%r' % stream)
+        print('\t\ttime_base: %r' % stream.time_base)
+        print('\t\trate: %r' % stream.rate)
+        print('\t\tstart_time: %r' % stream.start_time)
+        print('\t\tduration: %s' % format_time(stream.duration, stream.time_base))
+        print('\t\tbit_rate: %r' % stream.bit_rate)
+        print('\t\tbit_rate_tolerance: %r' % stream.bit_rate_tolerance)
 
         if stream.type == b'audio':
-            print '\t\taudio:'
-            print '\t\t\tformat:', stream.format
-            print '\t\t\tchannels: %s' % stream.channels
+            print('\t\taudio:')
+            print('\t\t\tformat:', stream.format)
+            print('\t\t\tchannels: %s' % stream.channels)
             audio_stream = stream
             break
         elif stream.type == 'container':
-            print '\t\tcontainer:'
-            print '\t\t\tformat:', stream.format
-            print '\t\t\taverage_rate: %r' % stream.average_rate
+            print('\t\tcontainer:')
+            print('\t\t\tformat:', stream.format)
+            print('\t\t\taverage_rate: %r' % stream.average_rate)
 
-        print '\t\tmetadata:'
+        print('\t\tmetadata:')
         for k, v in sorted(stream.metadata.iteritems()):
-            print '\t\t\t%s: %r' % (k, v)
+            print('\t\t\t%s: %r' % (k, v))
 
     if not audio_stream:
         exit()
@@ -412,10 +411,10 @@ if __name__ == '__main__':
         # for frame in packet.decode():
         #     packet = out_stream.encode(frame)
         #     if packet:
-        print '%r' %packet
-        print '\tduration: %s' % format_time(packet.duration, packet.stream.time_base)
-        print '\tpts: %s' % format_time(packet.pts, packet.stream.time_base)
-        print '\tdts: %s' % format_time(packet.dts, packet.stream.time_base)
+        print('%r' %packet)
+        print('\tduration: %s' % format_time(packet.duration, packet.stream.time_base))
+        print('\tpts: %s' % format_time(packet.pts, packet.stream.time_base))
+        print('\tdts: %s' % format_time(packet.dts, packet.stream.time_base))
         out_container.mux(packet)
         if i >1000:
             break

@@ -20,7 +20,7 @@ from methods import normalize,denormalize
 from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
-import calibrate
+from . calibrate import *
 
 import audio
 
@@ -29,9 +29,9 @@ from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw
 
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
-from calibration_plugin_base import Calibration_Plugin
-from screen_marker_calibration import Screen_Marker_Calibration
-import calibrate
+from . calibration_plugin_base import Calibration_Plugin
+from . screen_marker_calibration import Screen_Marker_Calibration
+
 #logging
 import logging
 logger = logging.getLogger(__name__)

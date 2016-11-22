@@ -13,7 +13,7 @@ import csv
 import numpy as np
 import cv2
 import logging
-from itertools import chain, ifilter
+from itertools import chain
 from math import atan, tan
 from operator import itemgetter
 from methods import denormalize
@@ -327,7 +327,8 @@ class Sliding_Window(object):
     def __init__(self, gaze_data, eye_id, min_duration):
         super(Sliding_Window, self).__init__()
 
-        def gp_to_normal_mapping((gazepoint_idx,gp)):
+        def gp_to_normal_mapping(gazepoint):
+            gazepoint_idx,gp = gazepoint
             for dat in gp['base_data']:
                 if dat['id'] == eye_id and 'circle_3d' in dat:
                     return (gazepoint_idx, dat['circle_3d']['normal'], dat['timestamp'], dat['diameter'])
@@ -519,7 +520,10 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
             return
 
         self.fixations.sort(key=lambda f: f['timestamp'])
-        def assign_idx_as_id((idx, fix)): fix['id'] = idx
+        def assign_idx_as_id(id_fix): 
+            idx, fix = id_fix
+            fix['id'] = idx
+            return idx
         map(assign_idx_as_id, enumerate(self.fixations))
 
         fixations_by_frame = [[] for x in self.g_pool.timestamps]

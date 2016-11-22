@@ -8,5 +8,5 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from intersections import *
-from transformations import *
+from . intersections import *
+from . transformations import *

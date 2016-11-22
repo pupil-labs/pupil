@@ -10,8 +10,7 @@
 
 from plugin import Plugin
 import cv2
-from calibrate import make_map_function
-import calibrate
+from . calibrate import *
 from methods import project_distort_pts , normalize, spherical_to_cart
 from copy import deepcopy
 import numpy as np
@@ -21,7 +20,7 @@ import zmq_tools
 import threading
 from multiprocessing import Process as Thread
 
-from visualizer_calibration import *
+from . visualizer_calibration import *
 
 
 class Gaze_Mapping_Plugin(Plugin):
@@ -116,7 +115,7 @@ class Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     def __init__(self, g_pool,params):
         super(Monocular_Gaze_Mapper, self).__init__(g_pool)
         self.params = params
-        self.map_fn = make_map_function(*self.params)
+        self.map_fn = calibrate.make_map_function(*self.params)
 
     def _map_monocular(self,p):
         gaze_point = self.map_fn(p['norm_pos'])
@@ -133,7 +132,7 @@ class Dual_Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin)
         super(Dual_Monocular_Gaze_Mapper, self).__init__(g_pool)
         self.params0 = params0
         self.params1 = params1
-        self.map_fns = (make_map_function(*self.params0),make_map_function(*self.params1))
+        self.map_fns = (calibrate.make_map_function(*self.params0),calibrate.make_map_function(*self.params1))
 
     def _map_monocular(self,p):
         gaze_point = self.map_fns[p['id']](p['norm_pos'])
@@ -150,10 +149,10 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
         self.params_eye0 = params_eye0
         self.params_eye1 = params_eye1
         self.multivariate = True
-        self.map_fn = make_map_function(*self.params)
+        self.map_fn = calibrate.make_map_function(*self.params)
         self.map_fn_fallback = []
-        self.map_fn_fallback.append(make_map_function(*self.params_eye0))
-        self.map_fn_fallback.append(make_map_function(*self.params_eye1))
+        self.map_fn_fallback.append(calibrate.make_map_function(*self.params_eye0))
+        self.map_fn_fallback.append(calibrate.make_map_function(*self.params_eye1))
 
 
     def init_gui(self):

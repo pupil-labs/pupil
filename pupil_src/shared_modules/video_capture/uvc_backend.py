@@ -8,8 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
-from .fake_backend import Fake_Source
+from . base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
+from . fake_backend import Fake_Source
 
 import uvc, time
 #check versions for our own depedencies as they are fast-changing

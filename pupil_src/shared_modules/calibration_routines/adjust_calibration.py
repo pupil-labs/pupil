@@ -16,13 +16,13 @@ from file_methods import load_object
 from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
 from OpenGL.GL import GL_POLYGON
 from circle_detector import find_concetric_circles
-from finish_calibration import finish_calibration
-import calibrate
+from . finish_calibration import finish_calibration
+from . calibrate import *
 
 import audio
 
 from pyglui import ui
-from calibration_plugin_base import Calibration_Plugin
+from . calibration_plugin_base import Calibration_Plugin
 
 #logging
 import logging

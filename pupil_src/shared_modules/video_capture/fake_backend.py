@@ -110,7 +110,7 @@ class Fake_Source(Base_Source):
 
     def make_img(self,size):
         c_w ,c_h = max(1,size[0]/30),max(1,size[1]/30)
-        coarse = np.random.randint(0,200,size=(c_h,c_w,3)).astype(np.uint8)
+        coarse = np.random.randint(0,200,size=(int(c_h),int(c_w),3)).astype(np.uint8)
         # coarse[:,:,1] /=5
         # coarse[:,:,2] *=0
         # coarse[:,:,1] /=30
@@ -158,7 +158,7 @@ class Fake_Source(Base_Source):
 
     @property
     def frame_rates(self):
-        return range(30,60,90,120)
+        return (30,60,90,120)
 
     @property
     def frame_sizes(self):
