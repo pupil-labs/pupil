@@ -40,12 +40,10 @@ from version_utils import get_version
 app_version = get_version(version_file)
 
 #threading and processing
-try:
-    from billiard import Process, Queue, Value,active_children, freeze_support,forking_enable
-except:
-    from multiprocessing import Process, Queue, Value,active_children, freeze_support
-    def forking_enable(_):
-        pass
+from multiprocessing import Process, Queue, Value,active_children,freeze_support,set_start_method
+def forking_enable(_):
+    set_start_method('spawn')
+
 
 from threading import Thread
 from ctypes import c_double,c_bool
