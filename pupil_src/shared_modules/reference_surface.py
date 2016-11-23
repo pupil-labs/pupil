@@ -25,8 +25,11 @@ from pyglui.ui import get_opensans_font_path
 #ctypes import for atb_vars:
 from time import time
 
+from pykalman import KalmanFilter
+
 import logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 marker_corners_norm = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
 def m_verts_to_screen(verts):
@@ -81,6 +84,11 @@ class Reference_Surface(object):
         self.uid = str(time())
         self.real_world_size = {'x':1.,'y':1.}
 
+        self.kfilter = self.setup_kalman_filter(n_dim_obs=8)
+        self.current_mean = None
+        self.current_cov = None
+        self.cov_threshold = 2.
+
         ###window and gui vars
         self._window = None
         self.fullscreen = False
@@ -99,6 +107,24 @@ class Reference_Surface(object):
         if saved_definition is not None:
             self.load_from_dict(saved_definition)
 
+    def setup_kalman_filter(self, n_dim_obs):
+        self.kfilter_obs_dim = n_dim_obs
+        self.kfilter_state_dim = 2*self.kfilter_obs_dim
+
+        transition = np.zeros((self.kfilter_state_dim,self.kfilter_state_dim))
+        observation_matrix = np.zeros((self.kfilter_obs_dim,self.kfilter_state_dim))
+        for i in xrange(self.kfilter_obs_dim):
+            transition[i*2,i*2:i*2+2] = np.ones(2) # new pos = old pos + old vel
+            transition[i*2+1,i*2+1] = 1. # new vel = old vel
+            observation_matrix[i,i*2] = 1. # predicted = pos without vel
+
+        return KalmanFilter(
+            transition_matrices=transition,
+            transition_covariance=.01 * np.eye(self.kfilter_state_dim),
+            observation_matrices=observation_matrix)
+
+    def create_kalman_oberservation(self,corner_vertices):
+        return np.hstack(corner_vertices)
 
     def save_to_dict(self):
         """
@@ -282,18 +308,34 @@ class Reference_Surface(object):
                 else:
                     corners_robust.append(nulldist)
 
-
-            corners_robust = np.array(corners_robust)
-
-            if self.old_corners_robust is not None and np.mean(np.abs(corners_robust-self.old_corners_robust)) < 0.02:
-                smooth_corners_robust  = self.old_corners_robust
-                smooth_corners_robust += .5*(corners_robust-self.old_corners_robust )
-
-                corners_robust = smooth_corners_robust
-                self.old_corners_robust  = smooth_corners_robust
+            observ = self.create_kalman_oberservation(corners_robust)
+            if self.current_mean is None or self.current_cov is None:
+                self.current_mean, self.current_cov = self.kfilter.filter(np.vstack((observ,observ)))
+                self.current_mean = self.current_mean[-1,:]
+                self.current_cov  = self.current_cov[-1,:,:]
             else:
-                self.old_corners_robust = corners_robust
+                self.current_mean, self.current_cov = self.kfilter.filter_update(
+                    self.current_mean, self.current_cov, observ)
+            corners_robust = np.asarray(corners_robust)
 
+        elif self.current_mean is not None or self.current_cov is not None:
+            # update with missing observation
+            self.current_mean, self.current_cov = self.kfilter.filter_update(
+                    self.current_mean, self.current_cov)
+
+            obs_mat = self.kfilter.observation_matrices
+            corners_robust = np.dot(obs_mat,self.current_mean).reshape(4,2).astype(np.float32)
+            detected = True
+            m_from_undistored_norm_space = None
+            m_to_undistored_norm_space = None
+
+        else: detected = False
+
+        if self.current_cov is not None:
+            logger.debug("Current mean covariance %f"%self.current_cov.mean())
+
+        if (detected and self.current_cov is not None and
+            self.current_cov.mean() < self.cov_threshold):
             #compute a perspective thransform from from the marker norm space to the apparent image.
             # The surface corners will be at the right points
             # However the space between the corners may be distored due to distortions of the lens,
@@ -364,12 +406,6 @@ class Reference_Surface(object):
                     # combine all tranformations into transformation matrix that decribes the move from object origin and orientation to camera origin and orientation
                     tranform3d_object_to_cam =  np.matrix(flip_z_axix_hm) * np.matrix(rot3d_object_to_cam_hm) * np.matrix(translate3d_object_to_cam_hm)
                     camera_pose_3d = tranform3d_object_to_cam
-            if detected == False:
-                camera_pose_3d = None
-                m_from_screen = None
-                m_to_screen = None
-                m_from_undistored_norm_space = None
-                m_to_undistored_norm_space = None
 
         else:
             detected = False
@@ -378,8 +414,19 @@ class Reference_Surface(object):
             m_to_screen = None
             m_from_undistored_norm_space = None
             m_to_undistored_norm_space = None
+            self.current_mean = None
+            self.current_cov = None
 
-        return {'detected':detected,'detected_markers':len(overlap),'m_from_undistored_norm_space':m_from_undistored_norm_space,'m_to_undistored_norm_space':m_to_undistored_norm_space,'m_from_screen':m_from_screen,'m_to_screen':m_to_screen,'camera_pose_3d':camera_pose_3d}
+        return {
+            'detected'        :detected,
+            'detected_markers':len(overlap),
+            'm_from_undistored_norm_space':m_from_undistored_norm_space,
+            'm_to_undistored_norm_space'  :m_to_undistored_norm_space,
+            'm_from_screen'   :m_from_screen,
+            'm_to_screen'     :m_to_screen,
+            'camera_pose_3d'  :camera_pose_3d,
+            'mean_kfilter_cov': -1. if self.current_cov is None else self.current_cov.mean()
+        }
 
 
     def img_to_ref_surface(self,pos):
@@ -483,10 +530,17 @@ class Reference_Surface(object):
             hat = cv2.perspectiveTransform(hat,self.m_to_screen)
             frame = cv2.perspectiveTransform(frame,self.m_to_screen)
             alpha = min(1,self.build_up_status/self.required_build_up)
+            if self.current_cov is not None:
+                fade_range = .8,self.cov_threshold
+                mean_cov   = self.current_cov.mean()
+                if   mean_cov < fade_range[0]: mean_cov = fade_range[0]
+                elif mean_cov > fade_range[1]: mean_cov = fade_range[1]
+                cov_alpha = (fade_range[1]-mean_cov)/(fade_range[1]-fade_range[0])
             if highlight:
-                draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*.1),line_type=GL_POLYGON)
-            draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*alpha))
-            draw_polyline_norm(hat.reshape((4,2)),1,RGBA(r,g,b,a*alpha))
+                draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*.1*cov_alpha),line_type=GL_POLYGON)
+
+            draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*alpha*cov_alpha))
+            draw_polyline_norm(hat.reshape((4,2)),1,RGBA(r,g,b,a*alpha*cov_alpha))
             text_anchor = frame.reshape((5,-1))[2]
             text_anchor[1] = 1-text_anchor[1]
             text_anchor *=img_size[1],img_size[0]
@@ -495,11 +549,11 @@ class Reference_Surface(object):
             marker_edit_anchor = text_anchor[0],text_anchor[1]+50
             if self.defined:
                 if marker_mode:
-                    draw_points([marker_edit_anchor],color=RGBA(0,.8,.7))
+                    draw_points([marker_edit_anchor],color=RGBA(0,.8,.7,cov_alpha))
                 else:
                     draw_points([marker_edit_anchor])
                 if surface_mode:
-                    draw_points([surface_edit_anchor],color=RGBA(0,.8,.7))
+                    draw_points([surface_edit_anchor],color=RGBA(0,.8,.7,cov_alpha))
                 else:
                     draw_points([surface_edit_anchor])
 
