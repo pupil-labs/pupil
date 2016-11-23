@@ -96,7 +96,6 @@ class NDSI_Source(Base_Source):
 
     def on_notification(self, sensor, event):
         if self._initial_refresh:
-            self.sensor.__events__.append((time.time(),{'subject':'initial refresh'}))
             self.sensor.refresh_controls()
             self._initial_refresh = False
         if event['subject'] == 'error':
