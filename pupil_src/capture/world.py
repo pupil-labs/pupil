@@ -192,8 +192,6 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     def get_dt():
         return next(tick)
 
-    g_pool.on_frame_size_change = lambda new_size: None
-
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(g_pool.user_dir,'user_settings_world'))
     if session_settings.get("version",VersionFormat('0.0')) < g_pool.version:

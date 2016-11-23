@@ -54,10 +54,12 @@ class NDSI_Source(Base_Source):
 
         logger.debug('NDSI Source Sensor: %s'%self.sensor)
         self.control_id_ui_mapping = {}
-        self.get_frame_timeout = 2000
+        self.get_frame_timeout = 1000
+        self._frame_size = None
         self.frame_size = frame_size
         self.frame_rate = frame_rate
         self.has_ui = False
+        self._initial_refresh = True
 
     @property
     def name(self):
@@ -77,6 +79,7 @@ class NDSI_Source(Base_Source):
         for a in range(attempts):
             try:
                 frame = self._get_frame()
+                self.frame_size = (frame.width, frame.height)
             except Exception as e:
                 # check if streaming is enabled
                 if 'streaming' in self.sensor.controls:
@@ -92,21 +95,24 @@ class NDSI_Source(Base_Source):
         raise StreamError("Could not grab frame after 3 attempts. Giving up.")
 
     def on_notification(self, sensor, event):
+        if self._initial_refresh:
+            self.sensor.__events__.append((time.time(),{'subject':'initial refresh'}))
+            self.sensor.refresh_controls()
+            self._initial_refresh = False
         if event['subject'] == 'error':
             logger.warning('Error: %s'%event['error_str'])
-        elif self.has_ui and event['control_id'] not in self.control_id_ui_mapping:
+        elif self.has_ui and (
+            event['control_id'] not in self.control_id_ui_mapping or
+            event['changes'].get('dtype') == "strmapping" or
+            event['changes'].get('dtype') == "intmapping"):
             self.update_control_menu()
 
     @property
     def frame_size(self):
-        return (1280, 720)
+        return self._frame_size
     @frame_size.setter
     def frame_size(self,new_size):
-        # Subclasses need to call this:
-        self.g_pool.on_frame_size_change(new_size)
-        # eye.py sets a custom `on_frame_size_change` callback
-        # which recalculates the size of the ROI. If this does not
-        # happen, the eye process will crash.
+        self._frame_size = new_size
     def set_frame_size(self,new_size):
         self.frame_size = new_size
 
@@ -137,14 +143,13 @@ class NDSI_Source(Base_Source):
         self.frame_rate = settings['frame_rate']
 
     def init_gui(self):
+        from pyglui import ui
         self.has_ui = True
+        self.uvc_menu = ui.Growing_Menu("UVC Controls")
         self.update_control_menu()
 
-    def update_control_menu(self):
+    def add_controls_to_menu(self,menu,controls):
         from pyglui import ui
-        del self.g_pool.capture_source_menu.elements[:]
-        self.control_id_ui_mapping = {}
-
         # closure factory
         def make_value_change_fn(ctrl_id):
             def initiate_value_change(val):
@@ -152,22 +157,22 @@ class NDSI_Source(Base_Source):
                 self.sensor.set_control_value(ctrl_id, val)
             return initiate_value_change
 
-        for ctrl_id, ctrl_dict in self.sensor.controls.iteritems():
+        for ctrl_id, ctrl_dict in controls:
             try:
-                dtype = ctrl_dict['dtype']
-                ctrl_ui = None
+                dtype    = ctrl_dict['dtype']
+                ctrl_ui  = None
                 if dtype == "string":
                     ctrl_ui = ui.Text_Input(
                         'value',
                         ctrl_dict,
-                        label=unicode(ctrl_dict['caption']),
+                        label=ctrl_dict['caption'],
                         setter=make_value_change_fn(ctrl_id))
                 elif dtype == "integer" or dtype == "float":
                     convert_fn = int if dtype == "integer" else float
                     ctrl_ui = ui.Slider(
                         'value',
                         ctrl_dict,
-                        label=unicode(ctrl_dict['caption']),
+                        label=ctrl_dict['caption'],
                         min =convert_fn(ctrl_dict.get('min', 0)),
                         max =convert_fn(ctrl_dict.get('max', 100)),
                         step=convert_fn(ctrl_dict.get('res', 0.)),
@@ -176,33 +181,58 @@ class NDSI_Source(Base_Source):
                     ctrl_ui = ui.Switch(
                         'value',
                         ctrl_dict,
-                        label=unicode(ctrl_dict['caption']),
+                        label=ctrl_dict['caption'],
                         on_val=ctrl_dict.get('max',True),
                         off_val=ctrl_dict.get('min',False),
                         setter=make_value_change_fn(ctrl_id))
-                elif dtype == "selector":
-                    desc_list = ctrl_dict['selector']
-                    labels    = [unicode(desc['caption']) for desc in desc_list]
-                    selection = [desc['value']        for desc in desc_list]
+                elif dtype == "strmapping" or dtype == "intmapping":
+                    desc_list = ctrl_dict['map']
+                    labels    = [desc['caption'] for desc in desc_list]
+                    selection = [desc['value']   for desc in desc_list]
                     ctrl_ui = ui.Selector(
                         'value',
                         ctrl_dict,
-                        label=unicode(ctrl_dict['caption']),
-                        selection=selection,
+                        label=ctrl_dict['caption'],
                         labels=labels,
+                        selection=selection,
                         setter=make_value_change_fn(ctrl_id))
                 if ctrl_ui:
+                    ctrl_ui.read_only = ctrl_dict.get('readonly',False)
                     self.control_id_ui_mapping[ctrl_id] = ctrl_ui
-                    self.g_pool.capture_source_menu.append(ctrl_ui)
+                    menu.append(ctrl_ui)
+                else:
+                    logger.error('Did not generate UI for %s'%ctrl_id)
             except:
-                logger.error('Exception for control:\n%s'%ctrl_dict)
+                logger.error('Exception for control:\n%s'%pprint.pformat(ctrl_dict))
                 import traceback as tb
                 tb.print_exc()
+        if len(menu) == 0:
+            menu.append(ui.Info_Text("No %s settings found"%menu.label))
+        return menu
+
+    def update_control_menu(self):
+        from pyglui import ui
+        del self.g_pool.capture_source_menu.elements[:]
+        del self.uvc_menu[:]
+        self.control_id_ui_mapping = {}
+
+        uvc_controls = []
+        other_controls = []
+        for entry in iter(sorted(self.sensor.controls.iteritems())):
+            if entry[0].startswith("UVC"):
+                uvc_controls.append(entry)
+            else: other_controls.append(entry)
+
+        self.add_controls_to_menu(self.g_pool.capture_source_menu, other_controls)
+        self.add_controls_to_menu(self.uvc_menu, uvc_controls)
+        self.g_pool.capture_source_menu.append(self.uvc_menu)
+
         self.g_pool.capture_source_menu.append(ui.Button("Reset to default values",self.sensor.reset_all_control_values))
 
     def cleanup(self):
         self.sensor.unlink()
         self.sensor = None
+        self.uvc_menu = None
 
 class NDSI_Manager(Base_Manager):
     """Enumerates and activates Pupil Mobile video sources
@@ -326,7 +356,7 @@ class NDSI_Manager(Base_Manager):
         elif (event['subject'] == 'attach' and
             event['sensor_type'] == 'video'):
             logger.debug('attached: %s'%event)
-            name = str('%s @ %s'%(event['sensor_name'],event['host_name']))
+            name = '%s @ %s'%(event['sensor_name'],event['host_name'])
             self.notify_all({
                 'subject': 'capture_manager.source_found',
                 'source_class_name': NDSI_Source.class_name(),
