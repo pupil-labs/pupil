@@ -217,7 +217,7 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
                 # but using m_screen_to_marker() will get you the marker with proper rotation.
                 r = np.roll(r,angle+1,axis=0) #np.roll is not the fastest when using these tiny arrays...
 
-                id_confidence = 2*np.mean (np.abs(np.array(soft_msg)-.5 ))
+                # id_confidence = 2*np.mean (np.abs(np.array(soft_msg)-.5 ))
                 id_confidence = 2* min(np.abs(np.array(soft_msg)-.5 ))
 
                 marker = {'id':msg,'id_confidence':id_confidence,'verts':r,'soft_id':soft_msg,'perimeter':cv2.arcLength(r,closed=True),'centroid':centroid,"frames_since_true_detection":0}
@@ -613,25 +613,25 @@ class MarkerTracker(object):
         return tracked_markers
 
 
-def bench(folder):
-    from os.path import join
-    from video_capture.av_file_capture import File_Capture
-    cap = File_Capture(join(folder,'marker-test.mp4'))
-
-    tracker = MarkerTracker()
-    detected_count = 0
-    for x in range(500):
-        frame = cap.get_frame()
-        img = frame.img
-        gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
-        markers = tracker.track_in_frame(gray_img,5,visualize=True)
-        draw_markers(img, markers)
-        cv2.imshow('Detected Markers', img)
-        if cv2.waitKey(1) == 27:
-           break
-        detected_count += len(markers)
-
-    print detected_count #3106 #3226
+# def bench(folder):
+#     from os.path import join
+#     from video_capture.av_file_capture import File_Capture
+#     cap = File_Capture(join(folder,'marker-test.mp4'))
+# 
+#     tracker = MarkerTracker()
+#     detected_count = 0
+#     for x in range(500):
+#         frame = cap.get_frame()
+#         img = frame.img
+#         gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
+#         markers = tracker.track_in_frame(gray_img,5,visualize=True)
+#         draw_markers(img, markers)
+#         cv2.imshow('Detected Markers', img)
+#         if cv2.waitKey(1) == 27:
+#            break
+#         detected_count += len(markers)
+# 
+#     print detected_count #3106 #3226
 
 
 def bench(folder):

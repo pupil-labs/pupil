@@ -141,7 +141,7 @@ class Plugin(object):
         All notifications must be serializable
 
         """
-        if self.g_pool.app == 'player':
+        if self.g_pool.app in ('player','exporter'):
             if notification.get('delay',0):
                 notification['_notify_time_'] = time()+notification['delay']
                 self.g_pool.delayed_notifications[notification['subject']] = notification
