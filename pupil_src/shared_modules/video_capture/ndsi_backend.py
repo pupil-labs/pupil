@@ -159,7 +159,7 @@ class NDSI_Source(Base_Source):
                 self.sensor.set_control_value(ctrl_id, val)
             return initiate_value_change
 
-        for ctrl_id, ctrl_dict in iter(sorted(self.sensor.controls.iteritems())):
+        for ctrl_id, ctrl_dict in controls:
             try:
                 dtype    = ctrl_dict['dtype']
                 ctrl_ui  = None
