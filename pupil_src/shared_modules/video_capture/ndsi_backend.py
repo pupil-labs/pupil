@@ -12,7 +12,7 @@ from .base_backend import InitialisationError, StreamError, Base_Source, Base_Ma
 from .fake_backend import Fake_Source
 
 import ndsi
-assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.11'
+assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.13'
 
 import logging
 logger = logging.getLogger(__name__)
@@ -100,7 +100,10 @@ class NDSI_Source(Base_Source):
             self.sensor.refresh_controls()
             self._initial_refresh = False
         if event['subject'] == 'error':
-            logger.warning('Error: %s'%event['error_str'])
+            # if not event['error_str'].startswith('err=-3'):
+            logger.warning('Error %s'%event['error_str'])
+            if 'control_id' in event:
+                logger.debug('%s'%self.sensor.controls[event['control_id']])
         elif self.has_ui and (
             event['control_id'] not in self.control_id_ui_mapping or
             event['changes'].get('dtype') == "strmapping" or
