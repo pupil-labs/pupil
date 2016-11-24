@@ -18,7 +18,7 @@ def get_tag_commit():
     returns string: 'tag'-'commits since tag'-'7 digit commit id'
     """
     try:
-        return str(check_output(['git', 'describe','--tags'],stderr=STDOUT,cwd=os.path.dirname(os.path.abspath(__file__))),'utf-8')
+        return check_output(['git', 'describe','--tags'],stderr=STDOUT,cwd=os.path.dirname(os.path.abspath(__file__)))
     except CalledProcessError as e:
         logger.error('Error calling git: "%s" \n output: "%s"'%(e,e.output))
         return None
