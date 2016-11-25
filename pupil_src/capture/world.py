@@ -486,7 +486,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         del events['pupil_positions'] #already on the wire
         del events['gaze_positions']  #send earlier in this loop
         del events['dt']  #no need to send this
-        for topic,data in events.iteritems():
+        for topic,data in events.items():
             assert(isinstance(data, (list, tuple)))
             for d in data:
                 ipc_pub.send(topic, d)

@@ -291,7 +291,7 @@ class Recorder(Plugin):
 
     def update(self,frame,events):
         if self.running:
-            for key,data in events.iteritems():
+            for key,data in events.items():
                 if key not in ('dt'):
                     try:
                         self.data[key] += data

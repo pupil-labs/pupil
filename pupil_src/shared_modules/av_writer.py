@@ -370,7 +370,7 @@ if __name__ == '__main__':
     print('\tformat:', container.format)
     print('\tduration:', float(container.duration) / av.time_base)
     print('\tmetadata:')
-    for k, v in sorted(container.metadata.iteritems()):
+    for k, v in sorted(container.metadata.items()):
         print('\t\t%s: %r' % (k, v))
 
     print(len(container.streams), 'stream(s):')
@@ -397,7 +397,7 @@ if __name__ == '__main__':
             print('\t\t\taverage_rate: %r' % stream.average_rate)
 
         print('\t\tmetadata:')
-        for k, v in sorted(stream.metadata.iteritems()):
+        for k, v in sorted(stream.metadata.items()):
             print('\t\t\t%s: %r' % (k, v))
 
     if not audio_stream:

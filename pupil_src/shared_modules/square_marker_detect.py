@@ -502,7 +502,7 @@ class MarkerTracker(object):
             'id_confidence': m_list[0][0],
             'norm_verts': m_list[0][1][self.vert_slc].reshape((4,1,2)),
             'loc_confidence': m_list[0][1][self.loc_conf_idx]
-        } for m_id, m_list in markers.iteritems()]
+        } for m_id, m_list in markers.items()]
 
     def make_raw_to_flat_map(self, img_shape):
         assert len(img_shape) == 2

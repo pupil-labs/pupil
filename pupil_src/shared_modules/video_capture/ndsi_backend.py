@@ -152,7 +152,7 @@ class NDSI_Source(Base_Source):
                 self.sensor.set_control_value(ctrl_id, val)
             return initiate_value_change
 
-        for ctrl_id, ctrl_dict in self.sensor.controls.iteritems():
+        for ctrl_id, ctrl_dict in self.sensor.controls.items():
             try:
                 dtype = ctrl_dict['dtype']
                 ctrl_ui = None
@@ -235,7 +235,7 @@ class NDSI_Manager(Base_Manager):
                 for s in self.network.sensors.values()
                 if s['sensor_type'] == 'video'
             }
-            devices = [pair for pair in devices.iteritems()] # create tuples
+            devices = [pair for pair in devices.items()] # create tuples
             # split tuples into 2 lists
             return zip(*(devices or [(None, 'No hosts found')]))
 

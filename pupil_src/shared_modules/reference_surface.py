@@ -104,7 +104,7 @@ class Reference_Surface(object):
         """
         save all markers and name of this surface to a dict.
         """
-        markers = dict([(m_id,m.uv_coords) for m_id,m in self.markers.iteritems()])
+        markers = dict([(m_id,m.uv_coords) for m_id,m in self.markers.items()])
         return {'name':self.name,'uid':self.uid,'markers':markers,'real_world_size':self.real_world_size}
 
 
@@ -117,7 +117,7 @@ class Reference_Surface(object):
         self.real_world_size = d.get('real_world_size',{'x':1.,'y':1.})
 
         marker_dict = d['markers']
-        for m_id,uv_coords in marker_dict.iteritems():
+        for m_id,uv_coords in marker_dict.items():
             self.markers[m_id] = Support_Marker(m_id)
             self.markers[m_id].load_uv_coords(uv_coords)
 
@@ -193,7 +193,7 @@ class Reference_Surface(object):
         - this mean value will be used from now on to estable surface transform
         """
         persistent_markers = {}
-        for k,m in self.markers.iteritems():
+        for k,m in self.markers.items():
             if len(m.collected_uv_coords)>self.required_build_up*.5:
                 persistent_markers[k] = m
         self.markers = persistent_markers

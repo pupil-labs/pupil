@@ -269,8 +269,8 @@ class UVC_Source(Base_Source):
             elif control.d_type == int:
                 c = ui.Slider('value',control,label=ctl_name,min=control.min_val,max=control.max_val,step=control.step)
             elif type(control.d_type) == dict:
-                selection = [value for name,value in control.d_type.iteritems()]
-                labels = [name for name,value in control.d_type.iteritems()]
+                selection = [value for name,value in control.d_type.items()]
+                labels = [name for name,value in control.d_type.items()]
                 c = ui.Selector('value',control, label = ctl_name, selection=selection,labels = labels)
             else:
                 pass
