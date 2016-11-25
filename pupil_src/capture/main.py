@@ -103,10 +103,11 @@ def launcher():
             if poller.poll(timeout=250):
                 #Recv new delayed notification and store it.
                 topic,n = sub.recv()
+                print("delay_notify recv: %s"%n)
                 n['_notify_time_'] = time()+n['delay']
                 waiting_notifications[n['subject']] = n
             #When a notifications time has come, pop from dict and send it as notification
-            for n in waiting_notifications.values():
+            for n in list(waiting_notifications.values()):
                 if n['_notify_time_'] < time():
                     del n['_notify_time_']
                     del n['delay']
@@ -135,13 +136,10 @@ def launcher():
         # IPC setup to receive log messages. Use zmq_tools.ZMQ_handler to send messages to here.
         sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=("logging",))
         while True:
-            # temporary patch for record.LogRecord = None 
-            try:
-                topic,msg = sub.recv()
-                record = logging.makeLogRecord(msg)
-                logger.handle(record)
-            except TypeError:
-                pass
+            topic,msg = sub.recv()
+            record = logging.makeLogRecord(msg)
+            logger.handle(record)
+
 
     ## IPC
     timebase = Value(c_double,0)
