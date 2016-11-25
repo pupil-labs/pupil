@@ -16,14 +16,14 @@ from __future__ import print_function
 import zmq
 assert zmq.__version__  > '15.1'
 from zmq.utils.monitor import recv_monitor_message
-# import ujson as serializer # uncomment for json seialization
+# import ujson as serializer # uncomment for json serialization
 import msgpack as serializer
 import logging
 
 
 class ZMQ_handler(logging.Handler):
     '''
-    A handler that send log records as serialized strings via zmq
+    A handler that sends log records as serialized strings via zmq
     '''
     def __init__(self,ctx,ipc_pub_url):
         super(ZMQ_handler, self).__init__()
@@ -35,7 +35,7 @@ class ZMQ_handler(logging.Handler):
 class Msg_Receiver(object):
     '''
     Recv messages on a sub port.
-    Not threadsave. Make a new one for each thread
+    Not threadsafe. Make a new one for each thread
     __init__ will block until connection is established.
     '''
     def __init__(self,ctx,url,topics = (),block_until_connected=True):
