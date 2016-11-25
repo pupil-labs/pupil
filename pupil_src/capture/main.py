@@ -103,7 +103,6 @@ def launcher():
             if poller.poll(timeout=250):
                 #Recv new delayed notification and store it.
                 topic,n = sub.recv()
-                print("delay_notify recv: %s"%n)
                 n['_notify_time_'] = time()+n['delay']
                 waiting_notifications[n['subject']] = n
             #When a notifications time has come, pop from dict and send it as notification
