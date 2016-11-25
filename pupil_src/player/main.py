@@ -12,10 +12,7 @@ import sys, os,platform,errno
 from glob import glob
 from copy import deepcopy
 from time import time
-if platform.system() == 'Darwin':
-    from billiard import freeze_support
-else:
-    from multiprocessing import freeze_support
+from multiprocessing import freeze_support
 
 
 if getattr(sys, 'frozen', False):

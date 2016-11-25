@@ -129,5 +129,5 @@ if __name__ == '__main__':
     cl = Cache_List(range(100),positive_eval_fn = lambda x: bool(x%2))
     cl.update(0,1)
     cl.update(4,1)
-    print cl.positive_ranges
-    print cl
+    print(cl.positive_ranges)
+    print(cl)

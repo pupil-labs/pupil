@@ -259,7 +259,7 @@ def main():
     parser.add_argument('-p', '--preview', action='store_true')
 
     if len(sys.argv)==1:
-        print parser.description
+        print(parser.description)
         return
 
     args = parser.parse_args()
@@ -356,7 +356,7 @@ def main():
                     working = True
         show_progess(jobs)
         time.sleep(.25)
-    print '\n'
+    print('\n')
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARNING)

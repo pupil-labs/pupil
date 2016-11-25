@@ -18,13 +18,13 @@ logger = logging.getLogger(__name__)
 
 from ctypes import c_bool, c_int,create_string_buffer
 
-if platform.system() == 'Darwin':
-    from billiard import Process,forking_enable,cpu_count
-    from billiard.sharedctypes import Value
-else:
-    from multiprocessing import Process,cpu_count
-    forking_enable = lambda x: x #dummy fn
-    from multiprocessing.sharedctypes import Value
+#threading and processing
+from multiprocessing import Process, cpu_count
+def forking_enable(_):
+    set_start_method('spawn')
+
+from multiprocessing.sharedctypes import Value
+
 
 from exporter import export
 

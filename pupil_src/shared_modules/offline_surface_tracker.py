@@ -13,14 +13,10 @@ import cv2
 import numpy as np
 import csv
 
-
-if platform.system() == 'Darwin':
-    from billiard import Process,Queue,forking_enable
-    from billiard.sharedctypes import Value
-else:
-    from multiprocessing import Process, Queue
-    forking_enable = lambda x: x #dummy fn
-    from multiprocessing.sharedctypes import Value
+from multiprocessing import Process, Queue
+def forking_enable(_):
+    set_start_method('spawn')
+from multiprocessing.sharedctypes import Value
 from ctypes import c_bool
 
 
