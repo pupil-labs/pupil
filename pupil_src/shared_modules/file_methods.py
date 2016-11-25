@@ -11,8 +11,6 @@
 try:
     import cPickle as pickle
 except ImportError:
-    pass
-else:
     import pickle
     
 import os
