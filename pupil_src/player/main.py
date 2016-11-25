@@ -243,7 +243,7 @@ def session(rec_dir):
     def next_frame(_):
         try:
             cap.seek_to_frame(cap.get_frame_index())
-        except FileSeekError:
+        except(FileSeekError):
             logger.warning("Could not seek to next frame.")
         else:
             g_pool.new_seek = True
@@ -251,7 +251,7 @@ def session(rec_dir):
     def prev_frame(_):
         try:
             cap.seek_to_frame(cap.get_frame_index()-2)
-        except FileSeekError:
+        except(FileSeekError):
             logger.warning("Could not seek to previous frame.")
         else:
             g_pool.new_seek = True
