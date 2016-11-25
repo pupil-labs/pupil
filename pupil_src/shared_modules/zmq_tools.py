@@ -74,13 +74,13 @@ class Msg_Receiver(object):
         in the payload dict with key: '__raw_data__' .
         '''
         topic = self.socket.recv()
-        payload = serializer.loads(self.socket.recv())
+        payload = serializer.loads(self.socket.recv(),encoding='utf-8')
         extra_frames = []
         while self.socket.get(zmq.RCVMORE):
             extra_frames.append(self.socket.recv())
         if extra_frames:
             payload['__raw_data__'] = extra_frames
-        return topic,payload
+        return str(topic),payload
 
     @property
     def new_data(self):
@@ -107,7 +107,7 @@ class Msg_Streamer(object):
         '''
         if '__raw_data__' not in payload:
             self.socket.send_string(topic,flags=zmq.SNDMORE)
-            self.socket.send(serializer.dumps(payload))
+            self.socket.send(serializer.dumps(payload,use_bin_type=True))
         else:
             extra_frames = payload.pop('__raw_data__')
             assert(isinstance(extra_frames, (list, tuple)))
