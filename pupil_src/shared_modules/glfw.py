@@ -491,7 +491,7 @@ def glfwInit():
 
 def glfwCreateWindow(width=640, height=480, title="GLFW Window", monitor=None, share=None):
     _glfw.glfwCreateWindow.restype = POINTER(GLFWwindow)
-    window = _glfw.glfwCreateWindow(width,height,title,monitor,share)
+    window = _glfw.glfwCreateWindow(width,height,title.encode('utf-8'),monitor,share)
     if window:
         __windows__.append(window)
         index = __windows__.index(window)
