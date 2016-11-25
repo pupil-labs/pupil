@@ -30,13 +30,13 @@ def dpkg_deb_version():
     '''
     [major].[minor].[rev]-[trailing-untagged-commits]
     '''
-    version = get_tag_commit()
+    version = get_tag_commit().decode('utf-8')
     if version is None:
         raise ValueError('Version Error')
-    version = version.replace("\n",'')#strip newlines
-    version = version.replace("v",'')#strip version 'v'
+    version = version.replace("\n","")#strip newlines
+    version = version.replace("v","")#strip version 'v'
     if '-' in version:
-        parts = version.split('-')
+        parts = version.split("-")
         parts[-2] = '-'+parts[-2]
         version = '.'.join(parts[:-2])
         version += parts[-2]
@@ -47,12 +47,12 @@ def pupil_version():
     '''
     [major].[minor].[rev].[trailing-untagged-commits]
     '''
-    version = get_tag_commit()
-    print(version)
+    version = get_tag_commit().decode('utf-8')
+    # print(version)
     if version is None:
         raise ValueError('Version Error')
     version = version.replace("\n","")#strip newlines
-    version = version.replace("v",'')#strip version 'v'
+    version = version.replace("v","")#strip version 'v'
     if '-' in version:
         parts = version.split('-')
         version = '.'.join(parts[:-1])
@@ -88,3 +88,4 @@ def write_version_file(target_dir):
 
 if __name__ == "__main__":
     print(get_tag_commit())
+    print(pupil_version())
