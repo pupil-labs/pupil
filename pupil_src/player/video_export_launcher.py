@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 from ctypes import c_bool, c_int,create_string_buffer
 
 #threading and processing
-from multiprocessing import Process, cpu_count
+from multiprocessing import Process, cpu_count, set_start_method
 def forking_enable(_):
     set_start_method('spawn')
 
