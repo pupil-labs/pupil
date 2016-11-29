@@ -100,13 +100,13 @@ def load_meta_info(rec_dir,update=False):
 
 def read_meta_info_v081(rec_dir):
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
     return meta_info
 
 def read_meta_info_legacy(rec_dir):
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as info:
+    with open(meta_info_path,'r',encoding='utf-8') as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines()) )
     return meta_info
 
@@ -303,4 +303,3 @@ def transparent_image_overlay(pos,overlay_img,img,alpha):
     except:
         logger.debug("transparent_image_overlay was outside of the world image and was not drawn")
     pass
-
