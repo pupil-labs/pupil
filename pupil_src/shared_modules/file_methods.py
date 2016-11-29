@@ -51,7 +51,9 @@ def load_object(file_path):
     #reading to string and loads is 2.5x faster that using the file handle and load.
     with open(file_path,'rb') as fh:
         data = fh.read()
-    return pickle.loads(data)
+    # encoding='latin1' enables us to import python2 data directly 
+    # but is a workaround - ideally we import bytes and then set encoding on all k,v pairs
+    return pickle.loads(data,encoding='latin1')
 
 def save_object(object,file_path):
     file_path = os.path.expanduser(file_path)
