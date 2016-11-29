@@ -20,7 +20,7 @@ def read_key_value_file(csvfile):
         DICT: Dictionary containing file content
     """
     reader = csv.reader(csvfile, delimiter=',') # create reader
-    reader.next() # skip fieldnames
+    next(reader) # skip fieldnames
     kvstore = {} # init key value store
     for row in reader:
         kvstore[row[0]] = row[1]
