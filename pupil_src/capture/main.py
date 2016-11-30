@@ -247,6 +247,7 @@ def launcher():
 
 
 if __name__ == '__main__':
+    print(sys.argv)
     freeze_support()
     forking_enable(0)
     launcher()

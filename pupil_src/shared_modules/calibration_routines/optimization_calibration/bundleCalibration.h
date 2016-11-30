@@ -33,7 +33,7 @@ using ceres::Solver;
 
 
 struct ReprojectionError {
-  ReprojectionError( Vector3 observed_point)
+  ReprojectionError( ::Vector3 observed_point)
       : observed_point(observed_point) {}
 
   template <typename T>
@@ -78,15 +78,15 @@ struct ReprojectionError {
 
 // Factory to hide the construction of the CostFunction object from
   // the client code.
-  static ceres::CostFunction* Create(const Vector3 observed_point ) {
+  static ceres::CostFunction* Create(const ::Vector3 observed_point ) {
     return (new ceres::AutoDiffCostFunction<ReprojectionError, 3, 3, 3, 3>(
                 new ReprojectionError(observed_point)));
   }
 
-  Vector3 observed_point;
+  ::Vector3 observed_point;
 };
 
-double bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vector3>& points,bool fix_points)
+double bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<::Vector3>& points,bool fix_points)
 {
 
 
