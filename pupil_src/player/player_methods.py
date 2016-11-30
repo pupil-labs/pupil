@@ -84,6 +84,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v082_to_v083(rec_dir)
     if rec_version < VersionFormat('0.8.6'):
         update_recording_v083_to_v086(rec_dir)
+    if rec_version < VersionFormat('0.8.7'):
+        update_recording_v086_to_v087(rec_dir)
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
     #    update_recording_v081_to_FUTURE(rec_dir)
@@ -169,6 +171,36 @@ def update_recording_v083_to_v086(rec_dir):
 
     with open(meta_info_path,'w') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
+
+
+def update_recording_v086_to_v087(rec_dir):
+    logger.info("Updating recording from v0.8.6 format to v0.8.7 format")
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+
+
+    def _clamp_norm_point(pos):
+        '''realisitic numbers for norm pos should be in this range.
+            Grossly bigger or smaller numbers are results bad exrapolation
+            and can cause overflow erorr when denormalized and cast as int32.
+        '''
+        return min(100,max(-100,pos[0])),min(100,max(-100,pos[1]))
+
+    for g in pupil_data['gaze_positions']:
+        if 'topic' not in g:
+            #we missed this in one gaze mapper
+            g['topic'] = topic
+        g['norm_pos'] = _clamp_norm_point(g['norm_pos'])
+
+    save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+
+    with open(meta_info_path) as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Capture Software Version'] = 'v0.8.7'
+
+    with open(meta_info_path,'w') as csvfile:
+        csv_utils.write_key_value_file(csvfile,meta_info)
+
 
 
 

@@ -23,6 +23,12 @@ from multiprocessing import Process as Thread
 
 from visualizer_calibration import *
 
+def _clamp_norm_point(pos):
+    '''realisitic numbers for norm pos should be in this range.
+        Grossly bigger or smaller numbers are results bad exrapolation
+        and can cause overflow erorr when denormalized and cast as int32.
+    '''
+    return min(100,max(-100,pos[0])),min(100,max(-100,pos[1]))
 
 class Gaze_Mapping_Plugin(Plugin):
     '''base class for all gaze mapping routines'''
@@ -242,6 +248,7 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
         image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , self.rotation_vector, self.translation_vector , self.camera_matrix , self.dist_coefs )
         image_point = image_point.reshape(-1,2)
         image_point = normalize( image_point[0], self.world_frame_size , flip_y = True)
+        image_point = _clamp_norm_point(image_point)
 
         eye_center = self.toWorld(p['sphere']['center'])
         gaze_3d = self.toWorld(gaze_point)
@@ -353,7 +360,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
         image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , self.rotation_vectors[p_id], self.translation_vectors[p_id] , self.camera_matrix , self.dist_coefs )
         image_point = image_point.reshape(-1,2)
         image_point = normalize( image_point[0], self.world_frame_size , flip_y = True)
-
+        image_point = _clamp_norm_point(image_point)
         if p_id == 0:
             eye_center = self.eye0_to_World(p['sphere']['center'])
             gaze_3d = self.eye0_to_World(gaze_point)
@@ -426,6 +433,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
             image_point, _  =  cv2.projectPoints( np.array([nearest_intersection_point]) ,  np.array([0.0,0.0,0.0]) ,  np.array([0.0,0.0,0.0]) , self.camera_matrix , self.dist_coefs )
             image_point = image_point.reshape(-1,2)
             image_point = normalize( image_point[0], self.world_frame_size , flip_y = True)
+            image_point = _clamp_norm_point(image_point)
 
 
         if self.visualizer.window:
