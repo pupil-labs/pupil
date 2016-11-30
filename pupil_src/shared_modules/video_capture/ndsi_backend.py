@@ -81,11 +81,6 @@ class NDSI_Source(Base_Source):
                 frame = self._get_frame()
                 self.frame_size = (frame.width, frame.height)
             except Exception as e:
-                # check if streaming is enabled
-                if 'streaming' in self.sensor.controls:
-                    pub_ctrl = self.sensor.controls['streaming']
-                    if not pub_ctrl.get('value', False):
-                        self.sensor.set_control_value('streaming', True)
                 if a:
                     logger.info('Could not get Frame: "%s". Attempt:%s/%s '%(e.message,a+1,attempts))
                 else:
@@ -96,12 +91,13 @@ class NDSI_Source(Base_Source):
 
     def on_notification(self, sensor, event):
         if self._initial_refresh:
+            self.sensor.set_control_value('streaming', True)
             self.sensor.refresh_controls()
             self._initial_refresh = False
         if event['subject'] == 'error':
             # if not event['error_str'].startswith('err=-3'):
             logger.warning('Error %s'%event['error_str'])
-            if 'control_id' in event:
+            if 'control_id' in event and event['control_id'] in self.sensor.controls:
                 logger.debug('%s'%self.sensor.controls[event['control_id']])
         elif self.has_ui and (
             event['control_id'] not in self.control_id_ui_mapping or
