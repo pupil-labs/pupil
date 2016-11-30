@@ -24,14 +24,15 @@ from time import time
 import logging
 logger = logging.getLogger(__name__)
 
-from reference_surface import Reference_Surface
+from reference_surface import Reference_Surface, m_verts_to_screen, m_verts_from_screen
 
 class Offline_Reference_Surface(Reference_Surface):
     """docstring for Offline_Reference_Surface"""
     def __init__(self,g_pool,name="unnamed",saved_definition=None):
         super(Offline_Reference_Surface, self).__init__(name,saved_definition)
         self.g_pool = g_pool
-        self.cache = None
+        self.raw_cache = None
+        self.smoothed_cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
 
         self.heatmap_detail = .2
@@ -40,12 +41,65 @@ class Offline_Reference_Surface(Reference_Surface):
         self.metrics_gazecount = None
         self.metrics_texture = None
 
+    def clear_smoothing(self):
+        self.smoothed_cache = None
+
+    def refresh_smoothing(self):
+        t0 = time()
+        raw_data = np.ma.masked_all((self.raw_cache.length, 8))
+        for i,entry in enumerate(self.raw_cache):
+            if entry:
+                raw_data[i,:] = self.create_kalman_oberservation(entry['raw_location'])
+        t1 = time()
+        smoothed_mean, smoothed_cov = self.kfilter.smooth(raw_data)
+        t2 = time()
+        cov_mean  = smoothed_cov.mean(axis=(1,2))
+        projected = np.dot(smoothed_mean, self.kfilter.observation_matrices.T)
+        projected = projected.reshape(projected.shape[0],4,2).astype(np.float32)
+        self.smoothed_cache = [None] * cov_mean.shape[0]
+        for idx in xrange(cov_mean.shape[0]):
+            if cov_mean[idx] < self.cov_threshold:
+
+                detected_markers = 0
+                if self.raw_cache[idx]:
+                    detected_markers = self.raw_cache[idx]['detected_markers']
+                self.smoothed_cache[idx] = {
+                    'detected'        :True,
+                    'detected_markers':detected_markers,
+                    'm_from_screen'   :m_verts_from_screen(projected[idx,:,:]),
+                    'm_to_screen'     :m_verts_to_screen(projected[idx,:,:]),
+                    'mean_kfilter_cov':cov_mean[idx]
+                }
+        t3 = time()
+        logger.debug('Conversion time: %.3fs'%(t1-t0))
+        logger.debug(' Smoothing time: %.3fs'%(t2-t1))
+        logger.debug('Projection time: %.3fs'%(t3-t2))
+
     #cache fn for offline marker
     def locate_from_cache(self,frame_idx):
-        if self.cache == None:
+
+        if self.smoothed_cache:
+            cache_result = self.smoothed_cache[frame_idx]
+            if cache_result == None:
+                #cached data shows surface not found:
+                self.detected = False
+                self.m_from_screen = None
+                self.m_to_screen = None
+                self.gaze_on_srf = []
+                self.detected_markers = 0
+                return True
+            else:
+                self.detected = True
+                self.m_from_screen = cache_result['m_from_screen']
+                self.m_to_screen =  cache_result['m_to_screen']
+                self.detected_markers = cache_result['detected_markers']
+                self.gaze_on_srf = self.gaze_on_srf_by_frame_idx(frame_idx,self.m_from_screen)
+                return True
+
+        if self.raw_cache == None:
             #no cache available cannot update from cache
             return False
-        cache_result = self.cache[frame_idx]
+        cache_result = self.raw_cache[frame_idx]
         if cache_result == False:
             #cached data not avaible for this frame
             return False
@@ -77,18 +131,18 @@ class Offline_Reference_Surface(Reference_Surface):
         '''
 
         # iterations = 0
-        if self.cache == None:
+        if self.raw_cache == None:
             pass
             # self.init_cache(marker_cache)
         elif idx != None:
             #update single data pt
-            self.cache.update(idx,self.answer_caching_request(marker_cache,idx,camera_calibration,min_marker_perimeter,min_id_confidence))
+            self.raw_cache.update(idx,self.answer_caching_request(marker_cache,idx,camera_calibration,min_marker_perimeter,min_id_confidence))
         else:
             # update where marker cache is not False but surface cache is still false
             # this happens when the markercache was incomplete when this fn was run before
             for i in range(len(marker_cache)):
-                if self.cache[i] == False and marker_cache[i] != False:
-                    self.cache.update(i,self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter,min_id_confidence))
+                if self.raw_cache[i] == False and marker_cache[i] != False:
+                    self.raw_cache.update(i,self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter,min_id_confidence))
                     # iterations +=1
         # return iterations
 
@@ -97,7 +151,7 @@ class Offline_Reference_Surface(Reference_Surface):
     def init_cache(self,marker_cache,camera_calibration,min_marker_perimeter,min_id_confidence):
         if self.defined:
             logger.debug("Full update of surface '%s' positons cache"%self.name)
-            self.cache = Cache_List([self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter,min_id_confidence) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
+            self.raw_cache = Cache_List([self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter,min_id_confidence) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
 
 
     def answer_caching_request(self,marker_cache,frame_index,camera_calibration,min_marker_perimeter,min_id_confidence):
@@ -105,7 +159,7 @@ class Offline_Reference_Surface(Reference_Surface):
         # cache point had not been visited
         if visible_markers == False:
             return False
-        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence,locate_3d=False)
+        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence,locate_3d=False,smooth=False)
         if res['detected']:
             return res
         else:
@@ -114,17 +168,17 @@ class Offline_Reference_Surface(Reference_Surface):
 
     def move_vertex(self,vert_idx,new_pos):
         super(Offline_Reference_Surface, self).move_vertex(vert_idx,new_pos)
-        self.cache = None
+        self.raw_cache = None
         self.heatmap = None
 
     def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
         super(Offline_Reference_Surface, self).add_marker(marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
-        self.cache = None
+        self.raw_cache = None
         self.heatmap = None
 
     def remove_marker(self,marker):
         super(Offline_Reference_Surface, self).remove_marker(marker)
-        self.cache = None
+        self.raw_cache = None
         self.heatmap = None
 
     def gaze_on_srf_by_frame_idx(self,frame_index,m_from_screen):
@@ -185,7 +239,7 @@ class Offline_Reference_Surface(Reference_Surface):
 
     def generate_heatmap(self,section):
 
-        if self.cache is None:
+        if self.raw_cache is None:
             logger.warning('Surface cache is not build yet.')
             return
 
@@ -199,7 +253,7 @@ class Offline_Reference_Surface(Reference_Surface):
         self.heatmap = np.ones((y,x,4),dtype=np.uint8)
         all_gaze = []
 
-        for frame_idx,c_e in enumerate(self.cache[section]):
+        for frame_idx,c_e in enumerate(self.raw_cache[section]):
             if c_e:
                 frame_idx+=section.start
                 for gp in self.gaze_on_srf_by_frame_idx(frame_idx,c_e['m_from_screen']):
@@ -243,19 +297,19 @@ class Offline_Reference_Surface(Reference_Surface):
         #section is a slice
         #return number of frames where surface is visible.
         #If cache is not available on frames it is reported as not visible
-        if self.cache is None:
+        if self.raw_cache is None:
             return 0
-        section_cache = self.cache[section]
+        section_cache = self.raw_cache[section]
         return sum(map(bool,section_cache))
 
     def gaze_on_srf_in_section(self,section=slice(0,None)):
         #section is a slice
         #return number of gazepoints that are on surface in section
         #If cache is not available on frames it is reported as not visible
-        if self.cache is None:
+        if self.raw_cache is None:
             return []
         gaze_on_srf = []
-        for frame_idx,c_e in enumerate(self.cache[section]):
+        for frame_idx,c_e in enumerate(self.raw_cache[section]):
             frame_idx+=section.start
             if c_e:
                 gaze_on_srf += [gp for gp in self.gaze_on_srf_by_frame_idx(frame_idx,c_e['m_from_screen']) if gp['on_srf']]

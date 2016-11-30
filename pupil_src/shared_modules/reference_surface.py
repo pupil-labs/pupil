@@ -87,7 +87,7 @@ class Reference_Surface(object):
         self.kfilter = self.setup_kalman_filter(n_dim_obs=8)
         self.current_mean = None
         self.current_cov = None
-        self.cov_threshold = 2.
+        self.cov_threshold = 1.0
 
         ###window and gui vars
         self._window = None
@@ -120,11 +120,11 @@ class Reference_Surface(object):
 
         return KalmanFilter(
             transition_matrices=transition,
-            transition_covariance=.01 * np.eye(self.kfilter_state_dim),
+            transition_covariance=.02 * np.eye(self.kfilter_state_dim),
             observation_matrices=observation_matrix)
 
     def create_kalman_oberservation(self,corner_vertices):
-        return np.hstack(corner_vertices)
+        return corner_vertices.ravel()
 
     def save_to_dict(self):
         """
@@ -229,7 +229,7 @@ class Reference_Surface(object):
         self.defined = True
 
 
-    def locate(self, visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence, locate_3d=False,):
+    def locate(self, visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence, locate_3d=False,smooth=True):
         """
         - find overlapping set of surface markers and visible_markers
         - compute homography (and inverse) based on this subset
@@ -238,109 +238,34 @@ class Reference_Surface(object):
         if not self.defined:
             self.build_correspondance(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
 
-        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence,locate_3d)
+        res = self._get_location(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence,locate_3d,smooth)
         self.detected = res['detected']
         self.detected_markers = res['detected_markers']
         self.m_to_screen = res['m_to_screen']
         self.m_from_screen = res['m_from_screen']
         self.camera_pose_3d = res['camera_pose_3d']
 
-    def _get_location(self,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence, locate_3d=False):
+    def _get_location(self,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence, locate_3d=False, smooth=True):
+        if smooth:
+            loc, overlap = self._get_location_smooth(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
+        else:
+            loc, overlap = self._get_location_raw(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
 
-        filtered_markers = [m for m in visible_markers if m['perimeter']>=min_marker_perimeter and m['id_confidence']>min_id_confidence]
-        marker_by_id ={}
-        #if an id shows twice we use the bigger marker (usually this is a screen camera echo artifact.)
-        for m in filtered_markers:
-            if m["id"] in marker_by_id and m["perimeter"] < marker_by_id[m['id']]['perimeter']:
-                pass
-            else:
-                marker_by_id[m["id"]] = m
+        m_from_undistored_norm_space = None
+        m_to_undistored_norm_space = None
 
-        visible_ids = set(marker_by_id.keys())
-        requested_ids = set(self.markers.keys())
-        overlap = visible_ids & requested_ids
-        # need at least two markers per surface when the surface is more that 1 marker.
-        if overlap and len(overlap) >= min(2,len(requested_ids)):
+        # if detected and high enough cov in case of `smooth`
+        if (loc is not None and (not smooth or (
+                smooth and self.current_cov is not None and
+                self.current_cov.mean() < self.cov_threshold))
+            ):
             detected = True
-            xy = np.array( [marker_by_id[i]['verts'] for i in overlap] )
-            uv = np.array( [self.markers[i].uv_coords for i in overlap] )
-            uv.shape=(-1,1,2)
 
-            # our camera lens creates distortions we want to get a good 2d estimate despite that so we:
-            # compute the homography transform from marker into the undistored normalized image space
-            # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
-            xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*self.use_distortion)
-            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized, method=cv2.cv.CV_RANSAC,ransacReprojThreshold=0.1)
-            if not mask.all():
-                detected = False
-            m_from_undistored_norm_space,mask = cv2.findHomography(xy_undistorted_normalized,uv)
-            # project the corners of the surface to undistored space
-            corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
-            # project and distort these points  and normalize them
-            corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*self.use_distortion)
-            corners_nulldistorted, corners_nulldistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*0)
-
-            #normalize to pupil norm space
-            corners_redistorted.shape = -1,2
-            corners_redistorted /= camera_calibration['resolution']
-            corners_redistorted[:,-1] = 1-corners_redistorted[:,-1]
-
-            #normalize to pupil norm space
-            corners_nulldistorted.shape = -1,2
-            corners_nulldistorted /= camera_calibration['resolution']
-            corners_nulldistorted[:,-1] = 1-corners_nulldistorted[:,-1]
-
-
-            # maps for extreme lens distortions will behave irratically beyond the image bounds
-            # since our surfaces often extend beyond the screen we need to interpolate
-            # between a distored projection and undistored one.
-
-            # def ratio(val):
-            #     centered_val = abs(.5 - val)
-            #     # signed distance to img cennter .5 is imag bound
-            #     # we look to interpolate between .7 and .9
-            #     inter = max()
-
-            corners_robust = []
-            for nulldist,redist in zip(corners_nulldistorted,corners_redistorted):
-                if -.4 < nulldist[0] <1.4 and -.4 < nulldist[1] <1.4:
-                    corners_robust.append(redist)
-                else:
-                    corners_robust.append(nulldist)
-
-            observ = self.create_kalman_oberservation(corners_robust)
-            if self.current_mean is None or self.current_cov is None:
-                self.current_mean, self.current_cov = self.kfilter.filter(np.vstack((observ,observ)))
-                self.current_mean = self.current_mean[-1,:]
-                self.current_cov  = self.current_cov[-1,:,:]
-            else:
-                self.current_mean, self.current_cov = self.kfilter.filter_update(
-                    self.current_mean, self.current_cov, observ)
-            corners_robust = np.asarray(corners_robust)
-
-        elif self.current_mean is not None or self.current_cov is not None:
-            # update with missing observation
-            self.current_mean, self.current_cov = self.kfilter.filter_update(
-                    self.current_mean, self.current_cov)
-
-            obs_mat = self.kfilter.observation_matrices
-            corners_robust = np.dot(obs_mat,self.current_mean).reshape(4,2).astype(np.float32)
-            detected = True
-            m_from_undistored_norm_space = None
-            m_to_undistored_norm_space = None
-
-        else: detected = False
-
-        if self.current_cov is not None:
-            logger.debug("Current mean covariance %f"%self.current_cov.mean())
-
-        if (detected and self.current_cov is not None and
-            self.current_cov.mean() < self.cov_threshold):
-            #compute a perspective thransform from from the marker norm space to the apparent image.
+            #compute a perspective transform from from the marker norm space to the apparent image.
             # The surface corners will be at the right points
             # However the space between the corners may be distored due to distortions of the lens,
-            m_to_screen = m_verts_to_screen(corners_robust)
-            m_from_screen = m_verts_from_screen(corners_robust)
+            m_to_screen = m_verts_to_screen(loc)
+            m_from_screen = m_verts_from_screen(loc)
 
             camera_pose_3d = None
             if locate_3d:
@@ -414,8 +339,9 @@ class Reference_Surface(object):
             m_to_screen = None
             m_from_undistored_norm_space = None
             m_to_undistored_norm_space = None
-            self.current_mean = None
-            self.current_cov = None
+            if smooth:
+                self.current_mean = None
+                self.current_cov = None
 
         return {
             'detected'        :detected,
@@ -425,9 +351,104 @@ class Reference_Surface(object):
             'm_from_screen'   :m_from_screen,
             'm_to_screen'     :m_to_screen,
             'camera_pose_3d'  :camera_pose_3d,
+            'raw_location'    :loc,
             'mean_kfilter_cov': -1. if self.current_cov is None else self.current_cov.mean()
         }
 
+    def _get_location_smooth(self,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
+        corners_robust, overlap = self._get_location_raw(visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
+        return self.kalman_filter_update(corners_robust), overlap
+
+    def _get_location_raw(self,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
+        filtered_markers = [m for m in visible_markers if m['perimeter']>=min_marker_perimeter and m['id_confidence']>min_id_confidence]
+        marker_by_id ={}
+        #if an id shows twice we use the bigger marker (usually this is a screen camera echo artifact.)
+        for m in filtered_markers:
+            if m["id"] in marker_by_id and m["perimeter"] < marker_by_id[m['id']]['perimeter']:
+                pass
+            else:
+                marker_by_id[m["id"]] = m
+
+        visible_ids = set(marker_by_id.keys())
+        requested_ids = set(self.markers.keys())
+        overlap = visible_ids & requested_ids
+        # need at least two markers per surface when the surface is more that 1 marker.
+        if overlap and len(overlap) >= min(2,len(requested_ids)):
+            detected = True
+            xy = np.array( [marker_by_id[i]['verts'] for i in overlap] )
+            uv = np.array( [self.markers[i].uv_coords for i in overlap] )
+            uv.shape=(-1,1,2)
+
+            # our camera lens creates distortions we want to get a good 2d estimate despite that so we:
+            # compute the homography transform from marker into the undistored normalized image space
+            # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
+            xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*self.use_distortion)
+            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized, method=cv2.cv.CV_RANSAC,ransacReprojThreshold=0.1)
+            if not mask.all():
+                detected = False
+            m_from_undistored_norm_space,mask = cv2.findHomography(xy_undistorted_normalized,uv)
+            # project the corners of the surface to undistored space
+            corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
+            # project and distort these points  and normalize them
+            corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*self.use_distortion)
+            corners_nulldistorted, corners_nulldistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*0)
+
+            #normalize to pupil norm space
+            corners_redistorted.shape = -1,2
+            corners_redistorted /= camera_calibration['resolution']
+            corners_redistorted[:,-1] = 1-corners_redistorted[:,-1]
+
+            #normalize to pupil norm space
+            corners_nulldistorted.shape = -1,2
+            corners_nulldistorted /= camera_calibration['resolution']
+            corners_nulldistorted[:,-1] = 1-corners_nulldistorted[:,-1]
+
+
+            # maps for extreme lens distortions will behave irratically beyond the image bounds
+            # since our surfaces often extend beyond the screen we need to interpolate
+            # between a distored projection and undistored one.
+
+            # def ratio(val):
+            #     centered_val = abs(.5 - val)
+            #     # signed distance to img cennter .5 is imag bound
+            #     # we look to interpolate between .7 and .9
+            #     inter = max()
+
+            corners_robust = []
+            for nulldist,redist in zip(corners_nulldistorted,corners_redistorted):
+                if -.4 < nulldist[0] <1.4 and -.4 < nulldist[1] <1.4:
+                    corners_robust.append(redist)
+                else:
+                    corners_robust.append(nulldist)
+
+            return np.asarray(corners_robust), overlap
+        return None, overlap
+
+    def kalman_filter_update(self,corners_robust):
+        if corners_robust is not None:
+            observ = self.create_kalman_oberservation(corners_robust)
+            if self.current_mean is None or self.current_cov is None:
+                self.current_mean, self.current_cov = self.kfilter.filter(np.vstack((observ,observ)))
+                self.current_mean = self.current_mean[-1,:]
+                self.current_cov  = self.current_cov[-1,:,:]
+            else:
+                self.current_mean, self.current_cov = self.kfilter.filter_update(
+                    self.current_mean, self.current_cov, observ)
+
+            obs_mat = self.kfilter.observation_matrices
+            corners_robust = np.dot(obs_mat, self.current_mean).reshape(4,2).astype(np.float32)
+            return corners_robust
+
+        elif self.current_mean is not None or self.current_cov is not None:
+            # update with missing observation
+            self.current_mean, self.current_cov = self.kfilter.filter_update(
+                    self.current_mean, self.current_cov)
+
+            obs_mat = self.kfilter.observation_matrices
+            corners_robust = np.dot(obs_mat,self.current_mean).reshape(4,2).astype(np.float32)
+            return corners_robust
+
+        else: return None
 
     def img_to_ref_surface(self,pos):
         #convenience lines to allow 'simple' vectors (x,y) to be used
@@ -530,6 +551,7 @@ class Reference_Surface(object):
             hat = cv2.perspectiveTransform(hat,self.m_to_screen)
             frame = cv2.perspectiveTransform(frame,self.m_to_screen)
             alpha = min(1,self.build_up_status/self.required_build_up)
+            cov_alpha = 1.
             if self.current_cov is not None:
                 fade_range = .8,self.cov_threshold
                 mean_cov   = self.current_cov.mean()
