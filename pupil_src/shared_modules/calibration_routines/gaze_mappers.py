@@ -247,7 +247,8 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
         gaze_3d = self.toWorld(gaze_point)
         normal_3d = np.dot( self.rotation_matrix, np.array( p['circle_3d']['normal'] ) )
 
-        g = {   'norm_pos':image_point,
+        g = {   'topic':'gaze',
+                'norm_pos':image_point,
                 'eye_center_3d':eye_center.tolist(),
                 'gaze_normal_3d':normal_3d.tolist(),
                 'gaze_point_3d':gaze_3d.tolist(),
