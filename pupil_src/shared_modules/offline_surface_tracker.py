@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 import csv
 
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, set_start_method
 def forking_enable(_):
     set_start_method('spawn')
 from multiprocessing.sharedctypes import Value
