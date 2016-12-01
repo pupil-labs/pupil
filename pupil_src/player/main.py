@@ -426,7 +426,7 @@ def session(rec_dir):
 
 
         # publish delayed notifiactions when their time has come.
-        for n in g_pool.delayed_notifications.values():
+        for n in list(g_pool.delayed_notifications.values()):
             if n['_notify_time_'] < time():
                 del n['_notify_time_']
                 del g_pool.delayed_notifications[n['subject']]
