@@ -121,7 +121,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
         self.menu.append(ui.Slider('v_fov',self,min=5,step=1,max=180,label='Vertical FOV of scene camera',setter=set_v_fov))
 
 
-        self.add_button = ui.Thumb('jump_next_fixation',setter=jump_next_fixation,getter=lambda:False,label=unichr(0xf051).encode('utf-8'),hotkey='f',label_font='fontawesome',label_offset_x=0,label_offset_y=2,label_offset_size=-24)
+        self.add_button = ui.Thumb('jump_next_fixation',setter=jump_next_fixation,getter=lambda:False,label=chr(0xf051),hotkey='f',label_font='fontawesome',label_offset_x=0,label_offset_y=2,label_offset_size=-24)
         self.add_button.status_text = 'Next Fixation'
         self.g_pool.quickbar.append(self.add_button)
 
@@ -565,7 +565,7 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
                 'duration'         :duration,
                 'dispersion'       :np.rad2deg(dispersion),
                 'start_frame_index':fixation_support[0]['index'],
-                'mid_frame_index'  :fixation_support[fix_sup_len/2]['index'],
+                'mid_frame_index'  :fixation_support[int(fix_sup_len/2)]['index'],
                 'end_frame_index'  :fixation_support[-1]['index'],
                 'pix_dispersion'   :np.rad2deg(dispersion)*self.pix_per_degree,
                 'timestamp'        :fixation_support[0]['timestamp'],
