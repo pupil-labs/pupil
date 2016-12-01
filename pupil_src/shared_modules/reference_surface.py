@@ -257,7 +257,7 @@ class Reference_Surface(object):
         # if detected and high enough cov in case of `smooth`
         if (loc is not None and (not smooth or (
                 smooth and self.current_cov is not None and
-                self.current_cov.mean() < self.cov_threshold))
+                self.current_cov.sum() < self.cov_threshold))
             ):
             detected = True
 
@@ -352,7 +352,7 @@ class Reference_Surface(object):
             'm_to_screen'     :m_to_screen,
             'camera_pose_3d'  :camera_pose_3d,
             'raw_location'    :loc,
-            'mean_kfilter_cov': -1. if self.current_cov is None else self.current_cov.mean()
+            'summed_kfilter_cov': None if self.current_cov is None else self.current_cov.sum()
         }
 
     def _get_location_smooth(self,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
@@ -553,11 +553,11 @@ class Reference_Surface(object):
             alpha = min(1,self.build_up_status/self.required_build_up)
             cov_alpha = 1.
             if self.current_cov is not None:
-                fade_range = .8,self.cov_threshold
-                mean_cov   = self.current_cov.mean()
-                if   mean_cov < fade_range[0]: mean_cov = fade_range[0]
-                elif mean_cov > fade_range[1]: mean_cov = fade_range[1]
-                cov_alpha = (fade_range[1]-mean_cov)/(fade_range[1]-fade_range[0])
+                fade_range = 0.,self.cov_threshold
+                summed_cov = self.current_cov.sum()
+                if   summed_cov < fade_range[0]: summed_cov = fade_range[0]
+                elif summed_cov > fade_range[1]: summed_cov = fade_range[1]
+                cov_alpha = (fade_range[1]-summed_cov)/(fade_range[1]-fade_range[0])
             if highlight:
                 draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*.1*cov_alpha),line_type=GL_POLYGON)
 

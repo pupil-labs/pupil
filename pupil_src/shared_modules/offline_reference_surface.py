@@ -41,24 +41,35 @@ class Offline_Reference_Surface(Reference_Surface):
         self.metrics_gazecount = None
         self.metrics_texture = None
 
+        self.cov_threshold = 5.
+        self.cov_distribution = None
+
+    def setup_kalman_filter(self, n_dim_obs):
+        f = super(Offline_Reference_Surface, self).setup_kalman_filter(n_dim_obs)
+        f.transition_covariance = .2 * np.eye(self.kfilter_state_dim)
+        return f
+
     def clear_smoothing(self):
         self.smoothed_cache = None
 
     def refresh_smoothing(self):
+        self.kfilter = self.setup_kalman_filter(n_dim_obs=8)
         t0 = time()
-        raw_data = np.ma.masked_all((self.raw_cache.length, 8))
+        raw_data = np.ma.masked_all((self.raw_cache.length, self.kfilter_obs_dim))
         for i,entry in enumerate(self.raw_cache):
             if entry:
                 raw_data[i,:] = self.create_kalman_oberservation(entry['raw_location'])
         t1 = time()
-        smoothed_mean, smoothed_cov = self.kfilter.smooth(raw_data)
+        # self.kfilter.em(raw_data,n_iter=5)
         t2 = time()
-        cov_mean  = smoothed_cov.mean(axis=(1,2))
+        smoothed_mean, smoothed_cov = self.kfilter.smooth(raw_data)
+        t3 = time()
+        self.cov_distribution = smoothed_cov.sum(axis=(1,2))
         projected = np.dot(smoothed_mean, self.kfilter.observation_matrices.T)
         projected = projected.reshape(projected.shape[0],4,2).astype(np.float32)
-        smoothed = [None] * cov_mean.shape[0]
-        for idx in xrange(cov_mean.shape[0]):
-            if cov_mean[idx] < self.cov_threshold:
+        smoothed = [None] * self.cov_distribution.shape[0]
+        for idx in xrange(self.cov_distribution.shape[0]):
+            if self.cov_distribution[idx] < self.cov_threshold:
 
                 detected_markers = 0
                 if self.raw_cache[idx]:
@@ -68,7 +79,7 @@ class Offline_Reference_Surface(Reference_Surface):
                     'detected_markers':detected_markers,
                     'm_from_screen'   :m_verts_from_screen(projected[idx,:,:]),
                     'm_to_screen'     :m_verts_to_screen(projected[idx,:,:]),
-                    'mean_kfilter_cov':cov_mean[idx]
+                    'summed_kfilter_cov':self.cov_distribution[idx]
                 }
             else:
                 smoothed[idx] = {
@@ -76,14 +87,15 @@ class Offline_Reference_Surface(Reference_Surface):
                     'detected_markers':0,
                     'm_from_screen'   :None,
                     'm_to_screen'     :None,
-                    'mean_kfilter_cov':-1
+                    'summed_kfilter_cov':None
                 }
         eval_fn = lambda entry: entry['detected']
         self.smoothed_cache = Cache_List(smoothed, positive_eval_fn=eval_fn)
-        t3 = time()
+        t4 = time()
         logger.debug('Conversion time: %.3fs'%(t1-t0))
-        logger.debug(' Smoothing time: %.3fs'%(t2-t1))
-        logger.debug('Projection time: %.3fs'%(t3-t2))
+        logger.debug('Estimation time: %.3fs'%(t2-t1))
+        logger.debug(' Smoothing time: %.3fs'%(t3-t2))
+        logger.debug('Projection time: %.3fs'%(t4-t3))
 
     #cache fn for offline marker
     def locate_from_cache(self,frame_idx):
@@ -96,10 +108,11 @@ class Offline_Reference_Surface(Reference_Surface):
                 self.m_from_screen = cache_result['m_from_screen']
                 self.m_to_screen =  cache_result['m_to_screen']
                 self.detected_markers = cache_result['detected_markers']
-                self.current_cov =  cache_result['mean_kfilter_cov']
-                self.gaze_on_srf = self.gaze_on_srf_by_frame_idx(frame_idx,self.m_from_screen)
+                self.current_cov =  cache_result['summed_kfilter_cov']
+                self.gaze_on_srf = self.gaze_on_srf_by_frame_idx(frame_idx,self.m_from_screen) if self.m_from_screen is not None else None
                 return True
 
+        self.current_cov = None
         if self.raw_cache == None:
             #no cache available cannot update from cache
             return False

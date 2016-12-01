@@ -124,13 +124,18 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
         self.menu.elements[:] = []
         self.menu.append(ui.Button('Close',close))
-        self.menu.append(ui.Slider('min_marker_perimeter',self,min=20,max=500,step=1,setter=set_min_marker_perimeter))
+        self.menu.append(ui.Slider('min_marker_perimeter',self,min=20,max=100,step=1,setter=set_min_marker_perimeter))
         self.menu.append(ui.Info_Text('The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Surfaces","Show marker IDs","Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface()))
+
+        def make_smooth_callbacks(surface):
+            toggle_set = lambda (smooth): surface.refresh_smoothing() if smooth else surface.clear_smoothing()
+            toggle_get = lambda: bool(surface.smoothed_cache)
+            return toggle_set,toggle_get
         for s in self.surfaces:
             idx = self.surfaces.index(s)
             s_menu = ui.Growing_Menu("Surface %s"%idx)
@@ -139,8 +144,11 @@ class Offline_Surface_Tracker(Surface_Tracker):
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
-            s_menu.append(ui.Button('Refresh smoothing',s.refresh_smoothing))
-            s_menu.append(ui.Button('Clear smoothing',s.clear_smoothing))
+            cbs = make_smooth_callbacks(s)
+            kfilter_menu = ui.Growing_Menu("Kalman Filtering")
+            kfilter_menu.append(ui.Switch('should_smooth',label='Smooth surface',
+                setter=cbs[0], getter=cbs[1]))
+            s_menu.append(kfilter_menu)
             #closure to encapsulate idx
             def make_remove_s(i):
                 return lambda: self.remove_surface(i)
@@ -326,8 +334,9 @@ class Offline_Surface_Tracker(Surface_Tracker):
             selected_cache = s.smoothed_cache if s.smoothed_cache else s.raw_cache
             if selected_cache is not None:
                 for r in selected_cache.positive_ranges: # [[0,1],[3,4]]
-                    found_at += (r[0],0),(r[1],0) #[(0,0),(1,0),(3,0),(4,0)]
-                cached_surfaces.append(found_at)
+                    #[(0,0),(1,0),(3,0),(4,0)]
+                    found_at += (r[0],0),(r[1],0)
+                cached_surfaces.append((found_at,bool(s.smoothed_cache)))
 
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
@@ -345,11 +354,13 @@ class Offline_Surface_Tracker(Surface_Tracker):
         color = RGBA(.8,.6,.2,.8)
         draw_polyline(cached_ranges,color=color,line_type=GL_LINES,thickness=4)
 
-        color = RGBA(0,.7,.3,.8)
+        raw_color = RGBA(0,.7,.3,.8)
+        smoothed_color = RGBA(0,.3,.7,.8)
 
-        for s in cached_surfaces:
+        for found_at,smoothed in cached_surfaces:
+            color = smoothed_color if smoothed else raw_color
             glTranslatef(0,.02,0)
-            draw_polyline(s,color=color,line_type=GL_LINES,thickness=2)
+            draw_polyline(found_at,color=color,line_type=GL_LINES,thickness=2)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
