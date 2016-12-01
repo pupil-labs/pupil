@@ -168,7 +168,7 @@ def session(rec_dir):
 
     def on_drop(window,count,paths):
         for x in range(count):
-            new_rec_dir =  paths[x]
+            new_rec_dir =  paths[x].decode('utf-8')
             if is_pupil_rec_dir(new_rec_dir):
                 logger.debug("Starting new session with '%s'"%new_rec_dir)
                 global rec_dir
@@ -494,7 +494,7 @@ def show_no_rec_window():
 
     def on_drop(window,count,paths):
         for x in range(count):
-            new_rec_dir =  paths[x]
+            new_rec_dir =  paths[x].decode('utf-8')
             if is_pupil_rec_dir(new_rec_dir):
                 logger.debug("Starting new session with '%s'"%new_rec_dir)
                 global rec_dir
