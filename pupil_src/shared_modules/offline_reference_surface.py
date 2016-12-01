@@ -56,20 +56,30 @@ class Offline_Reference_Surface(Reference_Surface):
         cov_mean  = smoothed_cov.mean(axis=(1,2))
         projected = np.dot(smoothed_mean, self.kfilter.observation_matrices.T)
         projected = projected.reshape(projected.shape[0],4,2).astype(np.float32)
-        self.smoothed_cache = [None] * cov_mean.shape[0]
+        smoothed = [None] * cov_mean.shape[0]
         for idx in xrange(cov_mean.shape[0]):
             if cov_mean[idx] < self.cov_threshold:
 
                 detected_markers = 0
                 if self.raw_cache[idx]:
                     detected_markers = self.raw_cache[idx]['detected_markers']
-                self.smoothed_cache[idx] = {
+                smoothed[idx] = {
                     'detected'        :True,
                     'detected_markers':detected_markers,
                     'm_from_screen'   :m_verts_from_screen(projected[idx,:,:]),
                     'm_to_screen'     :m_verts_to_screen(projected[idx,:,:]),
                     'mean_kfilter_cov':cov_mean[idx]
                 }
+            else:
+                smoothed[idx] = {
+                    'detected'        :False,
+                    'detected_markers':0,
+                    'm_from_screen'   :None,
+                    'm_to_screen'     :None,
+                    'mean_kfilter_cov':-1
+                }
+        eval_fn = lambda entry: entry['detected']
+        self.smoothed_cache = Cache_List(smoothed, positive_eval_fn=eval_fn)
         t3 = time()
         logger.debug('Conversion time: %.3fs'%(t1-t0))
         logger.debug(' Smoothing time: %.3fs'%(t2-t1))
@@ -77,22 +87,16 @@ class Offline_Reference_Surface(Reference_Surface):
 
     #cache fn for offline marker
     def locate_from_cache(self,frame_idx):
-
         if self.smoothed_cache:
             cache_result = self.smoothed_cache[frame_idx]
-            if cache_result == None:
-                #cached data shows surface not found:
-                self.detected = False
-                self.m_from_screen = None
-                self.m_to_screen = None
-                self.gaze_on_srf = []
-                self.detected_markers = 0
-                return True
+            if cache_result == False:
+                pass
             else:
-                self.detected = True
+                self.detected = cache_result['detected']
                 self.m_from_screen = cache_result['m_from_screen']
                 self.m_to_screen =  cache_result['m_to_screen']
                 self.detected_markers = cache_result['detected_markers']
+                self.current_cov =  cache_result['mean_kfilter_cov']
                 self.gaze_on_srf = self.gaze_on_srf_by_frame_idx(frame_idx,self.m_from_screen)
                 return True
 

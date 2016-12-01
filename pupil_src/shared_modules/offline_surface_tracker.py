@@ -229,7 +229,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         # locate surfaces
         for s in self.surfaces:
             if not s.locate_from_cache(frame.index):
-                s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
+                s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence,smooth=False)
             if s.detected:
                 events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
@@ -323,8 +323,9 @@ class Offline_Surface_Tracker(Surface_Tracker):
         cached_surfaces = []
         for s in self.surfaces:
             found_at = []
-            if s.raw_cache is not None:
-                for r in s.raw_cache.positive_ranges: # [[0,1],[3,4]]
+            selected_cache = s.smoothed_cache if s.smoothed_cache else s.raw_cache
+            if selected_cache is not None:
+                for r in selected_cache.positive_ranges: # [[0,1],[3,4]]
                     found_at += (r[0],0),(r[1],0) #[(0,0),(1,0),(3,0),(4,0)]
                 cached_surfaces.append(found_at)
 
