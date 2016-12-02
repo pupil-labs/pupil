@@ -12,7 +12,6 @@ import sys, os,platform
 from glob import glob
 import cv2
 import numpy as np
-from file_methods import Persistent_Dict
 from pyglui import ui
 from player_methods import transparent_image_overlay
 from plugin import Plugin
