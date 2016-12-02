@@ -162,7 +162,7 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min
         events['pupil_positions'] = g_pool.pupil_positions_by_frame[frame.index]
 
         # publish delayed notifiactions when their time has come.
-        for n in g_pool.delayed_notifications.values():
+        for n in list(g_pool.delayed_notifications.values()):
             if n['_notify_time_'] < time():
                 del n['_notify_time_']
                 del g_pool.delayed_notifications[n['subject']]
