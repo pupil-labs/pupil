@@ -43,7 +43,7 @@ def find_concetric_circles(gray_img,min_ring_count=3, visual_debug=False):
         for i in cluster:
             c = contours[i]
             if len(c)>5:
-                if not ellipses.has_key(i):
+                if not i in ellipses:
                     e = cv2.fitEllipse(c)
                     fit = max(dist_pts_ellipse(e,c))
                     ellipses[i] = e,fit
