@@ -132,10 +132,14 @@ class Offline_Surface_Tracker(Surface_Tracker):
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface()))
 
-        def make_smooth_callbacks(surface):
-            toggle_set = lambda (smooth): surface.refresh_smoothing() if smooth else surface.clear_smoothing()
-            toggle_get = lambda: bool(surface.smoothed_cache)
-            return toggle_set,toggle_get
+        def make_smooth_setter(surface):
+            def set_smoothing(smooth):
+                surface.should_smooth = smooth
+                if smooth:
+                    surface.refresh_smoothing()
+                else:
+                    surface.clear_smoothing()
+            return set_smoothing
         for s in self.surfaces:
             idx = self.surfaces.index(s)
             s_menu = ui.Growing_Menu("Surface %s"%idx)
@@ -143,17 +147,14 @@ class Offline_Surface_Tracker(Surface_Tracker):
             s_menu.append(ui.Text_Input('name',s))
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
+            s_menu.append(ui.Switch('should_smooth',s,label='Smooth surface',
+                setter=make_smooth_setter(s)))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
-            cbs = make_smooth_callbacks(s)
-            kfilter_menu = ui.Growing_Menu("Kalman Filtering")
-            kfilter_menu.append(ui.Switch('should_smooth',label='Smooth surface',
-                setter=cbs[0], getter=cbs[1]))
-            s_menu.append(kfilter_menu)
             #closure to encapsulate idx
             def make_remove_s(i):
                 return lambda: self.remove_surface(i)
             remove_s = make_remove_s(idx)
-            s_menu.append(ui.Button('remove',remove_s))
+            s_menu.append(ui.Button('Remove surface',remove_s))
             self.menu.append(s_menu)
 
 
@@ -191,6 +192,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         # calc heatmaps
         for s in self.surfaces:
             if s.defined:
+                s.refresh_smoothing()
                 s.generate_heatmap(section)
 
         # calc distirbution accross all surfaces.
@@ -222,6 +224,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
     def invalidate_surface_caches(self):
         for s in self.surfaces:
             s.raw_cache = None
+            s.smoothed_cache = None
 
     def update(self,frame,events):
         self.img_shape = frame.img.shape

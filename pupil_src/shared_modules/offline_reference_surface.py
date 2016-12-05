@@ -33,6 +33,7 @@ class Offline_Reference_Surface(Reference_Surface):
         self.g_pool = g_pool
         self.raw_cache = None
         self.smoothed_cache = None
+        self.should_smooth = saved_definition.get('should_smooth',True)
         self.gaze_on_srf = [] # points on surface for realtime feedback display
 
         self.heatmap_detail = .2
@@ -53,6 +54,8 @@ class Offline_Reference_Surface(Reference_Surface):
         self.smoothed_cache = None
 
     def refresh_smoothing(self):
+        if not self.raw_cache or not self.should_smooth:
+            return # editing surface, smooth later, or should not smooth at all
         self.kfilter = self.setup_kalman_filter(n_dim_obs=8)
         t0 = time()
         raw_data = np.ma.masked_all((self.raw_cache.length, self.kfilter_obs_dim))
@@ -186,16 +189,19 @@ class Offline_Reference_Surface(Reference_Surface):
     def move_vertex(self,vert_idx,new_pos):
         super(Offline_Reference_Surface, self).move_vertex(vert_idx,new_pos)
         self.raw_cache = None
+        self.smoothed_cache = None
         self.heatmap = None
 
     def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
         super(Offline_Reference_Surface, self).add_marker(marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
         self.raw_cache = None
+        self.smoothed_cache = None
         self.heatmap = None
 
     def remove_marker(self,marker):
         super(Offline_Reference_Surface, self).remove_marker(marker)
         self.raw_cache = None
+        self.smoothed_cache = None
         self.heatmap = None
 
     def gaze_on_srf_by_frame_idx(self,frame_index,m_from_screen):
@@ -331,4 +337,9 @@ class Offline_Reference_Surface(Reference_Surface):
             if c_e:
                 gaze_on_srf += [gp for gp in self.gaze_on_srf_by_frame_idx(frame_idx,c_e['m_from_screen']) if gp['on_srf']]
         return gaze_on_srf
+
+    def save_to_dict(self):
+        d = super(Offline_Reference_Surface,self).save_to_dict()
+        d['should_smooth'] = self.should_smooth
+        return d
 

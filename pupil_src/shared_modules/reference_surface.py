@@ -553,7 +553,7 @@ class Reference_Surface(object):
             alpha = min(1,self.build_up_status/self.required_build_up)
             cov_alpha = 1.
             if self.current_cov is not None:
-                fade_range = 0.,self.cov_threshold
+                fade_range = 0.8*self.cov_threshold,self.cov_threshold
                 summed_cov = self.current_cov.sum()
                 if   summed_cov < fade_range[0]: summed_cov = fade_range[0]
                 elif summed_cov > fade_range[1]: summed_cov = fade_range[1]
