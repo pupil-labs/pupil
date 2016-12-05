@@ -292,7 +292,7 @@ class Recorder(Plugin):
     def update(self,frame,events):
         if self.running:
             for key,data in events.iteritems():
-                if key not in ('dt'):
+                if key not in ('dt','frame'):
                     try:
                         self.data[key] += data
                     except KeyError:

@@ -55,6 +55,12 @@ class Plugin(object):
         pass
 
 
+    def recent_events(self,events):
+        if 'frame' in events:
+            self.update(events['frame'],events)
+
+
+
     def update(self,frame=None,events={}):
         """
         called in Player and Capture

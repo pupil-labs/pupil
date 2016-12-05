@@ -41,7 +41,7 @@ app_version = get_version(version_file)
 
 #threading and processing
 try:
-    from billiard import Process, Queue, Value,active_children, freeze_support,forking_enable
+    from billiard2 import Process, Queue, Value,active_children, freeze_support,forking_enable
 except:
     from multiprocessing import Process, Queue, Value,active_children, freeze_support
     def forking_enable(_):

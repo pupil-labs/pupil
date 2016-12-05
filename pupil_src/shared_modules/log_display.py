@@ -75,7 +75,7 @@ class Log_Display(Plugin):
         self.window_size = w,h
         self.tex.resize(*self.window_size)
 
-    def update(self,frame,events):
+    def recent_events(self,events):
         if self._socket and self._socket.new_data:
             t,s = self._socket.recv()
             self.on_log(logging.makeLogRecord(s))
