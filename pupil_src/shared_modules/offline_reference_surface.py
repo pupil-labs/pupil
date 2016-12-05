@@ -42,12 +42,13 @@ class Offline_Reference_Surface(Reference_Surface):
         self.metrics_gazecount = None
         self.metrics_texture = None
 
-        self.cov_threshold = 5.
+        self.cov_threshold = 4.
         self.cov_distribution = None
 
     def setup_kalman_filter(self, n_dim_obs):
         f = super(Offline_Reference_Surface, self).setup_kalman_filter(n_dim_obs)
-        f.transition_covariance = .2 * np.eye(self.kfilter_state_dim)
+        Q = 0.5 * np.eye(self.kfilter_state_dim)
+        f.transition_covariance = Q
         return f
 
     def clear_smoothing(self):
@@ -57,19 +58,15 @@ class Offline_Reference_Surface(Reference_Surface):
         if not self.raw_cache or not self.should_smooth:
             return # editing surface, smooth later, or should not smooth at all
         self.kfilter = self.setup_kalman_filter(n_dim_obs=8)
-        t0 = time()
         raw_data = np.ma.masked_all((self.raw_cache.length, self.kfilter_obs_dim))
         for i,entry in enumerate(self.raw_cache):
             if entry:
                 raw_data[i,:] = self.create_kalman_oberservation(entry['raw_location'])
-        t1 = time()
         # self.kfilter.em(raw_data,n_iter=5)
-        t2 = time()
         smoothed_mean, smoothed_cov = self.kfilter.smooth(raw_data)
-        t3 = time()
         self.cov_distribution = smoothed_cov.sum(axis=(1,2))
         projected = np.dot(smoothed_mean, self.kfilter.observation_matrices.T)
-        projected = projected.reshape(projected.shape[0],4,2).astype(np.float32)
+        projected = projected.reshape(-1,4,2).astype(np.float32)
         smoothed = [None] * self.cov_distribution.shape[0]
         for idx in xrange(self.cov_distribution.shape[0]):
             if self.cov_distribution[idx] < self.cov_threshold:
@@ -94,11 +91,6 @@ class Offline_Reference_Surface(Reference_Surface):
                 }
         eval_fn = lambda entry: entry['detected']
         self.smoothed_cache = Cache_List(smoothed, positive_eval_fn=eval_fn)
-        t4 = time()
-        logger.debug('Conversion time: %.3fs'%(t1-t0))
-        logger.debug('Estimation time: %.3fs'%(t2-t1))
-        logger.debug(' Smoothing time: %.3fs'%(t3-t2))
-        logger.debug('Projection time: %.3fs'%(t4-t3))
 
     #cache fn for offline marker
     def locate_from_cache(self,frame_idx):
