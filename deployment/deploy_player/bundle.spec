@@ -1,7 +1,7 @@
 # -*- mode: python -*-
 
 
-import platform
+import platform, sys, os, os.path, zmq, glob, ntpath
 
 av_hidden_imports = ['av.format','av.packet','av.buffer','av.bytesource','av.frame','av.stream','av.descriptor','av.plane','av.audio.plane','av.container.streams','av.dictionary', 'av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane','av.option']
 pyglui_hidden_imports = ['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']
@@ -86,66 +86,64 @@ elif platform.system() == 'Linux':
                    name='pupil_player')
 
 elif platform.system() == 'Windows':
-	import sys, os, os.path
+        import sys, os, os.path
 
-	system_path = os.path.join(os.environ['windir'], 'system32')
+        zmq_path = os.path.dirname(zmq.__file__)
 
-	print "Using Environment:"
-	python_path = None
-	package_path = None
-	for path in sys.path:
-		print " -- " + path
-		if path.endswith("scripts"):
-			python_path = os.path.abspath(os.path.join(path, os.path.pardir))
-		elif path.endswith("site-packages"):
-			lib_dir = os.path.abspath(os.path.join(path, os.path.pardir))
-			python_path = os.path.abspath(os.path.join(lib_dir, os.path.pardir))
-			package_path = path
-	if (python_path and package_path):
-		print "PYTHON PATH @ " + python_path
-		print "PACKAGE PATH @ " + package_path
-	else:
-		print "could not find python_path or package_path. EXIT."
-		quit()
-	scipy_imports = ['scipy.integrate']
-	scipy_imports += ['scipy.integrate._ode', 'scipy.integrate.quadrature', 'scipy.integrate.odepack', 'scipy.integrate._odepack', 'scipy.integrate.quadpack', 'scipy.integrate._quadpack']
-	scipy_imports += ['scipy.integrate.vode', 'scipy.integrate.lsoda', 'scipy.integrate._dop', 'scipy.special._ufuncs', 'scipy.special._ufuncs_cxx']
+        zmq_p, zmq_lib = ntpath.split(glob.glob(zmq_path +  '/libzmq.*.pyd')[0])
 
-	a = Analysis(['../../pupil_src/player/main.py'],
-	             pathex=['../../pupil_src/shared_modules/'],
-	             hiddenimports=['pyglui.cygl.shader']+scipy_imports+av_hidden_imports+pyndsi_hidden_imports,
-	             hookspath=None,
-	             runtime_hooks=None,
+        system_path = os.path.join(os.environ['windir'], 'system32')
+
+        print( "Using Environment:")
+        python_path = None
+        package_path = None
+        for path in sys.path:
+                print( " -- " + path)
+                if path.endswith("scripts"):
+                        python_path = os.path.abspath(os.path.join(path, os.path.pardir))
+                elif path.endswith("site-packages"):
+                        lib_dir = os.path.abspath(os.path.join(path, os.path.pardir))
+                        python_path = os.path.abspath(os.path.join(lib_dir, os.path.pardir))
+                        package_path = path
+        if (python_path and package_path):
+                print( "PYTHON PATH @ " + python_path)
+                print( "PACKAGE PATH @ " + package_path)
+        else:
+                print( "could not find python_path or package_path. EXIT.")
+                quit()
+        scipy_imports = ['scipy.integrate']
+        scipy_imports += ['scipy.integrate._ode', 'scipy.integrate.quadrature', 'scipy.integrate.odepack', 'scipy.integrate._odepack', 'scipy.integrate.quadpack', 'scipy.integrate._quadpack']
+        scipy_imports += ['scipy.integrate.vode', 'scipy.integrate.lsoda', 'scipy.integrate._dop', 'scipy.special._ufuncs', 'scipy.special._ufuncs_cxx']
+
+        a = Analysis(['../../pupil_src/player/main.py'],
+                     pathex=['../../pupil_src/shared_modules/'],
+                     hiddenimports=['pyglui.cygl.shader']+scipy_imports+av_hidden_imports+pyndsi_hidden_imports,
+                     hookspath=None,
+                     runtime_hooks=None,
                  excludes=['pyx_compiler','matplotlib'])
 
 
-	pyz = PYZ(a.pure)
-	exe = EXE(pyz,
-	          a.scripts,
-	          exclude_binaries=True,
-	          name='pupil_player.exe',
-	          icon='pupil-player.ico',
-	          debug=False,
-	          strip=None,
-	          upx=True,
-	          console=True,
-	          resources=['pupil-player.ico,ICON,GLFW_ICON'])
+        pyz = PYZ(a.pure)
+        exe = EXE(pyz,
+                  a.scripts,
+                  exclude_binaries=True,
+                  name='pupil_player.exe',
+                  icon='pupil-player.ico',
+                  debug=False,
+                  strip=None,
+                  upx=True,
+                  console=True,
+                  resources=['pupil-player.ico,ICON'])
 
-	coll = COLLECT(exe,
-	               a.binaries,
-	               a.zipfiles,
-	               a.datas,
-	               [('glfw3.dll', '../../pupil_src/shared_modules/external/glfw3.dll','BINARY')],
-	               [('glfw3.lib', '../../pupil_src/shared_modules/external/glfw3.lib','BINARY')],
-	               [('glfw3dll.lib', '../../pupil_src/shared_modules/external/glfw3dll.lib','BINARY')],
-	               [('opencv_ffmpeg2411.dll', os.path.join(python_path, 'opencv_ffmpeg2411.dll'),'BINARY')],
-	               [('_videoInput.lib', os.path.join(python_path, '_videoInput.lib'),'BINARY')],
-	               [('msvcp110.dll', os.path.join(system_path, 'msvcp110.dll'),'BINARY')],
-	               [('msvcr110.dll', os.path.join(system_path, 'msvcr110.dll'),'BINARY')],
-	               [('msvcr120.dll', os.path.join(system_path, 'msvcr120.dll'),'BINARY')],
-	               [('OpenSans-Regular.ttf', os.path.join(package_path, 'pyglui/OpenSans-Regular.ttf'),'DATA')],
-                 [('Roboto-Regular.ttf', os.path.join(package_path, 'pyglui/Roboto-Regular.ttf'),'DATA')],
-                 [('fontawesome-webfont.ttf', os.path.join(package_path, 'pyglui/fontawesome-webfont.ttf'),'DATA')],
-	               strip=None,
-	               upx=True,
-	               name='Pupil Player')
+        coll = COLLECT(exe,
+                       a.binaries,
+                       a.zipfiles,
+                       a.datas,
+                       [('glfw3.dll', '../../pupil_src/shared_modules/external/glfw3.dll','BINARY')],
+                       [('OpenSans-Regular.ttf', os.path.join(package_path, 'pyglui/OpenSans-Regular.ttf'),'DATA')],
+                       [('Roboto-Regular.ttf', os.path.join(package_path, 'pyglui/Roboto-Regular.ttf'),'DATA')],
+                       [('fontawesome-webfont.ttf', os.path.join(package_path, 'pyglui/fontawesome-webfont.ttf'),'DATA')],
+                       [(zmq_lib,os.path.join(zmq_path, zmq_lib),'DATA') ],
+                       strip=None,
+                       upx=True,
+                       name='Pupil Player')
