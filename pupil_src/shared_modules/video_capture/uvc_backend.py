@@ -201,7 +201,10 @@ class UVC_Source(Base_Source):
 
     @property
     def name(self):
-        return self.uvc_capture.name
+        if self.uvc_capture:
+            return self.uvc_capture.name
+        else:
+            return "Ghost capture"
 
     @property
     def frame_size(self):
@@ -260,12 +263,12 @@ class UVC_Source(Base_Source):
         def set_frame_size(new_size):
             self.frame_size = new_size
 
-
-        ui_elements.append(ui.Info_Text('%s Controls'%self.uvc_capture.name))
         if self.uvc_capture is None:
-            ui_elements.append(ui.Info_Text('Capture is in ghost mode please reinit.'))
+            ui_elements.append(ui.Info_Text('Capture initialization faild.'))
             self.g_pool.capture_source_menu.extend(ui_elements)
             return
+
+        ui_elements.append(ui.Info_Text('%s Controls'%self.name))
         sensor_control = ui.Growing_Menu(label='Sensor Settings')
         sensor_control.append(ui.Info_Text("Do not change these during calibration or recording!"))
         sensor_control.collapsed=False
