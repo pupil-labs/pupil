@@ -216,7 +216,7 @@ class UVC_Source(Base_Source):
         sizes = [ abs(r[0]-new_size[0]) for r in self.uvc_capture.frame_sizes ]
         best_size_idx = sizes.index(min(sizes))
         size = self.uvc_capture.frame_sizes[best_size_idx]
-        if tuple(size) != new_size:
+        if tuple(size) != tuple(new_size):
             logger.warning("%s resolution capture mode not available. Selected %s."%(new_size,size))
         self.uvc_capture.frame_size = size
         self.frame_size_backup = size
