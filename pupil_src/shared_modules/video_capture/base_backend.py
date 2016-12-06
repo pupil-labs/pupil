@@ -94,8 +94,7 @@ class Base_Source(Plugin):
         raise NotImplementedError()
 
     def get_init_dict(self):
-        raise NotImplementedError()
-
+        return {}
 
     @property
     def frame_size(self):

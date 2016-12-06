@@ -21,8 +21,6 @@ from sets import ImmutableSet
 import logging
 logger = logging.getLogger(__name__)
 
-class AvalilabeDeviceNotFoundError(InitialisationError):
-    pass
 
 
 class UVC_Source(Base_Source):
@@ -167,13 +165,13 @@ class UVC_Source(Base_Source):
 
     def recent_events(self,events):
         try:
-            frame = self.uvc_capture.get_frame(.1)
+            frame = self.uvc_capture.get_frame(0.1)
             frame.timestamp = self.g_pool.get_timestamp()+self.ts_offset
         except(uvc.StreamError) as e:
             self._recent_frame = None
         except AttributeError as e:
             self._recent_frame = None
-
+            time.sleep(0.015)
         else:
             self._recent_frame = frame
             events['frame'] = frame
@@ -192,7 +190,7 @@ class UVC_Source(Base_Source):
         d = super(UVC_Source, self).get_init_dict()
         d['frame_size'] = self.frame_size
         d['frame_rate'] = self.frame_rate
-        if self.uvc_capture is not None:
+        if self.uvc_capture:
             d['name'] = self.name
             d['uvc_controls'] = {}
             for c in self.uvc_capture.controls:
@@ -221,6 +219,7 @@ class UVC_Source(Base_Source):
         if tuple(size) != new_size:
             logger.warning("%s resolution capture mode not available. Selected %s."%(new_size,size))
         self.uvc_capture.frame_size = size
+        self.frame_size_backup = size
 
     @property
     def frame_rate(self):
@@ -238,6 +237,7 @@ class UVC_Source(Base_Source):
         if rate != new_rate:
             logger.warning("%sfps capture mode not available at (%s) on '%s'. Selected %sfps. "%(new_rate,self.uvc_capture.frame_size,self.uvc_capture.name,rate))
         self.uvc_capture.frame_rate = rate
+        self.frame_rate_backup = rate
 
     @property
     def jpeg_support(self):
