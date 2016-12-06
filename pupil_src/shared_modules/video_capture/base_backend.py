@@ -76,7 +76,7 @@ class Base_Source(Plugin):
             Frame: Object containing image and time information of the current
             source frame. See `fake_source.py` for a minimal implementation.
         """
-        pass
+        raise NotImplementedError()
 
 
     def gl_display(self):
