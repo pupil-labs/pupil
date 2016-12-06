@@ -228,11 +228,12 @@ class Plugin_List(object):
             name, args = initializer
             logger.debug("Loading plugin: %s with settings %s"%(name, args))
             try:
-                self.add(plugin_by_name[name],args)
-            except (AttributeError,TypeError) as e:
-                logger.warning("Plugin '%s' failed to load from settings file. Because of Error:%s" %(name,e))
+                plugin_by_name[name]
             except KeyError:
                 logger.debug("Plugin '%s' failed to load. Not available for import." %(name))
+            else:
+                self.add(plugin_by_name[name],args)
+
 
     def __iter__(self):
         for p in self._plugins:
