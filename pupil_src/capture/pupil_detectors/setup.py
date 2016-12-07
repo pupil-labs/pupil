@@ -32,8 +32,6 @@ from Cython.Build import cythonize
 import numpy as np
 import os, platform
 
-
-
 dependencies = []
 # include all header files, to recognize changes
 for dirpath, dirnames, filenames in os.walk("singleeyefitter"):
@@ -43,41 +41,49 @@ for dirpath, dirnames, filenames in os.walk("singleeyefitter"):
 shared_cpp_include_path = '../../shared_cpp/include'
 singleeyefitter_include_path = 'singleeyefitter/'
 
-# opencv3 - highgui module has been split into parts: imgcodecs, videoio, and highgui itself
-opencv_libraries = ['opencv_core', 'opencv_highgui', 'opencv_videoio', 'opencv_imgcodecs', 'opencv_imgproc', 'opencv_video']
-#opencv_library_dir = '/usr/local/opt/opencv3/lib'
-#opencv_include_dir = '/usr/local/opt/opencv3/include'
-libs_2d = [] #['boost_python3']+opencv_libraries
 
-opencv_library_dir = '/usr/local/opt/opencv3/lib'
-opencv_include_dir = 'C:\\work\\ocv3\\include'#'/usr/local/opt/opencv3/include'
-eigen_include_win = 'C:\\work\\eigen-3.2'
-ceres = 'C:\\work\\ceres-windows'
-ceres_include = ceres + '\\ceres-solver\\include'
-glog_include = ceres + '\\glog\src\windows'
-boost_include =  'C:\\work\\boost_1_59_0'
-ceres_lib = ceres + '\\x64\\Release\\ceres_static.lib'
-glog_lib =  ceres + '\\x64\\Release\\libglog_static.lib'
+if platform.system() == 'Windows':
+    libs_2d = []
+    library_dirs = []
+    lib_spec = [[np.get_include(), ''],
+               ['C:\\work\\ocv3\\include', 'C:\\work\\ocv3\\x64\\vc12\\lib\\opencv_world300.lib'],
+               ['C:\\work\\eigen-3.2', ''],
+               ['C:\\work\\ceres-windows\\ceres-solver\\include', 'C:\\work\\ceres-windows\\x64\\Release\\ceres_static.lib'],
+               ['C:\\work\\ceres-windows\\glog\src\windows','C:\\work\\ceres-windows\\x64\\Release\\libglog_static.lib'],
+               ['C:\\work\\ceres-windows','' ],
+               ['C:\\work\\boost_1_59_0', '']]
 
-xtra_obj2d = ['C:\\work\\ocv3\\x64\\vc12\\lib\\opencv_world300.lib', ceres_lib, glog_lib]
+    include_dirs = [spec[0] for spec in lib_spec]
+    include_dirs.append(shared_cpp_include_path)
+    include_dirs.append(singleeyefitter_include_path)
+    xtra_obj2d =  [spec[1] for spec in lib_spec]
 
-#if(not os.path.isfile(opencv_library_dir+'/libopencv_core.so')):
-#    ros_dists = ['kinetic', 'jade', 'indigo']
-#    for ros_dist in ros_dists:
-#        ros_candidate_path = '/opt/ros/'+ros_dist+'/lib'
-#        if(os.path.isfile(ros_candidate_path+'/libopencv_core3.so')):
-#            opencv_library_dir = ros_candidate_path
-#            opencv_include_dir = '/opt/ros/'+ros_dist+'/include/opencv-3.1.0-dev'
-#            opencv_libraries = [lib + '3' for lib in opencv_libraries]
-#            break
+else:
+    # opencv3 - highgui module has been split into parts: imgcodecs, videoio, and highgui itself
+    opencv_libraries = ['opencv_core', 'opencv_highgui', 'opencv_videoio', 'opencv_imgcodecs', 'opencv_imgproc', 'opencv_video']
+    opencv_library_dir = '/usr/local/opt/opencv3/lib'
+    opencv_include_dir = '/usr/local/opt/opencv3/include'
+    if(not os.path.isfile(opencv_library_dir+'/libopencv_core.so')):
+        ros_dists = ['kinetic', 'jade', 'indigo']
+        for ros_dist in ros_dists:
+            ros_candidate_path = '/opt/ros/'+ros_dist+'/lib'
+            if(os.path.isfile(ros_candidate_path+'/libopencv_core3.so')):
+                opencv_library_dir = ros_candidate_path
+                opencv_include_dir = '/opt/ros/'+ros_dist+'/include/opencv-3.1.0-dev'
+                opencv_libraries = [lib + '3' for lib in opencv_libraries]
+                break
+    include_dirs = [ np.get_include() , eigen_include_win, '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, opencv_include_dir]
+    libs_2d = ['boost_python3']+opencv_libraries
+    xtra_obj2d = []
+    library_dirs = [opencv_library_dir]
 
 extensions = [
     Extension(
         name="detector_2d",
         sources=['detector_2d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp' ],
-        include_dirs = [ np.get_include() , eigen_include_win, '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, opencv_include_dir,ceres,  ceres_include, boost_include ],
+        include_dirs = include_dirs,
         libraries = libs_2d,
-        library_dirs = [opencv_library_dir],
+        library_dirs = library_dirs,
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-D_USE_MATH_DEFINES", "-std=c++11",'-w','-O2'], #-w hides warnings
         extra_objects = xtra_obj2d,
@@ -86,9 +92,9 @@ extensions = [
      Extension(
         name="detector_3d",
         sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/EyeModelFitter.cpp','singleeyefitter/EyeModel.cpp'],
-        include_dirs = [ np.get_include() , eigen_include_win,'/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, opencv_include_dir, ceres,ceres_include,glog_include, boost_include ],
+        include_dirs = include_dirs,
         libraries = libs_2d,
-        library_dirs = [opencv_library_dir],
+        library_dirs = library_dirs,
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-D_USE_MATH_DEFINES","-std=c++11",'-w','-O2'], #-w hides warnings
         extra_objects = xtra_obj2d,

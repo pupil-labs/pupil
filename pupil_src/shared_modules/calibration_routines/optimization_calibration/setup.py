@@ -43,40 +43,53 @@ for dirpath, dirnames, filenames in os.walk("."):
 shared_cpp_include_path = '../../../shared_cpp/include'
 singleeyefitter_include_path = '../../../capture/pupil_detectors/singleeyefitter'
 
-libs_2d = [] #['boost_python3']+opencv_libraries
 
-opencv_library_dir = '/usr/local/opt/opencv3/lib'
-opencv_include_dir = 'C:\\work\\ocv3\\include'#'/usr/local/opt/opencv3/include'
-eigen_include_win = 'C:\\work\\eigen-3.2'
-ceres = 'C:\\work\\ceres-windows'
-ceres_include = ceres + '\\ceres-solver\\include'
-glog_include = ceres + '\\glog\src\windows'
-boost_include =  'C:\\work\\boost_1_59_0'
-ceres_lib = ceres + '\\x64\\Release\\ceres_static.lib'
-glog_lib =  ceres + '\\x64\\Release\\libglog_static.lib'
 
-xtra_obj2d = ['C:\\work\\ocv3\\x64\\vc12\\lib\\opencv_world300.lib', ceres_lib, glog_lib]
+if platform.system() == 'Windows':
+    libs = []
+    library_dirs = []
+    lib_spec = [[np.get_include(), ''],
+               ['C:\\work\\ocv3\\include', 'C:\\work\\ocv3\\x64\\vc12\\lib\\opencv_world300.lib'],
+               ['C:\\work\\eigen-3.2', ''],
+               ['C:\\work\\ceres-windows\\ceres-solver\\include', 'C:\\work\\ceres-windows\\x64\\Release\\ceres_static.lib'],
+               ['C:\\work\\ceres-windows\\glog\src\windows','C:\\work\\ceres-windows\\x64\\Release\\libglog_static.lib'],
+               ['C:\\work\\ceres-windows','' ],
+               ['C:\\work\\boost_1_59_0', '']]
 
-#if(not os.path.isfile(opencv_library_dir+'/libopencv_core.so')):
-#    ros_dists = ['kinetic', 'jade', 'indigo']
-#    for ros_dist in ros_dists:
-#        ros_candidate_path = '/opt/ros/'+ros_dist+'/lib'
-#        if(os.path.isfile(ros_candidate_path+'/libopencv_core3.so')):
-#            opencv_library_dir = ros_candidate_path
-#            opencv_include_dir = '/opt/ros/'+ros_dist+'/include/opencv-3.1.0-dev'
-#            opencv_libraries = [lib + '3' for lib in opencv_libraries]
-#            break
+    include_dirs = [spec[0] for spec in lib_spec]
+    include_dirs.append(shared_cpp_include_path)
+    include_dirs.append(singleeyefitter_include_path)
+    xtra_obj =  [spec[1] for spec in lib_spec]
+
+else:
+    # opencv3 - highgui module has been split into parts: imgcodecs, videoio, and highgui itself
+    opencv_libraries = ['opencv_core', 'opencv_highgui', 'opencv_videoio', 'opencv_imgcodecs', 'opencv_imgproc', 'opencv_video']
+    opencv_library_dir = '/usr/local/opt/opencv3/lib'
+    opencv_include_dir = '/usr/local/opt/opencv3/include'
+    if(not os.path.isfile(opencv_library_dir+'/libopencv_core.so')):
+        ros_dists = ['kinetic', 'jade', 'indigo']
+        for ros_dist in ros_dists:
+            ros_candidate_path = '/opt/ros/'+ros_dist+'/lib'
+            if(os.path.isfile(ros_candidate_path+'/libopencv_core3.so')):
+                opencv_library_dir = ros_candidate_path
+                opencv_include_dir = '/opt/ros/'+ros_dist+'/include/opencv-3.1.0-dev'
+                opencv_libraries = [lib + '3' for lib in opencv_libraries]
+                break
+    include_dirs = [ np.get_include() , eigen_include_win, '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, opencv_include_dir]
+    libs = ['boost_python3']+opencv_libraries
+    xtra_obj = []
+    library_dirs = [opencv_library_dir]
 
 extensions = [
      Extension(
         name="calibration_methods",
         sources=['calibration_methods.pyx'],
-        include_dirs = [ np.get_include() , singleeyefitter_include_path, shared_cpp_include_path , eigen_include_win, '/usr/local/include/eigen3','/usr/include/eigen3',opencv_include_dir, ceres_include, glog_include],
-        libraries = libs_2d,
-        library_dirs = [opencv_library_dir],
+        include_dirs = include_dirs,
+        libraries = libs,
+        library_dirs = library_dirs,
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-D_USE_MATH_DEFINES", "-std=c++11",'-w','-O2'], #-w hides warnings
-        extra_objects = xtra_obj2d,
+        extra_objects = xtra_obj,
         depends= dependencies,
         language="c++")
 ]
