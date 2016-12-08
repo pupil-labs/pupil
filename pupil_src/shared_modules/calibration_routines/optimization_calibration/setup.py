@@ -49,7 +49,7 @@ if platform.system() == 'Windows':
     libs = []
     library_dirs = []
     lib_spec = [[np.get_include(), ''],
-               ['C:\\work\\ocv3\\include', 'C:\\work\\ocv3\\x64\\vc12\\lib\\opencv_world300.lib'],
+               ['C:\\work\\opencv3.1.0\\include', 'C:\\work\\opencv\\build\\x64\\vc14\\lib\\opencv_world310.lib'],
                ['C:\\work\\eigen-3.2', ''],
                ['C:\\work\\ceres-windows\\ceres-solver\\include', 'C:\\work\\ceres-windows\\x64\\Release\\ceres_static.lib'],
                ['C:\\work\\ceres-windows\\glog\src\windows','C:\\work\\ceres-windows\\x64\\Release\\libglog_static.lib'],
