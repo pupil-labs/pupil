@@ -10,7 +10,7 @@
 
 from plugin import Plugin
 import cv2
-from . calibrate import *
+from . import calibrate
 from methods import project_distort_pts , normalize, spherical_to_cart
 from copy import deepcopy
 import numpy as np
@@ -20,7 +20,7 @@ import zmq_tools
 import threading
 from multiprocessing import Process as Thread
 
-from . visualizer_calibration import *
+from . import visualizer_calibration
 
 
 class Gaze_Mapping_Plugin(Plugin):
