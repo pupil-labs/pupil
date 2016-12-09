@@ -33,11 +33,16 @@ class Base_Source(Plugin):
     which is a variation of `Plugin`.
 
     A source object is independent of its matching manager and should be
-    initialisable without it. If something fails the system will fallback
-    to `Fake_Source` which will wrap the settings of the previous source.
-    This feature can be used for re-initialisation of the previous source in
-    case it is accessible again. See `Base_Manager` for more information on
-    source recovery.
+    initialisable without it.
+
+    Initialization is require to suceed. In case of failure of the underlying capture
+    the follow properties need to be readable:
+
+    - name
+    - frame_rate
+    - frame_size
+
+    The recent_events fuction is allow to not add a frame to the events
 
     Attributes:
         g_pool (object): Global container, see `Plugin.g_pool`
@@ -94,7 +99,6 @@ class Base_Source(Plugin):
         if self._recent_frame is None:
             cygl.utils.draw_gl_texture(np.zeros((1,1,3),dtype=np.uint8),alpha=0.4)
         gl_utils.make_coord_system_pixel_based((self.frame_size[1],self.frame_size[0],3))
-
 
 
     @property
