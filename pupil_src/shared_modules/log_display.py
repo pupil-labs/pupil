@@ -36,7 +36,7 @@ class Log_Display(Plugin):
     def __init__(self, g_pool):
         super(Log_Display, self).__init__(g_pool)
         self.rendered_log = []
-        self.order = 0.0
+        self.order = 0.3
         self.alpha = 0.0
         self.should_redraw = True
 

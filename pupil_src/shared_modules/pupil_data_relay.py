@@ -29,7 +29,7 @@ class Pupil_Data_Relay(Plugin):
         while self.pupil_sub.new_data:
             t,p = self.pupil_sub.recv()
             recent_pupil_data.append(p)
-            new_gaze_data = g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
+            new_gaze_data = self.g_pool.active_gaze_mapping_plugin.on_pupil_datum(p)
             for g in new_gaze_data:
                 self.gaze_pub.send('gaze',g)
             recent_gaze_data += new_gaze_data

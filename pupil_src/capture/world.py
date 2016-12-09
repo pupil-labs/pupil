@@ -70,7 +70,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     #display
     import glfw
     from pyglui import ui,graph,cygl,__version__ as pyglui_version
-    assert pyglui_version >= '1.0'
+    assert pyglui_version >= '1.2'
     from pyglui.cygl.utils import Named_Texture
     from gl_utils import basic_gl_setup,adjust_gl_view,is_window_visible
 
@@ -126,6 +126,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     #g_pool holds variables for this process they are accesible to all plugins
     g_pool = Global_Container()
     g_pool.app = 'capture'
+    g_pool.process = 'world'
     g_pool.user_dir = user_dir
     g_pool.version = version
     g_pool.timebase = timebase
