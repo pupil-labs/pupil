@@ -56,6 +56,9 @@ class Plugin(object):
 
 
     def recent_events(self,events):
+        if not hasattr(self,'_warn_once'):
+            logger.warning("%s: Update will be deprecated soon. Use 'recent_events instead.'"%self.__class__.__name__)
+            self._warn_once = True
         if 'frame' in events:
             self.update(events['frame'],events)
 
