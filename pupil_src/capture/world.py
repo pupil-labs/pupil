@@ -147,8 +147,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     user_launchable_plugins = [Pupil_Groups,Frame_Publisher,Show_Calibration,Pupil_Remote,Time_Sync,Surface_Tracker,Annotation_Capture,Log_History,Fixation_Detector_3D]+runtime_plugins
     system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder,Pupil_Data_Relay]
     plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins+manager_classes+source_classes
-    name_by_index = [p.__name__ for p in plugin_by_index]
-    plugin_by_name = dict(zip(name_by_index,plugin_by_index))
+    plugin_by_name = {p.__name__:p for p in plugin_by_index}
 
     default_capture_settings = {
         'preferred_names'  : ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"],
