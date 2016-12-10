@@ -83,9 +83,9 @@ class Pupil_Remote(Plugin):
 
 
     def start_server(self,new_address):
-        self.thread_pipe.send_multipart(('Bind',"tcp://"+new_address))
+        self.thread_pipe.send_multipart((b'Bind',b"tcp://"+new_address.encode("utf-8")))
         response,msg = self.thread_pipe.recv_multipart()
-        if response == 'Bind OK' :
+        if response == b'Bind OK' :
             host,port = msg.split(':')
             self.host = host
             self.port = port
@@ -102,9 +102,9 @@ class Pupil_Remote(Plugin):
 
         #for capture we try to bind to a arbitrary port on the first external interface
         else:
-            self.thread_pipe.send_multipart(('Bind',"tcp://*:*"))
+            self.thread_pipe.send_multipart((b'Bind',b"tcp://*:*"))
             response,msg = self.thread_pipe.recv_multipart()
-            if response == 'Bind OK' :
+            if response == b'Bind OK' :
                 host,port = msg.split(':')
                 self.host = host
                 self.port = port
@@ -114,7 +114,7 @@ class Pupil_Remote(Plugin):
 
 
     def stop_server(self):
-        self.thread_pipe.send('Exit')
+        self.thread_pipe.send(b'Exit')
         while self.thread_pipe:
             sleep(.1)
 
@@ -183,9 +183,9 @@ class Pupil_Remote(Plugin):
             items = dict(poller.poll())
             if items.get(pipe,None) == zmq.POLLIN:
                 cmd = pipe.recv()
-                if cmd == 'Exit':
+                if cmd == b'Exit':
                     break
-                elif cmd == 'Bind':
+                elif cmd == b'Bind':
                     new_url = pipe.recv()
                     if remote_socket:
                         poller.unregister(remote_socket)
