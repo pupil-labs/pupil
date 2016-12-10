@@ -140,9 +140,6 @@ class Base_Source(Plugin):
         raise NotImplementedError()
 
 
-    @classmethod
-    def get_class_name(self):
-        return self.__name__
 
 class Base_Manager(Plugin):
     """Abstract base class for source managers.
