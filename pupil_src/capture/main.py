@@ -17,7 +17,7 @@ import os, sys, platform
 app = 'capture'
 
 if getattr(sys, 'frozen', False):
-    if sys.executable.endswith('pupil_service'):
+    if sys.executable.endswith('pupil_service') or sys.executable.endswith('pupil_service.exe'):
         app = 'service'
     # Specifiy user dir.
     user_dir = os.path.expanduser(os.path.join('~','pupil_%s_settings'%app))
