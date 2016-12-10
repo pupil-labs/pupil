@@ -118,7 +118,7 @@ elif platform.system() == 'Windows':
         scipy_imports += ['scipy.integrate.vode', 'scipy.integrate.lsoda', 'scipy.integrate._dop', 'scipy.special._ufuncs', 'scipy.special._ufuncs_cxx']
 
         a = Analysis(['../../pupil_src/capture/main.py'],
-                     pathex=['../../pupil_src/shared_modules/'],
+                     pathex=['../../pupil_src/shared_modules/', '../../pupil_external'],
                      binaries=None,
                      datas=None,
                      hiddenimports=pyglui_hidden_imports+scipy_imports+av_hidden_imports,
@@ -144,7 +144,7 @@ elif platform.system() == 'Windows':
                        a.binaries,
                        a.zipfiles,
                        a.datas,
-                       [('glfw3.dll', '../../pupil_src/shared_modules/external/glfw3.dll','BINARY')],
+                       [('glfw3.dll','../../pupil_external/glfw3.dll','BINARY')],
                        [('OpenSans-Regular.ttf', os.path.join(package_path, 'pyglui/OpenSans-Regular.ttf'),'DATA')],
                  [('Roboto-Regular.ttf', os.path.join(package_path, 'pyglui/Roboto-Regular.ttf'),'DATA')],
                  [('fontawesome-webfont.ttf', os.path.join(package_path, 'pyglui/fontawesome-webfont.ttf'),'DATA')],
