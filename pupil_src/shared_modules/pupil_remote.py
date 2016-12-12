@@ -86,7 +86,7 @@ class Pupil_Remote(Plugin):
         self.thread_pipe.send_multipart((b'Bind',b"tcp://"+new_address.encode("utf-8")))
         response,msg = self.thread_pipe.recv_multipart()
         if response == b'Bind OK' :
-            host,port = msg.split(':')
+            host,port = msg.split(b':')
             self.host = host
             self.port = port
             return
@@ -195,9 +195,9 @@ class Pupil_Remote(Plugin):
                         remote_socket.bind(new_url)
                     except zmq.ZMQError as e:
                         remote_socket = None
-                        pipe.send_multipart(("Error","Could not bind to Socket: %s. Reason: %s"%(new_url,e)))
+                        pipe.send_multipart((b"Error","Could not bind to Socket: %s. Reason: %s"%(new_url,e)))
                     else:
-                        pipe.send_multipart(("Bind OK",remote_socket.last_endpoint.replace("tcp://","")))
+                        pipe.send_multipart((b"Bind OK",remote_socket.last_endpoint.replace(b"tcp://",b"")))
                         poller.register(remote_socket)
             if items.get(remote_socket,None) == zmq.POLLIN:
                 self.on_recv(remote_socket,ipc_pub)
