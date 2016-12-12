@@ -43,7 +43,7 @@ singleeyefitter_include_path = 'singleeyefitter/'
 
 
 if platform.system() == 'Windows':
-    libs_2d = []
+    libs = []
     library_dirs = []
     lib_spec = [[np.get_include(), ''],
                ['C:\\work\\opencv3.1.0\\build\include', 'C:\\work\\opencv3.1.0\\build\\x64\\vc14\\lib\\opencv_world310.lib'],
@@ -73,7 +73,7 @@ else:
                 opencv_libraries = [lib + '3' for lib in opencv_libraries]
                 break
     include_dirs = [ np.get_include(), '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, opencv_include_dir]
-    libs_2d = ['boost_python3']+opencv_libraries
+    libs = ['ceres','boost_python3']+opencv_libraries
     xtra_obj2d = []
     library_dirs = [opencv_library_dir]
 
@@ -82,7 +82,7 @@ extensions = [
         name="detector_2d",
         sources=['detector_2d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp' ],
         include_dirs = include_dirs,
-        libraries = libs_2d,
+        libraries = libs,
         library_dirs = library_dirs,
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-D_USE_MATH_DEFINES", "-std=c++11",'-w'],#,'-O2'], #-w hides warnings
@@ -93,7 +93,7 @@ extensions = [
         name="detector_3d",
         sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/EyeModelFitter.cpp','singleeyefitter/EyeModel.cpp'],
         include_dirs = include_dirs,
-        libraries = libs_2d,
+        libraries = libs,
         library_dirs = library_dirs,
         extra_link_args=[], #'-WL,-R/usr/local/lib'
         extra_compile_args=["-D_USE_MATH_DEFINES","-std=c++11",'-w'],#,'-O2'], #-w hides warnings
