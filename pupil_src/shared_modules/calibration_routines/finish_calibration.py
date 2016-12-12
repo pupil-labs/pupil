@@ -16,7 +16,7 @@ from math_helper import *
 from file_methods import load_object,save_object
 from . camera_intrinsics_estimation import load_camera_calibration
 
-from . optimization_calibration import  bundle_adjust_calibration
+from . optimization_calibration import bundle_adjust_calibration
 from . calibrate import find_rigid_transform
 #logging
 import logging
