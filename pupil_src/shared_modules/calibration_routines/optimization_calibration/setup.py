@@ -75,6 +75,8 @@ else:
                 opencv_include_dir = '/opt/ros/'+ros_dist+'/include/opencv-3.1.0-dev'
                 opencv_libraries = [lib + '3' for lib in opencv_libraries]
                 break
+    include_dirs = [ np.get_include(), '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, opencv_include_dir]
+    libs = ['ceres','boost_python3']+opencv_libraries
     xtra_obj = []
     library_dirs = [opencv_library_dir]
 
