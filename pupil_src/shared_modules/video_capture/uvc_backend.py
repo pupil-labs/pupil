@@ -73,7 +73,7 @@ class UVC_Source(Base_Source):
                         else:
                             break
 
-        #check if we where sucessfull
+        #check if we were sucessfull
         if not self.uvc_capture:
             logger.error("Init failed. Capture is started in ghost mode. No images will be supplied.")
             self.name_backup = preferred_names
