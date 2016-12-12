@@ -8,6 +8,7 @@ Thumbs.db
 
 # binaries #
 *.so
+*.o
 
 #cython build files
 *.c
