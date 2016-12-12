@@ -9,7 +9,6 @@
 '''
 
 from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
-from .fake_backend import Fake_Source
 
 import uvc, time
 #check versions for our own depedencies as they are fast-changing
@@ -69,7 +68,7 @@ class UVC_Source(Base_Source):
                         except uvc.OpenError:
                             logger.info("%s matches %s but is already in use or blocked."%(uid_for_name,name))
                         except uvc.InitError as e:
-                            raise logger.error("Camera failed to initialize.")
+                            logger.error("Camera failed to initialize.")
                         else:
                             break
 
@@ -401,9 +400,6 @@ class UVC_Manager(Base_Manager):
             label='Activate source'
         ))
         self.g_pool.capture_selector_menu.extend(ui_elements)
-
-
-
 
     def cleanup(self):
         self.deinit_gui()

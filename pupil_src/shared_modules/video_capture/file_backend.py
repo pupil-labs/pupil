@@ -15,7 +15,6 @@ assert av.__version__ >= '0.2.5'
 av.logging.set_level(av.logging.ERROR)
 
 from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
-from .fake_backend import Fake_Source
 
 import numpy as np
 from time import time,sleep
