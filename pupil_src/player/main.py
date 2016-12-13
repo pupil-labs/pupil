@@ -61,12 +61,16 @@ logger.addHandler(ch)
 logging.getLogger("OpenGL").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
-
-#Linux scrolling is scaled differently
+#UI Platform tweaks
 if platform.system() == 'Linux':
-    y_scroll_factor = 10.0
+    scroll_factor = 10.0
+    window_position_default = (0,0)
+elif platform.system() == 'Windows':
+    scroll_factor = 1.0
+    window_position_default = (8,31)
 else:
-    y_scroll_factor = 1.0
+    scroll_factor = 1.0
+    window_position_default = (0,0)
 
 #imports
 from file_methods import Persistent_Dict,load_object
@@ -163,7 +167,7 @@ def session(rec_dir):
         g_pool.gui.update_mouse(x*hdpi_factor,y*hdpi_factor)
 
     def on_scroll(window,x,y):
-        g_pool.gui.update_scroll(x,y*y_scroll_factor)
+        g_pool.gui.update_scroll(x,y*scroll_factor)
 
 
     def on_drop(window,count,paths):
@@ -214,7 +218,7 @@ def session(rec_dir):
         session_settings.clear()
 
     width,height = session_settings.get('window_size',cap.frame_size)
-    window_pos = session_settings.get('window_position',(0,0))
+    window_pos = session_settings.get('window_position',window_position_default)
     main_window = glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "+ rec_dir.split(os.path.sep)[-1], None, None)
     glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
     glfwMakeContextCurrent(main_window)
