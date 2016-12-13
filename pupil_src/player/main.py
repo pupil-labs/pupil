@@ -515,7 +515,7 @@ def show_no_rec_window():
         logger.info("Session setting are from older version of this app. I will not use those.")
         session_settings.clear()
     w,h = session_settings.get('window_size',(1280,720))
-    window_pos = session_settings.get('window_position',(0,0))
+    window_pos = session_settings.get('window_position',window_position_default)
 
     glfwWindowHint(GLFW_RESIZABLE,0)
     window = glfwCreateWindow(w, h,'Pupil Player')
