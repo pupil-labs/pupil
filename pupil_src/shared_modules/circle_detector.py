@@ -27,13 +27,8 @@ def find_concetric_circles(gray_img,min_ring_count=3, visual_debug=False):
     clusters = get_nested_clusters(contours,hierarchy[0],min_nested_count=min_ring_count)
     concentric_cirlce_clusters = []
 
-
-
-
-
     #speed up code by caching computed ellipses
     ellipses = {}
-
 
     # for each cluster fit ellipses and cull members that dont have good ellipse fit
     for cluster in clusters:

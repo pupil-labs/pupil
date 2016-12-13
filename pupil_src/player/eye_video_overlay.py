@@ -12,6 +12,7 @@ import sys, os,platform
 from glob import glob
 import cv2
 import numpy as np
+from file_methods import Persistent_Dict
 from pyglui import ui
 from player_methods import transparent_image_overlay
 from plugin import Plugin
@@ -153,8 +154,8 @@ class Eye_Video_Overlay(Plugin):
         #try to load eye video and ts for each eye.
         for video,ts in zip(eye_video_path,eye_timestamps_path):
             try:
-                self.eye_cap.append(File_Source(g_pool,source_path=glob(video)[0],timestamps=np.load(ts)))
-            except (IndexError,FileCaptureError):
+                self.eye_cap.append(File_Source(self.g_pool,source_path=glob(video)[0],timestamps=np.load(ts)))
+            except IndexError,FileCaptureError:
                 pass
             else:
                 self.eye_frames.append(self.eye_cap[-1].get_frame())

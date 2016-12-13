@@ -200,7 +200,6 @@ class UVC_Source(Base_Source):
         return self.uvc_capture.frame_size
     @frame_size.setter
     def frame_size(self,new_size):
-        self.g_pool.on_frame_size_change(new_size)
         #closest match for size
         sizes = [ abs(r[0]-new_size[0]) for r in self.uvc_capture.frame_sizes ]
         best_size_idx = sizes.index(min(sizes))

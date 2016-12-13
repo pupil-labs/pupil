@@ -423,6 +423,8 @@ def session(rec_dir):
             if ts and ts != t:
                 dt,ts = t-ts,t
                 fps_graph.add(1./dt)
+            else:
+               ts = new_frame.timestamp
 
             g_pool.play_button.status_text = str(frame.index)
         #always update the CPU graph

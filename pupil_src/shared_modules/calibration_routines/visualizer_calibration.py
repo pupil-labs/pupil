@@ -44,9 +44,9 @@ class Calibration_Visualizer(Visualizer):
 
 		camera_fov = math.degrees(2.0 * math.atan( self.window_size[0] / (2.0 * self.focal_length)))
 		self.trackball = Trackball(camera_fov)
-		self.trackball.distance = [0,0,-0.1]
-		self.trackball.pitch = 0
-		self.trackball.roll = 180
+		self.trackball.distance = [0,0,-80.]
+		self.trackball.pitch = 210
+		self.trackball.roll = 0
 
 
 	########### Open, update, close #####################
