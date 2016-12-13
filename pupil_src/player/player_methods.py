@@ -189,7 +189,7 @@ def update_recording_v086_to_v087(rec_dir):
     for g in pupil_data['gaze_positions']:
         if 'topic' not in g:
             #we missed this in one gaze mapper
-            g['topic'] = topic
+            g['topic'] = 'gaze'
         g['norm_pos'] = _clamp_norm_point(g['norm_pos'])
 
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
