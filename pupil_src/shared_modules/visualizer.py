@@ -161,7 +161,7 @@ class Visualizer(object):
 
             glfwMakeContextCurrent(self.window)
 
-            glfwSetWindowPos(self.window,0,0)
+            glfwSetWindowPos(self.window,10,15)
             # Register callbacks window
             glfwSetFramebufferSizeCallback(self.window,self.on_resize)
             glfwSetWindowIconifyCallback(self.window,self.on_iconify)
