@@ -240,7 +240,7 @@ class Recorder(Plugin):
 
         self.meta_info_path = os.path.join(self.rec_path, "info.csv")
 
-        with open(self.meta_info_path, 'w') as csvfile:
+        with open(self.meta_info_path, 'w', newline='') as csvfile:
             csv_utils.write_key_value_file(csvfile,{
                 'Recording Name': self.session_name,
                 'Start Date': strftime("%d.%m.%Y", localtime(self.start_time)),
@@ -335,7 +335,7 @@ class Recorder(Plugin):
             logger.info("No camera calibration found.")
 
         try:
-            with open(self.meta_info_path, 'a') as csvfile:
+            with open(self.meta_info_path, 'a', newline='') as csvfile:
                 csv_utils.write_key_value_file(csvfile, {
                     'Duration Time': self.get_rec_time_str(),
                     'World Camera Frames': self.frame_count,
@@ -347,7 +347,7 @@ class Recorder(Plugin):
             logger.exception("Could not save metadata. Please report this bug!")
 
         try:
-            with open(os.path.join(self.rec_path, "user_info.csv"), 'w') as csvfile:
+            with open(os.path.join(self.rec_path, "user_info.csv"), 'w', newline='') as csvfile:
                 csv_utils.write_key_value_file(csvfile, self.user_info)
         except Exception:
             logger.exception("Could not save userdata. Please report this bug!")
