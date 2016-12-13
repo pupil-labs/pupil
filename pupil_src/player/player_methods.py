@@ -123,15 +123,15 @@ def update_meta_info(rec_dir, meta_info):
     meta_info_path = os.path.join(rec_dir,"info.csv")
     meta_info_old_path = os.path.join(rec_dir,"info_old.csv")
     shutil.copy2(meta_info_path,meta_info_old_path)
-    with open(meta_info_path,'w') as csvfile:
+    with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 def update_recording_v074_to_v082(rec_dir):
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Capture Software Version'] = 'v0.8.2'
-    with open(meta_info_path,'w') as csvfile:
+    with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 def update_recording_v082_to_v083(rec_dir):
@@ -146,11 +146,11 @@ def update_recording_v082_to_v083(rec_dir):
 
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Capture Software Version'] = 'v0.8.3'
 
-    with open(meta_info_path,'w') as csvfile:
+    with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 
@@ -165,11 +165,11 @@ def update_recording_v083_to_v086(rec_dir):
 
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Capture Software Version'] = 'v0.8.6'
 
-    with open(meta_info_path,'w') as csvfile:
+    with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 
@@ -194,11 +194,11 @@ def update_recording_v086_to_v087(rec_dir):
 
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Capture Software Version'] = 'v0.8.7'
 
-    with open(meta_info_path,'w') as csvfile:
+    with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 
