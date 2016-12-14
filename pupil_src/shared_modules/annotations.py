@@ -215,7 +215,7 @@ class Annotation_Player(Annotation_Capture):
         annotations_in_section = { a['index']:a for a in annotations_in_section}.values() #remove dublicates
         annotations_in_section.sort(key=lambda a:a['index'])
 
-        with open(os.path.join(export_dir,'annotations.csv'),'wb') as csvfile:
+        with open(os.path.join(export_dir,'annotations.csv'),'w',encoding='utf-8',newline='') as csvfile:
             csv_writer = csv.writer(csvfile)
             csv_writer.writerow(self.csv_representation_keys())
             for a in annotations_in_section:
