@@ -275,7 +275,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
             return
 
         fixations_in_section = chain(*self.g_pool.fixations_by_frame[export_range])
-        fixations_in_section = dict([(f['id'],f) for f in fixations_in_section]).values() #remove duplicates
+        fixations_in_section = list(dict([(f['id'],f) for f in fixations_in_section]).values()) #remove duplicates
         fixations_in_section.sort(key=lambda f:f['id'])
 
         with open(os.path.join(export_dir,'fixations.csv'),'wb') as csvfile:
