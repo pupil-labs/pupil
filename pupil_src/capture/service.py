@@ -69,7 +69,7 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_di
     # helpers/utils
     from file_methods import Persistent_Dict
     from methods import normalize, denormalize, delta_t, get_system_info
-    from version_utils import VersionFormat
+    from version_utils import Version_Format as VersionFormat
     import audio
     from uvc import get_time_monotonic
 

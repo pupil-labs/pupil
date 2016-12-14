@@ -18,7 +18,7 @@ from player_methods import transparent_image_overlay
 from plugin import Plugin
 
 # helpers/utils
-from version_utils import VersionFormat
+from version_utils import Version_Format as VersionFormat
 
 #capture
 from video_capture import EndofVideoFileError,FileSeekError,FileCaptureError,File_Source

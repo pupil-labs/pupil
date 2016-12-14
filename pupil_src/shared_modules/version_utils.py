@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Author: Douglas Creager <dcreager@dcreager.net>
-# Changes,Addions: Moritz Kassner <moritz@pupil-labs.com>
+# Changes, Additions: Moritz Kassner <moritz@pupil-labs.com>, Will Patera <will@pupil-labs.com>
 # This file is placed into the public domain.
 
 
@@ -12,6 +12,25 @@ from distutils.version import LooseVersion as VersionFormat
 
 import logging
 logger = logging.getLogger(__name__)
+
+#monkey patch for LooseVersions in Python3
+class Version_Format(VersionFormat):
+
+    #override cmp method to be more permissive
+    def _cmp(self, other):
+        try:
+            return super(Version_Format, self)._cmp(other)
+        except TypeError:
+            # When unorderable, compare the version strings instead
+            if isinstance(other, str):
+                other = VersionFormat(other)
+            if self.vstring == other.vstring:
+                return 0
+            if self.vstring < other.vstring:
+                return -1
+            if self.vstring > other.vstring:
+                return 1
+
 
 def get_tag_commit():
     """
@@ -66,14 +85,14 @@ def get_version(version_file=None):
             version = f.read()
     else:
         version = pupil_version()
-    version = VersionFormat(version)
+    version = Version_Format(version)
     logger.debug("Running version: %s"%version)
     return version
 
 def read_rec_version(meta_info):
     version = meta_info["Capture Software Version"]
     version = ''.join([c for c in version if c in '1234567890.-']) #strip letters in case of legacy version format
-    version = VersionFormat(version)
+    version = Version_Format(version)
     logger.debug("Recording version: %s"%(version))
     return version
 
