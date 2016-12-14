@@ -8,7 +8,8 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import sys, os, platform
+import sys, os
+from platform import system
 import cv2
 import numpy as np
 import csv
@@ -258,7 +259,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
 
     def init_marker_cacher(self):
-        if platform.system() == 'Darwin':
+        if system() == 'Darwin':
             forking_enable(0)
         
         from marker_detector_cacher import fill_cache
