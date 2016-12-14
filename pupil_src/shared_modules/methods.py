@@ -205,7 +205,7 @@ def erase_specular(image,lower_threshold=0.0, upper_threshold=150.0):
 
 
 def find_hough_circles(img):
-    circles = cv2.HoughCircles(pupil_img,cv2.cv.CV_HOUGH_GRADIENT,1,20,
+    circles = cv2.HoughCircles(pupil_img,cv2.HOUGH_GRADIENT,1,20,
                             param1=50,param2=30,minRadius=0,maxRadius=80)
     if circles is not None:
         circles = np.uint16(np.around(circles))

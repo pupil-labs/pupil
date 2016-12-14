@@ -643,7 +643,7 @@ def bench(folder):
     for x in range(500):
         frame = cap.get_frame()
         img = frame.img
-        gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
+        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         markers = detect_markers_robust(gray_img,5,prev_markers=markers,true_detect_every_frame=1,visualize=True)
 
         draw_markers(img, markers)
