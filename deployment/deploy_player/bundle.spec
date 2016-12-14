@@ -88,6 +88,14 @@ elif platform.system() == 'Linux':
 elif platform.system() == 'Windows':
         import sys, os, os.path
 
+        np_path = os.path.dirname(numpy.__file__)
+        np_dlls = glob.glob(np_path + '/core/*.dll')
+        np_dll_list = [] 
+
+        for dll_path in np_dlls:
+            dll_p, dll_f = ntpath.split(dll_path)
+            np_dll_list += [(dll_f, dll_path, 'BINARY')]
+            
         zmq_path = os.path.dirname(zmq.__file__)
 
         zmq_p, zmq_lib = ntpath.split(glob.glob(zmq_path +  '/libzmq.*.pyd')[0])
