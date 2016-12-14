@@ -15,7 +15,6 @@ assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.13'
 
 import logging
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG)
 
 class NDSI_Source(Base_Source):
     """Pupil Mobile video source
@@ -24,7 +23,7 @@ class NDSI_Source(Base_Source):
         get_frame_timeout (float): Maximal waiting time for next frame
         sensor (ndsi.Sensor): NDSI sensor backend
     """
-    def __init__(self, g_pool, frame_size, frame_rate, network=None, source_id=None, host_name=None, sensor_name=None, **settings):
+    def __init__(self, g_pool, frame_size, frame_rate, network=None, source_id=None, host_name=None, sensor_name=None):
         super(NDSI_Source, self).__init__(g_pool)
         self.sensor = None
         self._source_id = source_id
@@ -148,7 +147,6 @@ class NDSI_Source(Base_Source):
 
     def get_init_dict(self):
         settings = super(NDSI_Source, self).get_init_dict()
-        settings['name'] = self.name
         settings['frame_rate'] = self.frame_rate
         settings['frame_size'] = self.frame_size
         if self.sensor:
@@ -330,7 +328,6 @@ class NDSI_Manager(Base_Manager):
             if not source_uid:
                 return
             settings = {
-                'source_class_name': NDSI_Source.__name__,
                 'frame_size': self.g_pool.capture.frame_size,
                 'frame_rate': self.g_pool.capture.frame_rate,
                 'source_id': source_uid
@@ -397,12 +394,7 @@ class NDSI_Manager(Base_Manager):
             event['sensor_type'] == 'video'):
             logger.debug('attached: %s'%event)
             name = '%s @ %s'%(event['sensor_name'],event['host_name'])
-            self.notify_all({
-                'subject': 'capture_manager.source_found',
-                'source_class_name': NDSI_Source.__name__,
-                'source_id': event['sensor_uuid'],
-                'name': name
-            })
+            self.notify_all({ 'subject': 'capture_manager.source_found' })
             if not self.selected_host:
                 self.selected_host = event['host_uuid']
             self.re_build_ndsi_menu()

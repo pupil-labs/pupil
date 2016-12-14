@@ -25,7 +25,6 @@ import os.path
 #logging
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 class FileCaptureError(Exception):
     """General Exception for this module"""
@@ -86,7 +85,7 @@ class File_Source(Base_Source):
         timestamps (str): Path to timestamps file
     """
 
-    def __init__(self,g_pool,source_path=None,timestamps=None,timed_playback=False,*args,**kwargs):
+    def __init__(self,g_pool,source_path=None,timestamps=None,timed_playback=False):
         super(File_Source,self).__init__(g_pool)
 
         # minimal attribute set
@@ -341,9 +340,6 @@ class File_Manager(Base_Manager):
             if not full_path:
                 return
             settings = {
-                'source_class_name': File_Source.__name__,
-                'frame_size': self.g_pool.capture.frame_size,
-                'frame_rate': self.g_pool.capture.frame_rate,
                 'source_path': full_path,
                 'timed_playback': True
             }
