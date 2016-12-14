@@ -324,7 +324,7 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
             prev_pts = np.array([m['verts'] for m in not_found])
             prev_pts = np.vstack(prev_pts)
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(
-                prev_img, gray_img, prev_pts,
+                prev_img, gray_img, prev_pts, None,
                 minEigThreshold=.01,**lk_params)
             for marker_idx in xrange(flow_found.shape[0]/4):
                 m = not_found[marker_idx]
