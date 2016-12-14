@@ -86,7 +86,7 @@ class File_Source(Base_Source):
         timestamps (str): Path to timestamps file
     """
 
-    def __init__(self,g_pool,source_path=None,timestamps=None,*args,**kwargs):
+    def __init__(self,g_pool,source_path=None,timestamps=None,timed_playback=False,*args,**kwargs):
         super(File_Source,self).__init__(g_pool)
 
         # minimal attribute set
@@ -95,6 +95,7 @@ class File_Source(Base_Source):
         self.slowdown     = 0.0
         self.source_path  = source_path
         self.timestamps   = None
+        self.timed_playback = timed_playback
 
         if not source_path or not os.path.isfile(source_path):
             logger.error('Init failed. Source file could not be found at `%s`'%source_path)
@@ -148,7 +149,6 @@ class File_Source(Base_Source):
         else:
             logger.debug('using timestamps from list')
             self.timestamps = timestamps
-        print '>>>>', self._next_frame
         self.next_frame = self._next_frame()
 
     def ensure_initialisation(fallback_func=None):
@@ -170,21 +170,20 @@ class File_Source(Base_Source):
         return self._initialised
 
     @property
+    @ensure_initialisation(fallback_func=lambda: (1270, 720))
     def frame_size(self):
-        if self._recent_frame:
-            return self._recent_frame.width, self._recent_frame.height
-        else:
-            return 1270, 70
+        return int(self.video_stream.format.width),int(self.video_stream.format.height)
 
     @property
-    @ensure_initialisation(fallback_func=lambda *args: 20)
+    @ensure_initialisation(fallback_func=lambda: 20)
     def frame_rate(self):
-        return self.video_stream.average_rate
+        return float(self.video_stream.average_rate)
 
     def get_init_dict(self):
         settings = super(File_Source, self).get_init_dict()
         settings['source_path'] = self.source_path
         settings['timestamps'] = self.timestamps
+        settings['timed_playback'] = self.timed_playback
         return settings
 
     @property
@@ -225,7 +224,7 @@ class File_Source(Base_Source):
         return int(idx/self.video_stream.average_rate/self.video_stream.time_base)
 
     @ensure_initialisation()
-    def get_frame_nowait(self):
+    def get_frame(self):
         frame = None
         for frame in self.next_frame:
             index = self.pts_to_idx(frame.pts)
@@ -258,15 +257,18 @@ class File_Source(Base_Source):
         self.display_time = frame.timestamp - time()
         sleep(self.slowdown)
 
-    @ensure_initialisation(fallback_func=lambda *args: sleep(0.05))
+    @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events(self,events):
         try:
-            frame = self.get_frame_nowait()
-            self._recent_frame = frame
-            self.wait(frame)
+            frame = self.get_frame()
         except EndofVideoFileError:
             logger.info('Video has ended.')
             self._initialised = False
+        else:
+            self._recent_frame = frame
+            events['frame'] = frame
+            if self.timed_playback:
+                self.wait(frame)
 
     @ensure_initialisation()
     def seek_to_frame(self, seek_pos):
@@ -342,7 +344,8 @@ class File_Manager(Base_Manager):
                 'source_class_name': File_Source.__name__,
                 'frame_size': self.g_pool.capture.frame_size,
                 'frame_rate': self.g_pool.capture.frame_rate,
-                'source_path': full_path
+                'source_path': full_path,
+                'timed_playback': True
             }
             self.activate_source(settings)
 

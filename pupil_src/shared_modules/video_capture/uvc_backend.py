@@ -182,7 +182,7 @@ class UVC_Source(Base_Source):
                 names = self.name_backup
             try:
                 self._re_init_capture_by_names(names)
-            except InitialisationError as e:
+            except (InitialisationError, uvc.InitError) as e:
                 time.sleep(0.05)
             self._restart_in = int(2/0.05)
         else:
@@ -192,13 +192,13 @@ class UVC_Source(Base_Source):
         try:
             frame = self.uvc_capture.get_frame(0.05)
             frame.timestamp = self.g_pool.get_timestamp()+self.ts_offset
-        except(uvc.StreamError) as e:
+        except uvc.StreamError as e:
             self._recent_frame = None
             self._restart_logic()
-        except(AttributeError) as e:
+        except (AttributeError, uvc.InitError) as e:
             self._recent_frame = None
-            self._restart_logic()
             time.sleep(0.05)
+            self._restart_logic()
         else:
             self._recent_frame = frame
             events['frame'] = frame

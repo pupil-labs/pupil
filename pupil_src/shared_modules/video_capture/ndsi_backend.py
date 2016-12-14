@@ -290,7 +290,7 @@ class NDSI_Manager(Base_Manager):
                 for s in self.network.sensors.values()
                 if s['sensor_type'] == 'video'
             }
-            devices = [pair for pair in devices.iteritems()] # create tuples
+            devices = [pair for pair in devices.items()] # create tuples
             # split tuples into 2 lists
             return zip(*(devices or [(None, 'No hosts found')]))
 

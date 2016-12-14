@@ -221,7 +221,7 @@ if __name__ == '__main__':
     while True:
         # Get an image from the grabber
         try:
-            frame = cap.get_frame_nowait()
+            frame = cap.get_frame()
             frameNumber += 1
         except CameraCaptureError:
             print "Capture from Camera Failed. Stopping."

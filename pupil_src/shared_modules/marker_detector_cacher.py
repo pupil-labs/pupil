@@ -65,7 +65,7 @@ def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker
             markers[:] = []
 
         try:
-            frame = cap.get_frame_nowait()
+            frame = cap.get_frame()
         except EndofVideoFileError:
             logger.debug("Video File's last frame(s) not accesible")
              #could not read frame

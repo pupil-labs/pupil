@@ -76,8 +76,10 @@ class Base_Source(Plugin):
 
         Only called once and if UI is supported.
         """
-        del self.g_pool.capture_source_menu[:]
-
+        try:
+            del self.g_pool.capture_source_menu[:]
+        except AttributeError:
+            pass
 
     def recent_events(self,events):
         """Returns None

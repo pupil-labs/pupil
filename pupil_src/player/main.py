@@ -395,7 +395,7 @@ def session(rec_dir):
         if g_pool.play or g_pool.new_seek:
             g_pool.new_seek = False
             try:
-                new_frame = cap.get_frame_nowait()
+                new_frame = cap.get_frame()
             except EndofVideoFileError:
                 #end of video logic: pause at last frame.
                 g_pool.play=False
