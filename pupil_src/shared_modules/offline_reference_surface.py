@@ -194,7 +194,7 @@ class Offline_Reference_Surface(Reference_Surface):
         x = max(1,int(x))
         y = max(1,int(y))
 
-        filter_size = (int(self.heatmap_detail * x)/2)*2 +1
+        filter_size = int(int(self.heatmap_detail * x)/2)*2 +1
         std_dev = int(filter_size /6.)
         self.heatmap = np.ones((y,x,4),dtype=np.uint8)
         all_gaze = []
@@ -221,7 +221,7 @@ class Offline_Reference_Surface(Reference_Surface):
         hist = np.rot90(hist)
 
         #smoothing..
-        hist = cv2.GaussianBlur(hist, (filter_size,filter_size),std_dev)
+        hist = cv2.GaussianBlur(hist,(filter_size,filter_size),std_dev)
         maxval = np.amax(hist)
         if maxval:
             scale = 255./maxval
