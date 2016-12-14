@@ -278,14 +278,14 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
         fixations_in_section = list(dict([(f['id'],f) for f in fixations_in_section]).values()) #remove duplicates
         fixations_in_section.sort(key=lambda f:f['id'])
 
-        with open(os.path.join(export_dir,'fixations.csv'),'wb') as csvfile:
+        with open(os.path.join(export_dir,'fixations.csv'),'w',encoding='utf-8') as csvfile:
             csv_writer = csv.writer(csvfile)
             csv_writer.writerow(self.csv_representation_keys())
             for f in fixations_in_section:
                 csv_writer.writerow(self.csv_representation_for_fixation(f))
             logger.info("Created 'fixations.csv' file.")
 
-        with open(os.path.join(export_dir,'fixation_report.csv'),'wb') as csvfile:
+        with open(os.path.join(export_dir,'fixation_report.csv'),'w',encoding='utf-8') as csvfile:
             csv_writer = csv.writer(csvfile)
             csv_writer.writerow(('fixation classifier','Dispersion_Duration'))
             csv_writer.writerow(('max_dispersion','%0.3f deg'%self.max_dispersion) )
