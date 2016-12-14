@@ -165,8 +165,8 @@ class Pupil_Remote(Plugin):
         self.menu.append(ui.Switch('use_primary_interface',self,setter=set_iface,label="Use primary network interface"))
         if self.use_primary_interface:
             self.menu.append(ui.Text_Input('port',self,setter=set_port,label='Port'))
-            self.menu.append(ui.Info_Text('Connect localy:   "tcp://%s:%s" ' %('127.0.0.1',self.port)))
-            self.menu.append(ui.Info_Text('Connect remotely: "tcp://%s:%s" '%(ip,self.port)))
+            self.menu.append(ui.Info_Text('Connect locally:   "tcp://%s:%s" ' %('127.0.0.1',self.port.decode('utf-8'))))
+            self.menu.append(ui.Info_Text('Connect remotely: "tcp://%s:%s" '%(ip,self.port.decode('utf-8'))))
         else:
             self.menu.append(ui.Text_Input('host',setter=set_address,getter=lambda : self.host+':'+self.port, label='Address'))
             self.menu.append(ui.Info_Text('Bound to: "tcp://%s:%s" ' %(self.host,self.port)))
