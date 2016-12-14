@@ -152,6 +152,7 @@ elif platform.system() == 'Windows':
                        [('Roboto-Regular.ttf', os.path.join(package_path, 'pyglui/Roboto-Regular.ttf'),'DATA')],
                        [('fontawesome-webfont.ttf', os.path.join(package_path, 'pyglui/fontawesome-webfont.ttf'),'DATA')],
                        [(zmq_lib,os.path.join(zmq_path, zmq_lib),'DATA') ],
+                       np_dll_list,
                        strip=None,
                        upx=True,
                        name='Pupil Player')
