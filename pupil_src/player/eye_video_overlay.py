@@ -16,6 +16,7 @@ from file_methods import Persistent_Dict
 from pyglui import ui
 from player_methods import transparent_image_overlay
 from plugin import Plugin
+from copy import copy
 
 # helpers/utils
 from version_utils import VersionFormat
@@ -154,7 +155,10 @@ class Eye_Video_Overlay(Plugin):
         #try to load eye video and ts for each eye.
         for video,ts in zip(eye_video_path,eye_timestamps_path):
             try:
-                self.eye_cap.append(File_Source(self.g_pool,source_path=glob(video)[0],timestamps=np.load(ts)))
+                self.eye_cap.append(File_Source(
+                    copy(self.g_pool),
+                    source_path=glob(video)[0],
+                    timestamps=np.load(ts)))
             except IndexError,FileCaptureError:
                 pass
             else:

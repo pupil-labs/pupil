@@ -9,7 +9,6 @@
 '''
 
 from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
-from .fake_backend import Fake_Source
 
 import uvc, time
 #check versions for our own depedencies as they are fast-changing
@@ -69,11 +68,11 @@ class UVC_Source(Base_Source):
                         except uvc.OpenError:
                             logger.info("%s matches %s but is already in use or blocked."%(uid_for_name,name))
                         except uvc.InitError as e:
-                            raise logger.error("Camera failed to initialize.")
+                            logger.error("Camera failed to initialize.")
                         else:
                             break
 
-        #check if we where sucessfull
+        #check if we were sucessfull
         if not self.uvc_capture:
             logger.error("Init failed. Capture is started in ghost mode. No images will be supplied.")
             self.name_backup = preferred_names
@@ -183,7 +182,7 @@ class UVC_Source(Base_Source):
                 names = self.name_backup
             try:
                 self._re_init_capture_by_names(names)
-            except InitialisationError as e:
+            except (InitialisationError, uvc.InitError) as e:
                 time.sleep(0.05)
             self._restart_in = int(2/0.05)
         else:
@@ -193,13 +192,13 @@ class UVC_Source(Base_Source):
         try:
             frame = self.uvc_capture.get_frame(0.05)
             frame.timestamp = self.g_pool.get_timestamp()+self.ts_offset
-        except(uvc.StreamError) as e:
+        except uvc.StreamError as e:
             self._recent_frame = None
             self._restart_logic()
-        except(AttributeError) as e:
+        except (AttributeError, uvc.InitError) as e:
             self._recent_frame = None
-            self._restart_logic()
             time.sleep(0.05)
+            self._restart_logic()
         else:
             self._recent_frame = frame
             events['frame'] = frame
@@ -401,9 +400,6 @@ class UVC_Manager(Base_Manager):
             label='Activate source'
         ))
         self.g_pool.capture_selector_menu.extend(ui_elements)
-
-
-
 
     def cleanup(self):
         self.deinit_gui()

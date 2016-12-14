@@ -314,6 +314,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         def replace_source(source_class_name,source_settings):
             g_pool.capture.cleanup()
             g_pool.capture = source_class_by_name[source_class_name](g_pool,**source_settings)
+            g_pool.capture.init_gui()
+        g_pool.replace_source = replace_source
 
         def replace_manager(manager_class):
             g_pool.capture_manager.cleanup()
@@ -431,10 +433,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             event = {}
             g_pool.capture.recent_events(event)
             frame = event.get('frame')
+            g_pool.capture_manager.recent_events(event)
             if frame:
                 g_pool.u_r = UIRoi((frame.height,frame.width))
-                g_pool.capture_manager.update(frame, {})
-
                 if should_publish_frames and frame.jpeg_buffer:
                     if   frame_publish_format == "jpeg":
                         data = frame.jpeg_buffer

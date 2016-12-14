@@ -29,20 +29,19 @@ class StreamError(Exception):
 class Base_Source(Plugin):
     """Abstract source class
 
-    All source objects are based on `Base_Source`. It defines a basic interface
-    which is a variation of `Plugin`.
+    All source objects are based on `Base_Source`.
 
     A source object is independent of its matching manager and should be
     initialisable without it.
 
-    Initialization is require to suceed. In case of failure of the underlying capture
+    Initialization is required to succeed. In case of failure of the underlying capture
     the follow properties need to be readable:
 
     - name
     - frame_rate
     - frame_size
 
-    The recent_events fuction is allow to not add a frame to the events
+    The recent_events function is allowed to not add a frame to the `events` object.
 
     Attributes:
         g_pool (object): Global container, see `Plugin.g_pool`
@@ -77,8 +76,10 @@ class Base_Source(Plugin):
 
         Only called once and if UI is supported.
         """
-        del self.g_pool.capture_source_menu[:]
-
+        try:
+            del self.g_pool.capture_source_menu[:]
+        except AttributeError:
+            pass
 
     def recent_events(self,events):
         """Returns None

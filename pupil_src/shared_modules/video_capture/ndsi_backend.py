@@ -9,14 +9,12 @@
 '''
 
 from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
-from .fake_backend import Fake_Source
 
-import ndsi
+import ndsi, time
 assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.13'
 
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 class NDSI_Source(Base_Source):
     """Pupil Mobile video source
@@ -25,71 +23,101 @@ class NDSI_Source(Base_Source):
         get_frame_timeout (float): Maximal waiting time for next frame
         sensor (ndsi.Sensor): NDSI sensor backend
     """
-    def __init__(self, g_pool, frame_size, frame_rate, network=None, source_id=None, host_name=None, sensor_name=None,**settings):
-        if not network: raise InitialisationError()
+    def __init__(self, g_pool, frame_size, frame_rate, network=None, source_id=None, host_name=None, sensor_name=None):
         super(NDSI_Source, self).__init__(g_pool)
         self.sensor = None
-        try:
-            # uuid given
-            if source_id:
-                self.sensor = network.sensor(source_id, callbacks=(self.on_notification,))
-            # host/sensor name combination, prob. from settings
-            elif host_name and sensor_name:
-                for sensor in network.sensors.values():
-                    if (sensor['host_name'] == host_name and
-                        sensor['sensor_name'] == sensor_name):
-                        self.sensor = network.sensor(sensor['sensor_uuid'], callbacks=(self.on_notification,))
-            else:
-                for sensor_id in network.sensors:
-                    try:
-                        self.sensor = network.sensor(sensor_id, callbacks=(self.on_notification,))
-                        break
-                    except ValueError:
-                        continue
-        except ValueError:  raise InitialisationError()
-        if not self.sensor: raise InitialisationError()
-        if not self.sensor.supports_data_subscription:
+        self._source_id = source_id
+        self._sensor_name = sensor_name
+        self._host_name = host_name
+        self._frame_size = frame_size
+        self._frame_rate = frame_rate
+        self.has_ui = False
+        self.control_id_ui_mapping = {}
+        self.get_frame_timeout = 50 # ms
+        self.ghost_mode_timeout = 10 # sec
+        self._initial_refresh = True
+        self.last_update = self.g_pool.get_timestamp()
+
+        if not network:
+            logger.debug('No network reference provided. Capture is started in ghost mode. No images will be supplied.')
+            return
+
+        self.recover(network)
+
+        if not self.sensor or not self.sensor.supports_data_subscription:
+            logger.error('Init failed. Capture is started in ghost mode. No images will be supplied.')
             self.cleanup()
-            raise InitialisationError('Source does not support data subscription.')
 
         logger.debug('NDSI Source Sensor: %s'%self.sensor)
-        self.control_id_ui_mapping = {}
-        self.get_frame_timeout = 1000
-        self._frame_size = None
-        self.frame_size = frame_size
-        self.frame_rate = frame_rate
-        self.has_ui = False
-        self._initial_refresh = True
+
+    def recover(self, network):
+        logger.debug('Trying to recover with %s, %s, %s'%(self._source_id,self._sensor_name, self._host_name))
+        if self._source_id:
+            try:
+                # uuid given
+                self.sensor = network.sensor(self._source_id, callbacks=(self.on_notification,))
+            except ValueError:
+                pass
+
+        if self.sensor:
+            self._sensor_name = self.sensor.name
+            self._host_name = self.sensor.host_name
+            return
+        if self._host_name and self._sensor_name:
+            for sensor in network.sensors.values():
+                if (sensor['host_name'] == self._host_name and
+                    sensor['sensor_name'] == self._sensor_name):
+                    self.sensor = network.sensor(sensor['sensor_uuid'], callbacks=(self.on_notification,))
+                    if self.sensor:
+                        self._sensor_name = self.sensor.name
+                        self._host_name = self.sensor.host_name
+                        break
+        else:
+            for s_id in network.sensors:
+                self.sensor = network.sensor(s_id, callbacks=(self.on_notification,))
+                if self.sensor:
+                    self._sensor_name = self.sensor.name
+                    self._host_name = self.sensor.host_name
+                    break
 
     @property
     def name(self):
-        return '%s @ %s'%(self.sensor.name, self.sensor.host_name)
+        return '%s @ %s'%(self._sensor_name, self._host_name)
 
     def poll_notifications(self):
         while self.sensor.has_notifications:
             self.sensor.handle_notification()
 
-    def _get_frame(self):
-        self.poll_notifications()
-        return self.sensor.get_newest_data_frame(timeout=self.get_frame_timeout)
-
-    def get_frame(self):
-        '''Mirrors uvc.Capture.get_frame_robust()'''
-        attempts = 3
-        for a in range(attempts):
+    def recent_events(self,events):
+        if self.sensor:
+            self.poll_notifications()
             try:
-                frame = self._get_frame()
-                self.frame_size = (frame.width, frame.height)
+                frame = self.sensor.get_newest_data_frame(timeout=self.get_frame_timeout)
+            except ndsi.StreamError:
+                frame = None
             except Exception as e:
-                if a:
-                    logger.info('Could not get Frame: "%s". Attempt:%s/%s '%(e.message,a+1,attempts))
-                else:
-                    logger.debug('Could not get Frame of first try: "%s". Attempt:%s/%s '%(e.message,a+1,attempts))
-            else:
-                return frame
-        raise StreamError("Could not grab frame after 3 attempts. Giving up.")
+                frame = None
+                import traceback
+                logger.error(traceback.format_exc())
+            if frame:
+                self._recent_frame = frame
+                self._frame_size = (frame.width, frame.height)
+                self.last_update = self.g_pool.get_timestamp()
+                events['frame'] = frame
+            elif self.g_pool.get_timestamp() - self.last_update > self.ghost_mode_timeout:
+                logger.info('Entering gost mode')
+                if self.sensor:
+                    self.sensor.unlink()
+                self.sensor = None
+                self._source_id = None
+                self._initial_refresh = True
+                self.update_control_menu()
+                self.last_update = self.g_pool.get_timestamp()
+        else:
+            time.sleep(self.get_frame_timeout/1e3)
 
     def on_notification(self, sensor, event):
+        # should only called if sensor was created
         if self._initial_refresh:
             self.sensor.set_control_value('streaming', True)
             self.sensor.refresh_controls()
@@ -108,37 +136,27 @@ class NDSI_Source(Base_Source):
     @property
     def frame_size(self):
         return self._frame_size
-    @frame_size.setter
-    def frame_size(self,new_size):
-        self._frame_size = new_size
-    def set_frame_size(self,new_size):
-        self.frame_size = new_size
 
     @property
     def frame_rate(self):
-        return 30
-    @frame_rate.setter
-    def frame_rate(self,new_rate):
-        pass
+        return self._frame_rate
 
     @property
     def jpeg_support(self):
         return True
 
-    @property
-    def settings(self):
-        settings = super(NDSI_Source, self).settings
-        settings['name'] = self.name
-        settings['sensor_name'] = self.sensor.name
-        settings['host_name'] = self.sensor.host_name
+    def get_init_dict(self):
+        settings = super(NDSI_Source, self).get_init_dict()
         settings['frame_rate'] = self.frame_rate
         settings['frame_size'] = self.frame_size
+        if self.sensor:
+            settings['sensor_name'] = self.sensor.name
+            settings['host_name'] = self.sensor.host_name
+        else:
+            settings['sensor_name'] = self._sensor_name
+            settings['host_name'] = self._host_name
         return settings
 
-    @settings.setter
-    def settings(self,settings):
-        self.frame_size = settings['frame_size']
-        self.frame_rate = settings['frame_rate']
 
     def init_gui(self):
         from pyglui import ui
@@ -213,6 +231,10 @@ class NDSI_Source(Base_Source):
         del self.g_pool.capture_source_menu.elements[:]
         del self.uvc_menu[:]
         self.control_id_ui_mapping = {}
+        if not self.sensor:
+            self.g_pool.capture_source_menu.append(
+                ui.Info_Text('Sensor %s @ %s not available. Running in ghost mode.'%(self._sensor_name, self._host_name)))
+            return
 
         uvc_controls = []
         other_controls = []
@@ -228,7 +250,8 @@ class NDSI_Source(Base_Source):
         self.g_pool.capture_source_menu.append(ui.Button("Reset to default values",self.sensor.reset_all_control_values))
 
     def cleanup(self):
-        self.sensor.unlink()
+        if self.sensor:
+            self.sensor.unlink()
         self.sensor = None
         self.uvc_menu = None
 
@@ -247,6 +270,8 @@ class NDSI_Manager(Base_Manager):
         self.network = ndsi.Network(callbacks=(self.on_event,))
         self.network.start()
         self.selected_host = None
+        self._recover_in = 3
+        self._rejoin_in = 400
 
     def cleanup(self):
         self.deinit_gui()
@@ -263,7 +288,7 @@ class NDSI_Manager(Base_Manager):
                 for s in self.network.sensors.values()
                 if s['sensor_type'] == 'video'
             }
-            devices = [pair for pair in devices.iteritems()] # create tuples
+            devices = [pair for pair in devices.items()] # create tuples
             # split tuples into 2 lists
             return zip(*(devices or [(None, 'No hosts found')]))
 
@@ -303,7 +328,6 @@ class NDSI_Manager(Base_Manager):
             if not source_uid:
                 return
             settings = {
-                'source_class_name': NDSI_Source.class_name(),
                 'frame_size': self.g_pool.capture.frame_size,
                 'frame_rate': self.g_pool.capture.frame_rate,
                 'source_id': source_uid
@@ -330,8 +354,23 @@ class NDSI_Manager(Base_Manager):
         while self.network.has_events:
             self.network.handle_event()
 
-    def update(self, frame, events):
+    def recent_events(self,events):
         self.poll_events()
+
+        if (isinstance(self.g_pool.capture, NDSI_Source)
+            and not self.g_pool.capture.sensor):
+            if self._recover_in <=0:
+                self.recover()
+                self._recover_in = int(2*1e3/self.g_pool.capture.get_frame_timeout)
+            else:
+                self._recover_in -= 1
+
+            if self._rejoin_in <=0:
+                logger.debug('Rejoining network...')
+                self.network.rejoin()
+                self._rejoin_in = int(10*1e3/self.g_pool.capture.get_frame_timeout)
+            else:
+                self._rejoin_in -= 1
 
     def on_event(self, caller, event):
         if event['subject'] == 'detach':
@@ -339,7 +378,7 @@ class NDSI_Manager(Base_Manager):
             name = str('%s @ %s'%(event['sensor_name'],event['host_name']))
             self.notify_all({
                 'subject': 'capture_manager.source_lost',
-                'source_class_name': NDSI_Source.class_name(),
+                'source_class_name': NDSI_Source.__name__,
                 'source_id': event['sensor_uuid'],
                 'name': name
             })
@@ -355,35 +394,20 @@ class NDSI_Manager(Base_Manager):
             event['sensor_type'] == 'video'):
             logger.debug('attached: %s'%event)
             name = '%s @ %s'%(event['sensor_name'],event['host_name'])
-            self.notify_all({
-                'subject': 'capture_manager.source_found',
-                'source_class_name': NDSI_Source.class_name(),
-                'source_id': event['sensor_uuid'],
-                'name': name
-            })
+            self.notify_all({ 'subject': 'capture_manager.source_found' })
             if not self.selected_host:
                 self.selected_host = event['host_uuid']
             self.re_build_ndsi_menu()
 
     def activate_source(self, settings={}):
-        try:
-            capture = NDSI_Source(self.g_pool,network=self.network, **settings)
-        except InitialisationError as init_error:
-            logger.error('NDSI source could not be initialised.')
-            if init_error.message: logger.error(init_error.message)
-            logger.debug('NDSI source init settings:\n\t%s\n\t%s'%(self.network,settings))
+        settings['network']=self.network
+        if hasattr(self.g_pool, 'plugins'):
+            self.g_pool.plugins.add(NDSI_Source, args=settings)
         else:
-            self.g_pool.capture.deinit_gui()
-            self.g_pool.capture.cleanup()
-            self.g_pool.capture = None
-            self.g_pool.capture = capture
-            self.g_pool.capture.init_gui()
+            self.g_pool.replace_source(NDSI_Source.__name__, source_settings=settings)
 
     def recover(self):
-        if self.g_pool.capture.class_name() == Fake_Source.class_name():
-            preferred = self.g_pool.capture.preferred_source
-            if preferred['source_class_name'] == NDSI_Source.class_name():
-                self.activate_source(preferred)
+        self.g_pool.capture.recover(self.network)
 
     def on_notify(self,n):
         """Provides UI for the capture selection
@@ -395,5 +419,7 @@ class NDSI_Manager(Base_Manager):
             ``capture_manager.source_found``
             ``capture_manager.source_lost``
         """
-        if (n['subject'].startswith('capture_manager.source_found')):
-            self.recover()
+        if (n['subject'].startswith('capture_manager.source_found')
+            and isinstance(self.g_pool.capture, NDSI_Source)
+            and not self.g_pool.capture.sensor):
+                self.recover()
