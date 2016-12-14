@@ -1,7 +1,7 @@
 # -*- mode: python -*-
 
 
-import platform, sys, os, os.path, zmq, glob, ntpath
+import platform, sys, os, os.path, zmq, glob, ntpath, numpy
 
 av_hidden_imports = ['av.format','av.packet','av.buffer','av.bytesource','av.frame','av.stream','av.descriptor','av.plane','av.audio.plane','av.container.streams','av.dictionary', 'av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane','av.option']
 pyglui_hidden_imports = ['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']
@@ -95,7 +95,7 @@ elif platform.system() == 'Windows':
         for dll_path in np_dlls:
             dll_p, dll_f = ntpath.split(dll_path)
             np_dll_list += [(dll_f, dll_path, 'BINARY')]
-            
+
         zmq_path = os.path.dirname(zmq.__file__)
 
         zmq_p, zmq_lib = ntpath.split(glob.glob(zmq_path +  '/libzmq.*.pyd')[0])
