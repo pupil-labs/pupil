@@ -375,13 +375,6 @@ class NDSI_Manager(Base_Manager):
     def on_event(self, caller, event):
         if event['subject'] == 'detach':
             logger.debug('detached: %s'%event)
-            name = str('%s @ %s'%(event['sensor_name'],event['host_name']))
-            self.notify_all({
-                'subject': 'capture_manager.source_lost',
-                'source_class_name': NDSI_Source.__name__,
-                'source_id': event['sensor_uuid'],
-                'name': name
-            })
             sensors = [s for s in self.network.sensors.values() if s['sensor_type'] == 'video']
             if self.selected_host == event['host_uuid']:
                 if sensors:
@@ -393,7 +386,6 @@ class NDSI_Manager(Base_Manager):
         elif (event['subject'] == 'attach' and
             event['sensor_type'] == 'video'):
             logger.debug('attached: %s'%event)
-            name = '%s @ %s'%(event['sensor_name'],event['host_name'])
             self.notify_all({ 'subject': 'capture_manager.source_found' })
             if not self.selected_host:
                 self.selected_host = event['host_uuid']
@@ -417,7 +409,6 @@ class NDSI_Manager(Base_Manager):
 
         Emmits notifications:
             ``capture_manager.source_found``
-            ``capture_manager.source_lost``
         """
         if (n['subject'].startswith('capture_manager.source_found')
             and isinstance(self.g_pool.capture, NDSI_Source)
