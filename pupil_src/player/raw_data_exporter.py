@@ -128,7 +128,7 @@ class Raw_Data_Exporter(Plugin):
 
 
     def export_data(self,export_range,export_dir):
-        with open(os.path.join(export_dir,'pupil_postions.csv'),'w', encoding='utf-8') as csvfile:
+        with open(os.path.join(export_dir,'pupil_postions.csv'),'w', encoding='utf-8',newline='') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',')
 
             csv_writer.writerow(('timestamp',
@@ -211,7 +211,7 @@ class Raw_Data_Exporter(Plugin):
                 csv_writer.writerow(row)
             logger.info("Created 'pupil_positions.csv' file.")
 
-        with open(os.path.join(export_dir,'gaze_postions.csv'),'w', encoding='utf-8') as csvfile:
+        with open(os.path.join(export_dir,'gaze_postions.csv'),'w',encoding='utf-8',newline='') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',')
             csv_writer.writerow(("timestamp",
                                  "index",
@@ -261,7 +261,7 @@ class Raw_Data_Exporter(Plugin):
             logger.info("Created 'gaze_positions.csv' file.")
 
 
-        with open(os.path.join(export_dir,'pupil_gaze_postions_info.txt'),'w', encoding='utf-8') as info_file:
+        with open(os.path.join(export_dir,'pupil_gaze_postions_info.txt'),'w',encoding='utf-8',newline='') as info_file:
             info_file.write(self.__doc__)
 
 
