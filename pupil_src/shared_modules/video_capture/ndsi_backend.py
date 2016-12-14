@@ -15,7 +15,7 @@ assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.13'
 
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 
 class NDSI_Source(Base_Source):
     """Pupil Mobile video source
@@ -416,7 +416,6 @@ class NDSI_Manager(Base_Manager):
 
     def recover(self):
         self.g_pool.capture.recover(self.network)
-        print self.g_pool.capture.sensor
 
     def on_notify(self,n):
         """Provides UI for the capture selection

@@ -25,6 +25,7 @@ import os.path
 #logging
 import logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class FileCaptureError(Exception):
     """General Exception for this module"""
@@ -84,16 +85,22 @@ class File_Source(Base_Source):
         source_path (str): Path to source file
         timestamps (str): Path to timestamps file
     """
+
     def __init__(self,g_pool,source_path=None,timestamps=None,*args,**kwargs):
-        if not source_path or not os.path.isfile(source_path):
-            raise InitialisationError()
-
         super(File_Source,self).__init__(g_pool)
-        self.display_time = 0.
-        self.target_frame_idx = 0
 
-        self.slowdown = 0.0
-        self.source_path = source_path
+        # minimal attribute set
+        self._initialised = True
+        self.source_path  = None
+        self.slowdown     = 0.0
+        self.source_path  = source_path
+        self.timestamps   = None
+
+        if not source_path or not os.path.isfile(source_path):
+            logger.error('Init failed. Source file could not be found at `%s`'%source_path)
+            self._initialised = False
+            return
+
         self.container = av.open(str(source_path))
 
         try:
@@ -112,7 +119,12 @@ class File_Source(Base_Source):
             logger.debug("No audiostream found in media container")
 
         if not self.video_stream and not self.audio_stream:
-            raise InitialisationError()
+            logger.error('Init failed. Could not find any video or audio stream in the given source file.')
+            self._initialised = False
+            return
+
+        self.display_time = 0.
+        self.target_frame_idx = 0
 
         #we will use below for av playback
         # self.selected_streams = [s for s in (self.video_stream,self.audio_stream) if s]
@@ -136,34 +148,51 @@ class File_Source(Base_Source):
         else:
             logger.debug('using timestamps from list')
             self.timestamps = timestamps
+        print '>>>>', self._next_frame
         self.next_frame = self._next_frame()
 
+    def ensure_initialisation(fallback_func=None):
+        from functools import wraps
+        def decorator(func):
+            @wraps(func)
+            def run_func(self,*args,**kwargs):
+                if self._initialised and self.video_stream:
+                    return func(self,*args,**kwargs)
+                elif fallback_func:
+                    return fallback_func(*args,**kwargs)
+                else:
+                    logger.debug('Initialisation required.')
+            return run_func
+        return decorator
+
+    @property
+    def initialised(self):
+        return self._initialised
 
     @property
     def frame_size(self):
-        if self.video_stream:
-            return int(self.video_stream.format.width),int(self.video_stream.format.height)
+        if self._recent_frame:
+            return self._recent_frame.width, self._recent_frame.height
         else:
-            logger.error("No videostream.")
+            return 1270, 70
 
     @property
+    @ensure_initialisation(fallback_func=lambda *args: 20)
     def frame_rate(self):
         return self.video_stream.average_rate
 
-    @property
-    def settings(self):
-        settings = super(File_Source, self).settings
+    def get_init_dict(self):
+        settings = super(File_Source, self).get_init_dict()
         settings['source_path'] = self.source_path
         settings['timestamps'] = self.timestamps
         return settings
 
     @property
     def name(self):
-        return os.path.splitext(self.source_path)[0]
-
-    @settings.setter
-    def settings(self,settings):
-        pass
+        if self.source_path:
+            return os.path.splitext(self.source_path)[0]
+        else:
+            return 'File source in ghost mode'
 
     def get_frame_index(self):
         return self.target_frame_idx
@@ -171,6 +200,7 @@ class File_Source(Base_Source):
     def get_frame_count(self):
         return len(self.timestamps)
 
+    @ensure_initialisation()
     def _next_frame(self):
         for packet in self.container.demux(self.video_stream):
             for frame in packet.decode():
@@ -178,19 +208,23 @@ class File_Source(Base_Source):
                     yield frame
         raise EndofVideoFileError("end of file.")
 
+    @ensure_initialisation()
     def pts_to_idx(self,pts):
         # some older mkv did not use perfect timestamping so we are doing int(round()) to clear that.
         # With properly spaced pts (any v0.6.100+ recording) just int() would suffice.
         # print float(pts*self.video_stream.time_base*self.video_stream.average_rate),round(pts*self.video_stream.time_base*self.video_stream.average_rate)
         return int(round(pts*self.video_stream.time_base*self.video_stream.average_rate))
 
+    @ensure_initialisation()
     def pts_to_time(self,pts):
         ### we do not use this one, since we have our timestamps list.
         return int(pts*self.video_stream.time_base)
 
+    @ensure_initialisation()
     def idx_to_pts(self,idx):
         return int(idx/self.video_stream.average_rate/self.video_stream.time_base)
 
+    @ensure_initialisation()
     def get_frame_nowait(self):
         frame = None
         for frame in self.next_frame:
@@ -224,11 +258,17 @@ class File_Source(Base_Source):
         self.display_time = frame.timestamp - time()
         sleep(self.slowdown)
 
-    def get_frame(self):
-        frame = self.get_frame_nowait()
-        self.wait(frame)
-        return frame
+    @ensure_initialisation(fallback_func=lambda *args: sleep(0.05))
+    def recent_events(self,events):
+        try:
+            frame = self.get_frame_nowait()
+            self._recent_frame = frame
+            self.wait(frame)
+        except EndofVideoFileError:
+            logger.info('Video has ended.')
+            self._initialised = False
 
+    @ensure_initialisation()
     def seek_to_frame(self, seek_pos):
         ###frame accurate seeking
         try:
@@ -240,6 +280,7 @@ class File_Source(Base_Source):
             self.display_time = 0
             self.target_frame_idx = seek_pos
 
+    @ensure_initialisation()
     def seek_to_frame_fast(self, seek_pos):
         ###best effort seeking to closest keyframe
         self.video_stream.seek(self.idx_to_pts(seek_pos),mode='time')
@@ -298,7 +339,7 @@ class File_Manager(Base_Manager):
             if not full_path:
                 return
             settings = {
-                'source_class_name': File_Source.class_name(),
+                'source_class_name': File_Source.__name__,
                 'frame_size': self.g_pool.capture.frame_size,
                 'frame_rate': self.g_pool.capture.frame_rate,
                 'source_path': full_path
@@ -331,14 +372,10 @@ class File_Manager(Base_Manager):
         return {'root_folder':self.root_folder}
 
     def activate_source(self, settings={}):
-        try:
-            capture = File_Source(self.g_pool, **settings)
-        except InitialisationError:
-            logger.error('File source could not be initialised.')
-            logger.debug('File source init settings: %s'%settings)
+        if self.g_pool.process == 'world':
+            self.notify_all({'subject':'start_plugin',"name":"File_Source",'args':settings})
         else:
-            self.g_pool.capture.deinit_gui()
-            self.g_pool.capture.cleanup()
-            self.g_pool.capture = None
-            self.g_pool.capture = capture
-            self.g_pool.capture.init_gui()
+            self.notify_all({'subject':'start_eye_capture','target':self.g_pool.process, "name":"File_Source",'args':settings})
+
+    def recent_events(self,events):
+        pass
