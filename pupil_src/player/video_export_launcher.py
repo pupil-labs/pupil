@@ -10,7 +10,8 @@
 
 from plugin import Plugin
 import numpy as np
-import os,sys, platform
+import os,sys
+from platform import system
 import time
 from pyglui import ui
 import logging
@@ -125,8 +126,8 @@ class Video_Export_Launcher(Plugin):
             self.add_export(notification['range'],notification['export_dir'])
 
     def add_export(self,export_range,export_dir):
-        # on MacOS we will not use os.fork, elsewhere this does nothing.
-        forking_enable(0)
+        if system() == 'Darwin':
+            forking_enable(0)
 
         logger.debug("Adding new video export process.")
         should_terminate = Value(c_bool,False)
