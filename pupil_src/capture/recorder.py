@@ -271,7 +271,7 @@ class Recorder(Plugin):
 
         def populate_info_menu():
             self.info_menu.elements[:-2] = []
-            for name in self.user_info.iterkeys():
+            for name in self.user_info.keys():
                 self.info_menu.insert(0,ui.Text_Input(name,self.user_info))
 
         def set_user_info(new_string):
