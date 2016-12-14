@@ -234,7 +234,7 @@ def curvature(c):
         return
     c = c[:,0]
     curvature = []
-    for i in xrange(len(c)-2):
+    for i in range(len(c)-2):
         #find the angle at i+1
         frm = Vector(c[i])
         at = Vector(c[i+1])
@@ -491,8 +491,8 @@ def calibrate_camera(img_pts, obj_pts, img_size):
 
 def gen_pattern_grid(size=(4,11)):
     pattern_grid = []
-    for i in xrange(size[1]):
-        for j in xrange(size[0]):
+    for i in range(size[1]):
+        for j in range(size[0]):
             pattern_grid.append([(2*j)+i%2,i,0])
     return np.asarray(pattern_grid, dtype='f4')
 

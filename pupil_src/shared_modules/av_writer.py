@@ -340,7 +340,7 @@ def mac_pyav_hack():
 #     # print writer.video_stream.time_base
 #     # print writer.
 
-#     for x in xrange(300):
+#     for x in range(300):
 #         frame = cap.get_frame()
 #         writer.write_video_frame(frame)
 #         # writer.write(frame.img)

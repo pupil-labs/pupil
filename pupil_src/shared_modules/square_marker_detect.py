@@ -16,7 +16,7 @@ from scipy.spatial.distance import pdist
 from scipy.interpolate import interp1d
 #because np.sqrt is slower when we do it on small arrays
 def reversedEnumerate(l):
-    return zip(xrange(len(l)-1, -1, -1), reversed(l))
+    return zip(range(len(l)-1, -1, -1), reversed(l))
 
 from math import sqrt
 sqrt_2 = sqrt(2)
@@ -560,7 +560,7 @@ class MarkerTracker(object):
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(
                 self.prev_img, gray_img, prev_pts,
                 minEigThreshold=0.01,**lk_params)
-            for marker_idx in xrange(flow_found.shape[0]/4):
+            for marker_idx in range(int(flow_found.shape[0]/4)):
                 hist_marker = unmatched_history[marker_idx][0]
                 hist_marker[self.loc_conf_idx] -= self.unmatched_penalty
                 m_slc = slice(marker_idx*4,marker_idx*4+4)

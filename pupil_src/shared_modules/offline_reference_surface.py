@@ -97,7 +97,7 @@ class Offline_Reference_Surface(Reference_Surface):
     def init_cache(self,marker_cache,camera_calibration,min_marker_perimeter,min_id_confidence):
         if self.defined:
             logger.debug("Full update of surface '%s' positons cache"%self.name)
-            self.cache = Cache_List([self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter,min_id_confidence) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
+            self.cache = Cache_List([self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter,min_id_confidence) for i in range(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
 
 
     def answer_caching_request(self,marker_cache,frame_index,camera_calibration,min_marker_perimeter,min_id_confidence):
