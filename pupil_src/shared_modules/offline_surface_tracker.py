@@ -391,7 +391,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
                 return
 
 
-        with open(os.path.join(metrics_dir,'surface_visibility.csv'),'wb') as csvfile:
+        with open(os.path.join(metrics_dir,'surface_visibility.csv'),'w',encoding='utf-8',newline='') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',')
 
             # surface visibility report
@@ -409,7 +409,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
             logger.info("Created 'surface_visibility.csv' file")
 
 
-        with open(os.path.join(metrics_dir,'surface_gaze_distribution.csv'),'wb') as csvfile:
+        with open(os.path.join(metrics_dir,'surface_gaze_distribution.csv'),'w',encoding='utf-8',newline='') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',')
 
             # gaze distribution report
@@ -431,7 +431,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
 
 
-        with open(os.path.join(metrics_dir,'surface_events.csv'),'wb') as csvfile:
+        with open(os.path.join(metrics_dir,'surface_events.csv'),'w',encoding='utf-8',newline='') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',')
 
             # surface events report
@@ -458,7 +458,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
             save_object(s.cache.to_list(),os.path.join(metrics_dir,'srf_positions'+surface_name))
 
             #save surface_positions as csv
-            with open(os.path.join(metrics_dir,'srf_positons'+surface_name+'.csv'),'wb') as csvfile:
+            with open(os.path.join(metrics_dir,'srf_positons'+surface_name+'.csv'),'w',encoding='utf-8',newline='') as csvfile:
                 csv_writer =csv.writer(csvfile, delimiter=',')
                 csv_writer.writerow(('frame_idx','timestamp','m_to_screen','m_from_screen','detected_markers'))
                 for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
@@ -468,7 +468,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
 
             # save gaze on srf as csv.
-            with open(os.path.join(metrics_dir,'gaze_positions_on_surface'+surface_name+'.csv'),'wb') as csvfile:
+            with open(os.path.join(metrics_dir,'gaze_positions_on_surface'+surface_name+'.csv'),'w',encoding='utf-8',newline='') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter=',')
                 csv_writer.writerow(('world_timestamp','world_frame_idx','gaze_timestamp','x_norm','y_norm','x_scaled','y_scaled','on_srf'))
                 for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
@@ -479,7 +479,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
 
             # save fixation on srf as csv.
-            with open(os.path.join(metrics_dir,'fixations_on_surface'+surface_name+'.csv'),'wb') as csvfile:
+            with open(os.path.join(metrics_dir,'fixations_on_surface'+surface_name+'.csv'),'w',encoding='utf-8',newline='') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter=',')
                 csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','x_scaled','y_scaled','on_srf'))
                 fixations_on_surface = []
