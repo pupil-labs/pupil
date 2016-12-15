@@ -168,8 +168,8 @@ class Pupil_Remote(Plugin):
             self.menu.append(ui.Info_Text('Connect locally:   "tcp://%s:%s" ' %('127.0.0.1',self.port.decode('utf-8'))))
             self.menu.append(ui.Info_Text('Connect remotely: "tcp://%s:%s" '%(ip,self.port.decode('utf-8'))))
         else:
-            self.menu.append(ui.Text_Input('host',setter=set_address,getter=lambda : self.host+':'+self.port, label='Address'))
-            self.menu.append(ui.Info_Text('Bound to: "tcp://%s:%s" ' %(self.host,self.port)))
+            self.menu.append(ui.Text_Input('host',setter=set_address,getter=lambda : self.host.decode('utf-8')+':'+self.port.decode('utf-8'), label='Address'))
+            self.menu.append(ui.Info_Text('Bound to: "tcp://%s:%s" ' %(self.host.decode('utf-8'),self.port.decode('utf-8')) ))
 
     def deinit_gui(self):
         if self.menu:
