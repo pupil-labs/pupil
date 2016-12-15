@@ -251,7 +251,7 @@ class Pupil_Remote(Plugin):
             response = repr(self.g_pool.get_timestamp())
         else:
             response = 'Unknown command.'
-        socket.send(response)
+        socket.send(response.encode('utf-8'))
 
     def on_notify(self,notification):
         """send simple string messages to control application functions.
