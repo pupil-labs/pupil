@@ -15,7 +15,7 @@ import audio
 from pyglui import ui
 from . calibration_plugin_base import Calibration_Plugin
 from . finish_calibration import not_enough_data_error_msg,solver_failed_to_converge_error_msg
-from . calibrate import *
+from . import calibrate
 from . gaze_mappers import Monocular_Gaze_Mapper,Dual_Monocular_Gaze_Mapper
 
 #logging
