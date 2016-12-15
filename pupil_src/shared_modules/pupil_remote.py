@@ -109,7 +109,7 @@ class Pupil_Remote(Plugin):
             self.thread_pipe.send_multipart((b'Bind',b"tcp://*:*"))
             response,msg = self.thread_pipe.recv_multipart()
             if response == b'Bind OK' :
-                host,port = msg.split(':')
+                host,port = msg.split(b':')
                 self.host = host
                 self.port = port
             else:
@@ -209,7 +209,7 @@ class Pupil_Remote(Plugin):
         self.thread_pipe = None
 
     def on_recv(self,socket,ipc_pub):
-        msg = socket.recv()
+        msg = socket.recv().decode('utf-8')
         if msg.startswith('notify'):
             try:
                 payload = zmq_tools.serializer.loads(socket.recv(flags=zmq.NOBLOCK))
@@ -220,9 +220,9 @@ class Pupil_Remote(Plugin):
                 ipc_pub.notify(payload)
                 response = 'Notification recevied.'
         elif msg == 'SUB_PORT':
-            response = self.g_pool.ipc_sub_url.split(':')[-1]
+            response = self.g_pool.ipc_sub_url.split(b':')[-1]
         elif msg == 'PUB_PORT':
-            response = self.g_pool.ipc_pub_url.split(':')[-1]
+            response = self.g_pool.ipc_pub_url.split(b':')[-1]
         elif msg[0] == 'R':
             try:
                 ipc_pub.notify({'subject':'recording.should_start','session_name':msg[2:]})
