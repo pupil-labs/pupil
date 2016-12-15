@@ -212,7 +212,7 @@ class Pupil_Remote(Plugin):
         msg = socket.recv().decode('utf-8')
         if msg.startswith('notify'):
             try:
-                payload = zmq_tools.serializer.loads(socket.recv(flags=zmq.NOBLOCK))
+                payload = zmq_tools.serializer.loads(socket.recv(flags=zmq.NOBLOCK),encoding='utf-8')
                 payload['subject']
             except Exception as e:
                 response = 'Notification mal-formatted or missing: %s'%e
@@ -220,9 +220,9 @@ class Pupil_Remote(Plugin):
                 ipc_pub.notify(payload)
                 response = 'Notification recevied.'
         elif msg == 'SUB_PORT':
-            response = self.g_pool.ipc_sub_url.split(b':')[-1]
+            response = self.g_pool.ipc_sub_url.split(b':')[-1].decode('utf-8')
         elif msg == 'PUB_PORT':
-            response = self.g_pool.ipc_pub_url.split(b':')[-1]
+            response = self.g_pool.ipc_pub_url.split(b':')[-1].decode('utf-8')
         elif msg[0] == 'R':
             try:
                 ipc_pub.notify({'subject':'recording.should_start','session_name':msg[2:]})
