@@ -80,7 +80,6 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_di
     # Plug-ins
     from plugin import Plugin,Plugin_List,import_runtime_plugins
     from calibration_routines import calibration_plugins, gaze_mapping_plugins
-    from pupil_sync import Pupil_Sync
     from pupil_remote import Pupil_Remote
     from pupil_groups import Pupil_Groups
 
@@ -107,7 +106,7 @@ def service(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_di
 
     #manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
-    user_launchable_plugins = [Pupil_Groups,Pupil_Remote,Pupil_Sync]+runtime_plugins
+    user_launchable_plugins = [Pupil_Groups,Pupil_Remote]+runtime_plugins
     plugin_by_index =  runtime_plugins+calibration_plugins+gaze_mapping_plugins+user_launchable_plugins
     name_by_index = [p.__name__ for p in plugin_by_index]
     plugin_by_name = dict(zip(name_by_index,plugin_by_index))
