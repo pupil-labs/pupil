@@ -95,6 +95,18 @@ class UVC_Source(Base_Source):
 
         #UVC setting quirks:
         controls_dict = dict([(c.display_name,c) for c in self.uvc_capture.controls])
+
+
+        self.frame_size = frame_size
+        self.frame_rate = frame_rate
+        for c in self.uvc_capture.controls:
+            try:
+                c.value = uvc_controls[c.display_name]
+            except KeyError as e:
+                logger.debug('No UVC setting "%s" found from settings.'%c.display_name)
+
+
+
         try:
             controls_dict['Auto Focus'].value = 0
         except KeyError:
@@ -134,14 +146,6 @@ class UVC_Source(Base_Source):
             self.uvc_capture.bandwidth_factor = 3.0
             try: controls_dict['Auto Focus'].value = 0
             except KeyError: pass
-
-        self.frame_size = frame_size
-        self.frame_rate = frame_rate
-        for c in self.uvc_capture.controls:
-            try:
-                c.value = uvc_controls[c.display_name]
-            except KeyError as e:
-                logger.debug('No UVC setting "%s" found from settings.'%c.display_name)
 
     def _re_init_capture(self,uid):
         current_size = self.uvc_capture.frame_size
