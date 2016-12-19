@@ -194,6 +194,8 @@ class Recorder(Plugin):
         elif notification['subject'] == 'recording.should_start':
             if self.running:
                 logger.info('Recording already running!')
+            elif not self.g_pool.capture.online:
+                logger.error("Current world capture is offline. Please reconnect or switch to fake capture")
             else:
                 if notification.get("session_name",""):
                     self.set_session_name(notification["session_name"])
@@ -289,7 +291,7 @@ class Recorder(Plugin):
             self.g_pool.gui.remove(self.info_menu)
             self.info_menu = None
 
-    def update(self,frame,events):
+    def recent_events(self,events):
         if self.running:
             for key,data in events.iteritems():
                 if key not in ('dt','frame'):
@@ -299,9 +301,10 @@ class Recorder(Plugin):
                         self.data[key] = []
                         self.data[key] += data
 
-            self.timestamps.append(frame.timestamp)
-            self.writer.write_video_frame(frame)
-            self.frame_count += 1
+            if 'frame' in events:
+                self.timestamps.append(frame.timestamp)
+                self.writer.write_video_frame(frame)
+                self.frame_count += 1
 
             # # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
 

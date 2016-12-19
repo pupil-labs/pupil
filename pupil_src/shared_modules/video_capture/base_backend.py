@@ -140,6 +140,14 @@ class Base_Source(Plugin):
         """
         raise NotImplementedError()
 
+    @property
+    def online(self):
+        """
+        Returns:
+            bool: Source is avaible and streaming images.
+        """
+        return True
+
 
 
 class Base_Manager(Plugin):
