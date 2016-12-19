@@ -202,6 +202,8 @@ class UVC_Source(Base_Source):
         else:
             self._recent_frame = frame
             events['frame'] = frame
+            self._restart_in = 3
+
 
     def _get_uvc_controls(self):
         d = {}
@@ -268,6 +270,10 @@ class UVC_Source(Base_Source):
     @property
     def jpeg_support(self):
         return True
+
+    @property
+    def online(self):
+        return bool(self.uvc_capture)
 
     def init_gui(self):
         from pyglui import ui
