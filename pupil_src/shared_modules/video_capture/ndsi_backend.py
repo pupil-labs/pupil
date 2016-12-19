@@ -68,7 +68,7 @@ class NDSI_Source(Base_Source):
             except ValueError:
                 pass
 
-        if self.sensor:
+        if self.online:
             self._sensor_name = self.sensor.name
             self._host_name = self.sensor.host_name
             return
@@ -76,9 +76,10 @@ class NDSI_Source(Base_Source):
             for sensor in network.sensors.values():
                 if (sensor['host_name'] == self._host_name
                         and sensor['sensor_name'] == self._sensor_name):
-                    self.sensor = network.sensor(sensor['sensor_uuid'],
+                    self.sensor = network.sensor(
+                        sensor['sensor_uuid'],
                         callbacks=(self.on_notification,))
-                    if self.sensor:
+                    if self.online:
                         self._sensor_name = self.sensor.name
                         self._host_name = self.sensor.host_name
                         break
@@ -86,7 +87,7 @@ class NDSI_Source(Base_Source):
             for s_id in network.sensors:
                 self.sensor = network.sensor(s_id,
                                              callbacks=(self.on_notification,))
-                if self.sensor:
+                if self.online:
                     self._sensor_name = self.sensor.name
                     self._host_name = self.sensor.host_name
                     break
@@ -95,12 +96,16 @@ class NDSI_Source(Base_Source):
     def name(self):
         return '%s @ %s' % (self._sensor_name, self._host_name)
 
+    @property
+    def online(self):
+        return bool(self.sensor)
+
     def poll_notifications(self):
         while self.sensor.has_notifications:
             self.sensor.handle_notification()
 
     def recent_events(self, events):
-        if self.sensor:
+        if self.online:
             self.poll_notifications()
             try:
                 frame = self.sensor.get_newest_data_frame(
@@ -119,7 +124,7 @@ class NDSI_Source(Base_Source):
             elif (self.g_pool.get_timestamp() - self.last_update
                     > self.ghost_mode_timeout):
                 logger.info('Entering gost mode')
-                if self.sensor:
+                if self.online:
                     self.sensor.unlink()
                 self.sensor = None
                 self._source_id = None
@@ -163,7 +168,7 @@ class NDSI_Source(Base_Source):
         settings = super(NDSI_Source, self).get_init_dict()
         settings['frame_rate'] = self.frame_rate
         settings['frame_size'] = self.frame_size
-        if self.sensor:
+        if self.online:
             settings['sensor_name'] = self.sensor.name
             settings['host_name'] = self.sensor.host_name
         else:
@@ -270,7 +275,7 @@ class NDSI_Source(Base_Source):
                       self.sensor.reset_all_control_values))
 
     def cleanup(self):
-        if self.sensor:
+        if self.online:
             self.sensor.unlink()
         self.sensor = None
         self.uvc_menu = None
