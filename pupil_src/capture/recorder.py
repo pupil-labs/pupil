@@ -302,6 +302,7 @@ class Recorder(Plugin):
                         self.data[key] += data
 
             if 'frame' in events:
+                frame = events['frame']
                 self.timestamps.append(frame.timestamp)
                 self.writer.write_video_frame(frame)
                 self.frame_count += 1
