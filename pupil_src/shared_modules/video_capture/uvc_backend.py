@@ -415,3 +415,6 @@ class UVC_Manager(Base_Manager):
         self.deinit_gui()
         self.devices.cleanup()
         self.devices = None
+
+    def recent_events(self,events):
+        pass
