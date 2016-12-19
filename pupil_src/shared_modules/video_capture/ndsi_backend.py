@@ -11,9 +11,9 @@
 from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
 
 import ndsi, time
-assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.13'
 
 import logging
+assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.14'
 logger = logging.getLogger(__name__)
 
 class NDSI_Source(Base_Source):
