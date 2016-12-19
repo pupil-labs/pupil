@@ -50,15 +50,9 @@ class Fake_Source(Base_Source):
     it becomes accessible again.
 
     Attributes:
-        fps (int)
         frame_count (int): Sequence counter
         frame_rate (int)
         frame_size (tuple)
-        img (uint8 numpy array): bgr image
-        info_text (str): String shown to the user
-        preferred_source (dict): Settings about source which this fake capture is a fallback for.
-        presentation_time (float)
-        settings (dict)
     """
     def __init__(self, g_pool, name,frame_size,frame_rate):
         super(Fake_Source, self).__init__(g_pool)
@@ -97,8 +91,9 @@ class Fake_Source(Base_Source):
         self.frame_count +=1
         timestamp = self.g_pool.get_timestamp()
         frame = Frame(timestamp,self.img.copy(),self.frame_count)
-        cv2.putText(frame.img, "Fake Source Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
+        cv2.putText(frame.img, "Fake Source Frame %s"%self.frame_count,(20,20), cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,100,100))
         events['frame'] = frame
+        self._recent_frame = frame
 
     @property
     def name(self):
@@ -154,6 +149,14 @@ class Fake_Source(Base_Source):
     def online(self):
         return True
 
+    def get_init_dict(self):
+        d = super(Fake_Source, self).get_init_dict()
+        d['frame_size'] = self.frame_size
+        d['frame_rate'] = self.frame_rate
+        d['name'] = self.name
+        return d
+
+
 class Fake_Manager(Base_Manager):
     """Simple manager to explicitly activate a fake source"""
 
@@ -180,3 +183,6 @@ class Fake_Manager(Base_Manager):
         activation_button = ui.Button('Activate Fake Capture', activate)
         self.g_pool.capture_selector_menu.extend([text, activation_button])
 
+
+    def recent_events(self,events):
+        pass
