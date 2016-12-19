@@ -60,7 +60,6 @@ class Base_Source(Plugin):
     def cleanup(self):
         self.deinit_gui()
 
-
     def init_gui(self):
         """Place to add UI to system-provided menu
 
