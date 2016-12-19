@@ -210,7 +210,10 @@ class JPEG_Writer(object):
 
 
     def close(self):
-        self.container.close()
+        try:
+            self.container.close()
+        except(RuntimeError):
+            logger.error("Media file does not contain any frames.")
         logger.debug("Closed media container")
 
     def release(self):
