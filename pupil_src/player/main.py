@@ -65,11 +65,14 @@ logging.getLogger("OpenGL").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
 
-#Linux scrolling is scaled differently
+#UI Platform tweaks
 if platform.system() == 'Linux':
-    y_scroll_factor = 10.0
+    scroll_factor = 10.0
+elif platform.system() == 'Windows':
+    scroll_factor = 10.0
 else:
-    y_scroll_factor = 1.0
+    scroll_factor = 1.0
+
 
 #imports
 from file_methods import Persistent_Dict,load_object

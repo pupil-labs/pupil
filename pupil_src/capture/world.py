@@ -116,7 +116,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
         scroll_factor = 10.0
         window_position_default = (0,0)
     elif platform.system() == 'Windows':
-        scroll_factor = 1.0
+        scroll_factor = 10.0
         window_position_default = (8,31)
     else:
         scroll_factor = 1.0
