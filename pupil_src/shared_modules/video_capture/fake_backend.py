@@ -19,11 +19,6 @@ from pyglui import ui
 import logging
 logger = logging.getLogger(__name__)
 
-class CameraSourceError(Exception):
-    """General Exception for this module"""
-    def __init__(self, arg):
-        super(FileSourceError, self).__init__()
-        self.arg = arg
 
 class Frame(object):
     """docstring of Frame"""
@@ -65,48 +60,23 @@ class Fake_Source(Base_Source):
         presentation_time (float)
         settings (dict)
     """
-    def __init__(self, g_pool, **settings):
+    def __init__(self, g_pool, name,frame_size,frame_rate):
         super(Fake_Source, self).__init__(g_pool)
-        self.fps = 30
+        self.fps = frame_rate
+        self._name = name
         self.presentation_time = time()
-        self.make_img((640,480))
+        self.make_img(tuple(frame_size))
         self.frame_count = 0
-        self.info_text = settings.get('info_text', 'Select video source in the capture menu.')
-        self.preferred_source = settings
-        self.settings = settings
 
     def init_gui(self):
         from pyglui import ui
-        text = ui.Info_Text(self.info_text)
+        text = ui.Info_Text("Fake capture source streaming test images.")
         self.g_pool.capture_source_menu.append(text)
-
-        from pyglui.pyfontstash import fontstash
-        self.glfont = fontstash.Context()
-        self.glfont.add_font('opensans',ui.get_opensans_font_path())
-        self.glfont.set_size(64)
-        self.glfont.set_color_float((1.,1.,1.,1.0))
-        self.glfont.set_align_string(v_align='center',h_align='middle')
-
-
-
 
     def cleanup(self):
         self.info_text = None
         self.img = None
         self.preferred_source = None
-
-    def gl_display(self):
-        if hasattr(self,'glfont'):
-            from glfw import glfwGetFramebufferSize,glfwGetCurrentContext
-            self.window_size = glfwGetFramebufferSize(glfwGetCurrentContext())
-            self.glfont.set_color_float((0.,0.,0.,1.))
-            self.glfont.set_size(int(self.window_size[0]/30.))
-            self.glfont.set_blur(5.)
-            self.glfont.draw_limited_text(self.window_size[0]/2.,self.window_size[1]/2.,self.info_text,self.window_size[0]*0.8)
-            self.glfont.set_blur(0.96)
-            self.glfont.set_color_float((1.,1.,1.,1.0))
-            self.glfont.draw_limited_text(self.window_size[0]/2.,self.window_size[1]/2.,self.info_text,self.window_size[0]*0.8)
-
 
     def make_img(self,size):
         c_w ,c_h = max(1,size[0]/30),max(1,size[1]/30)
@@ -115,23 +85,24 @@ class Fake_Source(Base_Source):
         # coarse[:,:,2] *=0
         # coarse[:,:,1] /=30
         # self.img = np.ones((size[1],size[0],3),dtype=np.uint8)
+        print size
         self.img = cv2.resize(coarse,size,interpolation=cv2.INTER_LANCZOS4)
 
-    def get_frame(self):
-        now =  time()
+    def recent_events(self,events):
+        now = time()
         spent = now - self.presentation_time
         wait = max(0,1./self.fps - spent)
         sleep(wait)
         self.presentation_time = time()
-        frame_count = self.frame_count
         self.frame_count +=1
-
         timestamp = self.g_pool.get_timestamp()
-        return Frame(timestamp,self.img.copy(),frame_count)
+        frame = Frame(timestamp,self.img.copy(),self.frame_count)
+        cv2.putText(frame.img, "Fake Source Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
+        events['frame'] = frame
 
     @property
     def name(self):
-        return self.preferred_source.get('name', 'Fake Source')
+        return self._name
 
     @property
     def settings(self):
@@ -179,6 +150,10 @@ class Fake_Source(Base_Source):
     def jpeg_support(self):
         return False
 
+    @property
+    def online(self):
+        return True
+
 class Fake_Manager(Base_Manager):
     """Simple manager to explicitly activate a fake source"""
 
@@ -190,17 +165,18 @@ class Fake_Manager(Base_Manager):
     def init_gui(self):
         from pyglui import ui
         text = ui.Info_Text('Convenience manager to select a fake source explicitly.')
+
         def activate():
-            settings = self.g_pool.capture.settings
+            settings = {}
+            settings['frame_rate'] = self.g_pool.capture.frame_rate
+            settings['frame_size'] = self.g_pool.capture.frame_size
+            settings['name'] = self.g_pool.capture.name
             #if the user set fake capture, we dont want it to auto jump back to the old capture.
-            settings['source_class_name'] = Fake_Source.class_name()
-            self.activate_source(settings)
-        activation_button = ui.Button('Activate Test Image', activate)
+            if self.g_pool.process == 'world':
+                self.notify_all({'subject':'start_plugin',"name":"Fake_Source",'args':settings})
+            else:
+                self.notify_all({'subject':'start_eye_capture','target':self.g_pool.process, "name":"Fake_Source",'args':settings})
+
+        activation_button = ui.Button('Activate Fake Capture', activate)
         self.g_pool.capture_selector_menu.extend([text, activation_button])
 
-    def activate_source(self, settings={}):
-        self.g_pool.capture.deinit_gui()
-        self.g_pool.capture.cleanup()
-        self.g_pool.capture = None
-        self.g_pool.capture = Fake_Source(self.g_pool,**settings)
-        self.g_pool.capture.init_gui()
