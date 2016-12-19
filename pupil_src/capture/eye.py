@@ -244,7 +244,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         if roi_user_settings and roi_user_settings[-1] == g_pool.u_r.get()[-1]:
             g_pool.u_r.set(roi_user_settings)
 
-        writer = None
 
         pupil_detector_settings = session_settings.get('pupil_detector_settings',None)
         last_pupil_detector = pupil_detectors[session_settings.get('last_pupil_detector',Detector_2D.__name__)]
@@ -311,11 +310,18 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
 
         g_pool.capture_manager.init_gui()
 
+
+        g_pool.writer = None
+
         def replace_source(source_class_name,source_settings):
             g_pool.capture.cleanup()
             g_pool.capture = source_class_by_name[source_class_name](g_pool,**source_settings)
             g_pool.capture.init_gui()
-        g_pool.replace_source = replace_source
+            if g_pool.writer:
+                logger.info("Done recording.")
+                g_pool.writer.release()
+                g_pool.writer = None
+                np.save(timestamps_path,np.asarray(timestamps))
 
         def replace_manager(manager_class):
             g_pool.capture_manager.cleanup()
@@ -401,18 +407,17 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                         timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
                         if raw_mode and g_pool.capture.jpeg_support:
                             video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
-                            writer = JPEG_Writer(video_path,g_pool.capture.frame_rate)
+                            g_pool.writer = JPEG_Writer(video_path,g_pool.capture.frame_rate)
                         else:
                             video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
-                            writer = AV_Writer(video_path,g_pool.capture.frame_rate)
+                            g_pool.writer = AV_Writer(video_path,g_pool.capture.frame_rate)
                         timestamps = []
                 elif subject == 'recording.stopped':
-                    if writer:
+                    if g_pool.writer:
                         logger.info("Done recording.")
-                        writer.release()
-                        writer = None
+                        g_pool.writer.release()
+                        g_pool.writer = None
                         np.save(timestamps_path,np.asarray(timestamps))
-                        del timestamps
                 elif subject.startswith('meta.should_doc'):
                     ipc_socket.notify({
                         'subject':'meta.doc',
@@ -465,8 +470,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
 
 
 
-                if writer:
-                    writer.write_video_frame(frame)
+                if g_pool.writer:
+                    g_pool.writer.write_video_frame(frame)
                     timestamps.append(frame.timestamp)
 
 
@@ -546,9 +551,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         # END while running
 
         # in case eye recording was still runnnig: Save&close
-        if writer:
+        if g_pool.writer:
             logger.info("Done recording eye.")
-            writer = None
+            g_pool.writer = None
             np.save(timestamps_path,np.asarray(timestamps))
 
         glfw.glfwRestoreWindow(main_window) #need to do this for windows os
