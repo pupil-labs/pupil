@@ -170,6 +170,8 @@ class Fake_Manager(Base_Manager):
         text = ui.Info_Text('Convenience manager to select a fake source explicitly.')
 
         def activate():
+            #a capture leaving is a must stop for recording.
+            self.notify_all( {'subject':'recording.should_stop'} )
             settings = {}
             settings['frame_rate'] = self.g_pool.capture.frame_rate
             settings['frame_size'] = self.g_pool.capture.frame_size
