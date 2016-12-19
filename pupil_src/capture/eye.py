@@ -116,7 +116,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             scroll_factor = 10.0
             window_position_default = (600,300*eye_id)
         elif platform.system() == 'Windows':
-            scroll_factor = 1.0
+            scroll_factor = 10.0
             window_position_default = (600,31+300*eye_id)
         else:
             scroll_factor = 1.0
@@ -394,12 +394,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                             set_detector(Detector_2D)
                         detector_selector.read_only = False
                 elif subject == 'recording.started':
-                    if notification['record_eye']:
+                    if notification['record_eye'] and g_pool.capture.online:
                         record_path = notification['rec_path']
                         raw_mode = notification['compression']
                         logger.info("Will save eye video to: %s"%record_path)
                         timestamps_path = os.path.join(record_path, "eye%s_timestamps.npy"%eye_id)
-                        if raw_mode and frame.jpeg_buffer:
+                        if raw_mode and g_pool.capture.jpeg_support:
                             video_path = os.path.join(record_path, "eye%s.mp4"%eye_id)
                             writer = JPEG_Writer(video_path,g_pool.capture.frame_rate)
                         else:
@@ -435,7 +435,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             frame = event.get('frame')
             g_pool.capture_manager.recent_events(event)
             if frame:
-                g_pool.u_r = UIRoi((frame.height,frame.width))
+                if (g_pool.u_r.array_shape[0],g_pool.u_r.array_shape[1]) != (frame.height,frame.width):
+                    g_pool.u_r = UIRoi((frame.height,frame.width))
                 if should_publish_frames and frame.jpeg_buffer:
                     if   frame_publish_format == "jpeg":
                         data = frame.jpeg_buffer
