@@ -10,7 +10,7 @@
 
 import numpy as np
 from pyglui import ui
-import os,sys, platform
+import os,sys
 import time
 
 import logging
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     from textwrap import dedent
     from file_methods import Persistent_Dict
 from plugin import Plugin
-from video_export_launcher import Export_Process,Value,forking_enable,cpu_count
+from video_export_launcher import Export_Process,Value,cpu_count
 
 
 from exporter import export
@@ -140,9 +140,6 @@ class Batch_Exporter(Plugin):
         self._update_gui()
 
     def add_exports(self):
-        # on MacOS we will not use os.fork, elsewhere this does nothing.
-        forking_enable(0)
-
         outfiles = set()
         for d in self.new_exports:
             logger.debug("Adding new export.")
