@@ -116,8 +116,8 @@ class NDSI_Source(Base_Source):
                 frame = None
                 import traceback
                 logger.error(traceback.format_exc())
+            self._recent_frame = frame
             if frame:
-                self._recent_frame = frame
                 self._frame_size = (frame.width, frame.height)
                 self.last_update = self.g_pool.get_timestamp()
                 events['frame'] = frame
