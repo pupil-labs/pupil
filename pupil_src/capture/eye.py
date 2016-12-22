@@ -323,6 +323,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                 g_pool.writer = None
                 np.save(timestamps_path,np.asarray(timestamps))
 
+        g_pool.replace_source = replace_source # for ndsi capture
+
         def replace_manager(manager_class):
             g_pool.capture_manager.cleanup()
             g_pool.capture_manager = manager_class(g_pool)
