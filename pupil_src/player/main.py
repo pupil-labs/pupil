@@ -104,17 +104,17 @@ from vis_polyline import Vis_Polyline
 from vis_light_points import Vis_Light_Points
 from vis_watermark import Vis_Watermark
 from vis_fixation import Vis_Fixation
+from vis_scan_path import Vis_Scan_Path
+from vis_eye_video_overlay import Vis_Eye_Video_Overlay
 from seek_bar import Seek_Bar
 from trim_marks import Trim_Marks
 from video_export_launcher import Video_Export_Launcher
-from scan_path import Scan_Path
 from offline_surface_tracker import Offline_Surface_Tracker
 from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from fixation_detector import Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector
 from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
-from eye_video_overlay import Eye_Video_Overlay
 from log_display import Log_Display
 from annotations import Annotation_Player
 from raw_data_exporter import Raw_Data_Exporter
@@ -127,7 +127,7 @@ class Global_Container(object):
 def session(rec_dir):
 
     system_plugins = [Log_Display,Seek_Bar,Trim_Marks]
-    vis_plugins = sorted([Vis_Circle,Vis_Polyline,Vis_Light_Points,Vis_Cross,Vis_Watermark,Eye_Video_Overlay,Scan_Path], key=lambda x: x.__name__)
+    vis_plugins = sorted([Vis_Circle,Vis_Polyline,Vis_Light_Points,Vis_Cross,Vis_Watermark,Vis_Eye_Video_Overlay,Vis_Scan_Path], key=lambda x: x.__name__)
     analysis_plugins = sorted([Gaze_Position_2D_Fixation_Detector,Pupil_Angle_3D_Fixation_Detector,Manual_Gaze_Correction,Video_Export_Launcher,Offline_Surface_Tracker,Raw_Data_Exporter,Batch_Exporter,Annotation_Player], key=lambda x: x.__name__)
     other_plugins = sorted([Show_Calibration,Log_History], key=lambda x: x.__name__)
     user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir,'plugins')), key=lambda x: x.__name__)
@@ -343,7 +343,7 @@ def session(rec_dir):
 
     #we always load these plugins
     system_plugins = [('Trim_Marks',{}),('Seek_Bar',{})]
-    default_plugins = [('Log_Display',{}),('Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Video_Export_Launcher',{})]
+    default_plugins = [('Log_Display',{}),('Vis_Scan_Path',{}),('Vis_Polyline',{}),('Vis_Circle',{}),('Video_Export_Launcher',{})]
     previous_plugins = session_settings.get('loaded_plugins',default_plugins)
     g_pool.notifications = []
     g_pool.delayed_notifications = {}

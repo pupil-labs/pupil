@@ -39,10 +39,10 @@ from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
 from vis_light_points import Vis_Light_Points
 from vis_watermark import Vis_Watermark
+from vis_scan_path import Vis_Scan_Path
+from vis_eye_video_overlay import Vis_Eye_Video_Overlay
 
-from scan_path import Scan_Path
 from manual_gaze_correction import Manual_Gaze_Correction
-from eye_video_overlay import Eye_Video_Overlay
 from fixation_detector import Pupil_Angle_3D_Fixation_Detector,Gaze_Position_2D_Fixation_Detector
 
 
@@ -52,8 +52,8 @@ class Global_Container(object):
 def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,min_data_confidence,start_frame=None,end_frame=None,plugin_initializers=(),out_file_path=None):
 
     vis_plugins = sorted([Vis_Circle,Vis_Cross, Vis_Polyline,
-        Vis_Light_Points, Vis_Watermark, Scan_Path], key=lambda x: x.__name__)
-    analysis_plugins = sorted([Manual_Gaze_Correction,Eye_Video_Overlay,
+        Vis_Light_Points, Vis_Watermark, Vis_Scan_Path], key=lambda x: x.__name__)
+    analysis_plugins = sorted([Manual_Gaze_Correction,Vis_Eye_Video_Overlay,
         Pupil_Angle_3D_Fixation_Detector, Gaze_Position_2D_Fixation_Detector],
         key=lambda x: x.__name__)
     user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir,'plugins')),
