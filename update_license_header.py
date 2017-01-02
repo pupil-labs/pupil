@@ -14,10 +14,10 @@ import re
 license_txt = """\
 (*)~----------------------------------------------------------------------------------
  Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+ Copyright (C) 2012-2017  Pupil Labs
 
  Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
+ License details are in the files COPYING and COPYING.LESSER, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)\
 """
 
@@ -32,7 +32,7 @@ pattern = re.compile('(\'{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n(\'{3}|[*][/])', re
 # choose directories to exclude from search
 includes = ['*.py', '*.c']
 excludes = ['.git', '*.md', 'src_video', 'recordings', 'License', 'shader.py', 'vertex_buffer.py',
- 			 'gprof2dot.py','git_version.py','libuvcc*', '*.pstats', '*.png',
+ 			 'gprof2dot.py','git_version.py','transformations.py','libuvcc*', '*.pstats', '*.png',
  			 '*.svg', '*.ico', '*.sh', '*.icns', '*.spec', '.gitignore','glfw.py', 'version_utils.py']
 
 # transform glob patterns to regular expressions
