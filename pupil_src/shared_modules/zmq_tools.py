@@ -68,8 +68,8 @@ class Msg_Receiver(object):
     def recv(self):
         '''Recv a message with topic, payload.
 
-        topic is a utf-8 encoded string. Returned as unicode object.
-        payload is a msgpack serialized dict. Returned as a python dict.
+        Topic is a utf-8 encoded string. Returned as unicode object.
+        Payload is a msgpack serialized dict. Returned as a python dict.
 
         Any addional message frames will be added as a list
         in the payload dict with key: '__raw_data__' .
@@ -102,12 +102,14 @@ class Msg_Streamer(object):
     def send(self,topic,payload):
         '''Send a message with topic, payload
 `
-        topic is a unicode string. It will be send as utf-8 encoded byte array.
-        payload is a python dict. It will be send as a msgpack serialized dict.
+        Topic is a unicode string. It will be sent as utf-8 encoded byte array.
+        Payload is a python dict. It will be sent as a msgpack serialized dict.
 
-        if payload has the key '__raw_data__' we pop if of the payload and send its raw contents as extra frames
+        If payload has the key '__raw_data__'
+        we pop if of the payload and send its raw contents as extra frames
         everything else need to be serializable
-        the contents of the iterable in '__raw_data__' require exposing the pyhton memoryview interface.
+        the contents of the iterable in '__raw_data__'
+        require exposing the pyhton memoryview interface.
         '''
         if '__raw_data__' not in payload:
             self.socket.send_string(topic,flags=zmq.SNDMORE)
