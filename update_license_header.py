@@ -28,10 +28,11 @@ pattern = re.compile('(\'{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n(\'{3}|[*][/])', re
 
 # choose files types to include
 # choose directories to exclude from search
-includes = ['*.py', '*.c']
-excludes = ['.git', '*.md', 'src_video', 'recordings', 'License', 'shader.py', 'vertex_buffer.py',
-             'gprof2dot.py','git_version.py','transformations.py','libuvcc*', '*.pstats', '*.png',
-             '*.svg', '*.ico', '*.sh', '*.icns', '*.spec', '.gitignore','glfw.py', 'version_utils.py']
+includes = ['*.py', '*.c','*.cpp','*.hpp','*.h','*.pxd','*.pxy','*.pxi']
+excludes = [ 'src_video', 'recordings', 'shader.py',
+            'vertex_buffer.py', 'gprof2dot.py','git_version.py',
+            'transformations.py','libuvcc*', '.gitignore','glfw.py',
+            'version_utils.py','update_license_header.py']
 
 # transform glob patterns to regular expressions
 includes = r'|'.join([fnmatch.translate(x) for x in includes])
@@ -54,10 +55,12 @@ def write_header(file_name, license_txt):
     py_comment = ["'''\n","\n'''\n"]
     file_type = os.path.splitext(file_name)[-1]
 
-    if file_type == '.py':
+    if file_type in ('.py','.pxd','.pxy','.pxi'):
         license_txt = py_comment[0] + license_txt + py_comment[1]
-    if file_type == '.c':
+    elif file_type in ('.c','.cpp','.hpp','.h'):
         license_txt = c_comment[0] + license_txt + c_comment[1]
+    else:
+        raise Excection("Dont know how to deal with this filetype")
 
     with file(file_name, 'r') as original:
         data = original.read()
