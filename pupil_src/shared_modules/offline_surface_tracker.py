@@ -125,13 +125,22 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
         self.menu.elements[:] = []
         self.menu.append(ui.Button('Close',close))
-        self.menu.append(ui.Slider('min_marker_perimeter',self,min=20,max=500,step=1,setter=set_min_marker_perimeter))
+        self.menu.append(ui.Slider('min_marker_perimeter',self,min=20,max=100,step=1,setter=set_min_marker_perimeter))
         self.menu.append(ui.Info_Text('The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Surfaces","Show marker IDs","Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface()))
+
+        def make_smooth_setter(surface):
+            def set_smoothing(smooth):
+                surface.should_smooth = smooth
+                if smooth:
+                    surface.refresh_smoothing()
+                else:
+                    surface.clear_smoothing()
+            return set_smoothing
         for s in self.surfaces:
             idx = self.surfaces.index(s)
             s_menu = ui.Growing_Menu("Surface %s"%idx)
@@ -139,12 +148,14 @@ class Offline_Surface_Tracker(Surface_Tracker):
             s_menu.append(ui.Text_Input('name',s))
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
+            s_menu.append(ui.Switch('should_smooth',s,label='Smooth surface',
+                setter=make_smooth_setter(s)))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
                 return lambda: self.remove_surface(i)
             remove_s = make_remove_s(idx)
-            s_menu.append(ui.Button('remove',remove_s))
+            s_menu.append(ui.Button('Remove surface',remove_s))
             self.menu.append(s_menu)
 
 
@@ -182,6 +193,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         # calc heatmaps
         for s in self.surfaces:
             if s.defined:
+                s.refresh_smoothing()
                 s.generate_heatmap(section)
 
         # calc distirbution accross all surfaces.
@@ -212,7 +224,8 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
     def invalidate_surface_caches(self):
         for s in self.surfaces:
-            s.cache = None
+            s.raw_cache = None
+            s.smoothed_cache = None
 
     def update(self,frame,events):
         self.img_shape = frame.img.shape
@@ -228,7 +241,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         # locate surfaces
         for s in self.surfaces:
             if not s.locate_from_cache(frame.index):
-                s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
+                s.locate(self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence,smooth=False)
             if s.detected:
                 events['surfaces'].append({'name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp})
 
@@ -248,7 +261,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
             else:
                 # update srf with no or invald cache:
                 for s in self.surfaces:
-                    if s.cache == None and s not in [s for s,i in self.edit_surf_verts]:
+                    if s.raw_cache == None and s not in [s for s,i in self.edit_surf_verts]:
                         s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
                         self.notify_all({'subject':'surfaces_changed','delay':1})
 
@@ -322,10 +335,12 @@ class Offline_Surface_Tracker(Surface_Tracker):
         cached_surfaces = []
         for s in self.surfaces:
             found_at = []
-            if s.cache is not None:
-                for r in s.cache.positive_ranges: # [[0,1],[3,4]]
-                    found_at += (r[0],0),(r[1],0) #[(0,0),(1,0),(3,0),(4,0)]
-                cached_surfaces.append(found_at)
+            selected_cache = s.smoothed_cache if s.smoothed_cache else s.raw_cache
+            if selected_cache is not None:
+                for r in selected_cache.positive_ranges: # [[0,1],[3,4]]
+                    #[(0,0),(1,0),(3,0),(4,0)]
+                    found_at += (r[0],0),(r[1],0)
+                cached_surfaces.append((found_at,bool(s.smoothed_cache)))
 
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
@@ -343,11 +358,13 @@ class Offline_Surface_Tracker(Surface_Tracker):
         color = RGBA(.8,.6,.2,.8)
         draw_polyline(cached_ranges,color=color,line_type=GL_LINES,thickness=4)
 
-        color = RGBA(0,.7,.3,.8)
+        raw_color = RGBA(0,.7,.3,.8)
+        smoothed_color = RGBA(0,.3,.7,.8)
 
-        for s in cached_surfaces:
+        for found_at,smoothed in cached_surfaces:
+            color = smoothed_color if smoothed else raw_color
             glTranslatef(0,.02,0)
-            draw_polyline(s,color=color,line_type=GL_LINES,thickness=2)
+            draw_polyline(found_at,color=color,line_type=GL_LINES,thickness=2)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
@@ -403,7 +420,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
             csv_writer.writerow((''))
             csv_writer.writerow(('surface_name','visible_frame_count'))
             for s in self.surfaces:
-                if s.cache == None:
+                if s.raw_cache == None:
                     logger.warning("The surface is not cached. Please wait for the cacher to collect data.")
                     return
                 visible_count  = s.visible_count_in_section(section)
@@ -441,7 +458,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
             events = []
             for s in self.surfaces:
-                for enter_frame_id,exit_frame_id in s.cache.positive_ranges:
+                for enter_frame_id,exit_frame_id in s.raw_cache.positive_ranges:
                     events.append({'frame_id':enter_frame_id,'srf_name':s.name,'srf_uid':s.uid,'event':'enter'})
                     events.append({'frame_id':exit_frame_id,'srf_name':s.name,'srf_uid':s.uid,'event':'exit'})
 
@@ -457,13 +474,13 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
 
             # save surface_positions as pickle file
-            save_object(s.cache.to_list(),os.path.join(metrics_dir,'srf_positions'+surface_name))
+            save_object(s.raw_cache.to_list(),os.path.join(metrics_dir,'srf_positions'+surface_name))
 
             #save surface_positions as csv
             with open(os.path.join(metrics_dir,'srf_positons'+surface_name+'.csv'),'wb') as csvfile:
                 csv_writer =csv.writer(csvfile, delimiter=',')
                 csv_writer.writerow(('frame_idx','timestamp','m_to_screen','m_from_screen','detected_markers'))
-                for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
+                for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.raw_cache):
                     if in_mark <= idx <= out_mark:
                         if ref_srf_data is not None and ref_srf_data is not False:
                             csv_writer.writerow( (idx,ts,ref_srf_data['m_to_screen'],ref_srf_data['m_from_screen'],ref_srf_data['detected_markers']) )
@@ -473,7 +490,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
             with open(os.path.join(metrics_dir,'gaze_positions_on_surface'+surface_name+'.csv'),'wb') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter=',')
                 csv_writer.writerow(('world_timestamp','world_frame_idx','gaze_timestamp','x_norm','y_norm','x_scaled','y_scaled','on_srf'))
-                for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.cache):
+                for idx,ts,ref_srf_data in zip(range(len(self.g_pool.timestamps)),self.g_pool.timestamps,s.raw_cache):
                     if in_mark <= idx <= out_mark:
                         if ref_srf_data is not None and ref_srf_data is not False:
                             for gp in s.gaze_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
@@ -485,7 +502,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
                 csv_writer = csv.writer(csvfile, delimiter=',')
                 csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','x_scaled','y_scaled','on_srf'))
                 fixations_on_surface = []
-                for idx,ref_srf_data in zip(range(len(self.g_pool.timestamps)),s.cache):
+                for idx,ref_srf_data in zip(range(len(self.g_pool.timestamps)),s.raw_cache):
                     if in_mark <= idx <= out_mark:
                         if ref_srf_data is not None and ref_srf_data is not False:
                             for f in s.fixations_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
