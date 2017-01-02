@@ -17,7 +17,7 @@ import os, sys, platform
 app = 'capture'
 
 if getattr(sys, 'frozen', False):
-    if sys.executable.endswith('pupil_service') or sys.executable.endswith('pupil_service.exe'):
+    if 'pupil_service' in sys.executable:
         app = 'service'
     # Specifiy user dir.
     user_dir = os.path.expanduser(os.path.join('~','pupil_%s_settings'%app))
@@ -107,11 +107,11 @@ def launcher():
                 n['_notify_time_'] = time()+n['delay']
                 waiting_notifications[n['subject']] = n
             #When a notifications time has come, pop from dict and send it as notification
-            for n in list(waiting_notifications.values()):
+            for s,n in list(waiting_notifications.items()):
                 if n['_notify_time_'] < time():
                     del n['_notify_time_']
                     del n['delay']
-                    del waiting_notifications[n['subject']]
+                    del waiting_notifications[s]
                     pub.notify(n)
 
 
