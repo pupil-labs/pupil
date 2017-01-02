@@ -90,8 +90,7 @@ from video_capture import File_Source,EndofVideoFileError,FileSeekError
 
 # helpers/utils
 import csv_utils
-from version_utils import VersionFormat
-from version_utils import read_rec_version, get_version
+from version_utils import VersionFormat, read_rec_version, get_version
 from methods import normalize, denormalize, delta_t,get_system_info
 from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 
