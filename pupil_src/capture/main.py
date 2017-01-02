@@ -45,11 +45,7 @@ from version_utils import get_version
 app_version = get_version(version_file)
 
 #threading and processing
-from multiprocessing import Process, Queue, Value,active_children,freeze_support,set_start_method
-def forking_enable(_):
-    set_start_method('spawn')
-
-
+from multiprocessing import Process, Value,active_children,freeze_support,set_start_method
 from threading import Thread
 from ctypes import c_double,c_bool
 
@@ -252,7 +248,6 @@ def launcher():
 
 
 if __name__ == '__main__':
-    print(sys.argv)
     freeze_support()
-    forking_enable(0)
+    set_start_method('spawn')
     launcher()
