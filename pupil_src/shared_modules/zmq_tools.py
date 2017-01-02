@@ -11,8 +11,6 @@ This file contains convenience classes for communication with
 the Pupil IPC Backbone.
 '''
 
-from __future__ import print_function
-
 import zmq
 assert zmq.__version__  > '15.1'
 from zmq.utils.monitor import recv_monitor_message
@@ -62,13 +60,16 @@ class Msg_Receiver(object):
             self.subscribe(t)
 
     def subscribe(self,topic):
-        self.socket.set(zmq.SUBSCRIBE,topic.encode('utf-8'))
+        self.socket.subscribe(topic)
 
     def unsubscribe(self,topic):
-        self.socket.set(zmq.UNSUBSCRIBE, topic.encode('utf-8'))
+        self.socket.unsubscribe(topic)
 
     def recv(self):
         '''Recv a message with topic, payload.
+
+        topic is a utf-8 encoded string. Returned as unicode object.
+        payload is a msgpack serialized dict. Returned as a python dict.
 
         Any addional message frames will be added as a list
         in the payload dict with key: '__raw_data__' .
@@ -101,9 +102,12 @@ class Msg_Streamer(object):
     def send(self,topic,payload):
         '''Send a message with topic, payload
 `
+        topic is a unicode string. It will be send as utf-8 encoded byte array.
+        payload is a python dict. It will be send as a msgpack serialized dict.
+
         if payload has the key '__raw_data__' we pop if of the payload and send its raw contents as extra frames
         everything else need to be serializable
-        the contents of the iterable in '__raw_data__' require exposing the pyhton buffer interface.
+        the contents of the iterable in '__raw_data__' require exposing the pyhton memoryview interface.
         '''
         if '__raw_data__' not in payload:
             self.socket.send_string(topic,flags=zmq.SNDMORE)
@@ -202,18 +206,18 @@ if __name__ == '__main__':
 
     # # now lets get the current pupil time.
     # requester.send('t')
-    # print requester.recv()
+    # print(requester.recv())
     # requester.send_multipart(('notify.service_process.should_stop',serializer.dumps({'subject':'service_process.should_stop'})))
-    # print requester.recv()
+    # print(requester.recv())
     # requester.send_multipart(('notify.meta.should_doc',serializer.dumps({'subject':'meta.should_doc'})))
-    # print requester.recv()
+    # print(requester.recv())
     # # listen to all notifications.
     # while True:
     #     topic,msg = notification_monitor.recv()
-    #     print '%s: %s' %(msg.get('actor'), msg.get('doc'))
+    #     print('%s: %s' %(msg.get('actor'), msg.get('doc')))
 
     # # listen to all log messages.
     # while True:
-    #     print log_monitor.recv()
+    #     print(log_monitor.recv())
 
 
