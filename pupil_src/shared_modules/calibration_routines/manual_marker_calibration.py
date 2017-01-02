@@ -268,18 +268,20 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             if self.counter:
                 # lets draw an indicator on the count
                 e = self.markers[0][-1]
+                # cv2 requires integer arguments
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
-                                    int(e[-1]),0,360,360/self.counter_max)
+                                    int(e[-1]),0,360,int(360/self.counter_max))
                 indicator = [e[0]] + pts[self.counter:].tolist()[::-1] + [e[0]]
                 draw_polyline(indicator,color=RGBA(0.1,.5,.7,.8),line_type=GL_POLYGON)
 
             if self.auto_stop:
                 # lets draw an indicator on the autostop count
                 e = self.markers[0][-1]
+                # cv2 requires integer arguments
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
-                                    int(e[-1]),0,360,360/self.auto_stop_max)
+                                    int(e[-1]),0,360,int(360/self.auto_stop_max))
                 indicator = [e[0]] + pts[self.auto_stop:].tolist() + [e[0]]
                 draw_polyline(indicator,color=RGBA(8.,0.1,0.1,.8),line_type=GL_POLYGON)
         else:
