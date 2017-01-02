@@ -29,7 +29,7 @@ pattern = re.compile('(\'{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n(\'{3}|[*][/])', re
 # choose files types to include
 # choose directories to exclude from search
 includes = ['*.py', '*.c','*.cpp','*.hpp','*.h','*.pxd','*.pxy','*.pxi']
-excludes = [ 'src_video', 'recordings', 'shader.py',
+excludes = [ 'src_video', 'recordings', 'shader.py','singleeyefitter',
             'vertex_buffer.py', 'gprof2dot.py','git_version.py',
             'transformations.py','libuvcc*', '.gitignore','glfw.py',
             'version_utils.py','update_license_header.py']
