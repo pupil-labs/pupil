@@ -21,9 +21,6 @@ from ctypes import c_bool, c_int,create_string_buffer
 
 #threading and processing
 from multiprocessing import Process, cpu_count, set_start_method
-def forking_enable(_):
-    set_start_method('spawn')
-
 from multiprocessing.sharedctypes import Value
 
 
@@ -127,7 +124,7 @@ class Video_Export_Launcher(Plugin):
 
     def add_export(self,export_range,export_dir):
         if system() == 'Darwin':
-            forking_enable(0)
+            set_start_method('spawn')
 
         logger.debug("Adding new video export process.")
         should_terminate = Value(c_bool,False)

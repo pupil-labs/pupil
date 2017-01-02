@@ -7,7 +7,6 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-from __future__ import print_function
 
 import platform,sys,os
 os_name = platform.system()
