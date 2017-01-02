@@ -114,10 +114,10 @@ def undistort_unproject_pts(pts_uv, camera_matrix, dist_coefs):
     pts_uv = np.array(pts_uv)
     num_pts = pts_uv.size / 2
 
-    pts_uv.shape = (num_pts, 1, 2)
+    pts_uv.shape = (int(num_pts), 1, 2)
     pts_uv = cv2.undistortPoints(pts_uv, camera_matrix, dist_coefs)
     pts_3d = cv2.convertPointsToHomogeneous(np.float32(pts_uv))
-    pts_3d.shape = (num_pts,3)
+    pts_3d.shape = (int(num_pts),3)
     return pts_3d
 
 
