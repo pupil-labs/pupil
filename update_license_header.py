@@ -29,10 +29,10 @@ pattern = re.compile('(\'{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n(\'{3}|[*][/])', re
 # choose files types to include
 # choose directories to exclude from search
 includes = ['*.py', '*.c','*.cpp','*.hpp','*.h','*.pxd','*.pxy','*.pxi']
-excludes = [ 'src_video', 'recordings', 'shader.py','singleeyefitter',
+excludes = [ 'recordings*', 'shader.py','singleeyefitter*',
             'vertex_buffer.py', 'gprof2dot.py','git_version.py',
             'transformations.py','libuvcc*', '.gitignore','glfw.py',
-            'version_utils.py','update_license_header.py']
+            'version_utils.py','update_license_header.py','shared_cpp*']
 
 # transform glob patterns to regular expressions
 includes = r'|'.join([fnmatch.translate(x) for x in includes])
@@ -46,6 +46,9 @@ def get_files(start_dir, includes, excludes):
             files = [f for f in files if re.search(includes, f) and not re.search(excludes, f)]
             files = [os.path.join(root, f) for f in files]
             match_files += files
+        else:
+            print("Excluding '%s'"%root)
+
     return match_files
 
 def write_header(file_name, license_txt):
