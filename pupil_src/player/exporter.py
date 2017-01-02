@@ -25,7 +25,7 @@ import numpy as np
 from video_capture import File_Source,EndofVideoFileError
 from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 from methods import denormalize
-from version_utils import Version_Format as VersionFormat
+from version_utils import VersionFormat
 from version_utils import read_rec_version, get_version
 from av_writer import AV_Writer
 from file_methods import load_object

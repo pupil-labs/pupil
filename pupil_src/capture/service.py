@@ -7,7 +7,6 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-from __future__ import print_function
 import os, sys, platform
 
 class Global_Container(object):

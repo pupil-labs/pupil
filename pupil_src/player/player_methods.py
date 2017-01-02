@@ -14,7 +14,7 @@ import numpy as np
 import logging
 logger = logging.getLogger(__name__)
 from file_methods import save_object,load_object
-from version_utils import Version_Format as VersionFormat
+from version_utils import VersionFormat
 from version_utils import read_rec_version
 
 def correlate_data(data,timestamps):
@@ -313,7 +313,7 @@ def transparent_circle(img,center,radius,color,thickness):
 
     try:
         overlay = img[roi].copy()
-        cv2.circle(img,center,radius,rgb, thickness=thickness, lineType=cv2.LINE_AA)        
+        cv2.circle(img,center,radius,rgb, thickness=thickness, lineType=cv2.LINE_AA)
         opacity = alpha
         cv2.addWeighted(src1=img[roi], alpha=opacity, src2=overlay, beta=1. - opacity, gamma=0, dst=img[roi])
     except:
