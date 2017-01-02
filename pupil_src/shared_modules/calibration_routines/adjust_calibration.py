@@ -17,7 +17,7 @@ from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
 from OpenGL.GL import GL_POLYGON
 from circle_detector import find_concetric_circles
 from . finish_calibration import finish_calibration
-from . calibrate import *
+from . import calibrate
 
 import audio
 
