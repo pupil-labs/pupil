@@ -7,7 +7,6 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-from __future__ import print_function
 import os, sys, platform
 
 
@@ -82,7 +81,7 @@ def world(timebase,eyes_are_alive,ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,
     import psutil
 
     # helpers/utils
-    from version_utils import Version_Format as VersionFormat
+    from version_utils import VersionFormat
     from file_methods import Persistent_Dict
     from methods import normalize, denormalize, delta_t, get_system_info
     from uvc import get_time_monotonic
