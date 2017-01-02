@@ -219,7 +219,8 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
             self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen:
-                glfwSetWindowPos(self._window,200,0)
+                # move to y = 31 for windows os 
+                glfwSetWindowPos(self._window,200,31)
 
 
             #Register callbacks
