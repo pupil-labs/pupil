@@ -278,7 +278,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
     def update(self,frame,events):
         if self.collect_new:
             img = frame.img
-            status, grid_points = cv2.findCirclesGridDefault(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
+            status, grid_points = cv2.findCirclesGrid(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
             if status:
                 self.img_points.append(grid_points)
                 self.obj_points.append(self.obj_grid)
