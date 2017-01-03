@@ -105,7 +105,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         # helpers/utils
         from uvc import get_time_monotonic, StreamError
         from file_methods import Persistent_Dict
-        from version_utils import Version_Format as VersionFormat
+        from version_utils import VersionFormat
         from methods import normalize, denormalize, timer
         from av_writer import JPEG_Writer, AV_Writer
         from video_capture import InitialisationError, Fake_Source
