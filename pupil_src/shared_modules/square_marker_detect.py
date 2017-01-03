@@ -326,7 +326,7 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(
                 prev_img, gray_img, prev_pts, None,
                 minEigThreshold=.01,**lk_params)
-            for marker_idx in range(int(flow_found.shape[0]/4)):
+            for marker_idx in range(flow_found.shape[0]//4):
                 m = not_found[marker_idx]
                 m_slc = slice(marker_idx*4,marker_idx*4+4)
                 if flow_found[m_slc].sum() >= 4:
@@ -616,7 +616,7 @@ class MarkerTracker(object):
 #     from os.path import join
 #     from video_capture.av_file_capture import File_Capture
 #     cap = File_Capture(join(folder,'marker-test.mp4'))
-# 
+#
 #     tracker = MarkerTracker()
 #     detected_count = 0
 #     for x in range(500):
@@ -629,7 +629,7 @@ class MarkerTracker(object):
 #         if cv2.waitKey(1) == 27:
 #            break
 #         detected_count += len(markers)
-# 
+#
 #     print detected_count #3106 #3226
 
 

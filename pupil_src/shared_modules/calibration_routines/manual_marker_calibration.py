@@ -154,8 +154,8 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
                 row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
                 marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
-                avg = cv2.mean(marker_gray)[0] #CV2 fn return has changed!
-                center = marker_gray[int(second_ellipse[1][1]/2),int(second_ellipse[1][0]/2)] #python3 requires integers
+                avg,_ = cv2.mean(marker_gray)
+                center = marker_gray[second_ellipse[1][1]//2,second_ellipse[1][0]//2]
                 rel_shade = center-avg
 
                 #auto_stop logic
@@ -271,7 +271,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 # cv2 requires integer arguments
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
-                                    int(e[-1]),0,360,int(360/self.counter_max))
+                                    int(e[-1]),0,360,360//self.counter_max)
                 indicator = [e[0]] + pts[self.counter:].tolist()[::-1] + [e[0]]
                 draw_polyline(indicator,color=RGBA(0.1,.5,.7,.8),line_type=GL_POLYGON)
 
@@ -281,7 +281,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 # cv2 requires integer arguments
                 pts = cv2.ellipse2Poly( (int(e[0][0]),int(e[0][1])),
                                     (int(e[1][0]/2),int(e[1][1]/2)),
-                                    int(e[-1]),0,360,int(360/self.auto_stop_max))
+                                    int(e[-1]),0,360,360//self.auto_stop_max)
                 indicator = [e[0]] + pts[self.auto_stop:].tolist() + [e[0]]
                 draw_polyline(indicator,color=RGBA(8.,0.1,0.1,.8),line_type=GL_POLYGON)
         else:

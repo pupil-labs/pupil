@@ -755,7 +755,7 @@ class Support_Marker(object):
         # # now we treat the four uv scalars as a vector in 8-d space and compute the distace to the mean
         distance =  np.linalg.norm(deviation,axis=(1,3)).reshape(-1)
         # lets get the .5 cutof;
-        cut_off = sorted(distance)[int(len(distance)/2)]
+        cut_off = sorted(distance)[len(distance)//2]
         # filter the better half
         uv_subset = uv[distance<=cut_off]
         # claculate the mean of this subset

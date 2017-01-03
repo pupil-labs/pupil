@@ -209,7 +209,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
                                         'duration':duration,
                                         'dispersion':dispersion,
                                         'start_frame_index':fixation_support[0]['index'],
-                                        'mid_frame_index':fixation_support[int(len(fixation_support)/2)]['index'],
+                                        'mid_frame_index':fixation_support[len(fixation_support)//2]['index'],
                                         'end_frame_index':fixation_support[-1]['index'],
                                         'pix_dispersion':dispersion*self.pix_per_degree,
                                         'timestamp':fixation_support[0]['timestamp'],
@@ -520,7 +520,7 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
             return
 
         self.fixations.sort(key=lambda f: f['timestamp'])
-        def assign_idx_as_id(id_fix): 
+        def assign_idx_as_id(id_fix):
             idx, fix = id_fix
             fix['id'] = idx
             return idx
