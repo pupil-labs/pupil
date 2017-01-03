@@ -246,7 +246,8 @@ def launcher():
                     'actor':'launcher',
                     'doc':launcher.__doc__})
 
-        for p in active_children(): p.join()
+        for p in active_children():
+            p.join()
 
 
 if __name__ == '__main__':
