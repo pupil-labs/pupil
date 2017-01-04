@@ -203,7 +203,8 @@ class Pupil_Remote(Plugin):
                         pipe.send_string("Could not bind to Socket: {}. Reason: {}".format(new_url, e))
                     else:
                         pipe.send_string("Bind OK", flags=zmq.SNDMORE)
-                        pipe.send_string(remote_socket.last_endpoint.replace("tcp://", ""))
+                        # `.last_endpoint` is already of type `bytes`
+                        pipe.send(remote_socket.last_endpoint.replace(b"tcp://",b""))
                         poller.register(remote_socket)
             if items.get(remote_socket,None) == zmq.POLLIN:
                 self.on_recv(remote_socket,ipc_pub)
