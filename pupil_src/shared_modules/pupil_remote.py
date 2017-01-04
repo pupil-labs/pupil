@@ -165,11 +165,11 @@ class Pupil_Remote(Plugin):
         self.menu.append(ui.Switch('use_primary_interface',self,setter=set_iface,label="Use primary network interface"))
         if self.use_primary_interface:
             self.menu.append(ui.Text_Input('port',self,setter=set_port,label='Port'))
-            self.menu.append(ui.Info_Text('Connect locally:   "tcp://%s:%s" ' %('127.0.0.1',self.port.decode('utf-8'))))
-            self.menu.append(ui.Info_Text('Connect remotely: "tcp://%s:%s" '%(ip,self.port.decode('utf-8'))))
+            self.menu.append(ui.Info_Text('Connect locally:   "tcp://{}:{}"'.format('127.0.0.1',self.port.decode('utf-8'))))
+            self.menu.append(ui.Info_Text('Connect remotely: "tcp://{}:{}"'.format(ip,self.port.decode('utf-8'))))
         else:
             self.menu.append(ui.Text_Input('host',setter=set_address,getter=lambda : self.host.decode('utf-8')+':'+self.port.decode('utf-8'), label='Address'))
-            self.menu.append(ui.Info_Text('Bound to: "tcp://%s:%s" ' %(self.host.decode('utf-8'),self.port.decode('utf-8')) ))
+            self.menu.append(ui.Info_Text('Bound to: "tcp://{}:{}" ' .format(self.host.decode('utf-8'),self.port.decode('utf-8')) ))
 
     def deinit_gui(self):
         if self.menu:
@@ -199,9 +199,11 @@ class Pupil_Remote(Plugin):
                         remote_socket.bind(new_url)
                     except zmq.ZMQError as e:
                         remote_socket = None
-                        pipe.send_multipart((b"Error","Could not bind to Socket: %s. Reason: %s"%(new_url,e)))
+                        pipe.send_string("Error", flags=zmq.SNDMORE)
+                        pipe.send_string("Could not bind to Socket: {}. Reason: {}".format(new_url, e))
                     else:
-                        pipe.send_multipart((b"Bind OK",remote_socket.last_endpoint.replace(b"tcp://",b"")))
+                        pipe.send_string("Bind OK", flags=zmq.SNDMORE)
+                        pipe.send_string(remote_socket.last_endpoint.replace("tcp://", ""))
                         poller.register(remote_socket)
             if items.get(remote_socket,None) == zmq.POLLIN:
                 self.on_recv(remote_socket,ipc_pub)
@@ -215,7 +217,7 @@ class Pupil_Remote(Plugin):
                 payload = zmq_tools.serializer.loads(socket.recv(flags=zmq.NOBLOCK),encoding='utf-8')
                 payload['subject']
             except Exception as e:
-                response = 'Notification mal-formatted or missing: %s'%e
+                response = 'Notification mal-formatted or missing: {}'.format(e)
             else:
                 ipc_pub.notify(payload)
                 response = 'Notification recevied.'
@@ -242,7 +244,7 @@ class Pupil_Remote(Plugin):
             try:
                 target = float(msg[2:])
             except:
-                response = "'%s' cannot be converted to float."%msg[2:]
+                response = "'{}' cannot be converted to float.".format(msg[2:])
             else:
                 raw_time = self.g_pool.get_now()
                 self.g_pool.timebase.value = raw_time-target
@@ -274,7 +276,3 @@ class Pupil_Remote(Plugin):
         """
         self.stop_server()
         self.deinit_gui()
-
-
-
-

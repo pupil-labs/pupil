@@ -50,22 +50,24 @@ def verify_out_file_path(out_file_path,rec_dir):
             dir_name = rec_dir
         if not file_name:
             file_name = 'world_viz.mp4'
-        out_file_path = os.path.expanduser(os.path.join(dir_name,file_name))
+        out_file_path = os.path.expanduser(os.path.join(dir_name, file_name))
 
     out_file_path = avoid_overwrite(out_file_path)
     if os.path.isfile(out_file_path):
         logger.warning("Video out file already exsists. I will overwrite!")
         os.remove(out_file_path)
-    logger.debug("Saving Video to %s"%out_file_path)
+    logger.debug("Saving Video to {}".format(out_file_path))
 
     return out_file_path
+
 
 def avoid_overwrite(out_file_path):
     if os.path.isfile(out_file_path):
         # append something unique to avoid overwriting
-        out_file_path,ext = os.path.splitext(out_file_path)
+        out_file_path, ext = os.path.splitext(out_file_path)
         out_file_path += str(int(time.time())) + '.mp4'
     return out_file_path
+
 
 class Video_Export_Launcher(Plugin):
     """docstring for Video_Export_Launcher

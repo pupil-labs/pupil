@@ -165,7 +165,7 @@ class Surface_Tracker(Plugin):
 
         for s in self.surfaces:
             idx = self.surfaces.index(s)
-            s_menu = ui.Growing_Menu("Surface %s"%idx)
+            s_menu = ui.Growing_Menu("Surface {}".format(idx))
             s_menu.collapsed=True
             s_menu.append(ui.Text_Input('name',s))
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
@@ -215,7 +215,7 @@ class Surface_Tracker(Plugin):
 
 
         if self.running:
-            self.button.status_text = '%s/%s'%(len([s for s in self.surfaces if s.detected]),len(self.surfaces))
+            self.button.status_text = '{}/{}'.format(len([s for s in self.surfaces if s.detected]), len(self.surfaces))
         else:
             self.button.status_text = 'tracking paused'
 

@@ -569,7 +569,7 @@ if ne:
         """
         pos, size, angle = ellipse
         ex,ey = pos
-        dx,dy = size        
+        dx,dy = size
         pts = np.float64(points)
         pts.shape=(-1,2)
         rx,ry = dx/2., dy/2.
@@ -701,7 +701,7 @@ def get_system_info():
         username = 'unknown'
         sysname, nodename, release, version, machine = sys.platform,'unknown','unknown','unknown','unknown'
 
-    return "User: %s, Platform: %s, Machine: %s, Release: %s, Version: %s" %(username,sysname,nodename,release,version)
+    return "User: {}, Platform: {}, Machine: {}, Release: {}, Version: {}".format(username,sysname,nodename,release,version)
 
 
 if __name__ == '__main__':

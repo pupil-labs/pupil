@@ -74,7 +74,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
             logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
         else:
             self.cache = Cache_List(cache)
-            logger.debug("Loaded marker cache %s / %s frames had been searched before"%(len(self.cache)-self.cache.count(False),len(self.cache)) )
+            logger.debug("Loaded marker cache {} / {} frames had been searched before".format(len(self.cache)-self.cache.count(False),len(self.cache)) )
 
         self.init_marker_cacher()
         for s in self.surfaces:
@@ -130,7 +130,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface()))
         for s in self.surfaces:
             idx = self.surfaces.index(s)
-            s_menu = ui.Growing_Menu("Surface %s"%idx)
+            s_menu = ui.Growing_Menu("Surface {}".format(idx))
             s_menu.collapsed=True
             s_menu.append(ui.Text_Input('name',s))
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
@@ -261,7 +261,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
     def init_marker_cacher(self):
         if system() == 'Darwin':
             forking_enable(0)
-        
+
         from marker_detector_cacher import fill_cache
         visited_list = [False if x == False else True for x in self.cache]
         video_file_path =  self.g_pool.capture.source_path
@@ -380,14 +380,14 @@ class Offline_Surface_Tracker(Surface_Tracker):
         section = export_range
         in_mark = export_range.start
         out_mark = export_range.stop
-        logger.info("exporting metrics to %s"%metrics_dir)
+        logger.info("exporting metrics to {}".format(metrics_dir))
         if os.path.isdir(metrics_dir):
             logger.info("Will overwrite previous export for this section")
         else:
             try:
                 os.mkdir(metrics_dir)
             except:
-                logger.warning("Could not make metrics dir %s"%metrics_dir)
+                logger.warning("Could not make metrics dir {}".format(metrics_dir))
                 return
 
 
@@ -497,7 +497,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
                     csv_writer.writerow( (f['id'],f['timestamp'],f['duration'],f['start_frame_index'],f['end_frame_index'],f_x,f_y,f_x*s.real_world_size['x'],f_y*s.real_world_size['y'],f_on_srf) )
 
 
-            logger.info("Saved surface positon gaze and fixation data for '%s' with uid:'%s'"%(s.name,s.uid))
+            logger.info("Saved surface positon gaze and fixation data for '{}' with uid:'{}'".format(s.name,s.uid))
 
             if s.heatmap is not None:
                 logger.info("Saved Heatmap as .png file.")
@@ -543,4 +543,3 @@ class Offline_Surface_Tracker(Surface_Tracker):
         for s in self.surfaces:
             s.close_window()
         self.deinit_gui()
-

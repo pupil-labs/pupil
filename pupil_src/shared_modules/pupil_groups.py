@@ -105,14 +105,10 @@ class Pupil_Groups(Plugin):
             })
         elif notification['subject'].startswith('groups.pong'):
             peer = notification['groups.peer']
-            logger.info(
-                '%s: Ping time: %s - Pong time: %s'%(
-                    peer['name'],
-                    float(notification['t2'])-
-                    float(notification['t1']),
-                    float(peer['arrival_timestamp'])-
-                    float(notification['t2']))
-            )
+            logger.info('{}: Ping time: {} - Pong time: {}'.format(
+                peer['name'],
+                float(notification['t2']) - float(notification['t1']),
+                float(peer['arrival_timestamp']) - float(notification['t2'])))
 
     def get_init_dict(self):
         return {'name':self.name, 'active_group': self.active_group}
@@ -129,7 +125,7 @@ class Pupil_Groups(Plugin):
             if not self.group_members:
                 self.group_menu.append(ui.Info_Text('There are no other group members.'))
             for name in self.group_members.values():
-                self.group_menu.append(ui.Info_Text("%s"%name))
+                self.group_menu.append(ui.Info_Text(name))
 
     @property
     def default_headers(self):
@@ -243,22 +239,19 @@ class Pupil_Groups(Plugin):
                                 'type': event.type
                             }
                             local_out.notify(notification)
-                        except Exception as e:
-                            logger.info('Dropped garbage data by peer %s (%s)'%(event.peer_name, event.peer_uuid))
+                        except Exception:
+                            logger.info('Dropped garbage data by peer {} ({})'.format(event.peer_name, event.peer_uuid))
                 elif event.type == 'JOIN' and event.group == self.active_group:
                     local_out.notify({
                         'subject': 'groups.member_joined',
                         'name': event.peer_name,
                         'uuid_bytes': event.peer_uuid_bytes
                     })
-                elif (event.type == 'LEAVE' and \
-                      event.group == self.active_group) or \
-                      event.type == 'EXIT':
+                elif (event.type == 'LEAVE' and event.group == self.active_group) or event.type == 'EXIT':
                     local_out.notify({
                         'subject': 'groups.member_left',
                         'name': event.peer_name,
-                        'uuid_bytes': event.peer_uuid_bytes
-                    })
+                        'uuid_bytes': event.peer_uuid_bytes})
 
             if pipe in readable:
                 command = pipe.recv()

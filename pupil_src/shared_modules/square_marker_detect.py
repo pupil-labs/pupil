@@ -240,24 +240,24 @@ def draw_markers(img,markers):
         else:
             cv2.polylines(img,np.int0(hat),color = (0,255,0),isClosed=True)
         cv2.polylines(img,np.int0(centroid),color = (255,255,int(255*m['id_confidence'])),isClosed=True,thickness=2)
-        m_str = 'id: %i'%m['id']
+        m_str = 'id: {:i}'.format(m['id'])
         org = origin.copy()
         # cv2.rectangle(img, tuple(np.int0(org+(-5,-13))[0,:]), tuple(np.int0(org+(100,30))[0,:]),color=(0,0,0),thickness=-1)
         cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
         if 'id_confidence' in m:
-            m_str = 'idc: %.3f'%m['id_confidence']
+            m_str = 'idc: {:.3f}'.format(m['id_confidence'])
             org += (0, 12)
             cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
         if 'loc_confidence' in m:
-            m_str = 'locc: %.3f'%m['loc_confidence']
+            m_str = 'locc: {:.3f}'.format(m['loc_confidence'])
             org += (0, 12 )
             cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
         if 'frames_since_true_detection' in m:
-            m_str = 'otf: %s'%m['frames_since_true_detection']
+            m_str = 'otf: {}'.format(m['frames_since_true_detection'])
             org += (0, 12 )
             cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
         if 'opf_vel' in m:
-            m_str = 'otf: %s'%m['opf_vel']
+            m_str = 'otf: {}'.format(m['opf_vel'])
             org += (0, 12 )
             cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
 
@@ -659,14 +659,11 @@ def bench(folder):
     print(detected_count) #2900 #3042 #3021
 
 
-
-
-
 if __name__ == '__main__':
     folder = '/Users/mkassner/Desktop/'
     import cProfile,subprocess,os
     cProfile.runctx("bench(folder)",{'folder':folder},locals(),os.path.join(folder, "world.pstats"))
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-    subprocess.call("cd %s ; python "%folder+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
+    subprocess.call("cd {} ; python {} -f pstats world.pstats | dot -Tpng -o world_cpu_time.png".format(folder, gprof2dot_loc), shell=True)
     print("created  time graph for  process. Please check out the png next to this file")

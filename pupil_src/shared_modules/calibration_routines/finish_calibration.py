@@ -51,8 +51,8 @@ def finish_calibration(g_pool,pupil_list,ref_list):
     else:
         matched_monocular_data = matched_pupil1_data
 
-    logger.info('Collected %s monocular calibration data.'%len(matched_monocular_data))
-    logger.info('Collected %s binocular calibration data.'%len(matched_binocular_data))
+    logger.info('Collected {} monocular calibration data.'.format(len(matched_monocular_data)))
+    logger.info('Collected {} binocular calibration data.'.format(len(matched_binocular_data)))
 
 
     mode = g_pool.detection_mapping_mode

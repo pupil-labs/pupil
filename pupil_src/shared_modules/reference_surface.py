@@ -448,9 +448,8 @@ class Reference_Surface(object):
             return
         self.markers.pop(marker['id'])
 
-
     def marker_status(self):
-        return "%s   %s/%s" %(self.name,self.detected_markers,len(self.markers))
+        return "{}   {}/{}".format(self.name, self.detected_markers, len(self.markers))
 
     def get_mode_toggle(self,pos,img_shape):
         if self.detected and self.defined:

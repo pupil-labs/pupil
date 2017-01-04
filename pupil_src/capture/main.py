@@ -20,7 +20,7 @@ if getattr(sys, 'frozen', False):
     if 'pupil_service' in sys.executable:
         app = 'service'
     # Specifiy user dir.
-    user_dir = os.path.expanduser(os.path.join('~','pupil_%s_settings'%app))
+    user_dir = os.path.expanduser(os.path.join('~', 'pupil_{}_settings'.format(app)))
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
 else:
     if 'service' in sys.argv:
@@ -28,7 +28,7 @@ else:
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
     # Specifiy user dir.
-    user_dir = os.path.join(pupil_base_dir,'%s_settings'%app)
+    user_dir = os.path.join(pupil_base_dir,'{}_settings'.format(app))
     version_file = None
 
 # create folder for user settings, tmp data
@@ -225,17 +225,16 @@ def launcher():
             if "notify.eye_process.should_start" in topic:
                 eye_id = n['eye_id']
                 if not eyes_are_alive[eye_id].value:
-                    Process(target=eye,
-                                name='eye%s'%eye_id,
-                                args=(timebase,
-                                    eyes_are_alive[eye_id],
-                                    ipc_pub_url,
-                                    ipc_sub_url,
-                                    ipc_push_url,
-                                    user_dir,
-                                    app_version,
-                                    eye_id
-                                    )).start()
+                    Process(target=eye, name='eye{}'.format(eye_id), args=(
+                            timebase,
+                            eyes_are_alive[eye_id],
+                            ipc_pub_url,
+                            ipc_sub_url,
+                            ipc_push_url,
+                            user_dir,
+                            app_version,
+                            eye_id
+                            )).start()
             elif "notify.launcher_process.should_stop" in topic:
                 break
             elif "notify.meta.should_doc" in topic:

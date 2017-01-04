@@ -227,7 +227,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
         total_fixation_time  = sum([f['duration'] for f in fixations])
         total_video_time = self.g_pool.timestamps[-1]- self.g_pool.timestamps[0]
         fixation_count = len(fixations)
-        logger.info("detected %s Fixations. Total duration of fixations: %0.2fsec total time of video %0.2fsec "%(fixation_count,total_fixation_time,total_video_time))
+        logger.info("Detected {} Fixations. Total duration of fixations: {:.2f}sec total time of video {:0.2f}sec ".format(fixation_count, total_fixation_time, total_video_time))
 
 
         # now lets bin fixations into frames. Fixations may be repeated this way as they span muliple frames
@@ -237,7 +237,6 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
                 fixations_by_frame[idx].append(f)
 
         self.g_pool.fixations_by_frame = fixations_by_frame
-
 
     @classmethod
     def csv_representation_keys(self):
@@ -288,8 +287,8 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
         with open(os.path.join(export_dir,'fixation_report.csv'),'w',encoding='utf-8',newline='') as csvfile:
             csv_writer = csv.writer(csvfile)
             csv_writer.writerow(('fixation classifier','Dispersion_Duration'))
-            csv_writer.writerow(('max_dispersion','%0.3f deg'%self.max_dispersion) )
-            csv_writer.writerow(('min_duration','%0.3f sec'%self.min_duration) )
+            csv_writer.writerow(('max_dispersion','{:0.3f} deg'.format(self.max_dispersion)) )
+            csv_writer.writerow(('min_duration','{:0.3f} sec'.format(self.min_duration)) )
             csv_writer.writerow((''))
             csv_writer.writerow(('fixation_count',len(fixations_in_section)))
             logger.info("Created 'fixation_report.csv' file.")
@@ -306,7 +305,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
                 transparent_circle(frame.img, (x,y), radius=f['pix_dispersion']/2, color=(.5, .2, .6, .7), thickness=-1)
                 cv2.putText(
                     frame.img,
-                    '%i'%(f['id']),
+                    '{:i}'.format(f['id']),
                     (x+20,y),
                     cv2.FONT_HERSHEY_DUPLEX,
                     0.8,(255,150,100))
@@ -341,7 +340,7 @@ class Sliding_Window(object):
         self.indices, self.normals, self.timestamps, self.diameters = zip(*filtered)
 
         if not self.indices:
-            raise ValueError('No data found for eye id %i'%eye_id)
+            raise ValueError('No data found for eye id {:i}'.format(eye_id))
         self.eye_id          = eye_id
         self.min_duration    = min_duration
         self.start_index     = 0
@@ -354,7 +353,7 @@ class Sliding_Window(object):
 
     def append_frames(self,n=1):
         if (self.stop_index+n > len(self.normals)):
-            raise EOFError('Appending %i frames would exceed frame bound.'%n)
+            raise EOFError('Appending {:i} frames would exceed frame bound.'.format(n))
 
         new_data = self.pupil_normals(self.stop_index, self.stop_index+n)
         old_incl_new = self.pupil_normals(stop=self.stop_index+n)
@@ -388,7 +387,7 @@ class Sliding_Window(object):
 
         dm_shape = self.dm_shape
         if len(dm_shape) and len(dm_shape) != dm_shape[-1]:
-            raise ValueError('Distance matrix not squared: %ix%i'%(dm_cols,dm_rows))
+            raise ValueError('Distance matrix not squared: {0[0]:i}x{0[1]:i}'.format(dm_shape))
 
     def max_distance(self, ignore_last_frame=False):
         max_dist = 0.
@@ -439,7 +438,7 @@ class Sliding_Window(object):
             ts1 = self.timestamps[j]
             if abs(ts1 - ts0) > self.min_duration:
                 return start_idx, j
-        raise EOFError('Could not find a sliding window with minimal lenght of %.2fs'%self.min_duration)
+        raise EOFError('Could not find a sliding window with minimal lenght of {:.2f}s'.format(self.min_duration))
 
     def pupil_normals(self,start=None,stop=None):
         start = start or self.start_index
@@ -479,7 +478,7 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
                 transparent_circle(frame.img, (x,y), radius=f['pix_dispersion']/2, color=(.5, .2, .6, .7), thickness=-1)
                 cv2.putText(
                     frame.img,
-                    '%i - eye %i'%(f['id'],eye_id),
+                    '{:i} - eye {:i}'.format(f['id'], eye_id),
                     (x+20,y-5+30*eye_id),
                     cv2.FONT_HERSHEY_DUPLEX,
                     0.8,(255,150,100))
@@ -555,7 +554,7 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
                     p['norm_pos'][1] for p in fixation_support
                 ])/fix_sup_len
             confidence = sum(p['confidence'] for p in fixation_support)/fix_sup_len
-            avg_pupil_size =  sum(sw.diameters[sw.slice])/(sw.stop_index-sw.start_index)
+            avg_pupil_size = sum(sw.diameters[sw.slice])/(sw.stop_index-sw.start_index)
             duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
 
             new_fixation = {
@@ -597,8 +596,9 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
         total_video_time = self.g_pool.timestamps[-1]-self.g_pool.timestamps[0]
         fixation_count = len(fixations)
         t_stop = time.time()
-        logger.info("Detected %s fixations for eye %i. Total duration of fixations: %0.2fsec total time of video %0.2fsec. Took %.5fsec to calculate."%(fixation_count, eye_id,total_fixation_time, total_video_time, t_stop - t_start))
+        logger.info("Detected {} fixations for eye {:i}. Total duration of fixations: {:0.2f}sec total time of video {:0.2f}sec. Took {:.5f}sec to calculate.".format(fixation_count, eye_id, total_fixation_time, total_video_time, t_stop - t_start))
         return fixations
+
 
 class Detection_Window(object):
     def __init__(self):
@@ -656,7 +656,7 @@ class Detection_Window(object):
         self.remove_n_datums(counter)
 
     def remove_n_datums(self, n):
-        if n < 0: raise ValueError('`n` needs to be an integer not smaller than zero. `%s` given.'%n)
+        if n < 0: raise ValueError('`n` needs to be an integer not smaller than zero. `{}` given.'.format(n))
         del self.pupil_data[:n]
         del self.gaze_data[:n]
         del self.distances[:n]
@@ -717,13 +717,16 @@ class Detection_Window(object):
         return np.rad2deg(self.max_distance)
 
     def __str__(self):
-        return '<%s %fsec %fdeg>'%(self.__class__.__name__,self.duration,self.max_distance)
+        return '<{} {:f}sec {:f}deg>'.format(self.__class__.__name__, self.duration, self.max_distance)
+
 
 class Online_Base_Fixation_Detector(Plugin):
     order = .2
     uniqueness = 'by_base_class'
+
     def __init__(self, g_pool):
         super(Online_Base_Fixation_Detector, self).__init__(g_pool)
+
 
 class Fixation_Detector_3D(Online_Base_Fixation_Detector):
     """docstring for Online_Fixation_Detector_Pupil_Angle_Dispersion_Duration
@@ -735,7 +738,7 @@ class Fixation_Detector_3D(Online_Base_Fixation_Detector):
         self.dispersion_slider_min = 0.
         self.dispersion_slider_max = 3.
         self.dispersion_slider_stp = 0.05
-        self.detection_windows = [Detection_Window(),Detection_Window()]
+        self.detection_windows = [Detection_Window(), Detection_Window()]
 
     def update(self,frame=None,events={}):
         recent = [[],[]]
