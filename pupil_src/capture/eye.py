@@ -527,8 +527,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                             pts = cv2.ellipse2Poly(
                                 (int(eye_ball['center'][0]),
                                  int(eye_ball['center'][1])),
-                                (eye_ball['axes'][0] // 2,
-                                 eye_ball['axes'][1] // 2),
+                                (int(eye_ball['axes'][0] / 2),
+                                 int(eye_ball['axes'][1] // 2)),
                                 int(eye_ball['angle']), 0, 360, 8)
                         except ValueError as e:
                             pass
@@ -540,8 +540,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                             pts = cv2.ellipse2Poly(
                                 (int(result['ellipse']['center'][0]),
                                  int(result['ellipse']['center'][1])),
-                                (result['ellipse']['axes'][0] // 2,
-                                 result['ellipse']['axes'][1] // 2),
+                                (int(result['ellipse']['axes'][0] / 2),
+                                 int(result['ellipse']['axes'][1] / 2)),
                                 int(result['ellipse']['angle']), 0, 360, 15)
                             confidence = result['confidence'] * 0.7
                             draw_polyline(pts, 1, RGBA(1., 0, 0, confidence))
