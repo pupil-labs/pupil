@@ -56,7 +56,7 @@ class Pupil_Groups(Plugin):
 
     def stop_group_communication(self):
         logging.debug('Stopping Pupil Groups...')
-        self.thread_pipe.send('$TERM')
+        self.thread_pipe.send_string('$TERM')
         while self.thread_pipe:
             time.sleep(.1)
         logger.info('Pupil Groups stopped.')
@@ -154,7 +154,7 @@ class Pupil_Groups(Plugin):
     def name(self,value):
         self._name = value
         self.group_members = {}
-        self.thread_pipe.send('$RESTART')
+        self.thread_pipe.send_string('$RESTART')
 
     @property
     def active_group(self):
@@ -165,7 +165,7 @@ class Pupil_Groups(Plugin):
         self._active_group = value
         self.group_members = {}
         self.update_member_menu()
-        self.thread_pipe.send('$RESTART')
+        self.thread_pipe.send_string('$RESTART')
 
 
     # @groups.setter
@@ -261,7 +261,7 @@ class Pupil_Groups(Plugin):
                     })
 
             if pipe in readable:
-                command = pipe.recv()
+                command = pipe.recv_string()
                 if command == '$RESTART':
                     # Restart group_member node to change name
                     poller.unregister(group_member.socket())
