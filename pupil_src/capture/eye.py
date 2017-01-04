@@ -528,7 +528,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                                 (int(eye_ball['center'][0]),
                                  int(eye_ball['center'][1])),
                                 (int(eye_ball['axes'][0] / 2),
-                                 int(eye_ball['axes'][1] // 2)),
+                                 int(eye_ball['axes'][1] / 2)),
                                 int(eye_ball['angle']), 0, 360, 8)
                         except ValueError as e:
                             pass
