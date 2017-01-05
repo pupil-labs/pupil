@@ -9,15 +9,16 @@
 '''
 
 from time import sleep
-from plugin import Plugin
-from pyglui import ui
+import socket
+import audio
 import zmq
 import zmq_tools
-import socket
 from pyre import zhelper
+from pyglui import ui
+from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
-import audio
+
 
 class Pupil_Remote(Plugin):
     """Pupil Remote plugin
@@ -68,57 +69,55 @@ class Pupil_Remote(Plugin):
         order (float): See plugin.py
         thread_pipe (zmq.Socket): Pipe for background communication
     """
-    def __init__(self, g_pool,port="50020", host="*", use_primary_interface=True):
+    def __init__(self, g_pool, port="50020", host="*", use_primary_interface=True):
         super(Pupil_Remote, self).__init__(g_pool)
-        self.order = .01 #excecute first
+        self.order = .01  # excecute first
         self.context = g_pool.zmq_ctx
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
 
         self.use_primary_interface = use_primary_interface
         self.host = host
-        self.port= port
+        self.port = port
 
-        self.start_server(host+':'+port)
+        self.start_server('tcp://{}:{}'.format(host, port))
         self.menu = None
 
-
-    def start_server(self,new_address):
-
-        #addes needs to be a byte array for zmq
-        new_address = new_address.encode('utf-8')
-
-        self.thread_pipe.send_multipart((b'Bind',b"tcp://"+new_address))
-        response,msg = self.thread_pipe.recv_multipart()
-        if response == b'Bind OK' :
-            host,port = msg.split(b':')
+    def start_server(self, new_address):
+        self.thread_pipe.send_string('Bind', flags=zmq.SNDMORE)
+        self.thread_pipe.send_string(new_address)
+        response = self.thread_pipe.recv_string()
+        msg = self.thread_pipe.recv_string()
+        if response == 'Bind OK':
+            host, port = msg.split(':')
             self.host = host
             self.port = port
             return
 
-        #fail logic
+        # fail logic
         logger.error(msg)
 
-        #for service we shut down
+        # for service we shut down
         if self.g_pool.app == 'service':
             audio.say("Error: Port already in use.")
-            self.notify_all({'subject':'service_process.should_stop'})
+            self.notify_all({'subject': 'service_process.should_stop'})
             return
 
-        #for capture we try to bind to a arbitrary port on the first external interface
+        # for capture we try to bind to a arbitrary port on the first external interface
         else:
-            self.thread_pipe.send_multipart((b'Bind',b"tcp://*:*"))
-            response,msg = self.thread_pipe.recv_multipart()
-            if response == b'Bind OK' :
-                host,port = msg.split(b':')
+            self.thread_pipe.send_string('Bind', flags=zmq.SNDMORE)
+            self.thread_pipe.send_string('tcp://*:*')
+            response = self.thread_pipe.recv_string()
+            msg = self.thread_pipe.recv_string()
+            if response == 'Bind OK':
+                host, port = msg.split(':')
                 self.host = host
                 self.port = port
             else:
                 logger.error(msg)
                 raise Exception("Could not bind to port")
 
-
     def stop_server(self):
-        self.thread_pipe.send(b'Exit')
+        self.thread_pipe.send_string('Exit')
         while self.thread_pipe:
             sleep(.1)
 
@@ -140,7 +139,7 @@ class Pupil_Remote(Plugin):
 
         if self.use_primary_interface:
             def set_port(new_port):
-                new_address = '*:'+new_port
+                new_address = 'tcp://*:'+new_port
                 self.start_server(new_address)
                 self.update_menu()
 
@@ -154,43 +153,41 @@ class Pupil_Remote(Plugin):
                 if new_address.count(":") != 1:
                     logger.error("address format not correct")
                     return
-                self.start_server(new_address)
+                self.start_server('tcp://'+new_address)
                 self.update_menu()
 
-
-
         help_str = 'Pupil Remote using ZeroMQ REQ REP scheme.'
-        self.menu.append(ui.Button('Close',close))
+        self.menu.append(ui.Button('Close', close))
         self.menu.append(ui.Info_Text(help_str))
-        self.menu.append(ui.Switch('use_primary_interface',self,setter=set_iface,label="Use primary network interface"))
+        self.menu.append(ui.Switch('use_primary_interface', self, setter=set_iface, label="Use primary network interface"))
         if self.use_primary_interface:
-            self.menu.append(ui.Text_Input('port',self,setter=set_port,label='Port'))
-            self.menu.append(ui.Info_Text('Connect locally:   "tcp://%s:%s" ' %('127.0.0.1',self.port.decode('utf-8'))))
-            self.menu.append(ui.Info_Text('Connect remotely: "tcp://%s:%s" '%(ip,self.port.decode('utf-8'))))
+            self.menu.append(ui.Text_Input('port', self, setter=set_port, label='Port'))
+            self.menu.append(ui.Info_Text('Connect locally:   "tcp://127.0.0.1:{}"'.format(self.port)))
+            self.menu.append(ui.Info_Text('Connect remotely: "tcp://{}:{}"'.format(ip, self.port)))
         else:
-            self.menu.append(ui.Text_Input('host',setter=set_address,getter=lambda : self.host.decode('utf-8')+':'+self.port.decode('utf-8'), label='Address'))
-            self.menu.append(ui.Info_Text('Bound to: "tcp://%s:%s" ' %(self.host.decode('utf-8'),self.port.decode('utf-8')) ))
+            self.menu.append(ui.Text_Input('host', setter=set_address, label='Address',
+                                           getter=lambda: '{}:{}'.format(self.host, self.port)))
+            self.menu.append(ui.Info_Text('Bound to: "tcp://{}:{}"'.format(self.host, self.port)))
 
     def deinit_gui(self):
         if self.menu:
             self.g_pool.sidebar.remove(self.menu)
             self.menu = None
 
-
-    def thread_loop(self,context,pipe):
+    def thread_loop(self, context, pipe):
         poller = zmq.Poller()
-        ipc_pub = zmq_tools.Msg_Dispatcher(context,self.g_pool.ipc_push_url)
+        ipc_pub = zmq_tools.Msg_Dispatcher(context, self.g_pool.ipc_push_url)
         poller.register(pipe, zmq.POLLIN)
         remote_socket = None
 
         while True:
             items = dict(poller.poll())
-            if items.get(pipe,None) == zmq.POLLIN:
-                cmd = pipe.recv()
-                if cmd == b'Exit':
+            if pipe in items:
+                cmd = pipe.recv_string()
+                if cmd == 'Exit':
                     break
-                elif cmd == b'Bind':
-                    new_url = pipe.recv()
+                elif cmd == 'Bind':
+                    new_url = pipe.recv_string()
                     if remote_socket:
                         poller.unregister(remote_socket)
                         remote_socket.close(linger=0)
@@ -199,50 +196,53 @@ class Pupil_Remote(Plugin):
                         remote_socket.bind(new_url)
                     except zmq.ZMQError as e:
                         remote_socket = None
-                        pipe.send_multipart((b"Error","Could not bind to Socket: %s. Reason: %s"%(new_url,e)))
+                        pipe.send_string("Error", flags=zmq.SNDMORE)
+                        pipe.send_string("Could not bind to Socket: {}. Reason: {}".format(new_url, e))
                     else:
-                        pipe.send_multipart((b"Bind OK",remote_socket.last_endpoint.replace(b"tcp://",b"")))
-                        poller.register(remote_socket)
-            if items.get(remote_socket,None) == zmq.POLLIN:
-                self.on_recv(remote_socket,ipc_pub)
+                        pipe.send_string("Bind OK", flags=zmq.SNDMORE)
+                        # `.last_endpoint` is already of type `bytes`
+                        pipe.send(remote_socket.last_endpoint.replace(b"tcp://",b""))
+                        poller.register(remote_socket, zmq.POLLIN)
+            if remote_socket in items:
+                self.on_recv(remote_socket, ipc_pub)
 
         self.thread_pipe = None
 
-    def on_recv(self,socket,ipc_pub):
-        msg = socket.recv().decode('utf-8')
+    def on_recv(self, socket, ipc_pub):
+        msg = socket.recv_string()
         if msg.startswith('notify'):
             try:
-                payload = zmq_tools.serializer.loads(socket.recv(flags=zmq.NOBLOCK),encoding='utf-8')
+                payload = zmq_tools.serializer.loads(socket.recv(flags=zmq.NOBLOCK), encoding='utf-8')
                 payload['subject']
             except Exception as e:
-                response = 'Notification mal-formatted or missing: %s'%e
+                response = 'Notification mal-formatted or missing: {}'.format(e)
             else:
                 ipc_pub.notify(payload)
                 response = 'Notification recevied.'
         elif msg == 'SUB_PORT':
-            response = self.g_pool.ipc_sub_url.split(b':')[-1].decode('utf-8')
+            response = self.g_pool.ipc_sub_url.split(':')[-1]
         elif msg == 'PUB_PORT':
-            response = self.g_pool.ipc_pub_url.split(b':')[-1].decode('utf-8')
+            response = self.g_pool.ipc_pub_url.split(':')[-1]
         elif msg[0] == 'R':
             try:
-                ipc_pub.notify({'subject':'recording.should_start','session_name':msg[2:]})
+                ipc_pub.notify({'subject': 'recording.should_start', 'session_name': msg[2:]})
                 response = 'OK'
             except IndexError:
                 response = 'Recording command mal-formatted.'
         elif msg[0] == 'r':
-            ipc_pub.notify({'subject':'recording.should_stop'})
+            ipc_pub.notify({'subject': 'recording.should_stop'})
             response = 'OK'
         elif msg == 'C':
-            ipc_pub.notify({'subject':'calibration.should_start'})
+            ipc_pub.notify({'subject': 'calibration.should_start'})
             response = 'OK'
         elif msg == 'c':
-            ipc_pub.notify({'subject':'calibration.should_stop'})
+            ipc_pub.notify({'subject': 'calibration.should_stop'})
             response = 'OK'
         elif msg[0] == 'T':
             try:
                 target = float(msg[2:])
             except:
-                response = "'%s' cannot be converted to float."%msg[2:]
+                response = "'{}' cannot be converted to float.".format(msg[2:])
             else:
                 raw_time = self.g_pool.get_now()
                 self.g_pool.timebase.value = raw_time-target
@@ -251,9 +251,9 @@ class Pupil_Remote(Plugin):
             response = repr(self.g_pool.get_timestamp())
         else:
             response = 'Unknown command.'
-        socket.send(response.encode('utf-8'))
+        socket.send_string(response)
 
-    def on_notify(self,notification):
+    def on_notify(self, notification):
         """send simple string messages to control application functions.
 
         Emits notifications:
@@ -266,7 +266,7 @@ class Pupil_Remote(Plugin):
         pass
 
     def get_init_dict(self):
-        return {'port':self.port, 'host':self.host, 'use_primary_interface':self.use_primary_interface}
+        return {'port': self.port, 'host': self.host, 'use_primary_interface': self.use_primary_interface}
 
     def cleanup(self):
         """gets called when the plugin get terminated.
@@ -274,7 +274,3 @@ class Pupil_Remote(Plugin):
         """
         self.stop_server()
         self.deinit_gui()
-
-
-
-

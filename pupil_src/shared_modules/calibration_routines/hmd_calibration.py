@@ -78,7 +78,7 @@ class HMD_Calibration(Calibration_Plugin):
                 else:
                     logger.error("Ref data can only be added when calibratio is runnings.")
         except KeyError as e:
-            logger.error('Notification: %s not conform. Raised error %s'%(notification,e))
+            logger.error('Notification: {} not conform. Raised error {}'.format(notification,e))
 
 
     def deinit_gui(self):

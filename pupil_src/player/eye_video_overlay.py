@@ -229,7 +229,7 @@ class Eye_Video_Overlay(Plugin):
                 try:
                     self.eye_frames[eye_index] = self.eye_cap[eye_index].get_frame()
                 except EndofVideoFileError:
-                    logger.warning("Reached the end of the eye video for eye video %s."%eye_index)
+                    logger.warning("Reached the end of the eye video for eye video {}.".format(eye_index))
             else:
                 #our old frame is still valid because we are doing upsampling
                 pass

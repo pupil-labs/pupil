@@ -39,7 +39,7 @@ class Log_History(Plugin):
         def close():
             self.alive = False
 
-        help_str = 'A View of the %s most recent log messages. Complete logs are here: "%s"' %(self.num_messages,self.g_pool.user_dir)
+        help_str = 'A View of the {} most recent log messages. Complete logs are here: "{}"'.format(self.num_messages,self.g_pool.user_dir)
         self.menu = ui.Scrolling_Menu('Log')
         self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Button('Close',close))

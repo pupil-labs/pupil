@@ -49,8 +49,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # This is not harmful but unnecessary.
 
     # general imports
-    from time import time, sleep
-    import numpy as np
+    from time import sleep
     import logging
 
     # networking
@@ -78,6 +77,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     assert pyglui_version >= '1.0'
     from pyglui.cygl.utils import Named_Texture
     import gl_utils
+
     # monitoring
     import psutil
 
@@ -86,11 +86,11 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     from file_methods import Persistent_Dict
     from methods import normalize, denormalize, delta_t, get_system_info
     from uvc import get_time_monotonic
-    logger.info('Application Version: %s' % version)
-    logger.info('System Info: %s' % get_system_info())
+    logger.info('Application Version: {}'.format(version))
+    logger.info('System Info: {}'.format(get_system_info()))
 
     # video sources
-    from video_capture import InitialisationError, StreamError, Fake_Source,EndofVideoFileError, source_classes,manager_classes
+    from video_capture import InitialisationError, StreamError, Fake_Source, EndofVideoFileError, source_classes, manager_classes
     source_by_name = {src.class_name(): src for src in source_classes}
     import audio
 
@@ -103,7 +103,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     from calibration_routines import calibration_plugins, gaze_mapping_plugins
     from fixation_detector import Fixation_Detector_3D
     from recorder import Recorder
-    from show_calibration import Show_Calibration
     from display_recent_gaze import Display_Recent_Gaze
     from time_sync import Time_Sync
     from pupil_remote import Pupil_Remote
@@ -146,7 +145,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # manage plugins
     runtime_plugins = import_runtime_plugins(
         os.path.join(g_pool.user_dir, 'plugins'))
-    user_launchable_plugins = [Pupil_Groups, Frame_Publisher, Show_Calibration,
+    user_launchable_plugins = [Pupil_Groups, Frame_Publisher,
                                Pupil_Remote, Time_Sync, Surface_Tracker,
                                Annotation_Capture, Log_History,
                                Fixation_Detector_3D] + runtime_plugins
@@ -160,8 +159,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
                        ('Display_Recent_Gaze', {}),
                        ('Screen_Marker_Calibration', {}),
                        ('Recorder', {}),
-                       ('Pupil_Remote', {})
-                        ]
+                       ('Pupil_Remote', {})]
 
     # Callback functions
     def on_resize(window, w, h):
@@ -246,7 +244,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         g_pool.gui.collect_menus()
 
     def launch_eye_process(eye_id, delay=0):
-        n = {'subject': 'eye_process.should_start.%s' % eye_id,
+        n = {'subject': 'eye_process.should_start.{}'.format(eye_id),
              'eye_id': eye_id, 'delay': delay}
         ipc_pub.notify(n)
 
@@ -305,34 +303,24 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale', 1)
-    g_pool.sidebar = ui.Scrolling_Menu("Settings",
-                                        pos=(-350, 0),
-                                        size=(0, 0),
-                                        header_pos='left')
+    g_pool.sidebar = ui.Scrolling_Menu("Settings", pos=(-350, 0), size=(0, 0), header_pos='left')
     general_settings = ui.Growing_Menu('General')
-    general_settings.append(ui.Slider('scale',
-                                        g_pool.gui,
-                                        setter=set_scale,
-                                        step=.05, min=1., max=2.5,
-                                        label='Interface size'))
-    general_settings.append(ui.Button('Reset window size',
-                                        lambda: glfw.glfwSetWindowSize(main_window,frame.width,frame.height)))
-    general_settings.append(ui.Selector('audio_mode',
-                                        audio,
-                                        selection=audio.audio_modes))
+    general_settings.append(ui.Slider('scale', g_pool.gui, setter=set_scale, step=.05, min=1., max=2.5, label='Interface size'))
+    general_settings.append(ui.Button('Reset window size', lambda: glfw.glfwSetWindowSize(main_window, frame.width, frame.height)))
+    general_settings.append(ui.Selector('audio_mode', audio, selection=audio.audio_modes))
     general_settings.append(ui.Selector('detection_mapping_mode',
                                         g_pool,
                                         label='detection & mapping mode',
                                         setter=set_detection_mapping_mode,
                                         selection=['2d', '3d']))
     general_settings.append(ui.Switch('eye0_process',
-                                        label='Detect eye 0',
-                                        setter=lambda alive: start_stop_eye(0, alive),
-                                        getter=lambda: eyes_are_alive[0].value))
+                                      label='Detect eye 0',
+                                      setter=lambda alive: start_stop_eye(0, alive),
+                                      getter=lambda: eyes_are_alive[0].value))
     general_settings.append(ui.Switch('eye1_process',
-                                        label='Detect eye 1',
-                                        setter=lambda alive: start_stop_eye(1, alive),
-                                        getter=lambda: eyes_are_alive[1].value))
+                                      label='Detect eye 1',
+                                      setter=lambda alive: start_stop_eye(1, alive),
+                                      getter=lambda: eyes_are_alive[1].value))
 
     selector_label = "Select to load"
     labels = [p.__name__.replace('_', ' ') for p in user_launchable_plugins]
@@ -367,20 +355,19 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # We add the calibration menu selector, after a calibration has been added:
     g_pool.calibration_menu.insert(0, ui.Selector('active_calibration_plugin',
-                                                    getter=lambda: g_pool.active_calibration_plugin.__class__,
-                                                    selection=calibration_plugins,
-                                                    labels=[p.__name__.replace('_', ' ') for p in calibration_plugins],
-                                                    setter=open_plugin, label='Method'
-                                                ))
+                                                  getter=lambda: g_pool.active_calibration_plugin.__class__,
+                                                  labels=[p.__name__.replace('_', ' ') for p in calibration_plugins],
+                                                  selection=calibration_plugins,
+                                                  setter=open_plugin,
+                                                  label='Method'))
 
     # We add the capture selection menu, after a manager has been added:
     g_pool.capture_selector_menu.insert(0, ui.Selector('capture_manager',
-                                                        setter=open_plugin,
-                                                        getter=lambda: g_pool.capture_manager.__class__,
-                                                        selection=manager_classes,
-                                                        labels=[b.gui_name for b in manager_classes],
-                                                        label='Manager'
-                                                    ))
+                                                       getter=lambda: g_pool.capture_manager.__class__,
+                                                       labels=[b.gui_name for b in manager_classes],
+                                                       selection=manager_classes,
+                                                       setter=open_plugin,
+                                                       label='Manager'))
 
     # Register callbacks main_window
     glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
@@ -461,13 +448,12 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             g_pool.capture.deinit_gui()
             g_pool.capture.cleanup()
             g_pool.capture = None
-            prev_settings[
-                'info_text'] = "'%s' disconnected." % prev_settings['name']
+            prev_settings['info_text'] = "'{}' disconnected.".format(prev_settings['name'])
             g_pool.capture = Fake_Source(g_pool, **prev_settings)
             g_pool.capture.init_gui()
             ipc_pub.notify({'subject': 'recording.should_stop'})
             logger.error("Error getting frame. Falling back to Fake source.")
-            logger.debug("Caught error: %s" % e)
+            logger.debug("Caught error: {}".format(e))
             sleep(.2)
             continue
         except EndofVideoFileError:
@@ -590,9 +576,8 @@ def world_profiled(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     import os
     from world import world
     cProfile.runctx("world(timebase, eyes_are_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version)",
-                    {'timebase': timebase, 'eyes_are_alive': eyes_are_alive,
-                     'ipc_pub_url': ipc_pub_url, 'ipc_sub_url': ipc_sub_url,
-                     'ipc_push_url': ipc_push_url, 'user_dir': user_dir,
+                    {'timebase': timebase, 'eyes_are_alive': eyes_are_alive, 'ipc_pub_url': ipc_pub_url,
+                     'ipc_sub_url': ipc_sub_url, 'ipc_push_url': ipc_push_url, 'user_dir': user_dir,
                      'version': version}, locals(), "world.pstats")
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(

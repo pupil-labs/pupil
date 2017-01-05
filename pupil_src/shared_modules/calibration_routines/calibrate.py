@@ -37,18 +37,18 @@ def calibrate_2d_polynomial(cal_pt_cloud,screen_size=(1,1),threshold = 35, binoc
         map_fn = make_map_function(cx,cy,model_n)
         new_err_dist,new_err_mean,new_err_rms = fit_error_screen(new_err_x,new_err_y,screen_size)
 
-        logger.info('first iteration. root-mean-square residuals: %s, in pixel' %err_rms)
-        logger.info('second iteration: ignoring outliers. root-mean-square residuals: %s in pixel'%new_err_rms)
+        logger.info('first iteration. root-mean-square residuals: {}, in pixel'.format(err_rms))
+        logger.info('second iteration: ignoring outliers. root-mean-square residuals: {} in pixel'.format(new_err_rms))
 
-        logger.info('used %i data points out of the full dataset %i: subset is %i percent' \
-            %(cal_pt_cloud[err_dist<=threshold].shape[0], cal_pt_cloud.shape[0], \
-            100*float(cal_pt_cloud[err_dist<=threshold].shape[0])/cal_pt_cloud.shape[0]))
+        logger.info('used {} data points out of the full dataset {}: subset is {} percent'.format(
+            (cal_pt_cloud[err_dist <= threshold].shape[0], cal_pt_cloud.shape[0],
+             100*float(cal_pt_cloud[err_dist <= threshold].shape[0])/cal_pt_cloud.shape[0])))
 
-        return map_fn,err_dist<=threshold,(cx,cy,model_n)
+        return map_fn, err_dist <= threshold, (cx, cy, model_n)
 
-    else: # did disregard all points. The data cannot be represented by the model in a meaningful way:
+    else:  # did disregard all points. The data cannot be represented by the model in a meaningful way:
         map_fn = make_map_function(cx,cy,model_n)
-        logger.error('First iteration. root-mean-square residuals: %s in pixel, this is bad!'%err_rms)
+        logger.error('First iteration. root-mean-square residuals: {} in pixel, this is bad!'.format(err_rms))
         logger.error('The data cannot be represented by the model in a meaningfull way.')
         return map_fn,err_dist<=threshold,(cx,cy,model_n)
 
@@ -182,7 +182,7 @@ def make_model(cal_pt_cloud,n=7):
 def make_map_function(cx,cy,n):
     if n==3:
         def fn(pt):
-            X,Y = pos
+            X,Y = pt
             x2 = cx[0]*X + cx[1]*Y +cx[2]
             y2 = cy[0]*X + cy[1]*Y +cy[2]
             return x2,y2
@@ -224,7 +224,7 @@ def make_map_function(cx,cy,n):
         def fn(pt_0,pt_1):
             #        X0        Y0        X1         Y1            XX0        YY0            XY0            XXYY0                XX1            YY1            XY1            XXYY1            X0X1            X0Y1            Y0X1        Y0Y1           Ones
             X0,Y0 = pt_0
-            X1,Y1 = pt_1            
+            X1,Y1 = pt_1
             x2 = cx[0]*X0 + cx[1]*Y0 + cx[2]*X1 + cx[3]*Y1 + cx[4]*X0*X0 + cx[5]*Y0*Y0 + cx[6]*X0*Y0 + cx[7]*X0*X0*Y0*Y0 + cx[8]*X1*X1 + cx[9]*Y1*Y1 + cx[10]*X1*Y1 + cx[11]*X1*X1*Y1*Y1 + cx[12]*X0*X1 + cx[13]*X0*Y1 + cx[14]*Y0*X1 + cx[15]*Y0*Y1 + cx[16]
             y2 = cy[0]*X0 + cy[1]*Y0 + cy[2]*X1 + cy[3]*Y1 + cy[4]*X0*X0 + cy[5]*Y0*Y0 + cy[6]*X0*Y0 + cy[7]*X0*X0*Y0*Y0 + cy[8]*X1*X1 + cy[9]*Y1*Y1 + cy[10]*X1*Y1 + cy[11]*X1*X1*Y1*Y1 + cy[12]*X0*X1 + cy[13]*X0*Y1 + cy[14]*Y0*X1 + cy[15]*Y0*Y1 + cy[16]
             return x2,y2

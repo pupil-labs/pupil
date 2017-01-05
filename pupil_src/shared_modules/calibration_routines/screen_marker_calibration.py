@@ -271,17 +271,14 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                     self.stop()
                     return
                 self.active_site = self.sites.pop(0)
-                logger.debug("Moving screen marker to site at %s %s"%tuple(self.active_site))
+                logger.debug("Moving screen marker to site at {} {}".format(*self.active_site))
 
 
 
             #use np.arrays for per element wise math
             self.display_pos = np.array(self.active_site)
             self.on_position = on_position
-            self.button.status_text = '%s / %s'%(self.active_site,9)
-
-
-
+            self.button.status_text = '{} / {}'.format(self.active_site, 9)
 
     def gl_display(self):
         """
@@ -345,11 +342,10 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))
-            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,'Touch %s more times to cancel calibration.'%self.clicks_to_close)
+            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,'Touch {} more times to cancel calibration.'.format(self.clicks_to_close))
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
-
 
     def get_init_dict(self):
         d = {}
@@ -366,5 +362,3 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         if self._window:
             self.close_window()
         self.deinit_gui()
-
-

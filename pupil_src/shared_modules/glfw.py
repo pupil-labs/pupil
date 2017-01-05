@@ -35,7 +35,7 @@
 
 import sys,os
 import ctypes
-from ctypes import c_int,c_ushort,c_char_p,c_double,c_uint, c_char,Structure,CFUNCTYPE,byref,POINTER
+from ctypes import c_int,c_ushort,c_char_p,c_double,c_uint, c_char,c_float,Structure,CFUNCTYPE,byref,POINTER
 import platform
 from ctypes.util import find_library
 
@@ -626,17 +626,17 @@ def glfwGetJoystickButtons(joy):
 # --- Callbacks ---------------------------------------------------------------
 
 def __callback__(name):
-    callback = 'glfwSet%sCallback' % name
-    fun      = '%sfun' % name.lower()
+    callback = 'glfwSet{}Callback'.format(name)
+    fun      = '{}fun'.format(name.lower())
     code = """
-def %(callback)s(window, callback = None):
+def {callback}(window, callback = None):
     index = __windows__.index(window)
-    old_callback = __py_callbacks__[index]['%(fun)s']
-    __py_callbacks__[index]['%(fun)s'] = callback
-    if callback: callback = %(fun)s(callback)
-    __c_callbacks__[index]['%(fun)s'] = callback
-    _glfw.%(callback)s(window, callback)
-    return old_callback"""  % {'callback': callback, 'fun': fun}
+    old_callback = __py_callbacks__[index]['{fun}']
+    __py_callbacks__[index]['{fun}'] = callback
+    if callback: callback = {fun}(callback)
+    __c_callbacks__[index]['{fun}'] = callback
+    _glfw.{callback}(window, callback)
+    return old_callback""".format(callback=callback, fun=fun)
     return code
 
 exec(__callback__('Error'))
