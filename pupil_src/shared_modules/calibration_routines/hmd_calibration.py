@@ -75,7 +75,11 @@ class HMD_Calibration(Calibration_Plugin):
                     logger.warning('Calibration already stopped.')
             elif notification['subject'].startswith('calibration.add_ref_data'):
                 if self.active:
-                    self.ref_list += notification['ref_data']
+                    ref_data = notification['ref_data']
+                    if isinstance(ref_data, list):
+                        self.ref_list.extend(ref_data)
+                    else:
+                        self.ref_list.append(ref_data)
                 else:
                     logger.error("Ref data can only be added when calibratio is runnings.")
         except KeyError as e:
