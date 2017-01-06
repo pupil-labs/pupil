@@ -154,9 +154,9 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 col_slice = int(second_ellipse[0][0]-second_ellipse[1][0]/2),int(second_ellipse[0][0]+second_ellipse[1][0]/2)
                 row_slice = int(second_ellipse[0][1]-second_ellipse[1][1]/2),int(second_ellipse[0][1]+second_ellipse[1][1]/2)
                 marker_gray = gray_img[slice(*row_slice),slice(*col_slice)]
-                avg,_ = cv2.mean(marker_gray)
+                avg = cv2.mean(marker_gray)
                 center = marker_gray[second_ellipse[1][1]//2,second_ellipse[1][0]//2]
-                rel_shade = center-avg
+                rel_shade = center-avg[0]
 
                 #auto_stop logic
                 if rel_shade > 30:
