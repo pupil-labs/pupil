@@ -17,6 +17,7 @@ import OpenGL.GL as gl
 from glfw import *
 from circle_detector import find_concetric_circles
 from file_methods import load_object,save_object
+from platform import system
 
 import audio
 
@@ -30,8 +31,6 @@ from . finish_calibration import finish_calibration
 #logging
 import logging
 logger = logging.getLogger(__name__)
-
-
 
 # window calbacks
 def on_resize(window,w,h):
@@ -104,6 +103,14 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.glfont.set_color_float((0.2,0.5,0.9,1.0))
         self.glfont.set_align_string(v_align='center')
 
+        # UI Platform tweaks
+        if system() == 'Linux':
+            self.window_position_default = (0, 0)
+        elif system() == 'Windows':
+            self.window_position_default = (8, 31)
+        else:
+            self.window_position_default = (0, 0)
+
 
     def init_gui(self):
         self.monitor_idx = 0
@@ -170,7 +177,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
             self._window = glfwCreateWindow(width, height, title, monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen:
-                glfwSetWindowPos(self._window,200,0)
+                glfwSetWindowPos(self._window,self.window_position_default[0],self.window_position_default[1])
 
             glfwSetInputMode(self._window,GLFW_CURSOR,GLFW_CURSOR_HIDDEN)
 
