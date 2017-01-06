@@ -196,7 +196,31 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     def get_init_dict(self):
         return {'params':self.params, 'params_eye0':self.params_eye0, 'params_eye1':self.params_eye1}
 
+class Binocular_HMD_Scored_Gaze_Mapper(Binocular_Gaze_Mapper_Base):
+    """A gaze mapper that maps two eyes individually"""
+    def __init__(self, g_pool,params0,params1):
+        super(Binocular_HMD_Scored_Gaze_Mapper, self).__init__(g_pool)
+        self.params0 = params0
+        self.params1 = params1
+        self.map_fns = (make_map_function(*self.params0),make_map_function(*self.params1))
 
+    def _map_monocular(self,p):
+        gaze_point = self.map_fns[p['id']](p['norm_pos'])
+        return {'norm_pos':gaze_point,'confidence':p['confidence'],'id':p['id'],'timestamp':p['timestamp'],'base':[p]}
+
+    def _map_binocular(self, p0, p1):
+        gaze_point_eye0 = self.map_fns[p0['id']](p0['norm_pos'])
+        score_eye0 = p0['confidence']
+        gaze_point_eye1 = self.map_fns[p1['id']](p1['norm_pos'])
+        score_eye1 = p1['confidence']
+        score_total = score_eye0 + score_eye1
+        gaze_point = (gaze_point_eye0[0] * score_eye0 + gaze_point_eye1[0] * score_eye1)/score_total , (gaze_point_eye0[1] * score_eye0 + gaze_point_eye1[1] * score_eye1)/score_total
+        confidence = (p0['confidence'] * score_eye0 + p1['confidence'] * score_eye1)/score_total
+        ts = (p0['timestamp'] * score_eye0 + p1['timestamp'] * score_eye1)/score_total
+        return {'norm_pos':gaze_point,'confidence':confidence,'timestamp':ts,'base':[p0, p1]}
+
+    def get_init_dict(self):
+        return {'params0':self.params0,'params1':self.params1}
 
 class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     """docstring for Vector_Gaze_Mapper"""

@@ -17,7 +17,7 @@ from pyglui import ui
 from calibration_plugin_base import Calibration_Plugin
 from finish_calibration import not_enough_data_error_msg,solver_failed_to_converge_error_msg
 import calibrate
-from gaze_mappers import Monocular_Gaze_Mapper,Dual_Monocular_Gaze_Mapper
+from gaze_mappers import Monocular_Gaze_Mapper,Dual_Monocular_Gaze_Mapper, Binocular_HMD_Scored_Gaze_Mapper
 
 #logging
 import logging
@@ -145,7 +145,7 @@ class HMD_Calibration(Calibration_Plugin):
             params1 = None
 
         if params0 and params1:
-            g_pool.plugins.add(Dual_Monocular_Gaze_Mapper,args={'params0':params0,'params1':params1})
+            g_pool.plugins.add(Binocular_HMD_Scored_Gaze_Mapper,args={'params0':params0,'params1':params1})
             method = 'dual monocular polynomial regression'
         elif params0:
             g_pool.plugins.add(Monocular_Gaze_Mapper,args={'params':params0})
