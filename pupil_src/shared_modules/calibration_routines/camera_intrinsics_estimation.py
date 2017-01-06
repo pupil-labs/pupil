@@ -77,7 +77,7 @@ def load_camera_calibration(g_pool):
                 logger.warning('Loaded camera calibration but camera name and/or resolution has changed.')
                 camera_calibration = None
             else:
-                logger.info("Loaded user calibrated calibration for {}@{}}.".format(g_pool.capture.name,g_pool.capture.frame_size))
+                logger.info("Loaded user calibrated calibration for {}@{}.".format(g_pool.capture.name,g_pool.capture.frame_size))
 
         if not camera_calibration:
             logger.debug("Trying to load pre recorded calibration.")
