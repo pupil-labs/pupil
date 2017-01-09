@@ -21,6 +21,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+logger.setLevel(logging.INFO)
 
 class UVC_Source(Base_Source):
     """
@@ -164,6 +165,7 @@ class UVC_Source(Base_Source):
         self.init_gui()
 
     def _re_init_capture_by_names(self,names):
+        logger.info('Capture reinitialisation necessary.')  # burn-in test specific. Do not change text!
         self.devices.update()
         for d in self.devices:
             for name in names:
