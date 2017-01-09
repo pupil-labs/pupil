@@ -201,7 +201,7 @@ class Pupil_Remote(Plugin):
                     else:
                         pipe.send_string("Bind OK", flags=zmq.SNDMORE)
                         # `.last_endpoint` is already of type `bytes`
-                        pipe.send(remote_socket.last_endpoint.replace(b"tcp://",b""))
+                        pipe.send(remote_socket.last_endpoint.replace(b"tcp://", b""))
                         poller.register(remote_socket, zmq.POLLIN)
             if remote_socket in items:
                 self.on_recv(remote_socket, ipc_pub)

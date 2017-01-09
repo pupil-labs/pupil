@@ -82,9 +82,9 @@ class NDSI_Source(Base_Source):
                 self.frame_size = (frame.width, frame.height)
             except Exception as e:
                 if a:
-                    logger.info('Could not get Frame: "%s". Attempt:%s/%s '%(e.message,a+1,attempts))
+                    logger.info('Could not get Frame: "%s". Attempt:%s/%s '%(str(e), a+1, attempts))
                 else:
-                    logger.debug('Could not get Frame of first try: "%s". Attempt:%s/%s '%(e.message,a+1,attempts))
+                    logger.debug('Could not get Frame of first try: "%s". Attempt:%s/%s '%(str(e),a+1,attempts))
             else:
                 return frame
         raise StreamError("Could not grab frame after 3 attempts. Giving up.")
@@ -155,7 +155,7 @@ class NDSI_Source(Base_Source):
                 self.sensor.set_control_value(ctrl_id, val)
             return initiate_value_change
 
-        for ctrl_id, ctrl_dict in controls.items():
+        for ctrl_id, ctrl_dict in controls:
             try:
                 dtype    = ctrl_dict['dtype']
                 ctrl_ui  = None
@@ -201,7 +201,7 @@ class NDSI_Source(Base_Source):
                 else:
                     logger.error('Did not generate UI for %s'%ctrl_id)
             except:
-                logger.error('Exception for control:\n%s'%pprint.pformat(ctrl_dict))
+                logger.error('Exception for control:\n%s'%(ctrl_dict))
                 import traceback as tb
                 tb.print_exc()
         if len(menu) == 0:
@@ -219,7 +219,8 @@ class NDSI_Source(Base_Source):
         for entry in iter(sorted(self.sensor.controls.items())):
             if entry[0].startswith("UVC"):
                 uvc_controls.append(entry)
-            else: other_controls.append(entry)
+            else:
+                other_controls.append(entry)
 
         self.add_controls_to_menu(self.g_pool.capture_source_menu, other_controls)
         self.add_controls_to_menu(self.uvc_menu, uvc_controls)
