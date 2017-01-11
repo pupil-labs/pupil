@@ -8,15 +8,16 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
+import ndsi
+import logging
+
 from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
 from .fake_backend import Fake_Source
 
-import ndsi
 assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.13'
-
-import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 
 class NDSI_Source(Base_Source):
     """Pupil Mobile video source
@@ -25,8 +26,9 @@ class NDSI_Source(Base_Source):
         get_frame_timeout (float): Maximal waiting time for next frame
         sensor (ndsi.Sensor): NDSI sensor backend
     """
-    def __init__(self, g_pool, frame_size, frame_rate, network=None, source_id=None, host_name=None, sensor_name=None,**settings):
-        if not network: raise InitialisationError()
+    def __init__(self, g_pool, frame_size, frame_rate, network=None, source_id=None, host_name=None, sensor_name=None, **settings):
+        if not network:
+            raise InitialisationError()
         super(NDSI_Source, self).__init__(g_pool)
         self.sensor = None
         try:
@@ -36,8 +38,7 @@ class NDSI_Source(Base_Source):
             # host/sensor name combination, prob. from settings
             elif host_name and sensor_name:
                 for sensor in network.sensors.values():
-                    if (sensor['host_name'] == host_name and
-                        sensor['sensor_name'] == sensor_name):
+                    if sensor['host_name'] == host_name and sensor['sensor_name'] == sensor_name:
                         self.sensor = network.sensor(sensor['sensor_uuid'], callbacks=(self.on_notification,))
             else:
                 for sensor_id in network.sensors:
@@ -46,13 +47,15 @@ class NDSI_Source(Base_Source):
                         break
                     except ValueError:
                         continue
-        except ValueError:  raise InitialisationError()
-        if not self.sensor: raise InitialisationError()
+        except ValueError:
+            raise InitialisationError()
+        if not self.sensor:
+            raise InitialisationError()
         if not self.sensor.supports_data_subscription:
             self.cleanup()
             raise InitialisationError('Source does not support data subscription.')
 
-        logger.debug('NDSI Source Sensor: %s'%self.sensor)
+        logger.debug('NDSI Source Sensor: {}'.format(self.sensor))
         self.control_id_ui_mapping = {}
         self.get_frame_timeout = 1000
         self._frame_size = None
@@ -63,7 +66,7 @@ class NDSI_Source(Base_Source):
 
     @property
     def name(self):
-        return '%s @ %s'%(self.sensor.name, self.sensor.host_name)
+        return '{} @ {}'.format(self.sensor.name, self.sensor.host_name)
 
     def poll_notifications(self):
         while self.sensor.has_notifications:
@@ -82,9 +85,9 @@ class NDSI_Source(Base_Source):
                 self.frame_size = (frame.width, frame.height)
             except Exception as e:
                 if a:
-                    logger.info('Could not get Frame: "%s". Attempt:%s/%s '%(str(e), a+1, attempts))
+                    logger.info('Could not get Frame: "{}". Attempt: {}/{} '.format(str(e), a+1, attempts))
                 else:
-                    logger.debug('Could not get Frame of first try: "%s". Attempt:%s/%s '%(str(e),a+1,attempts))
+                    logger.debug('Could not get Frame of first try: "{}". Attempt: {}/{}'.format(str(e), a+1, attempts))
             else:
                 return frame
         raise StreamError("Could not grab frame after 3 attempts. Giving up.")
@@ -96,29 +99,31 @@ class NDSI_Source(Base_Source):
             self._initial_refresh = False
         if event['subject'] == 'error':
             # if not event['error_str'].startswith('err=-3'):
-            logger.warning('Error %s'%event['error_str'])
+            logger.warning('Error {}'.format(event['error_str']))
             if 'control_id' in event and event['control_id'] in self.sensor.controls:
-                logger.debug('%s'%self.sensor.controls[event['control_id']])
-        elif self.has_ui and (
-            event['control_id'] not in self.control_id_ui_mapping or
-            event['changes'].get('dtype') == "strmapping" or
-            event['changes'].get('dtype') == "intmapping"):
+                logger.debug(str(self.sensor.controls[event['control_id']]))
+        elif self.has_ui and (event['control_id'] not in self.control_id_ui_mapping
+                              or event['changes'].get('dtype') == "strmapping"
+                              or event['changes'].get('dtype') == "intmapping"):
             self.update_control_menu()
 
     @property
     def frame_size(self):
         return self._frame_size
+
     @frame_size.setter
-    def frame_size(self,new_size):
+    def frame_size(self, new_size):
         self._frame_size = new_size
-    def set_frame_size(self,new_size):
+
+    def set_frame_size(self, new_size):
         self.frame_size = new_size
 
     @property
     def frame_rate(self):
         return 30
+
     @frame_rate.setter
-    def frame_rate(self,new_rate):
+    def frame_rate(self, new_rate):
         pass
 
     @property
@@ -136,7 +141,7 @@ class NDSI_Source(Base_Source):
         return settings
 
     @settings.setter
-    def settings(self,settings):
+    def settings(self, settings):
         self.frame_size = settings['frame_size']
         self.frame_rate = settings['frame_rate']
 
@@ -146,19 +151,20 @@ class NDSI_Source(Base_Source):
         self.uvc_menu = ui.Growing_Menu("UVC Controls")
         self.update_control_menu()
 
-    def add_controls_to_menu(self,menu,controls):
+    def add_controls_to_menu(self, menu, controls):
         from pyglui import ui
+
         # closure factory
         def make_value_change_fn(ctrl_id):
             def initiate_value_change(val):
-                logger.debug('%s: %s >> %s'%(self.sensor, ctrl_id, val))
+                logger.debug('{}: {} >> {}'.format(self.sensor, ctrl_id, val))
                 self.sensor.set_control_value(ctrl_id, val)
             return initiate_value_change
 
         for ctrl_id, ctrl_dict in controls:
             try:
-                dtype    = ctrl_dict['dtype']
-                ctrl_ui  = None
+                dtype = ctrl_dict['dtype']
+                ctrl_ui = None
                 if dtype == "string":
                     ctrl_ui = ui.Text_Input(
                         'value',
@@ -171,8 +177,8 @@ class NDSI_Source(Base_Source):
                         'value',
                         ctrl_dict,
                         label=ctrl_dict['caption'],
-                        min =convert_fn(ctrl_dict.get('min', 0)),
-                        max =convert_fn(ctrl_dict.get('max', 100)),
+                        min=convert_fn(ctrl_dict.get('min', 0)),
+                        max=convert_fn(ctrl_dict.get('max', 100)),
                         step=convert_fn(ctrl_dict.get('res', 0.)),
                         setter=make_value_change_fn(ctrl_id))
                 elif dtype == "bool":
@@ -180,13 +186,13 @@ class NDSI_Source(Base_Source):
                         'value',
                         ctrl_dict,
                         label=ctrl_dict['caption'],
-                        on_val=ctrl_dict.get('max',True),
-                        off_val=ctrl_dict.get('min',False),
+                        on_val=ctrl_dict.get('max', True),
+                        off_val=ctrl_dict.get('min', False),
                         setter=make_value_change_fn(ctrl_id))
                 elif dtype == "strmapping" or dtype == "intmapping":
                     desc_list = ctrl_dict['map']
-                    labels    = [desc['caption'] for desc in desc_list]
-                    selection = [desc['value']   for desc in desc_list]
+                    labels = [desc['caption'] for desc in desc_list]
+                    selection = [desc['value'] for desc in desc_list]
                     ctrl_ui = ui.Selector(
                         'value',
                         ctrl_dict,
@@ -195,17 +201,17 @@ class NDSI_Source(Base_Source):
                         selection=selection,
                         setter=make_value_change_fn(ctrl_id))
                 if ctrl_ui:
-                    ctrl_ui.read_only = ctrl_dict.get('readonly',False)
+                    ctrl_ui.read_only = ctrl_dict.get('readonly', False)
                     self.control_id_ui_mapping[ctrl_id] = ctrl_ui
                     menu.append(ctrl_ui)
                 else:
-                    logger.error('Did not generate UI for %s'%ctrl_id)
+                    logger.error('Did not generate UI for {}'.format(ctrl_id))
             except:
-                logger.error('Exception for control:\n%s'%(ctrl_dict))
+                logger.error('Exception for control:\n{}'.format(ctrl_dict))
                 import traceback as tb
                 tb.print_exc()
         if len(menu) == 0:
-            menu.append(ui.Info_Text("No %s settings found"%menu.label))
+            menu.append(ui.Info_Text("No {} settings found".format(menu.label)))
         return menu
 
     def update_control_menu(self):
@@ -226,12 +232,14 @@ class NDSI_Source(Base_Source):
         self.add_controls_to_menu(self.uvc_menu, uvc_controls)
         self.g_pool.capture_source_menu.append(self.uvc_menu)
 
-        self.g_pool.capture_source_menu.append(ui.Button("Reset to default values",self.sensor.reset_all_control_values))
+        self.g_pool.capture_source_menu.append(ui.Button("Reset to default values",
+                                                         self.sensor.reset_all_control_values))
 
     def cleanup(self):
         self.sensor.unlink()
         self.sensor = None
         self.uvc_menu = None
+
 
 class NDSI_Manager(Base_Manager):
     """Enumerates and activates Pupil Mobile video sources
@@ -260,11 +268,11 @@ class NDSI_Manager(Base_Manager):
 
         def host_selection_list():
             devices = {
-                s['host_uuid']: s['host_name'] # removes duplicates
+                s['host_uuid']: s['host_name']  # removes duplicates
                 for s in self.network.sensors.values()
                 if s['sensor_type'] == 'video'
             }
-            devices = [pair for pair in devices.items()] # create tuples
+            devices = [pair for pair in devices.items()]  # create tuples
             # split tuples into 2 lists
             return zip(*(devices or [(None, 'No hosts found')]))
 
@@ -275,7 +283,7 @@ class NDSI_Manager(Base_Manager):
 
         host_sel, host_sel_labels = host_selection_list()
         ui_elements.append(ui.Selector(
-            'selected_host',self,
+            'selected_host', self,
             selection=host_sel,
             labels=host_sel_labels,
             setter=view_host,
@@ -283,7 +291,8 @@ class NDSI_Manager(Base_Manager):
         ))
 
         self.g_pool.capture_selector_menu.extend(ui_elements)
-        if not self.selected_host: return
+        if not self.selected_host:
+            return
         ui_elements = []
 
         host_menu = ui.Growing_Menu('Remote Host Information')
@@ -291,7 +300,7 @@ class NDSI_Manager(Base_Manager):
 
         def source_selection_list():
             default = (None, 'Select to activate')
-            #self.poll_events()
+            # self.poll_events()
             sources = [default] + [
                 (s['sensor_uuid'], s['sensor_name'])
                 for s in self.network.sensors.values()
@@ -336,8 +345,8 @@ class NDSI_Manager(Base_Manager):
 
     def on_event(self, caller, event):
         if event['subject'] == 'detach':
-            logger.debug('detached: %s'%event)
-            name = str('%s @ %s'%(event['sensor_name'],event['host_name']))
+            logger.debug('detached: {}'.format(event))
+            name = str('{} @ {}'.format(event['sensor_name'], event['host_name']))
             self.notify_all({
                 'subject': 'capture_manager.source_lost',
                 'source_class_name': NDSI_Source.class_name(),
@@ -352,10 +361,10 @@ class NDSI_Manager(Base_Manager):
                     self.selected_host = None
                 self.re_build_ndsi_menu()
 
-        elif (event['subject'] == 'attach' and
-            event['sensor_type'] == 'video'):
-            logger.debug('attached: %s'%event)
-            name = '%s @ %s'%(event['sensor_name'],event['host_name'])
+        elif (event['subject'] == 'attach'
+              and event['sensor_type'] == 'video'):
+            logger.debug('attached: {}'.format(event))
+            name = '{} @ {}'.format(event['sensor_name'], event['host_name'])
             self.notify_all({
                 'subject': 'capture_manager.source_found',
                 'source_class_name': NDSI_Source.class_name(),
@@ -368,11 +377,12 @@ class NDSI_Manager(Base_Manager):
 
     def activate_source(self, settings={}):
         try:
-            capture = NDSI_Source(self.g_pool,network=self.network, **settings)
+            capture = NDSI_Source(self.g_pool, network=self.network, **settings)
         except InitialisationError as init_error:
             logger.error('NDSI source could not be initialised.')
-            if init_error.message: logger.error(init_error.message)
-            logger.debug('NDSI source init settings:\n\t%s\n\t%s'%(self.network,settings))
+            if init_error.message:
+                logger.error(init_error.message)
+            logger.debug('NDSI source init settings:\n\t{}\n\t{}'.format(self.network, settings))
         else:
             self.g_pool.capture.deinit_gui()
             self.g_pool.capture.cleanup()
@@ -386,7 +396,7 @@ class NDSI_Manager(Base_Manager):
             if preferred['source_class_name'] == NDSI_Source.class_name():
                 self.activate_source(preferred)
 
-    def on_notify(self,n):
+    def on_notify(self, n):
         """Provides UI for the capture selection
 
         Reacts to notification:
