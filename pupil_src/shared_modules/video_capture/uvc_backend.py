@@ -45,7 +45,7 @@ class UVC_Source(Base_Source):
                 logger.warning("No avalilable camera found that matched {}".format(preferred_names))
             except uvc.InitError:
                 logger.error("Camera failed to initialize.")
-            except uvc.DeviceNotFoundError as e:
+            except uvc.DeviceNotFoundError:
                 logger.warning("No camera found that matched {}".format(preferred_names))
 
         # otherwise we use name or preffered_names
@@ -99,7 +99,7 @@ class UVC_Source(Base_Source):
         for c in self.uvc_capture.controls:
             try:
                 c.value = uvc_controls[c.display_name]
-            except KeyError as e:
+            except KeyError:
                 logger.debug('No UVC setting "{}" found from settings.'.format(c.display_name))
 
         try:
@@ -191,7 +191,7 @@ class UVC_Source(Base_Source):
         try:
             frame = self.uvc_capture.get_frame(0.05)
             frame.timestamp = self.g_pool.get_timestamp()+self.ts_offset
-        except uvc.StreamError as e:
+        except uvc.StreamError:
             self._recent_frame = None
             self._restart_logic()
         except (AttributeError, uvc.InitError):
@@ -310,7 +310,10 @@ class UVC_Source(Base_Source):
             selection=self.uvc_capture.frame_sizes,
             label='Resolution'
         ))
-        sensor_control.append(ui.Selector('frame_rate', self, selection=self.uvc_capture.frame_rates, label='Frame rate'))
+
+        def frame_rate_getter():
+            return (self.uvc_capture.frame_rates, [str(fr) for fr in self.uvc_capture.frame_rates])
+        sensor_control.append(ui.Selector('frame_rate', self, selection_getter=frame_rate_getter, label='Frame rate'))
 
         for control in self.uvc_capture.controls:
             c = None
