@@ -382,14 +382,18 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # gl_state settings
     gl_utils.basic_gl_setup()
     g_pool.image_tex = Named_Texture()
-    # refresh speed settings
-    glfw.glfwSwapInterval(0)
 
     # trigger setup of window and gl sizes
     on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
     # now the we have  aproper window we can load the last gui configuration
     g_pool.gui.configuration = session_settings.get('ui_config', {})
+
+
+    # create a timer to control window update frequency
+    window_update_timer = timer(1 / 60)
+    def window_should_update():
+        return next(window_update_timer)
 
     # set up performace graphs:
     pid = os.getpid()
@@ -479,7 +483,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
         glfw.glfwMakeContextCurrent(main_window)
         # render visual feedback from loaded plugins
-        if is_window_visible(main_window):
+        if window_should_update() and is_window_visible(main_window):
             g_pool.capture.gl_display()
             for p in g_pool.plugins:
                 p.gl_display()

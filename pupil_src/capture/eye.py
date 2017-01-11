@@ -292,7 +292,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         basic_gl_setup()
         g_pool.image_tex = Named_Texture()
         g_pool.image_tex.update_from_ndarray(np.ones((1,1),dtype=np.uint8)+125)
-        glfw.glfwSwapInterval(0)
 
         # setup GUI
         g_pool.gui = ui.UI()
