@@ -146,7 +146,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
     user_launchable_plugins = [ Pupil_Groups,
                                 Frame_Publisher,
-                                Show_Calibration,
                                 Pupil_Remote,
                                 Time_Sync,
                                 Surface_Tracker,
@@ -200,7 +199,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         pos = glfw.glfwGetCursorPos(window)
         pos = normalize(pos, glfw.glfwGetWindowSize(main_window))
         # Position in img pixels
-        pos = denormalize(pos, (frame.img.shape[1], frame.img.shape[0]))
+        pos = denormalize(pos, g_pool.capture.frame_size)
         for p in g_pool.plugins:
             p.on_click(pos, button, action)
 
@@ -479,7 +478,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
         glfw.glfwMakeContextCurrent(main_window)
         # render visual feedback from loaded plugins
-        if is_window_visible(main_window):
+        if gl_utils.is_window_visible(main_window):
             g_pool.capture.gl_display()
             for p in g_pool.plugins:
                 p.gl_display()

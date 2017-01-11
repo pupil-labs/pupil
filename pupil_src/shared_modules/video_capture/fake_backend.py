@@ -80,7 +80,6 @@ class Fake_Source(Base_Source):
         # coarse[:,:,2] *=0
         # coarse[:,:,1] /=30
         # self.img = np.ones((size[1],size[0],3),dtype=np.uint8)
-        print size
         self.img = cv2.resize(coarse,size,interpolation=cv2.INTER_LANCZOS4)
 
     def recent_events(self,events):
