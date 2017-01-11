@@ -33,6 +33,7 @@ def timer(dt):
         else:
             yield False
 
+
 def delta_t():
     ''' return time between each call like so:
 
@@ -46,7 +47,7 @@ def delta_t():
     ts = time()
     while True:
         t = time()
-        dt,ts = t-ts,t
+        dt, ts = t-ts, t
         yield dt
 
 
