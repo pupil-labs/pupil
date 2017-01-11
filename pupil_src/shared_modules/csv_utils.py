@@ -21,7 +21,7 @@ def read_key_value_file(csvfile):
         DICT: Dictionary containing file content
     """
     reader = csv.reader(csvfile, delimiter=',') # create reader
-    reader.next() # skip fieldnames
+    next(reader) # skip fieldnames
     kvstore = {} # init key value store
     for row in reader:
         kvstore[row[0]] = row[1]
@@ -41,7 +41,7 @@ def write_key_value_file(csvfile,dictionary,append=False):
     writer = csv.writer(csvfile, delimiter=',')
     if not append:
         writer.writerow(['key','value'])
-    for key,val in dictionary.iteritems():
+    for key,val in dictionary.items():
         writer.writerow([key,val])
 
 if __name__ == '__main__':
@@ -77,4 +77,4 @@ if __name__ == '__main__':
 
     import os
     os.remove(testfile)
-    print 'CSV Test: successfull'
+    print('CSV Test: successful')

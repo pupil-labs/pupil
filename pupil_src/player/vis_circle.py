@@ -12,7 +12,6 @@ See COPYING and COPYING.LESSER for license details.
 from player_methods import transparent_circle
 from plugin import Plugin
 import numpy as np
-import cv2
 
 # TODO: Import pyglui
 from pyglui import ui

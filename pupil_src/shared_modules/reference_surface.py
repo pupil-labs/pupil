@@ -105,7 +105,7 @@ class Reference_Surface(object):
         """
         save all markers and name of this surface to a dict.
         """
-        markers = dict([(m_id,m.uv_coords) for m_id,m in self.markers.iteritems()])
+        markers = dict([(m_id,m.uv_coords) for m_id,m in self.markers.items()])
         return {'name':self.name,'uid':self.uid,'markers':markers,'real_world_size':self.real_world_size}
 
 
@@ -118,7 +118,7 @@ class Reference_Surface(object):
         self.real_world_size = d.get('real_world_size',{'x':1.,'y':1.})
 
         marker_dict = d['markers']
-        for m_id,uv_coords in marker_dict.iteritems():
+        for m_id,uv_coords in marker_dict.items():
             self.markers[m_id] = Support_Marker(m_id)
             self.markers[m_id].load_uv_coords(uv_coords)
 
@@ -194,7 +194,7 @@ class Reference_Surface(object):
         - this mean value will be used from now on to estable surface transform
         """
         persistent_markers = {}
-        for k,m in self.markers.iteritems():
+        for k,m in self.markers.items():
             if len(m.collected_uv_coords)>self.required_build_up*.5:
                 persistent_markers[k] = m
         self.markers = persistent_markers
@@ -245,7 +245,7 @@ class Reference_Surface(object):
             # compute the homography transform from marker into the undistored normalized image space
             # (the line below is the same as what you find in methods.undistort_unproject_pts, except that we ommit the z corrd as it is always one.)
             xy_undistorted_normalized = cv2.undistortPoints(xy.reshape(-1,1,2), camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*self.use_distortion)
-            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized, method=cv2.cv.CV_RANSAC,ransacReprojThreshold=0.1)
+            m_to_undistored_norm_space,mask = cv2.findHomography(uv,xy_undistorted_normalized, method=cv2.RANSAC,ransacReprojThreshold=0.1)
             if not mask.all():
                 detected = False
             m_from_undistored_norm_space,mask = cv2.findHomography(xy_undistorted_normalized,uv)
@@ -316,7 +316,7 @@ class Reference_Surface(object):
                 uv3d[:,:-1] = uv
                 xy.shape = -1,1,2
                 # compute pose of object relative to camera center
-                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, xy, K, dist_coef,flags=cv2.CV_EPNP)
+                is3dPoseAvailable, rot3d_cam_to_object, translate3d_cam_to_object = cv2.solvePnP(uv3d, xy, K, dist_coef,flags=cv2.SOLVEPNP_EPNP)
 
                 if is3dPoseAvailable:
 
@@ -449,9 +449,8 @@ class Reference_Surface(object):
             return
         self.markers.pop(marker['id'])
 
-
     def marker_status(self):
-        return "%s   %s/%s" %(self.name,self.detected_markers,len(self.markers))
+        return "{}   {}/{}".format(self.name, self.detected_markers, len(self.markers))
 
     def get_mode_toggle(self,pos,img_shape):
         if self.detected and self.defined:
@@ -756,7 +755,7 @@ class Support_Marker(object):
         # # now we treat the four uv scalars as a vector in 8-d space and compute the distace to the mean
         distance =  np.linalg.norm(deviation,axis=(1,3)).reshape(-1)
         # lets get the .5 cutof;
-        cut_off = sorted(distance)[len(distance)/2]
+        cut_off = sorted(distance)[len(distance)//2]
         # filter the better half
         uv_subset = uv[distance<=cut_off]
         # claculate the mean of this subset
@@ -841,9 +840,9 @@ if __name__ == '__main__':
     tranform3d_to_camera_rotation = np.eye(4, dtype=np.float32)
     tranform3d_to_camera_rotation[:-1,:-1] = rotation3dMat.T
 
-    print tranform3d_to_camera_translation
-    print tranform3d_to_camera_rotation
-    print np.matrix(tranform3d_to_camera_rotation) * np.matrix(tranform3d_to_camera_translation)
+    print(tranform3d_to_camera_translation)
+    print(tranform3d_to_camera_rotation)
+    print(np.matrix(tranform3d_to_camera_rotation) * np.matrix(tranform3d_to_camera_translation))
 
 
 

@@ -47,7 +47,7 @@ class Vis_Light_Points(Plugin):
             except:
                 pass
 
-        out = cv2.distanceTransform(overlay,cv2.cv.CV_DIST_L2, 5)
+        out = cv2.distanceTransform(overlay,cv2.DIST_L2, 5)
 
         # fix for opencv binding inconsitency
         if type(out)==tuple:

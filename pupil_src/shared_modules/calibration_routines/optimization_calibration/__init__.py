@@ -13,7 +13,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import sys
 if not getattr(sys, 'frozen', False):
-    from build import build_cpp_extension
+    from . build import build_cpp_extension
     build_cpp_extension()
 
-from calibration_methods import  bundle_adjust_calibration
+from . calibration_methods import bundle_adjust_calibration

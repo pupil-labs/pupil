@@ -33,7 +33,7 @@ class Vis_Watermark(Plugin):
 
         available_files = glob(os.path.join(self.g_pool.user_dir,'*png')) #we only look for png's
         self.available_files = [f for f in available_files if cv2.imread(f,-1).shape[2]==4] #we only look for rgba images
-        logger.debug('Found %s watermark files: %s'%(len(self.available_files),self.available_files))
+        logger.debug('Found {} watermark files: {}'.format(len(self.available_files), self.available_files))
 
         self.watermark = None
         self.watermark_path = None
@@ -94,7 +94,7 @@ class Vis_Watermark(Plugin):
         self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Button('Close',self.unset_alive))
         if self.watermark is None:
-            self.menu.append(ui.Info_Text("Please save a .png file in the users settings dir: '%s' in RGBA format. Once this plugin is closed and re-loaded the png will be used as a watermark."%self.g_pool.user_dir))
+            self.menu.append(ui.Info_Text("Please save a .png file in the users settings dir: '{}' in RGBA format. Once this plugin is closed and re-loaded the png will be used as a watermark.".format(self.g_pool.user_dir)))
         else:
             if len(self.available_files) > 1:
                 self.menu.append(ui.Selector("watermark_path",self,label='file',selection= self.available_files,labels= [os.path.basename(p) for p in self.available_files], setter=self.load_watermark))

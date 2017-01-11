@@ -156,7 +156,7 @@ class Eye_Video_Overlay(Plugin):
         for video,ts in zip(eye_video_path,eye_timestamps_path):
             try:
                 self.eye_cap.append(File_Source(self.g_pool,source_path=glob(video)[0],timestamps=np.load(ts)))
-            except IndexError,FileCaptureError:
+            except(IndexError,FileCaptureError):
                 pass
             else:
                 self.eye_frames.append(self.eye_cap[-1].get_frame())
@@ -230,7 +230,7 @@ class Eye_Video_Overlay(Plugin):
                 try:
                     self.eye_frames[eye_index] = self.eye_cap[eye_index].get_frame()
                 except EndofVideoFileError:
-                    logger.warning("Reached the end of the eye video for eye video %s."%eye_index)
+                    logger.warning("Reached the end of the eye video for eye video {}.".format(eye_index))
             else:
                 #our old frame is still valid because we are doing upsampling
                 pass

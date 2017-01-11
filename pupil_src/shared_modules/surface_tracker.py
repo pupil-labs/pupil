@@ -106,7 +106,7 @@ class Surface_Tracker(Plugin):
                         if m['perimeter']>=self.min_marker_perimeter:
                             vx,vy = m['centroid']
                             if sqrt((x-vx)**2 + (y-vy)**2) <15:
-                                if self.marker_edit_surface.markers.has_key(m['id']):
+                                if m['id'] in self.marker_edit_surface.markers:
                                     self.marker_edit_surface.remove_marker(m)
                                 else:
                                     self.marker_edit_surface.add_marker(m,self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
@@ -166,7 +166,7 @@ class Surface_Tracker(Plugin):
 
         for s in self.surfaces:
             idx = self.surfaces.index(s)
-            s_menu = ui.Growing_Menu("Surface %s"%idx)
+            s_menu = ui.Growing_Menu("Surface {}".format(idx))
             s_menu.collapsed=True
             s_menu.append(ui.Text_Input('name',s))
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
@@ -216,7 +216,7 @@ class Surface_Tracker(Plugin):
 
 
         if self.running:
-            self.button.status_text = '%s/%s'%(len([s for s in self.surfaces if s.detected]),len(self.surfaces))
+            self.button.status_text = '{}/{}'.format(len([s for s in self.surfaces if s.detected]), len(self.surfaces))
         else:
             self.button.status_text = 'tracking paused'
 
@@ -264,7 +264,7 @@ class Surface_Tracker(Plugin):
                 exc = []
                 for m in self.markers:
                     if m['perimeter']>=self.min_marker_perimeter:
-                        if self.marker_edit_surface.markers.has_key(m['id']):
+                        if m['id'] in self.marker_edit_surface.markers:
                             inc.append(m['centroid'])
                         else:
                             exc.append(m['centroid'])

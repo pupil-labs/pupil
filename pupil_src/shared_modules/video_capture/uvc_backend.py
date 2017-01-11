@@ -9,14 +9,13 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
-from .fake_backend import Fake_Source
+from . base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
+from . fake_backend import Fake_Source
 
 import uvc, time
 #check versions for our own depedencies as they are fast-changing
 assert uvc.__version__ >= '0.8'
 from ctypes import c_double
-from sets import ImmutableSet
 
 #logging
 import logging
@@ -270,8 +269,8 @@ class UVC_Source(Base_Source):
             elif control.d_type == int:
                 c = ui.Slider('value',control,label=ctl_name,min=control.min_val,max=control.max_val,step=control.step)
             elif type(control.d_type) == dict:
-                selection = [value for name,value in control.d_type.iteritems()]
-                labels = [name for name,value in control.d_type.iteritems()]
+                selection = [value for name,value in control.d_type.items()]
+                labels = [name for name,value in control.d_type.items()]
                 c = ui.Selector('value',control, label = ctl_name, selection=selection,labels = labels)
             else:
                 pass

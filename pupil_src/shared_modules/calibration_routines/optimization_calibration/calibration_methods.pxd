@@ -44,7 +44,7 @@ cdef extern from '<Eigen/Eigen>' namespace 'Eigen':
         double y()
         double z()
 
-cdef extern from 'common.h':
+cdef extern from 'common.h' namespace "" :
 
     #typdefs
     ctypedef Matrix31d Vector3

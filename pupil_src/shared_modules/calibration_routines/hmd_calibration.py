@@ -14,10 +14,10 @@ from methods import normalize,denormalize
 import audio
 
 from pyglui import ui
-from calibration_plugin_base import Calibration_Plugin
-from finish_calibration import not_enough_data_error_msg,solver_failed_to_converge_error_msg
-import calibrate
-from gaze_mappers import Monocular_Gaze_Mapper,Dual_Monocular_Gaze_Mapper
+from . calibration_plugin_base import Calibration_Plugin
+from . finish_calibration import not_enough_data_error_msg,solver_failed_to_converge_error_msg
+from . import calibrate
+from . gaze_mappers import Monocular_Gaze_Mapper,Dual_Monocular_Gaze_Mapper
 
 #logging
 import logging
@@ -79,7 +79,7 @@ class HMD_Calibration(Calibration_Plugin):
                 else:
                     logger.error("Ref data can only be added when calibratio is runnings.")
         except KeyError as e:
-            logger.error('Notification: %s not conform. Raised error %s'%(notification,e))
+            logger.error('Notification: {} not conform. Raised error {}'.format(notification,e))
 
 
     def deinit_gui(self):

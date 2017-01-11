@@ -9,5 +9,5 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-from utils import *
-from trackball import *
+from . utils import *
+from . trackball import *

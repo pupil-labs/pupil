@@ -51,6 +51,7 @@ if os_name == "Linux":
                     sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
                 except OSError:
                     logger.warning("Soundfile not found.")
+
         def tink():
             if 'sound' in audio_mode:
                 try:
@@ -63,27 +64,27 @@ if os_name == "Linux":
                 try:
                     sp.Popen(["spd-say", message])
                 except OSError:
-                    logger.warning("could not say: '%s'. Please install spd-say if you want Pupil capture to speek to you.")
+                    install_warning = "could not say: '{}'. Please install spd-say if you want Pupil capture to speek to you."
+                    logger.warning(install_warning.format(message))
     else:
         def beep():
             if 'sound' in audio_mode:
-                print '\a'
+                print('\a')
 
         def tink():
             if 'sound' in audio_mode:
-                print '\a'
+                print('\a')
 
         def say(message):
             if 'sound' in audio_mode:
-                print '\a'
-                print message
-
+                print('\a')
+                print(message)
 
     class Audio_Input_Dict(dict):
         """docstring for Audio_Input_Dict"""
         def __init__(self):
             super(Audio_Input_Dict, self).__init__()
-            self['No Audio'] =-1
+            self['No Audio'] = -1
             try:
                 ret = sp.check_output([arecord_bin,"-l"])
             except OSError:
@@ -138,16 +139,16 @@ elif os_name == "Darwin":
 else:
     def beep():
         if 'sound' in audio_mode:
-            print '\a'
+            print('\a')
 
     def tink():
         if 'sound' in audio_mode:
-            print '\a'
+            print('\a')
 
     def say(message):
         if 'voice' in audio_mode:
-            print '\a'
-            print message
+            print('\a')
+            print(message)
 
 
     class Audio_Input_Dict(dict):
@@ -166,7 +167,7 @@ else:
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    print Audio_Input_Dict()
+    print(Audio_Input_Dict())
 
 
     # beep()

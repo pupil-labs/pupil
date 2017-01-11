@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 from glfw import *
 from OpenGL.GL import *
+from platform import system
 
 from pyglui.cygl.utils import RGBA
 from pyglui.cygl import utils as glutils
@@ -19,6 +20,13 @@ from pyglui.ui import get_opensans_font_path
 import math
 import numpy as np
 
+#UI Platform tweaks
+if system() == 'Linux':
+    window_position_default = (0,0)
+elif system() == 'Windows':
+    window_position_default = (8,31)
+else:
+    window_position_default = (0,0)
 
 class Visualizer(object):
     """docstring for Visualizer
@@ -162,7 +170,7 @@ class Visualizer(object):
 
             glfwMakeContextCurrent(self.window)
 
-            glfwSetWindowPos(self.window,0,0)
+            glfwSetWindowPos(self.window,window_position_default[0],window_position_default[1])
             # Register callbacks window
             glfwSetFramebufferSizeCallback(self.window,self.on_resize)
             glfwSetWindowIconifyCallback(self.window,self.on_iconify)

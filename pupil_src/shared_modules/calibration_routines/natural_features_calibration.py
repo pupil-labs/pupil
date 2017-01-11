@@ -13,14 +13,14 @@ import os
 import cv2
 import numpy as np
 from methods import normalize
-from finish_calibration import finish_calibration
+from . finish_calibration import finish_calibration
 from pyglui.cygl.utils import draw_points_norm,RGBA
 from glfw import GLFW_PRESS
 import audio
 
 
 from pyglui import ui
-from calibration_plugin_base import Calibration_Plugin
+from . calibration_plugin_base import Calibration_Plugin
 
 #logging
 import logging

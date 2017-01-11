@@ -18,10 +18,10 @@ import os, sys, platform
 app = 'capture'
 
 if getattr(sys, 'frozen', False):
-    if sys.executable.endswith('pupil_service'):
+    if 'pupil_service' in sys.executable:
         app = 'service'
     # Specifiy user dir.
-    user_dir = os.path.expanduser(os.path.join('~','pupil_%s_settings'%app))
+    user_dir = os.path.expanduser(os.path.join('~', 'pupil_{}_settings'.format(app)))
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
 else:
     if 'service' in sys.argv:
@@ -29,25 +29,24 @@ else:
     pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
     # Specifiy user dir.
-    user_dir = os.path.join(pupil_base_dir,'%s_settings'%app)
+    user_dir = os.path.join(pupil_base_dir,'{}_settings'.format(app))
     version_file = None
 
 # create folder for user settings, tmp data
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
 
+# create folder for user plugins
+plugin_dir = os.path.join(user_dir,'plugins')
+if not os.path.isdir(plugin_dir):
+    os.mkdir(plugin_dir)
+
 #app version
 from version_utils import get_version
 app_version = get_version(version_file)
 
 #threading and processing
-try:
-    from billiard import Process, Queue, Value,active_children, freeze_support,forking_enable
-except:
-    from multiprocessing import Process, Queue, Value,active_children, freeze_support
-    def forking_enable(_):
-        pass
-
+from multiprocessing import Process, Value,active_children,freeze_support,set_start_method
 from threading import Thread
 from ctypes import c_double,c_bool
 
@@ -109,11 +108,11 @@ def launcher():
                 n['_notify_time_'] = time()+n['delay']
                 waiting_notifications[n['subject']] = n
             #When a notifications time has come, pop from dict and send it as notification
-            for n in waiting_notifications.values():
+            for s,n in list(waiting_notifications.items()):
                 if n['_notify_time_'] < time():
                     del n['_notify_time_']
                     del n['delay']
-                    del waiting_notifications[n['subject']]
+                    del waiting_notifications[s]
                     pub.notify(n)
 
 
@@ -159,15 +158,15 @@ def launcher():
     # Using them in the main thread is not allowed.
     xsub_socket = zmq_ctx.socket(zmq.XSUB)
     xsub_socket.bind(ipc_pub_url)
-    ipc_pub_url = xsub_socket.last_endpoint.replace("0.0.0.0","127.0.0.1")
+    ipc_pub_url = xsub_socket.last_endpoint.decode('utf8').replace("0.0.0.0","127.0.0.1")
 
     xpub_socket = zmq_ctx.socket(zmq.XPUB)
     xpub_socket.bind(ipc_sub_url)
-    ipc_sub_url = xpub_socket.last_endpoint.replace("0.0.0.0","127.0.0.1")
+    ipc_sub_url = xpub_socket.last_endpoint.decode('utf8').replace("0.0.0.0","127.0.0.1")
 
     pull_socket = zmq_ctx.socket(zmq.PULL)
     pull_socket.bind(ipc_push_url)
-    ipc_push_url = pull_socket.last_endpoint.replace("0.0.0.0","127.0.0.1")
+    ipc_push_url = pull_socket.last_endpoint.decode('utf8').replace("0.0.0.0","127.0.0.1")
 
 
     # Starting communication threads:
@@ -227,17 +226,16 @@ def launcher():
             if "notify.eye_process.should_start" in topic:
                 eye_id = n['eye_id']
                 if not eyes_are_alive[eye_id].value:
-                    Process(target=eye,
-                                name='eye%s'%eye_id,
-                                args=(timebase,
-                                    eyes_are_alive[eye_id],
-                                    ipc_pub_url,
-                                    ipc_sub_url,
-                                    ipc_push_url,
-                                    user_dir,
-                                    app_version,
-                                    eye_id
-                                    )).start()
+                    Process(target=eye, name='eye{}'.format(eye_id), args=(
+                            timebase,
+                            eyes_are_alive[eye_id],
+                            ipc_pub_url,
+                            ipc_sub_url,
+                            ipc_push_url,
+                            user_dir,
+                            app_version,
+                            eye_id
+                            )).start()
             elif "notify.launcher_process.should_stop" in topic:
                 break
             elif "notify.meta.should_doc" in topic:
@@ -251,5 +249,5 @@ def launcher():
 
 if __name__ == '__main__':
     freeze_support()
-    forking_enable(0)
+    set_start_method('spawn')
     launcher()

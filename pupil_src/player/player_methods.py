@@ -15,7 +15,8 @@ import numpy as np
 import logging
 logger = logging.getLogger(__name__)
 from file_methods import save_object,load_object
-from version_utils import VersionFormat, read_rec_version
+from version_utils import VersionFormat
+from version_utils import read_rec_version
 
 def correlate_data(data,timestamps):
     '''
@@ -103,13 +104,13 @@ def load_meta_info(rec_dir,update=False):
 
 def read_meta_info_v081(rec_dir):
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
     return meta_info
 
 def read_meta_info_legacy(rec_dir):
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as info:
+    with open(meta_info_path,'r',encoding='utf-8') as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines()) )
     return meta_info
 
@@ -124,15 +125,15 @@ def update_meta_info(rec_dir, meta_info):
     meta_info_path = os.path.join(rec_dir,"info.csv")
     meta_info_old_path = os.path.join(rec_dir,"info_old.csv")
     shutil.copy2(meta_info_path,meta_info_old_path)
-    with open(meta_info_path,'w') as csvfile:
+    with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 def update_recording_v074_to_v082(rec_dir):
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Capture Software Version'] = 'v0.8.2'
-    with open(meta_info_path,'w') as csvfile:
+    with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 def update_recording_v082_to_v083(rec_dir):
@@ -147,11 +148,11 @@ def update_recording_v082_to_v083(rec_dir):
 
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Capture Software Version'] = 'v0.8.3'
 
-    with open(meta_info_path,'w') as csvfile:
+    with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 
@@ -166,11 +167,11 @@ def update_recording_v083_to_v086(rec_dir):
 
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Capture Software Version'] = 'v0.8.6'
 
-    with open(meta_info_path,'w') as csvfile:
+    with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 
@@ -195,11 +196,11 @@ def update_recording_v086_to_v087(rec_dir):
 
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Capture Software Version'] = 'v0.8.7'
 
-    with open(meta_info_path,'w') as csvfile:
+    with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 
@@ -313,11 +314,11 @@ def transparent_circle(img,center,radius,color,thickness):
 
     try:
         overlay = img[roi].copy()
-        cv2.circle(overlay,(pad,pad), radius=radius, color=rgb, thickness=thickness, lineType=cv2.cv.CV_AA)
+        cv2.circle(img,center,radius,rgb, thickness=thickness, lineType=cv2.LINE_AA)
         opacity = alpha
-        cv2.addWeighted(overlay, opacity, img[roi], 1. - opacity, 0, img[roi])
+        cv2.addWeighted(src1=img[roi], alpha=opacity, src2=overlay, beta=1. - opacity, gamma=0, dst=img[roi])
     except:
-        logger.debug("transparent_circle would have been partially outsize of img. Did not draw it.")
+        logger.debug("transparent_circle would have been partially outside of img. Did not draw it.")
 
 
 def transparent_image_overlay(pos,overlay_img,img,alpha):
@@ -336,4 +337,3 @@ def transparent_image_overlay(pos,overlay_img,img,alpha):
     except:
         logger.debug("transparent_image_overlay was outside of the world image and was not drawn")
     pass
-

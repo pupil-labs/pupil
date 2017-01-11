@@ -11,7 +11,8 @@ See COPYING and COPYING.LESSER for license details.
 
 from plugin import Plugin
 import numpy as np
-import os,sys, platform
+import os,sys
+from platform import system
 import time
 from pyglui import ui
 import logging
@@ -19,13 +20,10 @@ logger = logging.getLogger(__name__)
 
 from ctypes import c_bool, c_int,create_string_buffer
 
-if platform.system() == 'Darwin':
-    from billiard import Process,forking_enable,cpu_count
-    from billiard.sharedctypes import Value
-else:
-    from multiprocessing import Process,cpu_count
-    forking_enable = lambda x: x #dummy fn
-    from multiprocessing.sharedctypes import Value
+#threading and processing
+from multiprocessing import Process, cpu_count, set_start_method
+from multiprocessing.sharedctypes import Value
+
 
 from exporter import export
 
@@ -53,22 +51,24 @@ def verify_out_file_path(out_file_path,rec_dir):
             dir_name = rec_dir
         if not file_name:
             file_name = 'world_viz.mp4'
-        out_file_path = os.path.expanduser(os.path.join(dir_name,file_name))
+        out_file_path = os.path.expanduser(os.path.join(dir_name, file_name))
 
     out_file_path = avoid_overwrite(out_file_path)
     if os.path.isfile(out_file_path):
         logger.warning("Video out file already exsists. I will overwrite!")
         os.remove(out_file_path)
-    logger.debug("Saving Video to %s"%out_file_path)
+    logger.debug("Saving Video to {}".format(out_file_path))
 
     return out_file_path
+
 
 def avoid_overwrite(out_file_path):
     if os.path.isfile(out_file_path):
         # append something unique to avoid overwriting
-        out_file_path,ext = os.path.splitext(out_file_path)
+        out_file_path, ext = os.path.splitext(out_file_path)
         out_file_path += str(int(time.time())) + '.mp4'
     return out_file_path
+
 
 class Video_Export_Launcher(Plugin):
     """docstring for Video_Export_Launcher
@@ -126,8 +126,8 @@ class Video_Export_Launcher(Plugin):
             self.add_export(notification['range'],notification['export_dir'])
 
     def add_export(self,export_range,export_dir):
-        # on MacOS we will not use os.fork, elsewhere this does nothing.
-        forking_enable(0)
+        if system() == 'Darwin':
+            set_start_method('spawn')
 
         logger.debug("Adding new video export process.")
         should_terminate = Value(c_bool,False)

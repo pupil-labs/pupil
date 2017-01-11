@@ -24,7 +24,7 @@ from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from glfw import *
 
-from calibration_plugin_base import Calibration_Plugin
+from . calibration_plugin_base import Calibration_Plugin
 
 #logging
 import logging
@@ -57,7 +57,7 @@ pre_recorded_calibrations = {
 
 def idealized_camera_calibration(resolution,f=1000.):
     return {   'dist_coefs': np.array([[ 0.,0.,0.,0.,0.]]),
-               'camera_name': 'ideal camera with focal length %s'%f,
+               'camera_name': 'ideal camera with focal length {}'.format(f),
                'resolution': resolution,
                'camera_matrix': np.array([[  f,     0., resolution[0]/2.],
                                           [    0.,  f,  resolution[1]/2.],
@@ -78,16 +78,16 @@ def load_camera_calibration(g_pool):
                 logger.warning('Loaded camera calibration but camera name and/or resolution has changed.')
                 camera_calibration = None
             else:
-                logger.info("Loaded user calibrated calibration for %s@%s."%(g_pool.capture.name,g_pool.capture.frame_size))
+                logger.info("Loaded user calibrated calibration for {}@{}.".format(g_pool.capture.name,g_pool.capture.frame_size))
 
         if not camera_calibration:
             logger.debug("Trying to load pre recorded calibration.")
             try:
                 camera_calibration = pre_recorded_calibrations[g_pool.capture.name][g_pool.capture.frame_size]
             except KeyError:
-                logger.info("Pre recorded calibration for %s@%s not found."%(g_pool.capture.name,g_pool.capture.frame_size))
+                logger.info("Pre recorded calibration for {}@{} not found.".format(g_pool.capture.name,g_pool.capture.frame_size))
             else:
-                logger.info("Loaded pre recorded calibration for %s@%s."%(g_pool.capture.name,g_pool.capture.frame_size))
+                logger.info("Loaded pre recorded calibration for {}@{}.".format(g_pool.capture.name,g_pool.capture.frame_size))
 
 
         if not camera_calibration:
@@ -200,7 +200,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
     def advance(self,_):
         if self.count == 10:
             logger.info("Capture 10 calibration patterns.")
-            self.button.status_text = "%i to go" %(self.count)
+            self.button.status_text = "{:i} to go".format(self.count)
             self.calculated = False
             self.img_points = []
             self.obj_points = []
@@ -220,7 +220,8 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
             self._window = glfwCreateWindow(height, width, "Calibration", monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen:
-                glfwSetWindowPos(self._window,200,0)
+                # move to y = 31 for windows os
+                glfwSetWindowPos(self._window,200,31)
 
 
             #Register callbacks
@@ -268,8 +269,8 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
     def calculate(self):
         self.calculated = True
         self.count = 10
-        rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(np.array(self.obj_points), np.array(self.img_points),self.g_pool.capture.frame_size)
-        logger.info("Calibrated Camera, RMS:%s"%rms)
+        rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(np.array(self.obj_points), np.array(self.img_points),self.g_pool.capture.frame_size,None,None)
+        logger.info("Calibrated Camera, RMS:{}".format(rms))
         camera_calibration = {'camera_matrix':camera_matrix,'dist_coefs':dist_coefs,'camera_name':self.g_pool.capture.name,'resolution':self.g_pool.capture.frame_size}
         save_object(camera_calibration,os.path.join(self.g_pool.user_dir,"camera_calibration"))
         logger.info("Calibration saved to user folder")
@@ -279,13 +280,13 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
     def update(self,frame,events):
         if self.collect_new:
             img = frame.img
-            status, grid_points = cv2.findCirclesGridDefault(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
+            status, grid_points = cv2.findCirclesGrid(img, (4,11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
             if status:
                 self.img_points.append(grid_points)
                 self.obj_points.append(self.obj_grid)
                 self.collect_new = False
                 self.count -=1
-                self.button.status_text = "%i to go"%(self.count)
+                self.button.status_text = "{:i} to go".format(self.count)
 
 
         if self.count<=0 and not self.calculated:
@@ -339,7 +340,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
         if self.clicks_to_close <5:
             self.glfont.set_size(int(p_window_size[0]/30.))
-            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,'Touch %s more times to close window.'%self.clicks_to_close)
+            self.glfont.draw_text(p_window_size[0]/2.,p_window_size[1]/4.,'Touch {} more times to close window.'.format(self.clicks_to_close))
 
         glfwSwapBuffers(self._window)
         glfwMakeContextCurrent(active_window)
@@ -361,8 +362,8 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
 
 def _gen_pattern_grid(size=(4,11)):
     pattern_grid = []
-    for i in xrange(size[1]):
-        for j in xrange(size[0]):
+    for i in range(size[1]):
+        for j in range(size[0]):
             pattern_grid.append([(2*j)+i%2,i,0])
     return np.asarray(pattern_grid, dtype='f4')
 
