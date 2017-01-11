@@ -104,15 +104,13 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         import psutil
 
         # helpers/utils
-        from uvc import get_time_monotonic, StreamError
+        from uvc import get_time_monotonic
         from file_methods import Persistent_Dict
         from version_utils import VersionFormat
         from methods import normalize, denormalize, timer
         from av_writer import JPEG_Writer, AV_Writer
-        from video_capture import InitialisationError, Fake_Source
-        from video_capture import EndofVideoFileError, source_classes
+        from video_capture import source_classes
         from video_capture import manager_classes
-        source_by_name = {src.class_name(): src for src in source_classes}
 
         # Pupil detectors
         from pupil_detectors import Detector_2D, Detector_3D
@@ -137,7 +135,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         g_pool.user_dir = user_dir
         g_pool.version = version
         g_pool.app = 'capture'
-        g_pool.process = 'eye%s'%eye_id
+        g_pool.process = 'eye{}'.format(eye_id)
         g_pool.timebase = timebase
 
         g_pool.ipc_pub = ipc_socket
@@ -525,16 +523,17 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                     clear_gl_screen()
 
                     if frame:
-                    # switch to work in normalized coordinate space
-                    if g_pool.display_mode == 'algorithm':
-                        g_pool.image_tex.update_from_ndarray(frame.img)
-                    elif g_pool.display_mode in ('camera_image', 'roi'):
-                        g_pool.image_tex.update_from_ndarray(frame.gray)
-                    else:
-                        pass
+                        # switch to work in normalized coordinate space
+                        if g_pool.display_mode == 'algorithm':
+                            g_pool.image_tex.update_from_ndarray(frame.img)
+                        elif g_pool.display_mode in ('camera_image', 'roi'):
+                            g_pool.image_tex.update_from_ndarray(frame.gray)
+                        else:
+                            pass
                     make_coord_system_norm_based(g_pool.flip)
                     g_pool.image_tex.draw()
-                    make_coord_system_pixel_based((frame.height, frame.width, 3), g_pool.flip)
+                    f_width, f_height = g_pool.capture.frame_size
+                    make_coord_system_pixel_based((f_height, f_width, 3), g_pool.flip)
                     if frame:
                         if result['method'] == '3d c++':
                             eye_ball = result['projected_sphere']

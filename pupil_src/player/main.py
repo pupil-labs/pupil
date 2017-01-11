@@ -18,7 +18,7 @@ from copy import deepcopy
 from time import time
 from multiprocessing import freeze_support
 
-#UI Platform tweaks
+# UI Platform tweaks
 if platform.system() == 'Linux':
     scroll_factor = 10.0
 elif platform.system() == 'Windows':
