@@ -169,7 +169,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                     pos = normalize(pos,glfw.glfwGetWindowSize(main_window))
                     if g_pool.flip:
                         pos = 1-pos[0],1-pos[1]
-                    pos = denormalize(pos,(frame.width,frame.height)) # Position in img pixels
+                    pos = denormalize(pos,g_pool.capture.frame_size) # Position in img pixels
                     if g_pool.u_r.mouse_over_edit_pt(pos,g_pool.u_r.handle_size+40,g_pool.u_r.handle_size+40):
                         return # if the roi interacts we dont what the gui to interact as well
 
@@ -185,7 +185,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
                 pos = normalize((x,y),glfw.glfwGetWindowSize(main_window))
                 if g_pool.flip:
                     pos = 1-pos[0],1-pos[1]
-                pos = denormalize(pos,(frame.width,frame.height) )
+                pos = denormalize(pos,g_pool.capture.frame_size )
                 g_pool.u_r.move_vertex(g_pool.u_r.active_pt_idx,pos)
 
         def on_scroll(window,x,y):
@@ -288,7 +288,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
         g_pool.sidebar = ui.Scrolling_Menu("Settings",pos=(-300,0),size=(0,0),header_pos='left')
         general_settings = ui.Growing_Menu('General')
         general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface Size'))
-        general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,frame.width,frame.height)) )
+        general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,*g_pool.capture.frame_size)) )
         general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
         general_settings.append(ui.Selector('display_mode',g_pool,setter=set_display_mode_info,selection=['camera_image','roi','algorithm'], labels=['Camera Image', 'ROI', 'Algorithm'], label="Mode") )
         g_pool.display_mode_info = ui.Info_Text(g_pool.display_mode_info_text[g_pool.display_mode])
@@ -442,8 +442,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url,ipc_push_url, user_dir
             frame = event.get('frame')
             g_pool.capture_manager.recent_events(event)
             if frame:
-                if (g_pool.u_r.array_shape[0],g_pool.u_r.array_shape[1]) != (frame.height,frame.width):
-                    g_pool.u_r = UIRoi((frame.height,frame.width))
+                f_width, f_height = g_pool.capture.frame_size
+                if (g_pool.u_r.array_shape[0], g_pool.u_r.array_shape[1]) != (f_height, f_width):
+                    g_pool.u_r = UIRoi((f_height, f_width))
                 if should_publish_frames and frame.jpeg_buffer:
                     if   frame_publish_format == "jpeg":
                         data = frame.jpeg_buffer
