@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import numpy as np
@@ -96,8 +97,8 @@ class Offline_Reference_Surface(Reference_Surface):
 
     def init_cache(self,marker_cache,camera_calibration,min_marker_perimeter,min_id_confidence):
         if self.defined:
-            logger.debug("Full update of surface '%s' positons cache"%self.name)
-            self.cache = Cache_List([self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter,min_id_confidence) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
+            logger.debug("Full update of surface '{}' positons cache".format(self.name))
+            self.cache = Cache_List([self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter,min_id_confidence) for i in range(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
 
 
     def answer_caching_request(self,marker_cache,frame_index,camera_calibration,min_marker_perimeter,min_id_confidence):
@@ -194,8 +195,8 @@ class Offline_Reference_Surface(Reference_Surface):
         x = max(1,int(x))
         y = max(1,int(y))
 
-        filter_size = (int(self.heatmap_detail * x)/2)*2 +1
-        std_dev = filter_size /6.
+        filter_size = int(int(self.heatmap_detail * x)/2)*2 +1
+        std_dev = int(filter_size /6.)
         self.heatmap = np.ones((y,x,4),dtype=np.uint8)
         all_gaze = []
 
@@ -221,7 +222,7 @@ class Offline_Reference_Surface(Reference_Surface):
         hist = np.rot90(hist)
 
         #smoothing..
-        hist = cv2.GaussianBlur(hist, (filter_size,filter_size),std_dev)
+        hist = cv2.GaussianBlur(hist,(filter_size,filter_size),std_dev)
         maxval = np.amax(hist)
         if maxval:
             scale = 255./maxval

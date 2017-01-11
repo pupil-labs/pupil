@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 import os
 import csv
@@ -100,7 +101,7 @@ class Annotation_Capture(Plugin):
 
     def fire_annotation(self,annotation_label):
         t = self.g_pool.get_timestamp()
-        logger.info('"%s"@%s'%(annotation_label,t))
+        logger.info('"{}"@{}'.format(annotation_label, t))
         notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','record':True} #you may add more field to this dictionary if you want.
         self.notify_all(notification)
 
@@ -147,9 +148,9 @@ class Annotation_Player(Annotation_Capture):
                 annotations_list = []
                 logger.debug('No annotations found in pupil_data file.')
             else:
-                logger.debug('loaded %s annotations from pupil_data file'%len(annotations_list))
+                logger.debug('loaded {} annotations from pupil_data file'.format(len(annotations_list)))
         else:
-            logger.debug('loaded %s annotations from annotations file'%len(annotations_list))
+            logger.debug('loaded {} annotations from annotations file'.format(len(annotations_list)))
 
         self.annotations_by_frame = correlate_data(annotations_list, self.g_pool.timestamps)
         self.annotations_list = annotations_list
@@ -185,7 +186,7 @@ class Annotation_Player(Annotation_Capture):
 
     def fire_annotation(self,annotation_label):
         t = self.last_frame_ts
-        logger.info('"%s"@%s'%(annotation_label,t))
+        logger.info('"{}"@{}'.format(annotation_label, t))
         notification = {'subject':'annotation','label':annotation_label,'timestamp':t,'duration':0.0,'source':'local','added_in_player':True,'index':self.g_pool.capture.get_frame_index()-1} #you may add more field to this dictionary if you want.
         self.annotations_list.append(notification)
         self.annotations_by_frame[notification['index']].append(notification)
@@ -215,7 +216,7 @@ class Annotation_Player(Annotation_Capture):
         annotations_in_section = { a['index']:a for a in annotations_in_section}.values() #remove dublicates
         annotations_in_section.sort(key=lambda a:a['index'])
 
-        with open(os.path.join(export_dir,'annotations.csv'),'wb') as csvfile:
+        with open(os.path.join(export_dir,'annotations.csv'),'w',encoding='utf-8',newline='') as csvfile:
             csv_writer = csv.writer(csvfile)
             csv_writer.writerow(self.csv_representation_keys())
             for a in annotations_in_section:

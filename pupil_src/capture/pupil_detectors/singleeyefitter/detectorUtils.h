@@ -2,7 +2,7 @@
 #define __DETECTORUTILS_H__
 
 
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include "common/types.h"
 #include "EllipseEvaluation2D.h"
 

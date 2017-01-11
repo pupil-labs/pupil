@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import os
@@ -16,13 +17,13 @@ from file_methods import load_object
 from pyglui.cygl.utils import draw_points_norm,draw_polyline,RGBA
 from OpenGL.GL import GL_POLYGON
 from circle_detector import find_concetric_circles
-from finish_calibration import finish_calibration
-import calibrate
+from . finish_calibration import finish_calibration
+from . import calibrate
 
 import audio
 
 from pyglui import ui
-from calibration_plugin_base import Calibration_Plugin
+from . calibration_plugin_base import Calibration_Plugin
 
 #logging
 import logging
@@ -179,25 +180,25 @@ class Adjust_Calibration(Calibration_Plugin):
                     if self.smooth_vel < 0.01 and sample_ref_dist > 0.1:
                         self.sample_site = self.smooth_pos
                         audio.beep()
-                        logger.debug("Steady marker found. Starting to sample %s datapoints" %self.counter_max)
+                        logger.debug("Steady marker found. Starting to sample {} datapoints".format(self.counter_max))
                         self.counter = self.counter_max
 
                 if self.counter:
                     if self.smooth_vel > 0.01:
                         audio.tink()
-                        logger.warning("Marker moved to quickly: Aborted sample. Sampled %s datapoints. Looking for steady marker again."%(self.counter_max-self.counter))
+                        logger.warning("Marker moved to quickly: Aborted sample. Sampled {} datapoints. Looking for steady marker again.".format((self.counter_max-self.counter)))
                         self.counter = 0
                     else:
                         self.counter -= 1
                         ref = {}
                         ref["norm_pos"] = self.pos
-                        ref["screen_pos"] =  denormalize(self.pos,(frame.width,frame.height),flip_y=True)
+                        ref["screen_pos"] = denormalize(self.pos,(frame.width,frame.height),flip_y=True)
                         ref["timestamp"] = frame.timestamp
                         self.ref_list.append(ref)
                         if self.counter == 0:
                             #last sample before counter done and moving on
                             audio.tink()
-                            logger.debug("Sampled %s datapoints. Stopping to sample. Looking for steady marker again."%self.counter_max)
+                            logger.debug("Sampled {} datapoints. Stopping to sample. Looking for steady marker again.".format(self.counter_max))
 
             #always save pupil positions
             for pt in events.get('gaze_positions',[]):
@@ -214,17 +215,12 @@ class Adjust_Calibration(Calibration_Plugin):
             else:
                 self.button.status_text = 'Looking for Marker'
 
-
-
-            #stop if autostop condition is satisfied:
-            if self.auto_stop >=self.auto_stop_max:
+            # stop if autostop condition is satisfied:
+            if self.auto_stop >= self.auto_stop_max:
                 self.auto_stop = 0
                 self.stop()
-
-
         else:
             pass
-
 
     def get_init_dict(self):
         return {}

@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 import os,sys
 import logging
@@ -229,7 +230,7 @@ class Plugin_List(object):
         #now add plugins to plugin list.
         for initializer in plugin_initializers:
             name, args = initializer
-            logger.debug("Loading plugin: %s with settings %s"%(name, args))
+            logger.debug("Loading plugin: {} with settings {}".format(name, args))
             try:
                 plugin_by_name[name]
             except KeyError:
@@ -237,13 +238,12 @@ class Plugin_List(object):
             else:
                 self.add(plugin_by_name[name],args)
 
-
     def __iter__(self):
         for p in self._plugins:
             yield p
 
     def __str__(self):
-        return 'Plugin List: %s'%self._plugins
+        return 'Plugin List: {}'.format(self._plugins)
 
     def add(self,new_plugin,args={}):
         '''
@@ -252,14 +252,14 @@ class Plugin_List(object):
         if new_plugin.uniqueness == 'by_base_class':
             for p in self._plugins:
                 if p.base_class == new_plugin.__bases__[-1]:
-                    logger.debug("Plugin %s of base class %s will be replaced by %s."%(p,p.base_class_name,new_plugin.__name__))
+                    logger.debug("Plugin {} of base class {} will be replaced by {}.".format(p,p.base_class_name,new_plugin.__name__))
                     p.alive = False
                     self.clean()
 
         elif new_plugin.uniqueness == 'by_class':
             for p in self._plugins:
                 if p.this_class == new_plugin:
-                    logger.warning("Plugin '%s' is already loaded . Did not add it."%new_plugin.__name__)
+                    logger.warning("Plugin '{}' is already loaded . Did not add it.".format(new_plugin.__name__))
                     return
 
         plugin_instance = new_plugin(self.g_pool,**args)
@@ -267,9 +267,8 @@ class Plugin_List(object):
         self._plugins.sort(key=lambda p: p.order)
         if self.g_pool.app in ("capture","player") and plugin_instance.alive: #make sure the plugin does not want to be gone already
             plugin_instance.init_gui()
-            logger.info("Loaded: %s"%new_plugin.__name__)
+            logger.info("Loaded: {}".format(new_plugin.__name__))
         self.clean()
-
 
     def clean(self):
         '''
@@ -277,7 +276,7 @@ class Plugin_List(object):
         '''
         for p in self._plugins[:]:
             if not p.alive: # reading p.alive will trigger the plug-in cleanup fn.
-                logger.debug("Unloaded Plugin: %s"%p)
+                logger.debug("Unloaded Plugin: {}".format(p))
                 self._plugins.remove(p)
 
     def get_initializers(self):
@@ -312,19 +311,19 @@ def import_runtime_plugins(plugin_dir):
         # over other modules with identical name.
         sys.path.insert(0,plugin_dir)
         for d in os.listdir(plugin_dir):
-            logger.debug('Scanning: %s'%d)
+            logger.debug('Scanning: {}'.format(d))
             try:
                 if os.path.isfile(os.path.join(plugin_dir,d)):
                     d,ext =  d.rsplit(".", 1 )
                     if ext not in ('py','so','dylib'):
                         continue
                 module = importlib.import_module(d)
-                logger.debug('Imported: %s'%module)
+                logger.debug('Imported: {}'.format(module))
                 for name in dir(module):
                     member = getattr(module, name)
                     if isinstance(member, type) and issubclass(member, Plugin) and member.__name__ != 'Plugin':
-                        logger.info('Added: %s'%member)
+                        logger.info('Added: {}'.format(member))
                         runtime_plugins.append(member)
             except Exception as e:
-                logger.warning("Failed to load '%s'. Reason: '%s' "%(d,e))
+                logger.warning("Failed to load '{}'. Reason: '{}' ".format(d, e))
     return runtime_plugins

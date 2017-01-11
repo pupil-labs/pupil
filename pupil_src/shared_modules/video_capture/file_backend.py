@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import os,sys
@@ -142,7 +143,7 @@ class File_Source(Base_Source):
             except IOError:
                 logger.warning("did not find timestamps file, making timetamps up based on fps and frame count. Frame count and timestamps are not accurate!")
                 frame_rate = float(self.video_stream.average_rate)
-                self.timestamps = [i/frame_rate for i in xrange(int(self.container.duration/av.time_base*frame_rate)+100)] # we are adding some slack.
+                self.timestamps = [i/frame_rate for i in range(int(self.container.duration/av.time_base*frame_rate)+100)] # we are adding some slack.
             else:
                 logger.debug("Auto loaded %s timestamps from %s"%(len(self.timestamps),timestamps))
         else:

@@ -1,13 +1,15 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
+<<<<<<< HEAD
 import time
 import logging
 
@@ -16,7 +18,17 @@ import ndsi
 from .base_backend import Base_Source, Base_Manager
 
 assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.14'
+=======
+import ndsi
+import logging
+
+from .base_backend import InitialisationError, StreamError, Base_Source, Base_Manager
+from .fake_backend import Fake_Source
+
+assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.13'
+>>>>>>> master
 logger = logging.getLogger(__name__)
+
 
 
 class NDSI_Source(Base_Source):
@@ -26,6 +38,7 @@ class NDSI_Source(Base_Source):
         get_frame_timeout (float): Maximal waiting time for next frame
         sensor (ndsi.Sensor): NDSI sensor backend
     """
+<<<<<<< HEAD
     def __init__(self, g_pool, frame_size, frame_rate, network=None,
                  source_id=None, host_name=None, sensor_name=None):
         super(NDSI_Source, self).__init__(g_pool)
@@ -35,6 +48,43 @@ class NDSI_Source(Base_Source):
         self._host_name = host_name
         self._frame_size = frame_size
         self._frame_rate = frame_rate
+=======
+    def __init__(self, g_pool, frame_size, frame_rate, network=None, source_id=None, host_name=None, sensor_name=None, **settings):
+        if not network:
+            raise InitialisationError()
+        super(NDSI_Source, self).__init__(g_pool)
+        self.sensor = None
+        try:
+            # uuid given
+            if source_id:
+                self.sensor = network.sensor(source_id, callbacks=(self.on_notification,))
+            # host/sensor name combination, prob. from settings
+            elif host_name and sensor_name:
+                for sensor in network.sensors.values():
+                    if sensor['host_name'] == host_name and sensor['sensor_name'] == sensor_name:
+                        self.sensor = network.sensor(sensor['sensor_uuid'], callbacks=(self.on_notification,))
+            else:
+                for sensor_id in network.sensors:
+                    try:
+                        self.sensor = network.sensor(sensor_id, callbacks=(self.on_notification,))
+                        break
+                    except ValueError:
+                        continue
+        except ValueError:
+            raise InitialisationError()
+        if not self.sensor:
+            raise InitialisationError()
+        if not self.sensor.supports_data_subscription:
+            self.cleanup()
+            raise InitialisationError('Source does not support data subscription.')
+
+        logger.debug('NDSI Source Sensor: {}'.format(self.sensor))
+        self.control_id_ui_mapping = {}
+        self.get_frame_timeout = 1000
+        self._frame_size = None
+        self.frame_size = frame_size
+        self.frame_rate = frame_rate
+>>>>>>> master
         self.has_ui = False
         self.control_id_ui_mapping = {}
         self.get_frame_timeout = 50  # ms
@@ -94,11 +144,15 @@ class NDSI_Source(Base_Source):
 
     @property
     def name(self):
+<<<<<<< HEAD
         return '%s @ %s' % (self._sensor_name, self._host_name)
 
     @property
     def online(self):
         return bool(self.sensor)
+=======
+        return '{} @ {}'.format(self.sensor.name, self.sensor.host_name)
+>>>>>>> master
 
     def poll_notifications(self):
         while self.sensor.has_notifications:
@@ -108,6 +162,7 @@ class NDSI_Source(Base_Source):
         if self.online:
             self.poll_notifications()
             try:
+<<<<<<< HEAD
                 frame = self.sensor.get_newest_data_frame(
                     timeout=self.get_frame_timeout)
             except ndsi.StreamError:
@@ -133,6 +188,18 @@ class NDSI_Source(Base_Source):
                 self.last_update = self.g_pool.get_timestamp()
         else:
             time.sleep(self.get_frame_timeout/1e3)
+=======
+                frame = self._get_frame()
+                self.frame_size = (frame.width, frame.height)
+            except Exception as e:
+                if a:
+                    logger.info('Could not get Frame: "{}". Attempt: {}/{} '.format(str(e), a+1, attempts))
+                else:
+                    logger.debug('Could not get Frame of first try: "{}". Attempt: {}/{}'.format(str(e), a+1, attempts))
+            else:
+                return frame
+        raise StreamError("Could not grab frame after 3 attempts. Giving up.")
+>>>>>>> master
 
     def on_notification(self, sensor, event):
         # should only called if sensor was created
@@ -142,6 +209,7 @@ class NDSI_Source(Base_Source):
             self._initial_refresh = False
         if event['subject'] == 'error':
             # if not event['error_str'].startswith('err=-3'):
+<<<<<<< HEAD
             logger.warning('Error %s' % event['error_str'])
             if ('control_id' in event
                     and event['control_id'] in self.sensor.controls):
@@ -150,15 +218,41 @@ class NDSI_Source(Base_Source):
               and (event['control_id'] not in self.control_id_ui_mapping
                    or event['changes'].get('dtype') == "strmapping"
                    or event['changes'].get('dtype') == "intmapping")):
+=======
+            logger.warning('Error {}'.format(event['error_str']))
+            if 'control_id' in event and event['control_id'] in self.sensor.controls:
+                logger.debug(str(self.sensor.controls[event['control_id']]))
+        elif self.has_ui and (event['control_id'] not in self.control_id_ui_mapping
+                              or event['changes'].get('dtype') == "strmapping"
+                              or event['changes'].get('dtype') == "intmapping"):
+>>>>>>> master
             self.update_control_menu()
 
     @property
     def frame_size(self):
         return self._frame_size
+<<<<<<< HEAD
 
     @property
     def frame_rate(self):
         return self._frame_rate
+=======
+
+    @frame_size.setter
+    def frame_size(self, new_size):
+        self._frame_size = new_size
+
+    def set_frame_size(self, new_size):
+        self.frame_size = new_size
+
+    @property
+    def frame_rate(self):
+        return 30
+
+    @frame_rate.setter
+    def frame_rate(self, new_rate):
+        pass
+>>>>>>> master
 
     @property
     def jpeg_support(self):
@@ -176,6 +270,14 @@ class NDSI_Source(Base_Source):
             settings['host_name'] = self._host_name
         return settings
 
+<<<<<<< HEAD
+=======
+    @settings.setter
+    def settings(self, settings):
+        self.frame_size = settings['frame_size']
+        self.frame_rate = settings['frame_rate']
+
+>>>>>>> master
     def init_gui(self):
         from pyglui import ui
         self.has_ui = True
@@ -185,10 +287,17 @@ class NDSI_Source(Base_Source):
     def add_controls_to_menu(self, menu, controls):
         from pyglui import ui
 
+<<<<<<< HEAD
         #  closure factory
         def make_value_change_fn(ctrl_id):
             def initiate_value_change(val):
                 logger.debug('%s: %s >> %s' % (self.sensor, ctrl_id, val))
+=======
+        # closure factory
+        def make_value_change_fn(ctrl_id):
+            def initiate_value_change(val):
+                logger.debug('{}: {} >> {}'.format(self.sensor, ctrl_id, val))
+>>>>>>> master
                 self.sensor.set_control_value(ctrl_id, val)
             return initiate_value_change
 
@@ -236,6 +345,7 @@ class NDSI_Source(Base_Source):
                     self.control_id_ui_mapping[ctrl_id] = ctrl_ui
                     menu.append(ctrl_ui)
                 else:
+<<<<<<< HEAD
                     logger.error('Did not generate UI for %s' % ctrl_id)
             except:
                 logger.error('Exception for control:\n%s' % ctrl_dict)
@@ -243,6 +353,15 @@ class NDSI_Source(Base_Source):
                 tb.print_exc()
         if len(menu) == 0:
             menu.append(ui.Info_Text("No %s settings found" % menu.label))
+=======
+                    logger.error('Did not generate UI for {}'.format(ctrl_id))
+            except:
+                logger.error('Exception for control:\n{}'.format(ctrl_dict))
+                import traceback as tb
+                tb.print_exc()
+        if len(menu) == 0:
+            menu.append(ui.Info_Text("No {} settings found".format(menu.label)))
+>>>>>>> master
         return menu
 
     def update_control_menu(self):
@@ -259,7 +378,7 @@ class NDSI_Source(Base_Source):
 
         uvc_controls = []
         other_controls = []
-        for entry in iter(sorted(self.sensor.controls.iteritems())):
+        for entry in iter(sorted(self.sensor.controls.items())):
             if entry[0].startswith("UVC"):
                 uvc_controls.append(entry)
             else:
@@ -270,9 +389,14 @@ class NDSI_Source(Base_Source):
         self.add_controls_to_menu(self.uvc_menu, uvc_controls)
         self.g_pool.capture_source_menu.append(self.uvc_menu)
 
+<<<<<<< HEAD
         self.g_pool.capture_source_menu.append(
             ui.Button("Reset to default values",
                       self.sensor.reset_all_control_values))
+=======
+        self.g_pool.capture_source_menu.append(ui.Button("Reset to default values",
+                                                         self.sensor.reset_all_control_values))
+>>>>>>> master
 
     def cleanup(self):
         if self.online:
@@ -324,11 +448,21 @@ class NDSI_Manager(Base_Manager):
                 self.re_build_ndsi_menu()
 
         host_sel, host_sel_labels = host_selection_list()
+<<<<<<< HEAD
         ui_elements.append(ui.Selector('selected_host', self,
                                        selection=host_sel,
                                        labels=host_sel_labels,
                                        setter=view_host,
                                        label='Remote host'))
+=======
+        ui_elements.append(ui.Selector(
+            'selected_host', self,
+            selection=host_sel,
+            labels=host_sel_labels,
+            setter=view_host,
+            label='Remote host'
+        ))
+>>>>>>> master
 
         self.g_pool.capture_selector_menu.extend(ui_elements)
         if not self.selected_host:
@@ -401,9 +535,21 @@ class NDSI_Manager(Base_Manager):
 
     def on_event(self, caller, event):
         if event['subject'] == 'detach':
+<<<<<<< HEAD
             logger.debug('detached: %s' % event)
             sensors = [s for s in self.network.sensors.values()
                        if s['sensor_type'] == 'video']
+=======
+            logger.debug('detached: {}'.format(event))
+            name = str('{} @ {}'.format(event['sensor_name'], event['host_name']))
+            self.notify_all({
+                'subject': 'capture_manager.source_lost',
+                'source_class_name': NDSI_Source.class_name(),
+                'source_id': event['sensor_uuid'],
+                'name': name
+            })
+            sensors = [s for s in self.network.sensors.values() if s['sensor_type'] == 'video']
+>>>>>>> master
             if self.selected_host == event['host_uuid']:
                 if sensors:
                     self.selected_host = sensors[0]['host_uuid']
@@ -413,16 +559,37 @@ class NDSI_Manager(Base_Manager):
 
         elif (event['subject'] == 'attach'
               and event['sensor_type'] == 'video'):
+<<<<<<< HEAD
             logger.debug('attached: %s' % event)
             self.notify_all({'subject': 'capture_manager.source_found'})
+=======
+            logger.debug('attached: {}'.format(event))
+            name = '{} @ {}'.format(event['sensor_name'], event['host_name'])
+            self.notify_all({
+                'subject': 'capture_manager.source_found',
+                'source_class_name': NDSI_Source.class_name(),
+                'source_id': event['sensor_uuid'],
+                'name': name
+            })
+>>>>>>> master
             if not self.selected_host:
                 self.selected_host = event['host_uuid']
             self.re_build_ndsi_menu()
 
     def activate_source(self, settings={}):
+<<<<<<< HEAD
         settings['network'] = self.network
         if hasattr(self.g_pool, 'plugins'):
             self.g_pool.plugins.add(NDSI_Source, args=settings)
+=======
+        try:
+            capture = NDSI_Source(self.g_pool, network=self.network, **settings)
+        except InitialisationError as init_error:
+            logger.error('NDSI source could not be initialised.')
+            if init_error.message:
+                logger.error(init_error.message)
+            logger.debug('NDSI source init settings:\n\t{}\n\t{}'.format(self.network, settings))
+>>>>>>> master
         else:
             self.g_pool.replace_source(NDSI_Source.__name__,
                                        source_settings=settings)

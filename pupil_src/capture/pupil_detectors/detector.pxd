@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 from libcpp.memory cimport shared_ptr
@@ -13,32 +14,32 @@ from libcpp.vector cimport vector
 from libcpp.pair cimport pair
 from libc.stdint cimport int32_t
 
-cdef extern from '<opencv2/core/types_c.h>':
+cdef extern from '<opencv2/core.hpp>':
 
   int CV_8UC1
   int CV_8UC3
 
 
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv':
+cdef extern from '<opencv2/core.hpp>' namespace 'cv':
 
   cdef cppclass Mat :
       Mat() except +
       Mat( int height, int width, int type, void* data  ) except+
       Mat( int height, int width, int type ) except+
 
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv':
+cdef extern from '<opencv2/core.hpp>' namespace 'cv':
 
   cdef cppclass Rect_[T]:
     Rect_() except +
     Rect_( T x, T y, T width, T height ) except +
     T x, y, width, height
 
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv':
+cdef extern from '<opencv2/core.hpp>' namespace 'cv':
 
   cdef cppclass Point_[T]:
     Point_() except +
 
-cdef extern from '<opencv2/core/core.hpp>' namespace 'cv':
+cdef extern from '<opencv2/core.hpp>' namespace 'cv':
 
   cdef cppclass Scalar_[T]:
     Scalar_() except +
