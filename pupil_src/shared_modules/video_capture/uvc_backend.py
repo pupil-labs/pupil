@@ -19,8 +19,7 @@ from sets import ImmutableSet
 #logging
 import logging
 logger = logging.getLogger(__name__)
-
-
+logger.setLevel(logging.INFO)
 
 class UVC_Source(Base_Source):
     """
@@ -164,6 +163,8 @@ class UVC_Source(Base_Source):
         self.init_gui()
 
     def _re_init_capture_by_names(self,names):
+        # burn-in test specific. Do not change text!
+        logger.info('Camera stopped providing frames. Reinitialising camera.')
         self.devices.update()
         for d in self.devices:
             for name in names:
@@ -188,7 +189,7 @@ class UVC_Source(Base_Source):
                 self._re_init_capture_by_names(names)
             except (InitialisationError, uvc.InitError) as e:
                 time.sleep(0.05)
-            self._restart_in = int(2/0.05)
+            self._restart_in = int(5/0.05)
         else:
             self._restart_in -= 1
 
