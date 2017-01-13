@@ -66,7 +66,6 @@ from offline_surface_tracker import Offline_Surface_Tracker
 from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from fixation_detector import Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector
 from manual_gaze_correction import Manual_Gaze_Correction
-from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
 from log_display import Log_Display
@@ -148,7 +147,7 @@ def session(rec_dir):
                                Manual_Gaze_Correction, Video_Export_Launcher, Offline_Surface_Tracker,
                                Raw_Data_Exporter, Batch_Exporter, Annotation_Player], key=lambda x: x.__name__)
 
-    other_plugins = sorted([Show_Calibration, Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
+    other_plugins = sorted([Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
     user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
 
     user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
