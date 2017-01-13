@@ -20,18 +20,14 @@ logger = logging.getLogger(__name__)
 
 class Blink_Detection(Plugin):
     """
-    DisplayGaze shows the three most
-    recent gaze position on the screen
+    Blink_Detection creates "blink" events when the confidence drops in both eyes
     """
+    order = .8
 
     def __init__(self, g_pool):
         super(Blink_Detection, self).__init__(g_pool)
-        self.order = .8
-        self.history_length = 21  # Should be odd
-        self.confidence_histories = (deque(maxlen=self.history_length), deque(maxlen=self.history_length))
-        self.timestamp_histories = (deque(maxlen=self.history_length), deque(maxlen=self.history_length))
         self.eyes_are_alive = g_pool.eyes_are_alive
-
+        self.history_length = 21
         self.is_blink = False
 
     @property
@@ -41,6 +37,8 @@ class Blink_Detection(Plugin):
     @history_length.setter
     def history_length(self, hist_len):
         self._history_length = hist_len
+        self.confidence_histories = (deque(maxlen=hist_len), deque(maxlen=hist_len))
+        self.timestamp_histories = (deque(maxlen=hist_len), deque(maxlen=hist_len))
         self.blink_filter = np.ones(hist_len)
         self.blink_filter[hist_len//2:] = -1
 
