@@ -38,7 +38,7 @@ class NDSI_Source(Base_Source):
         self._frame_rate = frame_rate
         self.has_ui = False
         self.control_id_ui_mapping = {}
-        self.get_frame_timeout = 50  # ms
+        self.get_frame_timeout = 100  # ms
         self.ghost_mode_timeout = 10  # sec
         self._initial_refresh = True
         self.last_update = self.g_pool.get_timestamp()
@@ -109,8 +109,7 @@ class NDSI_Source(Base_Source):
         if self.online:
             self.poll_notifications()
             try:
-                frame = self.sensor.get_newest_data_frame(
-                    timeout=self.get_frame_timeout)
+                frame = self.sensor.get_newest_data_frame(timeout=self.get_frame_timeout)
             except ndsi.StreamError:
                 frame = None
             except Exception:
@@ -310,7 +309,6 @@ class NDSI_Manager(Base_Manager):
             devices = {
                 s['host_uuid']: s['host_name']  # removes duplicates
                 for s in self.network.sensors.values()
-                if s['sensor_type'] == 'video'
             }
             devices = [pair for pair in devices.items()]  # create tuples
             # split tuples into 2 lists
@@ -380,27 +378,24 @@ class NDSI_Manager(Base_Manager):
     def recent_events(self, events):
         self.poll_events()
 
-        if (isinstance(self.g_pool.capture, NDSI_Source)
-                and not self.g_pool.capture.sensor):
+        if (isinstance(self.g_pool.capture, NDSI_Source) and not self.g_pool.capture.sensor):
             if self._recover_in <= 0:
                 self.recover()
-                self._recover_in = int(2*1e3
-                                       / self.g_pool.capture.get_frame_timeout)
+                self._recover_in = int(2*1e3 / self.g_pool.capture.get_frame_timeout)
             else:
                 self._recover_in -= 1
 
             if self._rejoin_in <= 0:
                 logger.debug('Rejoining network...')
                 self.network.rejoin()
-                self._rejoin_in = int(10*1e3
-                                      / self.g_pool.capture.get_frame_timeout)
+                self._rejoin_in = int(10*1e3 / self.g_pool.capture.get_frame_timeout)
             else:
                 self._rejoin_in -= 1
 
     def on_event(self, caller, event):
         if event['subject'] == 'detach':
             logger.debug('detached: %s' % event)
-            sensors = [s for s in self.network.sensors.values() if s['sensor_type'] == 'video']
+            sensors = [s for s in self.network.sensors.values()]
             if self.selected_host == event['host_uuid']:
                 if sensors:
                     self.selected_host = sensors[0]['host_uuid']
@@ -408,10 +403,10 @@ class NDSI_Manager(Base_Manager):
                     self.selected_host = None
                 self.re_build_ndsi_menu()
 
-        elif (event['subject'] == 'attach'
-              and event['sensor_type'] == 'video'):
-            logger.debug('attached: {}'.format(event))
-            self.notify_all({'subject': 'capture_manager.source_found'})
+        elif event['subject'] == 'attach':
+            if event['sensor_type'] == 'video':
+                logger.debug('attached: {}'.format(event))
+                self.notify_all({'subject': 'capture_manager.source_found'})
             if not self.selected_host:
                 self.selected_host = event['host_uuid']
             self.re_build_ndsi_menu()
