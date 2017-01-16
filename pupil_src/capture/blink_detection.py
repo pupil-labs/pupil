@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 from plugin import Plugin
-from pyglui.cygl.utils import draw_points_norm,RGBA
 from collections import deque
 from itertools import islice
 import numpy as np
@@ -45,7 +44,7 @@ class Blink_Detection(Plugin):
     def recent_events(self, events={}):
 
         # Process all pupil_positions events
-        for pt in events.get('pupil_positions',[]):
+        for pt in events.get('pupil_positions', []):
             # Update history
             self.confidence_histories[pt['id']].appendleft(pt['confidence'])
             self.timestamp_histories[pt['id']].appendleft(pt['timestamp'])
@@ -54,7 +53,7 @@ class Blink_Detection(Plugin):
             if len(self.timestamp_histories[pt['id']]) < 60:
                 continue
             else:
-                fps = 60.0 / (self.timestamp_histories[pt['id']][0] -  self.timestamp_histories[pt['id']][59])
+                fps = 60.0 / (self.timestamp_histories[pt['id']][0] - self.timestamp_histories[pt['id']][59])
                 # fps = 120
                 self.history_length = int(self.history_length_per_fps * fps)
 
@@ -112,10 +111,9 @@ class Blink_Detection(Plugin):
                 'is_blink': self.is_blink
             }
 
-            if not 'blinks' in events:
+            if 'blinks' not in events:
                 events['blinks'] = []
             events['blinks'].append(blink_entry)
-
 
     def get_init_dict(self):
         return {}
