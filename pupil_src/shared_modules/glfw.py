@@ -65,6 +65,8 @@ else:
         dll_path = find_library('glfw')
     elif os_name == "Darwin":
         dll_path = find_library('glfw3')
+        if not dll_path:
+            dll_path = find_library('glfw')
     elif os_name == "Windows":
         dll_path = find_library('glfw3') #os.path.join(os.path.dirname(os.path.abspath(os.path.curdir)), 'shared_modules', 'external', 'glfw3')
     else:
