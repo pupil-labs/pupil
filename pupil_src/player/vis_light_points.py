@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import cv2
@@ -46,7 +47,7 @@ class Vis_Light_Points(Plugin):
             except:
                 pass
 
-        out = cv2.distanceTransform(overlay,cv2.cv.CV_DIST_L2, 5)
+        out = cv2.distanceTransform(overlay,cv2.DIST_L2, 5)
 
         # fix for opencv binding inconsitency
         if type(out)==tuple:

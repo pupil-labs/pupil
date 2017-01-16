@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import cv2
@@ -15,9 +16,8 @@ import numpy as np
 from scipy.spatial.distance import pdist
 from scipy.interpolate import interp1d
 #because np.sqrt is slower when we do it on small arrays
-from itertools import ifilter,izip
 def reversedEnumerate(l):
-    return izip(xrange(len(l)-1, -1, -1), reversed(l))
+    return zip(range(len(l)-1, -1, -1), reversed(l))
 
 from math import sqrt
 sqrt_2 = sqrt(2)
@@ -154,7 +154,7 @@ def correct_gradient(gray_img,r):
 def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False):
     edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, aperture, 9)
 
-    contours, hierarchy = cv2.findContours(edges,
+    _img, contours, hierarchy = cv2.findContours(edges,
                                     mode=cv2.RETR_TREE,
                                     method=cv2.CHAIN_APPROX_SIMPLE,offset=(0,0)) #TC89_KCOS
 
@@ -241,24 +241,24 @@ def draw_markers(img,markers):
         else:
             cv2.polylines(img,np.int0(hat),color = (0,255,0),isClosed=True)
         cv2.polylines(img,np.int0(centroid),color = (255,255,int(255*m['id_confidence'])),isClosed=True,thickness=2)
-        m_str = 'id: %i'%m['id']
+        m_str = 'id: {:i}'.format(m['id'])
         org = origin.copy()
         # cv2.rectangle(img, tuple(np.int0(org+(-5,-13))[0,:]), tuple(np.int0(org+(100,30))[0,:]),color=(0,0,0),thickness=-1)
         cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
         if 'id_confidence' in m:
-            m_str = 'idc: %.3f'%m['id_confidence']
+            m_str = 'idc: {:.3f}'.format(m['id_confidence'])
             org += (0, 12)
             cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
         if 'loc_confidence' in m:
-            m_str = 'locc: %.3f'%m['loc_confidence']
+            m_str = 'locc: {:.3f}'.format(m['loc_confidence'])
             org += (0, 12 )
             cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
         if 'frames_since_true_detection' in m:
-            m_str = 'otf: %s'%m['frames_since_true_detection']
+            m_str = 'otf: {}'.format(m['frames_since_true_detection'])
             org += (0, 12 )
             cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
         if 'opf_vel' in m:
-            m_str = 'otf: %s'%m['opf_vel']
+            m_str = 'otf: {}'.format(m['opf_vel'])
             org += (0, 12 )
             cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))
 
@@ -325,9 +325,9 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
             prev_pts = np.array([m['verts'] for m in not_found])
             prev_pts = np.vstack(prev_pts)
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(
-                prev_img, gray_img, prev_pts,
+                prev_img, gray_img, prev_pts, None,
                 minEigThreshold=.01,**lk_params)
-            for marker_idx in xrange(flow_found.shape[0]/4):
+            for marker_idx in range(flow_found.shape[0]//4):
                 m = not_found[marker_idx]
                 m_slc = slice(marker_idx*4,marker_idx*4+4)
                 if flow_found[m_slc].sum() >= 4:
@@ -487,7 +487,7 @@ class MarkerTracker(object):
         """Construct valid marker result from state"""
         markers = {}
         should_display = lambda m: m[self.loc_conf_idx] > self.display_threshold
-        for m_state in ifilter(should_display, self.state):
+        for m_state in filter(should_display, self.state):
         #for m_state in self.state:
             m_id = bin_list_to_int(np.round(m_state[self.id_slc]).astype(int))
             m_id_conf = self.marker_id_confidence(m_state)
@@ -503,7 +503,7 @@ class MarkerTracker(object):
             'id_confidence': m_list[0][0],
             'norm_verts': m_list[0][1][self.vert_slc].reshape((4,1,2)),
             'loc_confidence': m_list[0][1][self.loc_conf_idx]
-        } for m_id, m_list in markers.iteritems()]
+        } for m_id, m_list in markers.items()]
 
     def make_raw_to_flat_map(self, img_shape):
         assert len(img_shape) == 2
@@ -548,7 +548,7 @@ class MarkerTracker(object):
 
         prev_pts = []
         unmatched_history = filter(
-            lambda (_,unmatched): unmatched,
+            lambda _,unmatched: unmatched,
             izip(self.state,hist_to_match))
         for hist_marker, unmatched in unmatched_history:
             # use optical flow to track unmatched markers...
@@ -561,7 +561,7 @@ class MarkerTracker(object):
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(
                 self.prev_img, gray_img, prev_pts,
                 minEigThreshold=0.01,**lk_params)
-            for marker_idx in xrange(flow_found.shape[0]/4):
+            for marker_idx in range(int(flow_found.shape[0]/4)):
                 hist_marker = unmatched_history[marker_idx][0]
                 hist_marker[self.loc_conf_idx] -= self.unmatched_penalty
                 m_slc = slice(marker_idx*4,marker_idx*4+4)
@@ -617,7 +617,7 @@ class MarkerTracker(object):
 #     from os.path import join
 #     from video_capture.av_file_capture import File_Capture
 #     cap = File_Capture(join(folder,'marker-test.mp4'))
-# 
+#
 #     tracker = MarkerTracker()
 #     detected_count = 0
 #     for x in range(500):
@@ -630,7 +630,7 @@ class MarkerTracker(object):
 #         if cv2.waitKey(1) == 27:
 #            break
 #         detected_count += len(markers)
-# 
+#
 #     print detected_count #3106 #3226
 
 
@@ -644,7 +644,7 @@ def bench(folder):
     for x in range(500):
         frame = cap.get_frame()
         img = frame.img
-        gray_img = cv2.cvtColor(img, cv2.cv.CV_BGR2GRAY)
+        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         markers = detect_markers_robust(gray_img,5,prev_markers=markers,true_detect_every_frame=1,visualize=True)
 
         draw_markers(img, markers)
@@ -657,10 +657,7 @@ def bench(folder):
         if cv2.waitKey(1) == 27:
            break
         detected_count += len(markers)
-    print detected_count #2900 #3042 #3021
-
-
-
+    print(detected_count) #2900 #3042 #3021
 
 
 if __name__ == '__main__':
@@ -669,5 +666,5 @@ if __name__ == '__main__':
     cProfile.runctx("bench(folder)",{'folder':folder},locals(),os.path.join(folder, "world.pstats"))
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
-    subprocess.call("cd %s ; python "%folder+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
-    print "created  time graph for  process. Please check out the png next to this file"
+    subprocess.call("cd {} ; python {} -f pstats world.pstats | dot -Tpng -o world_cpu_time.png".format(folder, gprof2dot_loc), shell=True)
+    print("created  time graph for  process. Please check out the png next to this file")

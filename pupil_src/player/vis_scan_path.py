@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import cv2
@@ -55,7 +56,7 @@ class Vis_Scan_Path(Plugin):
         #lets update past gaze using optical flow: this is like sticking the gaze points onto the pixels of the img.
         if self.past_gaze_positions and succeeding_frame:
             past_screen_gaze = np.array([denormalize(ng['norm_pos'] ,img_shape,flip_y=True) for ng in self.past_gaze_positions],dtype=np.float32)
-            new_pts, status, err = cv2.calcOpticalFlowPyrLK(self.prev_gray, gray_img,past_screen_gaze,minEigThreshold=0.005,**lk_params)
+            new_pts, status, err = cv2.calcOpticalFlowPyrLK(self.prev_gray,gray_img,past_screen_gaze,None,minEigThreshold=0.005,**lk_params)
             for gaze,new_gaze_pt,s,e in zip(self.past_gaze_positions,new_pts,status,err):
                 if s:
                     # print "norm,updated",gaze['norm_gaze'], normalize(new_gaze_pt,img_shape[:-1],flip_y=True)

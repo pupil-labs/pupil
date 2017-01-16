@@ -1,3 +1,13 @@
+'''
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+'''
 
 from methods import Roi
 from pyglui.cygl.utils import draw_points as cygl_draw_points
@@ -37,7 +47,8 @@ class UIRoi(Roi):
                 [self.uX,self.uY],
                 [self.lX,self.uY]]
 
-    def move_vertex(self,vert_idx,(x,y)):
+    def move_vertex(self,vert_idx,pt):
+        x,y = pt
         x,y = int(x),int(y)
         x,y = min(self.max_x,x),min(self.max_y,y)
         x,y = max(self.min_x,x),max(self.min_y,y)
