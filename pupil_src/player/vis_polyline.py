@@ -20,7 +20,7 @@ from methods import denormalize
 class Vis_Polyline(Plugin):
     uniqueness = "not_unique"
     def __init__(self, g_pool,color=(1.0,0.0,0.4,1.0),thickness=2):
-        super(Vis_Polyline, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.order = .9
         self.menu = None
 

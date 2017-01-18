@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class InitialisationError(Exception):
     def __init__(self, msg=None):
-        super(InitialisationError, self).__init__()
+        super().__init__()
         self.message = msg
 
 
@@ -57,7 +57,7 @@ class Base_Source(Plugin):
 
     def __init__(self, g_pool):
         assert(not isinstance(g_pool, dict))
-        super(Base_Source, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.g_pool.capture = self
         self._recent_frame = None
 
@@ -167,7 +167,7 @@ class Base_Manager(Plugin):
     gui_name = 'Base Manager'
 
     def __init__(self, g_pool):
-        super(Base_Manager, self).__init__(g_pool)
+        super().__init__(g_pool)
         g_pool.capture_manager = self
 
     def get_init_dict(self):

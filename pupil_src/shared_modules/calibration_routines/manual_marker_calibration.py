@@ -39,7 +39,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             Fit ellipses
     """
     def __init__(self, g_pool):
-        super(Manual_Marker_Calibration, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.detected = False
         self.pos = None
         self.smooth_pos = 0.,0.
@@ -120,7 +120,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
             ``calibration.marker_sample_completed``: Enough data points sampled
 
         '''
-        super(Manual_Marker_Calibration, self).on_notify(notification)
+        super().on_notify(notification)
 
     def update(self,frame,events):
         """

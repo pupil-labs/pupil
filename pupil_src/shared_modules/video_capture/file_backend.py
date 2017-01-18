@@ -30,19 +30,19 @@ logger = logging.getLogger(__name__)
 class FileCaptureError(Exception):
     """General Exception for this module"""
     def __init__(self, arg):
-        super(FileCaptureError, self).__init__()
+        super().__init__()
         self.arg = arg
 
 class EndofVideoFileError(Exception):
     """docstring for EndofVideoFileError"""
     def __init__(self, arg):
-        super(EndofVideoFileError, self).__init__()
+        super().__init__()
         self.arg = arg
 
 class FileSeekError(Exception):
     """docstring for EndofVideoFileError"""
     def __init__(self):
-        super(FileSeekError, self).__init__()
+        super().__init__()
 
 
 class Frame(object):
@@ -87,7 +87,7 @@ class File_Source(Base_Source):
     """
 
     def __init__(self,g_pool,source_path=None,timestamps=None,timed_playback=False):
-        super(File_Source,self).__init__(g_pool)
+        super().__init__(g_pool)
 
         # minimal attribute set
         self._initialised = True
@@ -180,7 +180,7 @@ class File_Source(Base_Source):
         return float(self.video_stream.average_rate)
 
     def get_init_dict(self):
-        settings = super(File_Source, self).get_init_dict()
+        settings = super().get_init_dict()
         settings['source_path'] = self.source_path
         settings['timestamps'] = self.timestamps
         settings['timed_playback'] = self.timed_playback
@@ -315,7 +315,7 @@ class File_Manager(Base_Manager):
     file_exts = ['.mp4','.mkv','.mov']
 
     def __init__(self, g_pool, root_folder=None):
-        super(File_Manager, self).__init__(g_pool)
+        super().__init__(g_pool)
         base_dir = self.g_pool.user_dir.rsplit(os.path.sep,1)[0]
         default_rec_dir = os.path.join(base_dir,'recordings')
         self.root_folder = root_folder or default_rec_dir

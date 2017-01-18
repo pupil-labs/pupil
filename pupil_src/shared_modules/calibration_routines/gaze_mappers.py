@@ -35,7 +35,7 @@ class Gaze_Mapping_Plugin(Plugin):
     uniqueness = 'by_base_class'
     order = .1
     def __init__(self,g_pool):
-        super(Gaze_Mapping_Plugin, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.g_pool.active_gaze_mapping_plugin = self
 
     def on_pupil_datum(self, p):
@@ -45,7 +45,7 @@ class Gaze_Mapping_Plugin(Plugin):
 class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
     """Base class to implement the map callback"""
     def __init__(self, g_pool):
-        super(Monocular_Gaze_Mapper_Base, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.min_pupil_confidence = 0.0
 
     def on_pupil_datum(self, p):
@@ -61,7 +61,7 @@ class Monocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
     """Base class to implement the map callback"""
     def __init__(self, g_pool):
-        super(Binocular_Gaze_Mapper_Base, self).__init__(g_pool)
+        super().__init__(g_pool)
 
         self.min_pupil_confidence = 0.6
         self._caches = ([],[])
@@ -108,7 +108,7 @@ class Binocular_Gaze_Mapper_Base(Gaze_Mapping_Plugin):
 class Dummy_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     """docstring for Dummy_Gaze_Mapper"""
     def __init__(self, g_pool):
-        super(Dummy_Gaze_Mapper, self).__init__(g_pool)
+        super().__init__(g_pool)
 
     def _map_monocular(self,p):
         return {'topic':'gaze','norm_pos':p['norm_pos'],'confidence':p['confidence'],'timestamp':p['timestamp'],'base_data':[p]}
@@ -120,7 +120,7 @@ class Dummy_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
 class Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     """docstring for Monocular_Gaze_Mapper"""
     def __init__(self, g_pool,params):
-        super(Monocular_Gaze_Mapper, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.params = params
         self.map_fn = calibrate.make_map_function(*self.params)
 
@@ -136,7 +136,7 @@ class Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
 class Dual_Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     """A gaze mapper that maps two eyes individually"""
     def __init__(self, g_pool,params0,params1):
-        super(Dual_Monocular_Gaze_Mapper, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.params0 = params0
         self.params1 = params1
         self.map_fns = (calibrate.make_map_function(*self.params0),calibrate.make_map_function(*self.params1))
@@ -151,7 +151,7 @@ class Dual_Monocular_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin)
 
 class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     def __init__(self, g_pool,params,params_eye0,params_eye1):
-        super(Binocular_Gaze_Mapper, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.params = params
         self.params_eye0 = params_eye0
         self.params_eye1 = params_eye1
@@ -189,7 +189,7 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
             self.menu = None
 
     def cleanup(self):
-        super(Binocular_Gaze_Mapper, self).cleanup()
+        super().cleanup()
         self.deinit_gui()
 
     def get_init_dict(self):
@@ -200,7 +200,7 @@ class Binocular_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
 class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     """docstring for Vector_Gaze_Mapper"""
     def __init__(self, g_pool, eye_camera_to_world_matrix , camera_intrinsics ,cal_points_3d, cal_ref_points_3d, cal_gaze_points_3d, gaze_distance = 500 ):
-        super(Vector_Gaze_Mapper, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.eye_camera_to_world_matrix  =  eye_camera_to_world_matrix
         self.rotation_matrix = self.eye_camera_to_world_matrix[:3,:3]
         self.rotation_vector = cv2.Rodrigues( self.rotation_matrix  )[0]
@@ -283,7 +283,7 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
        return {'eye_camera_to_world_matrix':self.eye_camera_to_world_matrix ,'cal_points_3d':self.cal_points_3d,'cal_ref_points_3d':self.cal_ref_points_3d, 'cal_gaze_points_3d':self.cal_gaze_points_3d,  "camera_intrinsics":self.camera_intrinsics,'gaze_distance':self.gaze_distance}
 
     def cleanup(self):
-        super(Vector_Gaze_Mapper,self).cleanup()
+        super().cleanup()
         self.deinit_gui()
         self.visualizer.close_window()
 
@@ -291,7 +291,7 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
 class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     """docstring for Vector_Gaze_Mapper"""
     def __init__(self, g_pool, eye_camera_to_world_matrix0, eye_camera_to_world_matrix1 , camera_intrinsics , cal_points_3d = [],cal_ref_points_3d = [], cal_gaze_points0_3d = [], cal_gaze_points1_3d = [] ):
-        super(Binocular_Vector_Gaze_Mapper, self).__init__(g_pool)
+        super().__init__(g_pool)
 
         self.eye_camera_to_world_matricies  =  eye_camera_to_world_matrix0 , eye_camera_to_world_matrix1
         self.rotation_matricies  =  eye_camera_to_world_matrix0[:3,:3],eye_camera_to_world_matrix1[:3,:3]
@@ -482,6 +482,6 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
 
 
     def cleanup(self):
-        super(Binocular_Vector_Gaze_Mapper, self).cleanup()
+        super().cleanup()
         self.deinit_gui()
         self.visualizer.close_window()

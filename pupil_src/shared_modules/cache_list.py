@@ -24,7 +24,7 @@ class Cache_List(list):
     """
 
     def __init__(self, init_list,positive_eval_fn=None):
-        super(Cache_List, self).__init__(init_list)
+        super().__init__(init_list)
 
         self.visited_eval_fn = lambda x: x!=False
         self._visited_ranges = init_ranges(l = self,eval_fn = self.visited_eval_fn )
@@ -77,7 +77,7 @@ class Cache_List(list):
             self[key] = item
 
             update_ranges(self._visited_ranges,key)
-            if self.positive_eval_fn(item): 
+            if self.positive_eval_fn(item):
                 update_ranges(self._positive_ranges,key)
         else:
             #writing False to list entry already false, do nothing
@@ -121,8 +121,8 @@ def merge_ranges(l):
             l[i] = ([l[i][0],l[i+1][1]])
             #del second field
             del l[i+1]
-            return 
-    return 
+            return
+    return
 
 
 if __name__ == '__main__':

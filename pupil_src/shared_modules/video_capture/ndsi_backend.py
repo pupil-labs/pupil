@@ -29,7 +29,7 @@ class NDSI_Source(Base_Source):
     """
     def __init__(self, g_pool, frame_size, frame_rate, network=None,
                  source_id=None, host_name=None, sensor_name=None):
-        super(NDSI_Source, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.sensor = None
         self._source_id = source_id
         self._sensor_name = sensor_name
@@ -163,7 +163,7 @@ class NDSI_Source(Base_Source):
         return True
 
     def get_init_dict(self):
-        settings = super(NDSI_Source, self).get_init_dict()
+        settings = super().get_init_dict()
         settings['frame_rate'] = self.frame_rate
         settings['frame_size'] = self.frame_size
         if self.online:
@@ -290,7 +290,7 @@ class NDSI_Manager(Base_Manager):
     gui_name = 'Pupil Mobile'
 
     def __init__(self, g_pool):
-        super(NDSI_Manager, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.network = ndsi.Network(callbacks=(self.on_event,))
         self.network.start()
         self.selected_host = None

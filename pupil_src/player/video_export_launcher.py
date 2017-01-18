@@ -30,7 +30,7 @@ from exporter import export
 class Export_Process(Process):
     """small aditions to the process class"""
     def __init__(self, target,args):
-        super(Export_Process, self).__init__(target=target,args=args)
+        super().__init__(target=target,args=args)
         self.should_terminate,self.frames_to_export,self.current_frame,_,_,_,_,_,_,self.out_file_path = args
 
     def status(self):
@@ -75,7 +75,7 @@ class Video_Export_Launcher(Plugin):
     this plugin can export the video in a seperate process using exporter
     """
     def __init__(self, g_pool):
-        super(Video_Export_Launcher, self).__init__(g_pool)
+        super().__init__(g_pool)
         # initialize empty menu
         self.menu = None
         self.new_export = None

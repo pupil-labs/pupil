@@ -54,7 +54,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
     """
 
     def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False,robust_detection=True):
-        super(Offline_Surface_Tracker, self).__init__(g_pool,mode,min_marker_perimeter,robust_detection)
+        super().__init__(g_pool,mode,min_marker_perimeter,robust_detection)
         self.order = .2
 
         if g_pool.app == 'capture':
@@ -296,7 +296,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         """
         self.gl_display_cache_bars()
 
-        super(Offline_Surface_Tracker,self).gl_display()
+        super().gl_display()
 
         if self.mode == "Show Heatmaps":
             for s in  self.surfaces:

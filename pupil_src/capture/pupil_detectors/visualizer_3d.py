@@ -46,7 +46,7 @@ def get_perpendicular_vector(v):
 
 class Eye_Visualizer(Visualizer):
 	def __init__(self,g_pool , focal_length ):
-		super(Eye_Visualizer, self).__init__(g_pool , "Debug Visualizer", False)
+		super().__init__(g_pool , "Debug Visualizer", False)
 
 		self.focal_length = focal_length
 		self.image_width = 640 # right values are assigned in update

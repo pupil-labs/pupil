@@ -16,7 +16,7 @@ class Calibration_Plugin(Plugin):
     '''base class for all calibration routines'''
     uniqueness = 'by_base_class'
     def __init__(self,g_pool):
-        super(Calibration_Plugin, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.g_pool.active_calibration_plugin = self
         self.pupil_confidence_threshold = 0.6
         self.active = False

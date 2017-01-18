@@ -13,7 +13,7 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-    
+
 import os
 import logging
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class Persistent_Dict(dict):
     """a dict class that uses pickle to save inself to file"""
     def __init__(self, file_path):
-        super(Persistent_Dict, self).__init__()
+        super().__init__()
         self.file_path = os.path.expanduser(file_path)
         try:
             with open(self.file_path,'rb') as fh:
@@ -52,7 +52,7 @@ def load_object(file_path):
     #reading to string and loads is 2.5x faster that using the file handle and load.
     with open(file_path,'rb') as fh:
         data = fh.read()
-    # encoding='latin1' enables us to import python2 data directly 
+    # encoding='latin1' enables us to import python2 data directly
     # but is a workaround - ideally we import bytes and then set encoding on all k,v pairs
     return pickle.loads(data,encoding='latin1')
 

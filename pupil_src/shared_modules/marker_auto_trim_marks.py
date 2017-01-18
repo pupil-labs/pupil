@@ -42,7 +42,7 @@ class Marker_Auto_Trim_Marks(Plugin):
     """
 
     def __init__(self, g_pool,man_in_marks=[],man_out_marks=[]):
-        super(Marker_Auto_Trim_Marks, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.menu = None
 
         self.in_marker_id = 18

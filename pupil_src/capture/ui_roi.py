@@ -20,7 +20,7 @@ class UIRoi(Roi):
     this object inherits from ROI and adds some UI helper functions
     """
     def __init__(self,array_shape):
-        super(UIRoi, self).__init__(array_shape)
+        super().__init__(array_shape)
         self.max_x = array_shape[1]-1
         self.min_x = 1
         self.max_y = array_shape[0]-1
