@@ -30,7 +30,7 @@ class Annotation_Capture(Plugin):
     """Describe your plugin here
     """
     def __init__(self,g_pool,annotations=[('My annotation','E')]):
-        super(Annotation_Capture, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.menu = None
         self.sub_menu = None
         self.buttons = []
@@ -123,9 +123,9 @@ class Annotation_Player(Annotation_Capture):
     """
     def __init__(self,g_pool,annotations=None):
         if annotations:
-            super(Annotation_Player, self).__init__(g_pool,annotations)
+            super().__init__(g_pool,annotations)
         else:
-            super(Annotation_Player, self).__init__(g_pool)
+            super().__init__(g_pool)
 
         from player_methods import correlate_data
 

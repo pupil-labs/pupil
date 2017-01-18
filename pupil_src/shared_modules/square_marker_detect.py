@@ -404,7 +404,7 @@ class MarkerTracker(object):
     vel_slc = slice(15, 23)
 
     def __init__(self, detect_func=detect_markers):
-        super(MarkerTracker, self).__init__()
+        super().__init__()
         self.detect_in_frame = detect_func
         self.state = []
 

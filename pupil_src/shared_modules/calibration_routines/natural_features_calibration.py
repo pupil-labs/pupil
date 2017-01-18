@@ -31,7 +31,7 @@ class Natural_Features_Calibration(Calibration_Plugin):
         Features are selected by a user by clicking on
     """
     def __init__(self, g_pool):
-        super(Natural_Features_Calibration, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.first_img = None
         self.point = None
         self.count = 0

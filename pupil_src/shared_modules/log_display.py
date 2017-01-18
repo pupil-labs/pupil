@@ -20,7 +20,7 @@ from time import time
 
 class Log_to_Callback(logging.Handler):
     def __init__(self,cb):
-        super(Log_to_Callback, self).__init__()
+        super().__init__()
         self.cb = cb
     def emit(self,record):
         self.cb(record)
@@ -35,7 +35,7 @@ def duration_from_level(lvl):
 class Log_Display(Plugin):
     """docstring for Log_Display"""
     def __init__(self, g_pool):
-        super(Log_Display, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.rendered_log = []
         self.order = 0.3
         self.alpha = 0.0

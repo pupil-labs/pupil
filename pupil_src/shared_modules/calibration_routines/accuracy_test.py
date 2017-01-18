@@ -45,7 +45,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
     Points are collected at sites not between
     """
     def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
-        super(Accuracy_Test, self).__init__(g_pool,fullscreen,marker_scale)
+        super().__init__(g_pool,fullscreen,marker_scale)
 
         #result calculation variables:
         self.fov = 90. #taken from c930e specsheet, confirmed though mesurement within ~10deg.
@@ -140,7 +140,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
         self.open_window("Accuracy_Test")
 
     def update(self,frame,events):
-        super(Accuracy_Test,self).update(frame,events)
+        super().update(frame,events)
         if self.active :
             #always save gaze positions as opposed to pupil positons during calibration
             for pt in events.get('gaze_positions',[]):
@@ -224,7 +224,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
         logger.info("Angular precision: {}".format(self.precision))
 
     def gl_display(self):
-        super(Accuracy_Test, self).gl_display()
+        super().gl_display()
 
         if not self.active and self.error_lines is not None:
             draw_polyline_norm(self.error_lines,color=RGBA(1.,0.5,0.,.5),line_type=gl.GL_LINES)

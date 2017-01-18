@@ -56,7 +56,7 @@ class Fake_Source(Base_Source):
         frame_size (tuple)
     """
     def __init__(self, g_pool, name,frame_size,frame_rate):
-        super(Fake_Source, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.fps = frame_rate
         self._name = name
         self.presentation_time = time()
@@ -72,6 +72,7 @@ class Fake_Source(Base_Source):
         self.info_text = None
         self.img = None
         self.preferred_source = None
+        super().cleanup()
 
     def make_img(self,size):
         c_w ,c_h = max(1,size[0]/30),max(1,size[1]/30)
@@ -150,7 +151,7 @@ class Fake_Source(Base_Source):
         return True
 
     def get_init_dict(self):
-        d = super(Fake_Source, self).get_init_dict()
+        d = super().get_init_dict()
         d['frame_size'] = self.frame_size
         d['frame_rate'] = self.frame_rate
         d['name'] = self.name
@@ -163,7 +164,7 @@ class Fake_Manager(Base_Manager):
     gui_name = 'Test image'
 
     def __init__(self, g_pool):
-        super(Fake_Manager, self).__init__(g_pool)
+        super().__init__(g_pool)
 
     def init_gui(self):
         from pyglui import ui

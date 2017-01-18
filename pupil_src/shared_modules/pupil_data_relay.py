@@ -16,7 +16,7 @@ class Pupil_Data_Relay(Plugin):
     """
 
     def __init__(self, g_pool):
-        super(Pupil_Data_Relay, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.order = .01
         self.gaze_pub = zmq_tools.Msg_Streamer(self.g_pool.zmq_ctx,self.g_pool.ipc_pub_url)
         self.pupil_sub = zmq_tools.Msg_Receiver(self.g_pool.zmq_ctx,self.g_pool.ipc_sub_url,topics=('pupil',))

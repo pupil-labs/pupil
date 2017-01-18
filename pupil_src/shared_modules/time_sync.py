@@ -25,7 +25,7 @@ class Time_Sync(Plugin):
 
 
     def __init__(self, g_pool):
-        super(Time_Sync, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.menu = None
 
         #variables for the time sync logic

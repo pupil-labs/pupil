@@ -8,12 +8,12 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
-import os,sys
-import logging
-logger = logging.getLogger(__name__)
+import os
+import sys
 import importlib
 from time import time
-
+import logging
+logger = logging.getLogger(__name__)
 '''
 A simple example Plugin: 'display_recent_gaze.py'
 It is a good starting point to build your own plugin.
@@ -33,21 +33,17 @@ class Plugin(object):
     # uniqueness = 'not_unique'
     # uniqueness = 'by_base_class'
 
-
-
     # between 0 and 1 this indicated where in the plugin excecution order you plugin lives:
     # <.5  are things that add/mofify information that will be used by other plugins and rely on untouched data.
     # You should not edit frame if you are here!
     # == .5 is the default.
     # >.5 are things that depend on other plugins work like display , saving and streaming
-    #you can change this in __init__ for your instance or in the class definition
+    # you can change this in __init__ for your instance or in the class definition
     order = .5
 
-    def __init__(self,g_pool):
+    def __init__(self, g_pool):
         self._alive = True
         self.g_pool = g_pool
-
-
 
     def init_gui(self):
         '''
@@ -55,17 +51,15 @@ class Plugin(object):
         '''
         pass
 
-
-    def recent_events(self,events):
-        if not hasattr(self,'_warn_once'):
-            logger.warning("%s: Update will be deprecated soon. Use 'recent_events instead.'"%self.__class__.__name__)
+    def recent_events(self, events):
+        if not hasattr(self, '_warn_once'):
+            depr_warn = "{}: Update will be deprecated soon. Use 'recent_events instead.'"
+            logger.warning(depr_warn.format(self.__class__.__name__))
             self._warn_once = True
         if 'frame' in events:
-            self.update(events['frame'],events)
+            self.update(events['frame'], events)
 
-
-
-    def update(self,frame=None,events={}):
+    def update(self, frame=None, events={}):
         """
         called in Player and Capture
         gets called once every frame
@@ -74,29 +68,26 @@ class Plugin(object):
         """
         pass
 
-
     def gl_display(self):
         """
         gets called once every frame when its time to draw onto the gl canvas.
         """
         pass
 
-
-    def on_click(self,pos,button,action):
+    def on_click(self, pos, button, action):
         """
         gets called when the user clicks in the window screen
         """
         pass
 
-    def on_window_resize(self,window,w,h):
+    def on_window_resize(self, window, w, h):
         '''
         gets called when user resizes window.
         window is the glfw window handle of the resized window.
         '''
         pass
 
-
-    def on_notify(self,notification):
+    def on_notify(self, notification):
         """
         this gets called when a plugin wants to notify all others.
         notification is a dict in the format {'subject':'notification_category.notification_name',['addional_field':'blah']}
@@ -106,7 +97,7 @@ class Plugin(object):
         """
         pass
 
-    ## if you want a session persistent plugin implement this function:
+    # if you want a session persistent plugin implement this function:
     def get_init_dict(self):
         raise NotImplementedError()
         # d = {}
@@ -122,18 +113,20 @@ class Plugin(object):
         """
         pass
 
-    ###do not change methods,properties below this line in your derived class
+    # ------- do not change methods, properties below this line in your derived class
 
-    def notify_all(self,notification):
+    def notify_all(self, notification):
         """
 
         Do not overwrite this method.
 
         Call `notify_all` to notify all other plugins and processes with a notification:
 
-        notification is a dict in the format {'subject':'notification_category.[subcategory].action_name',['addional_field':'foo']}
+        notification is a dict in the format {'subject': 'notification_category.[subcategory].action_name',
+        ['addional_field':'foo']}
 
-            adding 'timestamp':self.g_pool.get_timestamp() will allow other plugins to know when you created this notification.
+            adding 'timestamp':self.g_pool.get_timestamp() will allow other plugins
+            to know when you created this notification.
 
             adding 'record':True will make recorder save the notification during recording.
 
@@ -144,15 +137,16 @@ class Plugin(object):
             (Remote notifyifactions are not be recevied by any local actor.)
 
             adding 'delay':3.2 will delay the notification for 3.2s.
-            If a new delayed notification of same subject is sent before 3.2s have passed we will discard the former notification.
+            If a new delayed notification of same subject is sent before 3.2s
+            have passed we will discard the former notification.
 
         You may add more fields as you like.
 
         All notifications must be serializable
 
         """
-        if self.g_pool.app in ('player','exporter'):
-            if notification.get('delay',0):
+        if self.g_pool.app in ('player', 'exporter'):
+            if notification.get('delay', 0):
                 notification['_notify_time_'] = time()+notification['delay']
                 self.g_pool.delayed_notifications[notification['subject']] = notification
             else:
@@ -167,15 +161,14 @@ class Plugin(object):
         Writing False to this will schedule the instance for deletion
         """
         if not self._alive:
-            if hasattr(self,"cleanup"):
+            if hasattr(self, "cleanup"):
                 self.cleanup()
         return self._alive
 
     @alive.setter
     def alive(self, value):
-        if isinstance(value,bool):
+        if isinstance(value, bool):
             self._alive = value
-
 
     @property
     def this_class(self):
@@ -183,7 +176,6 @@ class Plugin(object):
         this instance's class
         '''
         return self.__class__
-
 
     @property
     def class_name(self):
@@ -209,34 +201,33 @@ class Plugin(object):
 
     @property
     def pretty_class_name(self):
-        return self.class_name.replace('_',' ')
-
+        return self.class_name.replace('_', ' ')
 
 
 # Plugin manager classes and fns
-
 class Plugin_List(object):
     """This is the Plugin Manager
-        It is a self sorting list with a few functions to manage adding and removing Plugins and lacking most other list methods.
+        It is a self sorting list with a few functions to manage adding and
+        removing Plugins and lacking most other list methods.
     """
-    def __init__(self,g_pool,plugin_by_name,plugin_initializers):
+    def __init__(self, g_pool, plugin_by_name, plugin_initializers):
         self._plugins = []
         self.g_pool = g_pool
 
-        #add self as g_pool.plguins object to allow plugins to call the plugins list during init.
-        #this will be done again when the init returns but is kept there for readablitly.
+        # add self as g_pool.plguins object to allow plugins to call the plugins list during init.
+        # this will be done again when the init returns but is kept there for readablitly.
         self.g_pool.plugins = self
 
-        #now add plugins to plugin list.
+        # now add plugins to plugin list.
         for initializer in plugin_initializers:
             name, args = initializer
             logger.debug("Loading plugin: {} with settings {}".format(name, args))
             try:
                 plugin_by_name[name]
             except KeyError:
-                logger.debug("Plugin '%s' failed to load. Not available for import." %(name))
+                logger.debug("Plugin '{}' failed to load. Not available for import." .format(name))
             else:
-                self.add(plugin_by_name[name],args)
+                self.add(plugin_by_name[name], args)
 
     def __iter__(self):
         for p in self._plugins:
@@ -245,14 +236,15 @@ class Plugin_List(object):
     def __str__(self):
         return 'Plugin List: {}'.format(self._plugins)
 
-    def add(self,new_plugin,args={}):
+    def add(self, new_plugin, args={}):
         '''
         add a plugin instance to the list.
         '''
         if new_plugin.uniqueness == 'by_base_class':
             for p in self._plugins:
                 if p.base_class == new_plugin.__bases__[-1]:
-                    logger.debug("Plugin {} of base class {} will be replaced by {}.".format(p,p.base_class_name,new_plugin.__name__))
+                    replc_str = "Plugin {} of base class {} will be replaced by {}."
+                    logger.debug(replc_str.format(p, p.base_class_name, new_plugin.__name__))
                     p.alive = False
                     self.clean()
 
@@ -262,10 +254,11 @@ class Plugin_List(object):
                     logger.warning("Plugin '{}' is already loaded . Did not add it.".format(new_plugin.__name__))
                     return
 
-        plugin_instance = new_plugin(self.g_pool,**args)
+        plugin_instance = new_plugin(self.g_pool, **args)
         self._plugins.append(plugin_instance)
         self._plugins.sort(key=lambda p: p.order)
-        if self.g_pool.app in ("capture","player") and plugin_instance.alive: #make sure the plugin does not want to be gone already
+        # make sure the plugin does not want to be gone already
+        if self.g_pool.app in ("capture", "player") and plugin_instance.alive:
             plugin_instance.init_gui()
             logger.info("Loaded: {}".format(new_plugin.__name__))
         self.clean()
@@ -275,7 +268,7 @@ class Plugin_List(object):
         plugins may flag themselves as dead or are flagged as dead. We need to remove them.
         '''
         for p in self._plugins[:]:
-            if not p.alive: # reading p.alive will trigger the plug-in cleanup fn.
+            if not p.alive:  # reading p.alive will trigger the plug-in cleanup fn.
                 logger.debug("Unloaded Plugin: {}".format(p))
                 self._plugins.remove(p)
 
@@ -283,14 +276,13 @@ class Plugin_List(object):
         initializers = []
         for p in self._plugins:
             try:
-                p_initializer = p.class_name,p.get_init_dict()
+                p_initializer = p.class_name, p.get_init_dict()
                 initializers.append(p_initializer)
             except NotImplementedError:
-                #not all plugins want to be savable, they will not have the init dict.
+                # not all plugins want to be savable, they will not have the init dict.
                 # any object without a get_init_dict method will throw this exception.
                 pass
         return initializers
-
 
 
 def import_runtime_plugins(plugin_dir):
@@ -309,13 +301,13 @@ def import_runtime_plugins(plugin_dir):
     if os.path.isdir(plugin_dir):
         # we prepend to give the plugin dir content precendece
         # over other modules with identical name.
-        sys.path.insert(0,plugin_dir)
+        sys.path.insert(0, plugin_dir)
         for d in os.listdir(plugin_dir):
             logger.debug('Scanning: {}'.format(d))
             try:
-                if os.path.isfile(os.path.join(plugin_dir,d)):
-                    d,ext =  d.rsplit(".", 1 )
-                    if ext not in ('py','so','dylib'):
+                if os.path.isfile(os.path.join(plugin_dir, d)):
+                    d, ext = d.rsplit(".", 1)
+                    if ext not in ('py', 'so', 'dylib'):
                         continue
                 module = importlib.import_module(d)
                 logger.debug('Imported: {}'.format(module))

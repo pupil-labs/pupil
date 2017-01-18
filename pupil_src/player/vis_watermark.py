@@ -27,7 +27,7 @@ class Vis_Watermark(Plugin):
     uniqueness = "not_unique"
 
     def __init__(self, g_pool,selected_watermark_path = None,pos = (20,20)):
-        super(Vis_Watermark, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.order = .9
         self.menu = None
 

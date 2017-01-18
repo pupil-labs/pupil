@@ -28,7 +28,7 @@ class UVC_Source(Base_Source):
     Camera Capture is a class that encapsualtes uvc.Capture:
     """
     def __init__(self, g_pool, frame_size, frame_rate, name=None, preferred_names=(), uid=None, uvc_controls={}):
-        super(UVC_Source, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.uvc_capture = None
         self._restart_in = 3
         assert name or preferred_names or uid
@@ -211,7 +211,7 @@ class UVC_Source(Base_Source):
         return d
 
     def get_init_dict(self):
-        d = super(UVC_Source, self).get_init_dict()
+        d = super().get_init_dict()
         d['frame_size'] = self.frame_size
         d['frame_rate'] = self.frame_rate
         if self.uvc_capture:
@@ -355,7 +355,7 @@ class UVC_Source(Base_Source):
         if self.uvc_capture:
             self.uvc_capture.close()
             self.uvc_capture = None
-        super(UVC_Source, self).cleanup()
+        super().cleanup()
 
 
 class UVC_Manager(Base_Manager):
@@ -367,7 +367,7 @@ class UVC_Manager(Base_Manager):
     gui_name = 'Local USB'
 
     def __init__(self, g_pool):
-        super(UVC_Manager, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.devices = uvc.Device_List()
 
     def get_init_dict(self):

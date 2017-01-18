@@ -71,7 +71,7 @@ class Pupil_Remote(Plugin):
         thread_pipe (zmq.Socket): Pipe for background communication
     """
     def __init__(self, g_pool, port="50020", host="*", use_primary_interface=True):
-        super(Pupil_Remote, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.order = .01  # excecute first
         self.context = g_pool.zmq_ctx
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class Log_to_Callback(logging.Handler):
     def __init__(self,cb):
-        super(Log_to_Callback, self).__init__()
+        super().__init__()
         self.cb = cb
 
     def emit(self,record):
@@ -27,7 +27,7 @@ class Log_to_Callback(logging.Handler):
 class Log_History(Plugin):
     """Simple logging GUI that displays the last N messages from the logger"""
     def __init__(self, g_pool):
-        super(Log_History, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.menu = None
         self.num_messages = 50
 

@@ -33,7 +33,7 @@ class Surface_Tracker(Plugin):
     """docstring
     """
     def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False,robust_detection=True):
-        super(Surface_Tracker, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.order = .2
 
         # all markers that are detected in the most recent frame

@@ -15,7 +15,7 @@ import numpy as np
 class Frame_Publisher(Plugin):
 
     def __init__(self,g_pool,format='jpeg'):
-        super(Frame_Publisher,self).__init__(g_pool)
+        super().__init__(g_pool)
         self._format = format
 
     def init_gui(self):
