@@ -11,8 +11,8 @@ See COPYING and COPYING.LESSER for license details.
 
 from plugin import Plugin
 
-#imports need to
-import gl_utils,glfw
+# imports need to
+import gl_utils
 from pyglui import cygl
 import numpy as np
 
@@ -20,12 +20,16 @@ import numpy as np
 import logging
 logger = logging.getLogger(__name__)
 
+
 class InitialisationError(Exception):
-    def __init__(self,msg=None):
-        super(InitialisationError,self).__init__()
+    def __init__(self, msg=None):
+        super(InitialisationError, self).__init__()
         self.message = msg
+
+
 class StreamError(Exception):
     pass
+
 
 class Base_Source(Plugin):
     """Abstract source class
@@ -57,7 +61,6 @@ class Base_Source(Plugin):
         self.g_pool.capture = self
         self._recent_frame = None
 
-
     def cleanup(self):
         self.deinit_gui()
 
@@ -81,7 +84,7 @@ class Base_Source(Plugin):
         except AttributeError:
             pass
 
-    def recent_events(self,events):
+    def recent_events(self, events):
         """Returns None
 
         Adds events['frame']=Frame(args)

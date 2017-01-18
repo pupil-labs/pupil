@@ -72,6 +72,7 @@ class Fake_Source(Base_Source):
         self.info_text = None
         self.img = None
         self.preferred_source = None
+        super().cleanup()
 
     def make_img(self,size):
         c_w ,c_h = max(1,size[0]/30),max(1,size[1]/30)

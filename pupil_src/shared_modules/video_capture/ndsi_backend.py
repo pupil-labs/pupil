@@ -95,7 +95,7 @@ class NDSI_Source(Base_Source):
 
     @property
     def name(self):
-        return '{} @ {}'.format(self.sensor.name, self.sensor.host_name)
+        return '{} @ {}'.format(self._sensor_name, self._host_name)
 
     @property
     def online(self):
@@ -276,6 +276,7 @@ class NDSI_Source(Base_Source):
             self.sensor.unlink()
         self.sensor = None
         self.uvc_menu = None
+        super().cleanup()
 
 
 class NDSI_Manager(Base_Manager):
