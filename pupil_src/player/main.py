@@ -26,6 +26,22 @@ elif platform.system() == 'Windows':
 else:
     scroll_factor = 1.0
 
+if getattr(sys, 'frozen', False):
+    user_dir = os.path.expanduser(os.path.join('~', 'pupil_player_settings'))
+    version_file = os.path.join(sys._MEIPASS, '_version_string_')
+else:
+    # We are running in a normal Python environment.
+    # Make all pupil shared_modules available to this Python session.
+    pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
+    sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
+    # Specifiy user dirs.
+    user_dir = os.path.join(pupil_base_dir, 'player_settings')
+    version_file = None
+
+# create folder for user settings, tmp data
+if not os.path.isdir(user_dir):
+    os.mkdir(user_dir)
+
 # imports
 from file_methods import Persistent_Dict, load_object
 import numpy as np
@@ -80,22 +96,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 assert pyglui_version >= '1.0'
-
-if getattr(sys, 'frozen', False):
-    user_dir = os.path.expanduser(os.path.join('~', 'pupil_player_settings'))
-    version_file = os.path.join(sys._MEIPASS, '_version_string_')
-else:
-    # We are running in a normal Python environment.
-    # Make all pupil shared_modules available to this Python session.
-    pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
-    sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
-    # Specifiy user dirs.
-    user_dir = os.path.join(pupil_base_dir, 'player_settings')
-    version_file = None
-
-# create folder for user settings, tmp data
-if not os.path.isdir(user_dir):
-    os.mkdir(user_dir)
 
 # since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
