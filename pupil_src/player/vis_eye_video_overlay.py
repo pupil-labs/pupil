@@ -118,7 +118,7 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
 
     return eye_world_frame_map
 
-class Eye_Video_Overlay(Plugin):
+class Vis_Eye_Video_Overlay(Plugin):
     """docstring This plugin allows the user to overlay the eye recording on the recording of his field of vision
         Features: flip video across horiz/vert axes, click and drag around interface, scale video size from 20% to 100%,
         show only 1 or 2 or both eyes
