@@ -234,7 +234,7 @@ def update_recording_bytes_to_unicode(rec_dir):
             if converted_object != rec_object:
                 logger.info('Converted `{}` from bytes to unicode'.format(file))
                 save_object(rec_object, rec_file)
-        except ValueError:
+        except (ValueError, IsADirectoryError):
             continue
         # except TypeError:
         #     logger.error('TypeError when parsing `{}`'.format(file))
