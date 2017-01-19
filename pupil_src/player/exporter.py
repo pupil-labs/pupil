@@ -149,7 +149,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
             return False
 
         try:
-            frame = cap.get_frame_nowait()
+            frame = cap.get_frame()
         except EndofVideoFileError:
             break
 

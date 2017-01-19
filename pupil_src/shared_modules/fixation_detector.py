@@ -33,7 +33,7 @@ def angle_between_normals(v1, v2):
 class Offline_Base_Fixation_Detector(Plugin):
     """ base class for different fixation detection algorithms """
     def __init__(self, g_pool):
-        super(Offline_Base_Fixation_Detector, self).__init__(g_pool)
+        super().__init__(g_pool)
 
 
 class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
@@ -53,7 +53,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
 
     '''
     def __init__(self,g_pool,max_dispersion = 1.0,min_duration = 0.15,h_fov=78, v_fov=50,show_fixations = False):
-        super(Gaze_Position_2D_Fixation_Detector, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.min_duration = min_duration
         self.max_dispersion = max_dispersion
         self.h_fov = h_fov
@@ -326,7 +326,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
 class Sliding_Window(object):
     """docstring for Sliding_Window"""
     def __init__(self, gaze_data, eye_id, min_duration):
-        super(Sliding_Window, self).__init__()
+        super().__init__()
 
         def gp_to_normal_mapping(gazepoint):
             gazepoint_idx,gp = gazepoint
@@ -466,7 +466,7 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
         self.dispersion_slider_stp = .1
         self.gaze_data = list(chain(*g_pool.gaze_positions_by_frame))
         self.merge_strategy = merge_strategy
-        super(Pupil_Angle_3D_Fixation_Detector, self).__init__(g_pool, max_dispersion, min_duration, h_fov, v_fov, show_fixations)
+        super().__init__(g_pool, max_dispersion, min_duration, h_fov, v_fov, show_fixations)
 
     def update(self,frame,events):
         self.last_frame_ts = frame.timestamp
@@ -609,7 +609,7 @@ class Detection_Window(object):
         Holds gaze points and index to corresponding base datum
         Data format: [(gaze_point, base_data_idx),...]
         """
-        super(Detection_Window, self).__init__()
+        super().__init__()
         self.distance_fn     = angle_between_normals
         self.gaze_data       = []
         self.pupil_data      = []
@@ -727,14 +727,14 @@ class Online_Base_Fixation_Detector(Plugin):
     uniqueness = 'by_base_class'
 
     def __init__(self, g_pool):
-        super(Online_Base_Fixation_Detector, self).__init__(g_pool)
+        super().__init__(g_pool)
 
 
 class Fixation_Detector_3D(Online_Base_Fixation_Detector):
     """docstring for Online_Fixation_Detector_Pupil_Angle_Dispersion_Duration
     """
     def __init__(self, g_pool, max_dispersion=1.0, min_duration=0.15):
-        super(Fixation_Detector_3D, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.min_duration = min_duration
         self.max_dispersion = max_dispersion
         self.dispersion_slider_min = 0.

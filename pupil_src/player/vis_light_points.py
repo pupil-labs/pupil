@@ -26,7 +26,7 @@ class Vis_Light_Points(Plugin):
     uniqueness = "not_unique"
 
     def __init__(self, g_pool,falloff = 20):
-        super(Vis_Light_Points, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.order = .8
         self.menu = None
 

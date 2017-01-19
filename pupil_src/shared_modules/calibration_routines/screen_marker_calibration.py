@@ -72,7 +72,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
     """
     def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
-        super(Screen_Marker_Calibration, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.detected = False
         self.screen_marker_state = 0.
         self.sample_duration =  sample_duration # number of frames to sample per site

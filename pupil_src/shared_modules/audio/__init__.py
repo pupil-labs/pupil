@@ -83,7 +83,7 @@ if os_name == "Linux":
     class Audio_Input_Dict(dict):
         """docstring for Audio_Input_Dict"""
         def __init__(self):
-            super(Audio_Input_Dict, self).__init__()
+            super().__init__()
             self['No Audio'] = -1
             try:
                 ret = sp.check_output([arecord_bin,"-l"])
@@ -117,7 +117,7 @@ elif os_name == "Darwin":
     class Audio_Input_Dict(dict):
         """docstring for Audio_Input_Dict"""
         def __init__(self):
-            super(Audio_Input_Dict, self).__init__()
+            super().__init__()
             self['No Audio'] = -1
             self['Default Mic'] = 0
 
@@ -154,14 +154,14 @@ else:
     class Audio_Input_Dict(dict):
         """docstring for Audio_Input_Dict"""
         def __init__(self):
-            super(Audio_Input_Dict, self).__init__()
+            super().__init__()
             self['No Audio'] = -1
 
 
     class Audio_Capture(object):
         """docstring for audio_capture"""
         def __init__(self, audio_src_idx=0, out_file='out.wav'):
-            super(Audio_Capture, self).__init__()
+            super().__init__()
             logger.debug("Audio Capture not implemented on this OS")
 
 

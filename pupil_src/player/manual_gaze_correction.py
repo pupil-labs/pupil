@@ -24,7 +24,7 @@ class Manual_Gaze_Correction(Plugin):
     """
 
     def __init__(self, g_pool,x_offset=0.,y_offset=0.):
-        super(Manual_Gaze_Correction, self).__init__(g_pool)
+        super().__init__(g_pool)
         #let the plugin work before most other plugins.
         self.order = .3
         self.menu = None

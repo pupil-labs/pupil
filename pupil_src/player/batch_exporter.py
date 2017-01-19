@@ -53,7 +53,7 @@ class Batch_Exporter(Plugin):
     this plugin can export videos in a seperate process using exporter
     """
     def __init__(self, g_pool):
-        super(Batch_Exporter, self).__init__(g_pool)
+        super().__init__(g_pool)
 
         # initialize empty menu
         # and load menu configuration of last session

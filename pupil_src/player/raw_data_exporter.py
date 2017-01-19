@@ -99,7 +99,7 @@ class Raw_Data_Exporter(Plugin):
         gaze_normal1_z - z normal of the visual axis for eye 1
         '''
     def __init__(self, g_pool):
-        super(Raw_Data_Exporter, self).__init__(g_pool)
+        super().__init__(g_pool)
 
     def init_gui(self):
         self.menu = ui.Scrolling_Menu('Raw Data Exporter')

@@ -77,7 +77,7 @@ class AV_Writer(object):
     """
 
     def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 15000*10e3}, audio_stream=None,use_timestamps=False):
-        super(AV_Writer, self).__init__()
+        super().__init__()
         self.use_timestamps = use_timestamps
         # the approximate capture rate.
         self.fps = int(fps)
@@ -170,7 +170,7 @@ class JPEG_Writer(object):
     """
 
     def __init__(self, file_loc,fps=30):
-        super(JPEG_Writer, self).__init__()
+        super().__init__()
         # the approximate capture rate.
         self.fps = int(fps)
         self.time_base = Fraction(1000,self.fps*1000)
@@ -210,7 +210,10 @@ class JPEG_Writer(object):
         self.container.mux(packet)
 
     def close(self):
-        self.container.close()
+        try:
+            self.container.close()
+        except(RuntimeError):
+            logger.error("Media file does not contain any frames.")
         logger.debug("Closed media container")
 
     def release(self):
@@ -276,7 +279,7 @@ class Audio_Capture(object):
     """
 
     def __init__(self, file_loc,audio_src=0):
-        super(Audio_Capture, self).__init__()
+        super().__init__()
         self.thread = None
 
         try:

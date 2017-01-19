@@ -18,6 +18,14 @@ from copy import deepcopy
 from time import time
 from multiprocessing import freeze_support
 
+# UI Platform tweaks
+if platform.system() == 'Linux':
+    scroll_factor = 10.0
+elif platform.system() == 'Windows':
+    scroll_factor = 10.0
+else:
+    scroll_factor = 1.0
+
 if getattr(sys, 'frozen', False):
     user_dir = os.path.expanduser(os.path.join('~', 'pupil_player_settings'))
     version_file = os.path.join(sys._MEIPASS, '_version_string_')
@@ -29,6 +37,10 @@ else:
     # Specifiy user dirs.
     user_dir = os.path.join(pupil_base_dir, 'player_settings')
     version_file = None
+
+# create folder for user settings, tmp data
+if not os.path.isdir(user_dir):
+    os.mkdir(user_dir)
 
 # imports
 from file_methods import Persistent_Dict, load_object
@@ -71,7 +83,6 @@ from offline_surface_tracker import Offline_Surface_Tracker
 from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from fixation_detector import Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector
 from manual_gaze_correction import Manual_Gaze_Correction
-from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from log_display import Log_Display
 from annotations import Annotation_Player
@@ -85,10 +96,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 assert pyglui_version >= '1.0'
-
-# create folder for user settings, tmp data
-if not os.path.isdir(user_dir):
-    os.mkdir(user_dir)
 
 # since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
@@ -139,7 +146,7 @@ def session(rec_dir):
                                Manual_Gaze_Correction, Video_Export_Launcher, Offline_Surface_Tracker,
                                Raw_Data_Exporter, Batch_Exporter, Annotation_Player], key=lambda x: x.__name__)
 
-    other_plugins = sorted([Show_Calibration, Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
+    other_plugins = sorted([Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
     user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
 
     user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
@@ -436,7 +443,7 @@ def session(rec_dir):
         if g_pool.play or g_pool.new_seek:
             g_pool.new_seek = False
             try:
-                new_frame = cap.get_frame_nowait()
+                new_frame = cap.get_frame()
             except EndofVideoFileError:
                 # end of video logic: pause at last frame.
                 g_pool.play = False

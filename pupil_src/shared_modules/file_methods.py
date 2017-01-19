@@ -13,35 +13,33 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-    
+
 import os
+import traceback as tb
 import logging
 logger = logging.getLogger(__name__)
 
+
 class Persistent_Dict(dict):
     """a dict class that uses pickle to save inself to file"""
-    def __init__(self, file_path):
-        super(Persistent_Dict, self).__init__()
+    def __init__(self, file_path, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.file_path = os.path.expanduser(file_path)
         try:
-            with open(self.file_path,'rb') as fh:
-                try:
-                    self.update(pickle.load(fh))
-                except: #KeyError,EOFError
-                    logger.warning("Session settings file '%s'could not be read. Will overwrite on exit."%self.file_path)
+            self.update(load_object(self.file_path))
         except IOError:
-            logger.debug("Session settings file '%s' not found. Will make new one on exit."%self.file_path)
-
+            logger.debug("Session settings file '{}' not found. Will make new one on exit.".format(self.file_path))
+        except:  # KeyError, EOFError
+            logger.warning("Session settings file '{}'could not be read. Will overwrite on exit.".format(self.file_path))
+            logger.debug(tb.format_exc())
 
     def save(self):
         d = {}
         d.update(self)
         try:
-            with open(self.file_path,'wb') as fh:
-                pickle.dump(d,fh,-1)
+            save_object(d, self.file_path)
         except IOError:
-            logger.warning("Could not save session settings to '%s'"%self.file_path)
-
+            logger.warning("Could not save session settings to '{}'".format(self.file_path))
 
     def close(self):
         self.save()
@@ -49,18 +47,18 @@ class Persistent_Dict(dict):
 
 def load_object(file_path):
     file_path = os.path.expanduser(file_path)
-    #reading to string and loads is 2.5x faster that using the file handle and load.
-    with open(file_path,'rb') as fh:
-        data = fh.read()
-    # encoding='latin1' enables us to import python2 data directly 
-    # but is a workaround - ideally we import bytes and then set encoding on all k,v pairs
-    return pickle.loads(data,encoding='latin1')
+    # reading to string and loads is 2.5x faster that using the file handle and load.
+    try:
+        with open(file_path, 'rb') as fh:
+            return pickle.load(fh, encoding='bytes')
+    except pickle.UnpicklingError as e:
+        raise ValueError(e)
 
-def save_object(object,file_path):
+
+def save_object(object_, file_path):
     file_path = os.path.expanduser(file_path)
-    data = pickle.dumps(object,-1)
-    with open(file_path,'wb') as fh:
-        data = fh.write(data)
+    with open(file_path, 'wb') as fh:
+        pickle.dump(object_, fh, -1)
 
 
 if __name__ == '__main__':
@@ -76,37 +74,36 @@ if __name__ == '__main__':
     # print settings['roi']
     l = load_object('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_data')
     import csv
-    with open(os.path.join('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_postions.csv'),'wb') as csvfile:
+    with open(os.path.join('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_postions.csv'), 'wb') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',')
         csv_writer.writerow(('timestamp',
-                                    'id',
-                                    'confidence',
-                                    'norm_pos_x',
-                                    'norm_pos_y',
-                                    'diameter',
-                                    'method',
-                                    'ellipse_center_x',
-                                    'ellipse_center_y',
-                                    'ellipse_axis_a',
-                                    'ellipse_axis_b',
-                                    'ellipse_angle'))
+                             'id',
+                             'confidence',
+                             'norm_pos_x',
+                             'norm_pos_y',
+                             'diameter',
+                             'method',
+                             'ellipse_center_x',
+                             'ellipse_center_y',
+                             'ellipse_axis_a',
+                             'ellipse_axis_b',
+                             'ellipse_angle'))
         for p in l:
-            data_2d = [ '%s'%p['timestamp'],  #use str to be consitant with csv lib.
-                        p['id'],
-                        p['confidence'],
-                        p['norm_pos'][0],
-                        p['norm_pos'][1],
-                        p['diameter'],
-                        p['method'] ]
+            data_2d = [str(p['timestamp']),  # use str to be consitant with csv lib.
+                       p['id'],
+                       p['confidence'],
+                       p['norm_pos'][0],
+                       p['norm_pos'][1],
+                       p['diameter'],
+                       p['method']]
             try:
                 ellipse_data = [p['ellipse']['center'][0],
                                 p['ellipse']['center'][1],
                                 p['ellipse']['axes'][0],
                                 p['ellipse']['axes'][1],
-                                p['ellipse']['angle'] ]
+                                p['ellipse']['angle']]
             except KeyError:
-                ellipse_data = [None,]*5
+                ellipse_data = [None]*5
 
             row = data_2d + ellipse_data
             csv_writer.writerow(row)
-

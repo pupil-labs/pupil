@@ -33,7 +33,7 @@ class Adjust_Calibration(Calibration_Plugin):
     """
     """
     def __init__(self, g_pool):
-        super(Adjust_Calibration, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.active = False
         self.detected = False
         self.pos = None

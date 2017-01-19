@@ -11,10 +11,12 @@ See COPYING and COPYING.LESSER for license details.
 
 import os, cv2, csv_utils, shutil
 import numpy as np
-#logging
+import collections
+
+# logging
 import logging
 logger = logging.getLogger(__name__)
-from file_methods import save_object,load_object
+from file_methods import save_object, load_object
 from version_utils import VersionFormat
 from version_utils import read_rec_version
 
@@ -61,6 +63,8 @@ def correlate_data(data,timestamps):
     return data_by_frame
 
 def update_recording_to_recent(rec_dir):
+    update_recording_bytes_to_unicode(rec_dir)
+
     meta_info = load_meta_info(rec_dir,update=True) # also updates info file
     # Reference format: v0.7.4
     rec_version = read_rec_version(meta_info)
@@ -188,7 +192,7 @@ def update_recording_v086_to_v087(rec_dir):
         '''
         return min(100,max(-100,pos[0])),min(100,max(-100,pos[1]))
 
-    for g in pupil_data['gaze_positions']:
+    for g in pupil_data.get('gaze_positions', []):
         if 'topic' not in g:
             #we missed this in one gaze mapper
             g['topic'] = 'gaze'
@@ -204,6 +208,44 @@ def update_recording_v086_to_v087(rec_dir):
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 
+def update_recording_bytes_to_unicode(rec_dir):
+    logger.info("Updating recording from bytes to unicode.")
+
+    # update to python 3
+    meta_info_path = os.path.join(rec_dir, "info.csv")
+
+    def convert(data):
+        if isinstance(data, bytes):
+            return data.decode()
+        elif isinstance(data, str) or isinstance(data, np.ndarray):
+            return data
+        elif isinstance(data, collections.Mapping):
+            return dict(map(convert, data.items()))
+        elif isinstance(data, collections.Iterable):
+            return type(data)(map(convert, data))
+        else:
+            return data
+
+    for file in os.listdir(rec_dir):
+        rec_file = os.path.join(rec_dir, file)
+        try:
+            rec_object = load_object(rec_file)
+            converted_object = convert(rec_object)
+            if converted_object != rec_object:
+                logger.info('Converted `{}` from bytes to unicode'.format(file))
+                save_object(rec_object, rec_file)
+        except ValueError:
+            continue
+        # except TypeError:
+        #     logger.error('TypeError when parsing `{}`'.format(file))
+        #     continue
+
+    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Capture Software Version'] = 'v0.8.8'
+
+    with open(meta_info_path, 'w', newline='') as csvfile:
+        csv_utils.write_key_value_file(csvfile, meta_info)
 
 
 def update_recording_v073_to_v074(rec_dir):
