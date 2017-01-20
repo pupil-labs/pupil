@@ -16,7 +16,7 @@ import uvc
 from .base_backend import InitialisationError, Base_Source, Base_Manager
 
 # check versions for our own depedencies as they are fast-changing
-assert uvc.__version__ >= '0.8'
+assert uvc.__version__ >= '0.91'
 
 # logging
 logger = logging.getLogger(__name__)
