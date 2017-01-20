@@ -490,8 +490,8 @@ class Offline_Surface_Tracker(Surface_Tracker):
                             for f in s.fixations_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
                                 fixations_on_surface.append(f)
 
-                removed_dublicates = dict([(f['base_data']['id'],f) for f in fixations_on_surface]).values()
-                for f_on_s in removed_dublicates:
+                removed_duplicates = dict([(f['base_data']['id'],f) for f in fixations_on_surface]).values()
+                for f_on_s in removed_duplicates:
                     f = f_on_s['base_data']
                     f_x,f_y = f_on_s['norm_pos']
                     f_on_srf = f_on_s['on_srf']
