@@ -213,7 +213,7 @@ class Annotation_Player(Annotation_Capture):
             return
 
         annotations_in_section = chain(*self.annotations_by_frame[export_range])
-        annotations_in_section = list({a['index']: a for a in annotations_in_section}.values())  # remove dublicates
+        annotations_in_section = list({a['index']: a for a in annotations_in_section}.values())  # remove duplicates
         annotations_in_section.sort(key=lambda a:a['index'])
 
         with open(os.path.join(export_dir,'annotations.csv'),'w',encoding='utf-8',newline='') as csvfile:

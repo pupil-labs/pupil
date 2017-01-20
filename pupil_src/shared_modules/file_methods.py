@@ -52,7 +52,7 @@ def load_object(file_path):
         with open(file_path, 'rb') as fh:
             return pickle.load(fh, encoding='bytes')
     except pickle.UnpicklingError as e:
-        raise ValueError(e)
+        raise ValueError from e
 
 
 def save_object(object_, file_path):
