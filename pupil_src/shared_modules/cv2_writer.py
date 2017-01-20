@@ -14,7 +14,7 @@ from cv2 import VideoWriter
 class CV_Writer(object):
     """docstring for CV_Writer"""
     def __init__(self, file_loc,frame_rate,frame_size):
-        super(CV_Writer, self).__init__()
+        super().__init__()
         self.writer = VideoWriter(file_loc, VideoWriter_fourcc(*'DIVX'), float(frame_rate), frame_size)
 
     def write_video_frame(self, input_frame):

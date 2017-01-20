@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 class Show_Calibration(Plugin):
     """Calibration results visualization plugin"""
     def __init__(self,g_pool):
-        super(Show_Calibration, self).__init__(g_pool)
+        super().__init__(g_pool)
 
         self.menu=None
 
@@ -122,5 +122,5 @@ if __name__ == '__main__':
     # print cal_pt_cloud[inlier_map][:,0:2].shape
     # print cal_pt_cloud[inlier_map][0,2:4]
     inlier = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1)
-    print inlier
-    print inlier.reshape(-1,2)
+    print(inlier)
+    print(inlier.reshape(-1,2))

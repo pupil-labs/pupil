@@ -21,7 +21,7 @@ class Display_Recent_Gaze(Plugin):
     """
 
     def __init__(self, g_pool):
-        super(Display_Recent_Gaze, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.order = .8
         self.pupil_display_list = []
 

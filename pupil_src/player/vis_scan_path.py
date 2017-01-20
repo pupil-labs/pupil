@@ -17,14 +17,14 @@ from methods import denormalize,normalize
 import logging
 logger = logging.getLogger(__name__)
 
-class Scan_Path(Plugin):
+class Vis_Scan_Path(Plugin):
     """docstring
     using this plugin will extend the recent_gaze_positions by x extra dots from previous frames.
     lock recent gaze points onto pixels.
     """
 
     def __init__(self, g_pool,timeframe=.5):
-        super(Scan_Path, self).__init__(g_pool)
+        super().__init__(g_pool)
         #let the plugin work after most other plugins.
         self.order = .6
         self.menu = None

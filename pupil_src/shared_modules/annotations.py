@@ -30,7 +30,7 @@ class Annotation_Capture(Plugin):
     """Describe your plugin here
     """
     def __init__(self,g_pool,annotations=[('My annotation','E')]):
-        super(Annotation_Capture, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.menu = None
         self.sub_menu = None
         self.buttons = []
@@ -123,9 +123,9 @@ class Annotation_Player(Annotation_Capture):
     """
     def __init__(self,g_pool,annotations=None):
         if annotations:
-            super(Annotation_Player, self).__init__(g_pool,annotations)
+            super().__init__(g_pool,annotations)
         else:
-            super(Annotation_Player, self).__init__(g_pool)
+            super().__init__(g_pool)
 
         from player_methods import correlate_data
 
@@ -213,7 +213,7 @@ class Annotation_Player(Annotation_Capture):
             return
 
         annotations_in_section = chain(*self.annotations_by_frame[export_range])
-        annotations_in_section = { a['index']:a for a in annotations_in_section}.values() #remove dublicates
+        annotations_in_section = list({a['index']: a for a in annotations_in_section}.values())  # remove duplicates
         annotations_in_section.sort(key=lambda a:a['index'])
 
         with open(os.path.join(export_dir,'annotations.csv'),'w',encoding='utf-8',newline='') as csvfile:

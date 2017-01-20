@@ -54,7 +54,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
     """
 
     def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False,robust_detection=True):
-        super(Offline_Surface_Tracker, self).__init__(g_pool,mode,min_marker_perimeter,robust_detection)
+        super().__init__(g_pool,mode,min_marker_perimeter,robust_detection)
         self.order = .2
 
         if g_pool.app == 'capture':
@@ -296,7 +296,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         """
         self.gl_display_cache_bars()
 
-        super(Offline_Surface_Tracker,self).gl_display()
+        super().gl_display()
 
         if self.mode == "Show Heatmaps":
             for s in  self.surfaces:
@@ -490,8 +490,8 @@ class Offline_Surface_Tracker(Surface_Tracker):
                             for f in s.fixations_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
                                 fixations_on_surface.append(f)
 
-                removed_dublicates = dict([(f['base_data']['id'],f) for f in fixations_on_surface]).values()
-                for f_on_s in removed_dublicates:
+                removed_duplicates = dict([(f['base_data']['id'],f) for f in fixations_on_surface]).values()
+                for f_on_s in removed_duplicates:
                     f = f_on_s['base_data']
                     f_x,f_y = f_on_s['norm_pos']
                     f_on_srf = f_on_s['on_srf']

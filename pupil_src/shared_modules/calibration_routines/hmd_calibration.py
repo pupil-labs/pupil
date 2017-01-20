@@ -28,7 +28,7 @@ class HMD_Calibration(Calibration_Plugin):
     """Calibrate gaze on HMD screen.
     """
     def __init__(self, g_pool):
-        super(HMD_Calibration, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.info = None
         self.menu = None
         self.button = None

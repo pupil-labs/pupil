@@ -18,6 +18,30 @@ from copy import deepcopy
 from time import time
 from multiprocessing import freeze_support
 
+# UI Platform tweaks
+if platform.system() == 'Linux':
+    scroll_factor = 10.0
+elif platform.system() == 'Windows':
+    scroll_factor = 10.0
+else:
+    scroll_factor = 1.0
+
+if getattr(sys, 'frozen', False):
+    user_dir = os.path.expanduser(os.path.join('~', 'pupil_player_settings'))
+    version_file = os.path.join(sys._MEIPASS, '_version_string_')
+else:
+    # We are running in a normal Python environment.
+    # Make all pupil shared_modules available to this Python session.
+    pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
+    sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
+    # Specifiy user dirs.
+    user_dir = os.path.join(pupil_base_dir, 'player_settings')
+    version_file = None
+
+# create folder for user settings, tmp data
+if not os.path.isdir(user_dir):
+    os.mkdir(user_dir)
+
 # imports
 from file_methods import Persistent_Dict, load_object
 import numpy as np
@@ -50,17 +74,16 @@ from vis_polyline import Vis_Polyline
 from vis_light_points import Vis_Light_Points
 from vis_watermark import Vis_Watermark
 from vis_fixation import Vis_Fixation
+from vis_scan_path import Vis_Scan_Path
+from vis_eye_video_overlay import Vis_Eye_Video_Overlay
 from seek_bar import Seek_Bar
 from trim_marks import Trim_Marks
 from video_export_launcher import Video_Export_Launcher
-from scan_path import Scan_Path
 from offline_surface_tracker import Offline_Surface_Tracker
 from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from fixation_detector import Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector
 from manual_gaze_correction import Manual_Gaze_Correction
-from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
-from eye_video_overlay import Eye_Video_Overlay
 from log_display import Log_Display
 from annotations import Annotation_Player
 from raw_data_exporter import Raw_Data_Exporter
@@ -73,22 +96,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 assert pyglui_version >= '1.0'
-
-if getattr(sys, 'frozen', False):
-    user_dir = os.path.expanduser(os.path.join('~', 'pupil_player_settings'))
-    version_file = os.path.join(sys._MEIPASS, '_version_string_')
-else:
-    # We are running in a normal Python environment.
-    # Make all pupil shared_modules available to this Python session.
-    pupil_base_dir = os.path.abspath(__file__).rsplit('pupil_src', 1)[0]
-    sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
-    # Specifiy user dirs.
-    user_dir = os.path.join(pupil_base_dir, 'player_settings')
-    version_file = None
-
-# create folder for user settings, tmp data
-if not os.path.isdir(user_dir):
-    os.mkdir(user_dir)
 
 # since we are not using OS.fork on MacOS we need to do a few extra things to log our exports correctly.
 if platform.system() == 'Darwin':
@@ -131,16 +138,15 @@ class Global_Container(object):
 
 
 def session(rec_dir):
-
     system_plugins = [Log_Display, Seek_Bar, Trim_Marks]
     vis_plugins = sorted([Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross,
-                          Vis_Watermark, Eye_Video_Overlay, Scan_Path], key=lambda x: x.__name__)
+                          Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path], key=lambda x: x.__name__)
 
     analysis_plugins = sorted([Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector,
                                Manual_Gaze_Correction, Video_Export_Launcher, Offline_Surface_Tracker,
                                Raw_Data_Exporter, Batch_Exporter, Annotation_Player], key=lambda x: x.__name__)
 
-    other_plugins = sorted([Show_Calibration, Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
+    other_plugins = sorted([Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
     user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
 
     user_launchable_plugins = vis_plugins + analysis_plugins + other_plugins + user_plugins
@@ -387,7 +393,7 @@ def session(rec_dir):
 
     # we always load these plugins
     system_plugins = [('Trim_Marks', {}), ('Seek_Bar', {})]
-    default_plugins = [('Log_Display', {}), ('Scan_Path', {}), ('Vis_Polyline', {}), ('Vis_Circle', {}), ('Video_Export_Launcher', {})]
+    default_plugins = [('Log_Display', {}), ('Vis_Scan_Path', {}), ('Vis_Polyline', {}), ('Vis_Circle', {}), ('Video_Export_Launcher', {})]
     previous_plugins = session_settings.get('loaded_plugins', default_plugins)
     g_pool.notifications = []
     g_pool.delayed_notifications = {}
@@ -437,7 +443,7 @@ def session(rec_dir):
         if g_pool.play or g_pool.new_seek:
             g_pool.new_seek = False
             try:
-                new_frame = cap.get_frame_nowait()
+                new_frame = cap.get_frame()
             except EndofVideoFileError:
                 # end of video logic: pause at last frame.
                 g_pool.play = False

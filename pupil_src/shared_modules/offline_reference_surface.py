@@ -30,7 +30,7 @@ from reference_surface import Reference_Surface
 class Offline_Reference_Surface(Reference_Surface):
     """docstring for Offline_Reference_Surface"""
     def __init__(self,g_pool,name="unnamed",saved_definition=None):
-        super(Offline_Reference_Surface, self).__init__(name,saved_definition)
+        super().__init__(name,saved_definition)
         self.g_pool = g_pool
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
@@ -114,17 +114,17 @@ class Offline_Reference_Surface(Reference_Surface):
             return None
 
     def move_vertex(self,vert_idx,new_pos):
-        super(Offline_Reference_Surface, self).move_vertex(vert_idx,new_pos)
+        super().move_vertex(vert_idx,new_pos)
         self.cache = None
         self.heatmap = None
 
     def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
-        super(Offline_Reference_Surface, self).add_marker(marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
+        super().add_marker(marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
         self.cache = None
         self.heatmap = None
 
     def remove_marker(self,marker):
-        super(Offline_Reference_Surface, self).remove_marker(marker)
+        super().remove_marker(marker)
         self.cache = None
         self.heatmap = None
 
