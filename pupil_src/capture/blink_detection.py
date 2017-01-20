@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 from plugin import Plugin
+from pyglui import ui
 from collections import deque
 from itertools import islice
 import numpy as np
@@ -23,10 +24,10 @@ class Blink_Detection(Plugin):
     DisplayGaze shows the three most
     recent gaze position on the screen
     """
+    order = .8
 
     def __init__(self, g_pool):
         super(Blink_Detection, self).__init__(g_pool)
-        self.order = .8
         self.history_length_per_fps = 0.2
 
         # The maximum length of the history needs to be set a priori. If we are assuming a maximum framerat of 120 FPS
@@ -36,13 +37,30 @@ class Blink_Detection(Plugin):
         self.eyes_are_alive = g_pool.eyes_are_alive
 
         self.is_blink = False
+        self.menu = None
+
+    def init_gui(self):
+        self.menu = ui.Growing_Menu('Blink Detector')
+        self.g_pool.sidebar.append(self.menu)
+        self.menu.append(ui.Info_Text('This plugin detects blinks based on binocular confidence drops.'))
+        self.menu.append(ui.Button('Close', self.close))
+
+    def deinit_gui(self):
+        if self.menu:
+            self.g_pool.sidebar.remove(self.menu)
+            self.menu = None
+
+    def close(self):
+        self.alive = False
+
+    def cleanup(self):
+        self.deinit_gui()
 
     def update(self, frame=None, events={}):
         # backwards compatibility
         self.recent_events(events)
 
     def recent_events(self, events={}):
-
         # Process all pupil_positions events
         for pt in events.get('pupil_positions', []):
             # Update history
@@ -57,28 +75,28 @@ class Blink_Detection(Plugin):
                 # fps = 120
                 self.history_length = int(self.history_length_per_fps * fps)
 
-            # Build filter based on current history length
-            filter = np.asarray([-1 for i in range(int(math.floor(self.history_length / 2.0)))] + [1 for i in range(
+            # Build filter_ based on current history length
+            filter_ = np.asarray([-1 for i in range(int(math.floor(self.history_length / 2.0)))] + [1 for i in range(
                 int(math.ceil(self.history_length / 2.0)))])
-            filter = np.ones(self.hist_len)
-            filter[self.hist_len // 2:] = -1
+            filter_ = np.ones(self.hist_len)
+            filter_[self.hist_len // 2:] = -1
 
             # Compute activations if history is sufficient
             if self.eyes_are_alive[0].value:
                 if len(self.confidence_histories[0]) >= self.history_length:
                     slice = np.asarray(deque(islice(self.confidence_histories[0], 0, self.history_length)))
-                    # Normalize deviations in the overall magnitude and legth of the used filter
+                    # Normalize deviations in the overall magnitude and legth of the used filter_
                     slice = (slice - slice.min()) / (slice.max() - slice.min())
-                    act0 = np.dot(slice, filter) / self.history_length
+                    act0 = np.dot(slice, filter_) / self.history_length
                 else:
                     continue
 
             if self.eyes_are_alive[1].value:
                 if len(self.confidence_histories[1]) >= self.history_length:
                     slice = np.asarray(deque(islice(self.confidence_histories[1], 0, self.history_length)))
-                    # Normalize deviations in the overall magnitude and legth of the used filter
+                    # Normalize deviations in the overall magnitude and legth of the used filter_
                     slice = (slice - slice.min()) / (slice.max() - slice.min())
-                    act1 = np.dot(slice, filter) / self.history_length
+                    act1 = np.dot(slice, filter_) / self.history_length
                 else:
                     continue
 
@@ -101,7 +119,7 @@ class Blink_Detection(Plugin):
             if self.is_blink and act < -0.1:
                 self.is_blink = False
 
-            print str(self.is_blink) + " " + str(act)
+            logger.debug('{} {}'.format(self.is_blink, act))
 
             # Add info to events
             blink_entry = {
