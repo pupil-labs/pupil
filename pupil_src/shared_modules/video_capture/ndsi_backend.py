@@ -150,6 +150,16 @@ class NDSI_Source(Base_Source):
                               or event['changes'].get('dtype') == "intmapping"):
             self.update_control_menu()
 
+    def on_notify(self, notification):
+        subject = notification['subject']
+        if subject.startswith('remote_recorder.'):
+            if 'start_recording' in subject and self.online:
+                session_name = notification['session_name']
+                self.sensor.set_control_value('capture_session_name', session_name)
+                self.sensor.set_control_value('local_capture', True)
+            elif 'stop_recording' in subject:
+                self.sensor.set_control_value('local_capture', False)
+
     @property
     def frame_size(self):
         return self._frame_size

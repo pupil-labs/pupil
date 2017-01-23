@@ -463,8 +463,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                     frame_publish_format = 'jpeg'
                 elif subject.startswith('start_eye_capture') and notification['target'] == g_pool.process:
                     replace_source(notification['name'],notification['args'])
-                else:
-                    pass
+
+                g_pool.capture.on_notify(notification)
+
             # Get an image from the grabber
             event = {}
             g_pool.capture.recent_events(event)
