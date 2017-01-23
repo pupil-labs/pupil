@@ -134,6 +134,7 @@ class NDSI_Source(Base_Source):
         else:
             time.sleep(self.get_frame_timeout/1e3)
 
+    # remote notifications
     def on_notification(self, sensor, event):
         # should only called if sensor was created
         if self._initial_refresh:
@@ -142,7 +143,7 @@ class NDSI_Source(Base_Source):
             self._initial_refresh = False
         if event['subject'] == 'error':
             # if not event['error_str'].startswith('err=-3'):
-            logger.warning('Error {}'.format(event['error_str']))
+            logger.warning(f'Error {event["error_str"]}')
             if 'control_id' in event and event['control_id'] in self.sensor.controls:
                 logger.debug(str(self.sensor.controls[event['control_id']]))
         elif self.has_ui and (event['control_id'] not in self.control_id_ui_mapping
@@ -150,6 +151,18 @@ class NDSI_Source(Base_Source):
                               or event['changes'].get('dtype') == "intmapping"):
             self.update_control_menu()
 
+        if event.get('control_id') == 'local_capture':
+            if event['subject'] == 'update':
+                remote_event = 'started' if event['changes'].get('value', False) else 'stopped'
+            else:
+                remote_event = 'stopped'
+
+            self.notify_all({
+                'subject': f'remote_recording.{remote_event}',
+                'source': self.name,
+                'process': self.g_pool.process})
+
+    # local notifications
     def on_notify(self, notification):
         subject = notification['subject']
         if subject.startswith('remote_recorder.'):

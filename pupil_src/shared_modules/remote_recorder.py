@@ -35,22 +35,32 @@ class Remote_Recorder(Plugin):
             self.stop()
         else:
             self.start()
-        self.running = not self.running
 
     def start(self):
-        del self.menu[-1]
-        self.menu_toggle = ui.Button('Stop Recording', self.toggle_recording)
-        self.menu.append(self.menu_toggle)
-        unique_session_name = strftime("%Y%m%d%H%M%S", localtime())
-        self.notify_all({
-            'subject': 'remote_recorder.start_recording',
-            'session_name': f'{self.session_name}/{unique_session_name}'})
+        if not self.running:
+            del self.menu[-1]
+            self.menu_toggle = ui.Button('Stop Recording', self.toggle_recording)
+            self.menu.append(self.menu_toggle)
+            unique_session_name = strftime("%Y%m%d%H%M%S", localtime())
+            self.notify_all({
+                'subject': 'remote_recorder.start_recording',
+                'session_name': f'{self.session_name}/{unique_session_name}'})
+            self.running = True
 
     def stop(self):
-        del self.menu[-1]
-        self.menu_toggle = ui.Button('Start Recording', self.toggle_recording)
-        self.menu.append(self.menu_toggle)
-        self.notify_all({'subject': 'remote_recorder.stop_recording'})
+        if self.running:
+            del self.menu[-1]
+            self.menu_toggle = ui.Button('Start Recording', self.toggle_recording)
+            self.menu.append(self.menu_toggle)
+            self.notify_all({'subject': 'remote_recorder.stop_recording'})
+            self.running = False
+
+    def on_notify(self, notification):
+        subject = notification['subject']
+        if subject == 'remote_recording.stopped' and self.running:
+            source = notification['source']
+            logger.warning(f'Recording on {source} was stopped remotely. Stopping whole recording.')
+            self.stop()
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Remote Recorder')
@@ -80,6 +90,7 @@ class Remote_Recorder(Plugin):
         self.alive = False
 
     def cleanup(self):
+        self.stop()
         self.deinit_gui()
 
     def get_init_dict(self):
