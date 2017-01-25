@@ -249,5 +249,6 @@ def launcher():
 
 if __name__ == '__main__':
     freeze_support()
-    set_start_method('spawn')
+    if platform.system() == 'Darwin':
+        set_start_method('spawn')
     launcher()
