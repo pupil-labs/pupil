@@ -75,7 +75,7 @@ else:
                 break
     include_dirs = [np.get_include(), '/usr/local/include/eigen3', '/usr/include/eigen3', shared_cpp_include_path ,singleeyefitter_include_path, opencv_include_dir]
     if platform.system() == 'Linux':
-        python_version = sys.version_info()
+        python_version = sys.version_info
         # boost_python-py34
         boost_lib = 'boost_python-py'+str(python_version[0])+str(python_version[1])
     else:
