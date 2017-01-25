@@ -31,20 +31,17 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Build import cythonize
 import numpy as np
-import os, platform
-
+import os, sys, platform
 
 
 dependencies = []
 # include all header files, to recognize changes
 for dirpath, dirnames, filenames in os.walk("."):
     for filename in [f for f in filenames if f.endswith(".h")]:
-        dependencies.append( os.path.join(dirpath, filename) )
+        dependencies.append(os.path.join(dirpath, filename))
 
 shared_cpp_include_path = '../../../shared_cpp/include'
 singleeyefitter_include_path = '../../../capture/pupil_detectors/singleeyefitter'
-
-
 
 if platform.system() == 'Windows':
     libs = []
@@ -76,8 +73,14 @@ else:
                 opencv_include_dir = '/opt/ros/'+ros_dist+'/include/opencv-3.1.0-dev'
                 opencv_libraries = [lib + '3' for lib in opencv_libraries]
                 break
-    include_dirs = [ np.get_include(), '/usr/local/include/eigen3','/usr/include/eigen3', shared_cpp_include_path , singleeyefitter_include_path, opencv_include_dir]
-    libs = ['ceres','boost_python3']+opencv_libraries
+    include_dirs = [np.get_include(), '/usr/local/include/eigen3', '/usr/include/eigen3', shared_cpp_include_path ,singleeyefitter_include_path, opencv_include_dir]
+    if platform.system() == 'Linux':
+        python_version = sys.version_info()
+        # boost_python-py34
+        boost_lib = 'boost_python-py'+str(python_version[0])+str(python_version[1])
+    else:
+        boost_lib = 'boost_python3'
+    libs = ['ceres', boost_lib]+opencv_libraries
     xtra_obj = []
     library_dirs = [opencv_library_dir]
 

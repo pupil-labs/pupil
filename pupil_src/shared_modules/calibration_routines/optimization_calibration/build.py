@@ -12,10 +12,10 @@ See COPYING and COPYING.LESSER for license details.
 
 def build_cpp_extension():
     import subprocess as sp
-    import os
+    import os, sys
     src_loc = os.path.dirname(os.path.realpath(__file__))
     cwd = os.getcwd()
-    sp.call("cd {} && python setup.py build_ext --inplace && cd {}".format(src_loc, cwd), shell=True)
+    sp.call("cd {} && {} setup.py build_ext --inplace && cd {}".format(src_loc, sys.executable, cwd), shell=True)
 
 
 if __name__ == '__main__':
