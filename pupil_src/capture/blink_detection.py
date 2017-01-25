@@ -78,8 +78,8 @@ class Blink_Detection(Plugin):
             # Build filter_ based on current history length
             filter_ = np.asarray([-1 for i in range(int(math.floor(self.history_length / 2.0)))] + [1 for i in range(
                 int(math.ceil(self.history_length / 2.0)))])
-            filter_ = np.ones(self.hist_len)
-            filter_[self.hist_len // 2:] = -1
+            filter_ = np.ones(self.history_length)
+            filter_[self.history_length // 2:] = -1
 
             # Compute activations if history is sufficient
             if self.eyes_are_alive[0].value:
