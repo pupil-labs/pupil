@@ -159,7 +159,6 @@ class UVC_Source(Base_Source):
 
     def _re_init_capture_by_names(self, names):
         # burn-in test specific. Do not change text!
-        logger.info('Camera stopped providing frames. Reinitialising camera.')
         self.devices.update()
         for d in self.devices:
             for name in names:
@@ -176,11 +175,11 @@ class UVC_Source(Base_Source):
     def _restart_logic(self):
         if self._restart_in <= 0:
             if self.uvc_capture:
-                names = (self.uvc_capture.name,)
-            else:
-                names = self.name_backup
+                logger.warning("Capture failed to provide frames. Attempting to reinit.")
+                self.name_backup = (self.uvc_capture.name,)
+                self.uvc_capture = None
             try:
-                self._re_init_capture_by_names(names)
+                self._re_init_capture_by_names(self.name_backup)
             except (InitialisationError, uvc.InitError):
                 time.sleep(0.05)
             self._restart_in = int(5/0.05)
