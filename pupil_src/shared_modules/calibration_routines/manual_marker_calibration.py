@@ -47,6 +47,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         self.sample_site = (-2,-2)
         self.counter = 0
         self.counter_max = 30
+        self.fixation_boost = 15
         self.markers = []
         self.world_size = None
 
@@ -122,13 +123,14 @@ class Manual_Marker_Calibration(Calibration_Plugin):
         '''
         super().on_notify(notification)
 
-    def update(self,frame,events):
+    def recent_events(self, events):
         """
         gets called once every frame.
         reference positon need to be published to shared_pos
         if no reference was found, publish 0,0
         """
-        if self.active:
+        frame = events.get('frame')
+        if self.active and frame:
             recent_pupil_positions = events['pupil_positions']
 
             gray_img  = frame.gray
@@ -189,7 +191,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                 sample_ref_dist = abs(sample_ref_dist[0])+abs(sample_ref_dist[1])
 
                 # start counter if ref is resting in place and not at last sample site
-                if not self.counter:
+                if self.counter <= 0:
 
                     if self.smooth_vel < 0.01 and sample_ref_dist > 0.1:
                         self.sample_site = self.smooth_pos
@@ -198,7 +200,7 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                         self.notify_all({'subject':'calibration.marker_found','timestamp':self.g_pool.get_timestamp(),'record':True})
                         self.counter = self.counter_max
 
-                if self.counter:
+                if self.counter > 0:
                     if self.smooth_vel > 0.01:
                         audio.tink()
                         logger.warning("Marker moved too quickly: Aborted sample. Sampled {} datapoints. Looking for steady marker again.".format(self.counter_max-self.counter))
@@ -211,7 +213,9 @@ class Manual_Marker_Calibration(Calibration_Plugin):
                         ref["screen_pos"] = marker_pos
                         ref["timestamp"] = frame.timestamp
                         self.ref_list.append(ref)
-                        if self.counter == 0:
+                        if events.get('fixations', []):
+                            self.counter -= self.fixation_boost
+                        if self.counter <= 0:
                             #last sample before counter done and moving on
                             audio.tink()
                             logger.debug("Sampled {} datapoints. Stopping to sample. Looking for steady marker again.".format(self.counter_max))
