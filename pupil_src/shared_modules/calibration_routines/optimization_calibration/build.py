@@ -15,7 +15,7 @@ def build_cpp_extension():
     import os, sys
     src_loc = os.path.dirname(os.path.realpath(__file__))
     cwd = os.getcwd()
-    sp.call("cd {} && {} setup.py build_ext --inplace && cd {}".format(src_loc, sys.executable, cwd), shell=True)
+    sp.call("cd {0} && {1} setup.py install --install-lib={0} && cd {2}".format(src_loc, sys.executable, cwd), shell=True)
 
 
 if __name__ == '__main__':
