@@ -76,6 +76,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
         self.detected = False
         self.screen_marker_state = 0.
         self.sample_duration =  sample_duration # number of frames to sample per site
+        self.fixation_boost = sample_duration/2.
         self.lead_in = 25 #frames of marker shown before starting to sample
         self.lead_out = 5 #frames of markers shown after sampling is donw
 
@@ -231,9 +232,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
             self._window = None
             glfwMakeContextCurrent(active_window)
 
-
-    def update(self,frame,events):
-        if self.active:
+    def recent_events(self, events):
+        frame = events.get('frame')
+        if self.active and frame:
             recent_pupil_positions = events['pupil_positions']
             gray_img = frame.gray
 
@@ -241,20 +242,19 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 self.stop()
                 return
 
-            #detect the marker
-            self.markers = find_concetric_circles(gray_img,min_ring_count=4)
+            # detect the marker
+            self.markers = find_concetric_circles(gray_img, min_ring_count=4)
 
             if len(self.markers) > 0:
-                self.detected= True
-                marker_pos = self.markers[0][0][0] # first marker, innermost ellipse,center
-                self.pos = normalize(marker_pos,(frame.width,frame.height),flip_y=True)
+                self.detected = True
+                marker_pos = self.markers[0][0][0]  # first marker, innermost ellipse,center
+                self.pos = normalize(marker_pos, (frame.width, frame.height), flip_y=True)
 
             else:
                 self.detected = False
-                self.pos = None #indicate that no reference is detected
+                self.pos = None  # indicate that no reference is detected
 
-
-            #only save a valid ref position if within sample window of calibraiton routine
+            # only save a valid ref position if within sample window of calibraiton routine
             on_position = self.lead_in < self.screen_marker_state < (self.lead_in+self.sample_duration)
 
             if on_position and self.detected:
@@ -264,10 +264,15 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 ref["timestamp"] = frame.timestamp
                 self.ref_list.append(ref)
 
-            #always save pupil positions
+            # always save pupil positions
             for p_pt in recent_pupil_positions:
                 if p_pt['confidence'] > self.pupil_confidence_threshold:
                     self.pupil_list.append(p_pt)
+
+            if on_position and self.detected and events.get('fixations', []):
+                self.screen_marker_state = min(
+                    self.sample_duration+self.lead_in,
+                    self.screen_marker_state+self.fixation_boost)
 
             # Animate the screen marker
             if self.screen_marker_state < self.sample_duration+self.lead_in+self.lead_out:
@@ -281,9 +286,7 @@ class Screen_Marker_Calibration(Calibration_Plugin):
                 self.active_site = self.sites.pop(0)
                 logger.debug("Moving screen marker to site at {} {}".format(*self.active_site))
 
-
-
-            #use np.arrays for per element wise math
+            # use np.arrays for per element wise math
             self.display_pos = np.array(self.active_site)
             self.on_position = on_position
             self.button.status_text = '{} / {}'.format(self.active_site, 9)
