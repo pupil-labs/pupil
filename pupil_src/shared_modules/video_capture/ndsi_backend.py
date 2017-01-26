@@ -143,7 +143,7 @@ class NDSI_Source(Base_Source):
             self._initial_refresh = False
         if event['subject'] == 'error':
             # if not event['error_str'].startswith('err=-3'):
-            logger.warning(f'Error {event["error_str"]}')
+            logger.warning('Error {}'.format(event["error_str"]))
             if 'control_id' in event and event['control_id'] in self.sensor.controls:
                 logger.debug(str(self.sensor.controls[event['control_id']]))
         elif self.has_ui and (event['control_id'] not in self.control_id_ui_mapping
@@ -158,19 +158,19 @@ class NDSI_Source(Base_Source):
                 remote_event = 'stopped'
 
             self.notify_all({
-                'subject': f'remote_recording.{remote_event}',
+                'subject': 'ndsi.host_recording.{}'.format(remote_event),
                 'source': self.name,
                 'process': self.g_pool.process})
 
     # local notifications
     def on_notify(self, notification):
         subject = notification['subject']
-        if subject.startswith('remote_recorder.'):
-            if 'start_recording' in subject and self.online:
+        if subject.startswith('remote_recording.'):
+            if 'should_start' in subject and self.online:
                 session_name = notification['session_name']
                 self.sensor.set_control_value('capture_session_name', session_name)
                 self.sensor.set_control_value('local_capture', True)
-            elif 'stop_recording' in subject:
+            elif 'should_stop' in subject:
                 self.sensor.set_control_value('local_capture', False)
 
     @property

@@ -43,8 +43,8 @@ class Remote_Recorder(Plugin):
             self.menu.append(self.menu_toggle)
             unique_session_name = strftime("%Y%m%d%H%M%S", localtime())
             self.notify_all({
-                'subject': 'remote_recorder.start_recording',
-                'session_name': f'{self.session_name}/{unique_session_name}'})
+                'subject': 'remote_recording.should_start',
+                'session_name': '{}/{}'.format(self.session_name, unique_session_name)})
             self.running = True
 
     def stop(self):
@@ -52,14 +52,14 @@ class Remote_Recorder(Plugin):
             del self.menu[-1]
             self.menu_toggle = ui.Button('Start Recording', self.toggle_recording)
             self.menu.append(self.menu_toggle)
-            self.notify_all({'subject': 'remote_recorder.stop_recording'})
+            self.notify_all({'subject': 'remote_recording.should_stop'})
             self.running = False
 
     def on_notify(self, notification):
         subject = notification['subject']
-        if subject == 'remote_recording.stopped' and self.running:
+        if subject == 'ndsi.host_recording.stopped' and self.running:
             source = notification['source']
-            logger.warning(f'Recording on {source} was stopped remotely. Stopping whole recording.')
+            logger.warning('Recording on {} was stopped remotely. Stopping whole recording.'.format(source))
             self.stop()
 
     def init_gui(self):
