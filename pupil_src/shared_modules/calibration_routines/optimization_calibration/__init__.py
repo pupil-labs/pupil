@@ -9,11 +9,13 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
-#when running from source compile cpp extension if nessesary.
+try:
+    from . calibration_methods import bundle_adjust_calibration
 
-import sys
-if not getattr(sys, 'frozen', False):
-    from . build import build_cpp_extension
-    build_cpp_extension()
-
-from . calibration_methods import bundle_adjust_calibration
+except ImportError:
+    import sys
+    #when running from source compile cpp extension if nessesary.
+    if not getattr(sys, 'frozen', False):
+        from . build import build_cpp_extension
+        build_cpp_extension()
+    from . calibration_methods import bundle_adjust_calibration
