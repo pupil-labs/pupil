@@ -50,7 +50,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # This is not harmful but unnecessary.
 
     # general imports
-    from time import sleep
     import logging
 
     # networking
@@ -59,9 +58,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # zmq ipc setup
     zmq_ctx = zmq.Context()
-    ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx,ipc_push_url)
-    notify_sub = zmq_tools.Msg_Receiver(zmq_ctx,ipc_sub_url,topics=('notify',))
-
+    ipc_pub = zmq_tools.Msg_Dispatcher(zmq_ctx, ipc_push_url)
+    notify_sub = zmq_tools.Msg_Receiver(zmq_ctx, ipc_sub_url, topics=('notify',))
 
     # log setup
     logging.getLogger("OpenGL").setLevel(logging.ERROR)
@@ -109,7 +107,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     from annotations import Annotation_Capture
     from log_history import Log_History
     from frame_publisher import Frame_Publisher
-    from video_capture import source_classes, manager_classes,Base_Source
+    from blink_detection import Blink_Detection
+    from video_capture import source_classes, manager_classes
     from pupil_data_relay import Pupil_Data_Relay
 
     # UI Platform tweaks
@@ -142,38 +141,33 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.get_timestamp = get_timestamp
     g_pool.get_now = get_time_monotonic
 
-    #manage plugins
-    runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir,'plugins'))
-    user_launchable_plugins = [ Pupil_Groups,
-                                Frame_Publisher,
-                                Pupil_Remote,
-                                Time_Sync,
-                                Surface_Tracker,
-                                Annotation_Capture,
-                                Log_History,
-                                Fixation_Detector_3D]
-    user_launchable_plugins += runtime_plugins
-    system_plugins  = [Log_Display,Display_Recent_Gaze,Recorder,Pupil_Data_Relay]
-    plugin_by_index =  system_plugins+user_launchable_plugins+calibration_plugins+gaze_mapping_plugins+manager_classes+source_classes
-    plugin_by_name = {p.__name__:p for p in plugin_by_index}
+    # manage plugins
+    runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
+    user_launchable_plugins = [Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
+                               Annotation_Capture, Log_History, Fixation_Detector_3D, Blink_Detection] + runtime_plugins
+    system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay]
+    plugin_by_index = (system_plugins + user_launchable_plugins + calibration_plugins
+                       + gaze_mapping_plugins + manager_classes + source_classes)
+    name_by_index = [p.__name__ for p in plugin_by_index]
+    plugin_by_name = dict(zip(name_by_index, plugin_by_index))
 
     default_capture_settings = {
-        'preferred_names'  : ["Pupil Cam1 ID2","Logitech Camera","(046d:081d)","C510","B525", "C525","C615","C920","C930e"],
-        'frame_size': (1280,720),
+        'preferred_names': ["Pupil Cam1 ID2", "Logitech Camera", "(046d:081d)",
+                            "C510", "B525", "C525", "C615", "C920", "C930e"],
+        'frame_size': (1280, 720),
         'frame_rate': 30
     }
 
-    default_plugins = [ ("UVC_Source",default_capture_settings),
-                        ('Pupil_Data_Relay',{}),
-                        ('UVC_Manager',{}),
-                        ('Log_Display',{}),
-                        ('Dummy_Gaze_Mapper',{}),
-                        ('Display_Recent_Gaze',{}),
-                        ('Screen_Marker_Calibration',{}),
-                        ('Recorder',{}),
-                        ('Pupil_Remote',{}),
-                        ('Fixation_Detector_3D',{})
-                      ]
+    default_plugins = [("UVC_Source", default_capture_settings),
+                       ('Pupil_Data_Relay', {}),
+                       ('UVC_Manager', {}),
+                       ('Log_Display', {}),
+                       ('Dummy_Gaze_Mapper', {}),
+                       ('Display_Recent_Gaze', {}),
+                       ('Screen_Marker_Calibration', {}),
+                       ('Recorder', {}),
+                       ('Pupil_Remote', {}),
+                       ('Fixation_Detector_3D', {})]
 
     # Callback functions
     def on_resize(window, w, h):
@@ -288,10 +282,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # window and gl setup
     glfw.glfwInit()
-    width,height = session_settings.get('window_size',(1280,720))
-    main_window = glfw.glfwCreateWindow(width,height, "World")
-    window_pos = session_settings.get('window_position',window_position_default)
-    glfw.glfwSetWindowPos(main_window,window_pos[0],window_pos[1])
+    width, height = session_settings.get('window_size', (1280, 720))
+    main_window = glfw.glfwCreateWindow(width, height, "World")
+    window_pos = session_settings.get('window_position', window_position_default)
+    glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
     glfw.glfwMakeContextCurrent(main_window)
     cygl.utils.init()
     g_pool.main_window = main_window
