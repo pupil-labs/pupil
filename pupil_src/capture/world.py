@@ -110,6 +110,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     from blink_detection import Blink_Detection
     from video_capture import source_classes, manager_classes
     from pupil_data_relay import Pupil_Data_Relay
+    from remote_recorder import Remote_Recorder
 
     # UI Platform tweaks
     if platform.system() == 'Linux':
@@ -144,7 +145,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
     user_launchable_plugins = [Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
-                               Annotation_Capture, Log_History, Fixation_Detector_3D, Blink_Detection] + runtime_plugins
+                               Annotation_Capture, Log_History, Fixation_Detector_3D, Blink_Detection,
+                               Remote_Recorder] + runtime_plugins
     system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay]
     plugin_by_index = (system_plugins + user_launchable_plugins + calibration_plugins
                        + gaze_mapping_plugins + manager_classes + source_classes)
@@ -434,7 +436,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         # notify each plugin if there are new notifications:
         for n in new_notifications:
             handle_notifications(n)
-            g_pool.capture.on_notify(n)
             for p in g_pool.plugins:
                 p.on_notify(n)
 
