@@ -63,26 +63,26 @@ cdef class Detector_3D:
         self.detectProperties3D = settings['3D_Settings'] if settings else {}
 
         if not self.detectProperties2D:
-            self.detectProperties["coarse_detection"] = True
-            self.detectProperties["coarse_filter_min"] = 128
-            self.detectProperties["coarse_filter_max"] = 280
-            self.detectProperties["intensity_range"] = 23
-            self.detectProperties["blur_size"] = 5
-            self.detectProperties["canny_treshold"] = 160
-            self.detectProperties["canny_ration"] = 2
-            self.detectProperties["canny_aperture"] = 5
-            self.detectProperties["pupil_size_max"] = 240
-            self.detectProperties["pupil_size_min"] = 40
-            self.detectProperties["strong_perimeter_ratio_range_min"] = 0.6
-            self.detectProperties["strong_perimeter_ratio_range_max"] = 1.1
-            self.detectProperties["strong_area_ratio_range_min"] = 0.8
-            self.detectProperties["strong_area_ratio_range_max"] = 1.1
-            self.detectProperties["contour_size_min"] = 5
-            self.detectProperties["ellipse_roundness_ratio"] = 0.09
-            self.detectProperties["initial_ellipse_fit_treshhold"] = 4.3
-            self.detectProperties["final_perimeter_ratio_range_min"] = 0.5
-            self.detectProperties["final_perimeter_ratio_range_max"] = 1.0
-            self.detectProperties["ellipse_true_support_min_dist"] = 3.0
+            self.detectProperties2D["coarse_detection"] = True
+            self.detectProperties2D["coarse_filter_min"] = 128
+            self.detectProperties2D["coarse_filter_max"] = 280
+            self.detectProperties2D["intensity_range"] = 23
+            self.detectProperties2D["blur_size"] = 5
+            self.detectProperties2D["canny_treshold"] = 160
+            self.detectProperties2D["canny_ration"] = 2
+            self.detectProperties2D["canny_aperture"] = 5
+            self.detectProperties2D["pupil_size_max"] = 240
+            self.detectProperties2D["pupil_size_min"] = 40
+            self.detectProperties2D["strong_perimeter_ratio_range_min"] = 0.6
+            self.detectProperties2D["strong_perimeter_ratio_range_max"] = 1.1
+            self.detectProperties2D["strong_area_ratio_range_min"] = 0.8
+            self.detectProperties2D["strong_area_ratio_range_max"] = 1.1
+            self.detectProperties2D["contour_size_min"] = 5
+            self.detectProperties2D["ellipse_roundness_ratio"] = 0.09
+            self.detectProperties2D["initial_ellipse_fit_treshhold"] = 4.3
+            self.detectProperties2D["final_perimeter_ratio_range_min"] = 0.5
+            self.detectProperties2D["final_perimeter_ratio_range_max"] = 1.0
+            self.detectProperties2D["ellipse_true_support_min_dist"] = 3.0
 
 
         if not self.detectProperties3D:
