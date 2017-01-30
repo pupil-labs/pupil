@@ -57,7 +57,7 @@ cdef class Detector_2D:
             self.detectProperties["coarse_filter_min"] = 128
             self.detectProperties["coarse_filter_max"] = 280
             self.detectProperties["intensity_range"] = 23
-            self.detectProperties["blur_size"] = 13
+            self.detectProperties["blur_size"] = 5
             self.detectProperties["canny_treshold"] = 160
             self.detectProperties["canny_ration"] = 2
             self.detectProperties["canny_aperture"] = 5
