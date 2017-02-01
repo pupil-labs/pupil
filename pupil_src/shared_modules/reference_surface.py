@@ -404,11 +404,7 @@ class Reference_Surface(object):
     @staticmethod
     def map_datum_to_surface(d,m_from_screen):
         pos = np.array([d['norm_pos']]).reshape(1,1,2)
-        try:
-            mapped_pos = cv2.perspectiveTransform(pos , m_from_screen )
-        except Exception as e:
-            print('<<< {} >>>'.format(pos))
-            raise e
+        mapped_pos = cv2.perspectiveTransform(pos , m_from_screen )
         mapped_pos.shape = (2)
         on_srf = bool((0 <= mapped_pos[0] <= 1) and (0 <= mapped_pos[1] <= 1))
         return {'topic':d['topic']+"_on_surface",'norm_pos':(mapped_pos[0],mapped_pos[1]),'confidence':d['confidence'],'on_srf':on_srf,'base_data':d }
