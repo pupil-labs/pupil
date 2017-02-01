@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import numpy as np
 import cv2
+from platform import system
 from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup,cvmat_to_glmat,make_coord_system_norm_based
 from gl_utils.trackball import Trackball
 from glfw import *
@@ -99,6 +100,15 @@ class Reference_Surface(object):
         self.old_corners_robust = None
         if saved_definition is not None:
             self.load_from_dict(saved_definition)
+
+        # UI Platform tweaks
+        if system() == 'Linux':
+            self.window_position_default = (0, 0)
+        elif system() == 'Windows':
+            self.window_position_default = (8, 31)
+        else:
+            self.window_position_default = (0, 0)
+
 
 
     def save_to_dict(self):
@@ -638,7 +648,7 @@ class Reference_Surface(object):
 
             self._window = glfwCreateWindow(height, width, "Reference Surface: " + self.name, monitor=monitor, share=glfwGetCurrentContext())
             if not self.fullscreen:
-                glfwSetWindowPos(self._window,200,0)
+                glfwSetWindowPos(self._window,self.window_position_default[0],self.window_position_default[1])
 
 
 
