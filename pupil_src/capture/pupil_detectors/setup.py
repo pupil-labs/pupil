@@ -86,7 +86,7 @@ else:
 
 extensions = [
     Extension(
-        name="detector_2d",
+        name="pupil_detectors.detector_2d",
         sources=['detector_2d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp' ],
         include_dirs = include_dirs,
         libraries = libs,
@@ -97,7 +97,7 @@ extensions = [
         depends= dependencies,
         language="c++"),
      Extension(
-        name="detector_3d",
+        name="pupil_detectors.detector_3d",
         sources=['detector_3d.pyx','singleeyefitter/ImageProcessing/cvx.cpp','singleeyefitter/utils.cpp','singleeyefitter/detectorUtils.cpp', 'singleeyefitter/EyeModelFitter.cpp','singleeyefitter/EyeModel.cpp'],
         include_dirs = include_dirs,
         libraries = libs,
@@ -109,13 +109,14 @@ extensions = [
         language="c++"),
 ]
 
-setup(
-    name="eye_model_3d",
-    version="0.1",
-    url="https://github.com/pupil-labs/pupil",
-    author='Pupil Labs',
-    author_email='info@pupil-labs.com',
-    license='GNU',
-    ext_modules=cythonize(extensions)
-)
 
+if __name__ == '__main__':
+    setup(
+        name="pupil_detectors",
+        version="0.1",
+        url="https://github.com/pupil-labs/pupil",
+        author='Pupil Labs',
+        author_email='info@pupil-labs.com',
+        license='GNU',
+        ext_modules=cythonize(extensions, quiet=True, nthreads=8)
+    )

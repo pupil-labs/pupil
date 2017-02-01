@@ -14,7 +14,7 @@ import os
 import cv2
 import numpy as np
 import scipy.spatial as sp
-
+from time import strftime, localtime
 
 
 from methods import normalize,denormalize
@@ -166,7 +166,8 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
             return
 
         pt_cloud = np.array(pt_cloud)
-        np.save(os.path.join(self.g_pool.user_dir,'accuracy_test_pt_cloud.npy'),pt_cloud)
+        timestr = strftime("%Y%m%d%H%M%S", localtime())
+        np.save(os.path.join(self.g_pool.user_dir,'accuracy_test_pt_cloud_{}.npy'.format(timestr)),pt_cloud)
         gaze,ref = pt_cloud[:,0:2],pt_cloud[:,2:4]
         error_lines = np.array([[g,r] for g,r in zip(gaze,ref)])
         self.error_lines = error_lines.reshape(-1,2)
