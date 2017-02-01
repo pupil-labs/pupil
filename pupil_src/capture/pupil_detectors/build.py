@@ -19,7 +19,7 @@ def build_cpp_extension():
     import subprocess as sp
     import os, sys
     src_loc = os.path.dirname(os.path.realpath(__file__))
-    install_loc = os.path.split(os.path.split(src_loc)[0])[0]
+    install_loc = os.path.split(src_loc)[0]
     cwd = os.getcwd()
     os.chdir(src_loc)
     logger.info('Building extention modules... {}'.format([ext.name for ext in extensions]))
