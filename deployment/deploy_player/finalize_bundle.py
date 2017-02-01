@@ -97,10 +97,10 @@ elif platform.system() == 'Linux':
     bin_dir = os.path.join(deb_root,'usr','bin')
     app_dir = os.path.join(deb_root,'usr','share','applications')
     ico_dir = os.path.join(deb_root,'usr','share','icons','hicolor','scalable','apps')
-    os.makedirs(DEBIAN_dir,0755)
-    os.makedirs(bin_dir,0755)
-    os.makedirs(app_dir,0755)
-    os.makedirs(ico_dir,0755)
+    os.makedirs(DEBIAN_dir,0o755)
+    os.makedirs(bin_dir,0o755)
+    os.makedirs(app_dir,0o755)
+    os.makedirs(ico_dir,0o755)
 
     #DEBAIN Package description
     with open(os.path.join(DEBIAN_dir,'control'),'w') as f:
@@ -115,7 +115,7 @@ Description: Pupil Player is part of the Pupil Eye Tracking Platform
 Installed-Size: %s
 '''%(dpkg_deb_version(),dist_size/1024)
         f.write(content)
-    os.chmod(os.path.join(DEBIAN_dir,'control'),0644)
+    os.chmod(os.path.join(DEBIAN_dir,'control'),0o644)
 
     #bin_starter script
     with open(os.path.join(bin_dir,'pupil_player'),'w') as f:
@@ -123,7 +123,7 @@ Installed-Size: %s
 #!/bin/sh
 exec /opt/pupil_player/pupil_player "$@"'''
         f.write(content)
-    os.chmod(os.path.join(bin_dir,'pupil_player'),0755)
+    os.chmod(os.path.join(bin_dir,'pupil_player'),0o755)
 
 
     #.desktop entry
@@ -140,11 +140,11 @@ Icon=pupil-player
 Categories=Application;
 Name[en_US]=Pupil Player'''
         f.write(content)
-    os.chmod(os.path.join(app_dir,'pupil_player.desktop'),0644)
+    os.chmod(os.path.join(app_dir,'pupil_player.desktop'),0o644)
 
     #copy icon:
     shutil.copy('pupil-player.svg',ico_dir)
-    os.chmod(os.path.join(ico_dir,'pupil-player.svg'),0644)
+    os.chmod(os.path.join(ico_dir,'pupil-player.svg'),0o644)
 
     #copy the actual application
     shutil.copytree(distribtution_dir,opt_dir)
@@ -152,12 +152,12 @@ Name[en_US]=Pupil Player'''
     for root, dirs, files in os.walk(opt_dir):
         for name in files:
             if name == 'pupil_player':
-                os.chmod(os.path.join(root,name),0755)
+                os.chmod(os.path.join(root,name),0o755)
             else:
-                os.chmod(os.path.join(root,name),0644)
+                os.chmod(os.path.join(root,name),0o644)
         for name in dirs:
-            os.chmod(os.path.join(root,name),0755)
-    os.chmod(opt_dir,0755)
+            os.chmod(os.path.join(root,name),0o755)
+    os.chmod(opt_dir,0o755)
 
     #run dpkg_deb
     call('fakeroot dpkg-deb --build %s'%deb_root,shell=True)

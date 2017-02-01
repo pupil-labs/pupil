@@ -54,24 +54,24 @@ cdef class Detector_2D:
         self.coarseDetectionPreviousPosition =  (0,0)
         if not self.detectProperties:
             self.detectProperties["coarse_detection"] = True
-            self.detectProperties["coarse_filter_min"] = 150
-            self.detectProperties["coarse_filter_max"] = 300
-            self.detectProperties["intensity_range"] = 17
-            self.detectProperties["blur_size"] = 3
-            self.detectProperties["canny_treshold"] = 200
-            self.detectProperties["canny_ration"] = 3
+            self.detectProperties["coarse_filter_min"] = 128
+            self.detectProperties["coarse_filter_max"] = 280
+            self.detectProperties["intensity_range"] = 23
+            self.detectProperties["blur_size"] = 5
+            self.detectProperties["canny_treshold"] = 160
+            self.detectProperties["canny_ration"] = 2
             self.detectProperties["canny_aperture"] = 5
-            self.detectProperties["pupil_size_max"] = 150
+            self.detectProperties["pupil_size_max"] = 240
             self.detectProperties["pupil_size_min"] = 40
-            self.detectProperties["strong_perimeter_ratio_range_min"] = 0.8
+            self.detectProperties["strong_perimeter_ratio_range_min"] = 0.6
             self.detectProperties["strong_perimeter_ratio_range_max"] = 1.1
-            self.detectProperties["strong_area_ratio_range_min"] = 0.6
+            self.detectProperties["strong_area_ratio_range_min"] = 0.8
             self.detectProperties["strong_area_ratio_range_max"] = 1.1
             self.detectProperties["contour_size_min"] = 5
-            self.detectProperties["ellipse_roundness_ratio"] = 0.1
-            self.detectProperties["initial_ellipse_fit_treshhold"] = 1.8
-            self.detectProperties["final_perimeter_ratio_range_min"] = 0.6
-            self.detectProperties["final_perimeter_ratio_range_max"] = 1.2
+            self.detectProperties["ellipse_roundness_ratio"] = 0.09
+            self.detectProperties["initial_ellipse_fit_treshhold"] = 4.3
+            self.detectProperties["final_perimeter_ratio_range_min"] = 0.5
+            self.detectProperties["final_perimeter_ratio_range_max"] = 1.0
             self.detectProperties["ellipse_true_support_min_dist"] = 3.0
 
     def get_settings(self):
