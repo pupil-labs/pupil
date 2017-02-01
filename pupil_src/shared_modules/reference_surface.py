@@ -35,14 +35,10 @@ def m_verts_to_screen(verts):
     #verts need to be sorted counter-clockwise stating at bottom left
     return cv2.getPerspectiveTransform(marker_corners_norm,verts)
 
-
 def m_verts_from_screen(verts):
     #verts need to be sorted counter-clockwise stating at bottom left
     return cv2.getPerspectiveTransform(verts,marker_corners_norm)
 
-
-def typesafe_perspectiveTransform(A,B):
-    return cv2.perspectiveTransform(A.astype(np.float32, copy=False), B)
 
 
 class Reference_Surface(object):
@@ -184,7 +180,7 @@ class Reference_Surface(object):
         m_from_undistored_norm_space = m_verts_from_screen(hull)
         self.detected = True
         # map the markers vertices into the surface space (one can think of these as texture coordinates u,v)
-        marker_uv_coords =  typesafe_perspectiveTransform(all_verts_undistorted_normalized,m_from_undistored_norm_space)
+        marker_uv_coords =  cv2.perspectiveTransform(all_verts_undistorted_normalized,m_from_undistored_norm_space)
         marker_uv_coords.shape = (-1,4,1,2) #[marker,marker...] marker = [ [[r,c]],[[r,c]] ]
 
         # build up a dict of discovered markers. Each with a history of uv coordinates
@@ -264,7 +260,7 @@ class Reference_Surface(object):
                 detected = False
             m_from_undistored_norm_space,mask = cv2.findHomography(xy_undistorted_normalized,uv)
             # project the corners of the surface to undistored space
-            corners_undistored_space = typesafe_perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
+            corners_undistored_space = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),m_to_undistored_norm_space)
             # project and distort these points  and normalize them
             corners_redistorted, corners_redistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*self.use_distortion)
             corners_nulldistorted, corners_nulldistorted_jacobian = cv2.projectPoints(cv2.convertPointsToHomogeneous(corners_undistored_space), np.array([0,0,0], dtype=np.float32) , np.array([0,0,0], dtype=np.float32), camera_calibration['camera_matrix'], camera_calibration['dist_coefs']*0)
@@ -338,7 +334,7 @@ class Reference_Surface(object):
 
                     ###marker posed estimation from virtually projected points.
                     # object_pts = np.array([[[0,0],[0,1],[1,1],[1,0]]],dtype=np.float32)
-                    # projected_pts = typesafe_perspectiveTransform(object_pts,self.m_to_screen)
+                    # projected_pts = cv2.perspectiveTransform(object_pts,self.m_to_screen)
                     # projected_pts.shape = -1,2
                     # projected_pts *= img_size
                     # projected_pts.shape = -1, 1, 2
@@ -401,7 +397,7 @@ class Reference_Surface(object):
         #convenience lines to allow 'simple' vectors (x,y) to be used
         shape = pos.shape
         pos.shape = (-1,1,2)
-        new_pos = typesafe_perspectiveTransform(pos,self.m_from_screen )
+        new_pos = cv2.perspectiveTransform(pos,self.m_from_screen )
         new_pos.shape = shape
         return new_pos
 
@@ -410,7 +406,7 @@ class Reference_Surface(object):
         #convenience lines to allow 'simple' vectors (x,y) to be used
         shape = pos.shape
         pos.shape = (-1,1,2)
-        new_pos = typesafe_perspectiveTransform(pos, self.m_to_screen )
+        new_pos = cv2.perspectiveTransform(pos,self.m_to_screen )
         new_pos.shape = shape
         return new_pos
 
@@ -418,7 +414,7 @@ class Reference_Surface(object):
     @staticmethod
     def map_datum_to_surface(d,m_from_screen):
         pos = np.array([d['norm_pos']]).reshape(1,1,2)
-        mapped_pos = typesafe_perspectiveTransform(pos , m_from_screen )
+        mapped_pos = cv2.perspectiveTransform(pos , m_from_screen )
         mapped_pos.shape = (2)
         on_srf = bool((0 <= mapped_pos[0] <= 1) and (0 <= mapped_pos[1] <= 1))
         return {'topic':d['topic']+"_on_surface",'norm_pos':(mapped_pos[0],mapped_pos[1]),'confidence':d['confidence'],'on_srf':on_srf,'base_data':d }
@@ -439,7 +435,7 @@ class Reference_Surface(object):
         after[vert_idx] = new_pos
         transform = cv2.getPerspectiveTransform(after,before)
         for m in self.markers.values():
-            m.uv_coords = typesafe_perspectiveTransform(m.uv_coords,transform)
+            m.uv_coords = cv2.perspectiveTransform(m.uv_coords,transform)
 
 
     def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
@@ -452,7 +448,7 @@ class Reference_Surface(object):
             marker_verts = np.array(marker['verts'])
             marker_verts.shape = (-1,1,2)
             marker_verts_undistorted_normalized = cv2.undistortPoints(marker_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*self.use_distortion)
-            marker_uv_coords =  typesafe_perspectiveTransform(marker_verts_undistorted_normalized,res['m_from_undistored_norm_space'])
+            marker_uv_coords =  cv2.perspectiveTransform(marker_verts_undistorted_normalized,res['m_from_undistored_norm_space'])
             support_marker.load_uv_coords(marker_uv_coords)
             self.markers[marker['id']] = support_marker
 
@@ -470,7 +466,7 @@ class Reference_Surface(object):
         if self.detected and self.defined:
             x,y = pos
             frame = np.array([[[0,0],[1,0],[1,1],[0,1],[0,0]]],dtype=np.float32)
-            frame = typesafe_perspectiveTransform(frame,self.m_to_screen)
+            frame = cv2.perspectiveTransform(frame,self.m_to_screen)
             text_anchor = frame.reshape((5,-1))[2]
             text_anchor[1] = 1-text_anchor[1]
             text_anchor *=img_shape[1],img_shape[0]
@@ -494,8 +490,8 @@ class Reference_Surface(object):
             r,g,b,a = color
             frame = np.array([[[0,0],[1,0],[1,1],[0,1],[0,0]]],dtype=np.float32)
             hat = np.array([[[.3,.7],[.7,.7],[.5,.9],[.3,.7]]],dtype=np.float32)
-            hat = typesafe_perspectiveTransform(hat,self.m_to_screen)
-            frame = typesafe_perspectiveTransform(frame,self.m_to_screen)
+            hat = cv2.perspectiveTransform(hat,self.m_to_screen)
+            frame = cv2.perspectiveTransform(frame,self.m_to_screen)
             alpha = min(1,self.build_up_status/self.required_build_up)
             if highlight:
                 draw_polyline_norm(frame.reshape((5,2)),1,RGBA(r,g,b,a*.1),line_type=GL_POLYGON)
@@ -546,7 +542,7 @@ class Reference_Surface(object):
         draw surface and markers
         """
         if self.detected:
-            frame = typesafe_perspectiveTransform(marker_corners_norm.reshape(-1,1,2),self.m_to_screen)
+            frame = cv2.perspectiveTransform(marker_corners_norm.reshape(-1,1,2),self.m_to_screen)
             draw_points_norm(frame.reshape((4,2)),20,RGBA(1.0,0.2,0.6,.5))
 
 
