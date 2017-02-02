@@ -260,7 +260,7 @@ class Raw_Data_Exporter(Plugin):
                 csv_writer.writerow(data)
             logger.info("Created 'gaze_positions.csv' file.")
 
-        with open(os.path.join(export_dir, 'pupil_gaze_postions_info.txt'), 'w', encoding='utf-8', newline='') as info_file:
+        with open(os.path.join(export_dir, 'pupil_gaze_positions_info.txt'), 'w', encoding='utf-8', newline='') as info_file:
             info_file.write(self.__doc__)
 
     def get_init_dict(self):
