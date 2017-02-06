@@ -285,7 +285,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # window and gl setup
     glfw.glfwInit()
     width, height = session_settings.get('window_size', (1280, 720))
-    main_window = glfw.glfwCreateWindow(width, height, "World")
+    main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
     window_pos = session_settings.get('window_position', window_position_default)
     glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
     glfw.glfwMakeContextCurrent(main_window)

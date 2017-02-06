@@ -276,7 +276,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         # Initialize glfw
         glfw.glfwInit()
-        title = "eye {}".format(eye_id)
+        title = "Pupil Capture - eye {}".format(eye_id)
         width, height = session_settings.get(
             'window_size', g_pool.capture.frame_size)
         main_window = glfw.glfwCreateWindow(width, height, title, None, None)
