@@ -145,7 +145,9 @@ class Screen_Marker_Calibration(Calibration_Plugin):
 
 
     def start(self):
-
+        if not self.g_pool.capture.online:
+            logger.error("Calibration required world capture video input.")
+            return
         audio.say("Starting Calibration")
         logger.info("Starting Calibration")
         if self.g_pool.detection_mapping_mode == '3d':
