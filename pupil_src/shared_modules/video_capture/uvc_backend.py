@@ -168,7 +168,6 @@ class UVC_Source(Base_Source):
                         self._re_init_capture(d['uid'])
                     else:
                         self._init_capture(d['uid'])
-
                     return
         raise InitialisationError('Could not find Camera {} during re initilization.'.format(names))
 
@@ -182,6 +181,8 @@ class UVC_Source(Base_Source):
                 self._re_init_capture_by_names(self.name_backup)
             except (InitialisationError, uvc.InitError):
                 time.sleep(0.05)
+                self.deinit_gui()
+                self.init_gui()
             self._restart_in = int(5/0.05)
         else:
             self._restart_in -= 1
