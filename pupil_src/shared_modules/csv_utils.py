@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import csv
 
+
 def read_key_value_file(csvfile):
     """Reads CSV file, parses content into dict
 
@@ -20,12 +21,14 @@ def read_key_value_file(csvfile):
     Returns:
         DICT: Dictionary containing file content
     """
-    reader = csv.reader(csvfile, delimiter=',') # create reader
-    next(reader) # skip fieldnames
-    kvstore = {} # init key value store
+    kvstore = {}  # init key value store
+    dialect = csv.Sniffer().sniff(csvfile.read(), delimiters='\t,')
+    csvfile.seek(0)
+    reader = csv.reader(csvfile, dialect)  # create reader
     for row in reader:
         kvstore[row[0]] = row[1]
     return kvstore
+
 
 def write_key_value_file(csvfile,dictionary,append=False):
     """Writes a dictionary to a writable file in a CSV format
