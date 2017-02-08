@@ -332,8 +332,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar', (0, 100), (120, -100))
 
     g_pool.capture_source_menu = ui.Growing_Menu('Capture Source')
+    g_pool.capture_source_menu.collapsed = True
 
     g_pool.calibration_menu = ui.Growing_Menu('Calibration')
+    g_pool.calibration_menu.collapsed = True
     g_pool.capture_selector_menu = ui.Growing_Menu('Capture Selection')
 
     g_pool.sidebar.append(general_settings)

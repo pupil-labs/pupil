@@ -767,6 +767,7 @@ class Fixation_Detector_3D(Online_Base_Fixation_Detector):
 
         help_str = "Dispersion-based fixation detector. Uses the 3D-model's pupil normal as dispersion measure."
         self.menu = ui.Growing_Menu('3D Fixation Detector')
+        self.menu.collapsed = True
         self.menu.append(ui.Button('Close',close))
         self.menu.append(ui.Info_Text(help_str))
         def set_duration(new_value):

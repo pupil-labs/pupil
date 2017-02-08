@@ -170,6 +170,7 @@ cdef class Detector_2D:
 
     def init_gui(self,sidebar):
         self.menu = ui.Growing_Menu('Pupil Detector')
+        self.menu.collapsed = True
         info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")

@@ -186,6 +186,7 @@ cdef class Detector_3D:
 
     def init_gui(self,sidebar):
         self.menu2D = ui.Growing_Menu('Pupil Detector 2D')
+        self.menu2D.collapsed = True
         info = ui.Info_Text("Switch to the algorithm display mode to see a visualization of pupil detection parameters overlaid on the eye video. "\
                                 +"Adjust the pupil intensity range so that the pupil is fully overlaid with blue. "\
                                 +"Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds.")
@@ -199,6 +200,7 @@ cdef class Detector_3D:
         #self.menu2D.append(ui.Slider('canny_treshold',self.detectProperties2D,min=1,max=1000,step=1))
         #self.menu2D.append(ui.Slider('canny_ration',self.detectProperties2D,min=1,max=4,step=1))
         self.menu3D = ui.Growing_Menu('Pupil Detector 3D')
+        self.menu3D.collapsed = True
         info_3d = ui.Info_Text("Open the debug window to see a visualization of the 3D pupil detection." )
         self.menu3D.append(info_3d)
         self.menu3D.append(ui.Button('Reset 3D model', self.reset_3D_Model ))
