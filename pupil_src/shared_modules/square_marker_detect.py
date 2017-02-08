@@ -241,7 +241,7 @@ def draw_markers(img,markers):
         else:
             cv2.polylines(img,np.int0(hat),color = (0,255,0),isClosed=True)
         cv2.polylines(img,np.int0(centroid),color = (255,255,int(255*m['id_confidence'])),isClosed=True,thickness=2)
-        m_str = 'id: {:i}'.format(m['id'])
+        m_str = 'id: {:d}'.format(m['id'])
         org = origin.copy()
         # cv2.rectangle(img, tuple(np.int0(org+(-5,-13))[0,:]), tuple(np.int0(org+(100,30))[0,:]),color=(0,0,0),thickness=-1)
         cv2.putText(img,m_str,tuple(np.int0(org)[0,:]),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.4, color=(0,0,255))

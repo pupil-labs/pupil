@@ -307,7 +307,7 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
                 transparent_circle(frame.img, (x,y), radius=f['pix_dispersion']/2, color=(.5, .2, .6, .7), thickness=-1)
                 cv2.putText(
                     frame.img,
-                    '{:i}'.format(f['id']),
+                    '{:d}'.format(f['id']),
                     (x+20,y),
                     cv2.FONT_HERSHEY_DUPLEX,
                     0.8,(255,150,100))
@@ -342,7 +342,7 @@ class Sliding_Window(object):
         self.indices, self.normals, self.timestamps, self.diameters = zip(*filtered)
 
         if not self.indices:
-            raise ValueError('No data found for eye id {:i}'.format(eye_id))
+            raise ValueError('No data found for eye id {:d}'.format(eye_id))
         self.eye_id          = eye_id
         self.min_duration    = min_duration
         self.start_index     = 0
@@ -355,7 +355,7 @@ class Sliding_Window(object):
 
     def append_frames(self,n=1):
         if (self.stop_index+n > len(self.normals)):
-            raise EOFError('Appending {:i} frames would exceed frame bound.'.format(n))
+            raise EOFError('Appending {:d} frames would exceed frame bound.'.format(n))
 
         new_data = self.pupil_normals(self.stop_index, self.stop_index+n)
         old_incl_new = self.pupil_normals(stop=self.stop_index+n)
@@ -480,7 +480,7 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
                 transparent_circle(frame.img, (x,y), radius=f['pix_dispersion']/2, color=(.5, .2, .6, .7), thickness=-1)
                 cv2.putText(
                     frame.img,
-                    '{:i} - eye {:i}'.format(f['id'], eye_id),
+                    '{:d} - eye {:d}'.format(f['id'], eye_id),
                     (x+20,y-5+30*eye_id),
                     cv2.FONT_HERSHEY_DUPLEX,
                     0.8,(255,150,100))
@@ -598,7 +598,7 @@ class Pupil_Angle_3D_Fixation_Detector(Gaze_Position_2D_Fixation_Detector):
         total_video_time = self.g_pool.timestamps[-1]-self.g_pool.timestamps[0]
         fixation_count = len(fixations)
         t_stop = time.time()
-        logger.info("Detected {} fixations for eye {:i}. Total duration of fixations: {:0.2f}sec total time of video {:0.2f}sec. Took {:.5f}sec to calculate.".format(fixation_count, eye_id, total_fixation_time, total_video_time, t_stop - t_start))
+        logger.info("Detected {} fixations for eye {:d}. Total duration of fixations: {:0.2f}sec total time of video {:0.2f}sec. Took {:.5f}sec to calculate.".format(fixation_count, eye_id, total_fixation_time, total_video_time, t_stop - t_start))
         return fixations
 
 
