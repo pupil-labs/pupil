@@ -72,6 +72,7 @@ elif platform.system() == 'Linux':
 
     # libstdc++ is also not meant to travel with the bundle. Otherwise nvideo opengl drivers will fail to load.
     binaries = [b for b in binaries if not "libstdc++.so" in b[0]]
+    binaries = [b for b in binaries if not "libtasn1.so" in b[0]]
 
     coll = COLLECT(exe,
                    binaries,
