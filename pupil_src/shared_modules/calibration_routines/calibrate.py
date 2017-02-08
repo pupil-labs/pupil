@@ -41,9 +41,11 @@ def calibrate_2d_polynomial(cal_pt_cloud,screen_size=(1,1),threshold = 35, binoc
         logger.info('first iteration. root-mean-square residuals: {}, in pixel'.format(err_rms))
         logger.info('second iteration: ignoring outliers. root-mean-square residuals: {} in pixel'.format(new_err_rms))
 
+        print(err_dist.shape, threshold.shape, cal_pt_cloud[err_dist <= threshold].shape)
+        used_no = cal_pt_cloud[err_dist <= threshold].shape[0]
+        complete_no = cal_pt_cloud.shape[0]
         logger.info('used {} data points out of the full dataset {}: subset is {} percent'.format(
-            (cal_pt_cloud[err_dist <= threshold].shape[0], cal_pt_cloud.shape[0],
-             100*float(cal_pt_cloud[err_dist <= threshold].shape[0])/cal_pt_cloud.shape[0])))
+            (used_no, complete_no, 100*float(used_no)/complete_no)))
 
         return map_fn, err_dist <= threshold, (cx, cy, model_n)
 
