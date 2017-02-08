@@ -64,6 +64,7 @@ class Time_Echo_Server(asyncore.dispatcher):
         self.set_reuse_addr()
         self.bind((host, 0))
         self.port = self.socket.getsockname()[1]
+        # FIXME: gethostbyname might fail on unix
         self.host = host or socket.gethostbyname(socket.gethostname())
         self.protocol = 'tcp://'
         self.listen(5)

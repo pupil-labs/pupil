@@ -704,7 +704,7 @@ class Reference_Surface(object):
                 self.on_close()
 
     def on_close(self,window=None):
-        self.window_should_close = True
+        self.close_window()
 
 
     def on_button(self,window,button, action, mods):
