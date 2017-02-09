@@ -126,9 +126,6 @@ class Video_Export_Launcher(Plugin):
             self.add_export(notification['range'],notification['export_dir'])
 
     def add_export(self,export_range,export_dir):
-        if system() == 'Darwin':
-            set_start_method('spawn')
-
         logger.debug("Adding new video export process.")
         should_terminate = Value(c_bool,False)
         frames_to_export  = Value(c_int,0)
