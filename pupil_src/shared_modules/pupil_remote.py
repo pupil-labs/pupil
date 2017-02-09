@@ -124,6 +124,7 @@ class Pupil_Remote(Plugin):
 
     def init_gui(self):
         self.menu = ui.Growing_Menu('Pupil Remote')
+        self.menu.collapsed = True
         self.g_pool.sidebar.append(self.menu)
         self.update_menu()
 

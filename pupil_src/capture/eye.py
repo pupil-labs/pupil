@@ -330,6 +330,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         g_pool.capture_selector_menu = ui.Growing_Menu('Capture Selection')
         g_pool.capture_source_menu = ui.Growing_Menu('Capture Source')
+        g_pool.capture_source_menu.collapsed = True
         g_pool.capture.init_gui()
 
         g_pool.sidebar.append(general_settings)

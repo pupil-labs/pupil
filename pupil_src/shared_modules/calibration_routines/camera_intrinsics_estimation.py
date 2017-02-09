@@ -200,7 +200,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
     def advance(self,_):
         if self.count == 10:
             logger.info("Capture 10 calibration patterns.")
-            self.button.status_text = "{:i} to go".format(self.count)
+            self.button.status_text = "{:d} to go".format(self.count)
             self.calculated = False
             self.img_points = []
             self.obj_points = []
@@ -286,7 +286,7 @@ class Camera_Intrinsics_Estimation(Calibration_Plugin):
                 self.obj_points.append(self.obj_grid)
                 self.collect_new = False
                 self.count -=1
-                self.button.status_text = "{:i} to go".format(self.count)
+                self.button.status_text = "{:d} to go".format(self.count)
 
 
         if self.count<=0 and not self.calculated:

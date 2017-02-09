@@ -62,10 +62,11 @@ def correlate_data(data,timestamps):
 
     return data_by_frame
 
+
 def update_recording_to_recent(rec_dir):
     update_recording_bytes_to_unicode(rec_dir)
 
-    meta_info = load_meta_info(rec_dir,update=True) # also updates info file
+    meta_info = load_meta_info(rec_dir, update=True)  # also updates info file
     # Reference format: v0.7.4
     rec_version = read_rec_version(meta_info)
     if rec_version >= VersionFormat('0.7.4'):
@@ -81,7 +82,6 @@ def update_recording_to_recent(rec_dir):
     else:
         logger.Error("This recording is too old. Sorry.")
         return
-
 
     # Incremental format updates
     if rec_version < VersionFormat('0.8.2'):
@@ -227,6 +227,8 @@ def update_recording_bytes_to_unicode(rec_dir):
             return data
 
     for file in os.listdir(rec_dir):
+        if os.path.splitext(file)[1] == '.mp4':
+            continue
         rec_file = os.path.join(rec_dir, file)
         try:
             rec_object = load_object(rec_file)
@@ -236,13 +238,9 @@ def update_recording_bytes_to_unicode(rec_dir):
                 save_object(rec_object, rec_file)
         except (ValueError, IsADirectoryError):
             continue
-        # except TypeError:
-        #     logger.error('TypeError when parsing `{}`'.format(file))
-        #     continue
 
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info['Capture Software Version'] = 'v0.8.8'
 
     with open(meta_info_path, 'w', newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile, meta_info)
@@ -328,19 +326,18 @@ def update_recording_v03_to_v074(rec_dir):
     if not os.path.isfile(ts_path) and os.path.isfile(ts_path_old):
         os.rename(ts_path_old, ts_path)
 
+
 def is_pupil_rec_dir(rec_dir):
     if not os.path.isdir(rec_dir):
         logger.error("No valid dir supplied")
         return False
     try:
         meta_info = load_meta_info(rec_dir)
-        info = meta_info["Capture Software Version"]
+        meta_info["Capture Software Version"]  # Test key existence
     except:
         logger.error("Could not read info.csv file: Not a valid Pupil recording.")
         return False
     return True
-
-
 
 
 def transparent_circle(img,center,radius,color,thickness):
