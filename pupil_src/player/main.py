@@ -454,6 +454,7 @@ def session(rec_dir):
 
         frame = new_frame.copy()
         events = {}
+        events['frame'] = frame
         # report time between now and the last loop interation
         events['dt'] = get_dt()
         # new positons we make a deepcopy just like the image is a copy.
@@ -491,7 +492,7 @@ def session(rec_dir):
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
-            p.update(frame, events)
+            p.recent_events(events)
 
         # check if a plugin need to be destroyed
         g_pool.plugins.clean()
