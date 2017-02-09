@@ -64,11 +64,16 @@ def correlate_data(data,timestamps):
 
 
 def update_recording_to_recent(rec_dir):
-    update_recording_bytes_to_unicode(rec_dir)
 
     meta_info = load_meta_info(rec_dir, update=True)  # also updates info file
     # Reference format: v0.7.4
     rec_version = read_rec_version(meta_info)
+
+    # Convert python2 to python3
+    if rec_version < VersionFormat('0.8.7'):
+        update_recording_bytes_to_unicode(rec_dir)
+
+
     if rec_version >= VersionFormat('0.7.4'):
         pass
     elif rec_version >= VersionFormat('0.7.3'):
