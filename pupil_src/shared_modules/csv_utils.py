@@ -22,8 +22,10 @@ def read_key_value_file(csvfile):
         DICT: Dictionary containing file content
     """
     kvstore = {}  # init key value store
-    dialect = csv.Sniffer().sniff(csvfile.read(), delimiters='\t,')
-    csvfile.seek(0)
+    first_line = csvfile.readline()
+    if 'key' not in first_line or 'value' not in first_line:
+        csvfile.seek(0)  # Seek to start if first_line is not an header
+    dialect = csv.Sniffer().sniff(first_line, delimiters=',\t')
     reader = csv.reader(csvfile, dialect)  # create reader
     for row in reader:
         kvstore[row[0]] = row[1]

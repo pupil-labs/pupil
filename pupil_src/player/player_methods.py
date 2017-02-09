@@ -136,7 +136,7 @@ def update_recording_v074_to_v082(rec_dir):
     meta_info_path = os.path.join(rec_dir,"info.csv")
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info['Capture Software Version'] = 'v0.8.2'
+        meta_info['Data Format Version'] = 'v0.8.2'
     with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
@@ -154,7 +154,7 @@ def update_recording_v082_to_v083(rec_dir):
 
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info['Capture Software Version'] = 'v0.8.3'
+        meta_info['Data Format Version'] = 'v0.8.3'
 
     with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
@@ -173,7 +173,7 @@ def update_recording_v083_to_v086(rec_dir):
 
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info['Capture Software Version'] = 'v0.8.6'
+        meta_info['Data Format Version'] = 'v0.8.6'
 
     with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
@@ -202,7 +202,7 @@ def update_recording_v086_to_v087(rec_dir):
 
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info['Capture Software Version'] = 'v0.8.7'
+        meta_info['Data Format Version'] = 'v0.8.7'
 
     with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
@@ -227,7 +227,7 @@ def update_recording_bytes_to_unicode(rec_dir):
             return data
 
     for file in os.listdir(rec_dir):
-        if os.path.splitext(file)[1] == '.mp4':
+        if file.startswith('.') or os.path.splitext(file)[1] == '.mp4':
             continue
         rec_file = os.path.join(rec_dir, file)
         try:

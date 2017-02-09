@@ -73,7 +73,7 @@ def get_version(version_file=None):
 
 
 def read_rec_version(meta_info):
-    version = meta_info["Capture Software Version"]
+    version = meta_info.get("Recording Version",meta_info["Capture Software Version"])
     version = ''.join([c for c in version if c in '1234567890.-']) #strip letters in case of legacy version format
     version = VersionFormat(version)
     logger.debug("Recording version: {}".format(version))
