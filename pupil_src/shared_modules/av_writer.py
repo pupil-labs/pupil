@@ -94,7 +94,7 @@ class AV_Writer(object):
         self.ts_file_loc = file_path+'_timestamps_pts.npy'
         self.file_loc = file_loc
         self.container = av.open(self.file_loc,'w')
-        logger.debug("Opended '{}' for writing.".format(self.file_loc))
+        logger.debug("Opened '{}' for writing.".format(self.file_loc))
 
         if self.use_timestamps:
             self.time_base = Fraction(1,65535) #highest resolution for mp4
@@ -186,7 +186,7 @@ class JPEG_Writer(object):
 
         self.file_loc = file_loc
         self.container = av.open(self.file_loc,'w')
-        logger.debug("Opended '{}' for writing.".format(self.file_loc))
+        logger.debug("Opened '{}' for writing.".format(self.file_loc))
 
         self.video_stream = self.container.add_stream('mjpeg',1/self.time_base)
         self.video_stream.pix_fmt = "yuvj422p"
@@ -254,7 +254,7 @@ def rec_thread(file_loc, in_container, audio_src, should_close):
 
     #create out container
     out_container = av.open(file_loc,'w')
-    # logger.debug("Opended '%s' for writing."%file_loc)
+    # logger.debug("Opened '%s' for writing."%file_loc)
     out_stream =  out_container.add_stream(template = in_stream)
 
 
