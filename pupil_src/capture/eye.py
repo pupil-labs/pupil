@@ -440,10 +440,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                         timestamps_path = os.path.join(record_path, "eye{}_timestamps.npy".format(eye_id))
                         if raw_mode and frame and g_pool.capture.jpeg_support:
                             video_path = os.path.join(record_path, "eye{}.mp4".format(eye_id))
-                            writer = JPEG_Writer(video_path, g_pool.capture.frame_rate)
+                            g_pool.writer = JPEG_Writer(video_path, g_pool.capture.frame_rate)
                         else:
                             video_path = os.path.join(record_path, "eye{}.mp4".format(eye_id))
-                            writer = AV_Writer(video_path, g_pool.capture.frame_rate)
+                            g_pool.writer = AV_Writer(video_path, g_pool.capture.frame_rate)
                         timestamps = []
                 elif subject == 'recording.stopped':
                     if g_pool.writer:
