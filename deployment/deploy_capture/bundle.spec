@@ -6,8 +6,13 @@ import platform, sys, os, os.path, numpy, ntpath,glob
 av_hidden_imports = ['av.format','av.packet','av.buffer','av.bytesource','av.frame','av.stream','av.descriptor','av.plane','av.audio.plane','av.container.streams','av.dictionary', 'av.audio.stream','av.subtitles','av.subtitles.stream','av.subtitles.subtitle','av.video.reformatter','av.video.plane','av.option']
 pyglui_hidden_imports = ['pyglui.pyfontstash.fontstash','pyglui.cygl.shader','pyglui.cygl.utils']
 
+
+from pyglui import ui
+
 if platform.system() == 'Darwin':
+    sys.path.append('.')
     from version import dpkg_deb_version
+    del sys.path[-1]
 
     a = Analysis(['../../pupil_src/capture/main.py'],
                  pathex=['../../pupil_src/shared_modules/'],
@@ -31,10 +36,10 @@ if platform.system() == 'Darwin':
                    a.binaries - libSystem,
                    a.zipfiles,
                    a.datas,
-                   [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.1.2/lib/libglfw3.dylib','BINARY')],
-                   [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
-                   [('Roboto-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
-                   [('fontawesome-webfont.ttf','/usr/local/lib/python2.7/site-packages/pyglui/fontawesome-webfont.ttf','DATA')],
+                   [('libglfw.dylib', '/usr/local/Cellar/glfw/3.2.1/lib/libglfw.dylib','BINARY')],
+                   [('OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
+                   [('Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
+                   [('fontawesome-webfont.ttf',ui.get_fontawesome_font_path(),'DATA')],
                    strip=None,
                    upx=True,
                    name='Pupil Capture')
@@ -78,11 +83,11 @@ elif platform.system() == 'Linux':
                    binaries,
                    a.zipfiles,
                    a.datas,
-                   [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
+                   [('libglfw.so', '/usr/lib/x86_64-linux-gnu/libglfw.so','BINARY')],
                    [('libGLEW.so', '/usr/lib/x86_64-linux-gnu/libGLEW.so','BINARY')],
-                   [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/OpenSans-Regular.ttf','DATA')],
-                   [('Roboto-Regular.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/Roboto-Regular.ttf','DATA')],
-                   [('fontawesome-webfont.ttf','/usr/local/lib/python2.7/dist-packages/pyglui/fontawesome-webfont.ttf','DATA')],
+                   [('OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
+                   [('Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
+                   [('fontawesome-webfont.ttf',ui.get_fontawesome_font_path(),'DATA')],
                    strip=True,
                    upx=True,
                    name='pupil_capture')
@@ -92,7 +97,7 @@ elif platform.system() == 'Windows':
 
         np_path = os.path.dirname(numpy.__file__)
         np_dlls = glob.glob(np_path + '/core/*.dll')
-        np_dll_list = [] 
+        np_dll_list = []
 
         for dll_path in np_dlls:
             dll_p, dll_f = ntpath.split(dll_path)
@@ -149,8 +154,8 @@ elif platform.system() == 'Windows':
                        a.datas,
                        [('glfw3.dll','../../pupil_external/glfw3.dll','BINARY')],
                        [('OpenSans-Regular.ttf', os.path.join(package_path, 'pyglui/OpenSans-Regular.ttf'),'DATA')],
-                 [('Roboto-Regular.ttf', os.path.join(package_path, 'pyglui/Roboto-Regular.ttf'),'DATA')],
-                 [('fontawesome-webfont.ttf', os.path.join(package_path, 'pyglui/fontawesome-webfont.ttf'),'DATA')],
+                       [('Roboto-Regular.ttf', os.path.join(package_path, 'pyglui/Roboto-Regular.ttf'),'DATA')],
+                       [('fontawesome-webfont.ttf', os.path.join(package_path, 'pyglui/fontawesome-webfont.ttf'),'DATA')],
                        np_dll_list,
                        strip=False,
                        upx=True,

@@ -52,7 +52,7 @@ if getattr(sys, 'frozen', False):
     if os_name == "Linux":
         filename = 'libglfw.so'
     elif os_name == "Darwin":
-        filename = 'libglfw3.dylib'
+        filename = 'libglfw.dylib'
     elif os_name == "Windows":
         filename = 'glfw3.dll'
     else:
