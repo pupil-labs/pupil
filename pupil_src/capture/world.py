@@ -455,25 +455,25 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         # check if a plugin need to be destroyed
         g_pool.plugins.clean()
 
-
-        #update performace graphs
+        # update performace graphs
         if 'frame' in events:
             t = events["frame"].timestamp
-            dt,ts = t-ts,t
+            dt, ts = t-ts, t
             try:
                 fps_graph.add(1./dt)
             except ZeroDivisionError:
                 pass
-        for p in events["pupil_positions"]: pupil_graphs[p['id']].add(p['confidence'])
+        for p in events["pupil_positions"]:
+            pupil_graphs[p['id']].add(p['confidence'])
         cpu_graph.update()
 
-        #send new events to ipc:
-        del events['pupil_positions'] #already on the wire
-        del events['gaze_positions']  #send earlier
+        # send new events to ipc:
+        del events['pupil_positions']  # already on the wire
+        del events['gaze_positions']  # sent earlier
         if 'frame' in events:
             del events['frame']  #send explicity with frame publisher
         del events['dt']  #no need to send this
-        for topic,data in events.items():
+        for topic, data in events.items():
             assert(isinstance(data, (list, tuple)))
             for d in data:
                 ipc_pub.send(topic, d)
