@@ -16,7 +16,7 @@ import ndsi
 
 from .base_backend import Base_Source, Base_Manager
 
-assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.14'
+assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.15'
 logger = logging.getLogger(__name__)
 
 
@@ -183,7 +183,7 @@ class NDSI_Source(Base_Source):
 
     @property
     def jpeg_support(self):
-        return True
+        return isinstance(self._recent_frame, ndsi.frame.JPEGFrame)
 
     def get_init_dict(self):
         settings = super().get_init_dict()
