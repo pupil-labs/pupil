@@ -180,10 +180,10 @@ class UVC_Source(Base_Source):
             try:
                 self._re_init_capture_by_names(self.name_backup)
             except (InitialisationError, uvc.InitError):
-                time.sleep(0.05)
+                time.sleep(0.02)
                 self.deinit_gui()
                 self.init_gui()
-            self._restart_in = int(5/0.05)
+            self._restart_in = int(5/0.02)
         else:
             self._restart_in -= 1
 
@@ -196,7 +196,7 @@ class UVC_Source(Base_Source):
             self._restart_logic()
         except (AttributeError, uvc.InitError):
             self._recent_frame = None
-            time.sleep(0.05)
+            time.sleep(0.02)
             self._restart_logic()
         else:
             self._recent_frame = frame
