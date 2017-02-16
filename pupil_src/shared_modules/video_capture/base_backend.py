@@ -100,7 +100,7 @@ class Base_Source(Plugin):
             gl_utils.glFlush()
         gl_utils.make_coord_system_norm_based()
         self.g_pool.image_tex.draw()
-        if self._recent_frame is None:
+        if not self.online:
             cygl.utils.draw_gl_texture(np.zeros((1,1,3),dtype=np.uint8),alpha=0.4)
         gl_utils.make_coord_system_pixel_based((self.frame_size[1],self.frame_size[0],3))
 
