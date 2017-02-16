@@ -76,6 +76,9 @@ elif platform.system() == 'Linux':
     # libstdc++ is also not meant to travel with the bundle. Otherwise nvideo opengl drivers will fail to load.
     binaries = [b for b in binaries if not "libstdc++.so" in b[0]]
 
+    # required for 14.04 16.04 interoperability.
+    binaries = [b for b in binaries if not "libgomp.so.1" in b[0]]
+
 
     coll = COLLECT(exe,
                    binaries,
