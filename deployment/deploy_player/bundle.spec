@@ -69,20 +69,18 @@ elif platform.system() == 'Linux':
               upx=True,
               console=True)
 
-    # any libX file should be taken from distro else not protable between Ubuntu 12.04 and 14.04
-    binaries = [b for b in a.binaries if not "libX" in b[0] and not "libxcb" in b[0]]
+
     # libc is also not meant to travel with the bundle. Otherwise pyre.helpers with segfault.
-    binaries = [b for b in binaries if not "libc.so" in b[0]]
+    binaries = [b for b in a.binaries if not "libc.so" in b[0]]
 
     # libstdc++ is also not meant to travel with the bundle. Otherwise nvideo opengl drivers will fail to load.
     binaries = [b for b in binaries if not "libstdc++.so" in b[0]]
-    binaries = [b for b in binaries if not "libtasn1.so" in b[0]]
 
     coll = COLLECT(exe,
                    binaries,
                    a.zipfiles,
                    a.datas,
-                   [('libglfw.so', '/usr/lib/x86_64-linux-gnu/libglfw.so','BINARY')],
+                   [('libglfw.so', '/usr/local/lib/libglfw.so','BINARY')],
                    [('libGLEW.so', '/usr/lib/x86_64-linux-gnu/libGLEW.so','BINARY')],
                    [('OpenSans-Regular.ttf',ui.get_opensans_font_path(),'DATA')],
                    [('Roboto-Regular.ttf',ui.get_roboto_font_path(),'DATA')],
