@@ -25,7 +25,7 @@ class Frame(object):
     """docstring of Frame"""
     def __init__(self, timestamp,img,index):
         self.timestamp = timestamp
-        self.img = img
+        self._img = img
         self.bgr = img
         self.height,self.width,_ = img.shape
         self._gray = None
@@ -35,9 +35,13 @@ class Frame(object):
         self.jpeg_buffer = None
 
     @property
+    def img(self):
+        return self._img
+
+    @property
     def gray(self):
         if self._gray is None:
-            self._gray = cv2.cvtColor(self.img,cv2.COLOR_BGR2GRAY)
+            self._gray = cv2.cvtColor(self._img,cv2.COLOR_BGR2GRAY)
         return self._gray
     @gray.setter
     def gray(self, value):
@@ -70,7 +74,7 @@ class Fake_Source(Base_Source):
 
     def cleanup(self):
         self.info_text = None
-        self.img = None
+        self._img = None
         self.preferred_source = None
         super().cleanup()
 
@@ -80,8 +84,8 @@ class Fake_Source(Base_Source):
         # coarse[:,:,1] /=5
         # coarse[:,:,2] *=0
         # coarse[:,:,1] /=30
-        # self.img = np.ones((size[1],size[0],3),dtype=np.uint8)
-        self.img = cv2.resize(coarse,size,interpolation=cv2.INTER_LANCZOS4)
+        # self._img = np.ones((size[1],size[0],3),dtype=np.uint8)
+        self._img = cv2.resize(coarse,size,interpolation=cv2.INTER_LANCZOS4)
 
     def recent_events(self,events):
         now = time()
@@ -91,7 +95,7 @@ class Fake_Source(Base_Source):
         self.presentation_time = time()
         self.frame_count +=1
         timestamp = self.g_pool.get_timestamp()
-        frame = Frame(timestamp,self.img.copy(),self.frame_count)
+        frame = Frame(timestamp,self._img.copy(),self.frame_count)
         cv2.putText(frame.img, "Fake Source Frame %s"%self.frame_count,(20,20), cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,100,100))
         events['frame'] = frame
         self._recent_frame = frame
@@ -111,7 +115,7 @@ class Fake_Source(Base_Source):
 
     @property
     def frame_size(self):
-        return self.img.shape[1],self.img.shape[0]
+        return self._img.shape[1],self._img.shape[0]
     @frame_size.setter
     def frame_size(self,new_size):
         #closest match for size
