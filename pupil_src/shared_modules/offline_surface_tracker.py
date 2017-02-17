@@ -16,11 +16,11 @@ import numpy as np
 import csv
 
 #threading and processing
-from multiprocessing import get_context, cpu_count
 if platform.system() == 'Darwin':
-    mp_ctx = get_context('spawn')
+    from multiprocessing import get_context
+    mp = get_context('spawn')
 else:
-    mp_ctx = get_context()
+    import multiprocessing as mp
 
 from ctypes import c_bool
 
@@ -267,10 +267,10 @@ class Offline_Surface_Tracker(Surface_Tracker):
         visited_list = [False if x == False else True for x in self.cache]
         video_file_path =  self.g_pool.capture.source_path
         timestamps = self.g_pool.capture.timestamps
-        self.cache_queue = mp_ctx.Queue()
-        self.cacher_seek_idx = mp_ctx.Value('i',0)
-        self.cacher_run = mp_ctx.Value(c_bool,True)
-        self.cacher = mp_ctx.Process(target=fill_cache, args=(visited_list,video_file_path,timestamps,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter_cacher))
+        self.cache_queue = mp.Queue()
+        self.cacher_seek_idx = mp.Value('i',0)
+        self.cacher_run = mp.Value(c_bool,True)
+        self.cacher = mp.Process(target=fill_cache, args=(visited_list,video_file_path,timestamps,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter_cacher))
         self.cacher.start()
 
     def update_marker_cache(self):
