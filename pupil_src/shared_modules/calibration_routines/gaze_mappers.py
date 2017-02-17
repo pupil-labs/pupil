@@ -217,7 +217,6 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
         self.gaze_pts_debug = []
         self.sphere = {}
         self.gaze_distance = gaze_distance
-        self.visualizer.open_window()
 
 
     def toWorld(self, p):
@@ -318,7 +317,6 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
                                                 eye_camera_to_world_matrix1=  self.eye_camera_to_world_matricies[1],
                                                 cal_gaze_points1_3d =  cal_gaze_points1_3d)
         self.g_pool = g_pool
-        self.visualizer.open_window()
         self.gaze_pts_debug0 = []
         self.gaze_pts_debug1 = []
         self.intersection_points_debug = []
