@@ -77,6 +77,8 @@ class Pupil_Remote(Plugin):
         self.thread_pipe = zhelper.zthread_fork(self.context, self.thread_loop)
 
         self.use_primary_interface = use_primary_interface
+        assert type(host) == str
+        assert type(port) == str
         self.host = host
         self.port = port
 
