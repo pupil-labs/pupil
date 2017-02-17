@@ -220,7 +220,7 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
                 # id_confidence = 2*np.mean (np.abs(np.array(soft_msg)-.5 ))
                 id_confidence = 2* min(np.abs(np.array(soft_msg)-.5 ))
 
-                marker = {'id':msg,'id_confidence':id_confidence,'verts':r,'soft_id':soft_msg,'perimeter':cv2.arcLength(r,closed=True),'centroid':centroid,"frames_since_true_detection":0}
+                marker = {'id':msg,'id_confidence':id_confidence,'verts':r.tolist(),'soft_id':soft_msg,'perimeter':cv2.arcLength(r,closed=True),'centroid':centroid.tolist(),"frames_since_true_detection":0}
                 if visualize:
                     marker['otsu'] = np.rot90(otsu,-angle-2).transpose()
                     marker['img'] = cv2.resize(msg_img,(20*grid_size,20*grid_size),interpolation=cv2.INTER_NEAREST)
@@ -232,15 +232,15 @@ def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visual
 
 def draw_markers(img,markers):
     for m in markers:
-        centroid = [m['verts'].sum(axis=0)/4.]
-        origin = m['verts'][0]
+        centroid = np.array(m['centroid'],dtype=np.float32)
+        origin = np.array(m['verts'][0],dtype=np.float32)
         hat = np.array([[[0,0],[0,1],[.5,1.25],[1,1],[1,0]]],dtype=np.float32)
         hat = cv2.perspectiveTransform(hat,m_marker_to_screen(m))
         if m['id_confidence']>.9:
             cv2.polylines(img,np.int0(hat),color = (0,0,255),isClosed=True)
         else:
             cv2.polylines(img,np.int0(hat),color = (0,255,0),isClosed=True)
-        cv2.polylines(img,np.int0(centroid),color = (255,255,int(255*m['id_confidence'])),isClosed=True,thickness=2)
+        # cv2.polylines(img,np.int0(centroid),color = (255,255,int(255*m['id_confidence'])),isClosed=True,thickness=2)
         m_str = 'id: {:d}'.format(m['id'])
         org = origin.copy()
         # cv2.rectangle(img, tuple(np.int0(org+(-5,-13))[0,:]), tuple(np.int0(org+(100,30))[0,:]),color=(0,0,0),thickness=-1)
@@ -273,7 +273,7 @@ def m_marker_to_screen(marker):
     # |0,0     1,0|  |
     # +-----------+
     mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
-    return cv2.getPerspectiveTransform(mapped_space_one,marker['verts'])
+    return cv2.getPerspectiveTransform(mapped_space_one,np.array(marker['verts'],dtype=np.float32))
 
 
 def m_screen_to_marker(marker):
@@ -286,7 +286,7 @@ def m_screen_to_marker(marker):
     # |0,0     1,0|  |
     # +-----------+
     mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32)
-    return cv2.getPerspectiveTransform(marker['verts'],mapped_space_one)
+    return cv2.getPerspectiveTransform(np.array(marker['verts'],dtype=np.float32),mapped_space_one)
 
 
 
@@ -322,7 +322,7 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
         #any old markers not found in the new list?
         not_found = [m for m in prev_markers if m['id'] not in new_ids and m['id'] >=0]
         if not_found:
-            prev_pts = np.array([m['verts'] for m in not_found])
+            prev_pts = np.array([np.array(m['verts'],dtype=np.float32) for m in not_found])
             prev_pts = np.vstack(prev_pts)
             new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(
                 prev_img, gray_img, prev_pts, None,
@@ -348,9 +348,10 @@ def detect_markers_robust(gray_img,grid_size,prev_markers,min_marker_perimeter=4
                         mean_dif = vert_difs[closest_mean_dif].mean(axis=0)
                         # apply mean dif
                         proj_verts = prev_pts[m_slc] + mean_dif
-                        m['verts'] = new_verts
+                        m['verts'] = new_verts.tolist()
                         m['centroid'] = new_verts.sum(axis=0)/4.
                         m['centroid'].shape = (2)
+                        m['centroid'] = m['centroid'].tolist()
                         m["frames_since_true_detection"] +=1
                         # m['opf_vel'] = mean_dif
                 else:

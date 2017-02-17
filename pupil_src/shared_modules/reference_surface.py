@@ -148,7 +148,7 @@ class Reference_Surface(object):
         all_verts = [m['verts'] for m in visible_markers if m['perimeter']>=min_marker_perimeter]
         if not all_verts:
             return
-        all_verts = np.array(all_verts)
+        all_verts = np.array(all_verts,dtype=np.float32)
         all_verts.shape = (-1,1,2) # [vert,vert,vert,vert,vert...] with vert = [[r,c]]
         # all_verts_undistorted_normalized centered in img center flipped in y and range [-1,1]
         all_verts_undistorted_normalized = cv2.undistortPoints(all_verts, camera_calibration['camera_matrix'],camera_calibration['dist_coefs']*self.use_distortion)
