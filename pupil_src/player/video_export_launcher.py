@@ -12,27 +12,29 @@ See COPYING and COPYING.LESSER for license details.
 from plugin import Plugin
 import numpy as np
 import os,sys
-from platform import system
+import platform
 import time
 from pyglui import ui
 import logging
 logger = logging.getLogger(__name__)
 
-from ctypes import c_bool, c_int,create_string_buffer
+from ctypes import c_bool, c_int
 
 #threading and processing
-from multiprocessing import Process, cpu_count, set_start_method
-from multiprocessing.sharedctypes import Value
-
+from multiprocessing import get_context, cpu_count
+if platform.system() == 'Darwin':
+    mp_ctx = get_context('spawn')
+else:
+    mp_ctx = get_context()
+Value = mp_ctx.Value
 
 from exporter import export
 
-class Export_Process(Process):
+class Export_Process(mp_ctx.Process):
     """small aditions to the process class"""
     def __init__(self, target,args):
         super().__init__(target=target,args=args)
         self.should_terminate,self.frames_to_export,self.current_frame,_,_,_,_,_,_,self.out_file_path = args
-
     def status(self):
         return self.current_frame.value
     def cancel(self):
