@@ -214,7 +214,10 @@ class Offline_Surface_Tracker(Surface_Tracker):
         for s in self.surfaces:
             s.cache = None
 
-    def update(self,frame,events):
+    def recent_events(self,events):
+        frame = events.get('frame')
+        if not frame:
+            return
         self.img_shape = frame.img.shape
         self.update_marker_cache()
         # self.markers = [m for m in self.cache[frame.index] if m['perimeter'>=self.min_marker_perimeter]
