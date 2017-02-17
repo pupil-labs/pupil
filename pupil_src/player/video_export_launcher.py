@@ -21,16 +21,19 @@ logger = logging.getLogger(__name__)
 from ctypes import c_bool, c_int
 
 #threading and processing
-from multiprocessing import get_context, cpu_count
 if platform.system() == 'Darwin':
-    mp_ctx = get_context('spawn')
+    from multiprocessing import get_context
+    mp = get_context('spawn')
+    Value = mp.Value
+    cpu_count = mp.cpu_count
 else:
-    mp_ctx = get_context()
-Value = mp_ctx.Value
+    import multiprocessing as mp
+    from multiprocessing import Value, cpu_count
+
 
 from exporter import export
 
-class Export_Process(mp_ctx.Process):
+class Export_Process(mp.Process):
     """small aditions to the process class"""
     def __init__(self, target,args):
         super().__init__(target=target,args=args)
@@ -129,9 +132,9 @@ class Video_Export_Launcher(Plugin):
 
     def add_export(self,export_range,export_dir):
         logger.debug("Adding new video export process.")
-        should_terminate = Value(c_bool,False)
-        frames_to_export  = Value(c_int,0)
-        current_frame = Value(c_int,0)
+        should_terminate = mp.Value(c_bool,False)
+        frames_to_export  = mp.Value(c_int,0)
+        current_frame = mp.Value(c_int,0)
 
         rec_dir = self.g_pool.rec_dir
         user_dir = self.g_pool.user_dir
