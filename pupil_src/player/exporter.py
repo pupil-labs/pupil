@@ -153,7 +153,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
         except EndofVideoFileError:
             break
 
-        events = {}
+        events = {'frame':frame}
         # new positons and events
         events['gaze_positions'] = g_pool.gaze_positions_by_frame[frame.index]
         events['pupil_positions'] = g_pool.pupil_positions_by_frame[frame.index]
@@ -173,7 +173,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
-            p.update(frame, events)
+            p.recent_events(events)
 
         writer.write_video_frame(frame)
         current_frame.value += 1
