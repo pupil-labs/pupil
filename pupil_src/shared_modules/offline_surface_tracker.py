@@ -10,22 +10,28 @@ See COPYING and COPYING.LESSER for license details.
 '''
 
 import sys, os
-from platform import system
+import platform
 import cv2
 import numpy as np
 import csv
 
-from multiprocessing import Process, Queue, set_start_method
-def forking_enable(_):
-    set_start_method('spawn')
-from multiprocessing.sharedctypes import Value
+#threading and processing
+from multiprocessing import get_context, cpu_count
+if platform.system() == 'Darwin':
+    mp_ctx = get_context('spawn')
+else:
+    mp_ctx = get_context()
+Process = mp_ctx.Process
+Queue = mp_ctx.Queue
+Value = mp_ctx.Value
+
 from ctypes import c_bool
 
 
 from itertools import chain
 from OpenGL.GL import *
-from methods import normalize,denormalize
-from file_methods import Persistent_Dict,save_object
+from methods import normalize, denormalize
+from file_methods import Persistent_Dict, save_object
 from cache_list import Cache_List
 from glfw import *
 from pyglui import ui
@@ -260,9 +266,6 @@ class Offline_Surface_Tracker(Surface_Tracker):
 
 
     def init_marker_cacher(self):
-        if system() == 'Darwin':
-            forking_enable(0)
-
         from marker_detector_cacher import fill_cache
         visited_list = [False if x == False else True for x in self.cache]
         video_file_path =  self.g_pool.capture.source_path
