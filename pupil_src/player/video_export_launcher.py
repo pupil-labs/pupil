@@ -171,5 +171,9 @@ class Video_Export_Launcher(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
-
-
+        for e in self.exports:
+            e.cancel()
+            e.join(1.0)
+            if e.is_alive():
+                logger.error("Export unresponsive - terminating.")
+                e.terminate()
