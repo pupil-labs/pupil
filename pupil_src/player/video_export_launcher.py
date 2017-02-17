@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 from ctypes import c_bool, c_int
 
 #threading and processing
-if platform.system() == 'Darwin':
+if platform.system() in ('Darwin','Linux'):
     from multiprocessing import get_context
-    mp = get_context('spawn')
+    mp = get_context('forkserver')
     Value = mp.Value
     cpu_count = mp.cpu_count
 else:
