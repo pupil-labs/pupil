@@ -291,7 +291,10 @@ class Offline_Surface_Tracker(Surface_Tracker):
     def close_marker_cacher(self):
         self.update_marker_cache()
         self.cacher_run.value = False
-        self.cacher.join()
+        self.cacher.join(1.0)
+        if self.cacher.is_alive():
+            logger.error("Marker cacher unresponsive - terminating.")
+            self.cacher.terminate()
 
     def gl_display(self):
         """
