@@ -72,9 +72,12 @@ if __name__ == '__main__':
     # print load_object('test')
     # settings = Persistent_Dict('~/Desktop/pupil_settings/user_settings_eye')
     # print settings['roi']
+
+
+    # example. Write out pupil data into csv file.
     l = load_object('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_data')
     import csv
-    with open(os.path.join('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_postions.csv'), 'wb') as csvfile:
+    with open(os.path.join('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_postions.csv'), 'w') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',')
         csv_writer.writerow(('timestamp',
                              'id',
@@ -88,7 +91,7 @@ if __name__ == '__main__':
                              'ellipse_axis_a',
                              'ellipse_axis_b',
                              'ellipse_angle'))
-        for p in l:
+        for p in l['pupil_positions']:
             data_2d = [str(p['timestamp']),  # use str to be consitant with csv lib.
                        p['id'],
                        p['confidence'],
@@ -107,3 +110,4 @@ if __name__ == '__main__':
 
             row = data_2d + ellipse_data
             csv_writer.writerow(row)
+
