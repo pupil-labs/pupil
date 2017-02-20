@@ -345,6 +345,7 @@ class Recorder(Plugin):
                     'World Camera Frames': self.frame_count,
                     'World Camera Resolution': str(self.g_pool.capture.frame_size[0])+"x"+str(self.g_pool.capture.frame_size[1]),
                     'Capture Software Version': self.g_pool.version,
+                    'Data Format Version': self.g_pool.version,
                     'System Info': get_system_info()
                 }, append=True)
         except Exception:

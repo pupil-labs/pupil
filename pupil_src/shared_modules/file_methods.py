@@ -48,18 +48,19 @@ class Persistent_Dict(dict):
 def load_object(file_path):
     file_path = os.path.expanduser(file_path)
     # reading to string and loads is 2.5x faster that using the file handle and load.
+    with open(file_path, 'rb') as fh:
+        data = fh.read()
     try:
-        with open(file_path, 'rb') as fh:
-            return pickle.load(fh, encoding='bytes')
+        return pickle.loads(data, encoding='bytes')
     except pickle.UnpicklingError as e:
         raise ValueError from e
 
 
 def save_object(object_, file_path):
+    data = pickle.dumps(object_, -1)
     file_path = os.path.expanduser(file_path)
     with open(file_path, 'wb') as fh:
-        pickle.dump(object_, fh, -1)
-
+        fh.write(data)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
