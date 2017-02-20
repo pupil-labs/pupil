@@ -146,7 +146,7 @@ class Vis_Eye_Video_Overlay(Plugin):
         self.drag_offset = [None,None]
 
         # load eye videos and eye timestamps
-        if g_pool.rec_version < VersionFormat('0.4'):
+        if VersionFormat(self.g_pool.meta_info['Capture Software Version'][1:]) < VersionFormat('0.4'):
             eye_video_path = os.path.join(g_pool.rec_dir,'eye.avi'),'None'
             eye_timestamps_path = os.path.join(g_pool.rec_dir,'eye_timestamps.npy'),'None'
         else:
