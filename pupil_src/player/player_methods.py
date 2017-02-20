@@ -74,7 +74,6 @@ def update_recording_to_recent(rec_dir):
     if rec_version < VersionFormat('0.8.7'):
         update_recording_bytes_to_unicode(rec_dir)
 
-
     if rec_version >= VersionFormat('0.7.4'):
         pass
     elif rec_version >= VersionFormat('0.7.3'):
