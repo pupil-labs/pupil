@@ -69,6 +69,10 @@ def load_camera_calibration(g_pool):
     if g_pool.app == 'capture':
         try:
             camera_calibration = load_object(os.path.join(g_pool.user_dir,'camera_calibration'))
+            camera_calibration['camera_name']
+        except KeyError:
+            camera_calibration = None
+            logger.warning('Invalid or Deprecated camera calibration found. Please recalibrate camera.')
         except:
             camera_calibration = None
         else:
