@@ -72,7 +72,7 @@ def load_camera_calibration(g_pool):
             camera_calibration['camera_name']
         except KeyError:
             camera_calibration = None
-            logger.warning('Deprecated camera calibration format. Ignoring {}.'.format(os.path.join(g_pool.user_dir, 'camera_calibration')))
+            logger.warning('Invalid or Deprecated camera calibration found. Please recalibrate camera.')
         except:
             camera_calibration = None
         else:
