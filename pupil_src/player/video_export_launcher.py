@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 from ctypes import c_bool, c_int
 
 #threading and processing
-if platform.system() in ('Darwin','Linux'):
+if platform.system() in ('Darwin'):
     from multiprocessing import get_context
     mp = get_context('forkserver')
     Value = mp.Value

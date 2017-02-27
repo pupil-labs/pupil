@@ -16,9 +16,9 @@ import numpy as np
 import csv
 
 #threading and processing
-if platform.system() == 'Darwin':
+if platform.system() in ('Darwin'):
     from multiprocessing import get_context
-    mp = get_context('spawn') #forkserver works as well. Not sure what would be faster.
+    mp = get_context('forkserver')
 else:
     import multiprocessing as mp
 
