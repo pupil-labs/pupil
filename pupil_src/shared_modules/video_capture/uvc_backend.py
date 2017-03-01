@@ -12,11 +12,11 @@ See COPYING and COPYING.LESSER for license details.
 import time
 import logging
 import uvc
-
+from version_utils import VersionFormat
 from .base_backend import InitialisationError, Base_Source, Base_Manager
 
 # check versions for our own depedencies as they are fast-changing
-assert uvc.__version__ >= '0.91'
+assert VersionFormat(uvc.__version__) >= VersionFormat('0.10')
 
 # logging
 logger = logging.getLogger(__name__)
