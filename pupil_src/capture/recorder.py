@@ -187,7 +187,10 @@ class Recorder(Plugin):
         """
         # notification wants to be recorded
         if notification.get('record', False) and self.running:
-            self.data['notifications'].append(notification)
+            if 'timestamp' not in notification:
+                logger.error("Notification without timestamp will not be saved.")
+            else:
+                self.data['notifications'].append(notification)
         elif notification['subject'] == 'recording.should_start':
             if self.running:
                 logger.info('Recording already running!')
@@ -326,11 +329,6 @@ class Recorder(Plugin):
                   os.path.join(self.rec_path, "surface_definitions"))
         except:
             logger.info("No surface_definitions data found. You may want this if you do marker tracking.")
-        try:
-            copy2(os.path.join(self.g_pool.user_dir, "user_calibration_data"),
-                  os.path.join(self.rec_path, "user_calibration_data"))
-        except:
-            logger.warning("No user calibration data found. Please calibrate first.")
 
         camera_calibration = load_camera_calibration(self.g_pool)
         if camera_calibration is not None:
