@@ -72,7 +72,7 @@ def update_recording_to_recent(rec_dir):
     rec_version = read_rec_version(meta_info)
 
     # Convert python2 to python3
-    if rec_version < VersionFormat('0.8.7'):
+    if rec_version <= VersionFormat('0.8.7'):
         update_recording_bytes_to_unicode(rec_dir)
 
     if rec_version >= VersionFormat('0.7.4'):
@@ -201,9 +201,6 @@ def update_recording_v087_to_v091(rec_dir):
 def update_recording_bytes_to_unicode(rec_dir):
     logger.info("Updating recording from bytes to unicode.")
 
-    # update to python 3
-    meta_info_path = os.path.join(rec_dir, "info.csv")
-
     def convert(data):
         if isinstance(data, bytes):
             return data.decode()
@@ -217,7 +214,7 @@ def update_recording_bytes_to_unicode(rec_dir):
             return data
 
     for file in os.listdir(rec_dir):
-        if file.startswith('.') or os.path.splitext(file)[1] == '.mp4':
+        if file.startswith('.') or os.path.splitext(file)[1] in ('.mp4', '.avi'):
             continue
         rec_file = os.path.join(rec_dir, file)
         try:
@@ -225,13 +222,14 @@ def update_recording_bytes_to_unicode(rec_dir):
             converted_object = convert(rec_object)
             if converted_object != rec_object:
                 logger.info('Converted `{}` from bytes to unicode'.format(file))
-                save_object(rec_object, rec_file)
+                save_object(converted_object, rec_file)
         except (ValueError, IsADirectoryError):
             continue
 
+    # manually convert k v dicts.
+    meta_info_path = os.path.join(rec_dir, "info.csv")
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-
     with open(meta_info_path, 'w', newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile, meta_info)
 
