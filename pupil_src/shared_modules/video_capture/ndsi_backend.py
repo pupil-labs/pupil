@@ -386,7 +386,7 @@ class NDSI_Manager(Base_Manager):
             labels=src_sel_labels,
             getter=lambda: None,
             setter=activate,
-            label='Activate source'
+            label='Source'
         ))
 
         self.g_pool.capture_selector_menu.extend(ui_elements)
