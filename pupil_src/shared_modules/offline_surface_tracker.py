@@ -57,33 +57,39 @@ class Offline_Surface_Tracker(Surface_Tracker):
     """
 
     def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False,robust_detection=True):
-        super().__init__(g_pool,mode,min_marker_perimeter,robust_detection)
+        super().__init__(g_pool,mode,min_marker_perimeter,invert_image,robust_detection,)
         self.order = .2
-
+        self.marker_cache_version = 2
+        self.min_marker_perimeter_cacher = 20  #find even super small markers. The surface locater will filter using min_marker_perimeter
         if g_pool.app == 'capture':
            raise Exception('For Player only.')
 
-        self.marker_cache_version = 2
-        self.min_marker_perimeter_cacher = 20  #find even super small markers. The surface locater will filter using min_marker_perimeter
+        self.load_marker_cache()
+        self.init_marker_cacher()
+        for s in self.surfaces:
+            s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
+        self.recalculate()
+
+
+    def load_marker_cache(self):
         #check if marker cache is available from last session
-        self.persistent_cache = Persistent_Dict(os.path.join(g_pool.rec_dir,'square_marker_cache'))
+        self.persistent_cache = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'square_marker_cache'))
         version = self.persistent_cache.get('version',0)
         cache = self.persistent_cache.get('marker_cache',None)
         if cache is None:
-            self.cache = Cache_List([False for _ in g_pool.timestamps])
+            self.cache = Cache_List([False for _ in self.g_pool.timestamps])
             self.persistent_cache['version'] = self.marker_cache_version
         elif version != self.marker_cache_version:
             self.persistent_cache['version'] = self.marker_cache_version
-            self.cache = Cache_List([False for _ in g_pool.timestamps])
+            self.cache = Cache_List([False for _ in self.g_pool.timestamps])
             logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
         else:
             self.cache = Cache_List(cache)
             logger.debug("Loaded marker cache {} / {} frames had been searched before".format(len(self.cache)-self.cache.count(False),len(self.cache)) )
 
-        self.init_marker_cacher()
-        for s in self.surfaces:
-            s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
-        self.recalculate()
+    def clear_marker_cache(self):
+        self.cache = Cache_List([False for _ in self.g_pool.timestamps])
+        self.persistent_cache['version'] = self.marker_cache_version
 
     def load_surface_definitions_from_file(self):
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.rec_dir,'surface_definitions'))
@@ -123,8 +129,14 @@ class Offline_Surface_Tracker(Surface_Tracker):
             self.min_marker_perimeter = val
             self.notify_all({'subject':'min_marker_perimeter_changed','delay':1})
 
+        def set_invert_image(val):
+            self.invert_image = val
+            self.invalidate_marker_cache()
+            self.invalidate_surface_caches()
+
         self.menu.elements[:] = []
         self.menu.append(ui.Button('Close',close))
+        self.menu.append(ui.Switch('invert_image',self,setter=set_invert_image,label='Use inverted markers'))
         self.menu.append(ui.Slider('min_marker_perimeter',self,min=20,max=500,step=1,setter=set_min_marker_perimeter))
         self.menu.append(ui.Info_Text('The offline surface tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Info_Text("Press the export button or type 'e' to start the export."))
@@ -264,6 +276,10 @@ class Offline_Surface_Tracker(Surface_Tracker):
             if s.window_should_open:
                 s.open_window()
 
+    def invalidate_marker_cache(self):
+        self.close_marker_cacher()
+        self.clear_marker_cache()
+        self.init_marker_cacher()
 
     def init_marker_cacher(self):
         from marker_detector_cacher import fill_cache
@@ -273,7 +289,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
         self.cache_queue = mp.Queue()
         self.cacher_seek_idx = mp.Value('i',0)
         self.cacher_run = mp.Value(c_bool,True)
-        self.cacher = mp.Process(target=fill_cache, args=(visited_list,video_file_path,timestamps,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter_cacher))
+        self.cacher = mp.Process(target=fill_cache, args=(visited_list,video_file_path,timestamps,self.cache_queue,self.cacher_seek_idx,self.cacher_run,self.min_marker_perimeter_cacher,self.invert_image))
         self.cacher.start()
 
     def update_marker_cache(self):
