@@ -69,7 +69,14 @@ class Surface_Tracker(Plugin):
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.user_dir,'surface_definitions') )
         self.surfaces = [Reference_Surface(saved_definition=d) for d in  self.surface_definitions.get('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
 
+    def save_surface_definitions_to_file(self):
+        self.surface_definitions["realtime_square_marker_surfaces"] = [rs.save_to_dict() for rs in self.surfaces if rs.defined]
+        self.surface_definitions.save()
 
+    def on_notify(self,notification):
+        if notification['subject'] == 'surfaces_changed':
+            logger.info('Surfaces changed. Saving to file.')
+            self.save_surface_definitions_to_file()
     def on_click(self,pos,button,action):
         if self.mode == 'Show Markers and Surfaces':
             if action == GLFW_PRESS:
@@ -87,6 +94,9 @@ class Surface_Tracker(Plugin):
                             self.marker_edit_surface = s
 
             if action == GLFW_RELEASE:
+                if self.edit_surf_verts:
+                    #if we had draged a vertex lets let other know the surfaces changed.
+                    self.notify_all({'subject':'surfaces_changed','delay':2})
                 self.edit_surf_verts = []
 
             elif action == GLFW_PRESS:
@@ -107,8 +117,10 @@ class Surface_Tracker(Plugin):
                             if sqrt((x-vx)**2 + (y-vy)**2) <15:
                                 if m['id'] in self.marker_edit_surface.markers:
                                     self.marker_edit_surface.remove_marker(m)
+                                    self.notify_all({'subject':'surfaces_changed','delay':1})
                                 else:
                                     self.marker_edit_surface.add_marker(m,self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
+                                    self.notify_all({'subject':'surfaces_changed','delay':1})
 
     def add_surface(self,_):
         self.surfaces.append(Reference_Surface())
@@ -232,6 +244,10 @@ class Surface_Tracker(Plugin):
 
 
 
+
+
+
+
     def get_init_dict(self):
         return {'mode':self.mode,'min_marker_perimeter':self.min_marker_perimeter,'invert_image':self.invert_image,'robust_detection':self.robust_detection}
 
@@ -283,8 +299,7 @@ class Surface_Tracker(Plugin):
         This happens either voluntarily or forced.
         if you have a GUI or glfw window destroy it here.
         """
-        self.surface_definitions["realtime_square_marker_surfaces"] = [rs.save_to_dict() for rs in self.surfaces if rs.defined]
-        self.surface_definitions.close()
+        self.save_surface_definitions_to_file()
 
         for s in self.surfaces:
             s.cleanup()
