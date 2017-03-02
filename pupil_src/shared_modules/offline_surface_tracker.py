@@ -263,7 +263,7 @@ class Offline_Surface_Tracker(Surface_Tracker):
             else:
                 # update srf with no or invald cache:
                 for s in self.surfaces:
-                    if s.cache == None and s not in [s for s,i in self.edit_surf_verts]:
+                    if s.cache == None:
                         s.init_cache(self.cache,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
                         self.notify_all({'subject':'surfaces_changed','delay':1})
 
