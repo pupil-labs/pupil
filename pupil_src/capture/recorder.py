@@ -19,7 +19,7 @@ from plugin import Plugin
 from time import strftime, localtime, time, gmtime
 from shutil import copy2
 from audio import Audio_Input_Dict
-from file_methods import save_object
+from file_methods import save_object, load_object
 from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
@@ -260,6 +260,15 @@ class Recorder(Plugin):
         else:
             self.video_path = os.path.join(self.rec_path, "world.mp4")
             self.writer = AV_Writer(self.video_path, fps=self.g_pool.capture.frame_rate)
+
+        try:
+            cal_pt_path = os.path.join(self.g_pool.user_dir, "user_calibration_data")
+            cal_data = load_object(cal_pt_path)
+            notification = {'subject': 'calibration.calibration_data', 'record': True}
+            notification.update(cal_data)
+            self.data['notifications'].append(notification)
+        except:
+            pass
 
         if self.show_info_menu:
             self.open_info_menu()
