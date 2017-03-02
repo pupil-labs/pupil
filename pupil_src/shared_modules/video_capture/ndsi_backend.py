@@ -179,6 +179,15 @@ class NDSI_Source(Base_Source):
 
     @property
     def frame_rate(self):
+        if self.online:
+            # FIXME: Hacky way to calculate frame rate. Depends on control option's caption
+            fr_ctrl = self.sensor.controls.get('CAM_FRAME_RATE_CONTROL')
+            if fr_ctrl:
+                current_fr = fr_ctrl.get('value')
+                map_ = {mapping['value']: mapping['caption'] for mapping in fr_ctrl.get('map', [])}
+                current_fr_cap = map_[current_fr].replace('Hz', '').strip()
+                return float(current_fr_cap)
+
         return self._frame_rate
 
     @property
