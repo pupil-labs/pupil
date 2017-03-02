@@ -109,7 +109,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         from file_methods import Persistent_Dict
         from version_utils import VersionFormat
         from methods import normalize, denormalize, timer
-        from av_writer import JPEG_Writer, AV_Writer
+        from av_writer import JPEG_Writer, AV_Writer, H264_Writer
         from video_capture import source_classes
         from video_capture import manager_classes
 
@@ -438,11 +438,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                         raw_mode = notification['compression']
                         logger.info("Will save eye video to: {}".format(record_path))
                         timestamps_path = os.path.join(record_path, "eye{}_timestamps.npy".format(eye_id))
+                        video_path = os.path.join(record_path, "eye{}.mp4".format(eye_id))
                         if raw_mode and frame and g_pool.capture.jpeg_support:
-                            video_path = os.path.join(record_path, "eye{}.mp4".format(eye_id))
                             g_pool.writer = JPEG_Writer(video_path, g_pool.capture.frame_rate)
+                        elif raw_mode and hasattr(g_pool.capture._recent_frame, 'h264_buffer'):
+                            g_pool.writer = H264_Writer(video_path, g_pool.capture.frame_rate)
                         else:
-                            video_path = os.path.join(record_path, "eye{}.mp4".format(eye_id))
                             g_pool.writer = AV_Writer(video_path, g_pool.capture.frame_rate)
                         timestamps = []
                 elif subject == 'recording.stopped':

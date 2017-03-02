@@ -16,7 +16,7 @@ import ndsi
 
 from .base_backend import Base_Source, Base_Manager
 
-assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.15'
+assert ndsi.NDS_PROTOCOL_VERSION >= '0.2.16'
 logger = logging.getLogger(__name__)
 
 

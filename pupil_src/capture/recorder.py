@@ -21,7 +21,7 @@ from shutil import copy2
 from audio import Audio_Input_Dict
 from file_methods import save_object
 from methods import get_system_info
-from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
+from av_writer import JPEG_Writer, AV_Writer, H264_Writer, Audio_Capture
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 # logging
 import logging
@@ -251,11 +251,12 @@ class Recorder(Plugin):
         else:
             self.audio_writer = None
 
+        self.video_path = os.path.join(self.rec_path, "world.mp4")
         if self.raw_jpeg and self.g_pool.capture.jpeg_support:
-            self.video_path = os.path.join(self.rec_path, "world.mp4")
             self.writer = JPEG_Writer(self.video_path, self.g_pool.capture.frame_rate)
+        elif self.raw_jpeg and hasattr(self.g_pool.capture._recent_frame, 'h264_buffer'):
+            self.writer = H264_Writer(self.video_path, self.g_pool.capture.frame_rate)
         else:
-            self.video_path = os.path.join(self.rec_path, "world.mp4")
             self.writer = AV_Writer(self.video_path, fps=self.g_pool.capture.frame_rate)
 
         if self.show_info_menu:

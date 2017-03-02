@@ -220,6 +220,58 @@ class JPEG_Writer(object):
         self.close()
 
 
+class H264_Writer(object):
+    def __init__(self, file_loc, fps=30):
+        super().__init__()
+        # the approximate capture rate.
+        self.fps = int(fps)
+        self.time_base = Fraction(1000, self.fps*1000)
+        file_loc = str(file_loc)  #force str over unicode.
+        try:
+            file_path, ext = file_loc.rsplit('.', 1)
+        except:
+            logger.error("'{}' is not a valid media file name.".format(file_loc))
+            raise Exception("Error")
+
+        if ext not in ('mp4'):
+            logger.warning("media file container should be mp4. Using a different container is risky.")
+
+        self.file_loc = file_loc
+        self.container = av.open(self.file_loc, 'w')
+        logger.debug("Opened '{}' for writing.".format(self.file_loc))
+
+        self.video_stream = self.container.add_stream('h264', 1/self.time_base)
+        # self.video_stream.pix_fmt = "yuv422p"
+        self.configured = False
+        self.frame_count = 0
+
+        self.write_video_frame_compressed = self.write_video_frame
+
+    def write_video_frame(self, input_frame):
+        if not self.configured:
+            self.video_stream.height = input_frame.height
+            self.video_stream.width = input_frame.width
+            self.configured = True
+
+        packet = Packet()
+        packet.payload = input_frame.h264_buffer
+        # we are setting the packet pts manually this uses a different timebase av.frame!
+        packet.dts = int(self.frame_count/self.video_stream.time_base/self.fps)
+        packet.pts = int(self.frame_count/self.video_stream.time_base/self.fps)
+        self.frame_count += 1
+        self.container.mux(packet)
+
+    def close(self):
+        try:
+            self.container.close()
+        except(RuntimeError):
+            logger.error("Media file does not contain any frames.")
+        logger.debug("Closed media container")
+
+    def release(self):
+        self.close()
+
+
 def format_time(time, time_base):
         if time is None:
             return 'None'
@@ -348,8 +400,6 @@ def mac_pyav_hack():
 
 #     cap.close()
 #     writer.close()
-
-
 
 
 if __name__ == '__main__':
