@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 '''
 
+import sys
 import logging
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ def build_cpp_extension():
     os.chdir(src_loc)
     logger.info('Building extention modules...')
     build_cmd = "{} setup.py install --install-lib={}"
-    ret = sp.check_output(build_cmd.format(sys.executable, install_loc), shell=True).decode()
+    ret = sp.check_output(build_cmd.format(sys.executable, install_loc), shell=True).decode(sys.stdout.encoding)
     logger.debug('Build log:\n{}'.format(ret))
     os.chdir(cwd)
 
