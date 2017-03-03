@@ -44,7 +44,7 @@ if os_name == "Linux":
     ffmpeg_bin = "avconv"
     arecord_bin = 'arecord'
 
-    if 'Ubuntu' in platform.linux_distribution():
+    if platform.linux_distribution()[0] in ('Ubuntu', 'debian'):
         def beep():
             if 'sound' in audio_mode:
                 try:
