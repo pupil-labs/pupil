@@ -168,7 +168,8 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
         logger.info("Reclassifying fixations.")
         gaze_data = list(chain(*self.g_pool.gaze_positions_by_frame))
 
-        sample_threshold = self.min_duration * 3 *.3 #lets assume we need data for at least 30% of the duration
+        # lets assume we need data for at least 30% of the duration
+        sample_threshold = self.min_duration * self.g_pool.capture.frame_rate * .33
         dispersion_threshold = self.max_dispersion
         duration_threshold = self.min_duration
         self.notify_all({'subject':'fixations_changed'})
@@ -196,8 +197,8 @@ class Gaze_Position_2D_Fixation_Detector(Offline_Base_Fixation_Detector):
                 if fixation_support:
                     duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
                     if duration > duration_threshold and len(fixation_support) > sample_threshold:
-                        #long enough for fixation: we classifiy this fixation candidate as fixation
-                        #calculate character of fixation
+                        # long enough for fixation: we classifiy this fixation candidate as fixation
+                        # calculate character of fixation
                         fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
                         dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
                         confidence = sum(g['confidence'] for g in fixation_support)/len(fixation_support)
