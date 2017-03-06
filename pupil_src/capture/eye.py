@@ -381,7 +381,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         glfw.glfwSetScrollCallback(main_window, on_scroll)
 
         # set the last saved window size
-        on_resize(main_window, *glfw.glfwGetWindowSize(main_window))
+        on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
         # load last gui configuration
         g_pool.gui.configuration = session_settings.get('ui_config', {})
