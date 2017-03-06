@@ -148,13 +148,7 @@ class Recorder(Plugin):
         self.menu.append(ui.Selector('raw_jpeg', self, selection=[True, False], labels=["bigger file, less CPU", "smaller file, more CPU"], label='Compression'))
         self.menu.append(ui.Info_Text('Recording the raw eye video is optional. We use it for debugging.'))
         self.menu.append(ui.Switch('record_eye', self, on_val=True, off_val=False, label='Record eye'))
-
-        def audio_dev_getter():
-            # fetch list of currently available
-            self.audio_devices_dict = Audio_Input_Dict()
-            devices = list(self.audio_devices_dict.keys())
-            return devices, devices
-        self.menu.append(ui.Selector('audio_src', self, selection_getter=audio_dev_getter, label='Audio Source'))
+        self.menu.append(ui.Selector('audio_src', self, selection=list(self.audio_devices_dict.keys()), label='Audio Source'))
 
         self.button = ui.Thumb('running', self, setter=self.toggle, label='R', hotkey='r')
         self.button.on_color[:] = (1, .0, .0, .8)
