@@ -175,10 +175,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # Callback functions
     def on_resize(window, w, h):
         if gl_utils.is_window_visible(window):
-            hdpi_factor = glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0]
+            print('>wld>', w,h)
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
-            graph.adjust_size(w*hdpi_factor, h*hdpi_factor)
+            graph.adjust_size(w, h)
             gl_utils.adjust_gl_view(w, h)
             for p in g_pool.plugins:
                 p.on_window_resize(window, w, h)
