@@ -86,7 +86,7 @@ if os_name == "Linux":
             super().__init__()
             self['No Audio'] = -1
             try:
-                ret = sp.check_output([arecord_bin,"-l"]).decode()
+                ret = sp.check_output([arecord_bin,"-l"]).decode(sys.stdout.encoding)
             except OSError:
                 logger.warning("Could not enumerate audio input devices. Calling arecord failed.")
                 return
