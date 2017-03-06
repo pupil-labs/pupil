@@ -149,10 +149,11 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         # Callback functions
         def on_resize(window, w, h):
             if is_window_visible(window):
+                hdpi_factor = glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0]
                 active_window = glfw.glfwGetCurrentContext()
                 glfw.glfwMakeContextCurrent(window)
                 g_pool.gui.update_window(w, h)
-                graph.adjust_size(w, h)
+                graph.adjust_size(w*hdpi_factor, h*hdpi_factor)
                 adjust_gl_view(w, h)
                 glfw.glfwMakeContextCurrent(active_window)
 
