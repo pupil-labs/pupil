@@ -155,7 +155,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                 g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
                 g_pool.gui.update_window(w, h)
                 g_pool.gui.collect_menus()
-                graph.adjust_size(w, h)
+                for g in g_pool.graphs:
+                    g.scale = hdpi_factor
+                    g.adjust_size(w, h)
                 adjust_gl_view(w, h)
                 glfw.glfwMakeContextCurrent(active_window)
 
@@ -303,11 +305,9 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                                            size=(0, 0),
                                            header_pos='left')
         general_settings = ui.Growing_Menu('General')
-        general_settings.append(ui.Slider('gui_user_scale', g_pool,
+        general_settings.append(ui.Selector('gui_user_scale', g_pool,
                                           setter=set_scale,
-                                          step=.05,
-                                          min=.5,
-                                          max=1.5,
+                                          selection=[0.5, 0.75, 1., 1.5, 2.],
                                           label='Interface Size'))
         general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,*g_pool.capture.frame_size)) )
         general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
@@ -382,9 +382,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         glfw.glfwSetCursorPosCallback(main_window, on_pos)
         glfw.glfwSetScrollCallback(main_window, on_scroll)
 
-        # set the last saved window size
-        on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
-
         # load last gui configuration
         g_pool.gui.configuration = session_settings.get('ui_config', {})
 
@@ -403,6 +400,10 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         fps_graph.pos = (140, 130)
         fps_graph.update_rate = 5
         fps_graph.label = "%0.0f FPS"
+        g_pool.graphs = [cpu_graph, fps_graph]
+
+        # set the last saved window size
+        on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
         should_publish_frames = False
         frame_publish_format = 'jpeg'
@@ -570,7 +571,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                                             sharpness=1.)
 
                     # render graphs
-                    graph.push_view()
+                    graph.push_view(*glfw.glfwGetFramebufferSize(main_window))
                     fps_graph.draw()
                     cpu_graph.draw()
                     graph.pop_view()

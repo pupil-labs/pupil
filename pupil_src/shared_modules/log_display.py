@@ -15,6 +15,7 @@ from glfw import glfwGetFramebufferSize,glfwGetCurrentContext
 import zmq_tools
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
+import glfw
 
 from time import time
 
@@ -70,11 +71,14 @@ class Log_Display(Plugin):
         self.rendered_log.append(record)
         self.alpha += duration_from_level(record.levelname) + len(str(record.msg))/100.
         self.rendered_log = self.rendered_log[-10:]
-        self.alpha = min(self.alpha,6.)
+        self.alpha = min(self.alpha, 6.)
 
-    def on_window_resize(self,window,w,h):
-        self.window_size = w,h
+    def on_window_resize(self, window, w, h):
+        self.window_scale = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+        self.glfont.set_size(32*self.window_scale)
+        self.window_size = w, h
         self.tex.resize(*self.window_size)
+        self.should_redraw = True
 
     def recent_events(self,events):
         if self._socket and self._socket.new_data:
@@ -96,7 +100,7 @@ class Log_Display(Plugin):
                 self.glfont.set_blur(0.96)
                 self.glfont.set_color_float(color_from_level(record.levelname))
                 self.glfont.draw_limited_text(self.window_size[0]/2.,y,str(record.processName.upper())+': '+str(record.msg),self.window_size[0]*0.8)
-                y +=lineh
+                y += lineh
             pop_ortho()
             self.tex.pop()
             self.should_redraw = False

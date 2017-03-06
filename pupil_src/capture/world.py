@@ -73,7 +73,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # display
     import glfw
     from pyglui import ui, graph, cygl, __version__ as pyglui_version
-    assert pyglui_version >= '1.2'
+    assert pyglui_version >= '1.3'
     from pyglui.cygl.utils import Named_Texture
     import gl_utils
 
@@ -179,7 +179,9 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
-            graph.adjust_size(w, h)
+            for g in g_pool.graphs:
+                g.scale = hdpi_factor
+                g.adjust_size(w, h)
             gl_utils.adjust_gl_view(w, h)
             for p in g_pool.plugins:
                 p.on_window_resize(window, w, h)
@@ -300,7 +302,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
     g_pool.sidebar = ui.Scrolling_Menu("Settings", pos=(-350, 0), size=(0, 0), header_pos='left')
     general_settings = ui.Growing_Menu('General')
-    general_settings.append(ui.Slider('gui_user_scale', g_pool, setter=set_scale, step=.05, min=.5, max=1.5, label='Interface size'))
+    general_settings.append(ui.Selector('gui_user_scale', g_pool, setter=set_scale, selection=[0.5, 0.75, 1., 1.5, 2.], label='Interface size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0],g_pool.capture.frame_size[1])) )
     general_settings.append(ui.Selector('audio_mode',audio,selection=audio.audio_modes))
     general_settings.append(ui.Selector('detection_mapping_mode',
@@ -383,12 +385,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     gl_utils.basic_gl_setup()
     g_pool.image_tex = Named_Texture()
 
-    # trigger setup of window and gl sizes
-    on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
-
     # now the we have  aproper window we can load the last gui configuration
     g_pool.gui.configuration = session_settings.get('ui_config', {})
-
 
     # create a timer to control window update frequency
     window_update_timer = timer(1 / 60)
@@ -420,6 +418,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     pupil1_graph.update_rate = 5
     pupil1_graph.label = "id1 conf: %0.2f"
     pupil_graphs = pupil0_graph, pupil1_graph
+    g_pool.graphs = [cpu_graph, fps_graph, pupil0_graph, pupil1_graph]
+
+    # trigger setup of window and gl sizes
+    on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
     if session_settings.get('eye1_process_alive', False):
         launch_eye_process(1, delay=0.6)
@@ -486,12 +488,12 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             g_pool.capture.gl_display()
             for p in g_pool.plugins:
                 p.gl_display()
-            graph.push_view()
-            fps_graph.draw()
-            cpu_graph.draw()
-            pupil0_graph.draw()
-            pupil1_graph.draw()
+
+            graph.push_view(*glfw.glfwGetFramebufferSize(main_window))
+            for g in g_pool.graphs:
+                g.draw()
             graph.pop_view()
+
             g_pool.gui.update()
             glfw.glfwSwapBuffers(main_window)
         glfw.glfwPollEvents()
