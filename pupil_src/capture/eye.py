@@ -149,10 +149,12 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         # Callback functions
         def on_resize(window, w, h):
             if is_window_visible(window):
-                print('>eye>', w,h)
                 active_window = glfw.glfwGetCurrentContext()
                 glfw.glfwMakeContextCurrent(window)
+                hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+                g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
                 g_pool.gui.update_window(w, h)
+                g_pool.gui.collect_menus()
                 graph.adjust_size(w, h)
                 adjust_gl_view(w, h)
                 glfw.glfwMakeContextCurrent(active_window)
@@ -262,11 +264,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         g_pool.pupil_detector = last_pupil_detector(
             g_pool, pupil_detector_settings)
 
-        # UI callback functions
-        def set_scale(new_scale):
-            g_pool.gui.scale = new_scale
-            g_pool.gui.collect_menus()
-
         def set_display_mode_info(val):
             g_pool.display_mode = val
             g_pool.display_mode_info.text = g_pool.display_mode_info_text[val]
@@ -282,12 +279,16 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         width, height = session_settings.get(
             'window_size', g_pool.capture.frame_size)
         main_window = glfw.glfwCreateWindow(width, height, title, None, None)
-        hdpi_factor = float(glfw.glfwGetFramebufferSize(main_window)[0] / glfw.glfwGetWindowSize(main_window)[0])
         window_pos = session_settings.get(
             'window_position', window_position_default)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
         glfw.glfwMakeContextCurrent(main_window)
         cygl.utils.init()
+
+        # UI callback functions
+        def set_scale(new_scale):
+            g_pool.gui_user_scale = new_scale
+            on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
         # gl_state settings
         basic_gl_setup()
@@ -296,7 +297,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         # setup GUI
         g_pool.gui = ui.UI()
-        g_pool.gui.scale = session_settings.get('gui_scale', hdpi_factor)
         g_pool.sidebar = ui.Scrolling_Menu("Settings",
                                            pos=(-300, 0),
                                            size=(0, 0),
@@ -382,7 +382,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         glfw.glfwSetScrollCallback(main_window, on_scroll)
 
         # set the last saved window size
-        on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
+        # on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
+        set_scale(session_settings.get('gui_scale', 1))
 
         # load last gui configuration
         g_pool.gui.configuration = session_settings.get('ui_config', {})
@@ -598,7 +599,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
         # save session persistent settings
-        session_settings['gui_scale'] = g_pool.gui.scale
+        session_settings['gui_scale'] = g_pool.gui_user_scale
         session_settings['roi'] = g_pool.u_r.get()
         session_settings['flip'] = g_pool.flip
         session_settings['display_mode'] = g_pool.display_mode

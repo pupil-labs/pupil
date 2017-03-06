@@ -175,7 +175,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # Callback functions
     def on_resize(window, w, h):
         if gl_utils.is_window_visible(window):
-            print('>wld>', w,h)
+            hdpi_factor = float(glfw.glfwGetFramebufferSize(window)[0] / glfw.glfwGetWindowSize(window)[0])
+            g_pool.gui.scale = g_pool.gui_user_scale * hdpi_factor
             g_pool.gui.update_window(w, h)
             g_pool.gui.collect_menus()
             graph.adjust_size(w, h)
@@ -234,10 +235,6 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             return
         g_pool.plugins.add(plugin)
 
-    def set_scale(new_scale):
-        g_pool.gui.scale = new_scale
-        g_pool.gui.collect_menus()
-
     def launch_eye_process(eye_id, delay=0):
         n = {'subject': 'eye_process.should_start.{}'.format(eye_id),
              'eye_id': eye_id, 'delay': delay}
@@ -288,16 +285,18 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     glfw.glfwInit()
     width, height = session_settings.get('window_size', (1280, 720))
     main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
-    hdpi_factor = float(glfw.glfwGetFramebufferSize(main_window)[0] / glfw.glfwGetWindowSize(main_window)[0])
     window_pos = session_settings.get('window_position', window_position_default)
     glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
     glfw.glfwMakeContextCurrent(main_window)
     cygl.utils.init()
     g_pool.main_window = main_window
 
+    def set_scale(new_scale):
+        g_pool.gui_user_scale = new_scale
+        on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
+
     # setup GUI
     g_pool.gui = ui.UI()
-    g_pool.gui.scale = session_settings.get('gui_scale', hdpi_factor)
     g_pool.sidebar = ui.Scrolling_Menu("Settings", pos=(-350, 0), size=(0, 0), header_pos='left')
     general_settings = ui.Growing_Menu('General')
     general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface size'))
@@ -384,7 +383,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.image_tex = Named_Texture()
 
     # trigger setup of window and gl sizes
-    on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
+    # on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
+    set_scale(session_settings.get('gui_scale', 1))
 
     # now the we have  aproper window we can load the last gui configuration
     g_pool.gui.configuration = session_settings.get('ui_config', {})
@@ -498,7 +498,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
     session_settings['loaded_plugins'] = g_pool.plugins.get_initializers()
-    session_settings['gui_scale'] = g_pool.gui.scale
+    session_settings['gui_scale'] = g_pool.gui_user_scale
     session_settings['ui_config'] = g_pool.gui.configuration
     session_settings['window_size'] = glfw.glfwGetWindowSize(main_window)
     session_settings['window_position'] = glfw.glfwGetWindowPos(main_window)
