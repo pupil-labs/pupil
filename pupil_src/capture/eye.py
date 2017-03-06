@@ -282,6 +282,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         width, height = session_settings.get(
             'window_size', g_pool.capture.frame_size)
         main_window = glfw.glfwCreateWindow(width, height, title, None, None)
+        hdpi_factor = float(glfw.glfwGetFramebufferSize(main_window)[0] / glfw.glfwGetWindowSize(main_window)[0])
         window_pos = session_settings.get(
             'window_position', window_position_default)
         glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
@@ -295,7 +296,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         # setup GUI
         g_pool.gui = ui.UI()
-        g_pool.gui.scale = session_settings.get('gui_scale', 1)
+        g_pool.gui.scale = session_settings.get('gui_scale', hdpi_factor)
         g_pool.sidebar = ui.Scrolling_Menu("Settings",
                                            pos=(-300, 0),
                                            size=(0, 0),

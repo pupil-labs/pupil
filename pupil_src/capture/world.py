@@ -288,6 +288,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     glfw.glfwInit()
     width, height = session_settings.get('window_size', (1280, 720))
     main_window = glfw.glfwCreateWindow(width, height, "Pupil Capture - World")
+    hdpi_factor = float(glfw.glfwGetFramebufferSize(main_window)[0] / glfw.glfwGetWindowSize(main_window)[0])
     window_pos = session_settings.get('window_position', window_position_default)
     glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
     glfw.glfwMakeContextCurrent(main_window)
@@ -296,7 +297,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # setup GUI
     g_pool.gui = ui.UI()
-    g_pool.gui.scale = session_settings.get('gui_scale', 1)
+    g_pool.gui.scale = session_settings.get('gui_scale', hdpi_factor)
     g_pool.sidebar = ui.Scrolling_Menu("Settings", pos=(-350, 0), size=(0, 0), header_pos='left')
     general_settings = ui.Growing_Menu('General')
     general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface size'))
