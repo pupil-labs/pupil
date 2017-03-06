@@ -297,9 +297,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # setup GUI
     g_pool.gui = ui.UI()
+    g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
     g_pool.sidebar = ui.Scrolling_Menu("Settings", pos=(-350, 0), size=(0, 0), header_pos='left')
     general_settings = ui.Growing_Menu('General')
-    general_settings.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=1.,max=2.5,label='Interface size'))
+    general_settings.append(ui.Slider('gui_user_scale', g_pool, setter=set_scale, step=.05, min=.5, max=1.5, label='Interface size'))
     general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,g_pool.capture.frame_size[0],g_pool.capture.frame_size[1])) )
     general_settings.append(ui.Selector('audio_mode',audio,selection=audio.audio_modes))
     general_settings.append(ui.Selector('detection_mapping_mode',
@@ -383,8 +384,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.image_tex = Named_Texture()
 
     # trigger setup of window and gl sizes
-    # on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
-    set_scale(session_settings.get('gui_scale', 1))
+    on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
     # now the we have  aproper window we can load the last gui configuration
     g_pool.gui.configuration = session_settings.get('ui_config', {})

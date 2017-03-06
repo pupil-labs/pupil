@@ -297,17 +297,18 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
 
         # setup GUI
         g_pool.gui = ui.UI()
+        g_pool.gui_user_scale = session_settings.get('gui_scale', 1.)
         g_pool.sidebar = ui.Scrolling_Menu("Settings",
                                            pos=(-300, 0),
                                            size=(0, 0),
                                            header_pos='left')
         general_settings = ui.Growing_Menu('General')
-        general_settings.append(ui.Slider(  'scale',g_pool.gui,
-                                            setter=set_scale,
-                                            step = .05,
-                                            min=1.,
-                                            max=2.5,
-                                            label='Interface Size'))
+        general_settings.append(ui.Slider('gui_user_scale', g_pool,
+                                          setter=set_scale,
+                                          step=.05,
+                                          min=.5,
+                                          max=1.5,
+                                          label='Interface Size'))
         general_settings.append(ui.Button('Reset window size',lambda: glfw.glfwSetWindowSize(main_window,*g_pool.capture.frame_size)) )
         general_settings.append(ui.Switch('flip',g_pool,label='Flip image display'))
         general_settings.append(ui.Selector('display_mode',
@@ -382,8 +383,7 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         glfw.glfwSetScrollCallback(main_window, on_scroll)
 
         # set the last saved window size
-        # on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
-        set_scale(session_settings.get('gui_scale', 1))
+        on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
 
         # load last gui configuration
         g_pool.gui.configuration = session_settings.get('ui_config', {})
