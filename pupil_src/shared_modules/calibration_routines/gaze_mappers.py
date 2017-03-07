@@ -24,11 +24,11 @@ from multiprocessing import Process as Thread
 from . visualizer_calibration import Calibration_Visualizer
 
 def _clamp_norm_point(pos):
-    '''realisitic numbers for norm pos should be in this range.
+    '''realistic numbers for norm pos should be in this range.
         Grossly bigger or smaller numbers are results bad exrapolation
         and can cause overflow erorr when denormalized and cast as int32.
     '''
-    return min(100,max(-100,pos[0])),min(100,max(-100,pos[1]))
+    return min(100.,max(-100.,pos[0])),min(100.,max(-100.,pos[1]))
 
 class Gaze_Mapping_Plugin(Plugin):
     '''base class for all gaze mapping routines'''
