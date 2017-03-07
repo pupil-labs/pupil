@@ -28,7 +28,7 @@ def _clamp_norm_point(pos):
         Grossly bigger or smaller numbers are results bad exrapolation
         and can cause overflow erorr when denormalized and cast as int32.
     '''
-    return min(100,max(-100,pos[0])),min(100,max(-100,pos[1]))
+    return min(100.,max(-100.,pos[0])),min(100.,max(-100.,pos[1]))
 
 class Gaze_Mapping_Plugin(Plugin):
     '''base class for all gaze mapping routines'''
