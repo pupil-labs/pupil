@@ -112,6 +112,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     from video_capture import source_classes, manager_classes
     from pupil_data_relay import Pupil_Data_Relay
     from remote_recorder import Remote_Recorder
+    from audio_capture import Audio_Capture
 
     # UI Platform tweaks
     if platform.system() == 'Linux':
@@ -145,9 +146,9 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
 
     # manage plugins
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
-    user_launchable_plugins = [Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
-                               Annotation_Capture, Log_History, Fixation_Detector_3D, Blink_Detection,
-                               Remote_Recorder] + runtime_plugins
+    user_launchable_plugins = [Audio_Capture, Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync,
+                               Surface_Tracker, Annotation_Capture, Log_History, Fixation_Detector_3D,
+                               Blink_Detection, Remote_Recorder] + runtime_plugins
     system_plugins = [Log_Display, Display_Recent_Gaze, Recorder, Pupil_Data_Relay]
     plugin_by_index = (system_plugins + user_launchable_plugins + calibration_plugins
                        + gaze_mapping_plugins + manager_classes + source_classes)
@@ -471,8 +472,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
         del events['pupil_positions']  # already on the wire
         del events['gaze_positions']  # sent earlier
         if 'frame' in events:
-            del events['frame']  #send explicity with frame publisher
-        del events['dt']  #no need to send this
+            del events['frame']  # send explicity with frame publisher
+        if 'audio_packets' in events:
+            del events['audio_packets']
+        del events['dt']  # no need to send this
         for topic, data in events.items():
             assert(isinstance(data, (list, tuple)))
             for d in data:

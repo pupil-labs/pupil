@@ -317,15 +317,6 @@ class Audio_Capture(object):
         if self.thread:
             self.stop()
 
-
-def mac_pyav_hack():
-    if platform.system() == "Darwin":
-        try:
-            av.open(':0',format="avfoundation")
-        except:
-            pass
-
-
 # def test():
 
 #     import os
