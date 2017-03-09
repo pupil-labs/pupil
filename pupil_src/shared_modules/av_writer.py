@@ -17,7 +17,7 @@ requires:
 import os,sys,platform
 import av
 from av.packet import Packet
-av.logging.set_level(av.logging.ERROR)
+av.logging.set_level(av.logging.DEBUG)
 
 import numpy as np
 from time import time
@@ -58,32 +58,52 @@ The streamtimebase uses the codec timebase as a hint to find a good value.
 The stream timebase in influenced by the contraints/rules of the container as well.
 Only when the header  of the stream is written stream.time_base is garanteed
 to be valid and should only now be accesed.
-
-
-
-
-
 """
 
-class AV_Writer(object):
+
+class Audio_Writer(object):
+    '''
+    Mixin class to mixin audio packet into an existing container
+    '''
+    def write_audio_packet(self, packet):
+        # Test if audio outstream has been initialized
+        if not hasattr(self, 'audio_out_stream'):
+            try:
+                self.audio_out_stream = self.container.add_stream(template=packet.stream)
+            except ValueError:
+                # packet.stream codec is not supported in target container.
+                self.audio_out_stream = self.container.add_stream('aac')
+
+        for frame in packet.decode():
+            print('# Samples:', frame.samples)
+            # TODO set PTS correctly
+
+            # encode(frame) could result in multiple packets
+            # flush encoder to avoid accumulating buffers
+            output_packets = [self.audio_out_stream.encode(frame)]
+            while output_packets[-1]:
+                output_packets.append(self.audio_out_stream.encode(None))
+            for out in output_packets:
+                self.container.mux(out)
+
+
+class AV_Writer(Audio_Writer):
     """
     AV_Writer class
         - file_loc: path to file out
         - video_stream:
-        - audio_stream:
-
 
     We are creating a
     """
 
-    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 15000*10e3}, audio_stream=None,use_timestamps=False):
+    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 15000*10e3}, use_timestamps=False):
         super().__init__()
         self.use_timestamps = use_timestamps
         # the approximate capture rate.
         self.fps = int(fps)
-        file_loc = str(file_loc) #force str over unicode.
+        file_loc = str(file_loc)  # force str over unicode.
         try:
-            file_path,ext = file_loc.rsplit('.', 1)
+            file_path, ext = file_loc.rsplit('.', 1)
         except:
             logger.error("'{}' is not a valid media file name.".format(file_loc))
             raise Exception("Error")
@@ -135,7 +155,7 @@ class AV_Writer(object):
             self.frame.planes[0].update(input_frame.img)
 
         if self.use_timestamps:
-            self.frame.pts = int( (input_frame.timestamp-self.start_time)/self.time_base )
+            self.frame.pts = int((input_frame.timestamp-self.start_time)/self.time_base)
         else:
             # our timebase is 1/30  so a frame idx is the correct pts for an fps recorded video.
             self.frame.pts = self.current_frame_idx
@@ -144,8 +164,6 @@ class AV_Writer(object):
         if packet:
             self.container.mux(packet)
         self.current_frame_idx +=1
-
-
 
     def close(self):
         # flush encoder
@@ -159,12 +177,11 @@ class AV_Writer(object):
         self.container.close()
         logger.debug("Closed media container")
 
-
     def release(self):
         self.close()
 
 
-class JPEG_Writer(object):
+class JPEG_Writer(Audio_Writer):
     """
     PyAV based jpeg writer.
     """
@@ -317,46 +334,20 @@ class Audio_Capture(object):
         if self.thread:
             self.stop()
 
-# def test():
-
-#     import os
-#     import cv2
-#     from video_capture import autoCreateCapture
-#     logging.basicConfig(level=logging.DEBUG)
-
-#     writer = AV_Writer(os.path.expanduser("~/Desktop/av_writer_out.mp4"))
-#     # writer = cv2.VideoWriter(os.path.expanduser("~/Desktop/av_writer_out.avi"),cv2.cv.CV_FOURCC(*"DIVX"),30,(1280,720))
-#     cap = autoCreateCapture(0,(1280,720))
-#     frame = cap.get_frame()
-#     # print writer.video_stream.time_base
-#     # print writer.
-
-#     for x in range(300):
-#         frame = cap.get_frame()
-#         writer.write_video_frame(frame)
-#         # writer.write(frame.img)
-#         # print writer.video_stream
-
-#     cap.close()
-#     writer.close()
-
-
-
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
 
-    cap = Audio_Capture('test.wav','default')
+    # cap = Audio_Capture('test.wav')
 
-    import time
-    time.sleep(5)
-    cap.cleanup()
-    #mic device
-    exit()
+    # import time
+    # time.sleep(5)
+    # cap.close()
+    # #mic device
+    # exit()
 
-
-    # container = av.open('hw:0',format="alsa")
-    container = av.open('1:0',format="avfoundation")
+    container = av.open('hw:0',format="alsa")
+    # container = av.open('1:0', format="avfoundation")
     print('container:', container)
     print('\tformat:', container.format)
     print('\tduration:', float(container.duration) / av.time_base)

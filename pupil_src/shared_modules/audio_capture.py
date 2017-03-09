@@ -88,7 +88,7 @@ class Audio_Capture(Plugin):
         self.running.clear()
         self.deinit_gui()
         if self.thread and self.thread.is_alive():
-            self.thread.join()
+            self.thread.join(timeout=1)
 
     def start_capture(self, audio_src):
 
@@ -98,7 +98,7 @@ class Audio_Capture(Plugin):
             # else stop current capture gracefully
             self.running.clear()
             logger.debug('Closing capture for "{}"'.format(self.audio_src))
-            self.thread.join()
+            self.thread.join(timeout=1)
             self.thread = None
         if audio_src not in self.audio_devices_dict:
             logger.warning('Selected audio source is not available anymore')

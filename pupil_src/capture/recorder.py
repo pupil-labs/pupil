@@ -301,6 +301,9 @@ class Recorder(Plugin):
                 self.writer.write_video_frame(frame)
                 self.frame_count += 1
 
+            for audio_packet in events.get('audio_packets', []):
+                self.writer.write_audio_packet(audio_packet)
+
             # # cv2.putText(frame.img, "Frame %s"%self.frame_count,(200,200), cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,100))
 
             self.button.status_text = self.get_rec_time_str()
