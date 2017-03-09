@@ -161,7 +161,7 @@ class HMD_Calibration(Calibration_Plugin):
         self.notify_all({'subject':'calibration.successful','method':method})
 
 
-    def update(self,frame,events):
+    def recent_events(self,events):
         if self.active:
             for p_pt in events['pupil_positions']:
                 if p_pt['confidence'] > self.pupil_confidence_threshold:
