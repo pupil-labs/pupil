@@ -3,7 +3,7 @@ Open source eye tracking software platform that started as a thesis project at M
 
 Our vision is to create tools for a diverse group of people interested in learning about eye tracking and conducting their eye tracking projects.
 
-Chat with on [Discord](https://discord.gg/gKmmGqy).
+Chat with us on [Discord](https://discord.gg/gKmmGqy).
 
 ## Project Website
 For an intro to the Pupil mobile eye tracking platform have a look at the [Pupil Labs Website](http://pupil-labs.com "Pupil Labs").
