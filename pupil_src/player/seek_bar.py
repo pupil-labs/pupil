@@ -53,14 +53,15 @@ class Seek_Bar(Plugin):
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
             x,_ = self.screen_to_seek_bar((x,y))
             seek_pos = min(self.frame_count,max(0,x))
-            if abs(seek_pos-self.current_frame_index) >=.002*self.frame_count:
-                seek_pos = int(min(seek_pos,self.frame_count-5)) #the last frames can be problematic to seek to
+            seek_pos = int(min(seek_pos,self.frame_count-5)) #the last frames can be problematic to seek to
+            if self.current_frame_index-1 != seek_pos:
                 try:
+                    # logger.info('seeking to {} form {}'.format(seek_pos,self.current_frame_index))
                     self.cap.seek_to_frame(seek_pos)
                     self.current_frame_index = self.cap.get_frame_index()
                 except:
                     pass
-                self.g_pool.new_seek = True
+            self.g_pool.new_seek = True
 
     def on_click(self,img_pos,button,action):
         """
