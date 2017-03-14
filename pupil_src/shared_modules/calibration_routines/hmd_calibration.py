@@ -20,7 +20,7 @@ from . calibration_plugin_base import Calibration_Plugin
 from . finish_calibration import not_enough_data_error_msg, solver_failed_to_converge_error_msg
 from . import calibrate
 from . gaze_mappers import Monocular_Gaze_Mapper, Dual_Monocular_Gaze_Mapper, Binocular_Vector_Gaze_Mapper
-from . camera_intrinsics_calibration import idealized_camera_calibration
+from . camera_intrinsics_estimation import idealized_camera_calibration
 from math_helper import *
 
 # logging
