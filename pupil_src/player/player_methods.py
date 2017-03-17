@@ -100,6 +100,8 @@ def update_recording_to_recent(rec_dir):
         update_recording_v086_to_v087(rec_dir)
     if rec_version < VersionFormat('0.9.1'):
         update_recording_v087_to_v091(rec_dir)
+    if rec_version < VersionFormat('0.9.3'):
+        update_recording_v091_to_v093(rec_dir)
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
     #    update_recording_v081_to_FUTURE(rec_dir)
@@ -172,7 +174,7 @@ def update_recording_v086_to_v087(rec_dir):
             Grossly bigger or smaller numbers are results bad exrapolation
             and can cause overflow erorr when denormalized and cast as int32.
         '''
-        return min(100,max(-100,pos[0])),min(100,max(-100,pos[1]))
+        return min(100.,max(-100.,pos[0])),min(100.,max(-100.,pos[1]))
 
     for g in pupil_data.get('gaze_positions', []):
         if 'topic' not in g:
@@ -197,6 +199,26 @@ def update_recording_v087_to_v091(rec_dir):
         meta_info['Data Format Version'] = 'v0.9.1'
 
     update_meta_info(rec_dir,meta_info)
+
+def update_recording_v091_to_v093(rec_dir):
+    logger.info("Updating recording from v0.9.1 format to v0.9.3 format")
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+
+
+    for g in pupil_data.get('gaze_positions', []):
+        # fixing recordings made with bug https://github.com/pupil-labs/pupil/issues/598
+        g['norm_pos'] = float(g['norm_pos'][0]), float(g['norm_pos'][1])
+
+    save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+
+
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v0.9.3'
+    update_meta_info(rec_dir,meta_info)
+
+
 
 def update_recording_bytes_to_unicode(rec_dir):
     logger.info("Updating recording from bytes to unicode.")
