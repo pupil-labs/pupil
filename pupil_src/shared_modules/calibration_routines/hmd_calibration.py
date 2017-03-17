@@ -367,8 +367,7 @@ class HMD_Calibration_3D(HMD_Calibration,Calibration_Plugin):
                                 'cal_points_3d': points,
                                 'cal_ref_points_3d': [],
                                 'cal_gaze_points0_3d': points_b,
-                                'cal_gaze_points1_3d': points_c,
-                                'z_scale': 1./s})
+                                'cal_gaze_points1_3d': points_c})
 
         method = 'binocular 3d model'
         ts = g_pool.get_timestamp()
