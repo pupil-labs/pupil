@@ -240,6 +240,7 @@ def session(rec_dir):
     pupil_data = load_object(pupil_data_path)
     pupil_list = pupil_data['pupil_positions']
     gaze_list = pupil_data['gaze_positions']
+    g_pool.pupil_data = pupil_data
     g_pool.binocular = meta_info.get('Eye Mode', 'monocular') == 'binocular'
     g_pool.version = app_version
     g_pool.capture = cap
