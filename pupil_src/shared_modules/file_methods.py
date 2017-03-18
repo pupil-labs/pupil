@@ -14,6 +14,7 @@ try:
 except ImportError:
     import pickle
 
+UnpicklingError = pickle.UnpicklingError
 import os
 import traceback as tb
 import logging
@@ -74,10 +75,11 @@ if __name__ == '__main__':
     from time import time
     t = time()
     l = load_object('/Users/mkassner/Downloads/data/pupil_data')
+    print(l['notifications'])
     print(t-time())
-    t = time()
-    save_object(l,'/Users/mkassner/Downloads/data/pupil_data2')
-    print(t-time())
+    # t = time()
+    # save_object(l,'/Users/mkassner/Downloads/data/pupil_data2')
+    # print(t-time())
     import csv
     with open(os.path.join('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_postions.csv'), 'w') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',')

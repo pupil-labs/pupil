@@ -16,7 +16,7 @@ import collections
 # logging
 import logging
 logger = logging.getLogger(__name__)
-from file_methods import save_object, load_object
+from file_methods import save_object, load_object, UnpicklingError
 from version_utils import VersionFormat
 from version_utils import read_rec_version
 
@@ -245,7 +245,7 @@ def update_recording_bytes_to_unicode(rec_dir):
             if converted_object != rec_object:
                 logger.info('Converted `{}` from bytes to unicode'.format(file))
                 save_object(converted_object, rec_file)
-        except (ValueError, IsADirectoryError):
+        except (UnpicklingError, IsADirectoryError):
             continue
 
     # manually convert k v dicts.
