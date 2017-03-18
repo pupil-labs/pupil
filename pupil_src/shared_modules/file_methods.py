@@ -47,20 +47,15 @@ class Persistent_Dict(dict):
 
 def load_object(file_path):
     file_path = os.path.expanduser(file_path)
-    # reading to string and loads is 2.5x faster that using the file handle and load.
     with open(file_path, 'rb') as fh:
-        data = fh.read()
-    try:
-        return pickle.loads(data, encoding='bytes')
-    except pickle.UnpicklingError as e:
-        raise ValueError from e
+        data = pickle.load(fh, encoding='bytes')
+    return data
 
 
 def save_object(object_, file_path):
-    data = pickle.dumps(object_, -1)
     file_path = os.path.expanduser(file_path)
     with open(file_path, 'wb') as fh:
-        fh.write(data)
+        pickle.dump(object_,fh, -1)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
@@ -76,7 +71,13 @@ if __name__ == '__main__':
 
 
     # example. Write out pupil data into csv file.
-    l = load_object('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_data')
+    from time import time
+    t = time()
+    l = load_object('/Users/mkassner/Downloads/data/pupil_data')
+    print(t-time())
+    t = time()
+    save_object(l,'/Users/mkassner/Downloads/data/pupil_data2')
+    print(t-time())
     import csv
     with open(os.path.join('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_postions.csv'), 'w') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',')
