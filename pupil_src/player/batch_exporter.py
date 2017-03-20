@@ -172,7 +172,7 @@ class Batch_Exporter(Plugin):
 
                 process = Export_Process(target=export, args=(should_terminate, frames_to_export, current_frame,
                                                               export_dir, user_dir, self.g_pool.min_data_confidence,
-                                                              start_frame, end_frame, plugins, out_file_path))
+                                                              start_frame, end_frame, plugins, out_file_path,None))
                 self.exports.append(process)
 
     def start(self):

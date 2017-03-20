@@ -327,7 +327,11 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             g_pool.active_calibration_plugin.notify_all({'subject':'calibration.failed','reason':not_enough_data_error_msg,'timestamp':g_pool.get_timestamp(),'record':True})
             return
 
-    user_calibration_data = {'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
+    ts = g_pool.get_timestamp()
+    g_pool.active_calibration_plugin.notify_all({'subject':'calibration.successful','method':method,'timestamp': ts, 'record':True})
+    g_pool.active_calibration_plugin.notify_all({'subject':'calibration.calibration_data','timestamp': ts, 'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method,'record':True})
+
+    #this is only used by show calibration. TODO: rewrite show calibraiton.
+    user_calibration_data = {'timestamp': ts,'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
     save_object(user_calibration_data,os.path.join(g_pool.user_dir, "user_calibration_data"))
-    g_pool.active_calibration_plugin.notify_all({'subject':'calibration.successful','method':method,'timestamp':g_pool.get_timestamp(),'record':True})
 

@@ -284,13 +284,15 @@ class File_Source(Base_Source):
 
     @ensure_initialisation()
     def seek_to_frame_fast(self, seek_pos):
-        ###best effort seeking to closest keyframe
-        self.video_stream.seek(self.idx_to_pts(seek_pos),mode='time')
-        self.next_frame = self._next_frame()
-        frame = self.next_frame.next()
-        index = self.pts_to_idx(frame.pts)
-        self.target_frame_idx = index+1
-        self.display_time = 0
+        ###frame accurate seeking
+        try:
+            self.video_stream.seek(self.idx_to_pts(seek_pos),mode='time', any_frame=True)
+        except av.AVError as e:
+            raise FileSeekError()
+        else:
+            self.next_frame = self._next_frame()
+            self.display_time = 0
+            self.target_frame_idx = seek_pos
 
 
     def init_gui(self):

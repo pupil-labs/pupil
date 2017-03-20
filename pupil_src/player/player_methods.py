@@ -16,7 +16,7 @@ import collections
 # logging
 import logging
 logger = logging.getLogger(__name__)
-from file_methods import save_object, load_object
+from file_methods import save_object, load_object, UnpicklingError
 from version_utils import VersionFormat
 from version_utils import read_rec_version
 
@@ -65,14 +65,15 @@ def correlate_data(data,timestamps):
 
 def update_recording_to_recent(rec_dir):
 
-    meta_info = load_meta_info(rec_dir, update=True)  # also updates info file
+    meta_info = load_meta_info(rec_dir)
+    update_meta_info(rec_dir,meta_info)
+
     # Reference format: v0.7.4
     rec_version = read_rec_version(meta_info)
 
     # Convert python2 to python3
-    if rec_version < VersionFormat('0.8.7'):
+    if rec_version <= VersionFormat('0.8.7'):
         update_recording_bytes_to_unicode(rec_dir)
-
 
     if rec_version >= VersionFormat('0.7.4'):
         pass
@@ -97,43 +98,24 @@ def update_recording_to_recent(rec_dir):
         update_recording_v083_to_v086(rec_dir)
     if rec_version < VersionFormat('0.8.7'):
         update_recording_v086_to_v087(rec_dir)
+    if rec_version < VersionFormat('0.9.1'):
+        update_recording_v087_to_v091(rec_dir)
+    if rec_version < VersionFormat('0.9.3'):
+        update_recording_v091_to_v093(rec_dir)
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
     #    update_recording_v081_to_FUTURE(rec_dir)
 
-def load_meta_info(rec_dir,update=False):
-    #parse info.csv file
-    try:
-        meta_info = read_meta_info_v081(rec_dir)
-    except IndexError:
-        meta_info = read_meta_info_legacy(rec_dir)
-        if update:
-            update_meta_info(rec_dir,meta_info)
-    return meta_info
 
-def read_meta_info_v081(rec_dir):
+def load_meta_info(rec_dir):
     meta_info_path = os.path.join(rec_dir,"info.csv")
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
     return meta_info
 
-def read_meta_info_legacy(rec_dir):
-    meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path,'r',encoding='utf-8') as info:
-        meta_info = dict( ((line.strip().split('\t')) for line in info.readlines()) )
-    return meta_info
-
 def update_meta_info(rec_dir, meta_info):
-    """Backup old meta info file. Write current format.
-
-    Args:
-        rec_dir (path): Recording folder
-        meta_info (dict): Meta info
-    """
     logger.info('Updating meta info')
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    meta_info_old_path = os.path.join(rec_dir,"info_old.csv")
-    shutil.copy2(meta_info_path,meta_info_old_path)
     with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
@@ -142,8 +124,7 @@ def update_recording_v074_to_v082(rec_dir):
     with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Data Format Version'] = 'v0.8.2'
-    with open(meta_info_path,'w',newline='') as csvfile:
-        csv_utils.write_key_value_file(csvfile,meta_info)
+    update_meta_info(rec_dir,meta_info)
 
 def update_recording_v082_to_v083(rec_dir):
     logger.info("Updating recording from v0.8.2 format to v0.8.3 format")
@@ -161,8 +142,7 @@ def update_recording_v082_to_v083(rec_dir):
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Data Format Version'] = 'v0.8.3'
 
-    with open(meta_info_path,'w',newline='') as csvfile:
-        csv_utils.write_key_value_file(csvfile,meta_info)
+    update_meta_info(rec_dir,meta_info)
 
 
 def update_recording_v083_to_v086(rec_dir):
@@ -180,8 +160,7 @@ def update_recording_v083_to_v086(rec_dir):
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Data Format Version'] = 'v0.8.6'
 
-    with open(meta_info_path,'w',newline='') as csvfile:
-        csv_utils.write_key_value_file(csvfile,meta_info)
+    update_meta_info(rec_dir,meta_info)
 
 
 def update_recording_v086_to_v087(rec_dir):
@@ -195,7 +174,7 @@ def update_recording_v086_to_v087(rec_dir):
             Grossly bigger or smaller numbers are results bad exrapolation
             and can cause overflow erorr when denormalized and cast as int32.
         '''
-        return min(100,max(-100,pos[0])),min(100,max(-100,pos[1]))
+        return min(100.,max(-100.,pos[0])),min(100.,max(-100.,pos[1]))
 
     for g in pupil_data.get('gaze_positions', []):
         if 'topic' not in g:
@@ -209,15 +188,40 @@ def update_recording_v086_to_v087(rec_dir):
         meta_info = csv_utils.read_key_value_file(csvfile)
         meta_info['Data Format Version'] = 'v0.8.7'
 
-    with open(meta_info_path,'w',newline='') as csvfile:
-        csv_utils.write_key_value_file(csvfile,meta_info)
+    update_meta_info(rec_dir,meta_info)
+
+def update_recording_v087_to_v091(rec_dir):
+    logger.info("Updating recording from v0.8.7 format to v0.9.1 format")
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v0.9.1'
+
+    update_meta_info(rec_dir,meta_info)
+
+def update_recording_v091_to_v093(rec_dir):
+    logger.info("Updating recording from v0.9.1 format to v0.9.3 format")
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
+
+
+    for g in pupil_data.get('gaze_positions', []):
+        # fixing recordings made with bug https://github.com/pupil-labs/pupil/issues/598
+        g['norm_pos'] = float(g['norm_pos'][0]), float(g['norm_pos'][1])
+
+    save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+
+
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v0.9.3'
+    update_meta_info(rec_dir,meta_info)
+
 
 
 def update_recording_bytes_to_unicode(rec_dir):
     logger.info("Updating recording from bytes to unicode.")
-
-    # update to python 3
-    meta_info_path = os.path.join(rec_dir, "info.csv")
 
     def convert(data):
         if isinstance(data, bytes):
@@ -232,7 +236,7 @@ def update_recording_bytes_to_unicode(rec_dir):
             return data
 
     for file in os.listdir(rec_dir):
-        if file.startswith('.') or os.path.splitext(file)[1] == '.mp4':
+        if file.startswith('.') or os.path.splitext(file)[1] in ('.mp4', '.avi'):
             continue
         rec_file = os.path.join(rec_dir, file)
         try:
@@ -240,13 +244,14 @@ def update_recording_bytes_to_unicode(rec_dir):
             converted_object = convert(rec_object)
             if converted_object != rec_object:
                 logger.info('Converted `{}` from bytes to unicode'.format(file))
-                save_object(rec_object, rec_file)
-        except (ValueError, IsADirectoryError):
+                save_object(converted_object, rec_file)
+        except (UnpicklingError, IsADirectoryError):
             continue
 
+    # manually convert k v dicts.
+    meta_info_path = os.path.join(rec_dir, "info.csv")
     with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-
     with open(meta_info_path, 'w', newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile, meta_info)
 

@@ -92,7 +92,7 @@ extensions = [
         libraries = libs,
         library_dirs = library_dirs,
         extra_link_args=[], #'-WL,-R/usr/local/lib'
-        extra_compile_args=["-D_USE_MATH_DEFINES", "-std=c++11",'-w'],#,'-O2'], #-w hides warnings
+        extra_compile_args=["-D_USE_MATH_DEFINES", "-std=c++11",'-w', '-O3'],#,'-O2'], #-w hides warnings
         extra_objects = xtra_obj2d,
         depends= dependencies,
         language="c++"),
@@ -103,19 +103,19 @@ extensions = [
         libraries = libs,
         library_dirs = library_dirs,
         extra_link_args=[], #'-WL,-R/usr/local/lib'
-        extra_compile_args=["-D_USE_MATH_DEFINES","-std=c++11",'-w'],#,'-O2'], #-w hides warnings
+        extra_compile_args=["-D_USE_MATH_DEFINES","-std=c++11",'-w','-O3'],#,'-O2'], #-w hides warnings
         extra_objects = xtra_obj2d,
         depends= dependencies,
         language="c++"),
 ]
 
-
-setup(
-    name="pupil_detectors",
-    version="0.1",
-    url="https://github.com/pupil-labs/pupil",
-    author='Pupil Labs',
-    author_email='info@pupil-labs.com',
-    license='GNU',
-    ext_modules=cythonize(extensions, quiet=True, nthreads=8)
+if __name__ == '__main__':
+    setup(
+        name="pupil_detectors",
+        version="0.1",
+        url="https://github.com/pupil-labs/pupil",
+        author='Pupil Labs',
+        author_email='info@pupil-labs.com',
+        license='GNU',
+        ext_modules=cythonize(extensions, quiet=True, nthreads=8)
 )

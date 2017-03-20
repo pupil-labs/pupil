@@ -49,7 +49,7 @@ class Global_Container(object):
 
 
 def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir, min_data_confidence,
-           start_frame=None, end_frame=None, plugin_initializers=(), out_file_path=None):
+           start_frame=None, end_frame=None, plugin_initializers=(), out_file_path=None,pupil_data=None):
 
     vis_plugins = sorted([Vis_Circle,Vis_Cross,Vis_Polyline,Vis_Light_Points,
         Vis_Watermark,Vis_Scan_Path,Vis_Eye_Video_Overlay], key=lambda x: x.__name__)
@@ -126,11 +126,11 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
     g_pool.timestamps = timestamps
     g_pool.delayed_notifications = {}
     g_pool.notifications = []
-
     # load pupil_positions, gaze_positions
-    pupil_data = load_object(pupil_data_path)
+    pupil_data = pupil_data or load_object(pupil_data_path)
     pupil_list = pupil_data['pupil_positions']
     gaze_list = pupil_data['gaze_positions']
+
     g_pool.pupil_positions_by_frame = correlate_data(pupil_list, g_pool.timestamps)
     g_pool.gaze_positions_by_frame = correlate_data(gaze_list, g_pool.timestamps)
     g_pool.fixations_by_frame = [[] for x in g_pool.timestamps]  # populated by the fixation detector plugin
@@ -153,7 +153,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
         except EndofVideoFileError:
             break
 
-        events = {}
+        events = {'frame':frame}
         # new positons and events
         events['gaze_positions'] = g_pool.gaze_positions_by_frame[frame.index]
         events['pupil_positions'] = g_pool.pupil_positions_by_frame[frame.index]
@@ -173,7 +173,7 @@ def export(should_terminate, frames_to_export, current_frame, rec_dir, user_dir,
 
         # allow each Plugin to do its work.
         for p in g_pool.plugins:
-            p.update(frame, events)
+            p.recent_events(events)
 
         writer.write_video_frame(frame)
         current_frame.value += 1

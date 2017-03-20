@@ -24,11 +24,11 @@ from multiprocessing import Process as Thread
 from . visualizer_calibration import Calibration_Visualizer
 
 def _clamp_norm_point(pos):
-    '''realisitic numbers for norm pos should be in this range.
+    '''realistic numbers for norm pos should be in this range.
         Grossly bigger or smaller numbers are results bad exrapolation
         and can cause overflow erorr when denormalized and cast as int32.
     '''
-    return min(100,max(-100,pos[0])),min(100,max(-100,pos[1]))
+    return min(100.,max(-100.,pos[0])),min(100.,max(-100.,pos[1]))
 
 class Gaze_Mapping_Plugin(Plugin):
     '''base class for all gaze mapping routines'''
@@ -217,7 +217,6 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
         self.gaze_pts_debug = []
         self.sphere = {}
         self.gaze_distance = gaze_distance
-        self.visualizer.open_window()
 
 
     def toWorld(self, p):
@@ -318,7 +317,6 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
                                                 eye_camera_to_world_matrix1=  self.eye_camera_to_world_matricies[1],
                                                 cal_gaze_points1_3d =  cal_gaze_points1_3d)
         self.g_pool = g_pool
-        self.visualizer.open_window()
         self.gaze_pts_debug0 = []
         self.gaze_pts_debug1 = []
         self.intersection_points_debug = []

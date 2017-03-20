@@ -12,27 +12,32 @@ See COPYING and COPYING.LESSER for license details.
 from plugin import Plugin
 import numpy as np
 import os,sys
-from platform import system
+import platform
 import time
 from pyglui import ui
 import logging
 logger = logging.getLogger(__name__)
 
-from ctypes import c_bool, c_int,create_string_buffer
+from ctypes import c_bool, c_int
 
 #threading and processing
-from multiprocessing import Process, cpu_count, set_start_method
-from multiprocessing.sharedctypes import Value
+if platform.system() in ('Darwin'):
+    from multiprocessing import get_context
+    mp = get_context('forkserver')
+    Value = mp.Value
+    cpu_count = mp.cpu_count
+else:
+    import multiprocessing as mp
+    from multiprocessing import Value, cpu_count
 
 
 from exporter import export
 
-class Export_Process(Process):
+class Export_Process(mp.Process):
     """small aditions to the process class"""
     def __init__(self, target,args):
         super().__init__(target=target,args=args)
         self.should_terminate,self.frames_to_export,self.current_frame,_,_,_,_,_,_,self.out_file_path = args
-
     def status(self):
         return self.current_frame.value
     def cancel(self):
@@ -127,9 +132,9 @@ class Video_Export_Launcher(Plugin):
 
     def add_export(self,export_range,export_dir):
         logger.debug("Adding new video export process.")
-        should_terminate = Value(c_bool,False)
-        frames_to_export  = Value(c_int,0)
-        current_frame = Value(c_int,0)
+        should_terminate = mp.Value(c_bool,False)
+        frames_to_export  = mp.Value(c_int,0)
+        current_frame = mp.Value(c_int,0)
 
         rec_dir = self.g_pool.rec_dir
         user_dir = self.g_pool.user_dir
@@ -166,5 +171,9 @@ class Video_Export_Launcher(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
-
-
+        for e in self.exports:
+            e.cancel()
+            e.join(1.0)
+            if e.is_alive():
+                logger.error("Export unresponsive - terminating.")
+                e.terminate()

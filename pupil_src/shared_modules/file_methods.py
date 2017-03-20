@@ -14,6 +14,7 @@ try:
 except ImportError:
     import pickle
 
+UnpicklingError = pickle.UnpicklingError
 import os
 import traceback as tb
 import logging
@@ -47,19 +48,15 @@ class Persistent_Dict(dict):
 
 def load_object(file_path):
     file_path = os.path.expanduser(file_path)
-    # reading to string and loads is 2.5x faster that using the file handle and load.
-    try:
-        with open(file_path, 'rb') as fh:
-            return pickle.load(fh, encoding='bytes')
-    except pickle.UnpicklingError as e:
-        raise ValueError from e
+    with open(file_path, 'rb') as fh:
+        data = pickle.load(fh, encoding='bytes')
+    return data
 
 
 def save_object(object_, file_path):
     file_path = os.path.expanduser(file_path)
     with open(file_path, 'wb') as fh:
-        pickle.dump(object_, fh, -1)
-
+        pickle.dump(object_,fh, -1)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
@@ -72,9 +69,19 @@ if __name__ == '__main__':
     # print load_object('test')
     # settings = Persistent_Dict('~/Desktop/pupil_settings/user_settings_eye')
     # print settings['roi']
-    l = load_object('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_data')
+
+
+    # example. Write out pupil data into csv file.
+    from time import time
+    t = time()
+    l = load_object('/Users/mkassner/Downloads/data/pupil_data')
+    print(l['notifications'])
+    print(t-time())
+    # t = time()
+    # save_object(l,'/Users/mkassner/Downloads/data/pupil_data2')
+    # print(t-time())
     import csv
-    with open(os.path.join('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_postions.csv'), 'wb') as csvfile:
+    with open(os.path.join('/Users/mkassner/Pupil/pupil_code/pupil_src/capture/pupil_postions.csv'), 'w') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',')
         csv_writer.writerow(('timestamp',
                              'id',
@@ -88,7 +95,7 @@ if __name__ == '__main__':
                              'ellipse_axis_a',
                              'ellipse_axis_b',
                              'ellipse_angle'))
-        for p in l:
+        for p in l['pupil_positions']:
             data_2d = [str(p['timestamp']),  # use str to be consitant with csv lib.
                        p['id'],
                        p['confidence'],
@@ -107,3 +114,4 @@ if __name__ == '__main__':
 
             row = data_2d + ellipse_data
             csv_writer.writerow(row)
+

@@ -14,7 +14,7 @@ class Global_Container(object):
     pass
 
 
-def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker_perimeter):
+def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker_perimeter,invert_image):
     '''
     this function is part of marker_detector it is run as a seperate process.
     it must be kept in a seperate file for namespace sanatisation
@@ -83,7 +83,8 @@ def fill_cache(visited_list,video_file_path,timestamps,q,seek_idx,run,min_marker
                                         min_marker_perimeter=min_marker_perimeter,
                                         aperture=aperture,
                                         visualize=0,
-                                        true_detect_every_frame=1)
+                                        true_detect_every_frame=1,
+                                        invert_image= invert_image)
 
         visited_list[frame.index] = True
         q.put((frame.index,markers[:])) #object passed will only be pickeled when collected from other process! need to make a copy ot avoid overwrite!!!

@@ -633,5 +633,5 @@ def eye_profiled(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url
                     locals(), "eye{}.pstats".format(eye_id))
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules', 'gprof2dot.py')
-    subprocess.call("python " + gprof2dot_loc + " -f pstats eye{0}.pstats | dot -Tpng -o eye{}_cpu_time.png".format(eye_id), shell=True)
+    subprocess.call("python " + gprof2dot_loc + " -f pstats eye{0}.pstats | dot -Tpng -o eye{0}_cpu_time.png".format(eye_id), shell=True)
     print("created cpu time graph for eye{} process. Please check out the png next to the eye.py file".format(eye_id))

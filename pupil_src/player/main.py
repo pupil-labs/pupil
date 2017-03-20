@@ -207,7 +207,6 @@ def session(rec_dir):
     pupil_data_path = os.path.join(rec_dir, "pupil_data")
 
     meta_info = load_meta_info(rec_dir)
-    rec_version = read_rec_version(meta_info)
     app_version = get_version(version_file)
 
     # log info about Pupil Platform and Platform in player.log
@@ -241,7 +240,7 @@ def session(rec_dir):
     pupil_data = load_object(pupil_data_path)
     pupil_list = pupil_data['pupil_positions']
     gaze_list = pupil_data['gaze_positions']
-
+    g_pool.pupil_data = pupil_data
     g_pool.binocular = meta_info.get('Eye Mode', 'monocular') == 'binocular'
     g_pool.version = app_version
     g_pool.capture = cap
@@ -250,7 +249,6 @@ def session(rec_dir):
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
-    g_pool.rec_version = rec_version
     g_pool.meta_info = meta_info
     g_pool.min_data_confidence = session_settings.get('min_data_confidence', 0.6)
     g_pool.pupil_positions_by_frame = correlate_data(pupil_list, g_pool.timestamps)
@@ -324,7 +322,8 @@ def session(rec_dir):
     g_pool.main_menu.append(ui.Button("Close Pupil Player", lambda: glfwSetWindowShouldClose(main_window, True)))
     g_pool.main_menu.append(ui.Slider('scale', g_pool.gui, setter=set_scale, step=.05, min=0.75, max=2.5, label='Interface Size'))
     g_pool.main_menu.append(ui.Info_Text('Player Version: {}'.format(g_pool.version)))
-    g_pool.main_menu.append(ui.Info_Text('Recording Version: {}'.format(rec_version)))
+    g_pool.main_menu.append(ui.Info_Text('Capture Version: {}'.format(meta_info['Capture Software Version'])))
+    g_pool.main_menu.append(ui.Info_Text('Data Format Version: {}'.format(meta_info['Data Format Version'])))
     g_pool.main_menu.append(ui.Slider('min_data_confidence', g_pool, setter=set_data_confidence,
                                       step=.05, min=0.0, max=1.0, label='Confidence threshold'))
 
