@@ -21,7 +21,8 @@ from shutil import copy2
 from audio import Audio_Input_Dict
 from file_methods import save_object, load_object
 from methods import get_system_info
-from av_writer import JPEG_Writer, AV_Writer, H264_Writer, Audio_Capture
+from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
+from ndsi import H264Writer
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 # logging
 import logging
@@ -176,7 +177,6 @@ class Recorder(Plugin):
             self.notify_all({'subject': 'recording.should_start', 'session_name': self.session_name})
             self.notify_all({'subject': 'recording.should_start', 'session_name': self.session_name, 'remote_notify': 'all'})
 
-
     def on_notify(self, notification):
         """Handles recorder notifications
 
@@ -264,7 +264,10 @@ class Recorder(Plugin):
         if self.raw_jpeg and self.g_pool.capture.jpeg_support:
             self.writer = JPEG_Writer(self.video_path, self.g_pool.capture.frame_rate)
         elif self.raw_jpeg and hasattr(self.g_pool.capture._recent_frame, 'h264_buffer'):
-            self.writer = H264_Writer(self.video_path, self.g_pool.capture.frame_rate)
+            self.writer = H264Writer(self.video_path,
+                                     self.g_pool.capture.frame_size[0],
+                                     self.g_pool.capture.frame_size[1],
+                                     self.g_pool.capture.frame_rate)
         else:
             self.writer = AV_Writer(self.video_path, fps=self.g_pool.capture.frame_rate)
 
