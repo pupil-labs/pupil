@@ -1,3 +1,13 @@
+'''
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+'''
 
 import sys , os
  # Make all pupil shared_modules available to this Python session.
@@ -25,7 +35,7 @@ from SphereCircleTest import *
 class VisualizeSphere(Visualizer):
 
     def __init__(self):
-        super(VisualizeSphere,self).__init__( 800, "Debug Sphere",  True )
+        super().__init__( 800, "Debug Sphere",  True )
         self.running = True
 
     def update_window(self, eye, points, found_circle ):
@@ -57,7 +67,7 @@ class VisualizeSphere(Visualizer):
 
     def on_key(self,window, key, scancode, action, mods):
         # self.gui.update_button(button,action,mods)
-        super(VisualizeSphere, self).on_key(window, key, scancode, action, mods)
+        super().on_key(window, key, scancode, action, mods)
         if key == GLFW_KEY_ESCAPE:
           self.running = False
           self.close_window()

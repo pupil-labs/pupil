@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 from pyglui.cygl.utils import draw_polyline,draw_points,RGBA
@@ -25,7 +26,7 @@ class Seek_Bar(Plugin):
     it will show the current positon and allow you to drag to any postion in the video file.
     """
     def __init__(self, g_pool):
-        super(Seek_Bar, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.cap = g_pool.capture
         self.current_frame_index = self.cap.get_frame_index()
         self.frame_count = self.cap.get_frame_count()
@@ -52,14 +53,15 @@ class Seek_Bar(Plugin):
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
             x,_ = self.screen_to_seek_bar((x,y))
             seek_pos = min(self.frame_count,max(0,x))
-            if abs(seek_pos-self.current_frame_index) >=.002*self.frame_count:
-                seek_pos = int(min(seek_pos,self.frame_count-5)) #the last frames can be problematic to seek to
+            seek_pos = int(min(seek_pos,self.frame_count-5)) #the last frames can be problematic to seek to
+            if self.current_frame_index-1 != seek_pos:
                 try:
-                    self.cap.seek_to_frame_fast(seek_pos)
+                    # logger.info('seeking to {} form {}'.format(seek_pos,self.current_frame_index))
+                    self.cap.seek_to_frame(seek_pos)
                     self.current_frame_index = self.cap.get_frame_index()
                 except:
                     pass
-                self.g_pool.new_seek = True
+            self.g_pool.new_seek = True
 
     def on_click(self,img_pos,button,action):
         """

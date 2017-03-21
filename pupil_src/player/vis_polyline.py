@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 from plugin import Plugin
@@ -19,7 +20,7 @@ from methods import denormalize
 class Vis_Polyline(Plugin):
     uniqueness = "not_unique"
     def __init__(self, g_pool,color=(1.0,0.0,0.4,1.0),thickness=2):
-        super(Vis_Polyline, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.order = .9
         self.menu = None
 
@@ -34,7 +35,7 @@ class Vis_Polyline(Plugin):
         bgra = (self.b*255,self.g*255,self.r*255,self.a*255)
         if pts:
             pts = np.array([pts],dtype=np.int32)
-            cv2.polylines(frame.img, pts, isClosed=False, color=bgra, thickness=self.thickness, lineType=cv2.cv.CV_AA)
+            cv2.polylines(frame.img, pts, isClosed=False, color=bgra, thickness=self.thickness, lineType=cv2.LINE_AA)
 
     def init_gui(self):
         # initialize the menu

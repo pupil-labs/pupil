@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 
@@ -20,7 +21,7 @@ from methods import normalize,denormalize
 from gl_utils import adjust_gl_view,clear_gl_screen,basic_gl_setup
 import OpenGL.GL as gl
 from glfw import *
-import calibrate
+from . import calibrate
 
 import audio
 
@@ -29,9 +30,9 @@ from pyglui.cygl.utils import draw_points, draw_points_norm, draw_polyline, draw
 
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
-from calibration_plugin_base import Calibration_Plugin
-from screen_marker_calibration import Screen_Marker_Calibration
-import calibrate
+from . calibration_plugin_base import Calibration_Plugin
+from . screen_marker_calibration import Screen_Marker_Calibration
+
 #logging
 import logging
 logger = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
     Points are collected at sites not between
     """
     def __init__(self, g_pool,fullscreen=True,marker_scale=1.0,sample_duration=40):
-        super(Accuracy_Test, self).__init__(g_pool,fullscreen,marker_scale)
+        super().__init__(g_pool,fullscreen,marker_scale)
 
         #result calculation variables:
         self.fov = 90. #taken from c930e specsheet, confirmed though mesurement within ~10deg.
@@ -139,7 +140,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
         self.open_window("Accuracy_Test")
 
     def update(self,frame,events):
-        super(Accuracy_Test,self).update(frame,events)
+        super().update(frame,events)
         if self.active :
             #always save gaze positions as opposed to pupil positons during calibration
             for pt in events.get('gaze_positions',[]):
@@ -158,7 +159,7 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
 
         matched_data = calibrate.closest_matches_monocular(self.gaze_list,self.ref_list)
         pt_cloud = calibrate.preprocess_2d_data_monocular(matched_data)
-        logger.info("Collected %s data points." %len(pt_cloud))
+        logger.info("Collected {} data points.".format(len(pt_cloud)))
 
         if len(pt_cloud) < 20:
             logger.warning("Did not collect enough data.")
@@ -197,12 +198,12 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
         error_lines = error_lines.reshape(-1,2)
         error_mag = sp.distance.cdist(gaze,ref).diagonal().copy()
         accuracy_pix = np.mean(error_mag)
-        logger.info("Gaze error mean in world camera pixel: %f"%accuracy_pix)
+        logger.info("Gaze error mean in world camera pixel: {:f}".format(accuracy_pix))
         error_mag /= px_per_degree
-        logger.info('Error in degrees: %s'%error_mag)
-        logger.info('Outliers: %s'%np.where(error_mag>=self.outlier_thresh))
-        self.accuracy = np.mean(error_mag[error_mag<self.outlier_thresh])
-        logger.info('Angular accuracy: %s'%self.accuracy)
+        logger.info('Error in degrees: {}'.format(error_mag))
+        logger.info('Outliers: {}'.format(np.where(error_mag >=self.outlier_thresh)))
+        self.accuracy = np.mean(error_mag[error_mag < self.outlier_thresh])
+        logger.info('Angular accuracy: {}'.format(self.accuracy))
 
 
         #lets calculate precision:  (RMS of distance of succesive samples.)
@@ -220,17 +221,12 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
         # both times gaze data is not valid for this mesurement
         succesive_distances =  succesive_distances_gaze[np.logical_and(succesive_distances_gaze< 1., succesive_distances_ref< .1)]
         self.precision = np.sqrt(np.mean(succesive_distances**2))
-        logger.info("Angular precision: %s"%self.precision)
-
+        logger.info("Angular precision: {}".format(self.precision))
 
     def gl_display(self):
-        super(Accuracy_Test, self).gl_display()
+        super().gl_display()
 
         if not self.active and self.error_lines is not None:
             draw_polyline_norm(self.error_lines,color=RGBA(1.,0.5,0.,.5),line_type=gl.GL_LINES)
             draw_points_norm(self.error_lines[1::2],color=RGBA(.0,0.5,0.5,.5),size=3)
             draw_points_norm(self.error_lines[0::2],color=RGBA(.5,0.0,0.0,.5),size=3)
-
-
-
-

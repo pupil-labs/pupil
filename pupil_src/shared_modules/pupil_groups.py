@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import zmq, time, uuid
@@ -24,7 +25,7 @@ class Pupil_Groups(Plugin):
     Uses Pyre for local group member discovery.
     """
     def __init__(self, g_pool, name="Unnamed Group Member", active_group="pupil-groups"):
-        super(Pupil_Groups, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.menu = None
         self._name = name
         self._active_group = active_group
@@ -56,7 +57,7 @@ class Pupil_Groups(Plugin):
 
     def stop_group_communication(self):
         logging.debug('Stopping Pupil Groups...')
-        self.thread_pipe.send('$TERM')
+        self.thread_pipe.send_string('$TERM')
         while self.thread_pipe:
             time.sleep(.1)
         logger.info('Pupil Groups stopped.')
@@ -105,14 +106,10 @@ class Pupil_Groups(Plugin):
             })
         elif notification['subject'].startswith('groups.pong'):
             peer = notification['groups.peer']
-            logger.info(
-                '%s: Ping time: %s - Pong time: %s'%(
-                    peer['name'],
-                    float(notification['t2'])-
-                    float(notification['t1']),
-                    float(peer['arrival_timestamp'])-
-                    float(notification['t2']))
-            )
+            logger.info('{}: Ping time: {} - Pong time: {}'.format(
+                peer['name'],
+                float(notification['t2']) - float(notification['t1']),
+                float(peer['arrival_timestamp']) - float(notification['t2'])))
 
     def get_init_dict(self):
         return {'name':self.name, 'active_group': self.active_group}
@@ -129,7 +126,7 @@ class Pupil_Groups(Plugin):
             if not self.group_members:
                 self.group_menu.append(ui.Info_Text('There are no other group members.'))
             for name in self.group_members.values():
-                self.group_menu.append(ui.Info_Text("%s"%name))
+                self.group_menu.append(ui.Info_Text(name))
 
     @property
     def default_headers(self):
@@ -154,7 +151,7 @@ class Pupil_Groups(Plugin):
     def name(self,value):
         self._name = value
         self.group_members = {}
-        self.thread_pipe.send('$RESTART')
+        self.thread_pipe.send_string('$RESTART')
 
     @property
     def active_group(self):
@@ -165,7 +162,7 @@ class Pupil_Groups(Plugin):
         self._active_group = value
         self.group_members = {}
         self.update_member_menu()
-        self.thread_pipe.send('$RESTART')
+        self.thread_pipe.send_string('$RESTART')
 
 
     # @groups.setter
@@ -243,25 +240,22 @@ class Pupil_Groups(Plugin):
                                 'type': event.type
                             }
                             local_out.notify(notification)
-                        except Exception as e:
-                            logger.info('Dropped garbage data by peer %s (%s)'%(event.peer_name, event.peer_uuid))
+                        except Exception:
+                            logger.info('Dropped garbage data by peer {} ({})'.format(event.peer_name, event.peer_uuid))
                 elif event.type == 'JOIN' and event.group == self.active_group:
                     local_out.notify({
                         'subject': 'groups.member_joined',
                         'name': event.peer_name,
                         'uuid_bytes': event.peer_uuid_bytes
                     })
-                elif (event.type == 'LEAVE' and \
-                      event.group == self.active_group) or \
-                      event.type == 'EXIT':
+                elif (event.type == 'LEAVE' and event.group == self.active_group) or event.type == 'EXIT':
                     local_out.notify({
                         'subject': 'groups.member_left',
                         'name': event.peer_name,
-                        'uuid_bytes': event.peer_uuid_bytes
-                    })
+                        'uuid_bytes': event.peer_uuid_bytes})
 
             if pipe in readable:
-                command = pipe.recv()
+                command = pipe.recv_string()
                 if command == '$RESTART':
                     # Restart group_member node to change name
                     poller.unregister(group_member.socket())

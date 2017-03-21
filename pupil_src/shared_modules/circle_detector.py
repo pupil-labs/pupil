@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import numpy as np
@@ -17,7 +18,7 @@ def find_concetric_circles(gray_img,min_ring_count=3, visual_debug=False):
 
     # get threshold image used to get crisp-clean edges using blur to remove small features
     edges = cv2.adaptiveThreshold(cv2.blur(gray_img,(3,3)), 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 5, 11)
-    contours, hierarchy = cv2.findContours(edges,
+    _, contours, hierarchy = cv2.findContours(edges,
                                     mode=cv2.RETR_TREE,
                                     method=cv2.CHAIN_APPROX_NONE,offset=(0,0)) #TC89_KCOS
     if visual_debug is not False:
@@ -27,13 +28,8 @@ def find_concetric_circles(gray_img,min_ring_count=3, visual_debug=False):
     clusters = get_nested_clusters(contours,hierarchy[0],min_nested_count=min_ring_count)
     concentric_cirlce_clusters = []
 
-
-
-
-
     #speed up code by caching computed ellipses
     ellipses = {}
-
 
     # for each cluster fit ellipses and cull members that dont have good ellipse fit
     for cluster in clusters:
@@ -43,7 +39,7 @@ def find_concetric_circles(gray_img,min_ring_count=3, visual_debug=False):
         for i in cluster:
             c = contours[i]
             if len(c)>5:
-                if not ellipses.has_key(i):
+                if not i in ellipses:
                     e = cv2.fitEllipse(c)
                     fit = max(dist_pts_ellipse(e,c))
                     ellipses[i] = e,fit
@@ -100,7 +96,7 @@ if __name__ == '__main__':
             sts,img = cap.read()
             # img = cv2.imread('/Users/mkassner/Desktop/manual_calibration_marker-01.png')
             gray  = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            print len(find_concetric_circles(gray,visual_debug=img))
+            print(len(find_concetric_circles(gray,visual_debug=img)))
             cv2.imshow('img',img)
             cv2.waitKey(1)
             # return
@@ -111,4 +107,4 @@ if __name__ == '__main__':
     loc = os.path.abspath(__file__).rsplit('pupil_src', 1)
     gprof2dot_loc = os.path.join(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     subprocess.call("python "+gprof2dot_loc+" -f pstats world.pstats | dot -Tpng -o world_cpu_time.png", shell=True)
-    print "created  time graph for  process. Please check out the png next to this file"
+    print("created  time graph for  process. Please check out the png next to this file")

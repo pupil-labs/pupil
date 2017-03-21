@@ -696,7 +696,7 @@ def shear_from_matrix(matrix):
     w, V = numpy.linalg.eig(M33)
     i = numpy.where(abs(numpy.real(w) - 1.0) < 1e-4)[0]
     if len(i) < 2:
-        raise ValueError("no two linear independent eigenvectors found %s" % w)
+        raise ValueError("no two linear independent eigenvectors found {}".format(w))
     V = numpy.real(V[:, i]).squeeze().T
     lenorm = -1.0
     for i0, i1 in ((0, 1), (0, 2), (1, 2)):
@@ -1922,7 +1922,7 @@ def _import_module(name, package=None, warn=True, prefix='_py_', ignore='_'):
             module = import_module('.' + name, package=package)
     except ImportError:
         if warn:
-            warnings.warn("failed to import module %s" % name)
+            warnings.warn("failed to import module {}".format(name))
     else:
         for attr in dir(module):
             if ignore and attr.startswith(ignore):

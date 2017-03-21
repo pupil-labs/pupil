@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import numpy as np
@@ -29,7 +30,7 @@ from reference_surface import Reference_Surface
 class Offline_Reference_Surface(Reference_Surface):
     """docstring for Offline_Reference_Surface"""
     def __init__(self,g_pool,name="unnamed",saved_definition=None):
-        super(Offline_Reference_Surface, self).__init__(name,saved_definition)
+        super().__init__(name,saved_definition)
         self.g_pool = g_pool
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
@@ -96,8 +97,8 @@ class Offline_Reference_Surface(Reference_Surface):
 
     def init_cache(self,marker_cache,camera_calibration,min_marker_perimeter,min_id_confidence):
         if self.defined:
-            logger.debug("Full update of surface '%s' positons cache"%self.name)
-            self.cache = Cache_List([self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter,min_id_confidence) for i in xrange(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
+            logger.debug("Full update of surface '{}' positons cache".format(self.name))
+            self.cache = Cache_List([self.answer_caching_request(marker_cache,i,camera_calibration,min_marker_perimeter,min_id_confidence) for i in range(len(marker_cache))],positive_eval_fn=lambda x:  (x!=False) and (x!=None))
 
 
     def answer_caching_request(self,marker_cache,frame_index,camera_calibration,min_marker_perimeter,min_id_confidence):
@@ -113,17 +114,17 @@ class Offline_Reference_Surface(Reference_Surface):
             return None
 
     def move_vertex(self,vert_idx,new_pos):
-        super(Offline_Reference_Surface, self).move_vertex(vert_idx,new_pos)
+        super().move_vertex(vert_idx,new_pos)
         self.cache = None
         self.heatmap = None
 
     def add_marker(self,marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence):
-        super(Offline_Reference_Surface, self).add_marker(marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
+        super().add_marker(marker,visible_markers,camera_calibration,min_marker_perimeter,min_id_confidence)
         self.cache = None
         self.heatmap = None
 
     def remove_marker(self,marker):
-        super(Offline_Reference_Surface, self).remove_marker(marker)
+        super().remove_marker(marker)
         self.cache = None
         self.heatmap = None
 
@@ -194,8 +195,8 @@ class Offline_Reference_Surface(Reference_Surface):
         x = max(1,int(x))
         y = max(1,int(y))
 
-        filter_size = (int(self.heatmap_detail * x)/2)*2 +1
-        std_dev = filter_size /6.
+        filter_size = int(int(self.heatmap_detail * x)/2)*2 +1
+        std_dev = int(filter_size /6.)
         self.heatmap = np.ones((y,x,4),dtype=np.uint8)
         all_gaze = []
 
@@ -221,7 +222,7 @@ class Offline_Reference_Surface(Reference_Surface):
         hist = np.rot90(hist)
 
         #smoothing..
-        hist = cv2.GaussianBlur(hist, (filter_size,filter_size),std_dev)
+        hist = cv2.GaussianBlur(hist,(filter_size,filter_size),std_dev)
         maxval = np.amax(hist)
         if maxval:
             scale = 255./maxval

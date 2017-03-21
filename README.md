@@ -3,7 +3,7 @@ Open source eye tracking software platform that started as a thesis project at M
 
 Our vision is to create tools for a diverse group of people interested in learning about eye tracking and conducting their eye tracking projects.
 
-[![Gitter](https://badges.gitter.im/pupil-labs/pupil.svg)](https://gitter.im/pupil-labs/pupil?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+Chat with us on [Discord](https://discord.gg/gKmmGqy).
 
 ## Project Website
 For an intro to the Pupil mobile eye tracking platform have a look at the [Pupil Labs Website](http://pupil-labs.com "Pupil Labs").
@@ -29,7 +29,7 @@ For an intro to the Pupil mobile eye tracking platform have a look at the [Pupil
 	<td valign="top">Get up and running and learn the basic Pupil workflow</td>
 	<td valign="top">Learn more about Pupil Capture and Pupil Player software settings and workflows here</td>
 	<td valign="top">Want to write code? Read the developer docs here</td>
-	<td valign="top">Connect with the Pupil community. Chat with us on <a href="https://gitter.im/pupil-labs/pupil?utm_source=share-link&utm_medium=link&utm_campaign=share-link">gitter</a></td>		
+	<td valign="top">Connect with the Pupil community. Chat with us on <a href="https://discord.gg/gKmmGqy">Discord</a></td>		
 </tr>
 </table>
 

@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 from visualizer import Visualizer
@@ -19,7 +20,7 @@ import math
 
 class Calibration_Visualizer(Visualizer):
 	def __init__(self, g_pool, world_camera_intrinsics , cal_ref_points_3d, cal_observed_points_3d, eye_camera_to_world_matrix0 , cal_gaze_points0_3d, eye_camera_to_world_matrix1 = np.eye(4) , cal_gaze_points1_3d = [],  run_independently = False , name = "Calibration Visualizer" ):
-		super(Calibration_Visualizer, self).__init__( g_pool,name,  run_independently)
+		super().__init__( g_pool,name,  run_independently)
 
 		self.image_width = 640 # right values are assigned in update
 		self.focal_length = 620

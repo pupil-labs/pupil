@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import cv2
@@ -23,7 +24,7 @@ class Manual_Gaze_Correction(Plugin):
     """
 
     def __init__(self, g_pool,x_offset=0.,y_offset=0.):
-        super(Manual_Gaze_Correction, self).__init__(g_pool)
+        super().__init__(g_pool)
         #let the plugin work before most other plugins.
         self.order = .3
         self.menu = None

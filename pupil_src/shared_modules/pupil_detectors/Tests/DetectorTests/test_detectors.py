@@ -1,3 +1,13 @@
+'''
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+'''
 
 
 
@@ -221,7 +231,7 @@ if __name__ == '__main__':
     while True:
         # Get an image from the grabber
         try:
-            frame = cap.get_frame_nowait()
+            frame = cap.get_frame()
             frameNumber += 1
         except CameraCaptureError:
             print "Capture from Camera Failed. Stopping."

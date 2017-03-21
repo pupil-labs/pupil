@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 
@@ -24,7 +25,7 @@ class Time_Sync(Plugin):
 
 
     def __init__(self, g_pool):
-        super(Time_Sync, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.menu = None
 
         #variables for the time sync logic
@@ -86,7 +87,7 @@ class Time_Sync(Plugin):
                     break
         if ok_to_change:
             self.slew_time(offset)
-            logger.info("Pupil Sync has adjusted the clock by %ss"%offset)
+            logger.info("Pupil Sync has adjusted the clock by {}s".format(offset))
             return True
         else:
             return False
@@ -161,7 +162,7 @@ class Time_Sync(Plugin):
 
             if self.is_nothing:
                 # Create follower.
-                logger.debug("Clock will sync with %s"%notification['host'])
+                logger.debug("Clock will sync with {}".format(notification['host']))
                 self.time_sync_node = Clock_Sync_Follower(notification['host'],port=notification['port'],interval=10,time_fn=self.get_time,jump_fn=self.jump_time,slew_fn=self.slew_time)
 
             if not self.is_master:

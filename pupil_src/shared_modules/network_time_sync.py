@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 from time import sleep
 from uvc import get_time_monotonic
@@ -62,17 +63,18 @@ class Time_Echo_Server(asyncore.dispatcher):
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
         self.bind((host, 0))
-        self.port = self.getsockname()[1]
+        self.port = self.socket.getsockname()[1]
+        # FIXME: gethostbyname might fail on unix
         self.host = host or socket.gethostbyname(socket.gethostname())
         self.protocol = 'tcp://'
         self.listen(5)
-        logger.debug('Timer Server ready on port:%s'%self.port)
+        logger.debug('Timer Server ready on port: {}'.format(self.port))
 
     def handle_accept(self):
         pair = self.accept()
         if pair is not None:
             sock, addr = pair
-            handler = Time_Echo(sock,self.time_fn)
+            Time_Echo(sock,self.time_fn)
 
     def __del__(self):
         logger.debug("Server closed")
@@ -165,7 +167,7 @@ class Clock_Sync_Follower(threading.Thread):
                         if self.jump_time(offset):
                             self.in_sync = True
                             self.offset_remains = False
-                            logger.debug('Time adjusted by %sms.'%(offset/self.ms))
+                            logger.debug('Time adjusted by {}ms.'.format(offset/self.ms))
                         else:
                             self.in_sync = True
                             self.offset_remains = True
@@ -178,7 +180,7 @@ class Clock_Sync_Follower(threading.Thread):
                             # print offset/self.ms,slew_time/self.ms
                             self.slew_time(slew_time)
                             offset -= slew_time
-                            logger.debug('Time slewed by: %sms'%(slew_time/self.ms))
+                            logger.debug('Time slewed by: {}ms'.format(slew_time/self.ms))
 
                             self.in_sync = not bool(offset)
                             self.offset_remains = not self.in_sync
@@ -217,10 +219,10 @@ class Clock_Sync_Follower(threading.Thread):
 
             server_socket.close()
 
-            times.sort(key=lambda (t0,t1,t2): t2-t0)
+            times.sort(key=lambda t0,t1,t2: t2-t0)
             times = times[:int(len(times)*0.69)]
-            delays = [t2-t0 for t0,t1,t2 in times]
-            offsets = [t0-((t1+(t2-t0)/2)) for t0,t1,t2 in times]
+            delays = [t2-t0 for t0, t1, t2 in times]
+            offsets = [t0-((t1+(t2-t0)/2)) for t0, t1, t2 in times]
             mean_offset = sum(offsets)/len(offsets)
             offset_jitter = sum( [abs(mean_offset-o)for o in offsets] )/len(offsets)
             mean_delay = sum(delays)/len(delays)
@@ -247,11 +249,11 @@ class Clock_Sync_Follower(threading.Thread):
     def __str__(self):
         if self.in_sync:
             if self.offset_remains:
-                return "NOT in sync with %s"%self.host
+                return "NOT in sync with {}".format(self.host)
             else:
-                return 'Synced with %s with  %.2fms jitter'%(self.host,self.sync_jitter/self.ms)
+                return 'Synced with {} with  {:.2f}ms jitter'.format(self.host,self.sync_jitter/self.ms)
         else:
-            return "Connecting to %s"%self.host
+            return "Connecting to {}".format(self.host)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
@@ -294,9 +296,9 @@ if __name__ == '__main__':
     # slave3 = Clock_Sync_Follower(host,port=port,interval=10,time_fn=get_time,jump_fn=jump_time_dummy,slew_fn=slew_time_dummy)
     for x in range(10):
         sleep(4)
-        print slave
+        print(slave)
         # print "offset:%f, jitter: %f"%(epoch,slave.sync_jitter)
-    print 'shutting down'
+    print('shutting down')
     slave.stop()
     master.stop()
-    print 'googdby'
+    print('good bye')

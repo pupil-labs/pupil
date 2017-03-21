@@ -33,7 +33,7 @@ and contains the fast Guo Hall thinner algorithm
 
 
 #include <deque>
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include "ImageContour.h"
 #include "cvx.h"
 

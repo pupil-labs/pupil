@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import sys, os,platform
@@ -22,7 +23,7 @@ from plugin import Plugin
 import logging
 logger = logging.getLogger(__name__)
 
-from square_marker_detect import detect_markers,detect_markers_robust, draw_markers,m_marker_to_screen, MarkerTracker
+from square_marker_detect import detect_markers,detect_markers_robust, draw_markers,m_marker_to_screen
 from reference_surface import Reference_Surface
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 
@@ -32,12 +33,11 @@ class Surface_Tracker(Plugin):
     """docstring
     """
     def __init__(self,g_pool,mode="Show Markers and Surfaces",min_marker_perimeter = 100,invert_image=False,robust_detection=True):
-        super(Surface_Tracker, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.order = .2
 
         # all markers that are detected in the most recent frame
         self.markers = []
-        self.marker_tracker = MarkerTracker()
 
         self.camera_calibration = load_camera_calibration(self.g_pool)
         self.load_surface_definitions_from_file()
@@ -69,7 +69,14 @@ class Surface_Tracker(Plugin):
         self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.user_dir,'surface_definitions') )
         self.surfaces = [Reference_Surface(saved_definition=d) for d in  self.surface_definitions.get('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
 
+    def save_surface_definitions_to_file(self):
+        self.surface_definitions["realtime_square_marker_surfaces"] = [rs.save_to_dict() for rs in self.surfaces if rs.defined]
+        self.surface_definitions.save()
 
+    def on_notify(self,notification):
+        if notification['subject'] == 'surfaces_changed':
+            logger.info('Surfaces changed. Saving to file.')
+            self.save_surface_definitions_to_file()
     def on_click(self,pos,button,action):
         if self.mode == 'Show Markers and Surfaces':
             if action == GLFW_PRESS:
@@ -87,6 +94,9 @@ class Surface_Tracker(Plugin):
                             self.marker_edit_surface = s
 
             if action == GLFW_RELEASE:
+                if self.edit_surf_verts:
+                    #if we had draged a vertex lets let other know the surfaces changed.
+                    self.notify_all({'subject':'surfaces_changed','delay':2})
                 self.edit_surf_verts = []
 
             elif action == GLFW_PRESS:
@@ -105,10 +115,12 @@ class Surface_Tracker(Plugin):
                         if m['perimeter']>=self.min_marker_perimeter:
                             vx,vy = m['centroid']
                             if sqrt((x-vx)**2 + (y-vy)**2) <15:
-                                if self.marker_edit_surface.markers.has_key(m['id']):
+                                if m['id'] in self.marker_edit_surface.markers:
                                     self.marker_edit_surface.remove_marker(m)
+                                    self.notify_all({'subject':'surfaces_changed','delay':1})
                                 else:
                                     self.marker_edit_surface.add_marker(m,self.markers,self.camera_calibration,self.min_marker_perimeter,self.min_id_confidence)
+                                    self.notify_all({'subject':'surfaces_changed','delay':1})
 
     def add_surface(self,_):
         self.surfaces.append(Reference_Surface())
@@ -165,7 +177,7 @@ class Surface_Tracker(Plugin):
 
         for s in self.surfaces:
             idx = self.surfaces.index(s)
-            s_menu = ui.Growing_Menu("Surface %s"%idx)
+            s_menu = ui.Growing_Menu("Surface {}".format(idx))
             s_menu.collapsed=True
             s_menu.append(ui.Text_Input('name',s))
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
@@ -215,7 +227,7 @@ class Surface_Tracker(Plugin):
 
 
         if self.running:
-            self.button.status_text = '%s/%s'%(len([s for s in self.surfaces if s.detected]),len(self.surfaces))
+            self.button.status_text = '{}/{}'.format(len([s for s in self.surfaces if s.detected]), len(self.surfaces))
         else:
             self.button.status_text = 'tracking paused'
 
@@ -229,6 +241,10 @@ class Surface_Tracker(Plugin):
                     if s.detected:
                         new_pos = s.img_to_ref_surface(np.array(pos))
                         s.move_vertex(v_idx,new_pos)
+
+
+
+
 
 
 
@@ -263,7 +279,7 @@ class Surface_Tracker(Plugin):
                 exc = []
                 for m in self.markers:
                     if m['perimeter']>=self.min_marker_perimeter:
-                        if self.marker_edit_surface.markers.has_key(m['id']):
+                        if m['id'] in self.marker_edit_surface.markers:
                             inc.append(m['centroid'])
                         else:
                             exc.append(m['centroid'])
@@ -283,8 +299,7 @@ class Surface_Tracker(Plugin):
         This happens either voluntarily or forced.
         if you have a GUI or glfw window destroy it here.
         """
-        self.surface_definitions["realtime_square_marker_surfaces"] = [rs.save_to_dict() for rs in self.surfaces if rs.defined]
-        self.surface_definitions.close()
+        self.save_surface_definitions_to_file()
 
         for s in self.surfaces:
             s.cleanup()

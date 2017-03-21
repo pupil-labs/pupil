@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 """
@@ -76,7 +77,7 @@ class AV_Writer(object):
     """
 
     def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 15000*10e3}, audio_stream=None,use_timestamps=False):
-        super(AV_Writer, self).__init__()
+        super().__init__()
         self.use_timestamps = use_timestamps
         # the approximate capture rate.
         self.fps = int(fps)
@@ -84,7 +85,7 @@ class AV_Writer(object):
         try:
             file_path,ext = file_loc.rsplit('.', 1)
         except:
-            logger.error("'%s' is not a valid media file name."%file_loc)
+            logger.error("'{}' is not a valid media file name.".format(file_loc))
             raise Exception("Error")
 
         if ext not in ('mp4,mov,mkv'):
@@ -93,7 +94,7 @@ class AV_Writer(object):
         self.ts_file_loc = file_path+'_timestamps_pts.npy'
         self.file_loc = file_loc
         self.container = av.open(self.file_loc,'w')
-        logger.debug("Opended '%s' for writing."%self.file_loc)
+        logger.debug("Opened '{}' for writing.".format(self.file_loc))
 
         if self.use_timestamps:
             self.time_base = Fraction(1,65535) #highest resolution for mp4
@@ -169,7 +170,7 @@ class JPEG_Writer(object):
     """
 
     def __init__(self, file_loc,fps=30):
-        super(JPEG_Writer, self).__init__()
+        super().__init__()
         # the approximate capture rate.
         self.fps = int(fps)
         self.time_base = Fraction(1000,self.fps*1000)
@@ -177,7 +178,7 @@ class JPEG_Writer(object):
         try:
             file_path,ext = file_loc.rsplit('.', 1)
         except:
-            logger.error("'%s' is not a valid media file name."%file_loc)
+            logger.error("'{}' is not a valid media file name.".format(file_loc))
             raise Exception("Error")
 
         if ext not in ('mp4'):
@@ -185,7 +186,7 @@ class JPEG_Writer(object):
 
         self.file_loc = file_loc
         self.container = av.open(self.file_loc,'w')
-        logger.debug("Opended '%s' for writing."%self.file_loc)
+        logger.debug("Opened '{}' for writing.".format(self.file_loc))
 
         self.video_stream = self.container.add_stream('mjpeg',1/self.time_base)
         self.video_stream.pix_fmt = "yuvj422p"
@@ -208,32 +209,32 @@ class JPEG_Writer(object):
         self.frame_count +=1
         self.container.mux(packet)
 
-
     def close(self):
-        self.container.close()
+        try:
+            self.container.close()
+        except(RuntimeError):
+            logger.error("Media file does not contain any frames.")
         logger.debug("Closed media container")
 
     def release(self):
         self.close()
 
 
-
-
 def format_time(time, time_base):
         if time is None:
             return 'None'
-        return '%.3fs (%s or %s/%s)' % (time_base * time, time_base * time, time_base.numerator * time, time_base.denominator)
+        return '{:.3f}s ({} or {}/{})'.format(time_base * time, time_base * time, time_base.numerator * time, time_base.denominator)
 
 
-def rec_thread(file_loc, in_container, audio_src,should_close):
+def rec_thread(file_loc, in_container, audio_src, should_close):
     # print sys.modules['av']
     # import av
     if not in_container:
         #create in container
         if platform.system() == "Darwin":
-            in_container = av.open('none:%s'%audio_src,format="avfoundation")
+            in_container = av.open('none:{}'.format(audio_src),format="avfoundation")
         elif platform.system() == "Linux":
-            in_container = av.open('hw:%s'%audio_src,format="alsa")
+            in_container = av.open('hw:{}'.format(audio_src),format="alsa")
 
     in_stream = None
 
@@ -253,7 +254,7 @@ def rec_thread(file_loc, in_container, audio_src,should_close):
 
     #create out container
     out_container = av.open(file_loc,'w')
-    # logger.debug("Opended '%s' for writing."%file_loc)
+    # logger.debug("Opened '%s' for writing."%file_loc)
     out_stream =  out_container.add_stream(template = in_stream)
 
 
@@ -278,13 +279,13 @@ class Audio_Capture(object):
     """
 
     def __init__(self, file_loc,audio_src=0):
-        super(Audio_Capture, self).__init__()
+        super().__init__()
         self.thread = None
 
         try:
             file_path,ext = file_loc.rsplit('.', 1)
         except:
-            logger.error("'%s' is not a valid media file name."%file_loc)
+            logger.error("'{}' is not a valid media file name.".format(file_loc))
             raise Exception("Error")
 
         if ext not in ('wav'):
@@ -298,12 +299,11 @@ class Audio_Capture(object):
     def start(self,file_loc, audio_src):
         self.should_close.clear()
         if platform.system() == "Darwin":
-            in_container = av.open('none:%s'%audio_src,format="avfoundation")
+            in_container = av.open('none:{}'.format(audio_src),format="avfoundation")
         else:
             in_container = None
         self.thread = Thread(target=rec_thread, args=(file_loc,in_container, audio_src,self.should_close))
         self.thread.start()
-
 
     def stop(self):
         self.should_close.set()
@@ -340,7 +340,7 @@ def mac_pyav_hack():
 #     # print writer.video_stream.time_base
 #     # print writer.
 
-#     for x in xrange(300):
+#     for x in range(300):
 #         frame = cap.get_frame()
 #         writer.write_video_frame(frame)
 #         # writer.write(frame.img)
@@ -366,45 +366,44 @@ if __name__ == '__main__':
 
     # container = av.open('hw:0',format="alsa")
     container = av.open('1:0',format="avfoundation")
-    print 'container:', container
-    print '\tformat:', container.format
-    print '\tduration:', float(container.duration) / av.time_base
-    print '\tmetadata:'
-    for k, v in sorted(container.metadata.iteritems()):
-        print '\t\t%s: %r' % (k, v)
-    print
+    print('container:', container)
+    print('\tformat:', container.format)
+    print('\tduration:', float(container.duration) / av.time_base)
+    print('\tmetadata:')
+    for k, v in sorted(container.metadata.items()):
+        print('\t\t{}: {!r}'.format(k, v))
 
-    print len(container.streams), 'stream(s):'
+    print(len(container.streams), 'stream(s):')
     audio_stream = None
     for i, stream in enumerate(container.streams):
 
-        print '\t%r' % stream
-        print '\t\ttime_base: %r' % stream.time_base
-        print '\t\trate: %r' % stream.rate
-        print '\t\tstart_time: %r' % stream.start_time
-        print '\t\tduration: %s' % format_time(stream.duration, stream.time_base)
-        print '\t\tbit_rate: %r' % stream.bit_rate
-        print '\t\tbit_rate_tolerance: %r' % stream.bit_rate_tolerance
+        print('\t{!r}'.format(stream))
+        print('\t\ttime_base: {!r}'.format(stream.time_base))
+        print('\t\trate: {!r}'.format(stream.rate))
+        print('\t\tstart_time: {!r}'.format(stream.start_time))
+        print('\t\tduration: {}'.format(format_time(stream.duration, stream.time_base)))
+        print('\t\tbit_rate: {}'.format(stream.bit_rate))
+        print('\t\tbit_rate_tolerance: {}'.format(stream.bit_rate_tolerance))
 
         if stream.type == b'audio':
-            print '\t\taudio:'
-            print '\t\t\tformat:', stream.format
-            print '\t\t\tchannels: %s' % stream.channels
+            print('\t\taudio:')
+            print('\t\t\tformat:', stream.format)
+            print('\t\t\tchannels: {}'.format(stream.channels))
             audio_stream = stream
             break
         elif stream.type == 'container':
-            print '\t\tcontainer:'
-            print '\t\t\tformat:', stream.format
-            print '\t\t\taverage_rate: %r' % stream.average_rate
+            print('\t\tcontainer:')
+            print('\t\t\tformat:', stream.format)
+            print('\t\t\taverage_rate: {!r}'.format(stream.average_rate))
 
-        print '\t\tmetadata:'
-        for k, v in sorted(stream.metadata.iteritems()):
-            print '\t\t\t%s: %r' % (k, v)
+        print('\t\tmetadata:')
+        for k, v in sorted(stream.metadata.items()):
+            print('\t\t\t{}: {!r}'.format(k, v))
 
     if not audio_stream:
         exit()
-    #file contianer:
 
+    # file contianer:
     out_container = av.open('test.wav','w')
     out_stream = out_container.add_stream(template=audio_stream)
     # out_stream.rate = 44100
@@ -412,12 +411,12 @@ if __name__ == '__main__':
         # for frame in packet.decode():
         #     packet = out_stream.encode(frame)
         #     if packet:
-        print '%r' %packet
-        print '\tduration: %s' % format_time(packet.duration, packet.stream.time_base)
-        print '\tpts: %s' % format_time(packet.pts, packet.stream.time_base)
-        print '\tdts: %s' % format_time(packet.dts, packet.stream.time_base)
+        print('{!r}'.format(packet))
+        print('\tduration: {}'.format(format_time(packet.duration, packet.stream.time_base)))
+        print('\tpts: {}'.format(format_time(packet.pts, packet.stream.time_base)))
+        print('\tdts: {}'.format(format_time(packet.dts, packet.stream.time_base)))
         out_container.mux(packet)
-        if i >1000:
+        if i > 1000:
             break
 
     out_container.close()
@@ -428,4 +427,3 @@ if __name__ == '__main__':
     # gprof2dot_loc = os.path.oin(loc[0], 'pupil_src', 'shared_modules','gprof2dot.py')
     # subthread.call("python "+gprof2dot_loc+" -f pstats av_writer.pstats | dot -Tpng -o av_writer.png", shell=True)
     # print "created cpu time graph for av_writer thread. Please check out the png next to the av_writer.py file"
-

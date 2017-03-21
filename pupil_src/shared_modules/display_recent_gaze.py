@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 from plugin import Plugin
@@ -20,11 +21,11 @@ class Display_Recent_Gaze(Plugin):
     """
 
     def __init__(self, g_pool):
-        super(Display_Recent_Gaze, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.order = .8
         self.pupil_display_list = []
 
-    def update(self,frame,events):
+    def recent_events(self,events):
         for pt in events.get('gaze_positions',[]):
             self.pupil_display_list.append((pt['norm_pos'] , pt['confidence']))
         self.pupil_display_list[:-3] = []

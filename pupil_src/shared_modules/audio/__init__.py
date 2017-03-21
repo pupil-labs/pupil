@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import platform,sys,os
@@ -43,13 +44,14 @@ if os_name == "Linux":
     ffmpeg_bin = "avconv"
     arecord_bin = 'arecord'
 
-    if 'Ubuntu' in platform.linux_distribution():
+    if platform.linux_distribution()[0] in ('Ubuntu', 'debian'):
         def beep():
             if 'sound' in audio_mode:
                 try:
                     sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
                 except OSError:
                     logger.warning("Soundfile not found.")
+
         def tink():
             if 'sound' in audio_mode:
                 try:
@@ -62,29 +64,29 @@ if os_name == "Linux":
                 try:
                     sp.Popen(["spd-say", message])
                 except OSError:
-                    logger.warning("could not say: '%s'. Please install spd-say if you want Pupil capture to speek to you.")
+                    install_warning = "could not say: '{}'. Please install spd-say if you want Pupil capture to speek to you."
+                    logger.warning(install_warning.format(message))
     else:
         def beep():
             if 'sound' in audio_mode:
-                print '\a'
+                print('\a')
 
         def tink():
             if 'sound' in audio_mode:
-                print '\a'
+                print('\a')
 
         def say(message):
             if 'sound' in audio_mode:
-                print '\a'
-                print message
-
+                print('\a')
+                print(message)
 
     class Audio_Input_Dict(dict):
         """docstring for Audio_Input_Dict"""
         def __init__(self):
-            super(Audio_Input_Dict, self).__init__()
-            self['No Audio'] =-1
+            super().__init__()
+            self['No Audio'] = -1
             try:
-                ret = sp.check_output([arecord_bin,"-l"])
+                ret = sp.check_output([arecord_bin,"-l"]).decode(sys.stdout.encoding)
             except OSError:
                 logger.warning("Could not enumerate audio input devices. Calling arecord failed.")
                 return
@@ -115,7 +117,7 @@ elif os_name == "Darwin":
     class Audio_Input_Dict(dict):
         """docstring for Audio_Input_Dict"""
         def __init__(self):
-            super(Audio_Input_Dict, self).__init__()
+            super().__init__()
             self['No Audio'] = -1
             self['Default Mic'] = 0
 
@@ -137,35 +139,35 @@ elif os_name == "Darwin":
 else:
     def beep():
         if 'sound' in audio_mode:
-            print '\a'
+            print('\a')
 
     def tink():
         if 'sound' in audio_mode:
-            print '\a'
+            print('\a')
 
     def say(message):
         if 'voice' in audio_mode:
-            print '\a'
-            print message
+            print('\a')
+            print(message)
 
 
     class Audio_Input_Dict(dict):
         """docstring for Audio_Input_Dict"""
         def __init__(self):
-            super(Audio_Input_Dict, self).__init__()
+            super().__init__()
             self['No Audio'] = -1
 
 
     class Audio_Capture(object):
         """docstring for audio_capture"""
         def __init__(self, audio_src_idx=0, out_file='out.wav'):
-            super(Audio_Capture, self).__init__()
+            super().__init__()
             logger.debug("Audio Capture not implemented on this OS")
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    print Audio_Input_Dict()
+    print(Audio_Input_Dict())
 
 
     # beep()

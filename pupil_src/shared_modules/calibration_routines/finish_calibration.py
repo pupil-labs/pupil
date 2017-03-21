@@ -1,27 +1,28 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import os
 import numpy as np
 
-import calibrate
-import math_helper
+from . import calibrate
+from math_helper import *
 from file_methods import load_object,save_object
-from camera_intrinsics_estimation import load_camera_calibration
+from . camera_intrinsics_estimation import load_camera_calibration
 
-from optimization_calibration import  bundle_adjust_calibration
-from calibrate import find_rigid_transform
+from . optimization_calibration import bundle_adjust_calibration
+from . calibrate import find_rigid_transform
 #logging
 import logging
 logger = logging.getLogger(__name__)
-from gaze_mappers import *
+from . gaze_mappers import *
 
 not_enough_data_error_msg = 'Did not collect enough data during calibration.'
 solver_failed_to_converge_error_msg = 'Paramters could not be estimated from data.'
@@ -51,8 +52,8 @@ def finish_calibration(g_pool,pupil_list,ref_list):
     else:
         matched_monocular_data = matched_pupil1_data
 
-    logger.info('Collected %s monocular calibration data.'%len(matched_monocular_data))
-    logger.info('Collected %s binocular calibration data.'%len(matched_binocular_data))
+    logger.info('Collected {} monocular calibration data.'.format(len(matched_monocular_data)))
+    logger.info('Collected {} binocular calibration data.'.format(len(matched_binocular_data)))
 
 
     mode = g_pool.detection_mapping_mode
@@ -326,7 +327,11 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             g_pool.active_calibration_plugin.notify_all({'subject':'calibration.failed','reason':not_enough_data_error_msg,'timestamp':g_pool.get_timestamp(),'record':True})
             return
 
-    user_calibration_data = {'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
+    ts = g_pool.get_timestamp()
+    g_pool.active_calibration_plugin.notify_all({'subject':'calibration.successful','method':method,'timestamp': ts, 'record':True})
+    g_pool.active_calibration_plugin.notify_all({'subject':'calibration.calibration_data','timestamp': ts, 'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method,'record':True})
+
+    #this is only used by show calibration. TODO: rewrite show calibraiton.
+    user_calibration_data = {'timestamp': ts,'pupil_list':pupil_list,'ref_list':ref_list,'calibration_method':method}
     save_object(user_calibration_data,os.path.join(g_pool.user_dir, "user_calibration_data"))
-    g_pool.active_calibration_plugin.notify_all({'subject':'calibration.successful','method':method,'timestamp':g_pool.get_timestamp(),'record':True})
 

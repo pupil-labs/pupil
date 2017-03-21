@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 import os
 from pyglui import ui
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class Log_to_Callback(logging.Handler):
     def __init__(self,cb):
-        super(Log_to_Callback, self).__init__()
+        super().__init__()
         self.cb = cb
 
     def emit(self,record):
@@ -26,7 +27,7 @@ class Log_to_Callback(logging.Handler):
 class Log_History(Plugin):
     """Simple logging GUI that displays the last N messages from the logger"""
     def __init__(self, g_pool):
-        super(Log_History, self).__init__(g_pool)
+        super().__init__(g_pool)
         self.menu = None
         self.num_messages = 50
 
@@ -39,7 +40,7 @@ class Log_History(Plugin):
         def close():
             self.alive = False
 
-        help_str = 'A View of the %s most recent log messages. Complete logs are here: "%s"' %(self.num_messages,self.g_pool.user_dir)
+        help_str = 'A View of the {} most recent log messages. Complete logs are here: "{}"'.format(self.num_messages,self.g_pool.user_dir)
         self.menu = ui.Scrolling_Menu('Log')
         self.g_pool.gui.append(self.menu)
         self.menu.append(ui.Button('Close',close))

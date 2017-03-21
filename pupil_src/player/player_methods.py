@@ -1,20 +1,24 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 import os, cv2, csv_utils, shutil
 import numpy as np
-#logging
+import collections
+
+# logging
 import logging
 logger = logging.getLogger(__name__)
-from file_methods import save_object,load_object
-from version_utils import VersionFormat, read_rec_version
+from file_methods import save_object, load_object, UnpicklingError
+from version_utils import VersionFormat
+from version_utils import read_rec_version
 
 def correlate_data(data,timestamps):
     '''
@@ -58,10 +62,19 @@ def correlate_data(data,timestamps):
 
     return data_by_frame
 
+
 def update_recording_to_recent(rec_dir):
-    meta_info = load_meta_info(rec_dir,update=True) # also updates info file
+
+    meta_info = load_meta_info(rec_dir)
+    update_meta_info(rec_dir,meta_info)
+
     # Reference format: v0.7.4
     rec_version = read_rec_version(meta_info)
+
+    # Convert python2 to python3
+    if rec_version <= VersionFormat('0.8.7'):
+        update_recording_bytes_to_unicode(rec_dir)
+
     if rec_version >= VersionFormat('0.7.4'):
         pass
     elif rec_version >= VersionFormat('0.7.3'):
@@ -76,7 +89,6 @@ def update_recording_to_recent(rec_dir):
         logger.Error("This recording is too old. Sorry.")
         return
 
-
     # Incremental format updates
     if rec_version < VersionFormat('0.8.2'):
         update_recording_v074_to_v082(rec_dir)
@@ -86,53 +98,33 @@ def update_recording_to_recent(rec_dir):
         update_recording_v083_to_v086(rec_dir)
     if rec_version < VersionFormat('0.8.7'):
         update_recording_v086_to_v087(rec_dir)
+    if rec_version < VersionFormat('0.9.1'):
+        update_recording_v087_to_v091(rec_dir)
+    if rec_version < VersionFormat('0.9.3'):
+        update_recording_v091_to_v093(rec_dir)
     # How to extend:
     # if rec_version < VersionFormat('FUTURE FORMAT'):
     #    update_recording_v081_to_FUTURE(rec_dir)
 
-def load_meta_info(rec_dir,update=False):
-    #parse info.csv file
-    try:
-        meta_info = read_meta_info_v081(rec_dir)
-    except IndexError:
-        meta_info = read_meta_info_legacy(rec_dir)
-        if update:
-            update_meta_info(rec_dir,meta_info)
-    return meta_info
 
-def read_meta_info_v081(rec_dir):
+def load_meta_info(rec_dir):
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
     return meta_info
 
-def read_meta_info_legacy(rec_dir):
-    meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as info:
-        meta_info = dict( ((line.strip().split('\t')) for line in info.readlines()) )
-    return meta_info
-
 def update_meta_info(rec_dir, meta_info):
-    """Backup old meta info file. Write current format.
-
-    Args:
-        rec_dir (path): Recording folder
-        meta_info (dict): Meta info
-    """
     logger.info('Updating meta info')
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    meta_info_old_path = os.path.join(rec_dir,"info_old.csv")
-    shutil.copy2(meta_info_path,meta_info_old_path)
-    with open(meta_info_path,'w') as csvfile:
+    with open(meta_info_path,'w',newline='') as csvfile:
         csv_utils.write_key_value_file(csvfile,meta_info)
 
 def update_recording_v074_to_v082(rec_dir):
     meta_info_path = os.path.join(rec_dir,"info.csv")
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info['Capture Software Version'] = 'v0.8.2'
-    with open(meta_info_path,'w') as csvfile:
-        csv_utils.write_key_value_file(csvfile,meta_info)
+        meta_info['Data Format Version'] = 'v0.8.2'
+    update_meta_info(rec_dir,meta_info)
 
 def update_recording_v082_to_v083(rec_dir):
     logger.info("Updating recording from v0.8.2 format to v0.8.3 format")
@@ -146,12 +138,11 @@ def update_recording_v082_to_v083(rec_dir):
 
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info['Capture Software Version'] = 'v0.8.3'
+        meta_info['Data Format Version'] = 'v0.8.3'
 
-    with open(meta_info_path,'w') as csvfile:
-        csv_utils.write_key_value_file(csvfile,meta_info)
+    update_meta_info(rec_dir,meta_info)
 
 
 def update_recording_v083_to_v086(rec_dir):
@@ -165,12 +156,11 @@ def update_recording_v083_to_v086(rec_dir):
 
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info['Capture Software Version'] = 'v0.8.6'
+        meta_info['Data Format Version'] = 'v0.8.6'
 
-    with open(meta_info_path,'w') as csvfile:
-        csv_utils.write_key_value_file(csvfile,meta_info)
+    update_meta_info(rec_dir,meta_info)
 
 
 def update_recording_v086_to_v087(rec_dir):
@@ -184,24 +174,86 @@ def update_recording_v086_to_v087(rec_dir):
             Grossly bigger or smaller numbers are results bad exrapolation
             and can cause overflow erorr when denormalized and cast as int32.
         '''
-        return min(100,max(-100,pos[0])),min(100,max(-100,pos[1]))
+        return min(100.,max(-100.,pos[0])),min(100.,max(-100.,pos[1]))
 
-    for g in pupil_data['gaze_positions']:
+    for g in pupil_data.get('gaze_positions', []):
         if 'topic' not in g:
             #we missed this in one gaze mapper
-            g['topic'] = topic
+            g['topic'] = 'gaze'
         g['norm_pos'] = _clamp_norm_point(g['norm_pos'])
 
     save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
 
-    with open(meta_info_path) as csvfile:
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
-        meta_info['Capture Software Version'] = 'v0.8.7'
+        meta_info['Data Format Version'] = 'v0.8.7'
 
-    with open(meta_info_path,'w') as csvfile:
-        csv_utils.write_key_value_file(csvfile,meta_info)
+    update_meta_info(rec_dir,meta_info)
+
+def update_recording_v087_to_v091(rec_dir):
+    logger.info("Updating recording from v0.8.7 format to v0.9.1 format")
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v0.9.1'
+
+    update_meta_info(rec_dir,meta_info)
+
+def update_recording_v091_to_v093(rec_dir):
+    logger.info("Updating recording from v0.9.1 format to v0.9.3 format")
+    meta_info_path = os.path.join(rec_dir,"info.csv")
+    pupil_data = load_object(os.path.join(rec_dir, "pupil_data"))
 
 
+    for g in pupil_data.get('gaze_positions', []):
+        # fixing recordings made with bug https://github.com/pupil-labs/pupil/issues/598
+        g['norm_pos'] = float(g['norm_pos'][0]), float(g['norm_pos'][1])
+
+    save_object(pupil_data,os.path.join(rec_dir, "pupil_data"))
+
+
+    with open(meta_info_path,'r',encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+        meta_info['Data Format Version'] = 'v0.9.3'
+    update_meta_info(rec_dir,meta_info)
+
+
+
+def update_recording_bytes_to_unicode(rec_dir):
+    logger.info("Updating recording from bytes to unicode.")
+
+    def convert(data):
+        if isinstance(data, bytes):
+            return data.decode()
+        elif isinstance(data, str) or isinstance(data, np.ndarray):
+            return data
+        elif isinstance(data, collections.Mapping):
+            return dict(map(convert, data.items()))
+        elif isinstance(data, collections.Iterable):
+            return type(data)(map(convert, data))
+        else:
+            return data
+
+    for file in os.listdir(rec_dir):
+        if file.startswith('.') or os.path.splitext(file)[1] in ('.mp4', '.avi'):
+            continue
+        rec_file = os.path.join(rec_dir, file)
+        try:
+            rec_object = load_object(rec_file)
+            converted_object = convert(rec_object)
+            if converted_object != rec_object:
+                logger.info('Converted `{}` from bytes to unicode'.format(file))
+                save_object(converted_object, rec_file)
+        except (UnpicklingError, IsADirectoryError):
+            continue
+
+    # manually convert k v dicts.
+    meta_info_path = os.path.join(rec_dir, "info.csv")
+    with open(meta_info_path, 'r', encoding='utf-8') as csvfile:
+        meta_info = csv_utils.read_key_value_file(csvfile)
+    with open(meta_info_path, 'w', newline='') as csvfile:
+        csv_utils.write_key_value_file(csvfile, meta_info)
 
 
 def update_recording_v073_to_v074(rec_dir):
@@ -284,19 +336,18 @@ def update_recording_v03_to_v074(rec_dir):
     if not os.path.isfile(ts_path) and os.path.isfile(ts_path_old):
         os.rename(ts_path_old, ts_path)
 
+
 def is_pupil_rec_dir(rec_dir):
     if not os.path.isdir(rec_dir):
         logger.error("No valid dir supplied")
         return False
     try:
         meta_info = load_meta_info(rec_dir)
-        info = meta_info["Capture Software Version"]
+        meta_info["Capture Software Version"]  # Test key existence
     except:
         logger.error("Could not read info.csv file: Not a valid Pupil recording.")
         return False
     return True
-
-
 
 
 def transparent_circle(img,center,radius,color,thickness):
@@ -312,11 +363,11 @@ def transparent_circle(img,center,radius,color,thickness):
 
     try:
         overlay = img[roi].copy()
-        cv2.circle(overlay,(pad,pad), radius=radius, color=rgb, thickness=thickness, lineType=cv2.cv.CV_AA)
+        cv2.circle(img,center,radius,rgb, thickness=thickness, lineType=cv2.LINE_AA)
         opacity = alpha
-        cv2.addWeighted(overlay, opacity, img[roi], 1. - opacity, 0, img[roi])
+        cv2.addWeighted(src1=img[roi], alpha=opacity, src2=overlay, beta=1. - opacity, gamma=0, dst=img[roi])
     except:
-        logger.debug("transparent_circle would have been partially outsize of img. Did not draw it.")
+        logger.debug("transparent_circle would have been partially outside of img. Did not draw it.")
 
 
 def transparent_image_overlay(pos,overlay_img,img,alpha):
@@ -335,4 +386,3 @@ def transparent_image_overlay(pos,overlay_img,img,alpha):
     except:
         logger.debug("transparent_image_overlay was outside of the world image and was not drawn")
     pass
-

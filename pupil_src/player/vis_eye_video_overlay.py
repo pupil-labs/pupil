@@ -1,21 +1,24 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
-import sys, os,platform
+import sys, os, platform
 from glob import glob
 import cv2
+import math
 import numpy as np
 from file_methods import Persistent_Dict
 from pyglui import ui
 from player_methods import transparent_image_overlay
 from plugin import Plugin
+from copy import copy
 
 # helpers/utils
 from version_utils import VersionFormat
@@ -116,14 +119,14 @@ def correlate_eye_world(eye_timestamps,world_timestamps):
 
     return eye_world_frame_map
 
-class Eye_Video_Overlay(Plugin):
+class Vis_Eye_Video_Overlay(Plugin):
     """docstring This plugin allows the user to overlay the eye recording on the recording of his field of vision
         Features: flip video across horiz/vert axes, click and drag around interface, scale video size from 20% to 100%,
         show only 1 or 2 or both eyes
         features updated by Andrew June 2015
     """
-    def __init__(self,g_pool,alpha=0.6,eye_scale_factor=.5,move_around=0,mirror={'0':False,'1':False}, flip={'0':False,'1':False},pos=[(640,10),(10,10)]):
-        super(Eye_Video_Overlay, self).__init__(g_pool)
+    def __init__(self,g_pool,alpha=0.6,eye_scale_factor=.5,move_around=0,mirror={'0':False,'1':False}, flip={'0':False,'1':False},pos=[(640,10),(10,10)], show_ellipses=True):
+        super().__init__(g_pool)
         self.order = .6
         self.menu = None
 
@@ -133,6 +136,7 @@ class Eye_Video_Overlay(Plugin):
         self.showeyes = 0,1 #modes: any text containg both means both eye is present, on 'only eye1' if only one eye recording
         self.move_around = move_around #boolean whether allow to move clip around screen or not
         self.video_size = [0,0] #video_size of recording (bc scaling)
+        self.show_ellipses = show_ellipses
 
         #variables specific to each eye
         self.eye_frames = []
@@ -144,7 +148,7 @@ class Eye_Video_Overlay(Plugin):
         self.drag_offset = [None,None]
 
         # load eye videos and eye timestamps
-        if g_pool.rec_version < VersionFormat('0.4'):
+        if VersionFormat(self.g_pool.meta_info['Capture Software Version'][1:]) < VersionFormat('0.4'):
             eye_video_path = os.path.join(g_pool.rec_dir,'eye.avi'),'None'
             eye_timestamps_path = os.path.join(g_pool.rec_dir,'eye_timestamps.npy'),'None'
         else:
@@ -155,7 +159,7 @@ class Eye_Video_Overlay(Plugin):
         for video,ts in zip(eye_video_path,eye_timestamps_path):
             try:
                 self.eye_cap.append(File_Source(self.g_pool,source_path=glob(video)[0],timestamps=np.load(ts)))
-            except IndexError,FileCaptureError:
+            except(IndexError,FileCaptureError):
                 pass
             else:
                 self.eye_frames.append(self.eye_cap[-1].get_frame())
@@ -200,6 +204,7 @@ class Eye_Video_Overlay(Plugin):
         if 1 in self.showeyes:
             self.menu.append(ui.Switch('1',self.mirror,label="Eye 2: Horiz Flip"))
             self.menu.append(ui.Switch('1',self.flip,label="Eye 2: Vert Flip"))
+        self.menu.append(ui.Switch('show_ellipses', self, label="Visualize Ellipses"))
 
 
     def set_showeyes(self,new_mode):
@@ -212,7 +217,7 @@ class Eye_Video_Overlay(Plugin):
             self.g_pool.gui.remove(self.menu)
             self.menu = None
 
-    def update(self,frame,events):
+    def update(self, frame, events):
         for eye_index in self.showeyes:
             requested_eye_frame_idx = self.eye_world_frame_map[eye_index][frame.index]
 
@@ -229,7 +234,7 @@ class Eye_Video_Overlay(Plugin):
                 try:
                     self.eye_frames[eye_index] = self.eye_cap[eye_index].get_frame()
                 except EndofVideoFileError:
-                    logger.warning("Reached the end of the eye video for eye video %s."%eye_index)
+                    logger.warning("Reached the end of the eye video for eye video {}.".format(eye_index))
             else:
                 #our old frame is still valid because we are doing upsampling
                 pass
@@ -256,9 +261,33 @@ class Eye_Video_Overlay(Plugin):
             if self.flip[str(eye_index)]:
                 eyeimage = np.flipud(eyeimage)
 
-            #5. finally overlay the image
-            x,y = int(self.pos[eye_index][0]),int(self.pos[eye_index][1])
-            transparent_image_overlay((x,y),cv2.cvtColor(eyeimage,cv2.COLOR_GRAY2BGR),frame.img,self.alpha)
+            eyeimage = cv2.cvtColor(eyeimage, cv2.COLOR_GRAY2BGR)
+
+            if self.show_ellipses and events['pupil_positions']:
+                for pd in events['pupil_positions']:
+                    if pd['id'] == eye_index:
+                        break
+
+                el = pd['ellipse']
+                conf = int(pd.get('model_confidence', pd.get('confidence', 0.1)) * 255)
+                center = list(map(lambda val: int(self.eye_scale_factor*val), el['center']))
+                el['axes'] = tuple(map(lambda val: int(self.eye_scale_factor*val/2), el['axes']))
+                el['angle'] = int(el['angle'])
+                el_points = cv2.ellipse2Poly(tuple(center), el['axes'], el['angle'], 0, 360, 1)
+
+                if self.mirror[str(eye_index)]:
+                    el_points = [(self.video_size[0] - x, y) for x, y in el_points]
+                    center[0] = self.video_size[0] - center[0]
+                if self.flip[str(eye_index)]:
+                    el_points = [(x, self.video_size[1] - y) for x, y in el_points]
+                    center[1] = self.video_size[1] - center[1]
+
+                cv2.polylines(eyeimage, [np.asarray(el_points)], True, (0, 0, 255, conf), thickness=math.ceil(2*self.eye_scale_factor))
+                cv2.circle(eyeimage, tuple(center), int(5*self.eye_scale_factor), (0, 0, 255, conf), thickness=-1)
+
+            # 5. finally overlay the image
+            x, y = int(self.pos[eye_index][0]), int(self.pos[eye_index][1])
+            transparent_image_overlay((x, y), eyeimage, frame.img, self.alpha)
 
     def on_click(self,pos,button,action):
         if self.move_around == 1 and action == 1:
@@ -270,7 +299,7 @@ class Eye_Video_Overlay(Plugin):
             self.drag_offset = [None,None]
 
     def get_init_dict(self):
-        return {'alpha':self.alpha,'eye_scale_factor':self.eye_scale_factor,'move_around':self.move_around,'mirror':self.mirror,'flip':self.flip,'pos':self.pos,'move_around':self.move_around}
+        return {'alpha':self.alpha,'eye_scale_factor':self.eye_scale_factor,'move_around':self.move_around,'mirror':self.mirror,'flip':self.flip,'pos':self.pos,'move_around':self.move_around, 'show_ellipses': self.show_ellipses}
 
     def cleanup(self):
         """ called when the plugin gets terminated.

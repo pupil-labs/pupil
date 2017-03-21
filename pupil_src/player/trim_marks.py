@@ -1,11 +1,12 @@
 '''
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 '''
 
 from OpenGL.GL import *
@@ -20,7 +21,7 @@ class Trim_Marks(Plugin):
     """docstring for Trim_Mark
     """
     def __init__(self, g_pool):
-        super(Trim_Marks, self).__init__(g_pool)
+        super().__init__(g_pool)
         g_pool.trim_marks = self #attach self for ease of access by others.
         self.order = .4
         self.capture = g_pool.capture
@@ -52,19 +53,19 @@ class Trim_Marks(Plugin):
     def set(self,mark_range):
         self._in_mark,self._out_mark = mark_range
 
-
     def get_string(self):
-        return '%s - %s'%(self._in_mark,self._out_mark)
+        return '{} - {}'.format(self._in_mark, self._out_mark)
 
-    def set_string(self,str):
+    def set_string(self, str):
         try:
-            in_m,out_m = str.split('-')
+            in_m, out_m = str.split('-')
             in_m = int(in_m)
             out_m = int(out_m)
             self.in_mark = in_m
             self.out_mark = out_m
         except:
             logger.warning("Setting Trimmarks via string failed.")
+
     def init_gui(self):
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 

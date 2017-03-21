@@ -1,11 +1,12 @@
 /*
-(*)~----------------------------------------------------------------------------------
- Pupil - eye tracking platform
- Copyright (C) 2012-2016  Pupil Labs
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2017  Pupil Labs
 
- Distributed under the terms of the GNU Lesser General Public License (LGPL v3.0).
- License details are in the file license.txt, distributed as part of this software.
-----------------------------------------------------------------------------------~(*)
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
 */
 
 
@@ -33,7 +34,7 @@ using ceres::Solver;
 
 
 struct ReprojectionError {
-  ReprojectionError( Vector3 observed_point)
+  ReprojectionError( ::Vector3 observed_point)
       : observed_point(observed_point) {}
 
   template <typename T>
@@ -78,15 +79,15 @@ struct ReprojectionError {
 
 // Factory to hide the construction of the CostFunction object from
   // the client code.
-  static ceres::CostFunction* Create(const Vector3 observed_point ) {
+  static ceres::CostFunction* Create(const ::Vector3 observed_point ) {
     return (new ceres::AutoDiffCostFunction<ReprojectionError, 3, 3, 3, 3>(
                 new ReprojectionError(observed_point)));
   }
 
-  Vector3 observed_point;
+  ::Vector3 observed_point;
 };
 
-double bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<Vector3>& points,bool fix_points)
+double bundleAdjustCalibration( std::vector<Observer>& observers, std::vector<::Vector3>& points,bool fix_points)
 {
 
 
