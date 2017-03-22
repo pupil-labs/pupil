@@ -41,7 +41,7 @@ for dirpath, dirnames, filenames in os.walk("."):
         dependencies.append(os.path.join(dirpath, filename))
 
 shared_cpp_include_path = '../../../shared_cpp/include'
-singleeyefitter_include_path = '../../../capture/pupil_detectors/singleeyefitter'
+singleeyefitter_include_path = '../../pupil_detectors/singleeyefitter'
 
 if platform.system() == 'Windows':
     libs = []

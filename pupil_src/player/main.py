@@ -59,7 +59,7 @@ from OpenGL.GL import glClearColor
 from video_capture import File_Source, EndofVideoFileError, FileSeekError
 
 # helpers/utils
-from version_utils import VersionFormat, read_rec_version, get_version
+from version_utils import VersionFormat, get_version
 from methods import normalize, denormalize, delta_t, get_system_info
 from player_methods import correlate_data, is_pupil_rec_dir, update_recording_to_recent, load_meta_info
 
@@ -88,6 +88,7 @@ from log_display import Log_Display
 from annotations import Annotation_Player
 from raw_data_exporter import Raw_Data_Exporter
 from log_history import Log_History
+from offline_pupil_detection import Offline_Pupil_Detection
 
 
 import logging
@@ -142,9 +143,12 @@ def session(rec_dir):
     vis_plugins = sorted([Vis_Circle, Vis_Fixation, Vis_Polyline, Vis_Light_Points, Vis_Cross,
                           Vis_Watermark, Vis_Eye_Video_Overlay, Vis_Scan_Path], key=lambda x: x.__name__)
 
-    analysis_plugins = sorted([Gaze_Position_2D_Fixation_Detector, Pupil_Angle_3D_Fixation_Detector,
-                               Manual_Gaze_Correction, Video_Export_Launcher, Offline_Surface_Tracker,
-                               Raw_Data_Exporter, Batch_Exporter, Annotation_Player], key=lambda x: x.__name__)
+    analysis_plugins = sorted([Gaze_Position_2D_Fixation_Detector,
+                              Pupil_Angle_3D_Fixation_Detector,
+                              Manual_Gaze_Correction, Video_Export_Launcher,
+                              Offline_Surface_Tracker, Raw_Data_Exporter,
+                              Batch_Exporter, Annotation_Player,
+                              Offline_Pupil_Detection], key=lambda x: x.__name__)
 
     other_plugins = sorted([Log_History, Marker_Auto_Trim_Marks], key=lambda x: x.__name__)
     user_plugins = sorted(import_runtime_plugins(os.path.join(user_dir, 'plugins')), key=lambda x: x.__name__)
