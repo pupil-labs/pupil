@@ -144,6 +144,10 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     g_pool.get_now = get_time_monotonic
 
     # manage plugins
+    user_calibration_plugins_path = os.path.join('plugins','calibration_routines')
+    runtime_calibration_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, user_calibration_plugins_path))
+    calibration_plugins = calibration_plugins + runtime_calibration_plugins
+    
     runtime_plugins = import_runtime_plugins(os.path.join(g_pool.user_dir, 'plugins'))
     user_launchable_plugins = [Pupil_Groups, Frame_Publisher, Pupil_Remote, Time_Sync, Surface_Tracker,
                                Annotation_Capture, Log_History, Fixation_Detector_3D, Blink_Detection,
