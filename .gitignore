@@ -40,3 +40,6 @@ SphereCircleTest.cpp
 *.mp4
 *.mkv
 *.egg-info
+
+#pycharm
+.idea/
