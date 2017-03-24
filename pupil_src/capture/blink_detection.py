@@ -89,7 +89,7 @@ class Blink_Detection(Plugin):
                         slice = (slice - slice.min()) / (slice.max() - slice.min())
                         act0 = np.dot(slice, filter_) / self.history_length
                     else:
-                        act0 = 0
+                        act0 = 0.0
                 else:
                     continue
 
@@ -101,7 +101,7 @@ class Blink_Detection(Plugin):
                         slice = (slice - slice.min()) / (slice.max() - slice.min())
                         act1 = np.dot(slice, filter_) / self.history_length
                     else:
-                        act1 = 0
+                        act1 = 0.0
                 else:
                     continue
 
