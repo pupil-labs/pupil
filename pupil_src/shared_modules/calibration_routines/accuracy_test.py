@@ -139,11 +139,11 @@ class Accuracy_Test(Screen_Marker_Calibration,Calibration_Plugin):
         self.gaze_list = []
         self.open_window("Accuracy_Test")
 
-    def update(self,frame,events):
-        super().update(frame,events)
-        if self.active :
-            #always save gaze positions as opposed to pupil positons during calibration
-            for pt in events.get('gaze_positions',[]):
+    def recent_events(self, events):
+        super().recent_events(events)
+        if self.active:
+            # always save gaze positions as opposed to pupil positons during calibration
+            for pt in events.get('gaze_positions', []):
                 if pt['confidence'] > self.pupil_confidence_threshold:
                     #we add an id for the calibration preprocess data to work as is usually expects pupil data.
                     pt['id'] = 0
