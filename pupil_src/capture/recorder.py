@@ -22,7 +22,7 @@ from audio import Audio_Input_Dict
 from file_methods import save_object, load_object
 from methods import get_system_info
 from av_writer import JPEG_Writer, AV_Writer, Audio_Capture
-from ndsi import H264Writer, frame as frame_classes
+from ndsi import H264Writer
 from calibration_routines.camera_intrinsics_estimation import load_camera_calibration
 # logging
 import logging
@@ -124,7 +124,6 @@ class Recorder(Plugin):
         self.show_info_menu = show_info_menu
         self.info_menu = None
         self.info_menu_conf = info_menu_conf
-        self.should_start = False
 
     def get_init_dict(self):
         d = {}
@@ -206,7 +205,7 @@ class Recorder(Plugin):
             else:
                 if notification.get("session_name", ""):
                     self.set_session_name(notification["session_name"])
-                self.should_start = True
+                self.start()
 
         elif notification['subject'] == 'recording.should_stop':
             if self.running:
@@ -219,7 +218,6 @@ class Recorder(Plugin):
         return strftime("%H:%M:%S", rec_time)
 
     def start(self):
-        self.should_start = False
         self.timestamps = []
         self.data = {'pupil_positions': [], 'gaze_positions': [], 'notifications': []}
         self.frame_count = 0
@@ -314,18 +312,6 @@ class Recorder(Plugin):
             self.info_menu = None
 
     def recent_events(self,events):
-        if self.should_start and 'frame' in events:
-            self.button.status_text = 'Starting...'
-            # wait for I-frame if video is h264, else start
-            if isinstance(events['frame'], frame_classes.H264Frame):
-                if H264Writer.is_iframe(events['frame']):
-                    logger.info('I-frame found. Starting recording...')
-                    self.start()
-                else:
-                    logger.warning('Waiting for I-Frame. Dropping frame.')
-            else:
-                logger.info('No I-frame needed. Starting recording...')
-                self.start()
         if self.running:
             for key, data in events.items():
                 if key not in ('dt','frame'):
