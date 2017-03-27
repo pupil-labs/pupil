@@ -109,7 +109,8 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         from file_methods import Persistent_Dict
         from version_utils import VersionFormat
         from methods import normalize, denormalize, timer
-        from av_writer import JPEG_Writer, AV_Writer, H264_Writer
+        from av_writer import JPEG_Writer, AV_Writer
+        from ndsi import H264Writer
         from video_capture import source_classes
         from video_capture import manager_classes
 
@@ -350,7 +351,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                 logger.info("Done recording.")
                 g_pool.writer.release()
                 g_pool.writer = None
-                np.save(timestamps_path,np.asarray(timestamps))
 
         g_pool.replace_source = replace_source # for ndsi capture
 
@@ -437,21 +437,21 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                         record_path = notification['rec_path']
                         raw_mode = notification['compression']
                         logger.info("Will save eye video to: {}".format(record_path))
-                        timestamps_path = os.path.join(record_path, "eye{}_timestamps.npy".format(eye_id))
                         video_path = os.path.join(record_path, "eye{}.mp4".format(eye_id))
                         if raw_mode and frame and g_pool.capture.jpeg_support:
                             g_pool.writer = JPEG_Writer(video_path, g_pool.capture.frame_rate)
-                        elif raw_mode and hasattr(g_pool.capture._recent_frame, 'h264_buffer'):
-                            g_pool.writer = H264_Writer(video_path, g_pool.capture.frame_rate)
+                        elif hasattr(g_pool.capture._recent_frame, 'h264_buffer'):
+                            g_pool.writer = H264Writer(video_path,
+                                                       g_pool.capture.frame_size[0],
+                                                       g_pool.capture.frame_size[1],
+                                                       g_pool.capture.frame_rate)
                         else:
                             g_pool.writer = AV_Writer(video_path, g_pool.capture.frame_rate)
-                        timestamps = []
                 elif subject == 'recording.stopped':
                     if g_pool.writer:
                         logger.info("Done recording.")
                         g_pool.writer.release()
                         g_pool.writer = None
-                        np.save(timestamps_path,np.asarray(timestamps))
                 elif subject.startswith('meta.should_doc'):
                     ipc_socket.notify({
                         'subject': 'meta.doc',
@@ -496,20 +496,15 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
                         '__raw_data__': [data]
                     })
 
-
                 t = frame.timestamp
-                dt,ts = t-ts,t
+                dt, ts = t - ts, t
                 try:
                     fps_graph.add(1./dt)
                 except ZeroDivisionError:
                     pass
 
-
-
                 if g_pool.writer:
                     g_pool.writer.write_video_frame(frame)
-                    timestamps.append(frame.timestamp)
-
 
                 # pupil ellipse detection
                 result = g_pool.pupil_detector.detect(frame, g_pool.u_r, g_pool.display_mode == 'algorithm')
@@ -592,8 +587,6 @@ def eye(timebase, is_alive_flag, ipc_pub_url, ipc_sub_url, ipc_push_url,
         if g_pool.writer:
             logger.info("Done recording eye.")
             g_pool.writer = None
-            np.save(timestamps_path,np.asarray(timestamps))
-
 
         glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
         # save session persistent settings
