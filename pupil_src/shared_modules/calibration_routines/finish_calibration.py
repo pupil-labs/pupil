@@ -166,16 +166,15 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             eye_camera_to_world_matrix1[:3,:3] = R_world1
             eye_camera_to_world_matrix1[:3,3:4] = np.reshape(camera_translation, (3,1) )
 
-
-            g_pool.plugins.add(Binocular_Vector_Gaze_Mapper,args={
-                                    'eye_camera_to_world_matrix0':eye_camera_to_world_matrix0,
-                                    'eye_camera_to_world_matrix1':eye_camera_to_world_matrix1 ,
-                                    'camera_intrinsics': camera_intrinsics ,
-                                    'cal_points_3d': [p.tolist() for p in points],
-                                    'cal_ref_points_3d': [p.tolist() for p in points_a],
-                                    'cal_gaze_points0_3d': [p.tolist() for p in points_b],
-                                    'cal_gaze_points1_3d': [p.tolist() for p in points_c]})
-
+            g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
+                                                         'name': 'Binocular_Vector_Gaze_Mapper',
+                                                         'args': {'eye_camera_to_world_matrix0': eye_camera_to_world_matrix0,
+                                                                  'eye_camera_to_world_matrix1': eye_camera_to_world_matrix1 ,
+                                                                  'camera_intrinsics': camera_intrinsics ,
+                                                                  'cal_points_3d': [p.tolist() for p in points],
+                                                                  'cal_ref_points_3d': [p.tolist() for p in points_a],
+                                                                  'cal_gaze_points0_3d': [p.tolist() for p in points_b],
+                                                                  'cal_gaze_points1_3d': [p.tolist() for p in points_c]}})
 
         elif matched_monocular_data:
             method = 'monocular 3d model'
@@ -274,14 +273,14 @@ def finish_calibration(g_pool,pupil_list,ref_list):
             eye_camera_to_world_matrix[:3,:3] = R_eye
             eye_camera_to_world_matrix[:3,3:4] = np.reshape(camera_translation, (3,1) )
 
-
-            g_pool.plugins.add(Vector_Gaze_Mapper,args=
-                {'eye_camera_to_world_matrix':eye_camera_to_world_matrix ,
-                'camera_intrinsics': camera_intrinsics ,
-                'cal_points_3d': [p.tolist() for p in points_in_world],
-                'cal_ref_points_3d': [p.tolist() for p in points_a],
-                'cal_gaze_points_3d': [p.tolist() for p in points_b],
-                'gaze_distance':500})
+            g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
+                                                         'name': 'Vector_Gaze_Mapper',
+                                                         'args': {'eye_camera_to_world_matrix': eye_camera_to_world_matrix.tolist(),
+                                                                  'camera_intrinsics': camera_intrinsics,
+                                                                  'cal_points_3d': [p.tolist() for p in points_in_world],
+                                                                  'cal_ref_points_3d': [p.tolist() for p in points_a],
+                                                                  'cal_gaze_points_3d': [p.tolist() for p in points_b],
+                                                                  'gaze_distance':500}})
 
         else:
             logger.error(not_enough_data_error_msg)
@@ -310,7 +309,11 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg,'timestamp':g_pool.get_timestamp(),'record':True})
                 return
 
-            g_pool.plugins.add(Binocular_Gaze_Mapper,args={'params':params, 'params_eye0':params_eye0, 'params_eye1':params_eye1})
+            g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
+                                                         'name': 'Binocular_Gaze_Mapper',
+                                                         'args': {'params': params,
+                                                                  'params_eye0': params_eye0,
+                                                                  'params_eye1': params_eye1}})
 
 
         elif matched_monocular_data:
@@ -321,7 +324,9 @@ def finish_calibration(g_pool,pupil_list,ref_list):
                 g_pool.active_calibration_plugin.notify_all({'subject':'calibration.failed','reason':solver_failed_to_converge_error_msg,'timestamp':g_pool.get_timestamp(),'record':True})
                 return
 
-            g_pool.plugins.add(Monocular_Gaze_Mapper,args={'params':params})
+            g_pool.active_calibration_plugin.notify_all({'subject': 'start_plugin',
+                                                         'name': 'Monocular_Gaze_Mapper',
+                                                         'args': {'params': params}})
         else:
             logger.error(not_enough_data_error_msg)
             g_pool.active_calibration_plugin.notify_all({'subject':'calibration.failed','reason':not_enough_data_error_msg,'timestamp':g_pool.get_timestamp(),'record':True})
