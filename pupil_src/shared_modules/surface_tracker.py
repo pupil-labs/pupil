@@ -66,8 +66,8 @@ class Surface_Tracker(Plugin):
 
     def load_surface_definitions_from_file(self):
         # all registered surfaces
-        self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.user_dir,'surface_definitions') )
-        self.surfaces = [Reference_Surface(saved_definition=d) for d in  self.surface_definitions.get('realtime_square_marker_surfaces',[]) if isinstance(d,dict)]
+        self.surface_definitions = Persistent_Dict(os.path.join(self.g_pool.user_dir,'surface_definitions'))
+        self.surfaces = [Reference_Surface(saved_definition=d) for d in self.surface_definitions.get('realtime_square_marker_surfaces',[])]
 
     def save_surface_definitions_to_file(self):
         self.surface_definitions["realtime_square_marker_surfaces"] = [rs.save_to_dict() for rs in self.surfaces if rs.defined]
