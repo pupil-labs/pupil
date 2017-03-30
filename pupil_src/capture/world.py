@@ -73,7 +73,7 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
     # display
     import glfw
     from pyglui import ui, graph, cygl, __version__ as pyglui_version
-    assert pyglui_version >= '1.2'
+    assert pyglui_version >= '1.3'
     from pyglui.cygl.utils import Named_Texture
     import gl_utils
 
